@@ -32,6 +32,8 @@ class Keywords {
   const UniqueString *const identEval;
   /// Identifier for "delete".
   const UniqueString *const identDelete;
+  /// Identifier for "this".
+  const UniqueString *const identThis;
   /// Identifier for "use strict".
   const UniqueString *const identUseStrict;
   /// Identifier for "var".

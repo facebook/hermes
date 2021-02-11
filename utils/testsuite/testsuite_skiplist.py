@@ -1590,6 +1590,7 @@ SKIP_LIST = [
     "flow/types/parameter_defaults/migrated_0023.js",
     "flow/uninitialized_const_bindings/migrated_0000.js",
     "flow/uninitialized_const_bindings_invalid/migrated_0000.js",
+    "flow/this_param/class_constructor.js",
     # Reserved type names
     "flow/types/aliases/reserved_type.js",
     "flow/types/annotations/static_is_reserved_param.js",

@@ -97,6 +97,7 @@ void JSParserImpl::initializeIdentifiers() {
   esIdent_ = lexer_.getIdentifier("ES");
   commonJSIdent_ = lexer_.getIdentifier("CommonJS");
   mixinsIdent_ = lexer_.getIdentifier("mixins");
+  thisIdent_ = lexer_.getIdentifier("this");
 
   anyIdent_ = lexer_.getIdentifier("any");
   mixedIdent_ = lexer_.getIdentifier("mixed");
@@ -532,6 +533,34 @@ bool JSParserImpl::parseFormalParameters(
   assert(check(TokenKind::l_paren) && "FormalParameters must start with '('");
   // (
   SMLoc lparenLoc = advance().Start;
+
+#if HERMES_PARSE_FLOW
+  // The first parameter can be 'this' in Flow mode.
+  if (context_.getParseFlow() && check(TokenKind::rw_this)) {
+    auto *name = tok_->getResWordIdentifier();
+    SMLoc thisParamStart = advance().Start;
+
+    SMLoc annotStart = tok_->getStartLoc();
+    if (!eat(
+            TokenKind::colon,
+            JSLexer::GrammarContext::Flow,
+            "in 'this' type annotation",
+            "start of 'this'",
+            thisParamStart))
+      return false;
+
+    auto optType = parseTypeAnnotation(annotStart);
+    if (!optType)
+      return false;
+    ESTree::Node *type = *optType;
+    paramList.push_back(*setLocation(
+        thisParamStart,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::IdentifierNode(name, type, false)));
+
+    checkAndEat(TokenKind::comma);
+  }
+#endif
 
   while (!check(TokenKind::r_paren)) {
     if (check(TokenKind::dotdotdot)) {

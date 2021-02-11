@@ -206,6 +206,7 @@ declare class C {
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionTypeAnnotation",
 // CHECK-NEXT:               "params": [],
+// CHECK-NEXT:               "this": null,
 // CHECK-NEXT:               "returnType": {
 // CHECK-NEXT:                 "type": "VoidTypeAnnotation"
 // CHECK-NEXT:               },
@@ -251,6 +252,7 @@ declare class C {
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionTypeAnnotation",
 // CHECK-NEXT:               "params": [],
+// CHECK-NEXT:               "this": null,
 // CHECK-NEXT:               "returnType": {
 // CHECK-NEXT:                 "type": "VoidTypeAnnotation"
 // CHECK-NEXT:               },
@@ -366,6 +368,7 @@ declare class C {
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionTypeAnnotation",
 // CHECK-NEXT:               "params": [],
+// CHECK-NEXT:               "this": null,
 // CHECK-NEXT:               "returnType": {
 // CHECK-NEXT:                 "type": "StringTypeAnnotation"
 // CHECK-NEXT:               },

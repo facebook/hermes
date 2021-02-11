@@ -73,6 +73,7 @@ type T2 = {
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionTypeAnnotation",
 // CHECK-NEXT:               "params": [],
+// CHECK-NEXT:               "this": null,
 // CHECK-NEXT:               "returnType": {
 // CHECK-NEXT:                 "type": "NumberTypeAnnotation"
 // CHECK-NEXT:               },
@@ -107,6 +108,7 @@ type T2 = {
 // CHECK-NEXT:                   "optional": false
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               ],
+// CHECK-NEXT:               "this": null,
 // CHECK-NEXT:               "returnType": {
 // CHECK-NEXT:                 "type": "NumberTypeAnnotation"
 // CHECK-NEXT:               },
@@ -129,6 +131,7 @@ type T2 = {
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionTypeAnnotation",
 // CHECK-NEXT:               "params": [],
+// CHECK-NEXT:               "this": null,
 // CHECK-NEXT:               "returnType": {
 // CHECK-NEXT:                 "type": "NumberTypeAnnotation"
 // CHECK-NEXT:               },
@@ -334,6 +337,7 @@ type T6 = {
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionTypeAnnotation",
 // CHECK-NEXT:               "params": [],
+// CHECK-NEXT:               "this": null,
 // CHECK-NEXT:               "returnType": {
 // CHECK-NEXT:                 "type": "NumberTypeAnnotation"
 // CHECK-NEXT:               },
@@ -356,6 +360,7 @@ type T6 = {
 // CHECK-NEXT:                   "optional": false
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               ],
+// CHECK-NEXT:               "this": null,
 // CHECK-NEXT:               "returnType": {
 // CHECK-NEXT:                 "type": "StringTypeAnnotation"
 // CHECK-NEXT:               },
@@ -533,6 +538,7 @@ type T11 = {
 // CHECK-NEXT:                   "optional": false
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               ],
+// CHECK-NEXT:               "this": null,
 // CHECK-NEXT:               "returnType": {
 // CHECK-NEXT:                 "type": "VoidTypeAnnotation"
 // CHECK-NEXT:               },

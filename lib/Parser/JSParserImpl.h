@@ -263,6 +263,7 @@ class JSParserImpl {
   UniqueString *esIdent_;
   UniqueString *commonJSIdent_;
   UniqueString *mixinsIdent_;
+  UniqueString *thisIdent_;
 
   UniqueString *anyIdent_;
   UniqueString *mixedIdent_;
@@ -1042,6 +1043,7 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseFunctionTypeAnnotationWithParams(
       SMLoc start,
       ESTree::NodeList &&params,
+      ESTree::Node *thisConstraint,
       ESTree::Node *rest,
       ESTree::Node *typeParams);
   Optional<ESTree::Node *> parseFunctionOrGroupTypeAnnotation();
@@ -1099,10 +1101,12 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseTypeArgs();
 
   /// \param[out] params the parameters, populated by reference.
+  /// \param[out] thisConstraint the type annotation for 'this'.
   /// \return the rest parameter if it exists, nullptr otherwise. None still
   /// indicates an error.
   Optional<ESTree::FunctionTypeParamNode *> parseFunctionTypeAnnotationParams(
-      ESTree::NodeList &params);
+      ESTree::NodeList &params,
+      ESTree::NodePtr &thisConstraint);
   Optional<ESTree::FunctionTypeParamNode *> parseFunctionTypeAnnotationParam();
 
   Optional<ESTree::Node *> parseTypeCallProperty(SMLoc start, bool isStatic);

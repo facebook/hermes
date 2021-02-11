@@ -123,6 +123,8 @@ class EsprimaTestRunner:
                 ast["directive"] = "use strict"
             else:
                 del ast["directive"]
+        if ast["type"] == "Identifier" and ast["name"] == "this":
+            del ast["optional"]
         # convert the literal node types to ESTree standard form
         if ast["type"] in HERMES_LITERAL_NODE_TYPES:
             if ast["type"] == "NullLiteral":

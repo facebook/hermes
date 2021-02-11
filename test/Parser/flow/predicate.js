@@ -31,6 +31,7 @@ declare function foo(number): number %checks;
 // CHECK-NEXT:                 "optional": false
 // CHECK-NEXT:               }
 // CHECK-NEXT:             ],
+// CHECK-NEXT:             "this": null,
 // CHECK-NEXT:             "returnType": {
 // CHECK-NEXT:               "type": "NumberTypeAnnotation"
 // CHECK-NEXT:             },
@@ -64,6 +65,7 @@ declare function foo(number): number %checks(x);
 // CHECK-NEXT:                 "optional": false
 // CHECK-NEXT:               }
 // CHECK-NEXT:             ],
+// CHECK-NEXT:             "this": null,
 // CHECK-NEXT:             "returnType": {
 // CHECK-NEXT:               "type": "NumberTypeAnnotation"
 // CHECK-NEXT:             },

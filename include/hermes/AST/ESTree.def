@@ -682,9 +682,10 @@ ESTREE_NODE_0_ARGS(SymbolTypeAnnotation, Base)
 ESTREE_NODE_0_ARGS(AnyTypeAnnotation, Base)
 ESTREE_NODE_0_ARGS(MixedTypeAnnotation, Base)
 ESTREE_NODE_0_ARGS(VoidTypeAnnotation, Base)
-ESTREE_NODE_4_ARGS(
+ESTREE_NODE_5_ARGS(
     FunctionTypeAnnotation, Base,
     NodeList, params, false,
+    NodePtr, this, true,
     NodePtr, returnType, false,
     NodePtr, rest, true,
     NodePtr, typeParameters, true)

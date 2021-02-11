@@ -240,6 +240,7 @@ interface T {
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionTypeAnnotation",
 // CHECK-NEXT:               "params": [],
+// CHECK-NEXT:               "this": null,
 // CHECK-NEXT:               "returnType": {
 // CHECK-NEXT:                 "type": "VoidTypeAnnotation"
 // CHECK-NEXT:               },
@@ -285,6 +286,7 @@ interface T {
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionTypeAnnotation",
 // CHECK-NEXT:               "params": [],
+// CHECK-NEXT:               "this": null,
 // CHECK-NEXT:               "returnType": {
 // CHECK-NEXT:                 "type": "VoidTypeAnnotation"
 // CHECK-NEXT:               },

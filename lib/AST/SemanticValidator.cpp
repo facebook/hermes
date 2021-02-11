@@ -33,6 +33,7 @@ Keywords::Keywords(Context &astContext)
           astContext.getIdentifier("arguments").getUnderlyingPointer()),
       identEval(astContext.getIdentifier("eval").getUnderlyingPointer()),
       identDelete(astContext.getIdentifier("delete").getUnderlyingPointer()),
+      identThis(astContext.getIdentifier("this").getUnderlyingPointer()),
       identUseStrict(
           astContext.getIdentifier("use strict").getUnderlyingPointer()),
       identVar(astContext.getIdentifier("var").getUnderlyingPointer()),
@@ -643,6 +644,25 @@ void SemanticValidator::visitFunction(
 
   if (id)
     validateDeclarationNames(FunctionInfo::VarDecl::Kind::Var, id, nullptr);
+
+#if HERMES_PARSE_FLOW
+  if (astContext_.getParseFlow() && !params.empty()) {
+    // Skip 'this' parameter annotation, and error if it's an arrow parameter,
+    // because arrow functions inherit 'this'.
+    if (auto *ident = dyn_cast<ESTree::IdentifierNode>(&params.front())) {
+      if (ident->_name == kw_.identThis) {
+        if (isa<ArrowFunctionExpressionNode>(node)) {
+          sm_.error(
+              ident->getSourceRange(), "'this' not allowed as parameter name");
+        }
+        if (compile_) {
+          // Delete the node because it cannot be compiled.
+          params.erase(params.begin());
+        }
+      }
+    }
+  }
+#endif
 
   // Set to false if the parameter list contains binding patterns.
   bool simpleParameterList = true;

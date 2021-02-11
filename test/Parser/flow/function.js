@@ -22,6 +22,7 @@ type A = () => number;
 // CHECK-NEXT:       "right": {
 // CHECK-NEXT:         "type": "FunctionTypeAnnotation",
 // CHECK-NEXT:         "params": [],
+// CHECK-NEXT:         "this": null,
 // CHECK-NEXT:         "returnType": {
 // CHECK-NEXT:           "type": "NumberTypeAnnotation"
 // CHECK-NEXT:         },
@@ -50,6 +51,7 @@ type A = number => number;
 // CHECK-NEXT:             "optional": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
+// CHECK-NEXT:         "this": null,
 // CHECK-NEXT:         "returnType": {
 // CHECK-NEXT:           "type": "NumberTypeAnnotation"
 // CHECK-NEXT:         },
@@ -78,6 +80,7 @@ type A = (number) => number;
 // CHECK-NEXT:             "optional": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
+// CHECK-NEXT:         "this": null,
 // CHECK-NEXT:         "returnType": {
 // CHECK-NEXT:           "type": "NumberTypeAnnotation"
 // CHECK-NEXT:         },
@@ -109,6 +112,7 @@ type A = (foo: number) => number;
 // CHECK-NEXT:             "optional": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
+// CHECK-NEXT:         "this": null,
 // CHECK-NEXT:         "returnType": {
 // CHECK-NEXT:           "type": "NumberTypeAnnotation"
 // CHECK-NEXT:         },
@@ -140,6 +144,7 @@ type A = (foo?: number) => number;
 // CHECK-NEXT:             "optional": true
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
+// CHECK-NEXT:         "this": null,
 // CHECK-NEXT:         "returnType": {
 // CHECK-NEXT:           "type": "NumberTypeAnnotation"
 // CHECK-NEXT:         },
@@ -182,6 +187,7 @@ type A = (foo: number, bar: number,) => number;
 // CHECK-NEXT:             "optional": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
+// CHECK-NEXT:         "this": null,
 // CHECK-NEXT:         "returnType": {
 // CHECK-NEXT:           "type": "NumberTypeAnnotation"
 // CHECK-NEXT:         },
@@ -224,6 +230,7 @@ type A = (foo: number, bar: number) => number;
 // CHECK-NEXT:             "optional": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
+// CHECK-NEXT:         "this": null,
 // CHECK-NEXT:         "returnType": {
 // CHECK-NEXT:           "type": "NumberTypeAnnotation"
 // CHECK-NEXT:         },
@@ -252,6 +259,7 @@ type A = (number, ...number) => number;
 // CHECK-NEXT:             "optional": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
+// CHECK-NEXT:         "this": null,
 // CHECK-NEXT:         "returnType": {
 // CHECK-NEXT:           "type": "NumberTypeAnnotation"
 // CHECK-NEXT:         },
@@ -278,6 +286,7 @@ type A = (...foo: number) => number;
 // CHECK-NEXT:       "right": {
 // CHECK-NEXT:         "type": "FunctionTypeAnnotation",
 // CHECK-NEXT:         "params": [],
+// CHECK-NEXT:         "this": null,
 // CHECK-NEXT:         "returnType": {
 // CHECK-NEXT:           "type": "NumberTypeAnnotation"
 // CHECK-NEXT:         },
