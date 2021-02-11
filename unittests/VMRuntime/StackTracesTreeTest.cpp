@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/VM/StackTracesTree-NoRuntime.h"
+#include "hermes/VM/StackTracesTree.h"
+#include "hermes/VM/Runtime.h"
 
 #if defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES)
 

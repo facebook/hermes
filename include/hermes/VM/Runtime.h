@@ -38,7 +38,7 @@
 #include "hermes/VM/RuntimeStats.h"
 #include "hermes/VM/Serializer.h"
 #include "hermes/VM/StackFrame.h"
-#include "hermes/VM/StackTracesTree.h"
+#include "hermes/VM/StackTracesTree-NoRuntime.h"
 #include "hermes/VM/SymbolRegistry.h"
 #include "hermes/VM/TwineChar16.h"
 #include "hermes/VM/VMExperiments.h"
@@ -87,6 +87,7 @@ class ScopedNativeCallFrame;
 class SamplingProfiler;
 class CodeCoverageProfiler;
 struct MockedEnvironment;
+struct StackTracesTree;
 
 #ifdef HERMESVM_PROFILER_BB
 class JSArray;
