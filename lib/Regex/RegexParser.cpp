@@ -293,9 +293,11 @@ class Parser {
         break;
 
       case ParseStackElement::LookAround: {
-        quantifierAllowed = !(flags_.unicode);
         bool negate = elem.negateLookaround;
         bool forwards = elem.forwardLookaround;
+        // ES11 Annex B.1.4 extends RegExp to allow quantifiers for
+        // lookaheads when unicode is disabled.
+        quantifierAllowed = !(flags_.unicode) && forwards;
         auto mexpStart = elem.mexp;
         auto mexpEnd = re_->markedCount();
         auto expr = re_->spliceOut(elem.splicePoint);
@@ -339,10 +341,10 @@ class Parser {
         case '(': {
           // Open a new group of the right type.
           if (tryConsume("(?=")) {
-            // Positive lookeahead, negate = false, forwards = true
+            // Positive lookahead, negate = false, forwards = true
             openLookaround(stack, false, true);
           } else if (tryConsume("(?!")) {
-            // Negative lookeahead, negate = true, forwards = true
+            // Negative lookahead, negate = true, forwards = true
             openLookaround(stack, true, true);
           } else if (tryConsume("(?<=")) {
             // Positive lookbehind, negate = false, forwards = false
@@ -438,6 +440,7 @@ class Parser {
         case '{': {
           // Under Unicode, this is always an error.
           // Without Unicode, it is an error if it is a valid quantifier.
+          // (extension from ES11 Annex B.1.4)
           Quantifier tmp;
           if (tryConsumeQuantifier(&tmp)) {
             setError(constants::ErrorType::InvalidRepeat);
@@ -1071,7 +1074,7 @@ class Parser {
   uint32_t maxBackRef() const {
     return maxBackRef_;
   }
-}; // namespace regex
+};
 
 template <typename Receiver>
 constants::ErrorType parseRegex(
