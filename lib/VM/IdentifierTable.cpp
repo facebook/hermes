@@ -35,7 +35,7 @@ IdentifierTable::LookupEntry::LookupEntry(
 }
 
 #ifdef HERMESVM_SERIALIZE
-enum class EntryKind { ASCII, UFT16, StrPrim, Free };
+enum class EntryKind { ASCII, UTF16, StrPrim, Free };
 
 void IdentifierTable::LookupEntry::serialize(Serializer &s) {
   // Common for every type.
@@ -58,7 +58,7 @@ void IdentifierTable::LookupEntry::serialize(Serializer &s) {
   } else if (isLazyUTF16()) {
     // Pointer to an UTF16 string literal.
     // Write the following data for this entry: [UTF16, num, str(offset)].
-    s.writeInt<uint8_t>((uint8_t)EntryKind::UFT16);
+    s.writeInt<uint8_t>((uint8_t)EntryKind::UTF16);
     s.writeInt<uint32_t>(num_);
     s.writeChar16Str(getLazyUTF16Ref());
   } else {
@@ -80,7 +80,7 @@ void IdentifierTable::LookupEntry::deserialize(Deserializer &d) {
       isUTF16_ = false;
       return;
     }
-    case EntryKind::UFT16: {
+    case EntryKind::UTF16: {
       num_ = d.readInt<uint32_t>();
       utf16Ptr_ = d.readChar16Str();
       isUTF16_ = true;
