@@ -802,12 +802,12 @@ void GCBase::printStats(JSONEmitter &json) {
     json.emitKeyValue("cause", event.cause);
     json.emitKeyValue("duration", event.duration.count());
     json.emitKeyValue("cpuDuration", event.cpuDuration.count());
-    json.emitKeyValue("preAllocated", event.preAllocated);
-    json.emitKeyValue("preSize", event.preSize);
-    json.emitKeyValue("postAllocated", event.postAllocated);
-    json.emitKeyValue("postSize", event.postSize);
-    json.emitKeyValue("preExternal", event.preExternal);
-    json.emitKeyValue("postExternal", event.postExternal);
+    json.emitKeyValue("preAllocated", event.allocated.before);
+    json.emitKeyValue("postAllocated", event.allocated.after);
+    json.emitKeyValue("preSize", event.size.before);
+    json.emitKeyValue("postSize", event.size.after);
+    json.emitKeyValue("preExternal", event.external.before);
+    json.emitKeyValue("postExternal", event.external.after);
     json.emitKeyValue("survivalRatio", event.survivalRatio);
     json.emitKey("tags");
     json.openArray();
@@ -827,9 +827,9 @@ void GCBase::recordGCStats(
       std::chrono::duration<double>(event.duration).count());
   stats->gcCPUTime.record(
       std::chrono::duration<double>(event.cpuDuration).count());
-  stats->finalHeapSize = event.postSize;
-  stats->usedBefore.record(event.preAllocated);
-  stats->usedAfter.record(event.postAllocated);
+  stats->finalHeapSize = event.size.after;
+  stats->usedBefore.record(event.allocated.before);
+  stats->usedAfter.record(event.allocated.after);
   stats->numCollections++;
 }
 

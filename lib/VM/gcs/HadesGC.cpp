@@ -360,12 +360,9 @@ HadesGC::CollectionStats::~CollectionStats() {
       std::chrono::duration_cast<std::chrono::milliseconds>(
           endTime_ - beginTime_),
       std::chrono::duration_cast<std::chrono::milliseconds>(cpuDuration_),
-      /*preAllocated*/ allocatedBefore_,
-      /*preSize*/ sizeBefore_,
-      /*postAllocated*/ afterAllocatedBytes(),
-      /*postSize*/ sizeAfter_,
-      /*preExternal*/ externalBefore_,
-      /*postExternal*/ afterExternalBytes(),
+      /*allocated*/ BeforeAndAfter{allocatedBefore_, afterAllocatedBytes()},
+      /*size*/ BeforeAndAfter{sizeBefore_, sizeAfter_},
+      /*external*/ BeforeAndAfter{externalBefore_, afterExternalBytes()},
       /*survivalRatio*/ survivalRatio(),
       /*tags*/ std::move(tags_)});
 }

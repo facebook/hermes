@@ -1555,12 +1555,9 @@ void GenGC::CollectionSection::recordGCStats(
       std::chrono::duration_cast<std::chrono::milliseconds>(
           wallEnd - wallStart_),
       std::chrono::duration_cast<std::chrono::milliseconds>(cpuEnd - cpuStart_),
-      /*preAllocated*/ usedBefore,
-      /*preSize*/ sizeBefore,
-      /*postAllocated*/ usedAfter,
-      /*postSize*/ sizeAfter,
-      /*preExternal*/ externalBefore,
-      /*postExternal*/ externalAfter,
+      /*allocated*/ BeforeAndAfter{usedBefore, usedAfter},
+      /*size*/ BeforeAndAfter{sizeBefore, sizeAfter},
+      /*external*/ BeforeAndAfter{externalBefore, externalAfter},
       /*survivalRatio*/ usedBefore ? (usedAfter * 1.0) / usedBefore : 0,
       /*tags*/ {}};
 

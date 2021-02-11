@@ -374,16 +374,13 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
       std::chrono::duration_cast<std::chrono::milliseconds>(
           wallEnd - wallStart),
       std::chrono::duration_cast<std::chrono::milliseconds>(cpuEnd - cpuStart),
+      /*allocated*/ BeforeAndAfter{allocatedBefore, allocatedBytes_},
       // MallocGC only allocates memory as it is used so there is no distinction
       // between the allocated bytes and the heap size.
-      /*preAllocated*/ allocatedBefore,
-      /*preSize*/ allocatedBefore,
-      /*postAllocated*/ allocatedBytes_,
-      /*postSize*/ allocatedBytes_,
+      /*size*/ BeforeAndAfter{allocatedBefore, allocatedBytes_},
       // TODO: MallocGC doesn't yet support credit/debit external memory, so
       // it has no data for these numbers.
-      /*preExternal*/ 0,
-      /*postExternal*/ 0,
+      /*external*/ BeforeAndAfter{0, 0},
       /*survivalRatio*/
       allocatedBefore ? (allocatedBytes_ * 1.0) / allocatedBefore : 0,
       /*tags*/ {}};
