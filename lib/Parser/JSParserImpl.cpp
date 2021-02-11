@@ -4880,7 +4880,21 @@ Optional<ESTree::Node *> JSParserImpl::reparseAssignmentPattern(
     if (auto *OEN = dyn_cast<ESTree::ObjectExpressionNode>(node)) {
       return reparseObjectAssignmentPattern(OEN, inDecl);
     }
-    if (isa<ESTree::IdentifierNode>(node) || isa<ESTree::PatternNode>(node)) {
+    if (auto *ident = dyn_cast<ESTree::IdentifierNode>(node)) {
+      // Validate in this function to avoid validating in each branch of
+      // the conditions within the other reparse functions.
+      // Validation does not prevent progress of the parse here, so we can
+      // return node regardless of whether we failed to validate.
+      validateBindingIdentifier(
+          Param{},
+          ident->getSourceRange(),
+          ident->_name,
+          TokenKind::identifier);
+      return node;
+    }
+    if (isa<ESTree::PatternNode>(node)) {
+      // Pattern nodes validate their binding identifiers when they are
+      // initially parsed, no work to do here.
       return node;
     }
 #if HERMES_PARSE_FLOW
@@ -5043,16 +5057,6 @@ Optional<ESTree::Node *> JSParserImpl::reparseObjectAssignmentPattern(
                 propNode->getStartLoc(), propNode->_key->getStartLoc()),
             "invalid destructuring target");
         continue;
-      }
-
-      if (auto *key = dyn_cast<ESTree::IdentifierNode>(propNode->_key)) {
-        if (!validateBindingIdentifier(
-                Param{},
-                key->getSourceRange(),
-                key->_name,
-                TokenKind::identifier)) {
-          return None;
-        }
       }
 
       ESTree::Node *value = propNode->_value;
