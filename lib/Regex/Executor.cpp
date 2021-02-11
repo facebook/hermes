@@ -1363,9 +1363,9 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           if (!doLoopBody && !doNotTaken) {
             BACKTRACK();
           } else if (doLoopBody && !doNotTaken) {
-            prepareToEnterLoopBody(s, loop, backtrackStack);
+            if (!prepareToEnterLoopBody(s, loop, backtrackStack))
+              return nullptr;
             s->ip_ = loopTakenIp;
-
           } else if (doNotTaken && !doLoopBody) {
             s->ip_ = loop->notTakenTarget;
           } else {
@@ -1379,7 +1379,6 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
                       backtrackStack,
                       BacktrackInsn::makeEnterNonGreedyLoop(
                           loop, loopTakenIp, loopData))) {
-                error_ = MatchRuntimeErrorType::MaxStackDepth;
                 return nullptr;
               }
               s->ip_ = loop->notTakenTarget;
