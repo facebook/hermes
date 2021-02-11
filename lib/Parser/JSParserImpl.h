@@ -860,12 +860,14 @@ class JSParserImpl {
   /// Reparse the specified node as arrow function parameter list and store the
   /// parameter list in \p paramList. Print an error and return false on error,
   /// otherwise return true.
-  /// \param[out] reparsedAsync set to true when the params indicate an async
-  /// function, false otherwise.
+  /// \param[in/out] isAsync the arrow function is async. The caller may already
+  /// know this prior to calling this function, in which case `true` should be
+  /// passed. Otherwise, this function will try to reparse a call expression
+  /// into an async arrow function.
   bool reparseArrowParameters(
       ESTree::Node *node,
       ESTree::NodeList &paramList,
-      bool &reparsedAsync);
+      bool &isAsync);
 
   /// \param forceAsync set to true when it is already known that the arrow
   ///   function expression is 'async'. This occurs when there are no parens

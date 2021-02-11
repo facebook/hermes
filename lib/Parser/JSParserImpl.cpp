@@ -4643,9 +4643,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
 bool JSParserImpl::reparseArrowParameters(
     ESTree::Node *node,
     ESTree::NodeList &paramList,
-    bool &reparsedAsync) {
-  reparsedAsync = false;
-
+    bool &isAsync) {
   // Empty argument list "()".
   if (node->getParens() == 0 && isa<ESTree::CoverEmptyArgsNode>(node))
     return true;
@@ -4660,28 +4658,39 @@ bool JSParserImpl::reparseArrowParameters(
         TokenKind::identifier);
   }
 
-  if (node->getParens() != 1 && !isa<ESTree::CallExpressionNode>(node)) {
-    error(node->getSourceRange(), "invalid arrow function parameter list");
-    return false;
-  }
-
   ESTree::NodeList nodeList{};
 
-  if (auto *seqNode = dyn_cast<ESTree::SequenceExpressionNode>(node)) {
-    nodeList = std::move(seqNode->_expressions);
-  } else if (auto *callNode = dyn_cast<ESTree::CallExpressionNode>(node)) {
+  if (auto *callNode = dyn_cast<ESTree::CallExpressionNode>(node)) {
     // Async function parameters look like call expressions. For example:
     // async(x,y)
-    // Set `reparsedAsync = true` to indicate that this was async.
-    nodeList = std::move(callNode->_arguments);
-    reparsedAsync = true;
+    // It must have no surrounding parens and the name must be 'async'.
+    // It must also not already be `async`, because the CallExpression
+    // determines whether it is `async`.
+    // Set `isAsync = true` to indicate that this was async.
+    auto *callee = dyn_cast<ESTree::IdentifierNode>(callNode->_callee);
+    if (!isAsync && callNode->getParens() == 0 && callee &&
+        callee->_name == asyncIdent_) {
+      nodeList = std::move(callNode->_arguments);
+      isAsync = true;
+    } else {
+      error(node->getSourceRange(), "invalid arrow function parameter list");
+      return false;
+    }
   } else {
-    node->clearParens();
-    nodeList.push_back(*node);
+    if (node->getParens() != 1) {
+      error(node->getSourceRange(), "invalid arrow function parameter list");
+      return false;
+    }
+
+    if (auto *seqNode = dyn_cast<ESTree::SequenceExpressionNode>(node)) {
+      nodeList = std::move(seqNode->_expressions);
+    } else {
+      node->clearParens();
+      nodeList.push_back(*node);
+    }
   }
 
-  llvh::SaveAndRestore<bool> oldParamAwait(
-      paramAwait_, paramAwait_ || reparsedAsync);
+  llvh::SaveAndRestore<bool> oldParamAwait(paramAwait_, paramAwait_ || isAsync);
 
   // If the node has 0 parentheses, return true, otherwise print an error and
   // return false.
@@ -4789,9 +4798,9 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
           startLoc))
     return None;
 
-  bool reparsedAsync;
+  bool isAsync = forceAsync;
   ESTree::NodeList paramList;
-  if (!reparseArrowParameters(leftExpr, paramList, reparsedAsync))
+  if (!reparseArrowParameters(leftExpr, paramList, isAsync))
     return None;
 
   SaveStrictMode saveStrictMode{this};
@@ -4799,8 +4808,7 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
   bool expression;
 
   llvh::SaveAndRestore<bool> oldParamYield(paramYield_, false);
-  llvh::SaveAndRestore<bool> bodyParamAwait(
-      paramAwait_, forceAsync || reparsedAsync);
+  llvh::SaveAndRestore<bool> bodyParamAwait(paramAwait_, isAsync);
   if (check(TokenKind::l_brace)) {
     auto optBody = parseFunctionBody(Param{}, true, JSLexer::AllowDiv, true);
     if (!optBody)
@@ -4827,7 +4835,7 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
       returnType,
       predicate,
       expression,
-      forceAsync || reparsedAsync);
+      isAsync);
 
   arrow->strictness = ESTree::makeStrictness(isStrictMode());
   return setLocation(startLoc, getPrevTokenEndLoc(), arrow);
@@ -5166,11 +5174,11 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
   }
 
   SMLoc startLoc = tok_->getStartLoc();
-  bool isAsync = false;
+  bool forceAsync = false;
   if (check(asyncIdent_)) {
     OptValue<TokenKind> optNext = lexer_.lookahead1(TokenKind::identifier);
     if (optNext.hasValue() && *optNext == TokenKind::identifier) {
-      isAsync = true;
+      forceAsync = true;
     }
 #if HERMES_PARSE_FLOW
     if (context_.getParseFlow() && optNext.hasValue() &&
@@ -5293,7 +5301,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
         predicate,
         typeParams ? typeParams->getStartLoc() : startLoc,
         allowTypedArrowFunction,
-        isAsync);
+        forceAsync);
   }
 
 #if HERMES_PARSE_FLOW
