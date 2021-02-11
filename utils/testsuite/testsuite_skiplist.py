@@ -1698,7 +1698,6 @@ PERMANENT_SKIP_LIST = [
     "test262/test/language/literals/string/legacy-non-octal-escape-sequence-strict.js",
     "test262/test/language/literals/string/legacy-octal-escape-sequence-prologue-strict.js",
     "test262/test/annexB/language/expressions/object/__proto__-duplicate-computed.js",
-    "test262/test/annexB/language/literals/numeric/non-octal-decimal-integer.js",
     "test262/test/annexB/language/literals/regexp/class-escape.js",
     "test262/test/language/function-code/block-decl-onlystrict.js",
     "test262/test/language/function-code/switch-case-decl-onlystrict.js",

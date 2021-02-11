@@ -1404,7 +1404,10 @@ void JSLexer::scanNumber(GrammarContext grammarContext) {
     ++curCharPtr_;
   }
 
-  if (radix == 10) { // which means it is not necessarily an integer
+  if (radix == 10 || legacyOctal) {
+    // It is not necessarily an integer.
+    // We could have interpreted as legacyOctal initially but will have to
+    // change to decimal later.
     if (*curCharPtr_ == '.') {
       ++curCharPtr_;
       goto fraction;
@@ -1461,6 +1464,30 @@ end:
 
   double val;
 
+  /// ES6.0 B.1.1
+  /// If we encounter a "legacy" octal number (starting with a '0') but if
+  /// the integer contains '8' or '9' we interpret it as decimal.
+  const auto updateLegacyOctalRadix =
+      [this, &radix, start, &legacyOctal]() -> void {
+    assert(
+        legacyOctal &&
+        "updateLegacyOctalRadix can only be called in legacyOctal mode");
+    (void)legacyOctal;
+    for (auto *scanPtr = start; scanPtr != curCharPtr_; ++scanPtr) {
+      if (*scanPtr == '.' || *scanPtr == 'e') {
+        break;
+      }
+      if (LLVM_UNLIKELY(*scanPtr >= '8') && LLVM_LIKELY(*scanPtr != '_')) {
+        sm_.warning(
+            SMRange(token_.getStartLoc(), SMLoc::getFromPointer(curCharPtr_)),
+            "Numeric literal starts with 0 but contains an 8 or 9 digit. "
+            "Interpreting as decimal (not octal).");
+        radix = 10;
+        break;
+      }
+    }
+  };
+
   if (!ok) {
     errorRange(token_.getStartLoc(), "invalid numeric literal");
     val = std::numeric_limits<double>::quiet_NaN();
@@ -1474,6 +1501,29 @@ end:
       ival = ival * 10 + (*start - '0');
     val = ival;
   } else if (real || radix == 10) {
+    if (legacyOctal) {
+      if (strictMode_ || grammarContext == GrammarContext::Flow) {
+        if (!errorRange(
+                token_.getStartLoc(),
+                "Decimals with leading zeros are not allowed in strict mode")) {
+          val = std::numeric_limits<double>::quiet_NaN();
+          goto done;
+        }
+      } else {
+        // Check to see if we can actually scan this as radix 10.
+        // Non-integer numbers must be in base 10, otherwise we error.
+        updateLegacyOctalRadix();
+        if (LLVM_LIKELY(radix != 10)) {
+          if (!errorRange(
+                  token_.getStartLoc(),
+                  "Octal numeric literals must be integers")) {
+            val = std::numeric_limits<double>::quiet_NaN();
+            goto done;
+          }
+        }
+      }
+    }
+
     // We need a zero-terminated buffer for hermes_g_strtod().
     llvh::SmallString<32> buf;
     buf.reserve(curCharPtr_ - start + 1);
@@ -1535,21 +1585,7 @@ end:
     } else {
       // Parse the rest of the number:
       if (legacyOctal) {
-        // ES6.0 B.1.1
-        // If we encounter a "legacy" octal number (starting with a '0') but it
-        // contains '8' or '9' we interpret it as decimal.
-        for (auto *scanPtr = start; scanPtr < curCharPtr_; ++scanPtr) {
-          if (LLVM_UNLIKELY(*scanPtr >= '8') && LLVM_LIKELY(*scanPtr != '_')) {
-            sm_.warning(
-                SMRange(
-                    token_.getStartLoc(), SMLoc::getFromPointer(curCharPtr_)),
-                "Numeric literal starts with 0 but contains an 8 or 9 digit. "
-                "Interpreting as decimal (not octal).");
-            radix = 10;
-            break;
-          }
-        }
-
+        updateLegacyOctalRadix();
         // LegacyOctalLikeDecimalIntegerLiteral cannot contain separators.
         if (LLVM_UNLIKELY(seenSeparator)) {
           errorRange(

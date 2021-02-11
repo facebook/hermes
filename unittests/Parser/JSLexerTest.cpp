@@ -342,37 +342,87 @@ TEST(JSLexerTest, OctalLiteralTest) {
   SourceErrorManager sm;
   DiagContext diag(sm);
 
-  JSLexer lex("01 010 09 019 0o11 0O11", sm, alloc);
+  {
+    JSLexer lex("01 010 09 019 0o11 0O11", sm, alloc);
 
-  auto tok = lex.advance();
-  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
-  ASSERT_EQ(tok->getNumericLiteral(), 1.0);
+    auto tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(tok->getNumericLiteral(), 1.0);
 
-  tok = lex.advance();
-  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
-  ASSERT_EQ(tok->getNumericLiteral(), 8.0);
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(tok->getNumericLiteral(), 8.0);
 
-  ASSERT_EQ(diag.getWarnCountClear(), 0);
+    ASSERT_EQ(diag.getWarnCountClear(), 0);
 
-  tok = lex.advance();
-  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
-  ASSERT_EQ(tok->getNumericLiteral(), 9.0);
-  ASSERT_EQ(diag.getWarnCountClear(), 1);
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(tok->getNumericLiteral(), 9.0);
+    ASSERT_EQ(diag.getWarnCountClear(), 1);
 
-  tok = lex.advance();
-  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
-  ASSERT_EQ(tok->getNumericLiteral(), 19.0);
-  ASSERT_EQ(diag.getWarnCountClear(), 1);
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(tok->getNumericLiteral(), 19.0);
+    ASSERT_EQ(diag.getWarnCountClear(), 1);
 
-  tok = lex.advance();
-  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
-  ASSERT_EQ(tok->getNumericLiteral(), 9.0);
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(tok->getNumericLiteral(), 9.0);
 
-  tok = lex.advance();
-  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
-  ASSERT_EQ(tok->getNumericLiteral(), 9.0);
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(tok->getNumericLiteral(), 9.0);
 
-  ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+    ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+  }
+
+  {
+    JSLexer lex("08.1_1 07.11 07.9 08.9", sm, alloc);
+    lex.setStrictMode(false);
+
+    auto tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(tok->getNumericLiteral(), 8.11);
+    ASSERT_EQ(diag.getWarnCountClear(), 1);
+
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(diag.getErrCountClear(), 1);
+
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(diag.getErrCountClear(), 1);
+
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(tok->getNumericLiteral(), 8.9);
+    ASSERT_EQ(diag.getWarnCountClear(), 1);
+
+    ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+  }
+
+  {
+    JSLexer lex("08.1_1 07.11 07.9 08.9", sm, alloc);
+    lex.setStrictMode(true);
+
+    auto tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(diag.getErrCountClear(), 1);
+
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(diag.getErrCountClear(), 1);
+
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(diag.getErrCountClear(), 1);
+
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(diag.getErrCountClear(), 1);
+
+    ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+  }
 }
 
 #if HERMES_PARSE_FLOW
