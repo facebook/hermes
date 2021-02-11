@@ -64,6 +64,9 @@ class HermesToBabelAdapter extends HermesASTAdapter {
       case 'PrivateName':
       case 'ClassPrivateProperty':
         return this.mapPrivateProperty(node);
+      case 'FunctionDeclaration':
+      case 'FunctionExpression':
+        return this.mapFunction(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -318,6 +321,16 @@ class HermesToBabelAdapter extends HermesASTAdapter {
       },
       arguments: [this.mapNode(node.source)],
     };
+  }
+
+  mapFunction(node) {
+    // Remove the first parameter if it is a this-type annotation,
+    // which is not recognized by Babel.
+    if (node.params.length !== 0 && node.params[0].name === 'this') {
+      node.params.shift();
+    }
+
+    return this.mapNodeDefault(node);
   }
 }
 

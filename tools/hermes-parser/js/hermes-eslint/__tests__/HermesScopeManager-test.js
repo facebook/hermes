@@ -1312,3 +1312,75 @@ describe('FunctionExpression', () => {
     );
   });
 });
+
+describe('This type annotation', () => {
+  test('Is not treated as a parameter', () => {
+    verifyHasScopes(
+      `
+        function foo(this: string, param: number) {
+          return this;
+        }
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'foo',
+              type: DefinitionType.FunctionName,
+              referenceCount: 0,
+            },
+          ],
+        },
+        {
+          type: ScopeType.Function,
+          variables: [
+            {
+              name: 'arguments',
+              referenceCount: 0,
+            },
+            {
+              name: 'param',
+              referenceCount: 0,
+            },
+          ],
+        },
+      ],
+    );
+  });
+
+  test('Type annotation is still visited', () => {
+    verifyHasScopes(
+      `
+        type T = string;
+        function foo(this: T) {}
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'T',
+              type: DefinitionType.Type,
+              referenceCount: 1,
+            },
+            {
+              name: 'foo',
+              type: DefinitionType.FunctionName,
+              referenceCount: 0,
+            },
+          ],
+        },
+        {
+          type: ScopeType.Function,
+          variables: [
+            {
+              name: 'arguments',
+              referenceCount: 0,
+            },
+          ],
+        },
+      ],
+    );
+  });
+});

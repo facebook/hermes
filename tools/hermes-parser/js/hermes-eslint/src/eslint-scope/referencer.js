@@ -180,8 +180,6 @@ class Referencer extends esrecurse.Visitor {
   }
 
   visitFunction(node) {
-    let i, iz;
-
     // FunctionDeclaration name is defined in upper scope
     // NOTE: Not referring variableScope. It is intended.
     // Since
@@ -220,13 +218,13 @@ class Referencer extends esrecurse.Visitor {
 
     const that = this;
 
-    /**
-     * Visit pattern callback
-     * @param {pattern} pattern - pattern
-     * @param {Object} info - info
-     * @returns {void}
-     */
-    function visitPatternCallback(pattern, info) {
+    function visitPatternCallback(i, pattern, info) {
+      // If the first parameter for a function has name 'this' it is a Flow
+      // type annotation and not a parameter than can be referenced by name.
+      if (i === 0 && pattern.name === 'this') {
+        return;
+      }
+
       that
         .currentScope()
         .__define(
@@ -238,11 +236,11 @@ class Referencer extends esrecurse.Visitor {
     }
 
     // Process parameter declarations.
-    for (i = 0, iz = node.params.length; i < iz; ++i) {
+    for (let i = 0, iz = node.params.length; i < iz; ++i) {
       this.visitPattern(
         node.params[i],
         {visitAllNodes: true},
-        visitPatternCallback,
+        (pattern, info) => visitPatternCallback(i, pattern, info),
       );
     }
 

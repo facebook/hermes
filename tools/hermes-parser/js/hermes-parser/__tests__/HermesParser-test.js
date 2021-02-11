@@ -1556,3 +1556,92 @@ return 1
     ],
   });
 });
+
+describe('This type annotations', () => {
+  test('Removed in Babel mode', () => {
+    const params = [
+      {
+        type: 'Identifier',
+        name: 'param',
+        typeAnnotation: {
+          typeAnnotation: {type: 'NumberTypeAnnotation'},
+        },
+      },
+    ];
+
+    expect(
+      parse(
+        `
+          function f1(this: string, param: number) {}
+          (function f2(this: string, param: number) {});
+        `,
+        {babel: true},
+      ),
+    ).toMatchObject({
+      type: 'File',
+      program: {
+        type: 'Program',
+        body: [
+          {
+            type: 'FunctionDeclaration',
+            id: {name: 'f1'},
+            params,
+          },
+          {
+            type: 'ExpressionStatement',
+            expression: {
+              type: 'FunctionExpression',
+              id: {name: 'f2'},
+              params,
+            },
+          },
+        ],
+      },
+    });
+  });
+
+  test('Preserved in ESTree mode', () => {
+    const params = [
+      {
+        type: 'Identifier',
+        name: 'this',
+        typeAnnotation: {
+          typeAnnotation: {type: 'StringTypeAnnotation'},
+        },
+      },
+      {
+        type: 'Identifier',
+        name: 'param',
+        typeAnnotation: {
+          typeAnnotation: {type: 'NumberTypeAnnotation'},
+        },
+      },
+    ];
+
+    expect(
+      parse(
+        `
+          function f1(this: string, param: number) {}
+          (function f2(this: string, param: number) {});
+        `,
+      ),
+    ).toMatchObject({
+      type: 'Program',
+      body: [
+        {
+          type: 'FunctionDeclaration',
+          id: {name: 'f1'},
+          params,
+        },
+        {
+          type: 'ExpressionStatement',
+          expression: {
+            type: 'FunctionExpression',
+            id: {name: 'f2'},
+            params,
+          },
+        },
+      ],
+    });
+  });
+});
