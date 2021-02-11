@@ -1612,11 +1612,6 @@ SKIP_LIST = [
     # Potentially invalid JSX that is inconsistent across implementations.
     "flow/JSX/invalid_unpaired_gt.js",
     "flow/JSX/invalid_unpaired_rcurly.js",
-    # Boolean enum tests are out of date
-    "flow/comment_interning/enum_declaration.js",
-    "flow/enums/enum-boolean-member-not-initialized-implicit.js",
-    "flow/enums/enum-valid-boolean-explicit.js",
-    "flow/enums/enum-valid-boolean-implicit.js",
     ### Failing Flow tests end ###
 ]
 
