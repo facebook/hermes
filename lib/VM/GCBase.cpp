@@ -382,6 +382,20 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
     pointerAccept(slot->getPointer(), nullptr, true);
   }
 
+  void acceptSym(SymbolID sym, const char *name) override {
+    if (sym.isInvalid()) {
+      return;
+    }
+    auto nameRef = llvh::StringRef::withNullAsEmpty(name);
+    const auto id = gc_.getObjectID(sym);
+    if (!nameRef.empty()) {
+      snap_.addNamedEdge(HeapSnapshot::EdgeType::Internal, nameRef, id);
+    } else {
+      // Unnamed edges get indices.
+      snap_.addIndexedEdge(HeapSnapshot::EdgeType::Element, nextEdge_++, id);
+    }
+  }
+
   void provideSnapshot(
       const std::function<void(HeapSnapshot &)> &func) override {
     func(snap_);
