@@ -31,12 +31,20 @@ def isValueObject(v: str) -> bool:
     return v.startswith("object:")
 
 
+def isValuePropNameID(v: str) -> bool:
+    return v.startswith("propNameID:")
+
+
+def isValueString(v: str) -> bool:
+    return v.startswith("string:")
+
+
 def isValueNumber(v: str) -> bool:
     return v.startswith("number:")
 
 
 def parseObjectFromValue(v: str) -> int:
-    assert isValueObject(v)
+    assert isValueObject(v) or isValuePropNameID(v) or isValueString(v)
     parts = v.split(":")
     assert len(parts) == 2
     return int(parts[1])
@@ -53,6 +61,14 @@ def parseNumberFromValue(v: str) -> Union[int, float]:
 
 def createObject(objID: int) -> str:
     return "object:" + str(objID)
+
+
+def createPropNameID(propID: int) -> str:
+    return "propNameID:" + str(propID)
+
+
+def createString(stringID: int) -> str:
+    return "string:" + str(stringID)
 
 
 def createNumber(num: float) -> str:
@@ -82,6 +98,10 @@ class Normalizer:
     def normalize_value(self, v: str) -> str:
         if isValueObject(v):
             return createObject(self.normal[parseObjectFromValue(v)])
+        elif isValuePropNameID(v):
+            return createPropNameID(self.normal[parseObjectFromValue(v)])
+        elif isValueString(v):
+            return createString(self.normal[parseObjectFromValue(v)])
         elif self.convert_number and isValueNumber(v):
             return createNumber(parseNumberFromValue(v))
         else:
@@ -95,7 +115,14 @@ class Normalizer:
         # different value types:
         # * if it is another number it will cause a failure at runtime
         # * if it is a string it will cause a failure at parse time
-        OBJECT_HOLDING_KEYS = ["objID", "functionID", "hostObjectID", "propNamesID"]
+        OBJECT_HOLDING_KEYS = [
+            "objID",
+            "functionID",
+            "hostObjectID",
+            "propNamesID",
+            "propID",
+            "propNameID",
+        ]
         VALUE_HOLDING_KEYS = ["value", "retval"]
         for objkey in OBJECT_HOLDING_KEYS:
             if objkey in rec:
