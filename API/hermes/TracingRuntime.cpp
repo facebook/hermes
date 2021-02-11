@@ -622,7 +622,8 @@ namespace {
 void addRecordMarker(TracingRuntime &tracingRuntime) {
   jsi::Runtime &rt = tracingRuntime.plain();
   const char *funcName = "__nativeRecordTraceMarker";
-  if (tracingRuntime.global().hasProperty(tracingRuntime, funcName)) {
+  const auto funcProp = jsi::PropNameID::forAscii(tracingRuntime, funcName);
+  if (tracingRuntime.global().hasProperty(tracingRuntime, funcProp)) {
     // If this function is already defined, throw.
     throw jsi::JSINativeException(
         std::string("global.") + funcName +
@@ -630,10 +631,10 @@ void addRecordMarker(TracingRuntime &tracingRuntime) {
   }
   rt.global().setProperty(
       tracingRuntime,
-      funcName,
+      funcProp,
       jsi::Function::createFromHostFunction(
           tracingRuntime,
-          jsi::PropNameID::forAscii(tracingRuntime, funcName),
+          funcProp,
           0,
           [funcName, &tracingRuntime](
               jsi::Runtime &rt,
