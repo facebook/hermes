@@ -73,7 +73,7 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
   EXPECT_FALSE(gcconf.getAllocInYoung());
 
   EXPECT_EQ(rtconf.getMaxNumRegisters(), 100);
-  EXPECT_TRUE(rtconf.getES6Proxy());
+  EXPECT_FALSE(rtconf.getES6Proxy());
   EXPECT_FALSE(rtconf.getES6Symbol());
   EXPECT_FALSE(rtconf.getES6Intl());
   EXPECT_TRUE(rtconf.getEnableSampledStats());

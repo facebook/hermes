@@ -133,6 +133,12 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
   if (auto *maxNumRegisters = rtConfig->get("maxNumRegisters")) {
     conf.withMaxNumRegisters(getNumberAs<unsigned>(maxNumRegisters));
   }
+  if (auto *promise = rtConfig->get("ES6Promise")) {
+    conf.withES6Promise(llvh::cast<JSONBoolean>(promise)->getValue());
+  }
+  if (auto *proxy = rtConfig->get("ES6Proxy")) {
+    conf.withES6Proxy(llvh::cast<JSONBoolean>(proxy)->getValue());
+  }
   if (auto *symbol = rtConfig->get("ES6Symbol")) {
     conf.withES6Symbol(llvh::cast<JSONBoolean>(symbol)->getValue());
   }
