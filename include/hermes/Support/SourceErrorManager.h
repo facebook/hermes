@@ -27,6 +27,8 @@ using llvh::SMLoc;
 using llvh::SMRange;
 using llvh::Twine;
 
+class CollectMessagesRAII;
+
 /// Options for outputting errors
 struct SourceErrorOutputOptions {
   /// Determine whether errors should be colorized
@@ -201,6 +203,10 @@ class SourceErrorManager {
     unsigned firstNote_;
   };
 
+  /// If non-null, send messages to externalMessageBuffer_ instead of directly
+  /// to bufferedMessages_ or printing to screen.
+  CollectMessagesRAII *externalMessageBuffer_{nullptr};
+
   /// All buffered messages. This is empty if \c bufferingEnabled_ is zero.
   std::vector<BufferedMessage> bufferedMessages_{};
 
@@ -212,6 +218,7 @@ class SourceErrorManager {
 
   friend class SaveAndSuppressMessages;
   friend class SaveAndBufferMessages;
+  friend class CollectMessagesRAII;
 
   bool isWarningEnabled(Warning warning) {
     return warningStatuses_.test((unsigned)warning);
@@ -563,6 +570,9 @@ class SourceErrorManager {
   };
 
  private:
+  /// Increment the message counter and check if we've hit the error limit.
+  void countAndGenMessage(DiagKind dk, SMLoc loc, SMRange sm, const Twine &msg);
+
   /// Implementation of generating a message.
   void doGenMessage(DiagKind dk, SMLoc loc, SMRange sm, const Twine &msg);
 
@@ -578,6 +588,65 @@ class SourceErrorManager {
   /// Convert an index to a virtual buffer ID.
   unsigned indexToVirtualBufferId(unsigned index) const {
     return index | kVirtualBufIdTag;
+  }
+};
+
+/// RAII to enable message buffering and restore the previous state of
+/// buffering on destruction, while discarding messages on request.
+/// Enables the caller to decide whether or not to actually print the messages
+/// upon destruction while this class is alive.
+class CollectMessagesRAII {
+  SourceErrorManager *const sm_;
+  CollectMessagesRAII *oldExternalMessageBuffer_;
+
+  /// Whether to show or discard messages upon destruction.
+  bool discardMessages_;
+
+  class StoredMessage {
+   public:
+    SourceErrorManager::DiagKind dk;
+    SMLoc loc;
+    SMRange sm;
+    std::string msg;
+
+    StoredMessage(
+        SourceErrorManager::DiagKind dk,
+        SMLoc loc,
+        SMRange sm,
+        Twine const &msg)
+        : dk(dk), loc(loc), sm(sm), msg(msg.str()) {}
+  };
+
+  std::vector<StoredMessage> storage_{};
+
+ public:
+  CollectMessagesRAII(SourceErrorManager *sm, bool discardMessages)
+      : sm_(sm), discardMessages_(discardMessages) {
+    sm->enableBuffering();
+    oldExternalMessageBuffer_ = sm->externalMessageBuffer_;
+    sm->externalMessageBuffer_ = this;
+  }
+
+  ~CollectMessagesRAII() {
+    if (!discardMessages_) {
+      for (StoredMessage &msg : storage_) {
+        sm_->countAndGenMessage(msg.dk, msg.loc, msg.sm, std::move(msg.msg));
+      }
+    }
+    sm_->disableBuffering();
+    sm_->externalMessageBuffer_ = oldExternalMessageBuffer_;
+  }
+
+  void addMessage(
+      SourceErrorManager::DiagKind dk,
+      SMLoc loc,
+      SMRange sm,
+      Twine const &msg) {
+    storage_.emplace_back(dk, loc, sm, msg);
+  }
+
+  void setSuppressMessages(bool discardMessages) {
+    discardMessages_ = discardMessages;
   }
 };
 

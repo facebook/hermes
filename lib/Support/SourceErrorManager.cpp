@@ -122,6 +122,20 @@ void SourceErrorManager::dumpCoords(llvh::raw_ostream &OS, SMLoc loc) {
   dumpCoords(OS, coords);
 }
 
+void SourceErrorManager::countAndGenMessage(
+    DiagKind dk,
+    SMLoc loc,
+    SMRange sm,
+    const Twine &msg) {
+  ++messageCount_[dk];
+  doGenMessage(dk, loc, sm, msg);
+
+  if (LLVM_UNLIKELY(dk == DK_Error && messageCount_[DK_Error] == errorLimit_)) {
+    errorLimitReached_ = true;
+    doGenMessage(DK_Error, {}, {}, sTooManyErrors);
+  }
+}
+
 void SourceErrorManager::doGenMessage(
     hermes::SourceErrorManager::DiagKind dk,
     llvh::SMLoc loc,
@@ -194,13 +208,12 @@ void SourceErrorManager::message(
   }
   assert(static_cast<unsigned>(dk) < kMessageCountSize && "bounds check");
 
-  ++messageCount_[dk];
-  doGenMessage(dk, loc, sm, msg);
-
-  if (LLVM_UNLIKELY(dk == DK_Error && messageCount_[DK_Error] == errorLimit_)) {
-    errorLimitReached_ = true;
-    doGenMessage(DK_Error, {}, {}, sTooManyErrors);
+  if (externalMessageBuffer_) {
+    externalMessageBuffer_->addMessage(dk, loc, sm, msg);
+    return;
   }
+
+  countAndGenMessage(dk, loc, sm, msg);
 }
 
 void SourceErrorManager::message(

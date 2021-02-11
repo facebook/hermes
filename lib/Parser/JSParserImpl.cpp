@@ -5231,8 +5231,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
     JSLexer::SavePoint savePoint{&lexer_};
     // Suppress messages from the parser while still displaying lexer
     // messages.
-    SourceErrorManager::SaveAndSuppressMessages suppress{
-        &sm_, Subsystem::Parser};
+    CollectMessagesRAII suppress{&sm_, true};
     // Do as the flow parser does due to JSX ambiguities.
     // First we try and parse as an assignment expression disallowing
     // typed arrow functions. If that fails, then try again while allowing
@@ -5241,6 +5240,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
         param, AllowTypedArrowFunction::No, CoverTypedParameters::No, nullptr);
     if (optAssign) {
       // That worked, so just return it directly.
+      suppress.setSuppressMessages(false);
       return *optAssign;
     } else {
       // Consume the type parameters and try again.
@@ -5286,10 +5286,21 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
          isa<ESTree::CoverEmptyArgsNode>(*optLeftExpr)) &&
         check(TokenKind::colon)) {
       JSLexer::SavePoint savePoint{&lexer_};
-      // Suppress messages from the parser while still displaying lexer
-      // messages.
-      SourceErrorManager::SaveAndSuppressMessages suppress{
-          &sm_, Subsystem::Parser};
+      // Defer our decision on whether to show or suppress messages for this
+      // next section.
+      // If we are unsuccessful during the parse, it can mean that we need to
+      // start parsing JSX children inside tags, instead of function type
+      // parameters. We need to suppress lexer messages because the lexing rules
+      // inside JSX are quite different from JS/Flow.
+      // For example:
+      // x ? (1) : <tag>#{foo}</tag>;
+      //         ^
+      // and
+      // x ? (1) : <tag>"</tag>;
+      //         ^
+      // must be able to handle the lexer errors that would occur if we lexed
+      // the inside of the JSX tags as JS.
+      CollectMessagesRAII suppress{&sm_, true};
       SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
       bool startsWithPredicate = check(checksIdent_);
       auto optType = startsWithPredicate
@@ -5302,11 +5313,15 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
           assert(
               !startsWithPredicate && "no returnType if startsWithPredicate");
           // Done parsing the return type and predicate.
+          // Successful parse, show any messages that the lexer emitted.
+          suppress.setSuppressMessages(false);
         } else if (check(checksIdent_)) {
           auto optPred = parsePredicate();
           if (optPred && check(TokenKind::equalgreater)) {
             // Done parsing the return type and predicate.
             predicate = *optPred;
+            // Successful parse, show any messages that the lexer emitted.
+            suppress.setSuppressMessages(false);
           } else {
             savePoint.restore();
           }
