@@ -1344,11 +1344,9 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           auto &loopData = s->getLoop(loop->loopId);
           uint32_t iteration = loopData.iterations;
 
-          uint32_t loopTakenIp = s->ip_ + sizeof(BeginLoopInsn);
-          uint32_t loopNotTakenIp = loop->notTakenTarget;
+          const uint32_t loopTakenIp = s->ip_ + sizeof(BeginLoopInsn);
 
-          bool doLoopBody = iteration < loop->max;
-          bool doNotTaken = iteration >= loop->min;
+          assert(loop->min <= loop->max && "Inconsistent loop bounds");
 
           // Check to see if we have looped more than the minimum number of
           // iterations, and if so, whether the subexpression we looped over
@@ -1360,18 +1358,16 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
               loopData.entryPosition == c.offsetFromLeft())
             BACKTRACK();
 
-          if (!doLoopBody && !doNotTaken) {
-            BACKTRACK();
-          } else if (doLoopBody && !doNotTaken) {
+          if (iteration < loop->min) {
             if (!prepareToEnterLoopBody(s, loop, backtrackStack))
               return nullptr;
             s->ip_ = loopTakenIp;
-          } else if (doNotTaken && !doLoopBody) {
+          } else if (iteration == loop->max) {
             s->ip_ = loop->notTakenTarget;
           } else {
-            assert(
-                doNotTaken && doLoopBody &&
-                "Must be exploring loop not taken and body");
+            // We are within the target iteration range, figure out whether we
+            // should continue or exit.
+            assert(iteration >= loop->min && iteration < loop->max);
             if (!loop->greedy) {
               // Backtrack by entering this non-greedy loop.
               loopData.entryPosition = c.offsetFromLeft();
@@ -1387,7 +1383,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
               if (!pushBacktrack(
                       backtrackStack,
                       BacktrackInsn::makeSetPosition(
-                          loopNotTakenIp, c.currentPointer()))) {
+                          loop->notTakenTarget, c.currentPointer()))) {
                 error_ = MatchRuntimeErrorType::MaxStackDepth;
                 return nullptr;
               }
