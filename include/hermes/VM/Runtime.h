@@ -63,7 +63,8 @@ class JSONEmitter;
 
 namespace inst {
 struct Inst;
-}
+enum class OpCode : uint8_t;
+} // namespace inst
 
 namespace hbc {
 class BytecodeModule;
@@ -112,6 +113,88 @@ enum class PropCacheID {
 #undef V
       _COUNT
 };
+
+/// Trace of the last few instructions for debugging crashes.
+class CrashTraceImpl {
+  /// Record of the last executed instruction.
+  struct Record {
+    /// Offset from start of bytecode file.
+    uint32_t ipOffset;
+    /// Opcode of last executed instruction.
+    inst::OpCode opCode;
+  };
+
+ public:
+  /// Record the currently executing module, replacing the info of the
+  /// previous one.
+  inline void recordModule(
+      uint32_t segmentID,
+      llvh::StringRef sourceURL,
+      llvh::StringRef sourceHash);
+
+  /// Add a record to the circular trace buffer.
+  void recordInst(uint32_t ipOffset, inst::OpCode opCode) {
+    static_assert(
+        kTraceLength && (kTraceLength & (kTraceLength - 1)) == 0,
+        "kTraceLength must be a power of 2");
+    unsigned n = (last_ + 1) & (kTraceLength - 1);
+    last_ = n;
+    Record *p = trace_ + n;
+    p->ipOffset = ipOffset;
+    p->opCode = opCode;
+  }
+
+ private:
+  /// Size of the circular buffer.
+  static constexpr unsigned kTraceLength = 8;
+  /// The index of the last entry written to the buffer.
+  unsigned last_ = kTraceLength - 1;
+  /// A circular buffer of Record.
+  Record trace_[kTraceLength] = {};
+
+  /// Current segmentID.
+  uint32_t segmentID_ = 0;
+  /// Source URL, truncated, zero terminated.
+  char sourceURL_[16] = {};
+  /// SHA1 source hash.
+  uint8_t sourceHash_[20] = {};
+};
+
+inline void CrashTraceImpl::recordModule(
+    uint32_t segmentID,
+    llvh::StringRef sourceURL,
+    llvh::StringRef sourceHash) {
+  segmentID_ = segmentID;
+  size_t len = std::min(sizeof(sourceURL_) - 1, sourceURL.size());
+  ::memcpy(sourceURL_, sourceURL.data(), len);
+  sourceURL_[len] = 0;
+  ::memcpy(
+      sourceHash_,
+      sourceHash.data(),
+      std::min(sizeof(sourceHash_), sourceHash.size()));
+}
+
+class CrashTraceNoop {
+ public:
+  void recordModule(
+      uint32_t segmentID,
+      llvh::StringRef sourceURL,
+      llvh::StringRef sourceHash) {}
+
+  /// Add a record to the circular trace buffer.
+  void recordInst(uint32_t ipOffset, inst::OpCode opCode) {}
+};
+
+#ifndef HERMESVM_CRASH_TRACE
+// Make sure it is 0 or 1 so it can be checked in C++.
+#define HERMESVM_CRASH_TRACE 0
+#endif
+
+#if HERMESVM_CRASH_TRACE
+using CrashTrace = CrashTraceImpl;
+#else
+using CrashTrace = CrashTraceNoop;
+#endif
 
 /// The Runtime encapsulates the entire context of a VM. Multiple instances can
 /// exist and are completely independent from each other.
@@ -1092,6 +1175,9 @@ class Runtime : public HandleRootOwner,
   /// A list of all active runtime modules. Each \c RuntimeModule adds itself
   /// on construction and removes itself on destruction.
   RuntimeModuleList runtimeModuleList_{};
+
+  /// Optional record of the last few executed bytecodes in case of a crash.
+  CrashTrace crashTrace_{};
 
   /// @name Private VM State
   /// @{

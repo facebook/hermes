@@ -124,10 +124,19 @@ static const WrapperFunc interpWrappers[] = {PROFILER_SYMBOLS(LIST_ITEM)};
 
 /// Initialize the state of some internal variables based on the current
 /// code block.
-#define INIT_STATE_FOR_CODEBLOCK(codeBlock)                 \
-  do {                                                      \
-    strictMode = (codeBlock)->isStrictMode();               \
-    defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode); \
+#define INIT_STATE_FOR_CODEBLOCK(codeBlock)                      \
+  do {                                                           \
+    strictMode = (codeBlock)->isStrictMode();                    \
+    defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);      \
+    if (EnableCrashTrace) {                                      \
+      auto *bc = (codeBlock)->getRuntimeModule()->getBytecode(); \
+      bytecodeFileStart = bc->getRawBuffer().data();             \
+      auto hash = bc->getSourceHash();                           \
+      runtime->crashTrace_.recordModule(                         \
+          bc->getSegmentID(),                                    \
+          (codeBlock)->getRuntimeModule()->getSourceURL(),       \
+          llvh::StringRef((const char *)&hash, sizeof(hash)));   \
+    }                                                            \
   } while (0)
 
 CallResult<PseudoHandle<JSGenerator>> Interpreter::createGenerator_RJS(
@@ -801,7 +810,12 @@ CallResult<HermesValue> Runtime::interpretFunctionImpl(
 #endif
 
   InterpreterState state{newCodeBlock, 0};
-  return Interpreter::interpretFunction<false>(this, state);
+  if (HERMESVM_CRASH_TRACE &&
+      (getVMExperimentFlags() & experiments::CrashTrace)) {
+    return Interpreter::interpretFunction<false, true>(this, state);
+  } else {
+    return Interpreter::interpretFunction<false, false>(this, state);
+  }
 }
 
 CallResult<HermesValue> Runtime::interpretFunction(CodeBlock *newCodeBlock) {
@@ -818,7 +832,11 @@ CallResult<HermesValue> Runtime::interpretFunction(CodeBlock *newCodeBlock) {
 
 #ifdef HERMES_ENABLE_DEBUGGER
 ExecutionStatus Runtime::stepFunction(InterpreterState &state) {
-  return Interpreter::interpretFunction<true>(this, state).getStatus();
+  if (HERMESVM_CRASH_TRACE &&
+      (getVMExperimentFlags() & experiments::CrashTrace))
+    return Interpreter::interpretFunction<true, true>(this, state).getStatus();
+  else
+    return Interpreter::interpretFunction<true, false>(this, state).getStatus();
 }
 #endif
 
@@ -845,7 +863,7 @@ static inline double doSub(double x, double y) {
   return x - y;
 }
 
-template <bool SingleStep>
+template <bool SingleStep, bool EnableCrashTrace>
 CallResult<HermesValue> Interpreter::interpretFunction(
     Runtime *runtime,
     InterpreterState &state) {
@@ -971,6 +989,8 @@ CallResult<HermesValue> Interpreter::interpretFunction(
   CallResult<PseudoHandle<>> resPH{ExecutionStatus::EXCEPTION};
   CallResult<Handle<Arguments>> resArgs{ExecutionStatus::EXCEPTION};
   CallResult<bool> boolRes{ExecutionStatus::EXCEPTION};
+  // Start of the bytecode file, used to calculate IP offset in crash traces.
+  const uint8_t *bytecodeFileStart;
 
   // Mark the gcScope so we can clear all allocated handles.
   // Remember how many handles the scope has so we can clear them in the loop.
@@ -1072,6 +1092,10 @@ tailCall:
     HERMES_SLOW_ASSERT(tmpHandle->isUndefined() && "tmpHandle not cleared"); \
     RECORD_OPCODE_START_TIME;                                                \
     INC_OPCODE_COUNT;                                                        \
+    if (EnableCrashTrace) {                                                  \
+      runtime->crashTrace_.recordInst(                                       \
+          (uint32_t)((const uint8_t *)ip - bytecodeFileStart), ip->opCode);  \
+    }                                                                        \
   }
 
 #ifdef HERMESVM_INDIRECT_THREADING

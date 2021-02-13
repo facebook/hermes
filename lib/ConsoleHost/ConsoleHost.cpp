@@ -466,6 +466,8 @@ bool executeHBCBytecodeImpl(
   }
 
   llvh::StringRef sourceURL{};
+  if (filename)
+    sourceURL = *filename;
   vm::CallResult<vm::HermesValue> status = runtime->runBytecode(
       std::move(bytecode),
       flags,

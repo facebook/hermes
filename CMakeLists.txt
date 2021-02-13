@@ -140,6 +140,9 @@ set(HERMESVM_API_TRACE_ANDROID_REPLAY OFF CACHE BOOL
 set(HERMESVM_SANITIZE_HANDLES OFF CACHE BOOL
   "Enable Handle sanitization")
 
+set(HERMESVM_CRASH_TRACE OFF CACHE BOOL
+  "Enable recording of instructions for crash debugging depending on VMExperiments")
+
 # Enable Address Sanitizer
 set(HERMES_ENABLE_ADDRESS_SANITIZER OFF CACHE BOOL
   "Enable -fsanitize=address")
@@ -354,6 +357,9 @@ if(HERMESVM_API_TRACE_ANDROID_REPLAY)
 endif()
 if(HERMESVM_SANITIZE_HANDLES)
     add_definitions(-DHERMESVM_SANITIZE_HANDLES)
+endif()
+if(HERMESVM_CRASH_TRACE)
+    add_definitions(-DHERMESVM_CRASH_TRACE=1)
 endif()
 if (HERMES_ENABLE_ADDRESS_SANITIZER)
     append("-fsanitize=address" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)

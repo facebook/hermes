@@ -28,6 +28,7 @@ enum {
   HadesCompaction = 1 << 10,
   Hades = 1 << 11,
   HadesTimedIncremental = 1 << 12,
+  CrashTrace = 1 << 13,
 };
 
 /// Set of flags for active VM experiments.
