@@ -471,6 +471,34 @@ static std::string mergeGCStats(const std::vector<std::string> &repGCStats) {
   return *valueAndStats[median].second;
 }
 
+#ifndef NDEBUG
+/// Assert that \p val seen at replay matches the recorded \p traceValue
+void assertMatch(const SynthTrace::TraceValue &traceValue, const Value &val) {
+  if (traceValue.isUndefined()) {
+    assert(val.isUndefined() && "type mismatch between trace and replay");
+  } else if (traceValue.isNull()) {
+    assert(val.isNull() && "type mismatch between trace and replay");
+  } else if (traceValue.isBool()) {
+    assert(val.isBool() && "type mismatch between trace and replay");
+    assert(
+        val.getBool() == traceValue.getBool() &&
+        "value mismatch between trace and replay");
+  } else if (traceValue.isNumber()) {
+    assert(val.isNumber() && "type mismatch between trace and replay");
+    // Bitwise comparison to avoid issues with negative zero and NaN.
+    double valNum = val.getNumber();
+    double traceValueNum = traceValue.getNumber();
+    assert(
+        memcmp(&valNum, &traceValueNum, sizeof(valNum)) == 0 &&
+        "value mismatch between trace and replay");
+  } else if (traceValue.isString()) {
+    assert(val.isString() && "type mismatch between trace and replay");
+  } else if (traceValue.isObject()) {
+    assert(val.isObject() && "type mismatch between trace and replay");
+  }
+}
+#endif
+
 } // namespace
 
 TraceInterpreter::TraceInterpreter(
@@ -1062,21 +1090,12 @@ Value TraceInterpreter::execFunction(
           case RecordType::EndExecJS: {
             const auto &eejsr =
                 dynamic_cast<const SynthTrace::EndExecJSRecord &>(*rec);
-            if (!ifObjectAddToDefs(
-                    eejsr.retVal_,
-                    std::move(overallRetval),
-                    call,
-                    globalRecordNum,
-                    locals)) {
-              assert(
-                  !(overallRetval.isObject() || overallRetval.isString()) &&
-                  "Trace expects non-object but actual return was an object");
-              auto v =
-                  traceValueToJSIValue(rt_, trace_, nullptr, eejsr.retVal_);
-              assert(
-                  Value::strictEquals(rt_, v, overallRetval) &&
-                  "evaluateJavaScript() retval does not match trace");
-            }
+            ifObjectAddToDefs(
+                eejsr.retVal_,
+                std::move(overallRetval),
+                call,
+                globalRecordNum,
+                locals);
             LLVM_FALLTHROUGH;
           }
           case RecordType::Marker: {
@@ -1204,7 +1223,7 @@ Value TraceInterpreter::execFunction(
 #endif
               value = obj.getProperty(rt_, propNameID);
             }
-            (void)ifObjectAddToDefs(
+            ifObjectAddToDefs(
                 gpr.value_, std::move(value), call, globalRecordNum, locals);
             break;
           }
@@ -1288,7 +1307,7 @@ Value TraceInterpreter::execFunction(
             auto value = getObjForUse(arr.objID_)
                              .asArray(rt_)
                              .getValueAtIndex(rt_, arr.index_);
-            (void)ifObjectAddToDefs(
+            ifObjectAddToDefs(
                 arr.value_, std::move(value), call, globalRecordNum, locals);
             break;
           }
@@ -1361,7 +1380,7 @@ Value TraceInterpreter::execFunction(
           case RecordType::ReturnToNative: {
             const auto &rtnr =
                 dynamic_cast<const SynthTrace::ReturnToNativeRecord &>(*rec);
-            (void)ifObjectAddToDefs(
+            ifObjectAddToDefs(
                 rtnr.retVal_, std::move(retval), call, globalRecordNum, locals);
             // If the return value wasn't an object, it can be ignored.
             break;
@@ -1370,19 +1389,20 @@ Value TraceInterpreter::execFunction(
             const auto &ctnr =
                 static_cast<const SynthTrace::CallToNativeRecord &>(*rec);
             // Associate the this arg with its object id.
-            (void)ifObjectAddToDefs(
+            ifObjectAddToDefs(
                 ctnr.thisArg_,
                 std::move(thisVal),
                 call,
                 globalRecordNum,
-                locals);
+                locals,
+                /* isThis = */ true);
             // Associate each argument with its object id.
             assert(
                 ctnr.args_.size() == count &&
                 "Called at runtime with a different number of args than "
                 "the trace expected");
             for (uint64_t i = 0; i < ctnr.args_.size(); ++i) {
-              (void)ifObjectAddToDefs(
+              ifObjectAddToDefs(
                   ctnr.args_[i],
                   std::move(args[i]),
                   call,
@@ -1434,7 +1454,7 @@ Value TraceInterpreter::execFunction(
                 pniLocals);
             // Associate the single argument with its object id (if it's an
             // object).
-            (void)ifObjectAddToDefs(
+            ifObjectAddToDefs(
                 spnr.value_, std::move(args[0]), call, globalRecordNum, locals);
             break;
           }
@@ -1539,30 +1559,34 @@ void TraceInterpreter::addValueToDefs(
       call, valID, globalRecordNum, ValueType{rt_, valRef}, locals, globals);
 }
 
-bool TraceInterpreter::ifObjectAddToDefs(
+void TraceInterpreter::ifObjectAddToDefs(
     const SynthTrace::TraceValue &traceValue,
     Value &&val,
     const Call &call,
     uint64_t globalRecordNum,
-    std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals) {
-  SynthTrace::ObjectID objID;
-  if (traceValue.isObject() || traceValue.isString()) {
-    objID = traceValue.getUID();
-  } else {
-    return false;
+    std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals,
+    bool isThis) {
+#ifndef NDEBUG
+  // TODO(T84791675): Include 'this' once all traces are correctly recording it.
+  if (!isThis) {
+    assertMatch(traceValue, val);
   }
-  addJSIValueToDefs(call, objID, globalRecordNum, std::move(val), locals);
-  return true;
+#endif
+  if (traceValue.isObject() || traceValue.isString()) {
+    addJSIValueToDefs(
+        call, traceValue.getUID(), globalRecordNum, std::move(val), locals);
+  }
 }
 
-bool TraceInterpreter::ifObjectAddToDefs(
+void TraceInterpreter::ifObjectAddToDefs(
     const SynthTrace::TraceValue &traceValue,
     const Value &val,
     const Call &call,
     uint64_t globalRecordNum,
-    std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals) {
-  return ifObjectAddToDefs(
-      traceValue, Value{rt_, val}, call, globalRecordNum, locals);
+    std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals,
+    bool isThis) {
+  ifObjectAddToDefs(
+      traceValue, Value{rt_, val}, call, globalRecordNum, locals, isThis);
 }
 
 void TraceInterpreter::checkMarker(const std::string &marker) {

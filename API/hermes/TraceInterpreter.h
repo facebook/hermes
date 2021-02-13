@@ -380,20 +380,28 @@ class TraceInterpreter final {
   /// val to be of the corresponding runtime type.  Adds this
   /// occurrence at \p globalRecordNum as a local or global definition
   /// in \p locals or the global object map, respectively.
-  bool ifObjectAddToDefs(
+  ///
+  /// \p isThis should be true if and only if the value is a 'this' in a call
+  /// (only used for validation). TODO(T84791675): Remove this parameter.
+  ///
+  /// N.B. This method should be called even if you happen to know that the
+  /// value cannot be an Object or String, since it performs useful validation.
+  void ifObjectAddToDefs(
       const SynthTrace::TraceValue &traceValue,
       const jsi::Value &val,
       const Call &call,
       uint64_t globalRecordNum,
-      std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals);
+      std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals,
+      bool isThis = false);
 
   /// Same as above, except it avoids copies on temporary objects.
-  bool ifObjectAddToDefs(
+  void ifObjectAddToDefs(
       const SynthTrace::TraceValue &traceValue,
       jsi::Value &&val,
       const Call &call,
       uint64_t globalRecordNum,
-      std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals);
+      std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals,
+      bool isThis = false);
 
   /// Check if the \p marker is the one that is being searched for. If this is
   /// the first time encountering the matching marker, perform the actions set
