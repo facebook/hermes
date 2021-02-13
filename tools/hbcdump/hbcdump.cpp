@@ -159,6 +159,9 @@ static void printHelp(llvh::Optional<llvh::StringRef> command = llvh::None) {
       {"at-virtual",
        "Display information about the function at a given virtual offset.\n\n"
        "USAGE: at-virtual <OFFSET>\n"},
+      {"at-offset",
+       "Display information about the function at a given file offset.\n\n"
+       "USAGE: at-offset <OFFSET>\n"},
       {"help",
        "Help instructions for hbcdump tool commands.\n\n"
        "USAGE: help <COMMAND>\n"
@@ -401,6 +404,24 @@ static bool executeCommand(
         analyzer.dumpFunctionInfo(*funcId, json);
       } else {
         os << "Virtual offset " << virtualOffset << " is invalid.\n";
+      }
+    } else {
+      printHelp(command);
+      return false;
+    }
+  } else if (command == "at_offset" || command == "at-offset") {
+    JSONEmitter json(os, /* pretty */ true);
+    if (commandTokens.size() == 2) {
+      uint32_t offset;
+      if (commandTokens[1].getAsInteger(0, offset)) {
+        os << "Error: cannot parse offset as integer.\n";
+        return false;
+      }
+      auto funcId = analyzer.getFunctionFromOffset(offset);
+      if (funcId.hasValue()) {
+        analyzer.dumpFunctionInfo(*funcId, json);
+      } else {
+        os << "Offset " << offset << " is invalid.\n";
       }
     } else {
       printHelp(command);
