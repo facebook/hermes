@@ -1012,6 +1012,59 @@ class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
   HadesGC &gc_;
 };
 
+class HadesGC::Executor {
+ public:
+  Executor() : thread_([this] { worker(); }) {}
+  ~Executor() {
+    {
+      std::lock_guard<std::mutex> lk(mtx_);
+      shutdown_ = true;
+      cv_.notify_one();
+    }
+    thread_.join();
+  }
+
+  std::future<void> add(std::function<void()> fn) {
+    std::lock_guard<std::mutex> lk(mtx_);
+    // Use a shared_ptr because we cannot std::move the promise into the
+    // lambda in C++11.
+    auto promise = std::make_shared<std::promise<void>>();
+    auto ret = promise->get_future();
+    queue_.push_back([promise, fn] {
+      fn();
+      promise->set_value();
+    });
+    cv_.notify_one();
+    return ret;
+  }
+
+  std::thread::id getThreadId() const {
+    return thread_.get_id();
+  }
+
+ private:
+  void worker() {
+    oscompat::set_thread_name("hades");
+    std::unique_lock<std::mutex> lk(mtx_);
+    while (!shutdown_) {
+      cv_.wait(lk, [this]() { return !queue_.empty() || shutdown_; });
+      while (!queue_.empty()) {
+        auto fn = std::move(queue_.front());
+        queue_.pop_front();
+        lk.unlock();
+        fn();
+        lk.lock();
+      }
+    }
+  }
+
+  std::mutex mtx_;
+  std::condition_variable cv_;
+  std::deque<std::function<void()>> queue_;
+  bool shutdown_{false};
+  std::thread thread_;
+};
+
 bool HadesGC::OldGen::sweepNext() {
   // Check if there are any more segments to sweep. Note that in the case where
   // OG has zero segments, this also skips updating the stats and survival ratio
@@ -1202,6 +1255,8 @@ HadesGC::HadesGC(
           2 * AlignedStorage::size())},
       provider_(std::move(provider)),
       oldGen_{this},
+      backgroundExecutor_{
+          kConcurrentGC ? llvh::make_unique<Executor>() : nullptr},
       promoteYGToOG_{!gcConfig.getAllocInYoung()},
       revertToYGAtTTI_{gcConfig.getRevertToYGAtTTI()},
       occupancyTarget_(gcConfig.getOccupancyTarget()),
@@ -1244,9 +1299,6 @@ HadesGC::~HadesGC() {
   assert(
       concurrentPhase_ == Phase::None &&
       "Must call finalizeAll before destructor.");
-  if (oldGenCollectionThread_.joinable()) {
-    oldGenCollectionThread_.join();
-  }
 }
 
 uint32_t HadesGC::minAllocationSize() {
@@ -1409,7 +1461,7 @@ void HadesGC::waitForCollectionToFinish() {
   std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
   lk.unlock();
   // Wait for the collection to finish.
-  oldGenCollectionThread_.join();
+  ogThreadStatus_.get();
   lk.lock();
   assert(concurrentPhase_ == Phase::None);
   // Check for a tripwire, since we know a collection just completed.
@@ -1431,11 +1483,11 @@ void HadesGC::oldGenCollection(std::string cause) {
   assert(
       concurrentPhase_ == Phase::None &&
       "Starting a second old gen collection");
-  if (oldGenCollectionThread_.joinable()) {
-    // This is just making sure the leftover thread is completed before starting
-    // a new one. Since concurrentPhase_ == None here, there is no collection
-    // ongoing.
-    oldGenCollectionThread_.join();
+  if (ogThreadStatus_.valid()) {
+    // This is just making sure that any leftover work is completed before
+    // starting a new collection. Since concurrentPhase_ == None here, there is
+    // no collection ongoing.
+    ogThreadStatus_.get();
   }
   // We know ygCollectionStats_ exists because oldGenCollection is only called
   // by youngGenCollection.
@@ -1505,10 +1557,6 @@ void HadesGC::oldGenCollection(std::string cause) {
   // from the heap.
   oldGen_.initializeSweep();
 
-  // NOTE: Since the "this" value (the HadesGC instance) is implicitly copied to
-  // the new thread, the GC cannot be destructed until the new thread completes.
-  // This means that before destroying the GC, waitForCollectionToFinish must
-  // be called.
   if (!kConcurrentGC) {
     // 32-bit system: 64-bit HermesValues cannot be updated in one atomic
     // instruction. Have YG collections interleave marking work.
@@ -1524,16 +1572,16 @@ void HadesGC::oldGenCollection(std::string cause) {
   ogCollectionStats_->endCPUTimeSection();
   // 64-bit system: 64-bit HermesValues can be updated in one atomic
   // instruction. Start up a separate thread for doing marking work.
-  // NOTE: Since the "this" value (the HadesGC instance) is implicitly copied
-  // to the new thread, the GC cannot be destructed until the new thread
-  // completes. This means that before destroying the GC,
-  // waitForCollectionToFinish must be called.
-  oldGenCollectionThread_ = std::thread(&HadesGC::oldGenCollectionWorker, this);
+  // NOTE: Since the "this" value (the HadesGC instance) is copied to the
+  // executor, the GC cannot be destructed until the new thread completes. This
+  // means that before destroying the GC, waitForCollectionToFinish must be
+  // called.
+  ogThreadStatus_ =
+      backgroundExecutor_->add([this] { HadesGC::oldGenCollectionWorker(); });
   // Use concurrentPhase_ to be able to tell when the collection finishes.
 }
 
 void HadesGC::oldGenCollectionWorker() {
-  oscompat::set_thread_name("hades");
   {
     std::lock_guard<Mutex> lk(gcMutex_);
     ogCollectionStats_->beginCPUTimeSection();
@@ -2001,6 +2049,13 @@ void HadesGC::ttiReached() {
 }
 
 #ifndef NDEBUG
+
+bool HadesGC::calledByBackgroundThread() const {
+  // If the background thread is active, check if this thread matches the
+  // background thread.
+  return kConcurrentGC &&
+      backgroundExecutor_->getThreadId() == std::this_thread::get_id();
+}
 
 bool HadesGC::validPointer(const void *p) const {
   return dbgContains(p) && static_cast<const GCCell *>(p)->isValid();

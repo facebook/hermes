@@ -22,6 +22,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <deque>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -203,12 +204,7 @@ class HadesGC final : public GCBase {
   /// \name Debug APIs
   /// \{
 
-  bool calledByBackgroundThread() const override {
-    // If the background thread is active, check if this thread matches the
-    // background thread.
-    return kConcurrentGC &&
-        oldGenCollectionThread_.get_id() == std::this_thread::get_id();
-  }
+  bool calledByBackgroundThread() const override;
 
   /// See comment in GCBase.
   bool calledByGC() const override {
@@ -244,6 +240,7 @@ class HadesGC final : public GCBase {
   class MarkAcceptor;
   class MarkWeakRootsAcceptor;
   class OldGen;
+  class Executor;
 
   /// Similar to AlignedHeapSegment except it uses a free list.
   class HeapSegment final : public AlignedHeapSegment {
@@ -600,11 +597,15 @@ class HadesGC final : public GCBase {
   /// Protected by gcMutex_.
   std::unique_ptr<MarkAcceptor> oldGenMarker_;
 
-  /// This is the background thread that does marking and sweeping concurrently
-  /// with the mutator.
-  /// It should only be joined via \c waitForCollectionToFinish, which ensures
-  /// that the STW pause handling is done correctly.
-  std::thread oldGenCollectionThread_;
+  /// This provides the background thread for doing marking and sweeping
+  /// concurrently with the mutator.
+  std::unique_ptr<Executor> backgroundExecutor_;
+
+  /// This tracks the current status of execution in the background thread. The
+  /// future should be set every time work is enqueued onto the executor. After
+  /// that, whenever we need to wait for execution in the background thread to
+  /// end, we can call get() on this future.
+  std::future<void> ogThreadStatus_;
 
   /// This condition variable is used for synchronising the STW pause
   /// between the mutator and the background thread. When it is time for the STW
