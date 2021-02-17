@@ -11,7 +11,7 @@ project and ensure that the code base remains readable and maintainable.
 
 ### Language Features
 
-Hermes uses C++11.
+Hermes uses C++14.
 
 Exceptions or RTTI are prohibited, except where needed for
 interfacing with other software that requires them.
