@@ -1010,9 +1010,9 @@ class GCBase {
 #endif
 
 #ifdef HERMESVM_GC_RUNTIME
-  static uint32_t minAllocationSize();
+  inline static constexpr uint32_t minAllocationSize();
 
-  static constexpr uint32_t maxAllocationSize();
+  inline static constexpr uint32_t maxAllocationSize();
 #endif
 
   /// Dump detailed heap contents to the given output stream, \p os.

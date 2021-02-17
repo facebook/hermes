@@ -94,13 +94,6 @@ GCBase::GCBase(
 #endif
 }
 
-#ifdef HERMESVM_GC_RUNTIME
-/* static */
-uint32_t GCBase::minAllocationSize() {
-  return std::max({GenGC::minAllocationSize(), HadesGC::minAllocationSize()});
-}
-#endif
-
 GCBase::GCCycle::GCCycle(
     GCBase *gc,
     OptValue<GCCallbacks *> gcCallbacksOpt,

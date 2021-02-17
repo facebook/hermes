@@ -80,6 +80,11 @@ constexpr uint32_t GCBase::maxAllocationSize() {
   // Return the lesser of the two GC options' max allowed sizes.
   return min(HadesGC::maxAllocationSize(), GenGC::maxAllocationSize());
 }
+
+constexpr uint32_t GCBase::minAllocationSize() {
+  // Return the greater of the two GC options' min allowed sizes.
+  return max(HadesGC::minAllocationSize(), GenGC::minAllocationSize());
+}
 #endif
 
 template <typename Acceptor>
