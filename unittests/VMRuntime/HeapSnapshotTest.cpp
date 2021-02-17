@@ -914,6 +914,92 @@ TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
           0));
 }
 
+TEST_F(HeapSnapshotRuntimeTest, PropertyUpdatesTest) {
+  JSONFactory::Allocator alloc;
+  JSONFactory jsonFactory{alloc};
+  Handle<JSObject> obj = runtime->makeHandle(JSObject::create(runtime));
+  SymbolID fooSym, barSym;
+  {
+    vm::GCScope gcScope(runtime);
+    fooSym = vm::stringToSymbolID(
+                 runtime, vm::StringPrimitive::createNoThrow(runtime, "foo"))
+                 ->getHermesValue()
+                 .getSymbol();
+    barSym = vm::stringToSymbolID(
+                 runtime, vm::StringPrimitive::createNoThrow(runtime, "bar"))
+                 ->getHermesValue()
+                 .getSymbol();
+  }
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+  // Add two properties to the hidden class chain.
+  ASSERT_FALSE(isException(JSObject::defineOwnProperty(
+      obj,
+      runtime,
+      fooSym,
+      dpf,
+      runtime->makeHandle(HermesValue::encodeNumberValue(100)))));
+  ASSERT_FALSE(isException(JSObject::defineOwnProperty(
+      obj,
+      runtime,
+      barSym,
+      dpf,
+      runtime->makeHandle(HermesValue::encodeNumberValue(200)))));
+  // Trigger update transitions for both properties.
+  dpf.writable = false;
+  ASSERT_FALSE(isException(JSObject::defineOwnProperty(
+      obj,
+      runtime,
+      fooSym,
+      dpf,
+      runtime->makeHandle(HermesValue::encodeNumberValue(100)))));
+  ASSERT_FALSE(isException(JSObject::defineOwnProperty(
+      obj,
+      runtime,
+      barSym,
+      dpf,
+      runtime->makeHandle(HermesValue::encodeNumberValue(200)))));
+  // Forcibly clear the final hidden class's property map.
+  auto *clazz = obj->getClass(runtime);
+  clazz->clearPropertyMap(&runtime->getHeap());
+
+  JSONObject *root = TAKE_SNAPSHOT(runtime->getHeap(), jsonFactory);
+  ASSERT_NE(root, nullptr);
+  const JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
+  const JSONArray &edges = *llvh::cast<JSONArray>(root->at("edges"));
+  const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
+
+  const auto objID = runtime->getHeap().getObjectID(obj.get());
+  auto nodesAndEdges = FIND_NODE_AND_EDGES_FOR_ID(objID, nodes, edges, strings);
+
+  const auto FIRST_NAMED_PROPERTY_EDGE =
+      // parent, __proto__, class, directProp$i
+      JSObject::DIRECT_PROPERTY_SLOTS + 3;
+
+  EXPECT_EQ(
+      nodesAndEdges.first,
+      Node(
+          HeapSnapshot::NodeType::Object,
+          "Object(foo, bar)",
+          objID,
+          obj->getAllocatedSize(),
+          FIRST_NAMED_PROPERTY_EDGE + 2));
+  EXPECT_EQ(nodesAndEdges.second.size(), FIRST_NAMED_PROPERTY_EDGE + 2);
+
+  EXPECT_EQ(
+      nodesAndEdges.second[FIRST_NAMED_PROPERTY_EDGE],
+      Edge(
+          HeapSnapshot::EdgeType::Property,
+          "foo",
+          runtime->getHeap().getIDTracker().getNumberID(100)));
+
+  EXPECT_EQ(
+      nodesAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 1],
+      Edge(
+          HeapSnapshot::EdgeType::Property,
+          "bar",
+          runtime->getHeap().getIDTracker().getNumberID(200)));
+}
+
 #ifdef HERMES_ENABLE_DEBUGGER
 
 static std::string functionInfoToString(
