@@ -48,6 +48,17 @@ std::unique_ptr<T> make_unique(Args &&...args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
 
+/// std::min and std::max are only made constexpr in C++14.
+template <class T>
+constexpr const T &max(const T &a, const T &b) {
+  return a < b ? b : a;
+}
+
+template <class T>
+constexpr const T &min(const T &a, const T &b) {
+  return b < a ? b : a;
+}
+
 } // namespace hermes
 
 #endif // HERMES_SUPPORT_ALGORITHMS_H

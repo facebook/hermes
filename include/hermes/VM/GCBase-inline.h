@@ -11,6 +11,8 @@
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase.h"
 
+#include "hermes/Support/Algorithms.h"
+
 namespace hermes {
 namespace vm {
 
@@ -76,9 +78,7 @@ T *GCBase::makeA(uint32_t size, Args &&...args) {
 #ifdef HERMESVM_GC_RUNTIME
 constexpr uint32_t GCBase::maxAllocationSize() {
   // Return the lesser of the two GC options' max allowed sizes.
-  return HadesGC::maxAllocationSize() < GenGC::maxAllocationSize()
-      ? HadesGC::maxAllocationSize()
-      : GenGC::maxAllocationSize();
+  return min(HadesGC::maxAllocationSize(), GenGC::maxAllocationSize());
 }
 #endif
 
