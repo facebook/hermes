@@ -22,6 +22,10 @@ template <
     LongLived longLived,
     class... Args>
 T *GCBase::makeAFixed(Args &&...args) {
+  static_assert(
+      cellSize<T>() >= GC::minAllocationSize() &&
+          cellSize<T>() <= GC::maxAllocationSize(),
+      "Cell size outside legal range.");
   return makeA<T, true /* fixedSize */, hasFinalizer, longLived>(
       cellSize<T>(), std::forward<Args>(args)...);
 }
@@ -32,6 +36,9 @@ template <
     LongLived longLived,
     class... Args>
 T *GCBase::makeAVariable(uint32_t size, Args &&...args) {
+  // If size is greater than the max, we should OOM.
+  assert(
+      size >= GC::minAllocationSize() && "Cell size is smaller than minimum");
   return makeA<T, false /* fixedSize */, hasFinalizer, longLived>(
       heapAlignSize(size), std::forward<Args>(args)...);
 }
