@@ -39,15 +39,6 @@ HadesGC::HeapSegment::HeapSegment(AlignedStorage storage)
   growToLimit();
 }
 
-struct HadesGC::CopyListCell final : public GCCell {
-  // Linked list of cells pointing to the next cell that was copied.
-  CopyListCell *next_;
-  // If the cell was trimmed, this field will have the original size of the
-  // object stored. If the cell wasn't trimmed it'll have the same size as the
-  // forwarded pointer.
-  uint32_t originalSize_;
-};
-
 GCCell *
 HadesGC::OldGen::finishAlloc(GCCell *cell, uint32_t sz, uint16_t segmentIdx) {
   // Track the number of allocated bytes in a segment.
@@ -1299,11 +1290,6 @@ HadesGC::~HadesGC() {
   assert(
       concurrentPhase_ == Phase::None &&
       "Must call finalizeAll before destructor.");
-}
-
-uint32_t HadesGC::minAllocationSize() {
-  return heapAlignSize(
-      std::max(sizeof(OldGen::FreelistCell), sizeof(CopyListCell)));
 }
 
 void HadesGC::getHeapInfo(HeapInfo &info) {

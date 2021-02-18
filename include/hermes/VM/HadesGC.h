@@ -10,6 +10,7 @@
 
 #include "hermes/ADT/BitArray.h"
 #include "hermes/ADT/ExponentialMovingAverage.h"
+#include "hermes/Support/Algorithms.h"
 #include "hermes/Support/SlowAssert.h"
 #include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GCBase.h"
@@ -76,12 +77,15 @@ class HadesGC final : public GCBase {
     return gc->getKind() == HeapKind::HADES;
   }
 
-  static uint32_t minAllocationSize();
-
   static constexpr uint32_t maxAllocationSize() {
     // The largest allocation allowable in Hades is the max size a single
     // segment supports.
     return HeapSegment::maxSize();
+  }
+
+  static constexpr uint32_t minAllocationSize() {
+    return heapAlignSize(
+        max(sizeof(OldGen::FreelistCell), sizeof(CopyListCell)));
   }
 
   /// \name GCBase overrides
@@ -234,13 +238,21 @@ class HadesGC final : public GCBase {
 
   class CollectionStats;
   class HeapMarkingAcceptor;
-  struct CopyListCell;
   template <bool CompactionEnabled>
   class EvacAcceptor;
   class MarkAcceptor;
   class MarkWeakRootsAcceptor;
   class OldGen;
   class Executor;
+
+  struct CopyListCell final : public GCCell {
+    // Linked list of cells pointing to the next cell that was copied.
+    CopyListCell *next_;
+    // If the cell was trimmed, this field will have the original size of the
+    // object stored. If the cell wasn't trimmed it'll have the same size as the
+    // forwarded pointer.
+    uint32_t originalSize_;
+  };
 
   /// Similar to AlignedHeapSegment except it uses a free list.
   class HeapSegment final : public AlignedHeapSegment {
