@@ -31,7 +31,7 @@ TEST(GCOOMDeathTest, SuperSegment) {
     // This test won't work if there is no limit on allocation sizes.
     return;
   }
-  using SuperSegmentCell = EmptyCell<GC::maxAllocationSize() * 2>;
+  using SuperSegmentCell = VarSizedEmptyCell<GC::maxAllocationSize() * 2>;
   auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfig);
   EXPECT_OOM(SuperSegmentCell::create(*runtime));
 }
