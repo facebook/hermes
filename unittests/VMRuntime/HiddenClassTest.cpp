@@ -23,7 +23,7 @@ using HiddenClassTest = LargeHeapRuntimeTestFixture;
 TEST_F(HiddenClassTest, SmokeTest) {
   GCScope gcScope{runtime, "HiddenClassTest.SmokeTest", 48};
 
-  runtime->collect();
+  runtime->collect("test");
 
   auto aHnd = *runtime->getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"a"));
@@ -253,7 +253,7 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
   GCScope gcScope{
       runtime, "HiddenClassTest.UpdatePropertyFlagsWithoutTransitionsTest", 48};
 
-  runtime->collect();
+  runtime->collect("test");
 
   auto aHnd = *runtime->getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"a"));

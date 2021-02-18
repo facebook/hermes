@@ -41,7 +41,7 @@ TEST(GCObjectIterationTest, ForAllObjsGetsAllObjects) {
   GCCell *largeCell1 = LargeCell::create(rt);
   rt.pointerRoots.push_back(&largeCell1);
   // Should move both to the old gen, in separate segments.
-  gc.collect();
+  rt.collect();
   // A smaller size, in the young generation.
   constexpr size_t kSmallSize = 80;
   using SmallCell = EmptyCell<kSmallSize>;

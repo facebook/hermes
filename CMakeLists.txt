@@ -67,7 +67,7 @@ set(CMAKE_OSX_SYSROOT ${HERMES_APPLE_TARGET_PLATFORM})
 # - npm/package.json
 # - hermes-engine.podspec
 project(Hermes
-        VERSION 0.7.1
+        VERSION 0.7.2
         LANGUAGES C CXX)
 # Optional suffix like "-rc3"
 set(VERSION_SUFFIX "")

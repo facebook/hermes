@@ -168,7 +168,7 @@ class MallocGC final : public GCBase {
   /// Checks if a requested \p size can fit in the heap. If it can't, a
   /// collection occurs. If it still can't after the collection, OOM is
   /// declared.
-  void collectBeforeAlloc(uint32_t size);
+  void collectBeforeAlloc(std::string cause, uint32_t size);
 
   /// Same as above, but tries to allocate in a long lived area of the heap.
   /// Use this when the object is known to last for a long period of time.
@@ -185,7 +185,7 @@ class MallocGC final : public GCBase {
 
   /// Collect all of the dead objects and symbols in the heap. Also invalidate
   /// weak pointers that point to dead objects.
-  void collect();
+  void collect(std::string cause);
 
   static constexpr uint32_t minAllocationSize() {
     // MallocGC imposes no limit on individual allocations.
@@ -325,10 +325,12 @@ template <bool fixedSizeIgnored, HasFinalizer hasFinalizer>
 inline void *MallocGC::alloc(uint32_t size) {
   assert(noAllocLevel_ == 0 && "no alloc allowed right now");
   size = heapAlignSize(size);
+  if (shouldSanitizeHandles()) {
+    collectBeforeAlloc(kHandleSanCauseForAnalytics, size);
+  }
   // Use subtraction to prevent overflow.
-  if (LLVM_UNLIKELY(
-          shouldSanitizeHandles() || size > sizeLimit_ - allocatedBytes_)) {
-    collectBeforeAlloc(size);
+  if (LLVM_UNLIKELY(size > sizeLimit_ - allocatedBytes_)) {
+    collectBeforeAlloc(kNaturalCauseForAnalytics, size);
   }
   // Add space for the header.
   auto *header = new (checkedMalloc(size + sizeof(CellHeader))) CellHeader();
@@ -340,18 +342,6 @@ inline void *MallocGC::alloc(uint32_t size) {
   totalAllocatedBytes_ += size;
 #ifndef NDEBUG
   ++numAllocatedObjects_;
-#endif
-#if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
-  // If allocation location tracking is enabled we implicitly call
-  // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we always
-  // call getCurrentIPSlow() in a debug build as this has the effect of
-  // asserting the IP is correctly set (not invalidated) at this point. This
-  // allows us to leverage our whole test-suite to find missing cases of
-  // CAPTURE_IP* macros in the interpreter loop.
-  (void)gcCallbacks_->getCurrentIPSlow();
-#endif
-#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  getAllocationLocationTracker().newAlloc(mem);
 #endif
   return mem;
 }

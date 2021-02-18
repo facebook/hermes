@@ -86,7 +86,7 @@ TEST(GCReturnUnusedMemoryNCTest, CollectReturnsFreeMemory) {
   rt.pointerRoots.erase(rt.pointerRoots.begin());
 
   // Collect should return the unused memory back to the OS.
-  gc.collect();
+  rt.collect();
 
   size_t collected = gcRegionFootprint(gc);
   ASSERT_NE(collected, FAILED);

@@ -142,7 +142,7 @@ TEST(GCSanitizeHandlesTest, MovesAfterCollect) {
 
   Handle<DummyObject> dummy =
       runtime->makeHandle(DummyObject::create(*runtime));
-  runtime->gc.collect();
+  runtime->collect();
   TH.testHandleMoves(dummy);
 }
 

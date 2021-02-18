@@ -195,7 +195,7 @@ MallocGC::~MallocGC() {
   }
 }
 
-void MallocGC::collectBeforeAlloc(uint32_t size) {
+void MallocGC::collectBeforeAlloc(std::string cause, uint32_t size) {
   const auto growSizeLimit = [this, size](gcheapsize_t sizeLimit) {
     // Either double the size limit, or increase to size, at a max of maxSize_.
     return std::min(maxSize_, std::max(sizeLimit * 2, size));
@@ -220,7 +220,7 @@ void MallocGC::collectBeforeAlloc(uint32_t size) {
 #endif
   // Do a collection if the sanitization of handles is requested or if there
   // is memory pressure.
-  collect();
+  collect(std::move(cause));
   // While we still can't fill the allocation, keep growing.
   while (allocatedBytes_ >= sizeLimit_ - size) {
     if (sizeLimit_ == maxSize_) {
@@ -253,7 +253,7 @@ void MallocGC::clearUnmarkedPropertyMaps() {
 }
 #endif
 
-void MallocGC::collect() {
+void MallocGC::collect(std::string cause) {
   assert(noAllocLevel_ == 0 && "no GC allowed right now");
   using std::chrono::steady_clock;
   LLVM_DEBUG(llvh::dbgs() << "Beginning collection");
@@ -299,10 +299,8 @@ void MallocGC::collect() {
       assert(!header->isMarked() && "Live pointer left in dead heap section");
 #endif
       GCCell *cell = header->data();
-#ifndef NDEBUG
       // Extract before running any potential finalizers.
       const auto freedSize = cell->getAllocatedSize();
-#endif
       // Run the finalizer if it exists and the cell is actually dead.
       if (!header->isMarked()) {
         cell->getVT()->finalizeIfExists(cell, this);
@@ -312,14 +310,11 @@ void MallocGC::collect() {
           ++numFinalizedObjects_;
         }
 #endif
-      }
-      if (idTracker_.isTrackingIDs() ||
-          allocationLocationTracker_.isEnabled()) {
-        idTracker_.untrackObject(cell);
-        allocationLocationTracker_.freeAlloc(cell);
-      }
-      if (allocationLocationTracker_.isEnabled()) {
-        allocationLocationTracker_.freeAlloc(cell);
+        // Pointers that aren't marked now weren't moved, and are dead instead.
+        if (isTrackingIDs()) {
+          allocationLocationTracker_.freeAlloc(cell, freedSize);
+          idTracker_.untrackObject(cell);
+        }
       }
 #ifndef NDEBUG
       // Before free'ing, fill with a dead value for debugging
@@ -373,6 +368,7 @@ void MallocGC::collect() {
       getName(),
       "malloc",
       "full",
+      std::move(cause),
       std::chrono::duration_cast<std::chrono::milliseconds>(
           wallEnd - wallStart),
       std::chrono::duration_cast<std::chrono::milliseconds>(cpuEnd - cpuStart),

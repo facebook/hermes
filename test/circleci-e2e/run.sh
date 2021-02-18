@@ -32,8 +32,12 @@ npm install
 # Install new Hermes NPM.
 npm install "$hermes_npm_package"
 
+# Inject an empty watchmanconfig to the RN repo for easier local repro.
+echo "{}" > .watchmanconfig
+
 # Modify RN Tester app to print a log message at start-up
 echo "console.log('Using Hermes: ' + (global.HermesInternal != null));" >> packages/rn-tester/js/RNTesterApp.android.js
+
 
 # Wait for emulator to boot
 adb wait-for-device

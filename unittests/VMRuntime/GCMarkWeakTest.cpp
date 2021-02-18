@@ -87,7 +87,7 @@ TEST(GCMarkWeakTest, MarkWeak) {
 
   GCCell *g = TestCell::create(rt, &numMarkWeakCalls);
   rt.pointerRoots.push_back(&g);
-  gc.collect();
+  rt.collect();
 
   {
     WeakRefLock lk{gc.weakRefMutex()};
@@ -100,7 +100,7 @@ TEST(GCMarkWeakTest, MarkWeak) {
   }
 
   rt.pointerRoots.pop_back();
-  gc.collect();
+  rt.collect();
   // The weak ref is live at the beginning of the collection, but not by the
   // end, so the call in updateReferences isn't run, nor the second
   // checkHeapWellFormed.

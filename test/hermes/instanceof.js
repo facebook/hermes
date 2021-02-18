@@ -54,3 +54,15 @@ print( (new ChildObj()) instanceof BoundBase);
 //CHECK-NEXT: true
 print( (new ChildObj()) instanceof BoundChild);
 //CHECK-NEXT: true
+
+var a = new Proxy({}, {});
+var b = Object.create(a);
+var c = Object.create(b);
+a.__proto__ = c;
+try {
+    b instanceof Date;
+} catch (e) {
+    print("caught", e.name, e.message);
+}
+//CHECK-NEXT: caught RangeError Maximum prototype chain length exceeded
+

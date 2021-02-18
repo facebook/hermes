@@ -19,7 +19,6 @@ set(SupportSources
   RegexTest.cpp
   SNPrintfBufTest.cpp
   SourceErrorManagerTest.cpp
-  SamplingThreadTest.cpp
   StatsAccumulatorTest.cpp
   StringKindTest.cpp
   StringSetVectorTest.cpp
