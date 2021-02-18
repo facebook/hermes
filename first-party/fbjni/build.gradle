@@ -21,7 +21,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.5.0'
+        classpath 'com.android.tools.build:gradle:4.1.2'
     }
 }
 
@@ -39,8 +39,8 @@ repositories {
 }
 
 android {
-    compileSdkVersion 28
-    buildToolsVersion '29.0.1'
+    compileSdkVersion 29
+    buildToolsVersion '29.0.3'
 
     externalNativeBuild {
         cmake {
@@ -50,7 +50,7 @@ android {
 
     defaultConfig {
         minSdkVersion 15
-        targetSdkVersion 28
+        targetSdkVersion 29
         buildConfigField "boolean", "IS_INTERNAL_BUILD", 'true'
 
         sourceSets {
@@ -74,7 +74,7 @@ android {
 }
 
 dependencies {
-    compileOnly 'com.google.code.findbugs:jsr305:3.0.1'
+    compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
     implementation 'com.facebook.soloader:nativeloader:0.8.0'
 }
 
