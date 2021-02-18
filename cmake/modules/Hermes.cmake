@@ -257,6 +257,10 @@ if (MSVC)
     -D_SCL_SECURE_NO_WARNINGS
   )
 
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DYNAMICBASE /guard:cf")
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DYNAMICBASE /guard:cf")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /guard:cf")
+
   # Tell MSVC to use the Unicode version of the Win32 APIs instead of ANSI.
   #    add_definitions(
   #      -DUNICODE

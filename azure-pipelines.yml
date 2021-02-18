@@ -10,7 +10,7 @@ pool:
   vmImage: 'windows-latest'
 
 jobs:
-  - job: HermesBuild
+  - job: HermesBuildAll
     timeoutInMinutes: 50
     displayName: Build the Hermes binary for supported architectures and flavors
     strategy:
@@ -58,9 +58,66 @@ jobs:
           artifactName: HermesArtifacts
           pathtoPublish: $(Build.ArtifactStagingDirectory)
 
+  - job: HermesBuildForPublish
+    timeoutInMinutes: 50
+    displayName: Build the Hermes binary for supported architectures and flavors
+    strategy:
+      matrix:
+        DebugX64:
+          BuildConfiguration: debug
+          BuildPlatform: x64
+        DebugX86:
+          BuildConfiguration: debug
+          BuildPlatform: x86
+        DebugARM64:
+          BuildConfiguration: debug
+          BuildPlatform: arm64
+        ReleaseX64:
+          BuildConfiguration: release
+          BuildPlatform: x64
+        ReleaseX86:
+          BuildConfiguration: release
+          BuildPlatform: x86
+        ReleaseARM64:
+          BuildConfiguration: release
+          BuildPlatform: arm64
+
+    steps:
+      - task: PowerShell@2
+        displayName: Run the build script
+        inputs:
+          targetType: filePath
+          filePath: $(Build.SourcesDirectory)\cibuild.ps1
+          arguments:
+            -SourcesPath:$(Build.SourcesDirectory)
+            -OutputPath:$(Build.ArtifactStagingDirectory)
+            -Platform:$(BuildPlatform)
+            -Configuration:$(BuildConfiguration)
+            -AppPlatform:uwp
+            -DllBuild
+
+      - task: PowerShell@2
+        displayName: Build Hermes Win32 CLI executable
+        inputs:
+          targetType: filePath
+          filePath: $(Build.SourcesDirectory)\cibuild.ps1
+          arguments:
+            -SourcesPath:$(Build.SourcesDirectory)
+            -OutputPath:$(Build.ArtifactStagingDirectory)
+            -Platform:x86
+            -Configuration:release
+            -AppPlatform:win32
+            -ToolsBuild
+
+      - task: PublishBuildArtifacts@1
+        displayName: "Publish artifacts"
+        inputs:
+          artifactName: HermesArtifacts
+          pathtoPublish: $(Build.ArtifactStagingDirectory)
+
   - job: HermesPublishNuget
     dependsOn:
-      - HermesBuild
+      - HermesBuildForPublish
     displayName: Publish Nuget
     steps:
       - checkout: none
