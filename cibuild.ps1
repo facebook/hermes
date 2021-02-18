@@ -110,6 +110,7 @@ function Run-Build($SourcesPath, $OutputPath, $Platform, $Configuration, $AppPla
     $genArgs += ('-DPYTHON_EXECUTABLE={0}' -f $PYTHON_PATH)
     $genArgs += ('-DCMAKE_BUILD_TYPE={0}' -f (Get-CMakeConfiguration $Configuration))
     $genArgs += '-DHERMES_ENABLE_DEBUGGER=On'
+    $genArgs += '-HERMESVM_PLATFORM_LOGGING=On'
 
     if ($AppPlatform -eq "uwp") {
         $genArgs += '-DCMAKE_CXX_STANDARD=17'
