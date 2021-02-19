@@ -10,7 +10,7 @@
     <repository type="git" url="$RepoUri$" commit="$CommitId$" />
   </metadata>
   <files>
-    <file src="$nugetroot$\lib\**\*.*" target="lib" exclude="**\*.manifest;**\*.iobj;**\*.ipdb;**\*.exp;**\*.ilk" />
+    <file src="$nugetroot$\lib\**\*.*" target="lib" exclude="**\*.manifest;**\*.iobj;**\*.ipdb;**\*.pdb;**\*.exp;**\*.ilk" />
     <file src="$nugetroot$\build\**\*.*" target="build"/>
     <file src="$nugetroot$\license\*.*" target="license"/>
     <file src="$nugetroot$\tools\*.*" target="tools"/>

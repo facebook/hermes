@@ -21,10 +21,8 @@
   </ItemDefinitionGroup>
   <ItemGroup Condition="'$(Configuration)' == 'Debug' And '$(HermesNoDLLCopy)' == ''">
     <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\..\lib\$(HermesAppPlatform)\debug\$(HermesPlatform)\hermes.dll" />
-    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\..\lib\$(HermesAppPlatform)\debug\$(HermesPlatform)\hermes.pdb" />
   </ItemGroup>
   <ItemGroup Condition="'$(Configuration)' == 'Release' And '$(HermesNoDLLCopy)' == ''">
     <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\..\lib\$(HermesAppPlatform)\release\$(HermesPlatform)\hermes.dll" />
-    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\..\lib\$(HermesAppPlatform)\release\$(HermesPlatform)\hermes.pdb" />
   </ItemGroup>
 </Project>
