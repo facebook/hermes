@@ -1000,6 +1000,66 @@ TEST_F(HeapSnapshotRuntimeTest, PropertyUpdatesTest) {
           runtime->getHeap().getIDTracker().getNumberID(200)));
 }
 
+TEST_F(HeapSnapshotRuntimeTest, ArrayElements) {
+  JSONFactory::Allocator alloc;
+  JSONFactory jsonFactory{alloc};
+  hbc::CompileFlags flags;
+  // Build an array that doesn't start at index 0.
+  std::string source =
+      "var a = []; a[10] = {}; a[15] = {}; a[(1 << 20) + 1000] = {}; a";
+  CallResult<HermesValue> res = runtime->run(source, "file:///fake.js", flags);
+  ASSERT_FALSE(isException(res));
+  Handle<JSArray> array = runtime->makeHandle(vmcast<JSArray>(*res));
+  Handle<JSObject> firstElement =
+      runtime->makeHandle<JSObject>(array->at(runtime, 10));
+  Handle<JSObject> secondElement =
+      runtime->makeHandle<JSObject>(array->at(runtime, 15));
+  auto cr = JSObject::getComputed_RJS(
+      array,
+      runtime,
+      runtime->makeHandle(HermesValue::encodeNumberValue((1 << 20) + 1000)));
+  ASSERT_FALSE(isException(cr));
+  Handle<JSObject> thirdElement = runtime->makeHandle<JSObject>(std::move(*cr));
+  const auto arrayID = runtime->getHeap().getObjectID(array.get());
+
+  JSONObject *root = TAKE_SNAPSHOT(runtime->getHeap(), jsonFactory);
+  ASSERT_NE(root, nullptr);
+
+  const JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
+  const JSONArray &edges = *llvh::cast<JSONArray>(root->at("edges"));
+  const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
+
+  auto nodeAndEdges =
+      FIND_NODE_AND_EDGES_FOR_ID(arrayID, nodes, edges, strings);
+  EXPECT_EQ(
+      nodeAndEdges.first,
+      Node(
+          HeapSnapshot::NodeType::Object,
+          "Array",
+          arrayID,
+          array->getAllocatedSize(),
+          10));
+  // The last edges are the element edges.
+  EXPECT_EQ(
+      nodeAndEdges.second[7],
+      Edge(
+          HeapSnapshot::EdgeType::Element,
+          (1 << 20) + 1000,
+          runtime->getHeap().getObjectID(thirdElement.get())));
+  EXPECT_EQ(
+      nodeAndEdges.second[8],
+      Edge(
+          HeapSnapshot::EdgeType::Element,
+          10,
+          runtime->getHeap().getObjectID(firstElement.get())));
+  EXPECT_EQ(
+      nodeAndEdges.second[9],
+      Edge(
+          HeapSnapshot::EdgeType::Element,
+          15,
+          runtime->getHeap().getObjectID(secondElement.get())));
+}
+
 #ifdef HERMES_ENABLE_DEBUGGER
 
 static std::string functionInfoToString(

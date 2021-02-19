@@ -43,9 +43,10 @@ void ArrayImpl::_snapshotAddEdgesImpl(
   }
   auto *const indexedStorage =
       self->indexedStorage_.getNonNull(gc->getPointerBase());
-  const auto len = self->endIndex_ - self->beginIndex_;
-  for (uint32_t i = 0; i < len; i++) {
-    const auto &elem = indexedStorage->at(i);
+  const auto beginIndex = self->beginIndex_;
+  const auto endIndex = self->endIndex_;
+  for (uint32_t i = beginIndex; i < endIndex; i++) {
+    const auto &elem = indexedStorage->at(i - beginIndex);
     const llvh::Optional<HeapSnapshot::NodeID> elemID = gc->getSnapshotID(elem);
     if (!elemID) {
       continue;
