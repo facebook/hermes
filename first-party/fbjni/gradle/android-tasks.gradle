@@ -99,7 +99,7 @@ afterEvaluate { project ->
 }
 
 // Utility method to extract only one entry in a zip file
-private def extractEntry(archive, entryPath, outputPath) {
+private static def extractEntry(archive, entryPath, outputPath) {
     if (!archive.exists()) {
         throw new GradleException("archive $archive not found")
     }

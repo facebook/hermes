@@ -41,6 +41,7 @@ repositories {
 android {
     compileSdkVersion 29
     buildToolsVersion '29.0.3'
+    ndkVersion '21.1.6352462'
 
     externalNativeBuild {
         cmake {
@@ -66,12 +67,32 @@ android {
 
         externalNativeBuild {
             cmake {
-                arguments '-DANDROID_TOOLCHAIN=clang'
+                arguments '-DANDROID_TOOLCHAIN=clang', '-DANDROID_STL=c++_shared'
                 targets 'fbjni'
+                version '3.10.2.4988404'
             }
+        }
+
+        buildFeatures {
+            prefabPublishing true
+        }
+
+        prefab {
+            fbjni {
+                headers 'cxx/'
+            }
+        }
+
+        // There's a bug in prefab that will bundle all these twice, causing the
+        // consumer to get duplicate errors.
+        // Followed the advice from https://github.com/chancezeus/libjpeg-turbo-android-prefab/blob/18eaa325e9954b832c9f3c95e141361d86746528/libjpeg-turbo/build.gradle
+        packagingOptions {
+            exclude("**/libfbjni.so")
+            exclude("**/libc++_shared.so")
         }
     }
 }
+
 
 dependencies {
     compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
