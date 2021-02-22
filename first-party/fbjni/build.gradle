@@ -26,8 +26,7 @@ buildscript {
 }
 
 plugins {
-    id 'com.github.dcendents.android-maven' version '2.1'
-    id 'com.jfrog.bintray' version '1.8.4'
+    id 'com.vanniktech.maven.publish' version '0.13.0' apply false
 }
 
 apply plugin: 'com.android.library'
@@ -56,7 +55,7 @@ android {
 
         sourceSets {
             main {
-                manifest.srcFile 'java/com/facebook/jni/AndroidManifest.xml'
+                manifest.srcFile 'manifest/AndroidManifest.xml'
                 java.srcDir 'java'
             }
         }
