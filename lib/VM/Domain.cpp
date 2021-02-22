@@ -200,7 +200,9 @@ void Domain::_snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
   auto *const self = vmcast<Domain>(cell);
   for (RuntimeModule *rm : self->runtimeModules_) {
     // Create a native node for each RuntimeModule owned by this domain.
+    rm->snapshotAddNodes(gc, snap);
     snap.beginNode();
+    rm->snapshotAddEdges(gc, snap);
     snap.endNode(
         HeapSnapshot::NodeType::Native,
         "RuntimeModule",

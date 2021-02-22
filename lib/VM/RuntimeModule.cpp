@@ -71,9 +71,11 @@ RuntimeModule::~RuntimeModule() {
   // own the ones that reference us.
   for (auto *block : functionMap_) {
     if (block != nullptr && block->getRuntimeModule() == this) {
+      runtime_->getHeap().getIDTracker().untrackNative(block);
       delete block;
     }
   }
+  runtime_->getHeap().getIDTracker().untrackNative(&functionMap_);
 }
 
 void RuntimeModule::prepareForRuntimeShutdown() {
@@ -510,20 +512,54 @@ RuntimeModule *RuntimeModule::deserialize(Deserializer &d) {
 #endif
 
 size_t RuntimeModule::additionalMemorySize() const {
-  size_t total = stringIDMap_.capacity() * sizeof(SymbolID) +
-      functionMap_.capacity() * sizeof(CodeBlock *) +
+  return stringIDMap_.capacity() * sizeof(SymbolID) +
       objectLiteralHiddenClasses_.getMemorySize() +
       templateMap_.getMemorySize();
-  // Add the size of each CodeBlock
+}
+
+void RuntimeModule::snapshotAddNodes(GC *gc, HeapSnapshot &snap) const {
+  // Create a native node for each CodeBlock owned by this module.
   for (const CodeBlock *cb : functionMap_) {
     // Skip the null code blocks, they are lazily inserted the first time
     // they are used.
     if (cb && cb->getRuntimeModule() == this) {
-      // Only add the size of a CodeBlock if this runtime module is the owner.
-      total += sizeof(CodeBlock) + cb->additionalMemorySize();
+      // Only add a CodeBlock if this runtime module is the owner.
+      snap.beginNode();
+      snap.endNode(
+          HeapSnapshot::NodeType::Native,
+          "CodeBlock",
+          gc->getNativeID(cb),
+          sizeof(CodeBlock) + cb->additionalMemorySize(),
+          0);
     }
   }
-  return total;
+
+  // Create a node for functionMap_.
+  snap.beginNode();
+  // Create an edge to each CodeBlock owned by this module.
+  for (int i = 0, e = functionMap_.size(); i < e; i++) {
+    const CodeBlock *cb = functionMap_[i];
+    // Skip the null code blocks, they are lazily inserted the first time
+    // they are used.
+    if (cb && cb->getRuntimeModule() == this) {
+      // Only add a CodeBlock if this runtime module is the owner.
+      snap.addIndexedEdge(
+          HeapSnapshot::EdgeType::Element, i, gc->getNativeID(cb));
+    }
+  }
+  snap.endNode(
+      HeapSnapshot::NodeType::Native,
+      "std::vector<CodeBlock *>",
+      gc->getNativeID(&functionMap_),
+      functionMap_.capacity() * sizeof(CodeBlock *),
+      0);
+}
+
+void RuntimeModule::snapshotAddEdges(GC *gc, HeapSnapshot &snap) const {
+  snap.addNamedEdge(
+      HeapSnapshot::EdgeType::Internal,
+      "functionMap",
+      gc->getNativeID(&functionMap_));
 }
 
 namespace detail {
