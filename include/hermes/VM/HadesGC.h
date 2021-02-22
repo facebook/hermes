@@ -590,7 +590,6 @@ class HadesGC final : public GCBase {
     Mark,
     CompleteMarking,
     Sweep,
-    Cleanup,
   };
 
   /// Represents the current phase the concurrent GC is in. The main difference

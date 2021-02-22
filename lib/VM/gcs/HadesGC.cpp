@@ -1437,27 +1437,8 @@ void HadesGC::waitForCollectionToFinish() {
     ygCollectionStats_->addCollectionType("waiting");
   }
 
-  while (concurrentPhase_ != Phase::None && concurrentPhase_ != Phase::Cleanup)
+  while (concurrentPhase_ != Phase::None)
     incrementalCollect(false);
-
-  if (!kConcurrentGC)
-    return;
-
-  assert(gcMutex_.depth() == 1 && "Depth must be 1 to release the lock.");
-  std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
-  lk.unlock();
-  // Wait for the collection to finish.
-  ogThreadStatus_.get();
-  lk.lock();
-  assert(concurrentPhase_ == Phase::None);
-  // Check for a tripwire, since we know a collection just completed.
-  checkTripwireAndResetStats();
-
-  assert(lk && "Lock must be re-acquired before exiting");
-  assert(gcMutex_ && "GC mutex must be re-acquired before exiting");
-  // Release association with the mutex to prevent the destructor from unlocking
-  // it.
-  lk.release();
 }
 
 void HadesGC::oldGenCollection(std::string cause) {
@@ -1467,13 +1448,22 @@ void HadesGC::oldGenCollection(std::string cause) {
   // This function must be called while the gcMutex_ is held.
   assert(gcMutex_ && "gcMutex_ must be held when starting an OG collection");
   assert(
+      gcMutex_.depth() == 1 &&
+      "Need ability to release mutex in oldGenCollection.");
+  assert(
       concurrentPhase_ == Phase::None &&
       "Starting a second old gen collection");
-  if (ogThreadStatus_.valid()) {
+  // Wait for any lingering background task to finish.
+  if (kConcurrentGC && ogThreadStatus_.valid()) {
     // This is just making sure that any leftover work is completed before
     // starting a new collection. Since concurrentPhase_ == None here, there is
-    // no collection ongoing.
+    // no collection ongoing. However, the background task may need to acquire
+    // the lock in order to observe the value of concurrentPhase_.
+    std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
+    lk.unlock();
     ogThreadStatus_.get();
+    lk.lock();
+    lk.release();
   }
   // We know ygCollectionStats_ exists because oldGenCollection is only called
   // by youngGenCollection.
@@ -1568,10 +1558,6 @@ void HadesGC::oldGenCollection(std::string cause) {
 }
 
 void HadesGC::oldGenCollectionWorker() {
-  {
-    std::lock_guard<Mutex> lk(gcMutex_);
-    ogCollectionStats_->beginCPUTimeSection();
-  }
   while (true) {
     std::lock_guard<Mutex> lk(gcMutex_);
     incrementalCollect(true);
@@ -1612,24 +1598,9 @@ void HadesGC::incrementalCollect(bool backgroundThread) {
         ogCollectionStats_->setEndTime();
         ogCollectionStats_->setAfterSize(heapFootprint());
         compacteeHandleForSweep_.reset();
-        if (!kConcurrentGC) {
-          // We can skip past Phase::Cleanup because we know !kConcurrentGC
-          // implies there's never a background thread.
-          concurrentPhase_ = Phase::None;
-          // Check the tripwire here since we know the incremental collection
-          // will always end on the mutator thread.
-          checkTripwireAndResetStats();
-        } else {
-          concurrentPhase_ = Phase::Cleanup;
-        }
-      }
-      break;
-    case Phase::Cleanup:
-      // For concurrent collections, the CPU time must be set from the
-      // background thread.
-      if (backgroundThread) {
-        ogCollectionStats_->endCPUTimeSection();
         concurrentPhase_ = Phase::None;
+        if (!backgroundThread)
+          checkTripwireAndResetStats();
       }
       break;
     default:
@@ -2529,6 +2500,9 @@ void HadesGC::checkTripwireAndResetStats() {
   assert(
       gcMutex_ &&
       "gcMutex must be held before calling checkTripwireAndResetStats");
+  assert(
+      concurrentPhase_ == Phase::None &&
+      "Cannot check stats while OG collection is ongoing.");
   if (!ogCollectionStats_) {
     return;
   }
