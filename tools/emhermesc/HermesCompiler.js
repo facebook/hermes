@@ -8,7 +8,7 @@
 // @flow
 // @format
 
-const hermesc = require("./emhermesc.js")({
+const hermesc = require(process.env.EMHERMESC || "./emhermesc.js")({
     noInitialRun: true,
     noExitRuntime: true,
 });
@@ -38,7 +38,7 @@ function strdup(str /*: string*/) /*: number*/ {
   return { ptr: addr, size: size };
 }
 
-function compile(source /*: string | Buffer*/, options) /*: Buffer*/ {
+function compile(source /*: string | Buffer*/, options = {}) /*: Buffer*/ {
     const sourceURL = options.sourceURL || "";
     const sourceMap = options.sourceMap || "";
 
@@ -118,7 +118,7 @@ function validateBytecodeModule(bc /*: Buffer*/, offset /*: number*/) /*: number
         throw Error("bytecode buffer is too small");
     }
 
-    return (fileLength + hermesProps.BYTECODE_ALIGNMENT - 1) % hermesProps.BYTECODE_ALIGNMENT;
+    return (fileLength + hermesProps.BYTECODE_ALIGNMENT - 1) / hermesProps.BYTECODE_ALIGNMENT;
 }
 
 exports.compile = compile;

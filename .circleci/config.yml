@@ -35,6 +35,7 @@ workflows:
             - linux
             - package-apple-runtime
             - windows
+      - test-emscripten
       - test-linux
       - test-e2e:
           requires:
@@ -481,6 +482,74 @@ jobs:
           root: /tmp/hermes/output
           paths:
             - .
+
+  # test to build with emscripten, not run
+  test-emscripten:
+    docker:
+      # emcc requires Python 3.7+
+      - image: debian:buster
+    environment:
+      - HERMES_WS_DIR: /tmp/hermes
+      - EMSDK: /tmp/emsdk
+      - TERM: dumb
+      - DEBIAN_FRONTEND: noninteractive
+    steps:
+      - run:
+          name: Install dependencies
+          command: |
+            apt-get update
+            apt-get install -y \
+                sudo git openssh-client cmake ninja-build python \
+                build-essential libreadline-dev libicu-dev zip python3 \
+                curl
+      - run:
+          name: Setup Emscripten
+          command: |
+            set -x
+            EMSDK_VERSION=2.0.9
+            curl -sfLO "https://github.com/emscripten-core/emsdk/archive/$EMSDK_VERSION.tar.gz"
+            tar -xf "$EMSDK_VERSION.tar.gz"
+            mv "emsdk-$EMSDK_VERSION" "$EMSDK"
+            rm "$EMSDK_VERSION.tar.gz"
+            "$EMSDK/emsdk" install latest
+            "$EMSDK/emsdk" activate latest
+      - checkout
+      - run:
+          name: Set up workspace
+          command: |
+            mkdir -p "$HERMES_WS_DIR"
+            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+            sudo cp /usr/bin/ninja /usr/bin/ninja.real
+            # See top comment
+            printf '%s\n' '#!/bin/sh' 'ninja.real -j4 "$@" || ninja.real -j1 "$@"' | sudo tee /usr/bin/ninja
+      - run:
+          name: Build Hermes Compiler
+          command: |
+            cd "$HERMES_WS_DIR"
+            hermes/utils/build/configure.py ./build
+            # Build the Hermes compiler so that the cross compiler build can
+            # access it to build the VM
+            cmake --build ./build --target hermesc
+      - run:
+          name: Build Hermes with Emscripten
+          command: |
+            set -x
+            cd "$HERMES_WS_DIR"
+            source "$EMSDK/emsdk_env.sh"
+            "$EMSDK"/upstream/emscripten/emcc --version
+
+            cmake ./hermes \
+                -Bembuild \
+                -GNinja \
+                -DCMAKE_BUILD_TYPE=Release  \
+                -DEMSCRIPTEN_FASTCOMP=0 \
+                -DCMAKE_EXE_LINKER_FLAGS="-s NODERAWFS=1 -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s LLD_REPORT_UNDEFINED=1" \
+                -DCMAKE_TOOLCHAIN_FILE="$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake" \
+                -DIMPORT_HERMESC="$PWD/build/ImportHermesc.cmake"
+            cmake --build ./embuild --target hermes
+            cmake --build ./embuild --target hermesc
+            cmake --build ./embuild --target emhermesc
+            EMHERMESC="$PWD/embuild/bin/emhermesc.js" node ./hermes/tools/emhermesc/test.js
   test-e2e:
     # For now we run E2E tests on MacOS as running an Android emulator on Linux is
     # not supported with Circle CI:
