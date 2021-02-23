@@ -385,6 +385,8 @@ class GenGC final : public GCBase {
   /// Add some GenGC-specific stats to the output.
   void dump(llvh::raw_ostream &os, bool verbose = false) override;
 
+  std::string getKindAsStr() const override;
+
   // Stats maintainence.
 
   /// Iterate over all objects in the heap, and call \p callback on them.

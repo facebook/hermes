@@ -1307,6 +1307,9 @@ class GCBase {
     return heapKind_;
   }
 
+  /// \return A string representation of the kind of GC.
+  virtual std::string getKindAsStr() const = 0;
+
   bool isTrackingIDs() {
     return getIDTracker().isTrackingIDs() ||
         getAllocationLocationTracker().isEnabled();

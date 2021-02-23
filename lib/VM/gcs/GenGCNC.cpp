@@ -1237,6 +1237,10 @@ void GenGC::dump(llvh::raw_ostream &os, bool verbose) {
 #endif
 }
 
+std::string GenGC::getKindAsStr() const {
+  return kGCName;
+}
+
 gcheapsize_t GenGC::bytesAllocatedSinceLastGC() const {
   return youngGen_.bytesAllocatedSinceLastGC() +
       oldGen_.bytesAllocatedSinceLastGC();

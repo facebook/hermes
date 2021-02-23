@@ -105,6 +105,7 @@ class HadesGC final : public GCBase {
           fragmentCallback) override;
   void disableHeapProfiler() override;
   void printStats(JSONEmitter &json) override;
+  std::string getKindAsStr() const override;
 
   /// \}
 

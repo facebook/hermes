@@ -453,6 +453,10 @@ void MallocGC::printStats(JSONEmitter &json) {
   json.closeDict();
 }
 
+std::string MallocGC::getKindAsStr() const {
+  return kGCName;
+}
+
 void MallocGC::resetStats() {
 #ifndef NDEBUG
   numAllocatedObjects_ = 0;

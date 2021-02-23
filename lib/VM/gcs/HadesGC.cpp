@@ -344,8 +344,7 @@ class HadesGC::CollectionStats final {
 HadesGC::CollectionStats::~CollectionStats() {
   gc_->recordGCStats(GCAnalyticsEvent{
       gc_->getName(),
-      std::string(kGCName) + (gc_->compactionEnabled_ ? "(compacting)" : "") +
-          (gc_->timedIncremental_ ? "(timed)" : ""),
+      gc_->getKindAsStr(),
       collectionType_,
       std::move(cause_),
       std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -1235,7 +1234,7 @@ HadesGC::HadesGC(
           (vmExperimentFlags & experiments::HadesTimedIncremental)} {
   (void)vmExperimentFlags;
   std::lock_guard<Mutex> lk(gcMutex_);
-  crashMgr_->setCustomData("HermesGC", kGCName);
+  crashMgr_->setCustomData("HermesGC", getKindAsStr().c_str());
   // createSegment relies on member variables and should not be called until
   // they are initialised.
   if (auto newYoungGen = createSegment())
@@ -1374,11 +1373,16 @@ void HadesGC::printStats(JSONEmitter &json) {
   GCBase::printStats(json);
   json.emitKey("specific");
   json.openDict();
-  json.emitKeyValue("collector", kGCName);
+  json.emitKeyValue("collector", getKindAsStr());
   json.emitKey("stats");
   json.openDict();
   json.closeDict();
   json.closeDict();
+}
+
+std::string HadesGC::getKindAsStr() const {
+  return std::string(kGCName) + (compactionEnabled_ ? "(compacting)" : "") +
+      (timedIncremental_ ? "(timed)" : "");
 }
 
 void HadesGC::collect(std::string cause, bool /*canEffectiveOOM*/) {

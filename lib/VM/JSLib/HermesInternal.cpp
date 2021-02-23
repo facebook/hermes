@@ -498,20 +498,9 @@ hermesInternalGetRuntimeProperties(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  const char *gcKind = nullptr;
-  switch (runtime->getHeap().getKind()) {
-    case GCBase::HeapKind::HADES:
-      gcKind = kConcurrentGC ? "Hades" : "Hades (incremental)";
-      break;
-    case GCBase::HeapKind::NCGEN:
-      gcKind = "GenGC";
-      break;
-    case GCBase::HeapKind::MALLOC:
-      gcKind = "Malloc";
-      break;
-  }
-  auto gcKindRes =
-      StringPrimitive::create(runtime, ASCIIRef(gcKind, strlen(gcKind)));
+  std::string gcKind = runtime->getHeap().getKindAsStr();
+  auto gcKindRes = StringPrimitive::create(
+      runtime, ASCIIRef(gcKind.c_str(), gcKind.length()));
   if (LLVM_UNLIKELY(gcKindRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

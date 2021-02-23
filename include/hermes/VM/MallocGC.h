@@ -244,6 +244,7 @@ class MallocGC final : public GCBase {
   void getHeapInfo(HeapInfo &info) override;
   void getHeapInfoWithMallocSize(HeapInfo &info) override;
   void getCrashManagerHeapInfo(CrashManager::HeapInformation &info) override;
+  std::string getKindAsStr() const override;
 
   /// @name Weak references
   /// @{
