@@ -80,19 +80,17 @@ def createNumber(num: float) -> str:
 class Normalizer:
     def __init__(self, globalObjID: int, convert_number: bool = False):
         def get_normalize_map(globalObjID: int):
-            def factory():
-                id = 0
+            id = 0
 
-                def get_next_id():
-                    nonlocal id
-                    id += 1
-                    return id
+            def id_factory():
+                nonlocal id
+                id += 1
+                return id
 
-                return get_next_id
-
-            return defaultdict(factory(), {globalObjID: 0})
+            return defaultdict(id_factory, {globalObjID: 0})
 
         self.normal = get_normalize_map(globalObjID)
+        self.string_normal = {}
         self.convert_number = convert_number
 
     def normalize_value(self, v: str) -> str:
@@ -124,9 +122,23 @@ class Normalizer:
             "propNameID",
         ]
         VALUE_HOLDING_KEYS = ["value", "retval"]
-        for objkey in OBJECT_HOLDING_KEYS:
-            if objkey in rec:
-                rec[objkey] = self.normal[rec[objkey]]
+        if rec.get("type", "") == "CreatePropNameIDRecord":
+            # PropNameIDs might get different IDs for the same string depending
+            # on the GC schedule, which makes it impossible to compare two
+            # traces. Normalize them more aggressively by using the string
+            # contents to map to an ID.
+            objID = rec["objID"]
+            chars = rec["chars"]
+            if objID not in self.normal:
+                if chars in self.string_normal:
+                    self.normal[objID] = self.string_normal[chars]
+                else:
+                    self.string_normal[chars] = self.normal[objID]
+            rec["objID"] = self.normal[objID]
+        else:
+            for objkey in OBJECT_HOLDING_KEYS:
+                if objkey in rec:
+                    rec[objkey] = self.normal[rec[objkey]]
 
         for valuekey in VALUE_HOLDING_KEYS:
             if valuekey in rec:
