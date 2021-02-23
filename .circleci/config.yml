@@ -526,10 +526,10 @@ jobs:
           name: Build Hermes Compiler
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py ./build
+            hermes/utils/build/configure.py ./build_host_hermesc
             # Build the Hermes compiler so that the cross compiler build can
             # access it to build the VM
-            cmake --build ./build --target hermesc
+            cmake --build ./build_host_hermesc --target hermesc
       - run:
           name: Build Hermes with Emscripten
           command: |
@@ -545,7 +545,7 @@ jobs:
                 -DEMSCRIPTEN_FASTCOMP=0 \
                 -DCMAKE_EXE_LINKER_FLAGS="-s NODERAWFS=1 -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s LLD_REPORT_UNDEFINED=1" \
                 -DCMAKE_TOOLCHAIN_FILE="$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake" \
-                -DIMPORT_HERMESC="$PWD/build/ImportHermesc.cmake"
+                -DIMPORT_HERMESC="$PWD/build_host_hermesc/ImportHermesc.cmake"
             cmake --build ./embuild --target hermes
             cmake --build ./embuild --target hermesc
             cmake --build ./embuild --target emhermesc

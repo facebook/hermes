@@ -11,43 +11,52 @@ Follow the directions on the
 [Emscripten website for `emsdk`](https://emscripten.org/docs/getting_started/downloads.html)
 to download the SDK.
 
-We recommend using `latest-fastcomp` to build Hermes, but `latest` works as well.
 ```
-emsdk install latest-fastcomp
-emsdk activate latest-fastcomp
+emsdk install latest
+emsdk activate latest
+source ./emsdk_env.sh
 ```
 
-If you install `emsdk` at `~/emsdk` and activate `latest-fastcomp`,
+If you install `emsdk` at `~/emsdk` and activate `latest`,
 then you should use this shell variable for the rest of these instructions:
+
 ```
-$EmscriptenRoot = ~/emsdk/fastcomp/emscripten
+$EmscriptenRoot = ~/emsdk/upstream/emscripten
 ```
 
-If you use `latest` instead, replace `fastcomp` in the above instruction with
-`upstream`.
+If you are using the old `fastcomp` instead, replace `upstream` in the above instruction with `fastcomp`.
+
+WARNING: The old `fastcomp` backend was [removed in emscripten `2.0.0` (August 2020)](https://emscripten.org/docs/compiling/WebAssembly.html?highlight=fastcomp#backends)
+
+
+## Setting up Workspace and Host Hermesc
+
+Hermes now requires a two stage build proecess because the VM now contains
+Hermes bytecode which needs to be compiled by Hermes.
+
+Please follow the [Cross Compilation](../CrossCompilation) to set up a workplace
+and build a host hermesc at `$HERMES_WS_DIR/build_host_hermesc`.
+
 
 ## Building Hermes With configure.py
 
 ```
 # Configure the build. Here the build is output to a
 # directory starting with the prefix "embuild".
-python3 ${HermesSourcePath?}/utils/build/configure.py \
+python3 ${HERMES_WS_DIR}/hermes/utils/build/configure.py \
+    --cmake-flags " -DIMPORT_HERMESC:PATH=${HERMES_WS_DIR}/build_host_hermesc/ImportHermesc.cmake " \
     --distribute \
     --wasm \
-    --emscripten-platform=fastcomp \
+    --emscripten-platform=upstream \
     --emscripten-root="${EmscriptenRoot?}" \
     /tmp/embuild
 
 # Build Hermes. The build directory name will depend on the flags passed to
 # configure.py.
-cmake --build /tmp/embuild_release_wasm_fastcomp --target hermes
+cmake --build /tmp/embuild --target hermes
 # Execute hermes
-node /tmp/embuild_release_wasm_fastcomp/bin/hermes.js --help
+node /tmp/embuild/bin/hermes.js --help
 ```
-
-In the commands above, replace `${HermesSourcePath?}` with the path where you
-cloned Hermes, and `${EmscriptenRoot?}` with the path to your Emscripten
-install.
 
 Make sure that the `--emscripten-platform` option matches the directory given
 to `--emscripten-root`, and is also the current activated Emscripten toolchain
@@ -62,12 +71,12 @@ project. If you want to customize your build, you can take this command as a
 base.
 
 ```
-mkdir embuild && cd embuild
-cmake ${HermesSourcePath?} \
+cmake ${HERMES_WS_DIR}/hermes \
+        -B embuild \
         -DCMAKE_TOOLCHAIN_FILE=${EmscriptenRoot?}/cmake/Modules/Platform/Emscripten.cmake \
         -DCMAKE_BUILD_TYPE=Release \
-        -DEMSCRIPTEN_FASTCOMP=1 \
-        -DCMAKE_EXE_LINKER_FLAGS="-s NODERAWFS=1 -s WASM=1 -s ALLOW_MEMORY_GROWTH=1"
+        -DCMAKE_EXE_LINKER_FLAGS="-s NODERAWFS=1 -s WASM=1 -s ALLOW_MEMORY_GROWTH=1" \
+        -DIMPORT_HERMESC:PATH="${HERMES_WS_DIR}/build_host_hermesc/ImportHermesc.cmake"
 ```
 
 Each option is explained below:
