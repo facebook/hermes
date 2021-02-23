@@ -1311,6 +1311,21 @@ std::string JSFunction::_snapshotNameImpl(GCCell *cell, GC *gc) {
   return self->codeBlock_->getNameString(gc->getCallbacks());
 }
 
+void JSFunction::_snapshotAddEdgesImpl(
+    GCCell *cell,
+    GC *gc,
+    HeapSnapshot &snap) {
+  auto *const self = vmcast<JSFunction>(cell);
+  // Add the super type's edges too.
+  Callable::_snapshotAddEdgesImpl(self, gc, snap);
+
+  // A node for the code block will be added as part of the RuntimeModule.
+  snap.addNamedEdge(
+      HeapSnapshot::EdgeType::Shortcut,
+      "codeBlock",
+      gc->getIDTracker().getNativeID(self->codeBlock_));
+}
+
 void JSFunction::_snapshotAddLocationsImpl(
     GCCell *cell,
     GC *gc,

@@ -771,7 +771,7 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationForLazyCode) {
       "myGlobal",
       funcID,
       func->getAllocatedSize(),
-      6};
+      7};
   EXPECT_EQ(node, expected);
   // Edges aren't tested in this test.
 
@@ -814,7 +814,7 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationAndNameTest) {
       "foo",
       funcID,
       func->getAllocatedSize(),
-      6};
+      7};
   EXPECT_EQ(node, expected);
   // Edges aren't tested in this test.
 
@@ -858,7 +858,7 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionDisplayNameTest) {
       "bar",
       funcID,
       func->getAllocatedSize(),
-      11};
+      12};
   EXPECT_EQ(node, expected);
 }
 

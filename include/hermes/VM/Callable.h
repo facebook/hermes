@@ -1037,6 +1037,7 @@ class JSFunction : public Callable {
   static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
   static void
   _snapshotAddLocationsImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 };
 
 /// A function which interprets code and returns a Async Function when called.
