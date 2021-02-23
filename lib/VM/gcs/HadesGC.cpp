@@ -1527,18 +1527,34 @@ void HadesGC::oldGenCollection(std::string cause) {
   // executor, the GC cannot be destructed until the new thread completes. This
   // means that before destroying the GC, waitForCollectionToFinish must be
   // called.
-  ogThreadStatus_ =
-      backgroundExecutor_->add([this] { HadesGC::oldGenCollectionWorker(); });
+  collectOGInBackground();
   // Use concurrentPhase_ to be able to tell when the collection finishes.
 }
 
-void HadesGC::oldGenCollectionWorker() {
-  while (true) {
-    std::lock_guard<Mutex> lk(gcMutex_);
-    incrementalCollect(true);
-    if (concurrentPhase_ == Phase::None)
-      break;
-  }
+void HadesGC::collectOGInBackground() {
+  assert(gcMutex_ && "Must hold GC mutex when scheduling background work.");
+  assert(
+      !backgroundTaskActive_ && "Should only have one active task at a time");
+#ifndef NDEBUG
+  backgroundTaskActive_ = true;
+#endif
+
+  ogThreadStatus_ = backgroundExecutor_->add([this]() {
+    while (true) {
+      std::lock_guard<Mutex> lk(gcMutex_);
+      assert(
+          backgroundTaskActive_ &&
+          "backgroundTaskActive_ must be true when the background task is in the loop.");
+      incrementalCollect(true);
+      if (concurrentPhase_ == Phase::None ||
+          concurrentPhase_ == Phase::CompleteMarking) {
+#ifndef NDEBUG
+        backgroundTaskActive_ = false;
+#endif
+        break;
+      }
+    }
+  });
 }
 
 void HadesGC::incrementalCollect(bool backgroundThread) {
@@ -1553,18 +1569,12 @@ void HadesGC::incrementalCollect(bool backgroundThread) {
         concurrentPhase_ = Phase::CompleteMarking;
       break;
     case Phase::CompleteMarking:
+      // Background task should exit, the mutator will restart it after the STW
+      // pause.
       if (!backgroundThread) {
         completeMarking();
         concurrentPhase_ = Phase::Sweep;
-        // If the OG collection is waiting, notify it that it can complete.
-        if (kConcurrentGC)
-          stopTheWorldCondVar_.notify_one();
-      } else {
-        waitForCompleteMarking();
       }
-      assert(
-          concurrentPhase_ != Phase::CompleteMarking &&
-          "completeMarking should advance concurrentPhase_");
       break;
     case Phase::Sweep:
       // Calling oldGen_.sweepNext() will sweep the next segment.
@@ -1625,19 +1635,6 @@ void HadesGC::prepareCompactee() {
     compactee_.start = compactee_.segment->lowLim();
     compacteeHandleForSweep_ = compactee_.segment;
   }
-}
-
-void HadesGC::waitForCompleteMarking() {
-  assert(kConcurrentGC);
-  assert(
-      calledByBackgroundThread() &&
-      "Only background thread can block waiting for STW pause.");
-  assert(gcMutex_);
-  std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
-  waitForConditionVariable(stopTheWorldCondVar_, lk, [this] {
-    return concurrentPhase_ != Phase::CompleteMarking;
-  });
-  lk.release();
 }
 
 void HadesGC::completeMarking() {
@@ -2941,6 +2938,7 @@ void HadesGC::yieldToOldGen() {
 
   } else if (concurrentPhase_ == Phase::CompleteMarking) {
     incrementalCollect(false);
+    collectOGInBackground();
   }
 }
 

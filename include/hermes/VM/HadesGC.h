@@ -618,13 +618,11 @@ class HadesGC final : public GCBase {
   /// end, we can call get() on this future.
   std::future<void> ogThreadStatus_;
 
-  /// This condition variable is used for synchronising the STW pause
-  /// between the mutator and the background thread. When it is time for the STW
-  /// pause, the OG thread will advance concurrentPhase_ to CompleteMarking and
-  /// wait on the condition variable. Once the mutator finishes running
-  /// completeMarking(), it will wake the OG thread back up, so that it can
-  /// resume with sweeping.
-  std::condition_variable_any stopTheWorldCondVar_;
+#ifndef NDEBUG
+  /// True from the time the background task is created, to the time it exits
+  /// the collection loop. False otherwise.
+  bool backgroundTaskActive_{false};
+#endif
 
   /// If true, whenever YG fills up immediately put it into the OG.
   bool promoteYGToOG_;
@@ -792,18 +790,13 @@ class HadesGC final : public GCBase {
   ///   have been unlocked and then re-locked.
   void waitForCollectionToFinish();
 
-  /// Worker function that does the bulk of the GC work concurrently with the
-  /// mutator.
-  void oldGenCollectionWorker();
+  /// Worker function that schedules the bulk of the GC work on the background
+  /// thread, to perform it concurrently with the mutator.
+  void collectOGInBackground();
 
   /// Perform a single step of an OG collection. \p backgroundThread indicates
   /// whether this call was made from the background thread.
   void incrementalCollect(bool backgroundThread);
-
-  /// Should only be called from the background thread in a concurrent GC.
-  /// Requests the mutator to complete the STW pause during the next YG
-  /// collection, blocks the background thread until that is done.
-  void waitForCompleteMarking();
 
   /// Finish the marking process. This requires a STW pause in order to do a
   /// final marking worklist drain, and to update weak roots. It must be invoked

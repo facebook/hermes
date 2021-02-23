@@ -159,38 +159,6 @@ class FakeMutex {
 
 } // namespace impl
 
-template <typename Predicate>
-void waitForConditionVariable(
-    std::condition_variable_any &cv,
-    std::unique_lock<std::recursive_mutex> &lk,
-    Predicate pred) {
-  cv.wait(lk, pred);
-}
-
-template <typename Predicate>
-void waitForConditionVariable(
-    std::condition_variable_any &cv,
-    std::unique_lock<impl::DebugMutex> &lk,
-    Predicate pred) {
-  assert(
-      lk.mutex()->depth() == 1 &&
-      "Must only lock recursive mutex once before waiting on CV");
-  cv.wait(lk, pred);
-}
-
-// This must exist for compilation purposes, but should never be called.
-template <typename Predicate>
-void waitForConditionVariable(
-    std::condition_variable_any &cv,
-    std::unique_lock<impl::FakeMutex> &lk,
-    Predicate pred) {
-  (void)cv;
-  (void)lk;
-  (void)pred;
-  assert(
-      false && "Should never call waitForConditionVariable with a FakeMutex");
-}
-
 // Only these typedefs should be used by the rest of the VM.
 template <typename T>
 using AtomicIfConcurrentGC = typename std::
