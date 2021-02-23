@@ -358,63 +358,29 @@ HadesGC::CollectionStats::~CollectionStats() {
       /*tags*/ std::move(tags_)});
 }
 
-/// This struct is used for acceptors that need to know whether they are marking
-/// heap addresses and track the original heap address of a given pointer. This
-/// is used by MarkAcceptor and EvacAcceptor to dirty cards during compaction.
-class HadesGC::HeapMarkingAcceptor : public RootAndSlotAcceptor {
- public:
-  HeapMarkingAcceptor(HadesGC &gc) : gc(gc) {}
-
-  using RootAndSlotAcceptor::accept;
-
-  void accept(GCCell *&ptr) override final {
-    acceptRoot(ptr);
-  }
-  virtual void acceptHeap(GCCell *&ptr, void *heapLoc) = 0;
-  virtual void acceptRoot(GCCell *&ptr) = 0;
-
-  void accept(GCPointerBase &ptr) override final {
-    acceptHeap(ptr.getLoc(), &ptr);
-  }
-  virtual void acceptHeap(BasedPointer &basedPtr, void *heapLoc) = 0;
-
-  void accept(RootSymbolID sym) override final {
-    acceptSym(sym);
-  }
-  void accept(GCSymbolID sym) override final {
-    acceptSym(sym);
-  }
-  virtual void acceptSym(SymbolID sym) = 0;
-
- protected:
-  HadesGC &gc;
-};
-
 template <bool CompactionEnabled>
-class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
+class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
                                     public WeakRootAcceptorDefault {
  public:
   EvacAcceptor(HadesGC &gc)
-      : HeapMarkingAcceptor{gc},
-        WeakRootAcceptorDefault{gc.getPointerBase()},
+      : WeakRootAcceptorDefault{gc.getPointerBase()},
+        gc{gc},
         copyListHead_{nullptr},
         isTrackingIDs_{gc.isTrackingIDs()} {}
 
   ~EvacAcceptor() {}
-
-  using HeapMarkingAcceptor::accept;
 
   inline bool shouldForward(const void *ptr) const {
     return gc.inYoungGen(ptr) ||
         (CompactionEnabled && gc.compactee_.evacContains(ptr));
   }
 
-  void acceptRoot(GCCell *&ptr) override {
+  void acceptRoot(GCCell *&ptr) {
     if (shouldForward(ptr))
       forwardCell(ptr);
   }
 
-  void acceptHeap(GCCell *&ptr, void *heapLoc) override {
+  void acceptHeap(GCCell *&ptr, void *heapLoc) {
     if (shouldForward(ptr)) {
       assert(
           HeapSegment::getCellMarkBit(ptr) &&
@@ -474,7 +440,7 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
     cell = newCell;
   }
 
-  void acceptHeap(BasedPointer &ptr, void *heapLoc) override {
+  void acceptHeap(BasedPointer &ptr, void *heapLoc) {
     if (!ptr) {
       return;
     }
@@ -483,6 +449,14 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
         static_cast<GCCell *>(base->basedToPointerNonNull(ptr));
     acceptHeap(actualizedPointer, heapLoc);
     ptr = base->pointerToBasedNonNull(actualizedPointer);
+  }
+
+  void accept(GCCell *&ptr) override {
+    acceptRoot(ptr);
+  }
+
+  void accept(GCPointerBase &ptr) override {
+    acceptHeap(ptr.getLoc(), &ptr);
   }
 
   void accept(PinnedHermesValue &hv) override {
@@ -516,7 +490,8 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
     }
   }
 
-  void acceptSym(SymbolID) override {}
+  void accept(RootSymbolID sym) override {}
+  void accept(GCSymbolID sym) override {}
 
   /// There is no need to do anything with WeakRefs, since they are not
   /// collected in a YG/compaction pass.
@@ -538,6 +513,7 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
   }
 
  private:
+  HadesGC &gc;
   /// The copy list is managed implicitly in the body of each copied YG object.
   CopyListCell *copyListHead_;
   const bool isTrackingIDs_;
@@ -657,18 +633,16 @@ class MarkWorklist {
   llvh::SmallVector<GCCell *, 0> worklist_;
 };
 
-class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
+class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
                                     public WeakRefAcceptor {
  public:
   MarkAcceptor(HadesGC &gc)
-      : HeapMarkingAcceptor{gc},
+      : gc{gc},
         markedSymbols_{gc.gcCallbacks_->getSymbolsEnd()},
         writeBarrierMarkedSymbols_{gc.gcCallbacks_->getSymbolsEnd()},
         bytesToMark_{gc.oldGen_.allocatedBytes()} {}
 
-  using HeapMarkingAcceptor::accept;
-
-  void acceptHeap(GCCell *&cell, void *heapLoc) override {
+  void acceptHeap(GCCell *cell, const void *heapLoc) {
     if (!cell) {
       return;
     }
@@ -686,28 +660,28 @@ class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
     push(cell);
   }
 
-  void acceptRoot(GCCell *&cell) override {
+  void acceptRoot(GCCell *cell) {
     assert((!cell || cell->isValid()) && "Encountered an invalid cell");
     if (cell && !HeapSegment::getCellMarkBit(cell))
       push(cell);
   }
 
-  void acceptHeap(BasedPointer &ptrRef, void *heapLoc) override {
-    // Copy into local variable in case it changes during evaluation.
-    const BasedPointer ptr = ptrRef;
+  void acceptHeap(BasedPointer ptr, const void *heapLoc) {
     if (!ptr) {
       return;
     }
     PointerBase *const base = gc.getPointerBase();
     GCCell *actualizedPointer =
         static_cast<GCCell *>(base->basedToPointerNonNull(ptr));
-#ifndef NDEBUG
-    void *const ptrCopy = actualizedPointer;
-#endif
     acceptHeap(actualizedPointer, heapLoc);
-    assert(
-        ptrCopy == actualizedPointer &&
-        "MarkAcceptor::accept should not modify its argument");
+  }
+
+  void accept(GCCell *&ptr) override {
+    acceptRoot(ptr);
+  }
+
+  void accept(GCPointerBase &ptr) override {
+    acceptHeap(ptr.getLoc(), &ptr);
   }
 
   template <typename HVType>
@@ -715,9 +689,6 @@ class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
     const HermesValue hv = hvRef;
     if (hv.isPointer()) {
       GCCell *ptr = static_cast<GCCell *>(hv.getPointer());
-#ifndef NDEBUG
-      void *const ptrCopy = ptr;
-#endif
       static_assert(
           std::is_same<HVType, GCHermesValue>::value ||
               std::is_same<HVType, PinnedHermesValue>::value,
@@ -726,11 +697,6 @@ class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
         acceptRoot(ptr);
       else
         acceptHeap(ptr, &hvRef);
-      // ptr should never be modified by this acceptor, so there's no write-back
-      // to do.
-      assert(
-          ptrCopy == ptr &&
-          "ptr shouldn't be modified by accept in MarkAcceptor");
     } else if (hv.isSymbol()) {
       acceptSym(hv.getSymbol());
     }
@@ -744,7 +710,7 @@ class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
     acceptHV(hvRef);
   }
 
-  void acceptSym(SymbolID sym) override {
+  void acceptSym(SymbolID sym) {
     const uint32_t idx = sym.unsafeGetIndex();
     if (sym.isInvalid() || idx >= markedSymbols_.size()) {
       // Ignore symbols that aren't valid or are pointing outside of the range
@@ -752,6 +718,13 @@ class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
       return;
     }
     markedSymbols_[idx] = true;
+  }
+
+  void accept(RootSymbolID sym) override {
+    acceptSym(sym);
+  }
+  void accept(GCSymbolID sym) override {
+    acceptSym(sym);
   }
 
   /// Interface for symbols marked by a write barrier.
@@ -904,6 +877,8 @@ class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
   }
 
  private:
+  HadesGC &gc;
+
   /// A worklist local to the marking thread, that is only pushed onto by the
   /// marking thread. If this is empty, the global worklist must be consulted
   /// to ensure that pointers modified in write barriers are handled.
