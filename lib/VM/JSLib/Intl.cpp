@@ -444,7 +444,7 @@ CallResult<HermesValue> intlServiceConstructor(
     return ExecutionStatus::EXCEPTION;
   }
 
-  auto native = make_unique<T>();
+  auto native = std::make_unique<T>();
   if (LLVM_UNLIKELY(
           native->initialize(runtime, *localesRes, *optionsRes) ==
           ExecutionStatus::EXCEPTION)) {

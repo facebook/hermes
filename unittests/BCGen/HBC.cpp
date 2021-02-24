@@ -109,7 +109,7 @@ TEST(HBCBytecodeGen, IntegrationTest) {
   EXPECT_GE(globalFunctionOffsetExpected, 0);
 
   auto bytecode = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-                      llvh::make_unique<StringBuffer>(OS.str()))
+                      std::make_unique<StringBuffer>(OS.str()))
                       .first;
 
   int functionCnt = bytecode->getFunctionCount();
@@ -183,7 +183,7 @@ TEST(HBCBytecodeGen, StripDebugInfo) {
   // Verify debug info absent from decoded BM.
   std::unique_ptr<hbc::BCProvider> strippedBC =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-          llvh::make_unique<StringBuffer>(strippedOS.str()))
+          std::make_unique<StringBuffer>(strippedOS.str()))
           .first;
   ASSERT_EQ(strippedBC->getFunctionCount(), BM->getNumFunctions());
   for (uint32_t i = 0, max = BM->getNumFunctions(); i < max; i++) {
@@ -236,7 +236,7 @@ TEST(HBCBytecodeGen, StringTableTest) {
   BS.serialize(*BM, SHA1{});
 
   auto bytecode = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-                      llvh::make_unique<StringBuffer>(OS.str()))
+                      std::make_unique<StringBuffer>(OS.str()))
                       .first;
 
   EXPECT_EQ(bytecode->getStringCount(), 5u);
@@ -297,7 +297,7 @@ TEST(HBCBytecodeGen, ExceptionTableTest) {
   BS.serialize(*BM, SHA1{});
 
   auto bytecode = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-                      llvh::make_unique<StringBuffer>(OS.str()))
+                      std::make_unique<StringBuffer>(OS.str()))
                       .first;
 
   ASSERT_EQ(bytecode->getExceptionTable(0).size(), 3u);
@@ -345,7 +345,7 @@ TEST(HBCBytecodeGen, ArrayBufferTest) {
   BS.serialize(*BM, SHA1{});
 
   auto bytecode = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-                      llvh::make_unique<StringBuffer>(OS.str()))
+                      std::make_unique<StringBuffer>(OS.str()))
                       .first;
 
   ASSERT_EQ(bytecode->getArrayBuffer().size(), 10u);
@@ -457,13 +457,12 @@ TEST(HBCBytecodeGen, SerializeBytecodeOptions) {
   auto bytecodeVecStaticBuiltins =
       bytecodeForSource("print('hello world');", flags);
 
-  auto bytecodeDefault =
-      hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-          llvh::make_unique<VectorBuffer>(bytecodeVecDefault))
-          .first;
+  auto bytecodeDefault = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+                             std::make_unique<VectorBuffer>(bytecodeVecDefault))
+                             .first;
   auto bytecodeStaticBuiltins =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-          llvh::make_unique<VectorBuffer>(bytecodeVecStaticBuiltins))
+          std::make_unique<VectorBuffer>(bytecodeVecStaticBuiltins))
           .first;
   ASSERT_TRUE(bytecodeDefault);
   ASSERT_TRUE(bytecodeStaticBuiltins);
@@ -475,13 +474,12 @@ TEST(HBCBytecodeGen, BytecodeOptionHasAsync) {
   auto bytecodeVecNoAsync = bytecodeForSource("function foo(){}");
   auto bytecodeVecHasAsync = bytecodeForSource("async function foo(){}");
 
-  auto bytecodeNoAsync =
-      hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-          llvh::make_unique<VectorBuffer>(bytecodeVecNoAsync))
-          .first;
+  auto bytecodeNoAsync = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+                             std::make_unique<VectorBuffer>(bytecodeVecNoAsync))
+                             .first;
   auto bytecodeHasAsync =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-          llvh::make_unique<VectorBuffer>(bytecodeVecHasAsync))
+          std::make_unique<VectorBuffer>(bytecodeVecHasAsync))
           .first;
   ASSERT_TRUE(bytecodeNoAsync);
   ASSERT_TRUE(bytecodeHasAsync);

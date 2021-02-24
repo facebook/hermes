@@ -28,7 +28,7 @@ using namespace hermes;
 Dependencies *hermes::hermesExtractDependencies(
     const char *source,
     size_t sourceSize) {
-  std::unique_ptr<Dependencies> result = hermes::make_unique<Dependencies>();
+  std::unique_ptr<Dependencies> result = std::make_unique<Dependencies>();
 
   auto context = std::make_shared<Context>();
 #if HERMES_PARSE_JSX

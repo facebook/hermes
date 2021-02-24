@@ -174,7 +174,7 @@ Runtime::Runtime(
       crashMgr_(runtimeConfig.getCrashMgr()),
       crashCallbackKey_(
           crashMgr_->registerCallback([this](int fd) { crashCallback(fd); })),
-      codeCoverageProfiler_(hermes::make_unique<CodeCoverageProfiler>(this)),
+      codeCoverageProfiler_(std::make_unique<CodeCoverageProfiler>(this)),
       gcEventCallback_(runtimeConfig.getGCConfig().getCallback()),
       allowFunctionToStringWithRuntimeSource_(
           runtimeConfig.getAllowFunctionToStringWithRuntimeSource()) {
@@ -238,7 +238,7 @@ Runtime::Runtime(
     LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
 
     if (runtimeConfig.getEnableSampleProfiling())
-      samplingProfiler_ = make_unique<SamplingProfiler>(this);
+      samplingProfiler_ = std::make_unique<SamplingProfiler>(this);
 
     return;
   }
@@ -346,7 +346,7 @@ Runtime::Runtime(
   initJSBuiltins(builtins_, jsBuiltinsObj);
 
   if (runtimeConfig.getEnableSampleProfiling())
-    samplingProfiler_ = make_unique<SamplingProfiler>(this);
+    samplingProfiler_ = std::make_unique<SamplingProfiler>(this);
 
   LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
 }
@@ -1032,7 +1032,7 @@ Handle<JSObject> Runtime::runInternalBytecode() {
   auto module = getInternalBytecode();
   std::pair<std::unique_ptr<hbc::BCProvider>, std::string> bcResult =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-          llvh::make_unique<Buffer>(module.data(), module.size()));
+          std::make_unique<Buffer>(module.data(), module.size()));
   if (LLVM_UNLIKELY(!bcResult.first)) {
     hermes_fatal((llvh::Twine("Error running internal bytecode: ") +
                   bcResult.second.c_str())
@@ -2299,7 +2299,7 @@ void Runtime::enableAllocationLocationTracker(
         std::vector<GCBase::AllocationLocationTracker::HeapStatsUpdate>)>
         fragmentCallback) {
   if (!stackTracesTree_) {
-    stackTracesTree_ = make_unique<StackTracesTree>();
+    stackTracesTree_ = std::make_unique<StackTracesTree>();
   }
   stackTracesTree_->syncWithRuntimeStack(this);
   getHeap().enableHeapProfiler(std::move(fragmentCallback));

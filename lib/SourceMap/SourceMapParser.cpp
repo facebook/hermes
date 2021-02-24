@@ -105,7 +105,7 @@ std::unique_ptr<SourceMap> SourceMapParser::parse(
     sm.error(genericLoc, "Failed to parse source map mappings");
     return nullptr;
   }
-  return llvh::make_unique<SourceMap>(
+  return std::make_unique<SourceMap>(
       sourceRoot,
       std::move(sources),
       std::move(lines),

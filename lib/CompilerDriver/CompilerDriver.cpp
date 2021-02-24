@@ -663,7 +663,7 @@ class OutputStream {
       return false;
     }
 
-    fdos_ = llvh::make_unique<raw_fd_ostream>(tempName_, EC, openFlags);
+    fdos_ = std::make_unique<raw_fd_ostream>(tempName_, EC, openFlags);
     if (EC) {
       llvh::errs() << "Failed to open file " << tempName_ << ": "
                    << EC.message() << '\n';
@@ -1340,7 +1340,7 @@ std::unique_ptr<hbc::BCProviderFromBuffer> loadBaseBytecodeProvider(
     return nullptr;
   }
   // Transfer ownership to an owned memory buffer.
-  auto ownedBuf = llvh::make_unique<OwnedMemoryBuffer>(std::move(fileBuf));
+  auto ownedBuf = std::make_unique<OwnedMemoryBuffer>(std::move(fileBuf));
   auto ret = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
       std::move(ownedBuf));
   if (!ret.first) {
@@ -1465,7 +1465,7 @@ std::unique_ptr<Context::ResolutionTable> readResolutionTable(
 
   using namespace ::hermes::parser;
 
-  auto result = hermes::make_unique<Context::ResolutionTable>();
+  auto result = std::make_unique<Context::ResolutionTable>();
 
   JSONObject *resolutionTable =
       llvh::dyn_cast_or_null<JSONObject>(metadata->get("resolutionTable"));
@@ -1654,7 +1654,7 @@ CompileResult processBytecodeFile(std::unique_ptr<llvh::MemoryBuffer> fileBuf) {
   std::string filename = fileBuf->getBufferIdentifier();
 
   std::unique_ptr<hbc::BCProviderFromBuffer> bytecode;
-  auto buffer = llvh::make_unique<OwnedMemoryBuffer>(std::move(fileBuf));
+  auto buffer = std::make_unique<OwnedMemoryBuffer>(std::move(fileBuf));
   auto ret =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(std::move(buffer));
   if (!ret.first) {

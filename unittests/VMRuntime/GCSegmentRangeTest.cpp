@@ -120,7 +120,7 @@ TEST_F(GCSegmentRangeTest, FuseEarlyTermination) {
 
   { // Now make sure a fused version of Generator will not restart after a
     // failure.
-    auto r = GCSegmentRange::fuse(llvh::make_unique<Generator>());
+    auto r = GCSegmentRange::fuse(std::make_unique<Generator>());
     for (size_t i = 0; i < FAIL; ++i) {
       EXPECT_NE(nullptr, r->next());
     }

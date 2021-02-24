@@ -107,7 +107,7 @@ loadSegment(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
   }
 
   auto ret = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-      llvh::make_unique<OwnedMemoryBuffer>(std::move(*fileBufRes)));
+      std::make_unique<OwnedMemoryBuffer>(std::move(*fileBufRes)));
   if (!ret.first) {
     return runtime->raiseTypeError("Error deserializing bytecode");
   }
@@ -169,7 +169,7 @@ serializeVM(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
     const auto *fileName = reinterpret_cast<std::string *>(ctx);
     std::error_code EC;
     serializeStream =
-        llvh::make_unique<llvh::raw_fd_ostream>(llvh::StringRef(*fileName), EC);
+        std::make_unique<llvh::raw_fd_ostream>(llvh::StringRef(*fileName), EC);
     if (EC) {
       return runtime->raiseTypeError(
           TwineChar16("Could not write to file located at ") +
@@ -194,7 +194,7 @@ serializeVM(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
     }
     std::error_code EC;
     serializeStream =
-        llvh::make_unique<llvh::raw_fd_ostream>(llvh::StringRef(fileName), EC);
+        std::make_unique<llvh::raw_fd_ostream>(llvh::StringRef(fileName), EC);
     if (EC) {
       return runtime->raiseTypeError(
           TwineChar16("Could not write to file located at ") +
@@ -421,7 +421,7 @@ bool executeHBCBytecodeImpl(
   }
 
   if (shouldRecordGCStats) {
-    statSampler = llvh::make_unique<vm::StatSamplingThread>(
+    statSampler = std::make_unique<vm::StatSamplingThread>(
         std::chrono::milliseconds(100));
   }
 

@@ -394,7 +394,7 @@ std::unique_ptr<const jsi::Buffer> bufConvert(
     std::unique_ptr<llvh::MemoryBuffer> data_;
   };
 
-  return llvh::make_unique<const OwnedMemoryBuffer>(std::move(buf));
+  return std::make_unique<const OwnedMemoryBuffer>(std::move(buf));
 }
 
 static bool isAllZeroSourceHash(const ::hermes::SHA1 sourceHash) {

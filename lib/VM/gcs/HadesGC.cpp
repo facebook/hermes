@@ -1221,7 +1221,7 @@ HadesGC::HadesGC(
       provider_(std::move(provider)),
       oldGen_{this},
       backgroundExecutor_{
-          kConcurrentGC ? llvh::make_unique<Executor>() : nullptr},
+          kConcurrentGC ? std::make_unique<Executor>() : nullptr},
       promoteYGToOG_{!gcConfig.getAllocInYoung()},
       revertToYGAtTTI_{gcConfig.getRevertToYGAtTTI()},
       occupancyTarget_(gcConfig.getOccupancyTarget()),
@@ -1455,7 +1455,7 @@ void HadesGC::oldGenCollection(std::string cause) {
   // call the destructor here so that the analytics callback is invoked from the
   // mutator thread. This might also be done from checkTripwireAndResetStats.
   ogCollectionStats_ =
-      llvh::make_unique<CollectionStats>(this, std::move(cause), "old");
+      std::make_unique<CollectionStats>(this, std::move(cause), "old");
   // NOTE: Leave CPU time as zero if the collection isn't concurrent, as the
   // times aren't useful.
   if (kConcurrentGC)
@@ -2256,7 +2256,7 @@ void HadesGC::youngGenEvacuateImpl(Acceptor &acceptor, bool doCompaction) {
 void HadesGC::youngGenCollection(
     std::string cause,
     bool forceOldGenCollection) {
-  ygCollectionStats_ = llvh::make_unique<CollectionStats>(this, cause, "young");
+  ygCollectionStats_ = std::make_unique<CollectionStats>(this, cause, "young");
   ygCollectionStats_->beginCPUTimeSection();
   ygCollectionStats_->setBeginTime();
   // Acquire the GC lock for the duration of the YG collection.

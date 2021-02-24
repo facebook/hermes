@@ -472,7 +472,7 @@ int main(int argc, char **argv) {
   }
 
   auto buffer =
-      llvh::make_unique<hermes::MemoryBuffer>(fileBufOrErr.get().get());
+      std::make_unique<hermes::MemoryBuffer>(fileBufOrErr.get().get());
   const uint8_t *bytecodeStart = buffer->data();
   auto ret =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(std::move(buffer));

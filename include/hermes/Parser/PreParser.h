@@ -60,7 +60,7 @@ struct PreParsedData {
       bufferInfo.resize(bufferId + 1);
     }
     if (!bufferInfo[bufferId]) {
-      bufferInfo[bufferId] = llvh::make_unique<PreParsedBufferInfo>();
+      bufferInfo[bufferId] = std::make_unique<PreParsedBufferInfo>();
     }
     return bufferInfo[bufferId].get();
   }

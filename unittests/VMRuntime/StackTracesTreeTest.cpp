@@ -96,7 +96,7 @@ struct StackTracesTreeTest : public RuntimeTestFixtureBase {
         bytecodeForSource(code.c_str(), TestCompileFlags{}, &sourceMapGen);
     std::shared_ptr<hbc::BCProviderFromBuffer> bcProvider =
         hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-            llvh::make_unique<Buffer>(&bytecode[0], bytecode.size()))
+            std::make_unique<Buffer>(&bytecode[0], bytecode.size()))
             .first;
     auto runRes = runtime->runBytecode(
         std::move(bcProvider),

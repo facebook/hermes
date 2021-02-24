@@ -98,7 +98,7 @@ LLVMDisassembler::Impl::Impl(
 
   streamer_.reset(target->createAsmStreamer(
       *ctx_,
-      llvh::make_unique<llvh::formatted_raw_ostream>(OS_),
+      std::make_unique<llvh::formatted_raw_ostream>(OS_),
       /*asmverbose*/ true,
       /*useDwarfDirectory*/ true,
       IP.release(),

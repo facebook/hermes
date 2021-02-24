@@ -26,8 +26,7 @@ bool compileJS(
   // Note that we are relying the zero termination provided by str.data(),
   // because the parser requires it.
   auto res = hbc::BCProviderFromSrc::createBCProviderFromSrc(
-      hermes::make_unique<hermes::Buffer>(
-          (const uint8_t *)str.data(), str.size()),
+      std::make_unique<hermes::Buffer>((const uint8_t *)str.data(), str.size()),
       sourceURL,
       flags);
   if (!res.first)

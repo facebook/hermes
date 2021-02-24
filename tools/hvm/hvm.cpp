@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
     return -1;
   }
 
-  auto buffer = llvh::make_unique<MemoryBuffer>(FileBufOrErr.get().get());
+  auto buffer = std::make_unique<MemoryBuffer>(FileBufOrErr.get().get());
   auto ret =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(std::move(buffer));
 

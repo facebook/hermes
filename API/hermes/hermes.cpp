@@ -1276,7 +1276,7 @@ void HermesRuntime::debugJavaScript(
 void HermesRuntime::registerForProfiling() {
   vm::Runtime &runtime = impl(this)->runtime_;
   runtime.samplingProfiler_ =
-      ::hermes::make_unique<::hermes::vm::SamplingProfiler>(&runtime);
+      std::make_unique<::hermes::vm::SamplingProfiler>(&runtime);
 }
 
 void HermesRuntime::unregisterForProfiling() {
@@ -1897,7 +1897,7 @@ jsi::Function HermesRuntimeImpl::createFunctionFromHostFunction(
     unsigned int paramCount,
     jsi::HostFunctionType func) {
   return maybeRethrow([&] {
-    auto context = ::hermes::make_unique<HFContext>(std::move(func), *this);
+    auto context = std::make_unique<HFContext>(std::move(func), *this);
     auto hostfunc =
         createFunctionFromHostFunction(context.get(), name, paramCount);
     context.release();
