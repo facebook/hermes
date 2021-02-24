@@ -1,9 +1,9 @@
 name: Publish Android
 
 on:
-  push:
-    tags:
-      - v*
+  release:
+    types:
+      - created
   workflow_dispatch:
 
 jobs:
@@ -29,7 +29,7 @@ jobs:
         SONATYPE_NEXUS_PASSWORD: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
         SONATYPE_NEXUS_USERNAME: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
     - name: Upload Java-Only Archives
-      run: ./gradlew -b host.gradle assembleRelease uploadArchives --info
+      run: ./gradlew -b host.gradle assemble uploadArchives --info
       env:
         SONATYPE_NEXUS_PASSWORD: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
         SONATYPE_NEXUS_USERNAME: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
