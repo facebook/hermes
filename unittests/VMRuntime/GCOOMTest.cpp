@@ -204,7 +204,7 @@ TEST(GCOOMTest, VALimitFullGC) {
   const GCConfig config = TestGCConfigFixedSize(kHeapSizeHint);
 
   // Only space for two segments.
-  auto provider = llvh::make_unique<LimitedStorageProvider>(
+  auto provider = std::make_unique<LimitedStorageProvider>(
       DummyRuntime::defaultProvider(), AlignedStorage::size() * 2);
 
   auto runtime =

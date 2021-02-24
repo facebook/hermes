@@ -32,7 +32,7 @@ std::unique_ptr<GC> DummyRuntime::makeHeap(
     std::shared_ptr<CrashManager> crashMgr,
     std::shared_ptr<StorageProvider> provider,
     experiments::VMExperimentFlags experiments) {
-  return llvh::make_unique<
+  return std::make_unique<
 #ifdef HERMESVM_GC_RUNTIME
       // For RuntimeGC tests, just always use GenGC.
       GenGC

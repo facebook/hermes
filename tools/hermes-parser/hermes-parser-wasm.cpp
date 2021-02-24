@@ -36,7 +36,7 @@ extern "C" ParseResult *hermesParse(
     bool detectFlow,
     bool tokens,
     bool allowReturnOutsideFunction) {
-  std::unique_ptr<ParseResult> result = hermes::make_unique<ParseResult>();
+  std::unique_ptr<ParseResult> result = std::make_unique<ParseResult>();
   if (source[sourceSize - 1] != 0) {
     result->error_ = "Input source must be zero-terminated";
     return result.release();
@@ -60,7 +60,7 @@ extern "C" ParseResult *hermesParse(
   context->setAllowReturnOutsideFunction(allowReturnOutsideFunction);
 
   std::unique_ptr<parser::JSParser> jsParser =
-      hermes::make_unique<parser::JSParser>(
+      std::make_unique<parser::JSParser>(
           *context, fileBufId, parser::FullParse);
   jsParser->setStoreComments(true);
   jsParser->setStoreTokens(tokens);

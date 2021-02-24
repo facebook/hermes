@@ -104,7 +104,7 @@ NativeDisassembler::~NativeDisassembler() {}
 std::unique_ptr<NativeDisassembler> NativeDisassembler::create(
     const char *triple,
     unsigned int asmOutputVariant) {
-  return llvh::make_unique<NativeDisassemblerImpl>(triple, asmOutputVariant);
+  return std::make_unique<NativeDisassemblerImpl>(triple, asmOutputVariant);
 }
 
 } // namespace vm

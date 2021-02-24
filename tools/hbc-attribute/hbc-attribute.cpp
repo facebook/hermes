@@ -500,7 +500,7 @@ bool attribute(
       (uintptr_t)input->getBufferStart());
 
   uintptr_t bundleStart = (uintptr_t)input->getBuffer().data();
-  auto hermesBuffer = llvh::make_unique<hermes::MemoryBuffer>(input.get());
+  auto hermesBuffer = std::make_unique<hermes::MemoryBuffer>(input.get());
   auto ret = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
       std::move(hermesBuffer));
   if (!ret.first) {

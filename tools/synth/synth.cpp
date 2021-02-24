@@ -280,7 +280,7 @@ int main(int argc, char **argv) {
       options.gcConfigBuilder.withShouldRecordStats(false);
       options.shouldTrackIO = false;
       std::error_code ec;
-      auto os = ::hermes::make_unique<llvh::raw_fd_ostream>(
+      auto os = std::make_unique<llvh::raw_fd_ostream>(
           cl::Trace.c_str(),
           ec,
           llvh::sys::fs::CD_CreateAlways,

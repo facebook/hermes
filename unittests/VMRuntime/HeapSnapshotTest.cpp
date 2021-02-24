@@ -1116,7 +1116,7 @@ struct ChromeStackTreeNode {
           llvh::cast<JSONNumber>(traceNodes[i + 1])->getValue();
       auto children = llvh::cast<JSONArray>(traceNodes[i + 4]);
       auto treeNode =
-          hermes::make_unique<ChromeStackTreeNode>(parent, functionInfoIndex);
+          std::make_unique<ChromeStackTreeNode>(parent, functionInfoIndex);
       idNodeMap.emplace(id, treeNode.get());
       treeNode->children_ = parse(*children, treeNode.get(), idNodeMap);
       res.emplace_back(std::move(treeNode));

@@ -104,8 +104,8 @@ PageAccessTracker::PageAccessTracker(
       bufStartPage_(bufStartPage),
       totalPages_(totalPages),
       signal_(signal) {
-  accessedPageIds_ = llvh::make_unique<unsigned int[]>(totalPages);
-  accessedMicros_ = llvh::make_unique<unsigned int[]>(totalPages);
+  accessedPageIds_ = std::make_unique<unsigned int[]>(totalPages);
+  accessedMicros_ = std::make_unique<unsigned int[]>(totalPages);
 }
 
 void PageAccessTracker::recordPageAccess(void *accessedAddr, uint32_t micros) {

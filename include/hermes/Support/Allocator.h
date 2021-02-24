@@ -82,7 +82,7 @@ class BacktrackingBumpPtrAllocator {
  public:
   explicit BacktrackingBumpPtrAllocator() {
     state_ = new State();
-    slabs_.push_back(llvh::make_unique<Slab>());
+    slabs_.push_back(std::make_unique<Slab>());
   }
   ~BacktrackingBumpPtrAllocator() {
     while (state_)

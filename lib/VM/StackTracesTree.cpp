@@ -235,7 +235,7 @@ void StackTracesTree::pushCallStack(
   auto nameID =
       nameStr.empty() ? anonymousFunctionID_ : strings_->insert(nameStr);
 
-  auto newNode = hermes::make_unique<StackTracesTreeNode>(
+  auto newNode = std::make_unique<StackTracesTreeNode>(
       nextNodeID_++, head_, sourceLoc, codeBlock, ip, nameID);
   auto newNodePtr = newNode.get();
   nodes_.emplace_back(std::move(newNode));
