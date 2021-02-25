@@ -415,6 +415,10 @@ describe('Program source type', () => {
         type: 'File',
         program: moduleProgram,
       });
+
+      expect(parse(moduleSource, {sourceType: 'unambiguous'})).toMatchObject(
+        moduleProgram,
+      );
     }
   });
 
@@ -431,6 +435,10 @@ describe('Program source type', () => {
       type: 'File',
       program: scriptProgram,
     });
+
+    expect(parse(scriptSource, {sourceType: 'unambiguous'})).toMatchObject(
+      scriptProgram,
+    );
   });
 });
 

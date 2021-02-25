@@ -27,12 +27,17 @@ function getOptions(options) {
     throw new Error('flow option must be "all" or "detect"');
   }
 
-  if (
+  if (options.sourceType === 'unambiguous') {
+    // Clear source type so that it will be detected from the contents of the file
+    options.sourceType = null;
+  } else if (
     options.sourceType != null &&
     options.sourceType !== 'script' &&
     options.sourceType !== 'module'
   ) {
-    throw new Error('sourceType option must be "script" or "module" if set');
+    throw new Error(
+      'sourceType option must be "script", "module", or "unambiguous" if set',
+    );
   }
 
   options.tokens = options.tokens === true;
