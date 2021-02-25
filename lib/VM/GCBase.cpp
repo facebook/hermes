@@ -1086,7 +1086,7 @@ void GCBase::IDTracker::deserialize(Deserializer &d) {
     d.readRelocation(&ptr, RelocationKind::GCPointer);
     auto res = objectIDMap_
                    .try_emplace(
-                       ptr.getStorageType().getRawValue(),
+                       GCPointerBase::storageTypeToRaw(ptr.getStorageType()),
                        d.readInt<HeapSnapshot::NodeID>())
                    .second;
     (void)res;
