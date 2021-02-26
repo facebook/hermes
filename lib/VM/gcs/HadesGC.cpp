@@ -1227,11 +1227,7 @@ HadesGC::HadesGC(
       occupancyTarget_(gcConfig.getOccupancyTarget()),
       ygAverageSurvivalRatio_{
           /*weight*/ 0.5,
-          /*init*/ kYGInitialSurvivalRatio},
-      compactionEnabled_{!!(vmExperimentFlags & experiments::HadesCompaction)},
-      timedIncremental_{
-          !kConcurrentGC &&
-          (vmExperimentFlags & experiments::HadesTimedIncremental)} {
+          /*init*/ kYGInitialSurvivalRatio} {
   (void)vmExperimentFlags;
   std::lock_guard<Mutex> lk(gcMutex_);
   crashMgr_->setCustomData("HermesGC", getKindAsStr().c_str());
@@ -1381,8 +1377,7 @@ void HadesGC::printStats(JSONEmitter &json) {
 }
 
 std::string HadesGC::getKindAsStr() const {
-  return std::string(kGCName) + (compactionEnabled_ ? "(compacting)" : "") +
-      (timedIncremental_ ? "(timed)" : "");
+  return kGCName;
 }
 
 void HadesGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
@@ -1607,8 +1602,6 @@ void HadesGC::prepareCompactee() {
 
   llvh::Optional<size_t> compacteeIdx;
 #ifndef HERMESVM_SANITIZE_HANDLES
-  if (!compactionEnabled_)
-    return;
   // We should compact if the target size of the heap has fallen below its
   // actual size.
   if (oldGen_.targetSizeBytes() < oldGen_.size()) {
@@ -2936,7 +2929,7 @@ void HadesGC::yieldToOldGen() {
     // also be <25ms, keeping us within 50ms even in the worst case.
     do {
       incrementalCollect(false);
-    } while (timedIncremental_ && concurrentPhase_ == initialPhase &&
+    } while (concurrentPhase_ == initialPhase &&
              ygCollectionStats_->getElapsedTime().count() <
                  kYGIncrementalCollectBudget);
 

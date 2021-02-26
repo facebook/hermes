@@ -60,8 +60,7 @@ DummyRuntime::DummyRuntime(
           gcConfig,
           crashMgr,
           std::move(storageProvider),
-          // Enable compaction in Hades for the unused memory test.
-          experiments::HadesCompaction)} {}
+          /* experiments */ 0)} {}
 
 DummyRuntime::~DummyRuntime() {
   EXPECT_FALSE(getHeap().getIDTracker().hasNativeIDs())

@@ -15,7 +15,8 @@ namespace vm {
 namespace experiments {
 
 /// List of active experiments, corresponding to
-/// Runtime::getVMExperimentFlags().
+/// Runtime::getVMExperimentFlags(). If possible, skip the commented values to
+/// avoid unexpected conflicts.
 enum {
   Default = 0,
   MAdviseSequential = 1 << 2,
@@ -25,9 +26,9 @@ enum {
   MAdviseStringsWillNeed = 1 << 6,
   VerifyBytecodeChecksum = 1 << 7,
   IgnoreMemoryWarnings = 1 << 9,
-  HadesCompaction = 1 << 10,
+  // HadesCompaction = 1 << 10,
   Hades = 1 << 11,
-  HadesTimedIncremental = 1 << 12,
+  // HadesTimedIncremental = 1 << 12,
   CrashTrace = 1 << 13,
 };
 

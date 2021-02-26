@@ -652,12 +652,6 @@ class HadesGC final : public GCBase {
   /// The amount of bytes of external memory credited to objects in the YG.
   uint64_t ygExternalBytes_{0};
 
-  /// If true, Hades will occasionally compact OG segments.
-  bool compactionEnabled_{false};
-
-  /// If true, incremental collections will do extra work until they cross 25ms.
-  bool timedIncremental_{false};
-
   struct CompacteeState {
     /// \return true if the pointer lives in the segment that is being marked or
     /// evacuated for compaction.
