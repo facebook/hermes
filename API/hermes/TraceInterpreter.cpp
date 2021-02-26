@@ -311,7 +311,7 @@ std::unordered_map<ObjectID, TraceInterpreter::DefAndUse> createGlobalMap(
         defs.size() &&
         "There must be at least one def for any globally used object");
     // The defs here are global record numbers.
-    uint64_t lastDefBeforeFirstUse = *defs.begin();
+    uint64_t lastDefBeforeFirstUse = 0;
     for (uint64_t def : defs) {
       if (def < firstUse) {
         lastDefBeforeFirstUse = std::max(lastDefBeforeFirstUse, def);
