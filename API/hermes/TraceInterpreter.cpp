@@ -17,7 +17,7 @@
 #include <llvh/Support/SaveAndRestore.h>
 
 #include <algorithm>
-#include <unordered_set>
+#include <set>
 
 using namespace hermes::parser;
 using namespace facebook::jsi;
@@ -243,7 +243,7 @@ std::unordered_map<ObjectID, TraceInterpreter::DefAndUse> createGlobalMap(
   // For Objects, Strings, and PropNameIDs.
   std::unordered_map<ObjectID, Glob> firstAndLastGlobalUses;
   // For Objects, Strings, and PropNameIDs.
-  std::unordered_map<ObjectID, std::unordered_set<uint64_t>> defsPerObj;
+  std::unordered_map<ObjectID, std::set<uint64_t>> defsPerObj;
 
   defsPerObj[globalObjID].insert(0);
   firstAndLastGlobalUses[globalObjID].firstUse = 0;
@@ -306,17 +306,15 @@ std::unordered_map<ObjectID, TraceInterpreter::DefAndUse> createGlobalMap(
     assert(
         firstUse <= lastUse &&
         "Should never have the first use be greater than the last use");
-    std::unordered_set<uint64_t> &defs = defsPerObj[objID];
+    const std::set<uint64_t> &defs = defsPerObj[objID];
     assert(
         defs.size() &&
         "There must be at least one def for any globally used object");
-    // The defs here are global record numbers.
-    uint64_t lastDefBeforeFirstUse = 0;
-    for (uint64_t def : defs) {
-      if (def < firstUse) {
-        lastDefBeforeFirstUse = std::max(lastDefBeforeFirstUse, def);
-      }
-    }
+    const auto firstDefAfterFirstUseIter = defs.upper_bound(firstUse);
+    assert(
+        firstDefAfterFirstUseIter != defs.begin() &&
+        "Must have at least one def before first use.");
+    uint64_t lastDefBeforeFirstUse = *std::prev(firstDefAfterFirstUseIter);
     assert(
         lastDefBeforeFirstUse <= lastUse &&
         "Should never have the last def before first use be greater than "
