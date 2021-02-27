@@ -290,8 +290,11 @@ void GenGCHeapSegment::forAllObjs(
   forObjsInRange(callback, start(), level());
 }
 
-void AlignedHeapSegment::addExtentToString(char **buf, int *sz) {
-  int n = snprintf(*buf, *sz, "{lo: \"%p\", hi: \"%p\"}", lowLim(), hiLim());
+void GenGCHeapSegment::addExtentToString(char **buf, int *sz) {
+  // Emit backslashes so that if the string is embedded inside JSON as a string,
+  // it is still parseable.
+  int n = snprintf(
+      *buf, *sz, R"({\"lo\": \"%p\", \"hi\": \"%p\"})", lowLim(), hiLim());
   *buf += n;
   *sz -= n;
 }

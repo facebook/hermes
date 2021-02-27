@@ -99,6 +99,13 @@ class GenGCHeapSegment final : public AlignedHeapSegment {
   void forAllObjs(const std::function<void(GCCell *)> &callback);
   void forAllObjs(const std::function<void(const GCCell *)> &callback) const;
 
+  /// Adds a representation of segments address range to *\p buf,
+  /// ensuring that we don't write more than \p sz characters.  Writes
+  /// min(*sz, <length of string for seg>) characters.  Updates buf to
+  /// point after the last character written, and decreases *\p sz by the
+  /// number of chars written.
+  void addExtentToString(char **buf, int *sz);
+
 #ifdef HERMES_SLOW_DEBUG
   /// For debugging: iterates over objects, asserting that all GCCells have
   /// vtables with valid cell kinds, and that all object pointers point to

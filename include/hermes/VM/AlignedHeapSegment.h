@@ -280,13 +280,6 @@ class AlignedHeapSegment {
   /// underlying storage).
   bool growToFit(size_t amount);
 
-  /// Adds a representation of segments address range to *\p buf,
-  /// ensuring that we don't write more than \p sz characters.  Writes
-  /// min(*sz, <length of string for seg>) characters.  Updates buf to
-  /// point after the last character written, and decreases *\p sz by the
-  /// number of chars written.
-  void addExtentToString(char **buf, int *sz);
-
 #ifndef NDEBUG
   /// Returns true iff \p lvl could refer to a level within this segment.
   bool dbgContainsLevel(const void *lvl) const;
