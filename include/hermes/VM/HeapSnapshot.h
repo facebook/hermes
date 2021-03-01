@@ -21,6 +21,7 @@
 #include "llvh/Support/raw_ostream.h"
 
 #include <bitset>
+#include <chrono>
 #include <string>
 
 namespace hermes {
@@ -86,6 +87,11 @@ class HeapSnapshot {
 #include "hermes/VM/HeapSnapshot.def"
       ;
 
+  static constexpr uint32_t V8_SNAPSHOT_SAMPLE_FIELD_COUNT = 0
+#define V8_SAMPLE_FIELD(label) +1
+#include "hermes/VM/HeapSnapshot.def"
+      ;
+
   using NodeID = uint32_t;
   using NodeIndex = uint32_t;
   using EdgeIndex = uint32_t;
@@ -138,6 +144,8 @@ class HeapSnapshot {
       ::facebook::hermes::debugger::ScriptID script,
       uint32_t line,
       uint32_t column);
+
+  void addSample(std::chrono::microseconds timestamp, NodeID lastSeenObjectID);
 
   static const char *nodeTypeToName(NodeType type);
 

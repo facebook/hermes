@@ -577,9 +577,7 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
 
   snap.beginSection(HeapSnapshot::Section::Samples);
   for (const auto &fragment : getAllocationLocationTracker().fragments()) {
-    json.emitValues(
-        {static_cast<uint64_t>(fragment.timestamp_.count()),
-         static_cast<uint64_t>(fragment.lastSeenObjectID_)});
+    snap.addSample(fragment.timestamp_, fragment.lastSeenObjectID_);
   }
   snap.endSection(HeapSnapshot::Section::Samples);
 

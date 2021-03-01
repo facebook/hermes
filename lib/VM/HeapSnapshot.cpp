@@ -194,6 +194,17 @@ void HeapSnapshot::addLocation(
   json_.emitValue(column - 1);
 }
 
+void HeapSnapshot::addSample(
+    std::chrono::microseconds timestamp,
+    NodeID lastSeenObjectID) {
+  assert(
+      nextSection_ == Section::Samples && sectionOpened_ &&
+      "Shouldn't be emitting samples until the sample section starts");
+  json_.emitValues(
+      {static_cast<uint64_t>(timestamp.count()),
+       static_cast<uint64_t>(lastSeenObjectID)});
+}
+
 const char *HeapSnapshot::nodeTypeToName(NodeType type) {
   switch (type) {
 #define V8_NODE_TYPE(enumerand, label) \
@@ -287,7 +298,10 @@ void HeapSnapshot::emitMeta() {
 
   json_.emitKey("sample_fields");
   json_.openArray();
-  json_.emitValues({"timestamp_us", "last_assigned_id"});
+  json_.emitValues({
+#define V8_SAMPLE_FIELD(name) #name,
+#include "hermes/VM/HeapSnapshot.def"
+  });
   json_.closeArray(); // sample_fields
 
   json_.emitKey("location_fields");

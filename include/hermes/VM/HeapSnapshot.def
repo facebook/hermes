@@ -39,6 +39,9 @@
 #define V8_TRACE_NODE_FIELD(name)
 #endif
 
+#ifndef V8_SAMPLE_FIELD
+#define V8_SAMPLE_FIELD(name)
+#endif
 
 /// V8 Heap Snapshots look like JSON, but the parser expects fields in a
 /// specific order.  They are also all expected to exist, whether not they
@@ -120,6 +123,9 @@ V8_TRACE_NODE_FIELD(count)
 V8_TRACE_NODE_FIELD(size)
 V8_TRACE_NODE_FIELD(children)
 
+V8_SAMPLE_FIELD(timestamp_us)
+V8_SAMPLE_FIELD(last_assigned_id)
+
 #undef V8_SNAPSHOT_SECTION
 #undef V8_NODE_TYPE
 #undef V8_NODE_FIELD
@@ -128,3 +134,4 @@ V8_TRACE_NODE_FIELD(children)
 #undef V8_TRACE_FUNCTION_INFO_FIELD
 #undef V8_TRACE_NODE_FIELD
 #undef V8_LOCATION_FIELD
+#undef V8_SAMPLE_FIELD

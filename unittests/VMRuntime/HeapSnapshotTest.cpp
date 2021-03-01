@@ -21,6 +21,7 @@
 #include "llvh/ADT/StringRef.h"
 #include "llvh/Support/raw_ostream.h"
 
+#include <chrono>
 #include <set>
 #include <sstream>
 
@@ -276,6 +277,28 @@ std::ostream &operator<<(std::ostream &os, const Edge &edge) {
   os.flags(f);
   return os;
 }
+
+struct Sample {
+  std::chrono::microseconds timestamp;
+  HeapSnapshot::NodeID lastSeenObjectID;
+
+  explicit Sample(
+      std::chrono::microseconds timestamp,
+      HeapSnapshot::NodeID lastSeenObjectID)
+      : timestamp(timestamp), lastSeenObjectID(lastSeenObjectID) {}
+
+  static Sample parse(JSONArray::iterator samples) {
+    std::chrono::microseconds timestamp{
+        static_cast<uint64_t>(llvh::cast<JSONNumber>(*samples)->getValue())};
+    samples++;
+
+    auto lastSeenObjectID = static_cast<HeapSnapshot::NodeID>(
+        llvh::cast<JSONNumber>(*samples)->getValue());
+    samples++;
+
+    return Sample{timestamp, lastSeenObjectID};
+  }
+};
 
 struct Location {
   Node object;
@@ -1220,6 +1243,16 @@ global(1) @ test.js(2):2:1
 global(2) @ test.js(2):11:4
 baz(3) @ test.js(2):9:31
 bar(4) @ test.js(2):6:20)#");
+
+  const JSONArray &samples = *llvh::cast<JSONArray>(root->at("samples"));
+  // Must have at least one sample
+  EXPECT_GT(samples.size(), 0u);
+  for (auto it = samples.begin(), e = samples.end(); it != e;
+       it += HeapSnapshot::V8_SNAPSHOT_SAMPLE_FIELD_COUNT) {
+    // Sample must be correctly formatted
+    auto sample = Sample::parse(it);
+    (void)sample;
+  }
 }
 
 TEST_F(HeapSnapshotRuntimeTest, TwoPathsToFunction) {
