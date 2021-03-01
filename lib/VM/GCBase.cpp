@@ -576,9 +576,7 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   snap.emitAllocationTraceInfo();
 
   snap.beginSection(HeapSnapshot::Section::Samples);
-  for (const auto &fragment : getAllocationLocationTracker().fragments()) {
-    snap.addSample(fragment.timestamp_, fragment.lastSeenObjectID_);
-  }
+  getAllocationLocationTracker().addSamplesToSnapshot(snap);
   snap.endSection(HeapSnapshot::Section::Samples);
 
   snap.beginSection(HeapSnapshot::Section::Locations);
@@ -1273,6 +1271,25 @@ void GCBase::AllocationLocationTracker::flushCallback() {
       }
     }
     fragmentCallback_(lastID, duration, std::move(updatedFragments));
+  }
+}
+
+void GCBase::AllocationLocationTracker::addSamplesToSnapshot(
+    HeapSnapshot &snap) {
+  std::lock_guard<Mutex> lk{mtx_};
+  if (enabled_) {
+    flushCallback();
+  }
+  // There might not be fragments if tracking has never been enabled. If there
+  // are, the last one is always invalid.
+  assert(
+      fragments_.empty() ||
+      fragments_.back().lastSeenObjectID_ == IDTracker::kInvalidNode &&
+          "Last fragment should not have an ID assigned yet");
+  // Loop over the fragments if we have any, and always skip the last one.
+  for (size_t i = 0, e = fragments_.size(); i + 1 < e; ++i) {
+    const auto &fragment = fragments_[i];
+    snap.addSample(fragment.timestamp_, fragment.lastSeenObjectID_);
   }
 }
 

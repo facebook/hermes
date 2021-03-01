@@ -622,9 +622,8 @@ class GCBase {
     /// allocations continue to be tracked.
     void disable();
 
-    const std::vector<Fragment> &fragments() const {
-      return fragments_;
-    }
+    /// Flush the current fragment and write all flushed fragments to \p snap.
+    void addSamplesToSnapshot(HeapSnapshot &snap);
 
 #ifdef HERMESVM_SERIALIZE
     void serialize(Serializer &s) const;

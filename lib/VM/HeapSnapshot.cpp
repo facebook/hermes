@@ -11,6 +11,7 @@
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/UTF8.h"
+#include "hermes/VM/GC.h"
 #include "hermes/VM/StackTracesTree.h"
 #include "hermes/VM/StringPrimitive.h"
 
@@ -200,6 +201,9 @@ void HeapSnapshot::addSample(
   assert(
       nextSection_ == Section::Samples && sectionOpened_ &&
       "Shouldn't be emitting samples until the sample section starts");
+  assert(
+      lastSeenObjectID != GCBase::IDTracker::kInvalidNode &&
+      "Last seen object ID must be valid");
   json_.emitValues(
       {static_cast<uint64_t>(timestamp.count()),
        static_cast<uint64_t>(lastSeenObjectID)});

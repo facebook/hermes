@@ -11,6 +11,7 @@
 #include "hermes/Parser/JSONParser.h"
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/Allocator.h"
+#include "hermes/Support/Compiler.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCPointer-inline.h"
@@ -1085,6 +1086,20 @@ TEST_F(HeapSnapshotRuntimeTest, ArrayElements) {
 
 #ifdef HERMES_ENABLE_DEBUGGER
 
+static HeapSnapshot::NodeID findHighestNodeID(
+    const JSONArray &nodes,
+    const JSONArray &strings) {
+  HeapSnapshot::NodeID maxID = GCBase::IDTracker::kInvalidNode;
+  for (auto it = nodes.begin(), e = nodes.end(); it != e;
+       it += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT) {
+    auto node = Node::parse(it, strings);
+    if (node.id > maxID) {
+      maxID = node.id;
+    }
+  }
+  return maxID;
+}
+
 static std::string functionInfoToString(
     int idx,
     const JSONArray &traceFunctionInfos,
@@ -1249,10 +1264,19 @@ bar(4) @ test.js(2):6:20)#");
   EXPECT_GT(samples.size(), 0u);
   for (auto it = samples.begin(), e = samples.end(); it != e;
        it += HeapSnapshot::V8_SNAPSHOT_SAMPLE_FIELD_COUNT) {
-    // Sample must be correctly formatted
     auto sample = Sample::parse(it);
-    (void)sample;
+    EXPECT_NE(sample.lastSeenObjectID, toRValue(GC::IDTracker::kInvalidNode));
+    if (it != samples.begin()) {
+      auto prevSample =
+          Sample::parse(it - HeapSnapshot::V8_SNAPSHOT_SAMPLE_FIELD_COUNT);
+      EXPECT_GT(sample.timestamp, prevSample.timestamp);
+      EXPECT_GT(sample.lastSeenObjectID, prevSample.lastSeenObjectID);
+    }
   }
+  auto highestNodeID = findHighestNodeID(nodes, strings);
+  auto lastSample = Sample::parse(
+      samples.end() - HeapSnapshot::V8_SNAPSHOT_SAMPLE_FIELD_COUNT);
+  EXPECT_GE(lastSample.lastSeenObjectID, highestNodeID);
 }
 
 TEST_F(HeapSnapshotRuntimeTest, TwoPathsToFunction) {
