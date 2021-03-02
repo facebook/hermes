@@ -1251,7 +1251,7 @@ HadesGC::HadesGC(
        requestedInitHeapSegments,
        // At least one YG segment and one OG segment.
        static_cast<size_t>(2)});
-  oldGen_.setTargetSegments(initHeapSegments);
+  oldGen_.setTargetSegments(initHeapSegments - 1);
 }
 
 HadesGC::~HadesGC() {
