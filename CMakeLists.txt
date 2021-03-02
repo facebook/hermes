@@ -127,6 +127,12 @@ set(HERMESVM_ALLOW_COMPRESSED_POINTERS ON CACHE BOOL
 set(HERMESVM_ALLOW_HUGE_PAGES OFF CACHE BOOL
         "Enable huge pages to back the GC managed heap. Only useful on Linux.")
 
+# Note that smaller heap segments will lower the maximum number of properties
+# that can be stored in an object.
+set(HERMESVM_HEAP_SEGMENT_SIZE_KB 4096
+        CACHE STRING
+        "Size of segments in the GC managed heap in KB. Must be a power of 2.")
+
 set(HERMESVM_ALLOW_CONCURRENT_GC ON CACHE BOOL
         "Enable concurrency in the GC for 64-bit builds.")
 
@@ -346,6 +352,7 @@ endif()
 if(HERMESVM_ALLOW_HUGE_PAGES)
     add_definitions(-DHERMESVM_ALLOW_HUGE_PAGES)
 endif()
+add_definitions(-DHERMESVM_HEAP_SEGMENT_SIZE_KB=${HERMESVM_HEAP_SEGMENT_SIZE_KB})
 if(HERMESVM_ALLOW_CONCURRENT_GC)
     add_definitions(-DHERMESVM_ALLOW_CONCURRENT_GC)
 endif()
