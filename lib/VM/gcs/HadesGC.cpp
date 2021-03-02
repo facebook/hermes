@@ -1562,6 +1562,8 @@ void HadesGC::incrementalCollect(bool backgroundThread) {
     case Phase::None:
       break;
     case Phase::Mark:
+      if (!kConcurrentGC && ygCollectionStats_)
+        ygCollectionStats_->addCollectionType("marking");
       // Drain some work from the mark worklist. If the work has finished
       // completely, move on to CompleteMarking.
       if (!oldGenMarker_->drainSomeWork())
@@ -1571,11 +1573,15 @@ void HadesGC::incrementalCollect(bool backgroundThread) {
       // Background task should exit, the mutator will restart it after the STW
       // pause.
       if (!backgroundThread) {
+        if (ygCollectionStats_)
+          ygCollectionStats_->addCollectionType("complete marking");
         completeMarking();
         concurrentPhase_ = Phase::Sweep;
       }
       break;
     case Phase::Sweep:
+      if (!kConcurrentGC && ygCollectionStats_)
+        ygCollectionStats_->addCollectionType("sweeping");
       // Calling oldGen_.sweepNext() will sweep the next segment.
       if (!oldGen_.sweepNext()) {
         // Finish any collection bookkeeping.
@@ -1636,9 +1642,6 @@ void HadesGC::prepareCompactee() {
 
 void HadesGC::completeMarking() {
   assert(inGC() && "inGC_ must be set during the STW pause");
-  if (ygCollectionStats_) {
-    ygCollectionStats_->addCollectionType("complete marking");
-  }
   // No locks are needed here because the world is stopped and there is only 1
   // active thread.
   oldGenMarker_->globalWorklist().flushPushChunk();
