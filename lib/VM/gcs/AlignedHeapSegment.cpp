@@ -26,8 +26,8 @@ namespace vm {
 
 void AlignedHeapSegment::Contents::protectGuardPage(
     oscompat::ProtectMode mode) {
-  char *begin = guardPage_;
-  size_t size = sizeof(guardPage_);
+  char *begin = &paddedGuardPage_[kGuardPagePadding];
+  size_t size = sizeof(paddedGuardPage_) - kGuardPagePadding;
   size_t PS = oscompat::page_size();
   // Only protect if the actual system page size matches expectations.
   if (reinterpret_cast<uintptr_t>(begin) % PS == 0 && PS <= size) {

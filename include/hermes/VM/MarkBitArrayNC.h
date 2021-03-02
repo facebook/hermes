@@ -105,11 +105,7 @@ class MarkBitArrayNC {
   static constexpr size_t kNumBits = AlignedStorage::size() >> LogHeapAlign;
   /// Bitset holding the contents of the mark bit array. Align it to the page
   /// size.
-  BitArray<kNumBits, pagesize::kExpectedPageSize> bitArray_;
-
-  static_assert(
-      sizeof(bitArray_) % pagesize::kExpectedPageSize == 0,
-      "Bit array does not meet alignment requirements!");
+  BitArray<kNumBits> bitArray_;
 };
 
 /* static */ constexpr size_t MarkBitArrayNC::size() {

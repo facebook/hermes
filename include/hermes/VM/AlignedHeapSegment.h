@@ -75,18 +75,47 @@ class AlignedHeapSegment {
 
     MarkBitArrayNC markBitArray_;
 
+    static constexpr size_t kMetadataSize =
+        sizeof(cardTable_) + sizeof(markBitArray_);
+    /// Padding to ensure that the guard page is aligned to a page boundary.
+    static constexpr size_t kGuardPagePadding =
+        llvh::alignTo<pagesize::kExpectedPageSize>(kMetadataSize) -
+        kMetadataSize;
+
     /// Memory made inaccessible through protectGuardPage, for security and
-    /// earlier detection of corruption.
-    char guardPage_[pagesize::kExpectedPageSize];
+    /// earlier detection of corruption. Padded to contain at least one full
+    /// aligned page.
+    char paddedGuardPage_[pagesize::kExpectedPageSize + kGuardPagePadding];
+
+    static constexpr size_t kMetadataAndGuardSize =
+        kMetadataSize + sizeof(paddedGuardPage_);
 
     /// The first byte of the allocation region, which extends past the "end" of
     /// the struct, to the end of the memory region that contains it.
     char allocRegion_[1];
 
    public:
-    /// Set the protection mode of guardPage_ (if system page size allows it).
+    /// Set the protection mode of paddedGuardPage_ (if system page size allows
+    /// it).
     void protectGuardPage(oscompat::ProtectMode mode);
   };
+
+  static_assert(
+      offsetof(Contents, paddedGuardPage_) == Contents::kMetadataSize,
+      "Should not need padding after metadata.");
+
+  /// The offset from the beginning of a segment of the allocatable region.
+  static constexpr size_t offsetOfAllocRegion{offsetof(Contents, allocRegion_)};
+
+  static_assert(
+      isSizeHeapAligned(offsetOfAllocRegion),
+      "Allocation region must start at a heap aligned offset");
+
+  static_assert(
+      (offsetof(Contents, paddedGuardPage_) + Contents::kGuardPagePadding) %
+              pagesize::kExpectedPageSize ==
+          0,
+      "Guard page must be aligned to likely page size");
 
   class HeapCellIterator : public llvh::iterator_facade_base<
                                HeapCellIterator,
@@ -115,17 +144,6 @@ class AlignedHeapSegment {
   static_assert(
       sizeof(SegmentInfo) < CardTable::kUnusedPrefixSize,
       "SegmentInfo does not fit in available unused CardTable space.");
-
-  /// The offset from the beginning of a segment of the allocatable region.
-  static constexpr size_t offsetOfAllocRegion{offsetof(Contents, allocRegion_)};
-
-  static_assert(
-      isSizeHeapAligned(offsetOfAllocRegion),
-      "Allocation region must start at a heap aligned offset");
-
-  static_assert(
-      offsetof(Contents, guardPage_) % sizeof(Contents::guardPage_) == 0,
-      "Guard page must be aligned to likely page size");
 
   /// Attempt an allocation of the given size in the segment.  If there is
   /// sufficent space, cast the space as a GCCell, and returns an uninitialized
