@@ -104,6 +104,14 @@ class AlignedHeapSegment {
       offsetof(Contents, paddedGuardPage_) == Contents::kMetadataSize,
       "Should not need padding after metadata.");
 
+  /// The total space at the start of the CardTable taken up by the metadata and
+  /// guard page in the Contents struct.
+  static constexpr size_t kCardTableUnusedPrefixBytes =
+      Contents::kMetadataAndGuardSize / CardTable::kHeapBytesPerCardByte;
+  static_assert(
+      sizeof(SegmentInfo) < kCardTableUnusedPrefixBytes,
+      "SegmentInfo does not fit in available unused CardTable space.");
+
   /// The offset from the beginning of a segment of the allocatable region.
   static constexpr size_t offsetOfAllocRegion{offsetof(Contents, allocRegion_)};
 
@@ -140,10 +148,6 @@ class AlignedHeapSegment {
    private:
     GCCell *cell_{nullptr};
   };
-
-  static_assert(
-      sizeof(SegmentInfo) < CardTable::kUnusedPrefixSize,
-      "SegmentInfo does not fit in available unused CardTable space.");
 
   /// Attempt an allocation of the given size in the segment.  If there is
   /// sufficent space, cast the space as a GCCell, and returns an uninitialized

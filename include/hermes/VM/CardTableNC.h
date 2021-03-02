@@ -68,9 +68,16 @@ class CardTable {
   static constexpr size_t kValidIndices =
       AlignedStorage::size() >> kLogCardSize;
 
-  /// The size of the card table: round up to the maximum page size.
-  static constexpr size_t kCardTableSize =
-      llvh::alignTo<pagesize::kExpectedPageSize>(kValidIndices);
+  /// The size of the card table.
+  static constexpr size_t kCardTableSize = kValidIndices;
+
+  /// For convenience, this is a conversion factor to determine how many bytes
+  /// in the heap correspond to a single byte in the card table. This is
+  /// distinct from kCardSize, which tells us how many bytes in the heap
+  /// correspond to a single byte in the card table. However, since each index
+  /// corresponds to a single byte for now, they are the same value. This is
+  /// guaranteed by a static_assert below.
+  static constexpr size_t kHeapBytesPerCardByte = kCardSize;
 
   /// A prefix of every segment is occupied by auxilary data
   /// structures.  The card table is the first such data structure.
@@ -85,24 +92,10 @@ class CardTable {
   /// Note that the total size of the card table is 2 times
   /// kCardTableSize, since the CardTable contains two byte arrays of
   /// that size (cards_ and _boundaries_).
-  static constexpr size_t kUnusedPrefixSize =
+  static constexpr size_t kFirstUsedIndex =
       (2 * kCardTableSize) >> kLogCardSize;
 
-  /// It is sometimes more clear to name the value above as the first valid
-  /// index of the card table.  The translation from size to index assumes that
-  /// card table entries are one byte; this assumption is validated by a
-  /// static_assert in the ctor below.
-  static constexpr size_t kFirstUsedIndex = kUnusedPrefixSize;
-
-  /// Default ctor; has a body just to allow static asserts.
-  CardTable() {
-    // See the comment on kFirstUsedIndex, above, for why this assert
-    // is necessary.
-    static_assert(
-        sizeof(cards_[0]) == 1,
-        "Validate assumption that card table entries are one byte");
-  }
-
+  CardTable() = default;
   /// CardTable is not copyable or movable: It must be constructed in-place.
   CardTable(const CardTable &) = delete;
   CardTable(CardTable &&) = delete;
@@ -264,6 +257,12 @@ class CardTable {
   /// This needs to be atomic so that the background thread in Hades can safely
   /// dirty cards when compacting.
   std::array<AtomicIfConcurrentGC<CardStatus>, kCardTableSize> cards_{};
+
+  /// See the comment at kHeapBytesPerCardByte above to see why this is
+  /// necessary.
+  static_assert(
+      sizeof(cards_[0]) == 1,
+      "Validate assumption that card table entries are one byte");
 
   /// Each card has a corresponding signed byte in the boundaries_ table.  A
   /// non-negative entry, K, indicates that the crossing object starts K *
