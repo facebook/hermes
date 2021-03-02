@@ -28,12 +28,11 @@ OptValue<size_t> CardTable::findNextCardWithStatus(
     CardStatus status,
     size_t fromIndex,
     size_t endIndex) const {
-  const char *fromIndexPtr = reinterpret_cast<const char *>(cards_) + fromIndex;
-  const void *card =
-      memchr(fromIndexPtr, static_cast<char>(status), endIndex - fromIndex);
-  return (card == nullptr)
-      ? OptValue<size_t>()
-      : OptValue<size_t>(reinterpret_cast<const CardStatus *>(card) - cards_);
+  for (size_t idx = fromIndex; idx < endIndex; idx++)
+    if (cards_[idx].load(std::memory_order_relaxed) == status)
+      return idx;
+
+  return llvh::None;
 }
 
 void CardTable::clear() {
@@ -73,7 +72,7 @@ void CardTable::cleanOrDirtyRange(
     size_t to,
     CardStatus cleanOrDirty) {
   for (size_t index = from; index <= to; index++) {
-    cards_[index] = cleanOrDirty;
+    cards_[index].store(cleanOrDirty, std::memory_order_relaxed);
   }
 }
 

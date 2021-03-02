@@ -47,8 +47,8 @@ namespace impl {
 template <typename T>
 class FakeAtomic final {
  public:
-  constexpr explicit FakeAtomic() : data_{} {}
-  constexpr explicit FakeAtomic(T desired) : data_{desired} {}
+  constexpr FakeAtomic() : data_{} {}
+  constexpr FakeAtomic(T desired) : data_{desired} {}
 
   T load(std::memory_order order) const {
     (void)order;

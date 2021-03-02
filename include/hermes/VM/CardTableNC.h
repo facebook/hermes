@@ -261,7 +261,9 @@ class CardTable {
 
   void cleanOrDirtyRange(size_t from, size_t to, CardStatus cleanOrDirty);
 
-  CardStatus cards_[kCardTableSize]{};
+  /// This needs to be atomic so that the background thread in Hades can safely
+  /// dirty cards when compacting.
+  std::array<AtomicIfConcurrentGC<CardStatus>, kCardTableSize> cards_{};
 
   /// Each card has a corresponding signed byte in the boundaries_ table.  A
   /// non-negative entry, K, indicates that the crossing object starts K *
@@ -311,7 +313,8 @@ inline const char *CardTable::indexToAddress(size_t index) const {
 }
 
 inline void CardTable::dirtyCardForAddress(const void *addr) {
-  cards_[addressToIndex(addr)] = CardStatus::Dirty;
+  cards_[addressToIndex(addr)].store(
+      CardStatus::Dirty, std::memory_order_relaxed);
 }
 
 inline bool CardTable::isCardForAddressDirty(const void *addr) const {
@@ -320,7 +323,7 @@ inline bool CardTable::isCardForAddressDirty(const void *addr) const {
 
 inline bool CardTable::isCardForIndexDirty(size_t index) const {
   assert(index < kValidIndices && "index is required to be in range.");
-  return cards_[index] == CardStatus::Dirty;
+  return cards_[index].load(std::memory_order_relaxed) == CardStatus::Dirty;
 }
 
 inline OptValue<size_t> CardTable::findNextDirtyCard(
