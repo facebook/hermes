@@ -165,21 +165,22 @@ TEST_F(GCSizingTest, TestHeapShrinks) {
 
   GCScope topScope(&rt);
 
-  // An array containing pointers to other arrays, 1MB each.
+  // An array containing pointers to other arrays, 32KB each.
   auto spineArr = rt.makeMutableHandle<Array>(nullptr);
-  // We can hold as many as 100.
-  spineArr = Array::create(rt, 100);
+
+  const size_t kArraysPerMB = 1024 * 1024 / (32 * 1024);
+  // We can hold up to 100MB worth of arrays.
+  spineArr = Array::create(rt, 100 * kArraysPerMB);
 
   // A holder for intermediate values.
   auto tmpArr = rt.makeMutableHandle<Array>(nullptr);
 
-  // How many elements in an array to get to 1MB?  This assumes 8-byte
+  // How many elements in an array to get to 32KB?  This assumes 8-byte
   // HermesValues in the arrays.
-  const size_t kElemsPerMB = 1000000 / 8;
-
+  const size_t kElemsPer32KB = 32 * 1024 / 8;
   // We want to reach 50 MB live, so we should get near the max heap size.
-  for (unsigned i = 0; i < 50; i++) {
-    tmpArr = Array::create(rt, kElemsPerMB);
+  for (unsigned i = 0; i < 50 * kArraysPerMB; i++) {
+    tmpArr = Array::create(rt, kElemsPer32KB);
     spineArr->values()[i].set(HermesValue::encodeObjectValue(*tmpArr), &gc);
   }
   tmpArr = nullptr;
@@ -195,7 +196,7 @@ TEST_F(GCSizingTest, TestHeapShrinks) {
   EXPECT_LT(expectedLargeHeap, info.heapSize);
 
   // Now decrease the live data down to 10MB.
-  for (unsigned i = 10; i < 50; i++) {
+  for (unsigned i = 10 * kArraysPerMB; i < 50 * kArraysPerMB; i++) {
     spineArr->values()[i].set(HermesValue::encodeNullValue(), &gc);
   }
 
@@ -208,7 +209,7 @@ TEST_F(GCSizingTest, TestHeapShrinks) {
   rt.collect();
   gc.getHeapInfo(info);
 
-  gcheapsize_t expectedSmallHeap = 30 * 1000000;
+  gcheapsize_t expectedSmallHeap = 30 * 1024 * 1024;
   EXPECT_GT(expectedSmallHeap, info.heapSize);
 }
 
@@ -232,21 +233,22 @@ TEST(GCSizingMinHeapTest, TestHeapDoesNotShrinkPastMinSize) {
 
   GCScope topScope(&rt);
 
-  // An array containing pointers to other arrays, 1MB each.
+  // An array containing pointers to other arrays, 32KB each.
   auto spineArr = rt.makeMutableHandle<Array>(nullptr);
-  // We can hold as many as 100.
-  spineArr = Array::create(rt, 100);
+  const size_t kArraysPerMB = 1024 * 1024 / (32 * 1024);
+  // We can hold up to 100MB worth of arrays.
+  spineArr = Array::create(rt, 100 * kArraysPerMB);
 
   // A holder for intermediate values.
   auto tmpArr = rt.makeMutableHandle<Array>(nullptr);
 
-  // How many elements in an array to get to 1MB?  This assumes 8-byte
+  // How many elements in an array to get to 32KB?  This assumes 8-byte
   // HermesValues in the arrays.
-  const size_t kElemsPerMB = 1000000 / 8;
+  const size_t kElemsPer32KB = 32 * 1024 / 8;
 
   // We want to reach 50 MB live, so we should get near the max heap size.
-  for (unsigned i = 0; i < 50; i++) {
-    tmpArr = Array::create(rt, kElemsPerMB);
+  for (unsigned i = 0; i < 50 * kArraysPerMB; i++) {
+    tmpArr = Array::create(rt, kElemsPer32KB);
     spineArr->values()[i].set(HermesValue::encodeObjectValue(*tmpArr), &gc);
   }
   tmpArr = nullptr;
@@ -262,7 +264,7 @@ TEST(GCSizingMinHeapTest, TestHeapDoesNotShrinkPastMinSize) {
   EXPECT_LT(kExpectedLargeHeap, info.heapSize);
 
   // Now decrease the live data down to 10MB.
-  for (unsigned i = 10; i < 50; i++) {
+  for (unsigned i = 10 * kArraysPerMB; i < 50 * kArraysPerMB; i++) {
     spineArr->values()[i].set(HermesValue::encodeNullValue(), &gc);
   }
 
