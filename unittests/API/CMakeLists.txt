@@ -42,12 +42,9 @@ set(HERMES_ENABLE_RTTI ON)
 # we need to set this one.
 set(LLVM_ENABLE_RTTI ON)
 
-set(APITestsSources ${APISources})
-if (HERMESVM_API_TRACE)
-  list(APPEND APITestsSources ${APITraceSources})
-endif()
+set(APITestsSources ${APISources} ${APITraceSources})
 add_hermes_unittest(APITests ${APITestsSources})
 
 include_directories(${HERMES_SOURCE_DIR}/API)
 include_directories(${HERMES_JSI_DIR})
-target_link_libraries(APITests hermesapi compileJS SegmentTestCompile)
+target_link_libraries(APITests hermesapi compileJS SegmentTestCompile traceInterpreter)

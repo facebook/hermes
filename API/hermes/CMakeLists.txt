@@ -6,7 +6,6 @@
 set(HERMES_OPTIONAL_SOURCES
   hermes.cpp
   hermes_tracing.cpp
-  hermes_tracing_compat.cpp
   DebuggerAPI.cpp
   SynthTrace.cpp
   SynthTraceParser.cpp
@@ -29,18 +28,6 @@ if(HERMES_IS_ANDROID)
     )
 endif()
 
-if (HERMESVM_API_TRACE)
-  list(APPEND api_sources
-    hermes_tracing.cpp
-    SynthTrace.cpp
-    SynthTraceParser.cpp
-    TraceInterpreter.cpp
-    TracingRuntime.cpp
-    )
-else()
-  list(APPEND api_sources hermes_tracing_compat.cpp)
-endif()
-
 add_hermes_library(hermesapi
         ${api_sources}
         LINK_LIBS jsi hermesVMRuntime)
@@ -57,6 +44,12 @@ set_property(TARGET hermesapi APPEND_STRING PROPERTY
   COMPILE_FLAGS ${hermesapi_compile_flags})
 set_property(TARGET hermesapi APPEND_STRING PROPERTY
   COMPILE_DEFINITIONS "CREATE_SHARED_LIBRARY")
+
+add_hermes_library(synthTrace hermes_tracing.cpp SynthTrace.cpp TracingRuntime.cpp
+  LINK_LIBS hermesapi)
+
+add_hermes_library(traceInterpreter SynthTraceParser.cpp TraceInterpreter.cpp
+  LINK_LIBS hermesapi hermesInstrumentation synthTrace)
 
 set(HERMES_LINK_COMPONENTS LLVHSupport)
 
