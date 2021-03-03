@@ -17,4 +17,5 @@ target_link_libraries(synth
   hermesVMRuntime
   hermesConsoleHost
   hermesapi
+  traceInterpreter
 )
