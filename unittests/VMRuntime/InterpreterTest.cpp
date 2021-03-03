@@ -430,6 +430,30 @@ getSP(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeNativePointer(&dummy);
 }
 
+// Use a non-inline function to perform the stack size measurement so that it
+// takes place in a new stack frame. This ensures that location of dummy on the
+// stack really is right before the stack frame for interpretFunction.
+LLVM_ATTRIBUTE_NOINLINE static void testInterpreterStackSize(
+    Runtime *runtime,
+    CodeBlock *codeBlock) {
+  // Check that inner and outer stack pointer differ by at most a set threshold.
+  int dummy;
+  const auto outerStackPointer = reinterpret_cast<uintptr_t>(&dummy);
+  auto status = runtime->interpretFunction(codeBlock);
+  ASSERT_EQ(ExecutionStatus::RETURNED, status.getStatus());
+  ASSERT_TRUE(status.getValue().isNativeValue());
+  const auto innerStackPointer =
+      reinterpret_cast<uintptr_t>(status.getValue().getNativePointer<void>());
+  // Increase this only if you have a reason to grow the interpreter's frame.
+#ifdef _MSC_VER
+  // TODO(T42117517) Understand why stack frame size is large on Windows
+  uintptr_t kStackFrameSizeLimit = 3000;
+#else
+  uintptr_t kStackFrameSizeLimit = 1500;
+#endif
+  ASSERT_LE(outerStackPointer - innerStackPointer, kStackFrameSizeLimit);
+}
+
 // In release mode, we test the size of the interpreter's stack frame.
 // "getSP" is installed as a native function and called from JS. The
 // distance from its "inner" frame to the "outer" frame that invoked
@@ -483,22 +507,7 @@ TEST_F(InterpreterTest, FrameSizeTest) {
       runtime, 0, nullptr, false, HermesValue::encodeUndefinedValue());
   ASSERT_FALSE(frame.overflowed());
 
-  // Check that inner and outer stack pointer differ by at most a set threshold.
-  int dummy;
-  const auto outerStackPointer = reinterpret_cast<uintptr_t>(&dummy);
-  auto status = runtime->interpretFunction(codeBlock);
-  ASSERT_EQ(ExecutionStatus::RETURNED, status.getStatus());
-  ASSERT_TRUE(status.getValue().isNativeValue());
-  const auto innerStackPointer =
-      reinterpret_cast<uintptr_t>(status.getValue().getNativePointer<void>());
-  // Increase this only if you have a reason to grow the interpreter's frame.
-#ifdef _MSC_VER
-  // TODO(T42117517) Understand why stack frame size is large on Windows
-  uintptr_t kStackFrameSizeLimit = 3000;
-#else
-  uintptr_t kStackFrameSizeLimit = 1500;
-#endif
-  ASSERT_LE(outerStackPointer - innerStackPointer, kStackFrameSizeLimit);
+  testInterpreterStackSize(runtime, codeBlock);
 }
 #endif // NDEBUG
 
