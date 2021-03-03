@@ -25,42 +25,19 @@ namespace vm {
   return ::testing::AssertionFailure();
 }
 
-std::unique_ptr<GC> DummyRuntime::makeHeap(
-    DummyRuntime *runtime,
-    MetadataTableForTests metaTable,
-    const GCConfig &gcConfig,
-    std::shared_ptr<CrashManager> crashMgr,
-    std::shared_ptr<StorageProvider> provider,
-    experiments::VMExperimentFlags experiments) {
-  return std::make_unique<
-#ifdef HERMESVM_GC_RUNTIME
-      // For RuntimeGC tests, just always use HadesGC.
-      HadesGC
-#else
-      GC
-#endif
-      >(
-      metaTable,
-      static_cast<GC::GCCallbacks *>(runtime),
-      runtime,
-      gcConfig,
-      crashMgr,
-      std::move(provider),
-      experiments);
-}
-
 DummyRuntime::DummyRuntime(
     MetadataTableForTests metaTable,
     const GCConfig &gcConfig,
     std::shared_ptr<StorageProvider> storageProvider,
     std::shared_ptr<CrashManager> crashMgr)
-    : gc_{makeHeap(
-          this,
+    : gcStorage_{
           metaTable,
+          this,
+          this,
           gcConfig,
           crashMgr,
           std::move(storageProvider),
-          /* experiments */ 0)} {}
+          /* experiments */ 0} {}
 
 DummyRuntime::~DummyRuntime() {
   EXPECT_FALSE(getHeap().getIDTracker().hasNativeIDs())
