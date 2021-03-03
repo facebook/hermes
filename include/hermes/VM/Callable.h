@@ -530,9 +530,14 @@ class NativeFunction : public Callable {
     auto newFrame = runtime->setCurrentFrameToTopOfStack();
     runtime->saveCallerIPInStackFrame();
     // Allocate the "reserved" registers in the new frame.
-    runtime->allocStack(
-        StackFrameLayout::CalleeExtraRegistersAtStart,
-        HermesValue::encodeUndefinedValue());
+    if (LLVM_UNLIKELY(!runtime->checkAndAllocStack(
+            StackFrameLayout::CalleeExtraRegistersAtStart,
+            HermesValue::encodeUndefinedValue()))) {
+      // Restore the stack before raising the overflow.
+      runtime->restoreStackAndPreviousFrame(newFrame);
+      return runtime->raiseStackOverflow(
+          Runtime::StackOverflowKind::JSRegisterStack);
+    }
 
 #ifdef HERMESVM_PROFILER_NATIVECALL
     auto t1 = HERMESVM_RDTSC();
