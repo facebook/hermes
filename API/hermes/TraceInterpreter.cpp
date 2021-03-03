@@ -9,6 +9,7 @@
 
 #include <hermes/TraceInterpreter.h>
 
+#include <hermes/BCGen/HBC/BytecodeDataProvider.h>
 #include <hermes/SynthTraceParser.h>
 #include <hermes/TracingRuntime.h>
 #include <hermes/VM/instrumentation/PerfEvents.h>

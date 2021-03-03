@@ -11,6 +11,7 @@
 
 #include "hermes/Parser/JSLexer.h"
 #include "hermes/Parser/JSONParser.h"
+#include "hermes/Support/OSCompat.h"
 #include "hermes/Support/SourceErrorManager.h"
 
 namespace facebook {

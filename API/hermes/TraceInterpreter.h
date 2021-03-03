@@ -10,6 +10,7 @@
 #ifdef HERMESVM_API_TRACE
 
 #include <hermes/Public/RuntimeConfig.h>
+#include <hermes/Support/OptValue.h>
 #include <hermes/Support/SHA1.h>
 #include <hermes/SynthTrace.h>
 

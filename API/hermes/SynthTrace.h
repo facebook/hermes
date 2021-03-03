@@ -12,12 +12,10 @@
 
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/JSONEmitter.h"
+#include "hermes/Support/SHA1.h"
 #include "hermes/Support/StringSetVector.h"
 #include "hermes/VM/GCExecTrace.h"
-#include "hermes/VM/HermesValue.h"
 #include "hermes/VM/MockedEnvironment.h"
-#include "hermes/VM/Operations.h"
-#include "hermes/VM/SymbolID.h"
 
 #include <chrono>
 #include <cstdlib>

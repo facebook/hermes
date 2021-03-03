@@ -16,6 +16,8 @@
 #include "hermes/SynthTrace.h"
 #include "hermes/VM/MockedEnvironment.h"
 
+#include "llvh/Support/MemoryBuffer.h"
+
 namespace facebook {
 namespace hermes {
 namespace tracing {
