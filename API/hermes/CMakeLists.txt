@@ -3,17 +3,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-set(HERMES_OPTIONAL_SOURCES
-  hermes.cpp
-  hermes_tracing.cpp
-  DebuggerAPI.cpp
-  SynthTrace.cpp
-  SynthTraceParser.cpp
-  TraceInterpreter.cpp
-  TracingRuntime.cpp
-  CompileJS.cpp
-  )
-
 set(api_sources
   hermes.cpp
   DebuggerAPI.cpp

@@ -127,25 +127,6 @@ set(jit_files
   JIT/ExternalCalls.cpp JIT/ExternalCalls.h
   )
 
-set(HERMES_OPTIONAL_SOURCES
-  gcs/FillerCell.cpp
-  gcs/GenGC.cpp
-  gcs/MallocGC.cpp
-  gcs/OldGen.cpp
-  gcs/Space.cpp
-  gcs/YoungGen.cpp
-  gcs/GCGeneration.cpp
-  gcs/GCSegmentAddressIndex.cpp
-  gcs/GenGCNC.cpp
-  gcs/OldGenNC.cpp
-  gcs/OldGenSegmentRanges.cpp
-  gcs/YoungGenNC.cpp
-  gcs/AlignedHeapSegment.cpp
-  gcs/AlignedStorage.cpp
-  gcs/CardTableNC.cpp
-  ${jit_files}
-)
-
 if (${HERMESVM_GCKIND} STREQUAL "NONCONTIG_GENERATIONAL")
   list(APPEND source_files gcs/AlignedHeapSegment.cpp gcs/AlignedStorage.cpp
                            gcs/CardTableNC.cpp gcs/FillerCell.cpp

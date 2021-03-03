@@ -22,13 +22,6 @@ set(APITraceSources
   SynthTraceParserTest.cpp
   TrackIOTest.cpp
   )
-# When compiling multiple libraries, put this here so that we can use a file in
-# not all the libraries.
-set(HERMES_OPTIONAL_SOURCES
-  ${APISources}
-  ${APISegmentTestCompileSources}
-  ${APITraceSources}
-  )
 
 set(HERMES_LINK_COMPONENTS LLVHSupport)
 
