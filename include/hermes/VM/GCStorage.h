@@ -37,9 +37,9 @@ class GCStorage {
   }
 #else
   {
-    GCBase::HeapKind heapKind = (vmExperimentFlags & experiments::Hades)
-        ? GCBase::HeapKind::HADES
-        : GCBase::HeapKind::NCGEN;
+    GCBase::HeapKind heapKind = (vmExperimentFlags & experiments::GenGC)
+        ? GCBase::HeapKind::NCGEN
+        : GCBase::HeapKind::HADES;
     GC *heap;
     switch (heapKind) {
       case GCBase::HeapKind::HADES:

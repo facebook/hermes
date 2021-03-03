@@ -34,8 +34,8 @@ std::unique_ptr<GC> DummyRuntime::makeHeap(
     experiments::VMExperimentFlags experiments) {
   return std::make_unique<
 #ifdef HERMESVM_GC_RUNTIME
-      // For RuntimeGC tests, just always use GenGC.
-      GenGC
+      // For RuntimeGC tests, just always use HadesGC.
+      HadesGC
 #else
       GC
 #endif
