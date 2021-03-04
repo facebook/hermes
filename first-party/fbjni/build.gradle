@@ -81,14 +81,6 @@ android {
                 headers 'cxx/'
             }
         }
-
-        // There's a bug in prefab that will bundle all these twice, causing the
-        // consumer to get duplicate errors.
-        // Followed the advice from https://github.com/chancezeus/libjpeg-turbo-android-prefab/blob/18eaa325e9954b832c9f3c95e141361d86746528/libjpeg-turbo/build.gradle
-        packagingOptions {
-            exclude("**/libfbjni.so")
-            exclude("**/libc++_shared.so")
-        }
     }
 }
 
