@@ -7,8 +7,6 @@
 
 #pragma once
 
-#ifdef HERMESVM_API_TRACE
-
 #include <hermes/Public/RuntimeConfig.h>
 #include <hermes/Support/OptValue.h>
 #include <hermes/Support/SHA1.h>
@@ -426,5 +424,3 @@ class TraceInterpreter final {
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
-
-#endif

@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_API_TRACE
-
 #include "hermes/SynthTraceParser.h"
 
 #include "hermes/Parser/JSLexer.h"
@@ -593,5 +591,3 @@ parseSynthTrace(const std::string &tracefile) {
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
-
-#endif

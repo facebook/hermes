@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_API_TRACE
-
 #include "SynthTrace.h"
 
 #include "hermes/Support/Algorithms.h"
@@ -849,5 +847,3 @@ std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type) {
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
-
-#endif
