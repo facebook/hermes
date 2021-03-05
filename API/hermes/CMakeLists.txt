@@ -37,15 +37,18 @@ set_property(TARGET hermesapi APPEND_STRING PROPERTY
 add_hermes_library(synthTrace hermes_tracing.cpp SynthTrace.cpp TracingRuntime.cpp
   LINK_LIBS hermesapi)
 
-add_hermes_library(traceInterpreter SynthTraceParser.cpp TraceInterpreter.cpp
-  LINK_LIBS hermesapi hermesInstrumentation synthTrace)
+add_hermes_library(traceInterpreter TraceInterpreter.cpp
+  LINK_LIBS hermesapi hermesInstrumentation synthTrace synthTraceParser)
 
 set(HERMES_LINK_COMPONENTS LLVHSupport)
-
-# Disable EH and RTTI for compileJS
-set(HERMES_ENABLE_EH OFF)
 set(HERMES_ENABLE_RTTI OFF)
 
+# synthTraceParser uses exceptions but not rtti
+add_hermes_library(synthTraceParser SynthTraceParser.cpp LINK_LIBS hermesSupport hermesParser synthTrace)
+
+set(HERMES_ENABLE_EH OFF)
+
+# compileJS uses neither exceptions nor RTTI
 add_hermes_library(compileJS STATIC CompileJS.cpp)
 
 # Restore EH and RTTI (Note: At the time of writing, there is no usage of
