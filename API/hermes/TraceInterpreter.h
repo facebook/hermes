@@ -125,6 +125,12 @@ class TraceInterpreter final {
     /// for using a tool like PIN to count instructions and compare runs.
     bool stabilizeInstructionCount{false};
 
+    /// If true, remove the requirement that the input bytecode was compiled
+    /// from the same source used to record the trace. There must only be one
+    /// input bytecode file in this case. If its observable behavior deviates
+    /// from the trace, the results are undefined.
+    bool disableSourceHashCheck{false};
+
     /// A trace contains many MarkerRecords which have a name used to identify
     /// them. If the replay encounters this given marker, perform an action
     /// described by MarkerAction. All actions will stop the trace early and
@@ -277,6 +283,7 @@ class TraceInterpreter final {
   getSourceHashToBundleMap(
       std::vector<std::unique_ptr<llvh::MemoryBuffer>> &&codeBufs,
       const SynthTrace &trace,
+      const ExecuteOptions &options,
       bool *codeIsMmapped = nullptr,
       bool *isBytecode = nullptr);
 

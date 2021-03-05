@@ -95,6 +95,14 @@ static opt<int> Reps(
         "rep with the median \"totalTime\"."),
     init(1));
 
+static opt<bool> DisableSourceHashCheck(
+    "disable-source-hash-check",
+    desc("Remove the requirement that the input bytecode was compiled from the "
+         "same source used to record the trace. There must only be one input "
+         "bytecode file in this case. If its observable behavior deviates "
+         "from the trace, the results are undefined."),
+    init(false));
+
 /// @}
 
 /// @name Common flags from Hermes VM
@@ -201,6 +209,7 @@ int main(int argc, char **argv) {
     }
     options.forceGCBeforeStats = cl::GCBeforeStats;
     options.stabilizeInstructionCount = cl::StableInstructionCount;
+    options.disableSourceHashCheck = cl::DisableSourceHashCheck;
 
     // These are the config parameters.
 
@@ -275,6 +284,10 @@ int main(int argc, char **argv) {
 
     std::vector<std::string> bytecodeFiles{
         cl::BytecodeFiles.begin(), cl::BytecodeFiles.end()};
+    if (cl::DisableSourceHashCheck && bytecodeFiles.size() != 1) {
+      throw std::invalid_argument(
+          "Must have single bytecode file to disable source hash check");
+    }
     if (!cl::Trace.empty()) {
       // If this is tracing mode, get the trace instead of the stats.
       options.gcConfigBuilder.withShouldRecordStats(false);

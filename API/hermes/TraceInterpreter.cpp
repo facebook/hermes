@@ -585,6 +585,7 @@ std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>>
 TraceInterpreter::getSourceHashToBundleMap(
     std::vector<std::unique_ptr<llvh::MemoryBuffer>> &&codeBufs,
     const SynthTrace &trace,
+    const ExecuteOptions &options,
     bool *codeIsMmapped,
     bool *isBytecode) {
   if (codeIsMmapped) {
@@ -633,7 +634,9 @@ TraceInterpreter::getSourceHashToBundleMap(
     (void)inserted;
   }
 
-  verifyBundlesExist(sourceHashToBundle, trace);
+  if (!options.disableSourceHashCheck) {
+    verifyBundlesExist(sourceHashToBundle, trace);
+  }
 
   return sourceHashToBundle;
 }
@@ -696,7 +699,7 @@ std::string TraceInterpreter::execFromMemoryBuffer(
   bool isBytecode;
   std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>>
       sourceHashToBundle = getSourceHashToBundleMap(
-          std::move(codeBufs), trace, &codeIsMmapped, &isBytecode);
+          std::move(codeBufs), trace, options, &codeIsMmapped, &isBytecode);
   options.traceEnabled = (traceStream != nullptr);
 
   const auto &rtConfig = merge(
@@ -755,7 +758,7 @@ std::string TraceInterpreter::execFromMemoryBuffer(
       runtime,
       options,
       trace,
-      getSourceHashToBundleMap(std::move(codeBufs), trace));
+      getSourceHashToBundleMap(std::move(codeBufs), trace, options));
 }
 
 /* static */
@@ -1057,7 +1060,8 @@ Value TraceInterpreter::execFunction(
                 dynamic_cast<const SynthTrace::BeginExecJSRecord &>(*rec);
             auto it = bundles_.find(bejsr.sourceHash());
             if (it == bundles_.end()) {
-              if (isAllZeroSourceHash(bejsr.sourceHash()) &&
+              if ((options_.disableSourceHashCheck ||
+                   isAllZeroSourceHash(bejsr.sourceHash())) &&
                   bundles_.size() == 1) {
                 // Normally, if a bundle's source hash doesn't match, it would
                 // be an error. However, for convenience and backwards
