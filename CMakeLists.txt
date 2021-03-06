@@ -136,9 +136,6 @@ set(HERMESVM_HEAP_SEGMENT_SIZE_KB 4096
 set(HERMESVM_ALLOW_CONCURRENT_GC ON CACHE BOOL
         "Enable concurrency in the GC for 64-bit builds.")
 
-set(HERMESVM_API_TRACE OFF CACHE BOOL
-  "Enable tracing interactions via the API")
-
 set(HERMESVM_API_TRACE_ANDROID_REPLAY OFF CACHE BOOL
   "Simulate Android config on Linux in API tracing.")
 
@@ -355,9 +352,6 @@ endif()
 add_definitions(-DHERMESVM_HEAP_SEGMENT_SIZE_KB=${HERMESVM_HEAP_SEGMENT_SIZE_KB})
 if(HERMESVM_ALLOW_CONCURRENT_GC)
     add_definitions(-DHERMESVM_ALLOW_CONCURRENT_GC)
-endif()
-if(HERMESVM_API_TRACE)
-    add_definitions(-DHERMESVM_API_TRACE)
 endif()
 if(HERMESVM_API_TRACE_ANDROID_REPLAY)
     add_definitions(-DHERMESVM_API_TRACE_ANDROID_REPLAY)

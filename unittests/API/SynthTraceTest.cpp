@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_API_TRACE
-
 #include <hermes/SynthTrace.h>
 
 #include <hermes/Parser/JSONParser.h>
@@ -1446,5 +1444,3 @@ function f(s) {
 /// @}
 
 } // namespace
-
-#endif

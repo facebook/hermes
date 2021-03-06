@@ -8,8 +8,6 @@
 #ifndef HERMES_TRACINGRUNTIME_H
 #define HERMES_TRACINGRUNTIME_H
 
-#ifdef HERMESVM_API_TRACE
-
 #include "SynthTrace.h"
 
 #include <hermes/hermes.h>
@@ -241,7 +239,5 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMESVM_API_TRACE
 
 #endif // HERMES_TRACINGRUNTIME_H

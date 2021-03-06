@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_API_TRACE
 #include <hermes/SynthTraceParser.h>
 
 #include <gtest/gtest.h>
@@ -178,5 +177,3 @@ TEST_F(SynthTraceParserTest, SynthMissingVersion) {
 }
 
 } // namespace
-
-#endif

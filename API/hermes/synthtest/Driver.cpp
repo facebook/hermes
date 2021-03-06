@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_API_TRACE
-
 #include <hermes/TraceInterpreter.h>
 #include <hermes/hermes.h>
 
@@ -175,5 +173,3 @@ INSTANTIATE_TEST_CASE_P(
     ::testing::ValuesIn(testGenerator()));
 
 } // namespace
-
-#endif

@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_API_TRACE
-
 #include <hermes/TraceInterpreter.h>
 
 #include <hermes/BCGen/HBC/BytecodeDataProvider.h>
@@ -1675,5 +1673,3 @@ LLVM_ATTRIBUTE_NORETURN void TraceInterpreter::crashOnException(
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
-
-#endif
