@@ -17,6 +17,7 @@
 #include "hermes/VM/VMExperiments.h"
 
 #include "llvh/ADT/SparseBitVector.h"
+#include "llvh/Support/ErrorOr.h"
 #include "llvh/Support/PointerLikeTypeTraits.h"
 
 #include <atomic>
@@ -876,7 +877,7 @@ class HadesGC final : public GCBase {
   const HeapSegment &youngGen() const;
 
   /// Create a new segment (to be used by either YG or OG).
-  HeapSegment createSegment();
+  llvh::ErrorOr<HeapSegment> createSegment();
 
   /// Set a given segment as the YG segment.
   /// \return the previous YG segment.

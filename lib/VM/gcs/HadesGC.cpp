@@ -9,6 +9,7 @@
 
 #include "GCBase-WeakMap.h"
 #include "hermes/Support/Compiler.h"
+#include "hermes/Support/ErrorHandling.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 #include "hermes/VM/FillerCell.h"
@@ -1233,10 +1234,10 @@ HadesGC::HadesGC(
   crashMgr_->setCustomData("HermesGC", getKindAsStr().c_str());
   // createSegment relies on member variables and should not be called until
   // they are initialised.
-  if (auto newYoungGen = createSegment())
-    setYoungGen(std::move(newYoungGen));
-  else
-    hermes_fatal("Failed to initialize the young gen");
+  llvh::ErrorOr<HeapSegment> newYoungGen = createSegment();
+  if (!newYoungGen)
+    hermes_fatal("Failed to initialize the young gen", newYoungGen.getError());
+  setYoungGen(std::move(newYoungGen.get()));
   const size_t minHeapSegments =
       // Align up first to round up.
       llvh::alignTo<AlignedStorage::size()>(gcConfig.getMinHeapSize()) /
@@ -2087,18 +2088,19 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
   // Before waiting for a collection to finish, check if we're below the max
   // heap size and can simply allocate another segment. This will prevent
   // blocking the YG unnecessarily.
-  if (HeapSegment seg = gc_->createSegment()) {
+  llvh::ErrorOr<HeapSegment> seg = gc_->createSegment();
+  if (seg) {
     // Complete this allocation using a bump alloc.
-    AllocResult res = seg.bumpAlloc(sz);
+    AllocResult res = seg->bumpAlloc(sz);
     assert(
         res.success &&
         "A newly created segment should always be able to allocate");
     // Set the cell head for any successful alloc, so that write barriers can
     // move from dirty cards to the head of the object.
-    seg.setCellHead(static_cast<GCCell *>(res.ptr), sz);
+    seg->setCellHead(static_cast<GCCell *>(res.ptr), sz);
     // Add the segment to segments_ and add the remainder of the segment to the
     // free list.
-    addSegment(std::move(seg));
+    addSegment(std::move(seg.get()));
     GCCell *newObj = static_cast<GCCell *>(res.ptr);
     HeapSegment::setCellMarkBit(newObj);
     return newObj;
@@ -2112,7 +2114,10 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
   }
 
   // The GC didn't recover enough memory, OOM.
-  gc_->oom(make_error_code(OOMError::MaxHeapReached));
+  // Re-use the error code from the earlier heap segment allocation, because
+  // it's either that the max heap size was reached, or that segment failed to
+  // allocate.
+  gc_->oom(seg.getError());
 }
 
 uint32_t HadesGC::OldGen::getFreelistBucket(uint32_t size) {
@@ -2435,7 +2440,7 @@ bool HadesGC::promoteYoungGenToOldGen() {
   // TODO: Add more stringent criteria for turning off this flag, for instance,
   // once the heap reaches a certain size. That would avoid growing the heap to
   // the maximum possible size before stopping promotions.
-  auto newYoungGen = createSegment();
+  llvh::ErrorOr<HeapSegment> newYoungGen = createSegment();
   if (!newYoungGen) {
     promoteYGToOG_ = false;
     return false;
@@ -2456,7 +2461,7 @@ bool HadesGC::promoteYoungGenToOldGen() {
   // segments. The addresses have to stay the same or else it would
   // require a marking pass through all objects.
   // This will also rename the segment in the crash data.
-  oldGen_.addSegment(setYoungGen(std::move(newYoungGen)));
+  oldGen_.addSegment(setYoungGen(std::move(newYoungGen.get())));
 
   return true;
 }
@@ -2841,17 +2846,17 @@ HadesGC::HeapSegment &HadesGC::OldGen::operator[](size_t i) {
   return segments_[i];
 }
 
-HadesGC::HeapSegment HadesGC::createSegment() {
+llvh::ErrorOr<HadesGC::HeapSegment> HadesGC::createSegment() {
   // No heap size limit when Handle-SAN is on, to allow the heap enough room to
   // keep moving things around.
 #ifndef HERMESVM_SANITIZE_HANDLES
   if (heapFootprint() >= maxHeapSize_) {
-    return {};
+    return make_error_code(OOMError::MaxHeapReached);
   }
 #endif
   auto res = AlignedStorage::create(provider_.get(), "hades-segment");
   if (!res) {
-    return {};
+    return res.getError();
   }
   HeapSegment seg(std::move(res.get()));
   // Even if compressed pointers are off, we still use the segment index for

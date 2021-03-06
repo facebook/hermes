@@ -88,7 +88,7 @@ OldGen::OldGen(GenGC *gc, Size sz, bool releaseUnused)
       AlignedStorage::create(gc_->storageProvider_.get(), kSegmentName);
   if (!result) {
     // Do not invoke oom() from here because the heap is not fully initialised.
-    hermes_fatal("Failed to initialize the old gen");
+    hermes_fatal("Failed to initialize the old gen", result.getError());
   }
   exchangeActiveSegment({std::move(result.get()), this});
 #ifdef HERMESVM_COMPRESSED_POINTERS
