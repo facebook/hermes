@@ -850,7 +850,7 @@ void GCBase::oom(std::error_code reason) {
       gcCallbacks_->getCallStackNoAlloc());
 #else
   oomDetail(reason);
-  hermes_fatal((llvh::Twine("OOM: ") + convert_error_to_message(reason)).str());
+  hermes_fatal("OOM", reason);
 #endif
 }
 

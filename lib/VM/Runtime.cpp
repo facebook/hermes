@@ -198,7 +198,7 @@ Runtime::Runtime(
         sizeof(PinnedHermesValue) * maxNumRegisters, oscompat::page_size());
     auto result = oscompat::vm_allocate(numBytesForRegisters);
     if (!result) {
-      hermes_fatal("failed to allocate register stack");
+      hermes_fatal("Failed to allocate register stack", result.getError());
     }
     registerStack_ = static_cast<PinnedHermesValue *>(result.get());
     registerStackBytesToUnmap_ = numBytesForRegisters;
