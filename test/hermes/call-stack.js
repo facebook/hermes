@@ -25,7 +25,7 @@ function a() {
 }
 
 print(a());
-//CHECK: c: {{.*/call-stack.js}}:6:37
-//CHECK-NEXT: f: {{.*/call-stack.js}}:11:13
-//CHECK-NEXT: b: {{.*/call-stack.js}}:13:11
-//CHECK-NEXT: a: {{.*/call-stack.js}}:17:11
+//CHECK: c: {{.*/call-stack.js}}:13:37
+//CHECK-NEXT: b: {{.*/call-stack.js}}:18:13
+//CHECK-NEXT: a: {{.*/call-stack.js}}:24:11
+//CHECK-NEXT: global: {{.*/call-stack.js}}:27:8
