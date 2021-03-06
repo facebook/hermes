@@ -1695,6 +1695,11 @@ void HadesGC::finalizeAllLocked() {
   // OG, and let the OG finalize the promoted objects.
   finalizeYoungGenObjects();
 
+  // If we are in the middle of a YG collection, some objects may have already
+  // been promoted to the OG. Assume that any remaining external memory in the
+  // YG belongs to those objects.
+  transferExternalMemoryToOldGen();
+
   const auto finalizeCallback = [this](GCCell *cell) {
     assert(cell->isValid() && "Invalid cell in finalizeAll");
     cell->getVT()->finalizeIfExists(cell, this);
