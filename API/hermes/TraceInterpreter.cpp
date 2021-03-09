@@ -469,6 +469,24 @@ static std::string mergeGCStats(const std::vector<std::string> &repGCStats) {
 }
 
 #ifndef NDEBUG
+bool isDoubleEqual(double a, double b) {
+  // Bitwise comparison to avoid issues with infinity and NaN.
+  if (memcmp(&a, &b, sizeof(double)) == 0)
+    return true;
+  // If the sign bit is different, then it is definitely not equal. This handles
+  // cases like -0 != 0.
+  if (std::signbit(a) != std::signbit(b))
+    return false;
+  // There can be subtle rounding differences between platforms, so allow for
+  // some error. For example, GCC uses 80 bit registers for doubles on
+  // non-Darwin x86 platforms. A change in when values are written to memory
+  // (when it is shortened to 64 bits), or comparing values between Darwin and
+  // non-Darwin platforms could lead to different results.
+  const double ep =
+      (std::abs(a) + std::abs(b)) * std::numeric_limits<double>::epsilon();
+  return std::abs(a - b) <= ep;
+}
+
 /// Assert that \p val seen at replay matches the recorded \p traceValue
 void assertMatch(const SynthTrace::TraceValue &traceValue, const Value &val) {
   if (traceValue.isUndefined()) {
@@ -482,11 +500,10 @@ void assertMatch(const SynthTrace::TraceValue &traceValue, const Value &val) {
         "value mismatch between trace and replay");
   } else if (traceValue.isNumber()) {
     assert(val.isNumber() && "type mismatch between trace and replay");
-    // Bitwise comparison to avoid issues with negative zero and NaN.
     double valNum = val.getNumber();
     double traceValueNum = traceValue.getNumber();
     assert(
-        memcmp(&valNum, &traceValueNum, sizeof(valNum)) == 0 &&
+        isDoubleEqual(valNum, traceValueNum) &&
         "value mismatch between trace and replay");
   } else if (traceValue.isString()) {
     assert(val.isString() && "type mismatch between trace and replay");
