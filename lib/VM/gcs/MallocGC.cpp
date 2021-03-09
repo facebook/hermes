@@ -385,7 +385,7 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
       allocatedBefore ? (allocatedBytes_ * 1.0) / allocatedBefore : 0,
       /*tags*/ {}};
 
-  recordGCStats(event);
+  recordGCStats(event, /* onMutator */ true);
   checkTripwire(allocatedBytes_);
 }
 

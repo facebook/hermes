@@ -506,7 +506,8 @@ class GCBase {
   struct CumulativeHeapStats {
     unsigned numCollections{0};
 
-    /// Summary statistics for GC wall times.
+    /// Summary statistics for GC wall times. For Hades, this should only track
+    /// time spent on the mutator.
     StatsAccumulator<double> gcWallTime;
 
     /// Summary statistics for GC CPU times.
@@ -1429,11 +1430,14 @@ class GCBase {
 
   /// Record statistics from a single GC, which are specified in the given
   /// \p event, in the overall cumulative stats struct.
-  void recordGCStats(const GCAnalyticsEvent &event);
+  void recordGCStats(const GCAnalyticsEvent &event, bool onMutator);
 
   /// Record statistics from a single GC, which are specified in the given
   /// \p event, in the given cumulative stats struct.
-  void recordGCStats(const GCAnalyticsEvent &event, CumulativeHeapStats *stats);
+  void recordGCStats(
+      const GCAnalyticsEvent &event,
+      CumulativeHeapStats *stats,
+      bool onMutator);
 
   /// Do any additional GC-specific logging that is useful before dying with
   /// out-of-memory.

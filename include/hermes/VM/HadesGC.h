@@ -784,7 +784,7 @@ class HadesGC final : public GCBase {
   /// \pre The gcMutex_ must be held before entering this function.
   /// \post The gcMutex_ will be held when the function exits, but it might
   ///   have been unlocked and then re-locked.
-  void waitForCollectionToFinish();
+  void waitForCollectionToFinish(std::string cause);
 
   /// Worker function that schedules the bulk of the GC work on the background
   /// thread, to perform it concurrently with the mutator.

@@ -1565,9 +1565,9 @@ void GenGC::CollectionSection::recordGCStats(
       /*survivalRatio*/ usedBefore ? (usedAfter * 1.0) / usedBefore : 0,
       /*tags*/ {}};
 
-  gc_->recordGCStats(event);
+  gc_->recordGCStats(event, /* onMutator */ true);
   // Also record as a region-specific collection.
-  gc_->recordGCStats(event, regionStats);
+  gc_->recordGCStats(event, regionStats, /* onMutator */ true);
 
   LLVM_DEBUG(
       dbgs() << "End garbage collection. numCollected="

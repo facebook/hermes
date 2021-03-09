@@ -811,9 +811,13 @@ void GCBase::printStats(JSONEmitter &json) {
 
 void GCBase::recordGCStats(
     const GCAnalyticsEvent &event,
-    CumulativeHeapStats *stats) {
-  stats->gcWallTime.record(
-      std::chrono::duration<double>(event.duration).count());
+    CumulativeHeapStats *stats,
+    bool onMutator) {
+  // Hades OG collections do not block the mutator, and so do not contribute to
+  // the max pause time or the total execution time.
+  if (onMutator)
+    stats->gcWallTime.record(
+        std::chrono::duration<double>(event.duration).count());
   stats->gcCPUTime.record(
       std::chrono::duration<double>(event.cpuDuration).count());
   stats->finalHeapSize = event.size.after;
@@ -822,14 +826,14 @@ void GCBase::recordGCStats(
   stats->numCollections++;
 }
 
-void GCBase::recordGCStats(const GCAnalyticsEvent &event) {
+void GCBase::recordGCStats(const GCAnalyticsEvent &event, bool onMutator) {
   if (analyticsCallback_) {
     analyticsCallback_(event);
   }
   if (recordGcStats_) {
     analyticsEvents_.push_back(event);
   }
-  recordGCStats(event, &cumStats_);
+  recordGCStats(event, &cumStats_, onMutator);
 }
 
 void GCBase::oom(std::error_code reason) {

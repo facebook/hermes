@@ -246,10 +246,15 @@ class HadesGC::CollectionStats final {
   using TimePoint = std::chrono::time_point<Clock>;
   using Duration = std::chrono::microseconds;
 
-  CollectionStats(HadesGC *gc, std::string cause, std::string collectionType)
+  CollectionStats(
+      HadesGC *gc,
+      std::string cause,
+      std::string collectionType,
+      bool onMutator)
       : gc_{gc},
         cause_{std::move(cause)},
-        collectionType_{std::move(collectionType)} {}
+        collectionType_{std::move(collectionType)},
+        onMutator_{onMutator} {}
   ~CollectionStats();
 
   void addCollectionType(std::string collectionType) {
@@ -329,6 +334,7 @@ class HadesGC::CollectionStats final {
   HadesGC *gc_;
   std::string cause_;
   std::string collectionType_;
+  bool onMutator_;
   std::vector<std::string> tags_;
   TimePoint beginTime_{};
   TimePoint endTime_{};
@@ -343,19 +349,21 @@ class HadesGC::CollectionStats final {
 };
 
 HadesGC::CollectionStats::~CollectionStats() {
-  gc_->recordGCStats(GCAnalyticsEvent{
-      gc_->getName(),
-      gc_->getKindAsStr(),
-      collectionType_,
-      std::move(cause_),
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          endTime_ - beginTime_),
-      std::chrono::duration_cast<std::chrono::milliseconds>(cpuDuration_),
-      /*allocated*/ BeforeAndAfter{allocatedBefore_, afterAllocatedBytes()},
-      /*size*/ BeforeAndAfter{sizeBefore_, sizeAfter_},
-      /*external*/ BeforeAndAfter{externalBefore_, afterExternalBytes()},
-      /*survivalRatio*/ survivalRatio(),
-      /*tags*/ std::move(tags_)});
+  gc_->recordGCStats(
+      GCAnalyticsEvent{
+          gc_->getName(),
+          gc_->getKindAsStr(),
+          collectionType_,
+          std::move(cause_),
+          std::chrono::duration_cast<std::chrono::milliseconds>(
+              endTime_ - beginTime_),
+          std::chrono::duration_cast<std::chrono::milliseconds>(cpuDuration_),
+          /*allocated*/ BeforeAndAfter{allocatedBefore_, afterAllocatedBytes()},
+          /*size*/ BeforeAndAfter{sizeBefore_, sizeAfter_},
+          /*external*/ BeforeAndAfter{externalBefore_, afterExternalBytes()},
+          /*survivalRatio*/ survivalRatio(),
+          /*tags*/ std::move(tags_)},
+      onMutator_);
 }
 
 template <bool CompactionEnabled>
@@ -1302,7 +1310,7 @@ void HadesGC::createSnapshot(llvh::raw_ostream &os) {
   // No allocations are allowed throughout the entire heap snapshot process.
   NoAllocScope scope{this};
   // Let any existing collections complete before taking the snapshot.
-  waitForCollectionToFinish();
+  waitForCollectionToFinish("snapshot");
   {
     GCCycle cycle{this, gcCallbacks_, "Heap Snapshot"};
     WeakRefLock lk{weakRefMutex()};
@@ -1355,14 +1363,14 @@ void HadesGC::enableHeapProfiler(
         fragmentCallback) {
   std::lock_guard<Mutex> lk{gcMutex_};
   // Let any existing collections complete before enabling the profiler.
-  waitForCollectionToFinish();
+  waitForCollectionToFinish("heap profiler enable");
   GCBase::enableHeapProfiler(std::move(fragmentCallback));
 }
 
 void HadesGC::disableHeapProfiler() {
   std::lock_guard<Mutex> lk{gcMutex_};
   // Let any existing collections complete before disabling the profiler.
-  waitForCollectionToFinish();
+  waitForCollectionToFinish("heap profiler disable");
   GCBase::disableHeapProfiler();
 }
 
@@ -1389,17 +1397,17 @@ void HadesGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
     // collection immediately anyway, so there's no need to avoid collecting YG.
     // This is especially important when the forced GC is a memory warning.
     promoteYGToOG_ = false;
-    waitForCollectionToFinish();
+    waitForCollectionToFinish(cause);
   }
   // This function should block until a collection finishes.
   // YG needs to be empty in order to do an OG collection.
-  youngGenCollection(std::move(cause), /*forceOldGenCollection*/ true);
+  youngGenCollection(cause, /*forceOldGenCollection*/ true);
   // Wait for the collection to complete.
   std::lock_guard<Mutex> lk{gcMutex_};
-  waitForCollectionToFinish();
+  waitForCollectionToFinish(std::move(cause));
 }
 
-void HadesGC::waitForCollectionToFinish() {
+void HadesGC::waitForCollectionToFinish(std::string cause) {
   assert(
       gcMutex_ &&
       "gcMutex_ must be held before calling waitForCollectionToFinish");
@@ -1407,13 +1415,27 @@ void HadesGC::waitForCollectionToFinish() {
     return;
   }
   GCCycle cycle{this, gcCallbacks_, "Old Gen (Direct)"};
+
+  llvh::Optional<CollectionStats> waitingStats;
   if (ygCollectionStats_) {
     // If this wait happened during a YG collection, add a "(waiting)" suffix.
     ygCollectionStats_->addCollectionType("waiting");
+  } else {
+    // Otherwise, if this happened during a direct-OG alloc or a manually
+    // triggered collection, create a new stats event to track the time spent in
+    // this wait.
+    waitingStats.emplace(this, std::move(cause), "waiting", true);
+    waitingStats->beginCPUTimeSection();
+    waitingStats->setBeginTime();
   }
 
   while (concurrentPhase_ != Phase::None)
     incrementalCollect(false);
+
+  if (waitingStats) {
+    waitingStats->endCPUTimeSection();
+    waitingStats->setEndTime();
+  }
 }
 
 void HadesGC::oldGenCollection(std::string cause) {
@@ -1451,7 +1473,7 @@ void HadesGC::oldGenCollection(std::string cause) {
   // call the destructor here so that the analytics callback is invoked from the
   // mutator thread. This might also be done from checkTripwireAndResetStats.
   ogCollectionStats_ =
-      std::make_unique<CollectionStats>(this, std::move(cause), "old");
+      std::make_unique<CollectionStats>(this, std::move(cause), "old", false);
   // NOTE: Leave CPU time as zero if the collection isn't concurrent, as the
   // times aren't useful.
   if (kConcurrentGC)
@@ -1688,7 +1710,7 @@ void HadesGC::finalizeAll() {
 void HadesGC::finalizeAllLocked() {
   // Wait for any existing OG collections to finish.
   // TODO: Investigate sending a cancellation instead.
-  waitForCollectionToFinish();
+  waitForCollectionToFinish("finalizeAll");
   // Now finalize the heap.
   // We might be in the middle of a YG collection, with some objects promoted to
   // the OG, and some not. Only finalize objects that have not been promoted to
@@ -2112,7 +2134,7 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
   }
   // Can't expand to any more segments, wait for an old gen collection to finish
   // and possibly free up memory.
-  gc_->waitForCollectionToFinish();
+  gc_->waitForCollectionToFinish("full heap");
   // Repeat the search in case the collection did free memory.
   if (GCCell *cell = search(sz)) {
     return cell;
@@ -2262,7 +2284,8 @@ void HadesGC::youngGenEvacuateImpl(Acceptor &acceptor, bool doCompaction) {
 void HadesGC::youngGenCollection(
     std::string cause,
     bool forceOldGenCollection) {
-  ygCollectionStats_ = std::make_unique<CollectionStats>(this, cause, "young");
+  ygCollectionStats_ =
+      std::make_unique<CollectionStats>(this, cause, "young", true);
   ygCollectionStats_->beginCPUTimeSection();
   ygCollectionStats_->setBeginTime();
   // Acquire the GC lock for the duration of the YG collection.
