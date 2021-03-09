@@ -304,7 +304,7 @@ class JSArray final : public ArrayImpl {
   }
 
   static uint32_t getLength(const JSArray *self) {
-    return self->shadowLength_;
+    return directSlotRef(self, lengthPropIndex()).getNumber();
   }
 
   /// Create an instance of Array, with [[Prototype]] initialized with
@@ -372,11 +372,6 @@ class JSArray final : public ArrayImpl {
     return jsArrayPropertyCount() - 1;
   }
 
-  /// A copy of the ".length" property. We compare every putComputed()
-  /// index against ".length", and extracting it from property storage every
-  /// time would be too slow.
-  uint32_t shadowLength_{0};
-
  public:
   template <typename NeedsBarrier>
   JSArray(
@@ -396,9 +391,7 @@ class JSArray final : public ArrayImpl {
  private:
   /// A helper to update the named '.length' property.
   static void putLength(JSArray *self, Runtime *runtime, uint32_t newLength) {
-    self->shadowLength_ = newLength;
-
-    namedSlotRef(self, runtime, lengthPropIndex())
+    directSlotRef(self, lengthPropIndex())
         .setNonPtr(
             HermesValue::encodeNumberValue(newLength), &runtime->getHeap());
   }

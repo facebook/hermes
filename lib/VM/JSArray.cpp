@@ -523,14 +523,10 @@ void ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
-JSArray::JSArray(Deserializer &d, const VTable *vt) : ArrayImpl(d, vt) {
-  shadowLength_ = d.readInt<uint32_t>();
-}
+JSArray::JSArray(Deserializer &d, const VTable *vt) : ArrayImpl(d, vt) {}
 
 void ArraySerialize(Serializer &s, const GCCell *cell) {
-  auto *self = vmcast<const JSArray>(cell);
   serializeArrayImpl(s, cell, JSObject::numOverlapSlots<JSArray>());
-  s.writeInt<uint32_t>(self->shadowLength_);
   s.endObject(cell);
 }
 
@@ -654,7 +650,8 @@ CallResult<bool> JSArray::setLength(
     uint32_t newLength,
     PropOpFlags opFlags) {
   // Fast-path: if we are enlarging, do nothing.
-  if (LLVM_LIKELY(newLength >= selfHandle->shadowLength_)) {
+  const auto currentLength = getLength(*selfHandle);
+  if (LLVM_LIKELY(newLength >= currentLength)) {
     putLength(*selfHandle, runtime, newLength);
     return true;
   }
@@ -668,7 +665,7 @@ CallResult<bool> JSArray::setLength(
     // We must scan backwards looking for a non-empty property. We only have
     // to scan in the intersection between the range of present values and
     // the range between the current length and the new length.
-    //              newLength         shadowLength
+    //              newLength         currentLength
     //                 |                    |
     //                 +--------------------+
     //       begin                end
@@ -682,7 +679,7 @@ CallResult<bool> JSArray::setLength(
     auto *self = selfHandle.get();
     auto range = _getOwnIndexedRangeImpl(self, runtime);
     uint32_t lowestScanLen = std::max(range.first, newLength);
-    uint32_t highestLen = std::min(range.second, self->shadowLength_);
+    uint32_t highestLen = std::min(range.second, currentLength);
 
     for (; highestLen > lowestScanLen; --highestLen) {
       if (!self->unsafeAt(runtime, highestLen - 1).isEmpty()) {

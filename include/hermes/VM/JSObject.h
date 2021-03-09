@@ -595,6 +595,13 @@ class JSObject : public GCCell {
         OwnKeysFlags().plusIncludeSymbols().plusIncludeNonEnumerable());
   }
 
+  /// Return a reference to a direct property storage space by \p index.
+  /// \pre index < DIRECT_PROPERTY_SLOTS.
+  static GCHermesValue &directSlotRef(JSObject *self, SlotIndex index);
+  static const GCHermesValue &directSlotRef(
+      const JSObject *self,
+      SlotIndex index);
+
   /// Return a reference to a slot in the "named value" storage space by
   /// \p index.
   /// \pre inl == PropStorage::Inline::Yes -> index <
@@ -1582,6 +1589,18 @@ inline T *JSObject::initDirectPropStorage(Runtime *runtime, T *self) {
       GCHermesValue(),
       &runtime->getHeap());
   return self;
+}
+
+inline GCHermesValue &JSObject::directSlotRef(JSObject *self, SlotIndex index) {
+  assert(index < DIRECT_PROPERTY_SLOTS && "Must be a direct property");
+  return self->directProps()[index];
+}
+
+inline const GCHermesValue &JSObject::directSlotRef(
+    const JSObject *self,
+    SlotIndex index) {
+  assert(index < DIRECT_PROPERTY_SLOTS && "Must be a direct property");
+  return self->directProps()[index];
 }
 
 template <PropStorage::Inline inl>
