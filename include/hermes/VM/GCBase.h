@@ -1336,12 +1336,14 @@ class GCBase {
   /// \return The ID for the given value. If the value cannot be represented
   ///   with an ID, returns None.
   llvh::Optional<HeapSnapshot::NodeID> getSnapshotID(HermesValue val);
+  /// Moves an object to a new address and a new size for all trackers.
   inline void moveObject(
       const void *oldPtr,
       uint32_t oldSize,
       const void *newPtr,
       uint32_t newSize);
-  inline void untrackObject(const void *cell);
+  /// Untracks a freed object from all trackers.
+  inline void untrackObject(const void *cell, uint32_t sz);
   /// \}
 
 #ifndef NDEBUG
@@ -1743,9 +1745,12 @@ inline void GCBase::moveObject(
   allocationLocationTracker_.updateSize(newPtr, oldSize, newSize);
 }
 
-inline void GCBase::untrackObject(const void *cell) {
-  assert(cell && "Called getObjectID on a null pointer");
-  return idTracker_.untrackObject(pointerBase_->pointerToBasedNonNull(cell));
+inline void GCBase::untrackObject(const void *cell, uint32_t sz) {
+  assert(cell && "Called untrackObject on a null pointer");
+  // The allocation tracker needs to use the ID, so this needs to come
+  // before untrackObject.
+  getAllocationLocationTracker().freeAlloc(cell, sz);
+  idTracker_.untrackObject(pointerBase_->pointerToBasedNonNull(cell));
 }
 
 #ifndef NDEBUG

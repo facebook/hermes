@@ -314,8 +314,7 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
 #endif
         // Pointers that aren't marked now weren't moved, and are dead instead.
         if (isTrackingIDs()) {
-          allocationLocationTracker_.freeAlloc(cell, freedSize);
-          untrackObject(cell);
+          untrackObject(cell, freedSize);
         }
       }
 #ifndef NDEBUG

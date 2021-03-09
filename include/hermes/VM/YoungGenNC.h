@@ -176,11 +176,6 @@ class YoungGen : public GCGeneration {
 
   /// Fixup the tracked IDs of objects that were moved or deleted.
   void updateIDTracker();
-  void updateAllocationLocationTracker();
-
- private:
-  template <bool updateIDTracker, bool updateAllocationLocationTracker>
-  void updateTrackers();
 
  public:
   /// Finalizes all unreachable cells with finalizers. If the cell was moved to

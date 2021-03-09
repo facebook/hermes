@@ -97,21 +97,17 @@ void GenGCHeapSegment::completeMarking(
 }
 
 void GenGCHeapSegment::deleteDeadObjectIDs(GenGC *gc) {
-  GCBase::AllocationLocationTracker &allocationLocationTracker =
-      gc->getAllocationLocationTracker();
-  if (gc->isTrackingIDs()) {
-    MarkBitArrayNC &markBits = markBitArray();
-    // Separate out the delete tracking into a different loop in order to keep
-    // the normal case fast.
-    forAllObjs([&markBits, &allocationLocationTracker, gc](const GCCell *cell) {
-      if (!markBits.at(markBits.addressToIndex(cell))) {
-        // The allocation tracker needs to use the ID, so this needs to come
-        // before untrackObject.
-        allocationLocationTracker.freeAlloc(cell, cell->getAllocatedSize());
-        gc->untrackObject(cell);
-      }
-    });
+  if (!gc->isTrackingIDs()) {
+    return;
   }
+  MarkBitArrayNC &markBits = markBitArray();
+  // Separate out the delete tracking into a different loop in order to keep
+  // the normal case fast.
+  forAllObjs([&markBits, gc](const GCCell *cell) {
+    if (!markBits.at(markBits.addressToIndex(cell))) {
+      gc->untrackObject(cell, cell->getAllocatedSize());
+    }
+  });
 }
 
 void GenGCHeapSegment::updateReferences(

@@ -379,15 +379,7 @@ void YoungGen::collect() {
     nextGen_->youngGenTransitiveClosure(toScan, acceptor);
   }
 
-  // Have to delete allocation tracker before the ID tracker, because the
-  // allocation tracker uses the ID tracker.
-  if (gc_->getAllocationLocationTracker().isEnabled()) {
-    PerfSection updateAllocationLocationTrackerSystraceRegion(
-        "updateAllocationLocationTracker");
-    updateAllocationLocationTracker();
-  }
-
-  if (gc_->getIDTracker().isTrackingIDs()) {
+  if (gc_->isTrackingIDs()) {
     PerfSection fixupTrackedObjectsSystraceRegion("updateIDTracker");
     updateIDTracker();
   }
@@ -593,15 +585,6 @@ GCCell *YoungGen::forwardPointer(GCCell *ptr) {
 }
 
 void YoungGen::updateIDTracker() {
-  updateTrackers</* idTracker */ true, /* allocationLocationTracker */ false>();
-}
-
-void YoungGen::updateAllocationLocationTracker() {
-  updateTrackers</* idTracker */ false, /* allocationLocationTracker */ true>();
-}
-
-template <bool idTracker, bool allocationLocationTracker>
-void YoungGen::updateTrackers() {
   char *ptr = activeSegment().start();
   char *lvl = activeSegment().level();
   while (ptr < lvl) {
@@ -609,22 +592,13 @@ void YoungGen::updateTrackers() {
     if (cell->hasMarkedForwardingPointer()) {
       auto *fptr = cell->getMarkedForwardingPointer();
       const auto sz = reinterpret_cast<GCCell *>(fptr)->getAllocatedSize();
-      if (idTracker) {
-        // YG promotions never change size.
-        gc_->moveObject(cell, sz, fptr, sz);
-      }
+      // YG promotions never change size.
+      gc_->moveObject(cell, sz, fptr, sz);
       ptr += sz;
     } else {
       const auto sz = cell->getAllocatedSize();
       ptr += sz;
-      // The allocation tracker needs to use the ID, so this needs to come
-      // before untrackObject.
-      if (allocationLocationTracker) {
-        gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
-      }
-      if (idTracker) {
-        gc_->untrackObject(cell);
-      }
+      gc_->untrackObject(cell, sz);
     }
   }
 }

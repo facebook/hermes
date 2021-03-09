@@ -1125,8 +1125,7 @@ bool HadesGC::OldGen::sweepNext() {
     // Cell is dead, run its finalizer first if it has one.
     cell->getVT()->finalizeIfExists(cell, gc_);
     if (isTracking && !vmisa<FillerCell>(cell)) {
-      gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
-      gc_->untrackObject(cell);
+      gc_->untrackObject(cell, sz);
     }
   }
 
@@ -2347,10 +2346,7 @@ void HadesGC::youngGenCollection(
     // Inform trackers about objects that died during this YG collection.
     if (isTrackingIDs()) {
       auto trackerCallback = [this](GCCell *cell) {
-        // Have to call freeAlloc before untrackObject.
-        getAllocationLocationTracker().freeAlloc(
-            cell, cell->getAllocatedSize());
-        untrackObject(cell);
+        untrackObject(cell, cell->getAllocatedSize());
       };
       yg.forCompactedObjs(trackerCallback);
       if (doCompaction) {
