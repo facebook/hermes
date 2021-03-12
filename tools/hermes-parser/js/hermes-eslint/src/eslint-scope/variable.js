@@ -35,10 +35,8 @@
 
 import type {Definition} from './definition';
 import type {Reference} from './reference';
+import type {Scope} from './scope';
 import type {Identifier} from './ScopeManagerTypes';
-
-// TODO: Use real type once scope.js have been typed
-type Scope = Object;
 
 /**
  * A Variable represents a locally scoped identifier. These include arguments to

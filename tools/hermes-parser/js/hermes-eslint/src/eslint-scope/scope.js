@@ -4,6 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @flow
  * @format
  */
 
@@ -32,6 +33,10 @@
 */
 'use strict';
 
+import type {Definition} from './definition';
+import type {Identifier, Node} from './ScopeManagerTypes';
+import type {ImplicitGlobal, ReadWriteFlagType} from './reference';
+
 const Syntax = require('estraverse').Syntax;
 
 const {ReadWriteFlag, Reference} = require('./reference');
@@ -42,6 +47,9 @@ const {
   ImplicitGlobalVariableDefinition,
 } = require('./definition');
 const assert = require('assert');
+
+// TODO: Use real type once scope-manager.js has been typed
+type ScopeManager = Object;
 
 const ScopeType = {
   Block: 'block',
@@ -60,12 +68,12 @@ const ScopeType = {
 
 /**
  * Test if scope is strict
- * @param {Scope} scope - scope
- * @param {Block} block - block
- * @param {boolean} isMethodDefinition - is method definition
- * @returns {boolean} is strict scope
  */
-function isStrictScope(scope, block, isMethodDefinition) {
+function isStrictScope(
+  scope: Scope,
+  block: Node,
+  isMethodDefinition: boolean,
+): boolean {
   let body;
 
   // When upper scope exists and is strict, inner scope is also strict.
@@ -136,11 +144,8 @@ function isStrictScope(scope, block, isMethodDefinition) {
 
 /**
  * Register scope
- * @param {ScopeManager} scopeManager - scope manager
- * @param {Scope} scope - scope
- * @returns {void}
  */
-function registerScope(scopeManager, scope) {
+function registerScope(scopeManager: ScopeManager, scope: Scope): void {
   scopeManager.scopes.push(scope);
 
   const scopes = scopeManager.__nodeToScope.get(scope.block);
@@ -154,15 +159,13 @@ function registerScope(scopeManager, scope) {
 
 /**
  * Should be statically closed
- * @param {Object} def - def
- * @returns {boolean} should be statically closed
  */
-function shouldBeStaticallyClosed(def) {
+function shouldBeStaticallyClosed(def: Definition): boolean {
   return (
     def.type === DefinitionType.ClassName ||
     def.type === DefinitionType.Enum ||
     def.type === DefinitionType.Type ||
-    (def.type === DefinitionType.Variable && def.parent.kind !== 'var')
+    (def.type === DefinitionType.Variable && def.parent?.kind !== 'var')
   );
 }
 
@@ -170,113 +173,121 @@ function shouldBeStaticallyClosed(def) {
  * @class Scope
  */
 class Scope {
-  constructor(scopeManager, type, upperScope, block, isMethodDefinition) {
-    /**
-     * One of 'module', 'block', 'switch', 'function', 'catch', 'with', 'function', 'class', 'global'.
-     * @member {String} Scope#type
-     */
-    this.type = type;
+  /**
+   * The type of the scope.
+   */
+  type: string;
 
-    /**
-     * The scoped {@link Variable}s of this scope, as <code>{ Variable.name
-     * : Variable }</code>.
-     * @member {Map} Scope#set
-     */
+  /**
+   * The scoped {@link Variable}s of this scope, as <code>{ Variable.name
+   * : Variable }</code>.
+   */
+  set: Map<string, Variable> = new Map();
+
+  /**
+   * Generally, through the lexical scoping of JS you can always know
+   * which variable an identifier in the source code refers to. There are
+   * a few exceptions to this rule. With 'global' and 'with' scopes you
+   * can only decide at runtime which variable a reference refers to.
+   * Moreover, if 'eval()' is used in a scope, it might introduce new
+   * bindings in this or its parent scopes.
+   * All those scopes are considered 'dynamic'.
+   */
+  dynamic: boolean;
+
+  /**
+   * A reference to the scope-defining syntax node.
+   */
+  block: Node;
+
+  /**
+   * The {@link Reference|references} that are not resolved with this scope.
+   */
+  through: Array<Reference> = [];
+
+  /**
+   * The scoped {@link Variable}s of this scope. In the case of a
+   * 'function' scope this includes the automatic argument <em>arguments</em> as
+   * its first element, as well as all further formal arguments.
+   */
+  variables: Array<Variable> = [];
+
+  /**
+   * Any variable {@link Reference|reference} found in this scope. This
+   * includes occurrences of local variables as well as variables from
+   * parent scopes (including the global scope). For local variables
+   * this also includes defining occurrences (like in a 'var' statement).
+   * In a 'function' scope this does not include the occurrences of the
+   * formal parameter in the parameter list.
+   */
+  references: Array<Reference> = [];
+
+  /**
+   * For 'global' and 'function' scopes, this is a self-reference. For
+   * other scope types this is the <em>variableScope</em> value of the
+   * parent scope.
+   */
+  variableScope: Scope;
+
+  /**
+   * Whether this scope is created by a FunctionExpression.
+   */
+  functionExpressionScope: boolean = false;
+
+  thisFound: boolean = false;
+
+  /**
+   * List of {@link Reference}s that are left to be resolved (i.e. which
+   * need to be linked to the variable they refer to).
+   */
+  __referencesLeftToResolve: Array<Reference> = [];
+
+  /**
+   * Reference to the parent {@link Scope|scope}.
+   */
+  upper: ?Scope;
+
+  /**
+   * Whether 'use strict' is in effect in this scope.
+   */
+  isStrict: boolean;
+
+  /**
+   * List of nested {@link Scope}s.
+   */
+  childScopes: Array<Scope> = [];
+
+  __declaredVariables: WeakMap<Node, Array<Variable>>;
+  __isClosed: boolean = false;
+
+  constructor(
+    scopeManager: ScopeManager,
+    type: string,
+    upperScope: ?Scope,
+    block: Node,
+    isMethodDefinition: boolean,
+  ) {
+    this.type = type;
     this.set = new Map();
 
-    /**
-     * Generally, through the lexical scoping of JS you can always know
-     * which variable an identifier in the source code refers to. There are
-     * a few exceptions to this rule. With 'global' and 'with' scopes you
-     * can only decide at runtime which variable a reference refers to.
-     * Moreover, if 'eval()' is used in a scope, it might introduce new
-     * bindings in this or its parent scopes.
-     * All those scopes are considered 'dynamic'.
-     * @member {boolean} Scope#dynamic
-     */
     this.dynamic =
       this.type === ScopeType.Global || this.type === ScopeType.With;
 
-    /**
-     * A reference to the scope-defining syntax node.
-     * @member {espree.Node} Scope#block
-     */
     this.block = block;
 
-    /**
-     * The {@link Reference|references} that are not resolved with this scope.
-     * @member {Reference[]} Scope#through
-     */
-    this.through = [];
-
-    /**
-     * The scoped {@link Variable}s of this scope. In the case of a
-     * 'function' scope this includes the automatic argument <em>arguments</em> as
-     * its first element, as well as all further formal arguments.
-     * @member {Variable[]} Scope#variables
-     */
-    this.variables = [];
-
-    /**
-     * Any variable {@link Reference|reference} found in this scope. This
-     * includes occurrences of local variables as well as variables from
-     * parent scopes (including the global scope). For local variables
-     * this also includes defining occurrences (like in a 'var' statement).
-     * In a 'function' scope this does not include the occurrences of the
-     * formal parameter in the parameter list.
-     * @member {Reference[]} Scope#references
-     */
-    this.references = [];
-
-    /**
-     * For 'global' and 'function' scopes, this is a self-reference. For
-     * other scope types this is the <em>variableScope</em> value of the
-     * parent scope.
-     * @member {Scope} Scope#variableScope
-     */
     this.variableScope =
       this.type === ScopeType.Global ||
       this.type === ScopeType.Function ||
       this.type === ScopeType.Module ||
       this.type === ScopeType.DeclareModule
         ? this
-        : upperScope.variableScope;
+        : // $FlowFixMe[incompatible-use] upperScope can only be null for Global scope
+          upperScope.variableScope;
 
-    /**
-     * Whether this scope is created by a FunctionExpression.
-     * @member {boolean} Scope#functionExpressionScope
-     */
-    this.functionExpressionScope = false;
-
-    /**
-     * @member {boolean} Scope#thisFound
-     */
-    this.thisFound = false;
-
-    /**
-     * List of {@link Reference}s that are left to be resolved (i.e. which
-     * need to be linked to the variable they refer to).
-     * @member {Reference[]} Scope#__referencesLeftToResolve
-     */
-    this.__referencesLeftToResolve = [];
-
-    /**
-     * Reference to the parent {@link Scope|scope}.
-     * @member {Scope} Scope#upper
-     */
     this.upper = upperScope;
 
-    /**
-     * Whether 'use strict' is in effect in this scope.
-     * @member {boolean} Scope#isStrict
-     */
     this.isStrict = isStrictScope(this, block, isMethodDefinition);
 
-    /**
-     * List of nested {@link Scope}s.
-     * @member {Scope[]} Scope#childScopes
-     */
-    this.childScopes = [];
     if (this.upper) {
       this.upper.childScopes.push(this);
     }
@@ -286,31 +297,31 @@ class Scope {
     registerScope(scopeManager, this);
   }
 
-  __shouldStaticallyClose(scopeManager) {
+  __shouldStaticallyClose(scopeManager: ScopeManager): boolean {
     return !this.dynamic;
   }
 
-  __shouldStaticallyCloseForGlobal(ref) {
+  __shouldStaticallyCloseForGlobal(ref: Reference): boolean {
     // On global scope, let/const/class declarations should be resolved statically.
     const name = ref.identifier.name;
 
-    if (!this.set.has(name)) {
+    const variable = this.set.get(name);
+    if (variable == null) {
       return false;
     }
 
-    const variable = this.set.get(name);
     const defs = variable.defs;
 
     return defs.length > 0 && defs.every(shouldBeStaticallyClosed);
   }
 
-  __staticCloseRef(ref) {
+  __staticCloseRef(ref: Reference): void {
     if (!this.__resolve(ref)) {
       this.__delegateToUpperScope(ref);
     }
   }
 
-  __dynamicCloseRef(ref) {
+  __dynamicCloseRef(ref: Reference): void {
     // notify all names are through to global
     let current = this;
 
@@ -320,7 +331,7 @@ class Scope {
     } while (current);
   }
 
-  __globalCloseRef(ref) {
+  __globalCloseRef(ref: Reference): void {
     // let/const/class declarations should be resolved statically.
     // others should be resolved dynamically.
     if (this.__shouldStaticallyCloseForGlobal(ref)) {
@@ -330,7 +341,7 @@ class Scope {
     }
   }
 
-  __close(scopeManager) {
+  __close(scopeManager: ScopeManager): ?Scope {
     let closeRef;
 
     if (this.__shouldStaticallyClose(scopeManager)) {
@@ -347,7 +358,8 @@ class Scope {
 
       closeRef.call(this, ref);
     }
-    this.__referencesLeftToResolve = null;
+    this.__referencesLeftToResolve = [];
+    this.__isClosed = true;
 
     return this.upper;
   }
@@ -356,17 +368,17 @@ class Scope {
    * Whether a given reference can be resolved to a given variable.
    * May be overridden in scope implementations.
    */
-  __isValidResolution(ref, variable) {
+  __isValidResolution(ref: Reference, variable: Variable): boolean {
     return true;
   }
 
-  __resolve(ref) {
+  __resolve(ref: Reference): boolean {
     const name = ref.identifier.name;
 
-    if (!this.set.has(name)) {
+    const variable = this.set.get(name);
+    if (variable == null) {
       return false;
     }
-    const variable = this.set.get(name);
 
     if (!this.__isValidResolution(ref, variable)) {
       return false;
@@ -377,14 +389,14 @@ class Scope {
     return true;
   }
 
-  __delegateToUpperScope(ref) {
+  __delegateToUpperScope(ref: Reference): void {
     if (this.upper) {
       this.upper.__referencesLeftToResolve.push(ref);
     }
     this.through.push(ref);
   }
 
-  __addDeclaredVariablesOfNode(variable, node) {
+  __addDeclaredVariablesOfNode(variable: Variable, node: Node): void {
     if (node == null) {
       return;
     }
@@ -400,14 +412,23 @@ class Scope {
     }
   }
 
-  __defineGeneric(name, set, variables, node, def) {
+  __defineGeneric(
+    name: string,
+    set: Map<string, Variable>,
+    variables: Array<Variable>,
+    node: Node,
+    def: ?Definition,
+  ): void {
     let variable;
 
-    variable = set.get(name);
-    if (!variable) {
-      variable = new Variable(name, this);
-      set.set(name, variable);
-      variables.push(variable);
+    const existingVariable = set.get(name);
+    if (!existingVariable) {
+      const newVariable = new Variable(name, this);
+      set.set(name, newVariable);
+      variables.push(newVariable);
+      variable = newVariable;
+    } else {
+      variable = existingVariable;
     }
 
     if (def) {
@@ -420,13 +441,19 @@ class Scope {
     }
   }
 
-  __define(node, def) {
+  __define(node: Node, def: Definition): void {
     if (node && node.type === Syntax.Identifier) {
       this.__defineGeneric(node.name, this.set, this.variables, node, def);
     }
   }
 
-  __referencingValue(node, assign, writeExpr, maybeImplicitGlobal, init) {
+  __referencingValue(
+    node: Identifier,
+    assign?: ReadWriteFlagType,
+    writeExpr?: Node,
+    maybeImplicitGlobal?: ?ImplicitGlobal,
+    init?: boolean,
+  ): void {
     // because Array element may be null
     if (!node || node.type !== Syntax.Identifier) {
       return;
@@ -451,7 +478,7 @@ class Scope {
     this.__referencesLeftToResolve.push(ref);
   }
 
-  __referencingType(node) {
+  __referencingType(node: Identifier): void {
     const ref = new Reference(
       node /* identifier */,
       this /* scope */,
@@ -466,12 +493,8 @@ class Scope {
     this.__referencesLeftToResolve.push(ref);
   }
 
-  __detectThis() {
+  __detectThis(): void {
     this.thisFound = true;
-  }
-
-  __isClosed() {
-    return this.__referencesLeftToResolve === null;
   }
 
   /**
@@ -480,10 +503,10 @@ class Scope {
    * @param {Espree.Identifier} ident - identifier to be resolved.
    * @returns {Reference} reference
    */
-  resolve(ident) {
+  resolve(ident: Identifier): ?Reference {
     let ref, i, iz;
 
-    assert(this.__isClosed(), 'Scope should be closed.');
+    assert(this.__isClosed, 'Scope should be closed.');
     assert(ident.type === Syntax.Identifier, 'Target should be identifier.');
     for (i = 0, iz = this.references.length; i < iz; ++i) {
       ref = this.references[i];
@@ -496,32 +519,26 @@ class Scope {
 
   /**
    * returns this scope is static
-   * @method Scope#isStatic
-   * @returns {boolean} static
    */
-  isStatic() {
+  isStatic(): boolean {
     return !this.dynamic;
   }
 
   /**
    * returns this scope has materialized arguments
-   * @method Scope#isArgumentsMaterialized
-   * @returns {boolean} arguemnts materialized
    */
-  isArgumentsMaterialized() {
+  isArgumentsMaterialized(): boolean {
     return true;
   }
 
   /**
    * returns this scope has materialized `this` reference
-   * @method Scope#isThisMaterialized
-   * @returns {boolean} this materialized
    */
-  isThisMaterialized() {
+  isThisMaterialized(): boolean {
     return true;
   }
 
-  isUsedName(name) {
+  isUsedName(name: string): boolean {
     if (this.set.has(name)) {
       return true;
     }
@@ -535,7 +552,13 @@ class Scope {
 }
 
 class GlobalScope extends Scope {
-  constructor(scopeManager, block) {
+  implicit: {
+    set: Map<string, Variable>,
+    variables: Array<Variable>,
+    referencesLeftToResolve: Array<Reference>,
+  };
+
+  constructor(scopeManager: ScopeManager, block: Node) {
     super(scopeManager, ScopeType.Global, null, block, false);
     this.implicit = {
       set: new Map(),
@@ -544,7 +567,7 @@ class GlobalScope extends Scope {
     };
   }
 
-  __close(scopeManager) {
+  __close(scopeManager: ScopeManager): ?Scope {
     const implicit = [];
 
     for (let i = 0, iz = this.__referencesLeftToResolve.length; i < iz; ++i) {
@@ -570,7 +593,7 @@ class GlobalScope extends Scope {
     return super.__close(scopeManager);
   }
 
-  __defineImplicit(node, def) {
+  __defineImplicit(node: Node, def: Definition): void {
     if (node && node.type === Syntax.Identifier) {
       this.__defineGeneric(
         node.name,
@@ -584,13 +607,13 @@ class GlobalScope extends Scope {
 }
 
 class ModuleScope extends Scope {
-  constructor(scopeManager, upperScope, block) {
+  constructor(scopeManager: ScopeManager, upperScope: ?Scope, block: Node) {
     super(scopeManager, ScopeType.Module, upperScope, block, false);
   }
 }
 
 class FunctionExpressionNameScope extends Scope {
-  constructor(scopeManager, upperScope, block) {
+  constructor(scopeManager: ScopeManager, upperScope: ?Scope, block: Node) {
     super(
       scopeManager,
       ScopeType.FunctionExpressionName,
@@ -604,17 +627,17 @@ class FunctionExpressionNameScope extends Scope {
 }
 
 class CatchScope extends Scope {
-  constructor(scopeManager, upperScope, block) {
+  constructor(scopeManager: ScopeManager, upperScope: ?Scope, block: Node) {
     super(scopeManager, ScopeType.Catch, upperScope, block, false);
   }
 }
 
 class WithScope extends Scope {
-  constructor(scopeManager, upperScope, block) {
+  constructor(scopeManager: ScopeManager, upperScope: ?Scope, block: Node) {
     super(scopeManager, ScopeType.With, upperScope, block, false);
   }
 
-  __close(scopeManager) {
+  __close(scopeManager: ScopeManager): ?Scope {
     if (this.__shouldStaticallyClose(scopeManager)) {
       return super.__close(scopeManager);
     }
@@ -624,26 +647,32 @@ class WithScope extends Scope {
 
       this.__delegateToUpperScope(ref);
     }
-    this.__referencesLeftToResolve = null;
+    this.__referencesLeftToResolve = [];
+    this.__isClosed = true;
 
     return this.upper;
   }
 }
 
 class BlockScope extends Scope {
-  constructor(scopeManager, upperScope, block) {
+  constructor(scopeManager: ScopeManager, upperScope: ?Scope, block: Node) {
     super(scopeManager, ScopeType.Block, upperScope, block, false);
   }
 }
 
 class SwitchScope extends Scope {
-  constructor(scopeManager, upperScope, block) {
+  constructor(scopeManager: ScopeManager, upperScope: ?Scope, block: Node) {
     super(scopeManager, ScopeType.Switch, upperScope, block, false);
   }
 }
 
 class FunctionScope extends Scope {
-  constructor(scopeManager, upperScope, block, isMethodDefinition) {
+  constructor(
+    scopeManager: ScopeManager,
+    upperScope: ?Scope,
+    block: Node,
+    isMethodDefinition: boolean,
+  ) {
     super(
       scopeManager,
       ScopeType.Function,
@@ -659,7 +688,7 @@ class FunctionScope extends Scope {
     }
   }
 
-  isArgumentsMaterialized() {
+  isArgumentsMaterialized(): boolean {
     // TODO(Constellation)
     // We can more aggressive on this condition like this.
     //
@@ -679,17 +708,17 @@ class FunctionScope extends Scope {
     const variable = this.set.get('arguments');
 
     assert(variable, 'Always have arguments variable.');
-    return variable.references.length !== 0;
+    return variable?.references.length !== 0;
   }
 
-  isThisMaterialized() {
+  isThisMaterialized(): boolean {
     if (!this.isStatic()) {
       return true;
     }
     return this.thisFound;
   }
 
-  __defineArguments() {
+  __defineArguments(): void {
     this.__defineGeneric('arguments', this.set, this.variables, null, null);
   }
 
@@ -699,7 +728,7 @@ class FunctionScope extends Scope {
   //         const x = 2
   //         console.log(a)
   //     }
-  __isValidResolution(ref, variable) {
+  __isValidResolution(ref: Reference, variable: Variable): boolean {
     if (!super.__isValidResolution(ref, variable)) {
       return false;
     }
@@ -723,25 +752,29 @@ class FunctionScope extends Scope {
 }
 
 class ForScope extends Scope {
-  constructor(scopeManager, upperScope, block) {
+  constructor(scopeManager: ScopeManager, upperScope: ?Scope, block: Node) {
     super(scopeManager, ScopeType.For, upperScope, block, false);
   }
 }
 
 class ClassScope extends Scope {
-  constructor(scopeManager, upperScope, block) {
+  constructor(scopeManager: ScopeManager, upperScope: ?Scope, block: Node) {
     super(scopeManager, ScopeType.Class, upperScope, block, false);
   }
 }
 
 class TypeScope extends Scope {
-  constructor(scopeManager, upperScope, typeNode) {
+  constructor(scopeManager: ScopeManager, upperScope: ?Scope, typeNode: Node) {
     super(scopeManager, ScopeType.Type, upperScope, typeNode, false);
   }
 }
 
 class DeclareModuleScope extends Scope {
-  constructor(scopeManager, upperScope, declareModuleNode) {
+  constructor(
+    scopeManager: ScopeManager,
+    upperScope: ?Scope,
+    declareModuleNode: Node,
+  ) {
     super(
       scopeManager,
       ScopeType.DeclareModule,

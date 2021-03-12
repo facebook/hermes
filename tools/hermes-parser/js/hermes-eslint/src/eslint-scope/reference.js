@@ -34,10 +34,8 @@
 'use strict';
 
 import type {Identifier, Node} from './ScopeManagerTypes';
+import type {Scope} from './scope';
 import type Variable from './variable';
-
-// TODO: Use real scope type once scope.js is typed
-type Scope = Object;
 
 export type ReadWriteFlagType = 0x1 | 0x2 | 0x3;
 
