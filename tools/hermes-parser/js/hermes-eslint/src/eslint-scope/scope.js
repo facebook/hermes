@@ -34,7 +34,7 @@
 
 const Syntax = require('estraverse').Syntax;
 
-const Reference = require('./reference');
+const {ReadWriteFlag, Reference} = require('./reference');
 const Variable = require('./variable');
 const {
   DefinitionType,
@@ -440,7 +440,7 @@ class Scope {
     const ref = new Reference(
       node /* identifier */,
       this /* scope */,
-      assign || Reference.READ /* read-write flag */,
+      assign || ReadWriteFlag.READ /* read-write flag */,
       writeExpr /* writeExpr */,
       maybeImplicitGlobal /* maybeImplicitGlobal */,
       !!init /* init */,
@@ -455,7 +455,7 @@ class Scope {
     const ref = new Reference(
       node /* identifier */,
       this /* scope */,
-      Reference.READ /* read-write flag */,
+      ReadWriteFlag.READ /* read-write flag */,
       null /* writeExpr */,
       null /* maybeImplicitGlobal */,
       false /* init */,

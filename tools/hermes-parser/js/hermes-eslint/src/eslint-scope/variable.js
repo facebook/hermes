@@ -34,10 +34,10 @@
 'use strict';
 
 import type {Definition} from './definition';
+import type {Reference} from './reference';
 import type {Identifier} from './ScopeManagerTypes';
 
-// TODO: Use real types once reference.js and scope.js have been typed
-type Reference = Object;
+// TODO: Use real type once scope.js have been typed
 type Scope = Object;
 
 /**

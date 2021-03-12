@@ -34,7 +34,7 @@
 
 const Syntax = require('estraverse').Syntax;
 const esrecurse = require('esrecurse');
-const Reference = require('./reference');
+const {ReadWriteFlag, Reference} = require('./reference');
 const Variable = require('./variable');
 const PatternVisitor = require('./pattern-visitor');
 const {
@@ -139,7 +139,7 @@ class Referencer extends esrecurse.Visitor {
     assignments.forEach(assignment => {
       scope.__referencingValue(
         pattern,
-        Reference.WRITE,
+        ReadWriteFlag.WRITE,
         assignment.right,
         maybeImplicitGlobal,
         init,
@@ -338,7 +338,7 @@ class Referencer extends esrecurse.Visitor {
       this.visitPattern(node.left.declarations[0].id, pattern => {
         this.currentScope().__referencingValue(
           pattern,
-          Reference.WRITE,
+          ReadWriteFlag.WRITE,
           node.right,
           null,
           true,
@@ -362,7 +362,7 @@ class Referencer extends esrecurse.Visitor {
         );
         this.currentScope().__referencingValue(
           pattern,
-          Reference.WRITE,
+          ReadWriteFlag.WRITE,
           node.right,
           maybeImplicitGlobal,
           false,
@@ -389,7 +389,7 @@ class Referencer extends esrecurse.Visitor {
       if (init) {
         this.currentScope().__referencingValue(
           pattern,
-          Reference.WRITE,
+          ReadWriteFlag.WRITE,
           init,
           null,
           true,
@@ -418,7 +418,7 @@ class Referencer extends esrecurse.Visitor {
           );
           this.currentScope().__referencingValue(
             pattern,
-            Reference.WRITE,
+            ReadWriteFlag.WRITE,
             node.right,
             maybeImplicitGlobal,
             false,
@@ -427,7 +427,7 @@ class Referencer extends esrecurse.Visitor {
       } else {
         this.currentScope().__referencingValue(
           node.left,
-          Reference.RW,
+          ReadWriteFlag.RW,
           node.right,
         );
       }
@@ -467,7 +467,11 @@ class Referencer extends esrecurse.Visitor {
 
   UpdateExpression(node) {
     if (PatternVisitor.isPattern(node.argument)) {
-      this.currentScope().__referencingValue(node.argument, Reference.RW, null);
+      this.currentScope().__referencingValue(
+        node.argument,
+        ReadWriteFlag.RW,
+        null,
+      );
     } else {
       this.visitChildren(node);
     }
