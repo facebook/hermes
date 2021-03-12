@@ -1368,6 +1368,7 @@ void Runtime::initPredefinedStrings() {
   assert(!getTopGCScope() && "There shouldn't be any handles allocated yet");
 
   auto buffer = predefStringAndSymbolChars;
+  auto propLengths = predefPropertyLengths;
   auto strLengths = predefStringLengths;
   auto symLengths = predefSymbolLengths;
 
@@ -1384,9 +1385,13 @@ void Runtime::initPredefinedStrings() {
   identifierTable_.reserve(Predefined::_IPROP_AFTER_LAST + strCount + symCount);
 
   for (uint32_t idx = 0; idx < Predefined::_IPROP_AFTER_LAST; ++idx) {
-    SymbolID sym = identifierTable_.createNotUniquedLazySymbol("");
+    SymbolID sym = identifierTable_.createNotUniquedLazySymbol(
+        ASCIIRef{&buffer[offset], propLengths[idx]});
+
     assert(sym == Predefined::getSymbolID((Predefined::IProp)registered++));
     (void)sym;
+
+    offset += propLengths[idx];
   }
 
   assert(
