@@ -36,6 +36,7 @@
 import type {Definition} from './definition';
 import type {Identifier, Node} from './ScopeManagerTypes';
 import type {ImplicitGlobal, ReadWriteFlagType} from './reference';
+import type ScopeManager from './scope-manager';
 
 const Syntax = require('estraverse').Syntax;
 
@@ -47,9 +48,6 @@ const {
   ImplicitGlobalVariableDefinition,
 } = require('./definition');
 const assert = require('assert');
-
-// TODO: Use real type once scope-manager.js has been typed
-type ScopeManager = Object;
 
 const ScopeType = {
   Block: 'block',
