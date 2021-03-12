@@ -4,6 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @flow
  * @format
  */
 
@@ -32,6 +33,8 @@
 */
 'use strict';
 
+import type {Identifier, Node} from './ScopeManagerTypes';
+
 const Variable = require('./variable');
 
 const DefinitionType = {
@@ -48,41 +51,62 @@ const DefinitionType = {
 };
 
 class Definition {
-  constructor({type, name, node, parent, index, kind}) {
-    /**
-     * @member {String} Definition#type - type of the occurrence (e.g. "Parameter", "Variable", ...).
-     */
+  /**
+   * Type of the occurrence (e.g. "Parameter", "Variable", ...).
+   */
+  type: string;
+
+  /**
+   * The identifier AST node of the occurrence.
+   */
+  name: Identifier;
+
+  /**
+   * The enclosing node of the identifier.
+   */
+  node: Node;
+
+  /**
+   * The enclosing statement node of the identifier.
+   */
+  parent: ?Node;
+
+  /**
+   * The index in the declaration statement.
+   */
+  index: ?number;
+
+  /**
+   * The kind of the declaration statement.
+   */
+  kind: ?string;
+
+  constructor({
+    type,
+    name,
+    node,
+    parent,
+    index,
+    kind,
+  }: {
+    type: string,
+    name: Identifier,
+    node: Node,
+    parent?: ?Node,
+    index?: number,
+    kind?: string,
+  }) {
     this.type = type;
-
-    /**
-     * @member {espree.Identifier} Definition#name - the identifier AST node of the occurrence.
-     */
     this.name = name;
-
-    /**
-     * @member {espree.Node} Definition#node - the enclosing node of the identifier.
-     */
     this.node = node;
-
-    /**
-     * @member {espree.Node?} Definition#parent - the enclosing statement node of the identifier.
-     */
     this.parent = parent;
-
-    /**
-     * @member {Number?} Definition#index - the index in the declaration statement.
-     */
     this.index = index;
-
-    /**
-     * @member {String?} Definition#kind - the kind of the declaration statement.
-     */
     this.kind = kind;
   }
 }
 
 class CatchClauseDefinition extends Definition {
-  constructor(catchNode) {
+  constructor(catchNode: Node) {
     super({
       type: DefinitionType.CatchClause,
       name: catchNode.param,
@@ -92,7 +116,7 @@ class CatchClauseDefinition extends Definition {
 }
 
 class ClassNameDefinition extends Definition {
-  constructor(classNode) {
+  constructor(classNode: Node) {
     super({
       type: DefinitionType.ClassName,
       name: classNode.id,
@@ -102,7 +126,7 @@ class ClassNameDefinition extends Definition {
 }
 
 class EnumDefinition extends Definition {
-  constructor(enumDeclarationNode) {
+  constructor(enumDeclarationNode: Node) {
     super({
       type: DefinitionType.Enum,
       name: enumDeclarationNode.id,
@@ -112,7 +136,7 @@ class EnumDefinition extends Definition {
 }
 
 class FunctionNameDefinition extends Definition {
-  constructor(functionNode) {
+  constructor(functionNode: Node) {
     super({
       type: DefinitionType.FunctionName,
       name: functionNode.id,
@@ -122,7 +146,7 @@ class FunctionNameDefinition extends Definition {
 }
 
 class ImplicitGlobalVariableDefinition extends Definition {
-  constructor(idNode, node) {
+  constructor(idNode: Identifier, node: Node) {
     super({
       type: DefinitionType.ImplicitGlobalVariable,
       name: idNode,
@@ -132,7 +156,11 @@ class ImplicitGlobalVariableDefinition extends Definition {
 }
 
 class ImportBindingDefinition extends Definition {
-  constructor(idNode, specifierNode, importDeclarationNode) {
+  constructor(
+    idNode: Identifier,
+    specifierNode: Node,
+    importDeclarationNode: Node,
+  ) {
     super({
       type: DefinitionType.ImportBinding,
       name: idNode,
@@ -143,7 +171,17 @@ class ImportBindingDefinition extends Definition {
 }
 
 class ParameterDefinition extends Definition {
-  constructor(idNode, functionNode, index, rest) {
+  /**
+   * Whether the parameter definition is a part of a rest parameter.
+   */
+  rest: boolean;
+
+  constructor(
+    idNode: Identifier,
+    functionNode: Node,
+    index: number,
+    rest: boolean,
+  ) {
     super({
       type: DefinitionType.Parameter,
       name: idNode,
@@ -151,16 +189,12 @@ class ParameterDefinition extends Definition {
       index,
     });
 
-    /**
-     * Whether the parameter definition is a part of a rest parameter.
-     * @member {boolean} ParameterDefinition#rest
-     */
     this.rest = rest;
   }
 }
 
 class TypeDefinition extends Definition {
-  constructor(idNode, declNode) {
+  constructor(idNode: Identifier, declNode: Node) {
     super({
       type: DefinitionType.Type,
       name: idNode,
@@ -170,7 +204,7 @@ class TypeDefinition extends Definition {
 }
 
 class TypeParameterDefinition extends Definition {
-  constructor(typeParamNode) {
+  constructor(typeParamNode: Node) {
     // The ScopeManager API expects an Identifier node that can be referenced
     // for each definition. TypeParameter nodes do not actually contain an
     // Identifier node, so we create a fake one with the correct name,
@@ -191,7 +225,13 @@ class TypeParameterDefinition extends Definition {
 }
 
 class VariableDefinition extends Definition {
-  constructor(idNode, declaratorNode, declarationNode, index, kind) {
+  constructor(
+    idNode: Identifier,
+    declaratorNode: Node,
+    declarationNode: Node,
+    index: number,
+    kind: string,
+  ) {
     super({
       type: DefinitionType.Variable,
       name: idNode,
@@ -206,6 +246,7 @@ class VariableDefinition extends Definition {
 module.exports = {
   CatchClauseDefinition,
   ClassNameDefinition,
+  Definition,
   DefinitionType,
   EnumDefinition,
   FunctionNameDefinition,

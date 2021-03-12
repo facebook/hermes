@@ -4,6 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @flow
  * @format
  */
 
@@ -32,45 +33,50 @@
 */
 'use strict';
 
+import type {Definition} from './definition';
+import type {Identifier} from './ScopeManagerTypes';
+
+// TODO: Use real types once reference.js and scope.js have been typed
+type Reference = Object;
+type Scope = Object;
+
 /**
  * A Variable represents a locally scoped identifier. These include arguments to
  * functions.
  * @class Variable
  */
 class Variable {
-  constructor(name, scope) {
-    /**
-     * The variable name, as given in the source code.
-     * @member {String} Variable#name
-     */
+  /**
+   * The variable name, as given in the source code.
+   */
+  name: string;
+
+  /**
+   * List of defining occurrences of this variable (like in 'var ...'
+   * statements or as parameter), as AST nodes.
+   */
+  identifiers: Array<Identifier> = [];
+
+  /**
+   * List of references of this variable (excluding parameter entries)
+   * in its defining scope and all nested scopes. For defining
+   * occurrences only see defs.
+   */
+  references: Array<Reference> = [];
+
+  /**
+   * List of defining occurrences of this variable (like in 'var ...'
+   * statements or as parameter), as custom objects.
+   */
+  defs: Array<Definition> = [];
+
+  /**
+   * Reference to the enclosing Scope.
+   */
+  scope: Scope;
+
+  constructor(name: string, scope: Scope) {
     this.name = name;
-
-    /**
-     * List of defining occurrences of this variable (like in 'var ...'
-     * statements or as parameter), as AST nodes.
-     * @member {espree.Identifier[]} Variable#identifiers
-     */
-    this.identifiers = [];
-
-    /**
-     * List of {@link Reference|references} of this variable (excluding parameter entries)
-     * in its defining scope and all nested scopes. For defining
-     * occurrences only see {@link Variable#defs}.
-     * @member {Reference[]} Variable#references
-     */
-    this.references = [];
-
-    /**
-     * List of defining occurrences of this variable (like in 'var ...'
-     * statements or as parameter), as custom objects.
-     * @member {Definition[]} Variable#defs
-     */
-    this.defs = [];
-
-    /**
-     * Reference to the enclosing Scope.
-     * @member {Scope} Variable#scope
-     */
     this.scope = scope;
   }
 }
