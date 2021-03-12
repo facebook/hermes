@@ -6,10 +6,13 @@
     "@babel/cli": "7.12.10",
     "@babel/preset-env": "7.12.1",
     "@babel/plugin-proposal-class-properties": "7.12.1",
+    "@babel/plugin-transform-flow-strip-types": "7.12.1",
+    "flow-bin": "0.146.0",
     "jest": "^26.4.2"
   },
   "scripts": {
     "build": "./scripts/build.sh",
+    "flow": "flow",
     "test": "jest"
   },
   "workspaces": ["hermes-eslint", "hermes-parser"]

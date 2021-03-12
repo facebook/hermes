@@ -19,7 +19,7 @@ class HermesToBabelAdapter extends HermesASTAdapter {
     }
 
     node.loc = {
-      source: this.sourceFilename,
+      source: this.sourceFilename ?? null,
       start: loc.start,
       end: loc.end,
     };
