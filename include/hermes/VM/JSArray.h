@@ -304,7 +304,7 @@ class JSArray final : public ArrayImpl {
   }
 
   static uint32_t getLength(const JSArray *self) {
-    return directSlotRef(self, lengthPropIndex()).getNumber();
+    return getDirectSlotValue(self, lengthPropIndex()).getNumber();
   }
 
   /// Create an instance of Array, with [[Prototype]] initialized with
@@ -391,9 +391,11 @@ class JSArray final : public ArrayImpl {
  private:
   /// A helper to update the named '.length' property.
   static void putLength(JSArray *self, Runtime *runtime, uint32_t newLength) {
-    directSlotRef(self, lengthPropIndex())
-        .setNonPtr(
-            HermesValue::encodeNumberValue(newLength), &runtime->getHeap());
+    setDirectSlotValueNonPtr(
+        self,
+        lengthPropIndex(),
+        HermesValue::encodeNumberValue(newLength),
+        &runtime->getHeap());
   }
 
   /// Update the JavaScript '.length' property, which also resizes the array.

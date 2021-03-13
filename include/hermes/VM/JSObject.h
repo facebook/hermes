@@ -512,21 +512,21 @@ class JSObject : public GCCell {
       JSObject *parent,
       PropOpFlags opFlags = PropOpFlags());
 
-  /// Return a reference to an internal property slot.
-  static GCHermesValue &
-  internalPropertyRef(JSObject *self, PointerBase *base, SlotIndex index) {
+  /// Return the value of an internal property slot.
+  static HermesValue
+  internalProperty(JSObject *self, PointerBase *base, SlotIndex index) {
     assert(
         HiddenClass::debugIsPropertyDefined(
             self->clazz_.get(base),
             base,
             InternalProperty::getSymbolID(index)) &&
         "internal slot must be reserved");
-    return namedSlotRef<PropStorage::Inline::Yes>(self, base, index);
+    return getNamedSlotValue<PropStorage::Inline::Yes>(self, base, index);
   }
 
   static HermesValue
   getInternalProperty(JSObject *self, PointerBase *base, SlotIndex index) {
-    return internalPropertyRef(self, base, index);
+    return internalProperty(self, base, index);
   }
 
   static void setInternalProperty(
@@ -595,29 +595,31 @@ class JSObject : public GCCell {
         OwnKeysFlags().plusIncludeSymbols().plusIncludeNonEnumerable());
   }
 
-  /// Return a reference to a direct property storage space by \p index.
+  /// Load a value from the direct property storage space by \p index.
   /// \pre index < DIRECT_PROPERTY_SLOTS.
-  static GCHermesValue &directSlotRef(JSObject *self, SlotIndex index);
-  static const GCHermesValue &directSlotRef(
+  inline static HermesValue getDirectSlotValue(
       const JSObject *self,
       SlotIndex index);
 
-  /// Return a reference to a slot in the "named value" storage space by
-  /// \p index.
-  /// \pre inl == PropStorage::Inline::Yes -> index <
-  ///   PropStorage::kValueToSegmentThreshold.
-  template <PropStorage::Inline inl = PropStorage::Inline::No>
-  static GCHermesValue &
-  namedSlotRef(JSObject *self, PointerBase *runtime, SlotIndex index);
+  /// Store a value to the direct property storage space by \p index.
+  /// \pre index < DIRECT_PROPERTY_SLOTS.
+  inline static void setDirectSlotValue(
+      JSObject *self,
+      SlotIndex index,
+      HermesValue value,
+      GC *gc);
+  inline static void setDirectSlotValueNonPtr(
+      JSObject *self,
+      SlotIndex index,
+      HermesValue value,
+      GC *gc);
 
   /// Load a value from the "named value" storage space by \p index.
   /// \pre inl == PropStorage::Inline::Yes -> index <
   /// PropStorage::kValueToSegmentThreshold.
   template <PropStorage::Inline inl = PropStorage::Inline::No>
-  static HermesValue
-  getNamedSlotValue(JSObject *self, PointerBase *runtime, SlotIndex index) {
-    return namedSlotRef<inl>(self, runtime, index);
-  }
+  inline static HermesValue
+  getNamedSlotValue(JSObject *self, PointerBase *runtime, SlotIndex index);
 
   /// Load a value from the "named value" storage space by the slot described by
   /// the property descriptor \p desc.
@@ -1591,21 +1593,38 @@ inline T *JSObject::initDirectPropStorage(Runtime *runtime, T *self) {
   return self;
 }
 
-inline GCHermesValue &JSObject::directSlotRef(JSObject *self, SlotIndex index) {
-  assert(index < DIRECT_PROPERTY_SLOTS && "Must be a direct property");
-  return self->directProps()[index];
-}
-
-inline const GCHermesValue &JSObject::directSlotRef(
+inline HermesValue JSObject::getDirectSlotValue(
     const JSObject *self,
     SlotIndex index) {
   assert(index < DIRECT_PROPERTY_SLOTS && "Must be a direct property");
   return self->directProps()[index];
 }
 
+inline void JSObject::setDirectSlotValue(
+    JSObject *self,
+    SlotIndex index,
+    HermesValue value,
+    GC *gc) {
+  assert(index < DIRECT_PROPERTY_SLOTS && "Must be a direct property");
+  self->directProps()[index].set(value, gc);
+}
+
+inline void JSObject::setDirectSlotValueNonPtr(
+    JSObject *self,
+    SlotIndex index,
+    HermesValue value,
+    GC *gc) {
+  assert(index < DIRECT_PROPERTY_SLOTS && "Must be a direct property");
+  self->directProps()[index].setNonPtr(value, gc);
+}
+
 template <PropStorage::Inline inl>
-inline GCHermesValue &
-JSObject::namedSlotRef(JSObject *self, PointerBase *runtime, SlotIndex index) {
+inline HermesValue JSObject::getNamedSlotValue(
+    JSObject *self,
+    PointerBase *runtime,
+    SlotIndex index) {
+  assert(!self->flags_.proxyObject && "getNamedSlotValue called on a Proxy");
+
   if (LLVM_LIKELY(index < DIRECT_PROPERTY_SLOTS))
     return self->directProps()[index];
 
