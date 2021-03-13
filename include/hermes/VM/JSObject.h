@@ -597,22 +597,17 @@ class JSObject : public GCCell {
 
   /// Load a value from the direct property storage space by \p index.
   /// \pre index < DIRECT_PROPERTY_SLOTS.
-  inline static HermesValue getDirectSlotValue(
-      const JSObject *self,
-      SlotIndex index);
+  template <SlotIndex index>
+  inline static HermesValue getDirectSlotValue(const JSObject *self);
 
   /// Store a value to the direct property storage space by \p index.
   /// \pre index < DIRECT_PROPERTY_SLOTS.
-  inline static void setDirectSlotValue(
-      JSObject *self,
-      SlotIndex index,
-      HermesValue value,
-      GC *gc);
-  inline static void setDirectSlotValueNonPtr(
-      JSObject *self,
-      SlotIndex index,
-      HermesValue value,
-      GC *gc);
+  template <SlotIndex index>
+  inline static void
+  setDirectSlotValue(JSObject *self, HermesValue value, GC *gc);
+  template <SlotIndex index>
+  inline static void
+  setDirectSlotValueNonPtr(JSObject *self, HermesValue value, GC *gc);
 
   /// Load a value from the "named value" storage space by \p index.
   /// \pre inl == PropStorage::Inline::Yes -> index <
@@ -1593,28 +1588,23 @@ inline T *JSObject::initDirectPropStorage(Runtime *runtime, T *self) {
   return self;
 }
 
-inline HermesValue JSObject::getDirectSlotValue(
-    const JSObject *self,
-    SlotIndex index) {
-  assert(index < DIRECT_PROPERTY_SLOTS && "Must be a direct property");
+template <SlotIndex index>
+inline HermesValue JSObject::getDirectSlotValue(const JSObject *self) {
+  static_assert(index < DIRECT_PROPERTY_SLOTS, "Must be a direct property");
   return self->directProps()[index];
 }
 
-inline void JSObject::setDirectSlotValue(
-    JSObject *self,
-    SlotIndex index,
-    HermesValue value,
-    GC *gc) {
-  assert(index < DIRECT_PROPERTY_SLOTS && "Must be a direct property");
+template <SlotIndex index>
+inline void
+JSObject::setDirectSlotValue(JSObject *self, HermesValue value, GC *gc) {
+  static_assert(index < DIRECT_PROPERTY_SLOTS, "Must be a direct property");
   self->directProps()[index].set(value, gc);
 }
 
-inline void JSObject::setDirectSlotValueNonPtr(
-    JSObject *self,
-    SlotIndex index,
-    HermesValue value,
-    GC *gc) {
-  assert(index < DIRECT_PROPERTY_SLOTS && "Must be a direct property");
+template <SlotIndex index>
+inline void
+JSObject::setDirectSlotValueNonPtr(JSObject *self, HermesValue value, GC *gc) {
+  static_assert(index < DIRECT_PROPERTY_SLOTS, "Must be a direct property");
   self->directProps()[index].setNonPtr(value, gc);
 }
 

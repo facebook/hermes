@@ -280,6 +280,18 @@ class Arguments final : public ArrayImpl {
 class JSArray final : public ArrayImpl {
   using Super = ArrayImpl;
 
+  // Object needs to be able to call setLength.
+  friend class JSObject;
+
+  static constexpr SlotIndex jsArrayPropertyCount() {
+    return numOverlapSlots<JSArray>() + ANONYMOUS_PROPERTY_SLOTS +
+        NAMED_PROPERTY_SLOTS;
+  }
+
+  static constexpr inline SlotIndex lengthPropIndex() {
+    return jsArrayPropertyCount() - 1;
+  }
+
  public:
 #ifdef HERMESVM_SERIALIZE
   JSArray(Deserializer &d, const VTable *vt);
@@ -304,7 +316,7 @@ class JSArray final : public ArrayImpl {
   }
 
   static uint32_t getLength(const JSArray *self) {
-    return getDirectSlotValue(self, lengthPropIndex()).getNumber();
+    return getDirectSlotValue<lengthPropIndex()>(self).getNumber();
   }
 
   /// Create an instance of Array, with [[Prototype]] initialized with
@@ -359,20 +371,6 @@ class JSArray final : public ArrayImpl {
         runtime->makeHandle(HermesValue::encodeNumberValue(newValue)));
   }
 
- private:
-  // Object needs to be able to call setLength.
-  friend class JSObject;
-
-  static constexpr SlotIndex jsArrayPropertyCount() {
-    return numOverlapSlots<JSArray>() + ANONYMOUS_PROPERTY_SLOTS +
-        NAMED_PROPERTY_SLOTS;
-  }
-
-  static constexpr inline SlotIndex lengthPropIndex() {
-    return jsArrayPropertyCount() - 1;
-  }
-
- public:
   template <typename NeedsBarrier>
   JSArray(
       Runtime *runtime,
@@ -391,11 +389,8 @@ class JSArray final : public ArrayImpl {
  private:
   /// A helper to update the named '.length' property.
   static void putLength(JSArray *self, Runtime *runtime, uint32_t newLength) {
-    setDirectSlotValueNonPtr(
-        self,
-        lengthPropIndex(),
-        HermesValue::encodeNumberValue(newLength),
-        &runtime->getHeap());
+    setDirectSlotValueNonPtr<lengthPropIndex()>(
+        self, HermesValue::encodeNumberValue(newLength), &runtime->getHeap());
   }
 
   /// Update the JavaScript '.length' property, which also resizes the array.
