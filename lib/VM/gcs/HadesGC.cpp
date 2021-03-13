@@ -689,33 +689,26 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
   }
 
   void accept(GCPointerBase &ptr) override {
-    acceptHeap(ptr.getLoc(), &ptr);
+    acceptHeap(concurrentRead(ptr.getLoc()), &ptr);
   }
 
-  template <typename HVType>
-  void acceptHV(HVType &hvRef) {
-    const HermesValue hv = hvRef;
+  void accept(GCHermesValue &hvRef) override {
+    HermesValue hv = concurrentRead<HermesValue>(hvRef);
     if (hv.isPointer()) {
-      GCCell *ptr = static_cast<GCCell *>(hv.getPointer());
-      static_assert(
-          std::is_same<HVType, GCHermesValue>::value ||
-              std::is_same<HVType, PinnedHermesValue>::value,
-          "No other type of HermesValue");
-      if (std::is_same<HVType, PinnedHermesValue>::value)
-        acceptRoot(ptr);
-      else
-        acceptHeap(ptr, &hvRef);
+      acceptHeap(static_cast<GCCell *>(hv.getPointer()), &hvRef);
     } else if (hv.isSymbol()) {
       acceptSym(hv.getSymbol());
     }
   }
 
-  void accept(GCHermesValue &hvRef) override {
-    acceptHV(hvRef);
-  }
-
-  void accept(PinnedHermesValue &hvRef) override {
-    acceptHV(hvRef);
+  void accept(PinnedHermesValue &hv) override {
+    // PinnedHermesValue is a root type and cannot live in the heap. Therefore
+    // there's no risk of a concurrent access.
+    if (hv.isPointer()) {
+      acceptRoot(static_cast<GCCell *>(hv.getPointer()));
+    } else if (hv.isSymbol()) {
+      acceptSym(hv.getSymbol());
+    }
   }
 
   void acceptSym(SymbolID sym) {
@@ -943,6 +936,31 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
     } else {
       localWorklist_.push(cell);
     }
+  }
+
+  template <typename T>
+  T concurrentReadImpl(const T &valRef) {
+    using Storage =
+        typename std::conditional<sizeof(T) == 4, uint32_t, uint64_t>::type;
+    static_assert(sizeof(T) == sizeof(Storage), "Sizes must match");
+    union {
+      Storage storage;
+      T val;
+    } ret;
+    // The cast to a volatile variable forces a read from valRef, since
+    // reads from volatile variables are considered observable behaviour. This
+    // prevents the compiler from optimising away the returned value,
+    // guaranteeing that we will not observe changes to the underlying value
+    // past this point. Not using volatile here could lead to a TOCTOU bug,
+    // because the underlying value may change after a pointer check (in the
+    // case of HermesValue) or a null check (for pointers).
+    ret.storage = *reinterpret_cast<Storage const volatile *>(&valRef);
+    return ret.val;
+  }
+
+  template <typename T>
+  T concurrentRead(const T &ref) {
+    return kConcurrentGC ? concurrentReadImpl<T>(ref) : ref;
   }
 };
 
