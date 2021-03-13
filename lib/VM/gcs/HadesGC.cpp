@@ -825,29 +825,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
           gc.dbgContains(cell) && "Non-heap object discovered during marking");
       const auto sz = cell->getAllocatedSize();
       numMarkedBytes += sz;
-      // There is a benign data race here, as the GC can read a pointer while
-      // it's being modified by the mutator; however, the following rules we
-      // obey prevent it from being a problem:
-      // * The only things being modified that the GC reads are the GCPointers
-      //    and GCHermesValue in an object. All other fields are ignored.
-      // * Those fields are fewer than 64 bits.
-      // * Therefore, on 64-bit platforms, those fields are atomic
-      //    automatically.
-      // * On 32-bit platforms, we don't run this code concurrently, and
-      //    instead yield cooperatively with the mutator. WARN: This isn't
-      //    true yet, will be true later.
-      // * Thanks to the write barrier, if something is modified its old value
-      //    is placed in the globalWorklist, so we don't miss marking it.
-      // * Since the global worklist is pushed onto *before* the write
-      //    happens, we know that there's no way the loop will exit unless it
-      //    reads the old value.
-      // * If it observes the old value (pre-write-barrier value) here, the
-      //    new value will still be live, either by being pre-marked by the
-      //    allocator, or because something else's write barrier will catch
-      //    the modification.
-      TsanIgnoreReadsBegin();
       gc.markCell(cell, *this);
-      TsanIgnoreReadsEnd();
     }
     assert(
         bytesToMark_ >= numMarkedBytes &&
@@ -947,6 +925,28 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
       Storage storage;
       T val;
     } ret;
+
+    // There is a benign data race here, as the GC can read a pointer while
+    // it's being modified by the mutator; however, the following rules we
+    // obey prevent it from being a problem:
+    // * The only things being modified that the GC reads are the GCPointers
+    //    and GCHermesValue in an object. All other fields are ignored.
+    // * Those fields are fewer than 64 bits.
+    // * Therefore, on 64-bit platforms, those fields are atomic
+    //    automatically.
+    // * On 32-bit platforms, we don't run this code concurrently, and
+    //    instead yield cooperatively with the mutator.
+    // * Thanks to the write barrier, if something is modified its old value
+    //    is placed in the globalWorklist, so we don't miss marking it.
+    // * Since the global worklist is pushed onto *before* the write
+    //    happens, we know that there's no way the loop will exit unless it
+    //    reads the old value.
+    // * If it observes the old value (pre-write-barrier value) here, the
+    //    new value will still be live, either by being pre-marked by the
+    //    allocator, or because something else's write barrier will catch
+    //    the modification.
+    TsanIgnoreReadsBegin();
+
     // The cast to a volatile variable forces a read from valRef, since
     // reads from volatile variables are considered observable behaviour. This
     // prevents the compiler from optimising away the returned value,
@@ -955,6 +955,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
     // because the underlying value may change after a pointer check (in the
     // case of HermesValue) or a null check (for pointers).
     ret.storage = *reinterpret_cast<Storage const volatile *>(&valRef);
+    TsanIgnoreReadsEnd();
     return ret.val;
   }
 
