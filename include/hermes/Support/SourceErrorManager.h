@@ -645,7 +645,7 @@ class CollectMessagesRAII {
     storage_.emplace_back(dk, loc, sm, msg);
   }
 
-  void setSuppressMessages(bool discardMessages) {
+  void setDiscardMessages(bool discardMessages) {
     discardMessages_ = discardMessages;
   }
 };

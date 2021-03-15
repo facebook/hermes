@@ -346,6 +346,98 @@ interface T {
 // CHECK-NEXT:         "inexact": false,
 // CHECK-NEXT:         "exact": false
 // CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+type T = interface {};
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "T"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "InterfaceTypeAnnotation",
+// CHECK-NEXT:         "extends": [],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "ObjectTypeAnnotation",
+// CHECK-NEXT:           "properties": [],
+// CHECK-NEXT:           "indexers": [],
+// CHECK-NEXT:           "callProperties": [],
+// CHECK-NEXT:           "internalSlots": [],
+// CHECK-NEXT:           "inexact": false,
+// CHECK-NEXT:           "exact": false
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+let x: interface {x: number} = {x: 3};
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "VariableDeclaration",
+// CHECK-NEXT:       "kind": "let",
+// CHECK-NEXT:       "declarations": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "type": "VariableDeclarator",
+// CHECK-NEXT:           "init": {
+// CHECK-NEXT:             "type": "ObjectExpression",
+// CHECK-NEXT:             "properties": [
+// CHECK-NEXT:               {
+// CHECK-NEXT:                 "type": "Property",
+// CHECK-NEXT:                 "key": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "x"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "value": {
+// CHECK-NEXT:                   "type": "NumericLiteral",
+// CHECK-NEXT:                   "value": 3,
+// CHECK-NEXT:                   "raw": "3"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "kind": "init",
+// CHECK-NEXT:                 "computed": false,
+// CHECK-NEXT:                 "method": false,
+// CHECK-NEXT:                 "shorthand": false
+// CHECK-NEXT:               }
+// CHECK-NEXT:             ]
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "x",
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "InterfaceTypeAnnotation",
+// CHECK-NEXT:                 "extends": [],
+// CHECK-NEXT:                 "body": {
+// CHECK-NEXT:                   "type": "ObjectTypeAnnotation",
+// CHECK-NEXT:                   "properties": [
+// CHECK-NEXT:                     {
+// CHECK-NEXT:                       "type": "ObjectTypeProperty",
+// CHECK-NEXT:                       "key": {
+// CHECK-NEXT:                         "type": "Identifier",
+// CHECK-NEXT:                         "name": "x"
+// CHECK-NEXT:                       },
+// CHECK-NEXT:                       "value": {
+// CHECK-NEXT:                         "type": "NumberTypeAnnotation"
+// CHECK-NEXT:                       },
+// CHECK-NEXT:                       "method": false,
+// CHECK-NEXT:                       "optional": false,
+// CHECK-NEXT:                       "static": false,
+// CHECK-NEXT:                       "proto": false,
+// CHECK-NEXT:                       "variance": null,
+// CHECK-NEXT:                       "kind": "init"
+// CHECK-NEXT:                     }
+// CHECK-NEXT:                   ],
+// CHECK-NEXT:                   "indexers": [],
+// CHECK-NEXT:                   "callProperties": [],
+// CHECK-NEXT:                   "internalSlots": [],
+// CHECK-NEXT:                   "inexact": false,
+// CHECK-NEXT:                   "exact": false
+// CHECK-NEXT:                 }
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ]
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

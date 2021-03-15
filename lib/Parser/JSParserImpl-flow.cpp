@@ -95,8 +95,14 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclare(
   }
   if (checkAndEat(TokenKind::rw_var)) {
     auto optIdent = parseBindingIdentifier(Param{});
-    if (!optIdent)
+    if (!optIdent) {
+      errorExpected(
+          TokenKind::identifier,
+          "in var declaration",
+          "start of declaration",
+          start);
       return None;
+    }
     if (!eatSemi())
       return None;
     return setLocation(
@@ -168,8 +174,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAlias(
     right = *optRight;
   }
 
-  if (!eatSemi(true))
-    return None;
+  eatSemi(true);
 
   if (kind == TypeAliasKind::DeclareOpaque) {
     return setLocation(
@@ -762,8 +767,14 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(
   if (check(TokenKind::rw_var)) {
     SMLoc varStart = advance(JSLexer::GrammarContext::Flow).Start;
     auto optIdent = parseBindingIdentifier(Param{});
-    if (!optIdent)
+    if (!optIdent) {
+      errorExpected(
+          TokenKind::identifier,
+          "in var declaration",
+          "start of declaration",
+          start);
       return None;
+    }
     if (!eatSemi())
       return None;
 
@@ -1025,6 +1036,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
           AllowStaticProperty::No,
           AllowSpreadProperty::Yes);
     case TokenKind::rw_interface: {
+      advance(JSLexer::GrammarContext::Flow);
       ESTree::NodeList extends{};
       auto optBody = parseInterfaceTail(start, extends);
       if (!optBody)
@@ -1093,6 +1105,18 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
             start,
             advance(JSLexer::GrammarContext::Flow).End,
             new (context_) ESTree::StringTypeAnnotationNode());
+      }
+      if (tok_->getResWordOrIdentifier() == interfaceIdent_) {
+        advance(JSLexer::GrammarContext::Flow);
+        ESTree::NodeList extends{};
+        auto optBody = parseInterfaceTail(start, extends);
+        if (!optBody)
+          return None;
+        return setLocation(
+            start,
+            *optBody,
+            new (context_) ESTree::InterfaceTypeAnnotationNode(
+                std::move(extends), *optBody));
       }
 
       {
@@ -2363,8 +2387,14 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumDeclaration() {
   SMLoc start = advance().Start;
 
   auto optIdent = parseBindingIdentifier(Param{});
-  if (!optIdent)
+  if (!optIdent) {
+    errorExpected(
+        TokenKind::identifier,
+        "in enum declaration",
+        "start of declaration",
+        start);
     return None;
+  }
   ESTree::Node *id = *optIdent;
 
   OptValue<EnumKind> optKind = llvh::None;
