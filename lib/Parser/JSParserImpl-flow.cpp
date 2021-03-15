@@ -1025,6 +1025,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
           AllowStaticProperty::No,
           AllowSpreadProperty::Yes);
     case TokenKind::rw_interface: {
+      advance(JSLexer::GrammarContext::Flow);
       ESTree::NodeList extends{};
       auto optBody = parseInterfaceTail(start, extends);
       if (!optBody)
@@ -1093,6 +1094,18 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
             start,
             advance(JSLexer::GrammarContext::Flow).End,
             new (context_) ESTree::StringTypeAnnotationNode());
+      }
+      if (tok_->getResWordOrIdentifier() == interfaceIdent_) {
+        advance(JSLexer::GrammarContext::Flow);
+        ESTree::NodeList extends{};
+        auto optBody = parseInterfaceTail(start, extends);
+        if (!optBody)
+          return None;
+        return setLocation(
+            start,
+            *optBody,
+            new (context_) ESTree::InterfaceTypeAnnotationNode(
+                std::move(extends), *optBody));
       }
 
       {
