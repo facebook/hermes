@@ -1105,6 +1105,9 @@ tailCall:
       &&case__last};
 
 #define CASE(name) case_##name:
+// For indirect threading, there is no way to specify a default, leave it as
+// an empty label.
+#define DEFAULT_CASE
 #define DISPATCH                                \
   BEFORE_OP_CODE;                               \
   if (SingleStep) {                             \
@@ -1117,6 +1120,7 @@ tailCall:
 #else // HERMESVM_INDIRECT_THREADING
 
 #define CASE(name) case OpCode::name:
+#define DEFAULT_CASE default:
 #define DISPATCH                                \
   if (SingleStep) {                             \
     state.codeBlock = curCodeBlock;             \
@@ -1986,8 +1990,13 @@ tailCall:
         DISPATCH;
       }
 
+      // Use a macro here to avoid clang-format issues with a literal default:
+      // label.
+      DEFAULT_CASE
       CASE(Unreachable) {
-        llvm_unreachable("Hermes bug: unreachable instruction");
+        hermes_fatal("Unreachable instruction encountered");
+        // The fatal call doesn't return, no need to set the IP differently and
+        // dispatch.
       }
 
       CASE(CreateClosure) {
@@ -3461,11 +3470,13 @@ tailCall:
       }
 
       CASE(_last) {
-        llvm_unreachable("Invalid opcode _last");
+        hermes_fatal("Invalid opcode _last");
       }
     }
 
-    llvm_unreachable("unreachable");
+    hermes_fatal(
+        "All opcodes should dispatch to the next and not fallthrough "
+        "to here");
 
   // We arrive here if we couldn't allocate the registers for the current frame.
   stackOverflow:
