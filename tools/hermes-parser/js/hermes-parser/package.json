@@ -1,6 +1,6 @@
 {
   "name": "hermes-parser",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "A JavaScript parser built from the Hermes engine",
   "main": "dist/index.js",
   "license": "MIT",
