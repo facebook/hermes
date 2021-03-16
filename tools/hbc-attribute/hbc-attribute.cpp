@@ -67,9 +67,6 @@ using SLG = hermes::hbc::SerializedLiteralGenerator;
  *
  * If you have added or modified sections, make sure they're counted properly.
  */
-static_assert(
-    BYTECODE_VERSION == 82,
-    "Bytecode version changed. Please verify that hbc-attribute counts correctly..");
 
 static llvh::cl::opt<std::string> InputFilename(
     llvh::cl::Positional,
