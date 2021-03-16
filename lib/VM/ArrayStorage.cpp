@@ -270,7 +270,7 @@ ExecutionStatus ArrayStorage::pushBackSlowPath(
   if (resize(selfHandle, runtime, size + 1) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  selfHandle->at(size).set(value.get(), &runtime->getHeap());
+  selfHandle->set(size, value.get(), &runtime->getHeap());
   return ExecutionStatus::RETURNED;
 }
 

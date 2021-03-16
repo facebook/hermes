@@ -366,16 +366,22 @@ ExecutionStatus Domain::importCJSModuleTable(
       cjsEntryModuleID = moduleID;
     }
     uint32_t index = moduleID * CJSModuleSize;
-    cjsModules->at(index + CachedExportsOffset)
-        .set(HermesValue::encodeEmptyValue(), &runtime->getHeap());
-    cjsModules->at(index + ModuleOffset)
-        .set(HermesValue::encodeObjectValue(nullptr), &runtime->getHeap());
-    cjsModules->at(index + FunctionIndexOffset)
-        .set(HermesValue::encodeNativeUInt32(functionID), &runtime->getHeap());
-    cjsModules->at(index + runtimeModuleOffset)
-        .set(
-            HermesValue::encodeNativePointer(runtimeModule),
-            &runtime->getHeap());
+    cjsModules->set(
+        index + CachedExportsOffset,
+        HermesValue::encodeEmptyValue(),
+        &runtime->getHeap());
+    cjsModules->set(
+        index + ModuleOffset,
+        HermesValue::encodeObjectValue(nullptr),
+        &runtime->getHeap());
+    cjsModules->set(
+        index + FunctionIndexOffset,
+        HermesValue::encodeNativeUInt32(functionID),
+        &runtime->getHeap());
+    cjsModules->set(
+        index + runtimeModuleOffset,
+        HermesValue::encodeNativePointer(runtimeModule),
+        &runtime->getHeap());
     assert(isModuleRegistered(moduleID) && "CJS module was not registered");
     return index;
   };

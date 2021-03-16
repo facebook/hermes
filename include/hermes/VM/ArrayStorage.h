@@ -112,11 +112,25 @@ class ArrayStorage final
   /// an element is in the "inline storage". All storage here is "inline".
   enum class Inline { No, Yes };
 
-  /// \return a reference to the element at index \p index
+  /// \return the element at index \p index
   template <Inline inl = Inline::No>
-  GCHermesValue &at(size_type index) {
+  HermesValue at(size_type index) {
     assert(index < size() && "index out of range");
     return data()[index];
+  }
+
+  /// \return the element at index \p index
+  template <Inline inl = Inline::No>
+  void set(size_type index, HermesValue val, GC *gc) {
+    assert(index < size() && "index out of range");
+    data()[index].set(val, gc);
+  }
+
+  /// \return the element at index \p index
+  template <Inline inl = Inline::No>
+  void setNonPtr(size_type index, HermesValue val, GC *gc) {
+    assert(index < size() && "index out of range");
+    data()[index].setNonPtr(val, gc);
   }
 
   size_type capacity() const {

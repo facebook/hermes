@@ -1597,12 +1597,12 @@ CallResult<Handle<GeneratorInnerFunction>> GeneratorInnerFunction::create(
   auto ctx = runtime->makeHandle<ArrayStorage>(*ctxRes);
 
   // Set "this" as the first element.
-  ctx->at(0).set(args.getThisArg(), &runtime->getHeap());
+  ctx->set(0, args.getThisArg(), &runtime->getHeap());
 
   // Set the rest of the arguments.
   // Argument i goes in slot i+1 to account for the "this".
   for (uint32_t i = 0, e = args.getArgCount(); i < e; ++i) {
-    ctx->at(i + 1).set(args.getArg(i), &runtime->getHeap());
+    ctx->set(i + 1, args.getArg(i), &runtime->getHeap());
   }
 
   self->savedContext_.set(runtime, ctx.get(), &runtime->getHeap());
@@ -1673,7 +1673,7 @@ void GeneratorInnerFunction::restoreStack(Runtime *runtime) {
        (StackFrameLayout::StackIncrement < 0 &&
         dst >= runtime->getStackPointer())) &&
       "reading off the end of the stack");
-  const GCHermesValue *src = &savedContext_.get(runtime)->at(frameOffset);
+  const GCHermesValue *src = savedContext_.get(runtime)->data() + frameOffset;
   GCHermesValue::copyToPinned(src, src + frameSize, dst);
 }
 
@@ -1694,7 +1694,7 @@ void GeneratorInnerFunction::saveStack(Runtime *runtime) {
   GCHermesValue::copy(
       first,
       first + frameSize,
-      &savedContext_.get(runtime)->at(frameOffset),
+      savedContext_.get(runtime)->data() + frameOffset,
       &runtime->getHeap());
 }
 

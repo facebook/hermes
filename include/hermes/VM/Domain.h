@@ -208,9 +208,10 @@ class Domain final : public GCCell {
       uint32_t cjsModuleOffset,
       Runtime *runtime,
       HermesValue cachedExports) {
-    cjsModules_.get(runtime)
-        ->at(cjsModuleOffset + CachedExportsOffset)
-        .set(cachedExports, &runtime->getHeap());
+    cjsModules_.get(runtime)->set(
+        cjsModuleOffset + CachedExportsOffset,
+        cachedExports,
+        &runtime->getHeap());
   }
 
   /// Set the module object for the given cjsModuleOffset.
@@ -218,9 +219,10 @@ class Domain final : public GCCell {
       uint32_t cjsModuleOffset,
       Runtime *runtime,
       Handle<JSObject> module) {
-    cjsModules_.get(runtime)
-        ->at(cjsModuleOffset + ModuleOffset)
-        .set(module.getHermesValue(), &runtime->getHeap());
+    cjsModules_.get(runtime)->set(
+        cjsModuleOffset + ModuleOffset,
+        module.getHermesValue(),
+        &runtime->getHeap());
   }
 
   /// \return the throwing require function with require.context bound to a

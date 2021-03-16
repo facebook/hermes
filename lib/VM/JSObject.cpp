@@ -303,7 +303,7 @@ void JSObject::allocateNewSlotStorage(
       PropStorage::resizeWithinCapacity(propStorage, runtime, newSlotIndex + 1);
     }
     // If we don't need to resize, just store it directly.
-    propStorage->at(newSlotIndex).set(*valueHandle, &runtime->getHeap());
+    propStorage->set(newSlotIndex, *valueHandle, &runtime->getHeap());
   }
 }
 
