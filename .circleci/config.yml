@@ -542,7 +542,6 @@ jobs:
                 -Bembuild \
                 -GNinja \
                 -DCMAKE_BUILD_TYPE=Release  \
-                -DEMSCRIPTEN_FASTCOMP=0 \
                 -DCMAKE_EXE_LINKER_FLAGS="-s NODERAWFS=1 -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s LLD_REPORT_UNDEFINED=1" \
                 -DCMAKE_TOOLCHAIN_FILE="$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake" \
                 -DIMPORT_HERMESC="$PWD/build_host_hermesc/ImportHermesc.cmake"
