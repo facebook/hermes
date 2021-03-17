@@ -162,6 +162,9 @@ set(HERMES_ENABLE_THREAD_SANITIZER OFF CACHE BOOL
 set(HERMES_ENABLE_TRACE_PC_GUARD OFF CACHE BOOL
   "Enable -fsanitize-coverage=trace-pc-guard")
 
+set(HERMES_ENABLE_CODE_COVERAGE OFF CACHE BOOL
+  "Enable code coverage to be generated when running binaries")
+
 set(HERMES_ENABLE_LIBFUZZER OFF CACHE BOOL
   "Enable libfuzzer")
 
@@ -377,6 +380,13 @@ if (HERMES_ENABLE_THREAD_SANITIZER)
 endif()
 if (HERMES_ENABLE_TRACE_PC_GUARD)
     append("-fsanitize-coverage=trace-pc-guard" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
+endif()
+if (HERMES_ENABLE_CODE_COVERAGE)
+    if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+        append("-fprofile-instr-generate -fcoverage-mapping" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
+    else()
+        message(FATAL_ERROR "Code coverage flags not defined for this compiler: ${CMAKE_CXX_COMPILER_ID}")
+    endif()
 endif()
 if(HERMES_FACEBOOK_BUILD)
     add_definitions(-DHERMES_FACEBOOK_BUILD)
@@ -673,6 +683,11 @@ if(HERMES_ENABLE_TEST_SUITE)
     dependency-extractor
     )
 
+  set(coverage_directory "")
+  if (HERMES_ENABLE_CODE_COVERAGE)
+    set(coverage_directory ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/coverage)
+  endif()
+
   set(HERMES_LIT_TEST_PARAMS
     test_exec_root=${HERMES_BINARY_DIR}/test
     unittests_dir=${HERMES_BINARY_DIR}/unittests
@@ -695,6 +710,7 @@ if(HERMES_ENABLE_TEST_SUITE)
     profiler=${HERMES_PROFILER_MODE_IN_LIT_TEST}
     gc=${HERMESVM_GCKIND}
     ubsan=${HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER}
+    coverage=${coverage_directory}
     )
 
   set(LLVH_LIT_ARGS "-sv")
