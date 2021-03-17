@@ -2287,7 +2287,8 @@ StackTracesTreeNode *Runtime::getCurrentStackTracesTreeNode(
     const inst::Inst *ip) {
   assert(stackTracesTree_ && "Runtime not configured to track alloc stacks");
   assert(
-      getHeap().getAllocationLocationTracker().isEnabled() &&
+      (getHeap().getAllocationLocationTracker().isEnabled() ||
+       getHeap().getSamplingAllocationTracker().isEnabled()) &&
       "AllocationLocationTracker not enabled");
   if (!ip) {
     return nullptr;
@@ -2315,6 +2316,21 @@ void Runtime::disableAllocationLocationTracker(bool clearExistingTree) {
   if (clearExistingTree) {
     stackTracesTree_.reset();
   }
+}
+
+void Runtime::enableSamplingHeapProfiler(
+    size_t samplingInterval,
+    int64_t seed) {
+  if (!stackTracesTree_) {
+    stackTracesTree_ = std::make_unique<StackTracesTree>();
+  }
+  stackTracesTree_->syncWithRuntimeStack(this);
+  getHeap().enableSamplingHeapProfiler(samplingInterval, seed);
+}
+
+void Runtime::disableSamplingHeapProfiler(llvh::raw_ostream &os) {
+  getHeap().disableSamplingHeapProfiler(os);
+  stackTracesTree_.reset();
 }
 
 void Runtime::popCallStackImpl() {
@@ -2348,6 +2364,10 @@ void Runtime::enableAllocationLocationTracker(
         std::vector<GCBase::AllocationLocationTracker::HeapStatsUpdate>)>) {}
 
 void Runtime::disableAllocationLocationTracker(bool) {}
+
+void Runtime::enableSamplingHeapProfiler(size_t, int64_t) {}
+
+void Runtime::disableSamplingHeapProfiler(llvh::raw_ostream &) {}
 
 void Runtime::popCallStackImpl() {}
 

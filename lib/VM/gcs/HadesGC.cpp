@@ -1392,6 +1392,22 @@ void HadesGC::disableHeapProfiler() {
   GCBase::disableHeapProfiler();
 }
 
+void HadesGC::enableSamplingHeapProfiler(
+    size_t samplingInterval,
+    int64_t seed) {
+  std::lock_guard<Mutex> lk{gcMutex_};
+  // Let any existing collections complete before enabling the profiler.
+  waitForCollectionToFinish("sampling heap profiler enable");
+  GCBase::enableSamplingHeapProfiler(samplingInterval, seed);
+}
+
+void HadesGC::disableSamplingHeapProfiler(llvh::raw_ostream &os) {
+  std::lock_guard<Mutex> lk{gcMutex_};
+  // Let any existing collections complete before disabling the profiler.
+  waitForCollectionToFinish("sampling heap profiler disable");
+  GCBase::disableSamplingHeapProfiler(os);
+}
+
 void HadesGC::printStats(JSONEmitter &json) {
   GCBase::printStats(json);
   json.emitKey("specific");

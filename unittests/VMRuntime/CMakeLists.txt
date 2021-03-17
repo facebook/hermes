@@ -56,6 +56,7 @@ set(RTSources
   PredefinedStringsTest.cpp
   HandleTest.cpp
   RuntimeConfigTest.cpp
+  SamplingHeapProfilerTest.cpp
   SegmentedArrayTest.cpp
   SerializerTest.cpp
   SmallXStringTest.cpp

@@ -669,6 +669,67 @@ class GCBase {
     Fragment &findFragmentForID(HeapSnapshot::NodeID id);
   };
 
+  class SamplingAllocationLocationTracker final {
+   public:
+    explicit inline SamplingAllocationLocationTracker(GCBase *gc) : gc_(gc) {}
+
+    /// Returns true if tracking is enabled for new allocations.
+    bool isEnabled() const {
+      return !!dist_;
+    }
+
+    /// Must be called by GC implementations whenever a new allocation is made.
+    void newAlloc(const void *ptr, uint32_t sz);
+
+    /// Must be called by GC implementations whenever an allocation is freed.
+    void freeAlloc(const void *ptr, uint32_t sz);
+
+    /// If an object's size changes, update the entry here.
+    void updateSize(const void *ptr, uint32_t oldSize, uint32_t newSize);
+
+    /// Turn the sampling memory profiler on. About once every
+    /// \p samplingInterval bytes are allocated, sample the allocation by
+    /// recording its stack.
+    /// \param seed If non-negative, use as the seed for the random sampling
+    ///   mechanism, giving deterministic output.
+    void enable(size_t samplingInterval, int64_t seed);
+
+    void disable(llvh::raw_ostream &os);
+
+   private:
+    struct Sample final {
+      size_t size;
+      StackTracesTreeNode *node;
+      /// This is the auto-incremented sample ID, not the ID of the object
+      /// associated with the sample.
+      uint64_t id;
+    };
+
+    /// This mutex protects stackMap_ and samples_. Not needed for enabling and
+    /// disabling because those only happen while the world is stopped.
+    Mutex mtx_;
+
+    GCBase *gc_;
+
+    /// Subtract from this each allocation. If it would underflow below zero,
+    /// take a sample.
+    size_t limit_{0};
+
+    /// Track all samples that have been taken.
+    llvh::DenseMap<HeapSnapshot::NodeID, Sample> samples_;
+
+    /// Use a poisson distribution to decide when to take the next sample.
+    std::minstd_rand randomEngine_;
+    std::unique_ptr<std::poisson_distribution<>> dist_;
+
+    /// An auto-incrementing integer representing a unique ID for a sample.
+    /// Used for ordering samples.
+    uint64_t nextSampleID_{1};
+
+    /// \return How many bytes should be waited until the next sample.
+    size_t nextSample();
+  };
+
   class IDTracker final {
    public:
     /// These are IDs that are reserved for special objects.
@@ -738,6 +799,10 @@ class GCBase {
     /// Get the unique object id of the given object.
     /// If one does not yet exist, start tracking it.
     inline HeapSnapshot::NodeID getObjectID(BasedPointer cell);
+
+    /// \return true if the cell has an object ID associated with it, false if
+    ///   there is none.
+    inline bool hasObjectID(BasedPointer cell);
 
     /// Same as \c getObjectID, except it asserts if the cell doesn't have an
     /// ID.
@@ -1094,6 +1159,21 @@ class GCBase {
   /// re-enabling later will still remember earlier objects.
   virtual void disableHeapProfiler();
 
+  /// Turn the sampling memory profiler on. About once every
+  /// \p samplingInterval bytes are allocated, sample the allocation by
+  /// recording its stack.
+  /// \param seed If non-negative, use as the seed for the random sampling
+  ///   mechanism, giving deterministic output.
+  virtual void enableSamplingHeapProfiler(
+      size_t samplingInterval,
+      int64_t seed);
+
+  /// Turn off the sampling heap profiler, which will stop tracking new
+  /// allocations and not record any stack traces. Write out the results of the
+  /// trace to \p os. After this call, any remembered data about sampled objects
+  /// will be gone.
+  virtual void disableSamplingHeapProfiler(llvh::raw_ostream &os);
+
 #ifdef HERMESVM_SERIALIZE
   /// Serialize WeakRefs.
   virtual void serializeWeakRefs(Serializer &s) = 0;
@@ -1312,7 +1392,8 @@ class GCBase {
 
   bool isTrackingIDs() {
     return getIDTracker().isTrackingIDs() ||
-        getAllocationLocationTracker().isEnabled();
+        getAllocationLocationTracker().isEnabled() ||
+        getSamplingAllocationTracker().isEnabled();
   }
 
   IDTracker &getIDTracker() {
@@ -1321,6 +1402,10 @@ class GCBase {
 
   AllocationLocationTracker &getAllocationLocationTracker() {
     return allocationLocationTracker_;
+  }
+
+  SamplingAllocationLocationTracker &getSamplingAllocationTracker() {
+    return samplingAllocationTracker_;
   }
 
   /// \name Snapshot ID methods
@@ -1336,6 +1421,10 @@ class GCBase {
   /// \return The ID for the given value. If the value cannot be represented
   ///   with an ID, returns None.
   llvh::Optional<HeapSnapshot::NodeID> getSnapshotID(HermesValue val);
+  /// \return True if the given cell has an ID associated with it.
+  inline bool hasObjectID(const void *cell);
+  /// Records that a new allocation has occurred.
+  inline void newAlloc(const void *ptr, uint32_t sz);
   /// Moves an object to a new address and a new size for all trackers.
   inline void moveObject(
       const void *oldPtr,
@@ -1588,6 +1677,9 @@ class GCBase {
   /// Attaches stack-traces to objects when enabled.
   AllocationLocationTracker allocationLocationTracker_;
 
+  /// Attaches stack-traces to objects when enabled.
+  SamplingAllocationLocationTracker samplingAllocationTracker_;
+
 #ifdef HERMESVM_SERIALIZE
   /// If true, then the runtime is currently deserializing heap data structures
   /// from a file. Don't run any garbage collections.
@@ -1733,6 +1825,16 @@ inline HeapSnapshot::NodeID GCBase::getNativeID(const void *mem) {
   return idTracker_.getNativeID(mem);
 }
 
+inline bool GCBase::hasObjectID(const void *cell) {
+  assert(cell && "Called hasObjectID on a null pointer");
+  return idTracker_.hasObjectID(pointerBase_->pointerToBasedNonNull(cell));
+}
+
+inline void GCBase::newAlloc(const void *ptr, uint32_t sz) {
+  allocationLocationTracker_.newAlloc(ptr, sz);
+  samplingAllocationTracker_.newAlloc(ptr, sz);
+}
+
 inline void GCBase::moveObject(
     const void *oldPtr,
     uint32_t oldSize,
@@ -1743,6 +1845,7 @@ inline void GCBase::moveObject(
       pointerBase_->pointerToBasedNonNull(newPtr));
   // Use newPtr here because the idTracker_ just moved it.
   allocationLocationTracker_.updateSize(newPtr, oldSize, newSize);
+  samplingAllocationTracker_.updateSize(newPtr, oldSize, newSize);
 }
 
 inline void GCBase::untrackObject(const void *cell, uint32_t sz) {
@@ -1750,6 +1853,7 @@ inline void GCBase::untrackObject(const void *cell, uint32_t sz) {
   // The allocation tracker needs to use the ID, so this needs to come
   // before untrackObject.
   getAllocationLocationTracker().freeAlloc(cell, sz);
+  getSamplingAllocationTracker().freeAlloc(cell, sz);
   idTracker_.untrackObject(pointerBase_->pointerToBasedNonNull(cell));
 }
 
@@ -1773,6 +1877,11 @@ inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(BasedPointer cell) {
   const auto objID = nextObjectID();
   objectIDMap_[cell.getRawValue()] = objID;
   return objID;
+}
+
+inline bool GCBase::IDTracker::hasObjectID(BasedPointer cell) {
+  std::lock_guard<Mutex> lk{mtx_};
+  return objectIDMap_.count(cell.getRawValue());
 }
 
 inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectIDMustExist(

@@ -14,7 +14,9 @@
 #include "hermes/Support/StringSetVector.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/HermesValue.h"
+#include "hermes/VM/StackTracesTree-NoRuntime.h"
 #include "hermes/VM/StringRefUtils.h"
+
 #include "llvh/ADT/DenseMap.h"
 #include "llvh/ADT/Optional.h"
 #include "llvh/ADT/StringRef.h"
@@ -184,6 +186,100 @@ class HeapSnapshot {
   /// correctness of the snapshot.
   EdgeIndex expectedEdges_{0};
 #endif
+};
+
+/// Use this class to output the Chrome .heapprofile file extension type.
+/// It's a JSON-based output, here's a small example of the top of the file:
+/// \code
+/// {
+///     "head": {
+///         "callFrame": {
+///             "functionName": "(root)",
+///             "scriptId": "0",
+///             "url": "",
+///             "lineNumber": -1,
+///             "columnNumber": -1
+///         },
+///         "selfSize": 0,
+///         "id": 1,
+///         "children": [
+///             {
+///                 "callFrame": {
+///                     "functionName": "foo",
+///                     "scriptId": "5",
+///                     "url": "file:///test_page.html",
+///                     "lineNumber": 18,
+///                     "columnNumber": 69
+///                 },
+///                 "selfSize": 196664,
+///                 "id": 3,
+///                 "children": [...]
+///             },
+///             ...
+///         ]
+///     },
+///     "samples": [
+///         {
+///             "size": 16432,
+///             "nodeId": 9,
+///             "ordinal": 23
+///         },
+///         ...
+///         {
+///             "size": 131080,
+///             "nodeId": 4,
+///             "ordinal": 2
+///         }
+///     ],
+/// }
+/// \endcode
+/// Some things to note about the format:
+/// * Chrome only stores the declaration of each function in a stack frame, not
+///   which lines called each other, or which line allocated an object.
+/// * selfSize in each frame denotes how many bytes are allocated in that
+///   function
+/// * lineNumber and columnNumber are 0-based, whereas most editors display line
+///   numbers starting at 1.
+/// * In the samples section, each sample tuple is the size of the heap, the id
+///   of the stack frame node described in the "head" section. "ordinal"
+///   describes the chronological order of samples. Samples are not placed in
+///   the JSON format in the order in which they occurred, but in an arbitrary
+///   order based on the call graph. "ordinal" is used to re-order them into a
+///   timeline of when allocations happened.
+/// * Each sample internally tracks the count of how many allocations of a given
+///   size happened. This is then translated to an estimate of the true number
+///   of allocations that occurred at a spot, based on the sampling process.
+/// * When a sampled allocation is deleted, the count and size are decremented.
+///   this process is meant to track only memory that is still alive at the time
+///   that the profile is reported back to the user. This means if a function
+///   creates a lot of garbage, that will not be reported by this profile.
+/// This format is much less optimized than the Chrome heap snapshot or heap
+/// profile format, and uses very basic JSON. It is also a completely separate
+/// format from a heap snapshot, hence why it's a different class. It re-uses a
+/// StackTracesTree to share information with normal heap profiles.
+class ChromeSamplingMemoryProfile final {
+ public:
+  explicit ChromeSamplingMemoryProfile(JSONEmitter &json);
+  ~ChromeSamplingMemoryProfile();
+
+  void emitTree(
+      StackTracesTree *stackTracesTree,
+      const llvh::DenseMap<
+          StackTracesTreeNode *,
+          llvh::DenseMap<size_t, size_t>> &sizesToCounts);
+  void beginSamples();
+  void emitSample(size_t size, StackTracesTreeNode *node, uint64_t id);
+  void endSamples();
+
+ private:
+  JSONEmitter &json_;
+
+  void emitNode(
+      StackTracesTreeNode *node,
+      StringSetVector &strings,
+      const llvh::DenseMap<
+          StackTracesTreeNode *,
+          llvh::DenseMap<size_t, size_t>> &sizesToCounts);
 };
 
 } // namespace vm

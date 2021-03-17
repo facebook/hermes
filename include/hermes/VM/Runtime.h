@@ -1477,6 +1477,17 @@ class Runtime : public HandleRootOwner,
   /// because old objects would end up with dead pointers to stack-trace nodes.
   void disableAllocationLocationTracker(bool clearExistingTree = false);
 
+  /// Enable the heap sampling profiler. About every \p samplingInterval bytes
+  /// allocated, the stack will be sampled. This will attribute the highest
+  /// allocating functions.
+  /// \param samplingInterval A number of bytes that a sample should be taken,
+  ///   on average.
+  /// \param seed If non-negative, used as the seed for the random engine.
+  void enableSamplingHeapProfiler(size_t samplingInterval, int64_t seed = -1);
+
+  /// Disable the heap sampling profiler and flush the results out to \p os.
+  void disableSamplingHeapProfiler(llvh::raw_ostream &os);
+
  private:
   void popCallStackImpl();
   void pushCallStackImpl(const CodeBlock *codeBlock, const inst::Inst *ip);

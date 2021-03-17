@@ -57,6 +57,7 @@ GCBase::GCBase(
       inGC_(false),
       name_(gcConfig.getName()),
       allocationLocationTracker_(this),
+      samplingAllocationTracker_(this),
 #ifdef HERMESVM_SANITIZE_HANDLES
       sanitizeRate_(gcConfig.getSanitizeConfig().getSanitizeRate()),
 #endif
@@ -614,6 +615,14 @@ void GCBase::enableHeapProfiler(
 
 void GCBase::disableHeapProfiler() {
   getAllocationLocationTracker().disable();
+}
+
+void GCBase::enableSamplingHeapProfiler(size_t samplingInterval, int64_t seed) {
+  getSamplingAllocationTracker().enable(samplingInterval, seed);
+}
+
+void GCBase::disableSamplingHeapProfiler(llvh::raw_ostream &os) {
+  getSamplingAllocationTracker().disable(os);
 }
 
 void GCBase::checkTripwire(size_t dataSize) {
@@ -1295,6 +1304,114 @@ void GCBase::AllocationLocationTracker::addSamplesToSnapshot(
     const auto &fragment = fragments_[i];
     snap.addSample(fragment.timestamp_, fragment.lastSeenObjectID_);
   }
+}
+
+void GCBase::SamplingAllocationLocationTracker::enable(
+    size_t samplingInterval,
+    int64_t seed) {
+  if (seed < 0) {
+    seed = std::random_device()();
+  }
+  randomEngine_.seed(seed);
+  dist_ = llvh::make_unique<std::poisson_distribution<>>(samplingInterval);
+  limit_ = nextSample();
+}
+
+void GCBase::SamplingAllocationLocationTracker::disable(llvh::raw_ostream &os) {
+  JSONEmitter json{os};
+  ChromeSamplingMemoryProfile profile{json};
+  std::lock_guard<Mutex> lk{mtx_};
+  // Track a map of size -> count for each stack tree node.
+  llvh::DenseMap<StackTracesTreeNode *, llvh::DenseMap<size_t, size_t>>
+      sizesToCounts;
+  // Do a pre-pass to compute sizesToCounts.
+  for (const auto &s : samples_) {
+    const Sample &sample = s.second;
+    sizesToCounts[sample.node][sample.size]++;
+  }
+
+  // Have to emit the tree of stack frames before emitting samples, Chrome
+  // requires the tree emitted first.
+  profile.emitTree(gc_->gcCallbacks_->getStackTracesTree(), sizesToCounts);
+  profile.beginSamples();
+  for (const auto &s : samples_) {
+    const Sample &sample = s.second;
+    profile.emitSample(sample.size, sample.node, sample.id);
+  }
+  profile.endSamples();
+  dist_.reset();
+  samples_.clear();
+  limit_ = 0;
+}
+
+void GCBase::SamplingAllocationLocationTracker::newAlloc(
+    const void *ptr,
+    uint32_t sz) {
+  // If the sampling profiler isn't enabled, don't check anything else.
+  if (!isEnabled()) {
+    return;
+  }
+  if (sz <= limit_) {
+    // Exit if it's not time for a sample yet.
+    limit_ -= sz;
+    return;
+  }
+  const auto *ip = gc_->gcCallbacks_->getCurrentIPSlow();
+  // This is stateful and causes the object to have an ID assigned.
+  const auto id = gc_->getObjectID(ptr);
+  if (StackTracesTreeNode *node =
+          gc_->gcCallbacks_->getCurrentStackTracesTreeNode(ip)) {
+    // Hold a lock while modifying samples_.
+    std::lock_guard<Mutex> lk{mtx_};
+    auto sampleItAndDidInsert =
+        samples_.try_emplace(id, Sample{sz, node, nextSampleID_++});
+    assert(sampleItAndDidInsert.second && "Failed to create a sample");
+    (void)sampleItAndDidInsert;
+  }
+  // Reset the limit.
+  limit_ = nextSample();
+}
+
+void GCBase::SamplingAllocationLocationTracker::freeAlloc(
+    const void *ptr,
+    uint32_t sz) {
+  // If the sampling profiler isn't enabled, don't check anything else.
+  if (!isEnabled()) {
+    return;
+  }
+  if (!gc_->hasObjectID(ptr)) {
+    // This object's lifetime isn't being tracked.
+    return;
+  }
+  const auto id = gc_->getObjectIDMustExist(ptr);
+  // Hold a lock while modifying samples_.
+  std::lock_guard<Mutex> lk{mtx_};
+  samples_.erase(id);
+}
+
+void GCBase::SamplingAllocationLocationTracker::updateSize(
+    const void *ptr,
+    uint32_t oldSize,
+    uint32_t newSize) {
+  int32_t delta = static_cast<int32_t>(newSize) - static_cast<int32_t>(oldSize);
+  if (!delta || !isEnabled() || !gc_->hasObjectID(ptr)) {
+    // Nothing to update.
+    return;
+  }
+  const auto id = gc_->getObjectIDMustExist(ptr);
+  // Hold a lock while modifying samples_.
+  std::lock_guard<Mutex> lk{mtx_};
+  const auto it = samples_.find(id);
+  if (it == samples_.end()) {
+    return;
+  }
+  Sample &sample = it->second;
+  // Update the size stored in the sample.
+  sample.size = newSize;
+}
+
+size_t GCBase::SamplingAllocationLocationTracker::nextSample() {
+  return (*dist_)(randomEngine_);
 }
 
 llvh::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {

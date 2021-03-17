@@ -105,6 +105,9 @@ class HadesGC final : public GCBase {
           std::vector<GCBase::AllocationLocationTracker::HeapStatsUpdate>)>
           fragmentCallback) override;
   void disableHeapProfiler() override;
+  void enableSamplingHeapProfiler(size_t samplingInterval, int64_t seed)
+      override;
+  void disableSamplingHeapProfiler(llvh::raw_ostream &os) override;
   void printStats(JSONEmitter &json) override;
   std::string getKindAsStr() const override;
 
