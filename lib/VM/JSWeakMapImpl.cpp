@@ -45,9 +45,8 @@ ExecutionStatus JSWeakMapImplBase::setValue(
       assert(
           it->second < self->valueStorage_.get(runtime)->size() &&
           "invalid index");
-      self->valueStorage_.get(runtime)
-          ->at(it->second)
-          .set(*value, &runtime->getHeap());
+      self->valueStorage_.get(runtime)->set(
+          it->second, *value, &runtime->getHeap());
       return ExecutionStatus::RETURNED;
     }
   }
@@ -72,7 +71,7 @@ ExecutionStatus JSWeakMapImplBase::setValue(
     assert(result.second && "unable to add a new value to map");
   }
 
-  self->valueStorage_.get(runtime)->at(i).set(*value, &runtime->getHeap());
+  self->valueStorage_.get(runtime)->set(i, *value, &runtime->getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -104,7 +103,7 @@ bool JSWeakMapImplBase::clearEntryDirect(GC *gc, const WeakRefKey &key) {
   }
   it->first.ref.clear();
   valueStorage_.get(gc->getPointerBase())
-      ->at(it->second)
+      ->atRef(it->second)
       .setInGC(HermesValue::encodeEmptyValue(), gc);
   return true;
 }
@@ -117,7 +116,7 @@ GCHermesValue *JSWeakMapImplBase::getValueDirect(
   if (it == map_.end()) {
     return nullptr;
   }
-  return &valueStorage_.get(gc->getPointerBase())->at(it->second);
+  return &valueStorage_.get(gc->getPointerBase())->atRef(it->second);
 }
 
 GCPointerBase::StorageType &JSWeakMapImplBase::getValueStorageRef(GC *gc) {
@@ -253,9 +252,8 @@ void JSWeakMapImplBase::deleteInternal(
     GC *gc,
     JSWeakMapImplBase::DenseMapT::iterator it) {
   assert(it != map_.end() && "Invalid iterator to deleteInternal");
-  valueStorage_.getNonNull(base)
-      ->at(it->second)
-      .setNonPtr(HermesValue::encodeNativeUInt32(freeListHead_), gc);
+  valueStorage_.getNonNull(base)->setNonPtr(
+      it->second, HermesValue::encodeNativeUInt32(freeListHead_), gc);
   freeListHead_ = it->second;
   map_.erase(it);
 }

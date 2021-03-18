@@ -53,7 +53,7 @@ void ArrayStorage::serializeArrayStorage(
 
   // Serialize HermesValue in storage. There is no native pointer.
   for (size_type i = 0; i < cell->size(); i++) {
-    s.writeHermesValue(cell->data()[i]);
+    s.writeHermesValue(cell->at(i));
   }
 
   s.endObject(cell);

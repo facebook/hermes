@@ -206,9 +206,8 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
 
   // Check whether the index is within the storage.
   if (LLVM_LIKELY(index >= beginIndex && index < endIndex)) {
-    self->indexedStorage_.getNonNull(runtime)
-        ->at(index - beginIndex)
-        .set(value.get(), &runtime->getHeap());
+    self->indexedStorage_.getNonNull(runtime)->set(
+        index - beginIndex, value.get(), &runtime->getHeap());
     return true;
   }
 
@@ -226,7 +225,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     self->indexedStorage_.set(runtime, newStorage.get(), &runtime->getHeap());
     self->beginIndex_ = index;
     self->endIndex_ = index + 1;
-    newStorage->at(0).set(value.get(), &runtime->getHeap());
+    newStorage->set(0, value.get(), &runtime->getHeap());
     return true;
   }
 
@@ -240,8 +239,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
       StorageType::resizeWithinCapacity(
           indexedStorage, runtime, index - beginIndex + 1);
       // self shouldn't have moved since there haven't been any allocations.
-      indexedStorage->at(index - beginIndex)
-          .set(value.get(), &runtime->getHeap());
+      indexedStorage->set(index - beginIndex, value.get(), &runtime->getHeap());
       return true;
     }
   }
@@ -256,8 +254,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    indexedStorageHandle->at(0).set(
-        value.getHermesValue(), &runtime->getHeap());
+    indexedStorageHandle->set(0, value.getHermesValue(), &runtime->getHeap());
     self = vmcast<ArrayImpl>(selfHandle.get());
     self->beginIndex_ = index;
     self->endIndex_ = index + 1;
@@ -295,8 +292,8 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     }
     self = vmcast<ArrayImpl>(selfHandle.get());
     self->endIndex_ = index + 1;
-    indexedStorageHandle->at(index - beginIndex)
-        .set(value.get(), &runtime->getHeap());
+    indexedStorageHandle->set(
+        index - beginIndex, value.get(), &runtime->getHeap());
   } else {
     // Extending to the left. 'index' will become the new 'beginIndex'.
     assert(index < beginIndex);
@@ -310,7 +307,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     }
     self = vmcast<ArrayImpl>(selfHandle.get());
     self->beginIndex_ = index;
-    indexedStorageHandle->at(0).set(value.get(), &runtime->getHeap());
+    indexedStorageHandle->set(0, value.get(), &runtime->getHeap());
   }
 
   // Update the potentially changed pointer.
@@ -324,17 +321,20 @@ bool ArrayImpl::_deleteOwnIndexedImpl(
     Runtime *runtime,
     uint32_t index) {
   auto *self = vmcast<ArrayImpl>(selfHandle.get());
-
+  NoAllocScope noAlloc{runtime};
   if (index >= self->beginIndex_ && index < self->endIndex_) {
-    auto &elem = self->indexedStorage_.getNonNull(runtime)->at(
-        index - self->beginIndex_);
-
+    auto *indexedStorage = self->indexedStorage_.getNonNull(runtime);
     // Cannot delete indexed elements if we are sealed.
-    if (LLVM_UNLIKELY(self->flags_.sealed))
+    if (LLVM_UNLIKELY(self->flags_.sealed)) {
+      HermesValue elem = indexedStorage->at(index - self->beginIndex_);
       if (!elem.isEmpty())
         return false;
+    }
 
-    elem.setNonPtr(HermesValue::encodeEmptyValue(), &runtime->getHeap());
+    indexedStorage->setNonPtr(
+        index - self->beginIndex_,
+        HermesValue::encodeEmptyValue(),
+        &runtime->getHeap());
   }
 
   return true;

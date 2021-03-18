@@ -114,7 +114,7 @@ class ArrayStorage final
 
   /// \return the element at index \p index
   template <Inline inl = Inline::No>
-  HermesValue at(size_type index) {
+  HermesValue at(size_type index) const {
     assert(index < size() && "index out of range");
     return data()[index];
   }

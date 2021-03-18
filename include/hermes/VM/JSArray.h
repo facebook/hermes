@@ -82,9 +82,8 @@ class ArrayImpl : public JSObject {
     assert(
         index >= self->beginIndex_ && index < self->endIndex_ &&
         "array index out of range");
-    self->indexedStorage_.getNonNull(runtime)
-        ->at(index - self->beginIndex_)
-        .set(value, &runtime->getHeap());
+    self->indexedStorage_.getNonNull(runtime)->set(
+        index - self->beginIndex_, value, &runtime->getHeap());
   }
 
   /// Set the element at index \p index to empty. This does not affect the
