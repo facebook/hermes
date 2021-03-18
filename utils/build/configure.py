@@ -104,9 +104,10 @@ def parse_args():
         "--emscripten-platform",
         dest="emscripten_platform",
         choices=("upstream", "fastcomp"),
-        default="fastcomp",
+        default="upstream",
         help="Use either the upstream emscripten backend based on LLVM or the "
-        "fastcomp backend",
+        "fastcomp backend. Note that the fastcomp backend is deprecated as of "
+        "emscripten v2 and above",
     )
     args = parser.parse_args()
     if args.icu_root:

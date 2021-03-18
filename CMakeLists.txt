@@ -239,7 +239,7 @@ set(ANDROID_LINUX_PERF_PATH ""
 set(HERMES_MSVC_MP ON CACHE STRING
   "Enable /MP in MSVC for parallel builds")
 
-set(EMSCRIPTEN_FASTCOMP ON CACHE BOOL
+set(EMSCRIPTEN_FASTCOMP OFF CACHE BOOL
   "Emscripten is using the fastcomp backend instead of the LLVM one")
 
 set(HERMES_ENABLE_INTL OFF CACHE BOOL
