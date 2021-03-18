@@ -16,6 +16,7 @@
 #include <llvh/Support/SaveAndRestore.h>
 
 #include <algorithm>
+#include <fstream>
 #include <set>
 
 using namespace hermes::parser;
@@ -922,14 +923,28 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
 
 std::string TraceInterpreter::execEntryFunction(
     const TraceInterpreter::Call &entryFunc) {
-  if (options_.action == ExecuteOptions::MarkerAction::TIMELINE) {
-    if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
-      // Start tracking heap objects right before interpreting the trace.
-      // No need to handle fragment callbacks, as this is not live profiling
-      // being given to Chrome, it's just going to a file.
-      hermesRuntime->instrumentation().startTrackingHeapObjectStackTraces(
-          nullptr);
-    }
+  assert(
+      (options_.action == ExecuteOptions::MarkerAction::NONE ||
+       !options_.profileFileName.empty()) &&
+      "If the action isn't none, need a profile output file");
+  switch (options_.action) {
+    case ExecuteOptions::MarkerAction::TIMELINE:
+      if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
+        // Start tracking heap objects right before interpreting the trace.
+        // No need to handle fragment callbacks, as this is not live profiling
+        // being given to Chrome, it's just going to a file.
+        hermesRuntime->instrumentation().startTrackingHeapObjectStackTraces(
+            nullptr);
+      }
+      break;
+    case ExecuteOptions::MarkerAction::SAMPLE:
+      if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
+        hermesRuntime->instrumentation().startHeapSampling(1 << 15);
+      }
+      break;
+    default:
+      // Do nothing.
+      break;
   }
   execFunction(entryFunc, Value::undefined(), nullptr, 0);
 
@@ -1630,6 +1645,14 @@ void TraceInterpreter::checkMarker(const std::string &marker) {
             options_.profileFileName);
       } else {
         llvh::errs() << "Heap timeline requested from non-Hermes runtime\n";
+      }
+      break;
+    case ExecuteOptions::MarkerAction::SAMPLE:
+      if (HermesRuntime *hermesRT = dynamic_cast<HermesRuntime *>(&rt_)) {
+        std::ofstream stream(options_.profileFileName);
+        hermesRT->instrumentation().stopHeapSampling(stream);
+      } else {
+        llvh::errs() << "Heap sampling requested from non-Hermes runtime\n";
       }
       break;
     case ExecuteOptions::MarkerAction::NONE:
