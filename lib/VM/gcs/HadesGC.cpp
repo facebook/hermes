@@ -258,7 +258,8 @@ class HadesGC::CollectionStats final {
   ~CollectionStats();
 
   void addCollectionType(std::string collectionType) {
-    tags_.emplace_back(std::move(collectionType));
+    if (std::find(tags_.begin(), tags_.end(), collectionType) == tags_.end())
+      tags_.emplace_back(std::move(collectionType));
   }
 
   /// Record the allocated bytes in the heap and its size before a collection
