@@ -258,7 +258,8 @@ class HadesGC::CollectionStats final {
   ~CollectionStats();
 
   void addCollectionType(std::string collectionType) {
-    tags_.emplace_back(std::move(collectionType));
+    if (std::find(tags_.begin(), tags_.end(), collectionType) == tags_.end())
+      tags_.emplace_back(std::move(collectionType));
   }
 
   /// Record the allocated bytes in the heap and its size before a collection
@@ -1390,6 +1391,22 @@ void HadesGC::disableHeapProfiler() {
   // Let any existing collections complete before disabling the profiler.
   waitForCollectionToFinish("heap profiler disable");
   GCBase::disableHeapProfiler();
+}
+
+void HadesGC::enableSamplingHeapProfiler(
+    size_t samplingInterval,
+    int64_t seed) {
+  std::lock_guard<Mutex> lk{gcMutex_};
+  // Let any existing collections complete before enabling the profiler.
+  waitForCollectionToFinish("sampling heap profiler enable");
+  GCBase::enableSamplingHeapProfiler(samplingInterval, seed);
+}
+
+void HadesGC::disableSamplingHeapProfiler(llvh::raw_ostream &os) {
+  std::lock_guard<Mutex> lk{gcMutex_};
+  // Let any existing collections complete before disabling the profiler.
+  waitForCollectionToFinish("sampling heap profiler disable");
+  GCBase::disableSamplingHeapProfiler(os);
 }
 
 void HadesGC::printStats(JSONEmitter &json) {

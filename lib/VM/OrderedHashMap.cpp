@@ -243,7 +243,7 @@ ExecutionStatus OrderedHashMap::rehashIfNecessary(
             &runtime->getHeap());
       }
       // Update bucket head to the new entry.
-      newHashTable->at(bucket).set(entry.getHermesValue(), &runtime->getHeap());
+      newHashTable->set(bucket, entry.getHermesValue(), &runtime->getHeap());
 
       entry = *oldNextInBucket;
     }
@@ -312,8 +312,8 @@ ExecutionStatus OrderedHashMap::insert(
         runtime, curBucketFront, &runtime->getHeap());
   }
   // Set the newly inserted entry as the front of this bucket chain.
-  self->hashTable_.get(runtime)->at(bucket).set(
-      newMapEntry.getHermesValue(), &runtime->getHeap());
+  self->hashTable_.get(runtime)->set(
+      bucket, newMapEntry.getHermesValue(), &runtime->getHeap());
 
   if (!self->firstIterationEntry_) {
     // If we are inserting the first ever element, update
@@ -369,7 +369,8 @@ bool OrderedHashMap::erase(
     // The entry we are erasing is the front entry in the bucket, we need
     // to update the bucket head to the next entry in the bucket, if not
     // any, set to empty value.
-    self->hashTable_.get(runtime)->at(bucket).set(
+    self->hashTable_.get(runtime)->set(
+        bucket,
         entry->nextEntryInBucket ? HermesValue::encodeObjectValue(
                                        entry->nextEntryInBucket.get(runtime))
                                  : HermesValue::encodeEmptyValue(),
@@ -426,8 +427,8 @@ void OrderedHashMap::clear(Runtime *runtime) {
       entry = entry->nextEntryInBucket.get(runtime);
     }
     // Clear every element in the hash table.
-    hashTable_.get(runtime)->at(i).setNonPtr(
-        HermesValue::encodeEmptyValue(), &runtime->getHeap());
+    hashTable_.get(runtime)->setNonPtr(
+        i, HermesValue::encodeEmptyValue(), &runtime->getHeap());
   }
   // Resize the hash table to the initial size.
   ArrayStorage::resizeWithinCapacity(

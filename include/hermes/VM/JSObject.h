@@ -1634,9 +1634,8 @@ inline void JSObject::setNamedSlotValue(
   if (LLVM_LIKELY(index < DIRECT_PROPERTY_SLOTS))
     return self->directProps()[index].set(value, &runtime->getHeap());
 
-  self->propStorage_.get(runtime)
-      ->at<inl>(index - DIRECT_PROPERTY_SLOTS)
-      .set(value, &runtime->getHeap());
+  self->propStorage_.get(runtime)->set<inl>(
+      index - DIRECT_PROPERTY_SLOTS, value, &runtime->getHeap());
 }
 
 inline HermesValue JSObject::getComputedSlotValue(

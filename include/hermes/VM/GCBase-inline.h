@@ -77,7 +77,7 @@ T *GCBase::makeA(uint32_t size, Args &&...args) {
           size, std::forward<Args>(args)...);
 #endif
 #ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  getAllocationLocationTracker().newAlloc(ptr, size);
+  newAlloc(ptr, size);
 #endif
   return ptr;
 }

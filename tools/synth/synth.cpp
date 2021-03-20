@@ -62,7 +62,11 @@ static opt<MarkerAction> Action(
             MarkerAction::TIMELINE,
             "timeline",
             "Take a heap timeline from the beginning of execution until the "
-            "marker to stop at")));
+            "marker to stop at"),
+        clEnumValN(
+            MarkerAction::SAMPLE,
+            "sample",
+            "Take a heap sampling profile at the marker to stop at")));
 
 static opt<bool> UseTraceConfig(
     "use-trace-config",
@@ -179,6 +183,20 @@ static llvh::Optional<::hermes::vm::gcheapsize_t> execOption(
   }
 }
 
+static const char *fileExtensionForAction(MarkerAction action) {
+  switch (action) {
+    case MarkerAction::SNAPSHOT:
+      return "heapsnapshot";
+    case MarkerAction::TIMELINE:
+      return "heaptimeline";
+    case MarkerAction::SAMPLE:
+      return "heapprofile";
+    case MarkerAction::NONE:
+      llvm_unreachable(
+          "Should never call fileExtensionForAction with a none action");
+  }
+}
+
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
   llvh::sys::PrintStackTraceOnErrorSignal("Hermes synth");
@@ -197,14 +215,10 @@ int main(int argc, char **argv) {
     options.reps = cl::Reps;
     options.marker = cl::Marker;
     options.action = cl::Action;
-    if (options.action == MarkerAction::SNAPSHOT ||
-        options.action == MarkerAction::TIMELINE) {
+    if (options.action != MarkerAction::NONE) {
       llvh::SmallVector<char, 16> tmpfile;
       llvh::sys::fs::createTemporaryFile(
-          options.marker,
-          options.action == MarkerAction::SNAPSHOT ? "heapsnapshot"
-                                                   : "heaptimeline",
-          tmpfile);
+          options.marker, fileExtensionForAction(options.action), tmpfile);
       options.profileFileName = std::string{tmpfile.begin(), tmpfile.end()};
     }
     options.forceGCBeforeStats = cl::GCBeforeStats;

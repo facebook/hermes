@@ -504,8 +504,8 @@ ESTREE_NODE_6_ARGS(
     NodeBoolean, declare, false,
     NodePtr, variance, true,
     NodePtr, typeAnnotation, true)
-ESTREE_IGNORE_IF_EMPTY(ClassProperty, variance)
-ESTREE_IGNORE_IF_EMPTY(ClassProperty, typeAnnotation)
+ESTREE_IGNORE_IF_EMPTY(ClassPrivateProperty, variance)
+ESTREE_IGNORE_IF_EMPTY(ClassPrivateProperty, typeAnnotation)
 
 ESTREE_NODE_5_ARGS(
     MethodDefinition, Base,

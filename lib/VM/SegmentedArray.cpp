@@ -219,7 +219,7 @@ ExecutionStatus SegmentedArray::push_back(
   if (growRight(self, runtime, 1) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto &elm = self->at(oldSize);
+  auto &elm = self->atRef(oldSize);
   new (&elm) GCHermesValue(*value, &runtime->getHeap());
   return ExecutionStatus::RETURNED;
 }

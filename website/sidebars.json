@@ -10,7 +10,8 @@
       "vm",
       "modules",
       "regexp",
-      "strings"
+      "strings",
+      "memory-profilers"
     ],
     "Integrations": [
       "react-native-integration"

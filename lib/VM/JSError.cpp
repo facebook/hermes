@@ -348,7 +348,7 @@ static Handle<PropStorage> getCallStackFunctionNames(
       runtime->clearThrownValue();
       return Runtime::makeNullHandle<PropStorage>();
     }
-    names->at(namesIndex).set(name.getHermesValue(), &runtime->getHeap());
+    names->set(namesIndex, name.getHermesValue(), &runtime->getHeap());
     ++namesIndex;
     gcScope.flushToMarker(marker);
   }

@@ -70,6 +70,14 @@ def parse_args():
     parser.add_argument("--enable-ubsan", dest="enable_ubsan", action="store_true")
     parser.add_argument("--enable-tsan", dest="enable_tsan", action="store_true")
     parser.add_argument(
+        "--code-coverage",
+        dest="code_coverage",
+        action="store_true",
+        help="Enables code coverage to be collected from binaries. Coverage "
+        'output will be placed in a subdirectory called "coverage" of the '
+        "build directory",
+    )
+    parser.add_argument(
         "--enable-trace-pc-guard", dest="enable_trace_pc_guard", action="store_true"
     )
     parser.add_argument("--icu", type=str, dest="icu_root", default="")
@@ -96,9 +104,10 @@ def parse_args():
         "--emscripten-platform",
         dest="emscripten_platform",
         choices=("upstream", "fastcomp"),
-        default="fastcomp",
+        default="upstream",
         help="Use either the upstream emscripten backend based on LLVM or the "
-        "fastcomp backend",
+        "fastcomp backend. Note that the fastcomp backend is deprecated as of "
+        "emscripten v2 and above",
     )
     args = parser.parse_args()
     if args.icu_root:
@@ -235,6 +244,8 @@ def main():
         cmake_flags += ["-DHERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER=ON"]
     if args.enable_tsan:
         cmake_flags += ["-DHERMES_ENABLE_THREAD_SANITIZER=ON"]
+    if args.code_coverage:
+        cmake_flags += ["-DHERMES_ENABLE_CODE_COVERAGE=ON"]
     if args.enable_trace_pc_guard:
         cmake_flags += ["-DHERMES_ENABLE_TRACE_PC_GUARD=ON"]
     if args.fbsource_dir:

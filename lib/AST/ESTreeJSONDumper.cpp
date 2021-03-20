@@ -62,7 +62,10 @@ class ESTreeJSONDumper {
 #define ESTREE_NODE_6_ARGS(NAME, ...)
 #define ESTREE_NODE_7_ARGS(NAME, ...)
 #define ESTREE_NODE_8_ARGS(NAME, ...)
-#define ESTREE_IGNORE_IF_EMPTY(NAME, FIELD) \
+#define ESTREE_IGNORE_IF_EMPTY(NAME, FIELD)        \
+  assert(                                          \
+      !ignoredEmptyFields_[#NAME].count(#FIELD) && \
+      "duplicate ignored fields");                 \
   ignoredEmptyFields_[#NAME].insert(#FIELD);
 #include "hermes/AST/ESTree.def"
     }

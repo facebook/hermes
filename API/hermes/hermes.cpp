@@ -560,6 +560,17 @@ class HermesRuntimeImpl final : public HermesRuntime,
   }
 
   // Overridden from jsi::Instrumentation
+  void startHeapSampling(size_t samplingInterval) override {
+    runtime_.enableSamplingHeapProfiler(samplingInterval);
+  }
+
+  // Overridden from jsi::Instrumentation
+  void stopHeapSampling(std::ostream &os) override {
+    llvh::raw_os_ostream ros(os);
+    runtime_.disableSamplingHeapProfiler(ros);
+  }
+
+  // Overridden from jsi::Instrumentation
   void createSnapshotToFile(const std::string &path) override {
     std::error_code code;
     llvh::raw_fd_ostream os(path, code, llvh::sys::fs::FileAccess::FA_Write);

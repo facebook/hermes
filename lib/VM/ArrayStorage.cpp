@@ -53,7 +53,7 @@ void ArrayStorage::serializeArrayStorage(
 
   // Serialize HermesValue in storage. There is no native pointer.
   for (size_type i = 0; i < cell->size(); i++) {
-    s.writeHermesValue(cell->data()[i]);
+    s.writeHermesValue(cell->at(i));
   }
 
   s.endObject(cell);
@@ -270,7 +270,7 @@ ExecutionStatus ArrayStorage::pushBackSlowPath(
   if (resize(selfHandle, runtime, size + 1) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  selfHandle->at(size).set(value.get(), &runtime->getHeap());
+  selfHandle->set(size, value.get(), &runtime->getHeap());
   return ExecutionStatus::RETURNED;
 }
 

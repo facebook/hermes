@@ -142,6 +142,8 @@ class TraceInterpreter final {
       SNAPSHOT,
       /// Take a heap timeline that ends at marker.
       TIMELINE,
+      /// Take a sampling heap profile that ends at marker.
+      SAMPLE,
     };
 
     /// Sets the action to take upon encountering the marker. The action will
