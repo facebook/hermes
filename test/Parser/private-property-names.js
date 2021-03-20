@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-ast --pretty-json %s | %FileCheck %s --match-full-lines
+// RUN: %hermes -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL: {
 // CHECK-NEXT:   "type": "Program",
@@ -32,9 +32,7 @@ class A {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": null,
 // CHECK-NEXT:             "static": false,
-// CHECK-NEXT:             "declare": false,
-// CHECK-NEXT:             "variance": null,
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "declare": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       }
@@ -62,9 +60,7 @@ class A {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": null,
 // CHECK-NEXT:             "static": false,
-// CHECK-NEXT:             "declare": false,
-// CHECK-NEXT:             "variance": null,
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "declare": false
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "ClassPrivateProperty",
@@ -74,9 +70,7 @@ class A {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": null,
 // CHECK-NEXT:             "static": false,
-// CHECK-NEXT:             "declare": false,
-// CHECK-NEXT:             "variance": null,
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "declare": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       }
@@ -103,9 +97,7 @@ class A {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": null,
 // CHECK-NEXT:             "static": false,
-// CHECK-NEXT:             "declare": false,
-// CHECK-NEXT:             "variance": null,
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "declare": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       }
@@ -209,9 +201,7 @@ class A {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": null,
 // CHECK-NEXT:             "static": false,
-// CHECK-NEXT:             "declare": false,
-// CHECK-NEXT:             "variance": null,
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "declare": false
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "MethodDefinition",
@@ -371,9 +361,7 @@ class A {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": null,
 // CHECK-NEXT:             "static": false,
-// CHECK-NEXT:             "declare": false,
-// CHECK-NEXT:             "variance": null,
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "declare": false
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "MethodDefinition",
