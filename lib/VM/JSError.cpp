@@ -316,22 +316,18 @@ static Handle<PropStorage> getCallStackFunctionNames(
     if (auto callableHandle = Handle<Callable>::dyn_vmcast(
             Handle<>(&cf.getCalleeClosureOrCBRef()))) {
       NamedPropertyDescriptor desc;
-      JSObject *propObj = JSObject::getNamedDescriptor(
-          callableHandle,
-          runtime,
-          Predefined::getSymbolID(Predefined::displayName),
-          desc);
+      JSObject *propObj = JSObject::getNamedDescriptorPredefined(
+          callableHandle, runtime, Predefined::displayName, desc);
 
       if (!propObj) {
-        propObj = JSObject::getNamedDescriptor(
-            callableHandle,
-            runtime,
-            Predefined::getSymbolID(Predefined::name),
-            desc);
+        propObj = JSObject::getNamedDescriptorPredefined(
+            callableHandle, runtime, Predefined::name, desc);
       }
 
-      if (propObj && !desc.flags.accessor && !desc.flags.proxyObject) {
-        name = JSObject::getNamedSlotValue(propObj, runtime, desc);
+      if (propObj && !desc.flags.accessor &&
+          LLVM_LIKELY(!desc.flags.proxyObject) &&
+          LLVM_LIKELY(!desc.flags.hostObject)) {
+        name = JSObject::getNamedSlotValueUnsafe(propObj, runtime, desc);
       } else if (desc.flags.proxyObject) {
         name = HermesValue::encodeStringValue(
             runtime->getPredefinedString(Predefined::proxyTrap));

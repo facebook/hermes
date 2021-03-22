@@ -88,8 +88,9 @@ CallResult<PseudoHandle<>> Runtime::getNamed(
   auto clazzGCPtr = obj->getClassGCPtr();
   auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
   if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
+    // The slot is cached, so it is safe to use the Internal function.
     return createPseudoHandle(
-        JSObject::getNamedSlotValue<PropStorage::Inline::Yes>(
+        JSObject::getNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
             *obj, this, cacheEntry->slot));
   }
   auto sym = Predefined::getSymbolID(fixedPropCacheNames[static_cast<int>(id)]);
@@ -106,7 +107,7 @@ CallResult<PseudoHandle<>> Runtime::getNamed(
       cacheEntry->clazz = clazzGCPtr.getStorageType();
       cacheEntry->slot = desc.slot;
     }
-    return createPseudoHandle(JSObject::getNamedSlotValue(*obj, this, desc));
+    return JSObject::getNamedSlotValue(createPseudoHandle(*obj), this, desc);
   }
   return JSObject::getNamed_RJS(obj, this, sym);
 }
@@ -118,7 +119,7 @@ ExecutionStatus Runtime::putNamedThrowOnError(
   auto clazzGCPtr = obj->getClassGCPtr();
   auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
   if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
-    JSObject::setNamedSlotValue<PropStorage::Inline::Yes>(
+    JSObject::setNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
         *obj, this, cacheEntry->slot, hv);
     return ExecutionStatus::RETURNED;
   }
@@ -134,7 +135,7 @@ ExecutionStatus Runtime::putNamedThrowOnError(
       cacheEntry->clazz = clazzGCPtr.getStorageType();
       cacheEntry->slot = desc.slot;
     }
-    JSObject::setNamedSlotValue(*obj, this, desc.slot, hv);
+    JSObject::setNamedSlotValueUnsafe(*obj, this, desc.slot, hv);
     return ExecutionStatus::RETURNED;
   }
   return JSObject::putNamed_RJS(

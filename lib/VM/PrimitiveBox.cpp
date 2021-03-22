@@ -99,7 +99,8 @@ void JSString::setPrimitiveString(
   assert(res && "cannot find 'length' property");
   (void)res;
 
-  JSObject::setNamedSlotValue(
+  // This is definitely not a proxy because we know strings have lengths.
+  JSObject::setNamedSlotValueUnsafe(
       *selfHandle,
       runtime,
       desc,

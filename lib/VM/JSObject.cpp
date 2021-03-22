@@ -312,15 +312,13 @@ CallResult<PseudoHandle<>> JSObject::getNamedPropertyValue_RJS(
     Runtime *runtime,
     Handle<JSObject> propObj,
     NamedPropertyDescriptor desc) {
-  assert(
-      !selfHandle->flags_.proxyObject && !propObj->flags_.proxyObject &&
-      "getNamedPropertyValue_RJS cannot be used with proxy objects");
-
   if (LLVM_LIKELY(!desc.flags.accessor))
-    return createPseudoHandle(getNamedSlotValue(propObj.get(), runtime, desc));
+    return getNamedSlotValue(propObj, runtime, desc);
 
-  auto *accessor =
-      vmcast<PropertyAccessor>(getNamedSlotValue(propObj.get(), runtime, desc));
+  // It's now valid to use the Internal variant because we know it's an
+  // accessor.
+  auto *accessor = vmcast<PropertyAccessor>(
+      getNamedSlotValueUnsafe(propObj.get(), runtime, desc));
   if (!accessor->getter)
     return createPseudoHandle(HermesValue::encodeUndefinedValue());
 
@@ -875,7 +873,7 @@ CallResult<bool> JSObject::getOwnComputedDescriptor(
   return false;
 }
 
-JSObject *JSObject::getNamedDescriptor(
+JSObject *JSObject::getNamedDescriptorUnsafe(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name,
@@ -894,6 +892,7 @@ JSObject *JSObject::getNamedDescriptor(
   if (LLVM_UNLIKELY(selfHandle->flags_.hostObject)) {
     desc.flags.hostObject = true;
     desc.flags.writable = true;
+    desc.slot = name.unsafeGetRaw();
     return *selfHandle;
   }
 
@@ -910,6 +909,7 @@ JSObject *JSObject::getNamedDescriptor(
 
   if (LLVM_UNLIKELY(selfHandle->flags_.proxyObject)) {
     desc.flags.proxyObject = true;
+    desc.slot = name.unsafeGetRaw();
     return *selfHandle;
   }
 
@@ -941,12 +941,14 @@ JSObject *JSObject::getNamedDescriptor(
       } else if (LLVM_UNLIKELY(mutableSelfHandle->flags_.hostObject)) {
         desc.flags.hostObject = true;
         desc.flags.writable = true;
+        desc.slot = name.unsafeGetRaw();
         return *mutableSelfHandle;
       } else {
         assert(
             mutableSelfHandle->flags_.proxyObject &&
             "descriptor flags are impossible");
         desc.flags.proxyObject = true;
+        desc.slot = name.unsafeGetRaw();
         return *mutableSelfHandle;
       }
     } while ((mutableSelfHandle = mutableSelfHandle->parent_.get(runtime)));
@@ -1030,7 +1032,7 @@ CallResult<PseudoHandle<>> JSObject::getNamedWithReceiver_RJS(
   NamedPropertyDescriptor desc;
   // Locate the descriptor. propObj contains the object which may be anywhere
   // along the prototype chain.
-  JSObject *propObj = getNamedDescriptor(selfHandle, runtime, name, desc);
+  JSObject *propObj = getNamedDescriptorUnsafe(selfHandle, runtime, name, desc);
   if (!propObj) {
     if (LLVM_UNLIKELY(opFlags.getMustExist())) {
       return runtime->raiseReferenceError(
@@ -1049,12 +1051,12 @@ CallResult<PseudoHandle<>> JSObject::getNamedWithReceiver_RJS(
       cacheEntry->clazz = propObj->getClassGCPtr().getStorageType();
       cacheEntry->slot = desc.slot;
     }
-    return createPseudoHandle(getNamedSlotValue(propObj, runtime, desc));
+    return createPseudoHandle(getNamedSlotValueUnsafe(propObj, runtime, desc));
   }
 
   if (desc.flags.accessor) {
-    auto *accessor =
-        vmcast<PropertyAccessor>(getNamedSlotValue(propObj, runtime, desc));
+    auto *accessor = vmcast<PropertyAccessor>(
+        getNamedSlotValueUnsafe(propObj, runtime, desc));
     if (!accessor->getter)
       return createPseudoHandle(HermesValue::encodeUndefinedValue());
 
@@ -1139,9 +1141,10 @@ CallResult<PseudoHandle<>> JSObject::getComputedWithReceiver_RJS(
 
   if (LLVM_LIKELY(
           !desc.flags.accessor && !desc.flags.hostObject &&
-          !desc.flags.proxyObject))
+          !desc.flags.proxyObject)) {
     return createPseudoHandle(
         getComputedSlotValue(propObj.get(), runtime, desc));
+  }
 
   if (desc.flags.accessor) {
     auto *accessor = vmcast<PropertyAccessor>(
@@ -1173,7 +1176,7 @@ CallResult<bool> JSObject::hasNamed(
     Runtime *runtime,
     SymbolID name) {
   NamedPropertyDescriptor desc;
-  JSObject *propObj = getNamedDescriptor(selfHandle, runtime, name, desc);
+  JSObject *propObj = getNamedDescriptorUnsafe(selfHandle, runtime, name, desc);
   if (propObj == nullptr) {
     return false;
   }
@@ -1266,8 +1269,8 @@ static ExecutionStatus raiseErrorForOverridingStaticBuiltin(
   // If the 'name' property does not exist or is an accessor, we don't display
   // the name.
   NamedPropertyDescriptor desc;
-  auto *obj = JSObject::getNamedDescriptor(
-      selfHandle, runtime, Predefined::getSymbolID(Predefined::name), desc);
+  auto *obj = JSObject::getNamedDescriptorPredefined(
+      selfHandle, runtime, Predefined::name, desc);
   assert(
       !selfHandle->isProxyObject() &&
       "raiseErrorForOverridingStaticBuiltin cannot be used with proxy objects");
@@ -1279,8 +1282,14 @@ static ExecutionStatus raiseErrorForOverridingStaticBuiltin(
   }
 
   // Display the name property of the builtin object if it is a string.
-  StringPrimitive *objName = dyn_vmcast<StringPrimitive>(
-      JSObject::getNamedSlotValue(selfHandle.get(), runtime, desc));
+  auto objNameRes =
+      JSObject::getNamedSlotValue(createPseudoHandle(obj), runtime, desc);
+  if (LLVM_UNLIKELY(objNameRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  PseudoHandle<StringPrimitive> objName =
+      PseudoHandle<StringPrimitive>::dyn_vmcast(std::move(*objNameRes));
   if (!objName) {
     return runtime->raiseTypeError(
         TwineChar16("Attempting to override read-only builtin method '") +
@@ -1289,7 +1298,8 @@ static ExecutionStatus raiseErrorForOverridingStaticBuiltin(
 
   return runtime->raiseTypeError(
       TwineChar16("Attempting to override read-only builtin method '") +
-      TwineChar16(objName) + "." + TwineChar16(methodNameHnd.get()) + "'");
+      TwineChar16(objName.get()) + "." + TwineChar16(methodNameHnd.get()) +
+      "'");
 }
 
 CallResult<bool> JSObject::putNamedWithReceiver_RJS(
@@ -1302,7 +1312,9 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
   NamedPropertyDescriptor desc;
 
   // Look for the property in this object or along the prototype chain.
-  JSObject *propObj = getNamedDescriptor(
+  // `name` will not be freed before this function returns,
+  // so it will outlive the lifetime of `desc`.
+  JSObject *propObj = getNamedDescriptorUnsafe(
       selfHandle,
       runtime,
       name,
@@ -1324,14 +1336,14 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
             !desc.flags.accessor && !desc.flags.internalSetter &&
             !desc.flags.hostObject && !desc.flags.proxyObject &&
             desc.flags.writable)) {
-      setNamedSlotValue(
+      setNamedSlotValueUnsafe(
           *selfHandle, runtime, desc, valueHandle.getHermesValue());
       return true;
     }
 
     if (LLVM_UNLIKELY(desc.flags.accessor)) {
-      auto *accessor =
-          vmcast<PropertyAccessor>(getNamedSlotValue(propObj, runtime, desc));
+      auto *accessor = vmcast<PropertyAccessor>(
+          getNamedSlotValueUnsafe(propObj, runtime, desc));
 
       // If it is a read-only accessor, fail.
       if (!accessor->setter) {
@@ -1414,7 +1426,7 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
           !receiverHandle->isHostObject() && !receiverHandle->isProxyObject() &&
           "getOwnNamedDescriptor never sets hostObject or proxyObject flags");
 
-      setNamedSlotValue(
+      setNamedSlotValueUnsafe(
           *receiverHandle, runtime, desc, valueHandle.getHermesValue());
       return true;
     }
@@ -1833,7 +1845,7 @@ CallResult<bool> JSObject::deleteNamed(
   }
 
   // Clear the deleted property value to prevent memory leaks.
-  setNamedSlotValue(
+  setNamedSlotValueUnsafe(
       *selfHandle, runtime, desc, HermesValue::encodeEmptyValue());
 
   // Perform the actual deletion.
@@ -1933,7 +1945,7 @@ CallResult<bool> JSObject::deleteComputed(
   if (pos) {
     // delete the named property (if it exists).
     // Clear the deleted property value to prevent memory leaks.
-    setNamedSlotValue(
+    setNamedSlotValueUnsafe(
         *selfHandle, runtime, desc, HermesValue::encodeEmptyValue());
 
     // Remove the property descriptor.
@@ -2411,7 +2423,7 @@ void JSObject::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
         }
         // Else, it's a user-visible property.
         HermesValue prop =
-            getNamedSlotValue(self, gc->getPointerBase(), desc.slot);
+            getNamedSlotValueUnsafe(self, gc->getPointerBase(), desc.slot);
         const llvh::Optional<HeapSnapshot::NodeID> idForProp =
             gc->getSnapshotID(prop);
         if (!idForProp) {
@@ -2718,7 +2730,7 @@ CallResult<bool> JSObject::updateOwnProperty(
       runtime,
       desc.flags,
       dpFlags,
-      getNamedSlotValue(selfHandle.get(), runtime, desc),
+      getNamedSlotValueUnsafe(selfHandle.get(), runtime, desc),
       valueOrAccessor,
       opFlags);
   if (updateStatus == ExecutionStatus::EXCEPTION)
@@ -2745,16 +2757,18 @@ CallResult<bool> JSObject::updateOwnProperty(
 
   if (dpFlags.setValue) {
     if (LLVM_LIKELY(!desc.flags.internalSetter))
-      setNamedSlotValue(selfHandle.get(), runtime, desc, valueOrAccessor.get());
+      setNamedSlotValueUnsafe(
+          selfHandle.get(), runtime, desc, valueOrAccessor.get());
     else
       return internalSetter(
           selfHandle, runtime, name, desc, valueOrAccessor, opFlags);
   } else if (dpFlags.isAccessor()) {
-    setNamedSlotValue(selfHandle.get(), runtime, desc, valueOrAccessor.get());
+    setNamedSlotValueUnsafe(
+        selfHandle.get(), runtime, desc, valueOrAccessor.get());
   } else {
     // If checkPropertyUpdate() returned needSet, but there is no value or
     // accessor, clear the value.
-    setNamedSlotValue(
+    setNamedSlotValueUnsafe(
         selfHandle.get(), runtime, desc, HermesValue::encodeUndefinedValue());
   }
 

@@ -26,7 +26,8 @@ namespace {
   {                                                                         \
     NamedPropertyDescriptor desc;                                           \
     ASSERT_TRUE(                                                            \
-        JSObject::getNamedDescriptor(obj, runtime, prop, desc) != nullptr); \
+        JSObject::getNamedDescriptorPredefined(obj, runtime, prop, desc) != \
+        nullptr);                                                           \
     EXPECT_FALSE(desc.flags.writable);                                      \
     EXPECT_FALSE(desc.flags.configurable);                                  \
     EXPECT_TRUE(desc.flags.staticBuiltin);                                  \
@@ -38,22 +39,19 @@ static void verifyAllBuiltinsFrozen(Runtime *runtime) {
   GCScope gcScope{runtime};
   auto global = runtime->getGlobal();
   Predefined::getSymbolID(Predefined::isArray);
-#define BUILTIN_OBJECT(object)                                    \
-  {                                                               \
-    auto objectID = Predefined::getSymbolID(Predefined::object);  \
-    EXPECT_PROPERTY_FROZEN_AND_MARKED_AS_STATIC(global, objectID) \
-  }
+#define BUILTIN_OBJECT(object) \
+  {EXPECT_PROPERTY_FROZEN_AND_MARKED_AS_STATIC(global, Predefined::object)}
 
   MutableHandle<JSObject> objHandle{runtime};
 
-#define BUILTIN_METHOD(object, method)                                \
-  {                                                                   \
-    auto objectID = Predefined::getSymbolID(Predefined::object);      \
-    auto cr = JSObject::getNamed_RJS(global, runtime, objectID);      \
-    ASSERT_NE(cr, ExecutionStatus::EXCEPTION);                        \
-    objHandle = vmcast<JSObject>(cr->get());                          \
-    auto methodID = Predefined::getSymbolID(Predefined::method);      \
-    EXPECT_PROPERTY_FROZEN_AND_MARKED_AS_STATIC(objHandle, methodID); \
+#define BUILTIN_METHOD(object, method)                           \
+  {                                                              \
+    auto objectID = Predefined::getSymbolID(Predefined::object); \
+    auto cr = JSObject::getNamed_RJS(global, runtime, objectID); \
+    ASSERT_NE(cr, ExecutionStatus::EXCEPTION);                   \
+    objHandle = vmcast<JSObject>(cr->get());                     \
+    EXPECT_PROPERTY_FROZEN_AND_MARKED_AS_STATIC(                 \
+        objHandle, Predefined::method);                          \
   }
 #include "hermes/FrontEndDefs/Builtins.def"
 }

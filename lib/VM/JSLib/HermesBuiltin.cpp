@@ -539,14 +539,11 @@ hermesBuiltinArraySpread(void *, Runtime *runtime, NativeArgs args) {
     // `arr[Symbol.iterator]` hasn't been changed by the user.
     NamedPropertyDescriptor desc;
     PseudoHandle<JSObject> propObj =
-        createPseudoHandle(JSObject::getNamedDescriptor(
-            arr,
-            runtime,
-            Predefined::getSymbolID(Predefined::SymbolIterator),
-            desc));
+        createPseudoHandle(JSObject::getNamedDescriptorPredefined(
+            arr, runtime, Predefined::SymbolIterator, desc));
     if (LLVM_LIKELY(propObj) && LLVM_LIKELY(!desc.flags.proxyObject)) {
       PseudoHandle<> slotValue = createPseudoHandle(
-          JSObject::getNamedSlotValue(propObj.get(), runtime, desc));
+          JSObject::getNamedSlotValueUnsafe(propObj.get(), runtime, desc));
       propObj.invalidate();
       if (LLVM_LIKELY(
               slotValue->getRaw() == runtime->arrayPrototypeValues.getRaw())) {
@@ -720,9 +717,9 @@ hermesBuiltinExportAll(void *, Runtime *runtime, NativeArgs args) {
   }
 
   Handle<JSObject> source = args.dyncastArg<JSObject>(1);
-  if (LLVM_UNLIKELY(!source)) {
+  if (LLVM_UNLIKELY(!source) || LLVM_UNLIKELY(source->isProxyObject())) {
     return runtime->raiseTypeError(
-        "exportAll() source argument must be object");
+        "exportAll() source argument must be non-Proxy object");
   }
 
   MutableHandle<> propertyHandle{runtime};
@@ -745,7 +742,8 @@ hermesBuiltinExportAll(void *, Runtime *runtime, NativeArgs args) {
           return true;
         }
 
-        propertyHandle = JSObject::getNamedSlotValue(*source, runtime, desc);
+        propertyHandle =
+            JSObject::getNamedSlotValueUnsafe(*source, runtime, desc);
         defineRes = JSObject::defineOwnProperty(
             exports, runtime, id, dpf, propertyHandle);
         if (LLVM_UNLIKELY(defineRes == ExecutionStatus::EXCEPTION)) {

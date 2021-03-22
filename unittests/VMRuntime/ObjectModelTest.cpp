@@ -17,12 +17,13 @@ using namespace hermes::vm;
 namespace {
 
 /// Assert that obj.prop has flag set to val.
-#define EXPECT_PROPERTY_FLAG(val, obj, prop, flag)                          \
-  {                                                                         \
-    NamedPropertyDescriptor desc;                                           \
-    ASSERT_TRUE(                                                            \
-        JSObject::getNamedDescriptor(obj, runtime, prop, desc) != nullptr); \
-    EXPECT_##val(desc.flags.flag);                                          \
+#define EXPECT_PROPERTY_FLAG(val, obj, prop, flag)                      \
+  {                                                                     \
+    NamedPropertyDescriptor desc;                                       \
+    ASSERT_TRUE(                                                        \
+        JSObject::getNamedDescriptorUnsafe(obj, runtime, prop, desc) != \
+        nullptr);                                                       \
+    EXPECT_##val(desc.flags.flag);                                      \
   }
 
 static inline Handle<Callable> makeSimpleJSFunction(
@@ -489,7 +490,8 @@ TEST_F(ObjectModelTest, SimpleDeleteTest) {
 
   // Make sure it is deleted.
   ASSERT_EQ(
-      nullptr, JSObject::getNamedDescriptor(obj, runtime, *prop1ID, desc));
+      nullptr,
+      JSObject::getNamedDescriptorUnsafe(obj, runtime, *prop1ID, desc));
   EXPECT_CALLRESULT_UNDEFINED(JSObject::getNamed_RJS(obj, runtime, *prop1ID));
 
   // Make sure obj.prop2 is still there.
@@ -512,7 +514,8 @@ TEST_F(ObjectModelTest, SimpleDeleteTest) {
 
   // Make sure it is deleted.
   ASSERT_EQ(
-      nullptr, JSObject::getNamedDescriptor(obj, runtime, *prop2ID, desc));
+      nullptr,
+      JSObject::getNamedDescriptorUnsafe(obj, runtime, *prop2ID, desc));
   EXPECT_CALLRESULT_UNDEFINED(JSObject::getNamed_RJS(obj, runtime, *prop2ID));
 
   // obj.prop4 = 40.0;
@@ -607,7 +610,8 @@ TEST_F(ObjectModelTest, NonArrayComputedTest) {
 
   // Make sure we can obtain "prop1" as a named property.
   NamedPropertyDescriptor ndesc;
-  ASSERT_TRUE(JSObject::getNamedDescriptor(obj1, runtime, *prop1ID, ndesc));
+  ASSERT_TRUE(
+      JSObject::getNamedDescriptorUnsafe(obj1, runtime, *prop1ID, ndesc));
 
   // Get the two properties computed descriptors and the values using the
   // descriptors.

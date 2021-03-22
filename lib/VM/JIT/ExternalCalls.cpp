@@ -120,7 +120,7 @@ ExecutionStatus externPutById(
     // If we have a cache hit, reuse the cached offset and immediately
     // return the property.
     if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
-      JSObject::setNamedSlotValue<PropStorage::Inline::Yes>(
+      JSObject::setNamedSlotValueInternal<PropStorage::Inline::Yes>(
           obj, runtime, cacheEntry->slot, *prop);
       return ExecutionStatus::RETURNED;
     }
@@ -140,8 +140,12 @@ ExecutionStatus externPutById(
         cacheEntry->slot = desc.slot;
       }
 
-      JSObject::setNamedSlotValue(obj, runtime, desc.slot, *prop);
-      return ExecutionStatus::RETURNED;
+      return JSObject::setNamedSlotValue(
+                 createPseudoHandle<JSObject>(obj),
+                 runtime,
+                 desc,
+                 createPseudoHandle(*prop))
+          .getStatus();
     }
 
     return JSObject::putNamed_RJS(
@@ -178,7 +182,7 @@ CallResult<HermesValue> externGetById(
     // If we have a cache hit, reuse the cached offset and immediately
     // return the property.
     if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
-      return JSObject::getNamedSlotValue<PropStorage::Inline::Yes>(
+      return JSObject::getNamedSlotValueInternal<PropStorage::Inline::Yes>(
           obj, runtime, cacheEntry->slot);
     }
     auto id = SymbolID::unsafeCreate(sid);
@@ -197,7 +201,9 @@ CallResult<HermesValue> externGetById(
         cacheEntry->slot = desc.slot;
       }
 
-      return JSObject::getNamedSlotValue(obj, runtime, desc);
+      return JSObject::getNamedSlotValue(
+                 createPseudoHandle<JSObject>(obj), runtime, desc)
+          .toCallResultHermesValue();
     }
 
     // The cache may also be populated via the prototype of the object.
@@ -213,7 +219,8 @@ CallResult<HermesValue> externGetById(
       if (parent &&
           cacheEntry->clazz == parent->getClassGCPtr().getStorageType() &&
           LLVM_LIKELY(!obj->isLazy())) {
-        return JSObject::getNamedSlotValue(parent, runtime, cacheEntry->slot);
+        return JSObject::getNamedSlotValueInternal(
+            parent, runtime, cacheEntry->slot);
       }
     }
 

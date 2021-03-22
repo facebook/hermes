@@ -521,7 +521,7 @@ class JSObject : public GCCell {
             base,
             InternalProperty::getSymbolID(index)) &&
         "internal slot must be reserved");
-    return getNamedSlotValue<PropStorage::Inline::Yes>(self, base, index);
+    return getNamedSlotValueUnsafe<PropStorage::Inline::Yes>(self, base, index);
   }
 
   static HermesValue
@@ -540,7 +540,7 @@ class JSObject : public GCCell {
             runtime,
             InternalProperty::getSymbolID(index)) &&
         "internal slot must be reserved");
-    return setNamedSlotValue<PropStorage::Inline::Yes>(
+    return setNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
         self, runtime, index, value);
   }
 
@@ -613,24 +613,57 @@ class JSObject : public GCCell {
   /// \pre inl == PropStorage::Inline::Yes -> index <
   /// PropStorage::kValueToSegmentThreshold.
   template <PropStorage::Inline inl = PropStorage::Inline::No>
-  inline static HermesValue
-  getNamedSlotValue(JSObject *self, PointerBase *runtime, SlotIndex index);
+  inline static HermesValue getNamedSlotValueUnsafe(
+      JSObject *self,
+      PointerBase *runtime,
+      SlotIndex index);
 
   /// Load a value from the "named value" storage space by the slot described by
   /// the property descriptor \p desc.
-  static HermesValue getNamedSlotValue(
+  /// NOTE: This should only be called on non-Proxy non-Host objects, when the
+  /// caller has already verified those conditions. Otherwise, just use
+  /// getNamedSlotValue.
+  static HermesValue getNamedSlotValueUnsafe(
       JSObject *self,
       PointerBase *runtime,
       NamedPropertyDescriptor desc) {
-    assert(!self->flags_.proxyObject && "getNamedSlotValue called on a Proxy");
-    return getNamedSlotValue(self, runtime, desc.slot);
+    assert(
+        !self->flags_.proxyObject && !desc.flags.proxyObject &&
+        "getNamedSlotValueUnsafe called on a Proxy");
+    assert(
+        !desc.flags.hostObject &&
+        "getNamedSlotValueUnsafe called on a HostObject");
+    return getNamedSlotValueUnsafe(self, runtime, desc.slot);
   }
+
+  /// Load a value from the "named value" storage space by the slot described by
+  /// the property descriptor \p desc.
+  static inline CallResult<PseudoHandle<>> getNamedSlotValue(
+      PseudoHandle<JSObject> self,
+      Runtime *runtime,
+      NamedPropertyDescriptor desc);
+
+  /// Load a value from the "named value" storage space by the slot described by
+  /// the property descriptor \p desc.
+  static inline CallResult<PseudoHandle<>> getNamedSlotValue(
+      Handle<JSObject> self,
+      Runtime *runtime,
+      NamedPropertyDescriptor desc);
+
+  /// Store a value to the "named value" storage space by the slot described by
+  /// the property descriptor \p desc.
+  /// The target descriptor may be a Proxy or HostObject.
+  static inline CallResult<bool> setNamedSlotValue(
+      PseudoHandle<JSObject> self,
+      Runtime *runtime,
+      NamedPropertyDescriptor desc,
+      PseudoHandle<> value);
 
   /// Store a value to the "named value" storage space by \p index.
   /// \pre inl == PropStorage::Inline::Yes -> index <
   /// PropStorage::kValueToSegmentThreshold.
   template <PropStorage::Inline inl = PropStorage::Inline::No>
-  static void setNamedSlotValue(
+  static void setNamedSlotValueUnsafe(
       JSObject *self,
       Runtime *runtime,
       SlotIndex index,
@@ -638,13 +671,15 @@ class JSObject : public GCCell {
 
   /// Store a value to the "named value" storage space by the slot described by
   /// \p desc.
-  static void setNamedSlotValue(
+  static void setNamedSlotValueUnsafe(
       JSObject *self,
       Runtime *runtime,
       NamedPropertyDescriptor desc,
       HermesValue value) {
-    assert(!self->flags_.proxyObject && "setNamedSlotValue called on a Proxy");
-    setNamedSlotValue(self, runtime, desc.slot, value);
+    assert(!desc.flags.proxyObject && "setNamedSlotValue called on a Proxy");
+    assert(
+        !desc.flags.hostObject && "setNamedSlotValue called on a HostObject");
+    setNamedSlotValueUnsafe(self, runtime, desc.slot, value);
   }
 
   /// Load a value using a named descriptor. Read the value either from
@@ -779,13 +814,36 @@ class JSObject : public GCCell {
       MutableHandle<> &valueOrAccessor);
 
   /// ES5.1 8.12.2.
+  /// Extract a descriptor \p desc of a predefined property \p name
+  /// in this object or along the prototype chain.
+  /// \return the object instance containing the property, or nullptr.
+  static JSObject *getNamedDescriptorPredefined(
+      Handle<JSObject> selfHandle,
+      Runtime *runtime,
+      Predefined::Str name,
+      NamedPropertyDescriptor &desc);
+
+  /// ES5.1 8.12.2.
+  /// Extract a descriptor \p desc of a predefined symbol \p name
+  /// in this object or along the prototype chain.
+  /// \return the object instance containing the property, or nullptr.
+  static JSObject *getNamedDescriptorPredefined(
+      Handle<JSObject> selfHandle,
+      Runtime *runtime,
+      Predefined::Sym name,
+      NamedPropertyDescriptor &desc);
+
+  /// ES5.1 8.12.2.
   /// Extract a descriptor \p desc of a named property \p name in this object
   /// or along the prototype chain.
+  /// IMPORTANT: This is unsafe because the caller must ensure \p name will NOT
+  /// be freed within the lifetime of \p desc - typically by ensuring \p name
+  /// is stored in the string table of the bytecode.
   /// \param expectedFlags if valid, we are searching for a property which, if
   ///   not found, we would create with these specific flags. This can speed
   ///   up the search in the negative case - when the property doesn't exist.
   /// \return the object instance containing the property, or nullptr.
-  static JSObject *getNamedDescriptor(
+  static JSObject *getNamedDescriptorUnsafe(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       SymbolID name,
@@ -793,9 +851,9 @@ class JSObject : public GCCell {
       NamedPropertyDescriptor &desc);
 
   /// ES5.1 8.12.2.
-  /// Wrapper around \c getNamedDescriptor() passing \c false to \c
+  /// Wrapper around \c getNamedDescriptorUnsafe() passing \c false to \c
   /// forPutNamed.
-  static JSObject *getNamedDescriptor(
+  static JSObject *getNamedDescriptorUnsafe(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       SymbolID name,
@@ -1609,7 +1667,7 @@ JSObject::setDirectSlotValueNonPtr(JSObject *self, HermesValue value, GC *gc) {
 }
 
 template <PropStorage::Inline inl>
-inline HermesValue JSObject::getNamedSlotValue(
+inline HermesValue JSObject::getNamedSlotValueUnsafe(
     JSObject *self,
     PointerBase *runtime,
     SlotIndex index) {
@@ -1622,8 +1680,53 @@ inline HermesValue JSObject::getNamedSlotValue(
       index - DIRECT_PROPERTY_SLOTS);
 }
 
+inline CallResult<PseudoHandle<>> JSObject::getNamedSlotValue(
+    PseudoHandle<JSObject> self,
+    Runtime *runtime,
+    NamedPropertyDescriptor desc) {
+  if (LLVM_UNLIKELY(desc.flags.proxyObject) ||
+      LLVM_UNLIKELY(desc.flags.hostObject)) {
+    SymbolID name = SymbolID::unsafeCreate(desc.slot);
+    assert(name.isValid() && "invalid SymbolID in descriptor");
+    return getNamed_RJS(runtime->makeHandle(std::move(self)), runtime, name);
+  }
+  return createPseudoHandle(getNamedSlotValueUnsafe(self.get(), runtime, desc));
+}
+
+inline CallResult<PseudoHandle<>> JSObject::getNamedSlotValue(
+    Handle<JSObject> self,
+    Runtime *runtime,
+    NamedPropertyDescriptor desc) {
+  if (LLVM_UNLIKELY(desc.flags.proxyObject) ||
+      LLVM_UNLIKELY(desc.flags.hostObject)) {
+    SymbolID name = SymbolID::unsafeCreate(desc.slot);
+    assert(name.isValid() && "invalid SymbolID in descriptor");
+    return getNamed_RJS(self, runtime, name);
+  }
+  return createPseudoHandle(getNamedSlotValueUnsafe(self.get(), runtime, desc));
+}
+
+inline CallResult<bool> JSObject::setNamedSlotValue(
+    PseudoHandle<JSObject> self,
+    Runtime *runtime,
+    NamedPropertyDescriptor desc,
+    PseudoHandle<> value) {
+  if (LLVM_UNLIKELY(desc.flags.proxyObject) ||
+      LLVM_UNLIKELY(desc.flags.hostObject)) {
+    SymbolID name = SymbolID::unsafeCreate(desc.slot);
+    assert(name.isValid() && "invalid SymbolID in descriptor");
+    return putNamed_RJS(
+        runtime->makeHandle(std::move(self)),
+        runtime,
+        name,
+        runtime->makeHandle(std::move(value)));
+  }
+  setNamedSlotValueUnsafe(self.get(), runtime, desc, value.get());
+  return true;
+}
+
 template <PropStorage::Inline inl>
-inline void JSObject::setNamedSlotValue(
+inline void JSObject::setNamedSlotValueUnsafe(
     JSObject *self,
     Runtime *runtime,
     SlotIndex index,
@@ -1649,7 +1752,8 @@ inline HermesValue JSObject::getComputedSlotValue(
         "indexed flag set but no indexed storage");
     return getOwnIndexed(self, runtime, desc.slot);
   }
-  return getNamedSlotValue(
+  // Call is valid because this function cannot be called with a Proxy.
+  return getNamedSlotValueUnsafe(
       self, runtime, desc.castToNamedPropertyDescriptorRef());
 }
 
@@ -1666,7 +1770,7 @@ inline ExecutionStatus JSObject::setComputedSlotValue(
         "indexed flag set but no indexed storage");
     return setOwnIndexed(selfHandle, runtime, desc.slot, value).getStatus();
   }
-  setNamedSlotValue(
+  setNamedSlotValueUnsafe(
       selfHandle.get(),
       runtime,
       desc.castToNamedPropertyDescriptorRef(),
@@ -1694,10 +1798,16 @@ inline OptValue<bool> JSObject::tryGetOwnNamedDescriptorFast(
 inline OptValue<HermesValue>
 JSObject::tryGetNamedNoAlloc(JSObject *self, PointerBase *base, SymbolID name) {
   for (JSObject *curr = self; curr; curr = curr->parent_.get(base)) {
+    if (LLVM_UNLIKELY(curr->isProxyObject()) ||
+        LLVM_UNLIKELY(curr->isHostObject())) {
+      // Fail if there is a proxy or host object in the chain,
+      // because walking the prototype chain without allocating can't be done.
+      return llvh::None;
+    }
     auto found =
         HiddenClass::findPropertyNoAlloc(curr->getClass(base), base, name);
     if (found) {
-      return getNamedSlotValue(curr, base, found.getValue().slot);
+      return getNamedSlotValueUnsafe(curr, base, found.getValue());
     }
   }
   // It wasn't found on any of the parents of this object, declare it
@@ -1705,12 +1815,38 @@ JSObject::tryGetNamedNoAlloc(JSObject *self, PointerBase *base, SymbolID name) {
   return llvh::None;
 }
 
-inline JSObject *JSObject::getNamedDescriptor(
+inline JSObject *JSObject::getNamedDescriptorPredefined(
+    Handle<JSObject> selfHandle,
+    Runtime *runtime,
+    Predefined::Str name,
+    NamedPropertyDescriptor &desc) {
+  return getNamedDescriptorUnsafe(
+      selfHandle,
+      runtime,
+      Predefined::getSymbolID(name),
+      PropertyFlags::invalid(),
+      desc);
+}
+
+inline JSObject *JSObject::getNamedDescriptorPredefined(
+    Handle<JSObject> selfHandle,
+    Runtime *runtime,
+    Predefined::Sym name,
+    NamedPropertyDescriptor &desc) {
+  return getNamedDescriptorUnsafe(
+      selfHandle,
+      runtime,
+      Predefined::getSymbolID(name),
+      PropertyFlags::invalid(),
+      desc);
+}
+
+inline JSObject *JSObject::getNamedDescriptorUnsafe(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name,
     NamedPropertyDescriptor &desc) {
-  return getNamedDescriptor(
+  return getNamedDescriptorUnsafe(
       selfHandle, runtime, name, PropertyFlags::invalid(), desc);
 }
 

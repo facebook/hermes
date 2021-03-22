@@ -151,16 +151,20 @@ ExecutionStatus Interpreter::caseIteratorBegin(
   if (LLVM_LIKELY(vmisa<JSArray>(O2REG(IteratorBegin)))) {
     // Attempt to get the fast path for array iteration.
     NamedPropertyDescriptor desc;
-    JSObject *propObj = JSObject::getNamedDescriptor(
+    JSObject *propObj = JSObject::getNamedDescriptorPredefined(
         Handle<JSArray>::vmcast(&O2REG(IteratorBegin)),
         runtime,
-        Predefined::getSymbolID(Predefined::SymbolIterator),
+        Predefined::SymbolIterator,
         desc);
-    if (LLVM_LIKELY(propObj) && LLVM_LIKELY(!propObj->isProxyObject())) {
-      HermesValue slotValue =
-          JSObject::getNamedSlotValue(propObj, runtime, desc);
+    if (LLVM_LIKELY(propObj)) {
+      auto slotValueRes = JSObject::getNamedSlotValue(
+          createPseudoHandle(propObj), runtime, desc);
+      if (LLVM_UNLIKELY(slotValueRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      PseudoHandle<> slotValue = std::move(*slotValueRes);
       if (LLVM_LIKELY(
-              slotValue.getRaw() == runtime->arrayPrototypeValues.getRaw())) {
+              slotValue->getRaw() == runtime->arrayPrototypeValues.getRaw())) {
         O1REG(IteratorBegin) = HermesValue::encodeNumberValue(0);
         return ExecutionStatus::RETURNED;
       }

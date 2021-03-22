@@ -438,7 +438,7 @@ ExecutionStatus Interpreter::putByIdTransient_RJS(
   auto O = runtime->makeHandle<JSObject>(res.getValue());
 
   NamedPropertyDescriptor desc;
-  JSObject *propObj = JSObject::getNamedDescriptor(O, runtime, id, desc);
+  JSObject *propObj = JSObject::getNamedDescriptorUnsafe(O, runtime, id, desc);
 
   // Is this a missing property, or a data property defined in the prototype
   // chain? In both cases we would need to create an own property on the
@@ -464,7 +464,7 @@ ExecutionStatus Interpreter::putByIdTransient_RJS(
   if (desc.flags.accessor) {
     // This is an accessor.
     auto *accessor = vmcast<PropertyAccessor>(
-        JSObject::getNamedSlotValue(propObj, runtime, desc));
+        JSObject::getNamedSlotValueUnsafe(propObj, runtime, desc));
 
     // It needs to have a setter.
     if (!accessor->setter) {
@@ -576,7 +576,8 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
       // any allocation in valGen.get() won't invalidate the raw pointer
       // retruned from obj.get().
       auto val = valGen.get(runtime);
-      JSObject::setNamedSlotValue(obj.get(), runtime, propIndex, val);
+      // We made this object, it's not a Proxy.
+      JSObject::setNamedSlotValueUnsafe(obj.get(), runtime, propIndex, val);
       gcScope.flushToMarker(marker);
       ++propIndex;
     }
@@ -2324,7 +2325,7 @@ tailCall:
           ++NumGetByIdCacheHits;
           CAPTURE_IP(
               O1REG(GetById) =
-                  JSObject::getNamedSlotValue<PropStorage::Inline::Yes>(
+                  JSObject::getNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
                       obj, runtime, cacheEntry->slot));
           ip = nextIP;
           DISPATCH;
@@ -2356,8 +2357,12 @@ tailCall:
             cacheEntry->slot = desc.slot;
           }
 
+          assert(
+              !obj->isProxyObject() &&
+              "tryGetOwnNamedDescriptorFast returned true on Proxy");
           CAPTURE_IP(
-              O1REG(GetById) = JSObject::getNamedSlotValue(obj, runtime, desc));
+              O1REG(GetById) =
+                  JSObject::getNamedSlotValueUnsafe(obj, runtime, desc));
           ip = nextIP;
           DISPATCH;
         }
@@ -2366,7 +2371,7 @@ tailCall:
         // This value is only reliable if the fast path was a definite
         // not-found.
         if (fastPathResult.hasValue() && !fastPathResult.getValue() &&
-            !obj->isProxyObject()) {
+            LLVM_LIKELY(!obj->isProxyObject())) {
           CAPTURE_IP_ASSIGN(JSObject * parent, obj->getParent(runtime));
           // TODO: This isLazy check is because a lazy object is reported as
           // having no properties and therefore cannot contain the property.
@@ -2376,8 +2381,9 @@ tailCall:
               cacheEntry->clazz == parent->getClassGCPtr().getStorageType() &&
               LLVM_LIKELY(!obj->isLazy())) {
             ++NumGetByIdProtoHits;
+            // We've already checked that this isn't a Proxy.
             CAPTURE_IP(
-                O1REG(GetById) = JSObject::getNamedSlotValue(
+                O1REG(GetById) = JSObject::getNamedSlotValueUnsafe(
                     parent, runtime, cacheEntry->slot));
             ip = nextIP;
             DISPATCH;
@@ -2385,9 +2391,11 @@ tailCall:
         }
 
 #ifdef HERMES_SLOW_DEBUG
+        // Call to getNamedDescriptorUnsafe is safe because `id` is kept alive
+        // by the IdentifierTable.
         CAPTURE_IP_ASSIGN(
             JSObject * propObj,
-            JSObject::getNamedDescriptor(
+            JSObject::getNamedDescriptorUnsafe(
                 Handle<JSObject>::vmcast(&O2REG(GetById)), runtime, id, desc));
         if (propObj) {
           if (desc.flags.accessor)
@@ -2493,8 +2501,9 @@ tailCall:
         // return the property.
         if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
           ++NumPutByIdCacheHits;
-          CAPTURE_IP(JSObject::setNamedSlotValue<PropStorage::Inline::Yes>(
-              obj, runtime, cacheEntry->slot, O2REG(PutById)));
+          CAPTURE_IP(
+              JSObject::setNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
+                  obj, runtime, cacheEntry->slot, O2REG(PutById)));
           ip = nextIP;
           DISPATCH;
         }
@@ -2525,7 +2534,8 @@ tailCall:
             cacheEntry->slot = desc.slot;
           }
 
-          CAPTURE_IP(JSObject::setNamedSlotValue(
+          // This must be valid because an own property was already found.
+          CAPTURE_IP(JSObject::setNamedSlotValueUnsafe(
               obj, runtime, desc.slot, O2REG(PutById)));
           ip = nextIP;
           DISPATCH;
