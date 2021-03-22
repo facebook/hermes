@@ -501,14 +501,20 @@ CallResult<bool> JSProxy::getOwnProperty(
   if (trapRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   // 7. If trap is undefined, then
   if (!*trapRes) {
     //   a. Return ? target.[[GetOwnProperty]](P).
     return valueOrAccessor
         ? JSObject::getOwnComputedDescriptor(
-              target, runtime, nameValHandle, desc, *valueOrAccessor)
+              target,
+              runtime,
+              nameValHandle,
+              tmpPropNameStorage,
+              desc,
+              *valueOrAccessor)
         : JSObject::getOwnComputedDescriptor(
-              target, runtime, nameValHandle, desc);
+              target, runtime, nameValHandle, tmpPropNameStorage, desc);
   }
   // 8. Let trapResultObj be ? Call(trap, handler, « target, P »).
   // 9. If Type(trapResultObj) is neither Object nor Undefined, throw a
@@ -527,7 +533,12 @@ CallResult<bool> JSProxy::getOwnProperty(
   ComputedPropertyDescriptor targetDesc;
   MutableHandle<> targetValueOrAccessor{runtime};
   CallResult<bool> targetDescRes = JSObject::getOwnComputedDescriptor(
-      target, runtime, nameValHandle, targetDesc, targetValueOrAccessor);
+      target,
+      runtime,
+      nameValHandle,
+      tmpPropNameStorage,
+      targetDesc,
+      targetValueOrAccessor);
   if (targetDescRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -693,8 +704,14 @@ CallResult<bool> JSProxy::defineOwnProperty(
   // 11. Let targetDesc be ? target.[[GetOwnProperty]](P).
   ComputedPropertyDescriptor targetDesc;
   MutableHandle<> targetDescValueOrAccessor{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   CallResult<bool> targetDescRes = JSObject::getOwnComputedDescriptor(
-      target, runtime, nameValHandle, targetDesc, targetDescValueOrAccessor);
+      target,
+      runtime,
+      nameValHandle,
+      tmpPropNameStorage,
+      targetDesc,
+      targetDescValueOrAccessor);
   if (targetDescRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -771,8 +788,9 @@ CallResult<bool> hasWithTrap(
   if (!trapResult) {
     //   a. Let targetDesc be ? target.[[GetOwnProperty]](P).
     ComputedPropertyDescriptor targetDesc;
+    MutableHandle<SymbolID> tmpPropNameStorage{runtime};
     CallResult<bool> targetDescRes = JSObject::getOwnComputedDescriptor(
-        target, runtime, nameValHandle, targetDesc);
+        target, runtime, nameValHandle, tmpPropNameStorage, targetDesc);
     if (targetDescRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -888,8 +906,14 @@ CallResult<PseudoHandle<>> getWithTrap(
   // 9. Let targetDesc be ? target.[[GetOwnProperty]](P).
   ComputedPropertyDescriptor targetDesc;
   MutableHandle<> targetValueOrAccessor{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   CallResult<bool> targetDescRes = JSObject::getOwnComputedDescriptor(
-      target, runtime, nameValHandle, targetDesc, targetValueOrAccessor);
+      target,
+      runtime,
+      nameValHandle,
+      tmpPropNameStorage,
+      targetDesc,
+      targetValueOrAccessor);
   if (targetDescRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1021,8 +1045,14 @@ CallResult<bool> setWithTrap(
   // 10. Let targetDesc be ? target.[[GetOwnProperty]](P).
   ComputedPropertyDescriptor targetDesc;
   MutableHandle<> targetValueOrAccessor{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   CallResult<bool> targetDescRes = JSObject::getOwnComputedDescriptor(
-      target, runtime, nameValHandle, targetDesc, targetValueOrAccessor);
+      target,
+      runtime,
+      nameValHandle,
+      tmpPropNameStorage,
+      targetDesc,
+      targetValueOrAccessor);
   if (targetDescRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1158,8 +1188,14 @@ CallResult<bool> deleteWithTrap(
   // 10. Let targetDesc be ? target.[[GetOwnProperty]](P).
   ComputedPropertyDescriptor targetDesc;
   MutableHandle<> targetValueOrAccessor{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   CallResult<bool> targetDescRes = JSObject::getOwnComputedDescriptor(
-      target, runtime, nameValHandle, targetDesc, targetValueOrAccessor);
+      target,
+      runtime,
+      nameValHandle,
+      tmpPropNameStorage,
+      targetDesc,
+      targetValueOrAccessor);
   if (targetDescRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1442,13 +1478,18 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   // 14. Let targetConfigurableKeys be a new empty List.
   // 15. Let targetNonconfigurableKeys be a new empty List.
   llvh::SmallSet<uint32_t, 8> nonConfigurable;
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   // 16. For each element key of targetKeys, do
   auto marker2 = runtime->getTopGCScope()->createMarker();
   for (uint32_t i = 0, len = JSArray::getLength(*targetKeys); i < len; ++i) {
     //   a. Let desc be ? target.[[GetOwnProperty]](key).
     ComputedPropertyDescriptor desc;
     CallResult<bool> descRes = JSObject::getOwnComputedDescriptor(
-        target, runtime, runtime->makeHandle(targetKeys->at(runtime, i)), desc);
+        target,
+        runtime,
+        runtime->makeHandle(targetKeys->at(runtime, i)),
+        tmpPropNameStorage,
+        desc);
     if (descRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }

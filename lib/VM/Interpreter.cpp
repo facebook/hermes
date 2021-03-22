@@ -235,9 +235,10 @@ CallResult<PseudoHandle<>> Interpreter::getArgumentsPropByValSlowPath_RJS(
       // somewhere up in the prototype chain. Since we want to avoid reifying,
       // check which it is:
       MutableHandle<JSObject> inObject{runtime};
+      MutableHandle<SymbolID> inNameTmpStorage{runtime};
       ComputedPropertyDescriptor desc;
       JSObject::getComputedPrimitiveDescriptor(
-          objectPrototype, runtime, strPrim, inObject, desc);
+          objectPrototype, runtime, strPrim, inObject, inNameTmpStorage, desc);
 
       // If we couldn't find the property, just return 'undefined'.
       if (!inObject)
@@ -246,8 +247,11 @@ CallResult<PseudoHandle<>> Interpreter::getArgumentsPropByValSlowPath_RJS(
       // If the property isn't an accessor, we can just return it without
       // reifying.
       if (!desc.flags.accessor) {
-        return createPseudoHandle(
-            JSObject::getComputedSlotValue(inObject.get(), runtime, desc));
+        return JSObject::getComputedSlotValue(
+            createPseudoHandle(inObject.get()),
+            runtime,
+            inNameTmpStorage,
+            desc);
       }
     }
 
@@ -2668,12 +2672,23 @@ tailCall:
           uint32_t idx = O4REG(GetNextPName).getNumber();
           uint32_t size = O5REG(GetNextPName).getNumber();
           MutableHandle<JSObject> propObj{runtime};
+          MutableHandle<SymbolID> tmpPropNameStorage{runtime};
           // Loop until we find a property which is present.
           while (idx < size) {
             tmpHandle = arr->at(idx);
             ComputedPropertyDescriptor desc;
-            CAPTURE_IP(JSObject::getComputedPrimitiveDescriptor(
-                obj, runtime, tmpHandle, propObj, desc));
+            CAPTURE_IP_ASSIGN(
+                ExecutionStatus status,
+                JSObject::getComputedPrimitiveDescriptor(
+                    obj,
+                    runtime,
+                    tmpHandle,
+                    propObj,
+                    tmpPropNameStorage,
+                    desc));
+            if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+              goto exception;
+            }
             if (LLVM_LIKELY(propObj))
               break;
             ++idx;

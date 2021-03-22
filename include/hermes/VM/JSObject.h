@@ -699,8 +699,19 @@ class JSObject : public GCCell {
   /// named storage or indexed storage depending on the presence of the
   /// "Indexed" flag. This does not call the getter, and can be used to
   /// retrieve the accessor directly.
-  static HermesValue getComputedSlotValue(
-      JSObject *self,
+  static CallResult<PseudoHandle<>> getComputedSlotValue(
+      PseudoHandle<JSObject> self,
+      Runtime *runtime,
+      MutableHandle<SymbolID> &tmpSymbolStorage,
+      ComputedPropertyDescriptor desc);
+
+  /// Load a value using a computed descriptor. Read the value either from
+  /// named storage or indexed storage depending on the presence of the
+  /// "Indexed" flag. This does not call the getter, and can be used to
+  /// retrieve the accessor directly.
+  /// \pre The property must not be on a Proxy or HostObject.
+  static HermesValue getComputedSlotValueUnsafe(
+      PseudoHandle<JSObject> self,
       Runtime *runtime,
       ComputedPropertyDescriptor desc);
 
@@ -709,7 +720,20 @@ class JSObject : public GCCell {
   /// "Indexed" flag. This does not call the setter, and can be used to
   /// set the accessor directly.  The \p gc parameter is necessary for write
   /// barriers.
-  LLVM_NODISCARD static ExecutionStatus setComputedSlotValue(
+  LLVM_NODISCARD static CallResult<bool> setComputedSlotValue(
+      Handle<JSObject> selfHandle,
+      Runtime *runtime,
+      MutableHandle<SymbolID> &tmpSymbolStorage,
+      ComputedPropertyDescriptor desc,
+      Handle<> value);
+
+  /// Store a value using a computed descriptor. Store the value either to
+  /// named storage or indexed storage depending on the presence of the
+  /// "Indexed" flag. This does not call the setter, and can be used to
+  /// set the accessor directly.  The \p gc parameter is necessary for write
+  /// barriers.
+  /// \pre The property must not be on a Proxy or HostObject.
+  LLVM_NODISCARD static ExecutionStatus setComputedSlotValueUnsafe(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       ComputedPropertyDescriptor desc,
@@ -723,7 +747,8 @@ class JSObject : public GCCell {
   /// \param propObj the object where the property was found (it could be
   ///   anywhere along the prototype chain).
   /// \param desc the property descriptor.
-  static CallResult<PseudoHandle<>> getComputedPropertyValue_RJS(
+  /// \pre The property must not be on a Proxy or HostObject.
+  static CallResult<PseudoHandle<>> getComputedPropertyValueInternal_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<JSObject> propObj,
@@ -740,6 +765,7 @@ class JSObject : public GCCell {
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<JSObject> propObj,
+      MutableHandle<SymbolID> &tmpSymbolStorage,
       ComputedPropertyDescriptor desc,
       Handle<> nameValHandle);
 
@@ -789,6 +815,7 @@ class JSObject : public GCCell {
       Runtime *runtime,
       Handle<> nameValHandle,
       IgnoreProxy ignoreProxy,
+      MutableHandle<SymbolID> &tmpSymbolStorage,
       ComputedPropertyDescriptor &desc);
 
   /// Provides the functionality of ES9 [[GetOwnProperty]] on selfHandle.  It
@@ -802,6 +829,7 @@ class JSObject : public GCCell {
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<> nameValHandle,
+      MutableHandle<SymbolID> &tmpSymbolStorage,
       ComputedPropertyDescriptor &desc);
 
   /// Like the other overload, except valueOrAccessor will be set to a value or
@@ -810,6 +838,7 @@ class JSObject : public GCCell {
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<> nameValHandle,
+      MutableHandle<SymbolID> &tmpSymbolStorage,
       ComputedPropertyDescriptor &desc,
       MutableHandle<> &valueOrAccessor);
 
@@ -863,6 +892,10 @@ class JSObject : public GCCell {
   /// Extract a descriptor \p desc of a named property \p name in this object
   /// or along the prototype chain.
   /// \param nameValHandle the name of the property. It must be a primitive.
+  /// \param tmpSymbolStorage a temporary handle sometimes used internally
+  ///    to store SymbolIDs in order to make sure they aren't collected.
+  ///    Must not be modified or read by the caller for the lifetime of \p desc,
+  ///    the function makes no guarantees regarding whether it is used.
   /// \param[out] propObj it is set to the object in the prototype chain
   ///   containing the property, or \c null if we didn't find the property.
   /// \param[out] desc if the property was found, set to the property
@@ -872,6 +905,7 @@ class JSObject : public GCCell {
       Runtime *runtime,
       Handle<> nameValHandle,
       MutableHandle<JSObject> &propObj,
+      MutableHandle<SymbolID> &tmpSymbolStorage,
       ComputedPropertyDescriptor &desc);
 
   /// A wrapper to getComputedPrimitiveDescriptor() in the case when
@@ -881,6 +915,10 @@ class JSObject : public GCCell {
   /// The values of the output parameters are not defined if the call terminates
   /// with an exception.
   /// \param nameValHandle the name of the property.
+  /// \param tmpSymbolStorage a temporary handle sometimes used internally
+  ///    to store SymbolIDs in order to make sure they aren't collected.
+  ///    Must not be modified or read by the caller for the lifetime of \p desc,
+  ///    the function makes no guarantees regarding whether it is used.
   /// \param[out] propObj if the method terminates without an exception, it is
   ///    set to the object in the prototype chain containing the property, or
   ///    \c null if we didn't find the property.
@@ -891,6 +929,7 @@ class JSObject : public GCCell {
       Runtime *runtime,
       Handle<> nameValHandle,
       MutableHandle<JSObject> &propObj,
+      MutableHandle<SymbolID> &tmpSymbolStorage,
       ComputedPropertyDescriptor &desc);
 
   /// The following three methods implement ES5.1 8.12.3.
@@ -1741,29 +1780,80 @@ inline void JSObject::setNamedSlotValueUnsafe(
       index - DIRECT_PROPERTY_SLOTS, value, &runtime->getHeap());
 }
 
-inline HermesValue JSObject::getComputedSlotValue(
-    JSObject *self,
+inline CallResult<PseudoHandle<>> JSObject::getComputedSlotValue(
+    PseudoHandle<JSObject> self,
     Runtime *runtime,
+    MutableHandle<SymbolID> &tmpSymbolStorage,
     ComputedPropertyDescriptor desc) {
-  assert(!self->flags_.proxyObject && "getComputedSlotValue called on a Proxy");
   if (LLVM_LIKELY(desc.flags.indexed)) {
     assert(
         self->flags_.indexedStorage &&
         "indexed flag set but no indexed storage");
-    return getOwnIndexed(self, runtime, desc.slot);
+    return createPseudoHandle(getOwnIndexed(self.get(), runtime, desc.slot));
+  }
+  if (LLVM_UNLIKELY(desc.flags.proxyObject) ||
+      LLVM_UNLIKELY(desc.flags.hostObject)) {
+    SymbolID name = SymbolID::unsafeCreate(desc.slot);
+    assert(name.isValid() && "invalid SymbolID in descriptor");
+    return getComputed_RJS(
+        runtime->makeHandle(std::move(self)),
+        runtime,
+        runtime->makeHandle(HermesValue::encodeSymbolValue(name)));
+  }
+  return createPseudoHandle(getNamedSlotValueUnsafe(
+      self.get(), runtime, desc.castToNamedPropertyDescriptorRef()));
+}
+
+inline HermesValue JSObject::getComputedSlotValueUnsafe(
+    PseudoHandle<JSObject> self,
+    Runtime *runtime,
+    ComputedPropertyDescriptor desc) {
+  if (LLVM_LIKELY(desc.flags.indexed)) {
+    assert(
+        self->flags_.indexedStorage &&
+        "indexed flag set but no indexed storage");
+    return getOwnIndexed(self.get(), runtime, desc.slot);
   }
   // Call is valid because this function cannot be called with a Proxy.
   return getNamedSlotValueUnsafe(
-      self, runtime, desc.castToNamedPropertyDescriptorRef());
+      self.get(), runtime, desc.castToNamedPropertyDescriptorRef());
 }
 
-inline ExecutionStatus JSObject::setComputedSlotValue(
+inline CallResult<bool> JSObject::setComputedSlotValue(
+    Handle<JSObject> selfHandle,
+    Runtime *runtime,
+    MutableHandle<SymbolID> &tmpSymbolStorage,
+    ComputedPropertyDescriptor desc,
+    Handle<> value) {
+  if (LLVM_LIKELY(desc.flags.indexed)) {
+    assert(
+        selfHandle->flags_.indexedStorage &&
+        "indexed flag set but no indexed storage");
+    return setOwnIndexed(selfHandle, runtime, desc.slot, value);
+  }
+  if (LLVM_UNLIKELY(desc.flags.proxyObject) ||
+      LLVM_UNLIKELY(desc.flags.hostObject)) {
+    SymbolID name = SymbolID::unsafeCreate(desc.slot);
+    assert(name.isValid() && "invalid SymbolID in descriptor");
+    return putComputed_RJS(
+        selfHandle,
+        runtime,
+        runtime->makeHandle(HermesValue::encodeSymbolValue(name)),
+        value);
+  }
+  setNamedSlotValueUnsafe(
+      selfHandle.get(),
+      runtime,
+      desc.castToNamedPropertyDescriptorRef(),
+      value.get());
+  return true;
+}
+
+inline ExecutionStatus JSObject::setComputedSlotValueUnsafe(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     ComputedPropertyDescriptor desc,
     Handle<> value) {
-  assert(
-      !selfHandle->isProxyObject() && "setComputedSlotValue called on a Proxy");
   if (LLVM_LIKELY(desc.flags.indexed)) {
     assert(
         selfHandle->flags_.indexedStorage &&

@@ -776,7 +776,7 @@ CallResult<HermesValue> slowPathNegate(
   return HermesValue::encodeNumberValue(-res->getNumber());
 }
 
-HermesValue externGetNextPName(
+CallResult<HermesValue> externGetNextPName(
     Runtime *runtime,
     PinnedHermesValue *arrReg,
     PinnedHermesValue *objReg,
@@ -792,13 +792,22 @@ HermesValue externGetNextPName(
   uint32_t size = sizeReg->getNumber();
   PinnedHermesValue *scratch = &runtime->getCurrentFrame().getScratchRef();
   MutableHandle<JSObject> propObj{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
 
   // Loop until we find a property which is present.
   while (idx < size) {
     *scratch = arr->at(idx);
     ComputedPropertyDescriptor desc;
-    JSObject::getComputedPrimitiveDescriptor(
-        obj, runtime, Handle<>(scratch), propObj, desc);
+    if (LLVM_UNLIKELY(
+            JSObject::getComputedPrimitiveDescriptor(
+                obj,
+                runtime,
+                Handle<>(scratch),
+                tmpPropNameStorage,
+                propObj,
+                desc) == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
     if (LLVM_LIKELY(propObj))
       break;
     ++idx;

@@ -599,6 +599,7 @@ arrayPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<> tmpHandle{runtime};
   // Used to find the object in the prototype chain that has index as property.
   MutableHandle<JSObject> propObj{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   auto marker = gcScope.createMarker();
   ComputedPropertyDescriptor desc;
 
@@ -671,10 +672,15 @@ arrayPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
           // may exist anywhere in the prototype chain.
           kHandle = HermesValue::encodeDoubleValue(k);
           JSObject::getComputedPrimitiveDescriptor(
-              objHandle, runtime, kHandle, propObj, desc);
+              objHandle, runtime, kHandle, propObj, tmpPropNameStorage, desc);
           CallResult<PseudoHandle<>> propRes =
               JSObject::getComputedPropertyValue_RJS(
-                  objHandle, runtime, propObj, desc, kHandle);
+                  objHandle,
+                  runtime,
+                  propObj,
+                  tmpPropNameStorage,
+                  desc,
+                  kHandle);
           if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
             return ExecutionStatus::EXCEPTION;
           }
@@ -956,6 +962,10 @@ class StandardSortModel : public SortModel {
   /// Object to sort elements [0, length).
   Handle<JSObject> obj_;
 
+  /// Temporary handles for property name.
+  MutableHandle<SymbolID> aTmpNameStorage_;
+  MutableHandle<SymbolID> bTmpNameStorage_;
+
   /// Preallocate handles in the current GCScope so that we don't have to make
   /// new handles in every method call.
 
@@ -984,6 +994,8 @@ class StandardSortModel : public SortModel {
         gcScope_(runtime),
         compareFn_(compareFn),
         obj_(obj),
+        aTmpNameStorage_(runtime),
+        bTmpNameStorage_(runtime),
         aHandle_(runtime),
         bHandle_(runtime),
         aValue_(runtime),
@@ -1002,16 +1014,21 @@ class StandardSortModel : public SortModel {
 
     ComputedPropertyDescriptor aDesc;
     JSObject::getComputedPrimitiveDescriptor(
-        obj_, runtime_, aHandle_, aDescObjHandle_, aDesc);
+        obj_, runtime_, aHandle_, aDescObjHandle_, aTmpNameStorage_, aDesc);
 
     ComputedPropertyDescriptor bDesc;
     JSObject::getComputedPrimitiveDescriptor(
-        obj_, runtime_, bHandle_, bDescObjHandle_, bDesc);
+        obj_, runtime_, bHandle_, bDescObjHandle_, bTmpNameStorage_, bDesc);
 
     if (aDescObjHandle_) {
       if (LLVM_LIKELY(!aDesc.flags.proxyObject)) {
         auto res = JSObject::getComputedPropertyValue_RJS(
-            obj_, runtime_, aDescObjHandle_, aDesc, aDescObjHandle_);
+            obj_,
+            runtime_,
+            aDescObjHandle_,
+            aTmpNameStorage_,
+            aDesc,
+            aDescObjHandle_);
         if (res == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -1044,7 +1061,12 @@ class StandardSortModel : public SortModel {
     if (bDescObjHandle_) {
       if (LLVM_LIKELY(!bDesc.flags.proxyObject)) {
         auto res = JSObject::getComputedPropertyValue_RJS(
-            obj_, runtime_, bDescObjHandle_, bDesc, bDescObjHandle_);
+            obj_,
+            runtime_,
+            bDescObjHandle_,
+            bTmpNameStorage_,
+            bDesc,
+            bDescObjHandle_);
         if (res == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -1129,9 +1151,9 @@ class StandardSortModel : public SortModel {
 
     ComputedPropertyDescriptor aDesc;
     JSObject::getComputedPrimitiveDescriptor(
-        obj_, runtime_, aHandle_, aDescObjHandle_, aDesc);
+        obj_, runtime_, aHandle_, aDescObjHandle_, aTmpNameStorage_, aDesc);
     CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
-        obj_, runtime_, aDescObjHandle_, aDesc, aHandle_);
+        obj_, runtime_, aDescObjHandle_, aTmpNameStorage_, aDesc, aHandle_);
     if (propRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1144,10 +1166,14 @@ class StandardSortModel : public SortModel {
 
     ComputedPropertyDescriptor bDesc;
     JSObject::getComputedPrimitiveDescriptor(
-        obj_, runtime_, bHandle_, bDescObjHandle_, bDesc);
+        obj_, runtime_, bHandle_, bDescObjHandle_, bTmpNameStorage_, bDesc);
     if ((propRes = JSObject::getComputedPropertyValue_RJS(
-             obj_, runtime_, bDescObjHandle_, bDesc, bHandle_)) ==
-        ExecutionStatus::EXCEPTION) {
+             obj_,
+             runtime_,
+             bDescObjHandle_,
+             bTmpNameStorage_,
+             bDesc,
+             bHandle_)) == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
     if ((*propRes)->isEmpty()) {
@@ -1390,6 +1416,7 @@ arrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<> k{runtime, HermesValue::encodeDoubleValue(0)};
 
   MutableHandle<JSObject> descObjHandle{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
 
   // Loop through and execute the callback on all existing values.
   // TODO: Implement a fast path for actual arrays.
@@ -1399,9 +1426,9 @@ arrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
 
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
-        O, runtime, k, descObjHandle, desc);
+        O, runtime, k, descObjHandle, tmpPropNameStorage, desc);
     CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
-        O, runtime, descObjHandle, desc, k);
+        O, runtime, descObjHandle, tmpPropNameStorage, desc, k);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1456,6 +1483,7 @@ static CallResult<uint64_t> flattenIntoArray(
 
   // Temporary storage for sourceIndex and targetIndex.
   MutableHandle<> indexHandle{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   MutableHandle<JSObject> propObj{runtime};
   MutableHandle<> element{runtime};
   MutableHandle<> lenResHandle{runtime};
@@ -1472,15 +1500,19 @@ static CallResult<uint64_t> flattenIntoArray(
     indexHandle = HermesValue::encodeNumberValue(sourceIndex);
     if (LLVM_UNLIKELY(
             JSObject::getComputedDescriptor(
-                source, runtime, indexHandle, propObj, desc) ==
-            ExecutionStatus::EXCEPTION)) {
+                source,
+                runtime,
+                indexHandle,
+                propObj,
+                tmpPropNameStorage,
+                desc) == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     // c. If exists is true, then
     // i. Let element be ? Get(source, P).
     CallResult<PseudoHandle<>> elementRes =
         JSObject::getComputedPropertyValue_RJS(
-            source, runtime, propObj, desc, indexHandle);
+            source, runtime, propObj, tmpPropNameStorage, desc, indexHandle);
     if (LLVM_UNLIKELY(elementRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1767,6 +1799,7 @@ arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   uint32_t n = 0;
 
   MutableHandle<JSObject> descObjHandle{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   MutableHandle<> kValue{runtime};
   auto marker = gcScope.createMarker();
 
@@ -1775,9 +1808,9 @@ arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   while (k->getNumber() < fin) {
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
-        O, runtime, k, descObjHandle, desc);
+        O, runtime, k, descObjHandle, tmpPropNameStorage, desc);
     CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
-        O, runtime, descObjHandle, desc, k);
+        O, runtime, descObjHandle, tmpPropNameStorage, desc, k);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1879,6 +1912,7 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<> to{runtime};
 
   // Value storage used for copying values.
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   MutableHandle<JSObject> fromDescObjHandle{runtime};
   MutableHandle<> fromValue{runtime};
 
@@ -1895,10 +1929,15 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
 
       ComputedPropertyDescriptor fromDesc;
       JSObject::getComputedPrimitiveDescriptor(
-          O, runtime, from, fromDescObjHandle, fromDesc);
+          O, runtime, from, fromDescObjHandle, tmpPropNameStorage, fromDesc);
       CallResult<PseudoHandle<>> propRes =
           JSObject::getComputedPropertyValue_RJS(
-              O, runtime, fromDescObjHandle, fromDesc, from);
+              O,
+              runtime,
+              fromDescObjHandle,
+              tmpPropNameStorage,
+              fromDesc,
+              from);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1943,10 +1982,15 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
       to = HermesValue::encodeDoubleValue(j + itemCount);
       ComputedPropertyDescriptor fromDesc;
       JSObject::getComputedPrimitiveDescriptor(
-          O, runtime, from, fromDescObjHandle, fromDesc);
+          O, runtime, from, fromDescObjHandle, tmpPropNameStorage, fromDesc);
       CallResult<PseudoHandle<>> propRes =
           JSObject::getComputedPropertyValue_RJS(
-              O, runtime, fromDescObjHandle, fromDesc, from);
+              O,
+              runtime,
+              fromDescObjHandle,
+              tmpPropNameStorage,
+              fromDesc,
+              from);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -2001,10 +2045,15 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
 
       ComputedPropertyDescriptor fromDesc;
       JSObject::getComputedPrimitiveDescriptor(
-          O, runtime, from, fromDescObjHandle, fromDesc);
+          O, runtime, from, fromDescObjHandle, tmpPropNameStorage, fromDesc);
       CallResult<PseudoHandle<>> propRes =
           JSObject::getComputedPropertyValue_RJS(
-              O, runtime, fromDescObjHandle, fromDesc, from);
+              O,
+              runtime,
+              fromDescObjHandle,
+              tmpPropNameStorage,
+              fromDesc,
+              from);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -2163,6 +2212,7 @@ arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<> fromHandle{runtime, HermesValue::encodeNumberValue(from)};
   MutableHandle<> toHandle{runtime, HermesValue::encodeNumberValue(to)};
 
+  MutableHandle<SymbolID> fromNameTmpStorage{runtime};
   MutableHandle<JSObject> fromObj{runtime};
   MutableHandle<> fromVal{runtime};
 
@@ -2177,13 +2227,17 @@ arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
     ComputedPropertyDescriptor fromDesc;
     if (LLVM_UNLIKELY(
             JSObject::getComputedDescriptor(
-                O, runtime, fromHandle, fromObj, fromDesc) ==
-            ExecutionStatus::EXCEPTION)) {
+                O,
+                runtime,
+                fromHandle,
+                fromObj,
+                fromNameTmpStorage,
+                fromDesc) == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     CallResult<PseudoHandle<>> fromValRes =
         JSObject::getComputedPropertyValue_RJS(
-            O, runtime, fromObj, fromDesc, fromHandle);
+            O, runtime, fromObj, fromNameTmpStorage, fromDesc, fromHandle);
     if (LLVM_UNLIKELY(fromValRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -2332,6 +2386,7 @@ arrayPrototypeShift(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<> from{runtime, HermesValue::encodeDoubleValue(1)};
   MutableHandle<> to{runtime};
 
+  MutableHandle<SymbolID> fromNameTmpStorage{runtime};
   MutableHandle<JSObject> fromDescObjHandle{runtime};
   MutableHandle<> fromVal{runtime};
 
@@ -2345,9 +2400,9 @@ arrayPrototypeShift(void *, Runtime *runtime, NativeArgs args) {
 
     ComputedPropertyDescriptor fromDesc;
     JSObject::getComputedPrimitiveDescriptor(
-        O, runtime, from, fromDescObjHandle, fromDesc);
+        O, runtime, from, fromDescObjHandle, fromNameTmpStorage, fromDesc);
     CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
-        O, runtime, fromDescObjHandle, fromDesc, from);
+        O, runtime, fromDescObjHandle, fromNameTmpStorage, fromDesc, from);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -2452,6 +2507,7 @@ indexOfHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
     }
   }
 
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   MutableHandle<JSObject> descObjHandle{runtime};
 
   // Search for the element.
@@ -2471,9 +2527,9 @@ indexOfHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
     }
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
-        O, runtime, k, descObjHandle, desc);
+        O, runtime, k, descObjHandle, tmpPropNameStorage, desc);
     CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
-        O, runtime, descObjHandle, desc, k);
+        O, runtime, descObjHandle, tmpPropNameStorage, desc, k);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -2527,6 +2583,7 @@ arrayPrototypeUnshift(void *, Runtime *runtime, NativeArgs args) {
     MutableHandle<> to{runtime};
 
     // Value that is being copied.
+    MutableHandle<SymbolID> fromNameTmpStorage{runtime};
     MutableHandle<JSObject> fromDescObjHandle{runtime};
     MutableHandle<> fromValue{runtime};
 
@@ -2540,10 +2597,15 @@ arrayPrototypeUnshift(void *, Runtime *runtime, NativeArgs args) {
 
       ComputedPropertyDescriptor fromDesc;
       JSObject::getComputedPrimitiveDescriptor(
-          O, runtime, from, fromDescObjHandle, fromDesc);
+          O, runtime, from, fromDescObjHandle, fromNameTmpStorage, fromDesc);
       CallResult<PseudoHandle<>> propRes =
           JSObject::getComputedPropertyValue_RJS(
-              O, runtime, fromDescObjHandle, fromDesc, from);
+              O,
+              runtime,
+              fromDescObjHandle,
+              fromNameTmpStorage,
+              fromDesc,
+              from);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -2640,6 +2702,7 @@ everySomeHelper(Runtime *runtime, NativeArgs args, const bool every) {
   MutableHandle<> k{runtime, HermesValue::encodeDoubleValue(0)};
 
   // Value at index k;
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   MutableHandle<JSObject> descObjHandle{runtime};
   MutableHandle<> kValue{runtime};
 
@@ -2650,9 +2713,9 @@ everySomeHelper(Runtime *runtime, NativeArgs args, const bool every) {
 
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
-        O, runtime, k, descObjHandle, desc);
+        O, runtime, k, descObjHandle, tmpPropNameStorage, desc);
     CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
-        O, runtime, descObjHandle, desc, k);
+        O, runtime, descObjHandle, tmpPropNameStorage, desc, k);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -2740,6 +2803,7 @@ arrayPrototypeMap(void *, Runtime *runtime, NativeArgs args) {
   // Current index to execute callback on.
   MutableHandle<> k{runtime, HermesValue::encodeDoubleValue(0)};
 
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   MutableHandle<JSObject> descObjHandle{runtime};
 
   // Main loop to execute callback and store the results in A.
@@ -2750,9 +2814,9 @@ arrayPrototypeMap(void *, Runtime *runtime, NativeArgs args) {
 
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
-        O, runtime, k, descObjHandle, desc);
+        O, runtime, k, descObjHandle, tmpPropNameStorage, desc);
     CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
-        O, runtime, descObjHandle, desc, k);
+        O, runtime, descObjHandle, tmpPropNameStorage, desc, k);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -2820,6 +2884,7 @@ arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
   uint32_t to = 0;
 
   // Value at index k.
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   MutableHandle<JSObject> descObjHandle{runtime};
   MutableHandle<> kValue{runtime};
 
@@ -2829,9 +2894,9 @@ arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
 
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
-        O, runtime, k, descObjHandle, desc);
+        O, runtime, k, descObjHandle, tmpPropNameStorage, desc);
     CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
-        O, runtime, descObjHandle, desc, k);
+        O, runtime, descObjHandle, tmpPropNameStorage, desc, k);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -3029,6 +3094,7 @@ reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
   // Current index in the reduction iteration.
   MutableHandle<> k{
       runtime, HermesValue::encodeDoubleValue(reverse ? len - 1 : 0)};
+  MutableHandle<SymbolID> kNameTmpStorage{runtime};
   MutableHandle<JSObject> kDescObjHandle{runtime};
 
   MutableHandle<> accumulator{runtime};
@@ -3057,10 +3123,10 @@ reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
       }
       ComputedPropertyDescriptor kDesc;
       JSObject::getComputedPrimitiveDescriptor(
-          O, runtime, k, kDescObjHandle, kDesc);
+          O, runtime, k, kDescObjHandle, kNameTmpStorage, kDesc);
       CallResult<PseudoHandle<>> propRes =
           JSObject::getComputedPropertyValue_RJS(
-              O, runtime, kDescObjHandle, kDesc, k);
+              O, runtime, kDescObjHandle, kNameTmpStorage, kDesc, k);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -3091,9 +3157,9 @@ reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
 
     ComputedPropertyDescriptor kDesc;
     JSObject::getComputedPrimitiveDescriptor(
-        O, runtime, k, kDescObjHandle, kDesc);
+        O, runtime, k, kDescObjHandle, kNameTmpStorage, kDesc);
     CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
-        O, runtime, kDescObjHandle, kDesc, k);
+        O, runtime, kDescObjHandle, kNameTmpStorage, kDesc, k);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

@@ -268,6 +268,7 @@ CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
 
   MutableHandle<> nextKeyHandle{runtime};
   MutableHandle<> propValueHandle{runtime};
+  MutableHandle<SymbolID> tmpSymbolStorage{runtime};
   GCScopeMarkerRAII marker{runtime};
   // 6. For each element nextKey of keys in List order, do
   for (uint32_t nextKeyIdx = 0, endIdx = keys->getEndIndex();
@@ -297,6 +298,7 @@ CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
           runtime,
           nextKeyHandle,
           JSObject::IgnoreProxy::Yes,
+          tmpSymbolStorage,
           desc);
       if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
         return ExecutionStatus::EXCEPTION;
@@ -383,13 +385,19 @@ hermesBuiltinCopyDataProperties(void *, Runtime *runtime, NativeArgs args) {
 
   MutableHandle<> nameHandle{runtime};
   MutableHandle<> valueHandle{runtime};
+  MutableHandle<SymbolID> tmpSymbolStorage{runtime};
 
   // Process all named properties/symbols.
   bool success = JSObject::forEachOwnPropertyWhile(
       source,
       runtime,
       // indexedCB.
-      [&source, &target, &excludedItems, &nameHandle, &valueHandle](
+      [&source,
+       &target,
+       &excludedItems,
+       &nameHandle,
+       &valueHandle,
+       &tmpSymbolStorage](
           Runtime *runtime, uint32_t index, ComputedPropertyDescriptor desc) {
         if (!desc.flags.enumerable)
           return true;
@@ -406,6 +414,7 @@ hermesBuiltinCopyDataProperties(void *, Runtime *runtime, NativeArgs args) {
               runtime,
               nameHandle,
               JSObject::IgnoreProxy::Yes,
+              tmpSymbolStorage,
               xdesc);
           if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
             return false;

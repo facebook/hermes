@@ -345,7 +345,7 @@ CallResult<HermesValue> slowPathNegate(
 /// \param iterReg the iterating index, it will be incremented by 1 every time
 ///         GetNextPName is called.
 /// \param sizeReg the size of property list.
-HermesValue externGetNextPName(
+CallResult<HermesValue> externGetNextPName(
     Runtime *runtime,
     PinnedHermesValue *arrReg,
     PinnedHermesValue *objReg,

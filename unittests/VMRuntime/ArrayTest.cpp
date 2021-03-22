@@ -32,31 +32,40 @@ TEST_F(ArrayTest, CppAPITest) {
 
   // Call haveOwnIndexed() and getOwnIndexed() on a element not in the array.
   ComputedPropertyDescriptor desc;
+  MutableHandle<SymbolID> tmpSymbolStorage{runtime};
   ASSERT_FALSE(*array->getOwnComputedPrimitiveDescriptor(
       array,
       runtime,
       runtime->makeHandle(100.0_hd),
       JSObject::IgnoreProxy::No,
+      tmpSymbolStorage,
       desc));
   EXPECT_CALLRESULT_UNDEFINED(
       array->getComputed_RJS(array, runtime, runtime->makeHandle(100.0_hd)));
 
 // Obtain the value a couple of different ways and check its value.
-#define EXPECT_INDEX_VALUE(value, array, index)                            \
-  EXPECT_EQ(value, array->at(runtime, index));                             \
-  ASSERT_TRUE(*array->getOwnComputedDescriptor(                            \
-      array,                                                               \
-      runtime,                                                             \
-      runtime->makeHandle(HermesValue::encodeDoubleValue(index)),          \
-      desc));                                                              \
-  EXPECT_CALLRESULT_VALUE(                                                 \
-      value,                                                               \
-      JSArray::getComputedPropertyValue_RJS(array, runtime, array, desc)); \
-  EXPECT_CALLRESULT_VALUE(                                                 \
-      value,                                                               \
-      array->getComputed_RJS(                                              \
-          array,                                                           \
-          runtime,                                                         \
+#define EXPECT_INDEX_VALUE(value, array, index)                         \
+  EXPECT_EQ(value, array->at(runtime, index));                          \
+  ASSERT_TRUE(*array->getOwnComputedDescriptor(                         \
+      array,                                                            \
+      runtime,                                                          \
+      runtime->makeHandle(HermesValue::encodeDoubleValue(index)),       \
+      tmpSymbolStorage,                                                 \
+      desc));                                                           \
+  EXPECT_CALLRESULT_VALUE(                                              \
+      value,                                                            \
+      JSArray::getComputedPropertyValue_RJS(                            \
+          array,                                                        \
+          runtime,                                                      \
+          array,                                                        \
+          tmpSymbolStorage,                                             \
+          desc,                                                         \
+          runtime->makeHandle(HermesValue::encodeDoubleValue(index)))); \
+  EXPECT_CALLRESULT_VALUE(                                              \
+      value,                                                            \
+      array->getComputed_RJS(                                           \
+          array,                                                        \
+          runtime,                                                      \
           runtime->makeHandle(HermesValue::encodeDoubleValue(index))));
 
   // array[100] = 50. This will case a reallocation.
@@ -106,6 +115,7 @@ TEST_F(ArrayTest, CppAPITest) {
       runtime,
       runtime->makeHandle(106.0_hd),
       JSObject::IgnoreProxy::No,
+      tmpSymbolStorage,
       desc));
   EXPECT_CALLRESULT_UNDEFINED(
       array->getComputed_RJS(array, runtime, runtime->makeHandle(106.0_hd)));
@@ -121,6 +131,7 @@ TEST_F(ArrayTest, CppAPITest) {
       runtime,
       runtime->makeHandle(106.0_hd),
       JSObject::IgnoreProxy::No,
+      tmpSymbolStorage,
       desc));
   EXPECT_CALLRESULT_UNDEFINED(
       array->getComputed_RJS(array, runtime, runtime->makeHandle(106.0_hd)));
