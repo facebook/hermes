@@ -613,9 +613,10 @@ memoryBufferFromZipFile(zip_t *zip, const char *path, bool silent = false) {
   int result = 0;
 
   result = zip_entry_open(zip, path);
-  if (result == -1) {
+  if (result < 0) {
     if (!silent) {
-      llvh::errs() << "Zip error reading " << path << ": File does not exist\n";
+      llvh::errs() << "Zip error: reading " << path << ": "
+                   << zip_strerror(result) << "\n";
     }
     return nullptr;
   }
