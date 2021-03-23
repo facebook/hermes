@@ -2072,55 +2072,22 @@ bool HadesGC::isMostRecentFinalizableObj(const GCCell *cell) const {
 
 #endif
 
-template <bool fixedSize, HasFinalizer hasFinalizer>
-void *HadesGC::allocWork(uint32_t sz) {
-  assert(
-      isSizeHeapAligned(sz) &&
-      "Should be aligned before entering this function");
-  assert(sz >= minAllocationSize() && "Allocating too small of an object");
-  if (kConcurrentGC) {
-    HERMES_SLOW_ASSERT(
-        !weakRefMutex() &&
-        "WeakRef mutex should not be held when alloc is called");
-  }
-  if (shouldSanitizeHandles()) {
-    // The best way to sanitize uses of raw pointers outside handles is to force
-    // the entire heap to move, and ASAN poison the old heap. That is too
-    // expensive to do, even with sampling, for Hades. It also doesn't test the
-    // more interesting aspect of Hades which is concurrent background
-    // collections. So instead, do a youngGenCollection which force-starts an
-    // oldGenCollection if one is not already running.
-    youngGenCollection(
-        kHandleSanCauseForAnalytics, /*forceOldGenCollection*/ true);
-  }
-  AllocResult res = youngGen().bumpAlloc(sz);
-  if (LLVM_UNLIKELY(!res.success)) {
-    // Failed to alloc in young gen, do a young gen collection.
-    youngGenCollection(
-        kNaturalCauseForAnalytics, /*forceOldGenCollection*/ false);
-    res = youngGen().bumpAlloc(sz);
-    if (LLVM_UNLIKELY(!res.success)) {
-      // A YG collection is guaranteed to fully evacuate, leaving all the space
-      // available, so the only way this could fail is if sz is greater than
-      // a segment size.
-      // This would be an error in VM code to ever allow such a size to be
-      // allocated, and thus there's an assert at the top of this function to
-      // disallow that. This case is for production, if we miss a test case.
-      oom(make_error_code(OOMError::SuperSegmentAlloc));
-    }
-  }
-  if (hasFinalizer == HasFinalizer::Yes) {
-    youngGenFinalizables_.emplace_back(static_cast<GCCell *>(res.ptr));
-  }
-  return res.ptr;
-}
+void *HadesGC::allocSlow(uint32_t sz) {
+  // Failed to alloc in young gen, do a young gen collection.
+  youngGenCollection(
+      kNaturalCauseForAnalytics, /*forceOldGenCollection*/ false);
+  auto res = youngGen().bumpAlloc(sz);
+  if (res.success)
+    return res.ptr;
 
-// Instaniate all versions of allocWork up-front so that this function doesn't
-// need to be inlined.
-template void *HadesGC::allocWork<true, HasFinalizer::Yes>(uint32_t);
-template void *HadesGC::allocWork<false, HasFinalizer::Yes>(uint32_t);
-template void *HadesGC::allocWork<true, HasFinalizer::No>(uint32_t);
-template void *HadesGC::allocWork<false, HasFinalizer::No>(uint32_t);
+  // A YG collection is guaranteed to fully evacuate, leaving all the space
+  // available, so the only way this could fail is if sz is greater than
+  // a segment size.
+  // This would be an error in VM code to ever allow such a size to be
+  // allocated, and thus there's an assert at the top of this function to
+  // disallow that. This case is for production, if we miss a test case.
+  oom(make_error_code(OOMError::SuperSegmentAlloc));
+}
 
 void *HadesGC::allocLongLived(uint32_t sz) {
   assert(

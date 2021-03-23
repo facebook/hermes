@@ -737,7 +737,10 @@ class HadesGC final : public GCBase {
   /// \tparam hasFinalizer If true, the cell about to be allocated into the
   ///   requested space will have a finalizer that the GC will need to invoke.
   template <bool fixedSize, HasFinalizer hasFinalizer>
-  void *allocWork(uint32_t sz);
+  inline void *allocWork(uint32_t sz);
+
+  /// Slow path for allocations.
+  void *allocSlow(uint32_t sz);
 
   /// Like alloc, but the resulting object is expected to be long-lived.
   /// Allocate directly in the old generation (doing a full collection if
@@ -943,6 +946,34 @@ inline T *HadesGC::makeA(uint32_t size, Args &&...args) {
 
   return new (allocWork<fixedSize, hasFinalizer>(size))
       T(std::forward<Args>(args)...);
+}
+
+template <bool fixedSize, HasFinalizer hasFinalizer>
+void *HadesGC::allocWork(uint32_t sz) {
+  assert(
+      isSizeHeapAligned(sz) &&
+      "Should be aligned before entering this function");
+  assert(sz >= minAllocationSize() && "Allocating too small of an object");
+  if (kConcurrentGC) {
+    HERMES_SLOW_ASSERT(
+        !weakRefMutex() &&
+        "WeakRef mutex should not be held when alloc is called");
+  }
+  if (shouldSanitizeHandles()) {
+    // The best way to sanitize uses of raw pointers outside handles is to force
+    // the entire heap to move, and ASAN poison the old heap. That is too
+    // expensive to do, even with sampling, for Hades. It also doesn't test the
+    // more interesting aspect of Hades which is concurrent background
+    // collections. So instead, do a youngGenCollection which force-starts an
+    // oldGenCollection if one is not already running.
+    youngGenCollection(
+        kHandleSanCauseForAnalytics, /*forceOldGenCollection*/ true);
+  }
+  AllocResult res = youngGen().bumpAlloc(sz);
+  void *resPtr = LLVM_UNLIKELY(!res.success) ? allocSlow(sz) : res.ptr;
+  if (hasFinalizer == HasFinalizer::Yes)
+    youngGenFinalizables_.emplace_back(static_cast<GCCell *>(resPtr));
+  return resPtr;
 }
 
 /// \}
