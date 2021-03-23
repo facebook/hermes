@@ -661,11 +661,13 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
       // corresponding card.
       HeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(heapLoc);
     }
-    assert(cell->isValid() && "Encountered an invalid cell");
     if (HeapSegment::getCellMarkBit(cell)) {
       // Points to an already marked object, do nothing.
       return;
     }
+    // This must be done after checking the cell mark bit, to avoid reading the
+    // metadata of cells in the YG, which we do not have the lock for.
+    assert(cell->isValid() && "Encountered an invalid cell");
     push(cell);
   }
 
