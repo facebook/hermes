@@ -29,6 +29,13 @@ static const char *kGCName =
 
 static const char *kCompacteeNameForCrashMgr = "COMPACT";
 
+// Since YG collection times are the primary driver of pause times, it is useful
+// to have a knob to reduce the effective size of the YG. This can be any value
+// smaller than the segment size.
+// Note that we only set this at the end of the first real YG, since doing it
+// for direct promotions would waste OG memory without a pause time benefit.
+static constexpr size_t kYGSegmentSize = HadesGC::HeapSegment::maxSize() / 2;
+
 // A free list cell is always variable-sized.
 const VTable HadesGC::OldGen::FreelistCell::vt{
     CellKind::FreelistKind,
@@ -2075,10 +2082,18 @@ bool HadesGC::isMostRecentFinalizableObj(const GCCell *cell) const {
 #endif
 
 void *HadesGC::allocSlow(uint32_t sz) {
+  AllocResult res;
   // Failed to alloc in young gen, do a young gen collection.
   youngGenCollection(
       kNaturalCauseForAnalytics, /*forceOldGenCollection*/ false);
-  auto res = youngGen().bumpAlloc(sz);
+  res = youngGen().bumpAlloc(sz);
+  if (res.success)
+    return res.ptr;
+
+  // Still fails after YG collection, perhaps it is a large alloc, try growing
+  // the YG to full size.
+  youngGen().clearExternalMemoryCharge();
+  res = youngGen().bumpAlloc(sz);
   if (res.success)
     return res.ptr;
 
@@ -2399,9 +2414,15 @@ void HadesGC::youngGenCollection(
     // Move external memory accounting from YG to OG as well.
     transferExternalMemoryToOldGen();
 
+    // transferExternalMemoryToOldGen resets the effectiveEnd to be the end.
+    // Move the effectiveEnd back to represent the YG size. This also handles
+    // the case where we had to create a large alloc in the YG and increased the
+    // effectiveEnd. In the future, we could also use this line to dynamically
+    // size the YG based on pause times.
+    youngGen().setEffectiveEnd(youngGen().start() + kYGSegmentSize);
+
     // We have to set these after the collection, in case a compaction took
-    // place
-    // and updated these metrics.
+    // place and updated these metrics.
     ygCollectionStats_->setBeforeSizes(
         heapBytes.before, externalBytes.before, heapFootprint());
 
