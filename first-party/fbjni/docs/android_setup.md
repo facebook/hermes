@@ -13,7 +13,7 @@ repositories {
 
 android {
   dependencies {
-    implementation 'com.facebook.fbjni:fbjni:0.2.1'
+    implementation 'com.facebook.fbjni:fbjni:0.2.2'
   }
 }
 ```
