@@ -22,8 +22,11 @@ afterEvaluate { project ->
         }
     }
 
-    def gradlePublishing = extensions.getByType(PublishingExtension.class)
-    gradlePublishing.publications.create("headers", MavenPublication.class) {
-      artifact(headersJar)
+    publishing {
+        publications {
+            withType(MavenPublication).configureEach {
+                artifact(headersJar)
+            }
+        }
     }
 }
