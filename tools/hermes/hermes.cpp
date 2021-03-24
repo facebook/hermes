@@ -191,8 +191,8 @@ static vm::RuntimeConfig getReplRuntimeConfig() {
       .withES6Proxy(cl::ES6Proxy)
       .withES6Symbol(cl::ES6Symbol)
       .withES6Intl(cl::ES6Intl)
-      .withEnableHermesInternal(true)
-      .withEnableHermesInternalTestMethods(true)
+      .withEnableHermesInternal(cl::EnableHermesInternal)
+      .withEnableHermesInternalTestMethods(cl::EnableHermesInternalTestMethods)
       .withAllowFunctionToStringWithRuntimeSource(cl::AllowFunctionToString)
       .build();
 }
