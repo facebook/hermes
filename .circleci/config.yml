@@ -12,6 +12,7 @@ version: 2.1
 
 orbs:
   win: circleci/windows@2.4.0
+  android: circleci/android@1.0.3
 
 workflows:
   version: 2
@@ -56,8 +57,10 @@ apple_defaults: &apple_defaults
 
 jobs:
   android:
-    docker:
-      - image: circleci/android:api-28-ndk
+    executor:
+      name: android/android
+      sdk-version: '28'
+      variant: ndk
     environment:
       - HERMES_WS_DIR: /tmp/hermes
       - TERM: dumb
@@ -67,7 +70,6 @@ jobs:
       - run:
           name: Set up workspace and install dependencies
           command: |
-            yes | sdkmanager "ndk-bundle"  &
             yes | sdkmanager "cmake;3.6.4111459" &
             mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
             ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
