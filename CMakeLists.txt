@@ -214,12 +214,6 @@ set(HERMESVM_EXCEPTION_ON_OOM OFF CACHE BOOL
 set(HERMESVM_PLATFORM_LOGGING OFF CACHE BOOL
     "hermesLog(...) is enabled, using the platform's logging mechanism")
 
-set(HERMESVM_JIT OFF CACHE BOOL
-  "Enable the JIT")
-
-set(HERMESVM_JIT_DISASSEMBLER OFF CACHE BOOL
-  "Enable the JIT disassembler")
-
 set(HERMES_USE_FLOWPARSER OFF CACHE BOOL
   "Use libflowparser for parsing es6")
 
@@ -397,12 +391,6 @@ if(HERMESVM_EXCEPTION_ON_OOM)
 endif()
 if(HERMESVM_PLATFORM_LOGGING)
     add_definitions(-DHERMESVM_PLATFORM_LOGGING)
-endif()
-if(HERMESVM_JIT)
-  add_definitions(-DHERMESVM_JIT)
-endif()
-if(HERMESVM_JIT_DISASSEMBLER)
-  add_definitions(-DHERMESVM_JIT_DISASSEMBLER)
 endif()
 if (NOT (ANDROID_LINUX_PERF_PATH STREQUAL ""))
   add_definitions(-DANDROID_LINUX_PERF_PATH="${ANDROID_LINUX_PERF_PATH}")
@@ -693,8 +681,6 @@ if(HERMES_ENABLE_TEST_SUITE)
     unittests_dir=${HERMES_BINARY_DIR}/unittests
     debugger_enabled=${HERMES_ENABLE_DEBUGGER}
     use_flowparser=${HERMES_USE_FLOWPARSER}
-    jit_enabled=${HERMESVM_JIT}
-    jit_disassembler_enabled=${HERMESVM_JIT_DISASSEMBLER}
     hbc_deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
     dependency_extractor=${HERMES_TOOLS_OUTPUT_DIR}/dependency-extractor
     FileCheck=${HERMES_TOOLS_OUTPUT_DIR}//FileCheck

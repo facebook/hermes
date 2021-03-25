@@ -93,7 +93,3 @@ target_link_libraries(HermesVMRuntimeTests
 hermes_link_icu(HermesVMRuntimeTests)
 
 add_subdirectory(Instrumentation)
-
-if(HERMESVM_JIT)
-  add_subdirectory(JIT)
-endif()

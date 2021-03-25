@@ -1291,11 +1291,7 @@ CallResult<PseudoHandle<>> JSFunction::_callImpl(
     Runtime *runtime) {
   auto *self = vmcast<JSFunction>(selfHandle.get());
   CallResult<HermesValue> result{ExecutionStatus::EXCEPTION};
-  if (auto *jitPtr = self->getCodeBlock()->getJITCompiled()) {
-    result = (*jitPtr)(runtime);
-  } else {
-    result = runtime->interpretFunction(self->getCodeBlock());
-  }
+  result = runtime->interpretFunction(self->getCodeBlock());
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

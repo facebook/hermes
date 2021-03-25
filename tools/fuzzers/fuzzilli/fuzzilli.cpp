@@ -182,7 +182,6 @@ int main(int argc, char **argv) {
                                          .withES6Symbol(true)
                                          .withEnableGenerator(true)
                                          .withEnableHermesInternal(true)
-                                         .withEnableJIT(true)
                                          .build());
     auto crashFunctionName = "FuzzilliCrash";
     auto crashFunctionProp =

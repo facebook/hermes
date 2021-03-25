@@ -27,7 +27,6 @@
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/InterpreterState.h"
-#include "hermes/VM/JIT/JIT.h"
 #include "hermes/VM/PointerBase.h"
 #include "hermes/VM/Predefined.h"
 #include "hermes/VM/Profiler.h"
@@ -544,10 +543,6 @@ class Runtime : public HandleRootOwner,
   /// Return the global object.
   Handle<JSObject> getGlobal();
 
-  /// Return the JIT context.
-  JITContext &getJITContext() {
-    return jitContext_;
-  }
   /// Returns trailing data for all runtime modules.
   std::vector<llvh::ArrayRef<uint8_t>> getEpilogues();
 
@@ -1090,9 +1085,6 @@ class Runtime : public HandleRootOwner,
   std::vector<std::function<void(HeapSnapshot &)>> customSnapshotNodeFuncs_;
   std::vector<std::function<void(HeapSnapshot &)>> customSnapshotEdgeFuncs_;
 
-  /// All state related to JIT compilation.
-  JITContext jitContext_;
-
   /// Set to true if we should enable ES6 Promise.
   const bool hasES6Promise_;
 
@@ -1128,7 +1120,6 @@ class Runtime : public HandleRootOwner,
   friend class RuntimeModule;
   friend class MarkRootsPhaseTimer;
   friend struct RuntimeOffsets;
-  friend class JITContext;
   friend class ScopedNativeDepthReducer;
   friend class ScopedNativeDepthTracker;
   friend class ScopedNativeCallFrame;

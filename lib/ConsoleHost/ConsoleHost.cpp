@@ -404,8 +404,6 @@ bool executeHBCBytecodeImpl(
 #else
   auto runtime = vm::Runtime::create(options.runtimeConfig);
 #endif
-  runtime->getJITContext().setDumpJITCode(options.dumpJITCode);
-  runtime->getJITContext().setCrashOnError(options.jitCrashOnError);
   if (options.stabilizeInstructionCount) {
     // Try to limit features that can introduce unpredictable CPU instruction
     // behavior. Date is a potential cause, but is not handled currently.

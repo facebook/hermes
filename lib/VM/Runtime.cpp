@@ -159,7 +159,6 @@ Runtime::Runtime(
           runtimeConfig.getCrashMgr(),
           std::move(provider),
           runtimeConfig.getVMExperimentFlags()),
-      jitContext_(runtimeConfig.getEnableJIT(), (1 << 20) * 16, (1 << 20) * 32),
       hasES6Promise_(runtimeConfig.getES6Promise()),
       hasES6Proxy_(runtimeConfig.getES6Proxy()),
       hasES6Symbol_(runtimeConfig.getES6Symbol()),
