@@ -270,7 +270,7 @@ numberPrototypeValueOf(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Number.prototype.valueOf() can only be used on Number");
   }
-  return JSNumber::getPrimitiveValue(numPtr, runtime);
+  return JSNumber::getPrimitiveValue(numPtr);
 }
 
 CallResult<HermesValue>
@@ -290,7 +290,7 @@ numberPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
       return runtime->raiseTypeError(
           "Number.prototype.toString() can only be used on Number");
     }
-    number = JSNumber::getPrimitiveValue(numPtr, runtime).getNumber();
+    number = JSNumber::getPrimitiveValue(numPtr).getNumber();
   }
 
   if (args.getArg(0).isUndefined())
@@ -342,7 +342,7 @@ numberPrototypeToLocaleString(void *ctx, Runtime *runtime, NativeArgs args) {
       return runtime->raiseTypeError(
           "Number.prototype.toLocaleString() can only be used on Number");
     }
-    number = JSNumber::getPrimitiveValue(numPtr, runtime).getNumber();
+    number = JSNumber::getPrimitiveValue(numPtr).getNumber();
   }
 
   // Call toString, as JSC does.
@@ -385,7 +385,7 @@ numberPrototypeToFixed(void *, Runtime *runtime, NativeArgs args) {
       return runtime->raiseTypeError(
           "Number.prototype.toFixed() can only be used on Number");
     }
-    x = JSNumber::getPrimitiveValue(numPtr.get(), runtime).getNumber();
+    x = JSNumber::getPrimitiveValue(numPtr.get()).getNumber();
   }
 
   if (std::isnan(x)) {
@@ -490,7 +490,7 @@ numberPrototypeToExponential(void *, Runtime *runtime, NativeArgs args) {
       return runtime->raiseTypeError(
           "Number.prototype.toExponential() can only be used on Number");
     }
-    x = JSNumber::getPrimitiveValue(numPtr.get(), runtime).getNumber();
+    x = JSNumber::getPrimitiveValue(numPtr.get()).getNumber();
   }
 
   auto res = toInteger(runtime, args.getArgHandle(0));
@@ -618,7 +618,7 @@ numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args) {
       return runtime->raiseTypeError(
           "Number.prototype.toPrecision() can only be used on Number");
     }
-    x = JSNumber::getPrimitiveValue(numPtr.get(), runtime).getNumber();
+    x = JSNumber::getPrimitiveValue(numPtr.get()).getNumber();
   }
 
   if (args.getArg(0).isUndefined()) {

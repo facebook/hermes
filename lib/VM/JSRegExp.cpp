@@ -99,12 +99,11 @@ Handle<JSRegExp> JSRegExp::create(
           numOverlapSlots<JSRegExp>() + ANONYMOUS_PROPERTY_SLOTS));
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
 
-  JSObject::setInternalProperty(
+  JSObject::setDirectSlotValue<patternPropIndex()>(
       *selfHandle,
-      runtime,
-      patternPropIndex(),
       HermesValue::encodeStringValue(
-          runtime->getPredefinedString(Predefined::emptyString)));
+          runtime->getPredefinedString(Predefined::emptyString)),
+      &runtime->getHeap());
 
   return selfHandle;
 }
@@ -113,8 +112,8 @@ void JSRegExp::initializeProperties(
     Handle<JSRegExp> selfHandle,
     Runtime *runtime,
     Handle<StringPrimitive> pattern) {
-  JSObject::setInternalProperty(
-      selfHandle.get(), runtime, patternPropIndex(), pattern.getHermesValue());
+  JSObject::setDirectSlotValue<patternPropIndex()>(
+      *selfHandle, pattern.getHermesValue(), &runtime->getHeap());
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.enumerable = 0;
@@ -213,8 +212,7 @@ PseudoHandle<StringPrimitive> JSRegExp::getPattern(
     JSRegExp *self,
     PointerBase *base) {
   return createPseudoHandle(
-      JSObject::getInternalProperty(self, base, patternPropIndex())
-          .getString());
+      JSObject::getDirectSlotValue<patternPropIndex()>(self).getString());
 }
 
 template <typename CharT, typename Traits>

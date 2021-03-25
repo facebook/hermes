@@ -512,9 +512,10 @@ class JSObject : public GCCell {
       JSObject *parent,
       PropOpFlags opFlags = PropOpFlags());
 
-  /// Return the value of an internal property slot.
+  /// Return the value of an internal property slot. Use getDirectSlotValue if
+  /// \p index is known to be in a direct property slot at compile time.
   static HermesValue
-  internalProperty(JSObject *self, PointerBase *base, SlotIndex index) {
+  getInternalProperty(JSObject *self, PointerBase *base, SlotIndex index) {
     assert(
         HiddenClass::debugIsPropertyDefined(
             self->clazz_.get(base),
@@ -522,11 +523,6 @@ class JSObject : public GCCell {
             InternalProperty::getSymbolID(index)) &&
         "internal slot must be reserved");
     return getNamedSlotValueUnsafe<PropStorage::Inline::Yes>(self, base, index);
-  }
-
-  static HermesValue
-  getInternalProperty(JSObject *self, PointerBase *base, SlotIndex index) {
-    return internalProperty(self, base, index);
   }
 
   static void setInternalProperty(

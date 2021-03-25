@@ -575,7 +575,7 @@ stringPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   auto *strPtr = dyn_vmcast<JSString>(args.getThisArg());
   if (strPtr) {
     // Only return the string if called on a String object.
-    return JSString::getPrimitiveValue(strPtr, runtime);
+    return JSString::getPrimitiveValue(strPtr);
   }
   return runtime->raiseTypeError(
       "String.prototype.toString() called on non-string object");

@@ -17,6 +17,11 @@ namespace vm {
 class JSDate final : public JSObject {
   using Super = JSObject;
 
+ protected:
+  static constexpr SlotIndex primitiveValuePropIndex() {
+    return numOverlapSlots<JSDate>() + ANONYMOUS_PROPERTY_SLOTS - 1;
+  }
+
  public:
   static const ObjectVTable vt;
 
@@ -38,19 +43,18 @@ class JSDate final : public JSObject {
   }
 
   /// \return the [[PrimitiveValue]] internal property.
-  static HermesValue getPrimitiveValue(JSObject *self, Runtime *runtime) {
-    return JSObject::getInternalProperty(
-        self, runtime, JSDate::primitiveValuePropIndex());
+  static HermesValue getPrimitiveValue(JSObject *self) {
+    return JSObject::getDirectSlotValue<JSDate::primitiveValuePropIndex()>(
+        self);
   }
 
   /// Set the [[PrimitiveValue]] internal property.
   static void
   setPrimitiveValue(JSObject *self, Runtime *runtime, HermesValue value) {
-    return JSObject::setInternalProperty(
-        self, runtime, JSDate::primitiveValuePropIndex(), value);
+    return JSObject::setDirectSlotValue<JSDate::primitiveValuePropIndex()>(
+        self, value, &runtime->getHeap());
   }
 
- public:
 #ifdef HERMESVM_SERIALIZE
   explicit JSDate(Deserializer &d);
 
@@ -59,11 +63,6 @@ class JSDate final : public JSObject {
 
   JSDate(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
       : JSObject(runtime, &vt.base, *parent, *clazz) {}
-
- protected:
-  static constexpr SlotIndex primitiveValuePropIndex() {
-    return numOverlapSlots<JSDate>() + ANONYMOUS_PROPERTY_SLOTS - 1;
-  }
 };
 
 } // namespace vm

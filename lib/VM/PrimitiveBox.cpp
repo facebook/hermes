@@ -64,11 +64,8 @@ CallResult<Handle<JSString>> JSString::create(
 
   auto selfHandle = JSObjectInit::initToHandle(runtime, obj);
 
-  JSObject::setInternalProperty(
-      *selfHandle,
-      runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
-      value.getHermesValue());
+  JSObject::setDirectSlotValue<PrimitiveBox::primitiveValuePropIndex()>(
+      *selfHandle, value.getHermesValue(), &runtime->getHeap());
 
   PropertyFlags pf;
   pf.writable = 0;
@@ -105,11 +102,8 @@ void JSString::setPrimitiveString(
       runtime,
       desc,
       HermesValue::encodeDoubleValue(string->getStringLength()));
-  return JSObject::setInternalProperty(
-      *selfHandle,
-      runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
-      string.getHermesValue());
+  return JSObject::setDirectSlotValue<PrimitiveBox::primitiveValuePropIndex()>(
+      *selfHandle, string.getHermesValue(), &runtime->getHeap());
 }
 
 bool JSString::_haveOwnIndexedImpl(
@@ -352,11 +346,8 @@ PseudoHandle<JSNumber> JSNumber::create(
   auto obj = runtime->makeAFixed<JSNumber>(runtime, parentHandle, clazzHandle);
   auto self = JSObjectInit::initToPseudoHandle(runtime, obj);
 
-  JSObject::setInternalProperty(
-      self.get(),
-      runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
-      HermesValue::encodeDoubleValue(value));
+  JSObject::setDirectSlotValue<PrimitiveBox::primitiveValuePropIndex()>(
+      self.get(), HermesValue::encodeDoubleValue(value), &runtime->getHeap());
 
   return self;
 }
@@ -403,11 +394,8 @@ JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
   auto obj = runtime->makeAFixed<JSBoolean>(runtime, parentHandle, clazzHandle);
   auto self = JSObjectInit::initToPseudoHandle(runtime, obj);
 
-  JSObject::setInternalProperty(
-      self.get(),
-      runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
-      *Runtime::getBoolValue(value));
+  JSObject::setDirectSlotValue<PrimitiveBox::primitiveValuePropIndex()>(
+      self.get(), *Runtime::getBoolValue(value), &runtime->getHeap());
   return self;
 }
 
@@ -454,11 +442,8 @@ PseudoHandle<JSSymbol> JSSymbol::create(
   auto *obj = runtime->makeAFixed<JSSymbol>(runtime, parentHandle, clazzHandle);
   auto self = JSObjectInit::initToPseudoHandle(runtime, obj);
 
-  JSObject::setInternalProperty(
-      self.get(),
-      runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
-      HermesValue::encodeSymbolValue(value));
+  JSObject::setDirectSlotValue<PrimitiveBox::primitiveValuePropIndex()>(
+      self.get(), HermesValue::encodeSymbolValue(value), &runtime->getHeap());
 
   return self;
 }
