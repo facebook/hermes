@@ -25,10 +25,6 @@ namespace vm {
 void ArrayImplBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<ArrayImpl>());
   ObjectBuildMeta(cell, mb);
-  const auto *self = static_cast<const ArrayImpl *>(cell);
-  // This edge has to be called "elements" in order for Chrome to attribute
-  // the size of the indexed storage as part of total usage of "JS Arrays".
-  mb.addField("elements", &self->indexedStorage_);
 }
 
 void ArrayImpl::_snapshotAddEdgesImpl(
@@ -41,6 +37,13 @@ void ArrayImpl::_snapshotAddEdgesImpl(
   if (!self->getIndexedStorage(gc->getPointerBase())) {
     return;
   }
+
+  // This edge has to be called "elements" in order for Chrome to attribute
+  // the size of the indexed storage as part of total usage of "JS Arrays".
+  snap.addNamedEdge(
+      HeapSnapshot::EdgeType::Internal,
+      "elements",
+      gc->getObjectID(self->getIndexedStorage(gc->getPointerBase())));
   auto *const indexedStorage = self->getIndexedStorage(gc->getPointerBase());
   const auto beginIndex = self->beginIndex_;
   const auto endIndex = self->endIndex_;
@@ -58,7 +61,6 @@ void ArrayImpl::_snapshotAddEdgesImpl(
 ArrayImpl::ArrayImpl(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
   beginIndex_ = d.readInt<uint32_t>();
   endIndex_ = d.readInt<uint32_t>();
-  d.readRelocation(&indexedStorage_, RelocationKind::GCPointer);
 }
 
 void serializeArrayImpl(
@@ -69,7 +71,6 @@ void serializeArrayImpl(
   JSObject::serializeObjectImpl(s, cell, overlapSlots);
   s.writeInt<uint32_t>(self->beginIndex_);
   s.writeInt<uint32_t>(self->endIndex_);
-  s.writeRelocation(self->getIndexedStorage(s.getRuntime()));
 }
 #endif
 
@@ -420,12 +421,11 @@ CallResult<Handle<Arguments>> Arguments::create(
       runtime->objectPrototypeRawPtr,
       numOverlapSlots<Arguments>() + ANONYMOUS_PROPERTY_SLOTS);
   auto obj = runtime->makeAFixed<Arguments>(
-      runtime,
-      Handle<JSObject>::vmcast(&runtime->objectPrototype),
-      clazz,
-      indexedStorage);
+      runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype), clazz);
   auto selfHandle = JSObjectInit::initToHandle(runtime, obj);
 
+  selfHandle->setIndexedStorage(
+      runtime, indexedStorage.get(), &runtime->getHeap());
   Arguments::setStorageEndIndex(selfHandle, runtime, length);
 
   PropertyFlags pf{};
@@ -595,11 +595,8 @@ CallResult<PseudoHandle<JSArray>> JSArray::create(
   auto self = JSObjectInit::initToPseudoHandle(
       runtime,
       runtime->makeAFixed<JSArray>(
-          runtime,
-          prototypeHandle,
-          classHandle,
-          indexedStorage,
-          GCPointerBase::NoBarriers()));
+          runtime, prototypeHandle, classHandle, GCPointerBase::NoBarriers()));
+  self->setIndexedStorage(runtime, *indexedStorage, &runtime->getHeap());
   putLength(self.get(), runtime, length);
 
   return self;

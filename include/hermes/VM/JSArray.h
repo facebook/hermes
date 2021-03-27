@@ -20,6 +20,10 @@ class ArrayImpl : public JSObject {
   using Super = JSObject;
   friend void ArrayImplBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
+  static constexpr size_t indexedStoragePropIndex() {
+    return numOverlapSlots<ArrayImpl>() + ANONYMOUS_PROPERTY_SLOTS - 1;
+  }
+
  public:
 #ifdef HERMESVM_SERIALIZE
   ArrayImpl(Deserializer &d, const VTable *vt);
@@ -27,6 +31,10 @@ class ArrayImpl : public JSObject {
   friend void
   serializeArrayImpl(Serializer &s, const GCCell *cell, unsigned overlapSlots);
 #endif
+
+  /// Add an anonymous property slot to hold the indexedStorage pointer.
+  static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS =
+      Super::ANONYMOUS_PROPERTY_SLOTS + 1;
 
   static bool classof(const GCCell *cell) {
     return kindInRange(
@@ -121,14 +129,16 @@ class ArrayImpl : public JSObject {
 
   /// Get a pointer to the indexed storage for this array. The returned value
   /// may be null if there is no indexed storage.
-  StorageType *getIndexedStorage(PointerBase *base) const {
-    return indexedStorage_.get(base);
+  StorageType *getIndexedStorage(PointerBase *) const {
+    return vmcast_or_null<StorageType>(
+        JSObject::getDirectSlotValue<indexedStoragePropIndex()>(this));
   }
 
   /// Set the indexed storage of this array to be \p p. The pointer is allowed
   /// to be null.
-  void setIndexedStorage(PointerBase *base, StorageType *p, GC *gc) {
-    indexedStorage_.set(base, p, gc);
+  void setIndexedStorage(PointerBase *, StorageType *p, GC *gc) {
+    JSObject::setDirectSlotValue<indexedStoragePropIndex()>(
+        this, HermesValue::encodeObjectValue(p), gc);
   }
 
   /// @}
@@ -149,14 +159,8 @@ class ArrayImpl : public JSObject {
       const VTable *vt,
       JSObject *parent,
       HiddenClass *clazz,
-      StorageType *indexedStorage,
       NeedsBarriers needsBarriers)
-      : JSObject(runtime, vt, parent, clazz, needsBarriers),
-        indexedStorage_(
-            runtime,
-            indexedStorage,
-            &runtime->getHeap(),
-            needsBarriers) {
+      : JSObject(runtime, vt, parent, clazz, needsBarriers) {
     flags_.indexedStorage = true;
     flags_.fastIndexProperties = true;
   }
@@ -166,15 +170,8 @@ class ArrayImpl : public JSObject {
       Runtime *runtime,
       const VTable *vt,
       JSObject *parent,
-      HiddenClass *clazz,
-      StorageType *indexedStorage)
-      : ArrayImpl(
-            runtime,
-            vt,
-            parent,
-            clazz,
-            indexedStorage,
-            GCPointerBase::YesBarriers()) {}
+      HiddenClass *clazz)
+      : ArrayImpl(runtime, vt, parent, clazz, GCPointerBase::YesBarriers()) {}
 
   /// Adds the special indexed element edges from this array to its backing
   /// storage.
@@ -243,9 +240,6 @@ class ArrayImpl : public JSObject {
   uint32_t beginIndex_{0};
   /// One past the last index contained in the storage.
   uint32_t endIndex_{0};
-  /// The indexed property storage. It can be nullptr, if both its capacity and
-  /// size are 0.
-  GCPointer<StorageType> indexedStorage_;
 };
 
 class Arguments final : public ArrayImpl {
@@ -279,9 +273,8 @@ class Arguments final : public ArrayImpl {
   Arguments(
       Runtime *runtime,
       Handle<JSObject> parent,
-      Handle<HiddenClass> clazz,
-      Handle<StorageType> indexedStorage)
-      : ArrayImpl(runtime, &vt.base, *parent, *clazz, *indexedStorage) {}
+      Handle<HiddenClass> clazz)
+      : ArrayImpl(runtime, &vt.base, *parent, *clazz) {}
 };
 
 class JSArray final : public ArrayImpl {
@@ -383,15 +376,8 @@ class JSArray final : public ArrayImpl {
       Runtime *runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
-      Handle<StorageType> indexedStorage,
       NeedsBarrier needsBarrier)
-      : ArrayImpl(
-            runtime,
-            &vt.base,
-            *parent,
-            *clazz,
-            *indexedStorage,
-            needsBarrier) {}
+      : ArrayImpl(runtime, &vt.base, *parent, *clazz, needsBarrier) {}
 
  private:
   /// A helper to update the named '.length' property.

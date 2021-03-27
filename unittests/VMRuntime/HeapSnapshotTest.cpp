@@ -1062,7 +1062,7 @@ TEST_F(HeapSnapshotRuntimeTest, ArrayElements) {
           "Array",
           arrayID,
           array->getAllocatedSize(),
-          10));
+          11));
   // The last edges are the element edges.
   EXPECT_EQ(
       nodeAndEdges.second[7],
@@ -1071,13 +1071,13 @@ TEST_F(HeapSnapshotRuntimeTest, ArrayElements) {
           (1 << 20) + 1000,
           runtime->getHeap().getObjectID(thirdElement.get())));
   EXPECT_EQ(
-      nodeAndEdges.second[8],
+      nodeAndEdges.second[9],
       Edge(
           HeapSnapshot::EdgeType::Element,
           10,
           runtime->getHeap().getObjectID(firstElement.get())));
   EXPECT_EQ(
-      nodeAndEdges.second[9],
+      nodeAndEdges.second[10],
       Edge(
           HeapSnapshot::EdgeType::Element,
           15,
