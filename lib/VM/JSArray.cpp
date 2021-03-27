@@ -411,12 +411,6 @@ CallResult<Handle<Arguments>> Arguments::create(
     size_type length,
     Handle<Callable> curFunction,
     bool strictMode) {
-  auto arrRes = StorageType::create(runtime, length);
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto indexedStorage = runtime->makeHandle<StorageType>(std::move(*arrRes));
-
   auto clazz = runtime->getHiddenClassForPrototype(
       runtime->objectPrototypeRawPtr,
       numOverlapSlots<Arguments>() + ANONYMOUS_PROPERTY_SLOTS);
@@ -424,8 +418,12 @@ CallResult<Handle<Arguments>> Arguments::create(
       runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype), clazz);
   auto selfHandle = JSObjectInit::initToHandle(runtime, obj);
 
-  selfHandle->setIndexedStorage(
-      runtime, indexedStorage.get(), &runtime->getHeap());
+  {
+    auto arrRes = StorageType::create(runtime, length);
+    if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    selfHandle->setIndexedStorage(runtime, arrRes->get(), &runtime->getHeap());
+  }
   Arguments::setStorageEndIndex(selfHandle, runtime, length);
 
   PropertyFlags pf{};
@@ -580,8 +578,13 @@ CallResult<PseudoHandle<JSArray>> JSArray::create(
       classHandle->getNumProperties() == jsArrayPropertyCount() &&
       "invalid number of properties in JSArray hidden class");
 
+  auto self = JSObjectInit::initToHandle(
+      runtime,
+      runtime->makeAFixed<JSArray>(
+          runtime, prototypeHandle, classHandle, GCPointerBase::NoBarriers()));
+
   // Only allocate the storage if capacity is not zero.
-  MutableHandle<StorageType> indexedStorage{runtime, nullptr};
+  StorageType *indexedStorage = nullptr;
   if (capacity) {
     if (LLVM_UNLIKELY(capacity > StorageType::maxElements()))
       return runtime->raiseRangeError("Out of memory for array elements");
@@ -589,17 +592,14 @@ CallResult<PseudoHandle<JSArray>> JSArray::create(
     if (arrRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    indexedStorage = std::move(*arrRes);
+    indexedStorage = arrRes->get();
   }
-
-  auto self = JSObjectInit::initToPseudoHandle(
-      runtime,
-      runtime->makeAFixed<JSArray>(
-          runtime, prototypeHandle, classHandle, GCPointerBase::NoBarriers()));
-  self->setIndexedStorage(runtime, *indexedStorage, &runtime->getHeap());
+  // Note that if there is no indexed storage, we still need to explicitly set
+  // this to null, because JSObjectInit defaults it to undefined.
+  self->setIndexedStorage(runtime, indexedStorage, &runtime->getHeap());
   putLength(self.get(), runtime, length);
 
-  return self;
+  return createPseudoHandle(self.get());
 }
 
 CallResult<PseudoHandle<JSArray>>
