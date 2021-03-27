@@ -58,7 +58,7 @@ hermesInternalGetEpilogues(void *, Runtime *runtime, NativeArgs args) {
   if (outerResult == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto outer = runtime->makeHandle(std::move(*outerResult));
+  auto outer = *outerResult;
   if (outer->setStorageEndIndex(outer, runtime, outerLen) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;

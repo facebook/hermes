@@ -149,12 +149,12 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
     return res->get();
   }
   // 7. Let argArray be CreateArrayFromList(argumentsList).
-  CallResult<PseudoHandle<JSArray>> argArrayRes = JSArray::create(
+  CallResult<Handle<JSArray>> argArrayRes = JSArray::create(
       runtime, callerFrame->getArgCount(), callerFrame->getArgCount());
   if (LLVM_UNLIKELY(argArrayRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> argArray = runtime->makeHandle(std::move(*argArrayRes));
+  Handle<JSArray> argArray = *argArrayRes;
   JSArray::setStorageEndIndex(argArray, runtime, callerFrame->getArgCount());
   for (uint32_t i = 0; i < callerFrame->getArgCount(); ++i) {
     JSArray::unsafeSetExistingElementAt(

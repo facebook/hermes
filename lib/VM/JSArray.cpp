@@ -564,7 +564,7 @@ Handle<HiddenClass> JSArray::createClass(
   return classHandle;
 }
 
-CallResult<PseudoHandle<JSArray>> JSArray::create(
+CallResult<Handle<JSArray>> JSArray::create(
     Runtime *runtime,
     Handle<JSObject> prototypeHandle,
     Handle<HiddenClass> classHandle,
@@ -599,10 +599,10 @@ CallResult<PseudoHandle<JSArray>> JSArray::create(
   self->setIndexedStorage(runtime, indexedStorage, &runtime->getHeap());
   putLength(self.get(), runtime, length);
 
-  return createPseudoHandle(self.get());
+  return self;
 }
 
-CallResult<PseudoHandle<JSArray>>
+CallResult<Handle<JSArray>>
 JSArray::create(Runtime *runtime, size_type capacity, size_type length) {
   return JSArray::create(
       runtime,
@@ -899,7 +899,7 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
       if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      Handle<JSArray> result = runtime->makeHandle(std::move(*resultRes));
+      Handle<JSArray> result = *resultRes;
       JSArray::setElementAt(result, runtime, 0, indexHandle);
       JSArray::setElementAt(result, runtime, 1, valueHandle);
       // 18. Return CreateIterResultObject(result, false).

@@ -650,7 +650,7 @@ CallResult<PseudoHandle<>> Interpreter::createArrayFromBuffer(
     return ExecutionStatus::EXCEPTION;
   }
   // Resize the array storage in advance.
-  auto arr = runtime->makeHandle(std::move(*arrRes));
+  auto arr = *arrRes;
   JSArray::setStorageEndIndex(arr, runtime, numElements);
 
   auto iter = curCodeBlock->getArrayBufferIter(bufferIndex, numLiterals);
@@ -2967,13 +2967,15 @@ tailCall:
         // Create a new array using the built-in constructor. Note that the
         // built-in constructor is empty, so we don't actually need to call
         // it.
-        CAPTURE_IP_ASSIGN(
-            auto createRes,
-            JSArray::create(runtime, ip->iNewArray.op2, ip->iNewArray.op2));
-        if (createRes == ExecutionStatus::EXCEPTION) {
-          goto exception;
+        {
+          CAPTURE_IP_ASSIGN(
+              auto createRes,
+              JSArray::create(runtime, ip->iNewArray.op2, ip->iNewArray.op2));
+          if (createRes == ExecutionStatus::EXCEPTION) {
+            goto exception;
+          }
+          O1REG(NewArray) = createRes->getHermesValue();
         }
-        O1REG(NewArray) = createRes->getHermesValue();
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(NewArray);
         DISPATCH;

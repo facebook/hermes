@@ -346,7 +346,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseArray() {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto array = runtime_->makeHandle(std::move(*arrRes));
+  auto array = *arrRes;
 
   if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -627,7 +627,7 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  propertyList_ = arrRes.getValue().get();
+  propertyList_ = arrRes->get();
 
   // Iterate through all indexes, in ascending order.
   GCScope gcScope{runtime_};

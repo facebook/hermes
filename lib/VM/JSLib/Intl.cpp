@@ -52,12 +52,12 @@ CallResult<HermesValue> localesToJS(
     return ExecutionStatus::EXCEPTION;
   }
 
-  CallResult<PseudoHandle<JSArray>> arrayRes =
+  CallResult<Handle<JSArray>> arrayRes =
       JSArray::create(runtime, result->size(), result->size());
   if (LLVM_UNLIKELY(arrayRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> array = runtime->makeHandle(std::move(*arrayRes));
+  Handle<JSArray> array = *arrayRes;
   MutableHandle<> name{runtime};
   uint64_t index = 0;
   for (auto &locale : *result) {
@@ -161,12 +161,12 @@ CallResult<HermesValue> partsToJS(
     return ExecutionStatus::EXCEPTION;
   }
 
-  CallResult<PseudoHandle<JSArray>> arrayRes =
+  CallResult<Handle<JSArray>> arrayRes =
       JSArray::create(runtime, result->size(), result->size());
   if (LLVM_UNLIKELY(arrayRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> array = runtime->makeHandle(std::move(*arrayRes));
+  Handle<JSArray> array = *arrayRes;
   uint64_t index = 0;
   for (auto &part : *result) {
     CallResult<Handle<JSObject>> partRes = partToJS(runtime, std::move(part));

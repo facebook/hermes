@@ -690,7 +690,7 @@ TEST_F(ObjectModelTest, NamedOrIndexed) {
 
   auto indexObjRes = JSArray::create(runtime, 10, 0);
   ASSERT_EQ(indexObjRes.getStatus(), ExecutionStatus::RETURNED);
-  auto indexObj = runtime->makeHandle(std::move(*indexObjRes));
+  auto indexObj = *indexObjRes;
 
   auto value1 = runtime->makeHandle(HermesValue::encodeDoubleValue(101));
   auto value2 = runtime->makeHandle(HermesValue::encodeDoubleValue(102));
@@ -784,7 +784,7 @@ TEST_F(ObjectModelTest, HasProperty) {
       runtime, createUTF16Ref(u"10"));
   auto indexID2Num = runtime->makeHandle(HermesValue::encodeNumberValue(10));
 
-  auto self = runtime->makeHandle(std::move(*JSArray::create(runtime, 0, 0)));
+  auto self = *JSArray::create(runtime, 0, 0);
 
   ASSERT_FALSE(*JSObject::hasComputed(self, runtime, nonIndexIDString));
   ASSERT_FALSE(*JSObject::hasComputed(self, runtime, indexIDNum));

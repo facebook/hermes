@@ -1191,7 +1191,7 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = runtime->makeHandle(std::move(*arrRes));
+  auto A = *arrRes;
   // e. Let n be 0.
   uint32_t n = 0;
 
@@ -1729,7 +1729,7 @@ regExpPrototypeSymbolSplit(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = runtime->makeHandle(std::move(*arrRes));
+  auto A = *arrRes;
   // 12. Let lengthA be 0.
   uint32_t lengthA = 0;
 

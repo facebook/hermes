@@ -1084,7 +1084,7 @@ typedArrayPrototypeMapFilter(void *ctx, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto values = runtime->makeHandle(std::move(*arrRes));
+  auto values = *arrRes;
   JSTypedArrayBase::size_type insert = 0;
   CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
   if (map) {
@@ -1175,7 +1175,7 @@ typedArrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strings = runtime->makeHandle(std::move(*arrRes));
+  auto strings = *arrRes;
 
   // Call toString on all the elements of the array.
   {
@@ -1497,7 +1497,7 @@ typedArrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strings = runtime->makeHandle(std::move(*arrRes));
+  auto strings = *arrRes;
 
   // Index into the array.
   MutableHandle<> storage(runtime);

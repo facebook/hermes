@@ -2313,7 +2313,7 @@ stringPrototypeSplit(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = runtime->makeHandle(std::move(*arrRes));
+  auto A = *arrRes;
   // 5. Let lengthA be 0.
   uint32_t lengthA = 0;
 

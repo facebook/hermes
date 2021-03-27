@@ -322,14 +322,14 @@ class JSArray final : public ArrayImpl {
   /// Create an instance of Array, with [[Prototype]] initialized with
   /// \p prototypeHandle, with capacity for \p capacity elements and actual size
   /// \p length.
-  static CallResult<PseudoHandle<JSArray>> create(
+  static CallResult<Handle<JSArray>> create(
       Runtime *runtime,
       Handle<JSObject> prototypeHandle,
       Handle<HiddenClass> classHandle,
       size_type capacity = 0,
       size_type length = 0);
 
-  static CallResult<PseudoHandle<JSArray>> create(
+  static CallResult<Handle<JSArray>> create(
       Runtime *runtime,
       Handle<JSObject> prototypeHandle,
       size_type capacity,
@@ -343,7 +343,7 @@ class JSArray final : public ArrayImpl {
         capacity,
         length);
   }
-  static CallResult<PseudoHandle<JSArray>> create(
+  static CallResult<Handle<JSArray>> create(
       Runtime *runtime,
       Handle<JSObject> prototypeHandle) {
     return create(runtime, prototypeHandle, 0, 0);
@@ -351,7 +351,7 @@ class JSArray final : public ArrayImpl {
 
   /// Create an instance of Array, using the standard array prototype, with
   /// capacity for \p capacity elements and actual size \p length.
-  static CallResult<PseudoHandle<JSArray>>
+  static CallResult<Handle<JSArray>>
   create(Runtime *runtime, size_type capacity, size_type length);
 
   /// A convenience method for setting the \c .length property of the array.
