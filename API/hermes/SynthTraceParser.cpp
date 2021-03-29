@@ -138,9 +138,6 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
   if (auto *proxy = rtConfig->get("ES6Proxy")) {
     conf.withES6Proxy(llvh::cast<JSONBoolean>(proxy)->getValue());
   }
-  if (auto *symbol = rtConfig->get("ES6Symbol")) {
-    conf.withES6Symbol(llvh::cast<JSONBoolean>(symbol)->getValue());
-  }
   if (auto *intl = rtConfig->get("Intl")) {
     conf.withIntl(llvh::cast<JSONBoolean>(intl)->getValue());
   }

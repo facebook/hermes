@@ -71,9 +71,6 @@ class Deserializer;
   /* Support for ES6 Proxy. */                                                 \
   F(constexpr, bool, ES6Proxy, true)                                           \
                                                                                \
-  /* Support for ES6 Symbol. */                                                \
-  F(constexpr, bool, ES6Symbol, true)                                          \
-                                                                               \
   /* Support for ECMA-402 Intl APIs. */                                        \
   F(constexpr, bool, Intl, true)                                               \
                                                                                \

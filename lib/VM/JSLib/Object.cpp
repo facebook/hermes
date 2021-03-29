@@ -153,15 +153,13 @@ Handle<JSObject> createObjectConstructor(Runtime *runtime) {
       ctx,
       objectGetOwnPropertyNames,
       1);
-  if (runtime->hasES6Symbol()) {
-    defineMethod(
-        runtime,
-        cons,
-        Predefined::getSymbolID(Predefined::getOwnPropertySymbols),
-        ctx,
-        objectGetOwnPropertySymbols,
-        1);
-  }
+  defineMethod(
+      runtime,
+      cons,
+      Predefined::getSymbolID(Predefined::getOwnPropertySymbols),
+      ctx,
+      objectGetOwnPropertySymbols,
+      1);
   defineMethod(
       runtime,
       cons,
