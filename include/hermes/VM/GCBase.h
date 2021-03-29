@@ -191,8 +191,7 @@ class WeakRefSlot {
 
   /// Return the object as a HermesValue.
   const HermesValue value() const {
-    assert(
-        (state() == Unmarked || state() == Marked) && "unclean GC mark state");
+    // Cannot check state() here because it can race with marking code.
     assert(hasValue() && "tried to access collected referent");
     return value_;
   }
@@ -207,13 +206,13 @@ class WeakRefSlot {
 
   /// Return the pointer to a GCCell, whether or not this slot is marked.
   void *getPointer() const {
-    assert(state() != Free && "use nextFree instead");
+    // Cannot check state() here because it can race with marking code.
     return value_.getPointer();
   }
 
   /// Update the stored pointer (because the object moved).
   void setPointer(void *newPtr) {
-    assert(state() != Free && "tried to update unallocated slot");
+    // Cannot check state() here because it can race with marking code.
     value_ = value_.updatePointer(newPtr);
   }
 
@@ -246,6 +245,8 @@ class WeakRefSlot {
   }
 
   WeakRefSlot *nextFree() const {
+    // nextFree is only called during a STW pause, so it's fine to access both
+    // state and value here.
     assert(state() == Free);
     return value_.getNativePointer<WeakRefSlot>();
   }
