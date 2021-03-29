@@ -178,7 +178,6 @@ int main(int argc, char **argv) {
   while (true) {
     auto runtime = makeHermesRuntime(::hermes::vm::RuntimeConfig::Builder()
                                          .withES6Proxy(true)
-                                         .withES6Intl(true)
                                          .withES6Symbol(true)
                                          .withEnableGenerator(true)
                                          .withEnableHermesInternal(true)
