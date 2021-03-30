@@ -122,7 +122,6 @@ int main(int argc, char **argv) {
                   .build())
           .withES6Promise(cl::ES6Promise)
           .withES6Proxy(cl::ES6Proxy)
-          .withES6Symbol(cl::ES6Symbol)
           .withIntl(cl::Intl)
           .withTrackIO(cl::TrackBytecodeIO)
           .withEnableHermesInternal(cl::EnableHermesInternal)

@@ -825,10 +825,6 @@ class Runtime : public HandleRootOwner,
     return hasES6Proxy_;
   }
 
-  bool hasES6Symbol() const {
-    return hasES6Symbol_;
-  }
-
   bool hasIntl() const {
     return hasIntl_;
   }
@@ -1090,9 +1086,6 @@ class Runtime : public HandleRootOwner,
 
   /// Set to true if we should enable ES6 Proxy.
   const bool hasES6Proxy_;
-
-  /// Set to true if we should enable ES6 Symbol.
-  const bool hasES6Symbol_;
 
   /// Set to true if we should enable ECMA-402 Intl APIs.
   const bool hasIntl_;

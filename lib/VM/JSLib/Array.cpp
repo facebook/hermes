@@ -285,15 +285,13 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       nullptr,
       arrayOf,
       0);
-  if (runtime->hasES6Symbol()) {
-    defineMethod(
-        runtime,
-        cons,
-        Predefined::getSymbolID(Predefined::from),
-        nullptr,
-        arrayFrom,
-        1);
-  }
+  defineMethod(
+      runtime,
+      cons,
+      Predefined::getSymbolID(Predefined::from),
+      nullptr,
+      arrayFrom,
+      1);
 
   return cons;
 }

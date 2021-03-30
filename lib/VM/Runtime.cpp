@@ -161,7 +161,6 @@ Runtime::Runtime(
           runtimeConfig.getVMExperimentFlags()),
       hasES6Promise_(runtimeConfig.getES6Promise()),
       hasES6Proxy_(runtimeConfig.getES6Proxy()),
-      hasES6Symbol_(runtimeConfig.getES6Symbol()),
       hasIntl_(runtimeConfig.getIntl()),
       shouldRandomizeMemoryLayout_(runtimeConfig.getRandomizeMemoryLayout()),
       bytecodeWarmupPercent_(runtimeConfig.getBytecodeWarmupPercent()),
@@ -2220,7 +2219,6 @@ void Runtime::populateHeaderRuntimeConfig(SerializeHeader &header) {
   header.enableEval = enableEval;
   header.hasES6Promise = hasES6Promise_;
   header.hasES6Proxy = hasES6Proxy_;
-  header.hasES6Symbol = hasES6Symbol_;
   header.hasIntl = hasIntl_;
   header.bytecodeWarmupPercent = bytecodeWarmupPercent_;
   header.trackIO = trackIO_;
@@ -2238,10 +2236,6 @@ void Runtime::checkHeaderRuntimeConfig(SerializeHeader &header) const {
   if (header.hasES6Proxy != hasES6Proxy_) {
     hermes_fatal(
         "serialize/deserialize Runtime Configs don't match (es6Proxy)");
-  }
-  if (header.hasES6Symbol != hasES6Symbol_) {
-    hermes_fatal(
-        "serialize/deserialize Runtime Configs don't match (es6Symbol)");
   }
   if (header.hasIntl != hasIntl_) {
     hermes_fatal("serialize/deserialize Runtime Configs don't match (intl)");

@@ -44,7 +44,6 @@ struct SerializeHeader {
   bool enableEval;
   bool hasES6Promise;
   bool hasES6Proxy;
-  bool hasES6Symbol;
   bool hasIntl;
   uint8_t bytecodeWarmupPercent;
   bool trackIO;

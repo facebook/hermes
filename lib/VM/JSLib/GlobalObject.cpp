@@ -614,9 +614,7 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
   createWeakSetConstructor(runtime);
 
   // Symbol constructor.
-  if (LLVM_UNLIKELY(runtime->hasES6Symbol())) {
-    createSymbolConstructor(runtime);
-  }
+  createSymbolConstructor(runtime);
 
   /// %IteratorPrototype%.
   populateIteratorPrototype(runtime);
