@@ -1121,6 +1121,17 @@ void GenGC::writeBarrier(const GCHermesValue *loc, HermesValue value) {
   countWriteBarrier(/*hv*/ true, kNumWriteBarrierOfObjectPtrIdx);
   writeBarrierImpl(loc, value.getPointer(), /*hv*/ true);
 }
+LLVM_ATTRIBUTE_NOINLINE
+void GenGC::writeBarrier(
+    const GCSmallHermesValue *loc,
+    SmallHermesValue value) {
+  countWriteBarrier(/*hv*/ true, kNumWriteBarrierTotalCountIdx);
+  if (!value.isPointer()) {
+    return;
+  }
+  countWriteBarrier(/*hv*/ true, kNumWriteBarrierOfObjectPtrIdx);
+  writeBarrierImpl(loc, value.getPointer(getPointerBase()), /*hv*/ true);
+}
 
 LLVM_ATTRIBUTE_NOINLINE
 void GenGC::writeBarrier(const GCPointerBase *loc, const GCCell *value) {
@@ -1138,6 +1149,21 @@ void GenGC::writeBarrierRange(const GCHermesValue *start, uint32_t numHVs) {
   // that the range to dirty is not in the young generation, but expect that in
   // most cases the cost of the check will be similar to the cost of dirtying
   // those addresses.
+  const char *firstPtr = reinterpret_cast<const char *>(start);
+  const char *lastPtr = reinterpret_cast<const char *>(start + numHVs) - 1;
+
+  assert(
+      AlignedStorage::start(firstPtr) == AlignedStorage::start(lastPtr) &&
+      "Range should be contained in the same segment");
+
+  GenGCHeapSegment::cardTableCovering(firstPtr)->dirtyCardsForAddressRange(
+      firstPtr, lastPtr);
+}
+
+void GenGC::writeBarrierRange(
+    const GCSmallHermesValue *start,
+    uint32_t numHVs) {
+  countRangeWriteBarrier();
   const char *firstPtr = reinterpret_cast<const char *>(start);
   const char *lastPtr = reinterpret_cast<const char *>(start + numHVs) - 1;
 

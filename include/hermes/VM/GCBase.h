@@ -28,6 +28,7 @@
 #include "hermes/VM/SerializeHeader.h"
 #include "hermes/VM/SlotAcceptor.h"
 #include "hermes/VM/SlotVisitor.h"
+#include "hermes/VM/SmallHermesValue.h"
 #include "hermes/VM/StackTracesTree-NoRuntime.h"
 #include "hermes/VM/StorageProvider.h"
 #include "hermes/VM/StringRefUtils.h"
@@ -1207,17 +1208,29 @@ class GCBase {
 
   /// Default implementations for read and write barriers: do nothing.
   void writeBarrier(const GCHermesValue *loc, HermesValue value);
+  void writeBarrier(const GCSmallHermesValue *loc, SmallHermesValue value);
   void writeBarrier(const GCPointerBase *loc, const GCCell *value);
   void writeBarrier(SymbolID symbol);
   void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value);
+  void constructorWriteBarrier(
+      const GCSmallHermesValue *loc,
+      SmallHermesValue value);
   void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
   void writeBarrierRange(const GCHermesValue *start, uint32_t numHVs);
+  void writeBarrierRange(const GCSmallHermesValue *start, uint32_t numHVs);
   void constructorWriteBarrierRange(
       const GCHermesValue *start,
       uint32_t numHVs);
+  void constructorWriteBarrierRange(
+      const GCSmallHermesValue *start,
+      uint32_t numHVs);
   void snapshotWriteBarrier(const GCHermesValue *loc);
+  void snapshotWriteBarrier(const GCSmallHermesValue *loc);
   void snapshotWriteBarrier(const GCPointerBase *loc);
   void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs);
+  void snapshotWriteBarrierRange(
+      const GCSmallHermesValue *start,
+      uint32_t numHVs);
   void weakRefReadBarrier(GCCell *value);
   void weakRefReadBarrier(HermesValue value);
 

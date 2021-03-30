@@ -139,6 +139,8 @@ static_assert(
     std::is_trivial<SmallHermesValue>::value,
     "SmallHermesValue must be trivial");
 
+using GCSmallHermesValue = GCHermesValueBase<SmallHermesValue>;
+
 } // end namespace vm
 } // end namespace hermes
 

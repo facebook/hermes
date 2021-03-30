@@ -40,7 +40,7 @@ template <typename HVType>
 template <typename NeedsBarriers>
 GCHermesValueBase<HVType>::GCHermesValueBase(HVType hv, GC *gc, std::nullptr_t)
     : HVType{hv} {
-  assert(!hv.isPointer() || !hv.getPointer());
+  assert(!hv.isPointer() || !hv.getPointer(gc->getPointerBase()));
   if (NeedsBarriers::value)
     gc->constructorWriteBarrier(this, hv);
 }
@@ -49,13 +49,14 @@ template <typename HVType>
 template <typename NeedsBarriers>
 inline void GCHermesValueBase<HVType>::set(HVType hv, GC *gc) {
   HERMES_SLOW_ASSERT(gc && "Need a GC parameter in case of a write barrier");
-  if (hv.isPointer() && hv.getPointer()) {
+  if (hv.isPointer() && hv.getPointer(gc->getPointerBase())) {
     HERMES_SLOW_ASSERT(
-        gc->validPointer(hv.getPointer()) &&
+        gc->validPointer(hv.getPointer(gc->getPointerBase())) &&
         "Setting an invalid pointer into a GCHermesValue");
     assert(
         NeedsBarriers::value ||
-        !gc->needsWriteBarrier(this, static_cast<GCCell *>(hv.getPointer())));
+        !gc->needsWriteBarrier(
+            this, static_cast<GCCell *>(hv.getPointer(gc->getPointerBase()))));
   }
   if (NeedsBarriers::value)
     gc->writeBarrier(this, hv);
@@ -65,7 +66,7 @@ inline void GCHermesValueBase<HVType>::set(HVType hv, GC *gc) {
 template <typename HVType>
 void GCHermesValueBase<HVType>::setNonPtr(HVType hv, GC *gc) {
   HERMES_SLOW_ASSERT(gc && "Need a GC parameter in case of a write barrier");
-  assert(!hv.isPointer() || !hv.getPointer());
+  assert(!hv.isPointer() || !hv.getPointer(gc->getPointerBase()));
   gc->snapshotWriteBarrier(this);
   HVType::setNoBarrier(hv);
 }

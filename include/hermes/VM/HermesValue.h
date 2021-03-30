@@ -377,6 +377,13 @@ class HermesValue {
     return safeSizeTrunc<uint64_t, void *>(raw_ & kDataMask);
   }
 
+#ifndef NDEBUG
+  /// Make asserts that call getPointer compatible with SmallHermesValue.
+  inline void *getPointer(void *) const {
+    return getPointer();
+  }
+#endif
+
   inline double getDouble() const {
     assert(isDouble());
     return safeTypeCast<uint64_t, double>(raw_);

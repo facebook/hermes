@@ -1826,6 +1826,25 @@ void HadesGC::writeBarrier(const GCHermesValue *loc, HermesValue value) {
   relocationWriteBarrier(loc, value.getPointer());
 }
 
+void HadesGC::writeBarrier(
+    const GCSmallHermesValue *loc,
+    SmallHermesValue value) {
+  assert(
+      !calledByBackgroundThread() &&
+      "Write barrier invoked by background thread.");
+  if (inYoungGen(loc)) {
+    // A pointer that lives in YG never needs any write barriers.
+    return;
+  }
+  if (ogMarkingBarriers_) {
+    snapshotWriteBarrierInternal(*loc);
+  }
+  if (!value.isPointer()) {
+    return;
+  }
+  relocationWriteBarrier(loc, value.getPointer(getPointerBase()));
+}
+
 void HadesGC::writeBarrier(const GCPointerBase *loc, const GCCell *value) {
   assert(
       !calledByBackgroundThread() &&
@@ -1868,6 +1887,21 @@ void HadesGC::constructorWriteBarrier(
 }
 
 void HadesGC::constructorWriteBarrier(
+    const GCSmallHermesValue *loc,
+    SmallHermesValue value) {
+  if (inYoungGen(loc)) {
+    // A pointer that lives in YG never needs any write barriers.
+    return;
+  }
+  // A constructor never needs to execute a SATB write barrier, since its
+  // previous value was definitely not live.
+  if (!value.isPointer()) {
+    return;
+  }
+  relocationWriteBarrier(loc, value.getPointer(getPointerBase()));
+}
+
+void HadesGC::constructorWriteBarrier(
     const GCPointerBase *loc,
     const GCCell *value) {
   if (inYoungGen(loc)) {
@@ -1880,6 +1914,16 @@ void HadesGC::constructorWriteBarrier(
 }
 
 void HadesGC::snapshotWriteBarrier(const GCHermesValue *loc) {
+  if (inYoungGen(loc)) {
+    // A pointer that lives in YG never needs any write barriers.
+    return;
+  }
+  if (ogMarkingBarriers_) {
+    snapshotWriteBarrierInternal(*loc);
+  }
+}
+
+void HadesGC::snapshotWriteBarrier(const GCSmallHermesValue *loc) {
   if (inYoungGen(loc)) {
     // A pointer that lives in YG never needs any write barriers.
     return;
@@ -1915,6 +1959,21 @@ void HadesGC::snapshotWriteBarrierRange(
   }
 }
 
+void HadesGC::snapshotWriteBarrierRange(
+    const GCSmallHermesValue *start,
+    uint32_t numHVs) {
+  if (inYoungGen(start)) {
+    // A pointer that lives in YG never needs any write barriers.
+    return;
+  }
+  if (!ogMarkingBarriers_) {
+    return;
+  }
+  for (uint32_t i = 0; i < numHVs; ++i) {
+    snapshotWriteBarrierInternal(start[i]);
+  }
+}
+
 void HadesGC::snapshotWriteBarrierInternal(GCCell *oldValue) {
   assert(
       (!oldValue || oldValue->isValid()) &&
@@ -1930,6 +1989,16 @@ void HadesGC::snapshotWriteBarrierInternal(GCCell *oldValue) {
 void HadesGC::snapshotWriteBarrierInternal(HermesValue oldValue) {
   if (oldValue.isPointer()) {
     snapshotWriteBarrierInternal(static_cast<GCCell *>(oldValue.getPointer()));
+  } else if (oldValue.isSymbol()) {
+    // Symbols need snapshot write barriers.
+    snapshotWriteBarrierInternal(oldValue.getSymbol());
+  }
+}
+
+void HadesGC::snapshotWriteBarrierInternal(SmallHermesValue oldValue) {
+  if (oldValue.isPointer()) {
+    snapshotWriteBarrierInternal(
+        static_cast<GCCell *>(oldValue.getPointer(getPointerBase())));
   } else if (oldValue.isSymbol()) {
     // Symbols need snapshot write barriers.
     snapshotWriteBarrierInternal(oldValue.getSymbol());

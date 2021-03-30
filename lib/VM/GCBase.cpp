@@ -950,18 +950,33 @@ bool GCBase::shouldSanitizeHandles() {
 #endif
 
 GCBASE_BARRIER_2(writeBarrier, const GCHermesValue *, HermesValue);
+GCBASE_BARRIER_2(writeBarrier, const GCSmallHermesValue *, SmallHermesValue);
 GCBASE_BARRIER_2(writeBarrier, const GCPointerBase *, const GCCell *);
 GCBASE_BARRIER_1(writeBarrier, SymbolID);
 GCBASE_BARRIER_2(constructorWriteBarrier, const GCHermesValue *, HermesValue);
 GCBASE_BARRIER_2(
     constructorWriteBarrier,
+    const GCSmallHermesValue *,
+    SmallHermesValue);
+GCBASE_BARRIER_2(
+    constructorWriteBarrier,
     const GCPointerBase *,
     const GCCell *);
 GCBASE_BARRIER_2(writeBarrierRange, const GCHermesValue *, uint32_t);
+GCBASE_BARRIER_2(writeBarrierRange, const GCSmallHermesValue *, uint32_t);
 GCBASE_BARRIER_2(constructorWriteBarrierRange, const GCHermesValue *, uint32_t);
+GCBASE_BARRIER_2(
+    constructorWriteBarrierRange,
+    const GCSmallHermesValue *,
+    uint32_t);
 GCBASE_BARRIER_1(snapshotWriteBarrier, const GCHermesValue *);
+GCBASE_BARRIER_1(snapshotWriteBarrier, const GCSmallHermesValue *);
 GCBASE_BARRIER_1(snapshotWriteBarrier, const GCPointerBase *);
 GCBASE_BARRIER_2(snapshotWriteBarrierRange, const GCHermesValue *, uint32_t);
+GCBASE_BARRIER_2(
+    snapshotWriteBarrierRange,
+    const GCSmallHermesValue *,
+    uint32_t);
 GCBASE_BARRIER_1(weakRefReadBarrier, GCCell *);
 GCBASE_BARRIER_1(weakRefReadBarrier, HermesValue);
 

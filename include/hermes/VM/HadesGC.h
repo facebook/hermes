@@ -156,6 +156,7 @@ class HadesGC final : public GCBase {
   /// NOTE: The write barrier call must be placed *before* the write to the
   /// pointer, so that the current value can be fetched.
   void writeBarrier(const GCHermesValue *loc, HermesValue value);
+  void writeBarrier(const GCSmallHermesValue *loc, SmallHermesValue value);
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap). The value may be null. Execute a write barrier.
@@ -170,11 +171,18 @@ class HadesGC final : public GCBase {
   /// Special versions of \p writeBarrier for when there was no previous value
   /// initialized into the space.
   void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value);
+  void constructorWriteBarrier(
+      const GCSmallHermesValue *loc,
+      SmallHermesValue value);
   void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
 
   void snapshotWriteBarrier(const GCHermesValue *loc);
+  void snapshotWriteBarrier(const GCSmallHermesValue *loc);
   void snapshotWriteBarrier(const GCPointerBase *loc);
   void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs);
+  void snapshotWriteBarrierRange(
+      const GCSmallHermesValue *start,
+      uint32_t numHVs);
 
   void weakRefReadBarrier(GCCell *value);
   void weakRefReadBarrier(HermesValue value);
@@ -830,6 +838,7 @@ class HadesGC final : public GCBase {
   /// pointer. Forwards to \c snapshotWriteBarrierInternal(SymbolID) is oldValue
   /// is a symbol.
   void snapshotWriteBarrierInternal(HermesValue oldValue);
+  void snapshotWriteBarrierInternal(SmallHermesValue oldValue);
 
   /// Performs a Snapshot At The Beginning (SATB) write barrier for a symbol,
   /// which assumes the old symbol was reachable at the start of the collection.
