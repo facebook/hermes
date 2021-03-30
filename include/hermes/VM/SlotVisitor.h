@@ -41,6 +41,10 @@ class BaseVisitor {
         visitArrayObject<Acceptor, GCHermesValue, WithNames>(
             acceptor, start, length, stride);
         break;
+      case ArrayType::SmallHermesValue:
+        visitArrayObject<Acceptor, GCSmallHermesValue, WithNames>(
+            acceptor, start, length, stride);
+        break;
       case ArrayType::Symbol:
         visitArrayObject<Acceptor, GCSymbolID, WithNames>(
             acceptor, start, length, stride);
@@ -179,6 +183,7 @@ struct SlotVisitor final : BaseVisitor {
   void visitFields(char *base, const Metadata &meta) {
     visitSlots<GCPointerBase>(base, meta.pointers_.offsets);
     visitSlots<GCHermesValue>(base, meta.values_.offsets);
+    visitSlots<GCSmallHermesValue>(base, meta.smallValues_.offsets);
     visitSlots<GCSymbolID>(base, meta.symbols_.offsets);
   }
 
@@ -193,6 +198,8 @@ struct SlotVisitor final : BaseVisitor {
         base, meta.pointers_.offsets, begin, end);
     visitSlotsWithinRange<GCHermesValue>(
         base, meta.values_.offsets, begin, end);
+    visitSlotsWithinRange<GCSmallHermesValue>(
+        base, meta.smallValues_.offsets, begin, end);
     visitSlotsWithinRange<GCSymbolID>(base, meta.symbols_.offsets, begin, end);
   }
 
@@ -239,6 +246,10 @@ struct SlotVisitor final : BaseVisitor {
         visitArrayObjectWithinRange<GCHermesValue>(
             start, length, stride, begin, end);
         break;
+      case ArrayType::SmallHermesValue:
+        visitArrayObjectWithinRange<GCSmallHermesValue>(
+            start, length, stride, begin, end);
+        break;
       case ArrayType::Symbol:
         visitArrayObjectWithinRange<GCSymbolID>(
             start, length, stride, begin, end);
@@ -270,6 +281,8 @@ struct SlotVisitorWithNames final : BaseVisitor {
     visitSlots<GCPointerBase>(
         base, meta.pointers_.offsets, meta.pointers_.names);
     visitSlots<GCHermesValue>(base, meta.values_.offsets, meta.values_.names);
+    visitSlots<GCSmallHermesValue>(
+        base, meta.smallValues_.offsets, meta.smallValues_.names);
     visitSlots<GCSymbolID>(base, meta.symbols_.offsets, meta.symbols_.names);
   }
 
