@@ -601,11 +601,11 @@ jobs:
             yarn --version
       - run:
           name: Install emulator dependencies
-          command: (yes | sdkmanager "platform-tools" "platforms;android-26" "extras;intel;Hardware_Accelerated_Execution_Manager" "build-tools;26.0.0" "system-images;android-26;google_apis;x86" "emulator" --verbose) || true
+          command: (yes | sdkmanager "platform-tools" "platforms;android-31" "extras;intel;Hardware_Accelerated_Execution_Manager" "build-tools;31.0.0" "system-images;android-31;google_apis;x86" "emulator" --verbose) || true
       - run:
           name: Create emulator definition
           command: |
-            avdmanager create avd -n Pixel_2_API_26 -k "system-images;android-26;google_apis;x86" -g google_apis -d "Nexus 5"
+            avdmanager create avd -n Pixel_2_API_26 -k "system-images;android-31;google_apis;x86" -g google_apis -d "Nexus 5"
       - run:
           name: Run emulator in background
           command: /usr/local/share/android-sdk/emulator/emulator @Pixel_2_API_26 -memory 2048 -noaudio
@@ -648,15 +648,15 @@ jobs:
           command: |
             brew tap homebrew/cask
             brew cask install android-sdk
-            (yes | sdkmanager "platform-tools" "platforms;android-26" --verbose) || true
+            (yes | sdkmanager "platform-tools" "platforms;android-30" --verbose) || true
             echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:$PATH"' >>  ~/.bash_profile
       - run:
           name: Install emulator dependencies
-          command: (yes | sdkmanager "extras;intel;Hardware_Accelerated_Execution_Manager" "system-images;android-26;google_apis;x86" "emulator" --verbose) || true
+          command: (yes | sdkmanager "extras;intel;Hardware_Accelerated_Execution_Manager" "system-images;android-30;google_apis;x86" "emulator" --verbose) || true
       - run:
           name: Create emulator definition
           command: |
-            avdmanager create avd -n Pixel_2_API_26 -k "system-images;android-26;google_apis;x86" -g google_apis -d "Nexus 5"
+            avdmanager create avd -n Pixel_2_API_26 -k "system-images;android-30;google_apis;x86" -g google_apis -d "Nexus 5"
       - run:
           name: Run emulator in background
           command: /usr/local/share/android-sdk/emulator/emulator @Pixel_2_API_26 -memory 2048 -noaudio
