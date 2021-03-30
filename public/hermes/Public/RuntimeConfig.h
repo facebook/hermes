@@ -74,8 +74,8 @@ class Deserializer;
   /* Support for ES6 Symbol. */                                                \
   F(constexpr, bool, ES6Symbol, true)                                          \
                                                                                \
-  /* Support for ES6 Symbol. */                                                \
-  F(constexpr, bool, ES6Intl, false)                                           \
+  /* Support for ECMA-402 Intl APIs. */                                        \
+  F(constexpr, bool, Intl, false)                                              \
                                                                                \
   /* Enable synth trace. */                                                    \
   F(constexpr, bool, TraceEnabled, false)                                      \

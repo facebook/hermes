@@ -767,7 +767,7 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
   // Define the global Intl object
   // TODO T65916424: Consider how we can move this somewhere more modular.
 
-  if (LLVM_UNLIKELY(runtime->hasES6Intl())) {
+  if (LLVM_UNLIKELY(runtime->hasIntl())) {
     runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
         runtime->getGlobal(),
         runtime,

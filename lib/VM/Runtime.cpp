@@ -162,7 +162,7 @@ Runtime::Runtime(
       hasES6Promise_(runtimeConfig.getES6Promise()),
       hasES6Proxy_(runtimeConfig.getES6Proxy()),
       hasES6Symbol_(runtimeConfig.getES6Symbol()),
-      hasES6Intl_(runtimeConfig.getES6Intl()),
+      hasIntl_(runtimeConfig.getIntl()),
       shouldRandomizeMemoryLayout_(runtimeConfig.getRandomizeMemoryLayout()),
       bytecodeWarmupPercent_(runtimeConfig.getBytecodeWarmupPercent()),
       trackIO_(runtimeConfig.getTrackIO()),
@@ -2221,7 +2221,7 @@ void Runtime::populateHeaderRuntimeConfig(SerializeHeader &header) {
   header.hasES6Promise = hasES6Promise_;
   header.hasES6Proxy = hasES6Proxy_;
   header.hasES6Symbol = hasES6Symbol_;
-  header.hasES6Intl = hasES6Intl_;
+  header.hasIntl = hasIntl_;
   header.bytecodeWarmupPercent = bytecodeWarmupPercent_;
   header.trackIO = trackIO_;
 }
@@ -2243,8 +2243,8 @@ void Runtime::checkHeaderRuntimeConfig(SerializeHeader &header) const {
     hermes_fatal(
         "serialize/deserialize Runtime Configs don't match (es6Symbol)");
   }
-  if (header.hasES6Intl != hasES6Intl_) {
-    hermes_fatal("serialize/deserialize Runtime Configs don't match (es6Intl)");
+  if (header.hasIntl != hasIntl_) {
+    hermes_fatal("serialize/deserialize Runtime Configs don't match (intl)");
   }
 
   if (header.bytecodeWarmupPercent != bytecodeWarmupPercent_) {

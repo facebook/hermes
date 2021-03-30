@@ -25,7 +25,6 @@ class HeapSnapshotAPITest : public ::testing::TestWithParam<bool> {
   HeapSnapshotAPITest()
       : rt(makeHermesRuntime(::hermes::vm::RuntimeConfig::Builder()
                                  .withES6Proxy(true)
-                                 .withES6Intl(true)
                                  .build())) {
     if (trackingFromBeginning()) {
       rt->instrumentation().startTrackingHeapObjectStackTraces(nullptr);

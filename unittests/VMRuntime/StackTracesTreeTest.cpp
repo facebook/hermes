@@ -30,7 +30,7 @@ struct StackTracesTreeTest : public RuntimeTestFixtureBase {
             RuntimeConfig::Builder(kTestRTConfigBuilder)
                 .withES6Promise(true)
                 .withES6Proxy(true)
-                .withES6Intl(true)
+                .withIntl(true)
                 .withGCConfig(GCConfig::Builder(kTestGCConfigBuilder).build())
                 .build()) {
     runtime->enableAllocationLocationTracker();
@@ -152,7 +152,7 @@ struct StackTracesTreeParameterizedTest
       : StackTracesTreeTest(
             RuntimeConfig::Builder(kTestRTConfigBuilder)
                 .withES6Proxy(true)
-                .withES6Intl(true)
+                .withIntl(true)
                 .withGCConfig(GCConfig::Builder(kTestGCConfigBuilder).build())
                 .build()) {
     if (trackerOnByDefault()) {

@@ -137,7 +137,7 @@ SynthTrace::SynthTrace(
     json_->emitKeyValue("ES6Promise", conf.getES6Promise());
     json_->emitKeyValue("ES6Proxy", conf.getES6Proxy());
     json_->emitKeyValue("ES6Symbol", conf.getES6Symbol());
-    json_->emitKeyValue("ES6Intl", conf.getES6Intl());
+    json_->emitKeyValue("Intl", conf.getIntl());
     json_->emitKeyValue("enableSampledStats", conf.getEnableSampledStats());
     json_->emitKeyValue("vmExperimentFlags", conf.getVMExperimentFlags());
     json_->closeDict();

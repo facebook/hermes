@@ -45,7 +45,7 @@ struct SerializeHeader {
   bool hasES6Promise;
   bool hasES6Proxy;
   bool hasES6Symbol;
-  bool hasES6Intl;
+  bool hasIntl;
   uint8_t bytecodeWarmupPercent;
   bool trackIO;
   /// Note: The following fields are not being checked right now because they
