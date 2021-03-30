@@ -1676,7 +1676,7 @@ inline T *JSObject::initDirectPropStorage(Runtime *runtime, T *self) {
   GCHermesValue::uninitialized_fill(
       self->directProps() + numOverlapSlots<T>(),
       self->directProps() + DIRECT_PROPERTY_SLOTS,
-      GCHermesValue(),
+      HermesValue::encodeUndefinedValue(),
       &runtime->getHeap());
   return self;
 }

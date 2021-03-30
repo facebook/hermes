@@ -848,7 +848,7 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
     // Initialize "thisArg". When constructing we must use the original 'this',
     // not the bound one.
     newCalleeFrame.getThisArgRef() = !originalNewTarget.isUndefined()
-        ? callerFrame.getScratchRef()
+        ? static_cast<HermesValue>(callerFrame.getScratchRef())
         : self->getArgsWithThis(runtime)[0];
 
     res =
@@ -1670,7 +1670,7 @@ void GeneratorInnerFunction::restoreStack(Runtime *runtime) {
         dst >= runtime->getStackPointer())) &&
       "reading off the end of the stack");
   const GCHermesValue *src = savedContext_.get(runtime)->data() + frameOffset;
-  GCHermesValue::copyToPinned(src, src + frameSize, dst);
+  GCHermesValueUtil::copyToPinned(src, src + frameSize, dst);
 }
 
 void GeneratorInnerFunction::saveStack(Runtime *runtime) {

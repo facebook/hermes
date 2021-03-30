@@ -527,28 +527,29 @@ class PinnedHermesValue : public HermesValue {
 // type. Hides assignment operator, but provides set operations that
 // do a write barrier for pointer values, or else assert that the new
 // value is not a pointer.
-class GCHermesValue : public HermesValue {
+template <typename HVType>
+class GCHermesValueBase final : public HVType {
  public:
-  GCHermesValue() : HermesValue(HermesValue::encodeUndefinedValue()) {}
+  GCHermesValueBase() : HVType(HVType::encodeUndefinedValue()) {}
   /// Initialize a GCHermesValue from another HV. Performs a write barrier.
   template <typename NeedsBarriers = std::true_type>
-  GCHermesValue(HermesValue hv, GC *gc);
+  GCHermesValueBase(HVType hv, GC *gc);
   /// Initialize a GCHermesValue from a non-pointer HV. Might perform a write
   /// barrier, depending on the GC.
   /// NOTE: The last parameter is unused, but acts as an overload selector.
   template <typename NeedsBarriers = std::true_type>
-  GCHermesValue(HermesValue hv, GC *gc, std::nullptr_t);
-  GCHermesValue(const GCHermesValue &) = delete;
+  GCHermesValueBase(HVType hv, GC *gc, std::nullptr_t);
+  GCHermesValueBase(const HVType &) = delete;
 
   /// The HermesValue \p hv may be an object pointer.  Assign the
   /// value, and perform any necessary write barriers.
   template <typename NeedsBarriers = std::true_type>
-  inline void set(HermesValue hv, GC *gc);
+  inline void set(HVType hv, GC *gc);
 
   /// The HermesValue \p hv must not be an object pointer.  Assign the
   /// value.
   /// Some GCs still need to do a write barrier though, so pass a GC parameter.
-  inline void setNonPtr(HermesValue hv, GC *gc);
+  inline void setNonPtr(HVType hv, GC *gc);
 
   /// Force a write barrier to occur on this value, as if the value was being
   /// set to null. This should be used when a value is becoming unreachable by
@@ -561,15 +562,14 @@ class GCHermesValue : public HermesValue {
   /// value \p fill.  If the fill value is an object pointer, must
   /// provide a non-null \p gc argument, to perform write barriers.
   template <typename InputIt>
-  static inline void
-  fill(InputIt first, InputIt last, HermesValue fill, GC *gc);
+  static inline void fill(InputIt first, InputIt last, HVType fill, GC *gc);
 
   /// Same as \p fill except the range expressed by  [\p first, \p last) has not
   /// been previously initialized. Cannot use this on previously initialized
   /// memory, as it will use an incorrect write barrier.
   template <typename InputIt>
   static inline void
-  uninitialized_fill(InputIt first, InputIt last, HermesValue fill, GC *gc);
+  uninitialized_fill(InputIt first, InputIt last, HVType fill, GC *gc);
 
   /// Copies a range of values and performs a write barrier on each.
   template <typename InputIt, typename OutputIt>
@@ -583,6 +583,22 @@ class GCHermesValue : public HermesValue {
   static inline OutputIt
   uninitialized_copy(InputIt first, InputIt last, OutputIt result, GC *gc);
 
+#if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
+  /// Same as \p copy, but specialised for raw pointers.
+  static inline GCHermesValueBase<HVType> *copy(
+      GCHermesValueBase<HVType> *first,
+      GCHermesValueBase<HVType> *last,
+      GCHermesValueBase<HVType> *result,
+      GC *gc);
+
+  /// Same as \p uninitialized_copy, but specialised for raw pointers.
+  static inline GCHermesValueBase<HVType> *uninitialized_copy(
+      GCHermesValueBase<HVType> *first,
+      GCHermesValueBase<HVType> *last,
+      GCHermesValueBase<HVType> *result,
+      GC *gc);
+#endif
+
   /// Copies a range of values and performs a write barrier on each.
   template <typename InputIt, typename OutputIt>
   static inline OutputIt
@@ -591,10 +607,16 @@ class GCHermesValue : public HermesValue {
   /// Same as \c unreachableWriteBarrier, but for a range of values all becoming
   /// unreachable.
   static inline void rangeUnreachableWriteBarrier(
-      GCHermesValue *first,
-      GCHermesValue *last,
+      GCHermesValueBase<HVType> *first,
+      GCHermesValueBase<HVType> *last,
       GC *gc);
+};
 
+using GCHermesValue = GCHermesValueBase<HermesValue>;
+
+/// copyToPinned is harder to generalise since it also depends on
+/// PinnedHermesValue, so we keep it in a separate struct for now.
+struct GCHermesValueUtil {
   /// Copies a range of values to a non-heap location, e.g., the JS stack.
   static inline void copyToPinned(
       const GCHermesValue *first,
