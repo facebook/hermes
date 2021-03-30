@@ -105,6 +105,10 @@ class PseudoHandle;
 template <typename T>
 class PseudoHandle;
 
+// Only used for HV32 API compatibility.
+class PointerBase;
+class GCCell;
+
 // Tags are defined as 16-bit values positioned at the high bits of a 64-bit
 // word.
 
@@ -458,6 +462,15 @@ class HermesValue {
 #else
   HermesValue &operator=(const HermesValue &hv) = default;
 #endif
+
+  /// @name HV32 Compatibility APIs - DO NOT CALL DIRECTLY
+  /// @{
+
+  GCCell *getPointer(PointerBase *) const {
+    return static_cast<GCCell *>(getPointer());
+  }
+
+  /// }
 
  protected:
   /// Performs an assignment without a barrier, in cases where the RHS
