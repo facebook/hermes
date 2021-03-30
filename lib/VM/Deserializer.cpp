@@ -235,6 +235,10 @@ void Deserializer::updateAddress(
     case RelocationKind::HermesValue:
       ((HermesValue *)address)->unsafeUpdatePointer(ptrVal);
       return;
+    case RelocationKind::SmallHermesValue:
+      ((SmallHermesValue *)address)
+          ->unsafeUpdatePointer(static_cast<GCCell *>(ptrVal), runtime_);
+      return;
   }
   llvm_unreachable("Invalid relocation kind");
 }

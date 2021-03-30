@@ -17,7 +17,12 @@ namespace hermes {
 namespace vm {
 
 /// Relocation kind. Used to distinguish different kind of pointers
-enum class RelocationKind { NativePointer, GCPointer, HermesValue };
+enum class RelocationKind {
+  NativePointer,
+  GCPointer,
+  HermesValue,
+  SmallHermesValue
+};
 
 constexpr uint32_t SD_MAGIC = 0xad082463;
 

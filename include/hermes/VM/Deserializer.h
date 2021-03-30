@@ -156,6 +156,20 @@ class Deserializer {
     lookupRelocation(hv, relo_id, RelocationKind::HermesValue);
   }
 
+  /// Reads a SmallHermesValue from MemoryBuffer. If it encodes a pointer,
+  /// update the relocation id to the correct pointer value (if known) or record
+  /// in the relocationQueue_.
+  void readSmallHermesValue(SmallHermesValue *shv) {
+    readData(shv, sizeof(SmallHermesValue));
+    if (!shv->isPointer()) {
+      return;
+    }
+    // Extract relocation id from HermesValue and see if we can do relocation
+    // now.
+    uint32_t relo_id = shv->getRelocationID();
+    lookupRelocation(shv, relo_id, RelocationKind::SmallHermesValue);
+  }
+
   /// Called at the end of deserialization. Because every entity has been
   /// deserialized at this point, we should be able to update prior forward
   /// references that we were not able to update before.
