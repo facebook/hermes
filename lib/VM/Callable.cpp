@@ -1533,7 +1533,7 @@ GeneratorInnerFunction::GeneratorInnerFunction(Deserializer &d)
         ArrayStorage::deserializeArrayStorage(d),
         &d.getRuntime()->getHeap());
   }
-  d.readHermesValue(&result_);
+  d.readSmallHermesValue(&result_);
   nextIPOffset_ = d.readInt<uint32_t>();
   action_ = (Action)d.readInt<uint8_t>();
 }
@@ -1550,7 +1550,7 @@ void GeneratorInnerFunctionSerialize(Serializer &s, const GCCell *cell) {
     ArrayStorage::serializeArrayStorage(
         s, self->savedContext_.get(s.getRuntime()));
   }
-  s.writeHermesValue(self->result_);
+  s.writeSmallHermesValue(self->result_);
   s.writeInt<uint32_t>(self->nextIPOffset_);
   s.writeInt<uint8_t>((uint8_t)self->action_);
   s.endObject(cell);
@@ -1614,7 +1614,9 @@ CallResult<PseudoHandle<>> GeneratorInnerFunction::callInnerFunction(
     Action action) {
   auto self = Handle<GeneratorInnerFunction>::vmcast(selfHandle);
 
-  self->result_.set(arg.getHermesValue(), &runtime->getHeap());
+  SmallHermesValue shv = SmallHermesValue::encodeHermesValue(
+      arg.getHermesValue(), &runtime->getHeap(), runtime);
+  self->result_.set(shv, &runtime->getHeap());
   self->action_ = action;
 
   auto ctx = runtime->makeMutableHandle(selfHandle->savedContext_);

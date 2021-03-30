@@ -1293,10 +1293,11 @@ class GeneratorInnerFunction final : public JSFunction {
   /// Clear the stored result_ field to prevent memory leaks.
   /// Should be called after getResult() by the ResumeGenerator instruction.
   void clearResult(Runtime *runtime) {
-    result_.setNonPtr(HermesValue::encodeEmptyValue(), &runtime->getHeap());
+    result_.setNonPtr(
+        SmallHermesValue::encodeEmptyValue(), &runtime->getHeap());
   }
 
-  HermesValue getResult() const {
+  SmallHermesValue getResult() const {
     return result_;
   }
 
@@ -1372,7 +1373,7 @@ class GeneratorInnerFunction final : public JSFunction {
 
   /// The result passed to `next()`, `throw()`, or `return()` by the user.
   /// Placed in the result register of `ResumeGenerator`.
-  GCHermesValue result_{};
+  GCSmallHermesValue result_{};
 
   /// The next instruction to jump to upon resuming from SuspendedYield,
   /// invalid if the generator is in any other state.

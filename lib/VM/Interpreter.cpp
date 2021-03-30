@@ -1769,7 +1769,7 @@ tailCall:
       CASE(ResumeGenerator) {
         auto *innerFn = vmcast<GeneratorInnerFunction>(
             runtime->getCurrentFrame().getCalleeClosure());
-        O1REG(ResumeGenerator) = innerFn->getResult();
+        O1REG(ResumeGenerator) = innerFn->getResult().unboxToHV(runtime);
         O2REG(ResumeGenerator) = HermesValue::encodeBoolValue(
             innerFn->getAction() == GeneratorInnerFunction::Action::Return);
         innerFn->clearResult(runtime);
