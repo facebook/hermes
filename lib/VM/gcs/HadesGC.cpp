@@ -16,6 +16,7 @@
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/RootAndSlotAcceptorDefault.h"
+#include "hermes/VM/SmallHermesValue-inline.h"
 
 #include <array>
 #include <functional>
@@ -491,6 +492,14 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     }
   }
 
+  void accept(GCSmallHermesValue &hv) override {
+    if (hv.isPointer()) {
+      GCCell *ptr = static_cast<GCCell *>(hv.getPointer(gc.getPointerBase()));
+      acceptHeap(ptr, &hv);
+      hv.setInGC(hv.updatePointer(ptr, gc.getPointerBase()), &gc);
+    }
+  }
+
   void acceptWeak(GCCell *&ptr) override {
     assert(!gc.inYoungGen(ptr) && "Weak roots cannot point into YG");
     if (!gc.compactee_.evacContains(ptr))
@@ -716,6 +725,16 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
     // there's no risk of a concurrent access.
     if (hv.isPointer()) {
       acceptRoot(static_cast<GCCell *>(hv.getPointer()));
+    } else if (hv.isSymbol()) {
+      acceptSym(hv.getSymbol());
+    }
+  }
+
+  void accept(GCSmallHermesValue &hvRef) override {
+    const SmallHermesValue hv = concurrentRead<SmallHermesValue>(hvRef);
+    if (hv.isPointer()) {
+      acceptHeap(
+          static_cast<GCCell *>(hv.getPointer(gc.getPointerBase())), &hvRef);
     } else if (hv.isSymbol()) {
       acceptSym(hv.getSymbol());
     }
@@ -3173,6 +3192,10 @@ void HadesGC::verifyCardTable() {
     void accept(GCHermesValue &hv) override {
       if (hv.isPointer())
         acceptHelper(hv.getPointer(), &hv);
+    }
+    void accept(GCSmallHermesValue &hv) override {
+      if (hv.isPointer())
+        acceptHelper(hv.getPointer(gc.getPointerBase()), &hv);
     }
 
     void accept(GCSymbolID hv) override {}

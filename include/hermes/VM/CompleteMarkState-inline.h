@@ -13,6 +13,7 @@
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/RootAndSlotAcceptorDefault.h"
+#include "hermes/VM/SmallHermesValue-inline.h"
 
 namespace hermes {
 namespace vm {
@@ -37,6 +38,14 @@ struct CompleteMarkState::FullMSCMarkTransitiveAcceptor final
   void acceptHV(HermesValue &hv) override {
     if (hv.isPointer()) {
       GCCell *cell = static_cast<GCCell *>(hv.getPointer());
+      accept(cell);
+    } else if (hv.isSymbol()) {
+      acceptSym(hv.getSymbol());
+    }
+  }
+  void acceptSHV(SmallHermesValue &hv) override {
+    if (hv.isPointer()) {
+      GCCell *cell = static_cast<GCCell *>(hv.getPointer(pointerBase_));
       accept(cell);
     } else if (hv.isSymbol()) {
       acceptSym(hv.getSymbol());
@@ -83,6 +92,17 @@ struct FullMSCUpdateAcceptor final : public RootAndSlotAcceptorDefault,
       if (ptr) {
         assert(gc.dbgContains(ptr) && "ptr not in heap");
         hv.setInGC(hv.updatePointer(ptr->getForwardingPointer()), &gc);
+      }
+    }
+  }
+
+  void acceptSHV(SmallHermesValue &hv) override {
+    if (hv.isPointer()) {
+      auto *ptr = static_cast<GCCell *>(hv.getPointer(pointerBase_));
+      if (ptr) {
+        assert(gc.dbgContains(ptr) && "ptr not in heap");
+        hv.setInGC(
+            hv.updatePointer(ptr->getForwardingPointer(), pointerBase_), &gc);
       }
     }
   }

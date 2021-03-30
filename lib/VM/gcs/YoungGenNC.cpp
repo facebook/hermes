@@ -531,6 +531,15 @@ void YoungGen::ensureReferentCopied(HermesValue *hv) {
   }
 }
 
+void YoungGen::ensureReferentCopied(SmallHermesValue *hv) {
+  assert(hv->isPointer() && "Should only call on pointer HermesValues");
+  GCCell *cell = static_cast<GCCell *>(hv->getPointer(gc_->getPointerBase()));
+  if (contains(cell)) {
+    hv->setInGC(
+        hv->updatePointer(forwardPointer(cell), gc_->getPointerBase()), gc_);
+  }
+}
+
 void YoungGen::ensureReferentCopied(GCCell **ptrLoc) {
   GCCell *ptr = *ptrLoc;
   if (contains(ptr)) {

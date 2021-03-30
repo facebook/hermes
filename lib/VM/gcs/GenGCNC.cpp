@@ -557,6 +557,9 @@ struct FullMSCDuplicateRootsDetectorAcceptor final
     assert(markedLocs_.count(&hv) == 0);
     markedLocs_.insert(&hv);
   }
+  void acceptSHV(SmallHermesValue &hv) override {
+    llvm_unreachable("No SmallHermesValue roots");
+  }
 };
 #endif
 
@@ -582,6 +585,23 @@ void GenGC::markPhase() {
     void acceptHV(HermesValue &hv) override {
       if (hv.isPointer()) {
         void *ptr = hv.getPointer();
+        if (ptr) {
+          assert(gc.dbgContains(ptr));
+          GCCell *cell = reinterpret_cast<GCCell *>(ptr);
+#ifdef HERMES_EXTRA_DEBUG
+          if (!cell->isValid()) {
+            hermes_fatal("HermesGC: marking pointer to invalid object.");
+          }
+#endif
+          GenGCHeapSegment::setCellMarkBit(cell);
+        }
+      } else if (hv.isSymbol()) {
+        gc.markSymbol(hv.getSymbol());
+      }
+    }
+    void acceptSHV(SmallHermesValue &hv) override {
+      if (hv.isPointer()) {
+        void *ptr = hv.getPointer(pointerBase_);
         if (ptr) {
           assert(gc.dbgContains(ptr));
           GCCell *cell = reinterpret_cast<GCCell *>(ptr);
@@ -1991,8 +2011,9 @@ void GenGC::sizeDiagnosticCensus() {
     const int64_t HINT32_MAX = (1LL << 31) - 1;
 
     HeapSizeDiagnostic diagnostic;
+    PointerBase *pointerBase_;
 
-    HeapSizeDiagnosticAcceptor() = default;
+    HeapSizeDiagnosticAcceptor(PointerBase *pb) : pointerBase_{pb} {}
 
     using SlotAcceptor::accept;
 
@@ -2010,7 +2031,10 @@ void GenGC::sizeDiagnosticCensus() {
     void accept(GCHermesValue &hv) override {
       acceptHV(hv);
     }
-    void acceptHV(HermesValue &hv) {
+    void accept(GCSmallHermesValue &shv) override {
+      acceptHV(shv.toHV(pointerBase_));
+    }
+    void acceptHV(const HermesValue &hv) {
       diagnostic.hv.count++;
       if (hv.isBool()) {
         diagnostic.hv.numBool++;
@@ -2068,13 +2092,13 @@ void GenGC::sizeDiagnosticCensus() {
   };
 
   hermesLog("HermesGC", "%s:", "Roots");
-  HeapSizeDiagnosticAcceptor rootAcceptor;
+  HeapSizeDiagnosticAcceptor rootAcceptor{getPointerBase()};
   DroppingAcceptor<HeapSizeDiagnosticAcceptor> namedRootAcceptor{rootAcceptor};
   markRoots(namedRootAcceptor, /* markLongLived */ true);
   rootAcceptor.diagnostic.rootsDiagnosticFrame();
 
   hermesLog("HermesGC", "%s:", "Heap contents");
-  HeapSizeDiagnosticAcceptor acceptor;
+  HeapSizeDiagnosticAcceptor acceptor{getPointerBase()};
   forAllObjs([&acceptor, this](GCCell *cell) {
     markCell(cell, acceptor);
     acceptor.diagnostic.numCell++;

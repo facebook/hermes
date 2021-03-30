@@ -15,6 +15,7 @@
 #include "hermes/VM/HiddenClass.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/RootAndSlotAcceptorDefault.h"
+#include "hermes/VM/SmallHermesValue-inline.h"
 
 #include "llvh/Support/Debug.h"
 
@@ -142,6 +143,16 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       GCCell *ptr = static_cast<GCCell *>(hv.getPointer());
       accept(ptr);
       hv.setInGC(hv.updatePointer(ptr), &gc);
+    } else if (hv.isSymbol()) {
+      acceptSym(hv.getSymbol());
+    }
+  }
+
+  void acceptSHV(SmallHermesValue &hv) override {
+    if (hv.isPointer()) {
+      GCCell *ptr = static_cast<GCCell *>(hv.getPointer(pointerBase_));
+      accept(ptr);
+      hv.setInGC(hv.updatePointer(ptr, pointerBase_), &gc);
     } else if (hv.isSymbol()) {
       acceptSym(hv.getSymbol());
     }

@@ -169,6 +169,12 @@ struct SnapshotAcceptor : public RootAndSlotAcceptorWithNamesDefault {
       accept(ptr, name);
     }
   }
+  void acceptSHV(SmallHermesValue &hv, const char *name) override {
+    if (hv.isPointer()) {
+      GCCell *ptr = static_cast<GCCell *>(hv.getPointer(pointerBase_));
+      accept(ptr, name);
+    }
+  }
 
  protected:
   HeapSnapshot &snap_;
@@ -189,6 +195,12 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
   void acceptHV(HermesValue &hv, const char *) override {
     if (hv.isNumber()) {
       seenNumbers_.insert(hv.getNumber());
+    }
+  }
+
+  void acceptSHV(SmallHermesValue &hv, const char *) override {
+    if (hv.isNumber()) {
+      seenNumbers_.insert(hv.getNumber(pointerBase_));
     }
   }
 
@@ -270,6 +282,11 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
           llvh::StringRef::withNullAsEmpty(name),
           id.getValue());
     }
+  }
+
+  void acceptSHV(SmallHermesValue &shv, const char *name) override {
+    HermesValue hv = shv.toHV(pointerBase_);
+    acceptHV(hv, name);
   }
 
   void accept(WeakRefBase &wr) override {

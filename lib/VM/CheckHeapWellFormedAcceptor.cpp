@@ -44,6 +44,15 @@ void CheckHeapWellFormedAcceptor::acceptHV(HermesValue &hv) {
   }
 }
 
+void CheckHeapWellFormedAcceptor::acceptSHV(SmallHermesValue &hv) {
+  if (hv.isPointer()) {
+    GCCell *cell = static_cast<GCCell *>(hv.getPointer(pointerBase_));
+    accept(cell);
+  } else if (hv.isSymbol()) {
+    acceptSym(hv.getSymbol());
+  }
+}
+
 void CheckHeapWellFormedAcceptor::acceptSym(SymbolID sym) {
   if (!sym.isValid()) {
     return;
