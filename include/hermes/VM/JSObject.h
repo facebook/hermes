@@ -1331,15 +1331,6 @@ class JSObject : public GCCell {
       Runtime *runtime,
       ObjectVTable::CheckAllOwnIndexedMode mode);
 
-  /// @}
-
- private:
-  // Internal API
-
-  const ObjectVTable *getVT() const {
-    return reinterpret_cast<const ObjectVTable *>(GCCell::getVT());
-  }
-
   /// Allocate an instance of property storage with the specified size.
   static inline ExecutionStatus allocatePropStorage(
       Handle<JSObject> selfHandle,
@@ -1354,6 +1345,15 @@ class JSObject : public GCCell {
       PseudoHandle<JSObject> self,
       Runtime *runtime,
       PropStorage::size_type size);
+
+  /// @}
+
+ private:
+  // Internal API
+
+  const ObjectVTable *getVT() const {
+    return reinterpret_cast<const ObjectVTable *>(GCCell::getVT());
+  }
 
   /// Allocate storage for a new slot after the slot index itself has been
   /// allocated by the hidden class.

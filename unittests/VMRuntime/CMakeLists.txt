@@ -48,7 +48,7 @@ set(RTSources
   IRInstrumentationTest.cpp
   JSLibTest.cpp
   NativeFrameTest.cpp
-  NativeFunctionNameTest.cpp
+  NativeFunctionTest.cpp
   MarkBitArrayNCTest.cpp
   ObjectBufferTest.cpp
   ObjectModelTest.cpp

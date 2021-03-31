@@ -5,16 +5,31 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/VM/JSNativeFunctions.h"
-
-#include "hermes/VM/JSError.h"
-#include "hermes/VM/JSTypedArray.h"
-
+#include "AdditionalSlots.h"
+#include "TestHelpers.h"
 #include "gtest/gtest.h"
+#include "hermes/VM/Callable.h"
+#include "hermes/VM/JSError.h"
+#include "hermes/VM/JSNativeFunctions.h"
+#include "hermes/VM/JSTypedArray.h"
 
 using namespace hermes::vm;
 
 namespace {
+
+using NativeFunctionTest = RuntimeTestFixture;
+
+TEST_F(NativeFunctionTest, AdditionalSlots) {
+  GCScope scope{runtime, "NativeFunctionTest"};
+  auto handle = NativeFunction::createWithoutPrototype(
+      runtime,
+      nullptr,
+      nullptr,
+      Predefined::getSymbolID(Predefined::emptyString),
+      0,
+      numAdditionalSlotsForTest<NativeFunction>());
+  testAdditionalSlots(runtime, handle);
+}
 
 TEST(NativeFunctionNameTest, SmokeTest) {
 #ifdef HERMESVM_SERIALIZE

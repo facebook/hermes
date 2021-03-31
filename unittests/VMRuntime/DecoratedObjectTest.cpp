@@ -6,9 +6,10 @@
  */
 
 #include "hermes/VM/DecoratedObject.h"
+
+#include "AdditionalSlots.h"
 #include "TestHelpers.h"
 #include "gtest/gtest.h"
-#include "hermes/VM/StringView.h"
 
 #include <vector>
 
@@ -84,24 +85,8 @@ TEST_F(DecoratedObjectTest, AdditionalSlots) {
       runtime,
       Handle<JSObject>::vmcast(&runtime->objectPrototype),
       std::make_unique<TestDecoration>(counter),
-      2));
-  DecoratedObject::setAdditionalSlotValue(
-      *handle, runtime, 0, HermesValue::encodeDoubleValue(10));
-  CallResult<HermesValue> strRes =
-      StringPrimitive::createEfficient(runtime, createASCIIRef("hello"));
-  EXPECT_NE(strRes, ExecutionStatus::EXCEPTION);
-  DecoratedObject::setAdditionalSlotValue(*handle, runtime, 1, *strRes);
-  // Verify slot values survive GC.
-  runtime->collect("test");
-  EXPECT_EQ(
-      DecoratedObject::getAdditionalSlotValue(*handle, runtime, 0).getNumber(),
-      10);
-  auto view = StringPrimitive::createStringView(
-      runtime,
-      runtime->makeHandle(
-          DecoratedObject::getAdditionalSlotValue(*handle, runtime, 1)
-              .getString()));
-  EXPECT_EQ(std::string(view.begin(), view.end()), "hello");
+      numAdditionalSlotsForTest<DecoratedObject>()));
+  testAdditionalSlots(runtime, handle);
 }
 
 } // namespace
