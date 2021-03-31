@@ -789,7 +789,7 @@ class NativeConstructor final : public NativeFunction {
         functionPtr,
         creator,
         targetKind);
-    return createPseudoHandle(cell);
+    return JSObjectInit::initToPseudoHandle(runtime, cell);
   }
 
   /// Create an instance of NativeConstructor.
@@ -816,7 +816,7 @@ class NativeConstructor final : public NativeFunction {
         functionPtr,
         creator,
         targetKind);
-    return createPseudoHandle(cell);
+    return JSObjectInit::initToPseudoHandle(runtime, cell);
   }
 
  private:
