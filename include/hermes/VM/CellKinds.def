@@ -47,6 +47,7 @@ CELL_KIND(PropertyAccessor)
 CELL_KIND(Environment)
 CELL_KIND(HashMapEntry)
 CELL_KIND(OrderedHashMap)
+CELL_KIND(BoxedDouble)
 
 CELL_CLASS(Object, "Object")
 CELL_CLASS(DecoratedObject, "DecoratedObject")

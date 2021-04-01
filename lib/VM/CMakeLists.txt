@@ -6,6 +6,7 @@
 set(source_files
   ArrayStorage.cpp
   BasicBlockExecutionInfo.cpp
+  BoxedDouble.cpp
   BuildMetadata.cpp
   Callable.cpp
   CellKind.cpp
