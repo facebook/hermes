@@ -36,11 +36,11 @@
 #include "llvh/Support/MathExtras.h"
 
 #include <algorithm>
-#include <array>
 #include <chrono>
 #include <cinttypes>
 #include <clocale>
 #include <cstdint>
+#include <map>
 #include <utility>
 
 #define DEBUG_TYPE "gc"
@@ -1709,6 +1709,46 @@ void GenGC::printCensusByKindStatsWork(
 #endif
 
 void GenGC::sizeDiagnosticCensus() {
+  struct DiagnosticStat {
+    uint64_t count{0};
+    uint64_t size{0};
+    std::map<std::string, DiagnosticStat> breakdown;
+
+    static constexpr double getPercent(double numer, double denom) {
+      return denom != 0 ? 100 * numer / denom : 0.0;
+    }
+    void printBreakdown(size_t depth) const {
+      if (breakdown.empty())
+        return;
+
+      static const char *fmtBase =
+          "%-25s : %'10" PRIu64 " [%'10" PRIu64 " B | %4.1f%%]";
+      const std::string fmtStr = std::string(depth, '\t') + fmtBase;
+      size_t totalSize = 0;
+      size_t totalCount = 0;
+      for (const auto &stat : breakdown) {
+        hermesLog(
+            "HermesGC",
+            fmtStr.c_str(),
+            stat.first.c_str(),
+            stat.second.count,
+            stat.second.size,
+            getPercent(stat.second.size, size));
+        stat.second.printBreakdown(depth + 1);
+        totalSize += stat.second.size;
+        totalCount += stat.second.count;
+      }
+      if (size_t other = size - totalSize)
+        hermesLog(
+            "HermesGC",
+            fmtStr.c_str(),
+            "Other",
+            count - totalCount,
+            other,
+            getPercent(other, size));
+    }
+  };
+
   struct HeapSizeDiagnostic {
     struct HermesValueDiagnostic {
       uint64_t count = 0;
@@ -1727,22 +1767,14 @@ void GenGC::sizeDiagnosticCensus() {
       uint64_t numObject = 0;
     };
 
-    struct StringDiagnostic {
-      uint64_t count = 0;
-      // Count of strings of a given size. Initialize to all zeros.
-      // The zeroth index is unused, but left as zero.
-      std::array<uint64_t, 8> countPerSize{};
-      uint64_t totalChars = 0;
-    };
-
     uint64_t numCell = 0;
     uint64_t numVariableSizedObject = 0;
     uint64_t numPointer = 0;
     uint64_t numSymbol = 0;
     HermesValueDiagnostic hv;
     HermesValueDiagnostic shv;
-    StringDiagnostic asciiStr;
-    StringDiagnostic utf16Str;
+    DiagnosticStat asciiStr;
+    DiagnosticStat utf16Str;
 
     const char *fmts[3] = {
         "\t%-25s : %'10" PRIu64 " [%'10" PRIu64 " B | %4.1f%%]",
@@ -1806,51 +1838,23 @@ void GenGC::sizeDiagnosticCensus() {
             fmts[0],
             "StringPrimitive (ASCII)",
             asciiStr.count,
-            asciiStr.totalChars,
-            getPercent(asciiStr.totalChars, heapSize));
-        for (decltype(asciiStr.countPerSize.size()) i = 1;
-             i < asciiStr.countPerSize.size();
-             i++) {
-          std::string tag;
-          llvh::raw_string_ostream stream(tag);
-          stream << llvh::format("StringPrimitive (size %1lu)", i);
-          stream.flush();
-          hermesLog(
-              "HermesGC",
-              fmts[1],
-              tag.c_str(),
-              asciiStr.countPerSize[i],
-              asciiStr.countPerSize[i] * i,
-              getPercent(asciiStr.countPerSize[i] * i, asciiStr.totalChars));
-        }
+            asciiStr.size,
+            getPercent(asciiStr.size, heapSize));
+        asciiStr.printBreakdown(2);
 
         hermesLog(
             "HermesGC",
             fmts[0],
             "StringPrimitive (UTF-16)",
             utf16Str.count,
-            utf16Str.totalChars,
-            getPercent(utf16Str.totalChars, heapSize));
-        for (decltype(utf16Str.countPerSize.size()) i = 1;
-             i < utf16Str.countPerSize.size();
-             i++) {
-          std::string tag;
-          llvh::raw_string_ostream stream(tag);
-          stream << llvh::format("StringPrimitive (size %1lu)", i);
-          stream.flush();
-          hermesLog(
-              "HermesGC",
-              fmts[1],
-              tag.c_str(),
-              utf16Str.countPerSize[i],
-              utf16Str.countPerSize[i] * i,
-              getPercent(utf16Str.countPerSize[i] * i, utf16Str.totalChars));
-        }
+            utf16Str.size,
+            getPercent(utf16Str.size, heapSize));
+        utf16Str.printBreakdown(2);
       }
 
       uint64_t leftover = heapSize - (hv.count * sizeof(HermesValue)) -
-          (numPointer * sizeof(GCPointerBase)) - (asciiStr.totalChars * 2) -
-          utf16Str.totalChars - headerSize;
+          (numPointer * sizeof(GCPointerBase)) - asciiStr.size - utf16Str.size -
+          headerSize;
       hermesLog(
           "HermesGC",
           fmts[0],
@@ -2116,25 +2120,27 @@ void GenGC::sizeDiagnosticCensus() {
     acceptor.diagnostic.numVariableSizedObject +=
         static_cast<int>(cell->isVariableSize());
 
-    if (cell->getKind() == CellKind::DynamicASCIIStringPrimitiveKind ||
-        cell->getKind() == CellKind::DynamicUniquedASCIIStringPrimitiveKind ||
-        cell->getKind() == CellKind::ExternalASCIIStringPrimitiveKind) {
-      acceptor.diagnostic.asciiStr.count++;
-      auto *strprim = vmcast<StringPrimitive>(cell);
-      if (strprim->getStringLength() < 8) {
-        acceptor.diagnostic.asciiStr.countPerSize[strprim->getStringLength()]++;
+    // We include ExternalStringPrimitives because we're including external
+    // memory in the overall heap size. We do not include
+    // BufferedStringPrimitives because they just store a pointer to an
+    // ExternalStringPrimitive (which is already tracked).
+    auto *strprim = dyn_vmcast<StringPrimitive>(cell);
+    if (strprim && !isBufferedStringPrimitive(cell)) {
+      auto &stat = strprim->isASCII() ? acceptor.diagnostic.asciiStr
+                                      : acceptor.diagnostic.utf16Str;
+      stat.count++;
+      const size_t len = strprim->getStringLength();
+      // If the string is UTF-16 then the length is in terms of 16 bit
+      // characters.
+      const size_t sz = strprim->isASCII() ? len : len * 2;
+      stat.size += sz;
+      if (len < 8) {
+        auto &subStat =
+            stat.breakdown
+                ["StringPrimitive (size " + oscompat::to_string(len) + ")"];
+        subStat.count++;
+        subStat.size += sz;
       }
-      acceptor.diagnostic.asciiStr.totalChars += strprim->getStringLength();
-    } else if (
-        cell->getKind() == CellKind::DynamicUTF16StringPrimitiveKind ||
-        cell->getKind() == CellKind::DynamicUniquedUTF16StringPrimitiveKind ||
-        cell->getKind() == CellKind::ExternalUTF16StringPrimitiveKind) {
-      acceptor.diagnostic.utf16Str.count++;
-      auto *strprim = vmcast<StringPrimitive>(cell);
-      if (strprim->getStringLength() < 8) {
-        acceptor.diagnostic.utf16Str.countPerSize[strprim->getStringLength()]++;
-      }
-      acceptor.diagnostic.utf16Str.totalChars += strprim->getStringLength();
     }
   });
 
