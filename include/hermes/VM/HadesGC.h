@@ -879,10 +879,6 @@ class HadesGC final : public GCBase {
   /// metadata and external memory.
   uint64_t heapFootprint() const;
 
-  /// \return the remaining available space we are allowed to use. That is, the
-  /// difference between maxHeapSize_ and heapFootprint.
-  uint64_t remainingBytes() const;
-
   /// Accessor for the YG.
   HeapSegment &youngGen();
   const HeapSegment &youngGen() const;

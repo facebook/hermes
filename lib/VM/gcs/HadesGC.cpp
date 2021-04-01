@@ -2865,11 +2865,6 @@ uint64_t HadesGC::heapFootprint() const {
   return totalSegments * AlignedStorage::size() + externalBytes();
 }
 
-uint64_t HadesGC::remainingBytes() const {
-  const auto footprint = heapFootprint();
-  return footprint > maxHeapSize_ ? 0 : maxHeapSize_ - footprint;
-}
-
 uint64_t HadesGC::OldGen::allocatedBytes() const {
   return allocatedBytes_;
 }
@@ -2968,9 +2963,20 @@ size_t HadesGC::OldGen::numSegments() const {
 }
 
 size_t HadesGC::OldGen::maxNumSegments() const {
-  const uint64_t ogMaxBytes =
-      numSegments() * AlignedStorage::size() + gc_->remainingBytes();
-  return llvh::divideCeil(ogMaxBytes, AlignedStorage::size());
+  assert(
+      llvh::alignTo<AlignedStorage::size()>(gc_->maxHeapSize_) ==
+          gc_->maxHeapSize_ &&
+      "max heap size must be aligned");
+  // Subtract the YG component from the max heap size.
+  const auto ogMaxHeapSize = gc_->maxHeapSize_ - AlignedStorage::size();
+  if (numSegments() * AlignedStorage::size() + externalBytes_ >=
+      ogMaxHeapSize) {
+    // If the current OldGen footprint is greater than the max heap size, say
+    // the current number of segments are the max number of segments.
+    return numSegments();
+  }
+  return llvh::divideCeil(
+      ogMaxHeapSize - externalBytes_, AlignedStorage::size());
 }
 
 HadesGC::HeapSegment &HadesGC::OldGen::operator[](size_t i) {
