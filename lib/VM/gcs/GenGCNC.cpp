@@ -1750,29 +1750,12 @@ void GenGC::sizeDiagnosticCensus() {
   };
 
   struct HeapSizeDiagnostic {
-    struct HermesValueDiagnostic {
-      uint64_t count = 0;
-      uint64_t numBool = 0;
-      uint64_t numNumber = 0;
-      uint64_t numInt8 = 0;
-      uint64_t numInt16 = 0;
-      uint64_t numInt24 = 0;
-      uint64_t numInt32 = 0;
-      uint64_t numSymbol = 0;
-      uint64_t numNull = 0;
-      uint64_t numUndefined = 0;
-      uint64_t numEmpty = 0;
-      uint64_t numNativeValue = 0;
-      uint64_t numString = 0;
-      uint64_t numObject = 0;
-    };
-
     uint64_t numCell = 0;
     uint64_t numVariableSizedObject = 0;
     uint64_t numPointer = 0;
     uint64_t numSymbol = 0;
-    HermesValueDiagnostic hv;
-    HermesValueDiagnostic shv;
+    DiagnosticStat hv;
+    DiagnosticStat shv;
     DiagnosticStat asciiStr;
     DiagnosticStat utf16Str;
 
@@ -1870,121 +1853,17 @@ void GenGC::sizeDiagnosticCensus() {
     void hermesValueDiagnostic(
         const char *name,
         uint64_t bytesHV,
-        const HermesValueDiagnostic &diag,
+        const DiagnosticStat &diag,
         uint64_t heapSize) const {
       hermesLog(
           "HermesGC",
           fmts[0],
           name,
           diag.count,
-          diag.count * bytesHV,
-          getPercent(diag.count * bytesHV, heapSize));
+          diag.size,
+          getPercent(diag.size, heapSize));
 
-      hermesLog(
-          "HermesGC",
-          fmts[1],
-          "Bool",
-          diag.numBool,
-          diag.numBool * bytesHV,
-          getPercent(diag.numBool, diag.count));
-
-      {
-        hermesLog(
-            "HermesGC",
-            fmts[1],
-            "Number",
-            diag.numNumber,
-            diag.numNumber * bytesHV,
-            getPercent(diag.numNumber, diag.count));
-        hermesLog(
-            "HermesGC",
-            fmts[2],
-            "Int8",
-            diag.numInt8,
-            diag.numInt8 * bytesHV,
-            getPercent(diag.numInt8, diag.numNumber));
-        hermesLog(
-            "HermesGC",
-            fmts[2],
-            "Int16",
-            diag.numInt16,
-            diag.numInt16 * bytesHV,
-            getPercent(diag.numInt16, diag.numNumber));
-        hermesLog(
-            "HermesGC",
-            fmts[2],
-            "Int24",
-            diag.numInt24,
-            diag.numInt24 * bytesHV,
-            getPercent(diag.numInt24, diag.numNumber));
-        hermesLog(
-            "HermesGC",
-            fmts[2],
-            "Int32",
-            diag.numInt32,
-            diag.numInt32 * bytesHV,
-            getPercent(diag.numInt32, diag.numNumber));
-
-        uint64_t numDoubles = diag.numNumber - diag.numInt32 - diag.numInt24 -
-            diag.numInt16 - diag.numInt8;
-        hermesLog(
-            "HermesGC",
-            fmts[2],
-            "Doubles",
-            numDoubles,
-            numDoubles * bytesHV,
-            getPercent(numDoubles, diag.numNumber));
-      }
-
-      hermesLog(
-          "HermesGC",
-          fmts[1],
-          "Symbol",
-          diag.numSymbol,
-          diag.numSymbol * bytesHV,
-          getPercent(diag.numSymbol, diag.count));
-      hermesLog(
-          "HermesGC",
-          fmts[1],
-          "Null",
-          diag.numNull,
-          diag.numNull * bytesHV,
-          getPercent(diag.numNull, diag.count));
-      hermesLog(
-          "HermesGC",
-          fmts[1],
-          "Undefined",
-          diag.numUndefined,
-          diag.numUndefined * bytesHV,
-          getPercent(diag.numUndefined, diag.count));
-      hermesLog(
-          "HermesGC",
-          fmts[1],
-          "Empty",
-          diag.numEmpty,
-          diag.numEmpty * bytesHV,
-          getPercent(diag.numEmpty, diag.count));
-      hermesLog(
-          "HermesGC",
-          fmts[1],
-          "NativeValue",
-          diag.numNativeValue,
-          diag.numNativeValue * bytesHV,
-          getPercent(diag.numNativeValue, diag.count));
-      hermesLog(
-          "HermesGC",
-          fmts[1],
-          "StringPointer",
-          diag.numString,
-          diag.numString * bytesHV,
-          getPercent(diag.numString, diag.count));
-      hermesLog(
-          "HermesGC",
-          fmts[1],
-          "ObjectPointer",
-          diag.numObject,
-          diag.numObject * bytesHV,
-          getPercent(diag.numObject, diag.count));
+      diag.printBreakdown(2);
     }
 
     void gcPointerDiagnostic(uint64_t heapSize) const {
@@ -2039,60 +1918,68 @@ void GenGC::sizeDiagnosticCensus() {
     }
 
     void accept(PinnedHermesValue &hv) override {
-      acceptHV(hv, diagnostic.hv);
+      acceptHV(hv, diagnostic.hv, sizeof(PinnedHermesValue));
     }
     void accept(GCHermesValue &hv) override {
-      acceptHV(hv, diagnostic.hv);
+      acceptHV(hv, diagnostic.hv, sizeof(GCHermesValue));
     }
     void accept(GCSmallHermesValue &shv) override {
-      acceptHV(shv.toHV(pointerBase_), diagnostic.shv);
+      acceptHV(
+          shv.toHV(pointerBase_), diagnostic.shv, sizeof(GCSmallHermesValue));
     }
     void acceptHV(
         const HermesValue &hv,
-        HeapSizeDiagnostic::HermesValueDiagnostic &diag) {
+        DiagnosticStat &diag,
+        const size_t hvBytes) {
       diag.count++;
+      diag.size += hvBytes;
+      llvh::StringRef hvType;
       if (hv.isBool()) {
-        diag.numBool++;
+        hvType = "Bool";
       } else if (hv.isNumber()) {
-        diag.numNumber++;
-
+        hvType = "Number";
         double val = hv.getNumber();
         double intpart;
+        llvh::StringRef numType = "Doubles";
         if (std::modf(val, &intpart) == 0.0) {
           if (val >= static_cast<double>(HINT8_MIN) &&
               val <= static_cast<double>(HINT8_MAX)) {
-            diag.numInt8++;
+            numType = "Int8";
           } else if (
               val >= static_cast<double>(HINT16_MIN) &&
               val <= static_cast<double>(HINT16_MAX)) {
-            diag.numInt16++;
+            numType = "Int16";
           } else if (
               val >= static_cast<double>(HINT24_MIN) &&
               val <= static_cast<double>(HINT24_MAX)) {
-            diag.numInt24++;
+            numType = "Int24";
           } else if (
               val >= static_cast<double>(HINT32_MIN) &&
               val <= static_cast<double>(HINT32_MAX)) {
-            diag.numInt32++;
+            numType = "Int32";
           }
         }
+        diag.breakdown["Number"].breakdown[numType].count++;
+        diag.breakdown["Number"].breakdown[numType].size += hvBytes;
       } else if (hv.isString()) {
-        diag.numString++;
+        hvType = "StringPointer";
       } else if (hv.isSymbol()) {
-        diag.numSymbol++;
+        hvType = "Symbol";
       } else if (hv.isObject()) {
-        diag.numObject++;
+        hvType = "ObjectPointer";
       } else if (hv.isNull()) {
-        diag.numNull++;
+        hvType = "Null";
       } else if (hv.isUndefined()) {
-        diag.numUndefined++;
+        hvType = "Undefined";
       } else if (hv.isEmpty()) {
-        diag.numEmpty++;
+        hvType = "Empty";
       } else if (hv.isNativeValue()) {
-        diag.numNativeValue++;
+        hvType = "NativeValue";
       } else {
         assert(false && "Should be no other hermes values");
       }
+      diag.breakdown[hvType].count++;
+      diag.breakdown[hvType].size += hvBytes;
     }
 
     void accept(RootSymbolID sym) override {
