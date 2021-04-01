@@ -170,8 +170,10 @@ void HadesGC::OldGen::eraseSegmentFreelists(size_t segmentIdx) {
       iter++;
 
     // Move all the set bits after segmentIdx down by 1.
-    for (; iter != endIter; iter++) {
-      size_t idx = *iter;
+    while (iter != endIter) {
+      // Increment the iterator before manipulating values because the
+      // manipulation may invalidate our current iterator.
+      size_t idx = *iter++;
       freelistBucketSegmentBitArray_[bucket].set(idx - 1);
       freelistBucketSegmentBitArray_[bucket].reset(idx);
     }
