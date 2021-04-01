@@ -421,10 +421,6 @@ class HadesGC final : public GCBase {
     /// \return a pointer to the removed cell.
     FreelistCell *removeCellFromFreelist(size_t bucket, size_t segmentIdx);
 
-    /// Unset all the bits for a given segment's freelist, so that no new
-    /// allocations take place in it.
-    void clearFreelistForSegment(size_t segmentIdx);
-
     /// Remove a segment entirely from every freelist. This will shift all bits
     /// after segmentIdx down by one.
     void eraseSegmentFreelists(size_t segmentIdx);

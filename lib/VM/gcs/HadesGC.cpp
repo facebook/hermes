@@ -152,15 +152,6 @@ HadesGC::OldGen::FreelistCell *HadesGC::OldGen::removeCellFromFreelist(
   return cell;
 }
 
-void HadesGC::OldGen::clearFreelistForSegment(size_t segmentIdx) {
-  for (size_t bucket = 0; bucket < kNumFreelistBuckets; ++bucket) {
-    freelistBucketSegmentBitArray_[bucket].reset(segmentIdx);
-    freelistBucketBitArray_.set(
-        bucket, !freelistBucketSegmentBitArray_[bucket].empty());
-    freelistSegmentsBuckets_[segmentIdx][bucket] = nullptr;
-  }
-}
-
 void HadesGC::OldGen::eraseSegmentFreelists(size_t segmentIdx) {
   for (size_t bucket = 0; bucket < kNumFreelistBuckets; ++bucket) {
     freelistBucketSegmentBitArray_[bucket].reset(segmentIdx);
