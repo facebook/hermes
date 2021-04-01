@@ -25,7 +25,7 @@ const TEMPLATE_FILE = path.resolve(
 
 // Create visitor keys file
 const visitorKeys = execSync(
-  `cpp -P -I "${process.argv[2]}" "${TEMPLATE_FILE}"`,
+  `c++ -E -P -I"${process.argv[2]}" -x c "${TEMPLATE_FILE}"`,
 );
 const visitorKeysFileContents = `/**
  * Copyright (c) Facebook, Inc. and its affiliates.
