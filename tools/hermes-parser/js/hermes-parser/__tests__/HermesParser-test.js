@@ -238,6 +238,34 @@ test('Babel root File node', () => {
   });
 });
 
+test('Babel identifierName', () => {
+  expect(parse('test', {babel: true})).toMatchObject({
+    type: 'File',
+    loc: loc(1, 0, 1, 4),
+    start: 0,
+    end: 4,
+    program: {
+      type: 'Program',
+      loc: loc(1, 0, 1, 4),
+      start: 0,
+      end: 4,
+      body: [
+        {
+          type: 'ExpressionStatement',
+          expression: {
+            type: 'Identifier',
+            loc: {
+              identifierName: 'test',
+            }
+          },
+        },
+      ],
+      directives: [],
+    },
+    comments: [],
+  });
+});
+
 test('Source locations', () => {
   // ESTree source locations include range
   expect(parse('Foo')).toMatchObject({
