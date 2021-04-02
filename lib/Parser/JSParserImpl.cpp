@@ -20,14 +20,6 @@ namespace hermes {
 namespace parser {
 namespace detail {
 
-/// Declare a RAII recursion tracker. Check whether the recursion limit has
-/// been exceeded, and if so generate an error and return an empty
-/// llvh::Optional<>.
-#define CHECK_RECURSION                \
-  TrackRecursion trackRecursion{this}; \
-  if (recursionDepthCheck())           \
-    return llvh::None;
-
 JSParserImpl::JSParserImpl(
     Context &context,
     std::unique_ptr<llvh::MemoryBuffer> input)
