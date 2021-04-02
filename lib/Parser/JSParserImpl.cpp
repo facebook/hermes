@@ -3210,6 +3210,9 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
   SMLoc puncLoc = tok_->getStartLoc();
   bool optional = checkAndEat(TokenKind::questiondot);
   if (checkAndEat(TokenKind::l_square)) {
+    // Parsing another Expression directly without going through
+    // PrimaryExpression. This can overflow, so check.
+    CHECK_RECURSION;
     auto propExpr = parseExpression();
     if (!propExpr)
       return None;
