@@ -1003,15 +1003,30 @@ Optional<ESTree::Node *> JSParserImpl::parsePostfixTypeAnnotation() {
 
   ESTree::Node *result = *optPrimary;
 
-  // Parse any [] after the primary type.
   while (!lexer_.isNewLineBeforeCurrentToken() &&
          checkAndEat(TokenKind::l_square, JSLexer::GrammarContext::Flow)) {
-    if (!need(TokenKind::r_square, "in array type annotation", nullptr, {}))
-      return None;
-    result = setLocation(
-        start,
-        advance(JSLexer::GrammarContext::Flow).End,
-        new (context_) ESTree::ArrayTypeAnnotationNode(result));
+    if (checkAndEat(TokenKind::r_square, JSLexer::GrammarContext::Flow)) {
+      // Legacy Array syntax `T[]`
+      result = setLocation(
+          start,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::ArrayTypeAnnotationNode(result));
+    } else {
+      // Indexed Access `T[K]`
+      auto optIndexType = parseTypeAnnotation();
+      if (!optIndexType)
+        return None;
+      if (!need(
+              TokenKind::r_square,
+              "in indexed access type",
+              "start of type",
+              start))
+        return None;
+      result = setLocation(
+          start,
+          advance(JSLexer::GrammarContext::Flow).End,
+          new (context_) ESTree::IndexedAccessTypeNode(result, *optIndexType));
+    }
   }
 
   return result;
