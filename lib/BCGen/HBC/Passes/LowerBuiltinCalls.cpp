@@ -183,3 +183,5 @@ bool LowerBuiltinCalls::runOnFunction(Function *F) {
 
 } // namespace hbc
 } // namespace hermes
+
+#undef DEBUG_TYPE

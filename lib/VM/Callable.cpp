@@ -1701,3 +1701,5 @@ void GeneratorInnerFunction::saveStack(Runtime *runtime) {
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

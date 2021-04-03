@@ -141,3 +141,5 @@ bool InstructionEscapeAnalysis::tryMergeOffsets(
 }
 
 } // namespace hermes
+
+#undef DEBUG_TYPE

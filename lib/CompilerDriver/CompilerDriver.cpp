@@ -2171,3 +2171,5 @@ CompileResult compileFromCommandLineOptions() {
 }
 } // namespace driver
 } // namespace hermes
+
+#undef DEBUG_TYPE

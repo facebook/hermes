@@ -111,3 +111,5 @@ bool MovElimination::runOnFunction(Function *F) {
 
   return changed;
 }
+
+#undef DEBUG_TYPE

@@ -450,3 +450,5 @@ PseudoHandle<JSSymbol> JSSymbol::create(
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

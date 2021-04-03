@@ -1051,3 +1051,5 @@ void HiddenClass::stealPropertyMapFromParent(
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

@@ -671,3 +671,5 @@ void IdentifierTable::deserialize(Deserializer &d) {
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

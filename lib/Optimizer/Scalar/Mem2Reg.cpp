@@ -792,3 +792,5 @@ bool Mem2Reg::runOnFunction(Function *F) {
 Pass *hermes::createMem2Reg() {
   return new Mem2Reg();
 }
+
+#undef DEBUG_TYPE

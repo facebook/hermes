@@ -916,3 +916,5 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

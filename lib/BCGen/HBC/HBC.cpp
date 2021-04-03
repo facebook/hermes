@@ -336,3 +336,5 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecode(
     BM->populateSourceMap(sourceMapGen);
   return BM;
 }
+
+#undef DEBUG_TYPE
