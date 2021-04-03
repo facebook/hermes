@@ -482,6 +482,11 @@ elseif(EMSCRIPTEN)
   set(ICU_FOUND 1)
 endif()
 
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+endif()
+
 if (NOT ICU_FOUND)
   # Workaround: FindICU does not correctly recognize ICU include dir until
   # CMake 3.8.0.  https://github.com/Kitware/CMake/commit/cdf7e5d8
