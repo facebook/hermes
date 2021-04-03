@@ -115,6 +115,9 @@ function(hermes_update_compile_flags name)
     # Update target props, since all sources are C++.
     set_property(TARGET ${name} APPEND_STRING PROPERTY
       COMPILE_FLAGS "${flags}")
+    if(HERMES_ENABLE_UNITY_BUILD)
+      set_target_properties(${name} PROPERTIES UNITY_BUILD ON)
+    endif()
   endif ()
 endfunction()
 

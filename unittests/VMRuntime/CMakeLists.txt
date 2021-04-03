@@ -5,6 +5,8 @@
 
 set(HERMES_LINK_COMPONENTS LLVHSupport)
 
+set(HERMES_ENABLE_UNITY_BUILD OFF)
+
 set(RTSources
   AlignedHeapSegmentTest.cpp
   AlignedStorageTest.cpp
