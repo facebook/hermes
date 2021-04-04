@@ -87,6 +87,11 @@ if (NOT PYTHONINTERP_FOUND)
 Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
 endif()
 
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+endif()
+
 # Project options.
 
 set(HERMES_IS_ANDROID OFF CACHE BOOL
