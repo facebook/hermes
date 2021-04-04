@@ -78,8 +78,9 @@ TEST_F(SegmentedArrayTest, AllowTrimming) {
   }
 
   // The array should be trimmed.
-  if (!kConcurrentGC)
+  if (!kConcurrentGC) {
     EXPECT_EQ(array->size(), array->capacity());
+  }
 }
 
 } // namespace

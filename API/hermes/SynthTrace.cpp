@@ -661,6 +661,8 @@ const char *SynthTrace::nameFromReleaseUnused(::hermes::vm::ReleaseUnused ru) {
       return "youngOnFull";
     case ::hermes::vm::ReleaseUnused::kReleaseUnusedYoungAlways:
       return "youngAlways";
+    default:
+      llvm_unreachable("No other valid value.");
   }
 }
 

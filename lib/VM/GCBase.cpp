@@ -1328,9 +1328,9 @@ void GCBase::AllocationLocationTracker::addSamplesToSnapshot(
   // There might not be fragments if tracking has never been enabled. If there
   // are, the last one is always invalid.
   assert(
-      fragments_.empty() ||
-      fragments_.back().lastSeenObjectID_ == IDTracker::kInvalidNode &&
-          "Last fragment should not have an ID assigned yet");
+      (fragments_.empty() ||
+       fragments_.back().lastSeenObjectID_ == IDTracker::kInvalidNode) &&
+      "Last fragment should not have an ID assigned yet");
   // Loop over the fragments if we have any, and always skip the last one.
   for (size_t i = 0, e = fragments_.size(); i + 1 < e; ++i) {
     const auto &fragment = fragments_[i];

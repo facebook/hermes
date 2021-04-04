@@ -124,8 +124,9 @@ TEST_F(ArrayStorageTest, AllowTrimming) {
   }
 
   // The array should be trimmed.
-  if (!kConcurrentGC)
+  if (!kConcurrentGC) {
     EXPECT_EQ(st->size(), st->capacity());
+  }
 }
 
 using ArrayStorageBigHeapTest = LargeHeapRuntimeTestFixture;
