@@ -268,3 +268,5 @@ JSArrayBuffer::createDataBlock(Runtime *runtime, size_type size, bool zero) {
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

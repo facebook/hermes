@@ -629,3 +629,4 @@ template void *MallocGC::alloc</*FixedSize*/ false, HasFinalizer::No>(
 
 } // namespace vm
 } // namespace hermes
+#undef DEBUG_TYPE

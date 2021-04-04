@@ -62,3 +62,5 @@ JSDate::create(Runtime *runtime, double value, Handle<JSObject> parentHandle) {
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

@@ -262,3 +262,5 @@ Optional<int32_t> FunctionScopeAnalysis::getScopeDepth(VariableScope *VS) {
 Function *FunctionScopeAnalysis::getLexicalParent(Function *F) {
   return calculateFunctionScopeData(F).parent;
 }
+
+#undef DEBUG_TYPE

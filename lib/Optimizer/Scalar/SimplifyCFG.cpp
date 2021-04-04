@@ -400,3 +400,5 @@ bool SimplifyCFG::runOnFunction(hermes::Function *F) {
 Pass *hermes::createSimplifyCFG() {
   return new SimplifyCFG();
 }
+
+#undef DEBUG_TYPE

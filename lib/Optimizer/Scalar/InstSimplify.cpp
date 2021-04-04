@@ -604,3 +604,5 @@ bool InstSimplify::runOnFunction(Function *F) {
 Pass *hermes::createInstSimplify() {
   return new InstSimplify();
 }
+
+#undef DEBUG_TYPE

@@ -239,3 +239,5 @@ bool hermes::isSimpleSideEffectFreeInstruction(Instruction *I) {
   }
   llvm_unreachable("unreachable");
 }
+
+#undef DEBUG_TYPE

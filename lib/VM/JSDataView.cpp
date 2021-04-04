@@ -82,3 +82,5 @@ JSDataView::JSDataView(
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

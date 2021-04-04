@@ -715,3 +715,5 @@ bool TypeInference::runOnModule(Module *M) {
 Pass *hermes::createTypeInference() {
   return new TypeInference();
 }
+
+#undef DEBUG_TYPE

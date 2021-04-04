@@ -334,3 +334,5 @@ ExecutionStatus Interpreter::implCallBuiltin(
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

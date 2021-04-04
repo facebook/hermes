@@ -264,3 +264,5 @@ void Runtime::dumpNativeCallStats(llvh::raw_ostream &OS) {
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

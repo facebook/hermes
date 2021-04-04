@@ -335,3 +335,4 @@ Pass *createInlining() {
 }
 
 } // namespace hermes
+#undef DEBUG_TYPE

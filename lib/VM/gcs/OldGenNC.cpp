@@ -1028,3 +1028,4 @@ void OldGen::updateCrashManagerHeapExtents(
 
 } // namespace vm
 } // namespace hermes
+#undef DEBUG_TYPE

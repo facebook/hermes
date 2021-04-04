@@ -5,6 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#ifndef HERMES_UNITTESTS_BCGEN_TESTHELPERS_H
+#define HERMES_UNITTESTS_BCGEN_TESTHELPERS_H
+
 #include "hermes/AST/Context.h"
 
 #include <stdint.h>
@@ -24,3 +27,5 @@ std::vector<uint8_t> bytecodeForSource(
     TestCompileFlags flags = TestCompileFlags());
 
 } // namespace hermes
+
+#endif

@@ -214,3 +214,5 @@ Pass *createTDZDedup() {
 }
 
 } // namespace hermes
+
+#undef DEBUG_TYPE
