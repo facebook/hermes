@@ -116,6 +116,9 @@ function(hermes_update_compile_flags name)
     set_property(TARGET ${name} APPEND_STRING PROPERTY
       COMPILE_FLAGS "${flags}")
   endif ()
+  if(HERMES_ENABLE_UNITY_BUILD)
+    set_target_properties(${name} PROPERTIES UNITY_BUILD ON)
+  endif()
 endfunction()
 
 function(add_hermes_library name)

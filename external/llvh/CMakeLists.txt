@@ -23,6 +23,9 @@ include(config-ix)
 configure_file(include/llvh/Config/config.h.cmake include/llvh/Config/config.h)
 configure_file(include/llvh/Config/llvm-config.h.cmake include/llvh/Config/llvm-config.h)
 
+# Some code is not compatible with unity builds, so turn them off for LLVH.
+set(HERMES_ENABLE_UNITY_BUILD OFF)
+
 add_subdirectory(lib)
 add_subdirectory(utils/FileCheck)
 add_subdirectory(utils/not)
