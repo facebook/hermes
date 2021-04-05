@@ -433,16 +433,6 @@ if (NOT (GENERATOR_IS_MULTI_CONFIG OR CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_C
     option(HERMES_ENABLE_LTO "Build Hermes with LTO" ON)
 endif()
 
-if (CMAKE_COMPILER_IS_GNUCXX)
-  # Suppress uninteresting warnings about initializing ArrayRef from initializer lists.
-  check_cxx_compiler_flag("-Winit-list-lifetime" INIT_LIST_LIFETIME_FLAG)
-  append_if(INIT_LIST_LIFETIME_FLAG "-Wno-init-list-lifetime" CMAKE_CXX_FLAGS)
-  # Suppress the redundant move warnings in GCC 9, because it leads to suboptimal
-  # recommendations for older compilers that do not implement C++ Core Issue 1579.
-  check_cxx_compiler_flag("-Wredundant-move" REDUNDANT_MOVE_FLAG)
-  append_if(REDUNDANT_MOVE_FLAG "-Wno-redundant-move" CMAKE_CXX_FLAGS)
-endif()
-
 if (GCC_COMPATIBLE)
   # Don't export symbols unless we explicitly say so
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")

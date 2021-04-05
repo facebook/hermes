@@ -191,7 +191,7 @@ static const char *fileExtensionForAction(MarkerAction action) {
       return "heaptimeline";
     case MarkerAction::SAMPLE:
       return "heapprofile";
-    case MarkerAction::NONE:
+    default:
       llvm_unreachable(
           "Should never call fileExtensionForAction with a none action");
   }
