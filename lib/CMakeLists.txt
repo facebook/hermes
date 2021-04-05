@@ -45,7 +45,7 @@ add_hermes_library(hermesFrontend
   IR/IRVerifier.cpp
   IR/Instrs.cpp
   Utils/Dumper.cpp
-  LINK_LIBS hermesSupport hermesFrontEndDefs hermesAST
+  LINK_LIBS hermesSupport hermesFrontEndDefs hermesAST hermesParser
 )
 
 add_subdirectory(VM)
