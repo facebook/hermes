@@ -1362,7 +1362,7 @@ Value TraceInterpreter::execFunction(
                 static_cast<const SynthTrace::CallFromNativeRecord &>(*rec);
             auto func = getObjForUse(cfnr.functionID_).asFunction(rt_);
             std::vector<Value> args;
-            for (const auto arg : cfnr.args_) {
+            for (const auto &arg : cfnr.args_) {
               args.emplace_back(
                   traceValueToJSIValue(rt_, trace_, getJSIValueForUse, arg));
             }
@@ -1391,7 +1391,7 @@ Value TraceInterpreter::execFunction(
             // calls the construct path.
             auto func = getObjForUse(cfnr.functionID_).asFunction(rt_);
             std::vector<Value> args;
-            for (const auto arg : cfnr.args_) {
+            for (const auto &arg : cfnr.args_) {
               args.emplace_back(
                   traceValueToJSIValue(rt_, trace_, getJSIValueForUse, arg));
             }

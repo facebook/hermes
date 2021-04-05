@@ -193,7 +193,7 @@ static void printHelp(llvh::Optional<llvh::StringRef> command = llvh::None) {
         "These commands are defined internally. Type `help' to see this list.\n"
         "Type `help name' to find out more about the function `name'.\n\n";
     llvh::outs() << topLevelHelpText;
-    for (const auto it : commandToHelpText) {
+    for (const auto &it : commandToHelpText) {
       llvh::outs() << it.first << '\n';
     }
   }

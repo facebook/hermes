@@ -405,4 +405,8 @@ if (GCC_COMPATIBLE)
 
   # Enable -Wdelete-non-virtual-dtor if available.
   add_flag_if_supported("-Wdelete-non-virtual-dtor" DELETE_NON_VIRTUAL_DTOR_FLAG)
+
+  # Disable range loop analysis warnings.
+  check_cxx_compiler_flag("-Wrange-loop-analysis" RANGE_ANALYSIS_FLAG)
+  append_if(RANGE_ANALYSIS_FLAG "-Wno-range-loop-analysis" CMAKE_CXX_FLAGS)
 endif (GCC_COMPATIBLE)

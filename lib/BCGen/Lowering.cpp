@@ -668,7 +668,7 @@ bool LowerCondBranch::runOnFunction(Function *F) {
       changed = true;
     }
 
-    for (const auto cbiter : condToCompMap) {
+    for (const auto &cbiter : condToCompMap) {
       auto binopInst =
           llvh::dyn_cast<BinaryOperatorInst>(cbiter.first->getCondition());
 
