@@ -74,7 +74,6 @@ namespace vm {
 
 // External forward declarations.
 class CodeBlock;
-class ArrayStorage;
 class Environment;
 class Interpreter;
 class JSObject;
