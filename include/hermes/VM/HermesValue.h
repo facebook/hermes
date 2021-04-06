@@ -108,6 +108,7 @@ class PseudoHandle;
 // Only used for HV32 API compatibility.
 class PointerBase;
 class GCCell;
+class Runtime;
 
 // Tags are defined as 16-bit values positioned at the high bits of a 64-bit
 // word.
@@ -468,6 +469,10 @@ class HermesValue {
 
   GCCell *getPointer(PointerBase *) const {
     return static_cast<GCCell *>(getPointer());
+  }
+
+  static HermesValue encodeHermesValue(HermesValue hv, Runtime *) {
+    return hv;
   }
 
   /// }

@@ -37,6 +37,12 @@ void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addArray("storage", self->data(), &self->size_, sizeof(GCHermesValue));
 }
 
+void ArrayStorageSmallBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  const auto *self = static_cast<const ArrayStorageSmall *>(cell);
+  mb.addArray(
+      "storage", self->data(), &self->size_, sizeof(GCSmallHermesValue));
+}
+
 #ifdef HERMESVM_SERIALIZE
 void ArrayStorageSerialize(Serializer &s, const GCCell *cell) {
   hermes_fatal("ArrayStorage should be serialized with its owner");
@@ -44,6 +50,34 @@ void ArrayStorageSerialize(Serializer &s, const GCCell *cell) {
 
 void ArrayStorageDeserialize(Deserializer &d, CellKind kind) {
   hermes_fatal("ArrayStorage should be deserialized with its owner");
+}
+
+void ArrayStorageSmallSerialize(Serializer &s, const GCCell *cell) {
+  auto self = vmcast<const ArrayStorageSmall>(cell);
+  s.writeInt<ArrayStorageSmall::size_type>(self->capacity_);
+  s.writeInt<ArrayStorageSmall::size_type>(self->size());
+
+  for (ArrayStorageSmall::size_type i = 0; i < self->size(); i++)
+    s.writeSmallHermesValue(self->at(i));
+
+  s.endObject(cell);
+}
+
+void ArrayStorageSmallDeserialize(Deserializer &d, CellKind kind) {
+  assert(
+      kind == CellKind::ArrayStorageSmallKind && "Expected ArrayStorageSmall");
+  const uint32_t capacity = d.readInt<ArrayStorageSmall::size_type>();
+  assert(capacity <= ArrayStorageSmall::maxElements() && "invalid capacity");
+  auto *cell = d.getRuntime()->makeAVariable<ArrayStorageSmall>(
+      ArrayStorageSmall::allocationSize(capacity), d.getRuntime(), capacity);
+  assert(cell->size() <= capacity && "size cannot be greater than capacity");
+  cell->size_.store(
+      d.readInt<ArrayStorageSmall::size_type>(), std::memory_order_release);
+
+  for (ArrayStorageSmall::size_type i = 0; i < cell->size(); i++)
+    d.readSmallHermesValue(&cell->data()[i]);
+
+  d.endObject(cell);
 }
 
 template <>
@@ -292,7 +326,8 @@ ExecutionStatus ArrayStorageBase<HVType>::pushBackSlowPath(
   if (resize(selfHandle, runtime, size + 1) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  selfHandle->set(size, value.get(), &runtime->getHeap());
+  auto hv = HVType::encodeHermesValue(*value, runtime);
+  selfHandle->set(size, hv, &runtime->getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -310,6 +345,7 @@ void ArrayStorageBase<HVType>::_trimCallback(GCCell *cell) {
 }
 
 template class ArrayStorageBase<HermesValue>;
+template class ArrayStorageBase<SmallHermesValue>;
 
 } // namespace vm
 } // namespace hermes

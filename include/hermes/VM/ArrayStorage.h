@@ -34,6 +34,12 @@ class ArrayStorageBase final
   using GCHVType = GCHermesValueBase<HVType>;
   friend llvh::TrailingObjects<ArrayStorageBase<HVType>, GCHVType>;
   friend void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend void ArrayStorageSmallBuildMeta(
+      const GCCell *cell,
+      Metadata::Builder &mb);
+
+  friend void ArrayStorageSmallSerialize(Serializer &s, const GCCell *cell);
+  friend void ArrayStorageSmallDeserialize(Deserializer &d, CellKind kind);
 
  public:
   using size_type = uint32_t;
@@ -42,6 +48,11 @@ class ArrayStorageBase final
   static const VTable vt;
 
 #ifdef HERMESVM_SERIALIZE
+  /// There is intentionally no implementation of SmallHermesValue
+  /// specializations of serialize/deserializeArrayStorage, because
+  /// SmallHermesValue cannot contain native pointers, so there is no need for
+  /// these helper functions.
+
   /// A convenience method to serialize an ArrayStorage which does not contain
   /// any native pointers.
   static void serializeArrayStorage(
@@ -69,7 +80,13 @@ class ArrayStorageBase final
   }
 
   static constexpr CellKind getCellKind() {
-    return CellKind::ArrayStorageKind;
+    static_assert(
+        std::is_same<HVType, HermesValue>::value ||
+            std::is_same<HVType, SmallHermesValue>::value,
+        "Illegal HVType.");
+    return std::is_same<HVType, HermesValue>::value
+        ? CellKind::ArrayStorageKind
+        : CellKind::ArrayStorageSmallKind;
   }
 
   /// Create a new instance with specified capacity.
@@ -165,10 +182,18 @@ class ArrayStorageBase final
       Handle<> value) {
     auto *self = selfHandle.get();
     const auto currSz = self->size();
+    // This must be done before the capacity check, because encodeHermesValue
+    // may allocate, which could cause trimming of the ArrayStorage. If the
+    // capacity check fails, then this work is wasted, but that's okay because
+    // it's a slow path.
+    auto hv = HVType::encodeHermesValue(value.get(), runtime);
+    // For SmallHermesValue, the above may allocate, so update self.
+    if (std::is_same<HVType, SmallHermesValue>::value)
+      self = selfHandle.get();
     if (LLVM_LIKELY(currSz < self->capacity_)) {
       // Use the constructor of GCHermesValue to use the correct write barrier
       // for uninitialized memory.
-      new (&self->data()[currSz]) GCHVType(value.get(), &runtime->getHeap());
+      new (&self->data()[currSz]) GCHVType(hv, &runtime->getHeap());
       self->size_.store(currSz + 1, std::memory_order_release);
       return ExecutionStatus::RETURNED;
     }
@@ -304,6 +329,7 @@ class ArrayStorageBase final
 };
 
 using ArrayStorage = ArrayStorageBase<HermesValue>;
+using ArrayStorageSmall = ArrayStorageBase<SmallHermesValue>;
 
 static_assert(
     ArrayStorage::allocationSize(ArrayStorage::maxElements()) <=
@@ -313,6 +339,18 @@ static_assert(
 static_assert(
     GC::maxAllocationSize() -
             ArrayStorage::allocationSize(ArrayStorage::maxElements()) <
+        HeapAlign,
+    "maxElements() is too small");
+
+static_assert(
+    ArrayStorageSmall::allocationSize(ArrayStorageSmall::maxElements()) <=
+        GC::maxAllocationSize(),
+    "maxElements() is too big");
+
+static_assert(
+    GC::maxAllocationSize() -
+            ArrayStorageSmall::allocationSize(
+                ArrayStorageSmall::maxElements()) <
         HeapAlign,
     "maxElements() is too small");
 
