@@ -17,6 +17,7 @@
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/RootAndSlotAcceptorDefault.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/SmallHermesValue-inline.h"
 #include "hermes/VM/VTable.h"
 
 #include "llvh/Support/Debug.h"

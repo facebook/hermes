@@ -14,6 +14,7 @@
 #include "hermes/VM/HiddenClass.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PropertyDescriptor.h"
+#include "hermes/VM/SmallHermesValue-inline.h"
 #include "hermes/VM/StringView.h"
 #include "hermes/VM/TypesafeFlags.h"
 #include "hermes/VM/VTable.h"

@@ -24,6 +24,7 @@
 #include "hermes/VM/HeapSnapshot.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/Serializer.h"
+#include "hermes/VM/SmallHermesValue-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/SweepResultNC.h"
 #include "hermes/VM/SymbolID.h"

@@ -11,6 +11,7 @@
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/Metadata.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/SmallHermesValue-inline.h"
 
 #include "llvh/Support/TrailingObjects.h"
 

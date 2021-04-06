@@ -8,6 +8,7 @@
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 
 #include "hermes/VM/GC.h"
+#include "hermes/VM/SmallHermesValue-inline.h"
 
 namespace hermes {
 namespace vm {
