@@ -3013,7 +3013,7 @@ llvh::ErrorOr<HadesGC::HeapSegment> HadesGC::createSegment() {
   pointerBase_->setSegment(segIdx, seg.lowLim());
   addSegmentExtentToCrashManager(seg, oscompat::to_string(segIdx));
   seg.markBitArray().markAll();
-  return seg;
+  return llvh::ErrorOr<HadesGC::HeapSegment>(std::move(seg));
 }
 
 void HadesGC::OldGen::addSegment(HeapSegment seg) {
