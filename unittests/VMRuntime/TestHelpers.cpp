@@ -89,6 +89,10 @@ void DummyRuntime::markWeakRoots(WeakRootAcceptor &acceptor) {
     markExtraWeak(acceptor);
 }
 
+// Dummy runtime doesn't need to mark anything during complete marking.
+void DummyRuntime::markRootsForCompleteMarking(RootAndSlotAcceptorWithNames &) {
+}
+
 std::string DummyRuntime::convertSymbolToUTF8(SymbolID) {
   return "";
 }

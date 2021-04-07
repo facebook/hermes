@@ -513,20 +513,8 @@ void Runtime::markRoots(
     acceptor.endRootSection();
   }
 
-  {
-    MarkRootsPhaseTimer timer(this, RootAcceptor::Section::SamplingProfiler);
-    acceptor.beginRootSection(RootAcceptor::Section::SamplingProfiler);
-    if (samplingProfiler_) {
-      samplingProfiler_->markRoots(acceptor);
-    }
-#ifdef HERMESVM_PROFILER_BB
-    auto *&hiddenClassArray = inlineCacheProfiler_.getHiddenClassArray();
-    if (hiddenClassArray) {
-      acceptor.acceptPtr(hiddenClassArray);
-    }
-#endif
-    acceptor.endRootSection();
-  }
+  // Mark the alternative roots during the normal mark roots call.
+  markRootsForCompleteMarking(acceptor);
 
   {
     MarkRootsPhaseTimer timer(
@@ -535,6 +523,12 @@ void Runtime::markRoots(
     if (codeCoverageProfiler_) {
       codeCoverageProfiler_->markRoots(acceptor);
     }
+#ifdef HERMESVM_PROFILER_BB
+    auto *&hiddenClassArray = inlineCacheProfiler_.getHiddenClassArray();
+    if (hiddenClassArray) {
+      acceptor.acceptPtr(hiddenClassArray);
+    }
+#endif
     acceptor.endRootSection();
   }
 
@@ -565,6 +559,16 @@ void Runtime::markWeakRoots(WeakRootAcceptor &acceptor) {
     rm.markWeakRoots(acceptor);
   for (auto &fn : customMarkWeakRootFuncs_)
     fn(&getHeap(), acceptor);
+  acceptor.endRootSection();
+}
+
+void Runtime::markRootsForCompleteMarking(
+    RootAndSlotAcceptorWithNames &acceptor) {
+  MarkRootsPhaseTimer timer(this, RootAcceptor::Section::SamplingProfiler);
+  acceptor.beginRootSection(RootAcceptor::Section::SamplingProfiler);
+  if (samplingProfiler_) {
+    samplingProfiler_->markRoots(acceptor);
+  }
   acceptor.endRootSection();
 }
 

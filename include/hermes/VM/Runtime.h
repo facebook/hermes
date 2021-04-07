@@ -935,6 +935,10 @@ class Runtime : public HandleRootOwner,
   /// method informs the GC of all runtime weak roots.
   void markWeakRoots(WeakRootAcceptor &weakAcceptor) override;
 
+  /// See documentation on \c GCBase::GCCallbacks.
+  void markRootsForCompleteMarking(
+      RootAndSlotAcceptorWithNames &acceptor) override;
+
   /// Visits every entry in the identifier table and calls acceptor with
   /// the entry and its id as arguments. This is intended to be used only for
   /// snapshots, as it is slow. The function passed as acceptor shouldn't

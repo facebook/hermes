@@ -426,6 +426,18 @@ class GCBase {
     /// beginning of every GC.
     virtual void markWeakRoots(WeakRootAcceptor &weakAcceptor) = 0;
 
+    /// Callback that might be invoked by the GC before it completes marking.
+    /// Not all GCs will call this. It should be used to mark any roots that
+    /// might change without executing proper read and write barriers on the GC.
+    /// An example would be something that skipped weak ref read barriers in a
+    /// signal handler. If they aren't marked, they would be collected as
+    /// garbage.
+    /// While it is possible to implement this just as forwarding to
+    /// \c markRoots, to be faster it should try to mark only things that would
+    /// not have been properly doing barriers.
+    virtual void markRootsForCompleteMarking(
+        RootAndSlotAcceptorWithNames &acceptor) = 0;
+
     /// \return one higher than the largest symbol in the identifier table. This
     /// enables the GC to size its internal structures for symbol marking.
     /// Optionally invoked at the beginning of a garbage collection.

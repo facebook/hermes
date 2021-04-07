@@ -1724,6 +1724,11 @@ void HadesGC::completeMarking() {
   // No locks are needed here because the world is stopped and there is only 1
   // active thread.
   oldGenMarker_->globalWorklist().flushPushChunk();
+  {
+    // Remark any roots that may have changed without executing barriers.
+    DroppingAcceptor<MarkAcceptor> nameAcceptor{*oldGenMarker_};
+    gcCallbacks_->markRootsForCompleteMarking(nameAcceptor);
+  }
   // Drain the marking queue.
   oldGenMarker_->drainAllWork();
   assert(
