@@ -11,7 +11,8 @@
       "modules",
       "regexp",
       "strings",
-      "memory-profilers"
+      "memory-profilers",
+      "gengc"
     ],
     "Integrations": [
       "react-native-integration"
