@@ -62,6 +62,7 @@ set(RTSources
   SmallHermesValueTest.cpp
   SmallXStringTest.cpp
   StaticBuiltinsTest.cpp
+  StackTracesTreeTest.cpp
   StorageProviderTest.cpp
   StringBuilderTest.cpp
   StringPrimitiveTest.cpp
