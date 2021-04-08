@@ -5,6 +5,10 @@
 
 set(HERMES_LINK_COMPONENTS LLVHSupport)
 
+# Some sources here have conflicting names for free functions, so disable unity
+# builds if they have been globally enabled.
+set(CMAKE_UNITY_BUILD OFF)
+
 set(RTSources
   AlignedHeapSegmentTest.cpp
   AlignedStorageTest.cpp
