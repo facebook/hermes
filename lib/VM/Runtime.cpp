@@ -2374,3 +2374,5 @@ void Runtime::pushCallStackImpl(const CodeBlock *, const inst::Inst *) {}
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

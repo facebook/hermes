@@ -72,3 +72,5 @@ CallResult<PseudoHandle<JSGenerator>> JSGenerator::create(
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

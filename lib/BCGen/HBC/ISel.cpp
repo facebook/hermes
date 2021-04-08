@@ -1661,3 +1661,5 @@ uint8_t HBCISel::acquirePropertyWriteCacheIndex(unsigned id) {
   idx = ++lastPropertyWriteCacheIndex_;
   return idx;
 }
+
+#undef DEBUG_TYPE

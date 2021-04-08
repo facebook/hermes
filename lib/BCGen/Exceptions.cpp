@@ -174,3 +174,5 @@ ExceptionEntryList hermes::generateExceptionHandlers(
   std::sort(exception_entries.begin(), exception_entries.end());
   return exception_entries;
 }
+
+#undef DEBUG_TYPE

@@ -755,3 +755,5 @@ llvh::Optional<Node *> buildAST(
 
 } // namespace ESTree
 } // namespace hermes
+
+#undef DEBUG_TYPE

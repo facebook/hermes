@@ -184,3 +184,5 @@ bool CSE::runOnFunction(Function *F) {
 Pass *hermes::createCSE() {
   return new CSE();
 }
+
+#undef DEBUG_TYPE

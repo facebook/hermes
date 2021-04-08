@@ -388,3 +388,5 @@ Pass *createResolveStaticRequire() {
 }
 
 } // namespace hermes
+
+#undef DEBUG_TYPE

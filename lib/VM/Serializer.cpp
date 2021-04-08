@@ -193,4 +193,6 @@ void Serializer::writeSmallHermesValue(SmallHermesValue shv) {
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE
 #endif

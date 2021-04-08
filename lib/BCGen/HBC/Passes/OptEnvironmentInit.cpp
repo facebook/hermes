@@ -83,3 +83,5 @@ bool OptEnvironmentInit::runOnFunction(Function *F) {
 
 } // namespace hbc
 } // namespace hermes
+
+#undef DEBUG_TYPE

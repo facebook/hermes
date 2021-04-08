@@ -719,3 +719,5 @@ bool LowerExponentiationOperator::lowerExponentiationOperator(
   binOp->eraseFromParent();
   return true;
 }
+
+#undef DEBUG_TYPE

@@ -447,3 +447,5 @@ void OrderedHashMap::clear(Runtime *runtime) {
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

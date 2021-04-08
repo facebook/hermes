@@ -209,3 +209,4 @@ int main(int argc, char **argv) {
 
   return diffFiles(std::move(fileBufs), filenames, humanize);
 }
+#undef DEBUG_TYPE

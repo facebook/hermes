@@ -182,3 +182,5 @@ CallResult<HermesValue> JSRegExpStringIterator::nextElement(
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

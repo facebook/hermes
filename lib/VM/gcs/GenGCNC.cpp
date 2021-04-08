@@ -1987,3 +1987,4 @@ void *GenGC::allocSlow(uint32_t sz, bool fixedSize, HasFinalizer hasFinalizer) {
 
 } // namespace vm
 } // namespace hermes
+#undef DEBUG_TYPE

@@ -1475,3 +1475,5 @@ llvh::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

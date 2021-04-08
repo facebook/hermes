@@ -590,3 +590,5 @@ template PseudoHandle<SegmentedArray> SegmentedArray::increaseSize<false>(
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

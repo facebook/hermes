@@ -458,3 +458,5 @@ template class JSWeakMapImpl<CellKind::WeakSetKind>;
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

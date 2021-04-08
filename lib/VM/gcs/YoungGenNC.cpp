@@ -684,3 +684,4 @@ void YoungGen::moveHeap(GenGC *gc, ptrdiff_t moveHeapDelta) {
 
 } // namespace vm
 } // namespace hermes
+#undef DEBUG_TYPE

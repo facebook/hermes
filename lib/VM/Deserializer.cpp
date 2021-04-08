@@ -245,4 +245,6 @@ void Deserializer::updateAddress(
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE
 #endif
