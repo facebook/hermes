@@ -683,11 +683,11 @@ stringPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
   uint32_t argCount = args.getArgCount();
 
   // Store the results of toStrings and concat them at the end.
-  auto arrRes = ArrayStorage::create(runtime, argCount, argCount);
+  auto arrRes = ArrayStorageSmall::create(runtime, argCount, argCount);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strings = runtime->makeHandle<ArrayStorage>(*arrRes);
+  auto strings = runtime->makeHandle<ArrayStorageSmall>(*arrRes);
 
   // Run toString on the arguments to figure out the final size.
   auto marker = gcScope.createMarker();
@@ -699,7 +699,10 @@ stringPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
 
     // Allocations can't be performed here,
     // and we know we're in bounds because we preallocated.
-    strings->set(i, strRes->getHermesValue(), &runtime->getHeap());
+    strings->set(
+        i,
+        SmallHermesValue::encodeStringValue(strRes->get(), runtime),
+        &runtime->getHeap());
     uint32_t strLength = strRes->get()->getStringLength();
 
     size.add(strLength);
@@ -722,7 +725,7 @@ stringPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
 
   // Copy the rest of the strings.
   for (uint32_t i = 0; i < argCount; i++) {
-    element = strings->at(i).getString();
+    element = strings->at(i).getString(runtime);
     builder->appendStringPrim(element);
   }
   return builder->getStringPrimitive().getHermesValue();
@@ -1676,7 +1679,7 @@ stringPrototypeReplaceAll(void *, Runtime *runtime, NativeArgs args) {
       // c. Else,
       // i. Assert: Type(replaceValue) is String.
       // ii. Let captures be a new empty List.
-      auto captures = Runtime::makeNullHandle<ArrayStorage>();
+      auto captures = Runtime::makeNullHandle<ArrayStorageSmall>();
       // iii. Let replacement be ! GetSubstitution(searchString, string,
       // position, captures, undefined, replaceValue).
       auto callRes = getSubstitution(
@@ -1991,7 +1994,7 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
   } else {
     // 12. Else,
     // a. Let captures be an empty List.
-    auto nullHandle = Runtime::makeNullHandle<ArrayStorage>();
+    auto nullHandle = Runtime::makeNullHandle<ArrayStorageSmall>();
     // b. Let replStr be GetSubstitution(matched, string, pos, captures,
     // replaceValue).
     auto callRes = getSubstitution(
