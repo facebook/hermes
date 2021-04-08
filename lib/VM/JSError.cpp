@@ -52,17 +52,11 @@ void ErrorSerialize(Serializer &s, const GCCell *cell) {
   // serialize/deserialize after user code.
 
   auto *self = vmcast<const JSError>(cell);
-  // If we have an ArrayStorage, it doesn't store any native pointers. Serialize
-  // it here.
-  bool hasArray = (bool)self->domains_;
-  s.writeInt<uint8_t>(hasArray);
-  if (hasArray) {
-    ArrayStorage::serializeArrayStorage(s, self->domains_.get(s.getRuntime()));
-  }
+  s.writeRelocation(self->domains_.get(s.getRuntime()));
 
-  // funcNames_ : GCPointer<PropStorage> is also ArrayStorage. Serialize it with
+  // funcNames_ : GCPointer<PropStorage> is an ArrayStorage. Serialize it with
   // JSError.
-  hasArray = (bool)self->funcNames_;
+  bool hasArray = (bool)self->funcNames_;
   s.writeInt<uint8_t>(hasArray);
   if (hasArray) {
     ArrayStorage::serializeArrayStorage(
@@ -79,14 +73,7 @@ void ErrorDeserialize(Deserializer &d, CellKind kind) {
 }
 
 JSError::JSError(Deserializer &d) : JSObject(d, &vt.base) {
-  // Deserialize domains.
-  if (d.readInt<uint8_t>()) {
-    domains_.set(
-        d.getRuntime(),
-        ArrayStorage::deserializeArrayStorage(d),
-        &d.getRuntime()->getHeap());
-  }
-
+  d.readRelocation(&domains_, RelocationKind::GCPointer);
   // Deserialize funcNames_.
   if (d.readInt<uint8_t>()) {
     funcNames_.set(
@@ -371,12 +358,12 @@ ExecutionStatus JSError::recordStackTrace(
   }
 
   StackTracePtr stack{new StackTrace()};
-  auto domainsRes = ArrayStorage::create(runtime, 1);
+  auto domainsRes = ArrayStorageSmall::create(runtime, 1);
   if (LLVM_UNLIKELY(domainsRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto domains = runtime->makeMutableHandle<ArrayStorage>(
-      vmcast<ArrayStorage>(*domainsRes));
+  auto domains = runtime->makeMutableHandle<ArrayStorageSmall>(
+      vmcast<ArrayStorageSmall>(*domainsRes));
 
   // Add the domain to the domains list, provided that it's not the same as the
   // last domain in the list. This allows us to save storage with a constant
@@ -387,10 +374,11 @@ ExecutionStatus JSError::recordStackTrace(
     GCScopeMarkerRAII marker{runtime};
     Handle<Domain> domain = codeBlock->getRuntimeModule()->getDomain(runtime);
     if (domains->size() > 0 &&
-        vmcast<Domain>(domains->at(domains->size() - 1)) == domain.get()) {
+        vmcast<Domain>(domains->at(domains->size() - 1).getObject(runtime)) ==
+            domain.get()) {
       return ExecutionStatus::RETURNED;
     }
-    return ArrayStorage::push_back(domains, runtime, domain);
+    return ArrayStorageSmall::push_back(domains, runtime, domain);
   };
 
   if (!skipTopFrame) {
