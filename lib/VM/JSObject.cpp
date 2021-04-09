@@ -315,7 +315,7 @@ CallResult<PseudoHandle<>> JSObject::getNamedPropertyValue_RJS(
   // It's now valid to use the Internal variant because we know it's an
   // accessor.
   auto *accessor = vmcast<PropertyAccessor>(
-      getNamedSlotValueUnsafe(propObj.get(), runtime, desc));
+      getNamedSlotValueUnsafe(propObj.get(), runtime, desc).getObject(runtime));
   if (!accessor->getter)
     return createPseudoHandle(HermesValue::encodeUndefinedValue());
 
@@ -1084,12 +1084,13 @@ CallResult<PseudoHandle<>> JSObject::getNamedWithReceiver_RJS(
       cacheEntry->clazz = propObj->getClassGCPtr().getStorageType();
       cacheEntry->slot = desc.slot;
     }
-    return createPseudoHandle(getNamedSlotValueUnsafe(propObj, runtime, desc));
+    return createPseudoHandle(
+        getNamedSlotValueUnsafe(propObj, runtime, desc).unboxToHV(runtime));
   }
 
   if (desc.flags.accessor) {
     auto *accessor = vmcast<PropertyAccessor>(
-        getNamedSlotValueUnsafe(propObj, runtime, desc));
+        getNamedSlotValueUnsafe(propObj, runtime, desc).getPointer(runtime));
     if (!accessor->getter)
       return createPseudoHandle(HermesValue::encodeUndefinedValue());
 
@@ -1386,7 +1387,7 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
 
     if (LLVM_UNLIKELY(desc.flags.accessor)) {
       auto *accessor = vmcast<PropertyAccessor>(
-          getNamedSlotValueUnsafe(propObj, runtime, desc));
+          getNamedSlotValueUnsafe(propObj, runtime, desc).getObject(runtime));
 
       // If it is a read-only accessor, fail.
       if (!accessor->setter) {
@@ -2358,7 +2359,8 @@ std::string JSObject::getHeuristicTypeName(GC *gc) {
   PointerBase *const base = gc->getPointerBase();
   if (auto constructorVal = tryGetNamedNoAlloc(
           this, base, Predefined::getSymbolID(Predefined::constructor))) {
-    if (auto *constructor = dyn_vmcast<JSObject>(*constructorVal)) {
+    if (auto *constructor = dyn_vmcast<JSObject>(
+            constructorVal->unboxToHV(gc->getPointerBase()))) {
       auto name = constructor->getNameIfExists(base);
       // If the constructor's name doesn't exist, or it is just the object
       // constructor, attempt to find a different name.
@@ -2436,14 +2438,14 @@ std::string JSObject::getNameIfExists(PointerBase *base) {
   // Try "displayName" first, if it is defined.
   if (auto nameVal = tryGetNamedNoAlloc(
           this, base, Predefined::getSymbolID(Predefined::displayName))) {
-    if (auto *name = dyn_vmcast<StringPrimitive>(*nameVal)) {
+    if (auto *name = dyn_vmcast<StringPrimitive>(nameVal->unboxToHV(base))) {
       return converter(name);
     }
   }
   // Next, use "name" if it is defined.
   if (auto nameVal = tryGetNamedNoAlloc(
           this, base, Predefined::getSymbolID(Predefined::name))) {
-    if (auto *name = dyn_vmcast<StringPrimitive>(*nameVal)) {
+    if (auto *name = dyn_vmcast<StringPrimitive>(nameVal->unboxToHV(base))) {
       return converter(name);
     }
   }
@@ -2479,7 +2481,8 @@ void JSObject::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
         }
         // Else, it's a user-visible property.
         HermesValue prop =
-            getNamedSlotValueUnsafe(self, gc->getPointerBase(), desc.slot);
+            getNamedSlotValueUnsafe(self, gc->getPointerBase(), desc.slot)
+                .unboxToHV(gc->getPointerBase());
         const llvh::Optional<HeapSnapshot::NodeID> idForProp =
             gc->getSnapshotID(prop);
         if (!idForProp) {
@@ -2513,7 +2516,8 @@ void JSObject::_snapshotAddLocationsImpl(
   if (auto constructorVal = tryGetNamedNoAlloc(
           self, base, Predefined::getSymbolID(Predefined::constructor))) {
     if (constructorVal->isObject()) {
-      if (auto *constructor = dyn_vmcast<JSFunction>(*constructorVal)) {
+      if (auto *constructor =
+              dyn_vmcast<JSFunction>(constructorVal->getObject(base))) {
         constructor->addLocationToSnapshot(snap, gc->getObjectID(self));
       }
     }
@@ -2786,7 +2790,8 @@ CallResult<bool> JSObject::updateOwnProperty(
       runtime,
       desc.flags,
       dpFlags,
-      getNamedSlotValueUnsafe(selfHandle.get(), runtime, desc),
+      getNamedSlotValueUnsafe(selfHandle.get(), runtime, desc)
+          .unboxToHV(runtime),
       valueOrAccessor,
       opFlags);
   if (updateStatus == ExecutionStatus::EXCEPTION)

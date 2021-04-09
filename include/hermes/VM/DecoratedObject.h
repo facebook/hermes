@@ -63,7 +63,7 @@ class DecoratedObject : public JSObject {
   /// \return the value in an additional slot.
   /// \param index must be less than the \c additionalSlotCount passed to
   /// the create method.
-  static HermesValue getAdditionalSlotValue(
+  static SmallHermesValue getAdditionalSlotValue(
       DecoratedObject *self,
       Runtime *runtime,
       unsigned index) {

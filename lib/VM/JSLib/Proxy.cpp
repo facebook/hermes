@@ -24,7 +24,9 @@ namespace {
 // properties is not a great pattern, and may change.
 enum ProxySlotIndexes { revocableProxy, COUNT };
 
-HermesValue getRevocableProxySlot(NativeFunction *revoker, Runtime *runtime) {
+SmallHermesValue getRevocableProxySlot(
+    NativeFunction *revoker,
+    Runtime *runtime) {
   return NativeFunction::getAdditionalSlotValue(
       revoker, runtime, ProxySlotIndexes::revocableProxy);
 }
@@ -103,7 +105,8 @@ proxyRevocationSteps(void *, Runtime *runtime, NativeArgs args) {
   // 1. Let p be F.[[RevocableProxy]].
   auto cc = runtime->getCurrentFrame()->getCalleeClosure();
   auto revoker = vmcast<NativeFunction>(cc);
-  HermesValue proxyVal = getRevocableProxySlot(revoker, runtime);
+  HermesValue proxyVal =
+      getRevocableProxySlot(revoker, runtime).unboxToHV(runtime);
   // 2. If p is null, return undefined.
   if (proxyVal.isNull()) {
     return HermesValue::encodeUndefinedValue();

@@ -91,7 +91,8 @@ CallResult<PseudoHandle<>> Runtime::getNamed(
     // The slot is cached, so it is safe to use the Internal function.
     return createPseudoHandle(
         JSObject::getNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
-            *obj, this, cacheEntry->slot));
+            *obj, this, cacheEntry->slot)
+            .unboxToHV(this));
   }
   auto sym = Predefined::getSymbolID(fixedPropCacheNames[static_cast<int>(id)]);
   NamedPropertyDescriptor desc;

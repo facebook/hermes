@@ -515,7 +515,7 @@ class JSObject : public GCCell {
 
   /// Return the value of an internal property slot. Use getDirectSlotValue if
   /// \p index is known to be in a direct property slot at compile time.
-  static HermesValue
+  static SmallHermesValue
   getInternalProperty(JSObject *self, PointerBase *base, SlotIndex index) {
     assert(
         HiddenClass::debugIsPropertyDefined(
@@ -607,7 +607,7 @@ class JSObject : public GCCell {
   /// \pre inl == PropStorage::Inline::Yes -> index <
   /// PropStorage::kValueToSegmentThreshold.
   template <PropStorage::Inline inl = PropStorage::Inline::No>
-  inline static HermesValue getNamedSlotValueUnsafe(
+  inline static SmallHermesValue getNamedSlotValueUnsafe(
       JSObject *self,
       PointerBase *runtime,
       SlotIndex index);
@@ -617,7 +617,7 @@ class JSObject : public GCCell {
   /// NOTE: This should only be called on non-Proxy non-Host objects, when the
   /// caller has already verified those conditions. Otherwise, just use
   /// getNamedSlotValue.
-  static HermesValue getNamedSlotValueUnsafe(
+  static SmallHermesValue getNamedSlotValueUnsafe(
       JSObject *self,
       PointerBase *runtime,
       NamedPropertyDescriptor desc) {
@@ -790,7 +790,7 @@ class JSObject : public GCCell {
   /// If the property cannot be found on this object or any of its prototypes,
   /// or if this object's HiddenClass has an uninitialized property map, returns
   /// \p llvh::None.
-  static OptValue<HermesValue>
+  static OptValue<SmallHermesValue>
   tryGetNamedNoAlloc(JSObject *self, PointerBase *base, SymbolID name);
 
   /// Parameter to getOwnComputedPrimitiveDescriptor
@@ -1695,18 +1695,17 @@ JSObject::setDirectSlotValue(JSObject *self, SmallHermesValue value, GC *gc) {
 }
 
 template <PropStorage::Inline inl>
-inline HermesValue JSObject::getNamedSlotValueUnsafe(
+inline SmallHermesValue JSObject::getNamedSlotValueUnsafe(
     JSObject *self,
     PointerBase *runtime,
     SlotIndex index) {
   assert(!self->flags_.proxyObject && "getNamedSlotValue called on a Proxy");
 
   if (LLVM_LIKELY(index < DIRECT_PROPERTY_SLOTS))
-    return self->directProps()[index].unboxToHV(runtime);
+    return self->directProps()[index];
 
-  return self->propStorage_.getNonNull(runtime)
-      ->at<inl>(index - DIRECT_PROPERTY_SLOTS)
-      .unboxToHV(runtime);
+  return self->propStorage_.getNonNull(runtime)->at<inl>(
+      index - DIRECT_PROPERTY_SLOTS);
 }
 
 inline CallResult<PseudoHandle<>> JSObject::getNamedSlotValue(
@@ -1719,7 +1718,8 @@ inline CallResult<PseudoHandle<>> JSObject::getNamedSlotValue(
     assert(name.isValid() && "invalid SymbolID in descriptor");
     return getNamed_RJS(runtime->makeHandle(std::move(self)), runtime, name);
   }
-  return createPseudoHandle(getNamedSlotValueUnsafe(self.get(), runtime, desc));
+  return createPseudoHandle(
+      getNamedSlotValueUnsafe(self.get(), runtime, desc).unboxToHV(runtime));
 }
 
 inline CallResult<PseudoHandle<>> JSObject::getNamedSlotValue(
@@ -1732,7 +1732,8 @@ inline CallResult<PseudoHandle<>> JSObject::getNamedSlotValue(
     assert(name.isValid() && "invalid SymbolID in descriptor");
     return getNamed_RJS(self, runtime, name);
   }
-  return createPseudoHandle(getNamedSlotValueUnsafe(self.get(), runtime, desc));
+  return createPseudoHandle(
+      getNamedSlotValueUnsafe(self.get(), runtime, desc).unboxToHV(runtime));
 }
 
 inline CallResult<bool> JSObject::setNamedSlotValue(
@@ -1791,8 +1792,10 @@ inline CallResult<PseudoHandle<>> JSObject::getComputedSlotValue(
         runtime,
         runtime->makeHandle(HermesValue::encodeSymbolValue(name)));
   }
-  return createPseudoHandle(getNamedSlotValueUnsafe(
-      self.get(), runtime, desc.castToNamedPropertyDescriptorRef()));
+  return createPseudoHandle(
+      getNamedSlotValueUnsafe(
+          self.get(), runtime, desc.castToNamedPropertyDescriptorRef())
+          .unboxToHV(runtime));
 }
 
 inline HermesValue JSObject::getComputedSlotValueUnsafe(
@@ -1807,7 +1810,8 @@ inline HermesValue JSObject::getComputedSlotValueUnsafe(
   }
   // Call is valid because this function cannot be called with a Proxy.
   return getNamedSlotValueUnsafe(
-      self.get(), runtime, desc.castToNamedPropertyDescriptorRef());
+             self.get(), runtime, desc.castToNamedPropertyDescriptorRef())
+      .unboxToHV(runtime);
 }
 
 inline CallResult<bool> JSObject::setComputedSlotValue(
@@ -1872,7 +1876,7 @@ inline OptValue<bool> JSObject::tryGetOwnNamedDescriptorFast(
       self->clazz_.getNonNull(runtime), runtime, name, desc);
 }
 
-inline OptValue<HermesValue>
+inline OptValue<SmallHermesValue>
 JSObject::tryGetNamedNoAlloc(JSObject *self, PointerBase *base, SymbolID name) {
   for (JSObject *curr = self; curr; curr = curr->parent_.get(base)) {
     if (LLVM_UNLIKELY(curr->isProxyObject()) ||

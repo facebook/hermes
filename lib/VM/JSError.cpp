@@ -299,7 +299,8 @@ static Handle<PropStorage> getCallStackFunctionNames(
       if (propObj && !desc.flags.accessor &&
           LLVM_LIKELY(!desc.flags.proxyObject) &&
           LLVM_LIKELY(!desc.flags.hostObject)) {
-        name = JSObject::getNamedSlotValueUnsafe(propObj, runtime, desc);
+        name = JSObject::getNamedSlotValueUnsafe(propObj, runtime, desc)
+                   .unboxToHV(runtime);
       } else if (desc.flags.proxyObject) {
         name = HermesValue::encodeStringValue(
             runtime->getPredefinedString(Predefined::proxyTrap));

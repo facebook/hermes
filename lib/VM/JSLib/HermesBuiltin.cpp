@@ -552,7 +552,8 @@ hermesBuiltinArraySpread(void *, Runtime *runtime, NativeArgs args) {
             arr, runtime, Predefined::SymbolIterator, desc));
     if (LLVM_LIKELY(propObj) && LLVM_LIKELY(!desc.flags.proxyObject)) {
       PseudoHandle<> slotValue = createPseudoHandle(
-          JSObject::getNamedSlotValueUnsafe(propObj.get(), runtime, desc));
+          JSObject::getNamedSlotValueUnsafe(propObj.get(), runtime, desc)
+              .unboxToHV(runtime));
       propObj.invalidate();
       if (LLVM_LIKELY(
               slotValue->getRaw() == runtime->arrayPrototypeValues.getRaw())) {
@@ -753,7 +754,8 @@ hermesBuiltinExportAll(void *, Runtime *runtime, NativeArgs args) {
         }
 
         propertyHandle =
-            JSObject::getNamedSlotValueUnsafe(*source, runtime, desc);
+            JSObject::getNamedSlotValueUnsafe(*source, runtime, desc)
+                .unboxToHV(runtime);
         defineRes = JSObject::defineOwnProperty(
             exports, runtime, id, dpf, propertyHandle);
         if (LLVM_UNLIKELY(defineRes == ExecutionStatus::EXCEPTION)) {

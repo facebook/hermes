@@ -467,7 +467,8 @@ ExecutionStatus Interpreter::putByIdTransient_RJS(
   if (desc.flags.accessor) {
     // This is an accessor.
     auto *accessor = vmcast<PropertyAccessor>(
-        JSObject::getNamedSlotValueUnsafe(propObj, runtime, desc));
+        JSObject::getNamedSlotValueUnsafe(propObj, runtime, desc)
+            .getObject(runtime));
 
     // It needs to have a setter.
     if (!accessor->setter) {
@@ -2296,7 +2297,8 @@ tailCall:
           CAPTURE_IP(
               O1REG(GetById) =
                   JSObject::getNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
-                      obj, runtime, cacheEntry->slot));
+                      obj, runtime, cacheEntry->slot)
+                      .unboxToHV(runtime));
           ip = nextIP;
           DISPATCH;
         }
@@ -2332,7 +2334,8 @@ tailCall:
               "tryGetOwnNamedDescriptorFast returned true on Proxy");
           CAPTURE_IP(
               O1REG(GetById) =
-                  JSObject::getNamedSlotValueUnsafe(obj, runtime, desc));
+                  JSObject::getNamedSlotValueUnsafe(obj, runtime, desc)
+                      .unboxToHV(runtime));
           ip = nextIP;
           DISPATCH;
         }
@@ -2354,7 +2357,8 @@ tailCall:
             // We've already checked that this isn't a Proxy.
             CAPTURE_IP(
                 O1REG(GetById) = JSObject::getNamedSlotValueUnsafe(
-                    parent, runtime, cacheEntry->slot));
+                                     parent, runtime, cacheEntry->slot)
+                                     .unboxToHV(runtime));
             ip = nextIP;
             DISPATCH;
           }
