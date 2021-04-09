@@ -671,8 +671,8 @@ class NativeFunction : public Callable {
       NativeFunction *self,
       Runtime *runtime,
       unsigned index,
-      HermesValue value) {
-    return JSObject::setInternalProperty(
+      SmallHermesValue value) {
+    JSObject::setInternalProperty(
         self,
         runtime,
         numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS + index,

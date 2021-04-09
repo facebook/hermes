@@ -1382,8 +1382,8 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
             !desc.flags.accessor && !desc.flags.internalSetter &&
             !desc.flags.hostObject && !desc.flags.proxyObject &&
             desc.flags.writable)) {
-      setNamedSlotValueUnsafe(
-          *selfHandle, runtime, desc, valueHandle.getHermesValue());
+      auto shv = SmallHermesValue::encodeHermesValue(*valueHandle, runtime);
+      setNamedSlotValueUnsafe(*selfHandle, runtime, desc, shv);
       return true;
     }
 
@@ -1472,9 +1472,8 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
       assert(
           !receiverHandle->isHostObject() && !receiverHandle->isProxyObject() &&
           "getOwnNamedDescriptor never sets hostObject or proxyObject flags");
-
-      setNamedSlotValueUnsafe(
-          *receiverHandle, runtime, desc, valueHandle.getHermesValue());
+      auto shv = SmallHermesValue::encodeHermesValue(*valueHandle, runtime);
+      setNamedSlotValueUnsafe(*receiverHandle, runtime, desc, shv);
       return true;
     }
 
@@ -1905,7 +1904,7 @@ CallResult<bool> JSObject::deleteNamed(
 
   // Clear the deleted property value to prevent memory leaks.
   setNamedSlotValueUnsafe(
-      *selfHandle, runtime, desc, HermesValue::encodeEmptyValue());
+      *selfHandle, runtime, desc, SmallHermesValue::encodeEmptyValue());
 
   // Perform the actual deletion.
   auto newClazz = HiddenClass::deleteProperty(
@@ -2005,7 +2004,7 @@ CallResult<bool> JSObject::deleteComputed(
     // delete the named property (if it exists).
     // Clear the deleted property value to prevent memory leaks.
     setNamedSlotValueUnsafe(
-        *selfHandle, runtime, desc, HermesValue::encodeEmptyValue());
+        *selfHandle, runtime, desc, SmallHermesValue::encodeEmptyValue());
 
     // Remove the property descriptor.
     auto newClazz = HiddenClass::deleteProperty(
@@ -2816,20 +2815,24 @@ CallResult<bool> JSObject::updateOwnProperty(
       "unexpected PropertyUpdateStatus");
 
   if (dpFlags.setValue) {
-    if (LLVM_LIKELY(!desc.flags.internalSetter))
-      setNamedSlotValueUnsafe(
-          selfHandle.get(), runtime, desc, valueOrAccessor.get());
-    else
+    if (LLVM_LIKELY(!desc.flags.internalSetter)) {
+      auto shv = SmallHermesValue::encodeHermesValue(*valueOrAccessor, runtime);
+      setNamedSlotValueUnsafe(selfHandle.get(), runtime, desc, shv);
+    } else {
       return internalSetter(
           selfHandle, runtime, name, desc, valueOrAccessor, opFlags);
+    }
   } else if (dpFlags.isAccessor()) {
-    setNamedSlotValueUnsafe(
-        selfHandle.get(), runtime, desc, valueOrAccessor.get());
+    auto shv = SmallHermesValue::encodeHermesValue(*valueOrAccessor, runtime);
+    setNamedSlotValueUnsafe(selfHandle.get(), runtime, desc, shv);
   } else {
     // If checkPropertyUpdate() returned needSet, but there is no value or
     // accessor, clear the value.
     setNamedSlotValueUnsafe(
-        selfHandle.get(), runtime, desc, HermesValue::encodeUndefinedValue());
+        selfHandle.get(),
+        runtime,
+        desc,
+        SmallHermesValue::encodeUndefinedValue());
   }
 
   return true;

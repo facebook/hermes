@@ -535,7 +535,7 @@ void setBoundCompare(
       collator,
       runtime,
       static_cast<unsigned int>(CollatorSlotIndexes::boundCompare),
-      value.getHermesValue());
+      SmallHermesValue::encodeObjectValue(value.get(), runtime));
 }
 
 // Collator compare internal slots
@@ -559,7 +559,7 @@ void setCollator(
       compare.get(),
       runtime,
       static_cast<unsigned int>(CollatorCompareSlotIndexes::collator),
-      value.getHermesValue());
+      SmallHermesValue::encodeObjectValue(value.get(), runtime));
 }
 
 CallResult<PseudoHandle<JSObject>>
@@ -771,7 +771,7 @@ void setDTFBoundFormat(
       dtf.get(),
       runtime,
       static_cast<unsigned int>(DTFSlotIndexes::boundFormat),
-      value.getHermesValue());
+      SmallHermesValue::encodeObjectValue(value.get(), runtime));
 }
 
 // DateTimeFormat format internal slots
@@ -795,7 +795,7 @@ void setDateTimeFormat(
       format.get(),
       runtime,
       static_cast<unsigned int>(DTFFormatSlotIndexes::dateTimeFormat),
-      value.getHermesValue());
+      SmallHermesValue::encodeObjectValue(value.get(), runtime));
 }
 
 CallResult<PseudoHandle<JSObject>> intlDateTimeFormatCreator(
@@ -1088,7 +1088,7 @@ void setNFBoundFormat(
       nf.get(),
       runtime,
       static_cast<unsigned int>(NFSlotIndexes::boundFormat),
-      value.getHermesValue());
+      SmallHermesValue::encodeObjectValue(value.get(), runtime));
 }
 
 // NumberFormat format internal slots
@@ -1112,7 +1112,7 @@ void setNumberFormat(
       format.get(),
       runtime,
       static_cast<unsigned int>(NFFormatSlotIndexes::numberFormat),
-      value.getHermesValue());
+      SmallHermesValue::encodeObjectValue(value.get(), runtime));
 }
 
 CallResult<PseudoHandle<JSObject>> intlNumberFormatCreator(

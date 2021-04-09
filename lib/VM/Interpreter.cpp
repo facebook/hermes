@@ -579,8 +579,9 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
       // any allocation in valGen.get() won't invalidate the raw pointer
       // retruned from obj.get().
       auto val = valGen.get(runtime);
+      auto shv = SmallHermesValue::encodeHermesValue(val, runtime);
       // We made this object, it's not a Proxy.
-      JSObject::setNamedSlotValueUnsafe(obj.get(), runtime, propIndex, val);
+      JSObject::setNamedSlotValueUnsafe(obj.get(), runtime, propIndex, shv);
       gcScope.flushToMarker(marker);
       ++propIndex;
     }
@@ -2446,6 +2447,9 @@ tailCall:
     putById : {
       ++NumPutById;
       if (LLVM_LIKELY(O1REG(PutById).isObject())) {
+        CAPTURE_IP_ASSIGN(
+            SmallHermesValue shv,
+            SmallHermesValue::encodeHermesValue(O2REG(PutById), runtime));
         auto *obj = vmcast<JSObject>(O1REG(PutById));
         auto cacheIdx = ip->iPutById.op3;
         auto *cacheEntry = curCodeBlock->getWriteCacheEntry(cacheIdx);
@@ -2455,12 +2459,16 @@ tailCall:
           HERMES_SLOW_ASSERT(
               gcScope.getHandleCountDbg() == KEEP_HANDLES &&
               "unaccounted handles were created");
+          auto shvHandle = runtime->makeHandle(shv.toHV(runtime));
           auto objHandle = runtime->makeHandle(obj);
           auto cacheHCPtr = vmcast_or_null<HiddenClass>(static_cast<GCCell *>(
               cacheEntry->clazz.get(runtime, &runtime->getHeap())));
           CAPTURE_IP(runtime->recordHiddenClass(
               curCodeBlock, ip, ID(idVal), obj->getClass(runtime), cacheHCPtr));
-          // obj may be moved by GC due to recordHiddenClass
+          // shv/obj may be invalidated by recordHiddenClass
+          if (shv.isPointer())
+            shv.unsafeUpdatePointer(
+                static_cast<GCCell *>(shvHandle->getPointer()), runtime);
           obj = objHandle.get();
         }
         gcScope.flushToSmallCount(KEEP_HANDLES);
@@ -2472,7 +2480,7 @@ tailCall:
           ++NumPutByIdCacheHits;
           CAPTURE_IP(
               JSObject::setNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
-                  obj, runtime, cacheEntry->slot, O2REG(PutById)));
+                  obj, runtime, cacheEntry->slot, shv));
           ip = nextIP;
           DISPATCH;
         }
@@ -2504,8 +2512,8 @@ tailCall:
           }
 
           // This must be valid because an own property was already found.
-          CAPTURE_IP(JSObject::setNamedSlotValueUnsafe(
-              obj, runtime, desc.slot, O2REG(PutById)));
+          CAPTURE_IP(
+              JSObject::setNamedSlotValueUnsafe(obj, runtime, desc.slot, shv));
           ip = nextIP;
           DISPATCH;
         }

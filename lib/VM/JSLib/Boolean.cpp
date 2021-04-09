@@ -55,7 +55,7 @@ booleanConstructor(void *, Runtime *runtime, NativeArgs args) {
   if (args.isConstructorCall()) {
     auto *self = vmcast<JSBoolean>(args.getThisArg());
     JSBoolean::setPrimitiveValue(
-        self, runtime, HermesValue::encodeBoolValue(value));
+        self, runtime, SmallHermesValue::encodeBoolValue(value));
     return args.getThisArg();
   }
 

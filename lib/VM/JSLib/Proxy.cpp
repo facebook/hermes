@@ -32,7 +32,7 @@ HermesValue getRevocableProxySlot(NativeFunction *revoker, Runtime *runtime) {
 void setRevocableProxySlot(
     NativeFunction *revoker,
     Runtime *runtime,
-    HermesValue value) {
+    SmallHermesValue value) {
   NativeFunction::setAdditionalSlotValue(
       revoker, runtime, ProxySlotIndexes::revocableProxy, value);
 }
@@ -109,7 +109,7 @@ proxyRevocationSteps(void *, Runtime *runtime, NativeArgs args) {
     return HermesValue::encodeUndefinedValue();
   }
   // 3. Set F.[[RevocableProxy]] to null.
-  setRevocableProxySlot(revoker, runtime, HermesValue::encodeNullValue());
+  setRevocableProxySlot(revoker, runtime, SmallHermesValue::encodeNullValue());
   // 4. Assert: p is a Proxy object.
   JSObject *proxy = dyn_vmcast<JSObject>(proxyVal);
   assert(
@@ -146,7 +146,9 @@ proxyRevocable(void *, Runtime *runtime, NativeArgs args) {
       0,
       ProxySlotIndexes::COUNT);
   // 4. Set revoker.[[RevocableProxy]] to p.
-  setRevocableProxySlot(*revoker, runtime, proxyRes->getHermesValue());
+  auto shv =
+      SmallHermesValue::encodeHermesValue(proxyRes->getHermesValue(), runtime);
+  setRevocableProxySlot(*revoker, runtime, shv);
   // 5. Let result be ObjectCreate(%ObjectPrototype%).
   Handle<JSObject> result = runtime->makeHandle(JSObject::create(runtime));
   // 6. Perform CreateDataProperty(result, "proxy", p).

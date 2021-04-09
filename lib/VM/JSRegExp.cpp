@@ -101,8 +101,8 @@ Handle<JSRegExp> JSRegExp::create(
 
   JSObject::setDirectSlotValue<patternPropIndex()>(
       *selfHandle,
-      HermesValue::encodeStringValue(
-          runtime->getPredefinedString(Predefined::emptyString)),
+      SmallHermesValue::encodeStringValue(
+          runtime->getPredefinedString(Predefined::emptyString), runtime),
       &runtime->getHeap());
 
   return selfHandle;
@@ -113,7 +113,9 @@ void JSRegExp::initializeProperties(
     Runtime *runtime,
     Handle<StringPrimitive> pattern) {
   JSObject::setDirectSlotValue<patternPropIndex()>(
-      *selfHandle, pattern.getHermesValue(), &runtime->getHeap());
+      *selfHandle,
+      SmallHermesValue::encodeStringValue(*pattern, runtime),
+      &runtime->getHeap());
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.enumerable = 0;

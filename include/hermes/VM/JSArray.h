@@ -136,9 +136,9 @@ class ArrayImpl : public JSObject {
 
   /// Set the indexed storage of this array to be \p p. The pointer is allowed
   /// to be null.
-  void setIndexedStorage(PointerBase *, StorageType *p, GC *gc) {
+  void setIndexedStorage(PointerBase *base, StorageType *p, GC *gc) {
     JSObject::setDirectSlotValue<indexedStoragePropIndex()>(
-        this, HermesValue::encodeObjectValue(p), gc);
+        this, SmallHermesValue::encodeObjectValue(p, base), gc);
   }
 
   /// @}
@@ -383,8 +383,7 @@ class JSArray final : public ArrayImpl {
   /// A helper to update the named '.length' property.
   static void
   putLength(JSArray *self, Runtime *runtime, SmallHermesValue newLength) {
-    setDirectSlotValueNonPtr<lengthPropIndex()>(
-        self, newLength.unboxToHV(runtime), &runtime->getHeap());
+    setDirectSlotValue<lengthPropIndex()>(self, newLength, &runtime->getHeap());
   }
 
   /// Update the JavaScript '.length' property, which also resizes the array.

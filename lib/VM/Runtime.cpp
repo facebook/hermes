@@ -119,8 +119,9 @@ ExecutionStatus Runtime::putNamedThrowOnError(
   auto clazzGCPtr = obj->getClassGCPtr();
   auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
   if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
+    auto shv = SmallHermesValue::encodeHermesValue(hv, this);
     JSObject::setNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
-        *obj, this, cacheEntry->slot, hv);
+        *obj, this, cacheEntry->slot, shv);
     return ExecutionStatus::RETURNED;
   }
   auto sym = Predefined::getSymbolID(fixedPropCacheNames[static_cast<int>(id)]);
@@ -135,7 +136,8 @@ ExecutionStatus Runtime::putNamedThrowOnError(
       cacheEntry->clazz = clazzGCPtr.getStorageType();
       cacheEntry->slot = desc.slot;
     }
-    JSObject::setNamedSlotValueUnsafe(*obj, this, desc.slot, hv);
+    auto shv = SmallHermesValue::encodeHermesValue(hv, this);
+    JSObject::setNamedSlotValueUnsafe(*obj, this, desc.slot, shv);
     return ExecutionStatus::RETURNED;
   }
   return JSObject::putNamed_RJS(

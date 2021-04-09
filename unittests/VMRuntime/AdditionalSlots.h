@@ -35,11 +35,16 @@ void testAdditionalSlots(Runtime *runtime, Handle<T> handle) {
   size_t numAdditionalSlots = numAdditionalSlotsForTest<T>();
   PseudoHandle<JSNumber> boxedNum = JSNumber::create(
       runtime, 3.14, Handle<JSObject>::vmcast(&runtime->numberPrototype));
-  T::setAdditionalSlotValue(*handle, runtime, 0, boxedNum.getHermesValue());
+  T::setAdditionalSlotValue(
+      *handle,
+      runtime,
+      0,
+      SmallHermesValue::encodeObjectValue(boxedNum.get(), runtime));
 
-  for (size_t i = 1; i < numAdditionalSlots; i++)
-    T::setAdditionalSlotValue(
-        *handle, runtime, i, HermesValue::encodeNumberValue(i));
+  for (size_t i = 1; i < numAdditionalSlots; i++) {
+    const auto shv = SmallHermesValue::encodeNumberValue(i, runtime);
+    T::setAdditionalSlotValue(*handle, runtime, i, shv);
+  }
 
   // Verify slot values survive GC.
   runtime->collect("test");

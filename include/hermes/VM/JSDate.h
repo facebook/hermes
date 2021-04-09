@@ -52,7 +52,7 @@ class JSDate final : public JSObject {
   static void
   setPrimitiveValue(JSObject *self, Runtime *runtime, SmallHermesValue value) {
     return JSObject::setDirectSlotValue<JSDate::primitiveValuePropIndex()>(
-        self, value.unboxToHV(runtime), &runtime->getHeap());
+        self, value, &runtime->getHeap());
   }
 
 #ifdef HERMESVM_SERIALIZE

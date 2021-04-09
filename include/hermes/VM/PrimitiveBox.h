@@ -53,7 +53,7 @@ class PrimitiveBox : public JSObject {
 
   /// Set the [[PrimitiveValue]] internal property.
   static void
-  setPrimitiveValue(JSObject *self, Runtime *runtime, HermesValue value) {
+  setPrimitiveValue(JSObject *self, Runtime *runtime, SmallHermesValue value) {
     return JSObject::setDirectSlotValue<
         PrimitiveBox::primitiveValuePropIndex()>(
         self, value, &runtime->getHeap());
@@ -220,12 +220,10 @@ class JSNumber final : public PrimitiveBox {
     return cell->getKind() == CellKind::NumberObjectKind;
   }
 
-  static PseudoHandle<JSNumber>
+  static Handle<JSNumber>
   create(Runtime *runtime, double value, Handle<JSObject> prototype);
 
-  static PseudoHandle<JSNumber> create(
-      Runtime *runtime,
-      Handle<JSObject> prototype) {
+  static Handle<JSNumber> create(Runtime *runtime, Handle<JSObject> prototype) {
     return create(runtime, 0.0, prototype);
   }
 

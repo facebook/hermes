@@ -464,9 +464,13 @@ Handle<RequireContext> RequireContext::create(
   auto self = JSObjectInit::initToHandle(runtime, cell);
 
   JSObject::setDirectSlotValue<domainPropIndex()>(
-      *self, domain.getHermesValue(), &runtime->getHeap());
+      *self,
+      SmallHermesValue::encodeObjectValue(domain.get(), runtime),
+      &runtime->getHeap());
   JSObject::setDirectSlotValue<dirnamePropIndex()>(
-      *self, dirname.getHermesValue(), &runtime->getHeap());
+      *self,
+      SmallHermesValue::encodeStringValue(dirname.get(), runtime),
+      &runtime->getHeap());
   return self;
 }
 

@@ -530,7 +530,7 @@ class JSObject : public GCCell {
       JSObject *self,
       Runtime *runtime,
       SlotIndex index,
-      HermesValue value) {
+      SmallHermesValue value) {
     assert(
         HiddenClass::debugIsPropertyDefined(
             self->clazz_.get(runtime),
@@ -601,10 +601,7 @@ class JSObject : public GCCell {
   /// \pre index < DIRECT_PROPERTY_SLOTS.
   template <SlotIndex index>
   inline static void
-  setDirectSlotValue(JSObject *self, HermesValue value, GC *gc);
-  template <SlotIndex index>
-  inline static void
-  setDirectSlotValueNonPtr(JSObject *self, HermesValue value, GC *gc);
+  setDirectSlotValue(JSObject *self, SmallHermesValue value, GC *gc);
 
   /// Load a value from the "named value" storage space by \p index.
   /// \pre inl == PropStorage::Inline::Yes -> index <
@@ -664,7 +661,7 @@ class JSObject : public GCCell {
       JSObject *self,
       Runtime *runtime,
       SlotIndex index,
-      HermesValue value);
+      SmallHermesValue value);
 
   /// Store a value to the "named value" storage space by the slot described by
   /// \p desc.
@@ -672,7 +669,7 @@ class JSObject : public GCCell {
       JSObject *self,
       Runtime *runtime,
       NamedPropertyDescriptor desc,
-      HermesValue value) {
+      SmallHermesValue value) {
     assert(!desc.flags.proxyObject && "setNamedSlotValue called on a Proxy");
     assert(
         !desc.flags.hostObject && "setNamedSlotValue called on a HostObject");
@@ -1690,16 +1687,9 @@ inline HermesValue JSObject::getDirectSlotValue(const JSObject *self) {
 
 template <SlotIndex index>
 inline void
-JSObject::setDirectSlotValue(JSObject *self, HermesValue value, GC *gc) {
+JSObject::setDirectSlotValue(JSObject *self, SmallHermesValue value, GC *gc) {
   static_assert(index < DIRECT_PROPERTY_SLOTS, "Must be a direct property");
-  self->directProps()[index].set(value, gc);
-}
-
-template <SlotIndex index>
-inline void
-JSObject::setDirectSlotValueNonPtr(JSObject *self, HermesValue value, GC *gc) {
-  static_assert(index < DIRECT_PROPERTY_SLOTS, "Must be a direct property");
-  self->directProps()[index].setNonPtr(value, gc);
+  self->directProps()[index].set(value.unboxToHV(gc->getPointerBase()), gc);
 }
 
 template <PropStorage::Inline inl>
@@ -1757,7 +1747,8 @@ inline CallResult<bool> JSObject::setNamedSlotValue(
         name,
         runtime->makeHandle(std::move(value)));
   }
-  setNamedSlotValueUnsafe(self.get(), runtime, desc, value.get());
+  auto shv = SmallHermesValue::encodeHermesValue(value.get(), runtime);
+  setNamedSlotValueUnsafe(self.get(), runtime, desc, shv);
   return true;
 }
 
@@ -1766,15 +1757,18 @@ inline void JSObject::setNamedSlotValueUnsafe(
     JSObject *self,
     Runtime *runtime,
     SlotIndex index,
-    HermesValue value) {
+    SmallHermesValue value) {
   // NOTE: even though it is tempting to implement this in terms of assignment
   // to namedSlotRef(), it is a slight performance regression, which is not
   // entirely unexpected.
   if (LLVM_LIKELY(index < DIRECT_PROPERTY_SLOTS))
-    return self->directProps()[index].set(value, &runtime->getHeap());
+    return self->directProps()[index].set(
+        value.unboxToHV(runtime), &runtime->getHeap());
 
   self->propStorage_.get(runtime)->set<inl>(
-      index - DIRECT_PROPERTY_SLOTS, value, &runtime->getHeap());
+      index - DIRECT_PROPERTY_SLOTS,
+      value.unboxToHV(runtime),
+      &runtime->getHeap());
 }
 
 inline CallResult<PseudoHandle<>> JSObject::getComputedSlotValue(
@@ -1838,11 +1832,9 @@ inline CallResult<bool> JSObject::setComputedSlotValue(
         runtime->makeHandle(HermesValue::encodeSymbolValue(name)),
         value);
   }
+  auto shv = SmallHermesValue::encodeHermesValue(value.get(), runtime);
   setNamedSlotValueUnsafe(
-      selfHandle.get(),
-      runtime,
-      desc.castToNamedPropertyDescriptorRef(),
-      value.get());
+      selfHandle.get(), runtime, desc.castToNamedPropertyDescriptorRef(), shv);
   return true;
 }
 
@@ -1857,11 +1849,9 @@ inline ExecutionStatus JSObject::setComputedSlotValueUnsafe(
         "indexed flag set but no indexed storage");
     return setOwnIndexed(selfHandle, runtime, desc.slot, value).getStatus();
   }
+  auto shv = SmallHermesValue::encodeHermesValue(value.get(), runtime);
   setNamedSlotValueUnsafe(
-      selfHandle.get(),
-      runtime,
-      desc.castToNamedPropertyDescriptorRef(),
-      value.get());
+      selfHandle.get(), runtime, desc.castToNamedPropertyDescriptorRef(), shv);
   return ExecutionStatus::RETURNED;
 }
 

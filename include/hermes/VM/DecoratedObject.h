@@ -80,8 +80,8 @@ class DecoratedObject : public JSObject {
       DecoratedObject *self,
       Runtime *runtime,
       unsigned index,
-      HermesValue value) {
-    return JSObject::setInternalProperty(
+      SmallHermesValue value) {
+    JSObject::setInternalProperty(
         self,
         runtime,
         numOverlapSlots<DecoratedObject>() + ANONYMOUS_PROPERTY_SLOTS + index,

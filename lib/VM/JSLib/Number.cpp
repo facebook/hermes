@@ -177,9 +177,9 @@ numberConstructor(void *, Runtime *runtime, NativeArgs args) {
   }
 
   if (args.isConstructorCall()) {
+    auto shv = SmallHermesValue::encodeNumberValue(value, runtime);
     auto *self = vmcast<JSNumber>(args.getThisArg());
-    JSNumber::setPrimitiveValue(
-        self, runtime, HermesValue::encodeDoubleValue(value));
+    JSNumber::setPrimitiveValue(self, runtime, shv);
     return args.getThisArg();
   }
 

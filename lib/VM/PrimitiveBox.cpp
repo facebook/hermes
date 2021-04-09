@@ -65,7 +65,9 @@ CallResult<Handle<JSString>> JSString::create(
   auto selfHandle = JSObjectInit::initToHandle(runtime, obj);
 
   JSObject::setDirectSlotValue<PrimitiveBox::primitiveValuePropIndex()>(
-      *selfHandle, value.getHermesValue(), &runtime->getHeap());
+      *selfHandle,
+      SmallHermesValue::encodeStringValue(value.get(), runtime),
+      &runtime->getHeap());
 
   PropertyFlags pf;
   pf.writable = 0;
@@ -97,13 +99,13 @@ void JSString::setPrimitiveString(
   (void)res;
 
   // This is definitely not a proxy because we know strings have lengths.
-  JSObject::setNamedSlotValueUnsafe(
-      *selfHandle,
-      runtime,
-      desc,
-      HermesValue::encodeDoubleValue(string->getStringLength()));
+  auto shv =
+      SmallHermesValue::encodeNumberValue(string->getStringLength(), runtime);
+  JSObject::setNamedSlotValueUnsafe(*selfHandle, runtime, desc, shv);
   return JSObject::setDirectSlotValue<PrimitiveBox::primitiveValuePropIndex()>(
-      *selfHandle, string.getHermesValue(), &runtime->getHeap());
+      *selfHandle,
+      SmallHermesValue::encodeStringValue(string.get(), runtime),
+      &runtime->getHeap());
 }
 
 bool JSString::_haveOwnIndexedImpl(
@@ -337,17 +339,17 @@ void NumberObjectDeserialize(Deserializer &d, CellKind kind) {
 }
 #endif
 
-PseudoHandle<JSNumber> JSNumber::create(
+Handle<JSNumber> JSNumber::create(
     Runtime *runtime,
     double value,
     Handle<JSObject> parentHandle) {
   auto clazzHandle = runtime->getHiddenClassForPrototype(
       *parentHandle, numOverlapSlots<JSNumber>() + ANONYMOUS_PROPERTY_SLOTS);
   auto obj = runtime->makeAFixed<JSNumber>(runtime, parentHandle, clazzHandle);
-  auto self = JSObjectInit::initToPseudoHandle(runtime, obj);
-
+  auto self = JSObjectInit::initToHandle(runtime, obj);
+  auto shv = SmallHermesValue::encodeNumberValue(value, runtime);
   JSObject::setDirectSlotValue<PrimitiveBox::primitiveValuePropIndex()>(
-      self.get(), HermesValue::encodeDoubleValue(value), &runtime->getHeap());
+      self.get(), shv, &runtime->getHeap());
 
   return self;
 }
@@ -395,7 +397,9 @@ JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
   auto self = JSObjectInit::initToPseudoHandle(runtime, obj);
 
   JSObject::setDirectSlotValue<PrimitiveBox::primitiveValuePropIndex()>(
-      self.get(), *Runtime::getBoolValue(value), &runtime->getHeap());
+      self.get(),
+      SmallHermesValue::encodeBoolValue(value),
+      &runtime->getHeap());
   return self;
 }
 
@@ -443,7 +447,9 @@ PseudoHandle<JSSymbol> JSSymbol::create(
   auto self = JSObjectInit::initToPseudoHandle(runtime, obj);
 
   JSObject::setDirectSlotValue<PrimitiveBox::primitiveValuePropIndex()>(
-      self.get(), HermesValue::encodeSymbolValue(value), &runtime->getHeap());
+      self.get(),
+      SmallHermesValue::encodeSymbolValue(value),
+      &runtime->getHeap());
 
   return self;
 }
