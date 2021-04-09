@@ -3,9 +3,10 @@ id: gengc
 title: The GenGC Garbage Collector
 ---
 
-GenGC is the default garbage collector for Hermes, and aims to provide a
+GenGC used to be the default garbage collector for Hermes, and aims to provide a
 generational garbage collector that returns memory to the OS aggressively and
-frequently.
+frequently. The newer GC is called [Hades](./Hades.md), and it has much lower
+pause times than GenGC. We recommend most users use Hades instead.
 
 Throughout this document, we will refer to the **heap**, which in this context
 means the memory space where JS objects reside. This is separate from the C and

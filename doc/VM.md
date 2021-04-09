@@ -60,8 +60,10 @@ This avoids preallocating too much memory, as well as returning memory to the OS
 The garbage collector is precise
 (it knows what `HermesValue`s are valid pointers to objects in the JS heap).
 
-See the documentation for the [GenGC garbage collector](./GenGC.md) for details
-on how garbage collection works in Hermes.
+See the documentation for the [Hades garbage collector](./Hades.md) for details
+on how garbage collection works in Hermes. Hades is a garbage collector
+that improves pause times dramatically over the older collector, called
+[GenGC](./GenGC.md). We recommend Hades for most applications.
 
 The garbage collector moves objects to different place on the heap,
 invalidating `HermesValue`s,
