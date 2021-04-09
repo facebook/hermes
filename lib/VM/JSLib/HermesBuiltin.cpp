@@ -560,7 +560,8 @@ hermesBuiltinArraySpread(void *, Runtime *runtime, NativeArgs args) {
         auto nextIndex = args.getArg(2).getNumberAs<JSArray::size_type>();
         MutableHandle<> idxHandle{runtime};
         GCScopeMarkerRAII marker{runtime};
-        for (JSArray::size_type i = 0; i < JSArray::getLength(*arr); ++i) {
+        for (JSArray::size_type i = 0; i < JSArray::getLength(*arr, runtime);
+             ++i) {
           marker.flush();
           // Fast path: look up the property in indexed storage.
           nextValue = arr->at(runtime, i);
@@ -671,7 +672,7 @@ hermesBuiltinApply(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError("args must be an array");
   }
 
-  uint32_t len = JSArray::getLength(*argArray);
+  uint32_t len = JSArray::getLength(*argArray, runtime);
 
   bool isConstructor = args.getArgCount() == 2;
 

@@ -398,7 +398,7 @@ objectGetOwnPropertyDescriptors(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   Handle<JSArray> ownKeys = *ownKeysRes;
-  uint32_t len = JSArray::getLength(*ownKeys);
+  uint32_t len = JSArray::getLength(*ownKeys, runtime);
 
   // 3. Let descriptors be ! ObjectCreate(%ObjectPrototype%).
   auto descriptors = runtime->makeHandle<JSObject>(JSObject::create(runtime));
@@ -802,7 +802,7 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
     return *namesRes;
   }
   auto names = runtime->makeHandle<JSArray>(*namesRes);
-  uint32_t len = JSArray::getLength(*names);
+  uint32_t len = JSArray::getLength(*names, runtime);
 
   auto propertiesRes = JSArray::create(runtime, len, len);
   if (LLVM_UNLIKELY(propertiesRes == ExecutionStatus::EXCEPTION)) {
@@ -822,7 +822,8 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
   // modified by a getter at any point in the loop, so `i` will not necessarily
   // correspond to `targetIdx`.
   auto marker = gcScope.createMarker();
-  for (uint32_t i = 0, len = JSArray::getLength(*names); i < len; ++i) {
+  for (uint32_t i = 0, len = JSArray::getLength(*names, runtime); i < len;
+       ++i) {
     gcScope.flushToMarker(marker);
 
     name = names->at(runtime, i).getString();

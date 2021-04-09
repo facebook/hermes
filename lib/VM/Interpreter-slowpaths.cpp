@@ -188,7 +188,8 @@ ExecutionStatus Interpreter::caseIteratorNext(
   if (LLVM_LIKELY(O2REG(IteratorNext).isNumber())) {
     JSArray::size_type i =
         O2REG(IteratorNext).getNumberAs<JSArray::size_type>();
-    if (i >= JSArray::getLength(vmcast<JSArray>(O3REG(IteratorNext)))) {
+    if (i >=
+        JSArray::getLength(vmcast<JSArray>(O3REG(IteratorNext)), runtime)) {
       // Finished iterating the array, stop.
       O2REG(IteratorNext) = HermesValue::encodeUndefinedValue();
       O1REG(IteratorNext) = HermesValue::encodeUndefinedValue();

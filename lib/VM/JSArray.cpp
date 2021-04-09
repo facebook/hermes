@@ -597,7 +597,8 @@ CallResult<Handle<JSArray>> JSArray::create(
   // Note that if there is no indexed storage, we still need to explicitly set
   // this to null, because JSObjectInit defaults it to undefined.
   self->setIndexedStorage(runtime, indexedStorage, &runtime->getHeap());
-  putLength(self.get(), runtime, length);
+  auto shv = SmallHermesValue::encodeNumberValue(length, runtime);
+  putLength(self.get(), runtime, shv);
 
   return self;
 }
@@ -648,9 +649,10 @@ CallResult<bool> JSArray::setLength(
     uint32_t newLength,
     PropOpFlags opFlags) {
   // Fast-path: if we are enlarging, do nothing.
-  const auto currentLength = getLength(*selfHandle);
+  const auto currentLength = getLength(*selfHandle, runtime);
   if (LLVM_LIKELY(newLength >= currentLength)) {
-    putLength(*selfHandle, runtime, newLength);
+    auto shv = SmallHermesValue::encodeNumberValue(newLength, runtime);
+    putLength(*selfHandle, runtime, shv);
     return true;
   }
 
@@ -744,7 +746,8 @@ CallResult<bool> JSArray::setLength(
       return ExecutionStatus::EXCEPTION;
     }
   }
-  putLength(*selfHandle, runtime, adjustedLength);
+  auto shv = SmallHermesValue::encodeNumberValue(adjustedLength, runtime);
+  putLength(*selfHandle, runtime, shv);
 
   if (adjustedLength != newLength) {
     if (opFlags.getThrowOnError()) {

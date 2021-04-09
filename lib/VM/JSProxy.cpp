@@ -1294,7 +1294,7 @@ CallResult<PseudoHandle<JSArray>> filterKeys(
        (okFlags.getIncludeNonSymbols() ? 0 : 1)) == 1 &&
       "Exactly one of Symbols or non-Symbols is included here");
   bool onlySymbols = okFlags.getIncludeSymbols();
-  uint32_t len = JSArray::getLength(*keys);
+  uint32_t len = JSArray::getLength(*keys, runtime);
   uint32_t count = 0;
   // Verify this loop is alloc-free
   {
@@ -1481,7 +1481,8 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   // 16. For each element key of targetKeys, do
   auto marker2 = runtime->getTopGCScope()->createMarker();
-  for (uint32_t i = 0, len = JSArray::getLength(*targetKeys); i < len; ++i) {
+  for (uint32_t i = 0, len = JSArray::getLength(*targetKeys, runtime); i < len;
+       ++i) {
     //   a. Let desc be ? target.[[GetOwnProperty]](key).
     ComputedPropertyDescriptor desc;
     CallResult<bool> descRes = JSObject::getOwnComputedDescriptor(
@@ -1513,7 +1514,9 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   //   a. If key is not an element of uncheckedResultKeys, throw a TypeError
   //   exception. b. Remove key from uncheckedResultKeys.
   auto inTrapResult = [&runtime, &trapResult](HermesValue value) {
-    for (uint32_t j = 0, len = JSArray::getLength(*trapResult); j < len; ++j) {
+    for (uint32_t j = 0, len = JSArray::getLength(*trapResult, runtime);
+         j < len;
+         ++j) {
       if (isSameValue(value, trapResult->at(runtime, j))) {
         return true;
       }
@@ -1533,7 +1536,8 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   // 21. For each key that is an element of targetConfigurableKeys, do
   //   a. If key is not an element of uncheckedResultKeys, throw a TypeError
   //   exception. b. Remove key from uncheckedResultKeys.
-  for (uint32_t i = 0, len = JSArray::getLength(*targetKeys); i < len; ++i) {
+  for (uint32_t i = 0, len = JSArray::getLength(*targetKeys, runtime); i < len;
+       ++i) {
     if (nonConfigurable.count(i) > 0) {
       continue;
     }
@@ -1543,7 +1547,8 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
     }
   }
   // 22. If uncheckedResultKeys is not empty, throw a TypeError exception.
-  if (JSArray::getLength(*targetKeys) != JSArray::getLength(*trapResult)) {
+  if (JSArray::getLength(*targetKeys, runtime) !=
+      JSArray::getLength(*trapResult, runtime)) {
     return runtime->raiseTypeError(
         "ownKeys target is non-extensible but trap result keys differ from target keys");
   }

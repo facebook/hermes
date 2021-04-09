@@ -1816,7 +1816,7 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
     if (arrayIndex) {
       // Check whether we need to update array's ".length" property.
       if (auto *array = dyn_vmcast<JSArray>(receiverHandle.get())) {
-        if (LLVM_UNLIKELY(*arrayIndex >= JSArray::getLength(array))) {
+        if (LLVM_UNLIKELY(*arrayIndex >= JSArray::getLength(array, runtime))) {
           auto cr = putNamed_RJS(
               receiverHandle,
               runtime,
@@ -2283,7 +2283,8 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
   // Check whether we need to update array's ".length" property.
   bool updateLength = false;
   if (auto arrayHandle = Handle<JSArray>::dyn_vmcast(selfHandle)) {
-    if (LLVM_UNLIKELY(*arrayIndex >= JSArray::getLength(*arrayHandle))) {
+    if (LLVM_UNLIKELY(
+            *arrayIndex >= JSArray::getLength(*arrayHandle, runtime))) {
       NamedPropertyDescriptor lengthDesc;
       bool lengthPresent = getOwnNamedDescriptor(
           arrayHandle,

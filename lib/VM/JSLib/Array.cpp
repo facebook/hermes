@@ -563,13 +563,13 @@ arrayPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
   // may change the length of subsequent arrays.
   uint64_t finalSizeEstimate = 0;
   if (JSArray *arr = dyn_vmcast<JSArray>(O.get())) {
-    finalSizeEstimate += JSArray::getLength(arr);
+    finalSizeEstimate += JSArray::getLength(arr, runtime);
   } else {
     ++finalSizeEstimate;
   }
   for (int64_t i = 0; i < argCount; ++i) {
     if (JSArray *arr = dyn_vmcast<JSArray>(args.getArg(i))) {
-      finalSizeEstimate += JSArray::getLength(arr);
+      finalSizeEstimate += JSArray::getLength(arr, runtime);
     } else {
       ++finalSizeEstimate;
     }
@@ -617,7 +617,7 @@ arrayPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
       uint64_t len;
       if (LLVM_LIKELY(arrHandle)) {
         // Fast path: E is an array.
-        len = JSArray::getLength(*arrHandle);
+        len = JSArray::getLength(*arrHandle, runtime);
       } else {
         CallResult<PseudoHandle<>> propRes = JSObject::getNamed_RJS(
             objHandle, runtime, Predefined::getSymbolID(Predefined::length));
@@ -869,7 +869,8 @@ arrayPrototypePush(void *, Runtime *runtime, NativeArgs args) {
   Handle<JSArray> arr = Handle<JSArray>::dyn_vmcast(O);
   if (LLVM_LIKELY(arr)) {
     // Fast path for getting the length.
-    len = HermesValue::encodeNumberValue(JSArray::getLength(arr.get()));
+    len =
+        HermesValue::encodeNumberValue(JSArray::getLength(arr.get(), runtime));
   } else {
     // Slow path, used when pushing onto non-array objects.
     auto propRes = JSObject::getNamed_RJS(

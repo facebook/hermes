@@ -154,14 +154,14 @@ TEST_F(ArrayTest, TestLength) {
   auto array = *arrayRes;
 
   // Make sure the length is 10.
-  ASSERT_EQ(10u, JSArray::getLength(array.get()));
+  ASSERT_EQ(10u, JSArray::getLength(array.get(), runtime));
   EXPECT_CALLRESULT_DOUBLE(
       10.0, JSObject::getNamed_RJS(array, runtime, lengthID));
 
   // Change it to 5.0.
   ASSERT_TRUE(*JSObject::putNamed_RJS(
       array, runtime, lengthID, runtime->makeHandle(5.0_hd)));
-  ASSERT_EQ(5u, JSArray::getLength(array.get()));
+  ASSERT_EQ(5u, JSArray::getLength(array.get(), runtime));
   EXPECT_CALLRESULT_DOUBLE(
       5.0, JSObject::getNamed_RJS(array, runtime, lengthID));
 
@@ -174,7 +174,7 @@ TEST_F(ArrayTest, TestLength) {
   }
 
   // Make sure it didn't change.
-  ASSERT_EQ(5u, JSArray::getLength(array.get()));
+  ASSERT_EQ(5u, JSArray::getLength(array.get(), runtime));
   EXPECT_CALLRESULT_DOUBLE(
       5.0, JSObject::getNamed_RJS(array, runtime, lengthID));
 }

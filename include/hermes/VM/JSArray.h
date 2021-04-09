@@ -315,7 +315,7 @@ class JSArray final : public ArrayImpl {
     return cell->getKind() == CellKind::ArrayKind;
   }
 
-  static uint32_t getLength(const JSArray *self) {
+  static uint32_t getLength(const JSArray *self, PointerBase *) {
     return getDirectSlotValue<lengthPropIndex()>(self).getNumber();
   }
 
@@ -381,9 +381,10 @@ class JSArray final : public ArrayImpl {
 
  private:
   /// A helper to update the named '.length' property.
-  static void putLength(JSArray *self, Runtime *runtime, uint32_t newLength) {
+  static void
+  putLength(JSArray *self, Runtime *runtime, SmallHermesValue newLength) {
     setDirectSlotValueNonPtr<lengthPropIndex()>(
-        self, HermesValue::encodeNumberValue(newLength), &runtime->getHeap());
+        self, newLength.unboxToHV(runtime), &runtime->getHeap());
   }
 
   /// Update the JavaScript '.length' property, which also resizes the array.
