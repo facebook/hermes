@@ -8,7 +8,10 @@
 #include "hermes/VM/StackTracesTree.h"
 #include "hermes/VM/Runtime.h"
 
-#if defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES)
+// Enabling Handle-SAN can create additional allocations, which will invalidate
+// the expected outputs in this test.
+#if defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && \
+    !defined(HERMESVM_SANITIZE_HANDLES)
 
 #include "TestHelpers.h"
 #include "TestHelpers1.h"
