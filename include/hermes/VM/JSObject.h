@@ -390,7 +390,7 @@ class JSObject : public GCCell {
   static const PropStorage::size_type NAMED_PROPERTY_SLOTS = 0;
 
   /// Number of property slots allocated directly inside the object.
-  static const PropStorage::size_type DIRECT_PROPERTY_SLOTS = 4;
+  static const PropStorage::size_type DIRECT_PROPERTY_SLOTS = 6;
 
   static bool classof(const GCCell *cell) {
     return kindInRange(
