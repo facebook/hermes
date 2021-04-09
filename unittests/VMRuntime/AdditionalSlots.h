@@ -50,7 +50,7 @@ void testAdditionalSlots(Runtime *runtime, Handle<T> handle) {
   runtime->collect("test");
   JSNumber *n =
       vmcast<JSNumber>(T::getAdditionalSlotValue(*handle, runtime, 0));
-  EXPECT_EQ(JSNumber::getPrimitiveValue(n).getNumber(), 3.14);
+  EXPECT_EQ(JSNumber::getPrimitiveValue(n).getNumber(runtime), 3.14);
 
   for (size_t i = 1; i < numAdditionalSlots; i++)
     EXPECT_EQ(T::getAdditionalSlotValue(*handle, runtime, i).getNumber(), i);

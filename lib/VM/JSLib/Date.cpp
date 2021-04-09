@@ -436,7 +436,7 @@ dateConstructor(void *, Runtime *runtime, NativeArgs args) {
       if (auto *dateArg = dyn_vmcast<JSDate>(args.getArg(0))) {
         // No handle needed here because we just retrieve a double.
         NoAllocScope noAlloc(runtime);
-        finalDate = JSDate::getPrimitiveValue(dateArg).getNumber();
+        finalDate = JSDate::getPrimitiveValue(dateArg).getNumber(runtime);
       } else {
         // Parse the argument if it's a string, else just convert to number.
         auto res =
@@ -564,7 +564,7 @@ datePrototypeToStringHelper(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.toString() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(date).getNumber();
+  double t = JSDate::getPrimitiveValue(date).getNumber(runtime);
   if (!std::isfinite(t)) {
     if (opts->throwOnError) {
       return runtime->raiseRangeError("Date value out of bounds");
@@ -619,7 +619,7 @@ CallResult<HermesValue> datePrototypeToLocaleStringHelper(
     return runtime->raiseTypeError(
         "Date.prototype.toString() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(date).getNumber();
+  double t = JSDate::getPrimitiveValue(date).getNumber(runtime);
   if (!std::isfinite(t)) {
     // "Invalid Date" in non-finite or NaN cases.
     return HermesValue::encodeStringValue(
@@ -640,7 +640,7 @@ datePrototypeGetTime(void *, Runtime *runtime, NativeArgs args) {
         "Date.prototype.getTime() called on non-Date object");
   }
 
-  return JSDate::getPrimitiveValue(date);
+  return JSDate::getPrimitiveValue(date).unboxToHV(runtime);
 }
 
 CallResult<HermesValue>
@@ -674,7 +674,7 @@ datePrototypeGetterHelper(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.toString() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(date).getNumber();
+  double t = JSDate::getPrimitiveValue(date).getNumber(runtime);
   if (std::isnan(t)) {
     return HermesValue::encodeNaNValue();
   }
@@ -748,7 +748,7 @@ datePrototypeSetMilliseconds(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.setMilliseconds() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(self.get()).getNumber();
+  double t = JSDate::getPrimitiveValue(self.get()).getNumber(runtime);
   if (!isUTC) {
     t = localTime(t);
   }
@@ -775,7 +775,7 @@ datePrototypeSetSeconds(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.setSeconds() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(self.get()).getNumber();
+  double t = JSDate::getPrimitiveValue(self.get()).getNumber(runtime);
   if (!isUTC) {
     t = localTime(t);
   }
@@ -813,7 +813,7 @@ datePrototypeSetMinutes(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.setMinutes() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(self.get()).getNumber();
+  double t = JSDate::getPrimitiveValue(self.get()).getNumber(runtime);
   if (!isUTC) {
     t = localTime(t);
   }
@@ -860,7 +860,7 @@ datePrototypeSetHours(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.setHours() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(self.get()).getNumber();
+  double t = JSDate::getPrimitiveValue(self.get()).getNumber(runtime);
   if (!isUTC) {
     t = localTime(t);
   }
@@ -916,7 +916,7 @@ datePrototypeSetDate(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.setDate() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(self.get()).getNumber();
+  double t = JSDate::getPrimitiveValue(self.get()).getNumber(runtime);
   if (!isUTC) {
     t = localTime(t);
   }
@@ -943,7 +943,7 @@ datePrototypeSetMonth(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.setMonth() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(self.get()).getNumber();
+  double t = JSDate::getPrimitiveValue(self.get()).getNumber(runtime);
   if (!isUTC) {
     t = localTime(t);
   }
@@ -979,7 +979,7 @@ datePrototypeSetFullYear(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.setFullYear() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(self.get()).getNumber();
+  double t = JSDate::getPrimitiveValue(self.get()).getNumber(runtime);
   if (!isUTC) {
     t = localTime(t);
   }
@@ -1028,7 +1028,7 @@ datePrototypeSetYear(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.setYear() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(self.get()).getNumber();
+  double t = JSDate::getPrimitiveValue(self.get()).getNumber(runtime);
   t = localTime(t);
   if (std::isnan(t)) {
     t = 0;

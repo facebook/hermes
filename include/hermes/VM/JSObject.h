@@ -595,7 +595,7 @@ class JSObject : public GCCell {
   /// Load a value from the direct property storage space by \p index.
   /// \pre index < DIRECT_PROPERTY_SLOTS.
   template <SlotIndex index>
-  inline static HermesValue getDirectSlotValue(const JSObject *self);
+  inline static SmallHermesValue getDirectSlotValue(const JSObject *self);
 
   /// Store a value to the direct property storage space by \p index.
   /// \pre index < DIRECT_PROPERTY_SLOTS.
@@ -1485,8 +1485,8 @@ class JSObject : public GCCell {
   GCPointer<PropStorage> propStorage_{};
 
   /// Storage for direct property slots.
-  inline GCHermesValue *directProps();
-  inline const GCHermesValue *directProps() const;
+  inline GCSmallHermesValue *directProps();
+  inline const GCSmallHermesValue *directProps() const;
 
  private:
   /// Byte offset to the first direct property slot in a JSObject.
@@ -1498,8 +1498,9 @@ class JSObject : public GCCell {
   static constexpr size_t uncappedOverlapSlots(size_t sizeofDerived) {
     return sizeofDerived <= directPropsOffset()
         ? 0
-        : (sizeofDerived - directPropsOffset() + sizeof(GCHermesValue) - 1) /
-            sizeof(GCHermesValue);
+        : (sizeofDerived - directPropsOffset() + sizeof(GCSmallHermesValue) -
+           1) /
+            sizeof(GCSmallHermesValue);
   }
 
   /// The allocation size needed for a plain JSObject instance (including its
@@ -1536,25 +1537,26 @@ class JSObject : public GCCell {
 /// Convenience class for accessing the direct property slots of a JSObject.
 class JSObjectAndDirectProps : public JSObject {
  public:
-  GCHermesValue directProps_[DIRECT_PROPERTY_SLOTS];
+  GCSmallHermesValue directProps_[DIRECT_PROPERTY_SLOTS];
 };
 
-GCHermesValue *JSObject::directProps() {
+GCSmallHermesValue *JSObject::directProps() {
   return static_cast<JSObjectAndDirectProps *>(this)->directProps_;
 }
 
-const GCHermesValue *JSObject::directProps() const {
+const GCSmallHermesValue *JSObject::directProps() const {
   return static_cast<const JSObjectAndDirectProps *>(this)->directProps_;
 }
 
 constexpr size_t JSObject::directPropsOffset() {
-  return llvh::alignTo<alignof(GCHermesValue)>(sizeof(JSObject));
+  return llvh::alignTo<alignof(GCSmallHermesValue)>(sizeof(JSObject));
 }
 
 constexpr size_t JSObject::cellSizeJSObject() {
   static_assert(
       sizeof(JSObjectAndDirectProps) ==
-          directPropsOffset() + sizeof(GCHermesValue) * DIRECT_PROPERTY_SLOTS,
+          directPropsOffset() +
+              sizeof(GCSmallHermesValue) * DIRECT_PROPERTY_SLOTS,
       "unexpected padding");
   return sizeof(JSObjectAndDirectProps);
 }
@@ -1671,16 +1673,16 @@ inline T *JSObject::initDirectPropStorage(Runtime *runtime, T *self) {
   static_assert(
       count <= DIRECT_PROPERTY_SLOTS,
       "smallPropStorage size must fit in direct properties");
-  GCHermesValue::uninitialized_fill(
+  GCSmallHermesValue::uninitialized_fill(
       self->directProps() + numOverlapSlots<T>(),
       self->directProps() + DIRECT_PROPERTY_SLOTS,
-      HermesValue::encodeUndefinedValue(),
+      SmallHermesValue::encodeUndefinedValue(),
       &runtime->getHeap());
   return self;
 }
 
 template <SlotIndex index>
-inline HermesValue JSObject::getDirectSlotValue(const JSObject *self) {
+inline SmallHermesValue JSObject::getDirectSlotValue(const JSObject *self) {
   static_assert(index < DIRECT_PROPERTY_SLOTS, "Must be a direct property");
   return self->directProps()[index];
 }
@@ -1689,7 +1691,7 @@ template <SlotIndex index>
 inline void
 JSObject::setDirectSlotValue(JSObject *self, SmallHermesValue value, GC *gc) {
   static_assert(index < DIRECT_PROPERTY_SLOTS, "Must be a direct property");
-  self->directProps()[index].set(value.unboxToHV(gc->getPointerBase()), gc);
+  self->directProps()[index].set(value, gc);
 }
 
 template <PropStorage::Inline inl>
@@ -1700,7 +1702,7 @@ inline HermesValue JSObject::getNamedSlotValueUnsafe(
   assert(!self->flags_.proxyObject && "getNamedSlotValue called on a Proxy");
 
   if (LLVM_LIKELY(index < DIRECT_PROPERTY_SLOTS))
-    return self->directProps()[index];
+    return self->directProps()[index].unboxToHV(runtime);
 
   return self->propStorage_.getNonNull(runtime)
       ->at<inl>(index - DIRECT_PROPERTY_SLOTS)
@@ -1763,8 +1765,7 @@ inline void JSObject::setNamedSlotValueUnsafe(
   // to namedSlotRef(), it is a slight performance regression, which is not
   // entirely unexpected.
   if (LLVM_LIKELY(index < DIRECT_PROPERTY_SLOTS))
-    return self->directProps()[index].set(
-        value.unboxToHV(runtime), &runtime->getHeap());
+    return self->directProps()[index].set(value, &runtime->getHeap());
 
   self->propStorage_.get(runtime)->set<inl>(
       index - DIRECT_PROPERTY_SLOTS, value, &runtime->getHeap());

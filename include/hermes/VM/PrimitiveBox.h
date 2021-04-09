@@ -46,7 +46,7 @@ class PrimitiveBox : public JSObject {
   }
 
   /// \return the [[PrimitiveValue]] internal property.
-  static HermesValue getPrimitiveValue(JSObject *self) {
+  static SmallHermesValue getPrimitiveValue(JSObject *self) {
     return JSObject::getDirectSlotValue<
         PrimitiveBox::primitiveValuePropIndex()>(self);
   }
@@ -102,7 +102,7 @@ class JSString final : public PrimitiveBox {
   static const StringPrimitive *getPrimitiveString(
       JSObject *self,
       Runtime *runtime) {
-    return getPrimitiveValue(self).getString();
+    return getPrimitiveValue(self).getString(runtime);
   }
 
   JSString(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
@@ -280,8 +280,7 @@ class JSSymbol final : public PrimitiveBox {
 
   /// Return the [[PrimitiveValue]] internal property as a string.
   static const PseudoHandle<SymbolID> getPrimitiveSymbol(JSObject *self) {
-    return PseudoHandle<SymbolID>::create(
-        HermesValueTraits<SymbolID>::decode(getPrimitiveValue(self)));
+    return PseudoHandle<SymbolID>::create(getPrimitiveValue(self).getSymbol());
   }
 
 #ifdef HERMESVM_SERIALIZE

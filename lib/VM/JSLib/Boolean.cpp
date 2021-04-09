@@ -90,7 +90,7 @@ booleanPrototypeValueOf(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Boolean.prototype.valueOf() can only be used on Boolean");
   }
-  return JSBoolean::getPrimitiveValue(boolPtr);
+  return JSBoolean::getPrimitiveValue(boolPtr).unboxToHV(runtime);
 }
 
 } // namespace vm

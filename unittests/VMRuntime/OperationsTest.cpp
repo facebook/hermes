@@ -825,7 +825,7 @@ TEST_F(OperationsTest, ToObjectTest) {
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());
     EXPECT_TRUE(res->isObject());
     auto obj = static_cast<PrimitiveBox *>(res->getPointer());
-    EXPECT_EQ(m, PrimitiveBox::getPrimitiveValue(obj).getNumber());
+    EXPECT_EQ(m, PrimitiveBox::getPrimitiveValue(obj).getNumber(runtime));
   }
 
   {
@@ -837,8 +837,8 @@ TEST_F(OperationsTest, ToObjectTest) {
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());
     EXPECT_TRUE(res->isObject());
     auto obj = static_cast<PrimitiveBox *>(res->getPointer());
-    auto objStrHandle =
-        runtime->makeHandle(PrimitiveBox::getPrimitiveValue(obj).getString());
+    auto objStrHandle = runtime->makeHandle(
+        PrimitiveBox::getPrimitiveValue(obj).getString(runtime));
     EXPECT_TRUE(StringPrimitive::createStringView(runtime, objStrHandle)
                     .equals(strRef));
   }

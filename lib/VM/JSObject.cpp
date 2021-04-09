@@ -85,7 +85,7 @@ void JSObject::serializeObjectImpl(
   // doesn't need to keep track of it.
   s.writeInt<uint8_t>(overlapSlots);
   for (size_t i = overlapSlots; i < JSObject::DIRECT_PROPERTY_SLOTS; i++) {
-    s.writeHermesValue(self->directProps()[i]);
+    s.writeSmallHermesValue(self->directProps()[i]);
   }
 }
 
@@ -109,7 +109,7 @@ JSObject::JSObject(Deserializer &d, const VTable *vtp)
 
   auto overlapSlots = d.readInt<uint8_t>();
   for (size_t i = overlapSlots; i < JSObject::DIRECT_PROPERTY_SLOTS; i++) {
-    d.readHermesValue(&directProps()[i]);
+    d.readSmallHermesValue(&directProps()[i]);
   }
 }
 #endif
@@ -258,8 +258,8 @@ void JSObject::allocateNewSlotStorage(
     Handle<> valueHandle) {
   // If it is a direct property, just store the value and we are done.
   if (LLVM_LIKELY(newSlotIndex < DIRECT_PROPERTY_SLOTS)) {
-    selfHandle->directProps()[newSlotIndex].set(
-        *valueHandle, &runtime->getHeap());
+    auto shv = SmallHermesValue::encodeHermesValue(*valueHandle, runtime);
+    selfHandle->directProps()[newSlotIndex].set(shv, &runtime->getHeap());
     return;
   }
 

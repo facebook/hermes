@@ -43,7 +43,7 @@ class JSDate final : public JSObject {
   }
 
   /// \return the [[PrimitiveValue]] internal property.
-  static HermesValue getPrimitiveValue(JSObject *self) {
+  static SmallHermesValue getPrimitiveValue(JSObject *self) {
     return JSObject::getDirectSlotValue<JSDate::primitiveValuePropIndex()>(
         self);
   }

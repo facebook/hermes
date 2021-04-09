@@ -1051,7 +1051,8 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
         << "Exception executing the call on new Date()";
     PseudoHandle<JSDate> valAsObj =
         PseudoHandle<JSDate>::vmcast(std::move(*val));
-    HermesValue hv = JSDate::getPrimitiveValue(valAsObj.get());
+    HermesValue hv =
+        JSDate::getPrimitiveValue(valAsObj.get()).unboxToHV(runtime);
     // This pointer can become invalid, don't be tempted to use it incorrectly.
     valAsObj.invalidate();
     EXPECT_EQ(hv.getNumberAs<uint64_t>(), newDate);

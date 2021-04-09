@@ -819,7 +819,8 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
   } else if (auto *jsBool = dyn_vmcast<JSBoolean>(*operationStrValue_)) {
     //  Else if value has a [[BooleanData]] internal slot, then
     //      Set value to value.[[BooleanData]].
-    operationStrValue_ = PrimitiveBox::getPrimitiveValue(jsBool);
+    operationStrValue_ =
+        PrimitiveBox::getPrimitiveValue(jsBool).unboxToHV(runtime_);
   }
 
   // Str.5.

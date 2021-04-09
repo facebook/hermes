@@ -129,9 +129,10 @@ class ArrayImpl : public JSObject {
 
   /// Get a pointer to the indexed storage for this array. The returned value
   /// may be null if there is no indexed storage.
-  StorageType *getIndexedStorage(PointerBase *) const {
+  StorageType *getIndexedStorage(PointerBase *base) const {
     return vmcast_or_null<StorageType>(
-        JSObject::getDirectSlotValue<indexedStoragePropIndex()>(this));
+        JSObject::getDirectSlotValue<indexedStoragePropIndex()>(this).getObject(
+            base));
   }
 
   /// Set the indexed storage of this array to be \p p. The pointer is allowed
@@ -315,8 +316,8 @@ class JSArray final : public ArrayImpl {
     return cell->getKind() == CellKind::ArrayKind;
   }
 
-  static uint32_t getLength(const JSArray *self, PointerBase *) {
-    return getDirectSlotValue<lengthPropIndex()>(self).getNumber();
+  static uint32_t getLength(const JSArray *self, PointerBase *pb) {
+    return getDirectSlotValue<lengthPropIndex()>(self).getNumber(pb);
   }
 
   /// Create an instance of Array, with [[Prototype]] initialized with

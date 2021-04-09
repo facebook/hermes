@@ -214,7 +214,7 @@ PseudoHandle<StringPrimitive> JSRegExp::getPattern(
     JSRegExp *self,
     PointerBase *base) {
   return createPseudoHandle(
-      JSObject::getDirectSlotValue<patternPropIndex()>(self).getString());
+      JSObject::getDirectSlotValue<patternPropIndex()>(self).getString(base));
 }
 
 template <typename CharT, typename Traits>
