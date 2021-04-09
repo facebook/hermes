@@ -470,9 +470,8 @@ dateConstructor(void *, Runtime *runtime, NativeArgs args) {
       // and call utcTime to get the final UTC value we want to store.
       finalDate = timeClip(utcTime(*cr));
     }
-
-    JSDate::setPrimitiveValue(
-        self.get(), runtime, HermesValue::encodeDoubleValue(finalDate));
+    auto shv = SmallHermesValue::encodeNumberValue(finalDate, runtime);
+    JSDate::setPrimitiveValue(self.get(), runtime, shv);
     return self.getHermesValue();
   }
 
@@ -734,9 +733,10 @@ datePrototypeSetTime(void *ctx, Runtime *runtime, NativeArgs args) {
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto v = HermesValue::encodeDoubleValue(timeClip(res->getNumber()));
+  double t = timeClip(res->getNumber());
+  auto v = SmallHermesValue::encodeNumberValue(t, runtime);
   JSDate::setPrimitiveValue(self.get(), runtime, v);
-  return v;
+  return HermesValue::encodeDoubleValue(t);
 }
 
 /// Set the milliseconds as provided and return the new time value.
@@ -759,14 +759,10 @@ datePrototypeSetMilliseconds(void *ctx, Runtime *runtime, NativeArgs args) {
   double ms = res->getNumber();
   double date = makeDate(
       day(t), makeTime(hourFromTime(t), minFromTime(t), secFromTime(t), ms));
-  PinnedHermesValue v;
-  if (!isUTC) {
-    v = HermesValue::encodeDoubleValue(timeClip(utcTime(date)));
-  } else {
-    v = HermesValue::encodeDoubleValue(timeClip(date));
-  }
-  JSDate::setPrimitiveValue(self.get(), runtime, v);
-  return v;
+  double utcT = !isUTC ? timeClip(utcTime(date)) : timeClip(date);
+  auto shv = SmallHermesValue::encodeNumberValue(utcT, runtime);
+  JSDate::setPrimitiveValue(self.get(), runtime, shv);
+  return HermesValue::encodeDoubleValue(utcT);
 }
 
 /// Takes 2 arguments: seconds, milliseconds.
@@ -801,14 +797,10 @@ datePrototypeSetSeconds(void *ctx, Runtime *runtime, NativeArgs args) {
 
   double date =
       makeDate(day(t), makeTime(hourFromTime(t), minFromTime(t), s, milli));
-  PinnedHermesValue v;
-  if (!isUTC) {
-    v = HermesValue::encodeDoubleValue(timeClip(utcTime(date)));
-  } else {
-    v = HermesValue::encodeDoubleValue(timeClip(date));
-  }
-  JSDate::setPrimitiveValue(self.get(), runtime, v);
-  return v;
+  double utcT = !isUTC ? timeClip(utcTime(date)) : timeClip(date);
+  auto shv = SmallHermesValue::encodeNumberValue(utcT, runtime);
+  JSDate::setPrimitiveValue(self.get(), runtime, shv);
+  return HermesValue::encodeDoubleValue(utcT);
 }
 
 /// Takes 3 arguments: minutes, seconds, milliseconds.
@@ -852,14 +844,10 @@ datePrototypeSetMinutes(void *ctx, Runtime *runtime, NativeArgs args) {
   }
 
   double date = makeDate(day(t), makeTime(hourFromTime(t), m, s, milli));
-  PinnedHermesValue v;
-  if (!isUTC) {
-    v = HermesValue::encodeDoubleValue(timeClip(utcTime(date)));
-  } else {
-    v = HermesValue::encodeDoubleValue(timeClip(date));
-  }
-  JSDate::setPrimitiveValue(self.get(), runtime, v);
-  return v;
+  double utcT = !isUTC ? timeClip(utcTime(date)) : timeClip(date);
+  auto shv = SmallHermesValue::encodeNumberValue(utcT, runtime);
+  JSDate::setPrimitiveValue(self.get(), runtime, shv);
+  return HermesValue::encodeDoubleValue(utcT);
 }
 
 /// Takes 4 arguments: hours, minutes, seconds, milliseconds.
@@ -913,14 +901,10 @@ datePrototypeSetHours(void *ctx, Runtime *runtime, NativeArgs args) {
   }
 
   double date = makeDate(day(t), makeTime(h, m, s, milli));
-  PinnedHermesValue v;
-  if (!isUTC) {
-    v = HermesValue::encodeDoubleValue(timeClip(utcTime(date)));
-  } else {
-    v = HermesValue::encodeDoubleValue(timeClip(date));
-  }
-  JSDate::setPrimitiveValue(self.get(), runtime, v);
-  return v;
+  double utcT = !isUTC ? timeClip(utcTime(date)) : timeClip(date);
+  auto shv = SmallHermesValue::encodeNumberValue(utcT, runtime);
+  JSDate::setPrimitiveValue(self.get(), runtime, shv);
+  return HermesValue::encodeDoubleValue(utcT);
 }
 
 /// Set the date of the month and return the new time.
@@ -943,14 +927,10 @@ datePrototypeSetDate(void *ctx, Runtime *runtime, NativeArgs args) {
   double dt = res->getNumber();
   double newDate = makeDate(
       makeDay(yearFromTime(t), monthFromTime(t), dt), timeWithinDay(t));
-  PinnedHermesValue v;
-  if (!isUTC) {
-    v = HermesValue::encodeDoubleValue(timeClip(utcTime(newDate)));
-  } else {
-    v = HermesValue::encodeDoubleValue(timeClip(newDate));
-  }
-  JSDate::setPrimitiveValue(self.get(), runtime, v);
-  return v;
+  double utcT = !isUTC ? timeClip(utcTime(newDate)) : timeClip(newDate);
+  auto shv = SmallHermesValue::encodeNumberValue(utcT, runtime);
+  JSDate::setPrimitiveValue(self.get(), runtime, shv);
+  return HermesValue::encodeDoubleValue(utcT);
 }
 
 /// Takes 2 arguments: month and date.
@@ -983,14 +963,10 @@ datePrototypeSetMonth(void *ctx, Runtime *runtime, NativeArgs args) {
     dt = dateFromTime(t);
   }
   double newDate = makeDate(makeDay(yearFromTime(t), m, dt), timeWithinDay(t));
-  PinnedHermesValue v;
-  if (!isUTC) {
-    v = HermesValue::encodeDoubleValue(timeClip(utcTime(newDate)));
-  } else {
-    v = HermesValue::encodeDoubleValue(timeClip(newDate));
-  }
-  JSDate::setPrimitiveValue(self.get(), runtime, v);
-  return v;
+  double utcT = !isUTC ? timeClip(utcTime(newDate)) : timeClip(newDate);
+  auto shv = SmallHermesValue::encodeNumberValue(utcT, runtime);
+  JSDate::setPrimitiveValue(self.get(), runtime, shv);
+  return HermesValue::encodeDoubleValue(utcT);
 }
 
 /// Takes 3 arguments: full year, month and date.
@@ -1036,14 +1012,10 @@ datePrototypeSetFullYear(void *ctx, Runtime *runtime, NativeArgs args) {
     dt = dateFromTime(t);
   }
   double newDate = makeDate(makeDay(y, m, dt), timeWithinDay(t));
-  PinnedHermesValue v;
-  if (!isUTC) {
-    v = HermesValue::encodeDoubleValue(timeClip(utcTime(newDate)));
-  } else {
-    v = HermesValue::encodeDoubleValue(timeClip(newDate));
-  }
-  JSDate::setPrimitiveValue(self.get(), runtime, v);
-  return v;
+  double utcT = !isUTC ? timeClip(utcTime(newDate)) : timeClip(newDate);
+  auto shv = SmallHermesValue::encodeNumberValue(utcT, runtime);
+  JSDate::setPrimitiveValue(self.get(), runtime, shv);
+  return HermesValue::encodeDoubleValue(utcT);
 }
 
 /// Takes one argument: the partial (or full) year.
@@ -1067,17 +1039,19 @@ datePrototypeSetYear(void *ctx, Runtime *runtime, NativeArgs args) {
   }
   double y = res->getNumber();
   if (std::isnan(y)) {
-    JSDate::setPrimitiveValue(
-        self.get(), runtime, HermesValue::encodeNaNValue());
+    auto shv = SmallHermesValue::encodeHermesValue(
+        HermesValue::encodeNaNValue(), runtime);
+    JSDate::setPrimitiveValue(self.get(), runtime, shv);
     return HermesValue::encodeNaNValue();
   }
   double yint = oscompat::trunc(y);
   double yr = 0 <= yint && yint <= 99 ? yint + 1900 : y;
   double date = utcTime(makeDate(
       makeDay(yr, monthFromTime(t), dateFromTime(t)), timeWithinDay(t)));
-  auto v = HermesValue::encodeDoubleValue(timeClip(date));
+  double d = timeClip(date);
+  auto v = SmallHermesValue::encodeNumberValue(timeClip(date), runtime);
   JSDate::setPrimitiveValue(self.get(), runtime, v);
-  return v;
+  return HermesValue::encodeDoubleValue(d);
 }
 
 CallResult<HermesValue>

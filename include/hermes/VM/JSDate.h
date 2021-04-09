@@ -50,9 +50,9 @@ class JSDate final : public JSObject {
 
   /// Set the [[PrimitiveValue]] internal property.
   static void
-  setPrimitiveValue(JSObject *self, Runtime *runtime, HermesValue value) {
+  setPrimitiveValue(JSObject *self, Runtime *runtime, SmallHermesValue value) {
     return JSObject::setDirectSlotValue<JSDate::primitiveValuePropIndex()>(
-        self, value, &runtime->getHeap());
+        self, value.unboxToHV(runtime), &runtime->getHeap());
   }
 
 #ifdef HERMESVM_SERIALIZE
