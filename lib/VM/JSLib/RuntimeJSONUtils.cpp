@@ -908,8 +908,8 @@ ExecutionStatus JSONStringifyer::operationJA() {
   depthCount_++;
   output_.push_back(u'[');
   CallResult<uint64_t> lenRes = getArrayLikeLength(
-      runtime_->makeHandle(
-          vmcast<JSObject>(stackValue_->at(stackValue_->size() - 1))),
+      runtime_->makeHandle(vmcast<JSObject>(
+          stackValue_->at(stackValue_->size() - 1).getObject(runtime_))),
       runtime_);
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -926,8 +926,8 @@ ExecutionStatus JSONStringifyer::operationJA() {
       indent();
     }
     // JA.8.a.
-    operationStrHolder_ =
-        vmcast<JSObject>(stackValue_->at(stackValue_->size() - 1));
+    operationStrHolder_ = vmcast<JSObject>(
+        stackValue_->at(stackValue_->size() - 1).getObject(runtime_));
     // Flush just before the recursion in case any handles were created.
     marker.flush();
     auto status = operationStr(HermesValue::encodeDoubleValue(index));
@@ -968,7 +968,8 @@ ExecutionStatus JSONStringifyer::operationJO() {
     operationJOK_ = propertyList_.get();
   } else {
     // JO.6.
-    tmpHandle_ = stackValue_->at(stackValue_->size() - 1);
+    tmpHandle_ = HermesValue::encodeObjectValue(
+        stackValue_->at(stackValue_->size() - 1).getObject(runtime_));
     if (LLVM_LIKELY(!Handle<JSObject>::vmcast(tmpHandle_)->isProxyObject())) {
       // enumerableOwnProperties_RJS is the spec definition, and is
       // used below on proxies so the correct traps get called.  In
@@ -1036,8 +1037,8 @@ ExecutionStatus JSONStringifyer::operationJO() {
     }
 
     // JO.9.a.
-    operationStrHolder_ =
-        vmcast<JSObject>(stackValue_->at(stackValue_->size() - 1));
+    operationStrHolder_ = vmcast<JSObject>(
+        stackValue_->at(stackValue_->size() - 1).getObject(runtime_));
 
     tmpHandle2_ = operationJOK_.getHermesValue();
     if (PropStorage::push_back(stackJO_, runtime_, tmpHandle2_) ==
@@ -1049,7 +1050,8 @@ ExecutionStatus JSONStringifyer::operationJO() {
     marker.flush();
     auto result = operationStr(*tmpHandle_);
 
-    operationJOK_ = vmcast<JSArray>(stackJO_->pop_back(runtime_));
+    operationJOK_ =
+        vmcast<JSArray>(stackJO_->pop_back(runtime_).getObject(runtime_));
 
     if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1089,7 +1091,7 @@ CallResult<bool> JSONStringifyer::pushValueToStack(HermesValue value) {
   assert(vmisa<JSObject>(value) && "Can only push object to stack");
 
   for (uint32_t i = 0, len = stackValue_->size(); i < len; ++i) {
-    if (stackValue_->at(i).getObject() == value.getObject()) {
+    if (stackValue_->at(i).getObject(runtime_) == value.getObject()) {
       return false;
     }
   }

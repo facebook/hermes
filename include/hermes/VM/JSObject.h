@@ -1702,8 +1702,9 @@ inline HermesValue JSObject::getNamedSlotValueUnsafe(
   if (LLVM_LIKELY(index < DIRECT_PROPERTY_SLOTS))
     return self->directProps()[index];
 
-  return self->propStorage_.getNonNull(runtime)->at<inl>(
-      index - DIRECT_PROPERTY_SLOTS);
+  return self->propStorage_.getNonNull(runtime)
+      ->at<inl>(index - DIRECT_PROPERTY_SLOTS)
+      .unboxToHV(runtime);
 }
 
 inline CallResult<PseudoHandle<>> JSObject::getNamedSlotValue(
@@ -1766,9 +1767,7 @@ inline void JSObject::setNamedSlotValueUnsafe(
         value.unboxToHV(runtime), &runtime->getHeap());
 
   self->propStorage_.get(runtime)->set<inl>(
-      index - DIRECT_PROPERTY_SLOTS,
-      value.unboxToHV(runtime),
-      &runtime->getHeap());
+      index - DIRECT_PROPERTY_SLOTS, value, &runtime->getHeap());
 }
 
 inline CallResult<PseudoHandle<>> JSObject::getComputedSlotValue(

@@ -74,14 +74,7 @@ void JSObject::serializeObjectImpl(
   s.writeData(&self->flags_, sizeof(ObjectFlags));
   s.writeRelocation(self->parent_.get(s.getRuntime()));
   s.writeRelocation(self->clazz_.get(s.getRuntime()));
-  // propStorage_ : GCPointer<PropStorage> is also ArrayStorage. Serialize
-  // *propStorage_ with this JSObject.
-  bool hasArray = (bool)self->propStorage_;
-  s.writeInt<uint8_t>(hasArray);
-  if (hasArray) {
-    ArrayStorage::serializeArrayStorage(
-        s, self->propStorage_.get(s.getRuntime()));
-  }
+  s.writeRelocation(self->propStorage_.get(s.getRuntime()));
 
   // Record the number of overlap slots, so that the deserialization code
   // doesn't need to keep track of it.
@@ -107,12 +100,7 @@ JSObject::JSObject(Deserializer &d, const VTable *vtp)
   d.readData(&flags_, sizeof(ObjectFlags));
   d.readRelocation(&parent_, RelocationKind::GCPointer);
   d.readRelocation(&clazz_, RelocationKind::GCPointer);
-  if (d.readInt<uint8_t>()) {
-    propStorage_.set(
-        d.getRuntime(),
-        ArrayStorage::deserializeArrayStorage(d),
-        &d.getRuntime()->getHeap());
-  }
+  d.readRelocation(&propStorage_, RelocationKind::GCPointer);
 
   auto overlapSlots = d.readInt<uint8_t>();
   for (size_t i = overlapSlots; i < JSObject::DIRECT_PROPERTY_SLOTS; i++) {
@@ -302,9 +290,13 @@ void JSObject::allocateNewSlotStorage(
           "allocated slot must be at end");
       PropStorage::resizeWithinCapacity(propStorage, runtime, newSlotIndex + 1);
     }
-    // If we don't need to resize, just store it directly.
-    propStorage->set(newSlotIndex, *valueHandle, &runtime->getHeap());
   }
+  // This must be done after the call to resizeWithinCapacity, since
+  // encodeHermesValue may allocate and cause the ArrayStorage to be trimmed.
+  auto shv = SmallHermesValue::encodeHermesValue(*valueHandle, runtime);
+  // If we don't need to resize, just store it directly.
+  selfHandle->propStorage_.getNonNull(runtime)->set(
+      newSlotIndex, shv, &runtime->getHeap());
 }
 
 CallResult<PseudoHandle<>> JSObject::getNamedPropertyValue_RJS(

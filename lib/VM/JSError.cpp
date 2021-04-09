@@ -53,15 +53,7 @@ void ErrorSerialize(Serializer &s, const GCCell *cell) {
 
   auto *self = vmcast<const JSError>(cell);
   s.writeRelocation(self->domains_.get(s.getRuntime()));
-
-  // funcNames_ : GCPointer<PropStorage> is an ArrayStorage. Serialize it with
-  // JSError.
-  bool hasArray = (bool)self->funcNames_;
-  s.writeInt<uint8_t>(hasArray);
-  if (hasArray) {
-    ArrayStorage::serializeArrayStorage(
-        s, self->funcNames_.get(s.getRuntime()));
-  }
+  s.writeRelocation(self->funcNames_.get(s.getRuntime()));
   s.writeInt<uint8_t>(self->catchable_);
   s.endObject(cell);
 }
@@ -74,14 +66,7 @@ void ErrorDeserialize(Deserializer &d, CellKind kind) {
 
 JSError::JSError(Deserializer &d) : JSObject(d, &vt.base) {
   d.readRelocation(&domains_, RelocationKind::GCPointer);
-  // Deserialize funcNames_.
-  if (d.readInt<uint8_t>()) {
-    funcNames_.set(
-        d.getRuntime(),
-        ArrayStorage::deserializeArrayStorage(d),
-        &d.getRuntime()->getHeap());
-  }
-
+  d.readRelocation(&funcNames_, RelocationKind::GCPointer);
   catchable_ = d.readInt<uint8_t>();
 }
 #endif
@@ -331,7 +316,9 @@ static Handle<PropStorage> getCallStackFunctionNames(
       runtime->clearThrownValue();
       return Runtime::makeNullHandle<PropStorage>();
     }
-    names->set(namesIndex, name.getHermesValue(), &runtime->getHeap());
+    auto shv =
+        SmallHermesValue::encodeHermesValue(name.getHermesValue(), runtime);
+    names->set(namesIndex, shv, &runtime->getHeap());
     ++namesIndex;
     gcScope.flushToMarker(marker);
   }
@@ -467,7 +454,7 @@ bool JSError::appendFunctionNameAtIndex(
         index < selfHandle->funcNames_.get(runtime)->size() &&
         "Index out of bounds");
     name = dyn_vmcast<StringPrimitive>(
-        selfHandle->funcNames_.get(runtime)->at(index));
+        selfHandle->funcNames_.get(runtime)->at(index).unboxToHV(runtime));
   }
 
   if (!name || name->getStringLength() == 0) {
