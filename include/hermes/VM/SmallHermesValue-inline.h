@@ -72,7 +72,13 @@ GCCell *HermesValue32::getPointer(PointerBase *pb) const {
 
 GCCell *HermesValue32::getObject(PointerBase *pb) const {
   assert(isObject());
-  return getPointer(pb);
+  // Since object pointers are the most common type, we have them as the
+  // zero-tag and can decode them without needing to remove the tag.
+  static_assert(
+      static_cast<uint8_t>(Tag::Object) == 0,
+      "Object tag must be zero for fast path.");
+  return GCPointerBase::storageTypeToPointer(
+      GCPointerBase::rawToStorageType(raw_), pb);
 }
 
 StringPrimitive *HermesValue32::getString(PointerBase *pb) const {
