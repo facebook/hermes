@@ -244,6 +244,8 @@ print(Date.parse('Mon Jul 16 2019 13:1525 GMT-0700'));
 // CHECK-NEXT: NaN
 print(Date.parse('Mon Jul 16 2019 13:1525 GMT'));
 // CHECK-NEXT: NaN
+print(Date.parse('2021-04-10T01:00:00.000-01:30'));
+// CHECK-NEXT: 1618021800000
 
 // Fault tolerance on garbages (marked as "G"s).
 // TODO(T66628172) adapt to local timezone.
