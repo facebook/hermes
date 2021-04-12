@@ -30,12 +30,8 @@ static const char *kGCName =
 
 static const char *kCompacteeNameForCrashMgr = "COMPACT";
 
-// Since YG collection times are the primary driver of pause times, it is useful
-// to have a knob to reduce the effective size of the YG. This can be any value
-// smaller than the segment size.
-// Note that we only set this at the end of the first real YG, since doing it
-// for direct promotions would waste OG memory without a pause time benefit.
-static constexpr size_t kYGSegmentSize = HadesGC::HeapSegment::maxSize() / 2;
+// We have a target max pause time of 50ms.
+static constexpr size_t kTargetMaxPauseMs = 50;
 
 // A free list cell is always variable-sized.
 const VTable HadesGC::OldGen::FreelistCell::vt{
@@ -2500,12 +2496,20 @@ void HadesGC::youngGenCollection(
     // Move external memory accounting from YG to OG as well.
     transferExternalMemoryToOldGen();
 
-    // transferExternalMemoryToOldGen resets the effectiveEnd to be the end.
-    // Move the effectiveEnd back to represent the YG size. This also handles
-    // the case where we had to create a large alloc in the YG and increased the
-    // effectiveEnd. In the future, we could also use this line to dynamically
-    // size the YG based on pause times.
-    youngGen().setEffectiveEnd(youngGen().start() + kYGSegmentSize);
+    // Potentially resize the YG if this collection did not meet our pause time
+    // goals. Exclude compacting collections and the portion of YG time spent on
+    // incremental OG collections, since they distort pause times and are
+    // unaffected by YG size.
+    if (!doCompaction)
+      updateYoungGenSizeFactor();
+
+    // The effective end of our YG is no longer accurate for multiple reasons:
+    // 1. transferExternalMemoryToOldGen resets the effectiveEnd to be the end.
+    // 2. Creating a large alloc in the YG can increase the effectiveEnd.
+    // 3. The duration of this collection may not have met our pause time goals.
+    youngGen().setEffectiveEnd(
+        youngGen().start() +
+        static_cast<size_t>(ygSizeFactor_ * HeapSegment::maxSize()));
 
     // We have to set these after the collection, in case a compaction took
     // place and updated these metrics.
@@ -2632,6 +2636,21 @@ void HadesGC::transferExternalMemoryToOldGen() {
   oldGen_.creditExternalMemory(ygExternalBytes_);
   ygExternalBytes_ = 0;
   youngGen_.clearExternalMemoryCharge();
+}
+
+void HadesGC::updateYoungGenSizeFactor() {
+  assert(
+      ygSizeFactor_ <= 1.0 && ygSizeFactor_ >= 0.25 && "YG size out of range.");
+  const auto ygDuration = ygCollectionStats_->getElapsedTime().count();
+  // If the YG collection has taken less than 40% of our budgeted time, increase
+  // the size of the YG by 10%.
+  if (ygDuration < kTargetMaxPauseMs * 0.4)
+    ygSizeFactor_ = std::min(ygSizeFactor_ * 1.1, 1.0);
+  // If the YG collection has taken more than 60% of our budgeted time, decrease
+  // the size of the YG by 10%. This is meant to leave some time for OG work.
+  // However, don't let the YG size drop below 25% of the segment size.
+  else if (ygDuration > kTargetMaxPauseMs * 0.6)
+    ygSizeFactor_ = std::max(ygSizeFactor_ * 0.9, 0.25);
 }
 
 template <bool CompactionEnabled>
@@ -3072,7 +3091,7 @@ void HadesGC::yieldToOldGen() {
     if (concurrentPhase_ == Phase::Mark)
       oldGenMarker_->setDrainRate(getDrainRate());
 
-    constexpr uint32_t kYGIncrementalCollectBudget = 25;
+    constexpr uint32_t kYGIncrementalCollectBudget = kTargetMaxPauseMs / 2;
     const auto initialPhase = concurrentPhase_;
     // If the phase hasn't changed and we are still under 25ms after the first
     // iteration, then we can be reasonably sure that the next iteration will

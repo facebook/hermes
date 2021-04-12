@@ -585,6 +585,14 @@ class HadesGC final : public GCBase {
   /// Protected by gcMutex_.
   std::vector<GCCell *> youngGenFinalizables_;
 
+  /// Since YG collection times are the primary driver of pause times, it is
+  /// useful to have a knob to reduce the effective size of the YG. This number
+  /// is the fraction of HeapSegment::maxSize() that we should use for the YG..
+  /// Note that we only set the YG size using this at the end of the first real
+  /// YG, since doing it for direct promotions would waste OG memory without a
+  /// pause time benefit.
+  double ygSizeFactor_{0.5};
+
   /// oldGen_ is a free list space, so it needs a different segment
   /// representation.
   /// Protected by gcMutex_.
@@ -782,6 +790,10 @@ class HadesGC final : public GCBase {
   /// Transfer any external memory charges from YG to OG. Used as part of YG
   /// collection.
   void transferExternalMemoryToOldGen();
+
+  /// Update the scaling factor for the size of the young gen to meet our pause
+  /// time goals, based on the duration of the most recently completed YG.
+  void updateYoungGenSizeFactor();
 
   /// Perform an OG garbage collection. All live objects in OG will be left
   /// untouched, all unreachable objects will be placed into a free list that
