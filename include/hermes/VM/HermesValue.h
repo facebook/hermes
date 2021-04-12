@@ -136,31 +136,31 @@ static_assert(ObjectTag == LastTag, "Tags mismatch");
 /// Only values in the range [FirstPointerTag..LastTag] are pointers.
 static constexpr TagKind FirstPointerTag = StrTag;
 
-/// An "extended tag", occupying one extra bit.
-enum class ETag : uint32_t {
-  Empty = EmptyInvalidTag * 2,
-#ifdef HERMES_SLOW_DEBUG
-  /// An invalid hermes value is one that should never exist in normal
-  /// operation, it can be used as a sigil to indicate a programming failure.
-  Invalid = EmptyInvalidTag * 2 + 1,
-#endif
-  Undefined = UndefinedNullTag * 2,
-  Null = UndefinedNullTag * 2 + 1,
-  Bool = BoolTag * 2,
-  Symbol = SymbolTag * 2,
-  Native1 = NativeValueTag * 2,
-  Native2 = NativeValueTag * 2 + 1,
-  Str1 = StrTag * 2,
-  Str2 = StrTag * 2 + 1,
-  Object1 = ObjectTag * 2,
-  Object2 = ObjectTag * 2 + 1,
-
-  FirstPointer = Str1,
-};
-
 /// A NaN-box encoded value.
 class HermesValue {
  public:
+  /// An "extended tag", occupying one extra bit.
+  enum class ETag : uint32_t {
+    Empty = EmptyInvalidTag * 2,
+#ifdef HERMES_SLOW_DEBUG
+    /// An invalid hermes value is one that should never exist in normal
+    /// operation, it can be used as a sigil to indicate a programming failure.
+    Invalid = EmptyInvalidTag * 2 + 1,
+#endif
+    Undefined = UndefinedNullTag * 2,
+    Null = UndefinedNullTag * 2 + 1,
+    Bool = BoolTag * 2,
+    Symbol = SymbolTag * 2,
+    Native1 = NativeValueTag * 2,
+    Native2 = NativeValueTag * 2 + 1,
+    Str1 = StrTag * 2,
+    Str2 = StrTag * 2 + 1,
+    Object1 = ObjectTag * 2,
+    Object2 = ObjectTag * 2 + 1,
+
+    FirstPointer = Str1,
+  };
+
   /// Number of bits used in the high part to encode the sign, exponent and tag.
   static constexpr unsigned kNumTagExpBits = 16;
   /// Number of bits available for data storage.

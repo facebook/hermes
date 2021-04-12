@@ -140,10 +140,9 @@ class SmallHermesValueAdaptor : protected HermesValue {
 /// A compressed HermesValue that is always equal to the size of a GCPointer. It
 /// uses the least significant bits (guaranteed to be zero by the heap
 /// alignment) as a tag to determine what the type of the remaining bits is.
-/// Doubles have to be boxed on the heap so that they can then be held as
-/// pointers. Native values are not supported. For types that do not have an
-/// associated value (e.g. undefined, empty), the value bits are used as the
-/// tag.
+/// Some types may use an additional tag bit to form an "extended tag". Doubles
+/// have to be boxed on the heap so that they can then be held as pointers.
+/// Native values are not supported.
 class HermesValue32 {
   /// If compressed pointers are enabled, then the size of this type should be
   /// equal to the size of a compressed pointer. Otherwise, the size of this
@@ -167,16 +166,16 @@ class HermesValue32 {
   static constexpr size_t kNumSmiBits =
       min(kNumValueBits, static_cast<size_t>(54));
 
-  /// A 3 bit tag describing the stored value. If the tag is Extended, then the
-  /// value is a secondary tag of type ValueTag.
+  /// A 3 bit tag describing the stored value. Tags that represent multiple
+  /// types are distinguished using an additional bit found in the "ETag".
   enum class Tag : uint8_t {
     Object,
     String,
     BoxedDouble,
     SmallInt,
     Symbol,
-    Bool,
-    Extended,
+    BoolAndUndefined,
+    EmptyAndNull,
     _Last
   };
 
@@ -186,13 +185,31 @@ class HermesValue32 {
 
   static constexpr uint8_t kLastPointerTag =
       static_cast<uint8_t>(Tag::BoxedDouble);
+  static constexpr uint8_t kFirstExtendedTag =
+      static_cast<uint8_t>(Tag::BoolAndUndefined);
 
-  /// If we don't need to store a value for a particular tag, then the value
-  /// bits can serve as a form of extended tag.
-  enum class ValueTag : uint8_t {
-    Undefined,
-    Empty,
-    Null,
+  static constexpr size_t kNumETagBits = kNumTagBits + 1;
+  static constexpr size_t kNumETagValueBits = kNumValueBits - 1;
+
+  /// Define an "extended tag", occupying one extra bit. For types that use all
+  /// kNumValueBits bits, duplicate the enum value for both possible values of
+  /// the extra bit.
+  static constexpr uint8_t kETagOffset = 1 << kNumTagBits;
+  enum class ETag : uint8_t {
+    Object1 = static_cast<uint8_t>(Tag::Object),
+    Object2 = static_cast<uint8_t>(Tag::Object) + kETagOffset,
+    String1 = static_cast<uint8_t>(Tag::String),
+    String2 = static_cast<uint8_t>(Tag::String) + kETagOffset,
+    BoxedDouble1 = static_cast<uint8_t>(Tag::BoxedDouble),
+    BoxedDouble2 = static_cast<uint8_t>(Tag::BoxedDouble) + kETagOffset,
+    SmallInt1 = static_cast<uint8_t>(Tag::SmallInt),
+    SmallInt2 = static_cast<uint8_t>(Tag::SmallInt) + kETagOffset,
+    Symbol1 = static_cast<uint8_t>(Tag::Symbol),
+    Symbol2 = static_cast<uint8_t>(Tag::Symbol) + kETagOffset,
+    Bool = static_cast<uint8_t>(Tag::BoolAndUndefined),
+    Undefined = static_cast<uint8_t>(Tag::BoolAndUndefined) + kETagOffset,
+    Empty = static_cast<uint8_t>(Tag::EmptyAndNull),
+    Null = static_cast<uint8_t>(Tag::EmptyAndNull) + kETagOffset,
   };
 
   RawType raw_;
@@ -204,15 +221,32 @@ class HermesValue32 {
   static constexpr HermesValue32 fromTagAndValue(Tag tag, RawType value) {
     // Only a small integer can have its top bits set (if it's negative).
     assert(
-        (value < (static_cast<RawType>(1) << kNumValueBits) ||
-         tag == Tag::SmallInt) &&
+        (llvh::isUInt<kNumValueBits>(value) || tag == Tag::SmallInt) &&
         "Value out of range.");
     return fromRaw((value << kNumTagBits) | static_cast<uint8_t>(tag));
+  }
+  static constexpr HermesValue32 fromETagAndValue(ETag etag, RawType value) {
+    assert(
+        llvh::isUInt<kNumETagValueBits>(value) &&
+        "Value must fit in value bits.");
+    assert(
+        static_cast<uint8_t>(etag) % kETagOffset >= kFirstExtendedTag &&
+        "Not an extended type.");
+    return fromRaw((value << kNumETagBits) | static_cast<uint8_t>(etag));
   }
 
   RawType getValue() const {
     assert(getTag() != Tag::SmallInt && "SMIs must use getSmallInt.");
+    assert(
+        static_cast<uint8_t>(getTag()) < kFirstExtendedTag &&
+        "Values for ETags should use getETagValue.");
     return raw_ >> kNumTagBits;
+  }
+  RawType getETagValue() const {
+    assert(
+        static_cast<uint8_t>(getTag()) >= kFirstExtendedTag &&
+        "Not an extended type.");
+    return raw_ >> kNumETagBits;
   }
   SmiType getSmallInt() const {
     assert(getTag() == Tag::SmallInt && "Must be a SMI.");
@@ -222,13 +256,9 @@ class HermesValue32 {
     return static_cast<Tag>(
         raw_ & llvh::maskTrailingOnes<RawType>(kNumTagBits));
   }
-  ValueTag getValueTag() const {
-    return static_cast<ValueTag>(getValue());
-  }
-
-  /// Helper function to encode an extended tag.
-  static constexpr HermesValue32 encodeValueTag(ValueTag et) {
-    return fromTagAndValue(Tag::Extended, static_cast<uint8_t>(et));
+  ETag getETag() const {
+    return static_cast<ETag>(
+        raw_ & llvh::maskTrailingOnes<RawType>(kNumETagBits));
   }
 
   /// Assert that the pointer can be encoded.
@@ -284,7 +314,7 @@ class HermesValue32 {
     return raw_ == encodeNullValue().raw_;
   }
   bool isBool() const {
-    return getTag() == Tag::Bool;
+    return getETag() == ETag::Bool;
   }
 
   /// Convert this to a full HermesValue, but do not unbox a BoxedDouble.
@@ -308,7 +338,7 @@ class HermesValue32 {
   }
   bool getBool() const {
     assert(isBool());
-    return getValue();
+    return getETagValue();
   }
 
   inline void setInGC(HermesValue32 hv, GC *gc);
@@ -350,16 +380,16 @@ class HermesValue32 {
     return fromTagAndValue(Tag::Symbol, s.unsafeGetRaw());
   }
   static constexpr HermesValue32 encodeBoolValue(bool b) {
-    return fromTagAndValue(Tag::Bool, b);
+    return fromETagAndValue(ETag::Bool, b);
   }
   static constexpr HermesValue32 encodeNullValue() {
-    return encodeValueTag(ValueTag::Null);
+    return fromETagAndValue(ETag::Null, 0);
   }
   static constexpr HermesValue32 encodeUndefinedValue() {
-    return encodeValueTag(ValueTag::Undefined);
+    return fromETagAndValue(ETag::Undefined, 0);
   }
   static constexpr HermesValue32 encodeEmptyValue() {
-    return encodeValueTag(ValueTag::Empty);
+    return fromETagAndValue(ETag::Empty, 0);
   }
 
  protected:

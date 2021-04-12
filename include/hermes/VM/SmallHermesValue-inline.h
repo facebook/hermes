@@ -29,29 +29,31 @@ void HermesValue32::setInGC(HermesValue32 hv, GC *gc) {
 }
 
 HermesValue HermesValue32::unboxToHV(PointerBase *pb) const {
-  switch (getTag()) {
-    case Tag::Object:
+  switch (getETag()) {
+    case ETag::Object1:
+    case ETag::Object2:
       return HermesValue::encodeObjectValue(getObject(pb));
-    case Tag::String:
+    case ETag::String1:
+    case ETag::String2:
       return HermesValue::encodeStringValue(getString(pb));
-    case Tag::BoxedDouble:
+    case ETag::BoxedDouble1:
+    case ETag::BoxedDouble2:
       return HermesValue::encodeNumberValue(
           vmcast<BoxedDouble>(getPointer(pb))->get());
-    case Tag::SmallInt:
+    case ETag::SmallInt1:
+    case ETag::SmallInt2:
       return HermesValue::encodeNumberValue(getSmallInt());
-    case Tag::Symbol:
+    case ETag::Symbol1:
+    case ETag::Symbol2:
       return HermesValue::encodeSymbolValue(SymbolID::unsafeCreate(getValue()));
-    case Tag::Bool:
-      return HermesValue::encodeBoolValue(getValue());
-    case Tag::Extended:
-      switch (getValueTag()) {
-        case ValueTag::Undefined:
-          return HermesValue::encodeUndefinedValue();
-        case ValueTag::Empty:
-          return HermesValue::encodeEmptyValue();
-        case ValueTag::Null:
-          return HermesValue::encodeNullValue();
-      }
+    case ETag::Bool:
+      return HermesValue::encodeBoolValue(getETagValue());
+    case ETag::Undefined:
+      return HermesValue::encodeUndefinedValue();
+    case ETag::Empty:
+      return HermesValue::encodeEmptyValue();
+    case ETag::Null:
+      return HermesValue::encodeNullValue();
     default:
       llvm_unreachable("No other tag");
   }
@@ -103,21 +105,21 @@ HermesValue32::encodeHermesValue(HermesValue hv, GC *gc, PointerBase *pb) {
     encodeNumberValue(0.0, gc, pb);
 #endif
   switch (hv.getETag()) {
-    case ETag::Empty:
+    case HermesValue::ETag::Empty:
       return encodeEmptyValue();
-    case ETag::Undefined:
+    case HermesValue::ETag::Undefined:
       return encodeUndefinedValue();
-    case ETag::Null:
+    case HermesValue::ETag::Null:
       return encodeNullValue();
-    case ETag::Bool:
+    case HermesValue::ETag::Bool:
       return encodeBoolValue(hv.getBool());
-    case ETag::Symbol:
+    case HermesValue::ETag::Symbol:
       return encodeSymbolValue(hv.getSymbol());
-    case ETag::Str1:
-    case ETag::Str2:
+    case HermesValue::ETag::Str1:
+    case HermesValue::ETag::Str2:
       return encodeStringValue(hv.getString(), pb);
-    case ETag::Object1:
-    case ETag::Object2:
+    case HermesValue::ETag::Object1:
+    case HermesValue::ETag::Object2:
       return encodeObjectValue(static_cast<GCCell *>(hv.getObject()), pb);
     default:
       assert(
