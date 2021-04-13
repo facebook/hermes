@@ -1617,8 +1617,8 @@ CallResult<PseudoHandle<>> GeneratorInnerFunction::callInnerFunction(
     Action action) {
   auto self = Handle<GeneratorInnerFunction>::vmcast(selfHandle);
 
-  SmallHermesValue shv = SmallHermesValue::encodeHermesValue(
-      arg.getHermesValue(), &runtime->getHeap(), runtime);
+  SmallHermesValue shv =
+      SmallHermesValue::encodeHermesValue(arg.getHermesValue(), runtime);
   self->result_.set(shv, &runtime->getHeap());
   self->action_ = action;
 

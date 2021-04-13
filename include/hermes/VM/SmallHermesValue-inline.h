@@ -95,14 +95,15 @@ double HermesValue32::getNumber(PointerBase *pb) const {
   return vmcast<BoxedDouble>(getPointer(pb))->get();
 }
 
-/* static */ HermesValue32
-HermesValue32::encodeHermesValue(HermesValue hv, GC *gc, PointerBase *pb) {
+/* static */ HermesValue32 HermesValue32::encodeHermesValue(
+    HermesValue hv,
+    Runtime *runtime) {
 #ifdef HERMESVM_SANITIZE_HANDLES
   // When Handle-SAN is on, make a double so that this function always
   // allocates. Note we can't do this for pointer values since they would get
   // invalidated.
   if (!hv.isPointer())
-    encodeNumberValue(0.0, gc, pb);
+    encodeNumberValue(0.0, runtime);
 #endif
   switch (hv.getETag()) {
     case HermesValue::ETag::Empty:
@@ -117,25 +118,20 @@ HermesValue32::encodeHermesValue(HermesValue hv, GC *gc, PointerBase *pb) {
       return encodeSymbolValue(hv.getSymbol());
     case HermesValue::ETag::Str1:
     case HermesValue::ETag::Str2:
-      return encodeStringValue(hv.getString(), pb);
+      return encodeStringValue(hv.getString(), runtime);
     case HermesValue::ETag::Object1:
     case HermesValue::ETag::Object2:
-      return encodeObjectValue(static_cast<GCCell *>(hv.getObject()), pb);
+      return encodeObjectValue(static_cast<GCCell *>(hv.getObject()), runtime);
     default:
       assert(
           hv.isNumber() && "Native values are forbidden in SmallHermesValue");
-      return encodeNumberValue(hv.getNumber(), gc, pb);
+      return encodeNumberValue(hv.getNumber(), runtime);
   }
 }
 
-/* static */ HermesValue32 HermesValue32::encodeHermesValue(
-    HermesValue hv,
+/* static */ HermesValue32 HermesValue32::encodeNumberValue(
+    double d,
     Runtime *runtime) {
-  return encodeHermesValue(hv, &runtime->getHeap(), runtime);
-}
-
-/* static */ HermesValue32
-HermesValue32::encodeNumberValue(double d, GC *gc, PointerBase *pb) {
   // Always box values when Handle-SAN is on so we can catch any mistakes.
 #ifndef HERMESVM_SANITIZE_HANDLES
   const SmiType i = doubleToSmi(d);
@@ -144,13 +140,8 @@ HermesValue32::encodeNumberValue(double d, GC *gc, PointerBase *pb) {
           llvh::DoubleToBits(d) != llvh::DoubleToBits(-0.0)))
     return fromTagAndValue(Tag::SmallInt, i);
 #endif
-  return encodePointerImpl(BoxedDouble::create(d, gc), Tag::BoxedDouble, pb);
-}
-
-/* static */ HermesValue32 HermesValue32::encodeNumberValue(
-    double d,
-    Runtime *runtime) {
-  return encodeNumberValue(d, &runtime->getHeap(), runtime);
+  return encodePointerImpl(
+      BoxedDouble::create(d, runtime), Tag::BoxedDouble, runtime);
 }
 
 /* static */ HermesValue32

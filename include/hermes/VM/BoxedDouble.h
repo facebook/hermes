@@ -8,7 +8,7 @@
 #ifndef HERMES_VM_BOXEDDOUBLE_H
 #define HERMES_VM_BOXEDDOUBLE_H
 
-#include "hermes/VM/GC.h"
+#include "hermes/VM/Runtime.h"
 
 namespace hermes {
 namespace vm {
@@ -40,11 +40,12 @@ class BoxedDouble final : public GCCell {
     return cell->getKind() == CellKind::BoxedDoubleKind;
   }
 
-  static BoxedDouble *create(double d, GC *gc) {
-    return gc->makeAFixed<BoxedDouble>(d, gc);
+  static BoxedDouble *create(double d, Runtime *runtime) {
+    return runtime->makeAFixed<BoxedDouble>(d, runtime);
   }
 
-  BoxedDouble(double d, GC *gc) : GCCell(gc, &vt), value_(d) {}
+  BoxedDouble(double d, Runtime *runtime)
+      : GCCell(&runtime->getHeap(), &vt), value_(d) {}
 
   double get() const {
     return value_;

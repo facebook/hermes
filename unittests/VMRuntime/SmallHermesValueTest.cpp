@@ -169,9 +169,7 @@ TEST_F(SmallHermesValueRuntimeTest, StringTest) {
   auto message =
       StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"hello"));
   auto SHV = SmallHermesValue::encodeHermesValue(
-      HermesValue::encodeStringValue(message.get()),
-      &runtime->getHeap(),
-      runtime);
+      HermesValue::encodeStringValue(message.get()), runtime);
   EXPECT_TRUE(SHV.isPointer());
   EXPECT_TRUE(SHV.isString());
   auto HV = SHV.unboxToHV(runtime);
@@ -184,7 +182,7 @@ TEST_F(SmallHermesValueRuntimeTest, ObjectTest) {
   auto obj = JSNumber::create(
       runtime, 3.14, Handle<JSObject>::vmcast(&runtime->numberPrototype));
   auto SHV = SmallHermesValue::encodeHermesValue(
-      HermesValue::encodeObjectValue(obj.get()), &runtime->getHeap(), runtime);
+      HermesValue::encodeObjectValue(obj.get()), runtime);
   EXPECT_TRUE(SHV.isPointer());
   EXPECT_TRUE(SHV.isObject());
   auto HV = SHV.unboxToHV(runtime);

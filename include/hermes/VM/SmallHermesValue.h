@@ -358,8 +358,6 @@ class HermesValue32 {
   /// this function is guaranteed to not allocate. This is important since an
   /// allocation may invalidate the pointer. For non-pointer values, always
   /// treat this function as though it may allocate.
-  inline static HermesValue32
-  encodeHermesValue(HermesValue hv, GC *gc, PointerBase *pb);
   inline static HermesValue32 encodeHermesValue(
       HermesValue hv,
       Runtime *runtime);
@@ -367,8 +365,6 @@ class HermesValue32 {
   /// Encode a double as a HermesValue32. Small integer values will be stored
   /// inline and doubles will be allocated on the heap. Always treat this
   /// function as though it may allocate.
-  inline static HermesValue32
-  encodeNumberValue(double d, GC *gc, PointerBase *pb);
   inline static HermesValue32 encodeNumberValue(double d, Runtime *runtime);
 
   inline static HermesValue32 encodeObjectValue(GCCell *ptr, PointerBase *pb);
