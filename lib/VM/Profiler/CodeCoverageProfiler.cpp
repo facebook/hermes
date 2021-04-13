@@ -14,6 +14,19 @@
 namespace hermes {
 namespace vm {
 
+// We intentionally leak these static members to avoid a case where they are
+// accessed after they are destroyed during shutdown.
+/* static */ std::unordered_set<CodeCoverageProfiler *>
+    &CodeCoverageProfiler::allProfilers() {
+  static auto *const allProfilers =
+      new std::unordered_set<CodeCoverageProfiler *>();
+  return *allProfilers;
+}
+/* static */ std::mutex &CodeCoverageProfiler::globalMutex() {
+  static auto *const globalMutex = new std::mutex();
+  return *globalMutex;
+}
+
 void CodeCoverageProfiler::markRoots(RootAcceptor &acceptor) {
   for (Domain *&domain : domains_) {
     acceptor.acceptPtr(domain);

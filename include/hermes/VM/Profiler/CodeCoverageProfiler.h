@@ -93,14 +93,8 @@ class CodeCoverageProfiler {
   std::vector<CodeCoverageProfiler::FuncInfo> getExecutedFunctionsLocal();
 
  private:
-  static std::unordered_set<CodeCoverageProfiler *> &allProfilers() {
-    static std::unordered_set<CodeCoverageProfiler *> allProfilers;
-    return allProfilers;
-  }
-  static std::mutex &globalMutex() {
-    static std::mutex globalMutex;
-    return globalMutex;
-  }
+  static std::unordered_set<CodeCoverageProfiler *> &allProfilers();
+  static std::mutex &globalMutex();
   static std::atomic<bool> &globalEnabledFlag() {
     static std::atomic<bool> globalEnabledFlag;
     return globalEnabledFlag;
