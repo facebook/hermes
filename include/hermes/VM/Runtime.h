@@ -801,6 +801,10 @@ class Runtime : public HandleRootOwner,
     return *codeCoverageProfiler_;
   }
 
+  /// Sampling profiler data for this runtime. The ctor/dtor of SamplingProfiler
+  /// will automatically register/unregister this runtime from profiling.
+  std::unique_ptr<SamplingProfiler> samplingProfiler;
+
 #ifdef HERMESVM_PROFILER_NATIVECALL
   /// Dump statistics about native calls.
   void dumpNativeCallStats(llvh::raw_ostream &OS);
@@ -853,6 +857,30 @@ class Runtime : public HandleRootOwner,
   std::string getCallStackNoAlloc() override {
     return getCallStackNoAlloc(nullptr);
   }
+
+  /// A stack overflow exception is thrown when \c nativeCallFrameDepth_ exceeds
+  /// this threshold.
+  static constexpr unsigned MAX_NATIVE_CALL_FRAME_DEPTH =
+#ifdef HERMES_LIMIT_STACK_DEPTH
+      // UBSAN builds will hit a native stack overflow much earlier, so make
+      // this limit dramatically lower.
+      30
+#elif defined(_MSC_VER) && defined(__clang__) && defined(HERMES_SLOW_DEBUG)
+      30
+#elif defined(_MSC_VER) && defined(HERMES_SLOW_DEBUG)
+      // On windows in dbg mode builds, stack frames are bigger, and a depth
+      // limit of 384 results in a C++ stack overflow in testing.
+      128
+#elif defined(_MSC_VER) && !NDEBUG
+      192
+#else
+      /// This depth limit was originally 256, and we
+      /// increased when an app violated it.  The new depth is 128
+      /// larger.  See T46966147 for measurements/calculations indicating
+      /// that this limit should still insulate us from native stack overflow.)
+      384
+#endif
+      ;
 
   /// Called when various GC events(e.g. collection start/end) happen.
   void onGCEvent(GCEventKind kind, const std::string &extraInfo) override;
@@ -913,7 +941,6 @@ class Runtime : public HandleRootOwner,
       std::shared_ptr<StorageProvider> provider,
       const RuntimeConfig &runtimeConfig);
 
-/// @}
 #if defined(HERMESVM_PROFILER_EXTERN)
  public:
 #else
@@ -953,7 +980,6 @@ class Runtime : public HandleRootOwner,
   /// Convert the given symbol into its UTF-8 string representation.
   std::string convertSymbolToUTF8(SymbolID id) override;
 
- private:
   /// Prints any statistics maintained in the Runtime about GC to \p
   /// os.  At present, this means the breakdown of markRoots time by
   /// "phase" within markRoots.
@@ -1187,31 +1213,6 @@ class Runtime : public HandleRootOwner,
   /// calls.
   unsigned nativeCallFrameDepth_{0};
 
- public:
-  /// A stack overflow exception is thrown when \c nativeCallFrameDepth_ exceeds
-  /// this threshold.
-  static constexpr unsigned MAX_NATIVE_CALL_FRAME_DEPTH =
-#ifdef HERMES_LIMIT_STACK_DEPTH
-      // UBSAN builds will hit a native stack overflow much earlier, so make
-      // this limit dramatically lower.
-      30
-#elif defined(_MSC_VER) && defined(__clang__) && defined(HERMES_SLOW_DEBUG)
-      30
-#elif defined(_MSC_VER) && defined(HERMES_SLOW_DEBUG)
-      // On windows in dbg mode builds, stack frames are bigger, and a depth
-      // limit of 384 results in a C++ stack overflow in testing.
-      128
-#elif defined(_MSC_VER) && !NDEBUG
-      192
-#else
-      /// This depth limit was originally 256, and we
-      /// increased when an app violated it.  The new depth is 128
-      /// larger.  See T46966147 for measurements/calculations indicating
-      /// that this limit should still insulate us from native stack overflow.)
-      384
-#endif
-      ;
-
   /// rootClazzes_[i] is a PinnedHermesValue pointing to a hidden class with
   /// its i first slots pre-reserved.
   std::array<PinnedHermesValue, InternalProperty::NumInternalProperties + 1>
@@ -1245,10 +1246,6 @@ class Runtime : public HandleRootOwner,
   /// This key will be unregistered in the destructor.
   const CrashManager::CallbackKey crashCallbackKey_;
 
-  /// Sampling profiler data for this runtime. The ctor/dtor of SamplingProfiler
-  /// will automatically register/unregister this runtime from profiling.
-  std::unique_ptr<SamplingProfiler> samplingProfiler_;
-
   /// Pointer to the code coverage profiler.
   const std::unique_ptr<CodeCoverageProfiler> codeCoverageProfiler_;
 
@@ -1280,6 +1277,19 @@ class Runtime : public HandleRootOwner,
 
   Debugger debugger_{this};
 #endif
+
+  /// Holds references to persistent BC providers for the lifetime of the
+  /// Runtime. This is needed because the identifier table may contain pointers
+  /// into bytecode, and so memory backing these must be preserved.
+  std::vector<std::shared_ptr<hbc::BCProvider>> persistentBCProviders_;
+
+  /// Config-provided callback for GC events.
+  std::function<void(GCEventKind, const char *)> gcEventCallback_;
+
+  /// Set from RuntimeConfig.
+  bool allowFunctionToStringWithRuntimeSource_;
+
+  /// @}
 
   /// \return whether any async break is requested or not.
   bool hasAsyncBreak() const {
@@ -1319,17 +1329,6 @@ class Runtime : public HandleRootOwner,
 
   /// Notify runtime execution has timeout.
   ExecutionStatus notifyTimeout();
-
-  /// Holds references to persistent BC providers for the lifetime of the
-  /// Runtime. This is needed because the identifier table may contain pointers
-  /// into bytecode, and so memory backing these must be preserved.
-  std::vector<std::shared_ptr<hbc::BCProvider>> persistentBCProviders_;
-
-  /// Config-provided callback for GC events.
-  std::function<void(GCEventKind, const char *)> gcEventCallback_;
-
-  /// Set from RuntimeConfig.
-  bool allowFunctionToStringWithRuntimeSource_;
 
  private:
 #ifdef NDEBUG

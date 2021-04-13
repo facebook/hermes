@@ -240,7 +240,7 @@ Runtime::Runtime(
     LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
 
     if (runtimeConfig.getEnableSampleProfiling())
-      samplingProfiler_ = std::make_unique<SamplingProfiler>(this);
+      samplingProfiler = std::make_unique<SamplingProfiler>(this);
 
     return;
   }
@@ -348,13 +348,13 @@ Runtime::Runtime(
   initJSBuiltins(builtins_, jsBuiltinsObj);
 
   if (runtimeConfig.getEnableSampleProfiling())
-    samplingProfiler_ = std::make_unique<SamplingProfiler>(this);
+    samplingProfiler = std::make_unique<SamplingProfiler>(this);
 
   LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
 }
 
 Runtime::~Runtime() {
-  samplingProfiler_.reset();
+  samplingProfiler.reset();
   getHeap().finalizeAll();
   // Now that all objects are finalized, there shouldn't be any native memory
   // keys left in the ID tracker for memory profiling. Assert that the only IDs
@@ -569,8 +569,8 @@ void Runtime::markRootsForCompleteMarking(
     RootAndSlotAcceptorWithNames &acceptor) {
   MarkRootsPhaseTimer timer(this, RootAcceptor::Section::SamplingProfiler);
   acceptor.beginRootSection(RootAcceptor::Section::SamplingProfiler);
-  if (samplingProfiler_) {
-    samplingProfiler_->markRoots(acceptor);
+  if (samplingProfiler) {
+    samplingProfiler->markRoots(acceptor);
   }
   acceptor.endRootSection();
 }
@@ -1879,8 +1879,8 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
 }
 
 void Runtime::onGCEvent(GCEventKind kind, const std::string &extraInfo) {
-  if (samplingProfiler_ != nullptr) {
-    samplingProfiler_->onGCEvent(kind, extraInfo);
+  if (samplingProfiler != nullptr) {
+    samplingProfiler->onGCEvent(kind, extraInfo);
   }
   if (gcEventCallback_) {
     gcEventCallback_(kind, extraInfo.c_str());
@@ -2070,7 +2070,7 @@ void Runtime::serializeRuntimeFields(Serializer &s) {
   // TODO: Come back later. serialize/deserialize this to be able to
   // serialize/deserialize after user code.
   // Field const CrashManager::CallbackKey crashCallbackKey_;
-  // Field std::shared_ptr<SamplingProfiler> samplingProfiler_;
+  // Field std::shared_ptr<SamplingProfiler> samplingProfiler;
 
 #ifdef HERMES_ENABLE_DEBUGGER
   // TODO: serialize/deserialize this to be able to serialize/deserialize after
@@ -2156,7 +2156,7 @@ void Runtime::deserializeRuntimeFields(Deserializer &d) {
   // TODO: Come back later. Serialize/deserialize this to be able to
   // serialize/deserialize after user code.
   // Field const CrashManager::CallbackKey crashCallbackKey_;
-  // Field std::shared_ptr<SamplingProfiler> samplingProfiler_;
+  // Field std::shared_ptr<SamplingProfiler> samplingProfiler;
 
 #ifdef HERMES_ENABLE_DEBUGGER
   // TODO: serialize/deserialize this to be able to serialize/deserialize after

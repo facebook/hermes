@@ -1285,12 +1285,12 @@ void HermesRuntime::debugJavaScript(
 
 void HermesRuntime::registerForProfiling() {
   vm::Runtime &runtime = impl(this)->runtime_;
-  runtime.samplingProfiler_ =
+  runtime.samplingProfiler =
       std::make_unique<::hermes::vm::SamplingProfiler>(&runtime);
 }
 
 void HermesRuntime::unregisterForProfiling() {
-  impl(this)->runtime_.samplingProfiler_.reset();
+  impl(this)->runtime_.samplingProfiler.reset();
 }
 
 void HermesRuntime::watchTimeLimit(uint32_t timeoutInMs) {
