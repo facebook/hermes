@@ -55,14 +55,24 @@ print(function(a,b,c){});
 // CHECK-NEXT: function (a0, a1, a2) { [bytecode] }
 print(function(a,b,c,d,e,f,g,h,i,j,k){});
 // CHECK-NEXT: function (a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10) { [bytecode] }
-print(Map.toString());
-// CHECK-NEXT: function Map() { [native code] }
+
+// Reconfigured .length
+function foo(x) {}
+Object.defineProperty(foo, "length", { value: 5 })
+print(foo);
+// CHECK-NEXT: function foo(a0, a1, a2, a3, a4) { [bytecode] }
 
 // Non-string .length
 var foo = function badlength(a, b, c){};
 Object.defineProperty(foo, "length", {value:"aa"});
 print(foo);
 // CHECK-NEXT: function badlength() { [bytecode] }
+
+// NativeFunctions are printed as 0-arity.
+print(Map);
+// CHECK-NEXT: function Map() { [native code] }
+print(Math.pow);
+// CHECK-NEXT: function pow() { [native code] }
 
 print('call');
 // CHECK-LABEL: call
