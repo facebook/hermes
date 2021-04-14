@@ -1,0 +1,192 @@
+# Overview
+
+is document describes the current state of Android implementation of Intl APIs(formally ECMA-402 specification) in Hermes JavaScript engine. ECMA-402 is still evolving and the latest iteration is [7th edition](https://402.ecma-international.org/7.0/) which was published in June 2020. Each new edition is built on top of the last one and typically adds new capabilities typically as,
+- New Intl service constructors (for e.g. Intl.Collator, Intl.NumberFormat etc...) or extending existing ones by accepting more parameters
+- New functions or properties in the Intl object prototypes (for e.g. Intl.Collator.prototype.compare)
+- New locale aware functions in standard Javascript object prototypes (for e.g. String.prototype.localeCompare)
+
+One standard internationalization implementation strategy followed by other engines, is to bundle a library and data (typically [icu](http://site.icu-project.org/)) along with the application package. This guarantees deterministic functionality at the cost of applications package bloat.  We decided to consume the Android platform libraries and data for space efficiency, but at the cost of some variance in behaviour across  Android platforms.
+
+Android platform internationalization libraries have been based on [ICU4j project](https://unicode-org.github.io/icu-docs/#/icu4j). Version of ICU4j and the backing [CLDR data](http://cldr.unicode.org/) varies across Android platform versions. Also, the ICU APIs were never exposed directly, but only through wrappers and aliases. This results in significant variance in internationalization API surface and data across platform versions.
+
+# ECMA-402 Compliance
+
+## Supported
+
+- Intl.Collator
+  - Intl.Collator.supportedLocalesOf
+  - Intl.Collator.prototype.compare
+  - Intl.Collator.prototype.resolvedOptions
+
+- Intl.NumberFormat
+  - Intl.NumberFormat.supportedLocalesOf
+  - Intl.NumberFormat.prototype.format
+  - Intl.NumberFormat.prototype.formatToParts
+  - Intl.NumberFormat.prototype.resolvedOptions
+
+- Intl.DateTimeFormat
+  - Intl.DateTimeFormat.supportedLocalesOf
+  - Intl.DateTimeFormat.prototype.format
+  - Intl.DateTimeFormat.prototype.formatToParts
+  - Intl.DateTimeFormat.prototype.resolvedOptions
+
+- Intl.getCanonicalLocales
+
+- String.prototype
+  - localeCompare
+  - toLocaleLowerCase
+  - toLocaleUpperCase
+
+- Array.prototype
+  - toLocaleString
+
+- Number.prototype
+  - toLocaleString
+
+- Date.prototype
+  - toLocaleString
+  - toLocaleDateString
+  - toLocaleTimeString
+
+## Not yet supported
+
+- [Intl.PluralRules](https://tc39.es/ecma402/#pluralrules-objects)
+
+- [Intl.RelativeTimeFormat](https://tc39.es/ecma402/#relativetimeformat-objects)
+
+- [Intl.DisplayNames](https://tc39.es/proposal-intl-displaynames/#sec-intl-displaynames-constructor)
+
+- [Intl.ListFormat](https://tc39.es/proposal-intl-list-format/#sec-intl-listformat-constructor)
+
+- [Intl.Locale](https://tc39.es/ecma402/#sec-intl-locale-constructor)
+
+- Intl.DateTimeFormat properties
+   - [dateStyle/timeStyle](https://tc39.es/proposal-intl-datetime-style/)
+   - [dayPeriod](https://github.com/tc39/ecma402/issues/29)
+   - [fractionalSecondDigits](https://github.com/tc39/ecma402/pull/347)
+- [BigInt.prototype.toLocaleString](https://tc39.es/ecma402/#sup-bigint.prototype.tolocalestring)
+
+## Excluded
+
+- [formatMatcher](https://tc39.es/ecma402/#sec-basicformatmatcher) property in Intl.DateTimeFormat.
+
+## Known Issues
+
+### Android 11
+
+- The keys of the object returned by &#39;resolvedOptions&#39; function in all Intl services are not deterministically ordered as prescribed by spec.
+- DateFormat: ECMAScript [beginning of time](https://www.ecma-international.org/ecma-262/11.0/index.html#sec-time-values-and-time-range) (-8,640,000,000,000,000), is formatted as November 271817, instead of expected April 271822.
+- Intl.NumberFormat implementation has some rough edges in supporting the following properties,
+  - style: 'unit'
+  - notation: 'compact'
+  - signDisplay
+  - currencyFormat
+
+### Android 10 (SDK<30) and older
+
+- NumberFormat: Scientific notation formatting has issues on some cases such as Infinity (e.g. Expected SameValue(«-∞E0», «-∞») to be true).
+- NumberFormat: Compact notation formatToParts doesn&#39;t identify unit, hence we report unit as &#39;literal&#39; (Compact short: 987654321: parts[1].type Expected SameValue(«literal», «compact») to be true)
+- NumberFormat: formatToParts doesn&#39;t produce expected result with Scientific/Engineering notation and input Infinity (-Infinity - engineering: length Expected SameValue(«4», «2») to be true).
+
+### Android 9 (SDK<29) and older
+
+- There are some failures likely due to older Unicode and CLDR version, which are hard to generalize. Some examples are,
+  - NumberFormat: &quot;Percent&quot; is not accepted as a unit.
+  - NumberFormat: unit symbols difference, kph vs km/h
+  - Some issue in significant digit precision, which is not yet looked into the details.
+
+### Android 8.0 – 8.1 (SDK<28) and older
+
+- getCanonicalLocales: Some differences in the keyword values due to CLDR/Unicode version difference (Expected SameValue(«und-u-tz-utc», «und-u-tz-gmt») to be true)
+- NumberFormat: CompactFormatter doesn&#39;t respect the precision inputs (Expected SameValue(«9,900만», «9877만») to be true; Expected SameValue(«990M», «988M») to be true).
+
+### Android 7.0 - 7.1 (SDK<26) and older
+
+- getCanonicalLocales: Unicode/CLDR version differences Expected SameValue(«und-u-ms-imperial», «und-u-ms-uksystem») to be true
+
+### Android 7.0 - 7.1 (SDK<24) and older
+
+- Collator: Doesn&#39;t canonically decompose the input strings. Canonically equivalent string with non-identical code points may not match.
+- getCanonicalLocales: Unicode/CLDR version differences (Expected SameValue(«und-u-ca-ethiopic-amete-alem», «und-u-ca-ethioaa») to be true; Expected SameValue(«und-u-ks-primary», «und-u-ks-level1») to be true)
+- Unit style does not work.
+- There are issues in the precision configuration due to lack of APIs.
+- DateFormat: There are issues with the calendar configuration which needs to be dug into.
+
+### SDK<21 and older
+
+On platforms before 21, Locale.forLanguageTag() is not available, hence we can&#39;t construct java.util.Locale object from locale tag. Hence, we fallback to English for any locale input.
+
+# Internationalization framework in Android Platform
+
+Our implementation is essentially projecting the Android platform provided internationalization facilities through the ECMA-402 specified services. It implies that the results of running the same code may vary between devices running different versions of Android.
+
+The following table summarizes ICU, CLDR and Unicode versions available on the Android platforms that we intent to support.
+
+**Platform 24+ where ICU4j APIs are available.**
+| Android Platform Version | ICU | Unicode | CLDR
+| --- | --- | --- | --- |
+| Android 11 (API level 30) | ICU4J 66.1 ([ref](https://android.googlesource.com/platform/external/icu/+/refs/heads/android11-mainline-release/icu4j/readme.html)) | Unicode 13 beta | CLDR 36.1 |
+| Android 10 (API level 29) | ICU4j 63.2 ([ref](https://developer.android.com/guide/topics/resources/internationalization)) | CLDR 34 | Unicode 11.0 |
+| Android 9 (API level 28) | ICU4j 60.2 ([ref](https://developer.android.com/guide/topics/resources/internationalization)) | CLDR 32.0.1 | Unicode 10.0 |
+| Android 8.0 - 8.1 (API levels 26 - 27) | ICU4j 58.2( [ref](https://developer.android.com/guide/topics/resources/internationalization)) | CLDR 30.0.3 | Unicode 9.0 |
+| Android 7.0 - 7.1 (API levels 24 - 25) | ICU4j 56 ([ref](https://developer.android.com/guide/topics/resources/internationalization))| CLDR 28 | Unicode 8.0 |
+
+<br />
+
+**Pre-24 platforms**
+
+| Android Platform Version | ICU | Unicode | CLDR
+| --- | --- | --- | --- |
+| Android 6.0 (API level 23) | ICU4j 55.1 ([ref](https://developer.android.com/guide/topics/resources/internationalization)) | CLDR 27.0.1 | Unicode 7.0 |
+| Android 5.0 (API levels 21–22) | ICU4j 53 ([ref](https://developer.android.com/guide/topics/resources/internationalization)) | CLDR 25 | Unicode 6.3 |
+| Android 4.4 (API levels 19–20) | ICU4j 51 ([ref](https://developer.android.com/guide/topics/resources/internationalization)) | CLDR 23 | Unicode 6.2 |
+| Android 4.3 (API level 18) | ICU4j 50 ([ref](https://developer.android.com/guide/topics/resources/internationalization)) | CLDR 22.1 | Unicode 6.2 |
+| Android 4.1 (API levels 16–17) | ICU4j 4.8 ([ref](https://developer.android.com/guide/topics/resources/internationalization)) | CLDR 2.0 | Unicode 6.0 |  
+  
+<br />
+
+To Summarize, there are three big partitions in the platform domain,
+
+Platforms <= 24 has much better internationalization support than earlier, as many ICU classes are available as is.
+
+Platforms 21-24 still has reasonable internationalization support, by allowing creation of Locale objects and exposing selected ICU services through java.text namespace.
+
+Platforms < 21 doesn't allow creation of Locale objects from tags, severely limiting general purpose international code.
+
+
+# Impact on Application Size
+
+The following numbers are measured using a test application which takes dependency on the Hermes library to evaluate a JavaScript snippet. Essentially, enabling Intl APIs adds 57-62K per ABI.
+
+| **Product APK Size** | **NOINTL** | **INTL** | **DIFF** | **PERC** |
+| --- | --- | --- | --- | --- |
+| ARM64 | 1,672,235 | 1,729,579 | 57,344 | 3.43% |
+| ARM | 1,471,539 | 1,528,883 | 57,344 | 3.90% |
+| X86\_64 | 1,844,255 | 1,901,599 | 57,344 | 3.11% |
+| X86 | 1,950,739 | 2,012,179 | 61,440 | 3.15% |
+
+The overhead is contributed by both compiled native C++ and Java bits
+
+The uncompressed size of the Hermes shared library got bigger as follows,
+
+| **libhermes.so Size** | **NOINTL** | **INTL** | **DIFF** | **PERC** |
+| --- | --- | --- | --- | --- |
+| ARM64 | 2,473,760 | 2,551,592 | 77,832 | 3.15% |
+| ARM | 1,696,672 | 1,754,016 | 57,344 | 3.38% |
+| X86\_64 | 2,633,528 | 2,711,368 | 77,840 | 2.96% |
+| X86 | 2,859,916 | 2,945,936 | 86,020 | 3.01% |
+
+And the Java bits got bigger as well,
+
+| **Java Size** | **NOINTL** | **INTL** | **DIFF** | **PERC** |
+| --- | --- | --- | --- | --- |
+| classes.jar (in hermes.aar) | 559 | 120975 | 120,416 | 21541.32% |
+| classes.dex (replapp.apk) | 160708 | 234808 | 74,100 | 46.11% |
+
+_Please note that the application dex file contains non-hermes class files too._
+
+And finally, this is the increase in the final npm package,
+
+| **NPM Package** | **NOINTL** | **INTL** | **DIFF** | **PERC** |
+| --- | --- | --- | --- | --- |
+| hermes | 214447973 | 219291220 | 4,843,247 | 2.26% |
