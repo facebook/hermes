@@ -7,8 +7,6 @@ This document describes the current state of Android implementation of Intl APIs
 
 One standard internationalization implementation strategy followed by other engines, is to bundle a library and data (typically [icu](http://site.icu-project.org/)) along with the application package. This guarantees deterministic functionality at the cost of applications package bloat.  We decided to consume the Android platform libraries and data for space efficiency, but at the cost of some variance in behaviour across  Android platforms.
 
-Android platform internationalization libraries have been based on [ICU4j project](https://unicode-org.github.io/icu-docs/#/icu4j). Version of ICU4j and the backing [CLDR data](http://cldr.unicode.org/) varies across Android platform versions. Also, the ICU APIs were never exposed directly, but only through wrappers and aliases. This results in significant variance in internationalization API surface and data across platform versions.
-
 # ECMA-402 Compliance
 
 ## Supported
@@ -119,6 +117,8 @@ On platforms before 21, Locale.forLanguageTag() is not available, hence we can&#
 # Internationalization framework in Android Platform
 
 Our implementation is essentially projecting the Android platform provided internationalization facilities through the ECMA-402 specified services. It implies that the results of running the same code may vary between devices running different versions of Android.
+
+Android platform internationalization libraries have been based on [ICU4j project](https://unicode-org.github.io/icu-docs/#/icu4j). Version of ICU4j and the backing [CLDR data](http://cldr.unicode.org/) varies across Android platform versions. Also, the ICU APIs were never exposed directly, but only through wrappers and aliases. This results in significant variance in internationalization API surface and data across platform versions.
 
 The following table summarizes ICU, CLDR and Unicode versions available on the Android platforms that we intent to support.
 
