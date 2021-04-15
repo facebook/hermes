@@ -287,11 +287,41 @@ the OG collection is over.
 ## Compact Phase
 
 Compacting live memory to be closer together is still a beneficial concept in
-Hades, as it reduces the fragmentation of the free lists for mostly empty
-heap segments. Implementing it is more tricky than GenGC though, as we can't
-modify pointers concurrently with the mutator thread.
+Hades, as it allows us to return unused memory to the OS, and reduces the
+fragmentation of the free lists for mostly empty heap segments. Implementing it
+is more tricky than GenGC though, as we can't modify pointers concurrently with
+the mutator thread.
 
-To achieve this, we only compact a single segment per OG GC.
+Due to these restrictions, we can currently only compact a single segment
+(called the compactee) for each full collection. Compaction runs as part of the
+collection cycle and flows as follows:
+
+1. At the start of an OG collection, determine whether the heap is currently
+larger than its target size. If so, select and record a segment to compact.
+2. Write barriers start dirtying cards for pointers pointing into the
+compaction candidate. This will continue until the compaction is fully complete.
+3. Marking begins. During marking, we dirty cards in the card table
+corresponding to any on-heap pointers that point into the compaction candidate.
+Any YG collection that occurs during marking needs special care. Promoted
+objects will not be scanned by the OG since they are allocated as marked, so
+they need to be scanned for compactee pointers after they have been promoted.
+Furthermore, the card table cannot be cleared at the end of the YG collection,
+since that would erase information from the ongoing compaction.
+4. During the STW pause, the internal state of the GC is updated to signal that
+all pointers into the compactee have been marked, and that the next YG
+collection should complete the compaction.
+5. Sweeping. The segment identified for compaction will not be swept, however
+compaction may take place during sweeping if the next YG collection starts
+before sweeping is complete. Note that write barriers will continue to be active
+until compaction is complete, since new pointers from the OG into the compactee
+may be added.
+6. Compaction. The next young gen collection evacuates both the YG and the
+compactee. It will mark long lived roots and update pointers based on the
+previously dirtied cards. Combining compaction with YG collections lets us
+share the overhead of updating roots, and lets us avoid tracking pointers from
+the YG into the compactee.
+7. The now empty segment is released by the GC and returned to the OS.
+
 
 ## Incremental Mode
 
