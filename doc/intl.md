@@ -1,118 +1,121 @@
-# Overview
+---
+id: intl
+title: Internationalization APIs
+---
 
-This document describes the current state of Android implementation of Intl APIs(formally ECMA-402 specification) in Hermes JavaScript engine. ECMA-402 is still evolving and the latest iteration is [7th edition](https://402.ecma-international.org/7.0/) which was published in June 2020. Each new edition is built on top of the last one and typically adds new capabilities typically as,
-- New Intl service constructors (for e.g. Intl.Collator, Intl.NumberFormat etc...) or extending existing ones by accepting more parameters
-- New functions or properties in the Intl object prototypes (for e.g. Intl.Collator.prototype.compare)
-- New locale aware functions in standard Javascript object prototypes (for e.g. String.prototype.localeCompare)
+This document describes the current state of Android implementation of the [ECMAScript Internationalization API Specification](https://tc39.es/ecma402/) (ECMA-402, or `Intl`). ECMA-402 is still evolving and the latest iteration is [7th edition](https://402.ecma-international.org/7.0/) which was published in June 2020. Each new edition is built on top of the last one and adds new capabilities typically as,
+- New `Intl` service constructors (e.g. `Intl.Collator`, `Intl.NumberFormat` etc.) or extending existing ones by accepting more parameters
+- New functions or properties in `Intl` objects (e.g. `Intl.Collator.prototype.compare`)
+- New locale aware functions in standard Javascript object prototypes (e.g. `String.prototype.localeCompare`)
 
-One standard internationalization implementation strategy followed by other engines, is to bundle a library and data (typically [icu](http://site.icu-project.org/)) along with the application package. This guarantees deterministic functionality at the cost of applications package bloat.  We decided to consume the Android platform libraries and data for space efficiency, but at the cost of some variance in behaviour across  Android platforms.
+One popular implementation strategy followed by other engines, is to bundle an internationalization framework (typically [ICU](http://site.icu-project.org/)) along with the application package. This guarantees deterministic behaviours at the cost of applications package bloat. We decided to consume the Android platform provided facilities for space efficiency, but at the cost of some variance in behaviours across Android platforms.
 
 # ECMA-402 Compliance
 
 ## Supported
 
-- Intl.Collator
-  - Intl.Collator.supportedLocalesOf
-  - Intl.Collator.prototype.compare
-  - Intl.Collator.prototype.resolvedOptions
+- `Intl.Collator`
+  - `Intl.Collator.supportedLocalesOf`
+  - `Intl.Collator.prototype.compare`
+  - `Intl.Collator.prototype.resolvedOptions`
 
-- Intl.NumberFormat
-  - Intl.NumberFormat.supportedLocalesOf
-  - Intl.NumberFormat.prototype.format
-  - Intl.NumberFormat.prototype.formatToParts
-  - Intl.NumberFormat.prototype.resolvedOptions
+- `Intl.NumberFormat`
+  - `Intl.NumberFormat.supportedLocalesOf`
+  - `Intl.NumberFormat.prototype.format`
+  - `Intl.NumberFormat.prototype.formatToParts`
+  - `Intl.NumberFormat.prototype.resolvedOptions`
 
-- Intl.DateTimeFormat
-  - Intl.DateTimeFormat.supportedLocalesOf
-  - Intl.DateTimeFormat.prototype.format
-  - Intl.DateTimeFormat.prototype.formatToParts
-  - Intl.DateTimeFormat.prototype.resolvedOptions
+- `Intl.DateTimeFormat`
+  - `Intl.DateTimeFormat.supportedLocalesOf`
+  - `Intl.DateTimeFormat.prototype.format`
+  - `Intl.DateTimeFormat.prototype.formatToParts`
+  - `Intl.DateTimeFormat.prototype.resolvedOptions`
 
-- Intl.getCanonicalLocales
+- `Intl.getCanonicalLocales`
 
-- String.prototype
-  - localeCompare
-  - toLocaleLowerCase
-  - toLocaleUpperCase
+- `String.prototype`
+  - `localeCompare`
+  - `toLocaleLowerCase`
+  - `toLocaleUpperCase`
 
-- Array.prototype
-  - toLocaleString
+- `Array.prototype`
+  - `toLocaleString`
 
-- Number.prototype
-  - toLocaleString
+- `Number.prototype`
+  - `toLocaleString`
 
-- Date.prototype
-  - toLocaleString
-  - toLocaleDateString
-  - toLocaleTimeString
+- `Date.prototype`
+  - `toLocaleString`
+  - `toLocaleDateString`
+  - `toLocaleTimeString`
 
 ## Not yet supported
 
-- [Intl.PluralRules](https://tc39.es/ecma402/#pluralrules-objects)
+- [`Intl.PluralRules`](https://tc39.es/ecma402/#pluralrules-objects)
 
-- [Intl.RelativeTimeFormat](https://tc39.es/ecma402/#relativetimeformat-objects)
+- [`Intl.RelativeTimeFormat`](https://tc39.es/ecma402/#relativetimeformat-objects)
 
-- [Intl.DisplayNames](https://tc39.es/proposal-intl-displaynames/#sec-intl-displaynames-constructor)
+- [`Intl.DisplayNames`](https://tc39.es/proposal-intl-displaynames/#sec-intl-displaynames-constructor)
 
-- [Intl.ListFormat](https://tc39.es/proposal-intl-list-format/#sec-intl-listformat-constructor)
+- [`Intl.ListFormat`](https://tc39.es/proposal-intl-list-format/#sec-intl-listformat-constructor)
 
-- [Intl.Locale](https://tc39.es/ecma402/#sec-intl-locale-constructor)
+- [`Intl.Locale`](https://tc39.es/ecma402/#sec-intl-locale-constructor)
 
-- Intl.DateTimeFormat properties
-   - [dateStyle/timeStyle](https://tc39.es/proposal-intl-datetime-style/)
-   - [dayPeriod](https://github.com/tc39/ecma402/issues/29)
-   - [fractionalSecondDigits](https://github.com/tc39/ecma402/pull/347)
-- [BigInt.prototype.toLocaleString](https://tc39.es/ecma402/#sup-bigint.prototype.tolocalestring)
+- `Intl.DateTimeFormat` properties
+   - [`dateStyle/timeStyle`](https://tc39.es/proposal-intl-datetime-style/)
+   - [`dayPeriod`](https://github.com/tc39/ecma402/issues/29)
+   - [`fractionalSecondDigits`](https://github.com/tc39/ecma402/pull/347)
+- [`BigInt.prototype.toLocaleString`](https://tc39.es/ecma402/#sup-bigint.prototype.tolocalestring)
 
 ## Excluded
 
-- [formatMatcher](https://tc39.es/ecma402/#sec-basicformatmatcher) property in Intl.DateTimeFormat.
+- `Intl.DateTimeFormat`: [`formatMatcher`](https://tc39.es/ecma402/#sec-basicformatmatcher) property in Intl.DateTimeFormat. The property enables the implementation to pick the best display format when it supports only a subset of all possible formats. ICU library in Android platform and hence our implementation allows all subsets and formats which makes this `formatMatcher` property unnecessary.
 
 ## Known Issues
 
 ### Android 11
 
-- The keys of the object returned by &#39;resolvedOptions&#39; function in all Intl services are not deterministically ordered as prescribed by spec.
-- DateFormat: ECMAScript [beginning of time](https://www.ecma-international.org/ecma-262/11.0/index.html#sec-time-values-and-time-range) (-8,640,000,000,000,000), is formatted as November 271817, instead of expected April 271822.
-- Intl.NumberFormat implementation has some rough edges in supporting the following properties,
-  - style: 'unit'
-  - notation: 'compact'
-  - signDisplay
-  - currencyFormat
+- The keys of the object returned by `resolvedOptions` function in all `Intl` services are not deterministically ordered as prescribed by spec.
+- DateFormat: ECMAScript [beginning of time](https://www.ecma-international.org/ecma-262/11.0/index.html#sec-time-values-and-time-range) (-8,640,000,000,000,000), is formatted as `November 271817`, instead of expected `April 271822`.
+- `Intl.NumberFormat` implementation has some rough edges in supporting the following properties,
+  - `style`: 'unit'
+  - `notation`: 'compact'
+  - `signDisplay`
+  - `currencyFormat`
 
-### Android 10 (SDK<30) and older
+### Android 10 and older (SDK < 30)
 
-- NumberFormat: Scientific notation formatting has issues on some cases such as Infinity (e.g. Expected SameValue(«-∞E0», «-∞») to be true).
-- NumberFormat: Compact notation formatToParts doesn&#39;t identify unit, hence we report unit as &#39;literal&#39; (Compact short: 987654321: parts[1].type Expected SameValue(«literal», «compact») to be true)
-- NumberFormat: formatToParts doesn&#39;t produce expected result with Scientific/Engineering notation and input Infinity (-Infinity - engineering: length Expected SameValue(«4», «2») to be true).
+- `Intl.NumberFormat`: Scientific notation formatting has issues on some cases such as Infinity (e.g. Expected SameValue(«-∞E0», «-∞») to be true).
+- `Intl.NumberFormat`: Compact notation `formatToParts` doesn't identify unit, hence we report unit as 'literal' (Compact short: 987654321: parts[1].type Expected SameValue(«literal», «compact») to be true)
+- `Intl.NumberFormat`: `formatToParts` function doesn't produce expected result with Scientific/Engineering notation and input Infinity (-Infinity - engineering: length Expected SameValue(«4», «2») to be true).
 
-### Android 9 (SDK<29) and older
+### Android 9 and older (SDK < 29)
 
 - There are some failures likely due to older Unicode and CLDR version, which are hard to generalize. Some examples are,
-  - NumberFormat: &quot;Percent&quot; is not accepted as a unit.
-  - NumberFormat: unit symbols difference, kph vs km/h
+  - `Intl.NumberFormat`: 'Percent' is not accepted as a unit.
+  - `Intl.NumberFormat`: unit symbols difference, kph vs km/h
   - Some issue in significant digit precision, which is not yet looked into the details.
 
-### Android 8.0 – 8.1 (SDK<28) and older
+### Android 8.0 – 8.1 and older (SDK < 28)
 
-- getCanonicalLocales: Some differences in the keyword values due to CLDR/Unicode version difference (Expected SameValue(«und-u-tz-utc», «und-u-tz-gmt») to be true)
-- NumberFormat: CompactFormatter doesn&#39;t respect the precision inputs (Expected SameValue(«9,900만», «9877만») to be true; Expected SameValue(«990M», «988M») to be true).
+- `Intl.getCanonicalLocales`: Some differences in the keyword values due to CLDR/Unicode version difference (Expected SameValue(«und-u-tz-utc», «und-u-tz-gmt») to be true)
+- `Intl.NumberFormat`: CompactFormatter doesn't respect the precision inputs (Expected SameValue(«9,900만», «9877만») to be true; Expected SameValue(«990M», «988M») to be true).
 
-### Android 7.0 - 7.1 (SDK<26) and older
+### Android 7.0 - 7.1 and older (SDK < 26)
 
-- getCanonicalLocales: Unicode/CLDR version differences Expected SameValue(«und-u-ms-imperial», «und-u-ms-uksystem») to be true
+- `Intl.getCanonicalLocales`: Unicode/CLDR version differences Expected SameValue(«und-u-ms-imperial», «und-u-ms-uksystem») to be true
 
-### Android 7.0 - 7.1 (SDK<24) and older
+### Android 7.0 - 7.1 and older (SDK < 24)
 
-- Collator: Doesn&#39;t canonically decompose the input strings. Canonically equivalent string with non-identical code points may not match.
-- getCanonicalLocales: Unicode/CLDR version differences (Expected SameValue(«und-u-ca-ethiopic-amete-alem», «und-u-ca-ethioaa») to be true; Expected SameValue(«und-u-ks-primary», «und-u-ks-level1») to be true)
-- Unit style does not work.
-- There are issues in the precision configuration due to lack of APIs.
-- DateFormat: There are issues with the calendar configuration which needs to be dug into.
+- `Intl.Collator`: Doesn't canonically decompose the input strings. Canonically equivalent string with non-identical code points may not match.
+- `Intl.getCanonicalLocales`: Unicode/CLDR version differences (Expected SameValue(«und-u-ca-ethiopic-amete-alem», «und-u-ca-ethioaa») to be true; Expected SameValue(«und-u-ks-primary», «und-u-ks-level1») to be true)
+- `Intl.NumberFormat`: Unit style does not work.
+- `Intl.NumberFormat`: There are issues in the precision configuration due to lack of APIs.
+- `Intl.DateFormat`: There are issues with the calendar configuration which needs to be dug into.
 
-### SDK<21 and older
+### SDK < 21 and older
 
-On platforms before 21, Locale.forLanguageTag() is not available, hence we can&#39;t construct java.util.Locale object from locale tag. Hence, we fallback to English for any locale input.
+On platforms before 21, `Locale.forLanguageTag()` is not available, hence we can't construct `java.util.Locale` object from locale tag. Hence, we fallback to English for any locale input.
 
 # Internationalization framework in Android Platform
 
@@ -120,9 +123,10 @@ Our implementation is essentially projecting the Android platform provided inter
 
 Android platform internationalization libraries have been based on [ICU4j project](https://unicode-org.github.io/icu-docs/#/icu4j). Version of ICU4j and the backing [CLDR data](http://cldr.unicode.org/) varies across Android platform versions. Also, the ICU APIs were never exposed directly, but only through wrappers and aliases. This results in significant variance in internationalization API surface and data across platform versions.
 
-The following table summarizes ICU, CLDR and Unicode versions available on the Android platforms that we intent to support.
+The following table summarizes ICU, CLDR and Unicode versions available on the Android platforms.
 
-**Platform 24+ where ICU4j APIs are available.**
+### Platform 24+ where ICU4j APIs are available.
+
 | Android Platform Version | ICU | Unicode | CLDR
 | --- | --- | --- | --- |
 | Android 11 (API level 30) | ICU4J 66.1 ([ref](https://android.googlesource.com/platform/external/icu/+/refs/heads/android11-mainline-release/icu4j/readme.html)) | Unicode 13 beta | CLDR 36.1 |
@@ -131,9 +135,8 @@ The following table summarizes ICU, CLDR and Unicode versions available on the A
 | Android 8.0 - 8.1 (API levels 26 - 27) | ICU4j 58.2( [ref](https://developer.android.com/guide/topics/resources/internationalization)) | CLDR 30.0.3 | Unicode 9.0 |
 | Android 7.0 - 7.1 (API levels 24 - 25) | ICU4j 56 ([ref](https://developer.android.com/guide/topics/resources/internationalization))| CLDR 28 | Unicode 8.0 |
 
-<br />
 
-**Pre-24 platforms**
+### Pre-24 platforms
 
 | Android Platform Version | ICU | Unicode | CLDR
 | --- | --- | --- | --- |
@@ -145,14 +148,15 @@ The following table summarizes ICU, CLDR and Unicode versions available on the A
   
 <br />
 
-To Summarize, there are three big partitions in the platform domain,
+In summary,
 
-Platforms <= 24 has much better internationalization support than earlier, as many ICU classes are available as is.
+Platforms >= 24 have much better internationalization support than earlier, as many ICU classes are available as is.
 
-Platforms 21-24 still has reasonable internationalization support, by allowing creation of Locale objects and exposing selected ICU services through java.text namespace.
+Platforms 21-24 still has reasonable internationalization support, by allowing creation of Locale objects and enabling selected ICU services through java.text namespace.
 
 Platforms < 21 doesn't allow creation of Locale objects from tags, severely limiting general purpose international code.
 
+Platform 30 has introduced classes under [`android.icu.number`](https://developer.android.com/reference/android/icu/util/package-summary) namespace which will majorly improve our `Intl.NumberFormat` implementation
 
 # Impact on Application Size
 
@@ -180,8 +184,8 @@ And the Java bits got bigger as well,
 
 | **Java Size** | **NOINTL** | **INTL** | **DIFF** | **PERC** |
 | --- | --- | --- | --- | --- |
-| classes.jar (in hermes.aar) | 559 | 120975 | 120,416 | 21541.32% |
-| classes.dex (replapp.apk) | 160708 | 234808 | 74,100 | 46.11% |
+| classes.jar<br />(in hermes.aar) | 559 | 120975 | 120,416 | 21541.32% |
+| classes.dex<br />(replapp.apk) | 160708 | 234808 | 74,100 | 46.11% |
 
 _Please note that the application dex file contains non-hermes class files too._
 

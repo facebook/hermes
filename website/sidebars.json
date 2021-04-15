@@ -13,7 +13,8 @@
       "strings",
       "memory-profilers",
       "gengc",
-      "hades"
+      "hades",
+      "intl"
     ],
     "Integrations": [
       "react-native-integration"
