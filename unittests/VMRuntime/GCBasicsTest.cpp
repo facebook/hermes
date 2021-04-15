@@ -492,7 +492,8 @@ TEST(GCCallbackTest, TestCallbackInvoked) {
 #ifndef HERMESVM_GC_RUNTIME
 #ifdef HERMESVM_GC_HADES
   // Hades will record the YG and OG collections as separate events.
-  EXPECT_EQ(4, ev.size());
+  // Hades also runs additional collections as part of rt->collect.
+  EXPECT_EQ(6, ev.size());
 #else
   EXPECT_EQ(2, ev.size());
 #endif

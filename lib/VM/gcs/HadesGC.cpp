@@ -1454,9 +1454,18 @@ void HadesGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
   // This function should block until a collection finishes.
   // YG needs to be empty in order to do an OG collection.
   youngGenCollection(cause, /*forceOldGenCollection*/ true);
-  // Wait for the collection to complete.
-  std::lock_guard<Mutex> lk{gcMutex_};
-  waitForCollectionToFinish(std::move(cause));
+  {
+    // Wait for the collection to complete.
+    std::lock_guard<Mutex> lk{gcMutex_};
+    waitForCollectionToFinish(cause);
+  }
+  // Start a second YG collection to complete any pending compaction.
+  // Since YG is empty, this will only be evacuating the compactee.
+  // Note that it's possible for this call to start another OG collection if the
+  // occupancy target is >= 75%. That doesn't break the contract of this
+  // function though, and we don't want to bother with waiting for that
+  // collection to complete because it won't find any garbage anyway.
+  youngGenCollection(std::move(cause), /*forceOldGenCollection*/ false);
 }
 
 void HadesGC::waitForCollectionToFinish(std::string cause) {
@@ -1490,7 +1499,7 @@ void HadesGC::waitForCollectionToFinish(std::string cause) {
   }
 }
 
-void HadesGC::oldGenCollection(std::string cause) {
+void HadesGC::oldGenCollection(std::string cause, bool forceCompaction) {
   // Full collection:
   //  * Mark all live objects by iterating through a worklist.
   //  * Sweep dead objects onto the free lists.
@@ -1569,7 +1578,7 @@ void HadesGC::oldGenCollection(std::string cause) {
   // prepareCompactee must be called before the new thread is spawned, in order
   // to ensure that write barriers start operating immediately, and that any
   // objects promoted during an intervening YG collection are correctly scanned.
-  prepareCompactee();
+  prepareCompactee(forceCompaction);
 
   // Setup the sweep iterator when collection begins, because the number of
   // segments can change if a YG collection interleaves. There's no need to
@@ -1673,7 +1682,7 @@ void HadesGC::incrementalCollect(bool backgroundThread) {
   }
 }
 
-void HadesGC::prepareCompactee() {
+void HadesGC::prepareCompactee(bool forceCompaction) {
   assert(gcMutex_);
   assert(
       compactee_.empty() &&
@@ -1684,8 +1693,8 @@ void HadesGC::prepareCompactee() {
   llvh::Optional<size_t> compacteeIdx;
 #ifndef HERMESVM_SANITIZE_HANDLES
   // We should compact if the target size of the heap has fallen below its
-  // actual size.
-  if (oldGen_.targetSizeBytes() < oldGen_.size()) {
+  // actual size, or if compaction was specifically requested.
+  if (forceCompaction || oldGen_.targetSizeBytes() < oldGen_.size()) {
     // Select the one with the fewest allocated bytes, to
     // minimise scanning and copying.
     uint64_t minBytes = HeapSegment::maxSize();
@@ -1698,6 +1707,8 @@ void HadesGC::prepareCompactee() {
     }
   }
 #else
+  // Handle-SAN forces a compaction to happen anyway.
+  (void)forceCompaction;
   if (oldGen_.numSegments()) {
     std::uniform_int_distribution<> distrib(0, oldGen_.numSegments() - 1);
     compacteeIdx = distrib(randomEngine_);
@@ -2548,7 +2559,10 @@ void HadesGC::youngGenCollection(
     // first YG after an OG completed.
     checkTripwireAndResetStats();
     if (forceOldGenCollection) {
-      oldGenCollection(std::move(cause));
+      // If an OG collection is being forced, it's because something called
+      // collect directly, most likely from a memory warning. In order to
+      // respond to memory pressure effectively, the OG should compact.
+      oldGenCollection(std::move(cause), /*forceCompaction*/ true);
     } else {
       // If the OG is sufficiently full after the collection finishes, begin
       // an OG collection.
@@ -2562,7 +2576,7 @@ void HadesGC::youngGenCollection(
       constexpr double kCollectionThreshold = 0.75;
       double allocatedRatio = static_cast<double>(totalAllocated) / totalBytes;
       if (allocatedRatio >= kCollectionThreshold) {
-        oldGenCollection(kNaturalCauseForAnalytics);
+        oldGenCollection(kNaturalCauseForAnalytics, /*forceCompaction*/ false);
       }
     }
   }

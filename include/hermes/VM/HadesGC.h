@@ -798,7 +798,9 @@ class HadesGC final : public GCBase {
   /// Perform an OG garbage collection. All live objects in OG will be left
   /// untouched, all unreachable objects will be placed into a free list that
   /// can be used by \c oldGenAlloc.
-  void oldGenCollection(std::string cause);
+  /// \param forceCompaction If true, ensure compaction is performed as part of
+  ///   the collection regardless of heap conditions.
+  void oldGenCollection(std::string cause, bool forceCompaction);
 
   /// If there's an OG collection going on, wait for it to complete. This
   /// function is synchronous and will block the caller if the GC background
@@ -823,7 +825,10 @@ class HadesGC final : public GCBase {
 
   /// Select a segment to compact and initialise any state needed for
   /// compaction.
-  void prepareCompactee();
+  /// \param forceCompaction If true, a compactee will be prepared regardless of
+  ///   heap conditions. Note that if there are no OG heap segments, a
+  ///   compaction cannot occur no matter what.
+  void prepareCompactee(bool forceCompaction);
 
   /// Search a single segment for pointers that may need to be updated as the
   /// YG/compactee are evacuated.
