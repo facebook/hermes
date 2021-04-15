@@ -69,7 +69,7 @@ One popular implementation strategy followed by other engines, is to bundle an i
 
 ## Excluded
 
-- `Intl.DateTimeFormat`: [`formatMatcher`](https://tc39.es/ecma402/#sec-basicformatmatcher) property in Intl.DateTimeFormat. The property enables the implementation to pick the best display format when it supports only a subset of all possible formats. ICU library in Android platform and hence our implementation allows all subsets and formats which makes this `formatMatcher` property unnecessary.
+- `Intl.DateTimeFormat`: [`formatMatcher`](https://tc39.es/ecma402/#sec-basicformatmatcher) parameter is not respected. The parameter enables the implementation to pick the best display format when it supports only a subset of all possible formats. ICU library in Android platform and hence our implementation allows all subsets and formats which makes this `formatMatcher` property unnecessary.
 
 ## Known Issues
 
@@ -87,7 +87,7 @@ One popular implementation strategy followed by other engines, is to bundle an i
 
 - `Intl.NumberFormat`: Scientific notation formatting has issues on some cases such as Infinity (e.g. Expected SameValue(«-∞E0», «-∞») to be true).
 - `Intl.NumberFormat`: Compact notation `formatToParts` doesn't identify unit, hence we report unit as 'literal' (Compact short: 987654321: parts[1].type Expected SameValue(«literal», «compact») to be true)
-- `Intl.NumberFormat`: `formatToParts` function doesn't produce expected result with Scientific/Engineering notation and input Infinity (-Infinity - engineering: length Expected SameValue(«4», «2») to be true).
+- `Intl.NumberFormat`: `formatToParts` function doesn't produce expected result with Scientific/Engineering notation and input Infinity (`-Infinity` - engineering: length Expected SameValue(«4», «2») to be true).
 
 ### Android 9 and older (SDK < 29)
 
