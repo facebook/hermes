@@ -2448,7 +2448,12 @@ void HadesGC::youngGenCollection(
     // Inform trackers about objects that died during this YG collection.
     if (isTrackingIDs()) {
       auto trackerCallback = [this](GCCell *cell) {
-        untrackObject(cell, cell->getAllocatedSize());
+        // The compactee might have free list cells, which are not tracked.
+        // untrackObject requires the object to have been tracked previously.
+        // So skip free list cells here.
+        if (!vmisa<OldGen::FreelistCell>(cell)) {
+          untrackObject(cell, cell->getAllocatedSize());
+        }
       };
       yg.forCompactedObjs(trackerCallback);
       if (doCompaction) {
