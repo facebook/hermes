@@ -1020,6 +1020,77 @@ WeakRefMutex &GCBase::weakRefMutex() {
   return weakRefMutex_;
 }
 
+HeapSnapshot::NodeID GCBase::getObjectID(const void *cell) {
+  assert(cell && "Called getObjectID on a null pointer");
+  return idTracker_.getObjectID(pointerBase_->pointerToBasedNonNull(cell));
+}
+
+HeapSnapshot::NodeID GCBase::getObjectIDMustExist(const void *cell) {
+  assert(cell && "Called getObjectID on a null pointer");
+  return idTracker_.getObjectIDMustExist(
+      pointerBase_->pointerToBasedNonNull(cell));
+}
+
+HeapSnapshot::NodeID GCBase::getObjectID(BasedPointer cell) {
+  assert(cell && "Called getObjectID on a null pointer");
+  return idTracker_.getObjectID(cell);
+}
+
+HeapSnapshot::NodeID GCBase::getObjectID(const GCPointerBase &cell) {
+  return getObjectID(cell.getStorageType());
+}
+
+HeapSnapshot::NodeID GCBase::getObjectID(SymbolID sym) {
+  return idTracker_.getObjectID(sym);
+}
+
+HeapSnapshot::NodeID GCBase::getNativeID(const void *mem) {
+  assert(mem && "Called getNativeID on a null pointer");
+  return idTracker_.getNativeID(mem);
+}
+
+bool GCBase::hasObjectID(const void *cell) {
+  assert(cell && "Called hasObjectID on a null pointer");
+  return idTracker_.hasObjectID(pointerBase_->pointerToBasedNonNull(cell));
+}
+
+void GCBase::newAlloc(const void *ptr, uint32_t sz) {
+  allocationLocationTracker_.newAlloc(ptr, sz);
+  samplingAllocationTracker_.newAlloc(ptr, sz);
+}
+
+void GCBase::moveObject(
+    const void *oldPtr,
+    uint32_t oldSize,
+    const void *newPtr,
+    uint32_t newSize) {
+  idTracker_.moveObject(
+      pointerBase_->pointerToBasedNonNull(oldPtr),
+      pointerBase_->pointerToBasedNonNull(newPtr));
+  // Use newPtr here because the idTracker_ just moved it.
+  allocationLocationTracker_.updateSize(newPtr, oldSize, newSize);
+  samplingAllocationTracker_.updateSize(newPtr, oldSize, newSize);
+}
+
+void GCBase::untrackObject(const void *cell, uint32_t sz) {
+  assert(cell && "Called untrackObject on a null pointer");
+  // The allocation tracker needs to use the ID, so this needs to come
+  // before untrackObject.
+  getAllocationLocationTracker().freeAlloc(cell, sz);
+  getSamplingAllocationTracker().freeAlloc(cell, sz);
+  idTracker_.untrackObject(pointerBase_->pointerToBasedNonNull(cell));
+}
+
+#ifndef NDEBUG
+uint64_t GCBase::nextObjectID() {
+  return debugAllocationCounter_++;
+}
+#endif
+
+const GCExecTrace &GCBase::getGCExecTrace() const {
+  return execTrace_;
+}
+
 /*static*/
 double GCBase::clockDiffSeconds(TimePoint start, TimePoint end) {
   std::chrono::duration<double> elapsed = (end - start);
@@ -1159,6 +1230,120 @@ HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
 bool GCBase::IDTracker::hasNativeIDs() {
   std::lock_guard<Mutex> lk{mtx_};
   return !nativeIDMap_.empty();
+}
+
+bool GCBase::IDTracker::isTrackingIDs() const {
+  return !objectIDMap_.empty();
+}
+
+HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(BasedPointer cell) {
+  std::lock_guard<Mutex> lk{mtx_};
+  auto iter = objectIDMap_.find(cell.getRawValue());
+  if (iter != objectIDMap_.end()) {
+    return iter->second;
+  }
+  // Else, assume it is an object that needs to be tracked and give it a new ID.
+  const auto objID = nextObjectID();
+  objectIDMap_[cell.getRawValue()] = objID;
+  return objID;
+}
+
+bool GCBase::IDTracker::hasObjectID(BasedPointer cell) {
+  std::lock_guard<Mutex> lk{mtx_};
+  return objectIDMap_.count(cell.getRawValue());
+}
+
+HeapSnapshot::NodeID GCBase::IDTracker::getObjectIDMustExist(
+    BasedPointer cell) {
+  std::lock_guard<Mutex> lk{mtx_};
+  auto iter = objectIDMap_.find(cell.getRawValue());
+  assert(iter != objectIDMap_.end() && "cell must already have an ID");
+  return iter->second;
+}
+
+HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(SymbolID sym) {
+  std::lock_guard<Mutex> lk{mtx_};
+  auto iter = symbolIDMap_.find(sym.unsafeGetIndex());
+  if (iter != symbolIDMap_.end()) {
+    return iter->second;
+  }
+  // Else, assume it is a symbol that needs to be tracked and give it a new ID.
+  const auto symID = nextObjectID();
+  symbolIDMap_[sym.unsafeGetIndex()] = symID;
+  return symID;
+}
+
+HeapSnapshot::NodeID GCBase::IDTracker::getNativeID(const void *mem) {
+  std::lock_guard<Mutex> lk{mtx_};
+  auto iter = nativeIDMap_.find(mem);
+  if (iter != nativeIDMap_.end()) {
+    return iter->second;
+  }
+  // Else, assume it is a piece of native memory that needs to be tracked and
+  // give it a new ID.
+  const auto objID = nextNativeID();
+  nativeIDMap_[mem] = objID;
+  return objID;
+}
+
+void GCBase::IDTracker::untrackObject(BasedPointer cell) {
+  std::lock_guard<Mutex> lk{mtx_};
+  // It's ok if this didn't exist before, since erase will remove it anyway, and
+  // the default constructed zero ID won't be present in extraNativeIDs_.
+  const auto id = objectIDMap_[cell.getRawValue()];
+  objectIDMap_.erase(cell.getRawValue());
+  extraNativeIDs_.erase(id);
+}
+
+void GCBase::IDTracker::untrackNative(const void *mem) {
+  std::lock_guard<Mutex> lk{mtx_};
+  nativeIDMap_.erase(mem);
+}
+
+void GCBase::IDTracker::untrackSymbol(uint32_t symIdx) {
+  std::lock_guard<Mutex> lk{mtx_};
+  symbolIDMap_.erase(symIdx);
+}
+
+HeapSnapshot::NodeID GCBase::IDTracker::lastID() const {
+  return lastID_;
+}
+
+HeapSnapshot::NodeID GCBase::IDTracker::nextObjectID() {
+  // This must be unique for most features that rely on it, check for overflow.
+  if (LLVM_UNLIKELY(
+          lastID_ >=
+          std::numeric_limits<HeapSnapshot::NodeID>::max() - kIDStep)) {
+    hermes_fatal("Ran out of object IDs");
+  }
+  return lastID_ += kIDStep;
+}
+
+HeapSnapshot::NodeID GCBase::IDTracker::nextNativeID() {
+  // Calling nextObjectID effectively allocates two new IDs, one even
+  // and one odd, returning the latter. For native objects, we want the former.
+  HeapSnapshot::NodeID id = nextObjectID();
+  assert(id > 0 && "nextObjectID should check for overflow");
+  return id - 1;
+}
+
+HeapSnapshot::NodeID GCBase::IDTracker::nextNumberID() {
+  // Numbers will all be considered JS memory, not native memory.
+  return nextObjectID();
+}
+
+GCBase::AllocationLocationTracker::AllocationLocationTracker(GCBase *gc)
+    : gc_(gc) {}
+
+bool GCBase::AllocationLocationTracker::isEnabled() const {
+  return enabled_;
+}
+
+StackTracesTreeNode *
+GCBase::AllocationLocationTracker::getStackTracesTreeNodeForAlloc(
+    HeapSnapshot::NodeID id) const {
+  auto mapIt = stackMap_.find(id);
+  return mapIt == stackMap_.end() ? nullptr : mapIt->second;
 }
 
 void GCBase::AllocationLocationTracker::enable(

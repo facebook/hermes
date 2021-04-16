@@ -590,10 +590,10 @@ class GCBase {
   /// object ID. When disabled old allocations continue to be tracked but
   /// no new allocations get a stack-trace.
   struct AllocationLocationTracker final {
-    explicit inline AllocationLocationTracker(GCBase *gc);
+    explicit AllocationLocationTracker(GCBase *gc);
 
     /// Returns true if tracking is enabled for new allocations.
-    inline bool isEnabled() const;
+    bool isEnabled() const;
     /// Must be called by GC implementations whenever a new allocation is made.
     void newAlloc(const void *ptr, uint32_t sz);
 
@@ -604,7 +604,7 @@ class GCBase {
     void freeAlloc(const void *ptr, uint32_t sz);
     /// Returns data needed to reconstruct the JS stack used to create the
     /// specified allocation.
-    inline StackTracesTreeNode *getStackTracesTreeNodeForAlloc(
+    StackTracesTreeNode *getStackTracesTreeNodeForAlloc(
         HeapSnapshot::NodeID id) const;
 
     /// A Fragment is a time bound for when objects are allocated. Any
@@ -808,27 +808,27 @@ class GCBase {
     explicit IDTracker();
 
     /// Return true if IDs are being tracked.
-    inline bool isTrackingIDs() const;
+    bool isTrackingIDs() const;
 
     /// Get the unique object id of the given object.
     /// If one does not yet exist, start tracking it.
-    inline HeapSnapshot::NodeID getObjectID(BasedPointer cell);
+    HeapSnapshot::NodeID getObjectID(BasedPointer cell);
 
     /// \return true if the cell has an object ID associated with it, false if
     ///   there is none.
-    inline bool hasObjectID(BasedPointer cell);
+    bool hasObjectID(BasedPointer cell);
 
     /// Same as \c getObjectID, except it asserts if the cell doesn't have an
     /// ID.
-    inline HeapSnapshot::NodeID getObjectIDMustExist(BasedPointer cell);
+    HeapSnapshot::NodeID getObjectIDMustExist(BasedPointer cell);
 
     /// Get the unique object id of the symbol with the given symbol \p sym. If
     /// one does not yet exist, start tracking it.
-    inline HeapSnapshot::NodeID getObjectID(SymbolID sym);
+    HeapSnapshot::NodeID getObjectID(SymbolID sym);
 
     /// Get the unique object id of the given native memory (non-JS-heap).
     /// If one does not yet exist, start tracking it.
-    inline HeapSnapshot::NodeID getNativeID(const void *mem);
+    HeapSnapshot::NodeID getNativeID(const void *mem);
 
     /// Get a list of IDs for native memory attached to the given node.
     /// List will be empty if nothing is attached yet. Then push onto the end
@@ -849,17 +849,17 @@ class GCBase {
 
     /// Remove the object from being tracked. This should be done to keep the
     /// tracking working set small.
-    inline void untrackObject(BasedPointer cell);
+    void untrackObject(BasedPointer cell);
 
     /// Remove the symbol from being tracked. This needs to be done to allow
     /// symbols to be re-used.
-    inline void untrackSymbol(uint32_t symIdx);
+    void untrackSymbol(uint32_t symIdx);
 
     /// Remove the native memory from being tracked. This should be done to keep
     /// the tracking working set small. It is also required to be done when
     /// malloc'ed memory is freed, since addresses can be re-used by future
     /// allocations.
-    inline void untrackNative(const void *mem);
+    void untrackNative(const void *mem);
 
     /// \return True if this is tracking any native IDs, false if there are no
     ///   native IDs being tracked.
@@ -867,7 +867,7 @@ class GCBase {
 
     /// Get the current last ID. All other existing IDs are less than or equal
     /// to this one.
-    inline HeapSnapshot::NodeID lastID() const;
+    HeapSnapshot::NodeID lastID() const;
 
 #ifdef HERMESVM_SERIALIZE
     /// Serialize this IDTracker to the output stream.
@@ -880,13 +880,13 @@ class GCBase {
     /// Get the next unique native ID for a chunk of native memory.
     /// NOTE: public to get assigned native ids without needing to reserve in
     /// advance.
-    inline HeapSnapshot::NodeID nextNativeID();
+    HeapSnapshot::NodeID nextNativeID();
 
    private:
     /// Get the next unique object ID for a newly created object.
-    inline HeapSnapshot::NodeID nextObjectID();
+    HeapSnapshot::NodeID nextObjectID();
     /// Get the next unique number ID for a number.
-    inline HeapSnapshot::NodeID nextNumberID();
+    HeapSnapshot::NodeID nextNumberID();
 
     /// JS heap nodes are represented by odd-numbered IDs, while native nodes
     /// are represented with even-numbered IDs. This requirement is enforced by
@@ -1069,7 +1069,7 @@ class GCBase {
 
   /// Return a reference to the GCExecTrace object, which is used if
   /// we're keeping track of information about GCs, for tracing, for example.
-  inline const GCExecTrace &getGCExecTrace() const;
+  const GCExecTrace &getGCExecTrace() const;
 
   /// Populate \p info with crash manager information about the heap
   virtual void getCrashManagerHeapInfo(CrashManager::HeapInformation &info) = 0;
@@ -1438,34 +1438,34 @@ class GCBase {
   /// \{
   // This set of methods are all mirrors of IDTracker, except with pointer
   // compression done automatically.
-  inline HeapSnapshot::NodeID getObjectID(const void *cell);
-  inline HeapSnapshot::NodeID getObjectIDMustExist(const void *cell);
-  inline HeapSnapshot::NodeID getObjectID(BasedPointer cell);
-  inline HeapSnapshot::NodeID getObjectID(const GCPointerBase &cell);
-  inline HeapSnapshot::NodeID getObjectID(SymbolID sym);
-  inline HeapSnapshot::NodeID getNativeID(const void *mem);
+  HeapSnapshot::NodeID getObjectID(const void *cell);
+  HeapSnapshot::NodeID getObjectIDMustExist(const void *cell);
+  HeapSnapshot::NodeID getObjectID(BasedPointer cell);
+  HeapSnapshot::NodeID getObjectID(const GCPointerBase &cell);
+  HeapSnapshot::NodeID getObjectID(SymbolID sym);
+  HeapSnapshot::NodeID getNativeID(const void *mem);
   /// \return The ID for the given value. If the value cannot be represented
   ///   with an ID, returns None.
   llvh::Optional<HeapSnapshot::NodeID> getSnapshotID(HermesValue val);
   /// \return True if the given cell has an ID associated with it.
-  inline bool hasObjectID(const void *cell);
+  bool hasObjectID(const void *cell);
   /// Records that a new allocation has occurred.
-  inline void newAlloc(const void *ptr, uint32_t sz);
+  void newAlloc(const void *ptr, uint32_t sz);
   /// Moves an object to a new address and a new size for all trackers.
-  inline void moveObject(
+  void moveObject(
       const void *oldPtr,
       uint32_t oldSize,
       const void *newPtr,
       uint32_t newSize);
   /// Untracks a freed object from all trackers.
-  inline void untrackObject(const void *cell, uint32_t sz);
+  void untrackObject(const void *cell, uint32_t sz);
   /// \}
 
 #ifndef NDEBUG
   /// \return The next debug allocation ID for embedding directly into a GCCell.
   /// NOTE: This is not the same ID as is used for stable lifetime tracking, use
   /// \p getObjectID for that.
-  inline uint64_t nextObjectID();
+  uint64_t nextObjectID();
 #endif
 
   using TimePoint = std::chrono::steady_clock::time_point;
@@ -1821,191 +1821,6 @@ class WeakRefBase {
     return slot_;
   }
 };
-
-inline HeapSnapshot::NodeID GCBase::getObjectID(const void *cell) {
-  assert(cell && "Called getObjectID on a null pointer");
-  return idTracker_.getObjectID(pointerBase_->pointerToBasedNonNull(cell));
-}
-
-inline HeapSnapshot::NodeID GCBase::getObjectIDMustExist(const void *cell) {
-  assert(cell && "Called getObjectID on a null pointer");
-  return idTracker_.getObjectIDMustExist(
-      pointerBase_->pointerToBasedNonNull(cell));
-}
-
-inline HeapSnapshot::NodeID GCBase::getObjectID(BasedPointer cell) {
-  assert(cell && "Called getObjectID on a null pointer");
-  return idTracker_.getObjectID(cell);
-}
-
-inline HeapSnapshot::NodeID GCBase::getObjectID(const GCPointerBase &cell) {
-  return getObjectID(cell.getStorageType());
-}
-
-inline HeapSnapshot::NodeID GCBase::getObjectID(SymbolID sym) {
-  return idTracker_.getObjectID(sym);
-}
-
-inline HeapSnapshot::NodeID GCBase::getNativeID(const void *mem) {
-  assert(mem && "Called getNativeID on a null pointer");
-  return idTracker_.getNativeID(mem);
-}
-
-inline bool GCBase::hasObjectID(const void *cell) {
-  assert(cell && "Called hasObjectID on a null pointer");
-  return idTracker_.hasObjectID(pointerBase_->pointerToBasedNonNull(cell));
-}
-
-inline void GCBase::newAlloc(const void *ptr, uint32_t sz) {
-  allocationLocationTracker_.newAlloc(ptr, sz);
-  samplingAllocationTracker_.newAlloc(ptr, sz);
-}
-
-inline void GCBase::moveObject(
-    const void *oldPtr,
-    uint32_t oldSize,
-    const void *newPtr,
-    uint32_t newSize) {
-  idTracker_.moveObject(
-      pointerBase_->pointerToBasedNonNull(oldPtr),
-      pointerBase_->pointerToBasedNonNull(newPtr));
-  // Use newPtr here because the idTracker_ just moved it.
-  allocationLocationTracker_.updateSize(newPtr, oldSize, newSize);
-  samplingAllocationTracker_.updateSize(newPtr, oldSize, newSize);
-}
-
-inline void GCBase::untrackObject(const void *cell, uint32_t sz) {
-  assert(cell && "Called untrackObject on a null pointer");
-  // The allocation tracker needs to use the ID, so this needs to come
-  // before untrackObject.
-  getAllocationLocationTracker().freeAlloc(cell, sz);
-  getSamplingAllocationTracker().freeAlloc(cell, sz);
-  idTracker_.untrackObject(pointerBase_->pointerToBasedNonNull(cell));
-}
-
-#ifndef NDEBUG
-inline uint64_t GCBase::nextObjectID() {
-  return debugAllocationCounter_++;
-}
-#endif
-
-inline bool GCBase::IDTracker::isTrackingIDs() const {
-  return !objectIDMap_.empty();
-}
-
-inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(BasedPointer cell) {
-  std::lock_guard<Mutex> lk{mtx_};
-  auto iter = objectIDMap_.find(cell.getRawValue());
-  if (iter != objectIDMap_.end()) {
-    return iter->second;
-  }
-  // Else, assume it is an object that needs to be tracked and give it a new ID.
-  const auto objID = nextObjectID();
-  objectIDMap_[cell.getRawValue()] = objID;
-  return objID;
-}
-
-inline bool GCBase::IDTracker::hasObjectID(BasedPointer cell) {
-  std::lock_guard<Mutex> lk{mtx_};
-  return objectIDMap_.count(cell.getRawValue());
-}
-
-inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectIDMustExist(
-    BasedPointer cell) {
-  std::lock_guard<Mutex> lk{mtx_};
-  auto iter = objectIDMap_.find(cell.getRawValue());
-  assert(iter != objectIDMap_.end() && "cell must already have an ID");
-  return iter->second;
-}
-
-inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(SymbolID sym) {
-  std::lock_guard<Mutex> lk{mtx_};
-  auto iter = symbolIDMap_.find(sym.unsafeGetIndex());
-  if (iter != symbolIDMap_.end()) {
-    return iter->second;
-  }
-  // Else, assume it is a symbol that needs to be tracked and give it a new ID.
-  const auto symID = nextObjectID();
-  symbolIDMap_[sym.unsafeGetIndex()] = symID;
-  return symID;
-}
-
-inline HeapSnapshot::NodeID GCBase::IDTracker::getNativeID(const void *mem) {
-  std::lock_guard<Mutex> lk{mtx_};
-  auto iter = nativeIDMap_.find(mem);
-  if (iter != nativeIDMap_.end()) {
-    return iter->second;
-  }
-  // Else, assume it is a piece of native memory that needs to be tracked and
-  // give it a new ID.
-  const auto objID = nextNativeID();
-  nativeIDMap_[mem] = objID;
-  return objID;
-}
-
-inline void GCBase::IDTracker::untrackObject(BasedPointer cell) {
-  std::lock_guard<Mutex> lk{mtx_};
-  // It's ok if this didn't exist before, since erase will remove it anyway, and
-  // the default constructed zero ID won't be present in extraNativeIDs_.
-  const auto id = objectIDMap_[cell.getRawValue()];
-  objectIDMap_.erase(cell.getRawValue());
-  extraNativeIDs_.erase(id);
-}
-
-inline void GCBase::IDTracker::untrackNative(const void *mem) {
-  std::lock_guard<Mutex> lk{mtx_};
-  nativeIDMap_.erase(mem);
-}
-
-inline void GCBase::IDTracker::untrackSymbol(uint32_t symIdx) {
-  std::lock_guard<Mutex> lk{mtx_};
-  symbolIDMap_.erase(symIdx);
-}
-
-inline const GCExecTrace &GCBase::getGCExecTrace() const {
-  return execTrace_;
-}
-
-inline HeapSnapshot::NodeID GCBase::IDTracker::lastID() const {
-  return lastID_;
-}
-
-inline HeapSnapshot::NodeID GCBase::IDTracker::nextObjectID() {
-  // This must be unique for most features that rely on it, check for overflow.
-  if (LLVM_UNLIKELY(
-          lastID_ >=
-          std::numeric_limits<HeapSnapshot::NodeID>::max() - kIDStep)) {
-    hermes_fatal("Ran out of object IDs");
-  }
-  return lastID_ += kIDStep;
-}
-
-inline HeapSnapshot::NodeID GCBase::IDTracker::nextNativeID() {
-  // Calling nextObjectID effectively allocates two new IDs, one even
-  // and one odd, returning the latter. For native objects, we want the former.
-  HeapSnapshot::NodeID id = nextObjectID();
-  assert(id > 0 && "nextObjectID should check for overflow");
-  return id - 1;
-}
-
-inline HeapSnapshot::NodeID GCBase::IDTracker::nextNumberID() {
-  // Numbers will all be considered JS memory, not native memory.
-  return nextObjectID();
-}
-
-GCBase::AllocationLocationTracker::AllocationLocationTracker(GCBase *gc)
-    : gc_(gc) {}
-
-inline bool GCBase::AllocationLocationTracker::isEnabled() const {
-  return enabled_;
-}
-
-inline StackTracesTreeNode *
-GCBase::AllocationLocationTracker::getStackTracesTreeNodeForAlloc(
-    HeapSnapshot::NodeID id) const {
-  auto mapIt = stackMap_.find(id);
-  return mapIt == stackMap_.end() ? nullptr : mapIt->second;
-}
 
 } // namespace vm
 } // namespace hermes
