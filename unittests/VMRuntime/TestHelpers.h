@@ -163,9 +163,15 @@ inline const GCConfig TestGCConfigFixedSize(
 #define ASSERT_RETURNED(x) ASSERT_EQ(ExecutionStatus::RETURNED, x)
 
 /// Expect that 'x' is a string primitive with value 'str'
-#define EXPECT_STRINGPRIM(str, x) \
-  EXPECT_TRUE(isSameValue(        \
-      StringPrimitive::createNoThrow(runtime, str).getHermesValue(), x));
+#define EXPECT_STRINGPRIM(str, x)                                           \
+  do {                                                                      \
+    GCScopeMarkerRAII marker{runtime};                                      \
+    Handle<> xHandle{runtime, x};                                           \
+    Handle<StringPrimitive> strHandle =                                     \
+        StringPrimitive::createNoThrow(runtime, str);                       \
+    EXPECT_TRUE(                                                            \
+        isSameValue(strHandle.getHermesValue(), xHandle.getHermesValue())); \
+  } while (0)
 
 /// Assert that execution of 'x' didn't throw and returned the expected bool.
 #define EXPECT_CALLRESULT_BOOL_RAW(B, x) \
