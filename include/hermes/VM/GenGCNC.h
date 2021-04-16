@@ -698,8 +698,6 @@ class GenGC final : public GCBase {
       const uint64_t *bytes) const;
 #endif
 
-  void sizeDiagnosticCensus();
-
   /// Mark/Sweep/Compact GC:
 
   /// The individual phases of Mark/Sweep/Compact GC.

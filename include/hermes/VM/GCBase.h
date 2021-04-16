@@ -1556,6 +1556,10 @@ class GCBase {
       CumulativeHeapStats *stats,
       bool onMutator);
 
+  /// Print detailed stats of the breakdown of the roots and heap in terms of
+  /// the number of pointers, symbols, HermesValues, etc.
+  void sizeDiagnosticCensus(size_t allocatedBytes);
+
   /// Do any additional GC-specific logging that is useful before dying with
   /// out-of-memory.
   virtual void oomDetail(std::error_code reason);
