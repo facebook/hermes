@@ -26,13 +26,20 @@ class CodeCoverageProfiler {
  public:
   /// Executed function info.
   struct FuncInfo {
-    FuncInfo(uint32_t moduleId, uint32_t funcVirtualOffset)
-        : moduleId(moduleId), funcVirtualOffset(funcVirtualOffset) {}
+    FuncInfo(
+        uint32_t moduleId,
+        uint32_t funcVirtualOffset,
+        std::string debugInfo)
+        : moduleId(moduleId),
+          funcVirtualOffset(funcVirtualOffset),
+          debugInfo(debugInfo) {}
 
     /// Runtime module unique id.
     uint32_t moduleId;
     /// Executed function bytecode virtual offset.
     uint32_t funcVirtualOffset;
+
+    std::string debugInfo;
   };
 
   explicit CodeCoverageProfiler(Runtime *runtime) : runtime_(runtime) {

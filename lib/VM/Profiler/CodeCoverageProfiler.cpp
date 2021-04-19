@@ -68,12 +68,32 @@ CodeCoverageProfiler::getExecutedFunctionsLocal() {
   for (auto &entry : executedFuncBitsArrayMap_) {
     auto *bcProvider = entry.first->getBytecode();
     const uint32_t segmentID = bcProvider->getSegmentID();
+    // For Classic bundles, bcProvider->getSegmentID() is always 0.
+    // For that situation we also provide the sourceURL, which
+    // metro-symbolicate can use to parse the segmentID from the
+    // sourceURL.
+    llvh::StringRef sourceURL = entry.first->getSourceURL();
+    const auto *debugInfo = bcProvider->getDebugInfo();
     const std::vector<bool> &moduleFuncBitsArray = entry.second;
     for (uint32_t i = 0; i < moduleFuncBitsArray.size(); ++i) {
       if (moduleFuncBitsArray[i]) {
-        const uint32_t funcVirtualOffset =
-            bcProvider->getVirtualOffsetForFunction(i);
-        funcInfos.emplace_back(segmentID, funcVirtualOffset);
+        const auto *offsets = bcProvider->getDebugOffsets(i);
+        if (debugInfo && offsets &&
+            offsets->sourceLocations != hbc::DebugOffsets::NO_OFFSET) {
+          if (auto pos = debugInfo->getLocationForAddress(
+                  offsets->sourceLocations, 0 /* opcodeOffset */)) {
+            const std::string file =
+                debugInfo->getFilenameByID(pos->filenameId);
+            const uint32_t line = pos->line - 1; // Normalising to zero-based
+            const uint32_t column =
+                pos->column - 1; // Normalising to zero-based
+            funcInfos.emplace_back(line, column, file);
+          }
+        } else {
+          const uint32_t funcVirtualOffset =
+              bcProvider->getVirtualOffsetForFunction(i);
+          funcInfos.emplace_back(segmentID, funcVirtualOffset, sourceURL);
+        }
       }
     }
   }
@@ -100,7 +120,8 @@ bool operator==(
     const CodeCoverageProfiler::FuncInfo &left,
     const CodeCoverageProfiler::FuncInfo &right) {
   return left.moduleId == right.moduleId &&
-      left.funcVirtualOffset == right.funcVirtualOffset;
+      left.funcVirtualOffset == right.funcVirtualOffset &&
+      left.debugInfo == right.debugInfo;
 }
 
 } // namespace vm

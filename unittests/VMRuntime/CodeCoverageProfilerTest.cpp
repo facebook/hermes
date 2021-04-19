@@ -32,10 +32,24 @@ class CodeCoverageProfilerTest : public RuntimeTestFixture {
  protected:
   static CodeCoverageProfiler::FuncInfo getFuncInfo(Handle<JSFunction> func) {
     auto bcProvider = func->getCodeBlock()->getRuntimeModule()->getBytecode();
+    auto functionId = func->getCodeBlock()->getFunctionID();
+    auto debugInfo = bcProvider->getDebugInfo();
+    auto debugOffsets = bcProvider->getDebugOffsets(functionId);
+    if (debugInfo && debugOffsets &&
+        debugOffsets->sourceLocations != hbc::DebugOffsets::NO_OFFSET) {
+      if (auto pos = debugInfo->getLocationForAddress(
+              debugOffsets->sourceLocations, 0 /* opcodeOffset */)) {
+        auto file = debugInfo->getFilenameByID(pos->filenameId);
+        auto line = pos->line - 1; // Normalised to zero-based
+        auto column = pos->column - 1; // Normalised to zero-based
+        return {line, column, file};
+      }
+    }
     const uint32_t segmentID = bcProvider->getSegmentID();
-    const uint32_t funcVirtualOffset = bcProvider->getVirtualOffsetForFunction(
-        func->getCodeBlock()->getFunctionID());
-    return {segmentID, funcVirtualOffset};
+    const uint32_t funcVirtualOffset =
+        bcProvider->getVirtualOffsetForFunction(functionId);
+    const std::string sourceURL = func->getRuntimeModule()->getSourceURL();
+    return {segmentID, funcVirtualOffset, sourceURL};
   }
 
   // Check if the function is executed or not.
@@ -177,8 +191,8 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleDomains) {
   hbc::CompileFlags flags;
   flags.lazy = false;
   CallResult<HermesValue> res = runtime->run(
-      "var eval1 = eval('function used1() {}; used1(); used1;'); "
-      "var eval2 = eval('function unused() {}; function used2() {}; used2(); [used2, unused]');"
+      "var eval1 = eval('const a = 1; function used1() {}; used1(); used1; //# sourceURL=foo1.js'); "
+      "var eval2 = eval('const b = 1; function unused() {}; function used2() {}; used2(); [used2, unused] //# sourceURL=foo2.js');"
       "[eval1, eval2[0], eval2[1]];",
       "file:///fake.js",
       flags);

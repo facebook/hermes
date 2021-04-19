@@ -99,9 +99,11 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   static void dumpSampledTraceToStream(llvh::raw_ostream &stream);
 
   /// Return the executed JavaScript function info.
-  /// Each function info is a 64bit integer with the module id encoded in
-  /// upper 32bit and function virtual offset in lower 32bit.
-  static std::unordered_map<std::string, std::vector<int64_t>>
+  /// This information holds the segmentID, Virtualoffset and sourceURL.
+  /// This information is needed specifically to be able to symbolicate non-CJS
+  /// bundles correctly. This API will be simplified later to simply return a
+  /// segmentID and virtualOffset, when we are able to only support CJS bundles.
+  static std::unordered_map<std::string, std::vector<std::string>>
   getExecutedFunctions();
 
   /// \return whether code coverage profiler is enabled or not.

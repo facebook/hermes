@@ -1145,23 +1145,29 @@ void HermesRuntime::dumpSampledTraceToStream(llvh::raw_ostream &stream) {
   ::hermes::vm::SamplingProfiler::dumpChromeTraceGlobal(stream);
 }
 
-/*static*/ std::unordered_map<std::string, std::vector<int64_t>>
+/*static*/ std::unordered_map<std::string, std::vector<std::string>>
 HermesRuntime::getExecutedFunctions() {
   std::unordered_map<
       std::string,
       std::vector<::hermes::vm::CodeCoverageProfiler::FuncInfo>>
       executedFunctionsByVM =
           ::hermes::vm::CodeCoverageProfiler::getExecutedFunctions();
-  std::unordered_map<std::string, std::vector<int64_t>> result;
+  std::unordered_map<std::string, std::vector<std::string>> result;
 
   for (auto const &x : executedFunctionsByVM) {
-    std::vector<int64_t> res;
+    std::vector<std::string> res;
     std::transform(
         x.second.begin(),
         x.second.end(),
         std::back_inserter(res),
         [](const ::hermes::vm::CodeCoverageProfiler::FuncInfo &entry) {
-          return ((int64_t)entry.moduleId << 32) + entry.funcVirtualOffset;
+          std::stringstream ss;
+          ss << entry.moduleId;
+          ss << ":";
+          ss << entry.funcVirtualOffset;
+          ss << ":";
+          ss << entry.debugInfo;
+          return ss.str();
         });
     result.emplace(x.first, res);
   }
