@@ -1163,6 +1163,14 @@ void GCBase::IDTracker::moveObject(
   // Have to erase first, because any other access can invalidate the iterator.
   objectIDMap_.erase(old);
   objectIDMap_[newLocation.getRawValue()] = oldID;
+  // Update the reverse map entry if it exists.
+  auto reverseMappingIt = idObjectMap_.find(oldID);
+  if (reverseMappingIt != idObjectMap_.end()) {
+    assert(
+        reverseMappingIt->second == oldLocation.getRawValue() &&
+        "The reverse mapping should have the old address");
+    reverseMappingIt->second = newLocation.getRawValue();
+  }
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -1226,6 +1234,29 @@ HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
   }
   // Else, it is a number that hasn't been seen before.
   return numberRef = nextNumberID();
+}
+
+llvh::Optional<BasedPointer> GCBase::IDTracker::getObjectForID(
+    HeapSnapshot::NodeID id) {
+  std::lock_guard<Mutex> lk{mtx_};
+  auto it = idObjectMap_.find(id);
+  if (it != idObjectMap_.end()) {
+    return BasedPointer{it->second};
+  }
+  // Do an O(N) search through the map, then cache the result.
+  // This trades time for memory, since this is a rare operation.
+  for (const auto &p : objectIDMap_) {
+    if (p.second == id) {
+      // Cache the result so repeated lookups are fast.
+      // This cache is unlikely to grow that large, unless someone hovers over
+      // every single object in a snapshot in Chrome.
+      auto itAndDidInsert = idObjectMap_.try_emplace(p.second, p.first);
+      assert(itAndDidInsert.second);
+      return BasedPointer{itAndDidInsert.first->second};
+    }
+  }
+  // ID not found in the map, wasn't an object to begin with.
+  return llvh::None;
 }
 
 bool GCBase::IDTracker::hasNativeIDs() {
@@ -1294,6 +1325,8 @@ void GCBase::IDTracker::untrackObject(BasedPointer cell) {
   const auto id = objectIDMap_[cell.getRawValue()];
   objectIDMap_.erase(cell.getRawValue());
   extraNativeIDs_.erase(id);
+  // Erase the reverse mapping entry if it exists.
+  idObjectMap_.erase(id);
 }
 
 void GCBase::IDTracker::untrackNative(const void *mem) {
@@ -1657,6 +1690,13 @@ llvh::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
   } else {
     return llvh::None;
   }
+}
+
+void *GCBase::getObjectForID(HeapSnapshot::NodeID id) {
+  if (llvh::Optional<BasedPointer> ptr = idTracker_.getObjectForID(id)) {
+    return pointerBase_->basedToPointer(ptr.getValue());
+  }
+  return nullptr;
 }
 
 void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {

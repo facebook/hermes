@@ -842,6 +842,11 @@ class GCBase {
     /// Can be used to make fake nodes that will display their numeric value.
     HeapSnapshot::NodeID getNumberID(double num);
 
+    /// Get the object pointer for the given ID. This is the inverse of \c
+    /// getObjectID.
+    /// Returns none if there is no object for that ID.
+    llvh::Optional<BasedPointer> getObjectForID(HeapSnapshot::NodeID id);
+
     /// Tell the tracker that an object has moved locations.
     /// This must be called in a safe order, if A moves to B, and C moves to A,
     /// the first move must be recorded before the second.
@@ -911,6 +916,13 @@ class GCBase {
     /// large. Using compressed pointers keeps the size small.
     llvh::DenseMap<BasedPointer::StorageType, HeapSnapshot::NodeID>
         objectIDMap_;
+
+    /// The inverse of \c objectIDMap_. Only used for debugging views on heap
+    /// snapshots. To avoid wasting memory in the case where the debugger hasn't
+    /// requested any, it is populated lazily as each entry is requested. We
+    /// expect the vast majority of objects aren't inspected in the snapshot.
+    llvh::DenseMap<HeapSnapshot::NodeID, BasedPointer::StorageType>
+        idObjectMap_;
 
     /// Map of native pointers to IDs. Populated according to
     /// the same rules as the objectIDMap_.
@@ -1447,6 +1459,11 @@ class GCBase {
   /// \return The ID for the given value. If the value cannot be represented
   ///   with an ID, returns None.
   llvh::Optional<HeapSnapshot::NodeID> getSnapshotID(HermesValue val);
+
+  /// \return The object pointer for the given \p id. This is quite slow.
+  ///   If there is no such object this returns nullptr.
+  void *getObjectForID(HeapSnapshot::NodeID id);
+
   /// \return True if the given cell has an ID associated with it.
   bool hasObjectID(const void *cell);
   /// Records that a new allocation has occurred.
