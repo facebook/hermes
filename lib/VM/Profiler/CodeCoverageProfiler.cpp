@@ -10,6 +10,7 @@
 #include "hermes/VM/Callable.h"
 
 #include <assert.h>
+#include <unordered_map>
 
 namespace hermes {
 namespace vm {
@@ -45,17 +46,19 @@ void CodeCoverageProfiler::markExecutedSlowPath(CodeBlock *codeBlock) {
   moduleFuncMap[funcId] = true;
 }
 
-/* static */ std::vector<CodeCoverageProfiler::FuncInfo>
-CodeCoverageProfiler::getExecutedFunctions() {
+/* static */ std::
+    unordered_map<std::string, std::vector<CodeCoverageProfiler::FuncInfo>>
+    CodeCoverageProfiler::getExecutedFunctions() {
   std::lock_guard<std::mutex> lk(globalMutex());
-  // Since Hermes only supports symbolication for one runtime
-  // we return coverage information for the first runtime here.
   auto &profilers = allProfilers();
-  if (profilers.size()) {
-    CodeCoverageProfiler *profiler = *profilers.begin();
-    return profiler->getExecutedFunctionsLocal();
+  std::unordered_map<std::string, std::vector<CodeCoverageProfiler::FuncInfo>>
+      result;
+  for (const auto &profiler : profilers) {
+    std::vector<CodeCoverageProfiler::FuncInfo> profilerOutput =
+        profiler->getExecutedFunctionsLocal();
+    result.emplace(profiler->runtime_->getHeap().getName(), profilerOutput);
   }
-  return {};
+  return result;
 }
 
 std::vector<CodeCoverageProfiler::FuncInfo>

@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <future>
+#include <unordered_map>
 
 using namespace hermes::vm;
 
@@ -71,8 +72,10 @@ TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnused) {
       flags);
   EXPECT_FALSE(isException(res));
 
-  std::vector<CodeCoverageProfiler::FuncInfo> executedFuncInfos =
-      CodeCoverageProfiler::getExecutedFunctions();
+  std::unordered_map<std::string, std::vector<CodeCoverageProfiler::FuncInfo>>
+      executedFuncInfos = CodeCoverageProfiler::getExecutedFunctions();
+  std::vector<CodeCoverageProfiler::FuncInfo> testRuntimeExecutedFuncInfos =
+      executedFuncInfos.find(runtime->getHeap().getName())->second;
 
   Handle<JSArray> funcArr = runtime->makeHandle(vmcast<JSArray>(*res));
   Handle<JSFunction> funcUsed =
@@ -84,9 +87,9 @@ TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnused) {
   EXPECT_TRUE(hasDifferentInfo(funcUsed, funcUnused));
 
   // Global + used.
-  EXPECT_EQ(executedFuncInfos.size(), 2);
-  EXPECT_TRUE(isFuncExecuted(executedFuncInfos, funcUsed));
-  EXPECT_FALSE(isFuncExecuted(executedFuncInfos, funcUnused));
+  EXPECT_EQ(testRuntimeExecutedFuncInfos.size(), 2);
+  EXPECT_TRUE(isFuncExecuted(testRuntimeExecutedFuncInfos, funcUsed));
+  EXPECT_FALSE(isFuncExecuted(testRuntimeExecutedFuncInfos, funcUnused));
 }
 
 // Right now, this just tests that we can simultaneously run two code coverage
@@ -149,8 +152,10 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleModules) {
       flags);
   EXPECT_FALSE(isException(res2));
 
-  std::vector<CodeCoverageProfiler::FuncInfo> executedFuncInfos =
-      CodeCoverageProfiler::getExecutedFunctions();
+  std::unordered_map<std::string, std::vector<CodeCoverageProfiler::FuncInfo>>
+      executedFuncInfos = CodeCoverageProfiler::getExecutedFunctions();
+  std::vector<CodeCoverageProfiler::FuncInfo> testRuntimeExecutedFuncInfos =
+      executedFuncInfos.find(runtime->getHeap().getName())->second;
 
   Handle<JSArray> funcArr = runtime->makeHandle(vmcast<JSArray>(*res2));
   Handle<JSFunction> funcBar =
@@ -162,10 +167,10 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleModules) {
   EXPECT_TRUE(hasDifferentInfo(funcFoo, funcUnused));
   EXPECT_TRUE(hasDifferentInfo(funcBar, funcUnused));
 
-  EXPECT_EQ(executedFuncInfos.size(), 4);
-  EXPECT_TRUE(isFuncExecuted(executedFuncInfos, funcFoo));
-  EXPECT_TRUE(isFuncExecuted(executedFuncInfos, funcBar));
-  EXPECT_FALSE(isFuncExecuted(executedFuncInfos, funcUnused));
+  EXPECT_EQ(testRuntimeExecutedFuncInfos.size(), 4);
+  EXPECT_TRUE(isFuncExecuted(testRuntimeExecutedFuncInfos, funcFoo));
+  EXPECT_TRUE(isFuncExecuted(testRuntimeExecutedFuncInfos, funcBar));
+  EXPECT_FALSE(isFuncExecuted(testRuntimeExecutedFuncInfos, funcUnused));
 }
 
 TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleDomains) {
@@ -179,8 +184,10 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleDomains) {
       flags);
   EXPECT_FALSE(isException(res));
 
-  std::vector<CodeCoverageProfiler::FuncInfo> executedFuncInfos =
-      CodeCoverageProfiler::getExecutedFunctions();
+  std::unordered_map<std::string, std::vector<CodeCoverageProfiler::FuncInfo>>
+      executedFuncInfos = CodeCoverageProfiler::getExecutedFunctions();
+  std::vector<CodeCoverageProfiler::FuncInfo> testRuntimeExecutedFuncInfos =
+      executedFuncInfos.find(runtime->getHeap().getName())->second;
 
   Handle<JSArray> funcArr = runtime->makeHandle(vmcast<JSArray>(*res));
   Handle<JSFunction> funcUsed1 =
@@ -195,10 +202,10 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleDomains) {
   EXPECT_TRUE(hasDifferentInfo(funcUsed2, funcUnused));
 
   // Global + two eval() code + used1 + used2.
-  EXPECT_EQ(executedFuncInfos.size(), 5);
-  EXPECT_TRUE(isFuncExecuted(executedFuncInfos, funcUsed1));
-  EXPECT_TRUE(isFuncExecuted(executedFuncInfos, funcUsed2));
-  EXPECT_FALSE(isFuncExecuted(executedFuncInfos, funcUnused));
+  EXPECT_EQ(testRuntimeExecutedFuncInfos.size(), 5);
+  EXPECT_TRUE(isFuncExecuted(testRuntimeExecutedFuncInfos, funcUsed1));
+  EXPECT_TRUE(isFuncExecuted(testRuntimeExecutedFuncInfos, funcUsed2));
+  EXPECT_FALSE(isFuncExecuted(testRuntimeExecutedFuncInfos, funcUnused));
 }
 
 } // namespace CodeCoverageTest

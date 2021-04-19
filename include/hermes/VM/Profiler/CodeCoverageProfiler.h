@@ -14,6 +14,7 @@
 
 #include "llvh/ADT/DenseMap.h"
 
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -23,7 +24,7 @@ namespace vm {
 /// Function code coverage profiler.
 class CodeCoverageProfiler {
  public:
-  /// Executed function info of a single runtime.
+  /// Executed function info.
   struct FuncInfo {
     FuncInfo(uint32_t moduleId, uint32_t funcVirtualOffset)
         : moduleId(moduleId), funcVirtualOffset(funcVirtualOffset) {}
@@ -44,8 +45,10 @@ class CodeCoverageProfiler {
     allProfilers().erase(this);
   }
 
-  /// \return executed function information for a single runtime.
-  static std::vector<CodeCoverageProfiler::FuncInfo> getExecutedFunctions();
+  /// \return executed function information indexed per runtime.
+  static std::
+      unordered_map<std::string, std::vector<CodeCoverageProfiler::FuncInfo>>
+      getExecutedFunctions();
 
   /// globally enable the code coverage profiler.
   static void enableGlobal() {

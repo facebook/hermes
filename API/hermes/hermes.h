@@ -10,11 +10,13 @@
 
 #include <exception>
 #include <list>
+#include <map>
 #include <memory>
 #include <string>
 
 #include <hermes/Public/RuntimeConfig.h>
 #include <jsi/jsi.h>
+#include <unordered_map>
 
 #ifndef HERMES_EXPORT
 #ifdef _MSC_VER
@@ -99,7 +101,8 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   /// Return the executed JavaScript function info.
   /// Each function info is a 64bit integer with the module id encoded in
   /// upper 32bit and function virtual offset in lower 32bit.
-  static std::vector<int64_t> getExecutedFunctions();
+  static std::unordered_map<std::string, std::vector<int64_t>>
+  getExecutedFunctions();
 
   /// \return whether code coverage profiler is enabled or not.
   static bool isCodeCoverageProfilerEnabled();

@@ -57,6 +57,7 @@
 #include <list>
 #include <mutex>
 #include <system_error>
+#include <unordered_map>
 
 #ifdef HERMESJSI_ON_STACK
 #include <future>
@@ -1144,18 +1145,27 @@ void HermesRuntime::dumpSampledTraceToStream(llvh::raw_ostream &stream) {
   ::hermes::vm::SamplingProfiler::dumpChromeTraceGlobal(stream);
 }
 
-/*static*/ std::vector<int64_t> HermesRuntime::getExecutedFunctions() {
-  std::vector<::hermes::vm::CodeCoverageProfiler::FuncInfo> executedFuncs =
-      ::hermes::vm::CodeCoverageProfiler::getExecutedFunctions();
-  std::vector<int64_t> res;
-  std::transform(
-      executedFuncs.begin(),
-      executedFuncs.end(),
-      std::back_inserter(res),
-      [](const ::hermes::vm::CodeCoverageProfiler::FuncInfo &entry) {
-        return ((int64_t)entry.moduleId << 32) + entry.funcVirtualOffset;
-      });
-  return res;
+/*static*/ std::unordered_map<std::string, std::vector<int64_t>>
+HermesRuntime::getExecutedFunctions() {
+  std::unordered_map<
+      std::string,
+      std::vector<::hermes::vm::CodeCoverageProfiler::FuncInfo>>
+      executedFunctionsByVM =
+          ::hermes::vm::CodeCoverageProfiler::getExecutedFunctions();
+  std::unordered_map<std::string, std::vector<int64_t>> result;
+
+  for (auto const &x : executedFunctionsByVM) {
+    std::vector<int64_t> res;
+    std::transform(
+        x.second.begin(),
+        x.second.end(),
+        std::back_inserter(res),
+        [](const ::hermes::vm::CodeCoverageProfiler::FuncInfo &entry) {
+          return ((int64_t)entry.moduleId << 32) + entry.funcVirtualOffset;
+        });
+    result.emplace(x.first, res);
+  }
+  return result;
 }
 
 /*static*/ bool HermesRuntime::isCodeCoverageProfilerEnabled() {
