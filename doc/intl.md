@@ -97,17 +97,17 @@ One popular implementation strategy followed by other engines, is to bundle an i
 
 ### Android 8.0 – 8.1 and older (SDK < 28)
 
-- `Intl.getCanonicalLocales`: Some differences in the keyword values due to CLDR/Unicode version difference (Expected SameValue(«und-u-tz-utc», «und-u-tz-gmt») to be true)
-- `Intl.NumberFormat`: CompactFormatter doesn't respect the precision inputs (Expected SameValue(«9,900만», «9877만») to be true; Expected SameValue(«990M», «988M») to be true).
+- `Intl.getCanonicalLocales`: Unicode/CLDR version differences results in some variances. e.g. und-u-tz-utc vs. und-u-tz-gmt.
+- `Intl.NumberFormat`: CompactFormatter doesn't respect the precision inputs.
 
 ### Android 7.0 - 7.1 and older (SDK < 26)
 
-- `Intl.getCanonicalLocales`: Unicode/CLDR version differences Expected SameValue(«und-u-ms-imperial», «und-u-ms-uksystem») to be true
+- `Intl.getCanonicalLocales`: Unicode/CLDR version differences results in some variances. e.g. und-u-ms-imperial vs. und-u-ms-uksystem.
 
 ### Android 7.0 - 7.1 and older (SDK < 24)
 
 - `Intl.Collator`: Doesn't canonically decompose the input strings. Canonically equivalent string with non-identical code points may not match.
-- `Intl.getCanonicalLocales`: Unicode/CLDR version differences (Expected SameValue(«und-u-ca-ethiopic-amete-alem», «und-u-ca-ethioaa») to be true; Expected SameValue(«und-u-ks-primary», «und-u-ks-level1») to be true)
+- `Intl.getCanonicalLocales`: Unicode/CLDR version differences results in some variances. e.g. und-u-ca-ethiopic-amete-alem vs. und-u-ca-ethioaa, und-u-ks-primary vs. und-u-ks-level1.
 - `Intl.NumberFormat`: Unit style does not work.
 - `Intl.NumberFormat`: There are issues in the precision configuration due to lack of APIs.
 - `Intl.DateFormat`: There are issues with the calendar configuration which needs to be dug into.
