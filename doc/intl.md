@@ -71,7 +71,7 @@ One popular implementation strategy followed by other engines, is to bundle an i
 
 - `Intl.DateTimeFormat`: [`formatMatcher`](https://tc39.es/ecma402/#sec-basicformatmatcher) parameter is not respected. The parameter enables the implementation to pick the best display format when it supports only a subset of all possible formats. ICU library in Android platform and hence our implementation allows all subsets and formats which makes this `formatMatcher` property unnecessary.
 
-## Known Issues
+## Limitations across Android SDKs
 
 ### Android 11
 
@@ -85,9 +85,8 @@ One popular implementation strategy followed by other engines, is to bundle an i
 
 ### Android 10 and older (SDK < 30)
 
-- `Intl.NumberFormat`: Scientific notation formatting has issues on some cases such as Infinity (e.g. Expected SameValue(«-∞E0», «-∞») to be true).
-- `Intl.NumberFormat`: Compact notation `formatToParts` doesn't identify unit, hence we report unit as 'literal' (Compact short: 987654321: parts[1].type Expected SameValue(«literal», «compact») to be true)
-- `Intl.NumberFormat`: `formatToParts` function doesn't produce expected result with Scientific/Engineering notation and input Infinity (`-Infinity` - engineering: length Expected SameValue(«4», «2») to be true).
+- `Intl.NumberFormat`: Scientific notation formatting has issues on some cases. e.g. `-Infinity` may get formatted as '-∞E0' instead of expected '-∞'. Another manifestation of the issues is that the formatToParts may return 4 parts instead of 2.
+- `Intl.NumberFormat`: Compact notation `formatToParts` doesn't identify unit, hence we report unit as 'literal'. For e.g. the second part of "100ac" gets reported as "literal" instead of "compact"
 
 ### Android 9 and older (SDK < 29)
 
@@ -150,13 +149,13 @@ The following table summarizes ICU, CLDR and Unicode versions available on the A
 
 In summary,
 
-Platforms >= 24 have much better internationalization support than earlier, as many ICU classes are available as is.
+1. Platforms >= 24 have much better internationalization support than earlier, as many ICU classes are available as is.
 
-Platforms 21-24 still has reasonable internationalization support, by allowing creation of Locale objects and enabling selected ICU services through java.text namespace.
+2. Platforms 21-24 still has reasonable internationalization support, by allowing creation of Locale objects and enabling selected ICU services through java.text namespace.
 
-Platforms < 21 doesn't allow creation of Locale objects from tags, severely limiting general purpose international code.
+3. Platforms < 21 doesn't allow creation of Locale objects from tags, severely limiting general purpose international code.
 
-Platform 30 has introduced classes under [`android.icu.number`](https://developer.android.com/reference/android/icu/util/package-summary) namespace which will majorly improve our `Intl.NumberFormat` implementation
+4. Platform 30 has introduced classes under [`android.icu.number`](https://developer.android.com/reference/android/icu/util/package-summary) namespace which will majorly improve our `Intl.NumberFormat` implementation
 
 # Impact on Application Size
 
