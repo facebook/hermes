@@ -16,9 +16,9 @@ namespace hermes {
 /// and outputs to \p bytecode otherwise returns false.
 /// \param sourceURL this will be used as the "file name" of the buffer for
 ///   errors, stack traces, etc.
+/// \param optimize this will enable optimizations, but only if the
+/// HERMESVM_ENABLE_OPTIMIZATION_AT_RUNTIME preprocessor directive is set.
 /// NOTE: Doesn't throw any exceptions. It's up to the caller to report failure.
-///
-/// TODO(30388684): Return opaque object that can be run or serialized.
 bool compileJS(
     const std::string &str,
     const std::string &sourceURL,

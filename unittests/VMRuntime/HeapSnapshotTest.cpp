@@ -483,6 +483,30 @@ takeSnapshot(GC &gc, JSONFactory &factory, const char *file, int line) {
 #define PARSE_SNAPSHOT(...) parseSnapshot(__VA_ARGS__, __FILE__, __LINE__)
 #define TAKE_SNAPSHOT(...) takeSnapshot(__VA_ARGS__, __FILE__, __LINE__)
 
+TEST(HeapSnapshotTest, IDReversibleTest) {
+  // Make sure an ID <-> Object mapping is preserved across collections.
+  auto runtime = DummyRuntime::create(
+      getMetadataTable(),
+      GCConfig::Builder()
+          .withInitHeapSize(1024)
+          .withMaxHeapSize(1024 * 100)
+          .build());
+  DummyRuntime &rt = *runtime;
+  auto &gc = rt.getHeap();
+  GCScope gcScope(&rt);
+
+  // Make a dummy object.
+  auto obj = rt.makeHandle(DummyObject::create(rt));
+  const auto objID = gc.getObjectID(obj.get());
+  // Make sure the ID can be translated back to the object pointer.
+  EXPECT_EQ(obj.get(), gc.getObjectForID(objID));
+  // Run a collection to move things around.
+  gc.collect("test");
+  // Test that the ID is the same and it can be reversed.
+  EXPECT_EQ(objID, gc.getObjectID(obj.get()));
+  EXPECT_EQ(obj.get(), gc.getObjectForID(objID));
+}
+
 TEST(HeapSnapshotTest, HeaderTest) {
   JSONFactory::Allocator alloc;
   JSONFactory jsonFactory{alloc};

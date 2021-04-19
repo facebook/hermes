@@ -143,7 +143,7 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   // Extract the name.
   auto propRes = JSObject::getNamed_RJS(
       func, runtime, Predefined::getSymbolID(Predefined::name));
-  if (propRes == ExecutionStatus::EXCEPTION) {
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
@@ -151,39 +151,43 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   if (!(*propRes)->isUndefined()) {
     auto strRes =
         toString_RJS(runtime, runtime->makeHandle(std::move(*propRes)));
-    if (strRes == ExecutionStatus::EXCEPTION) {
+    if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     strRes->get()->appendUTF16String(strBuf);
   }
 
-  // Append the named parameters.
-  strBuf.append('(');
-
-  // Extract ".length".
-  auto lengthProp = Callable::extractOwnLengthProperty_RJS(func, runtime);
-  if (lengthProp == ExecutionStatus::EXCEPTION)
-    return ExecutionStatus::EXCEPTION;
-
-  // The value of the property is not guaranteed to be meaningful, so clamp it
-  // to [0..65535] for sanity.
-  uint32_t paramCount = (uint32_t)std::min(65535.0, std::max(0.0, *lengthProp));
-
-  for (uint32_t i = 0; i < paramCount; ++i) {
-    if (i != 0)
-      strBuf.append(", ");
-    char buf[16];
-    ::snprintf(buf, sizeof(buf), "a%u", i);
-    strBuf.append(buf);
-  }
-
-  // The rest of the body.
+  // Formal parameters and the rest of the body.
   if (vmisa<NativeFunction>(*func)) {
-    // Use [native code] here because we want to work with tools like
-    // Babel which detect the string [native code] and use it to alter
-    // behavior during the class transform.
-    strBuf.append(") { [native code] }");
+    // Use [native code] here because we want to work with tools like Babel
+    // which detect the string "[native code]" and use it to alter behavior
+    // during the class transform.
+    // Also print without synthesized formal parameters to avoid breaking
+    // heuristics that detect the string "() { [native code] }".
+    // \see https://github.com/facebook/hermes/issues/471
+    strBuf.append("() { [native code] }");
   } else {
+    // Append the synthesized formal parameters.
+    strBuf.append('(');
+
+    // Extract ".length".
+    auto lengthProp = Callable::extractOwnLengthProperty_RJS(func, runtime);
+    if (lengthProp == ExecutionStatus::EXCEPTION)
+      return ExecutionStatus::EXCEPTION;
+
+    // The value of the property is not guaranteed to be meaningful, so clamp it
+    // to [0..65535] for sanity.
+    uint32_t paramCount =
+        (uint32_t)std::min(65535.0, std::max(0.0, *lengthProp));
+
+    for (uint32_t i = 0; i < paramCount; ++i) {
+      if (i != 0)
+        strBuf.append(", ");
+      char buf[16];
+      ::snprintf(buf, sizeof(buf), "a%u", i);
+      strBuf.append(buf);
+    }
+
     // Avoid using the [native code] string to prevent extra wrapping overhead
     // in, e.g., Babel's class extension mechanism.
     strBuf.append(") { [bytecode] }");

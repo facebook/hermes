@@ -28,6 +28,7 @@
 #include "llvh/Support/raw_ostream.h"
 
 #include <inttypes.h>
+#include <clocale>
 #include <stdexcept>
 #include <system_error>
 
@@ -1020,6 +1021,77 @@ WeakRefMutex &GCBase::weakRefMutex() {
   return weakRefMutex_;
 }
 
+HeapSnapshot::NodeID GCBase::getObjectID(const void *cell) {
+  assert(cell && "Called getObjectID on a null pointer");
+  return idTracker_.getObjectID(pointerBase_->pointerToBasedNonNull(cell));
+}
+
+HeapSnapshot::NodeID GCBase::getObjectIDMustExist(const void *cell) {
+  assert(cell && "Called getObjectID on a null pointer");
+  return idTracker_.getObjectIDMustExist(
+      pointerBase_->pointerToBasedNonNull(cell));
+}
+
+HeapSnapshot::NodeID GCBase::getObjectID(BasedPointer cell) {
+  assert(cell && "Called getObjectID on a null pointer");
+  return idTracker_.getObjectID(cell);
+}
+
+HeapSnapshot::NodeID GCBase::getObjectID(const GCPointerBase &cell) {
+  return getObjectID(cell.getStorageType());
+}
+
+HeapSnapshot::NodeID GCBase::getObjectID(SymbolID sym) {
+  return idTracker_.getObjectID(sym);
+}
+
+HeapSnapshot::NodeID GCBase::getNativeID(const void *mem) {
+  assert(mem && "Called getNativeID on a null pointer");
+  return idTracker_.getNativeID(mem);
+}
+
+bool GCBase::hasObjectID(const void *cell) {
+  assert(cell && "Called hasObjectID on a null pointer");
+  return idTracker_.hasObjectID(pointerBase_->pointerToBasedNonNull(cell));
+}
+
+void GCBase::newAlloc(const void *ptr, uint32_t sz) {
+  allocationLocationTracker_.newAlloc(ptr, sz);
+  samplingAllocationTracker_.newAlloc(ptr, sz);
+}
+
+void GCBase::moveObject(
+    const void *oldPtr,
+    uint32_t oldSize,
+    const void *newPtr,
+    uint32_t newSize) {
+  idTracker_.moveObject(
+      pointerBase_->pointerToBasedNonNull(oldPtr),
+      pointerBase_->pointerToBasedNonNull(newPtr));
+  // Use newPtr here because the idTracker_ just moved it.
+  allocationLocationTracker_.updateSize(newPtr, oldSize, newSize);
+  samplingAllocationTracker_.updateSize(newPtr, oldSize, newSize);
+}
+
+void GCBase::untrackObject(const void *cell, uint32_t sz) {
+  assert(cell && "Called untrackObject on a null pointer");
+  // The allocation tracker needs to use the ID, so this needs to come
+  // before untrackObject.
+  getAllocationLocationTracker().freeAlloc(cell, sz);
+  getSamplingAllocationTracker().freeAlloc(cell, sz);
+  idTracker_.untrackObject(pointerBase_->pointerToBasedNonNull(cell));
+}
+
+#ifndef NDEBUG
+uint64_t GCBase::nextObjectID() {
+  return debugAllocationCounter_++;
+}
+#endif
+
+const GCExecTrace &GCBase::getGCExecTrace() const {
+  return execTrace_;
+}
+
 /*static*/
 double GCBase::clockDiffSeconds(TimePoint start, TimePoint end) {
   std::chrono::duration<double> elapsed = (end - start);
@@ -1091,6 +1163,14 @@ void GCBase::IDTracker::moveObject(
   // Have to erase first, because any other access can invalidate the iterator.
   objectIDMap_.erase(old);
   objectIDMap_[newLocation.getRawValue()] = oldID;
+  // Update the reverse map entry if it exists.
+  auto reverseMappingIt = idObjectMap_.find(oldID);
+  if (reverseMappingIt != idObjectMap_.end()) {
+    assert(
+        reverseMappingIt->second == oldLocation.getRawValue() &&
+        "The reverse mapping should have the old address");
+    reverseMappingIt->second = newLocation.getRawValue();
+  }
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -1156,9 +1236,148 @@ HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
   return numberRef = nextNumberID();
 }
 
+llvh::Optional<BasedPointer> GCBase::IDTracker::getObjectForID(
+    HeapSnapshot::NodeID id) {
+  std::lock_guard<Mutex> lk{mtx_};
+  auto it = idObjectMap_.find(id);
+  if (it != idObjectMap_.end()) {
+    return BasedPointer{it->second};
+  }
+  // Do an O(N) search through the map, then cache the result.
+  // This trades time for memory, since this is a rare operation.
+  for (const auto &p : objectIDMap_) {
+    if (p.second == id) {
+      // Cache the result so repeated lookups are fast.
+      // This cache is unlikely to grow that large, unless someone hovers over
+      // every single object in a snapshot in Chrome.
+      auto itAndDidInsert = idObjectMap_.try_emplace(p.second, p.first);
+      assert(itAndDidInsert.second);
+      return BasedPointer{itAndDidInsert.first->second};
+    }
+  }
+  // ID not found in the map, wasn't an object to begin with.
+  return llvh::None;
+}
+
 bool GCBase::IDTracker::hasNativeIDs() {
   std::lock_guard<Mutex> lk{mtx_};
   return !nativeIDMap_.empty();
+}
+
+bool GCBase::IDTracker::isTrackingIDs() const {
+  return !objectIDMap_.empty();
+}
+
+HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(BasedPointer cell) {
+  std::lock_guard<Mutex> lk{mtx_};
+  auto iter = objectIDMap_.find(cell.getRawValue());
+  if (iter != objectIDMap_.end()) {
+    return iter->second;
+  }
+  // Else, assume it is an object that needs to be tracked and give it a new ID.
+  const auto objID = nextObjectID();
+  objectIDMap_[cell.getRawValue()] = objID;
+  return objID;
+}
+
+bool GCBase::IDTracker::hasObjectID(BasedPointer cell) {
+  std::lock_guard<Mutex> lk{mtx_};
+  return objectIDMap_.count(cell.getRawValue());
+}
+
+HeapSnapshot::NodeID GCBase::IDTracker::getObjectIDMustExist(
+    BasedPointer cell) {
+  std::lock_guard<Mutex> lk{mtx_};
+  auto iter = objectIDMap_.find(cell.getRawValue());
+  assert(iter != objectIDMap_.end() && "cell must already have an ID");
+  return iter->second;
+}
+
+HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(SymbolID sym) {
+  std::lock_guard<Mutex> lk{mtx_};
+  auto iter = symbolIDMap_.find(sym.unsafeGetIndex());
+  if (iter != symbolIDMap_.end()) {
+    return iter->second;
+  }
+  // Else, assume it is a symbol that needs to be tracked and give it a new ID.
+  const auto symID = nextObjectID();
+  symbolIDMap_[sym.unsafeGetIndex()] = symID;
+  return symID;
+}
+
+HeapSnapshot::NodeID GCBase::IDTracker::getNativeID(const void *mem) {
+  std::lock_guard<Mutex> lk{mtx_};
+  auto iter = nativeIDMap_.find(mem);
+  if (iter != nativeIDMap_.end()) {
+    return iter->second;
+  }
+  // Else, assume it is a piece of native memory that needs to be tracked and
+  // give it a new ID.
+  const auto objID = nextNativeID();
+  nativeIDMap_[mem] = objID;
+  return objID;
+}
+
+void GCBase::IDTracker::untrackObject(BasedPointer cell) {
+  std::lock_guard<Mutex> lk{mtx_};
+  // It's ok if this didn't exist before, since erase will remove it anyway, and
+  // the default constructed zero ID won't be present in extraNativeIDs_.
+  const auto id = objectIDMap_[cell.getRawValue()];
+  objectIDMap_.erase(cell.getRawValue());
+  extraNativeIDs_.erase(id);
+  // Erase the reverse mapping entry if it exists.
+  idObjectMap_.erase(id);
+}
+
+void GCBase::IDTracker::untrackNative(const void *mem) {
+  std::lock_guard<Mutex> lk{mtx_};
+  nativeIDMap_.erase(mem);
+}
+
+void GCBase::IDTracker::untrackSymbol(uint32_t symIdx) {
+  std::lock_guard<Mutex> lk{mtx_};
+  symbolIDMap_.erase(symIdx);
+}
+
+HeapSnapshot::NodeID GCBase::IDTracker::lastID() const {
+  return lastID_;
+}
+
+HeapSnapshot::NodeID GCBase::IDTracker::nextObjectID() {
+  // This must be unique for most features that rely on it, check for overflow.
+  if (LLVM_UNLIKELY(
+          lastID_ >=
+          std::numeric_limits<HeapSnapshot::NodeID>::max() - kIDStep)) {
+    hermes_fatal("Ran out of object IDs");
+  }
+  return lastID_ += kIDStep;
+}
+
+HeapSnapshot::NodeID GCBase::IDTracker::nextNativeID() {
+  // Calling nextObjectID effectively allocates two new IDs, one even
+  // and one odd, returning the latter. For native objects, we want the former.
+  HeapSnapshot::NodeID id = nextObjectID();
+  assert(id > 0 && "nextObjectID should check for overflow");
+  return id - 1;
+}
+
+HeapSnapshot::NodeID GCBase::IDTracker::nextNumberID() {
+  // Numbers will all be considered JS memory, not native memory.
+  return nextObjectID();
+}
+
+GCBase::AllocationLocationTracker::AllocationLocationTracker(GCBase *gc)
+    : gc_(gc) {}
+
+bool GCBase::AllocationLocationTracker::isEnabled() const {
+  return enabled_;
+}
+
+StackTracesTreeNode *
+GCBase::AllocationLocationTracker::getStackTracesTreeNodeForAlloc(
+    HeapSnapshot::NodeID id) const {
+  auto mapIt = stackMap_.find(id);
+  return mapIt == stackMap_.end() ? nullptr : mapIt->second;
 }
 
 void GCBase::AllocationLocationTracker::enable(
@@ -1471,6 +1690,260 @@ llvh::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
   } else {
     return llvh::None;
   }
+}
+
+void *GCBase::getObjectForID(HeapSnapshot::NodeID id) {
+  if (llvh::Optional<BasedPointer> ptr = idTracker_.getObjectForID(id)) {
+    return pointerBase_->basedToPointer(ptr.getValue());
+  }
+  return nullptr;
+}
+
+void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
+  struct DiagnosticStat {
+    uint64_t count{0};
+    uint64_t size{0};
+    std::map<std::string, DiagnosticStat> breakdown;
+
+    static constexpr double getPercent(double numer, double denom) {
+      return denom != 0 ? 100 * numer / denom : 0.0;
+    }
+    void printBreakdown(size_t depth) const {
+      if (breakdown.empty())
+        return;
+
+      static const char *fmtBase =
+          "%-25s : %'10" PRIu64 " [%'10" PRIu64 " B | %4.1f%%]";
+      const std::string fmtStr = std::string(depth, '\t') + fmtBase;
+      size_t totalSize = 0;
+      size_t totalCount = 0;
+      for (const auto &stat : breakdown) {
+        hermesLog(
+            "HermesGC",
+            fmtStr.c_str(),
+            stat.first.c_str(),
+            stat.second.count,
+            stat.second.size,
+            getPercent(stat.second.size, size));
+        stat.second.printBreakdown(depth + 1);
+        totalSize += stat.second.size;
+        totalCount += stat.second.count;
+      }
+      if (size_t other = size - totalSize)
+        hermesLog(
+            "HermesGC",
+            fmtStr.c_str(),
+            "Other",
+            count - totalCount,
+            other,
+            getPercent(other, size));
+    }
+  };
+
+  struct HeapSizeDiagnostic {
+    uint64_t numCell = 0;
+    uint64_t numVariableSizedObject = 0;
+    DiagnosticStat stats;
+
+    void rootsDiagnosticFrame() const {
+      // Use this to print commas on large numbers
+      char *currentLocale = std::setlocale(LC_NUMERIC, nullptr);
+      std::setlocale(LC_NUMERIC, "");
+      hermesLog("HermesGC", "Root size: %'7" PRIu64 " B", stats.size);
+      stats.printBreakdown(1);
+      std::setlocale(LC_NUMERIC, currentLocale);
+    }
+
+    void sizeDiagnosticFrame() const {
+      // Use this to print commas on large numbers
+      char *currentLocale = std::setlocale(LC_NUMERIC, nullptr);
+      std::setlocale(LC_NUMERIC, "");
+
+      hermesLog("HermesGC", "Heap size: %'7" PRIu64 " B", stats.size);
+      hermesLog("HermesGC", "\tTotal cells: %'7" PRIu64, numCell);
+      hermesLog(
+          "HermesGC",
+          "\tNum variable size cells: %'7" PRIu64,
+          numVariableSizedObject);
+
+      stats.printBreakdown(1);
+
+      std::setlocale(LC_NUMERIC, currentLocale);
+    }
+  };
+
+  struct HeapSizeDiagnosticAcceptor final : public RootAndSlotAcceptor {
+    // Can't be static in a local class.
+    const int64_t HINT8_MIN = -(1 << 7);
+    const int64_t HINT8_MAX = (1 << 7) - 1;
+    const int64_t HINT16_MIN = -(1 << 15);
+    const int64_t HINT16_MAX = (1 << 15) - 1;
+    const int64_t HINT24_MIN = -(1 << 23);
+    const int64_t HINT24_MAX = (1 << 23) - 1;
+    const int64_t HINT32_MIN = -(1LL << 31);
+    const int64_t HINT32_MAX = (1LL << 31) - 1;
+
+    HeapSizeDiagnostic diagnostic;
+    PointerBase *pointerBase_;
+
+    HeapSizeDiagnosticAcceptor(PointerBase *pb) : pointerBase_{pb} {}
+
+    using SlotAcceptor::accept;
+
+    void accept(GCCell *&ptr) override {
+      diagnostic.stats.breakdown["Pointer"].count++;
+      diagnostic.stats.breakdown["Pointer"].size += sizeof(GCCell *);
+    }
+
+    void accept(GCPointerBase &ptr) override {
+      diagnostic.stats.breakdown["GCPointer"].count++;
+      diagnostic.stats.breakdown["GCPointer"].size += sizeof(GCPointerBase);
+    }
+
+    void accept(PinnedHermesValue &hv) override {
+      acceptHV(
+          hv,
+          diagnostic.stats.breakdown["HermesValue"],
+          sizeof(PinnedHermesValue));
+    }
+    void accept(GCHermesValue &hv) override {
+      acceptHV(
+          hv, diagnostic.stats.breakdown["HermesValue"], sizeof(GCHermesValue));
+    }
+    void accept(GCSmallHermesValue &shv) override {
+      acceptHV(
+          shv.toHV(pointerBase_),
+          diagnostic.stats.breakdown["SmallHermesValue"],
+          sizeof(GCSmallHermesValue));
+    }
+    void acceptHV(
+        const HermesValue &hv,
+        DiagnosticStat &diag,
+        const size_t hvBytes) {
+      diag.count++;
+      diag.size += hvBytes;
+      llvh::StringRef hvType;
+      if (hv.isBool()) {
+        hvType = "Bool";
+      } else if (hv.isNumber()) {
+        hvType = "Number";
+        double val = hv.getNumber();
+        double intpart;
+        llvh::StringRef numType = "Doubles";
+        if (std::modf(val, &intpart) == 0.0) {
+          if (val >= static_cast<double>(HINT8_MIN) &&
+              val <= static_cast<double>(HINT8_MAX)) {
+            numType = "Int8";
+          } else if (
+              val >= static_cast<double>(HINT16_MIN) &&
+              val <= static_cast<double>(HINT16_MAX)) {
+            numType = "Int16";
+          } else if (
+              val >= static_cast<double>(HINT24_MIN) &&
+              val <= static_cast<double>(HINT24_MAX)) {
+            numType = "Int24";
+          } else if (
+              val >= static_cast<double>(HINT32_MIN) &&
+              val <= static_cast<double>(HINT32_MAX)) {
+            numType = "Int32";
+          }
+        }
+        diag.breakdown["Number"].breakdown[numType].count++;
+        diag.breakdown["Number"].breakdown[numType].size += hvBytes;
+      } else if (hv.isString()) {
+        hvType = "StringPointer";
+      } else if (hv.isSymbol()) {
+        hvType = "Symbol";
+      } else if (hv.isObject()) {
+        hvType = "ObjectPointer";
+      } else if (hv.isNull()) {
+        hvType = "Null";
+      } else if (hv.isUndefined()) {
+        hvType = "Undefined";
+      } else if (hv.isEmpty()) {
+        hvType = "Empty";
+      } else if (hv.isNativeValue()) {
+        hvType = "NativeValue";
+      } else {
+        assert(false && "Should be no other hermes values");
+      }
+      diag.breakdown[hvType].count++;
+      diag.breakdown[hvType].size += hvBytes;
+    }
+
+    void accept(RootSymbolID sym) override {
+      acceptSym(sym);
+    }
+    void accept(GCSymbolID sym) override {
+      acceptSym(sym);
+    }
+    void acceptSym(SymbolID sym) {
+      diagnostic.stats.breakdown["Symbol"].count++;
+      diagnostic.stats.breakdown["Symbol"].size += sizeof(SymbolID);
+    }
+  };
+
+  hermesLog("HermesGC", "%s:", "Roots");
+  HeapSizeDiagnosticAcceptor rootAcceptor{getPointerBase()};
+  DroppingAcceptor<HeapSizeDiagnosticAcceptor> namedRootAcceptor{rootAcceptor};
+  markRoots(namedRootAcceptor, /* markLongLived */ true);
+  // For roots, compute the overall size and counts from the breakdown.
+  for (const auto &substat : rootAcceptor.diagnostic.stats.breakdown) {
+    rootAcceptor.diagnostic.stats.count += substat.second.count;
+    rootAcceptor.diagnostic.stats.size += substat.second.size;
+  }
+  rootAcceptor.diagnostic.rootsDiagnosticFrame();
+
+  hermesLog("HermesGC", "%s:", "Heap contents");
+  HeapSizeDiagnosticAcceptor acceptor{getPointerBase()};
+  forAllObjs([&acceptor, this](GCCell *cell) {
+    markCell(cell, acceptor);
+    acceptor.diagnostic.numCell++;
+    if (cell->isVariableSize()) {
+      acceptor.diagnostic.numVariableSizedObject++;
+      // In theory should use sizeof(VariableSizeRuntimeCell), but that includes
+      // padding sometimes. To be conservative, use the field it contains
+      // directly instead.
+      acceptor.diagnostic.stats.breakdown["Cell headers"].size +=
+          (sizeof(GCCell) + sizeof(uint32_t));
+    } else {
+      acceptor.diagnostic.stats.breakdown["Cell headers"].size +=
+          sizeof(GCCell);
+    }
+
+    // We include ExternalStringPrimitives because we're including external
+    // memory in the overall heap size. We do not include
+    // BufferedStringPrimitives because they just store a pointer to an
+    // ExternalStringPrimitive (which is already tracked).
+    auto *strprim = dyn_vmcast<StringPrimitive>(cell);
+    if (strprim && !isBufferedStringPrimitive(cell)) {
+      auto &stat = strprim->isASCII()
+          ? acceptor.diagnostic.stats.breakdown["StringPrimitive (ASCII)"]
+          : acceptor.diagnostic.stats.breakdown["StringPrimitive (UTF-16)"];
+      stat.count++;
+      const size_t len = strprim->getStringLength();
+      // If the string is UTF-16 then the length is in terms of 16 bit
+      // characters.
+      const size_t sz = strprim->isASCII() ? len : len * 2;
+      stat.size += sz;
+      if (len < 8) {
+        auto &subStat =
+            stat.breakdown
+                ["StringPrimitive (size " + oscompat::to_string(len) + ")"];
+        subStat.count++;
+        subStat.size += sz;
+      }
+    }
+  });
+
+  assert(
+      acceptor.diagnostic.stats.size == 0 &&
+      acceptor.diagnostic.stats.count == 0 &&
+      "Should not be setting overall stats during heap scan.");
+  for (const auto &substat : acceptor.diagnostic.stats.breakdown)
+    acceptor.diagnostic.stats.count += substat.second.count;
+  acceptor.diagnostic.stats.size = allocatedBytes;
+  acceptor.diagnostic.sizeDiagnosticFrame();
 }
 
 } // namespace vm
