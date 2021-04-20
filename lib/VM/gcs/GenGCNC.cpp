@@ -243,13 +243,11 @@ using uintegral = typename std::enable_if<
 /// If the number of binary digits Tdig in T is greater than the number of
 /// mantissa digits in a double (Ddig), returns the difference Tdig - Ddig.
 /// Otherwise return 0.
-/// TODO (T31421960): if/when we upgrade to C++14, we could use std::max for
-/// this instead of a ternary expression.
 template <typename T>
 constexpr int doubleDigitsDiff() {
-  return std::numeric_limits<T>::digits > std::numeric_limits<double>::digits
-      ? std::numeric_limits<T>::digits - std::numeric_limits<double>::digits
-      : 0;
+  return max(std::numeric_limits<T>::digits,
+             std::numeric_limits<double>::digits) -
+      std::numeric_limits<double>::digits;
 }
 
 /// Returns the largest value of the given unsigned integral type that is

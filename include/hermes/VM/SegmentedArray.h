@@ -434,17 +434,15 @@ class SegmentedArray final
   /// \return the number of slots that are needed to hold at least the requested
   /// capacity.
   static constexpr SegmentNumber numSlotsForCapacity(size_type capacity) {
-    // TODO(T31421960): Use if statements and local variables to clean this up.
-    return capacity <= kValueToSegmentThreshold
-        ? capacity
-        :
-        // Enough segments to hold the capacity without inline storage.
-        (llvh::alignTo<Segment::kMaxLength>(
-             capacity - kValueToSegmentThreshold) /
-         Segment::kMaxLength) +
-            // The slots for inline storage plus the slots need to hold the
-            // number of segments that can hold the capacity.
-            kValueToSegmentThreshold;
+    if (capacity <= kValueToSegmentThreshold)
+      return capacity;
+    // Enough segments to hold the capacity excluding inline storage.
+    const size_t numSegments = llvh::alignTo<Segment::kMaxLength>(
+                                   capacity - kValueToSegmentThreshold) /
+        Segment::kMaxLength;
+    // The slots for inline storage plus the slots need to hold the
+    // number of segments that can hold the capacity.
+    return kValueToSegmentThreshold + numSegments;
   }
 
   /// Given a TotalIndex \p index, \returns the index of the segment within the
@@ -617,19 +615,16 @@ class SegmentedArray final
 };
 
 constexpr SegmentedArray::size_type SegmentedArray::maxElements() {
-  // TODO(T31421960): Use local variables and std::min to clean this up.
-  return (maxNumSegments() <= maxNumSegmentsWithoutOverflow()
-              ? maxNumSegments()
-              : maxNumSegmentsWithoutOverflow()) *
-      Segment::kMaxLength +
-      kValueToSegmentThreshold;
+  return maxNumSegments() * Segment::kMaxLength + kValueToSegmentThreshold;
 }
 
 constexpr SegmentedArray::SegmentNumber SegmentedArray::maxNumSegments() {
-  return (
-      ((GC::maxAllocationSize() - allocationSizeForCapacity(0)) /
-       sizeof(GCHermesValue)) -
-      kValueToSegmentThreshold);
+  const SegmentedArray::SegmentNumber maxAllocSlots =
+      (GC::maxAllocationSize() - allocationSizeForCapacity(0)) /
+      sizeof(GCHermesValue);
+  const SegmentedArray::SegmentNumber maxAllocSegments =
+      maxAllocSlots - kValueToSegmentThreshold;
+  return min(maxAllocSegments, maxNumSegmentsWithoutOverflow());
 }
 
 constexpr SegmentedArray::SegmentNumber
