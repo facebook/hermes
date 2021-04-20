@@ -54,8 +54,7 @@ namespace vm {
 /// into which GCCells are bump allocated.
 class AlignedHeapSegment {
  public:
-  explicit AlignedHeapSegment(AlignedStorage storage)
-      : storage_(std::move(storage)) {}
+  explicit AlignedHeapSegment(AlignedStorage storage);
 
   /// Construct a null AlignedHeapSegment (one that does not own memory).
   AlignedHeapSegment() = default;

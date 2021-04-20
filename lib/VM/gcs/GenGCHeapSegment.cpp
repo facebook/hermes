@@ -21,16 +21,7 @@ namespace vm {
 GenGCHeapSegment::GenGCHeapSegment(
     AlignedStorage &&storage,
     GCGeneration *owner)
-    : AlignedHeapSegment(std::move(storage)), generation_(owner) {
-  // Storage end must be page-aligned so that markUnused below stays in segment.
-  assert(
-      reinterpret_cast<uintptr_t>(hiLim()) % oscompat::page_size() == 0 &&
-      "storage end must be page-aligned");
-  if (*this) {
-    new (contents()) Contents();
-    contents()->protectGuardPage(oscompat::ProtectMode::None);
-  }
-}
+    : AlignedHeapSegment(std::move(storage)), generation_(owner) {}
 
 void GenGCHeapSegment::creditExternalMemory(uint32_t size) {
   // Decrease effectiveEnd_ by size, but not below level_.  Be careful of
