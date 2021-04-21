@@ -20,14 +20,6 @@ namespace hermes {
 namespace parser {
 namespace detail {
 
-/// Declare a RAII recursion tracker. Check whether the recursion limit has
-/// been exceeded, and if so generate an error and return an empty
-/// llvh::Optional<>.
-#define CHECK_RECURSION                \
-  TrackRecursion trackRecursion{this}; \
-  if (recursionDepthCheck())           \
-    return llvh::None;
-
 JSParserImpl::JSParserImpl(
     Context &context,
     std::unique_ptr<llvh::MemoryBuffer> input)
@@ -97,6 +89,7 @@ void JSParserImpl::initializeIdentifiers() {
   esIdent_ = lexer_.getIdentifier("ES");
   commonJSIdent_ = lexer_.getIdentifier("CommonJS");
   mixinsIdent_ = lexer_.getIdentifier("mixins");
+  thisIdent_ = lexer_.getIdentifier("this");
 
   anyIdent_ = lexer_.getIdentifier("any");
   mixedIdent_ = lexer_.getIdentifier("mixed");
@@ -532,6 +525,34 @@ bool JSParserImpl::parseFormalParameters(
   assert(check(TokenKind::l_paren) && "FormalParameters must start with '('");
   // (
   SMLoc lparenLoc = advance().Start;
+
+#if HERMES_PARSE_FLOW
+  // The first parameter can be 'this' in Flow mode.
+  if (context_.getParseFlow() && check(TokenKind::rw_this)) {
+    auto *name = tok_->getResWordIdentifier();
+    SMLoc thisParamStart = advance().Start;
+
+    SMLoc annotStart = tok_->getStartLoc();
+    if (!eat(
+            TokenKind::colon,
+            JSLexer::GrammarContext::Flow,
+            "in 'this' type annotation",
+            "start of 'this'",
+            thisParamStart))
+      return false;
+
+    auto optType = parseTypeAnnotation(annotStart);
+    if (!optType)
+      return false;
+    ESTree::Node *type = *optType;
+    paramList.push_back(*setLocation(
+        thisParamStart,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::IdentifierNode(name, type, false)));
+
+    checkAndEat(TokenKind::comma);
+  }
+#endif
 
   while (!check(TokenKind::r_paren)) {
     if (check(TokenKind::dotdotdot)) {
@@ -3189,6 +3210,9 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
   SMLoc puncLoc = tok_->getStartLoc();
   bool optional = checkAndEat(TokenKind::questiondot);
   if (checkAndEat(TokenKind::l_square)) {
+    // Parsing another Expression directly without going through
+    // PrimaryExpression. This can overflow, so check.
+    CHECK_RECURSION;
     auto propExpr = parseExpression();
     if (!propExpr)
       return None;
@@ -4643,9 +4667,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
 bool JSParserImpl::reparseArrowParameters(
     ESTree::Node *node,
     ESTree::NodeList &paramList,
-    bool &reparsedAsync) {
-  reparsedAsync = false;
-
+    bool &isAsync) {
   // Empty argument list "()".
   if (node->getParens() == 0 && isa<ESTree::CoverEmptyArgsNode>(node))
     return true;
@@ -4660,28 +4682,39 @@ bool JSParserImpl::reparseArrowParameters(
         TokenKind::identifier);
   }
 
-  if (node->getParens() != 1 && !isa<ESTree::CallExpressionNode>(node)) {
-    error(node->getSourceRange(), "invalid arrow function parameter list");
-    return false;
-  }
-
   ESTree::NodeList nodeList{};
 
-  if (auto *seqNode = dyn_cast<ESTree::SequenceExpressionNode>(node)) {
-    nodeList = std::move(seqNode->_expressions);
-  } else if (auto *callNode = dyn_cast<ESTree::CallExpressionNode>(node)) {
+  if (auto *callNode = dyn_cast<ESTree::CallExpressionNode>(node)) {
     // Async function parameters look like call expressions. For example:
     // async(x,y)
-    // Set `reparsedAsync = true` to indicate that this was async.
-    nodeList = std::move(callNode->_arguments);
-    reparsedAsync = true;
+    // It must have no surrounding parens and the name must be 'async'.
+    // It must also not already be `async`, because the CallExpression
+    // determines whether it is `async`.
+    // Set `isAsync = true` to indicate that this was async.
+    auto *callee = dyn_cast<ESTree::IdentifierNode>(callNode->_callee);
+    if (!isAsync && callNode->getParens() == 0 && callee &&
+        callee->_name == asyncIdent_) {
+      nodeList = std::move(callNode->_arguments);
+      isAsync = true;
+    } else {
+      error(node->getSourceRange(), "invalid arrow function parameter list");
+      return false;
+    }
   } else {
-    node->clearParens();
-    nodeList.push_back(*node);
+    if (node->getParens() != 1) {
+      error(node->getSourceRange(), "invalid arrow function parameter list");
+      return false;
+    }
+
+    if (auto *seqNode = dyn_cast<ESTree::SequenceExpressionNode>(node)) {
+      nodeList = std::move(seqNode->_expressions);
+    } else {
+      node->clearParens();
+      nodeList.push_back(*node);
+    }
   }
 
-  llvh::SaveAndRestore<bool> oldParamAwait(
-      paramAwait_, paramAwait_ || reparsedAsync);
+  llvh::SaveAndRestore<bool> oldParamAwait(paramAwait_, paramAwait_ || isAsync);
 
   // If the node has 0 parentheses, return true, otherwise print an error and
   // return false.
@@ -4789,9 +4822,9 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
           startLoc))
     return None;
 
-  bool reparsedAsync;
+  bool isAsync = forceAsync;
   ESTree::NodeList paramList;
-  if (!reparseArrowParameters(leftExpr, paramList, reparsedAsync))
+  if (!reparseArrowParameters(leftExpr, paramList, isAsync))
     return None;
 
   SaveStrictMode saveStrictMode{this};
@@ -4799,8 +4832,7 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
   bool expression;
 
   llvh::SaveAndRestore<bool> oldParamYield(paramYield_, false);
-  llvh::SaveAndRestore<bool> bodyParamAwait(
-      paramAwait_, forceAsync || reparsedAsync);
+  llvh::SaveAndRestore<bool> bodyParamAwait(paramAwait_, isAsync);
   if (check(TokenKind::l_brace)) {
     auto optBody = parseFunctionBody(Param{}, true, JSLexer::AllowDiv, true);
     if (!optBody)
@@ -4827,7 +4859,7 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
       returnType,
       predicate,
       expression,
-      forceAsync || reparsedAsync);
+      isAsync);
 
   arrow->strictness = ESTree::makeStrictness(isStrictMode());
   return setLocation(startLoc, getPrevTokenEndLoc(), arrow);
@@ -4843,7 +4875,21 @@ Optional<ESTree::Node *> JSParserImpl::reparseAssignmentPattern(
     if (auto *OEN = dyn_cast<ESTree::ObjectExpressionNode>(node)) {
       return reparseObjectAssignmentPattern(OEN, inDecl);
     }
-    if (isa<ESTree::IdentifierNode>(node) || isa<ESTree::PatternNode>(node)) {
+    if (auto *ident = dyn_cast<ESTree::IdentifierNode>(node)) {
+      // Validate in this function to avoid validating in each branch of
+      // the conditions within the other reparse functions.
+      // Validation does not prevent progress of the parse here, so we can
+      // return node regardless of whether we failed to validate.
+      validateBindingIdentifier(
+          Param{},
+          ident->getSourceRange(),
+          ident->_name,
+          TokenKind::identifier);
+      return node;
+    }
+    if (isa<ESTree::PatternNode>(node)) {
+      // Pattern nodes validate their binding identifiers when they are
+      // initially parsed, no work to do here.
       return node;
     }
 #if HERMES_PARSE_FLOW
@@ -5008,16 +5054,6 @@ Optional<ESTree::Node *> JSParserImpl::reparseObjectAssignmentPattern(
         continue;
       }
 
-      if (auto *key = dyn_cast<ESTree::IdentifierNode>(propNode->_key)) {
-        if (!validateBindingIdentifier(
-                Param{},
-                key->getSourceRange(),
-                key->_name,
-                TokenKind::identifier)) {
-          return None;
-        }
-      }
-
       ESTree::Node *value = propNode->_value;
       ESTree::Node *init = nullptr;
       SMLoc endLoc = value->getEndLoc();
@@ -5166,11 +5202,11 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
   }
 
   SMLoc startLoc = tok_->getStartLoc();
-  bool isAsync = false;
+  bool forceAsync = false;
   if (check(asyncIdent_)) {
     OptValue<TokenKind> optNext = lexer_.lookahead1(TokenKind::identifier);
     if (optNext.hasValue() && *optNext == TokenKind::identifier) {
-      isAsync = true;
+      forceAsync = true;
     }
 #if HERMES_PARSE_FLOW
     if (context_.getParseFlow() && optNext.hasValue() &&
@@ -5190,8 +5226,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
     JSLexer::SavePoint savePoint{&lexer_};
     // Suppress messages from the parser while still displaying lexer
     // messages.
-    SourceErrorManager::SaveAndSuppressMessages suppress{
-        &sm_, Subsystem::Parser};
+    CollectMessagesRAII collect{&sm_, true};
     // Do as the flow parser does due to JSX ambiguities.
     // First we try and parse as an assignment expression disallowing
     // typed arrow functions. If that fails, then try again while allowing
@@ -5200,6 +5235,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
         param, AllowTypedArrowFunction::No, CoverTypedParameters::No, nullptr);
     if (optAssign) {
       // That worked, so just return it directly.
+      collect.setDiscardMessages(false);
       return *optAssign;
     } else {
       // Consume the type parameters and try again.
@@ -5245,10 +5281,21 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
          isa<ESTree::CoverEmptyArgsNode>(*optLeftExpr)) &&
         check(TokenKind::colon)) {
       JSLexer::SavePoint savePoint{&lexer_};
-      // Suppress messages from the parser while still displaying lexer
-      // messages.
-      SourceErrorManager::SaveAndSuppressMessages suppress{
-          &sm_, Subsystem::Parser};
+      // Defer our decision on whether to show or suppress messages for this
+      // next section.
+      // If we are unsuccessful during the parse, it can mean that we need to
+      // start parsing JSX children inside tags, instead of function type
+      // parameters. We need to suppress lexer messages because the lexing rules
+      // inside JSX are quite different from JS/Flow.
+      // For example:
+      // x ? (1) : <tag>#{foo}</tag>;
+      //         ^
+      // and
+      // x ? (1) : <tag>"</tag>;
+      //         ^
+      // must be able to handle the lexer errors that would occur if we lexed
+      // the inside of the JSX tags as JS.
+      CollectMessagesRAII collect{&sm_, true};
       SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
       bool startsWithPredicate = check(checksIdent_);
       auto optType = startsWithPredicate
@@ -5261,11 +5308,15 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
           assert(
               !startsWithPredicate && "no returnType if startsWithPredicate");
           // Done parsing the return type and predicate.
+          // Successful parse, show any messages that the lexer emitted.
+          collect.setDiscardMessages(false);
         } else if (check(checksIdent_)) {
           auto optPred = parsePredicate();
           if (optPred && check(TokenKind::equalgreater)) {
             // Done parsing the return type and predicate.
             predicate = *optPred;
+            // Successful parse, show any messages that the lexer emitted.
+            collect.setDiscardMessages(false);
           } else {
             savePoint.restore();
           }
@@ -5293,7 +5344,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
         predicate,
         typeParams ? typeParams->getStartLoc() : startLoc,
         allowTypedArrowFunction,
-        isAsync);
+        forceAsync);
   }
 
 #if HERMES_PARSE_FLOW

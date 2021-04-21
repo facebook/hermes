@@ -88,7 +88,7 @@ OldGen::OldGen(GenGC *gc, Size sz, bool releaseUnused)
       AlignedStorage::create(gc_->storageProvider_.get(), kSegmentName);
   if (!result) {
     // Do not invoke oom() from here because the heap is not fully initialised.
-    hermes_fatal("Failed to initialize the old gen");
+    hermes_fatal("Failed to initialize the old gen", result.getError());
   }
   exchangeActiveSegment({std::move(result.get()), this});
 #ifdef HERMESVM_COMPRESSED_POINTERS
@@ -336,6 +336,11 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
         accept(hv.getPointer(), &hv);
     }
 
+    void accept(GCSmallHermesValue &hv) override {
+      if (hv.isPointer())
+        accept(hv.getPointer(gc.getPointerBase()), &hv);
+    }
+
     void accept(GCSymbolID hv) override {}
   };
 
@@ -362,6 +367,11 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
       gc.youngGen_.ensureReferentCopied(&ptr);
     }
     void acceptHV(HermesValue &hv) {
+      if (hv.isPointer()) {
+        gc.youngGen_.ensureReferentCopied(&hv);
+      }
+    }
+    void acceptSHV(SmallHermesValue &hv) {
       if (hv.isPointer()) {
         gc.youngGen_.ensureReferentCopied(&hv);
       }
@@ -1018,3 +1028,4 @@ void OldGen::updateCrashManagerHeapExtents(
 
 } // namespace vm
 } // namespace hermes
+#undef DEBUG_TYPE

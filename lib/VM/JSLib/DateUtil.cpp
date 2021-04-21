@@ -840,6 +840,7 @@ static double parseISODate(StringView u16str) {
       if (!scanInt(it, end, tzm)) {
         return nan;
       }
+      tzm *= sign;
     }
   }
 

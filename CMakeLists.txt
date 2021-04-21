@@ -95,7 +95,7 @@ set(HERMES_IS_ANDROID OFF CACHE BOOL
 set(HERMES_IS_MOBILE_BUILD ${HERMES_IS_ANDROID} CACHE BOOL
   "Building for a mobile device")
 
-set(HERMESVM_GCKIND NONCONTIG_GENERATIONAL
+set(HERMESVM_GCKIND HADES
   CACHE STRING
   "HermesVM GC type: either NONCONTIG_GENERATIONAL, MALLOC, or HADES")
 
@@ -127,11 +127,14 @@ set(HERMESVM_ALLOW_COMPRESSED_POINTERS ON CACHE BOOL
 set(HERMESVM_ALLOW_HUGE_PAGES OFF CACHE BOOL
         "Enable huge pages to back the GC managed heap. Only useful on Linux.")
 
+# Note that smaller heap segments will lower the maximum number of properties
+# that can be stored in an object.
+set(HERMESVM_HEAP_SEGMENT_SIZE_KB 4096
+        CACHE STRING
+        "Size of segments in the GC managed heap in KB. Must be a power of 2.")
+
 set(HERMESVM_ALLOW_CONCURRENT_GC ON CACHE BOOL
         "Enable concurrency in the GC for 64-bit builds.")
-
-set(HERMESVM_API_TRACE OFF CACHE BOOL
-  "Enable tracing interactions via the API")
 
 set(HERMESVM_API_TRACE_ANDROID_REPLAY OFF CACHE BOOL
   "Simulate Android config on Linux in API tracing.")
@@ -139,6 +142,9 @@ set(HERMESVM_API_TRACE_ANDROID_REPLAY OFF CACHE BOOL
 # Hermes VM Handle sanitization (moving the heap after every alloc)
 set(HERMESVM_SANITIZE_HANDLES OFF CACHE BOOL
   "Enable Handle sanitization")
+
+set(HERMESVM_CRASH_TRACE OFF CACHE BOOL
+  "Enable recording of instructions for crash debugging depending on VMExperiments")
 
 # Enable Address Sanitizer
 set(HERMES_ENABLE_ADDRESS_SANITIZER OFF CACHE BOOL
@@ -155,6 +161,9 @@ set(HERMES_ENABLE_THREAD_SANITIZER OFF CACHE BOOL
 # Enable Trace PC Guard
 set(HERMES_ENABLE_TRACE_PC_GUARD OFF CACHE BOOL
   "Enable -fsanitize-coverage=trace-pc-guard")
+
+set(HERMES_ENABLE_CODE_COVERAGE OFF CACHE BOOL
+  "Enable code coverage to be generated when running binaries")
 
 set(HERMES_ENABLE_LIBFUZZER OFF CACHE BOOL
   "Enable libfuzzer")
@@ -205,12 +214,6 @@ set(HERMESVM_EXCEPTION_ON_OOM OFF CACHE BOOL
 set(HERMESVM_PLATFORM_LOGGING OFF CACHE BOOL
     "hermesLog(...) is enabled, using the platform's logging mechanism")
 
-set(HERMESVM_JIT OFF CACHE BOOL
-  "Enable the JIT")
-
-set(HERMESVM_JIT_DISASSEMBLER OFF CACHE BOOL
-  "Enable the JIT disassembler")
-
 set(HERMES_USE_FLOWPARSER OFF CACHE BOOL
   "Use libflowparser for parsing es6")
 
@@ -230,7 +233,7 @@ set(ANDROID_LINUX_PERF_PATH ""
 set(HERMES_MSVC_MP ON CACHE STRING
   "Enable /MP in MSVC for parallel builds")
 
-set(EMSCRIPTEN_FASTCOMP ON CACHE BOOL
+set(EMSCRIPTEN_FASTCOMP OFF CACHE BOOL
   "Emscripten is using the fastcomp backend instead of the LLVM one")
 
 set(HERMES_ENABLE_INTL OFF CACHE BOOL
@@ -343,17 +346,18 @@ endif()
 if(HERMESVM_ALLOW_HUGE_PAGES)
     add_definitions(-DHERMESVM_ALLOW_HUGE_PAGES)
 endif()
+add_definitions(-DHERMESVM_HEAP_SEGMENT_SIZE_KB=${HERMESVM_HEAP_SEGMENT_SIZE_KB})
 if(HERMESVM_ALLOW_CONCURRENT_GC)
     add_definitions(-DHERMESVM_ALLOW_CONCURRENT_GC)
-endif()
-if(HERMESVM_API_TRACE)
-    add_definitions(-DHERMESVM_API_TRACE)
 endif()
 if(HERMESVM_API_TRACE_ANDROID_REPLAY)
     add_definitions(-DHERMESVM_API_TRACE_ANDROID_REPLAY)
 endif()
 if(HERMESVM_SANITIZE_HANDLES)
     add_definitions(-DHERMESVM_SANITIZE_HANDLES)
+endif()
+if(HERMESVM_CRASH_TRACE)
+    add_definitions(-DHERMESVM_CRASH_TRACE=1)
 endif()
 if (HERMES_ENABLE_ADDRESS_SANITIZER)
     append("-fsanitize=address" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
@@ -371,20 +375,22 @@ endif()
 if (HERMES_ENABLE_TRACE_PC_GUARD)
     append("-fsanitize-coverage=trace-pc-guard" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
 endif()
+if (HERMES_ENABLE_CODE_COVERAGE)
+    if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+        append("-fprofile-instr-generate -fcoverage-mapping" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
+    else()
+        message(FATAL_ERROR "Code coverage flags not defined for this compiler: ${CMAKE_CXX_COMPILER_ID}")
+    endif()
+endif()
 if(HERMES_FACEBOOK_BUILD)
     add_definitions(-DHERMES_FACEBOOK_BUILD)
 endif()
 if(HERMESVM_EXCEPTION_ON_OOM)
+    set(HERMES_ENABLE_EH ON)
     add_definitions(-DHERMESVM_EXCEPTION_ON_OOM)
 endif()
 if(HERMESVM_PLATFORM_LOGGING)
     add_definitions(-DHERMESVM_PLATFORM_LOGGING)
-endif()
-if(HERMESVM_JIT)
-  add_definitions(-DHERMESVM_JIT)
-endif()
-if(HERMESVM_JIT_DISASSEMBLER)
-  add_definitions(-DHERMESVM_JIT_DISASSEMBLER)
 endif()
 if (NOT (ANDROID_LINUX_PERF_PATH STREQUAL ""))
   add_definitions(-DANDROID_LINUX_PERF_PATH="${ANDROID_LINUX_PERF_PATH}")
@@ -425,16 +431,6 @@ if (NOT (GENERATOR_IS_MULTI_CONFIG OR CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_C
     # and not GCC
     # GCC currently fails to link Hermes with LTO (see t16557748)
     option(HERMES_ENABLE_LTO "Build Hermes with LTO" ON)
-endif()
-
-if (CMAKE_COMPILER_IS_GNUCXX)
-  # Suppress uninteresting warnings about initializing ArrayRef from initializer lists.
-  check_cxx_compiler_flag("-Winit-list-lifetime" INIT_LIST_LIFETIME_FLAG)
-  append_if(INIT_LIST_LIFETIME_FLAG "-Wno-init-list-lifetime" CMAKE_CXX_FLAGS)
-  # Suppress the redundant move warnings in GCC 9, because it leads to suboptimal
-  # recommendations for older compilers that do not implement C++ Core Issue 1579.
-  check_cxx_compiler_flag("-Wredundant-move" REDUNDANT_MOVE_FLAG)
-  append_if(REDUNDANT_MOVE_FLAG "-Wno-redundant-move" CMAKE_CXX_FLAGS)
 endif()
 
 if (GCC_COMPATIBLE)
@@ -569,7 +565,7 @@ if (HERMES_ENABLE_DEBUGGER)
   add_definitions(-DHERMES_ENABLE_DEBUGGER)
 endif()
 
-set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++11")
+set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++14")
 
 set(HERMES_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(HERMES_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
@@ -615,7 +611,7 @@ if(HERMES_IS_ANDROID)
   set(OPTIONAL_JNI_ONLOAD "-Wl,--undefined=JNI_OnLoad")
 endif()
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -669,13 +665,16 @@ if(HERMES_ENABLE_TEST_SUITE)
     dependency-extractor
     )
 
+  set(coverage_directory "")
+  if (HERMES_ENABLE_CODE_COVERAGE)
+    set(coverage_directory ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/coverage)
+  endif()
+
   set(HERMES_LIT_TEST_PARAMS
     test_exec_root=${HERMES_BINARY_DIR}/test
     unittests_dir=${HERMES_BINARY_DIR}/unittests
     debugger_enabled=${HERMES_ENABLE_DEBUGGER}
     use_flowparser=${HERMES_USE_FLOWPARSER}
-    jit_enabled=${HERMESVM_JIT}
-    jit_disassembler_enabled=${HERMESVM_JIT_DISASSEMBLER}
     hbc_deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
     dependency_extractor=${HERMES_TOOLS_OUTPUT_DIR}/dependency-extractor
     FileCheck=${HERMES_TOOLS_OUTPUT_DIR}//FileCheck
@@ -691,6 +690,7 @@ if(HERMES_ENABLE_TEST_SUITE)
     profiler=${HERMES_PROFILER_MODE_IN_LIT_TEST}
     gc=${HERMESVM_GCKIND}
     ubsan=${HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER}
+    coverage=${coverage_directory}
     )
 
   set(LLVH_LIT_ARGS "-sv")

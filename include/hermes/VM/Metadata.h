@@ -58,7 +58,7 @@ struct Metadata final {
   /// The information about an array for an object.
   struct ArrayData {
     /// Which type of element the array holds.
-    enum class ArrayType { Pointer, HermesValue, Symbol };
+    enum class ArrayType { Pointer, HermesValue, SmallHermesValue, Symbol };
     ArrayType type;
     /// The offset of where the array starts.
     offset_t startOffset;
@@ -103,6 +103,8 @@ struct Metadata final {
     /// Adds a \c HermesValue field.
     void addField(const GCHermesValue *fieldLocation);
     void addField(const char *name, const GCHermesValue *fieldLocation);
+    void addField(const GCSmallHermesValue *fieldLocation);
+    void addField(const char *name, const GCSmallHermesValue *fieldLocation);
     /// Adds a \c Symbol field.
     void addField(const GCSymbolID *fieldLocation);
     void addField(const char *name, const GCSymbolID *fieldLocation);
@@ -132,6 +134,31 @@ struct Metadata final {
       addArray(
           name,
           ArrayData::ArrayType::HermesValue,
+          startLocation,
+          lengthLocation,
+          stride);
+    }
+
+    void addArray(
+        const GCSmallHermesValue *startLocation,
+        const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
+        std::size_t stride) {
+      addArray(
+          nullptr,
+          ArrayData::ArrayType::SmallHermesValue,
+          startLocation,
+          lengthLocation,
+          stride);
+    }
+
+    void addArray(
+        const char *name,
+        const GCSmallHermesValue *startLocation,
+        const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
+        std::size_t stride) {
+      addArray(
+          name,
+          ArrayData::ArrayType::SmallHermesValue,
           startLocation,
           lengthLocation,
           stride);
@@ -224,6 +251,7 @@ struct Metadata final {
     /// A list of offsets and within the object to its field type and name.
     std::map<offset_t, std::pair<const char *, size_t>> pointers_;
     std::map<offset_t, std::pair<const char *, size_t>> values_;
+    std::map<offset_t, std::pair<const char *, size_t>> smallValues_;
     std::map<offset_t, std::pair<const char *, size_t>> symbols_;
 #ifndef NDEBUG
     /// True if [offset, offset + size) overlaps any previously added field.
@@ -251,6 +279,7 @@ struct Metadata final {
   /// A mapping from an offset to a name for that field
   Fields pointers_;
   Fields values_;
+  Fields smallValues_;
   Fields symbols_;
 
   /// The optional array for this object to hold.

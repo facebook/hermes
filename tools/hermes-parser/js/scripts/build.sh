@@ -10,11 +10,6 @@ PACKAGES=(hermes-parser hermes-eslint)
 
 # Yarn install all packages
 yarn install
-for package in "${PACKAGES[@]}"; do
-  pushd "$THIS_DIR/../$package" || exit
-  yarn install
-  popd || exit
-done
 
 # Use internal FB build or pass path to WASM parser as first command line argument
 FB_BUILD_WASM_PARSER="$THIS_DIR/facebook/buildWasmParser.sh"

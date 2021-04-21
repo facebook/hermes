@@ -71,7 +71,7 @@ class Regex {
   template <typename NodeType, typename... Args>
   NodeType *appendNode(Args &&...args) {
     std::unique_ptr<NodeType> node =
-        hermes::make_unique<NodeType>(std::forward<Args>(args)...);
+        std::make_unique<NodeType>(std::forward<Args>(args)...);
     NodeType *nodePtr = node.get();
     nodeHolder_.push_back(std::move(node));
     nodes_.push_back(nodePtr);
@@ -381,7 +381,7 @@ void Regex<Traits>::pushLookaround(
   if (!forwards) {
     Node::reverseNodeList(exp);
   }
-  nodeHolder_.push_back(hermes::make_unique<GoalNode>());
+  nodeHolder_.push_back(std::make_unique<GoalNode>());
   exp.push_back(nodeHolder_.back().get());
   appendNode<LookaroundNode>(
       std::move(exp), mexpBegin, mexpEnd, invert, forwards);

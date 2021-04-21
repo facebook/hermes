@@ -28,6 +28,7 @@
 #include "hermes/VM/SerializeHeader.h"
 #include "hermes/VM/SlotAcceptor.h"
 #include "hermes/VM/SlotVisitor.h"
+#include "hermes/VM/SmallHermesValue.h"
 #include "hermes/VM/StackTracesTree-NoRuntime.h"
 #include "hermes/VM/StorageProvider.h"
 #include "hermes/VM/StringRefUtils.h"
@@ -191,8 +192,7 @@ class WeakRefSlot {
 
   /// Return the object as a HermesValue.
   const HermesValue value() const {
-    assert(
-        (state() == Unmarked || state() == Marked) && "unclean GC mark state");
+    // Cannot check state() here because it can race with marking code.
     assert(hasValue() && "tried to access collected referent");
     return value_;
   }
@@ -207,13 +207,13 @@ class WeakRefSlot {
 
   /// Return the pointer to a GCCell, whether or not this slot is marked.
   void *getPointer() const {
-    assert(state() != Free && "use nextFree instead");
+    // Cannot check state() here because it can race with marking code.
     return value_.getPointer();
   }
 
   /// Update the stored pointer (because the object moved).
   void setPointer(void *newPtr) {
-    assert(state() != Free && "tried to update unallocated slot");
+    // Cannot check state() here because it can race with marking code.
     value_ = value_.updatePointer(newPtr);
   }
 
@@ -246,6 +246,8 @@ class WeakRefSlot {
   }
 
   WeakRefSlot *nextFree() const {
+    // nextFree is only called during a STW pause, so it's fine to access both
+    // state and value here.
     assert(state() == Free);
     return value_.getNativePointer<WeakRefSlot>();
   }
@@ -424,6 +426,18 @@ class GCBase {
     /// beginning of every GC.
     virtual void markWeakRoots(WeakRootAcceptor &weakAcceptor) = 0;
 
+    /// Callback that might be invoked by the GC before it completes marking.
+    /// Not all GCs will call this. It should be used to mark any roots that
+    /// might change without executing proper read and write barriers on the GC.
+    /// An example would be something that skipped weak ref read barriers in a
+    /// signal handler. If they aren't marked, they would be collected as
+    /// garbage.
+    /// While it is possible to implement this just as forwarding to
+    /// \c markRoots, to be faster it should try to mark only things that would
+    /// not have been properly doing barriers.
+    virtual void markRootsForCompleteMarking(
+        RootAndSlotAcceptorWithNames &acceptor) = 0;
+
     /// \return one higher than the largest symbol in the identifier table. This
     /// enables the GC to size its internal structures for symbol marking.
     /// Optionally invoked at the beginning of a garbage collection.
@@ -506,7 +520,8 @@ class GCBase {
   struct CumulativeHeapStats {
     unsigned numCollections{0};
 
-    /// Summary statistics for GC wall times.
+    /// Summary statistics for GC wall times. For Hades, this should only track
+    /// time spent on the mutator.
     StatsAccumulator<double> gcWallTime;
 
     /// Summary statistics for GC CPU times.
@@ -622,9 +637,8 @@ class GCBase {
     /// allocations continue to be tracked.
     void disable();
 
-    const std::vector<Fragment> &fragments() const {
-      return fragments_;
-    }
+    /// Flush the current fragment and write all flushed fragments to \p snap.
+    void addSamplesToSnapshot(HeapSnapshot &snap);
 
 #ifdef HERMESVM_SERIALIZE
     void serialize(Serializer &s) const;
@@ -667,6 +681,67 @@ class GCBase {
     /// \return fragments_.back() if none exists (it's the currently active
     ///   fragment).
     Fragment &findFragmentForID(HeapSnapshot::NodeID id);
+  };
+
+  class SamplingAllocationLocationTracker final {
+   public:
+    explicit inline SamplingAllocationLocationTracker(GCBase *gc) : gc_(gc) {}
+
+    /// Returns true if tracking is enabled for new allocations.
+    bool isEnabled() const {
+      return !!dist_;
+    }
+
+    /// Must be called by GC implementations whenever a new allocation is made.
+    void newAlloc(const void *ptr, uint32_t sz);
+
+    /// Must be called by GC implementations whenever an allocation is freed.
+    void freeAlloc(const void *ptr, uint32_t sz);
+
+    /// If an object's size changes, update the entry here.
+    void updateSize(const void *ptr, uint32_t oldSize, uint32_t newSize);
+
+    /// Turn the sampling memory profiler on. About once every
+    /// \p samplingInterval bytes are allocated, sample the allocation by
+    /// recording its stack.
+    /// \param seed If non-negative, use as the seed for the random sampling
+    ///   mechanism, giving deterministic output.
+    void enable(size_t samplingInterval, int64_t seed);
+
+    void disable(llvh::raw_ostream &os);
+
+   private:
+    struct Sample final {
+      size_t size;
+      StackTracesTreeNode *node;
+      /// This is the auto-incremented sample ID, not the ID of the object
+      /// associated with the sample.
+      uint64_t id;
+    };
+
+    /// This mutex protects stackMap_ and samples_. Not needed for enabling and
+    /// disabling because those only happen while the world is stopped.
+    Mutex mtx_;
+
+    GCBase *gc_;
+
+    /// Subtract from this each allocation. If it would underflow below zero,
+    /// take a sample.
+    size_t limit_{0};
+
+    /// Track all samples that have been taken.
+    llvh::DenseMap<HeapSnapshot::NodeID, Sample> samples_;
+
+    /// Use a poisson distribution to decide when to take the next sample.
+    std::minstd_rand randomEngine_;
+    std::unique_ptr<std::poisson_distribution<>> dist_;
+
+    /// An auto-incrementing integer representing a unique ID for a sample.
+    /// Used for ordering samples.
+    uint64_t nextSampleID_{1};
+
+    /// \return How many bytes should be waited until the next sample.
+    size_t nextSample();
   };
 
   class IDTracker final {
@@ -738,6 +813,10 @@ class GCBase {
     /// Get the unique object id of the given object.
     /// If one does not yet exist, start tracking it.
     inline HeapSnapshot::NodeID getObjectID(BasedPointer cell);
+
+    /// \return true if the cell has an object ID associated with it, false if
+    ///   there is none.
+    inline bool hasObjectID(BasedPointer cell);
 
     /// Same as \c getObjectID, except it asserts if the cell doesn't have an
     /// ID.
@@ -1010,9 +1089,9 @@ class GCBase {
 #endif
 
 #ifdef HERMESVM_GC_RUNTIME
-  static uint32_t minAllocationSize();
+  inline static constexpr uint32_t minAllocationSize();
 
-  static constexpr uint32_t maxAllocationSize();
+  inline static constexpr uint32_t maxAllocationSize();
 #endif
 
   /// Dump detailed heap contents to the given output stream, \p os.
@@ -1094,6 +1173,21 @@ class GCBase {
   /// re-enabling later will still remember earlier objects.
   virtual void disableHeapProfiler();
 
+  /// Turn the sampling memory profiler on. About once every
+  /// \p samplingInterval bytes are allocated, sample the allocation by
+  /// recording its stack.
+  /// \param seed If non-negative, use as the seed for the random sampling
+  ///   mechanism, giving deterministic output.
+  virtual void enableSamplingHeapProfiler(
+      size_t samplingInterval,
+      int64_t seed);
+
+  /// Turn off the sampling heap profiler, which will stop tracking new
+  /// allocations and not record any stack traces. Write out the results of the
+  /// trace to \p os. After this call, any remembered data about sampled objects
+  /// will be gone.
+  virtual void disableSamplingHeapProfiler(llvh::raw_ostream &os);
+
 #ifdef HERMESVM_SERIALIZE
   /// Serialize WeakRefs.
   virtual void serializeWeakRefs(Serializer &s) = 0;
@@ -1126,17 +1220,29 @@ class GCBase {
 
   /// Default implementations for read and write barriers: do nothing.
   void writeBarrier(const GCHermesValue *loc, HermesValue value);
+  void writeBarrier(const GCSmallHermesValue *loc, SmallHermesValue value);
   void writeBarrier(const GCPointerBase *loc, const GCCell *value);
   void writeBarrier(SymbolID symbol);
   void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value);
+  void constructorWriteBarrier(
+      const GCSmallHermesValue *loc,
+      SmallHermesValue value);
   void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
   void writeBarrierRange(const GCHermesValue *start, uint32_t numHVs);
+  void writeBarrierRange(const GCSmallHermesValue *start, uint32_t numHVs);
   void constructorWriteBarrierRange(
       const GCHermesValue *start,
       uint32_t numHVs);
+  void constructorWriteBarrierRange(
+      const GCSmallHermesValue *start,
+      uint32_t numHVs);
   void snapshotWriteBarrier(const GCHermesValue *loc);
+  void snapshotWriteBarrier(const GCSmallHermesValue *loc);
   void snapshotWriteBarrier(const GCPointerBase *loc);
   void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs);
+  void snapshotWriteBarrierRange(
+      const GCSmallHermesValue *start,
+      uint32_t numHVs);
   void weakRefReadBarrier(GCCell *value);
   void weakRefReadBarrier(HermesValue value);
 
@@ -1307,9 +1413,13 @@ class GCBase {
     return heapKind_;
   }
 
+  /// \return A string representation of the kind of GC.
+  virtual std::string getKindAsStr() const = 0;
+
   bool isTrackingIDs() {
     return getIDTracker().isTrackingIDs() ||
-        getAllocationLocationTracker().isEnabled();
+        getAllocationLocationTracker().isEnabled() ||
+        getSamplingAllocationTracker().isEnabled();
   }
 
   IDTracker &getIDTracker() {
@@ -1318,6 +1428,10 @@ class GCBase {
 
   AllocationLocationTracker &getAllocationLocationTracker() {
     return allocationLocationTracker_;
+  }
+
+  SamplingAllocationLocationTracker &getSamplingAllocationTracker() {
+    return samplingAllocationTracker_;
   }
 
   /// \name Snapshot ID methods
@@ -1333,12 +1447,18 @@ class GCBase {
   /// \return The ID for the given value. If the value cannot be represented
   ///   with an ID, returns None.
   llvh::Optional<HeapSnapshot::NodeID> getSnapshotID(HermesValue val);
+  /// \return True if the given cell has an ID associated with it.
+  inline bool hasObjectID(const void *cell);
+  /// Records that a new allocation has occurred.
+  inline void newAlloc(const void *ptr, uint32_t sz);
+  /// Moves an object to a new address and a new size for all trackers.
   inline void moveObject(
       const void *oldPtr,
       uint32_t oldSize,
       const void *newPtr,
       uint32_t newSize);
-  inline void untrackObject(const void *cell);
+  /// Untracks a freed object from all trackers.
+  inline void untrackObject(const void *cell, uint32_t sz);
   /// \}
 
 #ifndef NDEBUG
@@ -1427,11 +1547,14 @@ class GCBase {
 
   /// Record statistics from a single GC, which are specified in the given
   /// \p event, in the overall cumulative stats struct.
-  void recordGCStats(const GCAnalyticsEvent &event);
+  void recordGCStats(const GCAnalyticsEvent &event, bool onMutator);
 
   /// Record statistics from a single GC, which are specified in the given
   /// \p event, in the given cumulative stats struct.
-  void recordGCStats(const GCAnalyticsEvent &event, CumulativeHeapStats *stats);
+  void recordGCStats(
+      const GCAnalyticsEvent &event,
+      CumulativeHeapStats *stats,
+      bool onMutator);
 
   /// Do any additional GC-specific logging that is useful before dying with
   /// out-of-memory.
@@ -1580,6 +1703,9 @@ class GCBase {
   /// Attaches stack-traces to objects when enabled.
   AllocationLocationTracker allocationLocationTracker_;
 
+  /// Attaches stack-traces to objects when enabled.
+  SamplingAllocationLocationTracker samplingAllocationTracker_;
+
 #ifdef HERMESVM_SERIALIZE
   /// If true, then the runtime is currently deserializing heap data structures
   /// from a file. Don't run any garbage collections.
@@ -1725,6 +1851,16 @@ inline HeapSnapshot::NodeID GCBase::getNativeID(const void *mem) {
   return idTracker_.getNativeID(mem);
 }
 
+inline bool GCBase::hasObjectID(const void *cell) {
+  assert(cell && "Called hasObjectID on a null pointer");
+  return idTracker_.hasObjectID(pointerBase_->pointerToBasedNonNull(cell));
+}
+
+inline void GCBase::newAlloc(const void *ptr, uint32_t sz) {
+  allocationLocationTracker_.newAlloc(ptr, sz);
+  samplingAllocationTracker_.newAlloc(ptr, sz);
+}
+
 inline void GCBase::moveObject(
     const void *oldPtr,
     uint32_t oldSize,
@@ -1735,11 +1871,16 @@ inline void GCBase::moveObject(
       pointerBase_->pointerToBasedNonNull(newPtr));
   // Use newPtr here because the idTracker_ just moved it.
   allocationLocationTracker_.updateSize(newPtr, oldSize, newSize);
+  samplingAllocationTracker_.updateSize(newPtr, oldSize, newSize);
 }
 
-inline void GCBase::untrackObject(const void *cell) {
-  assert(cell && "Called getObjectID on a null pointer");
-  return idTracker_.untrackObject(pointerBase_->pointerToBasedNonNull(cell));
+inline void GCBase::untrackObject(const void *cell, uint32_t sz) {
+  assert(cell && "Called untrackObject on a null pointer");
+  // The allocation tracker needs to use the ID, so this needs to come
+  // before untrackObject.
+  getAllocationLocationTracker().freeAlloc(cell, sz);
+  getSamplingAllocationTracker().freeAlloc(cell, sz);
+  idTracker_.untrackObject(pointerBase_->pointerToBasedNonNull(cell));
 }
 
 #ifndef NDEBUG
@@ -1762,6 +1903,11 @@ inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(BasedPointer cell) {
   const auto objID = nextObjectID();
   objectIDMap_[cell.getRawValue()] = objID;
   return objID;
+}
+
+inline bool GCBase::IDTracker::hasObjectID(BasedPointer cell) {
+  std::lock_guard<Mutex> lk{mtx_};
+  return objectIDMap_.count(cell.getRawValue());
 }
 
 inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectIDMustExist(

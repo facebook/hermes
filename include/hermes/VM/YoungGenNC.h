@@ -160,6 +160,7 @@ class YoungGen : public GCGeneration {
   /// redirect *hv to point where the already-installed forwarding pointer
   /// points.
   void ensureReferentCopied(HermesValue *hv);
+  void ensureReferentCopied(SmallHermesValue *hv);
 
   /// If *ptrLoc is a pointer into the current generation, check
   /// whether the referent has already been evacuated.  If not, copy
@@ -176,11 +177,6 @@ class YoungGen : public GCGeneration {
 
   /// Fixup the tracked IDs of objects that were moved or deleted.
   void updateIDTracker();
-  void updateAllocationLocationTracker();
-
- private:
-  template <bool updateIDTracker, bool updateAllocationLocationTracker>
-  void updateTrackers();
 
  public:
   /// Finalizes all unreachable cells with finalizers. If the cell was moved to

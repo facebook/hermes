@@ -31,7 +31,7 @@ PROMISE_DIR="${SCRIPT}/promise"
 TMP_PROMISE_DIR="${TMP_DIR}/promise"
 
 TMP_PROMISE_JS="${TMP_PROMISE_DIR}/Promise.js"
-BC_PROMISE_JS="${BC_DIR}/Promise.js"
+BC_PROMISE_JS="${BC_DIR}/01-Promise.js"
 
 gen() {
   # It's tricky to ensure `sed -i` work on both GNU and macOS consistantly.

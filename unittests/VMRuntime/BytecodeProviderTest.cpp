@@ -39,7 +39,7 @@ TEST_F(BytecodeProviderTest, IdentifierHashesPreserved) {
   const std::vector<uint8_t> bytecode = bytecodeForSource(source.str().c_str());
   std::shared_ptr<BCProviderFromBuffer> bcProvider =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-          llvh::make_unique<Buffer>(&bytecode[0], bytecode.size()))
+          std::make_unique<Buffer>(&bytecode[0], bytecode.size()))
           .first;
   ASSERT_NE(nullptr, bcProvider);
 

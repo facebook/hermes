@@ -172,6 +172,7 @@ class GenGC final : public GCBase {
   /// The given value is being written at the given loc (required to
   /// be in the heap).  If value is a pointer, execute a write barrier.
   void writeBarrier(const GCHermesValue *loc, HermesValue value);
+  void writeBarrier(const GCSmallHermesValue *loc, SmallHermesValue value);
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap).  The value is may be null.  Execute a write barrier.
@@ -184,6 +185,13 @@ class GenGC final : public GCBase {
   /// be in the heap).  If value is a pointer, execute a write barrier.
   /// The memory pointed to by \p loc is guaranteed to not have a valid pointer.
   void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value) {
+    // There's no difference for GenGC between the constructor and an
+    // assignment.
+    writeBarrier(loc, value);
+  }
+  void constructorWriteBarrier(
+      const GCSmallHermesValue *loc,
+      SmallHermesValue value) {
     // There's no difference for GenGC between the constructor and an
     // assignment.
     writeBarrier(loc, value);
@@ -246,6 +254,7 @@ class GenGC final : public GCBase {
   /// \pre The range described must be wholly contained within one segment of
   ///     the heap.
   void writeBarrierRange(const GCHermesValue *start, uint32_t numHVs);
+  void writeBarrierRange(const GCSmallHermesValue *start, uint32_t numHVs);
 
   /// Same as \p writeBarrierRange, except this is for previously uninitialized
   /// memory.
@@ -255,10 +264,20 @@ class GenGC final : public GCBase {
     // GenGC doesn't do anything special for uninitialized memory.
     writeBarrierRange(start, numHVs);
   }
+  void constructorWriteBarrierRange(
+      const GCSmallHermesValue *start,
+      uint32_t numHVs) {
+    // GenGC doesn't do anything special for uninitialized memory.
+    writeBarrierRange(start, numHVs);
+  }
 
   void snapshotWriteBarrier(const GCHermesValue *loc) {}
+  void snapshotWriteBarrier(const GCSmallHermesValue *loc) {}
   void snapshotWriteBarrier(const GCPointerBase *loc) {}
   void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs) {}
+  void snapshotWriteBarrierRange(
+      const GCSmallHermesValue *start,
+      uint32_t numHVs) {}
   void weakRefReadBarrier(GCCell *value) {}
   void weakRefReadBarrier(HermesValue value) {}
 
@@ -384,6 +403,8 @@ class GenGC final : public GCBase {
 
   /// Add some GenGC-specific stats to the output.
   void dump(llvh::raw_ostream &os, bool verbose = false) override;
+
+  std::string getKindAsStr() const override;
 
   // Stats maintainence.
 
@@ -623,17 +644,25 @@ class GenGC final : public GCBase {
     /// held for the region being collected at the moment (the young generation
     /// for young gen collections, and the entire heap for full collections).
     ///
-    /// \p regionSize The size of the region after the last GC.
-    /// \p usedBefore The number of bytes allocated just before the GC.
-    /// \p usedAfter The number of bytes live after the GC.
-    /// \p regionStats A pointer to the cumulative statistics struct for the
+    /// \param regionSize The size of the region after the last GC.
+    /// \param usedBefore The number of bytes allocated just before the GC.
+    /// \param sizeBefore The size of all segments in bytes just before the GC.
+    /// \param externalBefore The number of bytes external to the JS heap just
+    ///   before the GC.
+    /// \param usedAfter The number of bytes live after the GC.
+    /// \param sizeAfter The size of all segments in bytes after the GC.
+    /// \param externalAfter The number of bytes external to the JS heap after
+    ///   the GC.
+    /// \param regionStats A pointer to the cumulative statistics struct for the
     ///     region.
     void recordGCStats(
         size_t regionSize,
         size_t usedBefore,
         size_t sizeBefore,
+        size_t externalBefore,
         size_t usedAfter,
         size_t sizeAfter,
+        size_t externalAfter,
         CumulativeHeapStats *regionStats);
 
    private:

@@ -263,6 +263,7 @@ class JSParserImpl {
   UniqueString *esIdent_;
   UniqueString *commonJSIdent_;
   UniqueString *mixinsIdent_;
+  UniqueString *thisIdent_;
 
   UniqueString *anyIdent_;
   UniqueString *mixedIdent_;
@@ -860,12 +861,14 @@ class JSParserImpl {
   /// Reparse the specified node as arrow function parameter list and store the
   /// parameter list in \p paramList. Print an error and return false on error,
   /// otherwise return true.
-  /// \param[out] reparsedAsync set to true when the params indicate an async
-  /// function, false otherwise.
+  /// \param[in/out] isAsync the arrow function is async. The caller may already
+  /// know this prior to calling this function, in which case `true` should be
+  /// passed. Otherwise, this function will try to reparse a call expression
+  /// into an async arrow function.
   bool reparseArrowParameters(
       ESTree::Node *node,
       ESTree::NodeList &paramList,
-      bool &reparsedAsync);
+      bool &isAsync);
 
   /// \param forceAsync set to true when it is already known that the arrow
   ///   function expression is 'async'. This occurs when there are no parens
@@ -1040,6 +1043,7 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseFunctionTypeAnnotationWithParams(
       SMLoc start,
       ESTree::NodeList &&params,
+      ESTree::Node *thisConstraint,
       ESTree::Node *rest,
       ESTree::Node *typeParams);
   Optional<ESTree::Node *> parseFunctionOrGroupTypeAnnotation();
@@ -1097,10 +1101,12 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseTypeArgs();
 
   /// \param[out] params the parameters, populated by reference.
+  /// \param[out] thisConstraint the type annotation for 'this'.
   /// \return the rest parameter if it exists, nullptr otherwise. None still
   /// indicates an error.
   Optional<ESTree::FunctionTypeParamNode *> parseFunctionTypeAnnotationParams(
-      ESTree::NodeList &params);
+      ESTree::NodeList &params,
+      ESTree::NodePtr &thisConstraint);
   Optional<ESTree::FunctionTypeParamNode *> parseFunctionTypeAnnotationParam();
 
   Optional<ESTree::Node *> parseTypeCallProperty(SMLoc start, bool isStatic);
@@ -1186,6 +1192,15 @@ class JSParserImpl {
       --parser_->recursionDepth_;
     }
   };
+
+/// Declare a RAII recursion tracker. Check whether the recursion limit has
+/// been exceeded, and if so generate an error and return an empty
+/// llvh::Optional<>.
+/// The macro only works from inside JSParserImpl methods.
+#define CHECK_RECURSION                \
+  TrackRecursion trackRecursion{this}; \
+  if (recursionDepthCheck())           \
+    return llvh::None;
 };
 
 } // namespace detail

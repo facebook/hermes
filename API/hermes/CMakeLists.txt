@@ -3,18 +3,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-set(HERMES_OPTIONAL_SOURCES
-  hermes.cpp
-  hermes_tracing.cpp
-  hermes_tracing_compat.cpp
-  DebuggerAPI.cpp
-  SynthTrace.cpp
-  SynthTraceParser.cpp
-  TraceInterpreter.cpp
-  TracingRuntime.cpp
-  CompileJS.cpp
-  )
-
 set(api_sources
   hermes.cpp
   DebuggerAPI.cpp
@@ -27,18 +15,6 @@ if(HERMES_IS_ANDROID)
   list(APPEND api_sources
     JNI_OnLoad.cpp
     )
-endif()
-
-if (HERMESVM_API_TRACE)
-  list(APPEND api_sources
-    hermes_tracing.cpp
-    SynthTrace.cpp
-    SynthTraceParser.cpp
-    TraceInterpreter.cpp
-    TracingRuntime.cpp
-    )
-else()
-  list(APPEND api_sources hermes_tracing_compat.cpp)
 endif()
 
 add_hermes_library(hermesapi
@@ -58,12 +34,21 @@ set_property(TARGET hermesapi APPEND_STRING PROPERTY
 set_property(TARGET hermesapi APPEND_STRING PROPERTY
   COMPILE_DEFINITIONS "CREATE_SHARED_LIBRARY")
 
-set(HERMES_LINK_COMPONENTS LLVHSupport)
+add_hermes_library(synthTrace hermes_tracing.cpp SynthTrace.cpp TracingRuntime.cpp
+  LINK_LIBS hermesapi)
 
-# Disable EH and RTTI for compileJS
-set(HERMES_ENABLE_EH OFF)
+add_hermes_library(traceInterpreter TraceInterpreter.cpp
+  LINK_LIBS hermesapi hermesInstrumentation synthTrace synthTraceParser)
+
+set(HERMES_LINK_COMPONENTS LLVHSupport)
 set(HERMES_ENABLE_RTTI OFF)
 
+# synthTraceParser uses exceptions but not rtti
+add_hermes_library(synthTraceParser SynthTraceParser.cpp LINK_LIBS hermesSupport hermesParser synthTrace)
+
+set(HERMES_ENABLE_EH OFF)
+
+# compileJS uses neither exceptions nor RTTI
 add_hermes_library(compileJS STATIC CompileJS.cpp)
 
 # Restore EH and RTTI (Note: At the time of writing, there is no usage of

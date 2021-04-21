@@ -5,10 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_API_TRACE
-
 #include <hermes/TraceInterpreter.h>
 
+#include <hermes/BCGen/HBC/BytecodeDataProvider.h>
 #include <hermes/SynthTraceParser.h>
 #include <hermes/TracingRuntime.h>
 #include <hermes/VM/instrumentation/PerfEvents.h>
@@ -17,7 +16,8 @@
 #include <llvh/Support/SaveAndRestore.h>
 
 #include <algorithm>
-#include <unordered_set>
+#include <fstream>
+#include <set>
 
 using namespace hermes::parser;
 using namespace facebook::jsi;
@@ -243,7 +243,7 @@ std::unordered_map<ObjectID, TraceInterpreter::DefAndUse> createGlobalMap(
   // For Objects, Strings, and PropNameIDs.
   std::unordered_map<ObjectID, Glob> firstAndLastGlobalUses;
   // For Objects, Strings, and PropNameIDs.
-  std::unordered_map<ObjectID, std::unordered_set<uint64_t>> defsPerObj;
+  std::unordered_map<ObjectID, std::set<uint64_t>> defsPerObj;
 
   defsPerObj[globalObjID].insert(0);
   firstAndLastGlobalUses[globalObjID].firstUse = 0;
@@ -306,17 +306,15 @@ std::unordered_map<ObjectID, TraceInterpreter::DefAndUse> createGlobalMap(
     assert(
         firstUse <= lastUse &&
         "Should never have the first use be greater than the last use");
-    std::unordered_set<uint64_t> &defs = defsPerObj[objID];
+    const std::set<uint64_t> &defs = defsPerObj[objID];
     assert(
         defs.size() &&
         "There must be at least one def for any globally used object");
-    // The defs here are global record numbers.
-    uint64_t lastDefBeforeFirstUse = *defs.begin();
-    for (uint64_t def : defs) {
-      if (def < firstUse) {
-        lastDefBeforeFirstUse = std::max(lastDefBeforeFirstUse, def);
-      }
-    }
+    const auto firstDefAfterFirstUseIter = defs.upper_bound(firstUse);
+    assert(
+        firstDefAfterFirstUseIter != defs.begin() &&
+        "Must have at least one def before first use.");
+    uint64_t lastDefBeforeFirstUse = *std::prev(firstDefAfterFirstUseIter);
     assert(
         lastDefBeforeFirstUse <= lastUse &&
         "Should never have the last def before first use be greater than "
@@ -394,7 +392,7 @@ std::unique_ptr<const jsi::Buffer> bufConvert(
     std::unique_ptr<llvh::MemoryBuffer> data_;
   };
 
-  return llvh::make_unique<const OwnedMemoryBuffer>(std::move(buf));
+  return std::make_unique<const OwnedMemoryBuffer>(std::move(buf));
 }
 
 static bool isAllZeroSourceHash(const ::hermes::SHA1 sourceHash) {
@@ -470,6 +468,51 @@ static std::string mergeGCStats(const std::vector<std::string> &repGCStats) {
       valueAndStats.end());
   return *valueAndStats[median].second;
 }
+
+#ifndef NDEBUG
+bool isDoubleEqual(double a, double b) {
+  // Bitwise comparison to avoid issues with infinity and NaN.
+  if (memcmp(&a, &b, sizeof(double)) == 0)
+    return true;
+  // If the sign bit is different, then it is definitely not equal. This handles
+  // cases like -0 != 0.
+  if (std::signbit(a) != std::signbit(b))
+    return false;
+  // There can be subtle rounding differences between platforms, so allow for
+  // some error. For example, GCC uses 80 bit registers for doubles on
+  // non-Darwin x86 platforms. A change in when values are written to memory
+  // (when it is shortened to 64 bits), or comparing values between Darwin and
+  // non-Darwin platforms could lead to different results.
+  const double ep =
+      (std::abs(a) + std::abs(b)) * std::numeric_limits<double>::epsilon();
+  return std::abs(a - b) <= ep;
+}
+
+/// Assert that \p val seen at replay matches the recorded \p traceValue
+void assertMatch(const SynthTrace::TraceValue &traceValue, const Value &val) {
+  if (traceValue.isUndefined()) {
+    assert(val.isUndefined() && "type mismatch between trace and replay");
+  } else if (traceValue.isNull()) {
+    assert(val.isNull() && "type mismatch between trace and replay");
+  } else if (traceValue.isBool()) {
+    assert(val.isBool() && "type mismatch between trace and replay");
+    assert(
+        val.getBool() == traceValue.getBool() &&
+        "value mismatch between trace and replay");
+  } else if (traceValue.isNumber()) {
+    assert(val.isNumber() && "type mismatch between trace and replay");
+    double valNum = val.getNumber();
+    double traceValueNum = traceValue.getNumber();
+    assert(
+        isDoubleEqual(valNum, traceValueNum) &&
+        "value mismatch between trace and replay");
+  } else if (traceValue.isString()) {
+    assert(val.isString() && "type mismatch between trace and replay");
+  } else if (traceValue.isObject()) {
+    assert(val.isObject() && "type mismatch between trace and replay");
+  }
+}
+#endif
 
 } // namespace
 
@@ -558,6 +601,7 @@ std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>>
 TraceInterpreter::getSourceHashToBundleMap(
     std::vector<std::unique_ptr<llvh::MemoryBuffer>> &&codeBufs,
     const SynthTrace &trace,
+    const ExecuteOptions &options,
     bool *codeIsMmapped,
     bool *isBytecode) {
   if (codeIsMmapped) {
@@ -606,7 +650,9 @@ TraceInterpreter::getSourceHashToBundleMap(
     (void)inserted;
   }
 
-  verifyBundlesExist(sourceHashToBundle, trace);
+  if (!options.disableSourceHashCheck) {
+    verifyBundlesExist(sourceHashToBundle, trace);
+  }
 
   return sourceHashToBundle;
 }
@@ -644,6 +690,12 @@ TraceInterpreter::getSourceHashToBundleMap(
   // as well.
   rtConfigBuilder.withTraceEnabled(options.traceEnabled);
 
+  if (options.action == ExecuteOptions::MarkerAction::SAMPLE_TIME) {
+    // If time sampling is requested, the RuntimeConfig has to have the sampling
+    // profiler enabled.
+    rtConfigBuilder.withEnableSampleProfiling(true);
+  }
+
   // If aggregating multiple reps, randomize the placement of some data
   // structures in each rep, for a more robust time metric.
   if (options.reps > 1) {
@@ -669,7 +721,7 @@ std::string TraceInterpreter::execFromMemoryBuffer(
   bool isBytecode;
   std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>>
       sourceHashToBundle = getSourceHashToBundleMap(
-          std::move(codeBufs), trace, &codeIsMmapped, &isBytecode);
+          std::move(codeBufs), trace, options, &codeIsMmapped, &isBytecode);
   options.traceEnabled = (traceStream != nullptr);
 
   const auto &rtConfig = merge(
@@ -728,7 +780,7 @@ std::string TraceInterpreter::execFromMemoryBuffer(
       runtime,
       options,
       trace,
-      getSourceHashToBundleMap(std::move(codeBufs), trace));
+      getSourceHashToBundleMap(std::move(codeBufs), trace, options));
 }
 
 /* static */
@@ -877,14 +929,33 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
 
 std::string TraceInterpreter::execEntryFunction(
     const TraceInterpreter::Call &entryFunc) {
-  if (options_.action == ExecuteOptions::MarkerAction::TIMELINE) {
-    if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
-      // Start tracking heap objects right before interpreting the trace.
-      // No need to handle fragment callbacks, as this is not live profiling
-      // being given to Chrome, it's just going to a file.
-      hermesRuntime->instrumentation().startTrackingHeapObjectStackTraces(
-          nullptr);
-    }
+  assert(
+      (options_.action == ExecuteOptions::MarkerAction::NONE ||
+       !options_.profileFileName.empty()) &&
+      "If the action isn't none, need a profile output file");
+  switch (options_.action) {
+    case ExecuteOptions::MarkerAction::TIMELINE:
+      if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
+        // Start tracking heap objects right before interpreting the trace.
+        // No need to handle fragment callbacks, as this is not live profiling
+        // being given to Chrome, it's just going to a file.
+        hermesRuntime->instrumentation().startTrackingHeapObjectStackTraces(
+            nullptr);
+      }
+      break;
+    case ExecuteOptions::MarkerAction::SAMPLE_MEMORY:
+      if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
+        hermesRuntime->instrumentation().startHeapSampling(1 << 15);
+      }
+      break;
+    case ExecuteOptions::MarkerAction::SAMPLE_TIME:
+      if (dynamic_cast<HermesRuntime *>(&rt_)) {
+        HermesRuntime::enableSamplingProfiler();
+      }
+      break;
+    default:
+      // Do nothing.
+      break;
   }
   execFunction(entryFunc, Value::undefined(), nullptr, 0);
 
@@ -1030,7 +1101,8 @@ Value TraceInterpreter::execFunction(
                 dynamic_cast<const SynthTrace::BeginExecJSRecord &>(*rec);
             auto it = bundles_.find(bejsr.sourceHash());
             if (it == bundles_.end()) {
-              if (isAllZeroSourceHash(bejsr.sourceHash()) &&
+              if ((options_.disableSourceHashCheck ||
+                   isAllZeroSourceHash(bejsr.sourceHash())) &&
                   bundles_.size() == 1) {
                 // Normally, if a bundle's source hash doesn't match, it would
                 // be an error. However, for convenience and backwards
@@ -1062,21 +1134,12 @@ Value TraceInterpreter::execFunction(
           case RecordType::EndExecJS: {
             const auto &eejsr =
                 dynamic_cast<const SynthTrace::EndExecJSRecord &>(*rec);
-            if (!ifObjectAddToDefs(
-                    eejsr.retVal_,
-                    std::move(overallRetval),
-                    call,
-                    globalRecordNum,
-                    locals)) {
-              assert(
-                  !(overallRetval.isObject() || overallRetval.isString()) &&
-                  "Trace expects non-object but actual return was an object");
-              auto v =
-                  traceValueToJSIValue(rt_, trace_, nullptr, eejsr.retVal_);
-              assert(
-                  Value::strictEquals(rt_, v, overallRetval) &&
-                  "evaluateJavaScript() retval does not match trace");
-            }
+            ifObjectAddToDefs(
+                eejsr.retVal_,
+                std::move(overallRetval),
+                call,
+                globalRecordNum,
+                locals);
             LLVM_FALLTHROUGH;
           }
           case RecordType::Marker: {
@@ -1204,7 +1267,7 @@ Value TraceInterpreter::execFunction(
 #endif
               value = obj.getProperty(rt_, propNameID);
             }
-            (void)ifObjectAddToDefs(
+            ifObjectAddToDefs(
                 gpr.value_, std::move(value), call, globalRecordNum, locals);
             break;
           }
@@ -1288,7 +1351,7 @@ Value TraceInterpreter::execFunction(
             auto value = getObjForUse(arr.objID_)
                              .asArray(rt_)
                              .getValueAtIndex(rt_, arr.index_);
-            (void)ifObjectAddToDefs(
+            ifObjectAddToDefs(
                 arr.value_, std::move(value), call, globalRecordNum, locals);
             break;
           }
@@ -1310,7 +1373,7 @@ Value TraceInterpreter::execFunction(
                 static_cast<const SynthTrace::CallFromNativeRecord &>(*rec);
             auto func = getObjForUse(cfnr.functionID_).asFunction(rt_);
             std::vector<Value> args;
-            for (const auto arg : cfnr.args_) {
+            for (const auto &arg : cfnr.args_) {
               args.emplace_back(
                   traceValueToJSIValue(rt_, trace_, getJSIValueForUse, arg));
             }
@@ -1339,7 +1402,7 @@ Value TraceInterpreter::execFunction(
             // calls the construct path.
             auto func = getObjForUse(cfnr.functionID_).asFunction(rt_);
             std::vector<Value> args;
-            for (const auto arg : cfnr.args_) {
+            for (const auto &arg : cfnr.args_) {
               args.emplace_back(
                   traceValueToJSIValue(rt_, trace_, getJSIValueForUse, arg));
             }
@@ -1361,7 +1424,7 @@ Value TraceInterpreter::execFunction(
           case RecordType::ReturnToNative: {
             const auto &rtnr =
                 dynamic_cast<const SynthTrace::ReturnToNativeRecord &>(*rec);
-            (void)ifObjectAddToDefs(
+            ifObjectAddToDefs(
                 rtnr.retVal_, std::move(retval), call, globalRecordNum, locals);
             // If the return value wasn't an object, it can be ignored.
             break;
@@ -1370,19 +1433,20 @@ Value TraceInterpreter::execFunction(
             const auto &ctnr =
                 static_cast<const SynthTrace::CallToNativeRecord &>(*rec);
             // Associate the this arg with its object id.
-            (void)ifObjectAddToDefs(
+            ifObjectAddToDefs(
                 ctnr.thisArg_,
                 std::move(thisVal),
                 call,
                 globalRecordNum,
-                locals);
+                locals,
+                /* isThis = */ true);
             // Associate each argument with its object id.
             assert(
                 ctnr.args_.size() == count &&
                 "Called at runtime with a different number of args than "
                 "the trace expected");
             for (uint64_t i = 0; i < ctnr.args_.size(); ++i) {
-              (void)ifObjectAddToDefs(
+              ifObjectAddToDefs(
                   ctnr.args_[i],
                   std::move(args[i]),
                   call,
@@ -1434,7 +1498,7 @@ Value TraceInterpreter::execFunction(
                 pniLocals);
             // Associate the single argument with its object id (if it's an
             // object).
-            (void)ifObjectAddToDefs(
+            ifObjectAddToDefs(
                 spnr.value_, std::move(args[0]), call, globalRecordNum, locals);
             break;
           }
@@ -1539,30 +1603,34 @@ void TraceInterpreter::addValueToDefs(
       call, valID, globalRecordNum, ValueType{rt_, valRef}, locals, globals);
 }
 
-bool TraceInterpreter::ifObjectAddToDefs(
+void TraceInterpreter::ifObjectAddToDefs(
     const SynthTrace::TraceValue &traceValue,
     Value &&val,
     const Call &call,
     uint64_t globalRecordNum,
-    std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals) {
-  SynthTrace::ObjectID objID;
-  if (traceValue.isObject() || traceValue.isString()) {
-    objID = traceValue.getUID();
-  } else {
-    return false;
+    std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals,
+    bool isThis) {
+#ifndef NDEBUG
+  // TODO(T84791675): Include 'this' once all traces are correctly recording it.
+  if (!isThis) {
+    assertMatch(traceValue, val);
   }
-  addJSIValueToDefs(call, objID, globalRecordNum, std::move(val), locals);
-  return true;
+#endif
+  if (traceValue.isObject() || traceValue.isString()) {
+    addJSIValueToDefs(
+        call, traceValue.getUID(), globalRecordNum, std::move(val), locals);
+  }
 }
 
-bool TraceInterpreter::ifObjectAddToDefs(
+void TraceInterpreter::ifObjectAddToDefs(
     const SynthTrace::TraceValue &traceValue,
     const Value &val,
     const Call &call,
     uint64_t globalRecordNum,
-    std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals) {
-  return ifObjectAddToDefs(
-      traceValue, Value{rt_, val}, call, globalRecordNum, locals);
+    std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals,
+    bool isThis) {
+  ifObjectAddToDefs(
+      traceValue, Value{rt_, val}, call, globalRecordNum, locals, isThis);
 }
 
 void TraceInterpreter::checkMarker(const std::string &marker) {
@@ -1588,6 +1656,22 @@ void TraceInterpreter::checkMarker(const std::string &marker) {
             options_.profileFileName);
       } else {
         llvh::errs() << "Heap timeline requested from non-Hermes runtime\n";
+      }
+      break;
+    case ExecuteOptions::MarkerAction::SAMPLE_MEMORY:
+      if (HermesRuntime *hermesRT = dynamic_cast<HermesRuntime *>(&rt_)) {
+        std::ofstream stream(options_.profileFileName);
+        hermesRT->instrumentation().stopHeapSampling(stream);
+      } else {
+        llvh::errs() << "Heap sampling requested from non-Hermes runtime\n";
+      }
+      break;
+    case ExecuteOptions::MarkerAction::SAMPLE_TIME:
+      if (dynamic_cast<HermesRuntime *>(&rt_)) {
+        HermesRuntime::dumpSampledTraceToFile(options_.profileFileName);
+        HermesRuntime::disableSamplingProfiler();
+      } else {
+        llvh::errs() << "CPU sampling requested from non-Hermes runtime\n";
       }
       break;
     case ExecuteOptions::MarkerAction::NONE:
@@ -1648,5 +1732,3 @@ LLVM_ATTRIBUTE_NORETURN void TraceInterpreter::crashOnException(
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
-
-#endif

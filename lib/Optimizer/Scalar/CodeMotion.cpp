@@ -240,3 +240,5 @@ bool CodeMotion::runOnFunction(Function *F) {
 Pass *hermes::createCodeMotion() {
   return new CodeMotion();
 }
+
+#undef DEBUG_TYPE

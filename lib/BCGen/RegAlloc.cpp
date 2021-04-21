@@ -930,3 +930,5 @@ unsigned llvh::DenseMapInfo<Register>::getHashValue(Register Val) {
 bool llvh::DenseMapInfo<Register>::isEqual(Register LHS, Register RHS) {
   return LHS.getIndex() == RHS.getIndex();
 }
+
+#undef DEBUG_TYPE

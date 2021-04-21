@@ -131,3 +131,5 @@ bool DCE::runOnModule(Module *M) {
 Pass *hermes::createDCE() {
   return new DCE();
 }
+
+#undef DEBUG_TYPE

@@ -9,7 +9,7 @@
 
 #include "llvh/Support/Compiler.h"
 
-#ifdef HERMES_FACEBOOK_BUILD
+#if defined(HERMES_FACEBOOK_BUILD) && !defined(HERMES_FBCODE_BUILD)
 // TODO (T84179835): Disable this once it is no longer useful for debugging.
 #define HERMESJSI_ON_STACK
 #endif
@@ -560,6 +560,17 @@ class HermesRuntimeImpl final : public HermesRuntime,
   }
 
   // Overridden from jsi::Instrumentation
+  void startHeapSampling(size_t samplingInterval) override {
+    runtime_.enableSamplingHeapProfiler(samplingInterval);
+  }
+
+  // Overridden from jsi::Instrumentation
+  void stopHeapSampling(std::ostream &os) override {
+    llvh::raw_os_ostream ros(os);
+    runtime_.disableSamplingHeapProfiler(ros);
+  }
+
+  // Overridden from jsi::Instrumentation
   void createSnapshotToFile(const std::string &path) override {
     std::error_code code;
     llvh::raw_fd_ostream os(path, code, llvh::sys::fs::FileAccess::FA_Write);
@@ -908,8 +919,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
         if (arrayRes == vm::ExecutionStatus::EXCEPTION) {
           return vm::ExecutionStatus::EXCEPTION;
         }
-        vm::Handle<vm::JSArray> arrayHandle =
-            rt_.runtime_.makeHandle(std::move(*arrayRes));
+        vm::Handle<vm::JSArray> arrayHandle = *arrayRes;
 
         vm::GCScope gcScope{&rt_.runtime_};
         vm::MutableHandle<vm::SymbolID> tmpHandle{&rt_.runtime_};
@@ -1275,12 +1285,12 @@ void HermesRuntime::debugJavaScript(
 
 void HermesRuntime::registerForProfiling() {
   vm::Runtime &runtime = impl(this)->runtime_;
-  runtime.samplingProfiler_ =
-      ::hermes::make_unique<::hermes::vm::SamplingProfiler>(&runtime);
+  runtime.samplingProfiler =
+      std::make_unique<::hermes::vm::SamplingProfiler>(&runtime);
 }
 
 void HermesRuntime::unregisterForProfiling() {
-  impl(this)->runtime_.samplingProfiler_.reset();
+  impl(this)->runtime_.samplingProfiler.reset();
 }
 
 void HermesRuntime::watchTimeLimit(uint32_t timeoutInMs) {
@@ -1897,7 +1907,7 @@ jsi::Function HermesRuntimeImpl::createFunctionFromHostFunction(
     unsigned int paramCount,
     jsi::HostFunctionType func) {
   return maybeRethrow([&] {
-    auto context = ::hermes::make_unique<HFContext>(std::move(func), *this);
+    auto context = std::make_unique<HFContext>(std::move(func), *this);
     auto hostfunc =
         createFunctionFromHostFunction(context.get(), name, paramCount);
     context.release();

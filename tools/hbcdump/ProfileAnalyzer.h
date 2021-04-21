@@ -169,6 +169,10 @@ class ProfileAnalyzer {
   }
   // Return the ID of the function, if any, found at a given virtual offset.
   llvh::Optional<uint32_t> getFunctionFromVirtualOffset(uint32_t virtualOffset);
+
+  /// \return the ID of the function, if any, found at a given offset from the
+  /// start of the file.
+  llvh::Optional<uint32_t> getFunctionFromOffset(uint32_t offset);
 };
 
 } // namespace hermes

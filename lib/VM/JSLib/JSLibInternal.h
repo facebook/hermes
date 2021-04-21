@@ -324,7 +324,7 @@ CallResult<HermesValue> getSubstitution(
     Handle<StringPrimitive> matched,
     Handle<StringPrimitive> str,
     uint32_t position,
-    Handle<ArrayStorage> captures,
+    Handle<ArrayStorageSmall> captures,
     Handle<StringPrimitive> replacement);
 
 /// Main logic for String.prototype.split and RegExp.prototype[Symbol.split].

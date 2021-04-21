@@ -175,15 +175,17 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
 
   assert(name.isValid() && "A name must always be provided");
 
-  // Define the name.
-  auto nameHandle =
-      runtime->makeHandle(runtime->getStringPrimFromSymbolID(name));
-  DEFINE_PROP(selfHandle, P::name, nameHandle);
-
   // Length is the number of formal arguments.
+  // 10.2.9 SetFunctionLength is performed during 10.2.3 OrdinaryFunctionCreate.
   auto lengthHandle =
       runtime->makeHandle(HermesValue::encodeDoubleValue(paramCount));
   DEFINE_PROP(selfHandle, P::length, lengthHandle);
+
+  // Define the name.
+  // 10.2.8 SetFunctionName is performed after 10.2.3 OrdinaryFunctionCreate.
+  auto nameHandle =
+      runtime->makeHandle(runtime->getStringPrimFromSymbolID(name));
+  DEFINE_PROP(selfHandle, P::name, nameHandle);
 
   if (strictMode) {
     // Define .callee and .arguments properties: throw always in strict mode.
@@ -846,7 +848,7 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
     // Initialize "thisArg". When constructing we must use the original 'this',
     // not the bound one.
     newCalleeFrame.getThisArgRef() = !originalNewTarget.isUndefined()
-        ? callerFrame.getScratchRef()
+        ? static_cast<HermesValue>(callerFrame.getScratchRef())
         : self->getArgsWithThis(runtime)[0];
 
     res =
@@ -994,17 +996,20 @@ Handle<NativeFunction> NativeFunction::create(
     unsigned paramCount,
     Handle<JSObject> prototypeObjectHandle,
     unsigned additionalSlotCount) {
+  size_t reservedSlots = numOverlapSlots<NativeFunction>() +
+      ANONYMOUS_PROPERTY_SLOTS + additionalSlotCount;
   auto *cell = runtime->makeAFixed<NativeFunction>(
       runtime,
       &vt.base.base,
       parentHandle,
-      runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS +
-              additionalSlotCount),
+      runtime->getHiddenClassForPrototype(*parentHandle, reservedSlots),
       context,
       functionPtr);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
+
+  // Allocate a propStorage if the number of additional slots requires it.
+  runtime->ignoreAllocationFailure(
+      JSObject::allocatePropStorage(selfHandle, runtime, reservedSlots));
 
   auto st = defineNameLengthAndPrototype(
       selfHandle,
@@ -1289,11 +1294,7 @@ CallResult<PseudoHandle<>> JSFunction::_callImpl(
     Runtime *runtime) {
   auto *self = vmcast<JSFunction>(selfHandle.get());
   CallResult<HermesValue> result{ExecutionStatus::EXCEPTION};
-  if (auto *jitPtr = self->getCodeBlock()->getJITCompiled()) {
-    result = (*jitPtr)(runtime);
-  } else {
-    result = runtime->interpretFunction(self->getCodeBlock());
-  }
+  result = runtime->interpretFunction(self->getCodeBlock());
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1307,6 +1308,21 @@ std::string JSFunction::_snapshotNameImpl(GCCell *cell, GC *gc) {
     return funcName;
   }
   return self->codeBlock_->getNameString(gc->getCallbacks());
+}
+
+void JSFunction::_snapshotAddEdgesImpl(
+    GCCell *cell,
+    GC *gc,
+    HeapSnapshot &snap) {
+  auto *const self = vmcast<JSFunction>(cell);
+  // Add the super type's edges too.
+  Callable::_snapshotAddEdgesImpl(self, gc, snap);
+
+  // A node for the code block will be added as part of the RuntimeModule.
+  snap.addNamedEdge(
+      HeapSnapshot::EdgeType::Shortcut,
+      "codeBlock",
+      gc->getIDTracker().getNativeID(self->codeBlock_));
 }
 
 void JSFunction::_snapshotAddLocationsImpl(
@@ -1520,7 +1536,7 @@ GeneratorInnerFunction::GeneratorInnerFunction(Deserializer &d)
         ArrayStorage::deserializeArrayStorage(d),
         &d.getRuntime()->getHeap());
   }
-  d.readHermesValue(&result_);
+  d.readSmallHermesValue(&result_);
   nextIPOffset_ = d.readInt<uint32_t>();
   action_ = (Action)d.readInt<uint8_t>();
 }
@@ -1537,7 +1553,7 @@ void GeneratorInnerFunctionSerialize(Serializer &s, const GCCell *cell) {
     ArrayStorage::serializeArrayStorage(
         s, self->savedContext_.get(s.getRuntime()));
   }
-  s.writeHermesValue(self->result_);
+  s.writeSmallHermesValue(self->result_);
   s.writeInt<uint32_t>(self->nextIPOffset_);
   s.writeInt<uint8_t>((uint8_t)self->action_);
   s.endObject(cell);
@@ -1580,12 +1596,12 @@ CallResult<Handle<GeneratorInnerFunction>> GeneratorInnerFunction::create(
   auto ctx = runtime->makeHandle<ArrayStorage>(*ctxRes);
 
   // Set "this" as the first element.
-  ctx->at(0).set(args.getThisArg(), &runtime->getHeap());
+  ctx->set(0, args.getThisArg(), &runtime->getHeap());
 
   // Set the rest of the arguments.
   // Argument i goes in slot i+1 to account for the "this".
   for (uint32_t i = 0, e = args.getArgCount(); i < e; ++i) {
-    ctx->at(i + 1).set(args.getArg(i), &runtime->getHeap());
+    ctx->set(i + 1, args.getArg(i), &runtime->getHeap());
   }
 
   self->savedContext_.set(runtime, ctx.get(), &runtime->getHeap());
@@ -1601,7 +1617,9 @@ CallResult<PseudoHandle<>> GeneratorInnerFunction::callInnerFunction(
     Action action) {
   auto self = Handle<GeneratorInnerFunction>::vmcast(selfHandle);
 
-  self->result_.set(arg.getHermesValue(), &runtime->getHeap());
+  SmallHermesValue shv = SmallHermesValue::encodeHermesValue(
+      arg.getHermesValue(), &runtime->getHeap(), runtime);
+  self->result_.set(shv, &runtime->getHeap());
   self->action_ = action;
 
   auto ctx = runtime->makeMutableHandle(selfHandle->savedContext_);
@@ -1656,8 +1674,8 @@ void GeneratorInnerFunction::restoreStack(Runtime *runtime) {
        (StackFrameLayout::StackIncrement < 0 &&
         dst >= runtime->getStackPointer())) &&
       "reading off the end of the stack");
-  const GCHermesValue *src = &savedContext_.get(runtime)->at(frameOffset);
-  GCHermesValue::copyToPinned(src, src + frameSize, dst);
+  const GCHermesValue *src = savedContext_.get(runtime)->data() + frameOffset;
+  GCHermesValueUtil::copyToPinned(src, src + frameSize, dst);
 }
 
 void GeneratorInnerFunction::saveStack(Runtime *runtime) {
@@ -1677,9 +1695,11 @@ void GeneratorInnerFunction::saveStack(Runtime *runtime) {
   GCHermesValue::copy(
       first,
       first + frameSize,
-      &savedContext_.get(runtime)->at(frameOffset),
+      savedContext_.get(runtime)->data() + frameOffset,
       &runtime->getHeap());
 }
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

@@ -10,6 +10,7 @@
 
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/PointerBase.h"
+#include "hermes/VM/SmallHermesValue.h"
 #include "hermes/VM/SymbolID.h"
 
 namespace hermes {
@@ -33,6 +34,7 @@ struct SlotAcceptor {
   virtual ~SlotAcceptor() = default;
   virtual void accept(GCPointerBase &ptr) = 0;
   virtual void accept(GCHermesValue &hv) = 0;
+  virtual void accept(GCSmallHermesValue &hv) = 0;
   virtual void accept(GCSymbolID sym) = 0;
 };
 
@@ -110,6 +112,11 @@ struct RootAndSlotAcceptorWithNames : public RootAndSlotAcceptor {
   }
   virtual void accept(GCHermesValue &hv, const char *name) = 0;
 
+  void accept(GCSmallHermesValue &hv) final {
+    accept(hv, nullptr);
+  }
+  virtual void accept(GCSmallHermesValue &hv, const char *name) = 0;
+
   void accept(GCSymbolID sym) final {
     accept(sym, nullptr);
   }
@@ -152,6 +159,10 @@ struct DroppingAcceptor final : public RootAndSlotAcceptorWithNames {
   }
 
   void accept(GCHermesValue &hv, const char *) override {
+    acceptor.accept(hv);
+  }
+
+  void accept(GCSmallHermesValue &hv, const char *) override {
     acceptor.accept(hv);
   }
 

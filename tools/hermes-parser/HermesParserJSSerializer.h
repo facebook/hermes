@@ -75,6 +75,8 @@ struct PositionResult {
 class ParseResult {
  public:
   std::string error_;
+  uint32_t errorLine_ = 0;
+  uint32_t errorColumn_ = 0;
   /// Buffer containing serialized AST
   std::vector<uint32_t> programBuffer_;
   /// Buffer containing serialized source positions

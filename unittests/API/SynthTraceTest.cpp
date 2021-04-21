@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_API_TRACE
-
 #include <hermes/SynthTrace.h>
 
 #include <hermes/Parser/JSONParser.h>
@@ -1178,7 +1176,7 @@ TEST_F(SynthTraceSerializationTest, EndExecHasRetval) {
 
 TEST_F(SynthTraceSerializationTest, TraceHeader) {
   std::string result;
-  auto resultStream = ::hermes::make_unique<llvh::raw_string_ostream>(result);
+  auto resultStream = std::make_unique<llvh::raw_string_ostream>(result);
   const ::hermes::vm::RuntimeConfig conf;
   std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(
       makeHermesRuntime(conf), conf, std::move(resultStream)));
@@ -1242,11 +1240,8 @@ TEST_F(SynthTraceSerializationTest, TraceHeader) {
       conf.getES6Proxy(),
       llvh::cast<JSONBoolean>(rtConfig->at("ES6Proxy"))->getValue());
   EXPECT_EQ(
-      conf.getES6Symbol(),
-      llvh::cast<JSONBoolean>(rtConfig->at("ES6Symbol"))->getValue());
-  EXPECT_EQ(
-      conf.getES6Intl(),
-      llvh::cast<JSONBoolean>(rtConfig->at("ES6Intl"))->getValue());
+      conf.getIntl(),
+      llvh::cast<JSONBoolean>(rtConfig->at("Intl"))->getValue());
   EXPECT_EQ(
       conf.getEnableSampledStats(),
       llvh::cast<JSONBoolean>(rtConfig->at("enableSampledStats"))->getValue());
@@ -1257,7 +1252,7 @@ TEST_F(SynthTraceSerializationTest, TraceHeader) {
 
 TEST_F(SynthTraceSerializationTest, FullTrace) {
   std::string result;
-  auto resultStream = ::hermes::make_unique<llvh::raw_string_ostream>(result);
+  auto resultStream = std::make_unique<llvh::raw_string_ostream>(result);
   const ::hermes::vm::RuntimeConfig conf;
   std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(
       makeHermesRuntime(conf),
@@ -1326,7 +1321,7 @@ TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
   const ::hermes::vm::RuntimeConfig conf =
       ::hermes::vm::RuntimeConfig::Builder().withTraceEnabled(true).build();
   std::string result;
-  auto resultStream = ::hermes::make_unique<llvh::raw_string_ostream>(result);
+  auto resultStream = std::make_unique<llvh::raw_string_ostream>(result);
   std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(
       makeHermesRuntime(conf), conf, std::move(resultStream)));
 
@@ -1383,8 +1378,7 @@ TEST_F(SynthTraceSerializationTest, TracePreservesStringAllocs) {
   const ::hermes::vm::RuntimeConfig conf =
       ::hermes::vm::RuntimeConfig::Builder().withTraceEnabled(true).build();
   std::string traceResult;
-  auto resultStream =
-      ::hermes::make_unique<llvh::raw_string_ostream>(traceResult);
+  auto resultStream = std::make_unique<llvh::raw_string_ostream>(traceResult);
   std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(
       makeHermesRuntime(conf), conf, std::move(resultStream)));
 
@@ -1423,7 +1417,7 @@ function f(s) {
   tracing::TraceInterpreter::ExecuteOptions options;
   std::string replayTraceStr;
   auto replayTraceStream =
-      ::hermes::make_unique<llvh::raw_string_ostream>(replayTraceStr);
+      std::make_unique<llvh::raw_string_ostream>(replayTraceStr);
   std::unique_ptr<TracingHermesRuntime> rt2(makeTracingHermesRuntime(
       makeHermesRuntime(conf),
       conf,
@@ -1447,5 +1441,3 @@ function f(s) {
 /// @}
 
 } // namespace
-
-#endif

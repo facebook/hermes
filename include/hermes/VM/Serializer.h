@@ -136,6 +136,11 @@ class Serializer {
     }
   }
 
+  /// Write a SmallHermesValue to the stream. If it's a pointer, replace the
+  /// pointer to a relocation ID and write it to the stream. Otherwise
+  /// write \p shv directly.
+  void writeSmallHermesValue(SmallHermesValue shv);
+
   size_t getOffset() const {
     return writtenBytes_;
   }
@@ -212,6 +217,11 @@ class Serializer {
     hv.unsafeUpdatePointer(
         reinterpret_cast<void *>(static_cast<uintptr_t>(id)));
     return hv;
+  }
+
+  SmallHermesValue updateRelocationID(SmallHermesValue shv, uint32_t id) {
+    shv.unsafeUpdateRelocationID(id);
+    return shv;
   }
 
   /// Write string buffers and their sizes to the stream.

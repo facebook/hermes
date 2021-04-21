@@ -5,12 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_API_TRACE
-
 #include "hermes/SynthTraceParser.h"
 
 #include "hermes/Parser/JSLexer.h"
 #include "hermes/Parser/JSONParser.h"
+#include "hermes/Support/OSCompat.h"
 #include "hermes/Support/SourceErrorManager.h"
 
 namespace facebook {
@@ -133,11 +132,14 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
   if (auto *maxNumRegisters = rtConfig->get("maxNumRegisters")) {
     conf.withMaxNumRegisters(getNumberAs<unsigned>(maxNumRegisters));
   }
-  if (auto *symbol = rtConfig->get("ES6Symbol")) {
-    conf.withES6Symbol(llvh::cast<JSONBoolean>(symbol)->getValue());
+  if (auto *promise = rtConfig->get("ES6Promise")) {
+    conf.withES6Promise(llvh::cast<JSONBoolean>(promise)->getValue());
   }
-  if (auto *intl = rtConfig->get("ES6Intl")) {
-    conf.withES6Intl(llvh::cast<JSONBoolean>(intl)->getValue());
+  if (auto *proxy = rtConfig->get("ES6Proxy")) {
+    conf.withES6Proxy(llvh::cast<JSONBoolean>(proxy)->getValue());
+  }
+  if (auto *intl = rtConfig->get("Intl")) {
+    conf.withIntl(llvh::cast<JSONBoolean>(intl)->getValue());
   }
   if (auto *enableSampledStats = rtConfig->get("enableSampledStats")) {
     conf.withEnableSampledStats(
@@ -586,5 +588,3 @@ parseSynthTrace(const std::string &tracefile) {
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
-
-#endif

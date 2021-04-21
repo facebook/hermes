@@ -93,7 +93,7 @@ YoungGen::YoungGen(
       gc_->storageProvider_.get(), "hermes-younggen-segment");
   if (!result) {
     // Do not invoke oom() from here because the heap is not fully initialised.
-    hermes_fatal("Failed to initialize the young gen");
+    hermes_fatal("Failed to initialize the young gen", result.getError());
   }
   exchangeActiveSegment({std::move(result.get()), this});
   resetTrueAllocContext();
@@ -339,6 +339,8 @@ void YoungGen::collect() {
   // Track the sum of the total pre-collection sizes of the young gens.
   const size_t youngGenUsedBefore = usedDirect();
   const size_t heapSizeBefore = gc_->size();
+  const size_t youngGenExternalBefore = externalMemory();
+  const size_t oldGenExternalBefore = nextGen_->externalMemory();
   ygCollection.addArg("ygUsedBefore", youngGenUsedBefore);
   ygCollection.addArg("ogUsedBefore", nextGen_->used());
   ygCollection.addArg("ogSize", nextGen_->size());
@@ -377,15 +379,7 @@ void YoungGen::collect() {
     nextGen_->youngGenTransitiveClosure(toScan, acceptor);
   }
 
-  // Have to delete allocation tracker before the ID tracker, because the
-  // allocation tracker uses the ID tracker.
-  if (gc_->getAllocationLocationTracker().isEnabled()) {
-    PerfSection updateAllocationLocationTrackerSystraceRegion(
-        "updateAllocationLocationTracker");
-    updateAllocationLocationTracker();
-  }
-
-  if (gc_->getIDTracker().isTrackingIDs()) {
+  if (gc_->isTrackingIDs()) {
     PerfSection fixupTrackedObjectsSystraceRegion("updateIDTracker");
     updateIDTracker();
   }
@@ -458,12 +452,14 @@ void YoungGen::collect() {
       sizeDirect(),
       youngGenUsedBefore,
       heapSizeBefore,
+      youngGenExternalBefore,
       // Post-allocated has an ambiguous meaning for a young-gen GC, since the
       // young gen must be completely evacuated. Since zeros aren't really
       // useful here, instead put the number of bytes that were promoted into
       // old gen, which is the amount that survived the collection.
       promotedBytes,
       gc_->size(),
+      nextGen_->externalMemory() - oldGenExternalBefore,
       &gc_->youngGenCollectionCumStats_);
 
   markOldToYoungSecs_ +=
@@ -535,6 +531,15 @@ void YoungGen::ensureReferentCopied(HermesValue *hv) {
   }
 }
 
+void YoungGen::ensureReferentCopied(SmallHermesValue *hv) {
+  assert(hv->isPointer() && "Should only call on pointer HermesValues");
+  GCCell *cell = static_cast<GCCell *>(hv->getPointer(gc_->getPointerBase()));
+  if (contains(cell)) {
+    hv->setInGC(
+        hv->updatePointer(forwardPointer(cell), gc_->getPointerBase()), gc_);
+  }
+}
+
 void YoungGen::ensureReferentCopied(GCCell **ptrLoc) {
   GCCell *ptr = *ptrLoc;
   if (contains(ptr)) {
@@ -589,15 +594,6 @@ GCCell *YoungGen::forwardPointer(GCCell *ptr) {
 }
 
 void YoungGen::updateIDTracker() {
-  updateTrackers</* idTracker */ true, /* allocationLocationTracker */ false>();
-}
-
-void YoungGen::updateAllocationLocationTracker() {
-  updateTrackers</* idTracker */ false, /* allocationLocationTracker */ true>();
-}
-
-template <bool idTracker, bool allocationLocationTracker>
-void YoungGen::updateTrackers() {
   char *ptr = activeSegment().start();
   char *lvl = activeSegment().level();
   while (ptr < lvl) {
@@ -605,22 +601,13 @@ void YoungGen::updateTrackers() {
     if (cell->hasMarkedForwardingPointer()) {
       auto *fptr = cell->getMarkedForwardingPointer();
       const auto sz = reinterpret_cast<GCCell *>(fptr)->getAllocatedSize();
-      if (idTracker) {
-        // YG promotions never change size.
-        gc_->moveObject(cell, sz, fptr, sz);
-      }
+      // YG promotions never change size.
+      gc_->moveObject(cell, sz, fptr, sz);
       ptr += sz;
     } else {
       const auto sz = cell->getAllocatedSize();
       ptr += sz;
-      // The allocation tracker needs to use the ID, so this needs to come
-      // before untrackObject.
-      if (allocationLocationTracker) {
-        gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
-      }
-      if (idTracker) {
-        gc_->untrackObject(cell);
-      }
+      gc_->untrackObject(cell, sz);
     }
   }
 }
@@ -697,3 +684,4 @@ void YoungGen::moveHeap(GenGC *gc, ptrdiff_t moveHeapDelta) {
 
 } // namespace vm
 } // namespace hermes
+#undef DEBUG_TYPE

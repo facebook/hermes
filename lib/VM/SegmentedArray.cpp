@@ -219,7 +219,7 @@ ExecutionStatus SegmentedArray::push_back(
   if (growRight(self, runtime, 1) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto &elm = self->at(oldSize);
+  auto &elm = self->atRef(oldSize);
   new (&elm) GCHermesValue(*value, &runtime->getHeap());
   return ExecutionStatus::RETURNED;
 }
@@ -590,3 +590,5 @@ template PseudoHandle<SegmentedArray> SegmentedArray::increaseSize<false>(
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

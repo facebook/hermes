@@ -27,6 +27,7 @@ declare function foo3(): any;
 // CHECK-NEXT:           "typeAnnotation": {
 // CHECK-NEXT:             "type": "FunctionTypeAnnotation",
 // CHECK-NEXT:             "params": [],
+// CHECK-NEXT:             "this": null,
 // CHECK-NEXT:             "returnType": {
 // CHECK-NEXT:               "type": "AnyTypeAnnotation",
 // CHECK-NEXT:               "loc": {
@@ -98,6 +99,7 @@ declare function foo3(): any;
 // CHECK-NEXT:           "typeAnnotation": {
 // CHECK-NEXT:             "type": "FunctionTypeAnnotation",
 // CHECK-NEXT:             "params": [],
+// CHECK-NEXT:             "this": null,
 // CHECK-NEXT:             "returnType": {
 // CHECK-NEXT:               "type": "BooleanTypeAnnotation",
 // CHECK-NEXT:               "loc": {
@@ -181,6 +183,7 @@ declare function foo3(): any;
 // CHECK-NEXT:           "typeAnnotation": {
 // CHECK-NEXT:             "type": "FunctionTypeAnnotation",
 // CHECK-NEXT:             "params": [],
+// CHECK-NEXT:             "this": null,
 // CHECK-NEXT:             "returnType": {
 // CHECK-NEXT:               "type": "AnyTypeAnnotation",
 // CHECK-NEXT:               "loc": {

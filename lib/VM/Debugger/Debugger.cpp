@@ -569,18 +569,20 @@ auto Debugger::getStackTrace(InterpreterState state) const -> StackTrace {
     if (auto callableHandle = Handle<Callable>::dyn_vmcast(
             Handle<>(&cf.getCalleeClosureOrCBRef()))) {
       NamedPropertyDescriptor desc;
-      propObj = JSObject::getNamedDescriptor(
-          callableHandle,
-          runtime_,
-          Predefined::getSymbolID(Predefined::displayName),
-          desc);
+      propObj = JSObject::getNamedDescriptorPredefined(
+          callableHandle, runtime_, Predefined::displayName, desc);
       if (propObj) {
-        displayName =
-            JSObject::getNamedSlotValue(propObj.get(), runtime_, desc);
-        if (displayName->isString()) {
-          llvh::SmallVector<char16_t, 64> storage;
-          displayName->getString()->appendUTF16String(storage);
-          convertUTF16ToUTF8WithReplacements(frameInfo.functionName, storage);
+        auto displayNameRes = JSObject::getNamedSlotValue(
+            createPseudoHandle(*propObj), runtime_, desc);
+        if (LLVM_UNLIKELY(displayNameRes == ExecutionStatus::EXCEPTION)) {
+          displayName = HermesValue::encodeUndefinedValue();
+        } else {
+          displayName = std::move(*displayNameRes);
+          if (displayName->isString()) {
+            llvh::SmallVector<char16_t, 64> storage;
+            displayName->getString()->appendUTF16String(storage);
+            convertUTF16ToUTF8WithReplacements(frameInfo.functionName, storage);
+          }
         }
       }
     }
@@ -1200,6 +1202,12 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
       }
     } else if (breakpoint.requestedLocation.fileId != kInvalidLocation) {
       for (const auto &region : fileRegions) {
+        // We don't yet have a convincing story for debugging CommonJS, so for
+        // now just assert that we're still living in the one-file-per-RM world.
+        // TODO(T84976604): Properly handle setting breakpoints when there are
+        // multiple JS files per HBC file.
+        assert(
+            region.filenameId == 0 && "Unexpected multiple filenames per RM");
         if (resolveScriptId(&runtimeModule, region.filenameId) ==
             breakpoint.requestedLocation.fileId) {
           resolvedFileId = region.filenameId;
@@ -1285,9 +1293,6 @@ auto Debugger::getSourceMappingUrl(ScriptID scriptId) const -> String {
 auto Debugger::resolveScriptId(
     RuntimeModule *runtimeModule,
     uint32_t filenameId) const -> ScriptID {
-  // We don't yet have a convincing story for debugging CommonJS, so for
-  // now just assert that we're still living in the one-file-per-RM world.
-  assert(filenameId == 0 && "Unexpected multiple filenames per RM");
   return runtimeModule->getScriptID();
 }
 

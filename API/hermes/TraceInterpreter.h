@@ -7,9 +7,8 @@
 
 #pragma once
 
-#ifdef HERMESVM_API_TRACE
-
 #include <hermes/Public/RuntimeConfig.h>
+#include <hermes/Support/OptValue.h>
 #include <hermes/Support/SHA1.h>
 #include <hermes/SynthTrace.h>
 
@@ -124,6 +123,12 @@ class TraceInterpreter final {
     /// for using a tool like PIN to count instructions and compare runs.
     bool stabilizeInstructionCount{false};
 
+    /// If true, remove the requirement that the input bytecode was compiled
+    /// from the same source used to record the trace. There must only be one
+    /// input bytecode file in this case. If its observable behavior deviates
+    /// from the trace, the results are undefined.
+    bool disableSourceHashCheck{false};
+
     /// A trace contains many MarkerRecords which have a name used to identify
     /// them. If the replay encounters this given marker, perform an action
     /// described by MarkerAction. All actions will stop the trace early and
@@ -137,6 +142,10 @@ class TraceInterpreter final {
       SNAPSHOT,
       /// Take a heap timeline that ends at marker.
       TIMELINE,
+      /// Take a sampling heap profile that ends at marker.
+      SAMPLE_MEMORY,
+      /// Take a sampling time profile that ends at marker.
+      SAMPLE_TIME,
     };
 
     /// Sets the action to take upon encountering the marker. The action will
@@ -276,6 +285,7 @@ class TraceInterpreter final {
   getSourceHashToBundleMap(
       std::vector<std::unique_ptr<llvh::MemoryBuffer>> &&codeBufs,
       const SynthTrace &trace,
+      const ExecuteOptions &options,
       bool *codeIsMmapped = nullptr,
       bool *isBytecode = nullptr);
 
@@ -380,20 +390,28 @@ class TraceInterpreter final {
   /// val to be of the corresponding runtime type.  Adds this
   /// occurrence at \p globalRecordNum as a local or global definition
   /// in \p locals or the global object map, respectively.
-  bool ifObjectAddToDefs(
+  ///
+  /// \p isThis should be true if and only if the value is a 'this' in a call
+  /// (only used for validation). TODO(T84791675): Remove this parameter.
+  ///
+  /// N.B. This method should be called even if you happen to know that the
+  /// value cannot be an Object or String, since it performs useful validation.
+  void ifObjectAddToDefs(
       const SynthTrace::TraceValue &traceValue,
       const jsi::Value &val,
       const Call &call,
       uint64_t globalRecordNum,
-      std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals);
+      std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals,
+      bool isThis = false);
 
   /// Same as above, except it avoids copies on temporary objects.
-  bool ifObjectAddToDefs(
+  void ifObjectAddToDefs(
       const SynthTrace::TraceValue &traceValue,
       jsi::Value &&val,
       const Call &call,
       uint64_t globalRecordNum,
-      std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals);
+      std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals,
+      bool isThis = false);
 
   /// Check if the \p marker is the one that is being searched for. If this is
   /// the first time encountering the matching marker, perform the actions set
@@ -410,5 +428,3 @@ class TraceInterpreter final {
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
-
-#endif

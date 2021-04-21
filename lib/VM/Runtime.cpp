@@ -88,9 +88,11 @@ CallResult<PseudoHandle<>> Runtime::getNamed(
   auto clazzGCPtr = obj->getClassGCPtr();
   auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
   if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
+    // The slot is cached, so it is safe to use the Internal function.
     return createPseudoHandle(
-        JSObject::getNamedSlotValue<PropStorage::Inline::Yes>(
-            *obj, this, cacheEntry->slot));
+        JSObject::getNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
+            *obj, this, cacheEntry->slot)
+            .unboxToHV(this));
   }
   auto sym = Predefined::getSymbolID(fixedPropCacheNames[static_cast<int>(id)]);
   NamedPropertyDescriptor desc;
@@ -106,7 +108,7 @@ CallResult<PseudoHandle<>> Runtime::getNamed(
       cacheEntry->clazz = clazzGCPtr.getStorageType();
       cacheEntry->slot = desc.slot;
     }
-    return createPseudoHandle(JSObject::getNamedSlotValue(*obj, this, desc));
+    return JSObject::getNamedSlotValue(createPseudoHandle(*obj), this, desc);
   }
   return JSObject::getNamed_RJS(obj, this, sym);
 }
@@ -118,8 +120,9 @@ ExecutionStatus Runtime::putNamedThrowOnError(
   auto clazzGCPtr = obj->getClassGCPtr();
   auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
   if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
-    JSObject::setNamedSlotValue<PropStorage::Inline::Yes>(
-        *obj, this, cacheEntry->slot, hv);
+    auto shv = SmallHermesValue::encodeHermesValue(hv, this);
+    JSObject::setNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
+        *obj, this, cacheEntry->slot, shv);
     return ExecutionStatus::RETURNED;
   }
   auto sym = Predefined::getSymbolID(fixedPropCacheNames[static_cast<int>(id)]);
@@ -134,45 +137,14 @@ ExecutionStatus Runtime::putNamedThrowOnError(
       cacheEntry->clazz = clazzGCPtr.getStorageType();
       cacheEntry->slot = desc.slot;
     }
-    JSObject::setNamedSlotValue(*obj, this, desc.slot, hv);
+    auto shv = SmallHermesValue::encodeHermesValue(hv, this);
+    JSObject::setNamedSlotValueUnsafe(*obj, this, desc.slot, shv);
     return ExecutionStatus::RETURNED;
   }
   return JSObject::putNamed_RJS(
              obj, this, sym, makeHandle(hv), PropOpFlags().plusThrowOnError())
       .getStatus();
 }
-
-#ifdef HERMESVM_GC_RUNTIME
-std::unique_ptr<GC> Runtime::makeHeap(
-    Runtime *runtime,
-    GCBase::HeapKind heapKind,
-    std::shared_ptr<StorageProvider> provider,
-    const RuntimeConfig &runtimeConfig) {
-  switch (heapKind) {
-    case GCBase::HeapKind::HADES:
-      return llvh::make_unique<HadesGC>(
-          getMetadataTable(),
-          static_cast<GC::GCCallbacks *>(runtime),
-          runtime,
-          runtimeConfig.getGCConfig(),
-          runtimeConfig.getCrashMgr(),
-          std::move(provider),
-          runtimeConfig.getVMExperimentFlags());
-    case GCBase::HeapKind::NCGEN:
-      return llvh::make_unique<GenGC>(
-          getMetadataTable(),
-          static_cast<GC::GCCallbacks *>(runtime),
-          runtime,
-          runtimeConfig.getGCConfig(),
-          runtimeConfig.getCrashMgr(),
-          std::move(provider),
-          runtimeConfig.getVMExperimentFlags());
-    case GCBase::HeapKind::MALLOC:
-      llvm_unreachable(
-          "MallocGC should not be used with the RuntimeGC build config");
-  }
-}
-#endif
 
 Runtime::Runtime(
     std::shared_ptr<StorageProvider> provider,
@@ -182,16 +154,7 @@ Runtime::Runtime(
       verifyEvalIR(runtimeConfig.getVerifyEvalIR()),
       optimizedEval(runtimeConfig.getOptimizedEval()),
       asyncBreakCheckInEval(runtimeConfig.getAsyncBreakCheckInEval()),
-#ifdef HERMESVM_GC_RUNTIME
-      heap_(makeHeap(
-          this,
-          (runtimeConfig.getVMExperimentFlags() & experiments::Hades)
-              ? GCBase::HeapKind::HADES
-              : GCBase::HeapKind::NCGEN,
-          std::move(provider),
-          runtimeConfig)),
-#else
-      heap_(
+      heapStorage_(
           getMetadataTable(),
           this,
           this,
@@ -199,12 +162,9 @@ Runtime::Runtime(
           runtimeConfig.getCrashMgr(),
           std::move(provider),
           runtimeConfig.getVMExperimentFlags()),
-#endif
-      jitContext_(runtimeConfig.getEnableJIT(), (1 << 20) * 16, (1 << 20) * 32),
       hasES6Promise_(runtimeConfig.getES6Promise()),
       hasES6Proxy_(runtimeConfig.getES6Proxy()),
-      hasES6Symbol_(runtimeConfig.getES6Symbol()),
-      hasES6Intl_(runtimeConfig.getES6Intl()),
+      hasIntl_(runtimeConfig.getIntl()),
       shouldRandomizeMemoryLayout_(runtimeConfig.getRandomizeMemoryLayout()),
       bytecodeWarmupPercent_(runtimeConfig.getBytecodeWarmupPercent()),
       trackIO_(runtimeConfig.getTrackIO()),
@@ -216,7 +176,7 @@ Runtime::Runtime(
       crashMgr_(runtimeConfig.getCrashMgr()),
       crashCallbackKey_(
           crashMgr_->registerCallback([this](int fd) { crashCallback(fd); })),
-      codeCoverageProfiler_(hermes::make_unique<CodeCoverageProfiler>(this)),
+      codeCoverageProfiler_(std::make_unique<CodeCoverageProfiler>(this)),
       gcEventCallback_(runtimeConfig.getGCConfig().getCallback()),
       allowFunctionToStringWithRuntimeSource_(
           runtimeConfig.getAllowFunctionToStringWithRuntimeSource()) {
@@ -240,7 +200,7 @@ Runtime::Runtime(
         sizeof(PinnedHermesValue) * maxNumRegisters, oscompat::page_size());
     auto result = oscompat::vm_allocate(numBytesForRegisters);
     if (!result) {
-      hermes_fatal("failed to allocate register stack");
+      hermes_fatal("Failed to allocate register stack", result.getError());
     }
     registerStack_ = static_cast<PinnedHermesValue *>(result.get());
     registerStackBytesToUnmap_ = numBytesForRegisters;
@@ -280,7 +240,7 @@ Runtime::Runtime(
     LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
 
     if (runtimeConfig.getEnableSampleProfiling())
-      samplingProfiler_ = make_unique<SamplingProfiler>(this);
+      samplingProfiler = std::make_unique<SamplingProfiler>(this);
 
     return;
   }
@@ -388,13 +348,13 @@ Runtime::Runtime(
   initJSBuiltins(builtins_, jsBuiltinsObj);
 
   if (runtimeConfig.getEnableSampleProfiling())
-    samplingProfiler_ = make_unique<SamplingProfiler>(this);
+    samplingProfiler = std::make_unique<SamplingProfiler>(this);
 
   LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
 }
 
 Runtime::~Runtime() {
-  samplingProfiler_.reset();
+  samplingProfiler.reset();
   getHeap().finalizeAll();
   // Now that all objects are finalized, there shouldn't be any native memory
   // keys left in the ID tracker for memory profiling. Assert that the only IDs
@@ -556,20 +516,8 @@ void Runtime::markRoots(
     acceptor.endRootSection();
   }
 
-  {
-    MarkRootsPhaseTimer timer(this, RootAcceptor::Section::SamplingProfiler);
-    acceptor.beginRootSection(RootAcceptor::Section::SamplingProfiler);
-    if (samplingProfiler_) {
-      samplingProfiler_->markRoots(acceptor);
-    }
-#ifdef HERMESVM_PROFILER_BB
-    auto *&hiddenClassArray = inlineCacheProfiler_.getHiddenClassArray();
-    if (hiddenClassArray) {
-      acceptor.acceptPtr(hiddenClassArray);
-    }
-#endif
-    acceptor.endRootSection();
-  }
+  // Mark the alternative roots during the normal mark roots call.
+  markRootsForCompleteMarking(acceptor);
 
   {
     MarkRootsPhaseTimer timer(
@@ -578,6 +526,12 @@ void Runtime::markRoots(
     if (codeCoverageProfiler_) {
       codeCoverageProfiler_->markRoots(acceptor);
     }
+#ifdef HERMESVM_PROFILER_BB
+    auto *&hiddenClassArray = inlineCacheProfiler_.getHiddenClassArray();
+    if (hiddenClassArray) {
+      acceptor.acceptPtr(hiddenClassArray);
+    }
+#endif
     acceptor.endRootSection();
   }
 
@@ -608,6 +562,16 @@ void Runtime::markWeakRoots(WeakRootAcceptor &acceptor) {
     rm.markWeakRoots(acceptor);
   for (auto &fn : customMarkWeakRootFuncs_)
     fn(&getHeap(), acceptor);
+  acceptor.endRootSection();
+}
+
+void Runtime::markRootsForCompleteMarking(
+    RootAndSlotAcceptorWithNames &acceptor) {
+  MarkRootsPhaseTimer timer(this, RootAcceptor::Section::SamplingProfiler);
+  acceptor.beginRootSection(RootAcceptor::Section::SamplingProfiler);
+  if (samplingProfiler) {
+    samplingProfiler->markRoots(acceptor);
+  }
   acceptor.endRootSection();
 }
 
@@ -784,8 +748,7 @@ void Runtime::printArrayCensus(llvh::raw_ostream &os) {
   getHeap().forAllObjs([&arraySizeToCountAndWastedSlots, this](GCCell *cell) {
     if (cell->getKind() == CellKind::ArrayKind) {
       JSArray *arr = vmcast<JSArray>(cell);
-      JSArray::StorageType *storage =
-          arr->getIndexedStorage().get(getHeap().getPointerBase());
+      JSArray::StorageType *storage = arr->getIndexedStorage(this);
       const auto capacity = storage ? storage->totalCapacityOfSpine() : 0;
       const auto sz = storage ? storage->size() : 0;
       const auto key = std::make_pair(capacity, arr->getAllocatedSize());
@@ -1074,7 +1037,7 @@ Handle<JSObject> Runtime::runInternalBytecode() {
   auto module = getInternalBytecode();
   std::pair<std::unique_ptr<hbc::BCProvider>, std::string> bcResult =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-          llvh::make_unique<Buffer>(module.data(), module.size()));
+          std::make_unique<Buffer>(module.data(), module.size()));
   if (LLVM_UNLIKELY(!bcResult.first)) {
     hermes_fatal((llvh::Twine("Error running internal bytecode: ") +
                   bcResult.second.c_str())
@@ -1410,6 +1373,7 @@ void Runtime::initPredefinedStrings() {
   assert(!getTopGCScope() && "There shouldn't be any handles allocated yet");
 
   auto buffer = predefStringAndSymbolChars;
+  auto propLengths = predefPropertyLengths;
   auto strLengths = predefStringLengths;
   auto symLengths = predefSymbolLengths;
 
@@ -1426,9 +1390,13 @@ void Runtime::initPredefinedStrings() {
   identifierTable_.reserve(Predefined::_IPROP_AFTER_LAST + strCount + symCount);
 
   for (uint32_t idx = 0; idx < Predefined::_IPROP_AFTER_LAST; ++idx) {
-    SymbolID sym = identifierTable_.createNotUniquedLazySymbol("");
+    SymbolID sym = identifierTable_.createNotUniquedLazySymbol(
+        ASCIIRef{&buffer[offset], propLengths[idx]});
+
     assert(sym == Predefined::getSymbolID((Predefined::IProp)registered++));
     (void)sym;
+
+    offset += propLengths[idx];
   }
 
   assert(
@@ -1911,8 +1879,8 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
 }
 
 void Runtime::onGCEvent(GCEventKind kind, const std::string &extraInfo) {
-  if (samplingProfiler_ != nullptr) {
-    samplingProfiler_->onGCEvent(kind, extraInfo);
+  if (samplingProfiler != nullptr) {
+    samplingProfiler->onGCEvent(kind, extraInfo);
   }
   if (gcEventCallback_) {
     gcEventCallback_(kind, extraInfo.c_str());
@@ -2102,7 +2070,7 @@ void Runtime::serializeRuntimeFields(Serializer &s) {
   // TODO: Come back later. serialize/deserialize this to be able to
   // serialize/deserialize after user code.
   // Field const CrashManager::CallbackKey crashCallbackKey_;
-  // Field std::shared_ptr<SamplingProfiler> samplingProfiler_;
+  // Field std::shared_ptr<SamplingProfiler> samplingProfiler;
 
 #ifdef HERMES_ENABLE_DEBUGGER
   // TODO: serialize/deserialize this to be able to serialize/deserialize after
@@ -2188,7 +2156,7 @@ void Runtime::deserializeRuntimeFields(Deserializer &d) {
   // TODO: Come back later. Serialize/deserialize this to be able to
   // serialize/deserialize after user code.
   // Field const CrashManager::CallbackKey crashCallbackKey_;
-  // Field std::shared_ptr<SamplingProfiler> samplingProfiler_;
+  // Field std::shared_ptr<SamplingProfiler> samplingProfiler;
 
 #ifdef HERMES_ENABLE_DEBUGGER
   // TODO: serialize/deserialize this to be able to serialize/deserialize after
@@ -2258,8 +2226,7 @@ void Runtime::populateHeaderRuntimeConfig(SerializeHeader &header) {
   header.enableEval = enableEval;
   header.hasES6Promise = hasES6Promise_;
   header.hasES6Proxy = hasES6Proxy_;
-  header.hasES6Symbol = hasES6Symbol_;
-  header.hasES6Intl = hasES6Intl_;
+  header.hasIntl = hasIntl_;
   header.bytecodeWarmupPercent = bytecodeWarmupPercent_;
   header.trackIO = trackIO_;
 }
@@ -2277,12 +2244,8 @@ void Runtime::checkHeaderRuntimeConfig(SerializeHeader &header) const {
     hermes_fatal(
         "serialize/deserialize Runtime Configs don't match (es6Proxy)");
   }
-  if (header.hasES6Symbol != hasES6Symbol_) {
-    hermes_fatal(
-        "serialize/deserialize Runtime Configs don't match (es6Symbol)");
-  }
-  if (header.hasES6Intl != hasES6Intl_) {
-    hermes_fatal("serialize/deserialize Runtime Configs don't match (es6Intl)");
+  if (header.hasIntl != hasIntl_) {
+    hermes_fatal("serialize/deserialize Runtime Configs don't match (intl)");
   }
 
   if (header.bytecodeWarmupPercent != bytecodeWarmupPercent_) {
@@ -2324,7 +2287,8 @@ StackTracesTreeNode *Runtime::getCurrentStackTracesTreeNode(
     const inst::Inst *ip) {
   assert(stackTracesTree_ && "Runtime not configured to track alloc stacks");
   assert(
-      getHeap().getAllocationLocationTracker().isEnabled() &&
+      (getHeap().getAllocationLocationTracker().isEnabled() ||
+       getHeap().getSamplingAllocationTracker().isEnabled()) &&
       "AllocationLocationTracker not enabled");
   if (!ip) {
     return nullptr;
@@ -2341,7 +2305,7 @@ void Runtime::enableAllocationLocationTracker(
         std::vector<GCBase::AllocationLocationTracker::HeapStatsUpdate>)>
         fragmentCallback) {
   if (!stackTracesTree_) {
-    stackTracesTree_ = make_unique<StackTracesTree>();
+    stackTracesTree_ = std::make_unique<StackTracesTree>();
   }
   stackTracesTree_->syncWithRuntimeStack(this);
   getHeap().enableHeapProfiler(std::move(fragmentCallback));
@@ -2352,6 +2316,21 @@ void Runtime::disableAllocationLocationTracker(bool clearExistingTree) {
   if (clearExistingTree) {
     stackTracesTree_.reset();
   }
+}
+
+void Runtime::enableSamplingHeapProfiler(
+    size_t samplingInterval,
+    int64_t seed) {
+  if (!stackTracesTree_) {
+    stackTracesTree_ = std::make_unique<StackTracesTree>();
+  }
+  stackTracesTree_->syncWithRuntimeStack(this);
+  getHeap().enableSamplingHeapProfiler(samplingInterval, seed);
+}
+
+void Runtime::disableSamplingHeapProfiler(llvh::raw_ostream &os) {
+  getHeap().disableSamplingHeapProfiler(os);
+  stackTracesTree_.reset();
 }
 
 void Runtime::popCallStackImpl() {
@@ -2386,6 +2365,10 @@ void Runtime::enableAllocationLocationTracker(
 
 void Runtime::disableAllocationLocationTracker(bool) {}
 
+void Runtime::enableSamplingHeapProfiler(size_t, int64_t) {}
+
+void Runtime::disableSamplingHeapProfiler(llvh::raw_ostream &) {}
+
 void Runtime::popCallStackImpl() {}
 
 void Runtime::pushCallStackImpl(const CodeBlock *, const inst::Inst *) {}
@@ -2394,3 +2377,5 @@ void Runtime::pushCallStackImpl(const CodeBlock *, const inst::Inst *) {}
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

@@ -257,6 +257,7 @@ function foo(a?): number {}
 // CHECK-NEXT:                 "optional": false
 // CHECK-NEXT:               }
 // CHECK-NEXT:             ],
+// CHECK-NEXT:             "this": null,
 // CHECK-NEXT:             "returnType": {
 // CHECK-NEXT:               "type": "StringTypeAnnotation"
 // CHECK-NEXT:             },
@@ -466,6 +467,7 @@ function foo(a?): number {}
 // CHECK-NEXT:                 "typeAnnotation": {
 // CHECK-NEXT:                   "type": "FunctionTypeAnnotation",
 // CHECK-NEXT:                   "params": [],
+// CHECK-NEXT:                   "this": null,
 // CHECK-NEXT:                   "returnType": {
 // CHECK-NEXT:                     "type": "VoidTypeAnnotation"
 // CHECK-NEXT:                   },
@@ -475,6 +477,7 @@ function foo(a?): number {}
 // CHECK-NEXT:                 "optional": false
 // CHECK-NEXT:               }
 // CHECK-NEXT:             ],
+// CHECK-NEXT:             "this": null,
 // CHECK-NEXT:             "returnType": {
 // CHECK-NEXT:               "type": "NumberTypeAnnotation"
 // CHECK-NEXT:             },

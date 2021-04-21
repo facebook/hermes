@@ -23,6 +23,10 @@ include(config-ix)
 configure_file(include/llvh/Config/config.h.cmake include/llvh/Config/config.h)
 configure_file(include/llvh/Config/llvm-config.h.cmake include/llvh/Config/llvm-config.h)
 
+# Some sources are not compatible with unity builds, so if unity builds are
+# globally enabled, turn them off for LLVH.
+set(CMAKE_UNITY_BUILD OFF)
+
 add_subdirectory(lib)
 add_subdirectory(utils/FileCheck)
 add_subdirectory(utils/not)

@@ -45,7 +45,6 @@ HERMES_VM_GCOBJECT(Environment);
 HERMES_VM_GCOBJECT(DictPropertyMap);
 HERMES_VM_GCOBJECT(HiddenClass);
 HERMES_VM_GCOBJECT(PropertyAccessor);
-HERMES_VM_GCOBJECT(ArrayStorage);
 HERMES_VM_GCOBJECT(JSArray);
 HERMES_VM_GCOBJECT(PrimitiveBox);
 HERMES_VM_GCOBJECT(JSArrayBuffer);
@@ -115,6 +114,11 @@ template <size_t Size>
 struct EmptyCell;
 template <size_t Size>
 struct IsGCObject<EmptyCell<Size>> : public std::true_type {};
+
+template <typename HVType>
+class ArrayStorageBase;
+template <typename HVType>
+struct IsGCObject<ArrayStorageBase<HVType>> : public std::true_type {};
 
 template <typename T, bool isGCObject = IsGCObject<T>::value>
 struct HermesValueTraits;

@@ -5,6 +5,10 @@
 
 set(HERMES_LINK_COMPONENTS LLVHSupport)
 
+# Some sources here have conflicting names for free functions, so disable unity
+# builds if they have been globally enabled.
+set(CMAKE_UNITY_BUILD OFF)
+
 set(RTSources
   AlignedHeapSegmentTest.cpp
   AlignedStorageTest.cpp
@@ -48,7 +52,7 @@ set(RTSources
   IRInstrumentationTest.cpp
   JSLibTest.cpp
   NativeFrameTest.cpp
-  NativeFunctionNameTest.cpp
+  NativeFunctionTest.cpp
   MarkBitArrayNCTest.cpp
   ObjectBufferTest.cpp
   ObjectModelTest.cpp
@@ -56,10 +60,13 @@ set(RTSources
   PredefinedStringsTest.cpp
   HandleTest.cpp
   RuntimeConfigTest.cpp
+  SamplingHeapProfilerTest.cpp
   SegmentedArrayTest.cpp
   SerializerTest.cpp
+  SmallHermesValueTest.cpp
   SmallXStringTest.cpp
   StaticBuiltinsTest.cpp
+  StackTracesTreeTest.cpp
   StorageProviderTest.cpp
   StringBuilderTest.cpp
   StringPrimitiveTest.cpp
@@ -92,7 +99,3 @@ target_link_libraries(HermesVMRuntimeTests
 hermes_link_icu(HermesVMRuntimeTests)
 
 add_subdirectory(Instrumentation)
-
-if(HERMESVM_JIT)
-  add_subdirectory(JIT)
-endif()

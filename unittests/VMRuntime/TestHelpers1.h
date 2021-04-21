@@ -6,6 +6,7 @@
  */
 
 #include "hermes/AST/Context.h"
+#include "hermes/SourceMap/SourceMapGenerator.h"
 
 #include <stdint.h>
 #include <vector>
@@ -21,6 +22,7 @@ struct TestCompileFlags {
 /// compiled successfully. \return the bytecode as a vector of bytes.
 std::vector<uint8_t> bytecodeForSource(
     const char *source,
-    TestCompileFlags flags = TestCompileFlags());
+    TestCompileFlags flags = TestCompileFlags(),
+    SourceMapGenerator *sourceMapGen = nullptr);
 
 } // namespace hermes

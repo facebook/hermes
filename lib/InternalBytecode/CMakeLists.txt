@@ -34,23 +34,26 @@ set(JS_COMPILER_FLAGS "-O" "-Wno-undefined-variable")
 
 # Concatenate all JS files into one source file for compilation.
 # This way there is only one RuntimeModule made for them.
-# The concatenation order is set specifically so that order is controlled here.
 if(NOT WIN32)
   set(concatenate "cat")
 else()
   set(concatenate "type")
 endif()
 
-set(internal_bytecode_sources
-  header.js
-  Promise.js
-  AsyncFn.js
-  footer.js
-)
+# The concatenation order is specified by the numeric prefixes in the JS filenames.
+file(GLOB internal_bytecode_sources "*.js")
+list(SORT internal_bytecode_sources)
+
+# Convert path from cmake style (`/`) to native style (`\` on Win and `/` elsewhere) for Win.
+set(internal_bytecode_sources_native_path "")
+foreach(cmake_path IN LISTS internal_bytecode_sources)
+  file(TO_NATIVE_PATH ${cmake_path} native_path)
+  list(APPEND internal_bytecode_sources_native_path ${native_path})
+endforeach()
 
 add_custom_command(
   OUTPUT InternalBytecode.js
-  COMMAND ${concatenate} ${internal_bytecode_sources} > ${CMAKE_CURRENT_BINARY_DIR}/InternalBytecode.js
+  COMMAND ${concatenate} ${internal_bytecode_sources_native_path} > ${CMAKE_CURRENT_BINARY_DIR}/InternalBytecode.js
   DEPENDS ${internal_bytecode_sources}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   VERBATIM
@@ -64,7 +67,6 @@ add_custom_command(
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   VERBATIM
 )
-
 
 # X.inc is the hex dump of the compiled bytecode artifact that can be included
 # in the InternalBytecode.cpp as C/C++ hex literal to initialize a byte array.

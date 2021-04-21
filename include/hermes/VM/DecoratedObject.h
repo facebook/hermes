@@ -63,7 +63,7 @@ class DecoratedObject : public JSObject {
   /// \return the value in an additional slot.
   /// \param index must be less than the \c additionalSlotCount passed to
   /// the create method.
-  static HermesValue getAdditionalSlotValue(
+  static SmallHermesValue getAdditionalSlotValue(
       DecoratedObject *self,
       Runtime *runtime,
       unsigned index) {
@@ -80,8 +80,8 @@ class DecoratedObject : public JSObject {
       DecoratedObject *self,
       Runtime *runtime,
       unsigned index,
-      HermesValue value) {
-    return JSObject::setInternalProperty(
+      SmallHermesValue value) {
+    JSObject::setInternalProperty(
         self,
         runtime,
         numOverlapSlots<DecoratedObject>() + ANONYMOUS_PROPERTY_SLOTS + index,

@@ -229,7 +229,7 @@ class Context {
 
   parser::PreParsedBufferInfo *getPreParsedBufferInfo(uint32_t bufferId) {
     if (!preParsed_)
-      preParsed_ = llvh::make_unique<parser::PreParsedData>();
+      preParsed_ = std::make_unique<parser::PreParsedData>();
     return preParsed_->getBufferInfo(bufferId);
   }
 

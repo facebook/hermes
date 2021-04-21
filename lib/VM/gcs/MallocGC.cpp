@@ -15,6 +15,7 @@
 #include "hermes/VM/HiddenClass.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/RootAndSlotAcceptorDefault.h"
+#include "hermes/VM/SmallHermesValue-inline.h"
 
 #include "llvh/Support/Debug.h"
 
@@ -142,6 +143,16 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       GCCell *ptr = static_cast<GCCell *>(hv.getPointer());
       accept(ptr);
       hv.setInGC(hv.updatePointer(ptr), &gc);
+    } else if (hv.isSymbol()) {
+      acceptSym(hv.getSymbol());
+    }
+  }
+
+  void acceptSHV(SmallHermesValue &hv) override {
+    if (hv.isPointer()) {
+      GCCell *ptr = static_cast<GCCell *>(hv.getPointer(pointerBase_));
+      accept(ptr);
+      hv.setInGC(hv.updatePointer(ptr, pointerBase_), &gc);
     } else if (hv.isSymbol()) {
       acceptSym(hv.getSymbol());
     }
@@ -314,8 +325,7 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
 #endif
         // Pointers that aren't marked now weren't moved, and are dead instead.
         if (isTrackingIDs()) {
-          allocationLocationTracker_.freeAlloc(cell, freedSize);
-          untrackObject(cell);
+          untrackObject(cell, freedSize);
         }
       }
 #ifndef NDEBUG
@@ -374,16 +384,18 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
       std::chrono::duration_cast<std::chrono::milliseconds>(
           wallEnd - wallStart),
       std::chrono::duration_cast<std::chrono::milliseconds>(cpuEnd - cpuStart),
+      /*allocated*/ BeforeAndAfter{allocatedBefore, allocatedBytes_},
       // MallocGC only allocates memory as it is used so there is no distinction
       // between the allocated bytes and the heap size.
-      /*preAllocated*/ allocatedBefore,
-      /*preSize*/ allocatedBefore,
-      /*postAllocated*/ allocatedBytes_,
-      /*postSize*/ allocatedBytes_,
+      /*size*/ BeforeAndAfter{allocatedBefore, allocatedBytes_},
+      // TODO: MallocGC doesn't yet support credit/debit external memory, so
+      // it has no data for these numbers.
+      /*external*/ BeforeAndAfter{0, 0},
       /*survivalRatio*/
-      allocatedBefore ? (allocatedBytes_ * 1.0) / allocatedBefore : 0};
+      allocatedBefore ? (allocatedBytes_ * 1.0) / allocatedBefore : 0,
+      /*tags*/ {}};
 
-  recordGCStats(event);
+  recordGCStats(event, /* onMutator */ true);
   checkTripwire(allocatedBytes_);
 }
 
@@ -449,6 +461,10 @@ void MallocGC::printStats(JSONEmitter &json) {
   json.openDict();
   json.closeDict();
   json.closeDict();
+}
+
+std::string MallocGC::getKindAsStr() const {
+  return kGCName;
 }
 
 void MallocGC::resetStats() {
@@ -613,3 +629,4 @@ template void *MallocGC::alloc</*FixedSize*/ false, HasFinalizer::No>(
 
 } // namespace vm
 } // namespace hermes
+#undef DEBUG_TYPE

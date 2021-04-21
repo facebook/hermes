@@ -31,7 +31,7 @@ TEST(GCOOMDeathTest, SuperSegment) {
     // This test won't work if there is no limit on allocation sizes.
     return;
   }
-  using SuperSegmentCell = EmptyCell<GC::maxAllocationSize() * 2>;
+  using SuperSegmentCell = VarSizedEmptyCell<GC::maxAllocationSize() * 2>;
   auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfig);
   EXPECT_OOM(SuperSegmentCell::create(*runtime));
 }
@@ -204,7 +204,7 @@ TEST(GCOOMTest, VALimitFullGC) {
   const GCConfig config = TestGCConfigFixedSize(kHeapSizeHint);
 
   // Only space for two segments.
-  auto provider = llvh::make_unique<LimitedStorageProvider>(
+  auto provider = std::make_unique<LimitedStorageProvider>(
       DummyRuntime::defaultProvider(), AlignedStorage::size() * 2);
 
   auto runtime =

@@ -81,6 +81,22 @@ class GCPointerBase {
   inline static StorageType pointerToStorageType(
       GCCell *ptr,
       PointerBase *base);
+
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  static BasedPointer::StorageType storageTypeToRaw(StorageType st) {
+    return st.getRawValue();
+  }
+  static StorageType rawToStorageType(BasedPointer::StorageType raw) {
+    return BasedPointer{raw};
+  }
+#else
+  static uintptr_t storageTypeToRaw(StorageType st) {
+    return reinterpret_cast<uintptr_t>(st);
+  }
+  static StorageType rawToStorageType(uintptr_t st) {
+    return reinterpret_cast<StorageType>(st);
+  }
+#endif
 };
 
 /// A class to represent "raw" pointers to heap objects.  Disallows assignment,

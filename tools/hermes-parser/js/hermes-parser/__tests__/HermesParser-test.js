@@ -57,38 +57,56 @@ test('Can parse simple file', () => {
   });
 });
 
-test('Parse errors', () => {
-  expect(() => parse('const = 1')).toThrow(
-    new SyntaxError(
-      `'identifier' expected in declaration (1:6)
+describe('Parse errors', () => {
+  test('Basic', () => {
+    expect(() => parse('const = 1')).toThrow(
+      new SyntaxError(
+        `'identifier' expected in declaration (1:6)
 const = 1
 ~~~~~~^`,
-    ),
-  );
+      ),
+    );
+  });
 
-  // Parse error does not include caret line for non-ASCII characters
-  expect(() => parse('/*\u0176*/ const = 1')).toThrow(
-    new SyntaxError(
-      `'identifier' expected in declaration (1:13)
+  test('Has error location', () => {
+    try {
+      parse('const = 1');
+      fail('Expected parse error to be thrown');
+    } catch (e) {
+      expect(e.loc).toMatchObject({
+        line: 1,
+        column: 6,
+      });
+    }
+  });
+
+  test('Source line with non-ASCII characters', () => {
+    // Parse error does not include caret line for non-ASCII characters
+    expect(() => parse('/*\u0176*/ const = 1')).toThrow(
+      new SyntaxError(
+        `'identifier' expected in declaration (1:13)
 /*\u0176*/ const = 1`,
-    ),
-  );
+      ),
+    );
+  });
 
-  // Parse error with additional notes
-  const source = `class C {
+  test('Error with notes', () => {
+    // Parse error with additional notes
+    const source = `class C {
   constructor() { 1 }
   constructor() { 2 }
 }`;
-  expect(() => parse(source)).toThrow(
-    new SyntaxError(
-      `duplicate constructors in class (3:2)
+    expect(() => parse(source)).toThrow(
+      new SyntaxError(
+        `duplicate constructors in class (3:2)
   constructor() { 2 }
   ^~~~~~~~~~~~~~~~~~~
 note: first constructor definition (2:2)
   constructor() { 1 }
   ^~~~~~~~~~~~~~~~~~~`,
-    ),
-  );
+      ),
+    );
+  });
 });
 
 test('Parsing comments', () => {
@@ -212,6 +230,34 @@ test('Babel root File node', () => {
       body: [
         {
           type: 'ExpressionStatement',
+        },
+      ],
+      directives: [],
+    },
+    comments: [],
+  });
+});
+
+test('Babel identifierName', () => {
+  expect(parse('test', {babel: true})).toMatchObject({
+    type: 'File',
+    loc: loc(1, 0, 1, 4),
+    start: 0,
+    end: 4,
+    program: {
+      type: 'Program',
+      loc: loc(1, 0, 1, 4),
+      start: 0,
+      end: 4,
+      body: [
+        {
+          type: 'ExpressionStatement',
+          expression: {
+            type: 'Identifier',
+            loc: {
+              identifierName: 'test',
+            }
+          },
         },
       ],
       directives: [],
@@ -397,6 +443,10 @@ describe('Program source type', () => {
         type: 'File',
         program: moduleProgram,
       });
+
+      expect(parse(moduleSource, {sourceType: 'unambiguous'})).toMatchObject(
+        moduleProgram,
+      );
     }
   });
 
@@ -413,6 +463,10 @@ describe('Program source type', () => {
       type: 'File',
       program: scriptProgram,
     });
+
+    expect(parse(scriptSource, {sourceType: 'unambiguous'})).toMatchObject(
+      scriptProgram,
+    );
   });
 });
 
@@ -1227,6 +1281,50 @@ test('Import expression', () => {
   });
 });
 
+describe('Import declaration', () => {
+  test('Value importKind converted to null', () => {
+    const source = `import {Foo, type Bar, typeof Baz} from 'Foo'`;
+    const program = {
+      type: 'Program',
+      body: [
+        {
+          type: 'ImportDeclaration',
+          importKind: 'value',
+          specifiers: [
+            {
+              type: 'ImportSpecifier',
+              local: {
+                type: 'Identifier',
+                name: 'Foo',
+              },
+              importKind: null,
+            },
+            {
+              type: 'ImportSpecifier',
+              local: {
+                type: 'Identifier',
+                name: 'Bar',
+              },
+              importKind: 'type',
+            },
+            {
+              type: 'ImportSpecifier',
+              local: {
+                type: 'Identifier',
+                name: 'Baz',
+              },
+              importKind: 'typeof',
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(parse(source)).toMatchObject(program);
+    expect(parse(source, {babel: true})).toMatchObject({type: 'File', program});
+  });
+});
+
 test('Unicode strings and identifiers', () => {
   const source = `
     // Null byte in middle of string
@@ -1510,5 +1608,94 @@ return 1
         },
       },
     ],
+  });
+});
+
+describe('This type annotations', () => {
+  test('Removed in Babel mode', () => {
+    const params = [
+      {
+        type: 'Identifier',
+        name: 'param',
+        typeAnnotation: {
+          typeAnnotation: {type: 'NumberTypeAnnotation'},
+        },
+      },
+    ];
+
+    expect(
+      parse(
+        `
+          function f1(this: string, param: number) {}
+          (function f2(this: string, param: number) {});
+        `,
+        {babel: true},
+      ),
+    ).toMatchObject({
+      type: 'File',
+      program: {
+        type: 'Program',
+        body: [
+          {
+            type: 'FunctionDeclaration',
+            id: {name: 'f1'},
+            params,
+          },
+          {
+            type: 'ExpressionStatement',
+            expression: {
+              type: 'FunctionExpression',
+              id: {name: 'f2'},
+              params,
+            },
+          },
+        ],
+      },
+    });
+  });
+
+  test('Preserved in ESTree mode', () => {
+    const params = [
+      {
+        type: 'Identifier',
+        name: 'this',
+        typeAnnotation: {
+          typeAnnotation: {type: 'StringTypeAnnotation'},
+        },
+      },
+      {
+        type: 'Identifier',
+        name: 'param',
+        typeAnnotation: {
+          typeAnnotation: {type: 'NumberTypeAnnotation'},
+        },
+      },
+    ];
+
+    expect(
+      parse(
+        `
+          function f1(this: string, param: number) {}
+          (function f2(this: string, param: number) {});
+        `,
+      ),
+    ).toMatchObject({
+      type: 'Program',
+      body: [
+        {
+          type: 'FunctionDeclaration',
+          id: {name: 'f1'},
+          params,
+        },
+        {
+          type: 'ExpressionStatement',
+          expression: {
+            type: 'FunctionExpression',
+            id: {name: 'f2'},
+            params,
+          },
+        },
+      ],
+    });
   });
 });

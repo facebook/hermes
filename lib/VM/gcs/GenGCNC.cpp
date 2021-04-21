@@ -24,6 +24,7 @@
 #include "hermes/VM/HeapSnapshot.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/Serializer.h"
+#include "hermes/VM/SmallHermesValue-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/SweepResultNC.h"
 #include "hermes/VM/SymbolID.h"
@@ -36,11 +37,11 @@
 #include "llvh/Support/MathExtras.h"
 
 #include <algorithm>
-#include <array>
 #include <chrono>
 #include <cinttypes>
 #include <clocale>
 #include <cstdint>
+#include <map>
 #include <utility>
 
 #define DEBUG_TYPE "gc"
@@ -334,6 +335,8 @@ void GenGC::collect(std::string cause, bool canEffectiveOOM) {
 
   const size_t usedBefore = used();
   const size_t sizeBefore = size();
+  const size_t externalBefore =
+      youngGen_.externalMemory() + oldGen_.externalMemory();
   cumPreBytes_ += used();
   const size_t ygUsedBefore = youngGen_.used();
   const size_t ogUsedBefore = oldGen_.used();
@@ -415,8 +418,12 @@ void GenGC::collect(std::string cause, bool canEffectiveOOM) {
         sizeAfter,
         usedBefore,
         sizeBefore,
+        // Can't use ygExtMem or ogExtMem because those are taken after
+        // finalizers run.
+        externalBefore,
         usedAfter,
         sizeAfter,
+        youngGen_.externalMemory() + oldGen_.externalMemory(),
         &fullCollectionCumStats_);
 
     fullCollection.addArg("fullGCUsedAfter", usedAfter);
@@ -551,6 +558,9 @@ struct FullMSCDuplicateRootsDetectorAcceptor final
     assert(markedLocs_.count(&hv) == 0);
     markedLocs_.insert(&hv);
   }
+  void acceptSHV(SmallHermesValue &hv) override {
+    llvm_unreachable("No SmallHermesValue roots");
+  }
 };
 #endif
 
@@ -576,6 +586,23 @@ void GenGC::markPhase() {
     void acceptHV(HermesValue &hv) override {
       if (hv.isPointer()) {
         void *ptr = hv.getPointer();
+        if (ptr) {
+          assert(gc.dbgContains(ptr));
+          GCCell *cell = reinterpret_cast<GCCell *>(ptr);
+#ifdef HERMES_EXTRA_DEBUG
+          if (!cell->isValid()) {
+            hermes_fatal("HermesGC: marking pointer to invalid object.");
+          }
+#endif
+          GenGCHeapSegment::setCellMarkBit(cell);
+        }
+      } else if (hv.isSymbol()) {
+        gc.markSymbol(hv.getSymbol());
+      }
+    }
+    void acceptSHV(SmallHermesValue &hv) override {
+      if (hv.isPointer()) {
+        void *ptr = hv.getPointer(pointerBase_);
         if (ptr) {
           assert(gc.dbgContains(ptr));
           GCCell *cell = reinterpret_cast<GCCell *>(ptr);
@@ -1115,6 +1142,17 @@ void GenGC::writeBarrier(const GCHermesValue *loc, HermesValue value) {
   countWriteBarrier(/*hv*/ true, kNumWriteBarrierOfObjectPtrIdx);
   writeBarrierImpl(loc, value.getPointer(), /*hv*/ true);
 }
+LLVM_ATTRIBUTE_NOINLINE
+void GenGC::writeBarrier(
+    const GCSmallHermesValue *loc,
+    SmallHermesValue value) {
+  countWriteBarrier(/*hv*/ true, kNumWriteBarrierTotalCountIdx);
+  if (!value.isPointer()) {
+    return;
+  }
+  countWriteBarrier(/*hv*/ true, kNumWriteBarrierOfObjectPtrIdx);
+  writeBarrierImpl(loc, value.getPointer(getPointerBase()), /*hv*/ true);
+}
 
 LLVM_ATTRIBUTE_NOINLINE
 void GenGC::writeBarrier(const GCPointerBase *loc, const GCCell *value) {
@@ -1132,6 +1170,21 @@ void GenGC::writeBarrierRange(const GCHermesValue *start, uint32_t numHVs) {
   // that the range to dirty is not in the young generation, but expect that in
   // most cases the cost of the check will be similar to the cost of dirtying
   // those addresses.
+  const char *firstPtr = reinterpret_cast<const char *>(start);
+  const char *lastPtr = reinterpret_cast<const char *>(start + numHVs) - 1;
+
+  assert(
+      AlignedStorage::start(firstPtr) == AlignedStorage::start(lastPtr) &&
+      "Range should be contained in the same segment");
+
+  GenGCHeapSegment::cardTableCovering(firstPtr)->dirtyCardsForAddressRange(
+      firstPtr, lastPtr);
+}
+
+void GenGC::writeBarrierRange(
+    const GCSmallHermesValue *start,
+    uint32_t numHVs) {
+  countRangeWriteBarrier();
   const char *firstPtr = reinterpret_cast<const char *>(start);
   const char *lastPtr = reinterpret_cast<const char *>(start + numHVs) - 1;
 
@@ -1229,6 +1282,10 @@ void GenGC::dump(llvh::raw_ostream &os, bool verbose) {
      << "Range: " << numRangeBarriers_ << "\n"
      << "RangeFill: " << numRangeFillBarriers_ << "\n";
 #endif
+}
+
+std::string GenGC::getKindAsStr() const {
+  return kGCName;
 }
 
 gcheapsize_t GenGC::bytesAllocatedSinceLastGC() const {
@@ -1527,8 +1584,10 @@ void GenGC::CollectionSection::recordGCStats(
     size_t regionSize,
     size_t usedBefore,
     size_t sizeBefore,
+    size_t externalBefore,
     size_t usedAfter,
     size_t sizeAfter,
+    size_t externalAfter,
     CumulativeHeapStats *regionStats) {
   const TimePoint wallEnd = steady_clock::now();
   wallElapsedSecs_ = GCBase::clockDiffSeconds(wallStart_, wallEnd);
@@ -1547,15 +1606,15 @@ void GenGC::CollectionSection::recordGCStats(
       std::chrono::duration_cast<std::chrono::milliseconds>(
           wallEnd - wallStart_),
       std::chrono::duration_cast<std::chrono::milliseconds>(cpuEnd - cpuStart_),
-      /*preAllocated*/ usedBefore,
-      /*preSize*/ sizeBefore,
-      /*postAllocated*/ usedAfter,
-      /*postSize*/ sizeAfter,
-      /*survivalRatio*/ usedBefore ? (usedAfter * 1.0) / usedBefore : 0};
+      /*allocated*/ BeforeAndAfter{usedBefore, usedAfter},
+      /*size*/ BeforeAndAfter{sizeBefore, sizeAfter},
+      /*external*/ BeforeAndAfter{externalBefore, externalAfter},
+      /*survivalRatio*/ usedBefore ? (usedAfter * 1.0) / usedBefore : 0,
+      /*tags*/ {}};
 
-  gc_->recordGCStats(event);
+  gc_->recordGCStats(event, /* onMutator */ true);
   // Also record as a region-specific collection.
-  gc_->recordGCStats(event, regionStats);
+  gc_->recordGCStats(event, regionStats, /* onMutator */ true);
 
   LLVM_DEBUG(
       dbgs() << "End garbage collection. numCollected="
@@ -1651,293 +1710,75 @@ void GenGC::printCensusByKindStatsWork(
 #endif
 
 void GenGC::sizeDiagnosticCensus() {
+  struct DiagnosticStat {
+    uint64_t count{0};
+    uint64_t size{0};
+    std::map<std::string, DiagnosticStat> breakdown;
+
+    static constexpr double getPercent(double numer, double denom) {
+      return denom != 0 ? 100 * numer / denom : 0.0;
+    }
+    void printBreakdown(size_t depth) const {
+      if (breakdown.empty())
+        return;
+
+      static const char *fmtBase =
+          "%-25s : %'10" PRIu64 " [%'10" PRIu64 " B | %4.1f%%]";
+      const std::string fmtStr = std::string(depth, '\t') + fmtBase;
+      size_t totalSize = 0;
+      size_t totalCount = 0;
+      for (const auto &stat : breakdown) {
+        hermesLog(
+            "HermesGC",
+            fmtStr.c_str(),
+            stat.first.c_str(),
+            stat.second.count,
+            stat.second.size,
+            getPercent(stat.second.size, size));
+        stat.second.printBreakdown(depth + 1);
+        totalSize += stat.second.size;
+        totalCount += stat.second.count;
+      }
+      if (size_t other = size - totalSize)
+        hermesLog(
+            "HermesGC",
+            fmtStr.c_str(),
+            "Other",
+            count - totalCount,
+            other,
+            getPercent(other, size));
+    }
+  };
+
   struct HeapSizeDiagnostic {
-    struct HermesValueDiagnostic {
-      uint64_t count = 0;
-      uint64_t numBool = 0;
-      uint64_t numNumber = 0;
-      uint64_t numInt8 = 0;
-      uint64_t numInt16 = 0;
-      uint64_t numInt24 = 0;
-      uint64_t numInt32 = 0;
-      uint64_t numSymbol = 0;
-      uint64_t numNull = 0;
-      uint64_t numUndefined = 0;
-      uint64_t numEmpty = 0;
-      uint64_t numNativeValue = 0;
-      uint64_t numString = 0;
-      uint64_t numObject = 0;
-    };
-
-    struct StringDiagnostic {
-      uint64_t count = 0;
-      // Count of strings of a given size. Initialize to all zeros.
-      // The zeroth index is unused, but left as zero.
-      std::array<uint64_t, 8> countPerSize{};
-      uint64_t totalChars = 0;
-    };
-
     uint64_t numCell = 0;
     uint64_t numVariableSizedObject = 0;
-    uint64_t numPointer = 0;
-    uint64_t numSymbol = 0;
-    HermesValueDiagnostic hv;
-    StringDiagnostic asciiStr;
-    StringDiagnostic utf16Str;
-
-    const char *fmts[3] = {
-        "\t%-25s : %'10" PRIu64 " [%'10" PRIu64 " B | %4.1f%%]",
-        "\t\t%-25s : %'10" PRIu64 " [%'10" PRIu64 " B | %4.1f%%]",
-        "\t\t\t%-25s : %'10" PRIu64 " [%'10" PRIu64 " B | %4.1f%%]"};
+    DiagnosticStat stats;
 
     void rootsDiagnosticFrame() const {
       // Use this to print commas on large numbers
       char *currentLocale = std::setlocale(LC_NUMERIC, nullptr);
       std::setlocale(LC_NUMERIC, "");
-
-      uint64_t rootSize = hv.count * sizeof(HermesValue) +
-          numPointer * sizeof(GCPointerBase) + numSymbol * sizeof(SymbolID);
-      hermesLog("HermesGC", "Root size: %'7" PRIu64 " B", rootSize);
-
-      hermesValueDiagnostic(rootSize);
-      gcPointerDiagnostic(rootSize);
-      symbolDiagnostic(rootSize);
-
+      hermesLog("HermesGC", "Root size: %'7" PRIu64 " B", stats.size);
+      stats.printBreakdown(1);
       std::setlocale(LC_NUMERIC, currentLocale);
     }
 
-    void sizeDiagnosticFrame(uint64_t heapSize) const {
+    void sizeDiagnosticFrame() const {
       // Use this to print commas on large numbers
       char *currentLocale = std::setlocale(LC_NUMERIC, nullptr);
       std::setlocale(LC_NUMERIC, "");
 
-      hermesLog("HermesGC", "Heap size: %'7" PRIu64 " B", heapSize);
+      hermesLog("HermesGC", "Heap size: %'7" PRIu64 " B", stats.size);
       hermesLog("HermesGC", "\tTotal cells: %'7" PRIu64, numCell);
       hermesLog(
           "HermesGC",
           "\tNum variable size cells: %'7" PRIu64,
           numVariableSizedObject);
 
-      // In theory should use sizeof(VariableSizeRuntimeCell), but that includes
-      // padding sometimes. To be conservative, use the field it contains
-      // directly instead.
-      uint64_t headerSize =
-          numVariableSizedObject * (sizeof(GCCell) + sizeof(uint32_t)) +
-          (numCell - numVariableSizedObject) * sizeof(GCCell);
-      hermesLog(
-          "HermesGC",
-          fmts[0],
-          "Cell headers",
-          numCell,
-          headerSize,
-          getPercent(headerSize, heapSize));
-
-      hermesValueDiagnostic(heapSize);
-      gcPointerDiagnostic(heapSize);
-      symbolDiagnostic(heapSize);
-
-      {
-        hermesLog(
-            "HermesGC",
-            fmts[0],
-            "StringPrimitive (ASCII)",
-            asciiStr.count,
-            asciiStr.totalChars,
-            getPercent(asciiStr.totalChars, heapSize));
-        for (decltype(asciiStr.countPerSize.size()) i = 1;
-             i < asciiStr.countPerSize.size();
-             i++) {
-          std::string tag;
-          llvh::raw_string_ostream stream(tag);
-          stream << llvh::format("StringPrimitive (size %1lu)", i);
-          stream.flush();
-          hermesLog(
-              "HermesGC",
-              fmts[1],
-              tag.c_str(),
-              asciiStr.countPerSize[i],
-              asciiStr.countPerSize[i] * i,
-              getPercent(asciiStr.countPerSize[i] * i, asciiStr.totalChars));
-        }
-
-        hermesLog(
-            "HermesGC",
-            fmts[0],
-            "StringPrimitive (UTF-16)",
-            utf16Str.count,
-            utf16Str.totalChars,
-            getPercent(utf16Str.totalChars, heapSize));
-        for (decltype(utf16Str.countPerSize.size()) i = 1;
-             i < utf16Str.countPerSize.size();
-             i++) {
-          std::string tag;
-          llvh::raw_string_ostream stream(tag);
-          stream << llvh::format("StringPrimitive (size %1lu)", i);
-          stream.flush();
-          hermesLog(
-              "HermesGC",
-              fmts[1],
-              tag.c_str(),
-              utf16Str.countPerSize[i],
-              utf16Str.countPerSize[i] * i,
-              getPercent(utf16Str.countPerSize[i] * i, utf16Str.totalChars));
-        }
-      }
-
-      uint64_t leftover = heapSize - (hv.count * sizeof(HermesValue)) -
-          (numPointer * sizeof(GCPointerBase)) - (asciiStr.totalChars * 2) -
-          utf16Str.totalChars - headerSize;
-      hermesLog(
-          "HermesGC",
-          fmts[0],
-          "Other",
-          "-",
-          leftover,
-          getPercent(leftover, heapSize));
+      stats.printBreakdown(1);
 
       std::setlocale(LC_NUMERIC, currentLocale);
-    }
-
-   private:
-    void hermesValueDiagnostic(uint64_t heapSize) const {
-      constexpr uint64_t bytesHV = sizeof(HermesValue);
-      hermesLog(
-          "HermesGC",
-          fmts[0],
-          "HV",
-          hv.count,
-          hv.count * bytesHV,
-          getPercent(hv.count * bytesHV, heapSize));
-
-      hermesLog(
-          "HermesGC",
-          fmts[1],
-          "Bool",
-          hv.numBool,
-          hv.numBool * bytesHV,
-          getPercent(hv.numBool, hv.count));
-
-      {
-        hermesLog(
-            "HermesGC",
-            fmts[1],
-            "Number",
-            hv.numNumber,
-            hv.numNumber * bytesHV,
-            getPercent(hv.numNumber, hv.count));
-        hermesLog(
-            "HermesGC",
-            fmts[2],
-            "Int8",
-            hv.numInt8,
-            hv.numInt8 * bytesHV,
-            getPercent(hv.numInt8, hv.numNumber));
-        hermesLog(
-            "HermesGC",
-            fmts[2],
-            "Int16",
-            hv.numInt16,
-            hv.numInt16 * bytesHV,
-            getPercent(hv.numInt16, hv.numNumber));
-        hermesLog(
-            "HermesGC",
-            fmts[2],
-            "Int24",
-            hv.numInt24,
-            hv.numInt24 * bytesHV,
-            getPercent(hv.numInt24, hv.numNumber));
-        hermesLog(
-            "HermesGC",
-            fmts[2],
-            "Int32",
-            hv.numInt32,
-            hv.numInt32 * bytesHV,
-            getPercent(hv.numInt32, hv.numNumber));
-
-        uint64_t numDoubles =
-            hv.numNumber - hv.numInt32 - hv.numInt24 - hv.numInt16 - hv.numInt8;
-        hermesLog(
-            "HermesGC",
-            fmts[2],
-            "Doubles",
-            numDoubles,
-            numDoubles * bytesHV,
-            getPercent(numDoubles, hv.numNumber));
-      }
-
-      hermesLog(
-          "HermesGC",
-          fmts[1],
-          "Symbol",
-          hv.numSymbol,
-          hv.numSymbol * bytesHV,
-          getPercent(hv.numSymbol, hv.count));
-      hermesLog(
-          "HermesGC",
-          fmts[1],
-          "Null",
-          hv.numNull,
-          hv.numNull * bytesHV,
-          getPercent(hv.numNull, hv.count));
-      hermesLog(
-          "HermesGC",
-          fmts[1],
-          "Undefined",
-          hv.numUndefined,
-          hv.numUndefined * bytesHV,
-          getPercent(hv.numUndefined, hv.count));
-      hermesLog(
-          "HermesGC",
-          fmts[1],
-          "Empty",
-          hv.numEmpty,
-          hv.numEmpty * bytesHV,
-          getPercent(hv.numEmpty, hv.count));
-      hermesLog(
-          "HermesGC",
-          fmts[1],
-          "NativeValue",
-          hv.numNativeValue,
-          hv.numNativeValue * bytesHV,
-          getPercent(hv.numNativeValue, hv.count));
-      hermesLog(
-          "HermesGC",
-          fmts[1],
-          "StringPointer",
-          hv.numString,
-          hv.numString * bytesHV,
-          getPercent(hv.numString, hv.count));
-      hermesLog(
-          "HermesGC",
-          fmts[1],
-          "ObjectPointer",
-          hv.numObject,
-          hv.numObject * bytesHV,
-          getPercent(hv.numObject, hv.count));
-    }
-
-    void gcPointerDiagnostic(uint64_t heapSize) const {
-      hermesLog(
-          "HermesGC",
-          fmts[0],
-          "GCPointer",
-          numPointer,
-          numPointer * sizeof(GCPointerBase),
-          getPercent(numPointer * sizeof(GCPointerBase), heapSize));
-    }
-
-    void symbolDiagnostic(uint64_t heapSize) const {
-      hermesLog(
-          "HermesGC",
-          fmts[0],
-          "Symbol",
-          numSymbol,
-          numSymbol * sizeof(SymbolID),
-          getPercent(numSymbol * sizeof(SymbolID), heapSize));
-    }
-
-    static double getPercent(double numer, double denom) {
-      return denom != 0 ? 100 * numer / denom : 0.0;
     }
   };
 
@@ -1953,69 +1794,91 @@ void GenGC::sizeDiagnosticCensus() {
     const int64_t HINT32_MAX = (1LL << 31) - 1;
 
     HeapSizeDiagnostic diagnostic;
+    PointerBase *pointerBase_;
 
-    HeapSizeDiagnosticAcceptor() = default;
+    HeapSizeDiagnosticAcceptor(PointerBase *pb) : pointerBase_{pb} {}
 
     using SlotAcceptor::accept;
 
     void accept(GCCell *&ptr) override {
-      diagnostic.numPointer++;
+      diagnostic.stats.breakdown["Pointer"].count++;
+      diagnostic.stats.breakdown["Pointer"].size += sizeof(GCCell *);
     }
 
     void accept(GCPointerBase &ptr) override {
-      diagnostic.numPointer++;
+      diagnostic.stats.breakdown["GCPointer"].count++;
+      diagnostic.stats.breakdown["GCPointer"].size += sizeof(GCPointerBase);
     }
 
     void accept(PinnedHermesValue &hv) override {
-      acceptHV(hv);
+      acceptHV(
+          hv,
+          diagnostic.stats.breakdown["HermesValue"],
+          sizeof(PinnedHermesValue));
     }
     void accept(GCHermesValue &hv) override {
-      acceptHV(hv);
+      acceptHV(
+          hv, diagnostic.stats.breakdown["HermesValue"], sizeof(GCHermesValue));
     }
-    void acceptHV(HermesValue &hv) {
-      diagnostic.hv.count++;
+    void accept(GCSmallHermesValue &shv) override {
+      acceptHV(
+          shv.toHV(pointerBase_),
+          diagnostic.stats.breakdown["SmallHermesValue"],
+          sizeof(GCSmallHermesValue));
+    }
+    void acceptHV(
+        const HermesValue &hv,
+        DiagnosticStat &diag,
+        const size_t hvBytes) {
+      diag.count++;
+      diag.size += hvBytes;
+      llvh::StringRef hvType;
       if (hv.isBool()) {
-        diagnostic.hv.numBool++;
+        hvType = "Bool";
       } else if (hv.isNumber()) {
-        diagnostic.hv.numNumber++;
-
+        hvType = "Number";
         double val = hv.getNumber();
         double intpart;
+        llvh::StringRef numType = "Doubles";
         if (std::modf(val, &intpart) == 0.0) {
           if (val >= static_cast<double>(HINT8_MIN) &&
               val <= static_cast<double>(HINT8_MAX)) {
-            diagnostic.hv.numInt8++;
+            numType = "Int8";
           } else if (
               val >= static_cast<double>(HINT16_MIN) &&
               val <= static_cast<double>(HINT16_MAX)) {
-            diagnostic.hv.numInt16++;
+            numType = "Int16";
           } else if (
               val >= static_cast<double>(HINT24_MIN) &&
               val <= static_cast<double>(HINT24_MAX)) {
-            diagnostic.hv.numInt24++;
+            numType = "Int24";
           } else if (
               val >= static_cast<double>(HINT32_MIN) &&
               val <= static_cast<double>(HINT32_MAX)) {
-            diagnostic.hv.numInt32++;
+            numType = "Int32";
           }
         }
+        diag.breakdown["Number"].breakdown[numType].count++;
+        diag.breakdown["Number"].breakdown[numType].size += hvBytes;
       } else if (hv.isString()) {
-        diagnostic.hv.numString++;
+        hvType = "StringPointer";
       } else if (hv.isSymbol()) {
-        diagnostic.hv.numSymbol++;
+        hvType = "Symbol";
       } else if (hv.isObject()) {
-        diagnostic.hv.numObject++;
+        hvType = "ObjectPointer";
       } else if (hv.isNull()) {
-        diagnostic.hv.numNull++;
+        hvType = "Null";
       } else if (hv.isUndefined()) {
-        diagnostic.hv.numUndefined++;
+        hvType = "Undefined";
       } else if (hv.isEmpty()) {
-        diagnostic.hv.numEmpty++;
+        hvType = "Empty";
       } else if (hv.isNativeValue()) {
-        diagnostic.hv.numNativeValue++;
+        hvType = "NativeValue";
       } else {
         assert(false && "Should be no other hermes values");
       }
+      diag.breakdown[hvType].count++;
+      diag.breakdown[hvType].size += hvBytes;
     }
 
     void accept(RootSymbolID sym) override {
@@ -2025,47 +1888,72 @@ void GenGC::sizeDiagnosticCensus() {
       acceptSym(sym);
     }
     void acceptSym(SymbolID sym) {
-      diagnostic.numSymbol++;
+      diagnostic.stats.breakdown["Symbol"].count++;
+      diagnostic.stats.breakdown["Symbol"].size += sizeof(SymbolID);
     }
   };
 
   hermesLog("HermesGC", "%s:", "Roots");
-  HeapSizeDiagnosticAcceptor rootAcceptor;
+  HeapSizeDiagnosticAcceptor rootAcceptor{getPointerBase()};
   DroppingAcceptor<HeapSizeDiagnosticAcceptor> namedRootAcceptor{rootAcceptor};
   markRoots(namedRootAcceptor, /* markLongLived */ true);
+  // For roots, compute the overall size and counts from the breakdown.
+  for (const auto &substat : rootAcceptor.diagnostic.stats.breakdown) {
+    rootAcceptor.diagnostic.stats.count += substat.second.count;
+    rootAcceptor.diagnostic.stats.size += substat.second.size;
+  }
   rootAcceptor.diagnostic.rootsDiagnosticFrame();
 
   hermesLog("HermesGC", "%s:", "Heap contents");
-  HeapSizeDiagnosticAcceptor acceptor;
+  HeapSizeDiagnosticAcceptor acceptor{getPointerBase()};
   forAllObjs([&acceptor, this](GCCell *cell) {
     markCell(cell, acceptor);
     acceptor.diagnostic.numCell++;
-    acceptor.diagnostic.numVariableSizedObject +=
-        static_cast<int>(cell->isVariableSize());
+    if (cell->isVariableSize()) {
+      acceptor.diagnostic.numVariableSizedObject++;
+      // In theory should use sizeof(VariableSizeRuntimeCell), but that includes
+      // padding sometimes. To be conservative, use the field it contains
+      // directly instead.
+      acceptor.diagnostic.stats.breakdown["Cell headers"].size +=
+          (sizeof(GCCell) + sizeof(uint32_t));
+    } else {
+      acceptor.diagnostic.stats.breakdown["Cell headers"].size +=
+          sizeof(GCCell);
+    }
 
-    if (cell->getKind() == CellKind::DynamicASCIIStringPrimitiveKind ||
-        cell->getKind() == CellKind::DynamicUniquedASCIIStringPrimitiveKind ||
-        cell->getKind() == CellKind::ExternalASCIIStringPrimitiveKind) {
-      acceptor.diagnostic.asciiStr.count++;
-      auto *strprim = vmcast<StringPrimitive>(cell);
-      if (strprim->getStringLength() < 8) {
-        acceptor.diagnostic.asciiStr.countPerSize[strprim->getStringLength()]++;
+    // We include ExternalStringPrimitives because we're including external
+    // memory in the overall heap size. We do not include
+    // BufferedStringPrimitives because they just store a pointer to an
+    // ExternalStringPrimitive (which is already tracked).
+    auto *strprim = dyn_vmcast<StringPrimitive>(cell);
+    if (strprim && !isBufferedStringPrimitive(cell)) {
+      auto &stat = strprim->isASCII()
+          ? acceptor.diagnostic.stats.breakdown["StringPrimitive (ASCII)"]
+          : acceptor.diagnostic.stats.breakdown["StringPrimitive (UTF-16)"];
+      stat.count++;
+      const size_t len = strprim->getStringLength();
+      // If the string is UTF-16 then the length is in terms of 16 bit
+      // characters.
+      const size_t sz = strprim->isASCII() ? len : len * 2;
+      stat.size += sz;
+      if (len < 8) {
+        auto &subStat =
+            stat.breakdown
+                ["StringPrimitive (size " + oscompat::to_string(len) + ")"];
+        subStat.count++;
+        subStat.size += sz;
       }
-      acceptor.diagnostic.asciiStr.totalChars += strprim->getStringLength();
-    } else if (
-        cell->getKind() == CellKind::DynamicUTF16StringPrimitiveKind ||
-        cell->getKind() == CellKind::DynamicUniquedUTF16StringPrimitiveKind ||
-        cell->getKind() == CellKind::ExternalUTF16StringPrimitiveKind) {
-      acceptor.diagnostic.utf16Str.count++;
-      auto *strprim = vmcast<StringPrimitive>(cell);
-      if (strprim->getStringLength() < 8) {
-        acceptor.diagnostic.utf16Str.countPerSize[strprim->getStringLength()]++;
-      }
-      acceptor.diagnostic.utf16Str.totalChars += strprim->getStringLength();
     }
   });
 
-  acceptor.diagnostic.sizeDiagnosticFrame(used());
+  assert(
+      acceptor.diagnostic.stats.size == 0 &&
+      acceptor.diagnostic.stats.count == 0 &&
+      "Should not be setting overall stats during heap scan.");
+  for (const auto &substat : acceptor.diagnostic.stats.breakdown)
+    acceptor.diagnostic.stats.count += substat.second.count;
+  acceptor.diagnostic.stats.size = used();
+  acceptor.diagnostic.sizeDiagnosticFrame();
 }
 
 void GenGC::oomDetail(std::error_code reason) {
@@ -2099,3 +1987,4 @@ void *GenGC::allocSlow(uint32_t sz, bool fixedSize, HasFinalizer hasFinalizer) {
 
 } // namespace vm
 } // namespace hermes
+#undef DEBUG_TYPE

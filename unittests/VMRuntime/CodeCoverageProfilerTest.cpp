@@ -117,7 +117,7 @@ TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnusedTwoRuntimes) {
     HermesValue res = resFuts[i].get();
 
     std::vector<CodeCoverageProfiler::FuncInfo> executedFuncInfos =
-        rt->codeCoverageProfiler_->getExecutedFunctionsLocal();
+        rt->getCodeCoverageProfiler().getExecutedFunctionsLocal();
 
     Handle<JSArray> funcArr = rt->makeHandle(vmcast<JSArray>(res));
     Handle<JSFunction> funcUsed =

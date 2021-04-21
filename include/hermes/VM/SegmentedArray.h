@@ -259,9 +259,10 @@ class SegmentedArray final
   static CallResult<PseudoHandle<SegmentedArray>>
   create(Runtime *runtime, size_type capacity, size_type size);
 
-  /// Gets the element located at \p index.
+  /// Returns a reference to an element. Strongly prefer using at and set
+  /// instead.
   template <Inline inl = Inline::No>
-  GCHermesValue &at(TotalIndex index) {
+  GCHermesValue &atRef(TotalIndex index) {
     if (inl == Inline::Yes) {
       assert(
           index < kValueToSegmentThreshold && index < size() &&
@@ -273,14 +274,25 @@ class SegmentedArray final
     }
   }
 
-  /// Get the element located at \p index. \p const function for read.
-  const GCHermesValue &at(size_type index) const {
+  /// Gets the element located at \p index.
+  template <Inline inl = Inline::No>
+  HermesValue at(size_type index) const {
     assert(index < size() && "Invalid index.");
-    if (index < kValueToSegmentThreshold) {
+    if (inl == Inline::Yes || index < kValueToSegmentThreshold) {
       return inlineStorage()[index];
     } else {
       return segmentAt(toSegment(index))->at(toInterior(index));
     }
+  }
+
+  /// Sets the element located at \p index to \p val.
+  template <Inline inl = Inline::No>
+  void set(TotalIndex index, HermesValue val, GC *gc) {
+    atRef<inl>(index).set(val, gc);
+  }
+  template <Inline inl = Inline::No>
+  void setNonPtr(TotalIndex index, HermesValue val, GC *gc) {
+    atRef<inl>(index).setNonPtr(val, gc);
   }
 
   /// Gets the size of the SegmentedArray. The size is the number of elements

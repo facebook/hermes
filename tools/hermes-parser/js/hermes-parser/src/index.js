@@ -4,6 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @flow
  * @format
  */
 
@@ -13,12 +14,18 @@ const HermesParser = require('./HermesParser');
 const HermesToBabelAdapter = require('./HermesToBabelAdapter');
 const HermesToESTreeAdapter = require('./HermesToESTreeAdapter');
 
-function getOptions(options) {
-  // Default filename to null if none was provided
-  if (options.sourceFilename == null) {
-    options.sourceFilename = null;
-  }
+type Options = {
+  allowReturnOutsideFunction?: boolean,
+  babel?: boolean,
+  flow?: 'all' | 'detect',
+  sourceFilename?: string,
+  sourceType?: 'module' | 'script' | 'unambiguous',
+  tokens?: boolean,
+};
 
+type Program = Object;
+
+function getOptions(options: Options) {
   // Default to detecting whether to parse Flow syntax by the presence
   // of an @flow pragma.
   if (options.flow == null) {
@@ -27,12 +34,17 @@ function getOptions(options) {
     throw new Error('flow option must be "all" or "detect"');
   }
 
-  if (
+  if (options.sourceType === 'unambiguous') {
+    // Clear source type so that it will be detected from the contents of the file
+    delete options.sourceType;
+  } else if (
     options.sourceType != null &&
     options.sourceType !== 'script' &&
     options.sourceType !== 'module'
   ) {
-    throw new Error('sourceType option must be "script" or "module" if set');
+    throw new Error(
+      'sourceType option must be "script", "module", or "unambiguous" if set',
+    );
   }
 
   options.tokens = options.tokens === true;
@@ -42,13 +54,13 @@ function getOptions(options) {
   return options;
 }
 
-function getAdapter(options, code) {
+function getAdapter(options: Options, code: string) {
   return options.babel === true
     ? new HermesToBabelAdapter(options)
     : new HermesToESTreeAdapter(options, code);
 }
 
-function parse(code, opts = {}) {
+function parse(code: string, opts: Options = {}): Program {
   const options = getOptions(opts);
   const ast = HermesParser.parse(code, options);
   const adapter = getAdapter(options, code);

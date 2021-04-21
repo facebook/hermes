@@ -39,6 +39,12 @@ struct YoungGen::EvacAcceptor final : public RootAndSlotAcceptorDefault {
       gen.ensureReferentCopied(&hv);
     }
   }
+
+  void acceptSHV(SmallHermesValue &hv) override {
+    if (hv.isPointer()) {
+      gen.ensureReferentCopied(&hv);
+    }
+  }
 };
 
 } // namespace vm

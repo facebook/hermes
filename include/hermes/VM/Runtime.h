@@ -21,12 +21,12 @@
 #include "hermes/VM/Deserializer.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase-inline.h"
+#include "hermes/VM/GCStorage.h"
 #include "hermes/VM/Handle-inline.h"
 #include "hermes/VM/HandleRootOwner-inline.h"
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/InterpreterState.h"
-#include "hermes/VM/JIT/JIT.h"
 #include "hermes/VM/PointerBase.h"
 #include "hermes/VM/Predefined.h"
 #include "hermes/VM/Profiler.h"
@@ -37,7 +37,7 @@
 #include "hermes/VM/RuntimeStats.h"
 #include "hermes/VM/Serializer.h"
 #include "hermes/VM/StackFrame.h"
-#include "hermes/VM/StackTracesTree.h"
+#include "hermes/VM/StackTracesTree-NoRuntime.h"
 #include "hermes/VM/SymbolRegistry.h"
 #include "hermes/VM/TwineChar16.h"
 #include "hermes/VM/VMExperiments.h"
@@ -62,7 +62,8 @@ class JSONEmitter;
 
 namespace inst {
 struct Inst;
-}
+enum class OpCode : uint8_t;
+} // namespace inst
 
 namespace hbc {
 class BytecodeModule;
@@ -73,7 +74,6 @@ namespace vm {
 
 // External forward declarations.
 class CodeBlock;
-class ArrayStorage;
 class Environment;
 class Interpreter;
 class JSObject;
@@ -86,6 +86,7 @@ class ScopedNativeCallFrame;
 class SamplingProfiler;
 class CodeCoverageProfiler;
 struct MockedEnvironment;
+struct StackTracesTree;
 
 #ifdef HERMESVM_PROFILER_BB
 class JSArray;
@@ -110,6 +111,88 @@ enum class PropCacheID {
 #undef V
       _COUNT
 };
+
+/// Trace of the last few instructions for debugging crashes.
+class CrashTraceImpl {
+  /// Record of the last executed instruction.
+  struct Record {
+    /// Offset from start of bytecode file.
+    uint32_t ipOffset;
+    /// Opcode of last executed instruction.
+    inst::OpCode opCode;
+  };
+
+ public:
+  /// Record the currently executing module, replacing the info of the
+  /// previous one.
+  inline void recordModule(
+      uint32_t segmentID,
+      llvh::StringRef sourceURL,
+      llvh::StringRef sourceHash);
+
+  /// Add a record to the circular trace buffer.
+  void recordInst(uint32_t ipOffset, inst::OpCode opCode) {
+    static_assert(
+        kTraceLength && (kTraceLength & (kTraceLength - 1)) == 0,
+        "kTraceLength must be a power of 2");
+    unsigned n = (last_ + 1) & (kTraceLength - 1);
+    last_ = n;
+    Record *p = trace_ + n;
+    p->ipOffset = ipOffset;
+    p->opCode = opCode;
+  }
+
+ private:
+  /// Size of the circular buffer.
+  static constexpr unsigned kTraceLength = 8;
+  /// The index of the last entry written to the buffer.
+  unsigned last_ = kTraceLength - 1;
+  /// A circular buffer of Record.
+  Record trace_[kTraceLength] = {};
+
+  /// Current segmentID.
+  uint32_t segmentID_ = 0;
+  /// Source URL, truncated, zero terminated.
+  char sourceURL_[16] = {};
+  /// SHA1 source hash.
+  uint8_t sourceHash_[20] = {};
+};
+
+inline void CrashTraceImpl::recordModule(
+    uint32_t segmentID,
+    llvh::StringRef sourceURL,
+    llvh::StringRef sourceHash) {
+  segmentID_ = segmentID;
+  size_t len = std::min(sizeof(sourceURL_) - 1, sourceURL.size());
+  ::memcpy(sourceURL_, sourceURL.data(), len);
+  sourceURL_[len] = 0;
+  ::memcpy(
+      sourceHash_,
+      sourceHash.data(),
+      std::min(sizeof(sourceHash_), sourceHash.size()));
+}
+
+class CrashTraceNoop {
+ public:
+  void recordModule(
+      uint32_t segmentID,
+      llvh::StringRef sourceURL,
+      llvh::StringRef sourceHash) {}
+
+  /// Add a record to the circular trace buffer.
+  void recordInst(uint32_t ipOffset, inst::OpCode opCode) {}
+};
+
+#ifndef HERMESVM_CRASH_TRACE
+// Make sure it is 0 or 1 so it can be checked in C++.
+#define HERMESVM_CRASH_TRACE 0
+#endif
+
+#if HERMESVM_CRASH_TRACE
+using CrashTrace = CrashTraceImpl;
+#else
+using CrashTrace = CrashTraceNoop;
+#endif
 
 /// The Runtime encapsulates the entire context of a VM. Multiple instances can
 /// exist and are completely independent from each other.
@@ -299,11 +382,7 @@ class Runtime : public HandleRootOwner,
   FormatSymbolID formatSymbolID(SymbolID id);
 
   GC &getHeap() {
-#ifdef HERMESVM_GC_RUNTIME
-    return *heap_;
-#else
-    return heap_;
-#endif
+    return *heapStorage_.get();
   }
 
   /// @}
@@ -463,10 +542,6 @@ class Runtime : public HandleRootOwner,
   /// Return the global object.
   Handle<JSObject> getGlobal();
 
-  /// Return the JIT context.
-  JITContext &getJITContext() {
-    return jitContext_;
-  }
   /// Returns trailing data for all runtime modules.
   std::vector<llvh::ArrayRef<uint8_t>> getEpilogues();
 
@@ -726,6 +801,10 @@ class Runtime : public HandleRootOwner,
     return *codeCoverageProfiler_;
   }
 
+  /// Sampling profiler data for this runtime. The ctor/dtor of SamplingProfiler
+  /// will automatically register/unregister this runtime from profiling.
+  std::unique_ptr<SamplingProfiler> samplingProfiler;
+
 #ifdef HERMESVM_PROFILER_NATIVECALL
   /// Dump statistics about native calls.
   void dumpNativeCallStats(llvh::raw_ostream &OS);
@@ -749,12 +828,8 @@ class Runtime : public HandleRootOwner,
     return hasES6Proxy_;
   }
 
-  bool hasES6Symbol() const {
-    return hasES6Symbol_;
-  }
-
-  bool hasES6Intl() const {
-    return hasES6Intl_;
+  bool hasIntl() const {
+    return hasIntl_;
   }
 
   bool builtinsAreFrozen() const {
@@ -782,6 +857,30 @@ class Runtime : public HandleRootOwner,
   std::string getCallStackNoAlloc() override {
     return getCallStackNoAlloc(nullptr);
   }
+
+  /// A stack overflow exception is thrown when \c nativeCallFrameDepth_ exceeds
+  /// this threshold.
+  static constexpr unsigned MAX_NATIVE_CALL_FRAME_DEPTH =
+#ifdef HERMES_LIMIT_STACK_DEPTH
+      // UBSAN builds will hit a native stack overflow much earlier, so make
+      // this limit dramatically lower.
+      30
+#elif defined(_MSC_VER) && defined(__clang__) && defined(HERMES_SLOW_DEBUG)
+      30
+#elif defined(_MSC_VER) && defined(HERMES_SLOW_DEBUG)
+      // On windows in dbg mode builds, stack frames are bigger, and a depth
+      // limit of 384 results in a C++ stack overflow in testing.
+      128
+#elif defined(_MSC_VER) && !NDEBUG
+      192
+#else
+      /// This depth limit was originally 256, and we
+      /// increased when an app violated it.  The new depth is 128
+      /// larger.  See T46966147 for measurements/calculations indicating
+      /// that this limit should still insulate us from native stack overflow.)
+      384
+#endif
+      ;
 
   /// Called when various GC events(e.g. collection start/end) happen.
   void onGCEvent(GCEventKind kind, const std::string &extraInfo) override;
@@ -842,7 +941,6 @@ class Runtime : public HandleRootOwner,
       std::shared_ptr<StorageProvider> provider,
       const RuntimeConfig &runtimeConfig);
 
-/// @}
 #if defined(HERMESVM_PROFILER_EXTERN)
  public:
 #else
@@ -852,16 +950,6 @@ class Runtime : public HandleRootOwner,
   CallResult<HermesValue> interpretFunctionImpl(CodeBlock *newCodeBlock);
 
  private:
-#ifdef HERMESVM_GC_RUNTIME
-  /// Create a pointer to a heap instance for this runtime. Used during
-  /// construction.
-  static std::unique_ptr<GC> makeHeap(
-      Runtime *runtime,
-      GCBase::HeapKind heapKind,
-      std::shared_ptr<StorageProvider> provider,
-      const RuntimeConfig &runtimeConfig);
-#endif
-
   /// Called by the GC at the beginning of a collection. This method informs the
   /// GC of all runtime roots.  The \p markLongLived argument
   /// indicates whether root data structures that contain only
@@ -873,6 +961,10 @@ class Runtime : public HandleRootOwner,
   /// Called by the GC during collections that may reset weak references. This
   /// method informs the GC of all runtime weak roots.
   void markWeakRoots(WeakRootAcceptor &weakAcceptor) override;
+
+  /// See documentation on \c GCBase::GCCallbacks.
+  void markRootsForCompleteMarking(
+      RootAndSlotAcceptorWithNames &acceptor) override;
 
   /// Visits every entry in the identifier table and calls acceptor with
   /// the entry and its id as arguments. This is intended to be used only for
@@ -888,7 +980,6 @@ class Runtime : public HandleRootOwner,
   /// Convert the given symbol into its UTF-8 string representation.
   std::string convertSymbolToUTF8(SymbolID id) override;
 
- private:
   /// Prints any statistics maintained in the Runtime about GC to \p
   /// os.  At present, this means the breakdown of markRoots time by
   /// "phase" within markRoots.
@@ -1011,19 +1102,13 @@ class Runtime : public HandleRootOwner,
 #endif
 
  private:
-#ifdef HERMESVM_GC_RUNTIME
-  std::unique_ptr<GC> heap_;
-#else
-  GC heap_;
-#endif
+  GCStorage heapStorage_;
+
   std::vector<std::function<void(GC *, RootAcceptor &)>> customMarkRootFuncs_;
   std::vector<std::function<void(GC *, WeakRefAcceptor &)>>
       customMarkWeakRootFuncs_;
   std::vector<std::function<void(HeapSnapshot &)>> customSnapshotNodeFuncs_;
   std::vector<std::function<void(HeapSnapshot &)>> customSnapshotEdgeFuncs_;
-
-  /// All state related to JIT compilation.
-  JITContext jitContext_;
 
   /// Set to true if we should enable ES6 Promise.
   const bool hasES6Promise_;
@@ -1031,11 +1116,8 @@ class Runtime : public HandleRootOwner,
   /// Set to true if we should enable ES6 Proxy.
   const bool hasES6Proxy_;
 
-  /// Set to true if we should enable ES6 Symbol.
-  const bool hasES6Symbol_;
-
-  /// Set to true if we should enable ES6 Intl APIs.
-  const bool hasES6Intl_;
+  /// Set to true if we should enable ECMA-402 Intl APIs.
+  const bool hasIntl_;
 
   /// Set to true if we should randomize stack placement etc.
   const bool shouldRandomizeMemoryLayout_;
@@ -1060,7 +1142,6 @@ class Runtime : public HandleRootOwner,
   friend class RuntimeModule;
   friend class MarkRootsPhaseTimer;
   friend struct RuntimeOffsets;
-  friend class JITContext;
   friend class ScopedNativeDepthReducer;
   friend class ScopedNativeDepthTracker;
   friend class ScopedNativeCallFrame;
@@ -1108,6 +1189,9 @@ class Runtime : public HandleRootOwner,
   /// on construction and removes itself on destruction.
   RuntimeModuleList runtimeModuleList_{};
 
+  /// Optional record of the last few executed bytecodes in case of a crash.
+  CrashTrace crashTrace_{};
+
   /// @name Private VM State
   /// @{
 
@@ -1128,31 +1212,6 @@ class Runtime : public HandleRootOwner,
   /// Current depth of native call frames, including recursive interpreter
   /// calls.
   unsigned nativeCallFrameDepth_{0};
-
- public:
-  /// A stack overflow exception is thrown when \c nativeCallFrameDepth_ exceeds
-  /// this threshold.
-  static constexpr unsigned MAX_NATIVE_CALL_FRAME_DEPTH =
-#ifdef HERMES_LIMIT_STACK_DEPTH
-      // UBSAN builds will hit a native stack overflow much earlier, so make
-      // this limit dramatically lower.
-      30
-#elif defined(_MSC_VER) && defined(__clang__) && defined(HERMES_SLOW_DEBUG)
-      30
-#elif defined(_MSC_VER) && defined(HERMES_SLOW_DEBUG)
-      // On windows in dbg mode builds, stack frames are bigger, and a depth
-      // limit of 384 results in a C++ stack overflow in testing.
-      128
-#elif defined(_MSC_VER) && !NDEBUG
-      192
-#else
-      /// This depth limit was originally 256, and we
-      /// increased when an app violated it.  The new depth is 128
-      /// larger.  See T46966147 for measurements/calculations indicating
-      /// that this limit should still insulate us from native stack overflow.)
-      384
-#endif
-      ;
 
   /// rootClazzes_[i] is a PinnedHermesValue pointing to a hidden class with
   /// its i first slots pre-reserved.
@@ -1187,10 +1246,6 @@ class Runtime : public HandleRootOwner,
   /// This key will be unregistered in the destructor.
   const CrashManager::CallbackKey crashCallbackKey_;
 
-  /// Sampling profiler data for this runtime. The ctor/dtor of SamplingProfiler
-  /// will automatically register/unregister this runtime from profiling.
-  std::unique_ptr<SamplingProfiler> samplingProfiler_;
-
   /// Pointer to the code coverage profiler.
   const std::unique_ptr<CodeCoverageProfiler> codeCoverageProfiler_;
 
@@ -1222,6 +1277,19 @@ class Runtime : public HandleRootOwner,
 
   Debugger debugger_{this};
 #endif
+
+  /// Holds references to persistent BC providers for the lifetime of the
+  /// Runtime. This is needed because the identifier table may contain pointers
+  /// into bytecode, and so memory backing these must be preserved.
+  std::vector<std::shared_ptr<hbc::BCProvider>> persistentBCProviders_;
+
+  /// Config-provided callback for GC events.
+  std::function<void(GCEventKind, const char *)> gcEventCallback_;
+
+  /// Set from RuntimeConfig.
+  bool allowFunctionToStringWithRuntimeSource_;
+
+  /// @}
 
   /// \return whether any async break is requested or not.
   bool hasAsyncBreak() const {
@@ -1261,17 +1329,6 @@ class Runtime : public HandleRootOwner,
 
   /// Notify runtime execution has timeout.
   ExecutionStatus notifyTimeout();
-
-  /// Holds references to persistent BC providers for the lifetime of the
-  /// Runtime. This is needed because the identifier table may contain pointers
-  /// into bytecode, and so memory backing these must be preserved.
-  std::vector<std::shared_ptr<hbc::BCProvider>> persistentBCProviders_;
-
-  /// Config-provided callback for GC events.
-  std::function<void(GCEventKind, const char *)> gcEventCallback_;
-
-  /// Set from RuntimeConfig.
-  bool allowFunctionToStringWithRuntimeSource_;
 
  private:
 #ifdef NDEBUG
@@ -1405,6 +1462,17 @@ class Runtime : public HandleRootOwner,
   /// \param clearExistingTree is for use by tests and in general will break
   /// because old objects would end up with dead pointers to stack-trace nodes.
   void disableAllocationLocationTracker(bool clearExistingTree = false);
+
+  /// Enable the heap sampling profiler. About every \p samplingInterval bytes
+  /// allocated, the stack will be sampled. This will attribute the highest
+  /// allocating functions.
+  /// \param samplingInterval A number of bytes that a sample should be taken,
+  ///   on average.
+  /// \param seed If non-negative, used as the seed for the random engine.
+  void enableSamplingHeapProfiler(size_t samplingInterval, int64_t seed = -1);
+
+  /// Disable the heap sampling profiler and flush the results out to \p os.
+  void disableSamplingHeapProfiler(llvh::raw_ostream &os);
 
  private:
   void popCallStackImpl();

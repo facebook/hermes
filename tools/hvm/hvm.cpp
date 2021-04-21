@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
     return -1;
   }
 
-  auto buffer = llvh::make_unique<MemoryBuffer>(FileBufOrErr.get().get());
+  auto buffer = std::make_unique<MemoryBuffer>(FileBufOrErr.get().get());
   auto ret =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(std::move(buffer));
 
@@ -122,8 +122,7 @@ int main(int argc, char **argv) {
                   .build())
           .withES6Promise(cl::ES6Promise)
           .withES6Proxy(cl::ES6Proxy)
-          .withES6Symbol(cl::ES6Symbol)
-          .withES6Intl(cl::ES6Intl)
+          .withIntl(cl::Intl)
           .withTrackIO(cl::TrackBytecodeIO)
           .withEnableHermesInternal(cl::EnableHermesInternal)
           .withEnableHermesInternalTestMethods(
@@ -154,3 +153,4 @@ int main(int argc, char **argv) {
   }
   return success ? 0 : 1;
 }
+#undef DEBUG_TYPE

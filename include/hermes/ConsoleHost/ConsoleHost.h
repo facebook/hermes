@@ -111,12 +111,6 @@ struct ExecuteOptions {
   /// Execution time limit.
   uint32_t timeLimit{0};
 
-  /// Dump JIT'ed code.
-  bool dumpJITCode{false};
-
-  /// Fatally crash on any JIT compilation error.
-  bool jitCrashOnError{false};
-
   /// Perform a full GC just before printing any statistics.
   bool forceGCBeforeStats{false};
 
@@ -137,6 +131,9 @@ struct ExecuteOptions {
   /// File to serialize VM state to when serializeVM is called.
   std::string SerializeVMPath;
 #endif // HERMESVM_SERIALIZE
+
+  /// Start tracking heap objects before executing bytecode.
+  bool heapTimeline{false};
 };
 
 /// Executes the HBC bytecode provided in HermesVM.

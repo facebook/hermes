@@ -24,7 +24,7 @@ class HermesToESTreeAdapter extends HermesASTAdapter {
     }
 
     node.loc = {
-      source: this.sourceFilename,
+      source: this.sourceFilename ?? null,
       start: loc.start,
       end: loc.end,
     };
@@ -53,6 +53,8 @@ class HermesToESTreeAdapter extends HermesASTAdapter {
         return this.mapGenericTypeAnnotation(node);
       case 'ImportDeclaration':
         return this.mapImportDeclaration(node);
+      case 'ImportSpecifier':
+        return this.mapImportSpecifier(node);
       case 'ExportDefaultDeclaration':
         return this.mapExportDefaultDeclaration(node);
       case 'ExportNamedDeclaration':

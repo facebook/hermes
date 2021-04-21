@@ -40,6 +40,12 @@ class RootAndSlotAcceptorDefault : public RootAndSlotAcceptor {
 
   virtual void acceptHV(HermesValue &hv) = 0;
 
+  void accept(GCSmallHermesValue &shv) final {
+    acceptSHV(shv);
+  }
+
+  virtual void acceptSHV(SmallHermesValue &hv) = 0;
+
   void accept(GCSymbolID sym) final {
     acceptSym(sym);
   }
@@ -94,6 +100,12 @@ class RootAndSlotAcceptorWithNamesDefault
   }
 
   virtual void acceptHV(HermesValue &hv, const char *name) = 0;
+
+  void accept(GCSmallHermesValue &shv, const char *name) final {
+    acceptSHV(shv, name);
+  }
+
+  virtual void acceptSHV(SmallHermesValue &hv, const char *name) = 0;
 
   void accept(RootSymbolID sym, const char *name) final {
     acceptSym(sym, name);

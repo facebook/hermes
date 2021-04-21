@@ -70,7 +70,7 @@ TEST_F(GCLazySegmentNCTest, MaterializeAll) {
 /// Could not allocate every segment to cover the whole heap, but can allocate
 /// enough segments for the used portion of the heap.
 TEST_F(GCLazySegmentNCTest, MaterializeEnough) {
-  auto provider = llvh::make_unique<LimitedStorageProvider>(
+  auto provider = std::make_unique<LimitedStorageProvider>(
       DummyRuntime::defaultProvider(), kHeapVALimited);
   auto runtime =
       DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
@@ -89,7 +89,7 @@ TEST_F(GCLazySegmentNCTest, MaterializeEnough) {
 /// collection, but we could not materialize a segment, so we must do a full
 /// collection instead.
 TEST_F(GCLazySegmentNCTest, YoungGenNoMaterialize) {
-  auto provider = llvh::make_unique<LimitedStorageProvider>(
+  auto provider = std::make_unique<LimitedStorageProvider>(
       DummyRuntime::defaultProvider(), kHeapVALimited);
   auto runtime =
       DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
@@ -162,7 +162,7 @@ TEST_F(GCLazySegmentNCTest, OldGenAllocMaterialize) {
 
 /// We failed to materialize a segment that we needed to allocate in.
 TEST_F(GCLazySegmentNCDeathTest, FailToMaterialize) {
-  auto provider = llvh::make_unique<LimitedStorageProvider>(
+  auto provider = std::make_unique<LimitedStorageProvider>(
       DummyRuntime::defaultProvider(), kHeapVALimited);
   auto runtime =
       DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
@@ -180,7 +180,7 @@ TEST_F(GCLazySegmentNCDeathTest, FailToMaterialize) {
 }
 
 TEST_F(GCLazySegmentNCDeathTest, FailToMaterializeContinue) {
-  auto provider = llvh::make_unique<LimitedStorageProvider>(
+  auto provider = std::make_unique<LimitedStorageProvider>(
       DummyRuntime::defaultProvider(), kHeapVALimited);
   auto runtime =
       DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));

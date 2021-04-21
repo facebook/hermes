@@ -143,12 +143,12 @@ class OrderedHashMap final : public GCCell {
   HashMapEntry *iteratorNext(Runtime *runtime, HashMapEntry *entry = nullptr)
       const;
 
-  OrderedHashMap(Runtime *runtime, Handle<ArrayStorage> hashTableStorage);
+  OrderedHashMap(Runtime *runtime, Handle<ArrayStorageSmall> hashTableStorage);
 
  private:
   /// The hashtable, with size always equal to capacity_. The number of
   /// reachable entries from hashTable_ should be equal to size_.
-  GCPointer<ArrayStorage> hashTable_{nullptr};
+  GCPointer<ArrayStorageSmall> hashTable_{nullptr};
 
   /// The first entry ever inserted. We need this entry to begin an iteration.
   GCPointer<HashMapEntry> firstIterationEntry_{nullptr};
@@ -163,10 +163,8 @@ class OrderedHashMap final : public GCCell {
   /// ArrayStorage.
   // It needs to be less than 1/4th the max 32-bit integer in order to use an
   // integer-based load factor check of 0.75.
-  /// TODO(T31421960): Use constexpr std::min.
   static constexpr uint32_t MAX_CAPACITY =
-      ArrayStorage::maxElements() < UINT32_MAX / 4 ? ArrayStorage::maxElements()
-                                                   : UINT32_MAX / 4;
+      min(ArrayStorageSmall::maxElements(), UINT32_MAX / 4);
 
   /// Capacity of the hash table.
   uint32_t capacity_{INITIAL_CAPACITY};

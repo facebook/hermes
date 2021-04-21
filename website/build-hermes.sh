@@ -41,7 +41,6 @@ mkdir build_asmjs && cd build_asmjs
 cmake "$HERMES_PATH" \
     -DCMAKE_TOOLCHAIN_FILE="$EMS_PATH/emscripten/cmake/Modules/Platform/Emscripten.cmake" \
     -DCMAKE_BUILD_TYPE=MinSizeRel \
-    -DEMSCRIPTEN_FASTCOMP=1 \
     -DCMAKE_EXE_LINKER_FLAGS="$FLAGS"
 
 make -j hermes

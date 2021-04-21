@@ -61,4 +61,11 @@ LLVM_ATTRIBUTE_NORETURN void hermes_fatal(const std::string &msg) {
   llvh::report_fatal_error(msg.c_str());
 }
 
+LLVM_ATTRIBUTE_NORETURN void hermes_fatal(
+    llvh::StringRef prefix,
+    std::error_code code) {
+  llvh::report_fatal_error(
+      (llvh::Twine(prefix) + ": " + convert_error_to_message(code)).str());
+}
+
 } // namespace hermes

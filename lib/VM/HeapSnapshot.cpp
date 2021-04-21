@@ -11,6 +11,7 @@
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/UTF8.h"
+#include "hermes/VM/GC.h"
 #include "hermes/VM/StackTracesTree.h"
 #include "hermes/VM/StringPrimitive.h"
 
@@ -194,6 +195,20 @@ void HeapSnapshot::addLocation(
   json_.emitValue(column - 1);
 }
 
+void HeapSnapshot::addSample(
+    std::chrono::microseconds timestamp,
+    NodeID lastSeenObjectID) {
+  assert(
+      nextSection_ == Section::Samples && sectionOpened_ &&
+      "Shouldn't be emitting samples until the sample section starts");
+  assert(
+      lastSeenObjectID != GCBase::IDTracker::kInvalidNode &&
+      "Last seen object ID must be valid");
+  json_.emitValues(
+      {static_cast<uint64_t>(timestamp.count()),
+       static_cast<uint64_t>(lastSeenObjectID)});
+}
+
 const char *HeapSnapshot::nodeTypeToName(NodeType type) {
   switch (type) {
 #define V8_NODE_TYPE(enumerand, label) \
@@ -287,7 +302,10 @@ void HeapSnapshot::emitMeta() {
 
   json_.emitKey("sample_fields");
   json_.openArray();
-  json_.emitValues({"timestamp_us", "last_assigned_id"});
+  json_.emitValues({
+#define V8_SAMPLE_FIELD(name) #name,
+#include "hermes/VM/HeapSnapshot.def"
+  });
   json_.closeArray(); // sample_fields
 
   json_.emitKey("location_fields");
@@ -417,6 +435,80 @@ void HeapSnapshot::emitStrings() {
   }
 
   endSection(Section::Strings);
+}
+
+ChromeSamplingMemoryProfile::ChromeSamplingMemoryProfile(JSONEmitter &json)
+    : json_(json) {
+  json_.openDict();
+}
+
+ChromeSamplingMemoryProfile::~ChromeSamplingMemoryProfile() {
+  json_.closeDict();
+}
+
+void ChromeSamplingMemoryProfile::emitTree(
+    StackTracesTree *stackTracesTree,
+    const llvh::DenseMap<StackTracesTreeNode *, llvh::DenseMap<size_t, size_t>>
+        &sizesToCounts) {
+  json_.emitKey("head");
+  emitNode(
+      stackTracesTree->getRootNode(),
+      *stackTracesTree->getStringTable(),
+      sizesToCounts);
+}
+
+void ChromeSamplingMemoryProfile::emitNode(
+    StackTracesTreeNode *node,
+    StringSetVector &strings,
+    const llvh::DenseMap<StackTracesTreeNode *, llvh::DenseMap<size_t, size_t>>
+        &sizesToCounts) {
+  json_.openDict();
+  json_.emitKey("callFrame");
+  json_.openDict();
+  json_.emitKeyValue("functionName", strings[node->name]);
+  json_.emitKeyValue("scriptId", oscompat::to_string(node->sourceLoc.scriptID));
+  json_.emitKeyValue("url", strings[node->sourceLoc.scriptName]);
+  // For the sampling memory profiler, lines should be 0-based. The source
+  // location is 1-based, so subtract 1 here.
+  json_.emitKeyValue("lineNumber", node->sourceLoc.lineNo - 1);
+  json_.emitKeyValue("columnNumber", node->sourceLoc.columnNo - 1);
+  json_.closeDict();
+
+  size_t selfSize = 0;
+  for (const auto &sizeAndCount : sizesToCounts.lookup(node)) {
+    // Size is the key, count is the value.
+    selfSize += sizeAndCount.first * sizeAndCount.second;
+  }
+  json_.emitKeyValue("selfSize", selfSize);
+  json_.emitKeyValue("id", node->id);
+
+  json_.emitKey("children");
+  json_.openArray();
+  for (StackTracesTreeNode *child : node->getChildren()) {
+    emitNode(child, strings, sizesToCounts);
+  }
+  json_.closeArray();
+  json_.closeDict();
+}
+
+void ChromeSamplingMemoryProfile::beginSamples() {
+  json_.emitKey("samples");
+  json_.openArray();
+}
+
+void ChromeSamplingMemoryProfile::emitSample(
+    size_t size,
+    StackTracesTreeNode *node,
+    uint64_t id) {
+  json_.openDict();
+  json_.emitKeyValue("size", size);
+  json_.emitKeyValue("nodeId", node->id);
+  json_.emitKeyValue("ordinal", id);
+  json_.closeDict();
+}
+
+void ChromeSamplingMemoryProfile::endSamples() {
+  json_.closeArray();
 }
 
 std::string converter(const char *name) {

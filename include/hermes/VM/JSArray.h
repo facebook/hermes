@@ -20,6 +20,10 @@ class ArrayImpl : public JSObject {
   using Super = JSObject;
   friend void ArrayImplBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
+  static constexpr size_t indexedStoragePropIndex() {
+    return numOverlapSlots<ArrayImpl>() + ANONYMOUS_PROPERTY_SLOTS - 1;
+  }
+
  public:
 #ifdef HERMESVM_SERIALIZE
   ArrayImpl(Deserializer &d, const VTable *vt);
@@ -27,6 +31,10 @@ class ArrayImpl : public JSObject {
   friend void
   serializeArrayImpl(Serializer &s, const GCCell *cell, unsigned overlapSlots);
 #endif
+
+  /// Add an anonymous property slot to hold the indexedStorage pointer.
+  static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS =
+      Super::ANONYMOUS_PROPERTY_SLOTS + 1;
 
   static bool classof(const GCCell *cell) {
     return kindInRange(
@@ -82,9 +90,8 @@ class ArrayImpl : public JSObject {
     assert(
         index >= self->beginIndex_ && index < self->endIndex_ &&
         "array index out of range");
-    self->indexedStorage_.getNonNull(runtime)
-        ->at(index - self->beginIndex_)
-        .set(value, &runtime->getHeap());
+    self->getIndexedStorage(runtime)->set(
+        index - self->beginIndex_, value, &runtime->getHeap());
   }
 
   /// Set the element at index \p index to empty. This does not affect the
@@ -111,7 +118,7 @@ class ArrayImpl : public JSObject {
   /// contained in the storage.
   const HermesValue at(Runtime *runtime, size_type index) const {
     return index >= beginIndex_ && index < endIndex_
-        ? indexedStorage_.getNonNull(runtime)->at(index - beginIndex_)
+        ? getIndexedStorage(runtime)->at(index - beginIndex_)
         : HermesValue::encodeEmptyValue();
   }
 
@@ -120,8 +127,19 @@ class ArrayImpl : public JSObject {
     return runtime->makeHandle(at(runtime, index));
   }
 
-  const GCPointer<StorageType> &getIndexedStorage() const {
-    return indexedStorage_;
+  /// Get a pointer to the indexed storage for this array. The returned value
+  /// may be null if there is no indexed storage.
+  StorageType *getIndexedStorage(PointerBase *base) const {
+    return vmcast_or_null<StorageType>(
+        JSObject::getDirectSlotValue<indexedStoragePropIndex()>(this).getObject(
+            base));
+  }
+
+  /// Set the indexed storage of this array to be \p p. The pointer is allowed
+  /// to be null.
+  void setIndexedStorage(PointerBase *base, StorageType *p, GC *gc) {
+    JSObject::setDirectSlotValue<indexedStoragePropIndex()>(
+        this, SmallHermesValue::encodeObjectValue(p, base), gc);
   }
 
   /// @}
@@ -142,14 +160,8 @@ class ArrayImpl : public JSObject {
       const VTable *vt,
       JSObject *parent,
       HiddenClass *clazz,
-      StorageType *indexedStorage,
       NeedsBarriers needsBarriers)
-      : JSObject(runtime, vt, parent, clazz, needsBarriers),
-        indexedStorage_(
-            runtime,
-            indexedStorage,
-            &runtime->getHeap(),
-            needsBarriers) {
+      : JSObject(runtime, vt, parent, clazz, needsBarriers) {
     flags_.indexedStorage = true;
     flags_.fastIndexProperties = true;
   }
@@ -159,15 +171,8 @@ class ArrayImpl : public JSObject {
       Runtime *runtime,
       const VTable *vt,
       JSObject *parent,
-      HiddenClass *clazz,
-      StorageType *indexedStorage)
-      : ArrayImpl(
-            runtime,
-            vt,
-            parent,
-            clazz,
-            indexedStorage,
-            GCPointerBase::YesBarriers()) {}
+      HiddenClass *clazz)
+      : ArrayImpl(runtime, vt, parent, clazz, GCPointerBase::YesBarriers()) {}
 
   /// Adds the special indexed element edges from this array to its backing
   /// storage.
@@ -228,7 +233,7 @@ class ArrayImpl : public JSObject {
 
   /// Return the value at index \p index, which must be valid.
   const HermesValue unsafeAt(Runtime *runtime, size_type index) const {
-    return indexedStorage_.getNonNull(runtime)->at(index - beginIndex_);
+    return getIndexedStorage(runtime)->at(index - beginIndex_);
   }
 
  private:
@@ -236,9 +241,6 @@ class ArrayImpl : public JSObject {
   uint32_t beginIndex_{0};
   /// One past the last index contained in the storage.
   uint32_t endIndex_{0};
-  /// The indexed property storage. It can be nullptr, if both its capacity and
-  /// size are 0.
-  GCPointer<StorageType> indexedStorage_;
 };
 
 class Arguments final : public ArrayImpl {
@@ -272,13 +274,24 @@ class Arguments final : public ArrayImpl {
   Arguments(
       Runtime *runtime,
       Handle<JSObject> parent,
-      Handle<HiddenClass> clazz,
-      Handle<StorageType> indexedStorage)
-      : ArrayImpl(runtime, &vt.base, *parent, *clazz, *indexedStorage) {}
+      Handle<HiddenClass> clazz)
+      : ArrayImpl(runtime, &vt.base, *parent, *clazz) {}
 };
 
 class JSArray final : public ArrayImpl {
   using Super = ArrayImpl;
+
+  // Object needs to be able to call setLength.
+  friend class JSObject;
+
+  static constexpr SlotIndex jsArrayPropertyCount() {
+    return numOverlapSlots<JSArray>() + ANONYMOUS_PROPERTY_SLOTS +
+        NAMED_PROPERTY_SLOTS;
+  }
+
+  static constexpr inline SlotIndex lengthPropIndex() {
+    return jsArrayPropertyCount() - 1;
+  }
 
  public:
 #ifdef HERMESVM_SERIALIZE
@@ -303,21 +316,21 @@ class JSArray final : public ArrayImpl {
     return cell->getKind() == CellKind::ArrayKind;
   }
 
-  static uint32_t getLength(const JSArray *self) {
-    return self->shadowLength_;
+  static uint32_t getLength(const JSArray *self, PointerBase *pb) {
+    return getDirectSlotValue<lengthPropIndex()>(self).getNumber(pb);
   }
 
   /// Create an instance of Array, with [[Prototype]] initialized with
   /// \p prototypeHandle, with capacity for \p capacity elements and actual size
   /// \p length.
-  static CallResult<PseudoHandle<JSArray>> create(
+  static CallResult<Handle<JSArray>> create(
       Runtime *runtime,
       Handle<JSObject> prototypeHandle,
       Handle<HiddenClass> classHandle,
       size_type capacity = 0,
       size_type length = 0);
 
-  static CallResult<PseudoHandle<JSArray>> create(
+  static CallResult<Handle<JSArray>> create(
       Runtime *runtime,
       Handle<JSObject> prototypeHandle,
       size_type capacity,
@@ -331,7 +344,7 @@ class JSArray final : public ArrayImpl {
         capacity,
         length);
   }
-  static CallResult<PseudoHandle<JSArray>> create(
+  static CallResult<Handle<JSArray>> create(
       Runtime *runtime,
       Handle<JSObject> prototypeHandle) {
     return create(runtime, prototypeHandle, 0, 0);
@@ -339,7 +352,7 @@ class JSArray final : public ArrayImpl {
 
   /// Create an instance of Array, using the standard array prototype, with
   /// capacity for \p capacity elements and actual size \p length.
-  static CallResult<PseudoHandle<JSArray>>
+  static CallResult<Handle<JSArray>>
   create(Runtime *runtime, size_type capacity, size_type length);
 
   /// A convenience method for setting the \c .length property of the array.
@@ -359,48 +372,19 @@ class JSArray final : public ArrayImpl {
         runtime->makeHandle(HermesValue::encodeNumberValue(newValue)));
   }
 
- private:
-  // Object needs to be able to call setLength.
-  friend class JSObject;
-
-  static constexpr SlotIndex jsArrayPropertyCount() {
-    return numOverlapSlots<JSArray>() + ANONYMOUS_PROPERTY_SLOTS +
-        NAMED_PROPERTY_SLOTS;
-  }
-
-  static constexpr inline SlotIndex lengthPropIndex() {
-    return jsArrayPropertyCount() - 1;
-  }
-
-  /// A copy of the ".length" property. We compare every putComputed()
-  /// index against ".length", and extracting it from property storage every
-  /// time would be too slow.
-  uint32_t shadowLength_{0};
-
- public:
   template <typename NeedsBarrier>
   JSArray(
       Runtime *runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
-      Handle<StorageType> indexedStorage,
       NeedsBarrier needsBarrier)
-      : ArrayImpl(
-            runtime,
-            &vt.base,
-            *parent,
-            *clazz,
-            *indexedStorage,
-            needsBarrier) {}
+      : ArrayImpl(runtime, &vt.base, *parent, *clazz, needsBarrier) {}
 
  private:
   /// A helper to update the named '.length' property.
-  static void putLength(JSArray *self, Runtime *runtime, uint32_t newLength) {
-    self->shadowLength_ = newLength;
-
-    namedSlotRef(self, runtime, lengthPropIndex())
-        .setNonPtr(
-            HermesValue::encodeNumberValue(newLength), &runtime->getHeap());
+  static void
+  putLength(JSArray *self, Runtime *runtime, SmallHermesValue newLength) {
+    setDirectSlotValue<lengthPropIndex()>(self, newLength, &runtime->getHeap());
   }
 
   /// Update the JavaScript '.length' property, which also resizes the array.

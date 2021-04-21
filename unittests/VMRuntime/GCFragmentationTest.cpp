@@ -58,7 +58,8 @@ MetadataTableForTests getMetadataTable() {
 TEST(GCFragmentationTest, TestCoalescing) {
   // Fill the heap with increasingly larger cells, in order to test
   // defragmentation code.
-  static const size_t kNumSegments = 3;
+  static const size_t kNumSegments = 4;
+  static const size_t kNumOGSegments = kNumSegments - 1;
   static const size_t kHeapSize = AlignedHeapSegment::maxSize() * kNumSegments;
   static const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSize);
 
@@ -71,7 +72,7 @@ TEST(GCFragmentationTest, TestCoalescing) {
 
   {
     GCScope scope(&rt);
-    for (size_t i = 0; i < 16 * kNumSegments; i++)
+    for (size_t i = 0; i < 16 * kNumOGSegments; i++)
       rt.makeHandle(SixteenthCell::create(rt));
   }
 
@@ -83,11 +84,9 @@ TEST(GCFragmentationTest, TestCoalescing) {
 
   {
     GCScope scope(&rt);
-    for (size_t i = 0; i < 8 * kNumSegments; i++)
+    for (size_t i = 0; i < 8 * kNumOGSegments; i++)
       rt.makeHandle(EighthCell::create(rt));
   }
-
-  rt.pointerRoots.clear();
 
 #if defined(HERMESVM_GC_HADES) || defined(HERMESVM_GC_RUNTIME)
   rt.collect();
@@ -95,7 +94,7 @@ TEST(GCFragmentationTest, TestCoalescing) {
 
   {
     GCScope scope(&rt);
-    for (size_t i = 0; i < 4 * kNumSegments; i++)
+    for (size_t i = 0; i < 4 * kNumOGSegments; i++)
       rt.makeHandle(QuarterCell::create(rt));
   }
 }

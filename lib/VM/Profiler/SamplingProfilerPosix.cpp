@@ -250,7 +250,9 @@ uint32_t SamplingProfiler::walkRuntimeStack(
       auto *module = calleeCodeBlock->getRuntimeModule();
       assert(module != nullptr && "Cannot fetch runtimeModule for code block");
       frameStorage.jsFrame.module = module;
-      registerDomain(module->getDomainUnsafe(runtime_));
+      // Don't execute a read or write barrier here because this is a signal
+      // handler.
+      registerDomain(module->getDomainForSamplingProfiler());
     } else if (
         auto *nativeFunction =
             dyn_vmcast_or_null<NativeFunction>(frame.getCalleeClosure())) {

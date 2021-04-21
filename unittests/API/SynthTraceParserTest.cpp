@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_API_TRACE
 #include <hermes/SynthTraceParser.h>
 
 #include <gtest/gtest.h>
@@ -39,8 +38,7 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
     },
     "maxNumRegisters": 100,
     "ES6Proxy": false,
-    "ES6Symbol": false,
-    "ES6Intl": false,
+    "Intl": false,
     "enableSampledStats": true,
     "vmExperimentFlags": 123
   },
@@ -73,9 +71,8 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
   EXPECT_FALSE(gcconf.getAllocInYoung());
 
   EXPECT_EQ(rtconf.getMaxNumRegisters(), 100);
-  EXPECT_TRUE(rtconf.getES6Proxy());
-  EXPECT_FALSE(rtconf.getES6Symbol());
-  EXPECT_FALSE(rtconf.getES6Intl());
+  EXPECT_FALSE(rtconf.getES6Proxy());
+  EXPECT_FALSE(rtconf.getIntl());
   EXPECT_TRUE(rtconf.getEnableSampledStats());
   EXPECT_EQ(rtconf.getVMExperimentFlags(), 123);
 
@@ -178,5 +175,3 @@ TEST_F(SynthTraceParserTest, SynthMissingVersion) {
 }
 
 } // namespace
-
-#endif

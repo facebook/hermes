@@ -42,7 +42,7 @@ const char *getInstrumentedStatsTrace() {
     },
     {
       "type": "EndExecJSRecord",
-      "retval": "string:use strict",
+      "retval": "string:42",
       "time": 0
     }
   ]
@@ -103,7 +103,7 @@ const char *getInstrumentedStatsAllowsEmptyTrace() {
     },
     {
       "type": "EndExecJSRecord",
-      "retval": "string:use strict",
+      "retval": "string:42",
       "time": 0
     }
   ]

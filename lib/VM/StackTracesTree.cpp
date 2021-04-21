@@ -111,10 +111,9 @@ void StackTracesTree::syncWithRuntimeStack(Runtime *runtime) {
     if (prev != framesEnd) {
       if (CodeBlock *parentCB = prev.getCalleeCodeBlock()) {
         assert(
-            !savedCodeBlock ||
-            savedCodeBlock == parentCB &&
-                "If savedCodeBlock is non-null, it should match the parent's "
-                "callee code block");
+            (!savedCodeBlock || savedCodeBlock == parentCB) &&
+            "If savedCodeBlock is non-null, it should match the parent's "
+            "callee code block");
         savedCodeBlock = parentCB;
       }
     } else {
@@ -235,7 +234,7 @@ void StackTracesTree::pushCallStack(
   auto nameID =
       nameStr.empty() ? anonymousFunctionID_ : strings_->insert(nameStr);
 
-  auto newNode = hermes::make_unique<StackTracesTreeNode>(
+  auto newNode = std::make_unique<StackTracesTreeNode>(
       nextNodeID_++, head_, sourceLoc, codeBlock, ip, nameID);
   auto newNodePtr = newNode.get();
   nodes_.emplace_back(std::move(newNode));

@@ -347,11 +347,21 @@ static opt<std::string> BytecodeManifestFilename(
         "Name of the manifest file generated when compiling multiple segments to bytecode"),
     cat(CompilerCategory));
 
-/// Emit debug info for every instruction instead of just the throwing ones.
-static opt<bool> EmitDebugInfo(
-    "g",
-    desc("Emit debug info for all instructions"),
-    cat(CompilerCategory));
+enum class DebugLevel { g0, g1, g2, g3 };
+
+static cl::opt<DebugLevel> DebugInfoLevel(
+    cl::desc("Choose debug info level:"),
+    cl::init(DebugLevel::g1),
+    cl::values(
+        clEnumValN(DebugLevel::g3, "g", "Equivalent to -g3"),
+        clEnumValN(DebugLevel::g0, "g0", "Do not emit debug info"),
+        clEnumValN(DebugLevel::g1, "g1", "Emit location info for backtraces"),
+        clEnumValN(
+            DebugLevel::g2,
+            "g2",
+            "Emit location info for all instructions"),
+        clEnumValN(DebugLevel::g3, "g3", "Emit full info for debugging")),
+    cl::cat(CompilerCategory));
 
 static opt<std::string> InputSourceMap(
     "source-map",
@@ -603,9 +613,10 @@ memoryBufferFromZipFile(zip_t *zip, const char *path, bool silent = false) {
   int result = 0;
 
   result = zip_entry_open(zip, path);
-  if (result == -1) {
+  if (result < 0) {
     if (!silent) {
-      llvh::errs() << "Zip error reading " << path << ": File does not exist\n";
+      llvh::errs() << "Zip error: reading " << path << ": "
+                   << zip_strerror(result) << "\n";
     }
     return nullptr;
   }
@@ -653,7 +664,7 @@ class OutputStream {
       return false;
     }
 
-    fdos_ = llvh::make_unique<raw_fd_ostream>(tempName_, EC, openFlags);
+    fdos_ = std::make_unique<raw_fd_ostream>(tempName_, EC, openFlags);
     if (EC) {
       llvh::errs() << "Failed to open file " << tempName_ << ": "
                    << EC.message() << '\n';
@@ -869,6 +880,10 @@ void setFlagDefaults() {
 
   if (cl::LazyCompilation && cl::OptimizationLevel > cl::OptLevel::Og) {
     cl::OptimizationLevel = cl::OptLevel::Og;
+  }
+
+  if (cl::OutputSourceMap && cl::DebugInfoLevel < cl::DebugLevel::g2) {
+    cl::DebugInfoLevel = cl::DebugLevel::g2;
   }
 }
 
@@ -1098,11 +1113,12 @@ std::shared_ptr<Context> createContext(
   }
 #endif
 
-  if (cl::EmitDebugInfo) {
+  if (cl::DebugInfoLevel >= cl::DebugLevel::g3) {
     context->setDebugInfoSetting(DebugInfoSetting::ALL);
-  } else if (cl::OutputSourceMap) {
+  } else if (cl::DebugInfoLevel == cl::DebugLevel::g2) {
     context->setDebugInfoSetting(DebugInfoSetting::SOURCE_MAP);
   } else {
+    // -g1 or -g0. If -g0, we'll strip debug info later.
     context->setDebugInfoSetting(DebugInfoSetting::THROWING);
   }
   context->setEmitAsyncBreakCheck(cl::EmitAsyncBreakCheck);
@@ -1325,7 +1341,7 @@ std::unique_ptr<hbc::BCProviderFromBuffer> loadBaseBytecodeProvider(
     return nullptr;
   }
   // Transfer ownership to an owned memory buffer.
-  auto ownedBuf = llvh::make_unique<OwnedMemoryBuffer>(std::move(fileBuf));
+  auto ownedBuf = std::make_unique<OwnedMemoryBuffer>(std::move(fileBuf));
   auto ret = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
       std::move(ownedBuf));
   if (!ret.first) {
@@ -1450,7 +1466,7 @@ std::unique_ptr<Context::ResolutionTable> readResolutionTable(
 
   using namespace ::hermes::parser;
 
-  auto result = hermes::make_unique<Context::ResolutionTable>();
+  auto result = std::make_unique<Context::ResolutionTable>();
 
   JSONObject *resolutionTable =
       llvh::dyn_cast_or_null<JSONObject>(metadata->get("resolutionTable"));
@@ -1639,7 +1655,7 @@ CompileResult processBytecodeFile(std::unique_ptr<llvh::MemoryBuffer> fileBuf) {
   std::string filename = fileBuf->getBufferIdentifier();
 
   std::unique_ptr<hbc::BCProviderFromBuffer> bytecode;
-  auto buffer = llvh::make_unique<OwnedMemoryBuffer>(std::move(fileBuf));
+  auto buffer = std::make_unique<OwnedMemoryBuffer>(std::move(fileBuf));
   auto ret =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(std::move(buffer));
   if (!ret.first) {
@@ -1921,7 +1937,8 @@ CompileResult processSourceFiles(
 
   // If the user requests to output a source map, then do not also emit debug
   // info into the bytecode.
-  genOptions.stripDebugInfoSection = cl::OutputSourceMap;
+  genOptions.stripDebugInfoSection =
+      cl::OutputSourceMap || cl::DebugInfoLevel == cl::DebugLevel::g0;
 
   genOptions.stripFunctionNames = cl::StripFunctionNames;
 
@@ -2154,3 +2171,5 @@ CompileResult compileFromCommandLineOptions() {
 }
 } // namespace driver
 } // namespace hermes
+
+#undef DEBUG_TYPE

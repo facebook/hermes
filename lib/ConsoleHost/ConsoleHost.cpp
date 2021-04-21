@@ -65,8 +65,11 @@ createHeapSnapshot(void *, vm::Runtime *runtime, vm::NativeArgs args) {
   if (fileName.empty()) {
     // "-" is recognized as stdout.
     fileName = "-";
-  } else if (!llvh::StringRef{fileName}.endswith(".heapsnapshot")) {
-    return runtime->raiseTypeError("Filename must end in .heapsnapshot");
+  } else if (
+      !llvh::StringRef{fileName}.endswith(".heapsnapshot") &&
+      !llvh::StringRef{fileName}.endswith(".heaptimeline")) {
+    return runtime->raiseTypeError(
+        "Filename must end in .heapsnapshot or .heaptimeline");
   }
   if (auto err = runtime->getHeap().createSnapshotToFile(fileName)) {
     // This isn't a TypeError, but no other built-in can express file errors,
@@ -104,7 +107,7 @@ loadSegment(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
   }
 
   auto ret = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-      llvh::make_unique<OwnedMemoryBuffer>(std::move(*fileBufRes)));
+      std::make_unique<OwnedMemoryBuffer>(std::move(*fileBufRes)));
   if (!ret.first) {
     return runtime->raiseTypeError("Error deserializing bytecode");
   }
@@ -166,7 +169,7 @@ serializeVM(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
     const auto *fileName = reinterpret_cast<std::string *>(ctx);
     std::error_code EC;
     serializeStream =
-        llvh::make_unique<llvh::raw_fd_ostream>(llvh::StringRef(*fileName), EC);
+        std::make_unique<llvh::raw_fd_ostream>(llvh::StringRef(*fileName), EC);
     if (EC) {
       return runtime->raiseTypeError(
           TwineChar16("Could not write to file located at ") +
@@ -191,7 +194,7 @@ serializeVM(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
     }
     std::error_code EC;
     serializeStream =
-        llvh::make_unique<llvh::raw_fd_ostream>(llvh::StringRef(fileName), EC);
+        std::make_unique<llvh::raw_fd_ostream>(llvh::StringRef(fileName), EC);
     if (EC) {
       return runtime->raiseTypeError(
           TwineChar16("Could not write to file located at ") +
@@ -401,8 +404,6 @@ bool executeHBCBytecodeImpl(
 #else
   auto runtime = vm::Runtime::create(options.runtimeConfig);
 #endif
-  runtime->getJITContext().setDumpJITCode(options.dumpJITCode);
-  runtime->getJITContext().setCrashOnError(options.jitCrashOnError);
   if (options.stabilizeInstructionCount) {
     // Try to limit features that can introduce unpredictable CPU instruction
     // behavior. Date is a potential cause, but is not handled currently.
@@ -418,8 +419,12 @@ bool executeHBCBytecodeImpl(
   }
 
   if (shouldRecordGCStats) {
-    statSampler = llvh::make_unique<vm::StatSamplingThread>(
+    statSampler = std::make_unique<vm::StatSamplingThread>(
         std::chrono::milliseconds(100));
+  }
+
+  if (options.heapTimeline) {
+    runtime->enableAllocationLocationTracker();
   }
 
   vm::GCScope scope(runtime.get());
@@ -459,6 +464,8 @@ bool executeHBCBytecodeImpl(
   }
 
   llvh::StringRef sourceURL{};
+  if (filename)
+    sourceURL = *filename;
   vm::CallResult<vm::HermesValue> status = runtime->runBytecode(
       std::move(bytecode),
       flags,

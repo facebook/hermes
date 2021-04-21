@@ -21,13 +21,12 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.5.0'
+        classpath 'com.android.tools.build:gradle:4.1.2'
     }
 }
 
 plugins {
-    id 'com.github.dcendents.android-maven' version '2.1'
-    id 'com.jfrog.bintray' version '1.8.4'
+    id 'com.vanniktech.maven.publish' version '0.13.0' apply false
 }
 
 apply plugin: 'com.android.library'
@@ -39,8 +38,9 @@ repositories {
 }
 
 android {
-    compileSdkVersion 28
-    buildToolsVersion '29.0.1'
+    compileSdkVersion 29
+    buildToolsVersion '29.0.3'
+    ndkVersion '21.1.6352462'
 
     externalNativeBuild {
         cmake {
@@ -50,12 +50,12 @@ android {
 
     defaultConfig {
         minSdkVersion 15
-        targetSdkVersion 28
+        targetSdkVersion 29
         buildConfigField "boolean", "IS_INTERNAL_BUILD", 'true'
 
         sourceSets {
             main {
-                manifest.srcFile 'java/com/facebook/jni/AndroidManifest.xml'
+                manifest.srcFile 'manifest/AndroidManifest.xml'
                 java.srcDir 'java'
             }
         }
@@ -66,16 +66,28 @@ android {
 
         externalNativeBuild {
             cmake {
-                arguments '-DANDROID_TOOLCHAIN=clang'
+                arguments '-DANDROID_TOOLCHAIN=clang', '-DANDROID_STL=c++_shared'
                 targets 'fbjni'
+                version '3.10.2.4988404'
+            }
+        }
+
+        buildFeatures {
+            prefabPublishing true
+        }
+
+        prefab {
+            fbjni {
+                headers 'cxx/'
             }
         }
     }
 }
 
+
 dependencies {
-    compileOnly 'com.google.code.findbugs:jsr305:3.0.1'
-    implementation 'com.facebook.soloader:nativeloader:0.8.0'
+    compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
+    implementation 'com.facebook.soloader:nativeloader:0.10.1'
 }
 
 apply from: rootProject.file('gradle/release.gradle')

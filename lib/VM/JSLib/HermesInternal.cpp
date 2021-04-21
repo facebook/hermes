@@ -58,7 +58,7 @@ hermesInternalGetEpilogues(void *, Runtime *runtime, NativeArgs args) {
   if (outerResult == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto outer = runtime->makeHandle(std::move(*outerResult));
+  auto outer = *outerResult;
   if (outer->setStorageEndIndex(outer, runtime, outerLen) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -114,30 +114,32 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
 /// Predefined enum value, and its value is rooted in \p VALUE.  If property
 /// definition fails, the exceptional execution status will be propogated to the
 /// outer function.
-#define SET_PROP(KEY, VALUE)                                             \
-  do {                                                                   \
-    GCScopeMarkerRAII marker{gcScope};                                   \
-    double val = VALUE;                                                  \
-    if (statsTable) {                                                    \
-      std::string key = oscompat::to_string(static_cast<unsigned>(KEY)); \
-      if (statsTable->count(key.c_str())) {                              \
-        val = (*statsTable)[StringRef(key.c_str(), key.size())].num();   \
-      }                                                                  \
-    }                                                                    \
-    tmpHandle = HermesValue::encodeDoubleValue(val);                     \
-    auto status = JSObject::defineNewOwnProperty(                        \
-        resultHandle,                                                    \
-        runtime,                                                         \
-        Predefined::getSymbolID(KEY),                                    \
-        PropertyFlags::defaultNewNamedPropertyFlags(),                   \
-        tmpHandle);                                                      \
-    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {           \
-      return ExecutionStatus::EXCEPTION;                                 \
-    }                                                                    \
-    if (newStatsTable) {                                                 \
-      std::string key = oscompat::to_string(static_cast<unsigned>(KEY)); \
-      newStatsTable->try_emplace(key, val);                              \
-    }                                                                    \
+#define SET_PROP(KEY, VALUE)                                                \
+  do {                                                                      \
+    GCScopeMarkerRAII marker{gcScope};                                      \
+    double val = VALUE;                                                     \
+    if (statsTable) {                                                       \
+      auto array = runtime->getPredefinedString(KEY)->getStringRef<char>(); \
+      std::string key(array.data(), array.size());                          \
+      if (statsTable->count(key.c_str())) {                                 \
+        val = (*statsTable)[StringRef(key.c_str(), key.size())].num();      \
+      }                                                                     \
+    }                                                                       \
+    tmpHandle = HermesValue::encodeDoubleValue(val);                        \
+    auto status = JSObject::defineNewOwnProperty(                           \
+        resultHandle,                                                       \
+        runtime,                                                            \
+        Predefined::getSymbolID(KEY),                                       \
+        PropertyFlags::defaultNewNamedPropertyFlags(),                      \
+        tmpHandle);                                                         \
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {              \
+      return ExecutionStatus::EXCEPTION;                                    \
+    }                                                                       \
+    if (newStatsTable) {                                                    \
+      auto array = runtime->getPredefinedString(KEY)->getStringRef<char>(); \
+      std::string key(array.data(), array.size());                          \
+      newStatsTable->try_emplace(key, val);                                 \
+    }                                                                       \
   } while (false)
 
   auto &stats = runtime->getRuntimeStats();
@@ -496,20 +498,9 @@ hermesInternalGetRuntimeProperties(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  const char *gcKind = nullptr;
-  switch (runtime->getHeap().getKind()) {
-    case GCBase::HeapKind::HADES:
-      gcKind = kConcurrentGC ? "Hades" : "Hades (incremental)";
-      break;
-    case GCBase::HeapKind::NCGEN:
-      gcKind = "GenGC";
-      break;
-    case GCBase::HeapKind::MALLOC:
-      gcKind = "Malloc";
-      break;
-  }
-  auto gcKindRes =
-      StringPrimitive::create(runtime, ASCIIRef(gcKind, strlen(gcKind)));
+  std::string gcKind = runtime->getHeap().getKindAsStr();
+  auto gcKindRes = StringPrimitive::create(
+      runtime, ASCIIRef(gcKind.c_str(), gcKind.length()));
   if (LLVM_UNLIKELY(gcKindRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

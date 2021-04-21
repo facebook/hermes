@@ -307,8 +307,9 @@ void HiddenClass::forEachPropertyNoAlloc(
   std::vector<std::pair<SymbolID, NamedPropertyDescriptor>> properties;
   HiddenClass *curr = self;
   while (curr && !curr->propertyMap_) {
-    // Skip invalid symbols stored in the hidden class chain.
-    if (curr->symbolID_.isValid()) {
+    // Skip invalid symbols stored in the hidden class chain, as well as
+    // flag-only transitions.
+    if (curr->symbolID_.isValid() && !curr->propertyFlags_.flagsTransition) {
       properties.emplace_back(
           curr->symbolID_,
           NamedPropertyDescriptor{
@@ -1050,3 +1051,5 @@ void HiddenClass::stealPropertyMapFromParent(
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

@@ -318,6 +318,11 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// \return a raw pointer to the domain which owns this RuntimeModule.
   inline Domain *getDomainUnsafe(Runtime *);
 
+  /// \return a raw pointer to the domain which owns this RuntimeModule.
+  /// Does not execute any read or write barriers on the GC. Should only be
+  /// used during a signal handler or from a non-mutator thread.
+  inline Domain *getDomainForSamplingProfiler();
+
   /// \return the Runtime of this module.
   Runtime *getRuntime() {
     return runtime_;
@@ -360,6 +365,10 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// \return an estimate of the size of additional memory used by this
   /// RuntimeModule.
   size_t additionalMemorySize() const;
+
+  /// Add native nodes and edges to heap snapshots.
+  void snapshotAddNodes(GC *gc, HeapSnapshot &snap) const;
+  void snapshotAddEdges(GC *gc, HeapSnapshot &snap) const;
 
   /// Find the cached hidden class for an object literal, if one exists.
   /// \param keyBufferIndex value of NewObjectWithBuffer instruction.

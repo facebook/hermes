@@ -191,6 +191,7 @@ type T = ((string)) => (number);
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
+// CHECK-NEXT:         "this": null,
 // CHECK-NEXT:         "returnType": {
 // CHECK-NEXT:           "type": "NumberTypeAnnotation",
 // CHECK-NEXT:           "loc": {

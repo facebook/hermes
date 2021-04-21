@@ -25,43 +25,19 @@ namespace vm {
   return ::testing::AssertionFailure();
 }
 
-std::unique_ptr<GC> DummyRuntime::makeHeap(
-    DummyRuntime *runtime,
-    MetadataTableForTests metaTable,
-    const GCConfig &gcConfig,
-    std::shared_ptr<CrashManager> crashMgr,
-    std::shared_ptr<StorageProvider> provider,
-    experiments::VMExperimentFlags experiments) {
-  return llvh::make_unique<
-#ifdef HERMESVM_GC_RUNTIME
-      // For RuntimeGC tests, just always use GenGC.
-      GenGC
-#else
-      GC
-#endif
-      >(
-      metaTable,
-      static_cast<GC::GCCallbacks *>(runtime),
-      runtime,
-      gcConfig,
-      crashMgr,
-      std::move(provider),
-      experiments);
-}
-
 DummyRuntime::DummyRuntime(
     MetadataTableForTests metaTable,
     const GCConfig &gcConfig,
     std::shared_ptr<StorageProvider> storageProvider,
     std::shared_ptr<CrashManager> crashMgr)
-    : gc_{makeHeap(
-          this,
+    : gcStorage_{
           metaTable,
+          this,
+          this,
           gcConfig,
           crashMgr,
           std::move(storageProvider),
-          // Enable compaction in Hades for the unused memory test.
-          experiments::HadesCompaction)} {}
+          /* experiments */ 0} {}
 
 DummyRuntime::~DummyRuntime() {
   EXPECT_FALSE(getHeap().getIDTracker().hasNativeIDs())
@@ -111,6 +87,10 @@ void DummyRuntime::markWeakRoots(WeakRootAcceptor &acceptor) {
   }
   if (markExtraWeak)
     markExtraWeak(acceptor);
+}
+
+// Dummy runtime doesn't need to mark anything during complete marking.
+void DummyRuntime::markRootsForCompleteMarking(RootAndSlotAcceptorWithNames &) {
 }
 
 std::string DummyRuntime::convertSymbolToUTF8(SymbolID) {

@@ -11,6 +11,8 @@
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase.h"
 
+#include "hermes/Support/Algorithms.h"
+
 namespace hermes {
 namespace vm {
 
@@ -20,6 +22,10 @@ template <
     LongLived longLived,
     class... Args>
 T *GCBase::makeAFixed(Args &&...args) {
+  static_assert(
+      cellSize<T>() >= GC::minAllocationSize() &&
+          cellSize<T>() <= GC::maxAllocationSize(),
+      "Cell size outside legal range.");
   return makeA<T, true /* fixedSize */, hasFinalizer, longLived>(
       cellSize<T>(), std::forward<Args>(args)...);
 }
@@ -30,6 +36,9 @@ template <
     LongLived longLived,
     class... Args>
 T *GCBase::makeAVariable(uint32_t size, Args &&...args) {
+  // If size is greater than the max, we should OOM.
+  assert(
+      size >= GC::minAllocationSize() && "Cell size is smaller than minimum");
   return makeA<T, false /* fixedSize */, hasFinalizer, longLived>(
       heapAlignSize(size), std::forward<Args>(args)...);
 }
@@ -68,7 +77,7 @@ T *GCBase::makeA(uint32_t size, Args &&...args) {
           size, std::forward<Args>(args)...);
 #endif
 #ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  getAllocationLocationTracker().newAlloc(ptr, size);
+  newAlloc(ptr, size);
 #endif
   return ptr;
 }
@@ -76,9 +85,12 @@ T *GCBase::makeA(uint32_t size, Args &&...args) {
 #ifdef HERMESVM_GC_RUNTIME
 constexpr uint32_t GCBase::maxAllocationSize() {
   // Return the lesser of the two GC options' max allowed sizes.
-  return HadesGC::maxAllocationSize() < GenGC::maxAllocationSize()
-      ? HadesGC::maxAllocationSize()
-      : GenGC::maxAllocationSize();
+  return min(HadesGC::maxAllocationSize(), GenGC::maxAllocationSize());
+}
+
+constexpr uint32_t GCBase::minAllocationSize() {
+  // Return the greater of the two GC options' min allowed sizes.
+  return max(HadesGC::minAllocationSize(), GenGC::minAllocationSize());
 }
 #endif
 

@@ -200,7 +200,9 @@ void Domain::_snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
   auto *const self = vmcast<Domain>(cell);
   for (RuntimeModule *rm : self->runtimeModules_) {
     // Create a native node for each RuntimeModule owned by this domain.
+    rm->snapshotAddNodes(gc, snap);
     snap.beginNode();
+    rm->snapshotAddEdges(gc, snap);
     snap.endNode(
         HeapSnapshot::NodeType::Native,
         "RuntimeModule",
@@ -364,16 +366,22 @@ ExecutionStatus Domain::importCJSModuleTable(
       cjsEntryModuleID = moduleID;
     }
     uint32_t index = moduleID * CJSModuleSize;
-    cjsModules->at(index + CachedExportsOffset)
-        .set(HermesValue::encodeEmptyValue(), &runtime->getHeap());
-    cjsModules->at(index + ModuleOffset)
-        .set(HermesValue::encodeObjectValue(nullptr), &runtime->getHeap());
-    cjsModules->at(index + FunctionIndexOffset)
-        .set(HermesValue::encodeNativeUInt32(functionID), &runtime->getHeap());
-    cjsModules->at(index + runtimeModuleOffset)
-        .set(
-            HermesValue::encodeNativePointer(runtimeModule),
-            &runtime->getHeap());
+    cjsModules->set(
+        index + CachedExportsOffset,
+        HermesValue::encodeEmptyValue(),
+        &runtime->getHeap());
+    cjsModules->set(
+        index + ModuleOffset,
+        HermesValue::encodeObjectValue(nullptr),
+        &runtime->getHeap());
+    cjsModules->set(
+        index + FunctionIndexOffset,
+        HermesValue::encodeNativeUInt32(functionID),
+        &runtime->getHeap());
+    cjsModules->set(
+        index + runtimeModuleOffset,
+        HermesValue::encodeNativePointer(runtimeModule),
+        &runtime->getHeap());
     assert(isModuleRegistered(moduleID) && "CJS module was not registered");
     return index;
   };
@@ -455,13 +463,18 @@ Handle<RequireContext> RequireContext::create(
       runtime->getHiddenClassForPrototype(*objProto, ANONYMOUS_PROPERTY_SLOTS));
   auto self = JSObjectInit::initToHandle(runtime, cell);
 
-  JSObject::setInternalProperty(
-      *self, runtime, domainPropIndex(), domain.getHermesValue());
-  JSObject::setInternalProperty(
-      *self, runtime, dirnamePropIndex(), dirname.getHermesValue());
-
+  JSObject::setDirectSlotValue<domainPropIndex()>(
+      *self,
+      SmallHermesValue::encodeObjectValue(domain.get(), runtime),
+      &runtime->getHeap());
+  JSObject::setDirectSlotValue<dirnamePropIndex()>(
+      *self,
+      SmallHermesValue::encodeStringValue(dirname.get(), runtime),
+      &runtime->getHeap());
   return self;
 }
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

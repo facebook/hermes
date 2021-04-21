@@ -309,7 +309,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
 #ifdef HERMESVM_LEAN
       llvm_unreachable("Lazy support compiled out");
 #else
-      auto lazyData = llvh::make_unique<LazyCompilationData>();
+      auto lazyData = std::make_unique<LazyCompilationData>();
       lazyData->parentScope = F->getLazyScope();
       lazyData->nodeKind = F->getLazySource().nodeKind;
       lazyData->paramYield = F->getLazySource().paramYield;

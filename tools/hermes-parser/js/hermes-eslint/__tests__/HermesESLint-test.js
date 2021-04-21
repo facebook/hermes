@@ -54,6 +54,20 @@ test('Parser produces ESTree AST', () => {
   });
 });
 
+test('Parses ambiguous Flow syntax', () => {
+  expect(parseForESLint(`foo<T>(x)`).ast).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'CallExpression',
+        },
+      },
+    ],
+  });
+});
+
 test('Parser allows return outside function', () => {
   expect(parseForESLint('return 1').ast).toMatchObject({
     type: 'Program',
@@ -85,4 +99,14 @@ test('Visitor key order for control flow nodes', () => {
     TryStatement: ['block', 'handler', 'finalizer'],
     CatchClause: ['param', 'body'],
   });
+});
+
+test('Parse error messages formatted for ESLint', () => {
+  try {
+    parseForESLint('const = 1');
+    fail('Expected parse error to be thrown');
+  } catch (e) {
+    expect(e.lineNumber).toEqual(1);
+    expect(e.column).toEqual(6);
+  }
 });

@@ -186,7 +186,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
   bool isLargeFile =
       buffer->size() >= context->getPreemptiveFileCompilationThreshold();
   int fileBufId = context->getSourceErrorManager().addNewSourceBuffer(
-      llvh::make_unique<HermesLLVMMemoryBuffer>(std::move(buffer), sourceURL));
+      std::make_unique<HermesLLVMMemoryBuffer>(std::move(buffer), sourceURL));
   if (sourceMap != nullptr) {
     auto sourceMapTranslator =
         std::make_shared<SourceMapTranslator>(context->getSourceErrorManager());

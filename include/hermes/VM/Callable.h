@@ -530,9 +530,14 @@ class NativeFunction : public Callable {
     auto newFrame = runtime->setCurrentFrameToTopOfStack();
     runtime->saveCallerIPInStackFrame();
     // Allocate the "reserved" registers in the new frame.
-    runtime->allocStack(
-        StackFrameLayout::CalleeExtraRegistersAtStart,
-        HermesValue::encodeUndefinedValue());
+    if (LLVM_UNLIKELY(!runtime->checkAndAllocStack(
+            StackFrameLayout::CalleeExtraRegistersAtStart,
+            HermesValue::encodeUndefinedValue()))) {
+      // Restore the stack before raising the overflow.
+      runtime->restoreStackAndPreviousFrame(newFrame);
+      return runtime->raiseStackOverflow(
+          Runtime::StackOverflowKind::JSRegisterStack);
+    }
 
 #ifdef HERMESVM_PROFILER_NATIVECALL
     auto t1 = HERMESVM_RDTSC();
@@ -649,7 +654,7 @@ class NativeFunction : public Callable {
   /// \return the value in an additional slot.
   /// \param index must be less than the \c additionalSlotCount passed to
   /// the create method.
-  static HermesValue getAdditionalSlotValue(
+  static SmallHermesValue getAdditionalSlotValue(
       NativeFunction *self,
       Runtime *runtime,
       unsigned index) {
@@ -666,8 +671,8 @@ class NativeFunction : public Callable {
       NativeFunction *self,
       Runtime *runtime,
       unsigned index,
-      HermesValue value) {
-    return JSObject::setInternalProperty(
+      SmallHermesValue value) {
+    JSObject::setInternalProperty(
         self,
         runtime,
         numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS + index,
@@ -784,7 +789,7 @@ class NativeConstructor final : public NativeFunction {
         functionPtr,
         creator,
         targetKind);
-    return createPseudoHandle(cell);
+    return JSObjectInit::initToPseudoHandle(runtime, cell);
   }
 
   /// Create an instance of NativeConstructor.
@@ -811,7 +816,7 @@ class NativeConstructor final : public NativeFunction {
         functionPtr,
         creator,
         targetKind);
-    return createPseudoHandle(cell);
+    return JSObjectInit::initToPseudoHandle(runtime, cell);
   }
 
  private:
@@ -1037,6 +1042,7 @@ class JSFunction : public Callable {
   static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
   static void
   _snapshotAddLocationsImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 };
 
 /// A function which interprets code and returns a Async Function when called.
@@ -1287,10 +1293,11 @@ class GeneratorInnerFunction final : public JSFunction {
   /// Clear the stored result_ field to prevent memory leaks.
   /// Should be called after getResult() by the ResumeGenerator instruction.
   void clearResult(Runtime *runtime) {
-    result_.setNonPtr(HermesValue::encodeEmptyValue(), &runtime->getHeap());
+    result_.setNonPtr(
+        SmallHermesValue::encodeEmptyValue(), &runtime->getHeap());
   }
 
-  HermesValue getResult() const {
+  SmallHermesValue getResult() const {
     return result_;
   }
 
@@ -1366,7 +1373,7 @@ class GeneratorInnerFunction final : public JSFunction {
 
   /// The result passed to `next()`, `throw()`, or `return()` by the user.
   /// Placed in the result register of `ResumeGenerator`.
-  GCHermesValue result_{};
+  GCSmallHermesValue result_{};
 
   /// The next instruction to jump to upon resuming from SuspendedYield,
   /// invalid if the generator is in any other state.

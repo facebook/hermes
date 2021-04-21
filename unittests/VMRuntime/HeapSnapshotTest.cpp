@@ -11,6 +11,7 @@
 #include "hermes/Parser/JSONParser.h"
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/Allocator.h"
+#include "hermes/Support/Compiler.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCPointer-inline.h"
@@ -21,6 +22,7 @@
 #include "llvh/ADT/StringRef.h"
 #include "llvh/Support/raw_ostream.h"
 
+#include <chrono>
 #include <set>
 #include <sstream>
 
@@ -276,6 +278,28 @@ std::ostream &operator<<(std::ostream &os, const Edge &edge) {
   os.flags(f);
   return os;
 }
+
+struct Sample {
+  std::chrono::microseconds timestamp;
+  HeapSnapshot::NodeID lastSeenObjectID;
+
+  explicit Sample(
+      std::chrono::microseconds timestamp,
+      HeapSnapshot::NodeID lastSeenObjectID)
+      : timestamp(timestamp), lastSeenObjectID(lastSeenObjectID) {}
+
+  static Sample parse(JSONArray::iterator samples) {
+    std::chrono::microseconds timestamp{
+        static_cast<uint64_t>(llvh::cast<JSONNumber>(*samples)->getValue())};
+    samples++;
+
+    auto lastSeenObjectID = static_cast<HeapSnapshot::NodeID>(
+        llvh::cast<JSONNumber>(*samples)->getValue());
+    samples++;
+
+    return Sample{timestamp, lastSeenObjectID};
+  }
+};
 
 struct Location {
   Node object;
@@ -738,6 +762,12 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
 
 using HeapSnapshotRuntimeTest = RuntimeTestFixture;
 
+template <typename T>
+size_t firstNamedPropertyEdge() {
+  // parent, __proto__, class, directProp$i
+  return JSObject::DIRECT_PROPERTY_SLOTS - JSObject::numOverlapSlots<T>() + 3;
+}
+
 TEST_F(HeapSnapshotRuntimeTest, FunctionLocationForLazyCode) {
   // Similar test to the above, but for lazy-compiled source.
   JSONFactory::Allocator alloc;
@@ -771,7 +801,7 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationForLazyCode) {
       "myGlobal",
       funcID,
       func->getAllocatedSize(),
-      6};
+      firstNamedPropertyEdge<JSFunction>() + 3};
   EXPECT_EQ(node, expected);
   // Edges aren't tested in this test.
 
@@ -814,7 +844,7 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationAndNameTest) {
       "foo",
       funcID,
       func->getAllocatedSize(),
-      6};
+      firstNamedPropertyEdge<JSFunction>() + 3};
   EXPECT_EQ(node, expected);
   // Edges aren't tested in this test.
 
@@ -858,7 +888,7 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionDisplayNameTest) {
       "bar",
       funcID,
       func->getAllocatedSize(),
-      11};
+      firstNamedPropertyEdge<JSFunction>() + 8};
   EXPECT_EQ(node, expected);
 }
 
@@ -882,6 +912,7 @@ TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
 
   const auto mapID = runtime->getHeap().getObjectID(map.get());
   auto nodesAndEdges = FIND_NODE_AND_EDGES_FOR_ID(mapID, nodes, edges, strings);
+  auto firstNamed = firstNamedPropertyEdge<JSWeakMap>();
   EXPECT_EQ(
       nodesAndEdges.first,
       Node(
@@ -889,12 +920,12 @@ TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
           "WeakMap",
           mapID,
           map->getAllocatedSize(),
-          6));
-  EXPECT_EQ(nodesAndEdges.second.size(), 6);
+          firstNamed + 3));
+  EXPECT_EQ(nodesAndEdges.second.size(), firstNamed + 3);
 
   // Test the weak edge.
   EXPECT_EQ(
-      nodesAndEdges.second[3],
+      nodesAndEdges.second[firstNamed],
       Edge(
           HeapSnapshot::EdgeType::Weak,
           "0",
@@ -902,7 +933,7 @@ TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
   // Test the native edge.
   const auto nativeMapID = map->getMapID(&runtime->getHeap());
   EXPECT_EQ(
-      nodesAndEdges.second[5],
+      nodesAndEdges.second[firstNamed + 2],
       Edge(HeapSnapshot::EdgeType::Internal, "map", nativeMapID));
   EXPECT_EQ(
       FIND_NODE_FOR_ID(nativeMapID, nodes, strings),
@@ -914,7 +945,166 @@ TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
           0));
 }
 
+TEST_F(HeapSnapshotRuntimeTest, PropertyUpdatesTest) {
+  JSONFactory::Allocator alloc;
+  JSONFactory jsonFactory{alloc};
+  Handle<JSObject> obj = runtime->makeHandle(JSObject::create(runtime));
+  SymbolID fooSym, barSym;
+  {
+    vm::GCScope gcScope(runtime);
+    fooSym = vm::stringToSymbolID(
+                 runtime, vm::StringPrimitive::createNoThrow(runtime, "foo"))
+                 ->getHermesValue()
+                 .getSymbol();
+    barSym = vm::stringToSymbolID(
+                 runtime, vm::StringPrimitive::createNoThrow(runtime, "bar"))
+                 ->getHermesValue()
+                 .getSymbol();
+  }
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+  // Add two properties to the hidden class chain.
+  ASSERT_FALSE(isException(JSObject::defineOwnProperty(
+      obj,
+      runtime,
+      fooSym,
+      dpf,
+      runtime->makeHandle(HermesValue::encodeNumberValue(100)))));
+  ASSERT_FALSE(isException(JSObject::defineOwnProperty(
+      obj,
+      runtime,
+      barSym,
+      dpf,
+      runtime->makeHandle(HermesValue::encodeNumberValue(200)))));
+  // Trigger update transitions for both properties.
+  dpf.writable = false;
+  ASSERT_FALSE(isException(JSObject::defineOwnProperty(
+      obj,
+      runtime,
+      fooSym,
+      dpf,
+      runtime->makeHandle(HermesValue::encodeNumberValue(100)))));
+  ASSERT_FALSE(isException(JSObject::defineOwnProperty(
+      obj,
+      runtime,
+      barSym,
+      dpf,
+      runtime->makeHandle(HermesValue::encodeNumberValue(200)))));
+  // Forcibly clear the final hidden class's property map.
+  auto *clazz = obj->getClass(runtime);
+  clazz->clearPropertyMap(&runtime->getHeap());
+
+  JSONObject *root = TAKE_SNAPSHOT(runtime->getHeap(), jsonFactory);
+  ASSERT_NE(root, nullptr);
+  const JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
+  const JSONArray &edges = *llvh::cast<JSONArray>(root->at("edges"));
+  const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
+
+  const auto objID = runtime->getHeap().getObjectID(obj.get());
+  auto nodesAndEdges = FIND_NODE_AND_EDGES_FOR_ID(objID, nodes, edges, strings);
+
+  const auto FIRST_NAMED_PROPERTY_EDGE = firstNamedPropertyEdge<JSObject>();
+
+  EXPECT_EQ(
+      nodesAndEdges.first,
+      Node(
+          HeapSnapshot::NodeType::Object,
+          "Object(foo, bar)",
+          objID,
+          obj->getAllocatedSize(),
+          FIRST_NAMED_PROPERTY_EDGE + 2));
+  EXPECT_EQ(nodesAndEdges.second.size(), FIRST_NAMED_PROPERTY_EDGE + 2);
+
+  EXPECT_EQ(
+      nodesAndEdges.second[FIRST_NAMED_PROPERTY_EDGE],
+      Edge(
+          HeapSnapshot::EdgeType::Property,
+          "foo",
+          runtime->getHeap().getIDTracker().getNumberID(100)));
+
+  EXPECT_EQ(
+      nodesAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 1],
+      Edge(
+          HeapSnapshot::EdgeType::Property,
+          "bar",
+          runtime->getHeap().getIDTracker().getNumberID(200)));
+}
+
+TEST_F(HeapSnapshotRuntimeTest, ArrayElements) {
+  JSONFactory::Allocator alloc;
+  JSONFactory jsonFactory{alloc};
+  hbc::CompileFlags flags;
+  // Build an array that doesn't start at index 0.
+  std::string source =
+      "var a = []; a[10] = {}; a[15] = {}; a[(1 << 20) + 1000] = {}; a";
+  CallResult<HermesValue> res = runtime->run(source, "file:///fake.js", flags);
+  ASSERT_FALSE(isException(res));
+  Handle<JSArray> array = runtime->makeHandle(vmcast<JSArray>(*res));
+  Handle<JSObject> firstElement =
+      runtime->makeHandle<JSObject>(array->at(runtime, 10));
+  Handle<JSObject> secondElement =
+      runtime->makeHandle<JSObject>(array->at(runtime, 15));
+  auto cr = JSObject::getComputed_RJS(
+      array,
+      runtime,
+      runtime->makeHandle(HermesValue::encodeNumberValue((1 << 20) + 1000)));
+  ASSERT_FALSE(isException(cr));
+  Handle<JSObject> thirdElement = runtime->makeHandle<JSObject>(std::move(*cr));
+  const auto arrayID = runtime->getHeap().getObjectID(array.get());
+
+  JSONObject *root = TAKE_SNAPSHOT(runtime->getHeap(), jsonFactory);
+  ASSERT_NE(root, nullptr);
+
+  const JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
+  const JSONArray &edges = *llvh::cast<JSONArray>(root->at("edges"));
+  const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
+
+  const auto FIRST_NAMED_PROPERTY_EDGE = firstNamedPropertyEdge<JSArray>();
+  auto nodeAndEdges =
+      FIND_NODE_AND_EDGES_FOR_ID(arrayID, nodes, edges, strings);
+  EXPECT_EQ(
+      nodeAndEdges.first,
+      Node(
+          HeapSnapshot::NodeType::Object,
+          "Array",
+          arrayID,
+          array->getAllocatedSize(),
+          FIRST_NAMED_PROPERTY_EDGE + 5));
+  // The last edges are the element edges.
+  EXPECT_EQ(
+      nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 1],
+      Edge(
+          HeapSnapshot::EdgeType::Element,
+          (1 << 20) + 1000,
+          runtime->getHeap().getObjectID(thirdElement.get())));
+  EXPECT_EQ(
+      nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 3],
+      Edge(
+          HeapSnapshot::EdgeType::Element,
+          10,
+          runtime->getHeap().getObjectID(firstElement.get())));
+  EXPECT_EQ(
+      nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 4],
+      Edge(
+          HeapSnapshot::EdgeType::Element,
+          15,
+          runtime->getHeap().getObjectID(secondElement.get())));
+}
+
 #ifdef HERMES_ENABLE_DEBUGGER
+
+static HeapSnapshot::NodeID findHighestNodeID(
+    const JSONArray &nodes,
+    const JSONArray &strings) {
+  HeapSnapshot::NodeID maxID = GCBase::IDTracker::kInvalidNode;
+  for (auto it = nodes.begin(), e = nodes.end(); it != e;
+       it += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT) {
+    auto node = Node::parse(it, strings);
+    if (node.id > maxID) {
+      maxID = node.id;
+    }
+  }
+  return maxID;
+}
 
 static std::string functionInfoToString(
     int idx,
@@ -970,7 +1160,7 @@ struct ChromeStackTreeNode {
           llvh::cast<JSONNumber>(traceNodes[i + 1])->getValue();
       auto children = llvh::cast<JSONArray>(traceNodes[i + 4]);
       auto treeNode =
-          hermes::make_unique<ChromeStackTreeNode>(parent, functionInfoIndex);
+          std::make_unique<ChromeStackTreeNode>(parent, functionInfoIndex);
       idNodeMap.emplace(id, treeNode.get());
       treeNode->children_ = parse(*children, treeNode.get(), idNodeMap);
       res.emplace_back(std::move(treeNode));
@@ -1074,6 +1264,25 @@ global(1) @ test.js(2):2:1
 global(2) @ test.js(2):11:4
 baz(3) @ test.js(2):9:31
 bar(4) @ test.js(2):6:20)#");
+
+  const JSONArray &samples = *llvh::cast<JSONArray>(root->at("samples"));
+  // Must have at least one sample
+  EXPECT_GT(samples.size(), 0u);
+  for (auto it = samples.begin(), e = samples.end(); it != e;
+       it += HeapSnapshot::V8_SNAPSHOT_SAMPLE_FIELD_COUNT) {
+    auto sample = Sample::parse(it);
+    EXPECT_NE(sample.lastSeenObjectID, toRValue(GC::IDTracker::kInvalidNode));
+    if (it != samples.begin()) {
+      auto prevSample =
+          Sample::parse(it - HeapSnapshot::V8_SNAPSHOT_SAMPLE_FIELD_COUNT);
+      EXPECT_GT(sample.timestamp, prevSample.timestamp);
+      EXPECT_GT(sample.lastSeenObjectID, prevSample.lastSeenObjectID);
+    }
+  }
+  auto highestNodeID = findHighestNodeID(nodes, strings);
+  auto lastSample = Sample::parse(
+      samples.end() - HeapSnapshot::V8_SNAPSHOT_SAMPLE_FIELD_COUNT);
+  EXPECT_GE(lastSample.lastSeenObjectID, highestNodeID);
 }
 
 TEST_F(HeapSnapshotRuntimeTest, TwoPathsToFunction) {

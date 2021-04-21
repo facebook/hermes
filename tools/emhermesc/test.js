@@ -12,16 +12,18 @@ const assert = require("assert");
 
 function compileOrError(str) {
     try {
-        let buffer = hc.compile(str, {});
-        console.log(JSON.stringify(buffer));
-        console.log("bytecode buffer length", buffer.length)
+        console.log("Hermes compile: ");
+        let buffer = hc.compile(str);
+        console.log("bytecode buffer: ", buffer);
+        console.log("bytecode buffer length: ", buffer.length)
     } catch (e) {
-        console.error("Hermes error:", e.message);
+        console.error("Hermes error: ", e);
         return false;
     }
     return true;
 }
 
+// Convert thrown error to return value.
 function wrap(func) {
     try {
         return func();
@@ -30,10 +32,14 @@ function wrap(func) {
     }
 }
 
-assert(compileOrError("var x = 1; print(x);"));
-assert(!compileOrError("var x = 1 + ; print(x);"));
+// Test compile and validateBytecodeModule.
+const goodCode = "var x = 1; print(x);"
+const badCode = "var x = 1 + ; print(x);"
 
-let goodBuf = hc.compile("var x = 1; print(x);");
+assert(compileOrError(goodCode));
+assert(!compileOrError(badCode));
+
+let goodBuf = hc.compile(goodCode);
 
 let badBuf = Buffer.alloc(100);
 assert.equal(wrap(() => hc.validateBytecodeModule(badBuf, 3)), "bytecode is not aligned to 4");

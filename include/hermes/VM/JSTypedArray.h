@@ -18,7 +18,11 @@ namespace vm {
 /// exposes common interface elements to JSTypedArrays.
 class JSTypedArrayBase : public JSObject {
  public:
-  using size_type = std::size_t;
+  // The spec is silent about the maximum size of an ArrayBuffer.  If
+  // this is to be enlarged effectively, other changes (such as the
+  // use of uint32_t in ObjectVTable's indexed storage members, will
+  // need to be changed, too.
+  using size_type = uint32_t;
   using Super = JSObject;
 
   struct JSTypedArrayVTable {
@@ -173,8 +177,8 @@ class JSTypedArrayBase : public JSObject {
       Runtime *runtime,
       JSTypedArrayBase *self,
       JSArrayBuffer *buf,
-      JSArrayBuffer::size_type offset,
-      JSArrayBuffer::size_type size,
+      size_type offset,
+      size_type size,
       uint8_t byteWidth);
 
  protected:

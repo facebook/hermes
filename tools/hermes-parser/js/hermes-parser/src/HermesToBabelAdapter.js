@@ -19,7 +19,7 @@ class HermesToBabelAdapter extends HermesASTAdapter {
     }
 
     node.loc = {
-      source: this.sourceFilename,
+      source: this.sourceFilename ?? null,
       start: loc.start,
       end: loc.end,
     };
@@ -37,6 +37,8 @@ class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapNodeWithDirectives(node);
       case 'Empty':
         return this.mapEmpty(node);
+      case 'Identifier':
+        return this.mapIdentifier(node);
       case 'TemplateElement':
         return this.mapTemplateElement(node);
       case 'GenericTypeAnnotation':
@@ -49,6 +51,8 @@ class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapMethodDefinition(node);
       case 'ImportDeclaration':
         return this.mapImportDeclaration(node);
+      case 'ImportSpecifier':
+        return this.mapImportSpecifier(node);
       case 'ExportDefaultDeclaration':
         return this.mapExportDefaultDeclaration(node);
       case 'ExportNamedDeclaration':
@@ -62,6 +66,9 @@ class HermesToBabelAdapter extends HermesASTAdapter {
       case 'PrivateName':
       case 'ClassPrivateProperty':
         return this.mapPrivateProperty(node);
+      case 'FunctionDeclaration':
+      case 'FunctionExpression':
+        return this.mapFunction(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -137,6 +144,11 @@ class HermesToBabelAdapter extends HermesASTAdapter {
     }
 
     return node;
+  }
+
+  mapIdentifier(node) {
+    node.loc.identifierName = node.name;
+    return this.mapNodeDefault(node);
   }
 
   mapTemplateElement(node) {
@@ -316,6 +328,16 @@ class HermesToBabelAdapter extends HermesASTAdapter {
       },
       arguments: [this.mapNode(node.source)],
     };
+  }
+
+  mapFunction(node) {
+    // Remove the first parameter if it is a this-type annotation,
+    // which is not recognized by Babel.
+    if (node.params.length !== 0 && node.params[0].name === 'this') {
+      node.params.shift();
+    }
+
+    return this.mapNodeDefault(node);
   }
 }
 

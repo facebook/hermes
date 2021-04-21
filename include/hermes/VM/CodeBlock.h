@@ -50,20 +50,6 @@ class CodeBlock final
   /// ID of this function in the module's function list.
   uint32_t functionID_;
 
-#ifdef HERMESVM_JIT
-  /// Set to true if for some reason we don't want to JIT this block, for
-  /// example because it contains constructs that the JIT can't handle.
-  bool dontJIT_ = false;
-
-  /// If this CodeBlock was compiled, a pointer to the body.
-  JITCompiledFunctionPtr JITCompiled_ = nullptr;
-
-  /// Function execution count.
-  /// Ideally, a function's hotness should also include if it has a loop and how
-  /// hot that loop is.
-  uint32_t executionCount_ = 0;
-#endif
-
   /// Total size of the property cache.
   const uint32_t propertyCacheSize_;
 
@@ -263,72 +249,6 @@ class CodeBlock final
   SourceErrorManager::SourceCoords getLazyFunctionEndLoc() const {
     return getLazyFunctionLoc(false);
   }
-
-#ifdef HERMESVM_JIT
-  /// \return true if JIT is disabled for this function.
-  bool getDontJIT() const {
-    return dontJIT_;
-  }
-
-  /// Enable or disable JIT compilation of this function.
-  void setDontJIT(bool dontJIT) {
-    dontJIT_ = dontJIT;
-  }
-
-  /// \return the native code for this function, or null if it hasn't been
-  ///   compiled to native.
-  JITCompiledFunctionPtr getJITCompiled() const {
-    return JITCompiled_;
-  }
-
-  /// Set the native code for this function.
-  void setJITCompiled(JITCompiledFunctionPtr JITCompiled) {
-    JITCompiled_ = JITCompiled;
-  }
-
-  /// Increment the function execution count.
-  void incrementExecutionCount() {
-    executionCount_++;
-  }
-
-  /// \return the function execution count
-  uint32_t getExecutionCount() const {
-    return executionCount_;
-  }
-
-  /// Reset the function execution count to 0
-  void clearExecutionCount() {
-    executionCount_ = 0;
-  }
-#else
-  /// \return true if JIT is disabled for this function.
-  bool getDontJIT() const {
-    return true;
-  }
-
-  /// Enable or disable JIT compilation of this function.
-  void setDontJIT(bool dontJIT) {}
-
-  /// \return the native code for this function, or null if it hasn't been
-  ///   compiled to native.
-  JITCompiledFunctionPtr getJITCompiled() const {
-    return nullptr;
-  }
-
-  /// Set the native code for this function.
-  void setJITCompiled(JITCompiledFunctionPtr JITCompiled) {}
-
-  /// Increment the function executionCount_ count
-  void incrementExecutionCount() {}
-
-  /// \return the function executionCount_ count as 0 if the JIT is not enabled
-  uint32_t getExecutionCount() const {
-    return 0;
-  }
-
-  /// Reset the function executionCount_ count to 0
-  void clearExecutionCount() {}
-#endif
 
   inline PropertyCacheEntry *getReadCacheEntry(uint8_t idx) {
     assert(idx < writePropCacheOffset_ && "idx out of ReadCache bound");

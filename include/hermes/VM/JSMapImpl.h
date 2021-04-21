@@ -240,7 +240,7 @@ class JSMapIteratorImpl final : public JSObject {
             if (arrRes == ExecutionStatus::EXCEPTION) {
               return ExecutionStatus::EXCEPTION;
             }
-            auto arrHandle = runtime->makeHandle(std::move(*arrRes));
+            auto arrHandle = *arrRes;
             value = self->itr_.get(runtime)->key;
             JSArray::setElementAt(arrHandle, runtime, 0, value);
             value = self->itr_.get(runtime)->value;

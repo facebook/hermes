@@ -17,6 +17,7 @@
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/RootAndSlotAcceptorDefault.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/SmallHermesValue-inline.h"
 #include "hermes/VM/VTable.h"
 
 #include "llvh/Support/Debug.h"
@@ -57,6 +58,7 @@ GCBase::GCBase(
       inGC_(false),
       name_(gcConfig.getName()),
       allocationLocationTracker_(this),
+      samplingAllocationTracker_(this),
 #ifdef HERMESVM_SANITIZE_HANDLES
       sanitizeRate_(gcConfig.getSanitizeConfig().getSanitizeRate()),
 #endif
@@ -93,13 +95,6 @@ GCBase::GCBase(
   randomEngine_.seed(seed);
 #endif
 }
-
-#ifdef HERMESVM_GC_RUNTIME
-/* static */
-uint32_t GCBase::minAllocationSize() {
-  return std::max({GenGC::minAllocationSize(), HadesGC::minAllocationSize()});
-}
-#endif
 
 GCBase::GCCycle::GCCycle(
     GCBase *gc,
@@ -175,6 +170,12 @@ struct SnapshotAcceptor : public RootAndSlotAcceptorWithNamesDefault {
       accept(ptr, name);
     }
   }
+  void acceptSHV(SmallHermesValue &hv, const char *name) override {
+    if (hv.isPointer()) {
+      GCCell *ptr = static_cast<GCCell *>(hv.getPointer(pointerBase_));
+      accept(ptr, name);
+    }
+  }
 
  protected:
   HeapSnapshot &snap_;
@@ -195,6 +196,12 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
   void acceptHV(HermesValue &hv, const char *) override {
     if (hv.isNumber()) {
       seenNumbers_.insert(hv.getNumber());
+    }
+  }
+
+  void acceptSHV(SmallHermesValue &hv, const char *) override {
+    if (hv.isNumber()) {
+      seenNumbers_.insert(hv.getNumber(pointerBase_));
     }
   }
 
@@ -276,6 +283,11 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
           llvh::StringRef::withNullAsEmpty(name),
           id.getValue());
     }
+  }
+
+  void acceptSHV(SmallHermesValue &shv, const char *name) override {
+    HermesValue hv = shv.toHV(pointerBase_);
+    acceptHV(hv, name);
   }
 
   void accept(WeakRefBase &wr) override {
@@ -380,6 +392,20 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
       return;
     }
     pointerAccept(slot->getPointer(), nullptr, true);
+  }
+
+  void acceptSym(SymbolID sym, const char *name) override {
+    if (sym.isInvalid()) {
+      return;
+    }
+    auto nameRef = llvh::StringRef::withNullAsEmpty(name);
+    const auto id = gc_.getObjectID(sym);
+    if (!nameRef.empty()) {
+      snap_.addNamedEdge(HeapSnapshot::EdgeType::Internal, nameRef, id);
+    } else {
+      // Unnamed edges get indices.
+      snap_.addIndexedEdge(HeapSnapshot::EdgeType::Element, nextEdge_++, id);
+    }
   }
 
   void provideSnapshot(
@@ -569,11 +595,7 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   snap.emitAllocationTraceInfo();
 
   snap.beginSection(HeapSnapshot::Section::Samples);
-  for (const auto &fragment : getAllocationLocationTracker().fragments()) {
-    json.emitValues(
-        {static_cast<uint64_t>(fragment.timestamp_.count()),
-         static_cast<uint64_t>(fragment.lastSeenObjectID_)});
-  }
+  getAllocationLocationTracker().addSamplesToSnapshot(snap);
   snap.endSection(HeapSnapshot::Section::Samples);
 
   snap.beginSection(HeapSnapshot::Section::Locations);
@@ -611,6 +633,14 @@ void GCBase::enableHeapProfiler(
 
 void GCBase::disableHeapProfiler() {
   getAllocationLocationTracker().disable();
+}
+
+void GCBase::enableSamplingHeapProfiler(size_t samplingInterval, int64_t seed) {
+  getSamplingAllocationTracker().enable(samplingInterval, seed);
+}
+
+void GCBase::disableSamplingHeapProfiler(llvh::raw_ostream &os) {
+  getSamplingAllocationTracker().disable(os);
 }
 
 void GCBase::checkTripwire(size_t dataSize) {
@@ -788,11 +818,19 @@ void GCBase::printStats(JSONEmitter &json) {
     json.emitKeyValue("cause", event.cause);
     json.emitKeyValue("duration", event.duration.count());
     json.emitKeyValue("cpuDuration", event.cpuDuration.count());
-    json.emitKeyValue("preAllocated", event.preAllocated);
-    json.emitKeyValue("preSize", event.preSize);
-    json.emitKeyValue("postAllocated", event.postAllocated);
-    json.emitKeyValue("postSize", event.postSize);
+    json.emitKeyValue("preAllocated", event.allocated.before);
+    json.emitKeyValue("postAllocated", event.allocated.after);
+    json.emitKeyValue("preSize", event.size.before);
+    json.emitKeyValue("postSize", event.size.after);
+    json.emitKeyValue("preExternal", event.external.before);
+    json.emitKeyValue("postExternal", event.external.after);
     json.emitKeyValue("survivalRatio", event.survivalRatio);
+    json.emitKey("tags");
+    json.openArray();
+    for (const auto &tag : event.tags) {
+      json.emitValue(tag);
+    }
+    json.closeArray();
     json.closeDict();
   }
   json.closeArray();
@@ -800,25 +838,29 @@ void GCBase::printStats(JSONEmitter &json) {
 
 void GCBase::recordGCStats(
     const GCAnalyticsEvent &event,
-    CumulativeHeapStats *stats) {
-  stats->gcWallTime.record(
-      std::chrono::duration<double>(event.duration).count());
+    CumulativeHeapStats *stats,
+    bool onMutator) {
+  // Hades OG collections do not block the mutator, and so do not contribute to
+  // the max pause time or the total execution time.
+  if (onMutator)
+    stats->gcWallTime.record(
+        std::chrono::duration<double>(event.duration).count());
   stats->gcCPUTime.record(
       std::chrono::duration<double>(event.cpuDuration).count());
-  stats->finalHeapSize = event.postSize;
-  stats->usedBefore.record(event.preAllocated);
-  stats->usedAfter.record(event.postAllocated);
+  stats->finalHeapSize = event.size.after;
+  stats->usedBefore.record(event.allocated.before);
+  stats->usedAfter.record(event.allocated.after);
   stats->numCollections++;
 }
 
-void GCBase::recordGCStats(const GCAnalyticsEvent &event) {
+void GCBase::recordGCStats(const GCAnalyticsEvent &event, bool onMutator) {
   if (analyticsCallback_) {
     analyticsCallback_(event);
   }
   if (recordGcStats_) {
     analyticsEvents_.push_back(event);
   }
-  recordGCStats(event, &cumStats_);
+  recordGCStats(event, &cumStats_, onMutator);
 }
 
 void GCBase::oom(std::error_code reason) {
@@ -839,7 +881,7 @@ void GCBase::oom(std::error_code reason) {
       gcCallbacks_->getCallStackNoAlloc());
 #else
   oomDetail(reason);
-  hermes_fatal((llvh::Twine("OOM: ") + convert_error_to_message(reason)).str());
+  hermes_fatal("OOM", reason);
 #endif
 }
 
@@ -887,217 +929,77 @@ bool GCBase::shouldSanitizeHandles() {
 
 #ifdef HERMESVM_GC_RUNTIME
 
-void GCBase::writeBarrier(const GCHermesValue *loc, HermesValue value) {
-  switch (getKind()) {
-    case GCBase::HeapKind::HADES:
-      llvh::cast<HadesGC>(this)->writeBarrier(loc, value);
-      break;
-    case GCBase::HeapKind::NCGEN:
-      llvh::cast<GenGC>(this)->writeBarrier(loc, value);
-      break;
-    case GCBase::HeapKind::MALLOC:
-      llvm_unreachable(
-          "MallocGC should not be used with the RuntimeGC build config");
-      break;
+#define GCBASE_BARRIER_1(name, type1)                                       \
+  void GCBase::name(type1 arg1) {                                           \
+    switch (getKind()) {                                                    \
+      case GCBase::HeapKind::HADES:                                         \
+        llvh::cast<HadesGC>(this)->name(arg1);                              \
+        break;                                                              \
+      case GCBase::HeapKind::NCGEN:                                         \
+        llvh::cast<GenGC>(this)->name(arg1);                                \
+        break;                                                              \
+      case GCBase::HeapKind::MALLOC:                                        \
+        llvm_unreachable(                                                   \
+            "MallocGC should not be used with the RuntimeGC build config"); \
+        break;                                                              \
+    }                                                                       \
   }
-}
 
-void GCBase::writeBarrier(const GCPointerBase *loc, const GCCell *value) {
-  switch (getKind()) {
-    case GCBase::HeapKind::HADES:
-      llvh::cast<HadesGC>(this)->writeBarrier(loc, value);
-      break;
-    case GCBase::HeapKind::NCGEN:
-      llvh::cast<GenGC>(this)->writeBarrier(loc, value);
-      break;
-    case GCBase::HeapKind::MALLOC:
-      llvm_unreachable(
-          "MallocGC should not be used with the RuntimeGC build config");
-      break;
+#define GCBASE_BARRIER_2(name, type1, type2)                                \
+  void GCBase::name(type1 arg1, type2 arg2) {                               \
+    switch (getKind()) {                                                    \
+      case GCBase::HeapKind::HADES:                                         \
+        llvh::cast<HadesGC>(this)->name(arg1, arg2);                        \
+        break;                                                              \
+      case GCBase::HeapKind::NCGEN:                                         \
+        llvh::cast<GenGC>(this)->name(arg1, arg2);                          \
+        break;                                                              \
+      case GCBase::HeapKind::MALLOC:                                        \
+        llvm_unreachable(                                                   \
+            "MallocGC should not be used with the RuntimeGC build config"); \
+        break;                                                              \
+    }                                                                       \
   }
-}
-
-void GCBase::writeBarrier(SymbolID symbol) {
-  switch (getKind()) {
-    case GCBase::HeapKind::HADES:
-      llvh::cast<HadesGC>(this)->writeBarrier(symbol);
-      break;
-    case GCBase::HeapKind::NCGEN:
-      llvh::cast<GenGC>(this)->writeBarrier(symbol);
-      break;
-    case GCBase::HeapKind::MALLOC:
-      llvm_unreachable(
-          "MallocGC should not be used with the RuntimeGC build config");
-      break;
-  }
-}
-
-void GCBase::constructorWriteBarrier(
-    const GCHermesValue *loc,
-    HermesValue value) {
-  switch (getKind()) {
-    case GCBase::HeapKind::HADES:
-      llvh::cast<HadesGC>(this)->constructorWriteBarrier(loc, value);
-      break;
-    case GCBase::HeapKind::NCGEN:
-      llvh::cast<GenGC>(this)->constructorWriteBarrier(loc, value);
-      break;
-    case GCBase::HeapKind::MALLOC:
-      llvm_unreachable(
-          "MallocGC should not be used with the RuntimeGC build config");
-      break;
-  }
-}
-
-void GCBase::constructorWriteBarrier(
-    const GCPointerBase *loc,
-    const GCCell *value) {
-  switch (getKind()) {
-    case GCBase::HeapKind::HADES:
-      llvh::cast<HadesGC>(this)->constructorWriteBarrier(loc, value);
-      break;
-    case GCBase::HeapKind::NCGEN:
-      llvh::cast<GenGC>(this)->constructorWriteBarrier(loc, value);
-      break;
-    case GCBase::HeapKind::MALLOC:
-      llvm_unreachable(
-          "MallocGC should not be used with the RuntimeGC build config");
-      break;
-  }
-}
-
-void GCBase::writeBarrierRange(const GCHermesValue *start, uint32_t numHVs) {
-  switch (getKind()) {
-    case GCBase::HeapKind::HADES:
-      llvh::cast<HadesGC>(this)->writeBarrierRange(start, numHVs);
-      break;
-    case GCBase::HeapKind::NCGEN:
-      llvh::cast<GenGC>(this)->writeBarrierRange(start, numHVs);
-      break;
-    case GCBase::HeapKind::MALLOC:
-      llvm_unreachable(
-          "MallocGC should not be used with the RuntimeGC build config");
-      break;
-  }
-}
-
-void GCBase::constructorWriteBarrierRange(
-    const GCHermesValue *start,
-    uint32_t numHVs) {
-  switch (getKind()) {
-    case GCBase::HeapKind::HADES:
-      llvh::cast<HadesGC>(this)->constructorWriteBarrierRange(start, numHVs);
-      break;
-    case GCBase::HeapKind::NCGEN:
-      llvh::cast<GenGC>(this)->constructorWriteBarrierRange(start, numHVs);
-      break;
-    case GCBase::HeapKind::MALLOC:
-      llvm_unreachable(
-          "MallocGC should not be used with the RuntimeGC build config");
-      break;
-  }
-}
-
-void GCBase::snapshotWriteBarrier(const GCHermesValue *loc) {
-  switch (getKind()) {
-    case GCBase::HeapKind::HADES:
-      llvh::cast<HadesGC>(this)->snapshotWriteBarrier(loc);
-      break;
-    case GCBase::HeapKind::NCGEN:
-      llvh::cast<GenGC>(this)->snapshotWriteBarrier(loc);
-      break;
-    case GCBase::HeapKind::MALLOC:
-      llvm_unreachable(
-          "MallocGC should not be used with the RuntimeGC build config");
-      break;
-  }
-}
-
-void GCBase::snapshotWriteBarrier(const GCPointerBase *loc) {
-  switch (getKind()) {
-    case GCBase::HeapKind::HADES:
-      llvh::cast<HadesGC>(this)->snapshotWriteBarrier(loc);
-      break;
-    case GCBase::HeapKind::NCGEN:
-      llvh::cast<GenGC>(this)->snapshotWriteBarrier(loc);
-      break;
-    case GCBase::HeapKind::MALLOC:
-      llvm_unreachable(
-          "MallocGC should not be used with the RuntimeGC build config");
-      break;
-  }
-}
-
-void GCBase::snapshotWriteBarrierRange(
-    const GCHermesValue *start,
-    uint32_t numHVs) {
-  switch (getKind()) {
-    case GCBase::HeapKind::HADES:
-      llvh::cast<HadesGC>(this)->snapshotWriteBarrierRange(start, numHVs);
-      break;
-    case GCBase::HeapKind::NCGEN:
-      llvh::cast<GenGC>(this)->snapshotWriteBarrierRange(start, numHVs);
-      break;
-    case GCBase::HeapKind::MALLOC:
-      llvm_unreachable(
-          "MallocGC should not be used with the RuntimeGC build config");
-      break;
-  }
-}
-
-void GCBase::weakRefReadBarrier(GCCell *value) {
-  switch (getKind()) {
-    case GCBase::HeapKind::HADES:
-      llvh::cast<HadesGC>(this)->weakRefReadBarrier(value);
-      break;
-    case GCBase::HeapKind::NCGEN:
-      llvh::cast<GenGC>(this)->weakRefReadBarrier(value);
-      break;
-    case GCBase::HeapKind::MALLOC:
-      llvm_unreachable(
-          "MallocGC should not be used with the RuntimeGC build config");
-      break;
-  }
-}
-
-void GCBase::weakRefReadBarrier(HermesValue value) {
-  switch (getKind()) {
-    case GCBase::HeapKind::HADES:
-      llvh::cast<HadesGC>(this)->weakRefReadBarrier(value);
-      break;
-    case GCBase::HeapKind::NCGEN:
-      llvh::cast<GenGC>(this)->weakRefReadBarrier(value);
-      break;
-    case GCBase::HeapKind::MALLOC:
-      llvm_unreachable(
-          "MallocGC should not be used with the RuntimeGC build config");
-      break;
-  }
-}
-
 #else
-
-void GCBase::writeBarrier(const GCHermesValue *loc, HermesValue value) {}
-void GCBase::writeBarrier(const GCPointerBase *loc, const GCCell *value) {}
-void GCBase::writeBarrier(SymbolID symbol) {}
-void GCBase::constructorWriteBarrier(
-    const GCHermesValue *loc,
-    HermesValue value) {}
-void GCBase::constructorWriteBarrier(
-    const GCPointerBase *loc,
-    const GCCell *value) {}
-void GCBase::writeBarrierRange(const GCHermesValue *start, uint32_t numHVs) {}
-void GCBase::constructorWriteBarrierRange(
-    const GCHermesValue *start,
-    uint32_t numHVs) {}
-void GCBase::snapshotWriteBarrier(const GCHermesValue *loc) {}
-void GCBase::snapshotWriteBarrier(const GCPointerBase *loc) {}
-void GCBase::snapshotWriteBarrierRange(
-    const GCHermesValue *start,
-    uint32_t numHVs) {}
-void GCBase::weakRefReadBarrier(GCCell *value) {}
-void GCBase::weakRefReadBarrier(HermesValue value) {}
+#define GCBASE_BARRIER_1(name, type1) \
+  void GCBase::name(type1 arg1) {}
+#define GCBASE_BARRIER_2(name, type1, type2) \
+  void GCBase::name(type1 arg1, type2 arg2) {}
 #endif
+
+GCBASE_BARRIER_2(writeBarrier, const GCHermesValue *, HermesValue);
+GCBASE_BARRIER_2(writeBarrier, const GCSmallHermesValue *, SmallHermesValue);
+GCBASE_BARRIER_2(writeBarrier, const GCPointerBase *, const GCCell *);
+GCBASE_BARRIER_1(writeBarrier, SymbolID);
+GCBASE_BARRIER_2(constructorWriteBarrier, const GCHermesValue *, HermesValue);
+GCBASE_BARRIER_2(
+    constructorWriteBarrier,
+    const GCSmallHermesValue *,
+    SmallHermesValue);
+GCBASE_BARRIER_2(
+    constructorWriteBarrier,
+    const GCPointerBase *,
+    const GCCell *);
+GCBASE_BARRIER_2(writeBarrierRange, const GCHermesValue *, uint32_t);
+GCBASE_BARRIER_2(writeBarrierRange, const GCSmallHermesValue *, uint32_t);
+GCBASE_BARRIER_2(constructorWriteBarrierRange, const GCHermesValue *, uint32_t);
+GCBASE_BARRIER_2(
+    constructorWriteBarrierRange,
+    const GCSmallHermesValue *,
+    uint32_t);
+GCBASE_BARRIER_1(snapshotWriteBarrier, const GCHermesValue *);
+GCBASE_BARRIER_1(snapshotWriteBarrier, const GCSmallHermesValue *);
+GCBASE_BARRIER_1(snapshotWriteBarrier, const GCPointerBase *);
+GCBASE_BARRIER_2(snapshotWriteBarrierRange, const GCHermesValue *, uint32_t);
+GCBASE_BARRIER_2(
+    snapshotWriteBarrierRange,
+    const GCSmallHermesValue *,
+    uint32_t);
+GCBASE_BARRIER_1(weakRefReadBarrier, GCCell *);
+GCBASE_BARRIER_1(weakRefReadBarrier, HermesValue);
+
+#undef GCBASE_BARRIER_1
+#undef GCBASE_BARRIER_2
 
 /*static*/
 std::vector<detail::WeakRefKey *> GCBase::buildKeyList(
@@ -1226,7 +1128,7 @@ void GCBase::IDTracker::deserialize(Deserializer &d) {
     d.readRelocation(&ptr, RelocationKind::GCPointer);
     auto res = objectIDMap_
                    .try_emplace(
-                       ptr.getStorageType().getRawValue(),
+                       GCPointerBase::storageTypeToRaw(ptr.getStorageType()),
                        d.readInt<HeapSnapshot::NodeID>())
                    .second;
     (void)res;
@@ -1418,6 +1320,133 @@ void GCBase::AllocationLocationTracker::flushCallback() {
   }
 }
 
+void GCBase::AllocationLocationTracker::addSamplesToSnapshot(
+    HeapSnapshot &snap) {
+  std::lock_guard<Mutex> lk{mtx_};
+  if (enabled_) {
+    flushCallback();
+  }
+  // There might not be fragments if tracking has never been enabled. If there
+  // are, the last one is always invalid.
+  assert(
+      (fragments_.empty() ||
+       fragments_.back().lastSeenObjectID_ == IDTracker::kInvalidNode) &&
+      "Last fragment should not have an ID assigned yet");
+  // Loop over the fragments if we have any, and always skip the last one.
+  for (size_t i = 0, e = fragments_.size(); i + 1 < e; ++i) {
+    const auto &fragment = fragments_[i];
+    snap.addSample(fragment.timestamp_, fragment.lastSeenObjectID_);
+  }
+}
+
+void GCBase::SamplingAllocationLocationTracker::enable(
+    size_t samplingInterval,
+    int64_t seed) {
+  if (seed < 0) {
+    seed = std::random_device()();
+  }
+  randomEngine_.seed(seed);
+  dist_ = llvh::make_unique<std::poisson_distribution<>>(samplingInterval);
+  limit_ = nextSample();
+}
+
+void GCBase::SamplingAllocationLocationTracker::disable(llvh::raw_ostream &os) {
+  JSONEmitter json{os};
+  ChromeSamplingMemoryProfile profile{json};
+  std::lock_guard<Mutex> lk{mtx_};
+  // Track a map of size -> count for each stack tree node.
+  llvh::DenseMap<StackTracesTreeNode *, llvh::DenseMap<size_t, size_t>>
+      sizesToCounts;
+  // Do a pre-pass to compute sizesToCounts.
+  for (const auto &s : samples_) {
+    const Sample &sample = s.second;
+    sizesToCounts[sample.node][sample.size]++;
+  }
+
+  // Have to emit the tree of stack frames before emitting samples, Chrome
+  // requires the tree emitted first.
+  profile.emitTree(gc_->gcCallbacks_->getStackTracesTree(), sizesToCounts);
+  profile.beginSamples();
+  for (const auto &s : samples_) {
+    const Sample &sample = s.second;
+    profile.emitSample(sample.size, sample.node, sample.id);
+  }
+  profile.endSamples();
+  dist_.reset();
+  samples_.clear();
+  limit_ = 0;
+}
+
+void GCBase::SamplingAllocationLocationTracker::newAlloc(
+    const void *ptr,
+    uint32_t sz) {
+  // If the sampling profiler isn't enabled, don't check anything else.
+  if (!isEnabled()) {
+    return;
+  }
+  if (sz <= limit_) {
+    // Exit if it's not time for a sample yet.
+    limit_ -= sz;
+    return;
+  }
+  const auto *ip = gc_->gcCallbacks_->getCurrentIPSlow();
+  // This is stateful and causes the object to have an ID assigned.
+  const auto id = gc_->getObjectID(ptr);
+  if (StackTracesTreeNode *node =
+          gc_->gcCallbacks_->getCurrentStackTracesTreeNode(ip)) {
+    // Hold a lock while modifying samples_.
+    std::lock_guard<Mutex> lk{mtx_};
+    auto sampleItAndDidInsert =
+        samples_.try_emplace(id, Sample{sz, node, nextSampleID_++});
+    assert(sampleItAndDidInsert.second && "Failed to create a sample");
+    (void)sampleItAndDidInsert;
+  }
+  // Reset the limit.
+  limit_ = nextSample();
+}
+
+void GCBase::SamplingAllocationLocationTracker::freeAlloc(
+    const void *ptr,
+    uint32_t sz) {
+  // If the sampling profiler isn't enabled, don't check anything else.
+  if (!isEnabled()) {
+    return;
+  }
+  if (!gc_->hasObjectID(ptr)) {
+    // This object's lifetime isn't being tracked.
+    return;
+  }
+  const auto id = gc_->getObjectIDMustExist(ptr);
+  // Hold a lock while modifying samples_.
+  std::lock_guard<Mutex> lk{mtx_};
+  samples_.erase(id);
+}
+
+void GCBase::SamplingAllocationLocationTracker::updateSize(
+    const void *ptr,
+    uint32_t oldSize,
+    uint32_t newSize) {
+  int32_t delta = static_cast<int32_t>(newSize) - static_cast<int32_t>(oldSize);
+  if (!delta || !isEnabled() || !gc_->hasObjectID(ptr)) {
+    // Nothing to update.
+    return;
+  }
+  const auto id = gc_->getObjectIDMustExist(ptr);
+  // Hold a lock while modifying samples_.
+  std::lock_guard<Mutex> lk{mtx_};
+  const auto it = samples_.find(id);
+  if (it == samples_.end()) {
+    return;
+  }
+  Sample &sample = it->second;
+  // Update the size stored in the sample.
+  sample.size = newSize;
+}
+
+size_t GCBase::SamplingAllocationLocationTracker::nextSample() {
+  return (*dist_)(randomEngine_);
+}
+
 llvh::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
   if (val.isPointer() && val.getPointer()) {
     // Make nullptr HermesValue look like a JS null.
@@ -1446,3 +1475,5 @@ llvh::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

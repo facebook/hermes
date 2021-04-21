@@ -62,7 +62,15 @@ static opt<MarkerAction> Action(
             MarkerAction::TIMELINE,
             "timeline",
             "Take a heap timeline from the beginning of execution until the "
-            "marker to stop at")));
+            "marker to stop at"),
+        clEnumValN(
+            MarkerAction::SAMPLE_MEMORY,
+            "sample-memory",
+            "Take a heap sampling profile at the marker to stop at"),
+        clEnumValN(
+            MarkerAction::SAMPLE_TIME,
+            "sample-time",
+            "Take a CPU sampling profile at the marker to stop at")));
 
 static opt<bool> UseTraceConfig(
     "use-trace-config",
@@ -94,6 +102,14 @@ static opt<int> Reps(
         "Number of repetitions of execution. Any GC stats printed are those for the "
         "rep with the median \"totalTime\"."),
     init(1));
+
+static opt<bool> DisableSourceHashCheck(
+    "disable-source-hash-check",
+    desc("Remove the requirement that the input bytecode was compiled from the "
+         "same source used to record the trace. There must only be one input "
+         "bytecode file in this case. If its observable behavior deviates "
+         "from the trace, the results are undefined."),
+    init(false));
 
 /// @}
 
@@ -171,6 +187,22 @@ static llvh::Optional<::hermes::vm::gcheapsize_t> execOption(
   }
 }
 
+static const char *fileExtensionForAction(MarkerAction action) {
+  switch (action) {
+    case MarkerAction::SNAPSHOT:
+      return "heapsnapshot";
+    case MarkerAction::TIMELINE:
+      return "heaptimeline";
+    case MarkerAction::SAMPLE_MEMORY:
+      return "heapprofile";
+    case MarkerAction::SAMPLE_TIME:
+      return "cpuprofile";
+    default:
+      llvm_unreachable(
+          "Should never call fileExtensionForAction with a none action");
+  }
+}
+
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
   llvh::sys::PrintStackTraceOnErrorSignal("Hermes synth");
@@ -189,18 +221,15 @@ int main(int argc, char **argv) {
     options.reps = cl::Reps;
     options.marker = cl::Marker;
     options.action = cl::Action;
-    if (options.action == MarkerAction::SNAPSHOT ||
-        options.action == MarkerAction::TIMELINE) {
+    if (options.action != MarkerAction::NONE) {
       llvh::SmallVector<char, 16> tmpfile;
       llvh::sys::fs::createTemporaryFile(
-          options.marker,
-          options.action == MarkerAction::SNAPSHOT ? "heapsnapshot"
-                                                   : "heaptimeline",
-          tmpfile);
+          options.marker, fileExtensionForAction(options.action), tmpfile);
       options.profileFileName = std::string{tmpfile.begin(), tmpfile.end()};
     }
     options.forceGCBeforeStats = cl::GCBeforeStats;
     options.stabilizeInstructionCount = cl::StableInstructionCount;
+    options.disableSourceHashCheck = cl::DisableSourceHashCheck;
 
     // These are the config parameters.
 
@@ -275,12 +304,16 @@ int main(int argc, char **argv) {
 
     std::vector<std::string> bytecodeFiles{
         cl::BytecodeFiles.begin(), cl::BytecodeFiles.end()};
+    if (cl::DisableSourceHashCheck && bytecodeFiles.size() != 1) {
+      throw std::invalid_argument(
+          "Must have single bytecode file to disable source hash check");
+    }
     if (!cl::Trace.empty()) {
       // If this is tracing mode, get the trace instead of the stats.
       options.gcConfigBuilder.withShouldRecordStats(false);
       options.shouldTrackIO = false;
       std::error_code ec;
-      auto os = ::hermes::make_unique<llvh::raw_fd_ostream>(
+      auto os = std::make_unique<llvh::raw_fd_ostream>(
           cl::Trace.c_str(),
           ec,
           llvh::sys::fs::CD_CreateAlways,

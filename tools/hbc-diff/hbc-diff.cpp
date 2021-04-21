@@ -80,7 +80,7 @@ static ExecutionStatus diffFiles(
       fileBufs.size());
 
   for (uint32_t i = 0; i < fileBufs.size(); ++i) {
-    auto buffer = llvh::make_unique<MemoryBuffer>(fileBufs[i].get());
+    auto buffer = std::make_unique<MemoryBuffer>(fileBufs[i].get());
     const auto *fileHeader =
         reinterpret_cast<const hbc::BytecodeFileHeader *>(buffer->data());
 
@@ -209,3 +209,4 @@ int main(int argc, char **argv) {
 
   return diffFiles(std::move(fileBufs), filenames, humanize);
 }
+#undef DEBUG_TYPE

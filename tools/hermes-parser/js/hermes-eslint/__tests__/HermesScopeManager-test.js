@@ -541,7 +541,7 @@ describe('Type parameters', () => {
     ]);
   });
 
-  test('Function', () => {
+  test('FunctionDeclaration', () => {
     // Function contains type parameter in Function scope alongside value parameter
     verifyHasScopes(
       `
@@ -561,6 +561,16 @@ describe('Type parameters', () => {
           ],
         },
         {
+          type: ScopeType.Type,
+          variables: [
+            {
+              name: 'T',
+              type: DefinitionType.TypeParameter,
+              referenceCount: 1,
+            },
+          ],
+        },
+        {
           type: ScopeType.Function,
           variables: [
             {
@@ -568,9 +578,54 @@ describe('Type parameters', () => {
               referenceCount: 0,
             },
             {
+              name: 'x',
+              type: DefinitionType.Parameter,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ],
+    );
+  });
+
+  test('FunctionExpression', () => {
+    verifyHasScopes(
+      `
+        (function foo<T>(x) {
+          (x: T);
+        });
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [],
+        },
+        {
+          type: ScopeType.Type,
+          variables: [
+            {
               name: 'T',
               type: DefinitionType.TypeParameter,
               referenceCount: 1,
+            },
+          ],
+        },
+        {
+          type: ScopeType.FunctionExpressionName,
+          variables: [
+            {
+              name: 'foo',
+              type: DefinitionType.FunctionName,
+              referenceCount: 0,
+            },
+          ],
+        },
+        {
+          type: ScopeType.Function,
+          variables: [
+            {
+              name: 'arguments',
+              referenceCount: 0,
             },
             {
               name: 'x',
@@ -1181,4 +1236,151 @@ describe('ClassProperty', () => {
       },
     ],
   );
+});
+
+describe('FunctionExpression', () => {
+  test('Function name not referenced in return type', () => {
+    verifyHasScopes(`(function foo(): foo {});`, [
+      {
+        type: ScopeType.Module,
+        variables: [],
+      },
+      {
+        type: ScopeType.FunctionExpressionName,
+        variables: [
+          {
+            name: 'foo',
+            type: DefinitionType.FunctionName,
+            referenceCount: 0,
+          },
+        ],
+      },
+      {
+        type: ScopeType.Function,
+        variables: [
+          {
+            name: 'arguments',
+            referenceCount: 0,
+          },
+        ],
+      },
+    ]);
+  });
+
+  test('Function name shadows type parameter', () => {
+    verifyHasScopes(
+      `
+        (function foo<foo>() {
+          (1: foo);
+        });
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [],
+        },
+        {
+          type: ScopeType.Type,
+          variables: [
+            {
+              name: 'foo',
+              type: DefinitionType.TypeParameter,
+              referenceCount: 0,
+            },
+          ],
+        },
+        {
+          type: ScopeType.FunctionExpressionName,
+          variables: [
+            {
+              name: 'foo',
+              type: DefinitionType.FunctionName,
+              referenceCount: 1,
+            },
+          ],
+        },
+        {
+          type: ScopeType.Function,
+          variables: [
+            {
+              name: 'arguments',
+              referenceCount: 0,
+            },
+          ],
+        },
+      ],
+    );
+  });
+});
+
+describe('This type annotation', () => {
+  test('Is not treated as a parameter', () => {
+    verifyHasScopes(
+      `
+        function foo(this: string, param: number) {
+          return this;
+        }
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'foo',
+              type: DefinitionType.FunctionName,
+              referenceCount: 0,
+            },
+          ],
+        },
+        {
+          type: ScopeType.Function,
+          variables: [
+            {
+              name: 'arguments',
+              referenceCount: 0,
+            },
+            {
+              name: 'param',
+              referenceCount: 0,
+            },
+          ],
+        },
+      ],
+    );
+  });
+
+  test('Type annotation is still visited', () => {
+    verifyHasScopes(
+      `
+        type T = string;
+        function foo(this: T) {}
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'T',
+              type: DefinitionType.Type,
+              referenceCount: 1,
+            },
+            {
+              name: 'foo',
+              type: DefinitionType.FunctionName,
+              referenceCount: 0,
+            },
+          ],
+        },
+        {
+          type: ScopeType.Function,
+          variables: [
+            {
+              name: 'arguments',
+              referenceCount: 0,
+            },
+          ],
+        },
+      ],
+    );
+  });
 });

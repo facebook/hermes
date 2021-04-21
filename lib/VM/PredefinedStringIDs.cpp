@@ -61,6 +61,11 @@ llvh::Optional<SymbolID> getPredefinedStringID(llvh::StringRef str) {
 }
 
 // Use local constexpr arrays to avoid complaint about global constructors.
+static constexpr uint8_t _predefPropertyLengths[] = {
+#define NAMED_PROP(name) sizeof("(" #name ")") - 1,
+#include "hermes/VM/InternalProperties.def"
+};
+
 static constexpr uint8_t _predefStringLengths[] = {
 #define STR(name, string) sizeof(string) - 1,
 #include "hermes/VM/PredefinedStrings.def"
@@ -71,6 +76,7 @@ static constexpr uint8_t _predefSymbolLengths[] = {
 #include "hermes/VM/PredefinedSymbols.def"
 };
 
+const llvh::ArrayRef<uint8_t> predefPropertyLengths = _predefPropertyLengths;
 const llvh::ArrayRef<uint8_t> predefSymbolLengths = _predefSymbolLengths;
 const llvh::ArrayRef<uint8_t> predefStringLengths = _predefStringLengths;
 
@@ -78,6 +84,8 @@ const llvh::ArrayRef<char> predefStringAndSymbolChars =
 // One buffer contains all strings.
 // This ensures that all the strings live together in memory,
 // and that we don't touch multiple separate pages on startup.
+#define NAMED_PROP(name) "(" #name ")"
+#include "hermes/VM/InternalProperties.def"
 #define STR(name, string) string
 #include "hermes/VM/PredefinedStrings.def"
 #define SYM(name, symbol) symbol

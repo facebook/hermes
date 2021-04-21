@@ -14,6 +14,7 @@
 
 #include "EmptyCell.h"
 #include "TestHelpers.h"
+#include "hermes/Parser/JSONParser.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/AlignedHeapSegment.h"
@@ -77,6 +78,19 @@ class TestCrashManager : public CrashManager {
 };
 
 #ifndef HERMESVM_SANITIZE_HANDLES
+
+static ::testing::AssertionResult validJSON(const std::string &json) {
+  SourceErrorManager sm;
+  hermes::parser::JSONFactory::Allocator alloc;
+  hermes::parser::JSONFactory factory{alloc};
+  hermes::parser::JSONParser parser{factory, json, sm};
+  if (!parser.parse()) {
+    return ::testing::AssertionFailure() << "Invalid JSON: \"" << json << "\"";
+  }
+
+  return ::testing::AssertionSuccess();
+}
+
 /// We are able to materialize every segment.
 TEST(CrashManagerTest, HeapExtentsCorrect) {
   /// We need a max heap that's bigger than normal
@@ -102,12 +116,14 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
     roots.push_back(SegmentCell::create(rt));
     rt.pointerRoots.push_back(&roots.back());
   }
+  // This function isn't used in all paths.
+  (void)validJSON;
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
   EXPECT_EQ(5, testCrashMgr->customData().size());
 
   const std::string expectedYgKeyStr = "XYZ:HeapSegments_YG";
   const std::string oneExtent =
-      "\\{lo: \"0x[a-f0-9]*\", hi: \"0x[a-f0-9]*\"\\}";
+      R"(\{\\"lo\\": \\"0x[a-f0-9]*\\", \\"hi\\": \\"0x[a-f0-9]*\\"\})";
 
   EXPECT_NE(
       testCrashMgr->customData().end(),
@@ -115,6 +131,9 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
   EXPECT_THAT(
       testCrashMgr->customData().at(expectedYgKeyStr),
       MatchesRegex(oneExtent + "$"));
+  // The output should be encodable as a string value in JSON.
+  EXPECT_TRUE(
+      validJSON("\"" + testCrashMgr->customData().at(expectedYgKeyStr) + "\""));
 
   const std::string expectedOgKeyStr = "XYZ:HeapSegments_OG";
   const std::string expectedOgKeyStr0 = expectedOgKeyStr + ":0";

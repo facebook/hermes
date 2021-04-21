@@ -1590,6 +1590,7 @@ SKIP_LIST = [
     "flow/types/parameter_defaults/migrated_0023.js",
     "flow/uninitialized_const_bindings/migrated_0000.js",
     "flow/uninitialized_const_bindings_invalid/migrated_0000.js",
+    "flow/this_param/class_constructor.js",
     # Reserved type names
     "flow/types/aliases/reserved_type.js",
     "flow/types/annotations/static_is_reserved_param.js",
@@ -1611,11 +1612,6 @@ SKIP_LIST = [
     # Potentially invalid JSX that is inconsistent across implementations.
     "flow/JSX/invalid_unpaired_gt.js",
     "flow/JSX/invalid_unpaired_rcurly.js",
-    # Boolean enum tests are out of date
-    "flow/comment_interning/enum_declaration.js",
-    "flow/enums/enum-boolean-member-not-initialized-implicit.js",
-    "flow/enums/enum-valid-boolean-explicit.js",
-    "flow/enums/enum-valid-boolean-implicit.js",
     ### Failing Flow tests end ###
 ]
 
@@ -1697,7 +1693,6 @@ PERMANENT_SKIP_LIST = [
     "test262/test/language/literals/string/legacy-non-octal-escape-sequence-strict.js",
     "test262/test/language/literals/string/legacy-octal-escape-sequence-prologue-strict.js",
     "test262/test/annexB/language/expressions/object/__proto__-duplicate-computed.js",
-    "test262/test/annexB/language/literals/numeric/non-octal-decimal-integer.js",
     "test262/test/annexB/language/literals/regexp/class-escape.js",
     "test262/test/language/function-code/block-decl-onlystrict.js",
     "test262/test/language/function-code/switch-case-decl-onlystrict.js",

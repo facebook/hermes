@@ -208,9 +208,10 @@ class Domain final : public GCCell {
       uint32_t cjsModuleOffset,
       Runtime *runtime,
       HermesValue cachedExports) {
-    cjsModules_.get(runtime)
-        ->at(cjsModuleOffset + CachedExportsOffset)
-        .set(cachedExports, &runtime->getHeap());
+    cjsModules_.get(runtime)->set(
+        cjsModuleOffset + CachedExportsOffset,
+        cachedExports,
+        &runtime->getHeap());
   }
 
   /// Set the module object for the given cjsModuleOffset.
@@ -218,9 +219,10 @@ class Domain final : public GCCell {
       uint32_t cjsModuleOffset,
       Runtime *runtime,
       Handle<JSObject> module) {
-    cjsModules_.get(runtime)
-        ->at(cjsModuleOffset + ModuleOffset)
-        .set(module.getHermesValue(), &runtime->getHeap());
+    cjsModules_.get(runtime)->set(
+        cjsModuleOffset + ModuleOffset,
+        module.getHermesValue(),
+        &runtime->getHeap());
   }
 
   /// \return the throwing require function with require.context bound to a
@@ -291,13 +293,15 @@ class RequireContext final : public JSObject {
   /// \return the domain for this require context.
   static Domain *getDomain(Runtime *runtime, RequireContext *self) {
     return vmcast<Domain>(
-        JSObject::getInternalProperty(self, runtime, domainPropIndex()));
+        JSObject::getDirectSlotValue<domainPropIndex()>(self).getObject(
+            runtime));
   }
 
   /// \return the current dirname for this require context.
   static StringPrimitive *getDirname(Runtime *runtime, RequireContext *self) {
     return vmcast<StringPrimitive>(
-        JSObject::getInternalProperty(self, runtime, dirnamePropIndex()));
+        JSObject::getDirectSlotValue<dirnamePropIndex()>(self).getString(
+            runtime));
   }
 
 #ifdef HERMESVM_SERIALIZE

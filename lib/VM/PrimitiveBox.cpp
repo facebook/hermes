@@ -64,11 +64,10 @@ CallResult<Handle<JSString>> JSString::create(
 
   auto selfHandle = JSObjectInit::initToHandle(runtime, obj);
 
-  JSObject::setInternalProperty(
+  JSObject::setDirectSlotValue<PrimitiveBox::primitiveValuePropIndex()>(
       *selfHandle,
-      runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
-      value.getHermesValue());
+      SmallHermesValue::encodeStringValue(value.get(), runtime),
+      &runtime->getHeap());
 
   PropertyFlags pf;
   pf.writable = 0;
@@ -99,16 +98,14 @@ void JSString::setPrimitiveString(
   assert(res && "cannot find 'length' property");
   (void)res;
 
-  JSObject::setNamedSlotValue(
+  // This is definitely not a proxy because we know strings have lengths.
+  auto shv =
+      SmallHermesValue::encodeNumberValue(string->getStringLength(), runtime);
+  JSObject::setNamedSlotValueUnsafe(*selfHandle, runtime, desc, shv);
+  return JSObject::setDirectSlotValue<PrimitiveBox::primitiveValuePropIndex()>(
       *selfHandle,
-      runtime,
-      desc,
-      HermesValue::encodeDoubleValue(string->getStringLength()));
-  return JSObject::setInternalProperty(
-      *selfHandle,
-      runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
-      string.getHermesValue());
+      SmallHermesValue::encodeStringValue(string.get(), runtime),
+      &runtime->getHeap());
 }
 
 bool JSString::_haveOwnIndexedImpl(
@@ -342,20 +339,17 @@ void NumberObjectDeserialize(Deserializer &d, CellKind kind) {
 }
 #endif
 
-PseudoHandle<JSNumber> JSNumber::create(
+Handle<JSNumber> JSNumber::create(
     Runtime *runtime,
     double value,
     Handle<JSObject> parentHandle) {
   auto clazzHandle = runtime->getHiddenClassForPrototype(
       *parentHandle, numOverlapSlots<JSNumber>() + ANONYMOUS_PROPERTY_SLOTS);
   auto obj = runtime->makeAFixed<JSNumber>(runtime, parentHandle, clazzHandle);
-  auto self = JSObjectInit::initToPseudoHandle(runtime, obj);
-
-  JSObject::setInternalProperty(
-      self.get(),
-      runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
-      HermesValue::encodeDoubleValue(value));
+  auto self = JSObjectInit::initToHandle(runtime, obj);
+  auto shv = SmallHermesValue::encodeNumberValue(value, runtime);
+  JSObject::setDirectSlotValue<PrimitiveBox::primitiveValuePropIndex()>(
+      self.get(), shv, &runtime->getHeap());
 
   return self;
 }
@@ -402,11 +396,10 @@ JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
   auto obj = runtime->makeAFixed<JSBoolean>(runtime, parentHandle, clazzHandle);
   auto self = JSObjectInit::initToPseudoHandle(runtime, obj);
 
-  JSObject::setInternalProperty(
+  JSObject::setDirectSlotValue<PrimitiveBox::primitiveValuePropIndex()>(
       self.get(),
-      runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
-      *Runtime::getBoolValue(value));
+      SmallHermesValue::encodeBoolValue(value),
+      &runtime->getHeap());
   return self;
 }
 
@@ -453,14 +446,15 @@ PseudoHandle<JSSymbol> JSSymbol::create(
   auto *obj = runtime->makeAFixed<JSSymbol>(runtime, parentHandle, clazzHandle);
   auto self = JSObjectInit::initToPseudoHandle(runtime, obj);
 
-  JSObject::setInternalProperty(
+  JSObject::setDirectSlotValue<PrimitiveBox::primitiveValuePropIndex()>(
       self.get(),
-      runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
-      HermesValue::encodeSymbolValue(value));
+      SmallHermesValue::encodeSymbolValue(value),
+      &runtime->getHeap());
 
   return self;
 }
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

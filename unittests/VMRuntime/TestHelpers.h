@@ -265,7 +265,7 @@ class DummyRuntime final : public HandleRootOwner,
                            public PointerBase,
                            private GCBase::GCCallbacks {
  private:
-  std::unique_ptr<GC> gc_;
+  GCStorage gcStorage_;
 
  public:
   std::vector<GCCell **> pointerRoots{};
@@ -317,7 +317,7 @@ class DummyRuntime final : public HandleRootOwner,
   }
 
   GC &getHeap() {
-    return *gc_;
+    return *gcStorage_.get();
   }
 
   void collect();
@@ -325,6 +325,9 @@ class DummyRuntime final : public HandleRootOwner,
   void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool) override;
 
   void markWeakRoots(WeakRootAcceptor &weakAcceptor) override;
+
+  void markRootsForCompleteMarking(
+      RootAndSlotAcceptorWithNames &acceptor) override;
 
   unsigned int getSymbolsEnd() const override {
     return 0;

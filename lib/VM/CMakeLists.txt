@@ -6,6 +6,7 @@
 set(source_files
   ArrayStorage.cpp
   BasicBlockExecutionInfo.cpp
+  BoxedDouble.cpp
   BuildMetadata.cpp
   Callable.cpp
   CellKind.cpp
@@ -116,36 +117,6 @@ set(source_files
   JSLib/require.cpp
 )
 
-set(jit_files
-  JIT/PoolHeap.cpp
-  JIT/ExecHeap.cpp
-  JIT/LLVMDisassembler.cpp
-  JIT/NativeDisassembler.cpp
-  JIT/DiscoverBB.cpp
-  JIT/x86-64/JIT.cpp
-  JIT/x86-64/FastJIT.cpp JIT/x86-64/FastJIT.h
-  JIT/ExternalCalls.cpp JIT/ExternalCalls.h
-  )
-
-set(HERMES_OPTIONAL_SOURCES
-  gcs/FillerCell.cpp
-  gcs/GenGC.cpp
-  gcs/MallocGC.cpp
-  gcs/OldGen.cpp
-  gcs/Space.cpp
-  gcs/YoungGen.cpp
-  gcs/GCGeneration.cpp
-  gcs/GCSegmentAddressIndex.cpp
-  gcs/GenGCNC.cpp
-  gcs/OldGenNC.cpp
-  gcs/OldGenSegmentRanges.cpp
-  gcs/YoungGenNC.cpp
-  gcs/AlignedHeapSegment.cpp
-  gcs/AlignedStorage.cpp
-  gcs/CardTableNC.cpp
-  ${jit_files}
-)
-
 if (${HERMESVM_GCKIND} STREQUAL "NONCONTIG_GENERATIONAL")
   list(APPEND source_files gcs/AlignedHeapSegment.cpp gcs/AlignedStorage.cpp
                            gcs/CardTableNC.cpp gcs/FillerCell.cpp
@@ -162,6 +133,16 @@ elseif (${HERMESVM_GCKIND} STREQUAL "HADES")
             gcs/CardTableNC.cpp
             gcs/FillerCell.cpp
             gcs/HadesGC.cpp
+  )
+elseif (${HERMESVM_GCKIND} STREQUAL "RUNTIME")
+  list(APPEND source_files
+          gcs/AlignedHeapSegment.cpp gcs/AlignedStorage.cpp
+          gcs/CardTableNC.cpp gcs/FillerCell.cpp
+          gcs/HadesGC.cpp
+          gcs/CompleteMarkState.cpp gcs/GCGeneration.cpp
+          gcs/GCSegmentAddressIndex.cpp gcs/GenGCNC.cpp
+          gcs/OldGenNC.cpp gcs/OldGenSegmentRanges.cpp
+          gcs/YoungGenNC.cpp gcs/GenGCHeapSegment.cpp
   )
 else()
   message(WARNING "Not linking garbage collector")
@@ -197,20 +178,6 @@ set(link_libs
   dtoa
   ${CORE_FOUNDATION}
 )
-
-if(HERMESVM_JIT)
-  list(APPEND source_files ${jit_files})
-
-  set(LLVM_LINK_COMPONENTS
-    AllTargetsAsmPrinters
-    AllTargetsAsmParsers
-    AllTargetsDescs
-    AllTargetsDisassemblers
-    AllTargetsInfos
-    MC
-    MCParser
-  )
-endif()
 
 add_hermes_library(hermesVMRuntime STATIC ${source_files}
     LINK_LIBS

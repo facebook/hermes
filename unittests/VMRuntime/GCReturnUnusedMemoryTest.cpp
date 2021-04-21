@@ -49,6 +49,9 @@ TEST(GCReturnUnusedMemoryTest, CollectReturnsFreeMemory) {
   auto *cell2 = SemiCell::createLongLived(rt);
   rt.pointerRoots.push_back(reinterpret_cast<GCCell **>(&cell2));
 
+  auto *cell3 = SemiCell::createLongLived(rt);
+  rt.pointerRoots.push_back(reinterpret_cast<GCCell **>(&cell3));
+
   auto before = gc.getVMFootprintForTest();
   ASSERT_TRUE(before);
 
@@ -59,7 +62,7 @@ TEST(GCReturnUnusedMemoryTest, CollectReturnsFreeMemory) {
   auto touched = gc.getVMFootprintForTest();
   ASSERT_TRUE(touched);
 
-  rt.pointerRoots.erase(rt.pointerRoots.begin());
+  rt.pointerRoots.clear();
 
   // Collect should return the unused memory back to the OS.
   rt.collect();

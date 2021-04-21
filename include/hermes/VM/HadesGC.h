@@ -10,18 +10,21 @@
 
 #include "hermes/ADT/BitArray.h"
 #include "hermes/ADT/ExponentialMovingAverage.h"
+#include "hermes/Support/Algorithms.h"
 #include "hermes/Support/SlowAssert.h"
 #include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GCBase.h"
 #include "hermes/VM/VMExperiments.h"
 
 #include "llvh/ADT/SparseBitVector.h"
+#include "llvh/Support/ErrorOr.h"
 #include "llvh/Support/PointerLikeTypeTraits.h"
 
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
 #include <deque>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -75,12 +78,15 @@ class HadesGC final : public GCBase {
     return gc->getKind() == HeapKind::HADES;
   }
 
-  static uint32_t minAllocationSize();
-
   static constexpr uint32_t maxAllocationSize() {
     // The largest allocation allowable in Hades is the max size a single
     // segment supports.
     return HeapSegment::maxSize();
+  }
+
+  static constexpr uint32_t minAllocationSize() {
+    return heapAlignSize(
+        max(sizeof(OldGen::FreelistCell), sizeof(CopyListCell)));
   }
 
   /// \name GCBase overrides
@@ -99,7 +105,11 @@ class HadesGC final : public GCBase {
           std::vector<GCBase::AllocationLocationTracker::HeapStatsUpdate>)>
           fragmentCallback) override;
   void disableHeapProfiler() override;
+  void enableSamplingHeapProfiler(size_t samplingInterval, int64_t seed)
+      override;
+  void disableSamplingHeapProfiler(llvh::raw_ostream &os) override;
   void printStats(JSONEmitter &json) override;
+  std::string getKindAsStr() const override;
 
   /// \}
 
@@ -146,6 +156,7 @@ class HadesGC final : public GCBase {
   /// NOTE: The write barrier call must be placed *before* the write to the
   /// pointer, so that the current value can be fetched.
   void writeBarrier(const GCHermesValue *loc, HermesValue value);
+  void writeBarrier(const GCSmallHermesValue *loc, SmallHermesValue value);
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap). The value may be null. Execute a write barrier.
@@ -160,11 +171,18 @@ class HadesGC final : public GCBase {
   /// Special versions of \p writeBarrier for when there was no previous value
   /// initialized into the space.
   void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value);
+  void constructorWriteBarrier(
+      const GCSmallHermesValue *loc,
+      SmallHermesValue value);
   void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
 
   void snapshotWriteBarrier(const GCHermesValue *loc);
+  void snapshotWriteBarrier(const GCSmallHermesValue *loc);
   void snapshotWriteBarrier(const GCPointerBase *loc);
   void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs);
+  void snapshotWriteBarrierRange(
+      const GCSmallHermesValue *start,
+      uint32_t numHVs);
 
   void weakRefReadBarrier(GCCell *value);
   void weakRefReadBarrier(HermesValue value);
@@ -203,12 +221,7 @@ class HadesGC final : public GCBase {
   /// \name Debug APIs
   /// \{
 
-  bool calledByBackgroundThread() const override {
-    // If the background thread is active, check if this thread matches the
-    // background thread.
-    return kConcurrentGC &&
-        oldGenCollectionThread_.get_id() == std::this_thread::get_id();
-  }
+  bool calledByBackgroundThread() const override;
 
   /// See comment in GCBase.
   bool calledByGC() const override {
@@ -238,12 +251,21 @@ class HadesGC final : public GCBase {
 
   class CollectionStats;
   class HeapMarkingAcceptor;
-  struct CopyListCell;
   template <bool CompactionEnabled>
   class EvacAcceptor;
   class MarkAcceptor;
   class MarkWeakRootsAcceptor;
   class OldGen;
+  class Executor;
+
+  struct CopyListCell final : public GCCell {
+    // Linked list of cells pointing to the next cell that was copied.
+    CopyListCell *next_;
+    // If the cell was trimmed, this field will have the original size of the
+    // object stored. If the cell wasn't trimmed it'll have the same size as the
+    // forwarded pointer.
+    uint32_t originalSize_;
+  };
 
   /// Similar to AlignedHeapSegment except it uses a free list.
   class HeapSegment final : public AlignedHeapSegment {
@@ -398,10 +420,6 @@ class HadesGC final : public GCBase {
     /// freelist.
     /// \return a pointer to the removed cell.
     FreelistCell *removeCellFromFreelist(size_t bucket, size_t segmentIdx);
-
-    /// Unset all the bits for a given segment's freelist, so that no new
-    /// allocations take place in it.
-    void clearFreelistForSegment(size_t segmentIdx);
 
     /// Remove a segment entirely from every freelist. This will shift all bits
     /// after segmentIdx down by one.
@@ -567,6 +585,14 @@ class HadesGC final : public GCBase {
   /// Protected by gcMutex_.
   std::vector<GCCell *> youngGenFinalizables_;
 
+  /// Since YG collection times are the primary driver of pause times, it is
+  /// useful to have a knob to reduce the effective size of the YG. This number
+  /// is the fraction of HeapSegment::maxSize() that we should use for the YG..
+  /// Note that we only set the YG size using this at the end of the first real
+  /// YG, since doing it for direct promotions would waste OG memory without a
+  /// pause time benefit.
+  double ygSizeFactor_{0.5};
+
   /// oldGen_ is a free list space, so it needs a different segment
   /// representation.
   /// Protected by gcMutex_.
@@ -581,7 +607,6 @@ class HadesGC final : public GCBase {
     Mark,
     CompleteMarking,
     Sweep,
-    Cleanup,
   };
 
   /// Represents the current phase the concurrent GC is in. The main difference
@@ -600,19 +625,21 @@ class HadesGC final : public GCBase {
   /// Protected by gcMutex_.
   std::unique_ptr<MarkAcceptor> oldGenMarker_;
 
-  /// This is the background thread that does marking and sweeping concurrently
-  /// with the mutator.
-  /// It should only be joined via \c waitForCollectionToFinish, which ensures
-  /// that the STW pause handling is done correctly.
-  std::thread oldGenCollectionThread_;
+  /// This provides the background thread for doing marking and sweeping
+  /// concurrently with the mutator.
+  std::unique_ptr<Executor> backgroundExecutor_;
 
-  /// This condition variable is used for synchronising the STW pause
-  /// between the mutator and the background thread. When it is time for the STW
-  /// pause, the OG thread will advance concurrentPhase_ to CompleteMarking and
-  /// wait on the condition variable. Once the mutator finishes running
-  /// completeMarking(), it will wake the OG thread back up, so that it can
-  /// resume with sweeping.
-  std::condition_variable_any stopTheWorldCondVar_;
+  /// This tracks the current status of execution in the background thread. The
+  /// future should be set every time work is enqueued onto the executor. After
+  /// that, whenever we need to wait for execution in the background thread to
+  /// end, we can call get() on this future.
+  std::future<void> ogThreadStatus_;
+
+#ifndef NDEBUG
+  /// True from the time the background task is created, to the time it exits
+  /// the collection loop. False otherwise.
+  bool backgroundTaskActive_{false};
+#endif
 
   /// If true, whenever YG fills up immediately put it into the OG.
   bool promoteYGToOG_;
@@ -640,12 +667,6 @@ class HadesGC final : public GCBase {
 
   /// The amount of bytes of external memory credited to objects in the YG.
   uint64_t ygExternalBytes_{0};
-
-  /// If true, Hades will occasionally compact OG segments.
-  bool compactionEnabled_{false};
-
-  /// If true, incremental collections will do extra work until they cross 25ms.
-  bool timedIncremental_{false};
 
   struct CompacteeState {
     /// \return true if the pointer lives in the segment that is being marked or
@@ -728,7 +749,10 @@ class HadesGC final : public GCBase {
   /// \tparam hasFinalizer If true, the cell about to be allocated into the
   ///   requested space will have a finalizer that the GC will need to invoke.
   template <bool fixedSize, HasFinalizer hasFinalizer>
-  void *allocWork(uint32_t sz);
+  inline void *allocWork(uint32_t sz);
+
+  /// Slow path for allocations.
+  void *allocSlow(uint32_t sz);
 
   /// Like alloc, but the resulting object is expected to be long-lived.
   /// Allocate directly in the old generation (doing a full collection if
@@ -767,6 +791,10 @@ class HadesGC final : public GCBase {
   /// collection.
   void transferExternalMemoryToOldGen();
 
+  /// Update the scaling factor for the size of the young gen to meet our pause
+  /// time goals, based on the duration of the most recently completed YG.
+  void updateYoungGenSizeFactor();
+
   /// Perform an OG garbage collection. All live objects in OG will be left
   /// untouched, all unreachable objects will be placed into a free list that
   /// can be used by \c oldGenAlloc.
@@ -778,20 +806,15 @@ class HadesGC final : public GCBase {
   /// \pre The gcMutex_ must be held before entering this function.
   /// \post The gcMutex_ will be held when the function exits, but it might
   ///   have been unlocked and then re-locked.
-  void waitForCollectionToFinish();
+  void waitForCollectionToFinish(std::string cause);
 
-  /// Worker function that does the bulk of the GC work concurrently with the
-  /// mutator.
-  void oldGenCollectionWorker();
+  /// Worker function that schedules the bulk of the GC work on the background
+  /// thread, to perform it concurrently with the mutator.
+  void collectOGInBackground();
 
   /// Perform a single step of an OG collection. \p backgroundThread indicates
   /// whether this call was made from the background thread.
   void incrementalCollect(bool backgroundThread);
-
-  /// Should only be called from the background thread in a concurrent GC.
-  /// Requests the mutator to complete the STW pause during the next YG
-  /// collection, blocks the background thread until that is done.
-  void waitForCompleteMarking();
 
   /// Finish the marking process. This requires a STW pause in order to do a
   /// final marking worklist drain, and to update weak roots. It must be invoked
@@ -823,6 +846,7 @@ class HadesGC final : public GCBase {
   /// pointer. Forwards to \c snapshotWriteBarrierInternal(SymbolID) is oldValue
   /// is a symbol.
   void snapshotWriteBarrierInternal(HermesValue oldValue);
+  void snapshotWriteBarrierInternal(SmallHermesValue oldValue);
 
   /// Performs a Snapshot At The Beginning (SATB) write barrier for a symbol,
   /// which assumes the old symbol was reachable at the start of the collection.
@@ -867,16 +891,12 @@ class HadesGC final : public GCBase {
   /// metadata and external memory.
   uint64_t heapFootprint() const;
 
-  /// \return the remaining available space we are allowed to use. That is, the
-  /// difference between maxHeapSize_ and heapFootprint.
-  uint64_t remainingBytes() const;
-
   /// Accessor for the YG.
   HeapSegment &youngGen();
   const HeapSegment &youngGen() const;
 
   /// Create a new segment (to be used by either YG or OG).
-  HeapSegment createSegment();
+  llvh::ErrorOr<HeapSegment> createSegment();
 
   /// Set a given segment as the YG segment.
   /// \return the previous YG segment.
@@ -939,6 +959,34 @@ inline T *HadesGC::makeA(uint32_t size, Args &&...args) {
 
   return new (allocWork<fixedSize, hasFinalizer>(size))
       T(std::forward<Args>(args)...);
+}
+
+template <bool fixedSize, HasFinalizer hasFinalizer>
+void *HadesGC::allocWork(uint32_t sz) {
+  assert(
+      isSizeHeapAligned(sz) &&
+      "Should be aligned before entering this function");
+  assert(sz >= minAllocationSize() && "Allocating too small of an object");
+  if (kConcurrentGC) {
+    HERMES_SLOW_ASSERT(
+        !weakRefMutex() &&
+        "WeakRef mutex should not be held when alloc is called");
+  }
+  if (shouldSanitizeHandles()) {
+    // The best way to sanitize uses of raw pointers outside handles is to force
+    // the entire heap to move, and ASAN poison the old heap. That is too
+    // expensive to do, even with sampling, for Hades. It also doesn't test the
+    // more interesting aspect of Hades which is concurrent background
+    // collections. So instead, do a youngGenCollection which force-starts an
+    // oldGenCollection if one is not already running.
+    youngGenCollection(
+        kHandleSanCauseForAnalytics, /*forceOldGenCollection*/ true);
+  }
+  AllocResult res = youngGen().bumpAlloc(sz);
+  void *resPtr = LLVM_UNLIKELY(!res.success) ? allocSlow(sz) : res.ptr;
+  if (hasFinalizer == HasFinalizer::Yes)
+    youngGenFinalizables_.emplace_back(static_cast<GCCell *>(resPtr));
+  return resPtr;
 }
 
 /// \}

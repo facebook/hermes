@@ -95,8 +95,14 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclare(
   }
   if (checkAndEat(TokenKind::rw_var)) {
     auto optIdent = parseBindingIdentifier(Param{});
-    if (!optIdent)
+    if (!optIdent) {
+      errorExpected(
+          TokenKind::identifier,
+          "in var declaration",
+          "start of declaration",
+          start);
       return None;
+    }
     if (!eatSemi())
       return None;
     return setLocation(
@@ -168,8 +174,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAlias(
     right = *optRight;
   }
 
-  if (!eatSemi(true))
-    return None;
+  eatSemi(true);
 
   if (kind == TypeAliasKind::DeclareOpaque) {
     return setLocation(
@@ -315,7 +320,8 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFunction(SMLoc start) {
     return None;
 
   ESTree::NodeList params{};
-  auto optRest = parseFunctionTypeAnnotationParams(params);
+  ESTree::Node *thisConstraint = nullptr;
+  auto optRest = parseFunctionTypeAnnotationParams(params, thisConstraint);
   if (!optRest)
     return None;
 
@@ -351,7 +357,11 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFunction(SMLoc start) {
           funcStart,
           funcEnd,
           new (context_) ESTree::FunctionTypeAnnotationNode(
-              std::move(params), returnType, *optRest, typeParams))));
+              std::move(params),
+              thisConstraint,
+              returnType,
+              *optRest,
+              typeParams))));
   auto *ident = setLocation(
       idStart, func, new (context_) ESTree::IdentifierNode(id, func, false));
   return setLocation(
@@ -757,8 +767,14 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(
   if (check(TokenKind::rw_var)) {
     SMLoc varStart = advance(JSLexer::GrammarContext::Flow).Start;
     auto optIdent = parseBindingIdentifier(Param{});
-    if (!optIdent)
+    if (!optIdent) {
+      errorExpected(
+          TokenKind::identifier,
+          "in var declaration",
+          "start of declaration",
+          start);
       return None;
+    }
     if (!eatSemi())
       return None;
 
@@ -959,7 +975,7 @@ JSParserImpl::parseAnonFunctionWithoutParensTypeAnnotation() {
     ESTree::Node *rest = nullptr;
     ESTree::Node *typeParams = nullptr;
     return parseFunctionTypeAnnotationWithParams(
-        start, std::move(params), rest, typeParams);
+        start, std::move(params), nullptr, rest, typeParams);
   }
 
   return *optParam;
@@ -987,15 +1003,30 @@ Optional<ESTree::Node *> JSParserImpl::parsePostfixTypeAnnotation() {
 
   ESTree::Node *result = *optPrimary;
 
-  // Parse any [] after the primary type.
   while (!lexer_.isNewLineBeforeCurrentToken() &&
          checkAndEat(TokenKind::l_square, JSLexer::GrammarContext::Flow)) {
-    if (!need(TokenKind::r_square, "in array type annotation", nullptr, {}))
-      return None;
-    result = setLocation(
-        start,
-        advance(JSLexer::GrammarContext::Flow).End,
-        new (context_) ESTree::ArrayTypeAnnotationNode(result));
+    if (checkAndEat(TokenKind::r_square, JSLexer::GrammarContext::Flow)) {
+      // Legacy Array syntax `T[]`
+      result = setLocation(
+          start,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::ArrayTypeAnnotationNode(result));
+    } else {
+      // Indexed Access `T[K]`
+      auto optIndexType = parseTypeAnnotation();
+      if (!optIndexType)
+        return None;
+      if (!need(
+              TokenKind::r_square,
+              "in indexed access type",
+              "start of type",
+              start))
+        return None;
+      result = setLocation(
+          start,
+          advance(JSLexer::GrammarContext::Flow).End,
+          new (context_) ESTree::IndexedAccessTypeNode(result, *optIndexType));
+    }
   }
 
   return result;
@@ -1020,6 +1051,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
           AllowStaticProperty::No,
           AllowSpreadProperty::Yes);
     case TokenKind::rw_interface: {
+      advance(JSLexer::GrammarContext::Flow);
       ESTree::NodeList extends{};
       auto optBody = parseInterfaceTail(start, extends);
       if (!optBody)
@@ -1088,6 +1120,18 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
             start,
             advance(JSLexer::GrammarContext::Flow).End,
             new (context_) ESTree::StringTypeAnnotationNode());
+      }
+      if (tok_->getResWordOrIdentifier() == interfaceIdent_) {
+        advance(JSLexer::GrammarContext::Flow);
+        ESTree::NodeList extends{};
+        auto optBody = parseInterfaceTail(start, extends);
+        if (!optBody)
+          return None;
+        return setLocation(
+            start,
+            *optBody,
+            new (context_) ESTree::InterfaceTypeAnnotationNode(
+                std::move(extends), *optBody));
       }
 
       {
@@ -1214,7 +1258,8 @@ Optional<ESTree::Node *> JSParserImpl::parseFunctionTypeAnnotation() {
     return None;
 
   ESTree::NodeList params{};
-  auto optRest = parseFunctionTypeAnnotationParams(params);
+  ESTree::Node *thisConstraint = nullptr;
+  auto optRest = parseFunctionTypeAnnotationParams(params, thisConstraint);
   if (!optRest)
     return None;
   ESTree::Node *rest = *optRest;
@@ -1227,12 +1272,13 @@ Optional<ESTree::Node *> JSParserImpl::parseFunctionTypeAnnotation() {
     return None;
 
   return parseFunctionTypeAnnotationWithParams(
-      start, std::move(params), rest, typeParams);
+      start, std::move(params), thisConstraint, rest, typeParams);
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseFunctionTypeAnnotationWithParams(
     SMLoc start,
     ESTree::NodeList &&params,
+    ESTree::Node *thisConstraint,
     ESTree::Node *rest,
     ESTree::Node *typeParams) {
   assert(check(TokenKind::equalgreater));
@@ -1246,7 +1292,7 @@ Optional<ESTree::Node *> JSParserImpl::parseFunctionTypeAnnotationWithParams(
       start,
       getPrevTokenEndLoc(),
       new (context_) ESTree::FunctionTypeAnnotationNode(
-          std::move(params), *optReturnType, rest, typeParams));
+          std::move(params), thisConstraint, *optReturnType, rest, typeParams));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseFunctionOrGroupTypeAnnotation() {
@@ -1265,6 +1311,42 @@ Optional<ESTree::Node *> JSParserImpl::parseFunctionOrGroupTypeAnnotation() {
   ESTree::Node *type = nullptr;
   ESTree::Node *rest = nullptr;
   ESTree::NodeList params{};
+  ESTree::Node *thisConstraint = nullptr;
+
+  if (check(TokenKind::rw_this)) {
+    isFunction = true;
+    SMLoc thisStart = advance(JSLexer::GrammarContext::Flow).Start;
+    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+      auto optType = parseTypeAnnotation();
+      if (!optType)
+        return None;
+      ESTree::Node *typeAnnotation = *optType;
+
+      thisConstraint = setLocation(
+          thisStart,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::FunctionTypeParamNode(
+              /* name */ nullptr, typeAnnotation, /* optional */ false));
+    } else {
+      params.push_back(*setLocation(
+          thisStart,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::FunctionTypeParamNode(
+              nullptr,
+              setLocation(
+                  thisStart,
+                  getPrevTokenEndLoc(),
+                  new (context_) ESTree::GenericTypeAnnotationNode(
+                      setLocation(
+                          thisStart,
+                          getPrevTokenEndLoc(),
+                          new (context_) ESTree::IdentifierNode(
+                              thisIdent_, nullptr, false)),
+                      {})),
+              false)));
+    }
+    checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Flow);
+  }
 
   if (allowAnonFunctionType_ &&
       checkAndEat(TokenKind::dotdotdot, JSLexer::GrammarContext::Flow)) {
@@ -1357,7 +1439,7 @@ Optional<ESTree::Node *> JSParserImpl::parseFunctionOrGroupTypeAnnotation() {
       start,
       getPrevTokenEndLoc(),
       new (context_) ESTree::FunctionTypeAnnotationNode(
-          std::move(params), *optReturnType, rest, typeParams));
+          std::move(params), thisConstraint, *optReturnType, rest, typeParams));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseObjectTypeAnnotation(
@@ -1833,6 +1915,12 @@ Optional<ESTree::Node *> JSParserImpl::parseGetOrSetTypeProperty(
     }
   }
 
+  if (value->_this) {
+    error(
+        value->_this->getSourceRange(),
+        "Accessors must not have 'this' annotations");
+  }
+
   return setLocation(
       start,
       getPrevTokenEndLoc(),
@@ -2033,10 +2121,11 @@ JSParserImpl::parseMethodishTypeAnnotation(
     SMLoc start,
     ESTree::Node *typeParams) {
   ESTree::NodeList params{};
+  ESTree::Node *thisConstraint = nullptr;
 
   if (!need(TokenKind::l_paren, "at start of parameters", nullptr, {}))
     return None;
-  auto optRest = parseFunctionTypeAnnotationParams(params);
+  auto optRest = parseFunctionTypeAnnotationParams(params, thisConstraint);
   if (!optRest)
     return None;
 
@@ -2056,15 +2145,52 @@ JSParserImpl::parseMethodishTypeAnnotation(
       start,
       getPrevTokenEndLoc(),
       new (context_) ESTree::FunctionTypeAnnotationNode(
-          std::move(params), *optReturn, *optRest, typeParams));
+          std::move(params), thisConstraint, *optReturn, *optRest, typeParams));
 }
 
 Optional<ESTree::FunctionTypeParamNode *>
-JSParserImpl::parseFunctionTypeAnnotationParams(ESTree::NodeList &params) {
+JSParserImpl::parseFunctionTypeAnnotationParams(
+    ESTree::NodeList &params,
+    ESTree::NodePtr &thisConstraint) {
   assert(check(TokenKind::l_paren));
   SMLoc start = advance(JSLexer::GrammarContext::Flow).Start;
 
   ESTree::FunctionTypeParamNode *rest = nullptr;
+  thisConstraint = nullptr;
+
+  if (check(TokenKind::rw_this)) {
+    SMLoc thisStart = advance(JSLexer::GrammarContext::Flow).Start;
+    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+      auto optType = parseTypeAnnotation();
+      if (!optType)
+        return None;
+      ESTree::Node *typeAnnotation = *optType;
+
+      thisConstraint = setLocation(
+          thisStart,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::FunctionTypeParamNode(
+              /* name */ nullptr, typeAnnotation, /* optional */ false));
+    } else {
+      params.push_back(*setLocation(
+          thisStart,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::FunctionTypeParamNode(
+              nullptr,
+              setLocation(
+                  thisStart,
+                  getPrevTokenEndLoc(),
+                  new (context_) ESTree::GenericTypeAnnotationNode(
+                      setLocation(
+                          thisStart,
+                          getPrevTokenEndLoc(),
+                          new (context_) ESTree::IdentifierNode(
+                              thisIdent_, nullptr, false)),
+                      {})),
+              false)));
+    }
+    checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Flow);
+  }
 
   while (!check(TokenKind::r_paren)) {
     bool isRest =
@@ -2101,6 +2227,12 @@ JSParserImpl::parseFunctionTypeAnnotationParams(ESTree::NodeList &params) {
 Optional<ESTree::FunctionTypeParamNode *>
 JSParserImpl::parseFunctionTypeAnnotationParam() {
   SMLoc start = tok_->getStartLoc();
+
+  if (check(TokenKind::rw_this)) {
+    error(
+        tok_->getSourceRange(),
+        "'this' constraint must be the first parameter");
+  }
 
   auto optLeft = parseTypeAnnotation();
   if (!optLeft)
@@ -2270,8 +2402,14 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumDeclaration() {
   SMLoc start = advance().Start;
 
   auto optIdent = parseBindingIdentifier(Param{});
-  if (!optIdent)
+  if (!optIdent) {
+    errorExpected(
+        TokenKind::identifier,
+        "in enum declaration",
+        "start of declaration",
+        start);
     return None;
+  }
   ESTree::Node *id = *optIdent;
 
   OptValue<EnumKind> optKind = llvh::None;

@@ -34,7 +34,7 @@
 
 const Syntax = require('estraverse').Syntax;
 const esrecurse = require('esrecurse');
-const Reference = require('./reference');
+const {ReadWriteFlag, Reference} = require('./reference');
 const Variable = require('./variable');
 const PatternVisitor = require('./pattern-visitor');
 const {
@@ -139,7 +139,7 @@ class Referencer extends esrecurse.Visitor {
     assignments.forEach(assignment => {
       scope.__referencingValue(
         pattern,
-        Reference.WRITE,
+        ReadWriteFlag.WRITE,
         assignment.right,
         maybeImplicitGlobal,
         init,
@@ -180,8 +180,6 @@ class Referencer extends esrecurse.Visitor {
   }
 
   visitFunction(node) {
-    let i, iz;
-
     // FunctionDeclaration name is defined in upper scope
     // NOTE: Not referring variableScope. It is intended.
     // Since
@@ -192,6 +190,22 @@ class Referencer extends esrecurse.Visitor {
       // id is defined in upper scope
       this.currentScope().__define(node.id, new FunctionNameDefinition(node));
     }
+
+    // If type parameters exist, add them to type scope before function expression name.
+    if (node.typeParameters != null && node.typeParameters.length !== 0) {
+      const parentScope = this.scopeManager.__currentScope;
+
+      const typeScope = this.scopeManager.__nestTypeScope(node);
+      this.visit(node.typeParameters);
+
+      // Forward future defines in type scope to parent scope
+      typeScope.__define = function() {
+        return parentScope.__define.apply(parentScope, arguments);
+      };
+    }
+
+    // Return type may reference type parameters but not parameters or function expression name.
+    this.visit(node.returnType);
 
     // FunctionExpression with name creates its special scope;
     // FunctionExpressionNameScope.
@@ -204,13 +218,13 @@ class Referencer extends esrecurse.Visitor {
 
     const that = this;
 
-    /**
-     * Visit pattern callback
-     * @param {pattern} pattern - pattern
-     * @param {Object} info - info
-     * @returns {void}
-     */
-    function visitPatternCallback(pattern, info) {
+    function visitPatternCallback(i, pattern, info) {
+      // If the first parameter for a function has name 'this' it is a Flow
+      // type annotation and not a parameter than can be referenced by name.
+      if (i === 0 && pattern.name === 'this') {
+        return;
+      }
+
       that
         .currentScope()
         .__define(
@@ -221,16 +235,12 @@ class Referencer extends esrecurse.Visitor {
       that.referencingDefaultValue(pattern, info.assignments, null, true);
     }
 
-    // Add type parameter declarations before parameter declarations, as type
-    // parameters may be used in parameter declarations.
-    this.visit(node.typeParameters);
-
     // Process parameter declarations.
-    for (i = 0, iz = node.params.length; i < iz; ++i) {
+    for (let i = 0, iz = node.params.length; i < iz; ++i) {
       this.visitPattern(
         node.params[i],
         {visitAllNodes: true},
-        visitPatternCallback,
+        (pattern, info) => visitPatternCallback(i, pattern, info),
       );
     }
 
@@ -250,7 +260,6 @@ class Referencer extends esrecurse.Visitor {
       );
     }
 
-    this.visit(node.returnType);
     this.visit(node.predicate);
 
     // In TypeScript there are a number of function-like constructs which have no body,
@@ -329,7 +338,7 @@ class Referencer extends esrecurse.Visitor {
       this.visitPattern(node.left.declarations[0].id, pattern => {
         this.currentScope().__referencingValue(
           pattern,
-          Reference.WRITE,
+          ReadWriteFlag.WRITE,
           node.right,
           null,
           true,
@@ -353,7 +362,7 @@ class Referencer extends esrecurse.Visitor {
         );
         this.currentScope().__referencingValue(
           pattern,
-          Reference.WRITE,
+          ReadWriteFlag.WRITE,
           node.right,
           maybeImplicitGlobal,
           false,
@@ -380,7 +389,7 @@ class Referencer extends esrecurse.Visitor {
       if (init) {
         this.currentScope().__referencingValue(
           pattern,
-          Reference.WRITE,
+          ReadWriteFlag.WRITE,
           init,
           null,
           true,
@@ -409,7 +418,7 @@ class Referencer extends esrecurse.Visitor {
           );
           this.currentScope().__referencingValue(
             pattern,
-            Reference.WRITE,
+            ReadWriteFlag.WRITE,
             node.right,
             maybeImplicitGlobal,
             false,
@@ -418,7 +427,7 @@ class Referencer extends esrecurse.Visitor {
       } else {
         this.currentScope().__referencingValue(
           node.left,
-          Reference.RW,
+          ReadWriteFlag.RW,
           node.right,
         );
       }
@@ -458,7 +467,11 @@ class Referencer extends esrecurse.Visitor {
 
   UpdateExpression(node) {
     if (PatternVisitor.isPattern(node.argument)) {
-      this.currentScope().__referencingValue(node.argument, Reference.RW, null);
+      this.currentScope().__referencingValue(
+        node.argument,
+        ReadWriteFlag.RW,
+        null,
+      );
     } else {
       this.visitChildren(node);
     }
