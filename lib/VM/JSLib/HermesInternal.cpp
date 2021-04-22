@@ -600,6 +600,11 @@ hermesInternalHasPromise(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(runtime->hasES6Promise());
 }
 
+CallResult<HermesValue>
+hermesInternalUseEngineQueue(void *, Runtime *runtime, NativeArgs args) {
+  return HermesValue::encodeBoolValue(runtime->useJobQueue());
+}
+
 /// \code
 ///   HermesInternal.enqueueJob = function (func) {}
 /// \endcode
@@ -889,6 +894,7 @@ Handle<JSObject> createHermesInternalObject(
   defineInternMethod(
       P::enablePromiseRejectionTracker,
       hermesInternalEnablePromiseRejectionTracker);
+  defineInternMethod(P::useEngineQueue, hermesInternalUseEngineQueue);
 
   // All functions are known to be safe can be defined above this flag check.
   if (!flags.enableHermesInternal) {

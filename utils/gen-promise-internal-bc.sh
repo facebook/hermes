@@ -33,10 +33,16 @@ TMP_PROMISE_DIR="${TMP_DIR}/promise"
 TMP_PROMISE_JS="${TMP_PROMISE_DIR}/Promise.js"
 BC_PROMISE_JS="${BC_DIR}/01-Promise.js"
 
+NOLINT="/* @nolint */"
+PATCH1="  var useEngineQueue = HermesInternal.useEngineQueue()\;"
+PATCH2='(useEngineQueue ? HermesInternal.enqueueJob : setImmediate)'
+
 gen() {
-  # It's tricky to ensure `sed -i` work on both GNU and macOS consistantly.
+  # It's tricky to ensure `sed -i` work on both GNU and macOS consistently.
   # https://stackoverflow.com/questions/5694228/sed-in-place-flag-that-works-both-on-mac-bsd-and-linux
-  sed -i.bak '1s;^;/* @nolint */ ;' $TMP_PROMISE_JS && \
+  sed -i.bak "1s;^;${NOLINT};" $TMP_PROMISE_JS && \
+  sed -i.bak "3s;^;${PATCH1};" $TMP_PROMISE_JS && \
+  sed -i.bak "s/setImmediate/${PATCH2}/g" $TMP_PROMISE_JS && \
   sed -i.bak '$ d' $TMP_PROMISE_JS && \
   cat <<EOT >> $TMP_PROMISE_JS
 });
