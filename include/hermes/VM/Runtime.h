@@ -392,6 +392,25 @@ class Runtime : public HandleRootOwner,
   /// the builtins header header.
   inline Callable *getBuiltinCallable(unsigned builtinMethodID);
 
+  /// ES6-ES11 8.4.1 EnqueueJob ( queueName, job, arguments )
+  /// See \c jobQueue_ for how the Jobs and Job Queues are set up in Hermes.
+  inline void enqueueJob(Callable *job);
+
+  /// ES6-ES11 8.6 RunJobs ( )
+  /// Draining the job queue by invoking the queued jobs in FIFO order.
+  ///
+  /// \return ExecutionStatus::RETURNED if the job queue is emptied and no
+  /// exception was thrown from any job. Otherwise, ExecutionStatus::EXCEPTION
+  /// if an exception was thrown and the draining is stopped.
+  /// It's the caller's responsibility to check the status and re-invoke this
+  /// function to resume the draining to fulfill the microtask requirements.
+  ///
+  /// Note that ECMA-262 Promise Jobs always handle internal abruptCompletion
+  /// by returning a rejected Promise. However, the capability of propagating
+  /// exception per job is required by `queueMicrotask` to properly "report the
+  /// exception" (https://html.spec.whatwg.org/C#microtask-queuing).
+  ExecutionStatus drainJobs();
+
   IdentifierTable &getIdentifierTable() {
     return identifierTable_;
   }
@@ -1231,6 +1250,28 @@ class Runtime : public HandleRootOwner,
 
   /// True if the builtins are all frozen (non-writable, non-configurable).
   bool builtinsFrozen_{false};
+
+  /// ES6-ES11 8.4 Jobs and Job Queues.
+  /// A queue of pointers to callables that represent Jobs.
+  ///
+  /// Job: Since the ScriptJob is removed from ES12, the only type of Job from
+  /// ECMA-262 are Promise Jobs (https://tc39.es/ecma262/#sec-promise-jobs).
+  /// But it is also possible to implement the HTML defined `queueMicrotask`,
+  /// which is polyfill-able via Promise, by directly enqueuing into this job.
+  ///
+  /// Job are represented as callables with no parameters and would be invoked
+  /// via \c executeCall0 in Hermes. It's safe to do so because:
+  /// - Promise Jobs enqueued from Promise internal bytecode are thunks (or, in
+  /// the ES12 wording, Promise Jobs are Abstract Closure with no parameters).
+  /// - `queueMicrotask` take a JSFunction but only invoke it with 0 arguments.
+  ///
+  /// Although ES12 (9.4 Jobs and Host Operations to Enqueue Jobs) changed the
+  /// meta-language to ask hosts to schedule Promise Job to integrate with the
+  /// HTML spec, Hermes chose to adapt the ES6-11 suggested internal queue
+  /// approach, similar to other engines, e.g. V8/JSC, which is more efficient
+  /// (being able to batch the job invocations) and sufficient to express the
+  /// HTML spec specified "perform a microtask checkpoint" algorithm.
+  std::deque<Callable *> jobQueue_{};
 
 #ifdef HERMESVM_PROFILER_BB
   BasicBlockExecutionInfo basicBlockExecInfo_;

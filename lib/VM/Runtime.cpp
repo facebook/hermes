@@ -468,6 +468,14 @@ void Runtime::markRoots(
     acceptor.endRootSection();
   }
 
+  {
+    MarkRootsPhaseTimer timer(this, RootAcceptor::Section::Jobs);
+    acceptor.beginRootSection(RootAcceptor::Section::Jobs);
+    for (Callable *&f : jobQueue_)
+      acceptor.acceptPtr(f);
+    acceptor.endRootSection();
+  }
+
 #ifdef MARK
 #error "Shouldn't have defined mark already"
 #endif
@@ -1667,6 +1675,29 @@ void Runtime::freezeBuiltins() {
       llvh::ArrayRef<SymbolID>(objectList));
 
   builtinsFrozen_ = true;
+}
+
+ExecutionStatus Runtime::drainJobs() {
+  GCScope gcScope{this};
+  MutableHandle<Callable> job{this};
+  // Note that new jobs can be enqueued during the draining.
+  while (!jobQueue_.empty()) {
+    GCScopeMarkerRAII marker{gcScope};
+
+    job = jobQueue_.front();
+    jobQueue_.pop_front();
+
+    // Jobs are guaranteed to behave as thunks.
+    auto callRes =
+        Callable::executeCall0(job, this, Runtime::getUndefinedValue());
+
+    // Early return to signal the caller. Note that the exceptional job has been
+    // popped, so re-invocation would pick up from the next available job.
+    if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  }
+  return ExecutionStatus::RETURNED;
 }
 
 uint64_t Runtime::gcStableHashHermesValue(Handle<HermesValue> value) {

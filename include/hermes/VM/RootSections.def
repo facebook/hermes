@@ -14,6 +14,7 @@ ROOT_SECTION(RuntimeInstanceVars)
 ROOT_SECTION(RuntimeModules)
 ROOT_SECTION(CharStrings)
 ROOT_SECTION(Builtins)
+ROOT_SECTION(Jobs)
 ROOT_SECTION(Prototypes)
 // We don't need DebugEnvironment anymore, but keep it for MobileLab.
 ROOT_SECTION(DebugEnvironment)
