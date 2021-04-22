@@ -158,6 +158,8 @@ NATIVE_FUNCTION(hermesInternalTTRCReached)
 
 NATIVE_FUNCTION(hermesInternalSetPromiseRejectionTrackingHook)
 NATIVE_FUNCTION(hermesInternalEnablePromiseRejectionTracker)
+NATIVE_FUNCTION(hermesInternalEnqueueJob)
+NATIVE_FUNCTION(hermesInternalDrainJobs)
 
 #ifdef HERMES_ENABLE_DEBUGGER
 NATIVE_FUNCTION(isDebuggerAttached)
