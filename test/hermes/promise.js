@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -Xes6-promise %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -Xvm-experiment-flags=16384 %s | %FileCheck --match-full-lines %s
 // RUN: %hermesc -O -emit-binary -out %t.hbc %s && %hermes -Xes6-promise %t.hbc | %FileCheck --match-full-lines %s
 
 print('promise');

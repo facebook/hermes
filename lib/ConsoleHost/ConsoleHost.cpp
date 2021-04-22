@@ -486,6 +486,9 @@ bool executeHBCBytecodeImpl(
         llvh::errs(), runtime->makeHandle(runtime->getThrownValue()));
   }
 
+  // Perform a microtask checkpoint after running script.
+  microtask::performCheckpoint(runtime.get());
+
   if (!ctx.tasksEmpty()) {
     vm::GCScopeMarkerRAII marker{scope};
     // Run the tasks until there are no more.
@@ -501,6 +504,9 @@ bool executeHBCBytecodeImpl(
             llvh::errs(), runtime->makeHandle(runtime->getThrownValue()));
         break;
       }
+
+      // Perform a microtask checkpoint at the end of every task tick.
+      microtask::performCheckpoint(runtime.get());
     }
   }
 

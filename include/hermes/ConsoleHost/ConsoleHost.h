@@ -70,6 +70,32 @@ class ConsoleHostContext {
   }
 };
 
+/// Microtask checkpoint.
+/// https://html.spec.whatwg.org/C#perform-a-microtask-checkpoint
+///
+/// The algorithm needs to exhaust the event loop's microtask queue. Since the
+/// only type of microtask in ConsoleHost environments is ECMAScript Job, It
+/// is implemented by draining the job queue of \p runtime.
+/// It needs to be performed as steps of 8.1.4.4 Calling scripts and 8.1.6.3
+/// Process model (event loop), notably when the JS call stack is emptied.
+namespace microtask {
+
+/// Complete a checkpoint by repetitively trying to drain the engine job queue
+/// until there was no errors (implying queue exhaustiveness).
+/// Note that exceptions are directly printed to stderr.
+inline void performCheckpoint(vm::Runtime *runtime) {
+  if (!runtime->useJobQueue())
+    return;
+
+  while (
+      LLVM_UNLIKELY(runtime->drainJobs() == vm::ExecutionStatus::EXCEPTION)) {
+    runtime->printException(
+        llvh::errs(), runtime->makeHandle(runtime->getThrownValue()));
+  };
+}
+
+} // namespace microtask
+
 /// Installs console host functions in Runtime \p runtime.
 /// Host functions installed:
 ///   - quit()

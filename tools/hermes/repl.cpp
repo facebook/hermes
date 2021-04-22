@@ -425,6 +425,9 @@ int repl(const vm::RuntimeConfig &config) {
       resHandle = std::move(*callRes);
     }
 
+    // Perform a microtask checkpoint after running script.
+    microtask::performCheckpoint(runtime.get());
+
     if (!ctx.tasksEmpty()) {
       // Run the tasks until there are no more.
       vm::MutableHandle<vm::Callable> task{runtime.get()};
@@ -442,6 +445,9 @@ int repl(const vm::RuntimeConfig &config) {
           llvh::outs().resetColor();
           code.clear();
         }
+
+        // Perform a microtask checkpoint at the end of every task tick.
+        microtask::performCheckpoint(runtime.get());
       }
     }
 
