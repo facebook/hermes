@@ -851,6 +851,10 @@ class Runtime : public HandleRootOwner,
     return hasIntl_;
   }
 
+  bool useJobQueue() const {
+    return getVMExperimentFlags() & experiments::JobQueue;
+  }
+
   bool builtinsAreFrozen() const {
     return builtinsFrozen_;
   }
