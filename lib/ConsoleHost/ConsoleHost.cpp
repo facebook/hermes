@@ -486,7 +486,7 @@ bool executeHBCBytecodeImpl(
         llvh::errs(), runtime->makeHandle(runtime->getThrownValue()));
   }
 
-  if (!threwException && !ctx.tasksEmpty()) {
+  if (!ctx.tasksEmpty()) {
     vm::GCScopeMarkerRAII marker{scope};
     // Run the tasks until there are no more.
     vm::MutableHandle<vm::Callable> task{runtime.get()};
