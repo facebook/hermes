@@ -739,6 +739,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::Value evaluateJavaScript(
       const std::shared_ptr<const jsi::Buffer> &buffer,
       const std::string &sourceURL) override;
+  bool drainMicrotasks(int maxMicrotasksHint = -1) override;
   jsi::Object global() override;
 
   std::string description() override;
@@ -1469,6 +1470,10 @@ jsi::Value HermesRuntimeImpl::evaluateJavaScript(
     const std::shared_ptr<const jsi::Buffer> &buffer,
     const std::string &sourceURL) {
   return evaluateJavaScriptWithSourceMap(buffer, nullptr, sourceURL);
+}
+
+bool HermesRuntimeImpl::drainMicrotasks(int maxMicrotasksHint) {
+  return true;
 }
 
 jsi::Object HermesRuntimeImpl::global() {
