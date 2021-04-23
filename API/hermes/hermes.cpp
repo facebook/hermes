@@ -678,7 +678,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
     } else if (value.isBool()) {
       return vm::HermesValue::encodeBoolValue(value.getBool());
     } else if (value.isNumber()) {
-      return vm::HermesValue::encodeNumberValue(value.getNumber());
+      return vm::HermesValue::encodeUntrustedDoubleValue(value.getNumber());
     } else if (value.isSymbol() || value.isString() || value.isObject()) {
       return phv(value);
     } else {
@@ -695,7 +695,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       return vm::Runtime::getBoolValue(value.getBool());
     } else if (value.isNumber()) {
       return runtime_.makeHandle(
-          vm::HermesValue::encodeNumberValue(value.getNumber()));
+          vm::HermesValue::encodeUntrustedDoubleValue(value.getNumber()));
     } else if (value.isSymbol() || value.isString() || value.isObject()) {
       return vm::Handle<vm::HermesValue>(&phv(value));
     } else {
