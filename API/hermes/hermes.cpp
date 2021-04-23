@@ -1473,6 +1473,11 @@ jsi::Value HermesRuntimeImpl::evaluateJavaScript(
 }
 
 bool HermesRuntimeImpl::drainMicrotasks(int maxMicrotasksHint) {
+  if (runtime_.useJobQueue()) {
+    checkStatus(runtime_.drainJobs());
+  }
+  // \c drainJobs is currently an unbounded execution, hence no exceptions
+  // implies drained until TODO(T89426441): \c maxMicrotasksHint is supported
   return true;
 }
 
