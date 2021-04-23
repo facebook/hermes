@@ -427,8 +427,9 @@ class HadesGC final : public GCBase {
 
     /// Sweep the next segment and advance the internal sweep iterator. If there
     /// are no more segments left to sweep, update OG collection stats with
-    /// numbers from the sweep.
-    bool sweepNext();
+    /// numbers from the sweep. \p backgroundThread indicates  whether this call
+    /// was made from the background thread.
+    bool sweepNext(bool backgroundThread);
 
     /// Initialize the internal sweep iterator. This will reset the internal
     /// sweep stats to 0, and set the sweep iterator to the last segment in the

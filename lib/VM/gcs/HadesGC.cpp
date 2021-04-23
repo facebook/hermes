@@ -1076,7 +1076,7 @@ class HadesGC::Executor {
   std::thread thread_;
 };
 
-bool HadesGC::OldGen::sweepNext() {
+bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
   // Check if there are any more segments to sweep. Note that in the case where
   // OG has zero segments, this also skips updating the stats and survival ratio
   // at the end of this function, since they are not required.
@@ -1105,8 +1105,10 @@ bool HadesGC::OldGen::sweepNext() {
   for (GCCell *cell : segments_[sweepIterator_.segNumber].cells()) {
     assert(cell->isValid() && "Invalid cell in sweeping");
     if (HeapSegment::getCellMarkBit(cell)) {
-      // Cannot concurrently trim storage.
-      if (kConcurrentGC)
+      // Cannot concurrently trim storage. Technically just checking
+      // backgroundThread would suffice, but the kConcurrentGC lets us compile
+      // away this check in incremental mode.
+      if (kConcurrentGC && backgroundThread)
         continue;
       const uint32_t cellSize = cell->getAllocatedSize();
       const uint32_t trimmedSize =
@@ -1667,7 +1669,7 @@ void HadesGC::incrementalCollect(bool backgroundThread) {
       if (!kConcurrentGC && ygCollectionStats_)
         ygCollectionStats_->addCollectionType("sweeping");
       // Calling oldGen_.sweepNext() will sweep the next segment.
-      if (!oldGen_.sweepNext()) {
+      if (!oldGen_.sweepNext(backgroundThread)) {
         // Finish any collection bookkeeping.
         ogCollectionStats_->setEndTime();
         ogCollectionStats_->setAfterSize(heapFootprint());
