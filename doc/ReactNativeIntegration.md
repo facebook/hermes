@@ -7,7 +7,7 @@ title: React Native Integration
 
 To make Hermes usable in a React Native app we need to perform the following steps:
 
-1. Package a Hermes build into a npm package structure.
+1. Package a Hermes build into an npm package structure.
 2. Register this npm package with Yarn for use in other local projects.
 3. Link the npm package registered with Yarn into the React Native tree for our app.
 
