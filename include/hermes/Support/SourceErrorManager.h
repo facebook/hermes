@@ -9,6 +9,7 @@
 #define HERMES_SUPPORT_SOURCEERRORMANAGER_H
 
 #include "hermes/Support/OptValue.h"
+#include "hermes/Support/StringSetVector.h"
 #include "hermes/Support/Warning.h"
 
 #include "llvh/ADT/DenseMap.h"
@@ -26,9 +27,7 @@ using llvh::SMLoc;
 using llvh::SMRange;
 using llvh::Twine;
 
-/// Forward declaration of the private implementation of the source location
-/// cache.
-class SourceLocationCache;
+class CollectMessagesRAII;
 
 /// Options for outputting errors
 struct SourceErrorOutputOptions {
@@ -114,6 +113,13 @@ class SourceErrorManager {
   SourceErrorOutputOptions outputOptions_;
   std::shared_ptr<ICoordTranslator> translator_{};
 
+  /// Virtual buffers are tagged with the higest bit.
+  static constexpr unsigned kVirtualBufIdTag = 1u
+      << (sizeof(unsigned) * CHAR_BIT - 1);
+
+  /// The names of virtual buffers.
+  hermes::StringSetVector virtualBufferNames_{};
+
   static constexpr unsigned kMessageCountSize = 4;
 
   unsigned messageCount_[kMessageCountSize]{0, 0, 0, 0};
@@ -124,15 +130,16 @@ class SourceErrorManager {
   /// Set to true once the error limit has been reached.
   bool errorLimitReached_ = false;
 
-  std::shared_ptr<SourceLocationCache> cache_;
-
   /// Mapping from warnings to true if enabled, false if disabled.
   /// All warnings default to enabled, and the numerical value of the Warning
   /// enum is the index in this vector.
   llvh::SmallBitVector warningStatuses_;
 
-  /// If set, warnings are treated as errors.
-  bool warningsAreErrors_{false};
+  /// Mapping from warnings to true if should be treated as an error, false if
+  /// should be treated as a warning. All warnings default to being treated as
+  /// warnings, and the numerical value of the Warning enum is the index in this
+  /// vector.
+  llvh::SmallBitVector warningsAreErrors_;
 
   /// If set, messages from the given subsystem are ignored.
   /// If set to Subsystem::Unspecified, then all messages are ignored.
@@ -144,11 +151,11 @@ class SourceErrorManager {
 
   /// Map of bufId to source mapping URLs.
   /// If an entry doesn't exist, then there is no source mapping URL.
-  llvh::DenseMap<uint32_t, std::string> sourceMappingUrls_{};
+  llvh::DenseMap<unsigned, std::string> sourceMappingUrls_{};
 
   /// Map of bufId to user-specified source URLs.
   /// If an entry doesn't exist, then there is no user-specified source URL.
-  llvh::DenseMap<uint32_t, std::string> sourceUrls_{};
+  llvh::DenseMap<unsigned, std::string> sourceUrls_{};
 
   /// If larger than zero, messages are buffered and not immediately displayed.
   /// They will be displayed once the counter falls back to zero.
@@ -196,6 +203,10 @@ class SourceErrorManager {
     unsigned firstNote_;
   };
 
+  /// If non-null, send messages to externalMessageBuffer_ instead of directly
+  /// to bufferedMessages_ or printing to screen.
+  CollectMessagesRAII *externalMessageBuffer_{nullptr};
+
   /// All buffered messages. This is empty if \c bufferingEnabled_ is zero.
   std::vector<BufferedMessage> bufferedMessages_{};
 
@@ -207,6 +218,7 @@ class SourceErrorManager {
 
   friend class SaveAndSuppressMessages;
   friend class SaveAndBufferMessages;
+  friend class CollectMessagesRAII;
 
   bool isWarningEnabled(Warning warning) {
     return warningStatuses_.test((unsigned)warning);
@@ -248,12 +260,26 @@ class SourceErrorManager {
     errorLimitReached_ = false;
   }
 
-  bool getWarningsAreErrors() const {
-    return warningsAreErrors_;
+  /// \return true if \c warning is treated as an error or false if it's treated
+  /// as a warning.
+  bool isWarningAnError(Warning warning) const {
+    return warningsAreErrors_.test((unsigned)warning);
   }
 
+  /// Set \c warning to be treated as an error if \c warningIsErrors is true
+  /// or as a warning if it's false.
+  void setWarningIsError(Warning warning, bool warningIsError) {
+    warningsAreErrors_[(unsigned)warning] = warningIsError;
+  }
+
+  /// Set all warnings to be treated as errors if \c warningsAreErrors is true
+  /// or as warnings if it's false.
   void setWarningsAreErrors(bool warningsAreErrors) {
-    warningsAreErrors_ = warningsAreErrors;
+    if (warningsAreErrors) {
+      warningsAreErrors_.set();
+    } else {
+      warningsAreErrors_.reset();
+    }
   }
 
   void disableAllWarnings() {
@@ -261,8 +287,7 @@ class SourceErrorManager {
   }
 
   void setWarningStatus(Warning warning, bool enabled) {
-    enabled ? warningStatuses_.set((unsigned)warning)
-            : warningStatuses_.reset((unsigned)warning);
+    warningStatuses_[(unsigned)warning] = enabled;
   }
 
   SourceErrorOutputOptions getOutputOptions() const {
@@ -299,29 +324,36 @@ class SourceErrorManager {
   /// Add a new source buffer to this source manager. This takes ownership of
   /// the memory buffer.
   /// \return the ID of the newly added buffer.
-  uint32_t addNewSourceBuffer(std::unique_ptr<llvh::MemoryBuffer> f) {
-    return sm_.AddNewSourceBuffer(std::move(f), SMLoc{});
+  unsigned addNewSourceBuffer(std::unique_ptr<llvh::MemoryBuffer> f);
+
+  /// Add a source buffer which maps to a filename. It doesn't contain any
+  /// source and the only operation that can be performed on that buffer is to
+  /// obtain the filename using \c getBufferFileName() or \c getSourceUrl().
+  unsigned addNewVirtualSourceBuffer(llvh::StringRef fileName);
+
+  /// \return true if this bufferId was created using \c
+  /// addNewVirtualSourceBuffer().
+  inline bool isVirtualBufferId(unsigned bufId) const {
+    return (bufId & kVirtualBufIdTag) != 0;
   }
 
-  /// Add a source buffer which maps to a file, but doesn't actually contain any
-  /// source.
-  /// \param bufferName the LLVM buffer name associated with the buffer. In
-  ///     practice it usually contains a file path.
-  uint32_t addNewVirtualSourceBuffer(llvh::StringRef bufferName);
+  /// \return the filename associated with the buffer id (which may be virtual).
+  llvh::StringRef getBufferFileName(unsigned bufId) const;
 
-  const llvh::MemoryBuffer *getSourceBuffer(uint32_t bufId) const {
+  const llvh::MemoryBuffer *getSourceBuffer(unsigned bufId) const {
+    assert(!isVirtualBufferId(bufId) && "virtual buffers cannot be accessed");
     return sm_.getMemoryBuffer(bufId);
   }
 
   /// Set the source mapping URL for the buffer \p bufId.
   /// If one was already set, overwrite it.
-  void setSourceMappingUrl(uint32_t bufId, llvh::StringRef url) {
+  void setSourceMappingUrl(unsigned bufId, llvh::StringRef url) {
     sourceMappingUrls_[bufId] = url;
   }
 
   /// Get the source mapping URL for file \p bufId.
   /// \return URL if it exists, else return empty string.
-  llvh::StringRef getSourceMappingUrl(uint32_t bufId) const {
+  llvh::StringRef getSourceMappingUrl(unsigned bufId) const {
     const auto it = sourceMappingUrls_.find(bufId);
     if (it == sourceMappingUrls_.end()) {
       return "";
@@ -331,7 +363,7 @@ class SourceErrorManager {
 
   /// Set the user-specified source URL for the buffer \p bufId.
   /// If one was already set, overwrite it.
-  void setSourceUrl(uint32_t bufId, llvh::StringRef url) {
+  void setSourceUrl(unsigned bufId, llvh::StringRef url) {
     sourceUrls_[bufId] = url;
   }
 
@@ -363,12 +395,6 @@ class SourceErrorManager {
       const llvh::SMDiagnostic &diag,
       SourceErrorOutputOptions opts);
 
-  /// Return an identifier for this buffer, typically the filename it was read
-  /// from.
-  llvh::StringRef getOriginalBufferIdentifier(unsigned bufId) const {
-    return sm_.getMemoryBuffer(bufId)->getBufferIdentifier();
-  }
-
   /// Get the user-specified source URL for this buffer, or a default identifier
   /// for it (typically the filename it was read from).
   llvh::StringRef getSourceUrl(unsigned bufId) const {
@@ -376,7 +402,7 @@ class SourceErrorManager {
     if (it != sourceUrls_.end()) {
       return it->second;
     }
-    return getOriginalBufferIdentifier(bufId);
+    return getBufferFileName(bufId);
   }
 
   /// Print the passed source coordinates in human readable form for debugging.
@@ -544,18 +570,84 @@ class SourceErrorManager {
   };
 
  private:
-  /// Optionally upgrade warnings into errors.
-  void upgradeDiag(DiagKind &dk) {
-    assert(dk <= DK_Note && "invalid DiagKind");
-    if (warningsAreErrors_ && dk == DK_Warning)
-      dk = DK_Error;
-  }
+  /// Increment the message counter and check if we've hit the error limit.
+  void countAndGenMessage(DiagKind dk, SMLoc loc, SMRange sm, const Twine &msg);
 
   /// Implementation of generating a message.
   void doGenMessage(DiagKind dk, SMLoc loc, SMRange sm, const Twine &msg);
 
   /// Actually print the message without performing any checks, buffering, etc.
   void doPrintMessage(DiagKind dk, SMLoc loc, SMRange sm, const Twine &msg);
+
+  /// Convert a virtual buffer ID to an index.
+  unsigned virtualBufferIdToIndex(unsigned bufId) const {
+    assert(isVirtualBufferId(bufId) && "bufId is not virtual");
+    return bufId & ~kVirtualBufIdTag;
+  }
+
+  /// Convert an index to a virtual buffer ID.
+  unsigned indexToVirtualBufferId(unsigned index) const {
+    return index | kVirtualBufIdTag;
+  }
+};
+
+/// RAII to enable message buffering and restore the previous state of
+/// buffering on destruction, while discarding messages on request.
+/// Enables the caller to decide whether or not to actually print the messages
+/// upon destruction while this class is alive.
+class CollectMessagesRAII {
+  SourceErrorManager *const sm_;
+  CollectMessagesRAII *oldExternalMessageBuffer_;
+
+  /// Whether to show or discard messages upon destruction.
+  bool discardMessages_;
+
+  class StoredMessage {
+   public:
+    SourceErrorManager::DiagKind dk;
+    SMLoc loc;
+    SMRange sm;
+    std::string msg;
+
+    StoredMessage(
+        SourceErrorManager::DiagKind dk,
+        SMLoc loc,
+        SMRange sm,
+        Twine const &msg)
+        : dk(dk), loc(loc), sm(sm), msg(msg.str()) {}
+  };
+
+  std::vector<StoredMessage> storage_{};
+
+ public:
+  CollectMessagesRAII(SourceErrorManager *sm, bool discardMessages)
+      : sm_(sm), discardMessages_(discardMessages) {
+    sm->enableBuffering();
+    oldExternalMessageBuffer_ = sm->externalMessageBuffer_;
+    sm->externalMessageBuffer_ = this;
+  }
+
+  ~CollectMessagesRAII() {
+    if (!discardMessages_) {
+      for (StoredMessage &msg : storage_) {
+        sm_->countAndGenMessage(msg.dk, msg.loc, msg.sm, std::move(msg.msg));
+      }
+    }
+    sm_->disableBuffering();
+    sm_->externalMessageBuffer_ = oldExternalMessageBuffer_;
+  }
+
+  void addMessage(
+      SourceErrorManager::DiagKind dk,
+      SMLoc loc,
+      SMRange sm,
+      Twine const &msg) {
+    storage_.emplace_back(dk, loc, sm, msg);
+  }
+
+  void setDiscardMessages(bool discardMessages) {
+    discardMessages_ = discardMessages;
+  }
 };
 
 } // namespace hermes

@@ -33,6 +33,7 @@ Keywords::Keywords(Context &astContext)
           astContext.getIdentifier("arguments").getUnderlyingPointer()),
       identEval(astContext.getIdentifier("eval").getUnderlyingPointer()),
       identDelete(astContext.getIdentifier("delete").getUnderlyingPointer()),
+      identThis(astContext.getIdentifier("this").getUnderlyingPointer()),
       identUseStrict(
           astContext.getIdentifier("use strict").getUnderlyingPointer()),
       identVar(astContext.getIdentifier("var").getUnderlyingPointer()),
@@ -44,13 +45,15 @@ Keywords::Keywords(Context &astContext)
 
 SemanticValidator::SemanticValidator(
     Context &astContext,
-    sem::SemContext &semCtx)
+    sem::SemContext &semCtx,
+    bool compile)
     : astContext_(astContext),
       sm_(astContext.getSourceErrorManager()),
       bufferMessages_{&sm_},
       semCtx_(semCtx),
       initialErrorCount_(sm_.getErrorCount()),
-      kw_(astContext) {}
+      kw_(astContext),
+      compile_(compile) {}
 
 bool SemanticValidator::doIt(Node *rootNode) {
   visitESTreeNode(*this, rootNode);
@@ -140,7 +143,7 @@ void SemanticValidator::visit(FunctionExpressionNode *funcExpr) {
 
 void SemanticValidator::visit(ArrowFunctionExpressionNode *arrowFunc) {
   // Convert expression functions to a full-body to simplify IRGen.
-  if (arrowFunc->_expression) {
+  if (compile_ && arrowFunc->_expression) {
     auto *retStmt = new (astContext_) ReturnStatementNode(arrowFunc->_body);
     retStmt->copyLocationFrom(arrowFunc->_body);
 
@@ -167,6 +170,11 @@ void SemanticValidator::visit(ForInStatementNode *forIn) {
   visitForInOf(forIn, forIn->_left);
 }
 void SemanticValidator::visit(ForOfStatementNode *forOf) {
+  if (compile_ && forOf->_await)
+    sm_.error(
+        forOf->getSourceRange(),
+        "for await..of loops are currently unsupported");
+
   visitForInOf(forOf, forOf->_left);
 }
 
@@ -263,7 +271,8 @@ void SemanticValidator::visit(LabeledStatementNode *labelStmt) {
 /// Check RegExp syntax.
 void SemanticValidator::visit(RegExpLiteralNode *regexp) {
   llvh::StringRef regexpError;
-  if (!CompiledRegExp::tryCompile(
+  if (compile_ &&
+      !CompiledRegExp::tryCompile(
           regexp->_pattern->str(), regexp->_flags->str(), &regexpError)) {
     sm_.error(
         regexp->getSourceRange(),
@@ -295,7 +304,7 @@ void SemanticValidator::visit(TryStatementNode *tryStatement) {
   //    } finally {
   //      finallyBody;
   //    }
-  if (tryStatement->_handler && tryStatement->_finalizer) {
+  if (compile_ && tryStatement->_handler && tryStatement->_finalizer) {
     auto *nestedTry = new (astContext_)
         TryStatementNode(tryStatement->_block, tryStatement->_handler, nullptr);
     nestedTry->copyLocationFrom(tryStatement);
@@ -418,7 +427,8 @@ void SemanticValidator::visit(ContinueStatementNode *continueStmt) {
 }
 
 void SemanticValidator::visit(ReturnStatementNode *returnStmt) {
-  if (curFunction()->isGlobalScope())
+  if (curFunction()->isGlobalScope() &&
+      !astContext_.allowReturnOutsideFunction())
     sm_.error(returnStmt->getSourceRange(), "'return' not in a function");
   visitESTreeChildren(*this, returnStmt);
 }
@@ -461,6 +471,7 @@ void SemanticValidator::visit(SpreadElementNode *S, Node *parent) {
   if (!isa<ESTree::ObjectExpressionNode>(parent) &&
       !isa<ESTree::ArrayExpressionNode>(parent) &&
       !isa<ESTree::CallExpressionNode>(parent) &&
+      !isa<ESTree::OptionalCallExpressionNode>(parent) &&
       !isa<ESTree::NewExpressionNode>(parent))
     sm_.error(S->getSourceRange(), "spread operator is not supported");
   visitESTreeChildren(*this, S);
@@ -473,6 +484,18 @@ void SemanticValidator::visit(ClassExpressionNode *node) {
 
 void SemanticValidator::visit(ClassDeclarationNode *node) {
   SaveAndRestore<bool> oldStrictMode{curFunction()->strictMode, true};
+  visitESTreeChildren(*this, node);
+}
+
+void SemanticValidator::visit(PrivateNameNode *node) {
+  if (compile_)
+    sm_.error(node->getSourceRange(), "private properties are not supported");
+  visitESTreeChildren(*this, node);
+}
+
+void SemanticValidator::visit(ClassPrivatePropertyNode *node) {
+  if (compile_)
+    sm_.error(node->getSourceRange(), "private properties are not supported");
   visitESTreeChildren(*this, node);
 }
 
@@ -535,19 +558,22 @@ void SemanticValidator::visit(ExportDefaultDeclarationNode *exportDecl) {
 
   if (auto *funcDecl =
           dyn_cast<ESTree::FunctionDeclarationNode>(exportDecl->_declaration)) {
-    if (!funcDecl->_id) {
+    if (compile_ && !funcDecl->_id) {
       // If the default function declaration has no name, then change it to a
       // FunctionExpression node for cleaner IRGen.
-      exportDecl->_declaration =
-          new (astContext_) ESTree::FunctionExpressionNode(
-              funcDecl->_id,
-              std::move(funcDecl->_params),
-              funcDecl->_body,
-              funcDecl->_typeParameters,
-              funcDecl->_returnType,
-              funcDecl->_generator,
-              /* async */ false);
-      exportDecl->_declaration->copyLocationFrom(funcDecl);
+      auto *funcExpr = new (astContext_) ESTree::FunctionExpressionNode(
+          funcDecl->_id,
+          std::move(funcDecl->_params),
+          funcDecl->_body,
+          funcDecl->_typeParameters,
+          funcDecl->_returnType,
+          funcDecl->_predicate,
+          funcDecl->_generator,
+          /* async */ false);
+      funcExpr->strictness = funcDecl->strictness;
+      funcExpr->copyLocationFrom(funcDecl);
+
+      exportDecl->_declaration = funcExpr;
     }
   }
 
@@ -579,6 +605,12 @@ void SemanticValidator::visit(CoverRestElementNode *R) {
   sm_.error(R->getSourceRange(), "'...' not allowed in this context");
 }
 
+#if HERMES_PARSE_FLOW
+void SemanticValidator::visit(CoverTypedIdentifierNode *CTI) {
+  sm_.error(CTI->getSourceRange(), "typecast not allowed in this context");
+}
+#endif
+
 void SemanticValidator::visitFunction(
     FunctionLikeNode *node,
     Node *id,
@@ -598,14 +630,39 @@ void SemanticValidator::visitFunction(
 
   // Note that body might me empty (for lazy functions) or an expression (for
   // arrow functions).
-  if (isa<ESTree::BlockStatementNode>(body)) {
-    useStrictNode =
-        scanDirectivePrologue(cast<ESTree::BlockStatementNode>(body)->_body);
+  if (auto *bodyNode = dyn_cast<ESTree::BlockStatementNode>(body)) {
+    if (bodyNode->isLazyFunctionBody) {
+      // If it is a lazy function body, then scanning the directive prologue
+      // won't accomplish anything. Set the strictness directly via the
+      // stored strictness (which was populated based on preparsing data).
+      curFunction()->strictMode = ESTree::isStrict(node->strictness);
+    } else {
+      useStrictNode = scanDirectivePrologue(bodyNode->_body);
+    }
     updateNodeStrictness(node);
   }
 
   if (id)
     validateDeclarationNames(FunctionInfo::VarDecl::Kind::Var, id, nullptr);
+
+#if HERMES_PARSE_FLOW
+  if (astContext_.getParseFlow() && !params.empty()) {
+    // Skip 'this' parameter annotation, and error if it's an arrow parameter,
+    // because arrow functions inherit 'this'.
+    if (auto *ident = dyn_cast<ESTree::IdentifierNode>(&params.front())) {
+      if (ident->_name == kw_.identThis) {
+        if (isa<ArrowFunctionExpressionNode>(node)) {
+          sm_.error(
+              ident->getSourceRange(), "'this' not allowed as parameter name");
+        }
+        if (compile_) {
+          // Delete the node because it cannot be compiled.
+          params.erase(params.begin());
+        }
+      }
+    }
+  }
+#endif
 
   // Set to false if the parameter list contains binding patterns.
   bool simpleParameterList = true;

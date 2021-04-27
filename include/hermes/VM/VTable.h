@@ -141,11 +141,12 @@ struct VTable {
       TrimCallback *trim = nullptr,
       ExternalMemorySize *externalMemorySize = nullptr,
       HeapSnapshotMetadata snapshotMetaData =
-          HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
-                               nullptr,
-                               nullptr,
-                               nullptr,
-                               nullptr})
+          HeapSnapshotMetadata{
+              HeapSnapshot::NodeType::Object,
+              nullptr,
+              nullptr,
+              nullptr,
+              nullptr})
       : kind(kind),
         size(heapAlignSize(size)),
         finalize_(finalize),
@@ -187,20 +188,21 @@ struct VTable {
     return mallocSize_ ? mallocSize_(cell) : 0;
   }
 
-  bool canBeTrimmed() const {
-    assert(isValid());
-    return trim_;
-  }
-
-  /// Tell the \p cell to shrink itself, and return its new size. If the cell
-  /// doesn't have any shrinking to do, return the \p origSize.
-  gcheapsize_t getTrimmedSize(GCCell *cell, gcheapsize_t origSize) const {
-    assert(isValid());
-    return canBeTrimmed() ? heapAlignSize(trimSize_(cell)) : origSize;
+  /// If the cell can be trimmed, return the new size of the cell after
+  /// trimming. Otherwise, return \p origSize.
+  gcheapsize_t getTrimmedSize(GCCell *cell, size_t origSize) const {
+    const size_t trimmedSize =
+        trim_ ? heapAlignSize(trimSize_(cell)) : origSize;
+    assert(
+        isValid() && trimmedSize <= origSize &&
+        "Growing objects is not supported.");
+    return trimmedSize;
   }
 
   void trim(GCCell *cell) const {
-    assert(isValid());
+    assert(
+        isValid() && isVariableSize() &&
+        "A trimmable cell must be variable sized");
     trim_(cell);
   }
 
@@ -215,7 +217,7 @@ struct VTable {
   ///   * The magic_ field has the expected value.
   ///   * The kind that is within the range of valid CellKinds.
   bool isValid() const {
-    return magic_ == kMagic &&
+    return magic_ == kMagic && isSizeHeapAligned(size) &&
         kindInRange(
                kind, CellKind::AllCellsKind_first, CellKind::AllCellsKind_last);
   }
@@ -223,7 +225,7 @@ struct VTable {
   /// \return true iff this VTable has the correct magic_ value, and has the
   /// given \p expectedKind.
   bool isValid(CellKind expectedKind) const {
-    return magic_ == kMagic && kind == expectedKind;
+    return magic_ == kMagic && isSizeHeapAligned(size) && kind == expectedKind;
   }
 };
 

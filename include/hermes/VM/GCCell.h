@@ -26,15 +26,11 @@ class VariableSizeRuntimeCell;
 /// Return the allocation size for a fixed-size cell corresponding to class C.
 /// This must be used instead of the builtin sizeof operator, since classes
 /// further down the GCCell hierarchy may add (fixed-size) trailing objects and
-/// redefine this method. Example usage:
-///
-/// CallResult<HermesValue> MyCell::create(Runtime *runtime, ...) {
-///   void *mem = runtime->alloc(cellSize<MyCell>());
-///   ...
+/// redefine this method.
 template <class C>
 static constexpr uint32_t cellSize() {
   static_assert(HeapAlign % alignof(C) == 0, "insufficient heap alignment");
-  return C::template cellSizeImpl<C>();
+  return heapAlignSize(C::template cellSizeImpl<C>());
 }
 
 /// This include file defines a GCCell that allows forward heap
@@ -83,9 +79,7 @@ class GCCell {
     // ExternalStringPrimitive<T> is special: it extends VariableSizeRuntimeCell
     // but it's actually fixed-size.
     static_assert(
-        !std::is_convertible<C *, VariableSizeRuntimeCell *>::value ||
-            std::is_same<C, ExternalStringPrimitive<char>>::value ||
-            std::is_same<C, ExternalStringPrimitive<char16_t>>::value,
+        !std::is_convertible<C *, VariableSizeRuntimeCell *>::value,
         "must be fixed-size");
     return sizeof(C);
   }
@@ -284,13 +278,12 @@ class VariableSizeRuntimeCell : public GCCell {
   }
 
   /// Sets the size of the current cell to be \p sz.
-  /// NOTE: This should only be used by the GC, and only during compaction to
-  /// shrink objects.
+  /// NOTE: This should only be used by the GC, and only to shrink objects.
   /// \pre sz is already heap-aligned.
-  void setSizeDuringGCCompaction(uint32_t sz) {
+  void setSizeFromGC(uint32_t sz) {
     assert(
         isVariableSize() &&
-        "Cannot call setSizeDuringGCCompaction on a non-variable size cell");
+        "Cannot call setSizeFromGC on a non-variable size cell");
     assert(
         sz >= sizeof(VariableSizeRuntimeCell) &&
         "Should not allocate a VariableSizeRuntimeCell of size less than "

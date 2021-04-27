@@ -93,7 +93,6 @@ class SegmentedArray final
       length_.store(newLength, std::memory_order_release);
     }
 
-   private:
 #ifdef HERMESVM_SERIALIZE
     explicit Segment(Deserializer &d);
 
@@ -102,11 +101,14 @@ class SegmentedArray final
 #endif
 
     friend void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb);
-    static VTable vt;
+
+   private:
+    static const VTable vt;
 
     AtomicIfConcurrentGC<uint32_t> length_;
     GCHermesValue data_[kMaxLength];
 
+   public:
     explicit Segment(Runtime *runtime)
         : GCCell(&runtime->getHeap(), &vt), length_(0) {}
   };
@@ -257,9 +259,10 @@ class SegmentedArray final
   static CallResult<PseudoHandle<SegmentedArray>>
   create(Runtime *runtime, size_type capacity, size_type size);
 
-  /// Gets the element located at \p index.
+  /// Returns a reference to an element. Strongly prefer using at and set
+  /// instead.
   template <Inline inl = Inline::No>
-  GCHermesValue &at(TotalIndex index) {
+  GCHermesValue &atRef(TotalIndex index) {
     if (inl == Inline::Yes) {
       assert(
           index < kValueToSegmentThreshold && index < size() &&
@@ -271,14 +274,25 @@ class SegmentedArray final
     }
   }
 
-  /// Get the element located at \p index. \p const function for read.
-  const GCHermesValue &at(size_type index) const {
+  /// Gets the element located at \p index.
+  template <Inline inl = Inline::No>
+  HermesValue at(size_type index) const {
     assert(index < size() && "Invalid index.");
-    if (index < kValueToSegmentThreshold) {
+    if (inl == Inline::Yes || index < kValueToSegmentThreshold) {
       return inlineStorage()[index];
     } else {
       return segmentAt(toSegment(index))->at(toInterior(index));
     }
+  }
+
+  /// Sets the element located at \p index to \p val.
+  template <Inline inl = Inline::No>
+  void set(TotalIndex index, HermesValue val, GC *gc) {
+    atRef<inl>(index).set(val, gc);
+  }
+  template <Inline inl = Inline::No>
+  void setNonPtr(TotalIndex index, HermesValue val, GC *gc) {
+    atRef<inl>(index).setNonPtr(val, gc);
   }
 
   /// Gets the size of the SegmentedArray. The size is the number of elements
@@ -353,7 +367,7 @@ class SegmentedArray final
   }
 
  private:
-  static VTable vt;
+  static const VTable vt;
 
   friend TrailingObjects;
   friend void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb);
@@ -361,6 +375,7 @@ class SegmentedArray final
       const GCCell *cell,
       Metadata::Builder &mb);
 
+ public:
   SegmentedArray(Runtime *runtime, size_type capacity)
       : VariableSizeRuntimeCell(
             &runtime->getHeap(),
@@ -385,7 +400,7 @@ class SegmentedArray final
         slotCapacity_(slotCapacity),
         numSlotsUsed_(numSlotsUsed) {}
 #endif
-
+ private:
   /// Throws a RangeError with a descriptive message describing the attempted
   /// capacity allocated, and the max that is allowed.
   /// \returns ExecutionStatus::EXCEPTION always.

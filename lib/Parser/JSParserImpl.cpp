@@ -88,6 +88,7 @@ void JSParserImpl::initializeIdentifiers() {
 
   typeofIdent_ = lexer_.getIdentifier("typeof");
   declareIdent_ = lexer_.getIdentifier("declare");
+  protoIdent_ = lexer_.getIdentifier("proto");
   opaqueIdent_ = lexer_.getIdentifier("opaque");
   plusIdent_ = lexer_.getIdentifier("plus");
   minusIdent_ = lexer_.getIdentifier("minus");
@@ -95,11 +96,14 @@ void JSParserImpl::initializeIdentifiers() {
   exportsIdent_ = lexer_.getIdentifier("exports");
   esIdent_ = lexer_.getIdentifier("ES");
   commonJSIdent_ = lexer_.getIdentifier("CommonJS");
+  mixinsIdent_ = lexer_.getIdentifier("mixins");
+  thisIdent_ = lexer_.getIdentifier("this");
 
   anyIdent_ = lexer_.getIdentifier("any");
   mixedIdent_ = lexer_.getIdentifier("mixed");
   emptyIdent_ = lexer_.getIdentifier("empty");
   booleanIdent_ = lexer_.getIdentifier("boolean");
+  boolIdent_ = lexer_.getIdentifier("bool");
   numberIdent_ = lexer_.getIdentifier("number");
   stringIdent_ = lexer_.getIdentifier("string");
   voidIdent_ = lexer_.getIdentifier("void");
@@ -272,9 +276,8 @@ bool JSParserImpl::checkAsyncFunction() {
   return optNext.hasValue() && *optNext == TokenKind::rw_function;
 }
 
-bool JSParserImpl::eatSemi(SMLoc &endLoc, bool optional) {
+bool JSParserImpl::eatSemi(bool optional) {
   if (tok_->getKind() == TokenKind::semi) {
-    endLoc = tok_->getEndLoc();
     advance();
     return true;
   }
@@ -412,19 +415,22 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
     return None;
 
   ESTree::Node *returnType = nullptr;
+  ESTree::Node *predicate = nullptr;
 #if HERMES_PARSE_FLOW
-  if (context_.getParseFlow() &&
-      checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
-    auto optRet = parseTypeAnnotation(true);
-    if (!optRet)
-      return None;
-    returnType = *optRet;
+  if (context_.getParseFlow() && check(TokenKind::colon)) {
+    SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
+    if (!check(checksIdent_)) {
+      auto optRet = parseTypeAnnotation(annotStart);
+      if (!optRet)
+        return None;
+      returnType = *optRet;
+    }
 
     if (check(checksIdent_)) {
       auto optPred = parsePredicate();
       if (!optPred)
         return None;
-      // TODO: Store the predicate.
+      predicate = *optPred;
     }
   }
 #endif
@@ -456,6 +462,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
           nullptr,
           typeParams,
           returnType,
+          predicate,
           isGenerator,
           isAsync);
       // Initialize the node with a blank body.
@@ -468,6 +475,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
           nullptr,
           typeParams,
           returnType,
+          predicate,
           isGenerator,
           isAsync);
       // Initialize the node with a blank body.
@@ -498,6 +506,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
         body,
         typeParams,
         returnType,
+        predicate,
         isGenerator,
         isAsync);
     decl->strictness = ESTree::makeStrictness(isStrictMode());
@@ -509,6 +518,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
         body,
         typeParams,
         returnType,
+        predicate,
         isGenerator,
         isAsync);
     expr->strictness = ESTree::makeStrictness(isStrictMode());
@@ -523,6 +533,34 @@ bool JSParserImpl::parseFormalParameters(
   assert(check(TokenKind::l_paren) && "FormalParameters must start with '('");
   // (
   SMLoc lparenLoc = advance().Start;
+
+#if HERMES_PARSE_FLOW
+  // The first parameter can be 'this' in Flow mode.
+  if (context_.getParseFlow() && check(TokenKind::rw_this)) {
+    auto *name = tok_->getResWordIdentifier();
+    SMLoc thisParamStart = advance().Start;
+
+    SMLoc annotStart = tok_->getStartLoc();
+    if (!eat(
+            TokenKind::colon,
+            JSLexer::GrammarContext::Flow,
+            "in 'this' type annotation",
+            "start of 'this'",
+            thisParamStart))
+      return false;
+
+    auto optType = parseTypeAnnotation(annotStart);
+    if (!optType)
+      return false;
+    ESTree::Node *type = *optType;
+    paramList.push_back(*setLocation(
+        thisParamStart,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::IdentifierNode(name, type, false)));
+
+    checkAndEat(TokenKind::comma);
+  }
+#endif
 
   while (!check(TokenKind::r_paren)) {
     if (check(TokenKind::dotdotdot)) {
@@ -613,15 +651,23 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
     bool parseDirectives) {
   if (pass_ == LazyParse && !eagerly) {
     auto startLoc = tok_->getStartLoc();
-    assert(preParsed_->bodyStartToEnd.count(startLoc) == 1);
-    auto endLoc = preParsed_->bodyStartToEnd[startLoc];
+    assert(
+        preParsed_->functionInfo.count(startLoc) == 1 &&
+        "no function info stored during preparse");
+    PreParsedFunctionInfo functionInfo = preParsed_->functionInfo[startLoc];
+    SMLoc endLoc = functionInfo.end;
     if ((unsigned)(endLoc.getPointer() - startLoc.getPointer()) >=
         context_.getPreemptiveFunctionCompilationThreshold()) {
       lexer_.seek(endLoc);
-      advance();
+      advance(grammarContext);
+
+      // Emulate parsing the "use strict" directive in parseBlock.
+      setStrictMode(functionInfo.strictMode);
 
       auto *body = new (context_) ESTree::BlockStatementNode({});
       body->isLazyFunctionBody = true;
+      body->paramYield = paramYield_;
+      body->paramAwait = paramAwait_;
       body->bufferId = lexer_.getBufferId();
       return setLocation(startLoc, endLoc, body);
     }
@@ -632,7 +678,8 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
     return None;
 
   if (pass_ == PreParse) {
-    preParsed_->bodyStartToEnd[(*body)->getStartLoc()] = (*body)->getEndLoc();
+    preParsed_->functionInfo[(*body)->getStartLoc()] =
+        PreParsedFunctionInfo{(*body)->getEndLoc(), isStrictMode()};
   }
 
   return body;
@@ -692,10 +739,10 @@ bool JSParserImpl::parseStatementListItem(
 
     stmtList.push_back(*decl.getValue());
 #if HERMES_PARSE_FLOW
-  } else if (checkDeclareType()) {
+  } else if (context_.getParseFlow() && checkDeclareType()) {
     // declare var, declare function, declare interface, etc.
     SMLoc start = advance(JSLexer::GrammarContext::Flow).Start;
-    auto decl = parseDeclare(start);
+    auto decl = parseDeclare(start, AllowDeclareExportType::No);
     if (!decl)
       return false;
     stmtList.push_back(*decl.getValue());
@@ -865,13 +912,17 @@ Optional<ESTree::IdentifierNode *> JSParserImpl::parseBindingIdentifier(
   advance();
 
   ESTree::Node *type = nullptr;
+  bool optional = false;
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow()) {
-    if (checkAndEat(TokenKind::question)) {
-      // TODO: Store `optional` to the IdentifierNode.
+    if (check(TokenKind::question)) {
+      optional = true;
+      advance(JSLexer::GrammarContext::Flow);
     }
-    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
-      auto optType = parseTypeAnnotation(true);
+
+    if (check(TokenKind::colon)) {
+      SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
+      auto optType = parseTypeAnnotation(annotStart);
       if (!optType)
         return None;
       type = *optType;
@@ -881,8 +932,8 @@ Optional<ESTree::IdentifierNode *> JSParserImpl::parseBindingIdentifier(
 
   return setLocation(
       identRng,
-      type ? type->getSourceRange() : identRng,
-      new (context_) ESTree::IdentifierNode(id, type));
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::IdentifierNode(id, type, optional));
 }
 
 Optional<ESTree::VariableDeclarationNode *>
@@ -900,8 +951,7 @@ JSParserImpl::parseLexicalDeclaration(Param param) {
   if (!parseVariableDeclarationList(param, declList, startLoc))
     return None;
 
-  auto endLoc = declList.back().getEndLoc();
-  if (!eatSemi(endLoc))
+  if (!eatSemi())
     return None;
 
   if (isConst) {
@@ -924,7 +974,7 @@ JSParserImpl::parseLexicalDeclaration(Param param) {
 
   auto *res = setLocation(
       startLoc,
-      endLoc,
+      getPrevTokenEndLoc(),
       new (context_)
           ESTree::VariableDeclarationNode(kindIdent, std::move(declList)));
 
@@ -936,6 +986,18 @@ JSParserImpl::parseLexicalDeclaration(Param param) {
 Optional<ESTree::VariableDeclarationNode *>
 JSParserImpl::parseVariableStatement(Param param) {
   return parseLexicalDeclaration(ParamIn);
+}
+
+Optional<ESTree::PrivateNameNode *> JSParserImpl::parsePrivateName() {
+  assert(check(TokenKind::private_identifier));
+  ESTree::Node *ident = setLocation(
+      tok_,
+      tok_,
+      new (context_)
+          ESTree::IdentifierNode(tok_->getPrivateIdentifier(), nullptr, false));
+  SMLoc start = advance().Start;
+  return setLocation(
+      start, ident, new (context_) ESTree::PrivateNameNode(ident));
 }
 
 Optional<const char *> JSParserImpl::parseVariableDeclarationList(
@@ -969,6 +1031,7 @@ void JSParserImpl::ensureDestructuringInitialized(
 Optional<ESTree::VariableDeclaratorNode *>
 JSParserImpl::parseVariableDeclaration(Param param, SMLoc declLoc) {
   ESTree::Node *target;
+  SMLoc startLoc = tok_->getStartLoc();
 
   if (check(TokenKind::l_square, TokenKind::l_brace)) {
     auto optPat = parseBindingPattern(param);
@@ -993,21 +1056,22 @@ JSParserImpl::parseVariableDeclaration(Param param, SMLoc declLoc) {
   // No initializer?
   if (!check(TokenKind::equal)) {
     return setLocation(
-        target,
-        target,
+        startLoc,
+        getPrevTokenEndLoc(),
         new (context_) ESTree::VariableDeclaratorNode(nullptr, target));
   };
 
   // Parse the initializer.
   auto debugLoc = advance().Start;
 
-  auto expr = parseAssignmentExpression(param);
+  auto expr = parseAssignmentExpression(
+      param, AllowTypedArrowFunction::Yes, CoverTypedParameters::No);
   if (!expr)
     return None;
 
   return setLocation(
-      target,
-      *expr,
+      startLoc,
+      getPrevTokenEndLoc(),
       debugLoc,
       new (context_) ESTree::VariableDeclaratorNode(*expr, target));
 }
@@ -1066,7 +1130,6 @@ Optional<ESTree::ArrayPatternNode *> JSParserImpl::parseArrayBindingPattern(
     }
   }
 
-  SMLoc endLoc = tok_->getEndLoc();
   if (!eat(
           TokenKind::r_square,
           JSLexer::AllowDiv,
@@ -1078,23 +1141,24 @@ Optional<ESTree::ArrayPatternNode *> JSParserImpl::parseArrayBindingPattern(
   ESTree::Node *type = nullptr;
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow()) {
-    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
-      auto optType = parseTypeAnnotation(true);
+    if (check(TokenKind::colon)) {
+      SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
+      auto optType = parseTypeAnnotation(annotStart);
       if (!optType)
         return None;
       type = *optType;
-      endLoc = type->getEndLoc();
     }
   }
 #endif
 
   return setLocation(
       startLoc,
-      endLoc,
+      getPrevTokenEndLoc(),
       new (context_) ESTree::ArrayPatternNode(std::move(elemList), type));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseBindingElement(Param param) {
+  CHECK_RECURSION;
   ESTree::Node *elem;
 
   if (check(TokenKind::l_square, TokenKind::l_brace)) {
@@ -1141,7 +1205,9 @@ Optional<ESTree::Node *> JSParserImpl::parseBindingRestElement(Param param) {
   }
 
   return setLocation(
-      startLoc, *optElem, new (context_) ESTree::RestElementNode(*optElem));
+      startLoc,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::RestElementNode(*optElem));
 }
 
 Optional<ESTree::AssignmentPatternNode *> JSParserImpl::parseBindingInitializer(
@@ -1158,7 +1224,7 @@ Optional<ESTree::AssignmentPatternNode *> JSParserImpl::parseBindingInitializer(
 
   return setLocation(
       left,
-      *expr,
+      getPrevTokenEndLoc(),
       debugLoc,
       new (context_) ESTree::AssignmentPatternNode(left, *expr));
 }
@@ -1195,7 +1261,6 @@ Optional<ESTree::ObjectPatternNode *> JSParserImpl::parseObjectBindingPattern(
     }
   }
 
-  SMLoc endLoc = tok_->getEndLoc();
   if (!eat(
           TokenKind::r_brace,
           JSLexer::AllowDiv,
@@ -1207,19 +1272,19 @@ Optional<ESTree::ObjectPatternNode *> JSParserImpl::parseObjectBindingPattern(
   ESTree::Node *type = nullptr;
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow()) {
-    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
-      auto optType = parseTypeAnnotation(true);
+    if (check(TokenKind::colon)) {
+      SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
+      auto optType = parseTypeAnnotation(annotStart);
       if (!optType)
         return None;
       type = *optType;
-      endLoc = type->getEndLoc();
     }
   }
 #endif
 
   return setLocation(
       startLoc,
-      endLoc,
+      getPrevTokenEndLoc(),
       new (context_) ESTree::ObjectPatternNode(std::move(propList), type));
 }
 
@@ -1233,6 +1298,7 @@ Optional<ESTree::PropertyNode *> JSParserImpl::parseBindingProperty(
   ESTree::Node *key = optKey.getValue();
 
   ESTree::Node *value = nullptr;
+  bool shorthand = false;
 
   if (checkAndEat(TokenKind::colon)) {
     // PropertyName ":" BindingElement
@@ -1259,6 +1325,8 @@ Optional<ESTree::PropertyNode *> JSParserImpl::parseBindingProperty(
       return None;
     }
 
+    shorthand = true;
+
     if (check(TokenKind::equal)) {
       // BindingIdentifier Initializer
       //                   ^
@@ -1266,7 +1334,7 @@ Optional<ESTree::PropertyNode *> JSParserImpl::parseBindingProperty(
       auto *left = setLocation(
           ident,
           ident,
-          new (context_) ESTree::IdentifierNode(ident->_name, nullptr));
+          new (context_) ESTree::IdentifierNode(ident->_name, nullptr, false));
       auto optInit = parseBindingInitializer(param + ParamIn, left);
       if (!optInit)
         return None;
@@ -1279,14 +1347,15 @@ Optional<ESTree::PropertyNode *> JSParserImpl::parseBindingProperty(
       value = setLocation(
           ident,
           ident,
-          new (context_) ESTree::IdentifierNode(ident->_name, nullptr));
+          new (context_) ESTree::IdentifierNode(ident->_name, nullptr, false));
     }
   }
 
   return setLocation(
-      key,
-      value,
-      new (context_) ESTree::PropertyNode(key, value, initIdent_, computed));
+      startLoc,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::PropertyNode(
+          key, value, initIdent_, computed, false, shorthand));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseBindingRestProperty(
@@ -1312,7 +1381,9 @@ Optional<ESTree::Node *> JSParserImpl::parseBindingRestProperty(
   }
 
   return setLocation(
-      startLoc, *optElem, new (context_) ESTree::RestElementNode(*optElem));
+      startLoc,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::RestElementNode(*optElem));
 }
 
 Optional<ESTree::EmptyStatementNode *> JSParserImpl::parseEmptyStatement() {
@@ -1353,6 +1424,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExpressionOrLabelledStatement(
     advance();
   }
 
+  SMLoc startLoc = tok_->getStartLoc();
   auto optExpr = parseExpression(ParamIn, CoverTypedParameters::No);
   if (!optExpr)
     return None;
@@ -1391,13 +1463,12 @@ Optional<ESTree::Node *> JSParserImpl::parseExpressionOrLabelledStatement(
     return setLocation(
         id, body, new (context_) ESTree::LabeledStatementNode(id, body));
   } else {
-    auto endLoc = optExpr.getValue()->getEndLoc();
-    if (!eatSemi(endLoc))
+    if (!eatSemi())
       return None;
 
     return setLocation(
-        optExpr.getValue(),
-        endLoc,
+        startLoc,
+        getPrevTokenEndLoc(),
         new (context_)
             ESTree::ExpressionStatementNode(optExpr.getValue(), nullptr));
   }
@@ -1514,7 +1585,6 @@ Optional<ESTree::DoWhileStatementNode *> JSParserImpl::parseDoWhileStatement(
   auto optTest = parseExpression();
   if (!optTest)
     return None;
-  SMLoc endLoc = tok_->getEndLoc();
   if (!eat(
           TokenKind::r_paren,
           JSLexer::AllowRegExp,
@@ -1523,11 +1593,11 @@ Optional<ESTree::DoWhileStatementNode *> JSParserImpl::parseDoWhileStatement(
           whileLoc))
     return None;
 
-  eatSemi(endLoc, true);
+  eatSemi(true);
 
   return setLocation(
       startLoc,
-      endLoc,
+      getPrevTokenEndLoc(),
       new (context_)
           ESTree::DoWhileStatementNode(optBody.getValue(), optTest.getValue()));
 }
@@ -1535,6 +1605,13 @@ Optional<ESTree::DoWhileStatementNode *> JSParserImpl::parseDoWhileStatement(
 Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
   assert(check(TokenKind::rw_for));
   SMLoc startLoc = advance().Start;
+
+  bool await = false;
+  SMRange awaitRng;
+  if (paramAwait_ && check(awaitIdent_)) {
+    awaitRng = advance();
+    await = true;
+  }
 
   SMLoc lparenLoc = tok_->getStartLoc();
   if (!eat(
@@ -1551,7 +1628,7 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
   if (checkN(TokenKind::rw_var, TokenKind::rw_const, letIdent_)) {
     // Productions valid here:
     //   for ( var/let/const VariableDeclarationList
-    //   for ( var/let/const VariableDeclaration
+    //   for [await] ( var/let/const VariableDeclaration
     SMLoc varStartLoc = tok_->getStartLoc();
     auto *declIdent = tok_->getResWordOrIdentifier();
     advance();
@@ -1568,8 +1645,8 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
             ESTree::VariableDeclarationNode(declIdent, std::move(declList)));
   } else {
     // Productions valid here:
-    //   for ( Expression_opt
-    //   for ( LeftHandSideExpression
+    //   for [await] ( Expression_opt
+    //   for [await] ( LeftHandSideExpression
 
     if (!check(TokenKind::semi)) {
       auto optExpr1 = parseExpression(Param{});
@@ -1581,8 +1658,8 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
 
   if (checkN(TokenKind::rw_in, ofIdent_)) {
     // Productions valid here:
-    //   for ( var/let/const VariableDeclaration[In] in/of
-    //   for ( LeftHandSideExpression in/of
+    //   for [await] ( var/let/const VariableDeclaration[In] in/of
+    //   for [await] ( LeftHandSideExpression in/of
 
     if (decl && decl->_declarations.size() > 1) {
       error(
@@ -1605,6 +1682,9 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
     bool const forInLoop = check(TokenKind::rw_in);
     advance();
 
+    if (forInLoop && await)
+      error(awaitRng, "unexpected 'await' in for..in loop");
+
     auto optRightExpr =
         forInLoop ? parseExpression() : parseAssignmentExpression(ParamIn);
 
@@ -1626,7 +1706,10 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
           decl ? decl : expr1, optRightExpr.getValue(), optBody.getValue());
     } else {
       node = new (context_) ESTree::ForOfStatementNode(
-          decl ? decl : expr1, optRightExpr.getValue(), optBody.getValue());
+          decl ? decl : expr1,
+          optRightExpr.getValue(),
+          optBody.getValue(),
+          await);
     }
     return setLocation(startLoc, optBody.getValue(), node);
   } else if (checkAndEat(TokenKind::semi)) {
@@ -1635,6 +1718,9 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
     //   Expressionopt )
     //       Statement
     //   for ( Expression[In]opt ; Expressionopt ; Expressionopt ) Statement
+
+    if (await)
+      error(awaitRng, "unexpected 'await' in for loop without 'of'");
 
     if (decl)
       ensureDestructuringInitialized(decl);
@@ -1694,77 +1780,89 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
 Optional<ESTree::ContinueStatementNode *>
 JSParserImpl::parseContinueStatement() {
   assert(check(TokenKind::rw_continue));
-  SMRange loc = advance();
+  SMLoc startLoc = advance().Start;
 
-  if (eatSemi(loc.End, true))
+  if (eatSemi(true))
     return setLocation(
-        loc, loc, new (context_) ESTree::ContinueStatementNode(nullptr));
+        startLoc,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::ContinueStatementNode(nullptr));
 
   if (!need(
           TokenKind::identifier,
           "after 'continue'",
           "location of 'continue'",
-          loc.Start))
+          startLoc))
     return None;
   auto *id = setLocation(
       tok_,
       tok_,
-      new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
+      new (context_)
+          ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
   advance();
 
-  loc.End = id->getEndLoc();
-  if (!eatSemi(loc.End))
+  if (!eatSemi())
     return None;
 
   return setLocation(
-      loc, loc, new (context_) ESTree::ContinueStatementNode(id));
+      startLoc,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::ContinueStatementNode(id));
 }
 
 Optional<ESTree::BreakStatementNode *> JSParserImpl::parseBreakStatement() {
   assert(check(TokenKind::rw_break));
-  SMRange loc = advance();
+  SMLoc startLoc = advance().Start;
 
-  if (eatSemi(loc.End, true))
+  if (eatSemi(true))
     return setLocation(
-        loc, loc, new (context_) ESTree::BreakStatementNode(nullptr));
+        startLoc,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::BreakStatementNode(nullptr));
 
   if (!need(
           TokenKind::identifier,
           "after 'break'",
           "location of 'break'",
-          loc.Start))
+          startLoc))
     return None;
   auto *id = setLocation(
       tok_,
       tok_,
-      new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
+      new (context_)
+          ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
   advance();
 
-  loc.End = id->getEndLoc();
-  if (!eatSemi(loc.End))
+  if (!eatSemi())
     return None;
 
-  return setLocation(loc, loc, new (context_) ESTree::BreakStatementNode(id));
+  return setLocation(
+      startLoc,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::BreakStatementNode(id));
 }
 
 Optional<ESTree::ReturnStatementNode *> JSParserImpl::parseReturnStatement() {
   assert(check(TokenKind::rw_return));
-  SMRange loc = advance();
+  SMLoc startLoc = advance().Start;
 
-  if (eatSemi(loc.End, true))
+  if (eatSemi(true))
     return setLocation(
-        loc, loc, new (context_) ESTree::ReturnStatementNode(nullptr));
+        startLoc,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::ReturnStatementNode(nullptr));
 
   auto optArg = parseExpression();
   if (!optArg)
     return None;
 
-  loc.End = optArg.getValue()->getEndLoc();
-  if (!eatSemi(loc.End))
+  if (!eatSemi())
     return None;
 
   return setLocation(
-      loc, loc, new (context_) ESTree::ReturnStatementNode(optArg.getValue()));
+      startLoc,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::ReturnStatementNode(optArg.getValue()));
 }
 
 Optional<ESTree::WithStatementNode *> JSParserImpl::parseWithStatement(
@@ -1941,13 +2039,12 @@ Optional<ESTree::ThrowStatementNode *> JSParserImpl::parseThrowStatement(
   if (!optExpr)
     return None;
 
-  SMLoc endLoc = optExpr.getValue()->getEndLoc();
-  if (!eatSemi(endLoc))
+  if (!eatSemi())
     return None;
 
   return setLocation(
       startLoc,
-      endLoc,
+      getPrevTokenEndLoc(),
       new (context_) ESTree::ThrowStatementNode(optExpr.getValue()));
 }
 
@@ -2055,12 +2152,15 @@ Optional<ESTree::TryStatementNode *> JSParserImpl::parseTryStatement(
 Optional<ESTree::DebuggerStatementNode *>
 JSParserImpl::parseDebuggerStatement() {
   assert(check(TokenKind::rw_debugger));
-  SMRange loc = advance();
+  SMRange startLoc = advance();
 
-  if (!eatSemi(loc.End))
+  if (!eatSemi())
     return None;
 
-  return setLocation(loc, loc, new (context_) ESTree::DebuggerStatementNode());
+  return setLocation(
+      startLoc,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::DebuggerStatementNode());
 }
 
 Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
@@ -2094,7 +2194,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
           tok_,
           tok_,
           new (context_)
-              ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
+              ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
       advance(JSLexer::AllowDiv);
       return res;
     }
@@ -2170,6 +2270,10 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
             startLoc, endLoc, new (context_) ESTree::CoverEmptyArgsNode());
       }
 
+#if HERMES_PARSE_FLOW
+      SMLoc startLocAfterParen = tok_->getStartLoc();
+#endif
+
       ESTree::Node *expr;
       if (check(TokenKind::dotdotdot)) {
         auto optRest = parseBindingRestElement(ParamIn);
@@ -2190,22 +2294,22 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
 #if HERMES_PARSE_FLOW
       if (context_.getParseFlow()) {
         if (auto *cover = dyn_cast<ESTree::CoverTypedIdentifierNode>(expr)) {
-          if (cover->_right) {
+          if (cover->_right && !cover->_optional) {
             expr = setLocation(
                 expr,
-                expr,
+                getPrevTokenEndLoc(),
                 new (context_) ESTree::TypeCastExpressionNode(
                     cover->_left, cover->_right));
           }
-        } else if (checkAndEat(
-                       TokenKind::colon, JSLexer::GrammarContext::Flow)) {
-          auto optType = parseTypeAnnotation(true);
+        } else if (check(TokenKind::colon)) {
+          SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
+          auto optType = parseTypeAnnotation(annotStart);
           if (!optType)
             return None;
           ESTree::Node *type = *optType;
           expr = setLocation(
-              startLoc,
-              type,
+              startLocAfterParen,
+              getPrevTokenEndLoc(),
               new (context_) ESTree::TypeCastExpressionNode(expr, type));
         }
       }
@@ -2375,7 +2479,7 @@ Optional<ESTree::Node *> JSParserImpl::parseSpreadElement() {
 
   return setLocation(
       spreadStartLoc,
-      *optExpr,
+      getPrevTokenEndLoc(),
       new (context_) ESTree::SpreadElementNode(*optExpr));
 }
 
@@ -2388,6 +2492,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
   bool computed = false;
   bool generator = false;
   bool async = false;
+  bool method = false;
 
   if (check(getIdent_)) {
     UniqueString *ident = tok_->getResWordOrIdentifier();
@@ -2400,14 +2505,15 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       key = setLocation(
           identRng,
           identRng,
-          new (context_) ESTree::IdentifierNode(ident, nullptr));
+          new (context_) ESTree::IdentifierNode(ident, nullptr, false));
 #if HERMES_PARSE_FLOW
     } else if (context_.getParseFlow() && check(TokenKind::less)) {
       // This is a method definition.
+      method = true;
       key = setLocation(
           identRng,
           identRng,
-          new (context_) ESTree::IdentifierNode(ident, nullptr));
+          new (context_) ESTree::IdentifierNode(ident, nullptr, false));
 #endif
     } else if (check(TokenKind::comma, TokenKind::r_brace)) {
       // If the next token is "," or "}", this is a shorthand property
@@ -2415,13 +2521,16 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       key = setLocation(
           identRng,
           identRng,
-          new (context_) ESTree::IdentifierNode(ident, nullptr));
+          new (context_) ESTree::IdentifierNode(ident, nullptr, false));
       auto *value = setLocation(
-          key, key, new (context_) ESTree::IdentifierNode(ident, nullptr));
+          key,
+          key,
+          new (context_) ESTree::IdentifierNode(ident, nullptr, false));
       return setLocation(
           startLoc,
           value,
-          new (context_) ESTree::PropertyNode(key, value, initIdent_, false));
+          new (context_)
+              ESTree::PropertyNode(key, value, initIdent_, false, false, true));
     } else {
       // A getter method.
       computed = check(TokenKind::l_square);
@@ -2446,9 +2555,9 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
 
       ESTree::Node *returnType = nullptr;
 #if HERMES_PARSE_FLOW
-      if (context_.getParseFlow() &&
-          checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
-        auto optRet = parseTypeAnnotation(true);
+      if (context_.getParseFlow() && check(TokenKind::colon)) {
+        SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
+        auto optRet = parseTypeAnnotation(annotStart);
         if (!optRet)
           return None;
         returnType = *optRet;
@@ -2472,6 +2581,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           block.getValue(),
           nullptr,
           returnType,
+          /* predicate */ nullptr,
           false,
           false);
       funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
@@ -2479,7 +2589,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       setLocation(startLoc, block.getValue(), funcExpr);
 
       auto *node = new (context_) ESTree::PropertyNode(
-          optKey.getValue(), funcExpr, getIdent_, computed);
+          optKey.getValue(), funcExpr, getIdent_, computed, false, false);
       return setLocation(startLoc, block.getValue(), node);
     }
   } else if (check(setIdent_)) {
@@ -2493,14 +2603,15 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       key = setLocation(
           identRng,
           identRng,
-          new (context_) ESTree::IdentifierNode(ident, nullptr));
+          new (context_) ESTree::IdentifierNode(ident, nullptr, false));
 #if HERMES_PARSE_FLOW
     } else if (context_.getParseFlow() && check(TokenKind::less)) {
       // This is a method definition.
+      method = true;
       key = setLocation(
           identRng,
           identRng,
-          new (context_) ESTree::IdentifierNode(ident, nullptr));
+          new (context_) ESTree::IdentifierNode(ident, nullptr, false));
 #endif
     } else if (check(TokenKind::comma, TokenKind::r_brace)) {
       // If the next token is "," or "}", this is a shorthand property
@@ -2508,13 +2619,16 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       key = setLocation(
           identRng,
           identRng,
-          new (context_) ESTree::IdentifierNode(ident, nullptr));
+          new (context_) ESTree::IdentifierNode(ident, nullptr, false));
       auto *value = setLocation(
-          key, key, new (context_) ESTree::IdentifierNode(ident, nullptr));
+          key,
+          key,
+          new (context_) ESTree::IdentifierNode(ident, nullptr, false));
       return setLocation(
           startLoc,
           value,
-          new (context_) ESTree::PropertyNode(key, value, initIdent_, false));
+          new (context_)
+              ESTree::PropertyNode(key, value, initIdent_, false, false, true));
     } else {
       // A setter method.
       computed = check(TokenKind::l_square);
@@ -2545,9 +2659,9 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
 
       ESTree::Node *returnType = nullptr;
 #if HERMES_PARSE_FLOW
-      if (context_.getParseFlow() &&
-          checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
-        auto optRet = parseTypeAnnotation(true);
+      if (context_.getParseFlow() && check(TokenKind::colon)) {
+        SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
+        auto optRet = parseTypeAnnotation(annotStart);
         if (!optRet)
           return None;
         returnType = *optRet;
@@ -2571,6 +2685,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           block.getValue(),
           nullptr,
           returnType,
+          /* predicate */ nullptr,
           false,
           false);
       funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
@@ -2578,7 +2693,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       setLocation(startLoc, block.getValue(), funcExpr);
 
       auto *node = new (context_) ESTree::PropertyNode(
-          optKey.getValue(), funcExpr, setIdent_, computed);
+          optKey.getValue(), funcExpr, setIdent_, computed, false, false);
       return setLocation(startLoc, block.getValue(), node);
     }
   } else if (check(asyncIdent_)) {
@@ -2592,14 +2707,15 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       key = setLocation(
           identRng,
           identRng,
-          new (context_) ESTree::IdentifierNode(ident, nullptr));
+          new (context_) ESTree::IdentifierNode(ident, nullptr, false));
 #if HERMES_PARSE_FLOW
     } else if (context_.getParseFlow() && check(TokenKind::less)) {
       // This is a method definition.
+      method = true;
       key = setLocation(
           identRng,
           identRng,
-          new (context_) ESTree::IdentifierNode(ident, nullptr));
+          new (context_) ESTree::IdentifierNode(ident, nullptr, false));
 #endif
     } else if (check(TokenKind::comma, TokenKind::r_brace)) {
       // If the next token is "," or "}", this is a shorthand property
@@ -2607,16 +2723,20 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       key = setLocation(
           identRng,
           identRng,
-          new (context_) ESTree::IdentifierNode(ident, nullptr));
+          new (context_) ESTree::IdentifierNode(ident, nullptr, false));
       auto *value = setLocation(
-          key, key, new (context_) ESTree::IdentifierNode(ident, nullptr));
+          key,
+          key,
+          new (context_) ESTree::IdentifierNode(ident, nullptr, false));
       return setLocation(
           startLoc,
           value,
-          new (context_) ESTree::PropertyNode(key, value, initIdent_, false));
+          new (context_)
+              ESTree::PropertyNode(key, value, initIdent_, false, false, true));
     } else {
       // This is an async function, parse the key and set `async` to true.
       async = true;
+      method = true;
       generator = checkAndEat(TokenKind::star);
       computed = check(TokenKind::l_square);
       auto optKey = parsePropertyName();
@@ -2628,17 +2748,22 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
   } else if (check(TokenKind::identifier)) {
     auto *ident = tok_->getIdentifier();
     key = setLocation(
-        tok_, tok_, new (context_) ESTree::IdentifierNode(ident, nullptr));
+        tok_,
+        tok_,
+        new (context_) ESTree::IdentifierNode(ident, nullptr, false));
     advance();
     // If the next token is "," or "}", this is a shorthand property definition.
     if (check(TokenKind::comma, TokenKind::r_brace)) {
       auto *value = setLocation(
-          key, key, new (context_) ESTree::IdentifierNode(ident, nullptr));
+          key,
+          key,
+          new (context_) ESTree::IdentifierNode(ident, nullptr, false));
 
       return setLocation(
           startLoc,
           value,
-          new (context_) ESTree::PropertyNode(key, value, initIdent_, false));
+          new (context_)
+              ESTree::PropertyNode(key, value, initIdent_, false, false, true));
     }
   } else {
     generator = checkAndEat(TokenKind::star);
@@ -2651,6 +2776,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
   }
 
   ESTree::Node *value;
+  bool shorthand = false;
 
   if (isa<ESTree::IdentifierNode>(key) && check(TokenKind::equal)) {
     // Check for CoverInitializedName: IdentifierReference Initializer
@@ -2659,9 +2785,11 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
     if (!optInit)
       return None;
 
+    shorthand = true;
+
     value = setLocation(
         startLoc,
-        *optInit,
+        getPrevTokenEndLoc(),
         new (context_) ESTree::CoverInitializerNode(*optInit));
   } else if (check(TokenKind::l_paren, TokenKind::less) || async) {
     // Try this branch when we have '(' or '<' to indicate a method
@@ -2677,6 +2805,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
     //               ^
     llvh::SaveAndRestore<bool> oldParamYield(paramYield_, generator);
     llvh::SaveAndRestore<bool> oldParamAwait(paramAwait_, async);
+
+    method = true;
 
     ESTree::Node *typeParams = nullptr;
 #if HERMES_PARSE_FLOW
@@ -2702,8 +2832,9 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
 
     ESTree::Node *returnType = nullptr;
 #if HERMES_PARSE_FLOW
-    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
-      auto optRet = parseTypeAnnotation(true);
+    if (context_.getParseFlow() && check(TokenKind::colon)) {
+      SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
+      auto optRet = parseTypeAnnotation(annotStart);
       if (!optRet)
         return None;
       returnType = *optRet;
@@ -2727,6 +2858,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
         optBody.getValue(),
         typeParams,
         returnType,
+        /* predicate */ nullptr,
         generator,
         async);
     funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
@@ -2751,8 +2883,9 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
 
   return setLocation(
       startLoc,
-      value,
-      new (context_) ESTree::PropertyNode(key, value, initIdent_, computed));
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::PropertyNode(
+          key, value, initIdent_, computed, method, shorthand));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parsePropertyName() {
@@ -2780,7 +2913,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyName() {
           tok_,
           tok_,
           new (context_)
-              ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
+              ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
       advance();
       return res;
     }
@@ -2807,8 +2940,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyName() {
         auto *res = setLocation(
             tok_,
             tok_,
-            new (context_)
-                ESTree::IdentifierNode(tok_->getResWordIdentifier(), nullptr));
+            new (context_) ESTree::IdentifierNode(
+                tok_->getResWordIdentifier(), nullptr, false));
         advance();
         return res;
       } else {
@@ -2912,6 +3045,42 @@ Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew(
     // must not have a TemplateLiteral immediately after the `super` keyword.
     expr = setLocation(tok_, tok_, new (context_) ESTree::SuperNode());
     advance();
+    if (!checkN(TokenKind::l_paren, TokenKind::l_square, TokenKind::period)) {
+      errorExpected(
+          {TokenKind::l_paren, TokenKind::l_square, TokenKind::period},
+          "after 'super' keyword",
+          "location of 'super'",
+          startLoc);
+      return None;
+    }
+  } else if (check(TokenKind::rw_import)) {
+    // ImportCall must be a call with an AssignmentExpression as the
+    // argument.
+    advance();
+    if (!eat(
+            TokenKind::l_paren,
+            JSLexer::AllowRegExp,
+            "in import call",
+            "location of 'import'",
+            startLoc))
+      return None;
+
+    auto optSource = parseAssignmentExpression(ParamIn);
+    if (!optSource)
+      return None;
+    ESTree::Node *source = *optSource;
+
+    SMLoc endLoc = tok_->getEndLoc();
+    if (!eat(
+            TokenKind::r_paren,
+            JSLexer::AllowRegExp,
+            "in import call",
+            "location of 'import'",
+            startLoc))
+      return None;
+
+    expr = setLocation(
+        startLoc, endLoc, new (context_) ESTree::ImportExpressionNode(source));
   } else {
     auto primExpr = parsePrimaryExpression();
     if (!primExpr)
@@ -2925,11 +3094,12 @@ Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew(
 
 Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew_tail(
     IsConstructorCall isConstructorCall,
-    SMLoc objectLoc,
+    SMLoc startLoc,
     ESTree::Node *expr) {
+  SMLoc objectLoc = startLoc;
   bool seenOptionalChain = false;
-  llvh::SaveAndRestore<unsigned> savedRecursionDepth{recursionDepth_,
-                                                     recursionDepth_};
+  llvh::SaveAndRestore<unsigned> savedRecursionDepth{
+      recursionDepth_, recursionDepth_};
   while (
       checkN(TokenKind::l_square, TokenKind::period, TokenKind::questiondot) ||
       checkTemplateLiteral()) {
@@ -2953,7 +3123,8 @@ Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew_tail(
       // MemberExpression [ Expression ]
       // MemberExpression . IdentifierName
       // MemberExpression OptionalChain
-      auto msel = parseMemberSelect(objectLoc, expr, seenOptionalChain);
+      auto msel =
+          parseMemberSelect(startLoc, objectLoc, expr, seenOptionalChain);
       if (!msel)
         return None;
       objectLoc = nextObjectLoc;
@@ -2983,7 +3154,7 @@ Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew_tail(
       if (!optTemplate)
         return None;
       expr = setLocation(
-          expr,
+          startLoc,
           optTemplate.getValue(),
           new (context_) ESTree::TaggedTemplateExpressionNode(
               expr, optTemplate.getValue()));
@@ -3011,7 +3182,7 @@ Optional<const char *> JSParserImpl::parseArguments(
       if (isSpread) {
         argList.push_back(*setLocation(
             argStart,
-            arg.getValue(),
+            getPrevTokenEndLoc(),
             new (context_) ESTree::SpreadElementNode(arg.getValue())));
       } else {
         argList.push_back(*arg.getValue());
@@ -3038,12 +3209,13 @@ Optional<const char *> JSParserImpl::parseArguments(
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
+    SMLoc startLoc,
     SMLoc objectLoc,
     ESTree::NodePtr expr,
     bool seenOptionalChain) {
   assert(
       checkN(TokenKind::l_square, TokenKind::period, TokenKind::questiondot));
-  SMLoc startLoc = tok_->getStartLoc();
+  SMLoc puncLoc = tok_->getStartLoc();
   bool optional = checkAndEat(TokenKind::questiondot);
   if (checkAndEat(TokenKind::l_square)) {
     auto propExpr = parseExpression();
@@ -3055,27 +3227,30 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
             JSLexer::AllowDiv,
             "at end of member expression '[...'",
             "location iof '['",
-            startLoc))
+            puncLoc))
       return None;
 
     if (optional || seenOptionalChain) {
       return setLocation(
-          expr,
-          endLoc,
           startLoc,
+          endLoc,
+          puncLoc,
           new (context_) ESTree::OptionalMemberExpressionNode(
               expr, propExpr.getValue(), true, optional));
     }
     return setLocation(
-        expr,
-        endLoc,
         startLoc,
+        endLoc,
+        puncLoc,
         new (context_)
             ESTree::MemberExpressionNode(expr, propExpr.getValue(), true));
   } else if (
       checkAndEat(TokenKind::period) ||
-      (optional && !check(TokenKind::l_paren))) {
-    if (tok_->getKind() != TokenKind::identifier && !tok_->isResWord()) {
+      (optional &&
+       !(check(TokenKind::l_paren) ||
+         (context_.getParseFlow() && check(TokenKind::less))))) {
+    if (!check(TokenKind::identifier, TokenKind::private_identifier) &&
+        !tok_->isResWord()) {
       // Just use the pattern here, even though we know it will fail.
       if (!need(
               TokenKind::identifier,
@@ -3085,44 +3260,75 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
         return None;
     }
 
-    auto *id = setLocation(
-        tok_,
-        tok_,
-        new (context_)
-            ESTree::IdentifierNode(tok_->getResWordOrIdentifier(), nullptr));
-    advance(JSLexer::AllowDiv);
+    ESTree::Node *id = nullptr;
+    if (check(TokenKind::private_identifier)) {
+      auto optId = parsePrivateName();
+      if (!optId)
+        return None;
+      id = *optId;
+    } else {
+      id = setLocation(
+          tok_,
+          tok_,
+          new (context_) ESTree::IdentifierNode(
+              tok_->getResWordOrIdentifier(), nullptr, false));
+      advance(JSLexer::AllowDiv);
+    }
 
     if (optional || seenOptionalChain) {
       return setLocation(
-          expr,
-          id,
           startLoc,
+          id,
+          puncLoc,
           new (context_)
               ESTree::OptionalMemberExpressionNode(expr, id, false, optional));
     }
     return setLocation(
-        expr,
-        id,
         startLoc,
+        id,
+        puncLoc,
         new (context_) ESTree::MemberExpressionNode(expr, id, false));
   } else {
     assert(
-        optional && check(TokenKind::l_paren) && "must be ?.() at this point");
+        optional &&
+        (check(TokenKind::l_paren) ||
+         (context_.getParseFlow() && check(TokenKind::less))) &&
+        "must be ?.() at this point");
     // ?. Arguments :
     // ?. ( ArgumentList )
     //      ^
     auto debugLoc = tok_->getStartLoc();
+
+    ESTree::NodePtr typeArgs = nullptr;
+#if HERMES_PARSE_FLOW
+    if (context_.getParseFlow() && check(TokenKind::less)) {
+      auto optTypeArgs = parseTypeArgs();
+      if (!optTypeArgs) {
+        return None;
+      }
+
+      typeArgs = *optTypeArgs;
+
+      if (!need(
+              TokenKind::l_paren,
+              "after type arguments in optional call",
+              "start of optional call",
+              objectLoc))
+        return None;
+    }
+#endif
+
     ESTree::NodeList argList;
     SMLoc endLoc;
     if (!parseArguments(argList, endLoc))
       return None;
 
     return setLocation(
-        expr,
+        startLoc,
         endLoc,
         debugLoc,
         new (context_) ESTree::OptionalCallExpressionNode(
-            expr, nullptr, std::move(argList), true));
+            expr, typeArgs, std::move(argList), true));
   }
 
   llvm_unreachable("Invalid token in parseMemberSelect");
@@ -3139,15 +3345,18 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
       TokenKind::no_substitution_template,
       TokenKind::template_head));
 
+  SMLoc objectLoc = startLoc;
+
   for (;;) {
 #if HERMES_PARSE_FLOW
-    if (context_.getParseFlow() && !typeArgs && check(TokenKind::less)) {
+    if (context_.getParseFlowAmbiguous() && !typeArgs &&
+        check(TokenKind::less)) {
       JSLexer::SavePoint savePoint{&lexer_};
       // Each call in a chain may have type arguments.
       // As such, we must attempt to parse them upon encountering '<',
       // but roll back if it just ended up being a comparison operator.
-      SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
-                                                           Subsystem::Parser};
+      SourceErrorManager::SaveAndSuppressMessages suppress{
+          &sm_, Subsystem::Parser};
       auto optTypeArgs = parseTypeArgs();
       if (optTypeArgs && check(TokenKind::l_paren)) {
         // Call expression with type arguments.
@@ -3172,22 +3381,23 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
 
       if (seenOptionalChain) {
         expr = setLocation(
-            expr,
+            startLoc,
             endLoc,
             debugLoc,
             new (context_) ESTree::OptionalCallExpressionNode(
                 expr, typeArgs, std::move(argList), optional));
       } else {
         expr = setLocation(
-            expr,
+            startLoc,
             endLoc,
             debugLoc,
             new (context_)
                 ESTree::CallExpressionNode(expr, typeArgs, std::move(argList)));
-        // typeArgs have been used, discard them so the next item in the call
-        // chain can populate them if necessary.
-        typeArgs = nullptr;
       }
+
+      // typeArgs have been used, discard them so the next item in the call
+      // chain can populate them if necessary.
+      typeArgs = nullptr;
     } else if (checkN(
                    TokenKind::l_square,
                    TokenKind::period,
@@ -3196,11 +3406,12 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
         seenOptionalChain = true;
       }
 
-      SMLoc nextStartLoc = tok_->getStartLoc();
-      auto msel = parseMemberSelect(startLoc, expr, seenOptionalChain);
+      SMLoc nextObjectLoc = tok_->getStartLoc();
+      auto msel =
+          parseMemberSelect(startLoc, objectLoc, expr, seenOptionalChain);
       if (!msel)
         return None;
-      startLoc = nextStartLoc;
+      objectLoc = nextObjectLoc;
       expr = msel.getValue();
     } else if (check(
                    TokenKind::no_substitution_template,
@@ -3210,7 +3421,7 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
       if (!optTemplate)
         return None;
       expr = setLocation(
-          expr,
+          startLoc,
           optTemplate.getValue(),
           debugLoc,
           new (context_) ESTree::TaggedTemplateExpressionNode(
@@ -3266,11 +3477,11 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrOptionalExpression(
     auto *meta = setLocation(
         newRange,
         newRange,
-        new (context_) ESTree::IdentifierNode(newIdent_, nullptr));
+        new (context_) ESTree::IdentifierNode(newIdent_, nullptr, false));
     auto *prop = setLocation(
         tok_,
         tok_,
-        new (context_) ESTree::IdentifierNode(targetIdent_, nullptr));
+        new (context_) ESTree::IdentifierNode(targetIdent_, nullptr, false));
     advance();
     auto *expr = setLocation(
         meta, prop, new (context_) ESTree::MetaPropertyNode(meta, prop));
@@ -3283,13 +3494,34 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrOptionalExpression(
     return None;
   ESTree::NodePtr expr = optExpr.getValue();
 
+  ESTree::Node *typeArgs = nullptr;
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlowAmbiguous() && check(TokenKind::less)) {
+    JSLexer::SavePoint savePoint{&lexer_};
+    // Attempt to parse type args upon encountering '<',
+    // but roll back if it just ended up being a comparison operator.
+    SourceErrorManager::SaveAndSuppressMessages suppress{
+        &sm_, Subsystem::Parser};
+    auto optTypeArgs = parseTypeArgs();
+    if (optTypeArgs) {
+      // New expression with type arguments.
+      typeArgs = *optTypeArgs;
+    } else {
+      // Failed to parse a call expression with type arguments,
+      // simply roll back and start again.
+      savePoint.restore();
+    }
+  }
+#endif
+
   // Do we have arguments to a child MemberExpression? If yes, then it really
   // was a 'new MemberExpression(args)', otherwise it is a NewExpression
   if (!check(TokenKind::l_paren)) {
     return setLocation(
         newRange,
-        expr,
-        new (context_) ESTree::NewExpressionNode(expr, ESTree::NodeList{}));
+        getPrevTokenEndLoc(),
+        new (context_)
+            ESTree::NewExpressionNode(expr, typeArgs, ESTree::NodeList{}));
   }
 
   auto debugLoc = tok_->getStartLoc();
@@ -3302,13 +3534,14 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrOptionalExpression(
       newRange,
       endLoc,
       debugLoc,
-      new (context_) ESTree::NewExpressionNode(expr, std::move(argList)));
+      new (context_)
+          ESTree::NewExpressionNode(expr, typeArgs, std::move(argList)));
 
   SMLoc objectLoc = newRange.Start;
   while (
       checkN(TokenKind::l_square, TokenKind::period, TokenKind::questiondot)) {
     SMLoc nextObjectLoc = tok_->getStartLoc();
-    auto optMSel = parseMemberSelect(objectLoc, expr, false);
+    auto optMSel = parseMemberSelect(newRange.Start, objectLoc, expr, false);
     if (!optMSel)
       return None;
     objectLoc = nextObjectLoc;
@@ -3321,20 +3554,6 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrOptionalExpression(
 Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
   SMLoc startLoc = tok_->getStartLoc();
 
-  if (check(TokenKind::rw_import)) {
-    ESTree::Node *import =
-        setLocation(tok_, tok_, new (context_) ESTree::ImportNode());
-    advance();
-    if (!need(
-            TokenKind::l_paren,
-            "in import call",
-            "location of 'import'",
-            startLoc))
-      return None;
-
-    return parseCallExpression(startLoc, import, nullptr, false, false);
-  }
-
   auto optExpr = parseNewExpressionOrOptionalExpression(IsConstructorCall::No);
   if (!optExpr)
     return None;
@@ -3342,16 +3561,20 @@ Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
 
   bool optional = checkAndEat(TokenKind::questiondot);
   bool seenOptionalChain = optional ||
-      llvh::isa<ESTree::OptionalMemberExpressionNode>(expr) ||
-      llvh::isa<ESTree::OptionalCallExpressionNode>(expr);
+      (expr->getParens() == 0 &&
+       (llvh::isa<ESTree::OptionalMemberExpressionNode>(expr) ||
+        llvh::isa<ESTree::OptionalCallExpressionNode>(expr)));
 
   ESTree::Node *typeArgs = nullptr;
 #if HERMES_PARSE_FLOW
-  if (context_.getParseFlow() && check(TokenKind::less)) {
+  // If the less than sign is immediately following a question dot then it
+  // cannot be a binary expression and is unambiguously Flow type syntax.
+  if ((optional ? context_.getParseFlow() : context_.getParseFlowAmbiguous()) &&
+      check(TokenKind::less)) {
     JSLexer::SavePoint savePoint{&lexer_};
     // Suppress messages from the parser while still displaying lexer messages.
-    SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
-                                                         Subsystem::Parser};
+    SourceErrorManager::SaveAndSuppressMessages suppress{
+        &sm_, Subsystem::Parser};
     auto optTypeArgs = parseTypeArgs();
     if (optTypeArgs && check(TokenKind::l_paren)) {
       // Call expression with type arguments.
@@ -3380,6 +3603,7 @@ Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
 }
 
 Optional<ESTree::Node *> JSParserImpl::parsePostfixExpression() {
+  SMLoc startLoc = tok_->getStartLoc();
   auto optLHandExpr = parseLeftHandSideExpression();
   if (!optLHandExpr)
     return None;
@@ -3387,7 +3611,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePostfixExpression() {
   if (check(TokenKind::plusplus, TokenKind::minusminus) &&
       !lexer_.isNewLineBeforeCurrentToken()) {
     auto *res = setLocation(
-        optLHandExpr.getValue(),
+        startLoc,
         tok_,
         tok_,
         new (context_) ESTree::UpdateExpressionNode(
@@ -3428,7 +3652,7 @@ Optional<ESTree::Node *> JSParserImpl::parseUnaryExpression() {
 
       return setLocation(
           startLoc,
-          expr.getValue(),
+          getPrevTokenEndLoc(),
           new (context_)
               ESTree::UnaryExpressionNode(op, expr.getValue(), true));
     }
@@ -3444,7 +3668,7 @@ Optional<ESTree::Node *> JSParserImpl::parseUnaryExpression() {
 
       return setLocation(
           startLoc,
-          expr.getValue(),
+          getPrevTokenEndLoc(),
           new (context_)
               ESTree::UpdateExpressionNode(op, expr.getValue(), true));
     }
@@ -3458,10 +3682,11 @@ Optional<ESTree::Node *> JSParserImpl::parseUnaryExpression() {
           return None;
         return setLocation(
             startLoc,
-            optExpr.getValue(),
+            getPrevTokenEndLoc(),
             new (context_) ESTree::AwaitExpressionNode(optExpr.getValue()));
       }
       // Fall-through to default for all other identifiers.
+      LLVM_FALLTHROUGH;
 
     default:
       return parsePostfixExpression();
@@ -3509,8 +3734,21 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
   // We have 10 precedence levels.
   constexpr unsigned STACK_SIZE = 16;
 
-  // Operator and value stack.
-  llvh::SmallVector<std::pair<ESTree::NodePtr, TokenKind>, STACK_SIZE> stack{};
+  struct PrecedenceStackEntry {
+    /// Left hand side expression.
+    ESTree::NodePtr expr;
+    // Operator for this expression.
+    TokenKind opKind;
+    // Start location for the left hand side expression.
+    SMLoc exprStartLoc;
+
+    PrecedenceStackEntry(
+        ESTree::NodePtr expr,
+        TokenKind opKind,
+        SMLoc exprStartLoc)
+        : expr(expr), opKind(opKind), exprStartLoc(exprStartLoc) {}
+  };
+  llvh::SmallVector<PrecedenceStackEntry, STACK_SIZE> stack{};
 
   // True upon encountering a '??' operator.
   bool hasNullish = false;
@@ -3522,7 +3760,9 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
   const auto newBinNode = [this, &hasNullish, &hasBoolean](
                               ESTree::NodePtr left,
                               TokenKind opKind,
-                              ESTree::NodePtr right) -> ESTree::NodePtr {
+                              ESTree::NodePtr right,
+                              SMLoc startLoc,
+                              SMLoc endLoc) -> ESTree::NodePtr {
     UniqueString *opIdent = getTokenIdent(opKind);
     if (opKind == TokenKind::ampamp || opKind == TokenKind::pipepipe ||
         opKind == TokenKind::questionquestion) {
@@ -3542,13 +3782,13 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
         hasBoolean = true;
       }
       return setLocation(
-          left,
-          right,
+          startLoc,
+          endLoc,
           new (context_) ESTree::LogicalExpressionNode(left, right, opIdent));
     } else {
       return setLocation(
-          left,
-          right,
+          startLoc,
+          endLoc,
           new (context_) ESTree::BinaryExpressionNode(left, right, opIdent));
     }
   };
@@ -3557,25 +3797,33 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
   const TokenKind exceptKind =
       !param.has(ParamIn) ? TokenKind::rw_in : TokenKind::none;
 
+  SMLoc topExprStartLoc = tok_->getStartLoc();
   auto optExpr = parseUnaryExpression();
   if (!optExpr)
     return None;
   ESTree::NodePtr topExpr = optExpr.getValue();
+  SMLoc topExprEndLoc = getPrevTokenEndLoc();
 
   // While the current token is a binary operator.
   while (unsigned precedence =
              getPrecedenceExcept(tok_->getKind(), exceptKind)) {
     // If the next operator has no greater precedence than the operator on the
     // stack, pop the stack, creating a new binary expression.
-    while (!stack.empty() && precedence <= getPrecedence(stack.back().second)) {
-      if (precedence == getPrecedence(stack.back().second) &&
-          !isLeftAssoc(stack.back().second)) {
+    while (!stack.empty() && precedence <= getPrecedence(stack.back().opKind)) {
+      if (precedence == getPrecedence(stack.back().opKind) &&
+          !isLeftAssoc(stack.back().opKind)) {
         // If the precedences are equal, then we avoid popping for
         // right-associative operators to allow for the entire right-associative
         // expression to be built from the right.
         break;
       }
-      topExpr = newBinNode(stack.back().first, stack.back().second, topExpr);
+      topExpr = newBinNode(
+          stack.back().expr,
+          stack.back().opKind,
+          topExpr,
+          stack.back().exprStartLoc,
+          topExprEndLoc);
+      topExprStartLoc = topExpr->getStartLoc();
       stack.pop_back();
     }
 
@@ -3585,19 +3833,26 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
     //                     ^
     //                 We are here
     // Push topExpr and the '*', so we can parse rightExpr.
-    stack.emplace_back(topExpr, tok_->getKind());
+    stack.emplace_back(topExpr, tok_->getKind(), topExprStartLoc);
     advance();
 
+    topExprStartLoc = tok_->getStartLoc();
     auto optRightExpr = parseUnaryExpression();
     if (!optRightExpr)
       return None;
 
     topExpr = optRightExpr.getValue();
+    topExprEndLoc = getPrevTokenEndLoc();
   }
 
   // We have consumed all binary operators. Pop the stack, creating expressions.
   while (!stack.empty()) {
-    topExpr = newBinNode(stack.back().first, stack.back().second, topExpr);
+    topExpr = newBinNode(
+        stack.back().expr,
+        stack.back().opKind,
+        topExpr,
+        stack.back().exprStartLoc,
+        topExprEndLoc);
     stack.pop_back();
   }
 
@@ -3611,6 +3866,7 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
 Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
     Param param,
     CoverTypedParameters coverTypedParameters) {
+  SMLoc startLoc = tok_->getStartLoc();
   auto optTest = parseBinaryExpression(param);
   if (!optTest)
     return None;
@@ -3623,7 +3879,7 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
 #if HERMES_PARSE_FLOW
     if (context_.getParseFlow() &&
         coverTypedParameters == CoverTypedParameters::Yes) {
-      auto optCover = tryParseCoverTypedIdentifierNode(test);
+      auto optCover = tryParseCoverTypedIdentifierNode(test, false);
       if (!optCover)
         return None;
       if (*optCover)
@@ -3636,7 +3892,7 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
   }
 
   ESTree::Node *consequent = nullptr;
-  SMLoc questionLoc = tok_->getStartLoc();
+  SMRange questionRange = tok_->getSourceRange();
 
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow()) {
@@ -3651,7 +3907,7 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
     // in which case the '?' was part of an optional parameter, not a
     // conditional expression.
     if (coverTypedParameters == CoverTypedParameters::Yes) {
-      auto optCover = tryParseCoverTypedIdentifierNode(test);
+      auto optCover = tryParseCoverTypedIdentifierNode(test, true);
       if (!optCover)
         return None;
       if (*optCover)
@@ -3666,11 +3922,10 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
     // The tokens which can come here are limited to ',', '=', and ')'.
     if (coverTypedParameters == CoverTypedParameters::Yes &&
         checkN(TokenKind::comma, TokenKind::r_paren, TokenKind::equal)) {
-      // TODO: Store `optional` to the IdentifierNode.
       return setLocation(
-          test,
-          questionLoc,
-          new (context_) ESTree::CoverTypedIdentifierNode(test, nullptr));
+          startLoc,
+          questionRange,
+          new (context_) ESTree::CoverTypedIdentifierNode(test, nullptr, true));
     }
 
     // Now we're in the real backtracking stage.
@@ -3685,8 +3940,8 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
     // see if there is a ':' afterwards. If there isn't, failure is assured,
     // so we restore to the '?' and try again below, with
     // AllowTypedArrowFunction::No.
-    SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
-                                                         Subsystem::Parser};
+    SourceErrorManager::SaveAndSuppressMessages suppress{
+        &sm_, Subsystem::Parser};
     CHECK_RECURSION;
     auto optConsequent = parseAssignmentExpression(
         ParamIn, AllowTypedArrowFunction::Yes, CoverTypedParameters::No);
@@ -3718,7 +3973,7 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
           JSLexer::AllowRegExp,
           "in conditional expression after '... ? ...'",
           "location of '?'",
-          questionLoc))
+          questionRange.Start))
     return None;
 
   auto optAlternate = parseAssignmentExpression(
@@ -3728,15 +3983,17 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
   ESTree::Node *alternate = *optAlternate;
 
   return setLocation(
-      test,
-      alternate,
+      startLoc,
+      getPrevTokenEndLoc(),
       new (context_)
           ESTree::ConditionalExpressionNode(test, alternate, consequent));
 }
 
 #if HERMES_PARSE_FLOW
 Optional<ESTree::Node *> JSParserImpl::tryParseCoverTypedIdentifierNode(
-    ESTree::Node *test) {
+    ESTree::Node *test,
+    bool optional) {
+  assert(context_.getParseFlow() && "must be parsing Flow");
   // In the case of flow types in arrow function parameters, we may have
   // optional parameters which look like:
   // Identifier ? : TypeAnnotation
@@ -3748,28 +4005,18 @@ Optional<ESTree::Node *> JSParserImpl::tryParseCoverTypedIdentifierNode(
     if (isa<ESTree::IdentifierNode>(test) ||
         isa<ESTree::ObjectExpressionNode>(test) ||
         isa<ESTree::ArrayExpressionNode>(test)) {
-      ESTree::Node *type = nullptr;
-      bool optional = false;
-      if (check(TokenKind::question)) {
-        auto optNext = lexer_.lookahead1(None);
-        if (optNext.hasValue() &&
-            (*optNext == TokenKind::colon || *optNext == TokenKind::comma ||
-             *optNext == TokenKind::r_paren)) {
-          optional = true;
-        }
-      }
-      if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
-        // Deliberately wrap the type annotation later when reparsing.
-        auto optRet = parseTypeAnnotation(true);
-        if (!optRet)
-          return None;
-        type = *optRet;
-      }
-      // TODO: Store `optional` to the IdentifierNode.
+      // Deliberately wrap the type annotation later when reparsing.
+      SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
+      auto optRet = parseTypeAnnotation(annotStart);
+      if (!optRet)
+        return None;
+      ESTree::Node *type = *optRet;
+
       return setLocation(
           test,
-          type,
-          new (context_) ESTree::CoverTypedIdentifierNode(test, type));
+          getPrevTokenEndLoc(),
+          new (context_)
+              ESTree::CoverTypedIdentifierNode(test, type, optional));
     }
     // The colon must indicate something another than the typeAnnotation for
     // the parameter. Continue as usual.
@@ -3786,7 +4033,7 @@ Optional<ESTree::YieldExpressionNode *> JSParserImpl::parseYieldExpression(
       "yield expression must start with 'yield'");
   SMRange yieldLoc = advance();
 
-  if (eatSemi(yieldLoc.End, true) || checkEndAssignmentExpression())
+  if (check(TokenKind::semi) || checkEndAssignmentExpression())
     return setLocation(
         yieldLoc,
         yieldLoc,
@@ -3794,13 +4041,16 @@ Optional<ESTree::YieldExpressionNode *> JSParserImpl::parseYieldExpression(
 
   bool delegate = checkAndEat(TokenKind::star);
 
-  auto optArg = parseAssignmentExpression(param.get(ParamIn));
+  auto optArg = parseAssignmentExpression(
+      param.get(ParamIn),
+      AllowTypedArrowFunction::Yes,
+      CoverTypedParameters::No);
   if (!optArg)
     return None;
 
   return setLocation(
       yieldLoc,
-      optArg.getValue(),
+      getPrevTokenEndLoc(),
       new (context_) ESTree::YieldExpressionNode(optArg.getValue(), delegate));
 }
 
@@ -3816,7 +4066,7 @@ Optional<ESTree::ClassDeclarationNode *> JSParserImpl::parseClassDeclaration(
   ESTree::Node *name = nullptr;
   ESTree::Node *typeParams = nullptr;
 
-  if (!check(TokenKind::rw_extends, TokenKind::l_brace)) {
+  if (check(TokenKind::identifier)) {
     auto optName = parseBindingIdentifier(Param{});
     if (!optName) {
       errorExpected(
@@ -3827,14 +4077,6 @@ Optional<ESTree::ClassDeclarationNode *> JSParserImpl::parseClassDeclaration(
       return None;
     }
     name = *optName;
-#if HERMES_PARSE_FLOW
-    if (context_.getParseFlow() && check(TokenKind::less)) {
-      auto optParams = parseTypeParams();
-      if (!optParams)
-        return None;
-      typeParams = *optParams;
-    }
-#endif
   } else if (!param.has(ParamDefault)) {
     // Identifier is required unless we have +Default parameter.
     errorExpected(
@@ -3844,6 +4086,15 @@ Optional<ESTree::ClassDeclarationNode *> JSParserImpl::parseClassDeclaration(
         startLoc);
     return None;
   }
+
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow() && check(TokenKind::less)) {
+    auto optParams = parseTypeParams();
+    if (!optParams)
+      return None;
+    typeParams = *optParams;
+  }
+#endif
 
   auto optClass =
       parseClassTail(startLoc, name, typeParams, ClassParseKind::Declaration);
@@ -3863,7 +4114,9 @@ Optional<ESTree::ClassExpressionNode *> JSParserImpl::parseClassExpression() {
   ESTree::Node *name = nullptr;
   ESTree::Node *typeParams = nullptr;
 
-  if (!check(TokenKind::rw_extends, TokenKind::l_brace)) {
+  if (!check(TokenKind::rw_extends, TokenKind::l_brace) &&
+      !(context_.getParseFlow() &&
+        check(TokenKind::rw_implements, TokenKind::less))) {
     // Try to parse a BindingIdentifier if we did not see a ClassHeritage
     // or a '{'.
     auto optName = parseBindingIdentifier(Param{});
@@ -3876,15 +4129,16 @@ Optional<ESTree::ClassExpressionNode *> JSParserImpl::parseClassExpression() {
       return None;
     }
     name = *optName;
-#if HERMES_PARSE_FLOW
-    if (context_.getParseFlow() && check(TokenKind::less)) {
-      auto optParams = parseTypeParams();
-      if (!optParams)
-        return None;
-      typeParams = *optParams;
-    }
-#endif
   }
+
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow() && check(TokenKind::less)) {
+    auto optParams = parseTypeParams();
+    if (!optParams)
+      return None;
+    typeParams = *optParams;
+  }
+#endif
 
   auto optClass =
       parseClassTail(start, name, typeParams, ClassParseKind::Expression);
@@ -3992,6 +4246,22 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
   while (!check(TokenKind::r_brace)) {
     bool isStatic = false;
     SMRange startRange = tok_->getSourceRange();
+
+    bool declare = false;
+
+#if HERMES_PARSE_FLOW
+    if (context_.getParseFlow() && check(declareIdent_)) {
+      // Check for "declare" class properties.
+      auto optNext = lexer_.lookahead1(llvh::None);
+      if (optNext.hasValue() &&
+          (*optNext == TokenKind::rw_static ||
+           *optNext == TokenKind::identifier)) {
+        declare = true;
+        advance();
+      }
+    }
+#endif
+
     switch (tok_->getKind()) {
       case TokenKind::semi:
         advance();
@@ -4005,7 +4275,7 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
         // intentional fallthrough
       default: {
         // ClassElement
-        auto optElem = parseClassElement(isStatic, startRange);
+        auto optElem = parseClassElement(isStatic, startRange, declare);
         if (!optElem)
           return None;
         if (auto *method = dyn_cast<ESTree::MethodDefinitionNode>(*optElem)) {
@@ -4058,6 +4328,7 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
 Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     bool isStatic,
     SMRange startRange,
+    bool declare,
     bool eagerly) {
   SMLoc startLoc = tok_->getStartLoc();
 
@@ -4086,6 +4357,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     if (!checkN(
             TokenKind::less,
             TokenKind::l_paren,
+            TokenKind::r_brace,
             TokenKind::equal,
             TokenKind::colon,
             TokenKind::semi)) {
@@ -4095,7 +4367,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
       prop = setLocation(
           range,
           range,
-          new (context_) ESTree::IdentifierNode(getIdent_, nullptr));
+          new (context_) ESTree::IdentifierNode(getIdent_, nullptr, false));
       doParsePropertyName = false;
     }
   } else if (check(setIdent_)) {
@@ -4103,6 +4375,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     if (!checkN(
             TokenKind::less,
             TokenKind::l_paren,
+            TokenKind::r_brace,
             TokenKind::equal,
             TokenKind::colon,
             TokenKind::semi)) {
@@ -4112,7 +4385,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
       prop = setLocation(
           range,
           range,
-          new (context_) ESTree::IdentifierNode(setIdent_, nullptr));
+          new (context_) ESTree::IdentifierNode(setIdent_, nullptr, false));
       doParsePropertyName = false;
     }
   } else if (check(asyncIdent_)) {
@@ -4120,10 +4393,13 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     if (!checkN(
             TokenKind::less,
             TokenKind::l_paren,
+            TokenKind::r_brace,
             TokenKind::equal,
             TokenKind::colon,
-            TokenKind::semi)) {
+            TokenKind::semi) &&
+        !lexer_.isNewLineBeforeCurrentToken()) {
       // If we don't see '(' then this was actually an async method.
+      // Async methods cannot have a newline between 'async' and the name.
       // These can be either Async or AsyncGenerator, so check for that.
       special = checkAndEat(TokenKind::star) ? SpecialKind::AsyncGenerator
                                              : SpecialKind::Async;
@@ -4131,7 +4407,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
       prop = setLocation(
           range,
           range,
-          new (context_) ESTree::IdentifierNode(asyncIdent_, nullptr));
+          new (context_) ESTree::IdentifierNode(asyncIdent_, nullptr, false));
       doParsePropertyName = false;
     }
   } else if (checkAndEat(TokenKind::star)) {
@@ -4143,7 +4419,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     prop = setLocation(
         startRange,
         startRange,
-        new (context_) ESTree::IdentifierNode(staticIdent_, nullptr));
+        new (context_) ESTree::IdentifierNode(staticIdent_, nullptr, false));
     isStatic = false;
     doParsePropertyName = false;
   }
@@ -4161,12 +4437,23 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
 #endif
 
   bool computed = false;
+  bool isPrivate = false;
   if (doParsePropertyName) {
-    computed = check(TokenKind::l_square);
-    auto optProp = parsePropertyName();
-    if (!optProp)
-      return None;
-    prop = *optProp;
+    if (check(TokenKind::private_identifier)) {
+      isPrivate = true;
+      prop = setLocation(
+          tok_,
+          tok_,
+          new (context_) ESTree::IdentifierNode(
+              tok_->getPrivateIdentifier(), nullptr, false));
+      advance();
+    } else {
+      computed = check(TokenKind::l_square);
+      auto optProp = parsePropertyName();
+      if (!optProp)
+        return None;
+      prop = *optProp;
+    }
   }
 
   // Store the propName for comparisons, used for SyntaxErrors.
@@ -4176,19 +4463,22 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
   } else if (auto *str = dyn_cast<ESTree::StringLiteralNode>(prop)) {
     propName = str->_value;
   }
+
   bool isConstructor =
       !isStatic && !computed && propName && propName->str() == "constructor";
 
-  if (checkN(TokenKind::colon, TokenKind::equal, TokenKind::semi)) {
-    // Parse a class property.
-    // TODO: Account for private properties.
+  if (special == SpecialKind::None &&
+      !check(TokenKind::less, TokenKind::l_paren)) {
+    // Parse a class property, because this can't be a method definition.
+    // Attempt ASI after the fact, and continue on, letting the next iteration
+    // error if it wasn't actually a class property.
     // FieldDefinition ;
     //                 ^
     ESTree::Node *typeAnnotation = nullptr;
 #if HERMES_PARSE_FLOW
-    if (context_.getParseFlow() &&
-        checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
-      auto optType = parseTypeAnnotation(true);
+    if (context_.getParseFlow() && check(TokenKind::colon)) {
+      SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
+      auto optType = parseTypeAnnotation(annotStart);
       if (!optType)
         return None;
       typeAnnotation = *optType;
@@ -4202,17 +4492,44 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
       if (!optValue)
         return None;
       value = *optValue;
+      if (declare) {
+        error(startRange, "Invalid 'declare' with initializer");
+      }
     }
-    SMLoc end;
-    if (!eatSemi(end)) {
+    // ASI is allowed for separating class elements.
+    if (!eatSemi(true) && !typeAnnotation) {
+      errorExpected(
+          TokenKind::semi,
+          "after class property",
+          "start of class property",
+          startRange.Start);
       return None;
     }
+    if (isPrivate) {
+      return setLocation(
+          prop,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::ClassPrivatePropertyNode(
+              prop, value, isStatic, declare, variance, typeAnnotation));
+    }
     return setLocation(
-        prop,
-        end,
+        startRange,
+        getPrevTokenEndLoc(),
         new (context_) ESTree::ClassPropertyNode(
-            prop, value, computed, isStatic, variance, typeAnnotation));
+            prop,
+            value,
+            computed,
+            isStatic,
+            declare,
+            variance,
+            typeAnnotation));
   }
+
+  if (declare) {
+    error(startRange, "Invalid 'declare' in class method");
+  }
+
+  SMLoc funcExprStartLoc = tok_->getStartLoc();
 
   ESTree::Node *typeParams = nullptr;
 #if HERMES_PARSE_FLOW
@@ -4247,8 +4564,9 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
 
   ESTree::Node *returnType = nullptr;
 #if HERMES_PARSE_FLOW
-  if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
-    auto optRet = parseTypeAnnotation(true);
+  if (context_.getParseFlow() && check(TokenKind::colon)) {
+    SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
+    auto optRet = parseTypeAnnotation(annotStart);
     if (!optRet)
       return None;
     returnType = *optRet;
@@ -4268,7 +4586,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     return None;
 
   auto *funcExpr = setLocation(
-      startLoc,
+      funcExprStartLoc,
       optBody.getValue(),
       new (context_) ESTree::FunctionExpressionNode(
           nullptr,
@@ -4276,6 +4594,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
           optBody.getValue(),
           typeParams,
           returnType,
+          /* predicate */ nullptr,
           special == SpecialKind::Generator ||
               special == SpecialKind::AsyncGenerator,
           special == SpecialKind::Async ||
@@ -4286,22 +4605,33 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
 
   if (special == SpecialKind::Get && funcExpr->_params.size() != 0) {
     error(
-        funcExpr->getSourceRange(),
+        {startLoc, funcExpr->getEndLoc()},
         Twine("getter method must no one formal arguments, found ") +
             Twine(funcExpr->_params.size()));
   }
 
   if (special == SpecialKind::Set && funcExpr->_params.size() != 1) {
     error(
-        funcExpr->getSourceRange(),
+        {startLoc, funcExpr->getEndLoc()},
         Twine("setter method must have exactly one formal argument, found ") +
             Twine(funcExpr->_params.size()));
   }
 
+#if HERMES_PARSE_FLOW
+  if ((special == SpecialKind::Get || special == SpecialKind::Set) &&
+      typeParams != nullptr) {
+    error(
+        {startLoc, funcExpr->getEndLoc()},
+        "accessor method may not have type parameters");
+  }
+#endif
+
   if (isStatic && propName && propName->str() == "prototype") {
     // ClassElement : static MethodDefinition
     // It is a Syntax Error if PropName of MethodDefinition is "prototype".
-    error(funcExpr->getSourceRange(), "prototype method must not be static");
+    error(
+        {startLoc, funcExpr->getEndLoc()},
+        "prototype method must not be static");
     return None;
   }
 
@@ -4312,7 +4642,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
       // and SpecialMethod of MethodDefinition is true.
       // TODO: Account for generator methods in SpecialMethod here.
       error(
-          funcExpr->getSourceRange(),
+          {startLoc, funcExpr->getEndLoc()},
           "constructor method must not be a getter or setter");
       return None;
     }
@@ -4323,8 +4653,17 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     kind = setIdent_;
   }
 
+  if (isPrivate) {
+    prop = setLocation(
+        startLoc, prop, new (context_) ESTree::PrivateNameNode(prop));
+  }
+
+  if (variance) {
+    error(variance->getSourceRange(), "Unexpected variance sigil");
+  }
+
   return setLocation(
-      startLoc,
+      startRange,
       optBody.getValue(),
       new (context_) ESTree::MethodDefinitionNode(
           prop, funcExpr, kind, computed, isStatic));
@@ -4333,9 +4672,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
 bool JSParserImpl::reparseArrowParameters(
     ESTree::Node *node,
     ESTree::NodeList &paramList,
-    bool &reparsedAsync) {
-  reparsedAsync = false;
-
+    bool &isAsync) {
   // Empty argument list "()".
   if (node->getParens() == 0 && isa<ESTree::CoverEmptyArgsNode>(node))
     return true;
@@ -4350,28 +4687,39 @@ bool JSParserImpl::reparseArrowParameters(
         TokenKind::identifier);
   }
 
-  if (node->getParens() != 1 && !isa<ESTree::CallExpressionNode>(node)) {
-    error(node->getSourceRange(), "invalid arrow function parameter list");
-    return false;
-  }
-
   ESTree::NodeList nodeList{};
 
-  if (auto *seqNode = dyn_cast<ESTree::SequenceExpressionNode>(node)) {
-    nodeList = std::move(seqNode->_expressions);
-  } else if (auto *callNode = dyn_cast<ESTree::CallExpressionNode>(node)) {
+  if (auto *callNode = dyn_cast<ESTree::CallExpressionNode>(node)) {
     // Async function parameters look like call expressions. For example:
     // async(x,y)
-    // Set `reparsedAsync = true` to indicate that this was async.
-    nodeList = std::move(callNode->_arguments);
-    reparsedAsync = true;
+    // It must have no surrounding parens and the name must be 'async'.
+    // It must also not already be `async`, because the CallExpression
+    // determines whether it is `async`.
+    // Set `isAsync = true` to indicate that this was async.
+    auto *callee = dyn_cast<ESTree::IdentifierNode>(callNode->_callee);
+    if (!isAsync && callNode->getParens() == 0 && callee &&
+        callee->_name == asyncIdent_) {
+      nodeList = std::move(callNode->_arguments);
+      isAsync = true;
+    } else {
+      error(node->getSourceRange(), "invalid arrow function parameter list");
+      return false;
+    }
   } else {
-    node->clearParens();
-    nodeList.push_back(*node);
+    if (node->getParens() != 1) {
+      error(node->getSourceRange(), "invalid arrow function parameter list");
+      return false;
+    }
+
+    if (auto *seqNode = dyn_cast<ESTree::SequenceExpressionNode>(node)) {
+      nodeList = std::move(seqNode->_expressions);
+    } else {
+      node->clearParens();
+      nodeList.push_back(*node);
+    }
   }
 
-  llvh::SaveAndRestore<bool> oldParamAwait(
-      paramAwait_, paramAwait_ || reparsedAsync);
+  llvh::SaveAndRestore<bool> oldParamAwait(paramAwait_, paramAwait_ || isAsync);
 
   // If the node has 0 parentheses, return true, otherwise print an error and
   // return false.
@@ -4417,10 +4765,11 @@ bool JSParserImpl::reparseArrowParameters(
       continue;
     }
 
+    ESTree::AssignmentExpressionNode *asn = nullptr;
     ESTree::Node *init = nullptr;
 
     // If we encounter an initializer, unpack it.
-    if (auto *asn = dyn_cast<ESTree::AssignmentExpressionNode>(expr)) {
+    if ((asn = dyn_cast<ESTree::AssignmentExpressionNode>(expr))) {
       if (asn->_operator == getTokenIdent(TokenKind::equal)) {
         expr = asn->_left;
         init = asn->_right;
@@ -4437,7 +4786,7 @@ bool JSParserImpl::reparseArrowParameters(
 
     if (init) {
       expr = setLocation(
-          expr, init, new (context_) ESTree::AssignmentPatternNode(expr, init));
+          asn, asn, new (context_) ESTree::AssignmentPatternNode(expr, init));
     }
 
     if (auto *ident = dyn_cast<ESTree::IdentifierNode>(expr)) {
@@ -4457,7 +4806,9 @@ bool JSParserImpl::reparseArrowParameters(
 Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
     Param param,
     ESTree::Node *leftExpr,
+    ESTree::Node *typeParams,
     ESTree::Node *returnType,
+    ESTree::Node *predicate,
     SMLoc startLoc,
     AllowTypedArrowFunction allowTypedArrowFunction,
     bool forceAsync) {
@@ -4476,9 +4827,9 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
           startLoc))
     return None;
 
-  bool reparsedAsync;
+  bool isAsync = forceAsync;
   ESTree::NodeList paramList;
-  if (!reparseArrowParameters(leftExpr, paramList, reparsedAsync))
+  if (!reparseArrowParameters(leftExpr, paramList, isAsync))
     return None;
 
   SaveStrictMode saveStrictMode{this};
@@ -4486,8 +4837,7 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
   bool expression;
 
   llvh::SaveAndRestore<bool> oldParamYield(paramYield_, false);
-  llvh::SaveAndRestore<bool> bodyParamAwait(
-      paramAwait_, forceAsync || reparsedAsync);
+  llvh::SaveAndRestore<bool> bodyParamAwait(paramAwait_, isAsync);
   if (check(TokenKind::l_brace)) {
     auto optBody = parseFunctionBody(Param{}, true, JSLexer::AllowDiv, true);
     if (!optBody)
@@ -4510,13 +4860,14 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
       nullptr,
       std::move(paramList),
       body,
-      /* typeParameters */ nullptr,
+      typeParams,
       returnType,
+      predicate,
       expression,
-      forceAsync || reparsedAsync);
+      isAsync);
 
   arrow->strictness = ESTree::makeStrictness(isStrictMode());
-  return setLocation(startLoc, body, arrow);
+  return setLocation(startLoc, getPrevTokenEndLoc(), arrow);
 }
 
 Optional<ESTree::Node *> JSParserImpl::reparseAssignmentPattern(
@@ -4529,7 +4880,21 @@ Optional<ESTree::Node *> JSParserImpl::reparseAssignmentPattern(
     if (auto *OEN = dyn_cast<ESTree::ObjectExpressionNode>(node)) {
       return reparseObjectAssignmentPattern(OEN, inDecl);
     }
-    if (isa<ESTree::IdentifierNode>(node) || isa<ESTree::PatternNode>(node)) {
+    if (auto *ident = dyn_cast<ESTree::IdentifierNode>(node)) {
+      // Validate in this function to avoid validating in each branch of
+      // the conditions within the other reparse functions.
+      // Validation does not prevent progress of the parse here, so we can
+      // return node regardless of whether we failed to validate.
+      validateBindingIdentifier(
+          Param{},
+          ident->getSourceRange(),
+          ident->_name,
+          TokenKind::identifier);
+      return node;
+    }
+    if (isa<ESTree::PatternNode>(node)) {
+      // Pattern nodes validate their binding identifiers when they are
+      // initially parsed, no work to do here.
       return node;
     }
 #if HERMES_PARSE_FLOW
@@ -4541,15 +4906,16 @@ Optional<ESTree::Node *> JSParserImpl::reparseAssignmentPattern(
         return None;
       if (auto *apn = dyn_cast<ESTree::ArrayPatternNode>(*optAssn)) {
         apn->_typeAnnotation = type;
-        return apn;
+        return setLocation(cover, cover, apn);
       }
       if (auto *opn = dyn_cast<ESTree::ObjectPatternNode>(*optAssn)) {
         opn->_typeAnnotation = type;
-        return opn;
+        return setLocation(cover, cover, opn);
       }
       if (auto *id = dyn_cast<ESTree::IdentifierNode>(*optAssn)) {
         id->_typeAnnotation = type;
-        return id;
+        id->_optional = cover->_optional;
+        return setLocation(cover, cover, id);
       }
     }
     if (auto *typecast = dyn_cast<ESTree::TypeCastExpressionNode>(node)) {
@@ -4559,15 +4925,15 @@ Optional<ESTree::Node *> JSParserImpl::reparseAssignmentPattern(
         return None;
       if (auto *apn = dyn_cast<ESTree::ArrayPatternNode>(*optAssn)) {
         apn->_typeAnnotation = type;
-        return apn;
+        return setLocation(apn, type, apn);
       }
       if (auto *opn = dyn_cast<ESTree::ObjectPatternNode>(*optAssn)) {
         opn->_typeAnnotation = type;
-        return opn;
+        return setLocation(opn, type, opn);
       }
       if (auto *id = dyn_cast<ESTree::IdentifierNode>(*optAssn)) {
         id->_typeAnnotation = type;
-        return id;
+        return setLocation(id, type, id);
       }
     }
 #endif
@@ -4592,7 +4958,7 @@ Optional<ESTree::Node *> JSParserImpl::reparseArrayAsignmentPattern(
 
     // Every element in the array assignment pattern is optional,
     // because we can parse the Elision production.
-    if (auto *empty = dyn_cast<ESTree::EmptyNode>(elem)) {
+    if (isa<ESTree::EmptyNode>(elem)) {
       elements.push_back(*elem);
       continue;
     }
@@ -4608,14 +4974,15 @@ Optional<ESTree::Node *> JSParserImpl::reparseArrayAsignmentPattern(
         continue;
       elem = setLocation(
           spread,
-          *optSubPattern,
+          spread,
           new (context_) ESTree::RestElementNode(*optSubPattern));
     } else {
+      ESTree::AssignmentExpressionNode *asn = nullptr;
       ESTree::Node *init = nullptr;
 
       // If we encounter an initializer, unpack it.
       if (!elem->getParens()) {
-        if (auto *asn = dyn_cast<ESTree::AssignmentExpressionNode>(elem)) {
+        if ((asn = dyn_cast<ESTree::AssignmentExpressionNode>(elem))) {
           if (asn->_operator == getTokenIdent(TokenKind::equal)) {
             elem = asn->_left;
             init = asn->_right;
@@ -4631,9 +4998,7 @@ Optional<ESTree::Node *> JSParserImpl::reparseArrayAsignmentPattern(
 
       if (init) {
         elem = setLocation(
-            elem,
-            init,
-            new (context_) ESTree::AssignmentPatternNode(elem, init));
+            asn, asn, new (context_) ESTree::AssignmentPatternNode(elem, init));
       }
     }
 
@@ -4682,7 +5047,7 @@ Optional<ESTree::Node *> JSParserImpl::reparseObjectAssignmentPattern(
       }
 #endif
       node = setLocation(
-          spread, node, new (context_) ESTree::RestElementNode(node));
+          spread, spread, new (context_) ESTree::RestElementNode(node));
     } else {
       auto *propNode = cast<ESTree::PropertyNode>(node);
 
@@ -4694,18 +5059,9 @@ Optional<ESTree::Node *> JSParserImpl::reparseObjectAssignmentPattern(
         continue;
       }
 
-      if (auto *key = dyn_cast<ESTree::IdentifierNode>(propNode->_key)) {
-        if (!validateBindingIdentifier(
-                Param{},
-                key->getSourceRange(),
-                key->_name,
-                TokenKind::identifier)) {
-          return None;
-        }
-      }
-
       ESTree::Node *value = propNode->_value;
       ESTree::Node *init = nullptr;
+      SMLoc endLoc = value->getEndLoc();
 
       // If we encounter an initializer, unpack it.
       if (auto *asn = dyn_cast<ESTree::AssignmentExpressionNode>(value)) {
@@ -4721,8 +5077,8 @@ Optional<ESTree::Node *> JSParserImpl::reparseObjectAssignmentPattern(
             "CoverInitializedName must start with an identifier");
         // Clone the key.
         auto *ident = cast<ESTree::IdentifierNode>(propNode->_key);
-        value = new (context_)
-            ESTree::IdentifierNode(ident->_name, ident->_typeAnnotation);
+        value = new (context_) ESTree::IdentifierNode(
+            ident->_name, ident->_typeAnnotation, ident->_optional);
         value->copyLocationFrom(propNode->_key);
 
         init = coverInitializer->_init;
@@ -4736,8 +5092,10 @@ Optional<ESTree::Node *> JSParserImpl::reparseObjectAssignmentPattern(
 
       // If we have an initializer, create an AssignmentPattern.
       if (init) {
-        value = new (context_) ESTree::AssignmentPatternNode(value, init);
-        value->copyLocationFrom(propNode->_value);
+        value = setLocation(
+            value,
+            endLoc,
+            new (context_) ESTree::AssignmentPatternNode(value, init));
       }
 
       propNode->_value = value;
@@ -4758,57 +5116,73 @@ Optional<ESTree::Node *> JSParserImpl::tryParseTypedAsyncArrowFunction(
   assert(context_.getParseFlow());
   assert(check(asyncIdent_));
   JSLexer::SavePoint savePoint{&lexer_};
-  SourceErrorManager::SaveAndSuppressMessages suppress{&sm_, Subsystem::Parser};
   SMLoc start = advance().Start;
 
-  if (check(TokenKind::less)) {
-    auto optTypeParams = parseTypeParams();
-    if (!optTypeParams) {
-      savePoint.restore();
-      return None;
-    }
-  }
-
-  if (!check(TokenKind::l_paren)) {
-    savePoint.restore();
-    return None;
-  }
-
-  auto optLeftExpr =
-      parseConditionalExpression(param, CoverTypedParameters::Yes);
-  if (!optLeftExpr) {
-    savePoint.restore();
-    return None;
-  }
-
+  ESTree::Node *leftExpr = nullptr;
+  ESTree::Node *typeParams = nullptr;
   ESTree::Node *returnType = nullptr;
-  if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
-    auto optType = parseTypeAnnotation(true, AllowAnonFunctionType::No);
-    if (!optType) {
+  ESTree::Node *predicate = nullptr;
+  {
+    SourceErrorManager::SaveAndSuppressMessages suppress{
+        &sm_, Subsystem::Parser};
+    if (check(TokenKind::less)) {
+      auto optTypeParams = parseTypeParams();
+      if (!optTypeParams) {
+        savePoint.restore();
+        return None;
+      }
+      typeParams = *optTypeParams;
+    }
+
+    if (!check(TokenKind::l_paren)) {
       savePoint.restore();
       return None;
     }
-    returnType = *optType;
+
+    auto optLeftExpr =
+        parseConditionalExpression(param, CoverTypedParameters::Yes);
+    if (!optLeftExpr) {
+      savePoint.restore();
+      return None;
+    }
+    leftExpr = *optLeftExpr;
+
+    if (check(TokenKind::colon)) {
+      SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
+      if (!check(checksIdent_)) {
+        auto optType =
+            parseTypeAnnotation(annotStart, AllowAnonFunctionType::No);
+        if (!optType) {
+          savePoint.restore();
+          return None;
+        }
+        returnType = *optType;
+      }
+      if (check(checksIdent_)) {
+        auto optPredicate = parsePredicate();
+        if (!optPredicate) {
+          savePoint.restore();
+          return None;
+        }
+        predicate = *optPredicate;
+      }
+    }
+
+    if (!check(TokenKind::equalgreater)) {
+      savePoint.restore();
+      return None;
+    }
   }
 
-  if (!check(TokenKind::equalgreater)) {
-    savePoint.restore();
-    return None;
-  }
-
-  auto optArrow = parseArrowFunctionExpression(
+  return parseArrowFunctionExpression(
       param,
-      *optLeftExpr,
+      leftExpr,
+      typeParams,
       returnType,
+      predicate,
       start,
       AllowTypedArrowFunction::Yes,
       /* forceAsync */ true);
-  if (!optArrow) {
-    savePoint.restore();
-    return None;
-  }
-
-  return *optArrow;
 }
 #endif
 
@@ -4825,7 +5199,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
     if (!optYieldExpr)
       return None;
     ESTree::YieldExpressionNode *yieldExpr = *optYieldExpr;
-    if (!checkEndAssignmentExpression()) {
+    if (yieldExpr->_argument && !checkEndAssignmentExpression()) {
       error(tok_->getStartLoc(), "unexpected token after yield expression");
       return None;
     }
@@ -4833,11 +5207,11 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
   }
 
   SMLoc startLoc = tok_->getStartLoc();
-  bool isAsync = false;
+  bool forceAsync = false;
   if (check(asyncIdent_)) {
     OptValue<TokenKind> optNext = lexer_.lookahead1(TokenKind::identifier);
     if (optNext.hasValue() && *optNext == TokenKind::identifier) {
-      isAsync = true;
+      forceAsync = true;
     }
 #if HERMES_PARSE_FLOW
     if (context_.getParseFlow() && optNext.hasValue() &&
@@ -4857,8 +5231,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
     JSLexer::SavePoint savePoint{&lexer_};
     // Suppress messages from the parser while still displaying lexer
     // messages.
-    SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
-                                                         Subsystem::Parser};
+    CollectMessagesRAII collect{&sm_, true};
     // Do as the flow parser does due to JSX ambiguities.
     // First we try and parse as an assignment expression disallowing
     // typed arrow functions. If that fails, then try again while allowing
@@ -4867,12 +5240,14 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
         param, AllowTypedArrowFunction::No, CoverTypedParameters::No, nullptr);
     if (optAssign) {
       // That worked, so just return it directly.
+      collect.setDiscardMessages(false);
       return *optAssign;
     } else {
       // Consume the type parameters and try again.
       savePoint.restore();
       auto optTypeParams = parseTypeParams();
-      if (optTypeParams) {
+      // Type parameters must be followed by a '(' to be meaningful.
+      if (optTypeParams && check(TokenKind::l_paren)) {
         typeParams = *optTypeParams;
         optAssign = parseAssignmentExpression(
             param,
@@ -4897,11 +5272,13 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
   }
 #endif
 
+  SMLoc leftStartLoc = tok_->getStartLoc();
   auto optLeftExpr = parseConditionalExpression(param, coverTypedParameters);
   if (!optLeftExpr)
     return None;
 
   ESTree::Node *returnType = nullptr;
+  ESTree::Node *predicate = nullptr;
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow()) {
     if (allowTypedArrowFunction == AllowTypedArrowFunction::Yes &&
@@ -4909,22 +5286,42 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
          isa<ESTree::CoverEmptyArgsNode>(*optLeftExpr)) &&
         check(TokenKind::colon)) {
       JSLexer::SavePoint savePoint{&lexer_};
-      // Suppress messages from the parser while still displaying lexer
-      // messages.
-      SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
-                                                           Subsystem::Parser};
-      advance(JSLexer::GrammarContext::Flow);
-      auto optType = parseTypeAnnotation(true, AllowAnonFunctionType::No);
-      if (optType) {
+      // Defer our decision on whether to show or suppress messages for this
+      // next section.
+      // If we are unsuccessful during the parse, it can mean that we need to
+      // start parsing JSX children inside tags, instead of function type
+      // parameters. We need to suppress lexer messages because the lexing rules
+      // inside JSX are quite different from JS/Flow.
+      // For example:
+      // x ? (1) : <tag>#{foo}</tag>;
+      //         ^
+      // and
+      // x ? (1) : <tag>"</tag>;
+      //         ^
+      // must be able to handle the lexer errors that would occur if we lexed
+      // the inside of the JSX tags as JS.
+      CollectMessagesRAII collect{&sm_, true};
+      SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
+      bool startsWithPredicate = check(checksIdent_);
+      auto optType = startsWithPredicate
+          ? llvh::None
+          : parseTypeAnnotation(annotStart, AllowAnonFunctionType::No);
+      if (optType)
+        returnType = *optType;
+      if (optType || startsWithPredicate) {
         if (check(TokenKind::equalgreater)) {
+          assert(
+              !startsWithPredicate && "no returnType if startsWithPredicate");
           // Done parsing the return type and predicate.
-          returnType = *optType;
+          // Successful parse, show any messages that the lexer emitted.
+          collect.setDiscardMessages(false);
         } else if (check(checksIdent_)) {
           auto optPred = parsePredicate();
           if (optPred && check(TokenKind::equalgreater)) {
             // Done parsing the return type and predicate.
-            returnType = *optType;
-            // TODO: Store the predicate.
+            predicate = *optPred;
+            // Successful parse, show any messages that the lexer emitted.
+            collect.setDiscardMessages(false);
           } else {
             savePoint.restore();
           }
@@ -4944,14 +5341,15 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
   //   async [no line terminator] ArrowParameters [no line terminator] =>
   //   ConciseBody.
   if (check(TokenKind::equalgreater) && !lexer_.isNewLineBeforeCurrentToken()) {
-    // TODO: Pass typeParams along to arrow functions.
     return parseArrowFunctionExpression(
         param,
         *optLeftExpr,
+        typeParams,
         returnType,
-        startLoc,
+        predicate,
+        typeParams ? typeParams->getStartLoc() : startLoc,
         allowTypedArrowFunction,
-        isAsync);
+        forceAsync);
   }
 
 #if HERMES_PARSE_FLOW
@@ -4980,6 +5378,9 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
   UniqueString *op = getTokenIdent(tok_->getKind());
   auto debugLoc = advance().Start;
 
+  // We are directly recursing on parseAssignmentExpression.
+  // That can overflow the stack, so check recursion here.
+  CHECK_RECURSION;
   auto optRightExpr = parseAssignmentExpression(
       param, AllowTypedArrowFunction::Yes, CoverTypedParameters::No, nullptr);
   if (!optRightExpr)
@@ -4995,8 +5396,8 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
     return None;
   }
   return setLocation(
-      optLeftExpr.getValue(),
-      optRightExpr.getValue(),
+      leftStartLoc,
+      getPrevTokenEndLoc(),
       debugLoc,
       new (context_) ESTree::AssignmentExpressionNode(
           op, optLeftExpr.getValue(), optRightExpr.getValue()));
@@ -5005,6 +5406,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
 Optional<ESTree::Node *> JSParserImpl::parseExpression(
     Param param,
     CoverTypedParameters coverTypedParameters) {
+  SMLoc startLoc = tok_->getStartLoc();
   auto optExpr = parseAssignmentExpression(
       param, AllowTypedArrowFunction::Yes, coverTypedParameters, nullptr);
   if (!optExpr)
@@ -5050,11 +5452,9 @@ Optional<ESTree::Node *> JSParserImpl::parseExpression(
     exprList.push_back(*expr2);
   }
 
-  auto *firstExpr = &exprList.front();
-  auto *lastExpr = &exprList.back();
   return setLocation(
-      firstExpr,
-      lastExpr,
+      startLoc,
+      getPrevTokenEndLoc(),
       new (context_) ESTree::SequenceExpressionNode(std::move(exprList)));
 }
 
@@ -5083,7 +5483,8 @@ Optional<ESTree::StringLiteralNode *> JSParserImpl::parseFromClause() {
   return source;
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseImportDeclaration() {
+Optional<ESTree::ImportDeclarationNode *>
+JSParserImpl::parseImportDeclaration() {
   assert(
       check(TokenKind::rw_import) &&
       "import declaration must start with 'import'");
@@ -5097,13 +5498,13 @@ Optional<ESTree::Node *> JSParserImpl::parseImportDeclaration() {
         tok_,
         tok_,
         new (context_) ESTree::StringLiteralNode(tok_->getStringLiteral()));
-    auto endLoc = advance().End;
-    if (!eatSemi(endLoc)) {
+    advance();
+    if (!eatSemi()) {
       return None;
     }
     return setLocation(
         startLoc,
-        endLoc,
+        getPrevTokenEndLoc(),
         new (context_) ESTree::ImportDeclarationNode({}, source, valueIdent_));
   }
 
@@ -5118,14 +5519,13 @@ Optional<ESTree::Node *> JSParserImpl::parseImportDeclaration() {
     return None;
   }
 
-  SMLoc endLoc = optFromClause.getValue()->getEndLoc();
-  if (!eatSemi(endLoc)) {
+  if (!eatSemi()) {
     return None;
   }
 
   return setLocation(
       startLoc,
-      endLoc,
+      getPrevTokenEndLoc(),
       new (context_) ESTree::ImportDeclarationNode(
           std::move(specifiers), *optFromClause, kind));
 }
@@ -5152,7 +5552,7 @@ Optional<UniqueString *> JSParserImpl::parseImportClause(
       auto *defaultBinding = setLocation(
           kindRange,
           kindRange,
-          new (context_) ESTree::IdentifierNode(typeIdent_, nullptr));
+          new (context_) ESTree::IdentifierNode(typeIdent_, nullptr, false));
       specifiers.push_back(*setLocation(
           defaultBinding,
           defaultBinding,
@@ -5170,12 +5570,11 @@ Optional<UniqueString *> JSParserImpl::parseImportClause(
             startLoc);
         return None;
       }
-      SMLoc endLoc = optDefaultBinding.getValue()->getEndLoc();
+      ESTree::IdentifierNode *defaultBinding = *optDefaultBinding;
       specifiers.push_back(*setLocation(
-          startLoc,
-          endLoc,
-          new (context_)
-              ESTree::ImportDefaultSpecifierNode(*optDefaultBinding)));
+          defaultBinding,
+          defaultBinding,
+          new (context_) ESTree::ImportDefaultSpecifierNode(defaultBinding)));
     }
     if (!checkAndEat(TokenKind::comma)) {
       // If there was no comma, there's no more bindings to parse,
@@ -5293,7 +5692,6 @@ Optional<ESTree::ImportSpecifierNode *> JSParserImpl::parseImportSpecifier(
   ESTree::IdentifierNode *imported = nullptr;
   ESTree::IdentifierNode *local = nullptr;
   TokenKind localKind;
-  SMLoc endLoc;
 
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow() && checkAndEat(TokenKind::rw_typeof)) {
@@ -5313,10 +5711,9 @@ Optional<ESTree::ImportSpecifierNode *> JSParserImpl::parseImportSpecifier(
       imported = setLocation(
           typeRange,
           typeRange,
-          new (context_) ESTree::IdentifierNode(typeIdent_, nullptr));
+          new (context_) ESTree::IdentifierNode(typeIdent_, nullptr, false));
       local = imported;
       localKind = TokenKind::identifier;
-      endLoc = imported->getEndLoc();
     } else if (check(asIdent_)) {
       SMRange asRange = advance();
       if (check(TokenKind::r_brace, TokenKind::comma)) {
@@ -5325,10 +5722,10 @@ Optional<ESTree::ImportSpecifierNode *> JSParserImpl::parseImportSpecifier(
         imported = setLocation(
             asRange,
             asRange,
-            new (context_) ESTree::IdentifierNode(asIdent_, nullptr));
+            new (context_) ESTree::IdentifierNode(asIdent_, nullptr, false));
         local = imported;
         localKind = TokenKind::identifier;
-        endLoc = advance().End;
+        advance();
       } else if (checkAndEat(asIdent_)) {
         // 'type' 'as' 'as' Identifier
         //                  ^
@@ -5344,14 +5741,14 @@ Optional<ESTree::ImportSpecifierNode *> JSParserImpl::parseImportSpecifier(
         imported = setLocation(
             asRange,
             asRange,
-            new (context_) ESTree::IdentifierNode(asIdent_, nullptr));
+            new (context_) ESTree::IdentifierNode(asIdent_, nullptr, false));
         local = setLocation(
             tok_,
             tok_,
             new (context_) ESTree::IdentifierNode(
-                tok_->getResWordOrIdentifier(), nullptr));
+                tok_->getResWordOrIdentifier(), nullptr, false));
         localKind = TokenKind::identifier;
-        endLoc = advance().End;
+        advance();
       } else {
         // 'type' 'as' Identifier
         //             ^
@@ -5366,14 +5763,14 @@ Optional<ESTree::ImportSpecifierNode *> JSParserImpl::parseImportSpecifier(
         imported = setLocation(
             typeRange,
             typeRange,
-            new (context_) ESTree::IdentifierNode(typeIdent_, nullptr));
+            new (context_) ESTree::IdentifierNode(typeIdent_, nullptr, false));
         local = setLocation(
             tok_,
             tok_,
             new (context_) ESTree::IdentifierNode(
-                tok_->getResWordOrIdentifier(), nullptr));
+                tok_->getResWordOrIdentifier(), nullptr, false));
         localKind = TokenKind::identifier;
-        endLoc = advance().End;
+        advance();
       }
     } else {
       // 'type' Identifier
@@ -5390,11 +5787,11 @@ Optional<ESTree::ImportSpecifierNode *> JSParserImpl::parseImportSpecifier(
       imported = setLocation(
           tok_,
           tok_,
-          new (context_)
-              ESTree::IdentifierNode(tok_->getResWordOrIdentifier(), nullptr));
+          new (context_) ESTree::IdentifierNode(
+              tok_->getResWordOrIdentifier(), nullptr, false));
       local = imported;
       localKind = tok_->getKind();
-      endLoc = advance().End;
+      advance();
       if (checkAndEat(asIdent_)) {
         // type Identifier 'as' Identifier
         //                      ^
@@ -5410,9 +5807,9 @@ Optional<ESTree::ImportSpecifierNode *> JSParserImpl::parseImportSpecifier(
             tok_,
             tok_,
             new (context_) ESTree::IdentifierNode(
-                tok_->getResWordOrIdentifier(), nullptr));
+                tok_->getResWordOrIdentifier(), nullptr, false));
         localKind = tok_->getKind();
-        endLoc = advance().End;
+        advance();
       }
     }
   } else {
@@ -5428,8 +5825,8 @@ Optional<ESTree::ImportSpecifierNode *> JSParserImpl::parseImportSpecifier(
     imported = setLocation(
         tok_,
         tok_,
-        new (context_)
-            ESTree::IdentifierNode(tok_->getResWordOrIdentifier(), nullptr));
+        new (context_) ESTree::IdentifierNode(
+            tok_->getResWordOrIdentifier(), nullptr, false));
     local = imported;
     localKind = tok_->getKind();
     advance();
@@ -5446,10 +5843,10 @@ Optional<ESTree::ImportSpecifierNode *> JSParserImpl::parseImportSpecifier(
       local = setLocation(
           tok_,
           tok_,
-          new (context_)
-              ESTree::IdentifierNode(tok_->getResWordOrIdentifier(), nullptr));
+          new (context_) ESTree::IdentifierNode(
+              tok_->getResWordOrIdentifier(), nullptr, false));
       localKind = tok_->getKind();
-      endLoc = advance().End;
+      advance();
     }
   }
 
@@ -5464,7 +5861,7 @@ Optional<ESTree::ImportSpecifierNode *> JSParserImpl::parseImportSpecifier(
 
   return setLocation(
       startLoc,
-      endLoc,
+      getPrevTokenEndLoc(),
       new (context_) ESTree::ImportSpecifierNode(imported, local, kind));
 }
 
@@ -5482,17 +5879,48 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
 
   if (checkAndEat(TokenKind::star)) {
     // export * FromClause;
+    // export * as IdentifierName FromClause;
+    ESTree::Node *exportAs = nullptr;
+    if (checkAndEat(asIdent_)) {
+      // export * as IdentifierName FromClause;
+      //             ^
+      if (!check(TokenKind::identifier) && !tok_->isResWord()) {
+        errorExpected(
+            TokenKind::identifier,
+            "in export clause",
+            "start of export",
+            startLoc);
+        return None;
+      }
+      exportAs = setLocation(
+          tok_,
+          tok_,
+          new (context_) ESTree::IdentifierNode(
+              tok_->getResWordOrIdentifier(), nullptr, false));
+      advance();
+    }
     auto optFromClause = parseFromClause();
     if (!optFromClause) {
       return None;
     }
-    SMLoc endLoc = optFromClause.getValue()->getEndLoc();
-    if (!eatSemi(endLoc)) {
+    if (!eatSemi()) {
       return None;
+    }
+    if (exportAs) {
+      ESTree::NodeList specifiers{};
+      specifiers.push_back(*setLocation(
+          startLoc,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::ExportNamespaceSpecifierNode(exportAs)));
+      return setLocation(
+          startLoc,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::ExportNamedDeclarationNode(
+              nullptr, std::move(specifiers), *optFromClause, valueIdent_));
     }
     return setLocation(
         startLoc,
-        endLoc,
+        getPrevTokenEndLoc(),
         new (context_)
             ESTree::ExportAllDeclarationNode(*optFromClause, valueIdent_));
   } else if (checkAndEat(TokenKind::rw_default)) {
@@ -5535,23 +5963,21 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
       if (!optExpr) {
         return None;
       }
-      SMLoc endLoc = optExpr.getValue()->getEndLoc();
-      if (!eatSemi(endLoc)) {
+      if (!eatSemi()) {
         return None;
       }
       return setLocation(
           startLoc,
-          endLoc,
+          getPrevTokenEndLoc(),
           new (context_) ESTree::ExportDefaultDeclarationNode(*optExpr));
     }
   } else if (check(TokenKind::l_brace)) {
     // export ExportClause FromClause ;
     // export ExportClause ;
     ESTree::NodeList specifiers{};
-    SMLoc endLoc;
     llvh::SmallVector<SMRange, 2> invalids{};
 
-    auto optExportClause = parseExportClause(specifiers, endLoc, invalids);
+    auto optExportClause = parseExportClause(specifiers, invalids);
     if (!optExportClause) {
       return None;
     }
@@ -5564,7 +5990,6 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
         return None;
       }
       source = *optFromClause;
-      endLoc = source->getEndLoc();
     } else {
       // export ExportClause ;
       // ES9.0 15.2.3.1
@@ -5575,13 +6000,13 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
       }
     }
 
-    if (!eatSemi(endLoc)) {
+    if (!eatSemi()) {
       return None;
     }
 
     return setLocation(
         startLoc,
-        endLoc,
+        getPrevTokenEndLoc(),
         new (context_) ESTree::ExportNamedDeclarationNode(
             nullptr, std::move(specifiers), source, valueIdent_));
   } else if (check(TokenKind::rw_var)) {
@@ -5628,7 +6053,6 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
 
 bool JSParserImpl::parseExportClause(
     ESTree::NodeList &specifiers,
-    SMLoc &endLoc,
     llvh::SmallVectorImpl<SMRange> &invalids) {
   // ExportClause:
   //   { }
@@ -5651,7 +6075,6 @@ bool JSParserImpl::parseExportClause(
     }
   }
 
-  endLoc = tok_->getEndLoc();
   return eat(
       TokenKind::r_brace,
       JSLexer::AllowDiv,
@@ -5689,8 +6112,8 @@ Optional<ESTree::Node *> JSParserImpl::parseExportSpecifier(
   auto *local = setLocation(
       tok_,
       tok_,
-      new (context_)
-          ESTree::IdentifierNode(tok_->getResWordOrIdentifier(), nullptr));
+      new (context_) ESTree::IdentifierNode(
+          tok_->getResWordOrIdentifier(), nullptr, false));
   advance();
   ESTree::Node *exported;
   if (checkAndEat(asIdent_)) {
@@ -5701,12 +6124,13 @@ Optional<ESTree::Node *> JSParserImpl::parseExportSpecifier(
           "in export clause",
           "location of export clause",
           exportLoc);
+      return None;
     }
     exported = setLocation(
         tok_,
         tok_,
-        new (context_)
-            ESTree::IdentifierNode(tok_->getResWordOrIdentifier(), nullptr));
+        new (context_) ESTree::IdentifierNode(
+            tok_->getResWordOrIdentifier(), nullptr, false));
     advance();
   } else {
     // IdentifierName
@@ -5774,8 +6198,13 @@ bool JSParserImpl::preParseBuffer(
 
 Optional<ESTree::NodePtr> JSParserImpl::parseLazyFunction(
     ESTree::NodeKind kind,
+    bool paramYield,
+    bool paramAwait,
     SMLoc start) {
   seek(start);
+
+  paramYield_ = paramYield;
+  paramAwait_ = paramAwait;
 
   switch (kind) {
     case ESTree::NodeKind::FunctionExpression:

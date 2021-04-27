@@ -45,7 +45,7 @@ class JSGenerator final : public JSObject {
     return createPseudoHandle(self->innerFunction_.get(runtime));
   }
 
- protected:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit JSGenerator(Deserializer &d);
 
@@ -53,8 +53,11 @@ class JSGenerator final : public JSObject {
   friend void GeneratorDeserialize(Deserializer &d, CellKind kind);
 #endif
 
-  JSGenerator(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
-      : JSObject(runtime, &vt.base, parent, clazz) {}
+  JSGenerator(
+      Runtime *runtime,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz)
+      : JSObject(runtime, &vt.base, *parent, *clazz) {}
 
  private:
   /// The GeneratorInnerFunction that is called when this generator is advanced.

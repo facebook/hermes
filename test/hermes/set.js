@@ -320,6 +320,48 @@ function testRehash() {
 //CHECK-NEXT: 2
 }
 
+function testZero() {
+  print("testZero");
+//CHECK-LABEL: testZero
+
+  var s = new Set();
+  s.add(-0);
+  print(s.has(-0));
+  print(s.has(+0));
+  print(Object.is(-0, [...s][0]));
+  print(Object.is(+0, [...s][0]));
+//CHECK-NEXT: true
+//CHECK-NEXT: true
+//CHECK-NEXT: false
+//CHECK-NEXT: true
+
+  var s = new Set();
+  s.add(+0);
+  print(s.has(-0));
+  print(s.has(+0));
+  print(Object.is(-0, [...s][0]));
+  print(Object.is(+0, [...s][0]));
+//CHECK-NEXT: true
+//CHECK-NEXT: true
+//CHECK-NEXT: false
+//CHECK-NEXT: true
+
+  // -0 at both key and value should be normalized to +0.
+  var s = new Set();
+  s.add(-0);
+  var [k, v] = s.entries().next().value;
+  print(Object.is(-0, k));
+  print(Object.is(-0, v));
+//CHECK-NEXT: false
+//CHECK-NEXT: false
+
+  // delete -0 should work
+  print(s.delete(-0));
+//CHECK-NEXT: true
+  print(s.size === 0);
+//CHECK-NEXT: true
+}
+
 var s = new Set();
 var o1 = {};
 var o2 = {a: 1};
@@ -332,6 +374,7 @@ testIteration();
 testForEach();
 testMutatedIteration();
 testRehash();
+testZero();
 
 print("constructor");
 //CHECK-LABEL: constructor

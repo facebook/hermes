@@ -7,6 +7,8 @@ Hermes is a JavaScript engine optimized for fast start up of [React Native](http
 
 If you're only interested in using pre-built Hermes in a new or existing React Native app, you do not need to follow this guide or have direct access to the Hermes source. Instead, just follow [these instructions to enable Hermes](https://reactnative.dev/docs/hermes).
 
+> Noted that each Hermes release is aimed at a specific RN version. The rule of thumb is to always follow [Hermes releases](https://github.com/facebook/hermes/releases) strictly. Version mismatch can result in instant crash of your apps in the worst case scenario.
+
 If you want to know how to build and hack on Hermes directly, and/or integrate Hermes built from source into a React Native app then read on.
 
 The instructions here very briefly cover steps to build the Hermes CLI. They assume you have typical native development tools setup for your OS, and support for cmake and Ninja. For more details of required dependencies, building Hermes with different options, etc. follow these links instead:
@@ -18,11 +20,22 @@ To build a local debug version of the Hermes CLI tools the following steps shoul
 The following commands should get you going in a Windows Command Prompt:
 
 ```shell
-mkdir hermes-windows-workingdir
-cd hermes-windows-workingdir
-git -c core.autocrlf=false clone https://github.com/microsoft/hermes-windows.git
-python hermes-windows/utils/build/configure.py --build-system="Visual Studio 16 2019" --cmake-flags="-A x64" --distribute
-cd build_release
+mkdir hermes_workingdir
+cd hermes_workingdir
+git clone https://github.com/facebook/hermes.git
+hermes/utils/build/configure.py
+cd build
+ninja
+```
+
+Or if you're using Windows, the following should get you going in a Git Bash shell:
+
+```shell
+mkdir hermes_workingdir
+cd hermes_workingdir
+git -c core.autocrlf=false clone https://github.com/facebook/hermes.git
+hermes/utils/build/configure.py --build-system='Visual Studio 16 2019' --cmake-flags='-A x64' --distribute
+cd build
 MSBuild.exe ALL_BUILD.vcxproj /p:Configuration=Release
 ```
 

@@ -47,7 +47,7 @@ class Regex {
   SyntaxFlags flags_ = {};
 
   // Number of capture groups encountered so far.
-  uint32_t markedCount_ = 0;
+  uint16_t markedCount_ = 0;
 
   // Number of loops encountered so far.
   uint32_t loopCount_ = 0;
@@ -69,9 +69,9 @@ class Regex {
   /// list. The node should be constructible from \p args.
   /// \return an observer pointer to the new node.
   template <typename NodeType, typename... Args>
-  NodeType *appendNode(Args &&... args) {
+  NodeType *appendNode(Args &&...args) {
     std::unique_ptr<NodeType> node =
-        hermes::make_unique<NodeType>(std::forward<Args>(args)...);
+        std::make_unique<NodeType>(std::forward<Args>(args)...);
     NodeType *nodePtr = node.get();
     nodeHolder_.push_back(std::move(node));
     nodes_.push_back(nodePtr);
@@ -84,13 +84,17 @@ class Regex {
   }
 
   /// \return the number of marked subexpressions.
-  uint32_t markedCount() const {
+  uint16_t markedCount() const {
     return markedCount_;
   }
 
-  /// \increment the number of marked subexpressions and return the value.
-  uint32_t incrementMarkedCount() {
-    return ++markedCount_;
+  /// Increment the number of marked subexpressions.
+  /// \return the previous value of markedCount_.
+  uint16_t incrementMarkedCount() {
+    assert(
+        markedCount_ < std::numeric_limits<uint16_t>::max() &&
+        "markedCount_ will overflow");
+    return markedCount_++;
   }
 
   /// Given that the node \p splicePoint is in our node list, remove all nodes
@@ -117,16 +121,17 @@ class Regex {
   /// Compile the regex into bytecode. Return the resulting bytecode.
   std::vector<uint8_t> compile() const {
     assert(valid() && "Cannot compile invalid regex.");
-    // TODO: add validation for the loop and reduce the size of markedCount_ and
-    // loopCount_ to uint16_t.
+    // TODO: add validation for the loop and reduce the size of loopCount_ to
+    // uint16_t.
     assert(
         markedCount_ <= constants::kMaxCaptureGroupCount &&
         "Too many capture groups");
     assert(loopCount_ <= constants::kMaxLoopCount && "Too many loops");
-    RegexBytecodeHeader header = {static_cast<uint16_t>(markedCount_),
-                                  static_cast<uint16_t>(loopCount_),
-                                  flags_.toByte(),
-                                  matchConstraints_};
+    RegexBytecodeHeader header = {
+        markedCount_,
+        static_cast<uint16_t>(loopCount_),
+        flags_.toByte(),
+        matchConstraints_};
     RegexBytecodeStream bcs(header);
     Node::compile(nodes_, bcs);
     return bcs.acquireBytecode();
@@ -235,8 +240,7 @@ constants::ErrorType Regex<Traits>::parse(
       first, last, constants::kMaxCaptureGroupCount, &maxBackRef);
 
   // Validate loop and capture group count.
-  if (markedCount_ > constants::kMaxCaptureGroupCount ||
-      loopCount_ > constants::kMaxLoopCount) {
+  if (loopCount_ > constants::kMaxLoopCount) {
     return constants::ErrorType::PatternExceedsParseLimits;
   }
 
@@ -377,7 +381,7 @@ void Regex<Traits>::pushLookaround(
   if (!forwards) {
     Node::reverseNodeList(exp);
   }
-  nodeHolder_.push_back(hermes::make_unique<GoalNode>());
+  nodeHolder_.push_back(std::make_unique<GoalNode>());
   exp.push_back(nodeHolder_.back().get());
   appendNode<LookaroundNode>(
       std::move(exp), mexpBegin, mexpEnd, invert, forwards);

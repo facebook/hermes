@@ -14,37 +14,46 @@ namespace vm {
 
 #ifdef HERMES_SLOW_DEBUG
 
-CheckHeapWellFormedAcceptor::CheckHeapWellFormedAcceptor(GC &gc)
-    : SlotAcceptorDefault(gc), WeakRootAcceptorDefault(gc) {}
+CheckHeapWellFormedAcceptor::CheckHeapWellFormedAcceptor(GCBase &gc)
+    : RootAndSlotAcceptorDefault(gc.getPointerBase()),
+      WeakRootAcceptorDefault(gc.getPointerBase()),
+      gc(gc) {}
 
-void CheckHeapWellFormedAcceptor::accept(void *&ptr) {
+void CheckHeapWellFormedAcceptor::accept(GCCell *&ptr) {
+  accept(static_cast<const GCCell *>(ptr));
+}
+
+void CheckHeapWellFormedAcceptor::accept(const GCCell *ptr) {
   assert(
       (!ptr || gc.validPointer(ptr)) &&
       "A pointer is pointing outside of the valid region");
 }
 
-void CheckHeapWellFormedAcceptor::acceptWeak(void *&ptr) {
+void CheckHeapWellFormedAcceptor::acceptWeak(GCCell *&ptr) {
   // A weak pointer has the same well-formed-ness checks as a normal pointer.
   accept(ptr);
 }
 
-void CheckHeapWellFormedAcceptor::accept(HermesValue &hv) {
+void CheckHeapWellFormedAcceptor::acceptHV(HermesValue &hv) {
   assert(!hv.isInvalid() && "HermesValue with InvalidTag encountered by GC.");
   if (hv.isPointer()) {
-    void *cell = hv.getPointer();
+    GCCell *cell = static_cast<GCCell *>(hv.getPointer());
     accept(cell);
   } else if (hv.isSymbol()) {
-    accept(hv.getSymbol());
+    acceptSym(hv.getSymbol());
   }
 }
 
-void CheckHeapWellFormedAcceptor::accept(SymbolID sym) {
+void CheckHeapWellFormedAcceptor::acceptSym(SymbolID sym) {
   if (!sym.isValid()) {
     return;
   }
   assert(
       gc.getCallbacks()->isSymbolLive(sym) &&
       "Symbol is marked but is not live");
+  // Check that the string used by this symbol is valid.
+  accept(
+      static_cast<const GCCell *>(gc.getCallbacks()->getStringForSymbol(sym)));
 }
 
 void CheckHeapWellFormedAcceptor::accept(WeakRefBase &wr) {
@@ -53,7 +62,7 @@ void CheckHeapWellFormedAcceptor::accept(WeakRefBase &wr) {
   const WeakRefSlot *slot = wr.unsafeGetSlot();
   // If the weak value is a pointer, check that it's within the valid region.
   if (slot->state() != WeakSlotState::Free && slot->hasPointer()) {
-    void *cell = slot->getPointer();
+    GCCell *cell = static_cast<GCCell *>(slot->getPointer());
     accept(cell);
   }
 }

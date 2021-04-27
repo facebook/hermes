@@ -217,7 +217,7 @@ class Deserializer {
     assert(
         buffer_->getBufferStart() + offset_ + size < buffer_->getBufferEnd() &&
         "Deserialize read out of range");
-    auto resPtr = llvh::make_unique<const BufferFromSharedBuffer>(
+    auto resPtr = std::make_unique<const BufferFromSharedBuffer>(
         reinterpret_cast<const uint8_t *>(buffer_->getBufferStart()) + offset_,
         size,
         buffer_);

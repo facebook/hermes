@@ -44,13 +44,14 @@ MarkBitArrayNCTest::MarkBitArrayNCTest()
   auto last = reinterpret_cast<char *>(
       llvh::alignDown(reinterpret_cast<uintptr_t>(as.hiLim() - 1), HeapAlign));
 
-  addrs = {first,
-           first + HeapAlign,
-           first + HeapAlign * 42,
+  addrs = {
+      first,
+      first + HeapAlign,
+      first + HeapAlign * 42,
 
-           last - HeapAlign * 42,
-           last - HeapAlign,
-           last};
+      last - HeapAlign * 42,
+      last - HeapAlign,
+      last};
 
   EXPECT_TRUE(std::is_sorted(addrs.begin(), addrs.end()));
 }
@@ -175,6 +176,64 @@ TEST_F(MarkBitArrayNCTest, NextUnmarkedBit) {
   for (size_t from = mba->findNextUnmarkedBitFrom(0);
        from < MarkBitArrayNC::kNumBits;
        from = mba->findNextUnmarkedBitFrom(from + 1)) {
+    EXPECT_EQ(indices.front(), from);
+    indices.pop();
+  }
+}
+
+TEST_F(MarkBitArrayNCTest, PrevMarkedBitImmediate) {
+  char *addr = addrs.at(addrs.size() / 2);
+  size_t ind = mba->addressToIndex(addr);
+  mba->bitArray_.set(ind, true);
+  EXPECT_EQ(ind, mba->findPrevMarkedBitFrom(ind + 1));
+}
+
+TEST_F(MarkBitArrayNCTest, PrevMarkedBit) {
+  constexpr size_t FOUND_NONE = MarkBitArrayNC::kNumBits;
+  size_t from = MarkBitArrayNC::kNumBits;
+  /// Empty case: No unmarked bits
+  EXPECT_EQ(FOUND_NONE, mba->findPrevMarkedBitFrom(from));
+
+  std::queue<size_t> indices;
+  size_t addrIdx = addrs.size();
+  while (addrIdx-- > 0) {
+    auto ind = mba->addressToIndex(addrs[addrIdx]);
+    mba->bitArray_.set(ind, true);
+    indices.push(ind);
+  }
+  for (size_t from = mba->findPrevMarkedBitFrom(MarkBitArrayNC::kNumBits);
+       from != MarkBitArrayNC::kNumBits;
+       from = mba->findPrevMarkedBitFrom(from)) {
+    EXPECT_EQ(indices.front(), from);
+    indices.pop();
+  }
+}
+
+TEST_F(MarkBitArrayNCTest, PrevUnmarkedBitImmediate) {
+  char *addr = addrs.at(addrs.size() / 2);
+  size_t ind = mba->addressToIndex(addr);
+  mba->markAll();
+  mba->bitArray_.set(ind, false);
+  EXPECT_EQ(ind, mba->findPrevUnmarkedBitFrom(ind + 1));
+}
+
+TEST_F(MarkBitArrayNCTest, PrevUnmarkedBit) {
+  constexpr size_t FOUND_NONE = MarkBitArrayNC::kNumBits;
+  mba->markAll();
+  size_t from = MarkBitArrayNC::kNumBits;
+  /// Full case: No unmarked bits
+  EXPECT_EQ(FOUND_NONE, mba->findPrevUnmarkedBitFrom(from));
+
+  std::queue<size_t> indices;
+  size_t addrIdx = addrs.size();
+  while (addrIdx-- > 0) {
+    auto ind = mba->addressToIndex(addrs[addrIdx]);
+    mba->bitArray_.set(ind, false);
+    indices.push(ind);
+  }
+  for (size_t from = mba->findPrevUnmarkedBitFrom(MarkBitArrayNC::kNumBits);
+       from != MarkBitArrayNC::kNumBits;
+       from = mba->findPrevUnmarkedBitFrom(from)) {
     EXPECT_EQ(indices.front(), from);
     indices.pop();
   }

@@ -90,7 +90,7 @@ TEST_F(DictPropertyMapTest, SmokeTest) {
 
   // Delete prop2.
   found = DictPropertyMap::find(*map, id2);
-  DictPropertyMap::erase(*map, *found);
+  DictPropertyMap::erase(*map, runtime, *found);
   ASSERT_EQ(saveMap, map.get());
   ASSERT_EQ(3u, map->size());
 
@@ -141,7 +141,7 @@ TEST_F(DictPropertyMapTest, CreateOverCapacityTest) {
 TEST_F(DictPropertyMapTest, GrowOverCapacityTest) {
   // Hades can't handle doing a span of large allocations, because it has
   // fragmentation in its heap space.
-#ifndef HERMESVM_GC_HADES
+#if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
   // Don't do the test if it requires too many properties. Just cross our
   // fingers and hope it works.
   auto const maxCapacity = DictPropertyMap::getMaxCapacity();

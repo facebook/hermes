@@ -155,6 +155,12 @@ void vm_free_aligned(void *p, size_t sz) {
   vm_free(p, sz);
 }
 
+void vm_hugepage(void *p, size_t sz) {
+  assert(
+      reinterpret_cast<uintptr_t>(p) % page_size() == 0 &&
+      "Precondition: pointer is page-aligned.");
+}
+
 void vm_unused(void *p, size_t sz) {
 #ifndef NDEBUG
   const size_t PS = page_size();
@@ -189,6 +195,10 @@ bool vm_madvise(void *p, size_t sz, MAdvice advice) {
       "Precondition: pointer is page-aligned.");
 #endif
   return true;
+}
+
+llvh::ErrorOr<size_t> vm_footprint(char *start, char *end) {
+  return std::error_code(errno, std::generic_category());
 }
 
 int pages_in_ram(const void *p, size_t sz, llvh::SmallVectorImpl<int> *runs) {

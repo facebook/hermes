@@ -207,7 +207,7 @@ Value *simplifyBinOp(BinaryOperatorInst *binary) {
 
       // Operands of different types can't be strictly equal.
       if (leftTy.isPrimitive() && rightTy.isPrimitive()) {
-        if (Type::intersectTy(leftTy, rightTy).isEmptyTy()) {
+        if (Type::intersectTy(leftTy, rightTy).isNoType()) {
           return builder.getLiteralBool(false);
         }
       }
@@ -507,17 +507,17 @@ Value *simplifyCoerceThisNS(CoerceThisNSInst *coerce) {
   return nullptr;
 }
 
-/// Try to simplify ThrowIfUndefinedInst
+/// Try to simplify ThrowIfEmptyInst
 /// \returns one of:
 ///   - nullptr if the instruction cannot be simplified.
 ///   - the instruction itself, if it was changed inplace.
 ///   - a new instruction to replace the original one
 ///   - llvh::None if the instruction should be deleted.
-OptValue<Value *> simplifyThrowIfUndefined(ThrowIfUndefinedInst *TIU) {
+OptValue<Value *> simplifyThrowIfEmpty(ThrowIfEmptyInst *TIE) {
   // If the operand does not contain the "poison" type, it can be safely
   // eliminated.
-  if (!TIU->getCheckedValue()->getType().canBeUndefined())
-    return llvh::None;
+  if (!TIE->getCheckedValue()->getType().canBeEmpty())
+    return TIE->getCheckedValue();
   return nullptr;
 }
 
@@ -550,8 +550,8 @@ OptValue<Value *> simplifyInstruction(Instruction *I) {
       return simplifyCallInst(cast<CallInst>(I));
     case ValueKind::CoerceThisNSInstKind:
       return simplifyCoerceThisNS(cast<CoerceThisNSInst>(I));
-    case ValueKind::ThrowIfUndefinedInstKind:
-      return simplifyThrowIfUndefined(cast<ThrowIfUndefinedInst>(I));
+    case ValueKind::ThrowIfEmptyInstKind:
+      return simplifyThrowIfEmpty(cast<ThrowIfEmptyInst>(I));
 
     default:
       // TODO: handle other kinds of instructions.

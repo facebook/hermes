@@ -32,7 +32,7 @@ const char *dateAsFunctionTrace() {
     },
     {
       "type": "EndExecJSRecord",
-      "retval": "string:use strict",
+      "retval": "string:42",
       "time": 0
     }
   ]

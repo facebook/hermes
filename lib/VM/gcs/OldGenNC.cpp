@@ -77,9 +77,8 @@ OldGen::Size::adjustSizeWithBounds(size_t desired, size_t min, size_t max) {
   //  - segment-aligned, otherwise.
   //  - at most \c max bytes wide up to alignment.
   const auto clamped = std::max(min, std::min(desired, max));
-  const auto alignment = clamped <= AlignedHeapSegment::maxSize()
-      ? PS
-      : AlignedHeapSegment::maxSize();
+  const auto alignment =
+      clamped <= GenGCHeapSegment::maxSize() ? PS : GenGCHeapSegment::maxSize();
   return llvh::alignTo(clamped, alignment);
 }
 
@@ -88,7 +87,8 @@ OldGen::OldGen(GenGC *gc, Size sz, bool releaseUnused)
   auto result =
       AlignedStorage::create(gc_->storageProvider_.get(), kSegmentName);
   if (!result) {
-    gc_->oom(result.getError());
+    // Do not invoke oom() from here because the heap is not fully initialised.
+    hermes_fatal("Failed to initialize the old gen", result.getError());
   }
   exchangeActiveSegment({std::move(result.get()), this});
 #ifdef HERMESVM_COMPRESSED_POINTERS
@@ -117,6 +117,7 @@ size_t OldGen::available() const {
 
 void OldGen::growTo(size_t desired) {
   assert(desired == adjustSize(desired) && "Size must be adjusted.");
+  assert(isSizeHeapAligned(desired) && "Size must be heap aligned.");
 
   if (size() >= desired) {
     return;
@@ -124,9 +125,9 @@ void OldGen::growTo(size_t desired) {
 
   // We only need to grow from a non-segment-aligned size if the current size is
   // less than a segment's worth.
-  if (size() < AlignedHeapSegment::maxSize()) {
+  if (size() < GenGCHeapSegment::maxSize()) {
     assert(filledSegments_.empty());
-    activeSegment().growTo(std::min(desired, AlignedHeapSegment::maxSize()));
+    activeSegment().growTo(std::min(desired, GenGCHeapSegment::maxSize()));
   }
 
   size_ = desired;
@@ -139,6 +140,7 @@ void OldGen::shrinkTo(size_t desired) {
   assert(desired >= used());
   // Note that this assertion implies that desired >= sz_.min().
   assert(desired == adjustSize(desired) && "Size must be adjusted.");
+  assert(isSizeHeapAligned(desired) && "Size must be heap aligned.");
 
   if (size() <= desired) {
     return;
@@ -146,7 +148,7 @@ void OldGen::shrinkTo(size_t desired) {
 
   // We only shrink to a non-segment-aligned size if the desired size is less
   // than a segment's worth.
-  if (desired < AlignedHeapSegment::maxSize()) {
+  if (desired < GenGCHeapSegment::maxSize()) {
     // We should be justified in asserting that there are no filled segments
     // because we checked earlier that we are using less than the desired size
     // so by transitivity, we are using less than a segment's worth of space.
@@ -161,6 +163,7 @@ void OldGen::shrinkTo(size_t desired) {
 }
 
 bool OldGen::growToFit(size_t amount) {
+  assert(isSizeHeapAligned(amount) && "Amount must be heap aligned.");
   size_t unavailable = levelOffset() + trailingExternalMemory();
   size_t adjusted = adjustSize(unavailable + amount);
 
@@ -180,7 +183,7 @@ bool OldGen::growToFit(size_t amount) {
 
 gcheapsize_t OldGen::bytesAllocatedSinceLastGC() const {
   auto segs = segmentsSinceLastGC();
-  AlignedHeapSegment *seg = segs->next();
+  GenGCHeapSegment *seg = segs->next();
 
   assert(seg && "Must be at least one segment");
   assert(seg->dbgContainsLevel(levelAtEndOfLastGC_.ptr));
@@ -197,9 +200,8 @@ gcheapsize_t OldGen::bytesAllocatedSinceLastGC() const {
 }
 
 void OldGen::forAllObjs(const std::function<void(GCCell *)> &callback) {
-  forUsedSegments([&callback](AlignedHeapSegment &segment) {
-    segment.forAllObjs(callback);
-  });
+  forUsedSegments(
+      [&callback](GenGCHeapSegment &segment) { segment.forAllObjs(callback); });
 }
 
 #ifndef NDEBUG
@@ -210,7 +212,7 @@ bool OldGen::dbgContains(const void *p) const {
 void OldGen::forObjsAllocatedSinceGC(
     const std::function<void(GCCell *)> &callback) {
   auto segs = segmentsSinceLastGC();
-  AlignedHeapSegment *seg = segs->next();
+  GenGCHeapSegment *seg = segs->next();
 
   assert(seg && "Must be at least one segment");
   assert(seg->dbgContainsLevel(levelAtEndOfLastGC_.ptr));
@@ -255,8 +257,8 @@ size_t OldGen::effectiveSize() {
 
 OldGen::Location OldGen::effectiveEnd() {
   const size_t offset = effectiveSize();
-  const size_t segNum = offset / AlignedHeapSegment::maxSize();
-  const size_t segOff = offset % AlignedHeapSegment::maxSize();
+  const size_t segNum = offset / GenGCHeapSegment::maxSize();
+  const size_t segOff = offset % GenGCHeapSegment::maxSize();
 
   // In the common case, the effective end will be nowhere near the used portion
   // of the heap.
@@ -313,82 +315,55 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
   }
 
 #ifdef HERMES_SLOW_DEBUG
-  struct VerifyCardDirtyAcceptor final : public SlotAcceptorDefault {
-    using SlotAcceptorDefault::accept;
-    using SlotAcceptorDefault::SlotAcceptorDefault;
+  struct VerifyCardDirtyAcceptor final : public SlotAcceptor {
+    GenGC &gc;
+    VerifyCardDirtyAcceptor(GenGC &gc) : gc(gc) {}
 
-    void accept(void *&ptr) override {
-      char *valuePtr = reinterpret_cast<char *>(ptr);
-      char *locPtr = reinterpret_cast<char *>(&ptr);
-
+    void accept(void *valuePtr, void *locPtr) {
       if (gc.youngGen_.contains(valuePtr)) {
-        assert(AlignedHeapSegment::cardTableCovering(locPtr)
-                   ->isCardForAddressDirty(locPtr));
+        assert(
+            GenGCHeapSegment::cardTableCovering(locPtr)->isCardForAddressDirty(
+                locPtr));
       }
     }
-#ifdef HERMESVM_COMPRESSED_POINTERS
-    void accept(BasedPointer &ptr) override {
-      // Don't use the default from SlotAcceptorDefault since the address of the
-      // reference is used.
-      PointerBase *const base = gc.getPointerBase();
-      char *valuePtr = reinterpret_cast<char *>(base->basedToPointer(ptr));
-      char *locPtr = reinterpret_cast<char *>(&ptr);
 
-      if (gc.youngGen_.contains(valuePtr)) {
-        assert(AlignedHeapSegment::cardTableCovering(locPtr)
-                   ->isCardForAddressDirty(locPtr));
-      }
+    void accept(GCPointerBase &ptr) override {
+      accept(ptr.get(gc.getPointerBase()), &ptr);
     }
-#endif
-    void accept(HermesValue &hv) override {
-      if (!hv.isPointer()) {
-        return;
-      }
 
-      char *valuePtr = reinterpret_cast<char *>(hv.getPointer());
-      char *locPtr = reinterpret_cast<char *>(&hv);
-
-      if (gc.youngGen_.contains(valuePtr)) {
-        assert(AlignedHeapSegment::cardTableCovering(locPtr)
-                   ->isCardForAddressDirty(locPtr));
-      }
+    void accept(GCHermesValue &hv) override {
+      if (hv.isPointer())
+        accept(hv.getPointer(), &hv);
     }
+
+    void accept(GCSymbolID hv) override {}
   };
 
   if (kVerifyCardTable) {
     VerifyCardDirtyAcceptor acceptor(*gc_);
     GenGC *gc = gc_;
-    forAllObjs([gc, &acceptor](GCCell *cell) {
-      GCBase::markCell(cell, gc, acceptor);
-    });
+    forAllObjs([gc, &acceptor](GCCell *cell) { gc->markCell(cell, acceptor); });
   }
 
   verifyCardTableBoundaries();
 #endif // HERMES_SLOW_DEBUG
 
-  struct OldGenObjEvacAcceptor final : public SlotAcceptorDefault {
-    using SlotAcceptorDefault::accept;
-    using SlotAcceptorDefault::SlotAcceptorDefault;
+  struct OldGenObjEvacAcceptor final : public RootAndSlotAcceptorDefault {
+    GenGC &gc;
+    OldGenObjEvacAcceptor(GenGC &gc)
+        : RootAndSlotAcceptorDefault(gc.getPointerBase()), gc(gc) {}
 
-    // NOTE: C++ does not allow templates on local classes, so duplicate the
-    // body of \c helper for ensureReferentCopied.
-    void helper(GCCell **slotAddr, void *slotContents) {
-      if (gc.youngGen_.contains(slotContents)) {
-        gc.youngGen_.ensureReferentCopied(slotAddr);
-      }
-    }
-    void helper(HermesValue *slotAddr, void *slotContents) {
-      if (gc.youngGen_.contains(slotContents)) {
-        gc.youngGen_.ensureReferentCopied(slotAddr);
-      }
-    }
+    using RootAndSlotAcceptorDefault::accept;
 
-    void accept(void *&ptr) {
-      helper(reinterpret_cast<GCCell **>(&ptr), ptr);
+    void accept(BasedPointer &ptr) {
+      gc.youngGen_.ensureReferentCopied(&ptr);
     }
-    void accept(HermesValue &hv) {
+    void accept(GCCell *&ptr) {
+      gc.youngGen_.ensureReferentCopied(&ptr);
+    }
+    void acceptHV(HermesValue &hv) {
       if (hv.isPointer()) {
-        helper(&hv, hv.getPointer());
+        gc.youngGen_.ensureReferentCopied(&hv);
       }
     }
   };
@@ -401,7 +376,7 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
       GCSegmentRange::singleton(&activeSegment()));
 
   size_t i = 0;
-  while (AlignedHeapSegment *seg = segs->next()) {
+  while (GenGCHeapSegment *seg = segs->next()) {
     if (originalLevel.segmentNum < i)
       break;
 
@@ -472,21 +447,27 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
 #endif
 
       // Mark the first object with respect to the dirty card boundaries.
-      GCBase::markCellWithinRange(visitor, obj, obj->getVT(), gc_, begin, end);
+      gc_->markCellWithinRange(visitor, obj, obj->getVT(), begin, end);
 
-      // Mark the objects that are entirely contained within the dirty card
-      // boundaries.
-      for (GCCell *next = obj->nextCell(); next < boundary;
-           next = next->nextCell()) {
-        obj = next;
-        GCBase::markCell(visitor, obj, obj->getVT(), gc_);
-      }
+      obj = obj->nextCell();
+      // If there are additional objects in this card, scan them.
+      if (LLVM_LIKELY(obj < boundary)) {
+        // Mark the objects that are entirely contained within the dirty card
+        // boundaries. In a given iteration, obj is the start of a given object,
+        // and next is the start of the next object. Iterate until the last
+        // object where next is within the card.
+        for (GCCell *next = obj->nextCell(); next < boundary;
+             next = next->nextCell()) {
+          gc_->markCell(visitor, obj, obj->getVT());
+          obj = next;
+        }
 
-      // Mark the final object in the range with respect to the dirty card
-      // boundaries, as long as it does not coincide with the first object.
-      if (LLVM_LIKELY(obj != firstObj)) {
-        GCBase::markCellWithinRange(
-            visitor, obj, obj->getVT(), gc_, begin, end);
+        // Mark the final object in the range with respect to the dirty card
+        // boundaries.
+        assert(
+            obj < boundary && obj->nextCell() >= boundary &&
+            "Last object in card must touch or cross cross the card boundary");
+        gc_->markCellWithinRange(visitor, obj, obj->getVT(), begin, end);
       }
 
       from = iEnd;
@@ -515,13 +496,13 @@ void OldGen::youngGenTransitiveClosure(
     // Now we have two interior loops: we can be faster for already
     // filled segments, since their levels won't change.
     while (isFilled(toScanSegmentNum)) {
-      AlignedHeapSegment &curSegment = filledSegments_[toScanSegmentNum];
+      GenGCHeapSegment &curSegment = filledSegments_[toScanSegmentNum];
       const char *const curSegmentLevel = curSegment.level();
       while (toScanPtr < curSegmentLevel) {
         GCCell *cell = reinterpret_cast<GCCell *>(toScanPtr);
         toScanPtr += cell->getAllocatedSize();
         // Ask the object to mark the pointers it owns.
-        GCBase::markCell(cell, gc_, acceptor);
+        gc_->markCell(cell, acceptor);
       }
       toScanSegmentNum++;
       toScanPtr = isFilled(toScanSegmentNum)
@@ -543,7 +524,7 @@ void OldGen::youngGenTransitiveClosure(
         GCCell *cell = reinterpret_cast<GCCell *>(toScanPtr);
         toScanPtr += cell->getAllocatedSize();
         // Ask the object to mark the pointers it owns.
-        GCBase::markCell(cell, gc_, acceptor);
+        gc_->markCell(cell, acceptor);
       }
     }
 
@@ -556,7 +537,7 @@ void OldGen::youngGenTransitiveClosure(
 #ifdef HERMES_SLOW_DEBUG
 void OldGen::verifyCardTableBoundaries() const {
   if (kVerifyCardTableBoundaries) {
-    forUsedSegments([](const AlignedHeapSegment &segment) {
+    forUsedSegments([](const GenGCHeapSegment &segment) {
       segment.cardTable().verifyBoundaries(segment.start(), segment.level());
     });
   }
@@ -564,16 +545,18 @@ void OldGen::verifyCardTableBoundaries() const {
 #endif
 
 void OldGen::sweepAndInstallForwardingPointers(
-    GC *gc,
+    GenGC *gc,
     SweepResult *sweepResult) {
-  forUsedSegments([gc, sweepResult](AlignedHeapSegment &segment) {
+  forUsedSegments([gc, sweepResult](GenGCHeapSegment &segment) {
     segment.sweepAndInstallForwardingPointers(gc, sweepResult);
   });
 }
 
-void OldGen::updateReferences(GC *gc, SweepResult::VTablesRemaining &vTables) {
+void OldGen::updateReferences(
+    GenGC *gc,
+    SweepResult::VTablesRemaining &vTables) {
   auto acceptor = getFullMSCUpdateAcceptor(*gc);
-  forUsedSegments([&acceptor, gc, &vTables](AlignedHeapSegment &segment) {
+  forUsedSegments([&acceptor, gc, &vTables](GenGCHeapSegment &segment) {
     segment.updateReferences(gc, acceptor.get(), vTables);
   });
   updateFinalizableCellListReferences();
@@ -589,7 +572,7 @@ void OldGen::recordLevelAfterCompaction(
 
   // Some prefix of the used chunks correspond to segments in this generation.
   // The corresponding segments are the used segments after compaction.
-  whileUsedSegments([&](AlignedHeapSegment &segment) {
+  whileUsedSegments([&](GenGCHeapSegment &segment) {
     if (usedSegs >= nChunks || this != chunks.peek().generation()) {
       return false;
     }
@@ -630,12 +613,12 @@ AllocResult OldGen::fullCollectThenAlloc(
   gc_->oom(make_error_code(OOMError::MaxHeapReached));
 }
 
-void OldGen::moveHeap(GC *gc, ptrdiff_t moveHeapDelta) {
+void OldGen::moveHeap(GenGC *gc, ptrdiff_t moveHeapDelta) {
   // TODO (T25686322): implement non-contig version of this.
 }
 
 void OldGen::updateCardTablesAfterCompaction(bool youngIsEmpty) {
-  forUsedSegments([youngIsEmpty](AlignedHeapSegment &segment) {
+  forUsedSegments([youngIsEmpty](GenGCHeapSegment &segment) {
     if (youngIsEmpty) {
       segment.cardTable().clear();
     } else {
@@ -653,9 +636,8 @@ void OldGen::recreateCardTableBoundaries() {
 #ifdef HERMES_EXTRA_DEBUG
   unprotectCardTableBoundaries();
 #endif
-  forUsedSegments([](AlignedHeapSegment &segment) {
-    segment.recreateCardTableBoundaries();
-  });
+  forUsedSegments(
+      [](GenGCHeapSegment &segment) { segment.recreateCardTableBoundaries(); });
 
   updateCardTableBoundary();
 #ifdef HERMES_SLOW_DEBUG
@@ -708,7 +690,7 @@ bool OldGen::materializeNextSegment() {
 
   // Reserve a slot for the previously active segment
   filledSegments_.emplace_back();
-  AlignedHeapSegment *filledSegSlot = &filledSegments_.back();
+  GenGCHeapSegment *filledSegSlot = &filledSegments_.back();
 
   // Get a new segment from somewhere
   if (!segmentCache_.empty()) {
@@ -769,7 +751,7 @@ void OldGen::releaseSegments(size_t from) {
   }
 
   std::vector<const char *> toRelease;
-  const auto release = [&toRelease, this](AlignedHeapSegment &unused) {
+  const auto release = [&toRelease, this](GenGCHeapSegment &unused) {
     toRelease.push_back(unused.lowLim());
     if (!this->releaseUnused_) {
       // Clear the segment and move it to the cache.
@@ -813,7 +795,7 @@ void OldGen::updateCardTableBoundary() {
 AllocResult OldGen::allocRawSlow(uint32_t size, HasFinalizer hasFinalizer) {
   assert(ownsAllocContext() && "Only called when the context is owned.");
   // The size being allocated must fit in a segment.
-  if (LLVM_UNLIKELY(size > AlignedHeapSegment::maxSize())) {
+  if (LLVM_UNLIKELY(size > GenGCHeapSegment::maxSize())) {
     gc_->oom(make_error_code(OOMError::SuperSegmentAlloc));
   }
 
@@ -854,10 +836,10 @@ void OldGen::updateBoundariesAfterAlloc(char *alloc, char *nextAlloc) {
 }
 
 #ifdef HERMES_SLOW_DEBUG
-void OldGen::checkWellFormed(const GC *gc) const {
+void OldGen::checkWellFormed(const GenGC *gc) const {
   uint64_t totalExtSize = 0;
 
-  forUsedSegments([&totalExtSize, gc](const AlignedHeapSegment &segment) {
+  forUsedSegments([&totalExtSize, gc](const GenGCHeapSegment &segment) {
     uint64_t extSize = 0;
     segment.checkWellFormed(gc, &extSize);
     totalExtSize += extSize;
@@ -873,7 +855,7 @@ void OldGen::checkWellFormed(const GC *gc) const {
 /// out the crashes that the extra diasnostic code seems to have caused.
 void OldGen::protectCardTableBoundaries() {
   if (gc_->doMetadataProtection_) {
-    forUsedSegments([this](AlignedHeapSegment &segment) {
+    forUsedSegments([this](GenGCHeapSegment &segment) {
       segment.cardTable().protectBoundaryTable();
       auto res = protectedCardTables_.insert(&segment.cardTable());
       (void)res;
@@ -884,7 +866,7 @@ void OldGen::protectCardTableBoundaries() {
 
 void OldGen::unprotectCardTableBoundaries() {
   if (gc_->doMetadataProtection_) {
-    forUsedSegments([this](AlignedHeapSegment &segment) {
+    forUsedSegments([this](GenGCHeapSegment &segment) {
       assert(
           protectedCardTables_.find(&segment.cardTable()) !=
           protectedCardTables_.end());
@@ -917,11 +899,11 @@ void OldGen::unprotectActiveSegCardTableBoundaries() {
 #ifdef HERMES_EXTRA_DEBUG
 void OldGen::summarizeOldGenVTables() {
   forUsedSegments(
-      [](AlignedHeapSegment &segment) { segment.summarizeVTables(); });
+      [](GenGCHeapSegment &segment) { segment.summarizeVTables(); });
 }
 
 void OldGen::checkSummarizedOldGenVTables(unsigned fullGCNum) {
-  forUsedSegments([this, fullGCNum](const AlignedHeapSegment &segment) {
+  forUsedSegments([this, fullGCNum](const GenGCHeapSegment &segment) {
     if (!segment.checkSummarizedVTables()) {
       numVTableSummaryErrors_++;
       char detailBuffer[100];

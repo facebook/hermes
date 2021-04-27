@@ -279,7 +279,7 @@ class HiddenClass final : public GCCell {
   /// mode".
   static constexpr unsigned kDictionaryThreshold = 64;
 
-  static VTable vt;
+  static const VTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::HiddenClassKind;
@@ -487,7 +487,6 @@ class HiddenClass final : public GCCell {
   /// \return true if all properties are non-writable and non-configurable
   static bool areAllReadOnly(Handle<HiddenClass> selfHandle, Runtime *runtime);
 
- private:
   HiddenClass(
       Runtime *runtime,
       ClassFlags flags,
@@ -504,6 +503,7 @@ class HiddenClass final : public GCCell {
     assert(propertyFlags.isValid() && "propertyFlags must be valid");
   }
 
+ private:
   /// Allocate a new hidden class instance with the supplied parameters.
   static CallResult<HermesValue> create(
       Runtime *runtime,
@@ -569,7 +569,7 @@ class HiddenClass final : public GCCell {
 #endif
  private:
   /// The symbol that was added when transitioning to this hidden class.
-  const SymbolID symbolID_;
+  const GCSymbolID symbolID_;
   /// The flags of the added symbol.
   const PropertyFlags propertyFlags_;
 

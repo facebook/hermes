@@ -39,6 +39,24 @@ const char *tokenKindStr(TokenKind kind) {
   assert(kind <= TokenKind::_last_token);
   return g_tokenStr[static_cast<unsigned>(kind)];
 }
+
+#if HERMES_PARSE_JSX
+static llvh::DenseMap<StringRef, uint32_t> initializeHTMLEntities() {
+  llvh::DenseMap<StringRef, uint32_t> entities{};
+
+#define HTML_ENTITY(NAME, VALUE) \
+  entities.insert({llvh::StringLiteral(#NAME), VALUE});
+#include "hermes/Parser/HTMLEntities.def"
+
+  return entities;
+}
+
+static const llvh::DenseMap<StringRef, uint32_t> &getHTMLEntities() {
+  static const auto entities = initializeHTMLEntities();
+  return entities;
+}
+#endif
+
 JSLexer::JSLexer(
     uint32_t bufId,
     SourceErrorManager &sm,
@@ -50,6 +68,9 @@ JSLexer::JSLexer(
       allocator_(allocator),
       ownStrTab_(strTab ? nullptr : new StringTable(allocator_)),
       strTab_(strTab ? *strTab : *ownStrTab_),
+#if HERMES_PARSE_JSX
+      htmlEntities_(getHTMLEntities()),
+#endif
       strictMode_(strictMode),
       convertSurrogates_(convertSurrogates) {
   initializeWithBufferId(bufId);
@@ -67,6 +88,9 @@ JSLexer::JSLexer(
       allocator_(allocator),
       ownStrTab_(strTab ? nullptr : new StringTable(allocator_)),
       strTab_(strTab ? *strTab : *ownStrTab_),
+#if HERMES_PARSE_JSX
+      htmlEntities_(getHTMLEntities()),
+#endif
       strictMode_(strictMode),
       convertSurrogates_(convertSurrogates) {
   auto bufId = sm_.addNewSourceBuffer(std::move(input));
@@ -314,6 +338,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       token_.setStart(curCharPtr_);
         if (HERMES_PARSE_FLOW &&
             LLVM_UNLIKELY(grammarContext == GrammarContext::Flow) &&
+            curCharPtr_ + 7 <= bufferEnd_ &&
             llvh::StringRef(curCharPtr_, 7) == "%checks") {
           token_.setIdentifier(getStringLiteral("%checks"));
           curCharPtr_ += 7;
@@ -408,15 +433,17 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
         }
         break;
 
-      // #! (hashbang) at the very start of the buffer.
       case '#':
         if (LLVM_UNLIKELY(
                 curCharPtr_ == bufferStart_ && curCharPtr_[1] == '!')) {
+          // #! (hashbang) at the very start of the buffer.
           curCharPtr_ = skipLineComment(curCharPtr_);
           continue;
-        } else {
-          goto default_label;
         }
+        if (!scanPrivateIdentifier()) {
+          continue;
+        }
+        break;
 
       // <  <= << <<=
       case '<':
@@ -481,7 +508,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       case '.':
         token_.setStart(curCharPtr_);
         if (curCharPtr_[1] >= '0' && curCharPtr_[1] <= '9') {
-          scanNumber();
+          scanNumber(grammarContext);
         } else if (curCharPtr_[1] == '.' && curCharPtr_[2] == '.') {
           token_.setPunctuator(TokenKind::dotdotdot);
           curCharPtr_ += 3;
@@ -496,7 +523,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       case '5': case '6': case '7': case '8': case '9':
         // clang-format on
         token_.setStart(curCharPtr_);
-        scanNumber();
+        scanNumber(grammarContext);
         break;
 
         // clang-format off
@@ -585,10 +612,12 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
     break;
   } // for(;;)
 
-  token_.setEnd(curCharPtr_);
+  finishToken(curCharPtr_);
 
   return &token_;
 }
+
+#if HERMES_PARSE_JSX
 
 const Token *JSLexer::advanceInJSXChild() {
   token_.setStart(curCharPtr_);
@@ -604,20 +633,31 @@ const Token *JSLexer::advanceInJSXChild() {
           break;
         }
         // Fall-through to start scanning text.
+        LLVM_FALLTHROUGH;
 
       default: {
-        token_.setStart(curCharPtr_);
-        // FIXME: Cook rawStorage_ into a value using XHTML entities.
-        rawStorage_.clear();
+        const char *start = curCharPtr_;
+        token_.setStart(start);
+
+        // Build up cooked value using XHTML entities
+        tmpStorage_.clear();
         for (;;) {
           char c = *curCharPtr_;
-          if ((c == 0 && curCharPtr_ == bufferEnd_) || c == '{' || c == '<') {
+
+          if (c == '&') {
+            auto codePoint = consumeHTMLEntityOptional();
+            if (codePoint.hasValue()) {
+              appendUnicodeToStorage(*codePoint);
+              continue;
+            }
+          } else if (
+              (c == 0 && curCharPtr_ == bufferEnd_) || c == '{' || c == '<') {
             token_.setJSXText(
-                getStringLiteral(rawStorage_.str()),
-                getStringLiteral(rawStorage_.str()));
+                getStringLiteral(tmpStorage_.str()),
+                getStringLiteral(StringRef(start, curCharPtr_ - start)));
             break;
           }
-          rawStorage_.push_back(c);
+          tmpStorage_.push_back(c);
           ++curCharPtr_;
         }
         break;
@@ -627,9 +667,109 @@ const Token *JSLexer::advanceInJSXChild() {
     // Always terminate the loop unless "continue" was used.
     break;
   }
-  token_.setEnd(curCharPtr_);
+  finishToken(curCharPtr_);
   return &token_;
 }
+
+llvh::Optional<uint32_t> JSLexer::consumeHTMLEntityOptional() {
+  assert(*curCharPtr_ == '&');
+  const char *start = curCharPtr_;
+
+  if (curCharPtr_[1] == '#') {
+    if (curCharPtr_[2] == 'x') {
+      // HTML entity with form &#xHEX>;
+      curCharPtr_ += 3;
+      const char *numberStart = curCharPtr_;
+
+      uint32_t codePoint = 0;
+      char ch = *curCharPtr_;
+
+      // Calculate code point from non-empty sequence of hex digits followed by
+      // a semicolon.
+      for (;;) {
+        if (ch == ';' && curCharPtr_ != numberStart) {
+          curCharPtr_++;
+          return codePoint;
+        } else if (isdigit(ch)) {
+          ch -= '0';
+        } else {
+          ch |= 32;
+          if (ch >= 'a' && ch <= 'f') {
+            ch -= 'a' - 10;
+          } else {
+            break;
+          }
+        }
+
+        // Check that this number is representable as a code point
+        codePoint = (codePoint << 4) + ch;
+        if (codePoint > UNICODE_MAX_VALUE) {
+          break;
+        }
+
+        ++curCharPtr_;
+        ch = *curCharPtr_;
+      }
+    } else {
+      // HTML entity with form &#NUMBER;
+      curCharPtr_ += 2;
+      const char *numberStart = curCharPtr_;
+
+      uint32_t codePoint = 0;
+      char ch = *curCharPtr_;
+
+      // Calculate code point from non-empty sequence of decimal digits followed
+      // by a semicolon.
+      for (;;) {
+        if (ch == ';' && curCharPtr_ != numberStart) {
+          curCharPtr_++;
+          return codePoint;
+        } else if (isdigit(ch)) {
+          // Check that this number is representable as a code point
+          codePoint = codePoint * 10 + (ch - '0');
+          if (codePoint > UNICODE_MAX_VALUE) {
+            break;
+          }
+        } else {
+          break;
+        }
+
+        ++curCharPtr_;
+        ch = *curCharPtr_;
+      }
+    }
+  } else {
+    // HTML entity with form &NAME;
+    ++curCharPtr_;
+
+    // Gather HTML entity name and lookup name in table. HTML entity names are
+    // composed of a sequence of up to 8 alphanumeric characters followed by a
+    // semicolon. To minimize backtracking due to an `&` without a following
+    // semicolon we only need to look at most 9 characters ahead (8 for the
+    // name, 1 for the semicolon).
+    for (int i = 0; i < 9; i++) {
+      char ch = *curCharPtr_;
+      if (ch == ';') {
+        auto it = htmlEntities_.find(StringRef(curCharPtr_ - i, i));
+        if (it == htmlEntities_.end()) {
+          break;
+        }
+
+        curCharPtr_++;
+        return it->second;
+      } else if (((ch | 32) >= 'a' && (ch | 32) <= 'z') || isdigit(ch)) {
+        ++curCharPtr_;
+      } else {
+        break;
+      }
+    }
+  }
+
+  curCharPtr_ = start;
+  return llvh::None;
+}
+
+#endif
 
 bool JSLexer::isCurrentTokenADirective() {
   // The current token must be a string literal without escapes.
@@ -745,23 +885,28 @@ bool JSLexer::isCurrentTokenADirective() {
 const Token *JSLexer::rescanRBraceInTemplateLiteral() {
   assert(token_.getKind() == TokenKind::r_brace && "need } to rescan");
   --curCharPtr_;
+  // Undo the storage for the '}'.
+  if (LLVM_UNLIKELY(storeTokens_)) {
+    tokenStorage_.pop_back();
+  }
   assert(*curCharPtr_ == '}' && "non-} was scanned as r_brace");
   token_.setStart(curCharPtr_);
   scanTemplateLiteral();
-  token_.setEnd(curCharPtr_);
+  finishToken(curCharPtr_);
   return &token_;
 }
 
 OptValue<TokenKind> JSLexer::lookahead1(OptValue<TokenKind> expectedToken) {
   assert(
-      token_.getKind() == TokenKind::identifier ||
-      token_.isResWord() && "unsupported current token");
+      (token_.getKind() == TokenKind::identifier || token_.isResWord()) &&
+      "unsupported current token");
   UniqueString *savedIdent = token_.getResWordOrIdentifier();
   TokenKind savedKind = token_.getKind();
   SMLoc start = token_.getStartLoc();
   SMLoc end = token_.getEndLoc();
   const char *cur = curCharPtr_;
   SourceErrorManager::SaveAndSuppressMessages suppress(&sm_);
+  size_t savedCommentStorageSize = commentStorage_.size();
 
   advance();
   OptValue<TokenKind> kind = token_.getKind();
@@ -781,6 +926,18 @@ OptValue<TokenKind> JSLexer::lookahead1(OptValue<TokenKind> expectedToken) {
     token_.setResWord(savedKind, savedIdent);
   }
   seek(SMLoc::getFromPointer(cur));
+
+  // Remove any comments that were stored during the lookahead
+  if (storeComments_ && savedCommentStorageSize < commentStorage_.size()) {
+    commentStorage_.erase(
+        commentStorage_.begin() + savedCommentStorageSize,
+        commentStorage_.end());
+  }
+
+  // Undo the storage for the token we just advanced to.
+  if (LLVM_UNLIKELY(storeTokens_)) {
+    tokenStorage_.pop_back();
+  }
 
   return kind;
 }
@@ -1107,7 +1264,9 @@ endLoop:
 
   if (storeComments_) {
     commentStorage_.emplace_back(
-        StoredComment::Kind::Line, SMRange{lineCommentStart, lineCommentEnd});
+        start[0] == '/' ? StoredComment::Kind::Line
+                        : StoredComment::Kind::Hashbang,
+        SMRange{lineCommentStart, lineCommentEnd});
   }
 
   return cur;
@@ -1196,7 +1355,7 @@ llvh::Optional<StringRef> JSLexer::tryReadMagicComment(
   return value;
 }
 
-void JSLexer::scanNumber() {
+void JSLexer::scanNumber(GrammarContext grammarContext) {
   // A somewhat ugly state machine for scanning a number
 
   unsigned radix = 10;
@@ -1245,7 +1404,10 @@ void JSLexer::scanNumber() {
     ++curCharPtr_;
   }
 
-  if (radix == 10) { // which means it is not necessarily an integer
+  if (radix == 10 || legacyOctal) {
+    // It is not necessarily an integer.
+    // We could have interpreted as legacyOctal initially but will have to
+    // change to decimal later.
     if (*curCharPtr_ == '.') {
       ++curCharPtr_;
       goto fraction;
@@ -1300,12 +1462,34 @@ end:
     consumeIdentifierParts<IdentifierMode::JS>();
   }
 
-  token_.setEnd(curCharPtr_);
-
   double val;
 
+  /// ES6.0 B.1.1
+  /// If we encounter a "legacy" octal number (starting with a '0') but if
+  /// the integer contains '8' or '9' we interpret it as decimal.
+  const auto updateLegacyOctalRadix =
+      [this, &radix, start, &legacyOctal]() -> void {
+    assert(
+        legacyOctal &&
+        "updateLegacyOctalRadix can only be called in legacyOctal mode");
+    (void)legacyOctal;
+    for (auto *scanPtr = start; scanPtr != curCharPtr_; ++scanPtr) {
+      if (*scanPtr == '.' || *scanPtr == 'e') {
+        break;
+      }
+      if (LLVM_UNLIKELY(*scanPtr >= '8') && LLVM_LIKELY(*scanPtr != '_')) {
+        sm_.warning(
+            SMRange(token_.getStartLoc(), SMLoc::getFromPointer(curCharPtr_)),
+            "Numeric literal starts with 0 but contains an 8 or 9 digit. "
+            "Interpreting as decimal (not octal).");
+        radix = 10;
+        break;
+      }
+    }
+  };
+
   if (!ok) {
-    error(token_.getSourceRange(), "invalid numeric literal");
+    errorRange(token_.getStartLoc(), "invalid numeric literal");
     val = std::numeric_limits<double>::quiet_NaN();
   } else if (
       !real && radix == 10 && curCharPtr_ - start <= 9 &&
@@ -1317,6 +1501,29 @@ end:
       ival = ival * 10 + (*start - '0');
     val = ival;
   } else if (real || radix == 10) {
+    if (legacyOctal) {
+      if (strictMode_ || grammarContext == GrammarContext::Flow) {
+        if (!errorRange(
+                token_.getStartLoc(),
+                "Decimals with leading zeros are not allowed in strict mode")) {
+          val = std::numeric_limits<double>::quiet_NaN();
+          goto done;
+        }
+      } else {
+        // Check to see if we can actually scan this as radix 10.
+        // Non-integer numbers must be in base 10, otherwise we error.
+        updateLegacyOctalRadix();
+        if (LLVM_LIKELY(radix != 10)) {
+          if (!errorRange(
+                  token_.getStartLoc(),
+                  "Octal numeric literals must be integers")) {
+            val = std::numeric_limits<double>::quiet_NaN();
+            goto done;
+          }
+        }
+      }
+    }
+
     // We need a zero-terminated buffer for hermes_g_strtod().
     llvh::SmallString<32> buf;
     buf.reserve(curCharPtr_ - start + 1);
@@ -1334,14 +1541,14 @@ end:
           char next = *(it + 1);
           if (!isdigit(prev) &&
               !(radix == 16 && 'a' <= (prev | 32) && (prev | 32) <= 'f')) {
-            error(
-                token_.getSourceRange(),
+            errorRange(
+                token_.getStartLoc(),
                 "numeric separator must come after a digit");
           } else if (
               !isdigit(next) &&
               !(radix == 16 && 'a' <= (next | 32) && (next | 32) <= 'f')) {
-            error(
-                token_.getSourceRange(),
+            errorRange(
+                token_.getStartLoc(),
                 "numeric separator must come before a digit");
           }
         }
@@ -1353,13 +1560,15 @@ end:
     char *endPtr;
     val = ::hermes_g_strtod(buf.data(), &endPtr);
     if (endPtr != &buf.back()) {
-      error(token_.getSourceRange(), "invalid numeric literal");
+      errorRange(token_.getStartLoc(), "invalid numeric literal");
       val = std::numeric_limits<double>::quiet_NaN();
     }
   } else {
-    if (legacyOctal && strictMode_ && curCharPtr_ - start > 1) {
-      if (!error(
-              token_.getSourceRange(),
+    if (legacyOctal &&
+        (strictMode_ || grammarContext == GrammarContext::Flow) &&
+        curCharPtr_ - start > 1) {
+      if (!errorRange(
+              token_.getStartLoc(),
               "Octal literals must use '0o' in strict mode")) {
         val = std::numeric_limits<double>::quiet_NaN();
         goto done;
@@ -1369,38 +1578,25 @@ end:
     // Handle the zero-radix case. This could only happen with radix 16 because
     // otherwise start wouldn't have been changed.
     if (curCharPtr_ == start) {
-      error(
-          token_.getSourceRange(),
+      errorRange(
+          token_.getStartLoc(),
           llvh::Twine("No digits after ") + StringRef(start - 2, 2));
       val = std::numeric_limits<double>::quiet_NaN();
     } else {
       // Parse the rest of the number:
       if (legacyOctal) {
-        // ES6.0 B.1.1
-        // If we encounter a "legacy" octal number (starting with a '0') but it
-        // contains '8' or '9' we interpret it as decimal.
-        for (auto *scanPtr = start; scanPtr < curCharPtr_; ++scanPtr) {
-          if (LLVM_UNLIKELY(*scanPtr >= '8') && LLVM_LIKELY(*scanPtr != '_')) {
-            sm_.warning(
-                token_.getSourceRange(),
-                "Numeric literal starts with 0 but contains an 8 or 9 digit. "
-                "Interpreting as decimal (not octal).");
-            radix = 10;
-            break;
-          }
-        }
-
+        updateLegacyOctalRadix();
         // LegacyOctalLikeDecimalIntegerLiteral cannot contain separators.
         if (LLVM_UNLIKELY(seenSeparator)) {
-          error(
-              token_.getSourceRange(),
+          errorRange(
+              token_.getStartLoc(),
               "Numeric separator cannot be used in literal after leading 0");
         }
       }
       auto parsedInt = parseIntWithRadix</* AllowNumericSeparator */ true>(
           llvh::ArrayRef<char>{start, (size_t)(curCharPtr_ - start)}, radix);
       if (!parsedInt) {
-        error(token_.getSourceRange(), "invalid integer literal");
+        errorRange(token_.getStartLoc(), "invalid integer literal");
         val = std::numeric_limits<double>::quiet_NaN();
       } else {
         val = parsedInt.getValue();
@@ -1477,7 +1673,6 @@ void JSLexer::scanIdentifierFastPath(const char *start) {
   }
 
   curCharPtr_ = end;
-  token_.setEnd(end);
 
   size_t length = end - start;
 
@@ -1492,8 +1687,36 @@ void JSLexer::scanIdentifierFastPath(const char *start) {
 template <JSLexer::IdentifierMode Mode>
 void JSLexer::scanIdentifierParts() {
   consumeIdentifierParts<Mode>();
-  token_.setEnd(curCharPtr_);
   token_.setIdentifier(getIdentifier(tmpStorage_.str()));
+}
+
+bool JSLexer::scanPrivateIdentifier() {
+  assert(*curCharPtr_ == '#');
+
+  // Skip the '#'.
+  const char *start = curCharPtr_;
+  ++curCharPtr_;
+
+  // Scan the actual identifier.
+  if (LLVM_LIKELY(isASCIIIdentifierStart(*curCharPtr_))) {
+    scanIdentifierFastPath<IdentifierMode::JS>(curCharPtr_);
+  } else if (consumeIdentifierStart()) {
+    // curCharPtr_ has been updated by consumeIdentifierStart.
+    scanIdentifierParts<IdentifierMode::JS>();
+  } else {
+    error(SMLoc::getFromPointer(start), "empty private identifier");
+    return false;
+  }
+
+  // Reset the start to the '#' because the scanIdentifier functions were
+  // not aware of the true start of the token.
+  token_.setStart(start);
+  // Parsed a resword or identifier.
+  // Convert the TokenKind to private_identifier after the fact.
+  // This avoids adding another Mode to IdentifierMode.
+  token_.setPrivateIdentifier(token_.getResWordOrIdentifier());
+
+  return true;
 }
 
 template <bool JSX>
@@ -1511,7 +1734,7 @@ void JSLexer::scanString() {
     if (*curCharPtr_ == quoteCh) {
       ++curCharPtr_;
       break;
-    } else if (*curCharPtr_ == '\\') {
+    } else if (!JSX && *curCharPtr_ == '\\') {
       escapes = true;
       ++curCharPtr_;
       switch ((unsigned char)*curCharPtr_) {
@@ -1563,7 +1786,7 @@ void JSLexer::scanString() {
             appendUnicodeToStorage(0);
             break;
           }
-          // Fallthrough
+          LLVM_FALLTHROUGH;
         case '1':
         case '2':
         case '3':
@@ -1620,6 +1843,15 @@ void JSLexer::scanString() {
         sm_.note(token_.getStartLoc(), "string started here");
         break;
       }
+#if HERMES_PARSE_JSX
+    } else if (LLVM_UNLIKELY(JSX && *curCharPtr_ == '&')) {
+      auto codePoint = consumeHTMLEntityOptional();
+      if (codePoint.hasValue()) {
+        appendUnicodeToStorage(*codePoint);
+      } else {
+        tmpStorage_.push_back(*curCharPtr_++);
+      }
+#endif
     } else if (LLVM_UNLIKELY(*curCharPtr_ == 0 && curCharPtr_ == bufferEnd_)) {
       error(SMLoc::getFromPointer(curCharPtr_), "non-terminated string");
       sm_.note(token_.getStartLoc(), "string started here");

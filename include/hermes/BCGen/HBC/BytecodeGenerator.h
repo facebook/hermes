@@ -88,6 +88,10 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   /// The size (in bytes) of the bytecode array in this function.
   uint32_t bytecodeSize_{0};
 
+  /// Whether we are done generating this bytecode. Should be set to true by
+  /// bytecodeGenerationComplete.
+  bool complete_{false};
+
   /// Highest accessed property cache indices in this function.
   uint8_t highestReadCacheIndex_{0};
   uint8_t highestWriteCacheIndex_{0};
@@ -146,6 +150,9 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 
   /// Set the source location of the function definition.
   void setSourceLocation(const DebugSourceLocation &location) {
+    assert(
+        !complete_ &&
+        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
     sourceLocation_ = location;
   }
 
@@ -166,6 +173,9 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 
   /// Add a debug variable named \name.
   void setDebugVariableNames(std::vector<Identifier> names) {
+    assert(
+        !complete_ &&
+        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
     debugVariableNames_ = std::move(names);
   }
 
@@ -176,6 +186,9 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 
   /// Set the lexical parent ID to \p parentId.
   void setLexicalParentID(OptValue<uint32_t> parentID) {
+    assert(
+        !complete_ &&
+        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
     lexicalParentID_ = parentID;
   }
 
@@ -222,9 +235,15 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   }
 
   void setHighestReadCacheIndex(uint8_t sz) {
+    assert(
+        !complete_ &&
+        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
     this->highestReadCacheIndex_ = sz;
   }
   void setHighestWriteCacheIndex(uint8_t sz) {
+    assert(
+        !complete_ &&
+        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
     this->highestWriteCacheIndex_ = sz;
   }
 
@@ -232,9 +251,7 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   void setJumpTable(std::vector<uint32_t> &&jumpTable);
 
   /// Signal that bytecode generation is finalized.
-  void bytecodeGenerationComplete() {
-    bytecodeSize_ = opcodes_.size();
-  }
+  void bytecodeGenerationComplete();
 
   friend class HBCISel;
   friend class BytecodeModuleGenerator;
@@ -264,16 +281,16 @@ class BytecodeModuleGenerator {
   /// This allows us to serialize the filenames as part of the debug info.
   UniquingFilenameTable filenameTable_{};
 
-  /// The ID of the first CJS module in this BytecodeModule.
-  uint32_t cjsModuleOffset_{0};
+  /// The ID of this segment.
+  uint32_t segmentID_{0};
 
   /// A record of all the CJS modules registered in this run of generation.
   /// List of pairs: (filename ID, function index).
   std::vector<std::pair<uint32_t, uint32_t>> cjsModules_;
 
   /// A record of all the CJS modules resolved in this run of generation.
-  /// List of function indices.
-  std::vector<uint32_t> cjsModulesStatic_;
+  /// List of pairs: (module ID, function index).
+  std::vector<std::pair<uint32_t, uint32_t>> cjsModulesStatic_;
 
   /// Table of constants used to initialize constant arrays.
   /// They are stored as chars in order to shorten bytecode size.
@@ -292,6 +309,9 @@ class BytecodeModuleGenerator {
 
   /// Whether there are any lazy functions present.
   bool lazyFunctions_{false};
+
+  /// Whether there are any async functions present.
+  bool asyncFunctions_{false};
 
   /// Indicate whether this generator is still valid.
   /// We need this because one can only call the generate() function
@@ -352,9 +372,9 @@ class BytecodeModuleGenerator {
   /// \return the index of the string.
   uint32_t addFilename(StringRef str);
 
-  /// Set the CJS module offset for this module.
-  void setCJSModuleOffset(uint32_t offset) {
-    cjsModuleOffset_ = offset;
+  /// Set the segment ID for this module.
+  void setSegmentID(uint32_t id) {
+    segmentID_ = id;
   }
 
   /// Adds a CJS module entry to the table.

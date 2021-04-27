@@ -128,7 +128,36 @@ function foo(a?: number): number {}
 // CHECK-NEXT:             "typeAnnotation": {
 // CHECK-NEXT:               "type": "NumberTypeAnnotation"
 // CHECK-NEXT:             }
-// CHECK-NEXT:           }
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "optional": true
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ],
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "BlockStatement",
+// CHECK-NEXT:         "body": []
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "returnType": {
+// CHECK-NEXT:         "type": "TypeAnnotation",
+// CHECK-NEXT:         "typeAnnotation": {
+// CHECK-NEXT:           "type": "NumberTypeAnnotation"
+// CHECK-NEXT:         }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "generator": false,
+// CHECK-NEXT:       "async": false
+// CHECK-NEXT:     },
+
+function foo(a?): number {}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "FunctionDeclaration",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "foo"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "params": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "type": "Identifier",
+// CHECK-NEXT:           "name": "a",
+// CHECK-NEXT:           "optional": true
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "body": {
@@ -228,6 +257,7 @@ function foo(a?: number): number {}
 // CHECK-NEXT:                 "optional": false
 // CHECK-NEXT:               }
 // CHECK-NEXT:             ],
+// CHECK-NEXT:             "this": null,
 // CHECK-NEXT:             "returnType": {
 // CHECK-NEXT:               "type": "StringTypeAnnotation"
 // CHECK-NEXT:             },
@@ -262,7 +292,9 @@ function foo(a?: number): number {}
 // CHECK-NEXT:                   "name": "x"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "kind": "init",
-// CHECK-NEXT:                 "computed": false
+// CHECK-NEXT:                 "computed": false,
+// CHECK-NEXT:                 "method": false,
+// CHECK-NEXT:                 "shorthand": true
 // CHECK-NEXT:               }
 // CHECK-NEXT:             ],
 // CHECK-NEXT:             "typeAnnotation": {
@@ -339,7 +371,8 @@ function foo(a?: number): number {}
 // CHECK-NEXT:               "typeAnnotation": {
 // CHECK-NEXT:                 "type": "NumberTypeAnnotation"
 // CHECK-NEXT:               }
-// CHECK-NEXT:             }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "optional": true
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "body": {
@@ -374,7 +407,8 @@ function foo(a?: number): number {}
 // CHECK-NEXT:               "typeAnnotation": {
 // CHECK-NEXT:                 "type": "NumberTypeAnnotation"
 // CHECK-NEXT:               }
-// CHECK-NEXT:             }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "optional": true
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "body": {
@@ -399,39 +433,6 @@ function foo(a?: number): number {}
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "expression": false,
 // CHECK-NEXT:         "async": false
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "directive": null
-// CHECK-NEXT:     },
-
-(async<T>(): number => {1});
-// CHECK-NEXT:     {
-// CHECK-NEXT:       "type": "ExpressionStatement",
-// CHECK-NEXT:       "expression": {
-// CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
-// CHECK-NEXT:         "params": [],
-// CHECK-NEXT:         "body": {
-// CHECK-NEXT:           "type": "BlockStatement",
-// CHECK-NEXT:           "body": [
-// CHECK-NEXT:             {
-// CHECK-NEXT:               "type": "ExpressionStatement",
-// CHECK-NEXT:               "expression": {
-// CHECK-NEXT:                 "type": "NumericLiteral",
-// CHECK-NEXT:                 "value": 1,
-// CHECK-NEXT:                 "raw": "1"
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "directive": null
-// CHECK-NEXT:             }
-// CHECK-NEXT:           ]
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "returnType": {
-// CHECK-NEXT:           "type": "TypeAnnotation",
-// CHECK-NEXT:           "typeAnnotation": {
-// CHECK-NEXT:             "type": "NumberTypeAnnotation"
-// CHECK-NEXT:           }
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "expression": false,
-// CHECK-NEXT:         "async": true
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     },
@@ -466,6 +467,7 @@ function foo(a?: number): number {}
 // CHECK-NEXT:                 "typeAnnotation": {
 // CHECK-NEXT:                   "type": "FunctionTypeAnnotation",
 // CHECK-NEXT:                   "params": [],
+// CHECK-NEXT:                   "this": null,
 // CHECK-NEXT:                   "returnType": {
 // CHECK-NEXT:                     "type": "VoidTypeAnnotation"
 // CHECK-NEXT:                   },
@@ -475,6 +477,7 @@ function foo(a?: number): number {}
 // CHECK-NEXT:                 "optional": false
 // CHECK-NEXT:               }
 // CHECK-NEXT:             ],
+// CHECK-NEXT:             "this": null,
 // CHECK-NEXT:             "returnType": {
 // CHECK-NEXT:               "type": "NumberTypeAnnotation"
 // CHECK-NEXT:             },

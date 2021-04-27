@@ -11,7 +11,7 @@
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/Operations.h"
-#include "hermes/VM/StringView.h"
+#include "hermes/VM/PropertyAccessor.h"
 
 #include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
@@ -43,9 +43,10 @@ void ArrayImpl::_snapshotAddEdgesImpl(
   }
   auto *const indexedStorage =
       self->indexedStorage_.getNonNull(gc->getPointerBase());
-  const auto len = self->endIndex_ - self->beginIndex_;
-  for (uint32_t i = 0; i < len; i++) {
-    const auto &elem = indexedStorage->at(i);
+  const auto beginIndex = self->beginIndex_;
+  const auto endIndex = self->endIndex_;
+  for (uint32_t i = beginIndex; i < endIndex; i++) {
+    const auto &elem = indexedStorage->at(i - beginIndex);
     const llvh::Optional<HeapSnapshot::NodeID> elemID = gc->getSnapshotID(elem);
     if (!elemID) {
       continue;
@@ -205,9 +206,8 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
 
   // Check whether the index is within the storage.
   if (LLVM_LIKELY(index >= beginIndex && index < endIndex)) {
-    self->indexedStorage_.getNonNull(runtime)
-        ->at(index - beginIndex)
-        .set(value.get(), &runtime->getHeap());
+    self->indexedStorage_.getNonNull(runtime)->set(
+        index - beginIndex, value.get(), &runtime->getHeap());
     return true;
   }
 
@@ -225,7 +225,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     self->indexedStorage_.set(runtime, newStorage.get(), &runtime->getHeap());
     self->beginIndex_ = index;
     self->endIndex_ = index + 1;
-    newStorage->at(0).set(value.get(), &runtime->getHeap());
+    newStorage->set(0, value.get(), &runtime->getHeap());
     return true;
   }
 
@@ -239,8 +239,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
       StorageType::resizeWithinCapacity(
           indexedStorage, runtime, index - beginIndex + 1);
       // self shouldn't have moved since there haven't been any allocations.
-      indexedStorage->at(index - beginIndex)
-          .set(value.get(), &runtime->getHeap());
+      indexedStorage->set(index - beginIndex, value.get(), &runtime->getHeap());
       return true;
     }
   }
@@ -255,8 +254,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    indexedStorageHandle->at(0).set(
-        value.getHermesValue(), &runtime->getHeap());
+    indexedStorageHandle->set(0, value.getHermesValue(), &runtime->getHeap());
     self = vmcast<ArrayImpl>(selfHandle.get());
     self->beginIndex_ = index;
     self->endIndex_ = index + 1;
@@ -294,8 +292,8 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     }
     self = vmcast<ArrayImpl>(selfHandle.get());
     self->endIndex_ = index + 1;
-    indexedStorageHandle->at(index - beginIndex)
-        .set(value.get(), &runtime->getHeap());
+    indexedStorageHandle->set(
+        index - beginIndex, value.get(), &runtime->getHeap());
   } else {
     // Extending to the left. 'index' will become the new 'beginIndex'.
     assert(index < beginIndex);
@@ -309,7 +307,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     }
     self = vmcast<ArrayImpl>(selfHandle.get());
     self->beginIndex_ = index;
-    indexedStorageHandle->at(0).set(value.get(), &runtime->getHeap());
+    indexedStorageHandle->set(0, value.get(), &runtime->getHeap());
   }
 
   // Update the potentially changed pointer.
@@ -323,17 +321,20 @@ bool ArrayImpl::_deleteOwnIndexedImpl(
     Runtime *runtime,
     uint32_t index) {
   auto *self = vmcast<ArrayImpl>(selfHandle.get());
-
+  NoAllocScope noAlloc{runtime};
   if (index >= self->beginIndex_ && index < self->endIndex_) {
-    auto &elem = self->indexedStorage_.getNonNull(runtime)->at(
-        index - self->beginIndex_);
-
+    auto *indexedStorage = self->indexedStorage_.getNonNull(runtime);
     // Cannot delete indexed elements if we are sealed.
-    if (LLVM_UNLIKELY(self->flags_.sealed))
+    if (LLVM_UNLIKELY(self->flags_.sealed)) {
+      HermesValue elem = indexedStorage->at(index - self->beginIndex_);
       if (!elem.isEmpty())
         return false;
+    }
 
-    elem.setNonPtr(HermesValue::encodeEmptyValue(), &runtime->getHeap());
+    indexedStorage->setNonPtr(
+        index - self->beginIndex_,
+        HermesValue::encodeEmptyValue(),
+        &runtime->getHeap());
   }
 
   return true;
@@ -358,7 +359,7 @@ bool ArrayImpl::_checkAllOwnIndexedImpl(
 //===----------------------------------------------------------------------===//
 // class Arguments
 
-ObjectVTable Arguments::vt{
+const ObjectVTable Arguments::vt{
     VTable(
         CellKind::ArgumentsKind,
         cellSize<Arguments>(),
@@ -368,11 +369,12 @@ ObjectVTable Arguments::vt{
         nullptr,
         nullptr,
         nullptr, // externalMemorySize
-        VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
-                                     nullptr,
-                                     Arguments::_snapshotAddEdgesImpl,
-                                     nullptr,
-                                     nullptr}),
+        VTable::HeapSnapshotMetadata{
+            HeapSnapshot::NodeType::Object,
+            nullptr,
+            Arguments::_snapshotAddEdgesImpl,
+            nullptr,
+            nullptr}),
     Arguments::_getOwnIndexedRangeImpl,
     Arguments::_haveOwnIndexedImpl,
     Arguments::_getOwnIndexedPropertyFlagsImpl,
@@ -397,8 +399,7 @@ void ArgumentsSerialize(Serializer &s, const GCCell *cell) {
 
 void ArgumentsDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::ArgumentsKind && "Expected Arguments");
-  void *mem = d.getRuntime()->alloc(cellSize<Arguments>());
-  auto *cell = new (mem) Arguments(d);
+  auto *cell = d.getRuntime()->makeAFixed<Arguments>(d);
   d.endObject(cell);
 }
 #endif
@@ -414,14 +415,15 @@ CallResult<Handle<Arguments>> Arguments::create(
   }
   auto indexedStorage = runtime->makeHandle<StorageType>(std::move(*arrRes));
 
-  JSObjectAlloc<Arguments> mem{runtime};
-  auto selfHandle = mem.initToHandle(new (mem) Arguments(
-      runtime,
+  auto clazz = runtime->getHiddenClassForPrototype(
       runtime->objectPrototypeRawPtr,
-      runtime->getHiddenClassForPrototypeRaw(
-          runtime->objectPrototypeRawPtr,
-          numOverlapSlots<Arguments>() + ANONYMOUS_PROPERTY_SLOTS),
-      *indexedStorage));
+      numOverlapSlots<Arguments>() + ANONYMOUS_PROPERTY_SLOTS);
+  auto obj = runtime->makeAFixed<Arguments>(
+      runtime,
+      Handle<JSObject>::vmcast(&runtime->objectPrototype),
+      clazz,
+      indexedStorage);
+  auto selfHandle = JSObjectInit::initToHandle(runtime, obj);
 
   Arguments::setStorageEndIndex(selfHandle, runtime, length);
 
@@ -490,7 +492,7 @@ CallResult<Handle<Arguments>> Arguments::create(
 //===----------------------------------------------------------------------===//
 // class JSArray
 
-ObjectVTable JSArray::vt{
+const ObjectVTable JSArray::vt{
     VTable(
         CellKind::ArrayKind,
         cellSize<JSArray>(),
@@ -500,11 +502,12 @@ ObjectVTable JSArray::vt{
         nullptr,
         nullptr,
         nullptr, // externalMemorySize
-        VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
-                                     nullptr,
-                                     JSArray::_snapshotAddEdgesImpl,
-                                     nullptr,
-                                     nullptr}),
+        VTable::HeapSnapshotMetadata{
+            HeapSnapshot::NodeType::Object,
+            nullptr,
+            JSArray::_snapshotAddEdgesImpl,
+            nullptr,
+            nullptr}),
     JSArray::_getOwnIndexedRangeImpl,
     JSArray::_haveOwnIndexedImpl,
     JSArray::_getOwnIndexedPropertyFlagsImpl,
@@ -520,21 +523,16 @@ void ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
-JSArray::JSArray(Deserializer &d, const VTable *vt) : ArrayImpl(d, vt) {
-  shadowLength_ = d.readInt<uint32_t>();
-}
+JSArray::JSArray(Deserializer &d, const VTable *vt) : ArrayImpl(d, vt) {}
 
 void ArraySerialize(Serializer &s, const GCCell *cell) {
-  auto *self = vmcast<const JSArray>(cell);
   serializeArrayImpl(s, cell, JSObject::numOverlapSlots<JSArray>());
-  s.writeInt<uint32_t>(self->shadowLength_);
   s.endObject(cell);
 }
 
 void ArrayDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::ArrayKind && "Expected Array");
-  void *mem = d.getRuntime()->alloc(cellSize<JSArray>());
-  auto *cell = new (mem) JSArray(d, &JSArray::vt.base);
+  auto *cell = d.getRuntime()->makeAFixed<JSArray>(d, &JSArray::vt.base);
   d.endObject(cell);
 }
 #endif
@@ -542,11 +540,8 @@ void ArrayDeserialize(Deserializer &d, CellKind kind) {
 Handle<HiddenClass> JSArray::createClass(
     Runtime *runtime,
     Handle<JSObject> prototypeHandle) {
-  Handle<HiddenClass> classHandle{
-      runtime,
-      runtime->getHiddenClassForPrototypeRaw(
-          *prototypeHandle,
-          numOverlapSlots<JSArray>() + ANONYMOUS_PROPERTY_SLOTS)};
+  Handle<HiddenClass> classHandle = runtime->getHiddenClassForPrototype(
+      *prototypeHandle, numOverlapSlots<JSArray>() + ANONYMOUS_PROPERTY_SLOTS);
 
   PropertyFlags pf{};
   pf.enumerable = 0;
@@ -596,13 +591,14 @@ CallResult<PseudoHandle<JSArray>> JSArray::create(
     indexedStorage = std::move(*arrRes);
   }
 
-  JSObjectAlloc<JSArray> mem{runtime};
-  auto self = mem.initToPseudoHandle(new (mem) JSArray(
+  auto self = JSObjectInit::initToPseudoHandle(
       runtime,
-      *prototypeHandle,
-      *classHandle,
-      *indexedStorage,
-      GCPointerBase::NoBarriers()));
+      runtime->makeAFixed<JSArray>(
+          runtime,
+          prototypeHandle,
+          classHandle,
+          indexedStorage,
+          GCPointerBase::NoBarriers()));
   putLength(self.get(), runtime, length);
 
   return self;
@@ -654,7 +650,8 @@ CallResult<bool> JSArray::setLength(
     uint32_t newLength,
     PropOpFlags opFlags) {
   // Fast-path: if we are enlarging, do nothing.
-  if (LLVM_LIKELY(newLength >= selfHandle->shadowLength_)) {
+  const auto currentLength = getLength(*selfHandle);
+  if (LLVM_LIKELY(newLength >= currentLength)) {
     putLength(*selfHandle, runtime, newLength);
     return true;
   }
@@ -668,7 +665,7 @@ CallResult<bool> JSArray::setLength(
     // We must scan backwards looking for a non-empty property. We only have
     // to scan in the intersection between the range of present values and
     // the range between the current length and the new length.
-    //              newLength         shadowLength
+    //              newLength         currentLength
     //                 |                    |
     //                 +--------------------+
     //       begin                end
@@ -682,7 +679,7 @@ CallResult<bool> JSArray::setLength(
     auto *self = selfHandle.get();
     auto range = _getOwnIndexedRangeImpl(self, runtime);
     uint32_t lowestScanLen = std::max(range.first, newLength);
-    uint32_t highestLen = std::min(range.second, self->shadowLength_);
+    uint32_t highestLen = std::min(range.second, currentLength);
 
     for (; highestLen > lowestScanLen; --highestLen) {
       if (!self->unsafeAt(runtime, highestLen - 1).isEmpty()) {
@@ -706,11 +703,14 @@ CallResult<bool> JSArray::setLength(
     using IndexProp = std::pair<uint32_t, SymbolID>;
     llvh::SmallVector<IndexProp, 8> toBeDeleted;
 
+    GCScope scope{runtime};
+
     HiddenClass::forEachProperty(
         runtime->makeHandle(selfHandle->clazz_),
         runtime,
-        [runtime, &adjustedLength, &toBeDeleted](
+        [runtime, &adjustedLength, &toBeDeleted, &scope](
             SymbolID id, NamedPropertyDescriptor desc) {
+          GCScopeMarkerRAII marker{scope};
           // If this property is not an integer index, or it doesn't need to be
           // deleted (it is less than 'adjustedLength'), ignore it.
           auto propNameAsIndex = toArrayIndex(
@@ -730,6 +730,7 @@ CallResult<bool> JSArray::setLength(
     for (auto it = toBeDeleted.rbegin(), e = toBeDeleted.rend(); it != e;
          ++it) {
       if (it->first >= adjustedLength) {
+        GCScopeMarkerRAII marker{scope};
         auto cr = JSObject::deleteNamed(selfHandle, runtime, it->second);
         assert(
             cr != ExecutionStatus::EXCEPTION && *cr &&
@@ -761,7 +762,7 @@ CallResult<bool> JSArray::setLength(
 //===----------------------------------------------------------------------===//
 // class JSArrayIterator
 
-ObjectVTable JSArrayIterator::vt{
+const ObjectVTable JSArrayIterator::vt{
     VTable(CellKind::ArrayIteratorKind, cellSize<JSArrayIterator>()),
     JSArrayIterator::_getOwnIndexedRangeImpl,
     JSArrayIterator::_haveOwnIndexedImpl,
@@ -798,8 +799,7 @@ void ArrayIteratorSerialize(Serializer &s, const GCCell *cell) {
 
 void ArrayIteratorDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::ArrayIteratorKind && "Expected ArrayIterator");
-  void *mem = d.getRuntime()->alloc(cellSize<JSArrayIterator>());
-  auto *cell = new (mem) JSArrayIterator(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSArrayIterator>(d);
   d.endObject(cell);
 }
 #endif
@@ -809,16 +809,11 @@ PseudoHandle<JSArrayIterator> JSArrayIterator::create(
     Handle<JSObject> array,
     IterationKind iterationKind) {
   auto proto = Handle<JSObject>::vmcast(&runtime->arrayIteratorPrototype);
-
-  JSObjectAlloc<JSArrayIterator> mem{runtime};
-  return mem.initToPseudoHandle(new (mem) JSArrayIterator(
-      runtime,
-      *proto,
-      runtime->getHiddenClassForPrototypeRaw(
-          *proto,
-          numOverlapSlots<JSArrayIterator>() + ANONYMOUS_PROPERTY_SLOTS),
-      *array,
-      iterationKind));
+  auto clazz = runtime->getHiddenClassForPrototype(
+      *proto, numOverlapSlots<JSArrayIterator>() + ANONYMOUS_PROPERTY_SLOTS);
+  auto *obj = runtime->makeAFixed<JSArrayIterator>(
+      runtime, proto, clazz, array, iterationKind);
+  return JSObjectInit::initToPseudoHandle(runtime, obj);
 }
 
 /// Iterate to the next element and return.

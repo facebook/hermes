@@ -19,6 +19,7 @@
 #include <limits>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace hermes {
 namespace vm {
@@ -29,18 +30,69 @@ namespace vm {
 /// it 32-bit).
 using gcheapsize_t = uint32_t;
 
+/// Represents a value before and after an event.
+/// NOTE: Not a std::pair because using the names are more readable than first
+/// and second.
+struct BeforeAndAfter {
+  uint64_t before;
+  uint64_t after;
+};
+
 struct GCAnalyticsEvent {
+  /// The same value as \p Name from GCConfig. Stored here for simplicity of
+  /// the API since this is passed in callbacks that might not be able to store
+  /// the name. For a given Runtime, this will be the same value every time.
   std::string runtimeDescription;
+
+  /// The kind of GC this was. For a given Runtime, this will be the same value
+  /// every time.
   std::string gcKind;
+
+  /// The type of collection that ran, typically differentiating a "young"
+  /// generation GC and an "old" generation GC. When other values say they're
+  /// "scoped to the collectionType", it means that for a generation GC
+  /// they're only reporting the numbers for that generation.
   std::string collectionType;
+
+  /// The cause of this GC. Can be an arbitrary string describing the cause.
+  /// Typically "natural" is used to mean that the GC decided it was time, and
+  /// other causes mean it was forced by some other condition.
   std::string cause;
+
+  /// The wall time a collection took from start to end.
   std::chrono::milliseconds duration;
+
+  /// The CPU time a collection took from start to end. This time measure will
+  /// exclude time waiting on disk, mutexes, or time spent not scheduled to run.
   std::chrono::milliseconds cpuDuration;
-  uint64_t preAllocated;
-  uint64_t preSize;
-  uint64_t postAllocated;
-  uint64_t postSize;
+
+  /// The number of bytes allocated in the heap before and after the collection.
+  /// measurement does not include fragmentation, and is the same as the sum of
+  /// all sizes in calls to \p GC::makeA into that generation (including any
+  /// rounding up the GC does).
+  /// The value is scoped to the \p collectionType.
+  BeforeAndAfter allocated;
+
+  /// The number of bytes in use by the heap before and after the collection.
+  /// This measurement can include fragmentation if the \p gcKind has that
+  /// concept.
+  /// The value is scoped to the \p collectionType.
+  BeforeAndAfter size;
+
+  /// The number of bytes external to the JS heap before and after the
+  /// collection.
+  /// The value is scoped to the \p collectionType.
+  BeforeAndAfter external;
+
+  /// The ratio of cells that survived the collection to all cells before
+  /// the collection. Note that this is in term of sizes of cells, not the
+  /// numbers of cells. Excludes any cells not in direct use by the JS program,
+  /// such as FillerCell or FreelistCell.
+  /// The value is scoped to the \p collectionType.
   double survivalRatio;
+
+  /// A list of metadata tags to annotate this event with.
+  std::vector<std::string> tags;
 };
 
 /// Parameters to control a tripwire function called when the live set size
@@ -137,9 +189,6 @@ enum class GCEventKind {
                                                                           \
   /* Whether to use mprotect on GC metadata between GCs. */               \
   F(constexpr, bool, ProtectMetadata, false)                              \
-                                                                          \
-  /* Whether to track allocation traces starting in the Runtime ctor. */  \
-  F(constexpr, bool, AllocationLocationTrackerFromStart, false)           \
                                                                           \
   /* Callout for an analytics event. */                                   \
   F(HERMES_NON_CONSTEXPR,                                                 \

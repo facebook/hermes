@@ -18,11 +18,21 @@
 namespace hermes {
 namespace vm {
 
-VTable Domain::vt{CellKind::DomainKind,
-                  cellSize<Domain>(),
-                  _finalizeImpl,
-                  _markWeakImpl,
-                  _mallocSizeImpl};
+const VTable Domain::vt{
+    CellKind::DomainKind,
+    cellSize<Domain>(),
+    _finalizeImpl,
+    _markWeakImpl,
+    _mallocSizeImpl,
+    nullptr,
+    nullptr,
+    nullptr,
+    VTable::HeapSnapshotMetadata{
+        HeapSnapshot::NodeType::Code,
+        nullptr,
+        Domain::_snapshotAddEdgesImpl,
+        Domain::_snapshotAddNodesImpl,
+        nullptr}};
 
 void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const Domain *>(cell);
@@ -93,11 +103,7 @@ void DomainSerialize(Serializer &s, const GCCell *cell) {
 
 void DomainDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::DomainKind && "Expected Domain");
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<Domain>());
-  auto *cell = new (mem) Domain(d);
-  auto &samplingProfiler = SamplingProfiler::getInstance();
-  samplingProfiler->increaseDomainCount();
+  auto *cell = d.getRuntime()->makeAFixed<Domain, HasFinalizer::Yes>(d);
   d.endObject(cell);
 }
 
@@ -138,19 +144,17 @@ ArrayStorage *Domain::deserializeArrayStorage(Deserializer &d) {
 #endif
 
 PseudoHandle<Domain> Domain::create(Runtime *runtime) {
-  void *mem =
-      runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(cellSize<Domain>());
-  auto self = createPseudoHandle(new (mem) Domain(runtime));
-  auto &samplingProfiler = SamplingProfiler::getInstance();
-  samplingProfiler->increaseDomainCount();
+  auto *cell = runtime->makeAFixed<Domain, HasFinalizer::Yes>(runtime);
+  auto self = createPseudoHandle(cell);
   return self;
 }
 
 void Domain::_finalizeImpl(GCCell *cell, GC *gc) {
   auto *self = vmcast<Domain>(cell);
+  for (RuntimeModule *rm : self->runtimeModules_) {
+    gc->getIDTracker().untrackNative(rm);
+  }
   self->~Domain();
-  auto &samplingProfiler = SamplingProfiler::getInstance();
-  samplingProfiler->decreaseDomainCount();
 }
 
 Domain::~Domain() {
@@ -177,46 +181,72 @@ void Domain::markWeakRefs(WeakRefAcceptor &acceptor) {
 
 size_t Domain::_mallocSizeImpl(GCCell *cell) {
   auto *self = vmcast<Domain>(cell);
+  size_t rmSize = 0;
+  for (auto *rm : self->runtimeModules_)
+    rmSize += sizeof(RuntimeModule) + rm->additionalMemorySize();
+
   return self->cjsModuleTable_.getMemorySize() +
-      self->runtimeModules_.capacity_in_bytes();
+      self->runtimeModules_.capacity_in_bytes() + rmSize;
+}
+
+void Domain::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
+  auto *const self = vmcast<Domain>(cell);
+  for (RuntimeModule *rm : self->runtimeModules_)
+    snap.addNamedEdge(
+        HeapSnapshot::EdgeType::Internal, "RuntimeModule", gc->getNativeID(rm));
+}
+
+void Domain::_snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
+  auto *const self = vmcast<Domain>(cell);
+  for (RuntimeModule *rm : self->runtimeModules_) {
+    // Create a native node for each RuntimeModule owned by this domain.
+    rm->snapshotAddNodes(gc, snap);
+    snap.beginNode();
+    rm->snapshotAddEdges(gc, snap);
+    snap.endNode(
+        HeapSnapshot::NodeType::Native,
+        "RuntimeModule",
+        gc->getNativeID(rm),
+        sizeof(RuntimeModule) + rm->additionalMemorySize(),
+        0);
+  }
 }
 
 ExecutionStatus Domain::importCJSModuleTable(
     Handle<Domain> self,
     Runtime *runtime,
-    RuntimeModule *runtimeModule,
-    uint32_t cjsModuleOffset) {
+    RuntimeModule *runtimeModule) {
   if (runtimeModule->getBytecode()->getCJSModuleTable().empty() &&
       runtimeModule->getBytecode()->getCJSModuleTableStatic().empty()) {
     // Nothing to do, avoid allocating and simply return.
     return ExecutionStatus::RETURNED;
   }
 
-  const uint64_t newModules =
-      runtimeModule->getBytecode()->getCJSModuleTable().size() +
-      runtimeModule->getBytecode()->getCJSModuleTableStatic().size();
-
-  assert(
-      newModules <= std::numeric_limits<uint32_t>::max() &&
-      "number of modules is 32 bits due to the bytecode format");
-
   static_assert(
       CJSModuleSize < 10, "CJSModuleSize must be small to avoid overflow");
-
-  // Use uint64_t to allow us to check for overflow.
-  const uint64_t requiredSize = (cjsModuleOffset + newModules) * CJSModuleSize;
-  if (requiredSize > std::numeric_limits<uint32_t>::max()) {
-    return runtime->raiseRangeError("Loaded module count exceeded limit");
-  }
 
   MutableHandle<ArrayStorage> cjsModules{runtime};
 
   if (!self->cjsModules_) {
     // Create the module table on first import.
-    // Ensure the size and capacity are set correctly to allow for directly
-    // setting the values necessary.
-    auto cjsModulesRes =
-        ArrayStorage::create(runtime, requiredSize, requiredSize);
+    // If module IDs are contiguous and start from 0, we won't need to resize
+    // for this RuntimeModule.
+
+    const uint64_t firstSegmentModules =
+        runtimeModule->getBytecode()->getCJSModuleTable().size() +
+        runtimeModule->getBytecode()->getCJSModuleTableStatic().size();
+
+    assert(
+        firstSegmentModules <= std::numeric_limits<uint32_t>::max() &&
+        "number of modules is 32 bits due to the bytecode format");
+
+    // Use uint64_t to allow us to check for overflow.
+    const uint64_t requiredSize = firstSegmentModules * CJSModuleSize;
+    if (requiredSize > std::numeric_limits<uint32_t>::max()) {
+      return runtime->raiseRangeError("Loaded module count exceeded limit");
+    }
+
+    auto cjsModulesRes = ArrayStorage::create(runtime, requiredSize);
     if (LLVM_UNLIKELY(cjsModulesRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -253,58 +283,144 @@ ExecutionStatus Domain::importCJSModuleTable(
     self->throwingRequire_.set(runtime, *requireFn, &runtime->getHeap());
   } else {
     cjsModules = self->cjsModules_.get(runtime);
-    // Resize the array to allow for the new modules, if necessary.
-    if (requiredSize > self->cjsModules_.get(runtime)->size()) {
-      if (LLVM_UNLIKELY(
-              ArrayStorage::resize(cjsModules, runtime, requiredSize) ==
-              ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-    }
   }
 
   assert(cjsModules && "cjsModules not set");
 
-  uint32_t index = cjsModuleOffset * CJSModuleSize;
+  // Find the maximum module ID so we can resize cjsModules at most once per
+  // RuntimeModule.
+  uint64_t maxModuleID = cjsModules->size() / CJSModuleSize;
 
-  /// Push element \param val onto cjsModules and increment index.
-  const auto pushNoError = [runtime, &cjsModules, &index](HermesValue val) {
-    cjsModules->at(index).set(val, &runtime->getHeap());
-    ++index;
+  // The non-static module table does not store module IDs. They are assigned
+  // during registration by counting insertions to cjsModuleTable_. Count the
+  // insertions up front.
+  for (const auto &pair : runtimeModule->getBytecode()->getCJSModuleTable()) {
+    SymbolID symbolId =
+        runtimeModule->getSymbolIDFromStringIDMayAllocate(pair.first);
+    if (self->cjsModuleTable_.find(symbolId) == self->cjsModuleTable_.end()) {
+      ++maxModuleID;
+    }
+  }
+
+  // The static module table stores module IDs in an arbitrary order. Scan for
+  // the maximum ID.
+  for (const auto &pair :
+       runtimeModule->getBytecode()->getCJSModuleTableStatic()) {
+    const auto &moduleID = pair.first;
+    if (moduleID > maxModuleID) {
+      maxModuleID = moduleID;
+    }
+  }
+
+  assert(
+      maxModuleID <= std::numeric_limits<uint32_t>::max() &&
+      "number of modules is 32 bits due to the bytecode format");
+
+  // Use uint64_t to allow us to check for overflow.
+  const uint64_t requiredSize = (maxModuleID + 1) * CJSModuleSize;
+  if (requiredSize > std::numeric_limits<uint32_t>::max()) {
+    return runtime->raiseRangeError("Loaded module count exceeded limit");
+  }
+
+  // Resize the array to allow for the new modules, if necessary.
+  if (requiredSize > cjsModules->size()) {
+    if (LLVM_UNLIKELY(
+            ArrayStorage::resize(cjsModules, runtime, requiredSize) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  }
+
+  /// \return Whether the module with ID \param moduleID has been registered in
+  /// cjsModules. \pre Space has been allocated for this module's record in
+  /// cjsModules.
+  const auto isModuleRegistered = [&cjsModules,
+                                   maxModuleID](uint32_t moduleID) -> bool {
+    assert(
+        moduleID <= maxModuleID &&
+        "CJS module ID exceeds maximum known module ID");
+    (void)maxModuleID;
+    uint32_t index = moduleID * CJSModuleSize;
+    uint32_t requiredSize = index + CJSModuleSize;
+    assert(
+        cjsModules->size() >= requiredSize &&
+        "CJS module ID exceeds allocated storage");
+    (void)requiredSize;
+    return !cjsModules->at(index + FunctionIndexOffset).isEmpty();
+  };
+
+  /// Register CJS module \param moduleID in the runtime module table.
+  /// \return The index into cjsModules where this module's record begins.
+  /// \pre Space has been allocated for this module's record in cjsModules.
+  /// \pre There is no module already registered under moduleID.
+  auto &cjsEntryModuleID = self->cjsEntryModuleID_;
+  const auto registerModule =
+      [runtime,
+       &cjsModules,
+       runtimeModule,
+       &isModuleRegistered,
+       &cjsEntryModuleID](uint32_t moduleID, uint32_t functionID) -> uint32_t {
+    assert(!isModuleRegistered(moduleID) && "CJS module ID collision occurred");
+    (void)isModuleRegistered;
+    if (LLVM_UNLIKELY(!cjsEntryModuleID.hasValue())) {
+      cjsEntryModuleID = moduleID;
+    }
+    uint32_t index = moduleID * CJSModuleSize;
+    cjsModules->set(
+        index + CachedExportsOffset,
+        HermesValue::encodeEmptyValue(),
+        &runtime->getHeap());
+    cjsModules->set(
+        index + ModuleOffset,
+        HermesValue::encodeObjectValue(nullptr),
+        &runtime->getHeap());
+    cjsModules->set(
+        index + FunctionIndexOffset,
+        HermesValue::encodeNativeUInt32(functionID),
+        &runtime->getHeap());
+    cjsModules->set(
+        index + runtimeModuleOffset,
+        HermesValue::encodeNativePointer(runtimeModule),
+        &runtime->getHeap());
+    assert(isModuleRegistered(moduleID) && "CJS module was not registered");
+    return index;
   };
 
   // Import full table that allows dynamic requires.
   for (const auto &pair : runtimeModule->getBytecode()->getCJSModuleTable()) {
-    const auto startIndex = index;
-
-    pushNoError(HermesValue::encodeEmptyValue());
-    pushNoError(HermesValue::encodeObjectValue(nullptr));
-    pushNoError(HermesValue::encodeNativeUInt32(pair.second));
-    pushNoError(HermesValue::encodeNativePointer(runtimeModule));
-
-    // symbolId must not be inlined because getSymbolIDFromStringID allocates,
-    // which can make self->cjsModuleTable_ stale.
     SymbolID symbolId =
         runtimeModule->getSymbolIDFromStringIDMayAllocate(pair.first);
-    auto result = self->cjsModuleTable_.try_emplace(symbolId, startIndex);
-    (void)result;
-    assert(result.second && "Duplicate CJS modules");
+    auto emplaceRes = self->cjsModuleTable_.try_emplace(symbolId, 0xffffffff);
+    if (emplaceRes.second) {
+      // This module has not been registered before.
+      // Assign it an arbitrary unused module ID, because nothing will be
+      // referencing that ID from outside Domain.
+      // Counting insertions to cjsModuleTable_ is a valid source of unique IDs
+      // since a given Domain uses either dynamic requires or statically
+      // resolved requires.
+      uint32_t moduleID = self->cjsModuleTable_.size() - 1;
+      const auto functionID = pair.second;
+      auto index = registerModule(moduleID, functionID);
+      // Update the mapping from symbolId to an index into cjsModules.
+      emplaceRes.first->second = index;
+    }
   }
 
   // Import table to be used for requireFast.
-  for (const auto &functionID :
+  for (const auto &pair :
        runtimeModule->getBytecode()->getCJSModuleTableStatic()) {
-    pushNoError(HermesValue::encodeEmptyValue());
-    pushNoError(HermesValue::encodeObjectValue(nullptr));
-    pushNoError(HermesValue::encodeNativeUInt32(functionID));
-    pushNoError(HermesValue::encodeNativePointer(runtimeModule));
+    const auto &moduleID = pair.first;
+    const auto &functionID = pair.second;
+    if (!isModuleRegistered(moduleID)) {
+      registerModule(moduleID, functionID);
+    }
   }
 
   self->cjsModules_.set(runtime, cjsModules.get(), &runtime->getHeap());
   return ExecutionStatus::RETURNED;
 }
 
-ObjectVTable RequireContext::vt{
+const ObjectVTable RequireContext::vt{
     VTable(CellKind::RequireContextKind, cellSize<RequireContext>()),
     RequireContext::_getOwnIndexedRangeImpl,
     RequireContext::_haveOwnIndexedImpl,
@@ -331,9 +447,7 @@ void RequireContextSerialize(Serializer &s, const GCCell *cell) {
 
 void RequireContextDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::RequireContextKind && "Expected RequireContext");
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::No>(
-      cellSize<RequireContext>());
-  auto *cell = new (mem) RequireContext(d);
+  auto *cell = d.getRuntime()->makeAFixed<RequireContext>(d);
   d.endObject(cell);
 }
 #endif
@@ -342,13 +456,12 @@ Handle<RequireContext> RequireContext::create(
     Runtime *runtime,
     Handle<Domain> domain,
     Handle<StringPrimitive> dirname) {
-  JSObjectAlloc<RequireContext> mem{runtime};
-  auto self = mem.initToHandle(new (mem) RequireContext(
+  auto objProto = Handle<JSObject>::vmcast(&runtime->objectPrototype);
+  auto *cell = runtime->makeAFixed<RequireContext>(
       runtime,
-      vmcast<JSObject>(runtime->objectPrototype),
-      runtime->getHiddenClassForPrototypeRaw(
-          vmcast<JSObject>(runtime->objectPrototype),
-          ANONYMOUS_PROPERTY_SLOTS)));
+      objProto,
+      runtime->getHiddenClassForPrototype(*objProto, ANONYMOUS_PROPERTY_SLOTS));
+  auto self = JSObjectInit::initToHandle(runtime, cell);
 
   JSObject::setInternalProperty(
       *self, runtime, domainPropIndex(), domain.getHermesValue());

@@ -79,6 +79,11 @@ void vm_free(void *p, size_t sz);
 /// \p vm_allocate_aligned.
 void vm_free_aligned(void *p, size_t sz);
 
+/// Mark the \p sz byte region of memory starting at \p p as being a good
+/// candidate for huge pages.
+/// \pre sz must be a multiple of oscompat::page_size().
+void vm_hugepage(void *p, size_t sz);
+
 /// Mark the \p sz byte region of memory starting at \p p as not currently in
 /// use, so that the OS may free it. \p p must be page-aligned.
 void vm_unused(void *p, size_t sz);
@@ -107,6 +112,20 @@ enum class MAdvice { Random, Sequential };
 /// Issue an madvise() call.
 /// \return true on success, false on error.
 bool vm_madvise(void *p, size_t sz, MAdvice advice);
+
+/// Return the footprint of the memory-mapping starting at \p start (inclusive)
+/// and ending at \p end (exclusive). The notions of "footprint" and "mapping"
+/// are platform-specific, conforming to the following specification:
+///
+///  - "Mapping" refers to the abstraction from the kernel for contiguous chunks
+///    of virtual memory (i.e. from `mmap` or `vm_allocate`).
+///  - "Footprint" refers to the metric by which the platform measures the
+///    impact of a region on memory pressure. I.e. if this metric goes up, the
+///    likelihood that the process is killed due to memory pressure increases.
+///
+/// \return the footprint as a number of pages on success, and error on
+/// failure.
+llvh::ErrorOr<size_t> vm_footprint(char *start, char *end);
 
 /// Return the number of pages in the given region that are currently in RAM.
 /// If \p runs is provided, then populate it with the lengths of runs of

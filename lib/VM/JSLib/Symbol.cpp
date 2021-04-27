@@ -128,6 +128,15 @@ Handle<JSObject> createSymbolConstructor(Runtime *runtime) {
 
   // Symbol.prototype.xxx methods.
   void *ctx = nullptr;
+  defineAccessor(
+      runtime,
+      symbolPrototype,
+      Predefined::getSymbolID(Predefined::description),
+      ctx,
+      symbolPrototypeDescriptionGetter,
+      nullptr,
+      false,
+      true);
   defineMethod(
       runtime,
       symbolPrototype,
@@ -223,8 +232,31 @@ symbolKeyFor(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
+/// ES10.0 19.4.3.2 get Symbol.prototype.description
+/// TODO(T79770380): make the Symbol(undefined) case spec-conformant.
+CallResult<HermesValue>
+symbolPrototypeDescriptionGetter(void *, Runtime *runtime, NativeArgs args) {
+  MutableHandle<SymbolID> sym{runtime};
+  // 1. Let s be the this value.
+  // 2. Let sym be ? thisSymbolValue(s).
+  if (args.getThisArg().isSymbol()) {
+    sym = args.vmcastThis<SymbolID>().get();
+  } else if (auto symHandle = args.dyncastThis<JSSymbol>()) {
+    sym = JSSymbol::getPrimitiveSymbol(*symHandle, runtime).get();
+  } else {
+    return runtime->raiseTypeError(
+        "Symbol.prototype.description can only be called on Symbol");
+  }
+
+  // 3. Return sym.[[Description]].
+  StringPrimitive *desc = runtime->getStringPrimFromSymbolID(*sym);
+  return HermesValue::encodeStringValue(desc);
+}
+
+/// ES10 19.4.3.3 Symbol.prototype.toString ( )
 CallResult<HermesValue>
 symbolPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
+  // 1. Let sym be ? thisSymbolValue(this value).
   MutableHandle<SymbolID> sym{runtime};
   if (args.getThisArg().isSymbol()) {
     sym = args.vmcastThis<SymbolID>().get();
@@ -235,6 +267,7 @@ symbolPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
         "Symbol.prototype.toString can only be called on Symbol");
   }
 
+  // 2. Return SymbolDescriptiveString(sym).
   auto str = symbolDescriptiveString(runtime, sym);
   if (LLVM_UNLIKELY(str == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -242,16 +275,16 @@ symbolPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   return str->getHermesValue();
 }
 
+/// ES10 19.4.3.4 Symbol.prototype.valueOf ( )
 CallResult<HermesValue>
 symbolPrototypeValueOf(void *, Runtime *runtime, NativeArgs args) {
+  // 1. Return ? thisSymbolValue(this value).
   if (args.getThisArg().isSymbol()) {
     return args.getThisArg();
   }
-
   if (auto jsSymbol = args.dyncastThis<JSSymbol>()) {
     return JSSymbol::getPrimitiveSymbol(*jsSymbol, runtime).getHermesValue();
   }
-
   return runtime->raiseTypeError(
       "Symbol.prototype.valueOf can only be called on Symbol");
 }

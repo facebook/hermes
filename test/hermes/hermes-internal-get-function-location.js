@@ -15,14 +15,14 @@
 function fn1() {}
 print(loc(fn1).fileName);
 // JS: {{.+}}/hermes-internal-get-function-location.js
-// BC: undefined
+// BC: {{.+}}.hbc
 print(loc(fn1).lineNumber);
 // JS: [[@LINE-5]]
 // BC: undefined
 print(loc(fn1).columnNumber);
 // JS-NEXT: 1
 // BC-NEXT: undefined
-print(loc(fn1).cjsModuleOffset);
+print(loc(fn1).segmentID);
 // JS-NEXT: undefined
 // BC-NEXT: 0
 print(loc(fn1).virtualOffset);
@@ -35,14 +35,14 @@ print(loc(fn1).isNative);
 const fn1Bound = fn1.bind(null);
 print(loc(fn1Bound).fileName);
 // JS-NEXT: {{.+}}/hermes-internal-get-function-location.js
-// BC-NEXT: undefined
+// BC-NEXT: {{.+}}.hbc
 print(loc(fn1Bound).lineNumber);
 // JS: [[@LINE-25]]
 // BC-NEXT: undefined
 print(loc(fn1Bound).columnNumber);
 // JS-NEXT: 1
 // BC-NEXT: undefined
-print(loc(fn1Bound).cjsModuleOffset);
+print(loc(fn1Bound).segmentID);
 // JS-NEXT: undefined
 // BC-NEXT: 0
 print(loc(fn1Bound).virtualOffset);
@@ -61,7 +61,7 @@ print(loc(Object).lineNumber);
 print(loc(Object).columnNumber);
 // JS-NEXT: undefined
 // BC-NEXT: undefined
-print(loc(Object).cjsModuleOffset);
+print(loc(Object).segmentID);
 // JS-NEXT: undefined
 // BC-NEXT: undefined
 print(loc(Object).virtualOffset);
@@ -81,7 +81,7 @@ print(loc(fn2).lineNumber);
 print(loc(fn2).columnNumber);
 // JS-NEXT: 2
 // BC-NEXT: 2
-print(loc(fn2).cjsModuleOffset);
+print(loc(fn2).segmentID);
 // JS-NEXT: undefined
 // BC-NEXT: undefined
 print(loc(fn2).virtualOffset);

@@ -32,6 +32,8 @@ class Keywords {
   const UniqueString *const identEval;
   /// Identifier for "delete".
   const UniqueString *const identDelete;
+  /// Identifier for "this".
+  const UniqueString *const identThis;
   /// Identifier for "use strict".
   const UniqueString *const identUseStrict;
   /// Identifier for "var".
@@ -73,6 +75,11 @@ class SemanticValidator {
   /// True if we are validating a formal parameter list.
   bool isFormalParams_{false};
 
+  /// True if we are preparing the AST to be compiled by Hermes, including
+  /// erroring on features which we parse but don't compile and transforming
+  /// the AST. False if we just want to validate the AST.
+  bool compile_;
+
 #ifndef NDEBUG
   /// Our parser detects strictness and initializes the flag in every node,
   /// but if we are reading an external AST, we must look for "use strict" and
@@ -97,7 +104,10 @@ class SemanticValidator {
   unsigned recursionDepth_ = MAX_RECURSION_DEPTH;
 
  public:
-  explicit SemanticValidator(Context &astContext, sem::SemContext &semCtx);
+  explicit SemanticValidator(
+      Context &astContext,
+      sem::SemContext &semCtx,
+      bool compile);
 
   // Perform the validation on whole AST.
   bool doIt(Node *rootNode);
@@ -181,6 +191,8 @@ class SemanticValidator {
 
   void visit(ClassExpressionNode *node);
   void visit(ClassDeclarationNode *node);
+  void visit(PrivateNameNode *node);
+  void visit(ClassPrivatePropertyNode *node);
 
   void visit(ImportDeclarationNode *importDecl);
   void visit(ImportDefaultSpecifierNode *importDecl);
@@ -195,6 +207,9 @@ class SemanticValidator {
   void visit(CoverTrailingCommaNode *CTC);
   void visit(CoverInitializerNode *CI);
   void visit(CoverRestElementNode *R);
+#if HERMES_PARSE_FLOW
+  void visit(CoverTypedIdentifierNode *R);
+#endif
 
  private:
   inline bool haveActiveContext() const {

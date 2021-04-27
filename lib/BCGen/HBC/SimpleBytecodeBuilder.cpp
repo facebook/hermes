@@ -52,40 +52,42 @@ std::unique_ptr<Buffer> SimpleBytecodeBuilder::generateBytecodeBuffer() {
   uint32_t totalSize =
       debugOffset + sizeof(DebugInfoHeader) + sizeof(BytecodeFileFooter);
   BytecodeOptions options;
-  BytecodeFileHeader header{MAGIC,
-                            BYTECODE_VERSION,
-                            // There is no source for a bytecode builder, so
-                            // leave it as zeros.
-                            SHA1{},
-                            totalSize,
-                            0,
-                            functionCount,
-                            0,
-                            0,
-                            0,
-                            0,
-                            0,
-                            0,
-                            0,
-                            0,
-                            0,
-                            0,
-                            0,
-                            0,
-                            debugOffset,
-                            options};
+  BytecodeFileHeader header{
+      MAGIC,
+      BYTECODE_VERSION,
+      // There is no source for a bytecode builder, so
+      // leave it as zeros.
+      SHA1{},
+      totalSize,
+      0,
+      functionCount,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      debugOffset,
+      options};
   // Write BytecodeFileHeader to the buffer.
   appendStructToBytecode(bytecode, header);
   // Write all function headers to the buffer.
   for (uint32_t i = 0; i < functionCount; ++i) {
     uint32_t opcodeSize = functions_[i].opcodes.size();
-    FunctionHeader funcHeader{opcodeSize,
-                              functions_[i].paramCount,
-                              functions_[i].frameSize,
-                              0,
-                              0,
-                              0,
-                              0};
+    FunctionHeader funcHeader{
+        opcodeSize,
+        functions_[i].paramCount,
+        functions_[i].frameSize,
+        0,
+        0,
+        0,
+        0};
     funcHeader.offset = functions_[i].offset;
     funcHeader.flags.strictMode = true;
     SmallFuncHeader small(funcHeader);

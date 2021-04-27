@@ -42,7 +42,7 @@ class BaseVisitor {
             acceptor, start, length, stride);
         break;
       case ArrayType::Symbol:
-        visitArrayObject<Acceptor, SymbolID, WithNames>(
+        visitArrayObject<Acceptor, GCSymbolID, WithNames>(
             acceptor, start, length, stride);
         break;
     }
@@ -179,7 +179,7 @@ struct SlotVisitor final : BaseVisitor {
   void visitFields(char *base, const Metadata &meta) {
     visitSlots<GCPointerBase>(base, meta.pointers_.offsets);
     visitSlots<GCHermesValue>(base, meta.values_.offsets);
-    visitSlots<SymbolID>(base, meta.symbols_.offsets);
+    visitSlots<GCSymbolID>(base, meta.symbols_.offsets);
   }
 
   /// Same as \c visitFields, except any pointer field inside \p base that is
@@ -193,7 +193,7 @@ struct SlotVisitor final : BaseVisitor {
         base, meta.pointers_.offsets, begin, end);
     visitSlotsWithinRange<GCHermesValue>(
         base, meta.values_.offsets, begin, end);
-    visitSlotsWithinRange<SymbolID>(base, meta.symbols_.offsets, begin, end);
+    visitSlotsWithinRange<GCSymbolID>(base, meta.symbols_.offsets, begin, end);
   }
 
   /// Same as \c visitArrayObject, except it does not accept fields between
@@ -240,7 +240,7 @@ struct SlotVisitor final : BaseVisitor {
             start, length, stride, begin, end);
         break;
       case ArrayType::Symbol:
-        visitArrayObjectWithinRange<SymbolID>(
+        visitArrayObjectWithinRange<GCSymbolID>(
             start, length, stride, begin, end);
         break;
     }
@@ -270,7 +270,7 @@ struct SlotVisitorWithNames final : BaseVisitor {
     visitSlots<GCPointerBase>(
         base, meta.pointers_.offsets, meta.pointers_.names);
     visitSlots<GCHermesValue>(base, meta.values_.offsets, meta.values_.names);
-    visitSlots<SymbolID>(base, meta.symbols_.offsets, meta.symbols_.names);
+    visitSlots<GCSymbolID>(base, meta.symbols_.offsets, meta.symbols_.names);
   }
 
   template <typename T>

@@ -25,7 +25,7 @@ void GCGeneration::finalizeUnreachableObjects() {
   numFinalizedObjects_ = 0;
   for (gcheapsize_t i = 0; i < cellsWithFinalizers().size(); i++) {
     GCCell *cell = cellsWithFinalizers().at(i);
-    if (!AlignedHeapSegment::getCellMarkBit(cell)) {
+    if (!GenGCHeapSegment::getCellMarkBit(cell)) {
       cell->getVT()->finalize(cell, gc_);
       numFinalizedObjects_++;
       continue;
@@ -60,7 +60,7 @@ uint64_t GCGeneration::mallocSizeFromFinalizerList() const {
 
 void GCGeneration::clearUnmarkedPropertyMaps() {
   for (auto cell : cellsWithFinalizers())
-    if (!AlignedHeapSegment::getCellMarkBit(cell))
+    if (!GenGCHeapSegment::getCellMarkBit(cell))
       if (auto hc = dyn_vmcast<HiddenClass>(cell))
         hc->clearPropertyMap(gc_);
 }
@@ -85,8 +85,8 @@ void swap(GCGeneration::AllocContext &a, GCGeneration::AllocContext &b) {
 }
 
 void GCGeneration::exchangeActiveSegment(
-    AlignedHeapSegment &&newSeg,
-    AlignedHeapSegment *oldSegSlot) {
+    GenGCHeapSegment &&newSeg,
+    GenGCHeapSegment *oldSegSlot) {
   if (LLVM_LIKELY(oldSegSlot)) {
     *oldSegSlot = std::move(activeSegment());
     gc_->segmentMoved(oldSegSlot);

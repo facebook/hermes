@@ -891,13 +891,28 @@ void ProfileAnalyzer::dumpFunctionInfo(uint32_t funcId, JSONEmitter &json) {
 
 llvh::Optional<uint32_t> ProfileAnalyzer::getFunctionFromVirtualOffset(
     uint32_t virtualOffset) {
-  auto bcProvider = hbcParser_.getBCProvider();
+  auto *bcProvider = hbcParser_.getBCProvider().get();
   uint32_t funcCount = bcProvider->getFunctionCount();
 
   uint32_t endVirtualOffset = 0;
   for (uint32_t i = 0; i < funcCount; ++i) {
     endVirtualOffset += bcProvider->getFunctionHeader(i).bytecodeSizeInBytes();
     if (virtualOffset < endVirtualOffset) {
+      return i;
+    }
+  }
+  return llvh::None;
+}
+
+llvh::Optional<uint32_t> ProfileAnalyzer::getFunctionFromOffset(
+    uint32_t offset) {
+  auto *bcProvider = hbcParser_.getBCProvider().get();
+  uint32_t funcCount = bcProvider->getFunctionCount();
+
+  for (uint32_t i = 0; i < funcCount; ++i) {
+    auto header = bcProvider->getFunctionHeader(i);
+    if (offset >= header.offset() &&
+        offset < header.offset() + header.bytecodeSizeInBytes()) {
       return i;
     }
   }

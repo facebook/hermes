@@ -22,7 +22,7 @@ namespace vm {
 class JSRegExp final : public JSObject {
  public:
   using Super = JSObject;
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::RegExpKind;
   }
@@ -104,7 +104,7 @@ class JSRegExp final : public JSObject {
       Handle<StringPrimitive> strHandle,
       uint32_t searchStartOffset);
 
- private:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit JSRegExp(Deserializer &d);
 
@@ -112,9 +112,10 @@ class JSRegExp final : public JSObject {
   friend void RegExpDeserialize(Deserializer &d, CellKind kind);
 #endif
 
-  JSRegExp(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
-      : JSObject(runtime, &vt.base, parent, clazz) {}
+  JSRegExp(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
+      : JSObject(runtime, &vt.base, *parent, *clazz) {}
 
+ private:
   ~JSRegExp();
 
   /// Store a copy of the \p bytecode array.

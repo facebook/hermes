@@ -8,6 +8,7 @@
 #include "hermes/VM/JSWeakMapImpl.h"
 
 #include "hermes/VM/Casting.h"
+#include "hermes/VM/Runtime-inline.h"
 
 #include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
@@ -44,9 +45,8 @@ ExecutionStatus JSWeakMapImplBase::setValue(
       assert(
           it->second < self->valueStorage_.get(runtime)->size() &&
           "invalid index");
-      self->valueStorage_.get(runtime)
-          ->at(it->second)
-          .set(*value, &runtime->getHeap());
+      self->valueStorage_.get(runtime)->set(
+          it->second, *value, &runtime->getHeap());
       return ExecutionStatus::RETURNED;
     }
   }
@@ -71,7 +71,7 @@ ExecutionStatus JSWeakMapImplBase::setValue(
     assert(result.second && "unable to add a new value to map");
   }
 
-  self->valueStorage_.get(runtime)->at(i).set(*value, &runtime->getHeap());
+  self->valueStorage_.get(runtime)->set(i, *value, &runtime->getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -103,7 +103,7 @@ bool JSWeakMapImplBase::clearEntryDirect(GC *gc, const WeakRefKey &key) {
   }
   it->first.ref.clear();
   valueStorage_.get(gc->getPointerBase())
-      ->at(it->second)
+      ->atRef(it->second)
       .setInGC(HermesValue::encodeEmptyValue(), gc);
   return true;
 }
@@ -116,12 +116,12 @@ GCHermesValue *JSWeakMapImplBase::getValueDirect(
   if (it == map_.end()) {
     return nullptr;
   }
-  return &valueStorage_.get(gc->getPointerBase())->at(it->second);
+  return &valueStorage_.get(gc->getPointerBase())->atRef(it->second);
 }
 
 GCPointerBase::StorageType &JSWeakMapImplBase::getValueStorageRef(GC *gc) {
   assert(gc->calledByGC() && "Should only be used by the GC implementation.");
-  return valueStorage_.getLoc(gc);
+  return valueStorage_.getLoc();
 }
 
 /// \return true if the \p key exists in the map.
@@ -196,6 +196,45 @@ void JSWeakMapImplBase::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
   }
 }
 
+HeapSnapshot::NodeID JSWeakMapImplBase::getMapID(GC *gc) {
+  assert(map_.size() && "Shouldn't call getMapID on an empty map");
+  GCBase::IDTracker &tracker = gc->getIDTracker();
+  const auto id = gc->getObjectID(this);
+  auto &nativeIDList = tracker.getExtraNativeIDs(id);
+  if (nativeIDList.empty()) {
+    nativeIDList.push_back(tracker.nextNativeID());
+  }
+  return nativeIDList[0];
+}
+
+void JSWeakMapImplBase::_snapshotAddEdgesImpl(
+    GCCell *cell,
+    GC *gc,
+    HeapSnapshot &snap) {
+  auto *const self = vmcast<JSWeakMapImplBase>(cell);
+  JSObject::_snapshotAddEdgesImpl(self, gc, snap);
+  if (self->map_.size()) {
+    snap.addNamedEdge(
+        HeapSnapshot::EdgeType::Internal, "map", self->getMapID(gc));
+  }
+}
+
+void JSWeakMapImplBase::_snapshotAddNodesImpl(
+    GCCell *cell,
+    GC *gc,
+    HeapSnapshot &snap) {
+  auto *const self = vmcast<JSWeakMapImplBase>(cell);
+  if (self->map_.size()) {
+    snap.beginNode();
+    snap.endNode(
+        HeapSnapshot::NodeType::Native,
+        "DenseMap",
+        self->getMapID(gc),
+        self->map_.getMemorySize(),
+        0);
+  }
+}
+
 /// Mark weak references and remove any invalid weak refs.
 void JSWeakMapImplBase::findAndDeleteFreeSlots(PointerBase *base, GC *gc) {
   WeakRefLock lk{gc->weakRefMutex()};
@@ -213,9 +252,8 @@ void JSWeakMapImplBase::deleteInternal(
     GC *gc,
     JSWeakMapImplBase::DenseMapT::iterator it) {
   assert(it != map_.end() && "Invalid iterator to deleteInternal");
-  valueStorage_.getNonNull(base)
-      ->at(it->second)
-      .setNonPtr(HermesValue::encodeNativeUInt32(freeListHead_), gc);
+  valueStorage_.getNonNull(base)->setNonPtr(
+      it->second, HermesValue::encodeNativeUInt32(freeListHead_), gc);
   freeListHead_ = it->second;
   map_.erase(it);
 }
@@ -358,17 +396,13 @@ JSWeakMapImpl<C>::JSWeakMapImpl(Deserializer &d)
 
 void WeakMapDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::WeakMapKind && "Expected WeakMap.");
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<JSWeakMap>());
-  auto *cell = new (mem) JSWeakMap(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSWeakMap, HasFinalizer::Yes>(d);
   d.endObject(cell);
 }
 
 void WeakSetDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::WeakSetKind && "Expected WeakSet.");
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<JSWeakSet>());
-  auto *cell = new (mem) JSWeakSet(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSWeakSet, HasFinalizer::Yes>(d);
   d.endObject(cell);
 }
 #endif
@@ -380,7 +414,16 @@ const ObjectVTable JSWeakMapImpl<C>::vt{
         cellSize<JSWeakMapImpl>(),
         JSWeakMapImpl::_finalizeImpl,
         JSWeakMapImpl::_markWeakImpl,
-        JSWeakMapImpl::_mallocSizeImpl),
+        JSWeakMapImpl::_mallocSizeImpl,
+        nullptr,
+        nullptr,
+        nullptr,
+        VTable::HeapSnapshotMetadata{
+            HeapSnapshot::NodeType::Object,
+            nullptr,
+            _snapshotAddEdgesImpl,
+            _snapshotAddNodesImpl,
+            nullptr}),
     JSWeakMapImpl::_getOwnIndexedRangeImpl,
     JSWeakMapImpl::_haveOwnIndexedImpl,
     JSWeakMapImpl::_getOwnIndexedPropertyFlagsImpl,
@@ -400,14 +443,14 @@ CallResult<PseudoHandle<JSWeakMapImpl<C>>> JSWeakMapImpl<C>::create(
   }
   auto valueStorage = runtime->makeHandle<BigStorage>(std::move(*valueRes));
 
-  JSObjectAlloc<JSWeakMapImpl<C>, HasFinalizer::Yes> mem{runtime};
-  return mem.initToPseudoHandle(new (mem) JSWeakMapImpl<C>(
+  auto *cell = runtime->makeAFixed<JSWeakMapImpl<C>, HasFinalizer::Yes>(
       runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+      parentHandle,
+      runtime->getHiddenClassForPrototype(
           *parentHandle,
           numOverlapSlots<JSWeakMapImpl>() + ANONYMOUS_PROPERTY_SLOTS),
-      *valueStorage));
+      valueStorage);
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 template class JSWeakMapImpl<CellKind::WeakMapKind>;

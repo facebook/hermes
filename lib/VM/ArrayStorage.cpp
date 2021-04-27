@@ -15,7 +15,7 @@
 namespace hermes {
 namespace vm {
 
-VTable ArrayStorage::vt(
+const VTable ArrayStorage::vt(
     CellKind::ArrayStorageKind,
     0,
     nullptr,
@@ -24,16 +24,16 @@ VTable ArrayStorage::vt(
     _trimSizeCallback,
     _trimCallback,
     nullptr,
-    VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Array,
-                                 nullptr,
-                                 nullptr,
-                                 nullptr,
-                                 nullptr});
+    VTable::HeapSnapshotMetadata{
+        HeapSnapshot::NodeType::Array,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr});
 
 void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const ArrayStorage *>(cell);
-  mb.addArray<Metadata::ArrayData::ArrayType::HermesValue>(
-      "storage", self->data(), &self->size_, sizeof(GCHermesValue));
+  mb.addArray("storage", self->data(), &self->size_, sizeof(GCHermesValue));
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -53,7 +53,7 @@ void ArrayStorage::serializeArrayStorage(
 
   // Serialize HermesValue in storage. There is no native pointer.
   for (size_type i = 0; i < cell->size(); i++) {
-    s.writeHermesValue(cell->data()[i]);
+    s.writeHermesValue(cell->at(i));
   }
 
   s.endObject(cell);
@@ -62,9 +62,8 @@ void ArrayStorage::serializeArrayStorage(
 ArrayStorage *ArrayStorage::deserializeArrayStorage(Deserializer &d) {
   uint32_t capacity = d.readInt<size_type>();
   assert(capacity <= ArrayStorage::maxElements() && "invalid capacity");
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ false>(
-      ArrayStorage::allocationSize(capacity));
-  auto *cell = new (mem) ArrayStorage(d.getRuntime(), capacity);
+  auto *cell = d.getRuntime()->makeAVariable<ArrayStorage>(
+      ArrayStorage::allocationSize(capacity), d.getRuntime(), capacity);
   assert(cell->size() <= capacity && "size cannot be greater than capacity");
   cell->size_.store(d.readInt<size_type>(), std::memory_order_release);
 
@@ -271,7 +270,7 @@ ExecutionStatus ArrayStorage::pushBackSlowPath(
   if (resize(selfHandle, runtime, size + 1) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  selfHandle->at(size).set(value.get(), &runtime->getHeap());
+  selfHandle->set(size, value.get(), &runtime->getHeap());
   return ExecutionStatus::RETURNED;
 }
 

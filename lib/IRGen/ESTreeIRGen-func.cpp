@@ -55,9 +55,9 @@ Identifier FunctionContext::genAnonymousLabelName(StringRef hint) {
 
 void ESTreeIRGen::genFunctionDeclaration(
     ESTree::FunctionDeclarationNode *func) {
-  if (func->_async) {
+  if (func->_async && func->_generator) {
     Builder.getModule()->getContext().getSourceErrorManager().error(
-        func->getSourceRange(), Twine("async functions are unsupported"));
+        func->getSourceRange(), Twine("async generators are unsupported"));
     return;
   }
 
@@ -69,9 +69,10 @@ void ESTreeIRGen::genFunctionDeclaration(
   assert(
       funcStorage && "function declaration variable should have been hoisted");
 
-  Function *newFunc = func->_generator
-      ? genGeneratorFunction(functionName, nullptr, func)
-      : genES5Function(functionName, nullptr, func);
+  Function *newFunc = func->_async
+      ? genAsyncFunction(functionName, nullptr, func)
+      : func->_generator ? genGeneratorFunction(functionName, nullptr, func)
+                         : genES5Function(functionName, nullptr, func);
 
   // Store the newly created closure into a frame variable with the same name.
   auto *newClosure = Builder.createCreateFunctionInst(newFunc);
@@ -82,9 +83,9 @@ void ESTreeIRGen::genFunctionDeclaration(
 Value *ESTreeIRGen::genFunctionExpression(
     ESTree::FunctionExpressionNode *FE,
     Identifier nameHint) {
-  if (FE->_async) {
+  if (FE->_async && FE->_generator) {
     Builder.getModule()->getContext().getSourceErrorManager().error(
-        FE->getSourceRange(), Twine("async functions are unsupported"));
+        FE->getSourceRange(), Twine("async generators are unsupported"));
     return Builder.getLiteralUndefined();
   }
 
@@ -114,7 +115,9 @@ Value *ESTreeIRGen::genFunctionExpression(
     nameTable_.insert(originalNameIden, tempClosureVar);
   }
 
-  Function *newFunc = FE->_generator
+  Function *newFunc = FE->_async
+      ? genAsyncFunction(originalNameIden, tempClosureVar, FE)
+      : FE->_generator
       ? genGeneratorFunction(originalNameIden, tempClosureVar, FE)
       : genES5Function(originalNameIden, tempClosureVar, FE);
 
@@ -210,17 +213,10 @@ Function *ESTreeIRGen::genES5Function(
 
   if (auto *bodyBlock = llvh::dyn_cast<ESTree::BlockStatementNode>(body)) {
     if (bodyBlock->isLazyFunctionBody) {
-      // Set the AST position and variable context so we can continue later.
-      newFunction->setLazyScope(saveCurrentScope());
-      auto &lazySource = newFunction->getLazySource();
-      lazySource.bufferId = bodyBlock->bufferId;
-      lazySource.nodeKind = getLazyFunctionKind(functionNode);
-      lazySource.isGeneratorInnerFunction = isGeneratorInnerFunction;
-      lazySource.functionRange = functionNode->getSourceRange();
-
-      // Set the function's .length.
-      newFunction->setExpectedParamCountIncludingThis(
-          countExpectedArgumentsIncludingThis(functionNode));
+      assert(
+          !isGeneratorInnerFunction &&
+          "generator inner function should be included with outer function");
+      setupLazyScope(functionNode, newFunction, body);
       return newFunction;
     }
   }
@@ -238,7 +234,7 @@ Function *ESTreeIRGen::genES5Function(
     auto *prologueBB = Builder.createBasicBlock(newFunction);
     auto *prologueResumeIsReturn = Builder.createAllocStackInst(
         genAnonymousLabelName("isReturn_prologue"));
-    genResumeGenerator(nullptr, prologueResumeIsReturn, prologueBB);
+    genResumeGenerator(GenFinally::No, prologueResumeIsReturn, prologueBB);
 
     if (hasSimpleParams(functionNode)) {
       // If there are simple params, then we don't need an extra yield/resume.
@@ -270,7 +266,7 @@ Function *ESTreeIRGen::genES5Function(
       // Actual entry point of function from the caller's perspective.
       Builder.setInsertionBlock(entryPointBB);
       genResumeGenerator(
-          nullptr,
+          GenFinally::No,
           entryPointResumeIsReturn,
           Builder.createBasicBlock(newFunction));
     }
@@ -295,13 +291,28 @@ Function *ESTreeIRGen::genGeneratorFunction(
     ESTree::FunctionLikeNode *functionNode) {
   assert(functionNode && "Function AST cannot be null");
 
+  if (!Builder.getModule()->getContext().isGeneratorEnabled()) {
+    Builder.getModule()->getContext().getSourceErrorManager().error(
+        functionNode->getSourceRange(), "generator compilation is disabled");
+  }
+
   // Build the outer function which creates the generator.
   // Does not have an associated source range.
   auto *outerFn = Builder.createGeneratorFunction(
       originalName,
       Function::DefinitionKind::ES5Function,
       ESTree::isStrict(functionNode->strictness),
+      functionNode->getSourceRange(),
       /* insertBefore */ nullptr);
+  outerFn->setLazyClosureAlias(lazyClosureAlias);
+
+  auto *body = ESTree::getBlockStatement(functionNode);
+  if (auto *bodyBlock = llvh::dyn_cast<ESTree::BlockStatementNode>(body)) {
+    if (bodyBlock->isLazyFunctionBody) {
+      setupLazyScope(functionNode, outerFn, body);
+      return outerFn;
+    }
+  }
 
   {
     FunctionContext outerFnContext{this, outerFn, functionNode->getSemInfo()};
@@ -310,7 +321,7 @@ Function *ESTreeIRGen::genGeneratorFunction(
     // since it's lexically considered a child function.
     auto *innerFn = genES5Function(
         genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
-        lazyClosureAlias,
+        nullptr,
         functionNode,
         true);
 
@@ -334,6 +345,93 @@ Function *ESTreeIRGen::genGeneratorFunction(
   }
 
   return outerFn;
+}
+
+void ESTreeIRGen::setupLazyScope(
+    ESTree::FunctionLikeNode *functionNode,
+    Function *function,
+    ESTree::BlockStatementNode *bodyBlock) {
+  assert(
+      bodyBlock->isLazyFunctionBody &&
+      "setupLazyScope can only be used with lazy function bodies");
+  // Set the AST position and variable context so we can continue later.
+  function->setLazyScope(saveCurrentScope());
+  auto &lazySource = function->getLazySource();
+  lazySource.bufferId = bodyBlock->bufferId;
+  lazySource.nodeKind = getLazyFunctionKind(functionNode);
+  lazySource.functionRange = functionNode->getSourceRange();
+  lazySource.paramYield = bodyBlock->paramYield;
+  lazySource.paramAwait = bodyBlock->paramAwait;
+
+  // Set the function's .length.
+  function->setExpectedParamCountIncludingThis(
+      countExpectedArgumentsIncludingThis(functionNode));
+}
+
+Function *ESTreeIRGen::genAsyncFunction(
+    Identifier originalName,
+    Variable *lazyClosureAlias,
+    ESTree::FunctionLikeNode *functionNode) {
+  assert(functionNode && "Function AST cannot be null");
+
+  if (!Builder.getModule()->getContext().isGeneratorEnabled()) {
+    Builder.getModule()->getContext().getSourceErrorManager().error(
+        functionNode->getSourceRange(),
+        "async function compilation requires enabling generator");
+  }
+
+  auto *asyncFn = Builder.createAsyncFunction(
+      originalName,
+      Function::DefinitionKind::ES5Function,
+      ESTree::isStrict(functionNode->strictness),
+      functionNode->getSourceRange(),
+      /* insertBefore */ nullptr);
+
+  // Setup lazy compilation
+  asyncFn->setLazyClosureAlias(lazyClosureAlias);
+
+  auto *body = ESTree::getBlockStatement(functionNode);
+  if (auto *bodyBlock = llvh::dyn_cast<ESTree::BlockStatementNode>(body)) {
+    if (bodyBlock->isLazyFunctionBody) {
+      setupLazyScope(functionNode, asyncFn, body);
+      return asyncFn;
+    }
+  }
+
+  {
+    FunctionContext asyncFnContext{this, asyncFn, functionNode->getSemInfo()};
+
+    // Build the inner generator. This must be done in the outerFnContext
+    // since it's lexically considered a child function.
+    auto *gen = genGeneratorFunction(
+        genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
+        lazyClosureAlias,
+        functionNode);
+
+    // The outer async function need not emit code for parameters.
+    // It would simply delegate `arguments` object down to inner generator.
+    // This avoid emitting code e.g. destructuring parameters twice.
+    emitFunctionPrologue(
+        functionNode,
+        Builder.createBasicBlock(asyncFn),
+        InitES5CaptureState::Yes,
+        DoEmitParameters::No);
+
+    auto *genClosure = Builder.createCreateFunctionInst(gen);
+    auto *thisArg = curFunction()->function->getThisParameter();
+    auto *argumentsList = curFunction()->createArgumentsInst;
+
+    auto *spawnAsyncClosure = Builder.createGetBuiltinClosureInst(
+        BuiltinMethod::HermesBuiltin_spawnAsync);
+
+    auto *res = Builder.createCallInst(
+        spawnAsyncClosure,
+        Builder.getLiteralUndefined(),
+        {genClosure, thisArg, argumentsList});
+
+    emitFunctionEpilogue(res);
+  }
+  return asyncFn;
 }
 
 void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
@@ -404,12 +502,11 @@ void ESTreeIRGen::emitFunctionPrologue(
     if (!var || !res.second)
       continue;
 
-    // Otherwise, initialize it to undefined.
-    Builder.createStoreFrameInst(Builder.getLiteralUndefined(), var);
-    if (var->getRelatedVariable()) {
-      Builder.createStoreFrameInst(
-          Builder.getLiteralUndefined(), var->getRelatedVariable());
-    }
+    // Otherwise, initialize it to undefined or empty, depending on TDZ.
+    Builder.createStoreFrameInst(
+        var->getObeysTDZ() ? (Literal *)Builder.getLiteralEmpty()
+                           : (Literal *)Builder.getLiteralUndefined(),
+        var);
   }
   for (auto *fd : semInfo->closures) {
     declareVariableOrGlobalProperty(

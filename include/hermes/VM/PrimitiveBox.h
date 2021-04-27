@@ -71,7 +71,7 @@ class JSString final : public PrimitiveBox {
   // We need one more slot for the length property.
   static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
       Super::NAMED_PROPERTY_SLOTS + 1;
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::StringObjectKind;
@@ -104,13 +104,13 @@ class JSString final : public PrimitiveBox {
     return getPrimitiveValue(self, runtime).getString();
   }
 
- protected:
-  JSString(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
-      : PrimitiveBox(runtime, &vt.base, parent, clazz) {
+  JSString(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
+      : PrimitiveBox(runtime, &vt.base, *parent, *clazz) {
     flags_.indexedStorage = true;
     flags_.fastIndexProperties = true;
   }
 
+ protected:
   /// Check whether property with index \p index exists in indexed storage and
   /// \return true if it does.
   static bool
@@ -167,7 +167,7 @@ class JSStringIterator : public JSObject {
       Metadata::Builder &mb);
 
  public:
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::StringIteratorKind;
@@ -182,7 +182,6 @@ class JSStringIterator : public JSObject {
       Handle<JSStringIterator> self,
       Runtime *runtime);
 
- private:
 #ifdef HERMESVM_SERIALIZE
   explicit JSStringIterator(Deserializer &d);
 
@@ -192,11 +191,11 @@ class JSStringIterator : public JSObject {
 
   JSStringIterator(
       Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
-      StringPrimitive *iteratedString)
-      : JSObject(runtime, &vt.base, parent, clazz),
-        iteratedString_(runtime, iteratedString, &runtime->getHeap()) {}
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      Handle<StringPrimitive> iteratedString)
+      : JSObject(runtime, &vt.base, *parent, *clazz),
+        iteratedString_(runtime, *iteratedString, &runtime->getHeap()) {}
 
  private:
   /// [[IteratedString]]
@@ -210,7 +209,7 @@ class JSStringIterator : public JSObject {
 /// Number object.
 class JSNumber final : public PrimitiveBox {
  public:
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
 #ifdef HERMESVM_SERIALIZE
   JSNumber(Deserializer &d, const VTable *vt);
@@ -229,15 +228,14 @@ class JSNumber final : public PrimitiveBox {
     return create(runtime, 0.0, prototype);
   }
 
- protected:
-  JSNumber(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
-      : PrimitiveBox(runtime, &vt.base, parent, clazz) {}
+  JSNumber(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
+      : PrimitiveBox(runtime, &vt.base, *parent, *clazz) {}
 };
 
 /// Boolean object.
 class JSBoolean final : public PrimitiveBox {
  public:
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
 #ifdef HERMESVM_SERIALIZE
   JSBoolean(Deserializer &d, const VTable *vt);
@@ -256,15 +254,17 @@ class JSBoolean final : public PrimitiveBox {
     return create(runtime, false, prototype);
   }
 
- protected:
-  JSBoolean(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
-      : PrimitiveBox(runtime, &vt.base, parent, clazz) {}
+  JSBoolean(
+      Runtime *runtime,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz)
+      : PrimitiveBox(runtime, &vt.base, *parent, *clazz) {}
 };
 
 /// Symbol object.
 class JSSymbol final : public PrimitiveBox {
  public:
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::SymbolObjectKind;
@@ -287,15 +287,14 @@ class JSSymbol final : public PrimitiveBox {
         HermesValueTraits<SymbolID>::decode(getPrimitiveValue(self, runtime)));
   }
 
- protected:
 #ifdef HERMESVM_SERIALIZE
   explicit JSSymbol(Deserializer &d);
 
   friend void SymbolObjectDeserialize(Deserializer &d, CellKind kind);
 #endif
 
-  JSSymbol(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
-      : PrimitiveBox(runtime, &vt.base, parent, clazz) {}
+  JSSymbol(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
+      : PrimitiveBox(runtime, &vt.base, *parent, *clazz) {}
 };
 
 } // namespace vm

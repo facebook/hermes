@@ -14,6 +14,7 @@
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/RegExpMatch.h"
+#include "hermes/VM/Runtime-inline.h"
 #include "hermes/VM/StringView.h"
 
 #include "llvh/Support/Debug.h"
@@ -25,7 +26,7 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 // class JSRegExp
 
-ObjectVTable JSRegExp::vt{
+const ObjectVTable JSRegExp::vt{
     VTable(
         CellKind::RegExpKind,
         cellSize<JSRegExp>(),
@@ -35,11 +36,12 @@ ObjectVTable JSRegExp::vt{
         nullptr,
         nullptr,
         nullptr, // externalMemorySize
-        VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Regexp,
-                                     JSRegExp::_snapshotNameImpl,
-                                     JSRegExp::_snapshotAddEdgesImpl,
-                                     JSRegExp::_snapshotAddNodesImpl,
-                                     nullptr}),
+        VTable::HeapSnapshotMetadata{
+            HeapSnapshot::NodeType::Regexp,
+            JSRegExp::_snapshotNameImpl,
+            JSRegExp::_snapshotAddEdgesImpl,
+            JSRegExp::_snapshotAddNodesImpl,
+            nullptr}),
     JSRegExp::_getOwnIndexedRangeImpl,
     JSRegExp::_haveOwnIndexedImpl,
     JSRegExp::_getOwnIndexedPropertyFlagsImpl,
@@ -81,9 +83,7 @@ void RegExpSerialize(Serializer &s, const GCCell *cell) {
 
 void RegExpDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::RegExpKind && "Expected RegExp");
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<JSRegExp>());
-  auto *cell = new (mem) JSRegExp(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSRegExp, HasFinalizer::Yes>(d);
   d.endObject(cell);
 }
 #endif
@@ -91,13 +91,13 @@ void RegExpDeserialize(Deserializer &d, CellKind kind) {
 Handle<JSRegExp> JSRegExp::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  JSObjectAlloc<JSRegExp, HasFinalizer::Yes> mem{runtime};
-  auto selfHandle = mem.initToHandle(new (mem) JSRegExp(
+  auto *cell = runtime->makeAFixed<JSRegExp, HasFinalizer::Yes>(
       runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+      parentHandle,
+      runtime->getHiddenClassForPrototype(
           *parentHandle,
-          numOverlapSlots<JSRegExp>() + ANONYMOUS_PROPERTY_SLOTS)));
+          numOverlapSlots<JSRegExp>() + ANONYMOUS_PROPERTY_SLOTS));
+  auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
 
   JSObject::setInternalProperty(
       *selfHandle,
@@ -125,7 +125,7 @@ void JSRegExp::initializeProperties(
       runtime,
       Predefined::getSymbolID(Predefined::lastIndex),
       dpf,
-      runtime->makeHandle(HermesValue::encodeNumberValue(0)));
+      HandleRootOwner::getZeroValue());
   (void)res;
   assert(
       res != ExecutionStatus::EXCEPTION && *res &&

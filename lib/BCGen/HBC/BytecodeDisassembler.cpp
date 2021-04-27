@@ -47,8 +47,8 @@ static bool isOperandStringID(OpCode opCode, unsigned operandIndex) {
 std::pair<int, SLG::TagType> checkBufferTag(const unsigned char *buff) {
   auto keyTag = buff[0];
   if (keyTag & 0x80) {
-    return std::pair<int, SLG::TagType>{((keyTag & 0x0f) << 8) | (buff[1]),
-                                        keyTag & SLG::TagMask};
+    return std::pair<int, SLG::TagType>{
+        ((keyTag & 0x0f) << 8) | (buff[1]), keyTag & SLG::TagMask};
   } else {
     return std::pair<int, SLG::TagType>{keyTag & 0x0f, keyTag & SLG::TagMask};
   }
@@ -124,8 +124,7 @@ void BytecodeDisassembler::disassembleBytecodeFileHeader(raw_ostream &OS) {
   OS << "  String Kind Entry count: " << bcProvider_->getStringKinds().size()
      << "\n";
   OS << "  RegExp count: " << bcProvider_->getRegExpTable().size() << "\n";
-  OS << "  CommonJS module offset: " << bcProvider_->getCJSModuleOffset()
-     << "\n";
+  OS << "  Segment ID: " << bcProvider_->getSegmentID() << "\n";
   OS << "  CommonJS module count: " << bcProvider_->getCJSModuleTable().size()
      << "\n";
   OS << "  CommonJS module count (static): "
@@ -267,8 +266,10 @@ void BytecodeDisassembler::disassembleCJSModuleTable(raw_ostream &OS) {
   if (!cjsModulesStatic.empty()) {
     OS << "CommonJS Modules (Static):\n";
     for (uint32_t i = 0; i < cjsModulesStatic.size(); ++i) {
-      uint32_t functionID = cjsModulesStatic[i];
-      OS << "Module index " << i << " -> function ID " << functionID << '\n';
+      uint32_t moduleID = cjsModulesStatic[i].first;
+      uint32_t functionID = cjsModulesStatic[i].second;
+      OS << "Module ID " << moduleID << " -> function ID " << functionID
+         << '\n';
     }
     OS << '\n';
   }
@@ -350,7 +351,15 @@ void BytecodeVisitor::visitInstructionsInFunction(unsigned funcId) {
       bytecodeStart + functionHeader.bytecodeSizeInBytes();
 
   beforeStart(funcId, bytecodeStart);
+  visitInstructionsInBody(
+      bytecodeStart, bytecodeEnd, /* visitSwitchImmTargets = */ true);
+  afterStart();
+} // namespace hbc
 
+void BytecodeVisitor::visitInstructionsInBody(
+    const uint8_t *bytecodeStart,
+    const uint8_t *bytecodeEnd,
+    bool visitSwitchImmTargets) {
   auto ip = bytecodeStart;
   while (ip < bytecodeEnd) {
     const auto md = inst::getInstMetaData(
@@ -360,7 +369,7 @@ void BytecodeVisitor::visitInstructionsInFunction(unsigned funcId) {
     preVisitInstruction(md.opCode, ip, instLength);
 
     // Visit branch targets of the SwitchImm instruction.
-    if (op == OpCode::SwitchImm) {
+    if (op == OpCode::SwitchImm && visitSwitchImmTargets) {
       switchJumpTableForEach(
           (inst::Inst const *)ip,
           [this](uint32_t jmpIdx, int32_t offset, const uint8_t *dest) {
@@ -379,8 +388,7 @@ void BytecodeVisitor::visitInstructionsInFunction(unsigned funcId) {
     postVisitInstruction(op, ip, instLength);
     ip += instLength;
   }
-  afterStart();
-} // namespace hbc
+}
 
 class BytecodeHasher : public BytecodeVisitor {
  protected:
@@ -626,8 +634,11 @@ void PrettyDisassembleVisitor::visitOperand(
   }
   os_ << " ";
 
-  // Special handling for CallBuiltin.
-  if (operandIndex == 1 && opcode_ == inst::OpCode::CallBuiltin) {
+  // Special handling for CallBuiltin and GetBuiltinClosure.
+  if (operandIndex == 1 &&
+      (opcode_ == inst::OpCode::CallBuiltin ||
+       opcode_ == inst::OpCode::CallBuiltinLong ||
+       opcode_ == inst::OpCode::GetBuiltinClosure)) {
     uint8_t builtinIndex;
     decodeOperand(operandBuf, &builtinIndex);
     os_ << '"' << getBuiltinMethodName(builtinIndex) << '"';
@@ -1037,6 +1048,28 @@ class ObjdumpDisassembleVisitor : public BytecodeVisitor {
       std::shared_ptr<hbc::BCProvider> bcProvider,
       raw_ostream &os)
       : BytecodeVisitor(bcProvider), os_(os) {}
+
+  /// Disassemble a synthetic function with all opcodes with all zero operands.
+  void listOpCodes() {
+    os_ << "\n"
+        << llvh::format_hex_no_prefix((unsigned)-1, 16) << " <_" << (unsigned)-1
+        << ">:\n";
+
+    // Synthesize the function body.
+    std::vector<uint8_t> bytecode;
+    for (uint8_t op = 0; op < (uint8_t)inst::OpCode::_last; ++op) {
+      bytecode.push_back(op);
+      auto instLength =
+          inst::getInstMetaData(static_cast<inst::OpCode>(op)).size;
+      bytecode.resize(bytecode.size() + instLength - 1);
+    }
+
+    bytecodeStart_ = bytecode.data();
+    visitInstructionsInBody(
+        bytecode.data(),
+        bytecode.data() + bytecode.size(),
+        /* visitSwitchImmTargets = */ false);
+  }
 };
 
 void BytecodeDisassembler::disassemble(raw_ostream &OS) {
@@ -1048,6 +1081,11 @@ void BytecodeDisassembler::disassemble(raw_ostream &OS) {
          ++funcId) {
       ObjdumpDisassembleVisitor disassembleVisitor(bcProvider_, OS);
       disassembleVisitor.visitInstructionsInFunction(funcId);
+    }
+    if ((options_ & DisassemblyOptions::IncludeOpCodeList) ==
+        DisassemblyOptions::IncludeOpCodeList) {
+      ObjdumpDisassembleVisitor disassembleVisitor(bcProvider_, OS);
+      disassembleVisitor.listOpCodes();
     }
     return;
   }

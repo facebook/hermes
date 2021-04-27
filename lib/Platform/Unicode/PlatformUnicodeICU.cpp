@@ -72,10 +72,14 @@ void dateFormat(
   // directly reading tzname at the same time may read the null value, causing
   // a segfault.
   char tz[50];
-  time_t t;
-  struct tm *timeInfo;
-  timeInfo = localtime(&t);
-  auto numChars = strftime(tz, sizeof(tz), "%Z", timeInfo);
+  time_t t = time(nullptr);
+  struct tm timeInfo;
+#ifdef _WINDOWS
+  localtime_s(&timeInfo, &t);
+#else
+  localtime_r(&t, &timeInfo);
+#endif
+  auto numChars = strftime(tz, sizeof(tz), "%Z", &timeInfo);
   (void)numChars;
   assert(numChars < sizeof(tz) && "Chars written must fit within buffer");
 

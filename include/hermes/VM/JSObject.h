@@ -14,6 +14,7 @@
 #include "hermes/VM/HiddenClass.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PropertyDescriptor.h"
+#include "hermes/VM/StringView.h"
 #include "hermes/VM/TypesafeFlags.h"
 #include "hermes/VM/VTable.h"
 
@@ -312,7 +313,7 @@ struct ObjectVTable {
 class JSObject : public GCCell {
   friend void ObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
- protected:
+ public:
   /// A light-weight constructor which performs no GC allocations. Its purpose
   /// to make sure all fields are initialized according to C++ without writing
   /// to them twice.
@@ -326,6 +327,20 @@ class JSObject : public GCCell {
       : GCCell(&runtime->getHeap(), vtp),
         parent_(runtime, parent, &runtime->getHeap(), needsBarriers),
         clazz_(runtime, clazz, &runtime->getHeap(), needsBarriers),
+        propStorage_(runtime, nullptr, &runtime->getHeap(), needsBarriers) {
+    // Direct property slots are initialized by initDirectPropStorage.
+  }
+
+  template <typename NeedsBarriers>
+  JSObject(
+      Runtime *runtime,
+      const VTable *vtp,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      NeedsBarriers needsBarriers)
+      : GCCell(&runtime->getHeap(), vtp),
+        parent_(runtime, *parent, &runtime->getHeap(), needsBarriers),
+        clazz_(runtime, *clazz, &runtime->getHeap(), needsBarriers),
         propStorage_(runtime, nullptr, &runtime->getHeap(), needsBarriers) {
     // Direct property slots are initialized by initDirectPropStorage.
   }
@@ -358,7 +373,7 @@ class JSObject : public GCCell {
   serializeObjectImpl(Serializer &s, const GCCell *cell, unsigned overlapSlots);
 #endif
 
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   /// Default capacity of indirect property storage.
   static const PropStorage::size_type DEFAULT_PROPERTY_CAPACITY = 4;
@@ -437,6 +452,12 @@ class JSObject : public GCCell {
     return flags_.proxyObject;
   }
 
+  /// \return true if this object has fast indexed storage, meaning no property
+  ///   checks need to be made when reading an indexed value.
+  bool hasFastIndexProperties() const {
+    return flags_.fastIndexProperties;
+  }
+
   /// \return the `__proto__` internal property, which may be nullptr.
   JSObject *getParent(Runtime *runtime) const {
     assert(
@@ -491,21 +512,21 @@ class JSObject : public GCCell {
       JSObject *parent,
       PropOpFlags opFlags = PropOpFlags());
 
-  /// Return a reference to an internal property slot.
-  static GCHermesValue &
-  internalPropertyRef(JSObject *self, PointerBase *base, SlotIndex index) {
+  /// Return the value of an internal property slot.
+  static HermesValue
+  internalProperty(JSObject *self, PointerBase *base, SlotIndex index) {
     assert(
         HiddenClass::debugIsPropertyDefined(
             self->clazz_.get(base),
             base,
             InternalProperty::getSymbolID(index)) &&
         "internal slot must be reserved");
-    return namedSlotRef<PropStorage::Inline::Yes>(self, base, index);
+    return getNamedSlotValue<PropStorage::Inline::Yes>(self, base, index);
   }
 
   static HermesValue
   getInternalProperty(JSObject *self, PointerBase *base, SlotIndex index) {
-    return internalPropertyRef(self, base, index);
+    return internalProperty(self, base, index);
   }
 
   static void setInternalProperty(
@@ -574,22 +595,26 @@ class JSObject : public GCCell {
         OwnKeysFlags().plusIncludeSymbols().plusIncludeNonEnumerable());
   }
 
-  /// Return a reference to a slot in the "named value" storage space by
-  /// \p index.
-  /// \pre inl == PropStorage::Inline::Yes -> index <
-  ///   PropStorage::kValueToSegmentThreshold.
-  template <PropStorage::Inline inl = PropStorage::Inline::No>
-  static GCHermesValue &
-  namedSlotRef(JSObject *self, PointerBase *runtime, SlotIndex index);
+  /// Load a value from the direct property storage space by \p index.
+  /// \pre index < DIRECT_PROPERTY_SLOTS.
+  template <SlotIndex index>
+  inline static HermesValue getDirectSlotValue(const JSObject *self);
+
+  /// Store a value to the direct property storage space by \p index.
+  /// \pre index < DIRECT_PROPERTY_SLOTS.
+  template <SlotIndex index>
+  inline static void
+  setDirectSlotValue(JSObject *self, HermesValue value, GC *gc);
+  template <SlotIndex index>
+  inline static void
+  setDirectSlotValueNonPtr(JSObject *self, HermesValue value, GC *gc);
 
   /// Load a value from the "named value" storage space by \p index.
   /// \pre inl == PropStorage::Inline::Yes -> index <
   /// PropStorage::kValueToSegmentThreshold.
   template <PropStorage::Inline inl = PropStorage::Inline::No>
-  static HermesValue
-  getNamedSlotValue(JSObject *self, PointerBase *runtime, SlotIndex index) {
-    return namedSlotRef<inl>(self, runtime, index);
-  }
+  inline static HermesValue
+  getNamedSlotValue(JSObject *self, PointerBase *runtime, SlotIndex index);
 
   /// Load a value from the "named value" storage space by the slot described by
   /// the property descriptor \p desc.
@@ -982,7 +1007,30 @@ class JSObject : public GCCell {
   /// Note: This can throw even if ThrowOnError is false,
   /// because ThrowOnError is only for specific kinds of errors,
   /// and this function will not swallow other kinds of errors.
+  /// \pre Cannot call this function with a name that looks like a valid array
+  ///   index. Call \c defineOwnComputedPrimitive instead.
   static CallResult<bool> defineOwnProperty(
+      Handle<JSObject> selfHandle,
+      Runtime *runtime,
+      SymbolID name,
+      DefinePropertyFlags dpFlags,
+      Handle<> valueOrAccessor,
+      PropOpFlags opFlags = PropOpFlags()) {
+#ifdef HERMES_SLOW_DEBUG
+    // In slow debug, check if the symbol looks like an array index. If that's
+    // the case, it should be using defineOwnComputed instead.
+    auto nameView = runtime->getIdentifierTable().getStringView(runtime, name);
+    assert(
+        !toArrayIndex(nameView) &&
+        "Array index property should use defineOwnComputed instead");
+#endif
+    return defineOwnPropertyInternal(
+        selfHandle, runtime, name, dpFlags, valueOrAccessor, opFlags);
+  }
+
+  /// Same as \c defineOwnProperty, except the name can be a valid array index.
+  /// Prefer \c defineOwnProperty and \c defineOwnComputedPrimitive instead.
+  static CallResult<bool> defineOwnPropertyInternal(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       SymbolID name,
@@ -1001,6 +1049,8 @@ class JSObject : public GCCell {
   /// an object that the caller created since in that case the caller has full
   /// control over the properties in the object (and the prototype chain
   /// doesn't matter).
+  /// Don't call this function if you know the \p name is index-like, and the
+  /// \p selfHandle has indexedStorage, or it'll lose its fast indexed property.
   ///
   /// \param propertyFlags the actual, final, value of \c PropertyFlags that
   ///   will be stored in the property descriptor.
@@ -1429,103 +1479,39 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
     uint32_t &beginIndex,
     uint32_t &endIndex);
 
-/// This object is the value of a property which has a getter and/or setter.
-class PropertyAccessor final : public GCCell {
- protected:
-  PropertyAccessor(Runtime *runtime, Callable *getter, Callable *setter)
-      : GCCell(&runtime->getHeap(), &vt),
-        getter(runtime, getter, &runtime->getHeap()),
-        setter(runtime, setter, &runtime->getHeap()) {}
-
- public:
-#ifdef HERMESVM_SERIALIZE
-  /// Fast constructor used by deserialization. Don't do any GC allocation. Only
-  /// calls super Constructor.
-  PropertyAccessor(Deserializer &d);
-#endif
-
-  static VTable vt;
-
-  static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::PropertyAccessorKind;
-  }
-
-  GCPointer<Callable> getter{};
-  GCPointer<Callable> setter{};
-
-#if defined(HERMESVM_GC_HADES) && defined(HERMESVM_COMPRESSED_POINTERS)
-  // Unused padding just to meet the minimum allocation requirements from Hades.
-  int8_t _padding_[4];
-#endif
-
-  static CallResult<HermesValue>
-  create(Runtime *runtime, Handle<Callable> getter, Handle<Callable> setter);
-};
-
-/// Allocation utility for JSObject and its subclasses. Ensures direct property
-/// slots are initialized and that no allocation happens during construction.
-/// Should be used in a placement new expression, whose result is passed through
-/// one of the init* methods:
+/// Helper functions for initialising any kind of JSObject. Ensures direct
+/// property slots are initialized. Should be used in a placement new expression
+/// or with GC::makeA, whose result is passed through one of the init* methods:
 ///
-///   JSObjectAlloc<MyObjectType, HasFinalizer::Yes> mem{runtime};
-///   return mem.initToHandle(new (mem) MyObjectType(foo(), bar(), baz()));
+///   MyObjectType *obj = runtime->makeAFixed<MyObjectType>();
+///   return JSObjectInit::initToHandle(runtime, obj);
 ///
-template <typename JSObjectType, HasFinalizer hasFinalizer = HasFinalizer::No>
-class JSObjectAlloc {
- public:
-  /// Allocate memory that can hold an instance of JSObjectType.
-  JSObjectAlloc(Runtime *runtime)
-      : runtime_(runtime),
-        mem_(runtime->alloc</*fixedSize*/ true, hasFinalizer>(
-            cellSize<JSObjectType>())),
-        noAlloc_(runtime) {}
+namespace JSObjectInit {
+/// Initialize direct properties of obj and return it in a handle.
+template <typename JSObjectType>
+static Handle<JSObjectType> initToHandle(Runtime *runtime, JSObjectType *obj) {
+  // Check that the object looks well-formed.
+  assert(JSObjectType::classof(obj) && "Mismatched CellKind");
+  return runtime->makeHandle(JSObjectType::initDirectPropStorage(runtime, obj));
+}
 
-  /// Provides access to the allocated memory for a "placement new" expression.
-  operator void *() {
-    return mem_;
-  }
+/// Initialize direct properties of obj and return it in a pseudo-handle.
+template <typename JSObjectType>
+static PseudoHandle<JSObjectType> initToPseudoHandle(
+    Runtime *runtime,
+    JSObjectType *obj) {
+  assert(JSObjectType::classof(obj) && "Mismatched CellKind");
+  return createPseudoHandle(JSObjectType::initDirectPropStorage(runtime, obj));
+}
 
-  /// Initialize direct properties of obj and return it in a handle.
-  Handle<JSObjectType> initToHandle(JSObjectType *obj) {
-    noAlloc_.release();
-    return runtime_->makeHandle(init(obj));
-  }
-
-  /// Initialize direct properties of obj and return it in a pseudo-handle.
-  PseudoHandle<JSObjectType> initToPseudoHandle(JSObjectType *obj) {
-    noAlloc_.release();
-    return createPseudoHandle(init(obj));
-  }
-
-  /// Initialize direct properties of obj and return it as a raw HermesValue.
-  HermesValue initToHermesValue(JSObjectType *obj) {
-    return HermesValue::encodeObjectValue(init(obj));
-  }
-
-  ~JSObjectAlloc() {
-    assert(!mem_ && "Must call init* at least once");
-  }
-
- private:
-  JSObjectType *init(JSObjectType *obj) {
-    assert(obj == mem_ && "Must call init* no more than once");
-
-    // Check that the object looks well-formed.
-    assert(JSObjectType::classof(obj) && "Mismatched CellKind");
-
-    mem_ = nullptr;
-    return JSObjectType::initDirectPropStorage(runtime_, obj);
-  }
-
-  /// Runtime used for heap and handle allocation.
-  Runtime *runtime_;
-
-  /// Allocated memory for the object.
-  void *mem_;
-
-  /// Asserts no additional allocation happens until the object is constructed.
-  NoAllocScope noAlloc_;
-};
+/// Initialize direct properties of obj and return it as a raw HermesValue.
+template <typename JSObjectType>
+static HermesValue initToHermesValue(Runtime *runtime, JSObjectType *obj) {
+  assert(JSObjectType::classof(obj) && "Mismatched CellKind");
+  return HermesValue::encodeObjectValue(
+      JSObjectType::initDirectPropStorage(runtime, obj));
+}
+}; // namespace JSObjectInit
 
 //===----------------------------------------------------------------------===//
 // Object inline methods.
@@ -1602,9 +1588,33 @@ inline T *JSObject::initDirectPropStorage(Runtime *runtime, T *self) {
   return self;
 }
 
+template <SlotIndex index>
+inline HermesValue JSObject::getDirectSlotValue(const JSObject *self) {
+  static_assert(index < DIRECT_PROPERTY_SLOTS, "Must be a direct property");
+  return self->directProps()[index];
+}
+
+template <SlotIndex index>
+inline void
+JSObject::setDirectSlotValue(JSObject *self, HermesValue value, GC *gc) {
+  static_assert(index < DIRECT_PROPERTY_SLOTS, "Must be a direct property");
+  self->directProps()[index].set(value, gc);
+}
+
+template <SlotIndex index>
+inline void
+JSObject::setDirectSlotValueNonPtr(JSObject *self, HermesValue value, GC *gc) {
+  static_assert(index < DIRECT_PROPERTY_SLOTS, "Must be a direct property");
+  self->directProps()[index].setNonPtr(value, gc);
+}
+
 template <PropStorage::Inline inl>
-inline GCHermesValue &
-JSObject::namedSlotRef(JSObject *self, PointerBase *runtime, SlotIndex index) {
+inline HermesValue JSObject::getNamedSlotValue(
+    JSObject *self,
+    PointerBase *runtime,
+    SlotIndex index) {
+  assert(!self->flags_.proxyObject && "getNamedSlotValue called on a Proxy");
+
   if (LLVM_LIKELY(index < DIRECT_PROPERTY_SLOTS))
     return self->directProps()[index];
 
@@ -1624,9 +1634,8 @@ inline void JSObject::setNamedSlotValue(
   if (LLVM_LIKELY(index < DIRECT_PROPERTY_SLOTS))
     return self->directProps()[index].set(value, &runtime->getHeap());
 
-  self->propStorage_.get(runtime)
-      ->at<inl>(index - DIRECT_PROPERTY_SLOTS)
-      .set(value, &runtime->getHeap());
+  self->propStorage_.get(runtime)->set<inl>(
+      index - DIRECT_PROPERTY_SLOTS, value, &runtime->getHeap());
 }
 
 inline HermesValue JSObject::getComputedSlotValue(

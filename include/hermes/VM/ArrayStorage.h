@@ -35,7 +35,7 @@ class ArrayStorage final
   using size_type = uint32_t;
   using iterator = GCHermesValue *;
 
-  static VTable vt;
+  static const VTable vt;
 
 #ifdef HERMESVM_SERIALIZE
   /// A convinience method to serialize an ArrayStorage which does not contain
@@ -68,9 +68,9 @@ class ArrayStorage final
     if (LLVM_UNLIKELY(capacity > maxElements())) {
       return throwExcessiveCapacityError(runtime, capacity);
     }
-    void *mem = runtime->alloc</*fixedSize*/ false>(allocationSize(capacity));
-    return HermesValue::encodeObjectValue(new (mem)
-                                              ArrayStorage(runtime, capacity));
+    auto *cell = runtime->makeAVariable<ArrayStorage>(
+        allocationSize(capacity), runtime, capacity);
+    return HermesValue::encodeObjectValue(cell);
   }
 
   /// Create a new long-lived instance with specified capacity.
@@ -80,9 +80,9 @@ class ArrayStorage final
     if (LLVM_UNLIKELY(capacity > maxElements())) {
       return throwExcessiveCapacityError(runtime, capacity);
     }
-    void *mem = runtime->allocLongLived(allocationSize(capacity));
-    return HermesValue::encodeObjectValue(new (mem)
-                                              ArrayStorage(runtime, capacity));
+    return HermesValue::encodeObjectValue(
+        runtime->makeAVariable<ArrayStorage, HasFinalizer::No, LongLived::Yes>(
+            allocationSize(capacity), runtime, capacity));
   }
 
   /// Create a new instance with specified capacity and size.
@@ -112,11 +112,25 @@ class ArrayStorage final
   /// an element is in the "inline storage". All storage here is "inline".
   enum class Inline { No, Yes };
 
-  /// \return a reference to the element at index \p index
+  /// \return the element at index \p index
   template <Inline inl = Inline::No>
-  GCHermesValue &at(size_type index) {
+  HermesValue at(size_type index) const {
     assert(index < size() && "index out of range");
     return data()[index];
+  }
+
+  /// \return the element at index \p index
+  template <Inline inl = Inline::No>
+  void set(size_type index, HermesValue val, GC *gc) {
+    assert(index < size() && "index out of range");
+    data()[index].set(val, gc);
+  }
+
+  /// \return the element at index \p index
+  template <Inline inl = Inline::No>
+  void setNonPtr(size_type index, HermesValue val, GC *gc) {
+    assert(index < size() && "index out of range");
+    data()[index].setNonPtr(val, gc);
   }
 
   size_type capacity() const {
@@ -212,6 +226,7 @@ class ArrayStorage final
   size_type capacity_;
   AtomicIfConcurrentGC<size_type> size_{0};
 
+ public:
   ArrayStorage() = delete;
   ArrayStorage(const ArrayStorage &) = delete;
   void operator=(const ArrayStorage &) = delete;
@@ -224,6 +239,7 @@ class ArrayStorage final
             allocationSize(capacity)),
         capacity_(capacity) {}
 
+ private:
   /// Throws a RangeError with a descriptive message describing the attempted
   /// capacity allocated, and the max that is allowed.
   /// \returns ExecutionStatus::EXCEPTION always.

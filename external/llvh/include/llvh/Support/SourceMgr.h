@@ -30,6 +30,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <map>
 
 namespace llvh {
 
@@ -79,8 +80,9 @@ private:
     /// it points somewhere into \c Buffer. The static type parameter \p T
     /// must be an unsigned integer type from uint{8,16,32,64}_t large
     /// enough to store offsets inside \c Buffer.
+    /// \return a pointer to the start of the line and the line number.
     template<typename T>
-    unsigned getLineNumber(const char *Ptr) const;
+    std::pair<const char *, unsigned> getLineNumber(const char *Ptr) const;
 
     /// This is the location of the parent include, or null if at the top level.
     SMLoc IncludeLoc;
@@ -94,6 +96,12 @@ private:
 
   /// This is all of the buffers that we are reading from.
   std::vector<SrcBuffer> Buffers;
+
+  /// The end addresses of all buffers.
+  std::map<const char *, unsigned> BufferEnds;
+
+  /// The id of the buffer which FindBufferContainingLoc() found last.
+  mutable unsigned LastFoundBufId = 0;
 
   // This is the list of directories we should search for include files in.
   std::vector<std::string> IncludeDirectories;
@@ -151,11 +159,14 @@ public:
   /// the memory buffer.
   unsigned AddNewSourceBuffer(std::unique_ptr<MemoryBuffer> F,
                               SMLoc IncludeLoc) {
+    const char * End = F->getBufferEnd();
     SrcBuffer NB;
     NB.Buffer = std::move(F);
     NB.IncludeLoc = IncludeLoc;
     Buffers.push_back(std::move(NB));
-    return Buffers.size();
+    unsigned BufId = Buffers.size();
+    BufferEnds.emplace(End, BufId);
+    return BufId;
   }
 
   /// Search for a file with the specified name in the current directory or in

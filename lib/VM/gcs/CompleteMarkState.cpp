@@ -10,6 +10,7 @@
 #include "hermes/VM/CompleteMarkState-inline.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCBase.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 
 namespace hermes {
@@ -21,7 +22,7 @@ void CompleteMarkState::markTransitive(void *ptr) {
     return;
   }
 
-  MarkBitArrayNC *markBits = AlignedHeapSegment::markBitArrayCovering(ptr);
+  MarkBitArrayNC *markBits = GenGCHeapSegment::markBitArrayCovering(ptr);
   size_t ind = markBits->addressToIndex(ptr);
 
   assert(ind < markBits->size());
@@ -73,7 +74,7 @@ void CompleteMarkState::pushCell(GCCell *cell) {
 }
 
 void CompleteMarkState::drainMarkStack(
-    GC *gc,
+    GenGC *gc,
     FullMSCMarkTransitiveAcceptor &acceptor) {
   while (!markStack_.empty() || !varSizeMarkStack_.empty()) {
     GCCell *cell;
@@ -96,7 +97,7 @@ void CompleteMarkState::drainMarkStack(
     if (cell->getKind() == CellKind::WeakMapKind) {
       reachableWeakMaps_.push_back(vmcast<JSWeakMap>(cell));
     } else {
-      GCBase::markCell(cell, gc, acceptor);
+      gc->markCell(cell, acceptor);
     }
 
     // All fields of a fixed-sized cell should be marked by this point, but var
@@ -108,7 +109,7 @@ void CompleteMarkState::drainMarkStack(
   }
 }
 
-std::unique_ptr<FullMSCUpdateAcceptor> getFullMSCUpdateAcceptor(GC &gc) {
+std::unique_ptr<FullMSCUpdateAcceptor> getFullMSCUpdateAcceptor(GenGC &gc) {
   return std::unique_ptr<FullMSCUpdateAcceptor>(new FullMSCUpdateAcceptor(gc));
 }
 

@@ -25,7 +25,7 @@ class FinalizableNativeFunction final : public NativeFunction {
   FinalizeNativeFunctionPtr finalizePtr_;
 
  public:
-  static CallableVTable vt;
+  static const CallableVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::FinalizableNativeFunctionKind;
@@ -47,23 +47,23 @@ class FinalizableNativeFunction final : public NativeFunction {
     return context_;
   }
 
- protected:
   FinalizableNativeFunction(
       Runtime *runtime,
-      PseudoHandle<JSObject> parent,
-      PseudoHandle<HiddenClass> clazz,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
       void *context,
       NativeFunctionPtr functionPtr,
       FinalizeNativeFunctionPtr finalizePtr)
       : NativeFunction(
             runtime,
             &vt.base.base,
-            parent.get(),
-            clazz.get(),
+            parent,
+            clazz,
             context,
             functionPtr),
         finalizePtr_(finalizePtr) {}
 
+ protected:
   ~FinalizableNativeFunction() {
     finalizePtr_(context_);
   }
@@ -97,7 +97,7 @@ class HostObjectProxy : public DecoratedObject::Decoration {
 
 class HostObject final : public DecoratedObject {
  public:
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::HostObjectKind;
@@ -128,11 +128,10 @@ class HostObject final : public DecoratedObject {
     return static_cast<const HostObjectProxy *>(this->getDecoration());
   }
 
- private:
   HostObject(
       Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
       std::unique_ptr<HostObjectProxy> proxy)
       : DecoratedObject(runtime, &vt, parent, clazz, std::move(proxy)) {}
 };

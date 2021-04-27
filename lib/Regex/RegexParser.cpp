@@ -58,21 +58,6 @@ class Parser {
   const uint32_t backRefLimit_;
   uint32_t maxBackRef_ = 0;
 
-  // Maximum depth of our parser. This is effectively the depth of C stack
-  // frames that the parser may use, and is the mechanism that prevents stack
-  // overflow for overly complex expressions.
-  static constexpr uint32_t kMaxParseDepth =
-#ifdef HERMES_LIMIT_STACK_DEPTH
-      256
-#elif defined(_MSC_VER) && defined(HERMES_SLOW_DEBUG)
-      256
-#elif defined(_MSC_VER)
-      512
-#else
-      1024
-#endif
-      ;
-
   /// Set the error \p err, if not already set to a different error.
   /// Also move our input to end, to abort parsing.
   /// \return false, for convenience.
@@ -98,7 +83,7 @@ class Parser {
     /// The first marked subexpression of the term that this quantifies.
     /// For example, in the regex /(a)(b)((c)|d){3, 5}/ this would be 2, because
     /// we are quantifying the marked subexpression at index 2.
-    uint32_t startMarkedSubexprs_;
+    uint16_t startMarkedSubexprs_;
 
     /// The start node of the expression which we are quantifying. This is owned
     /// by the regex. The end node is always the last node of the regex.
@@ -256,9 +241,13 @@ class Parser {
   void openCapturingGroup(ParseStack &stack) {
     ParseStackElement elem(ParseStackElement::CapturingGroup);
     // Quantifier must be prepared before incrementing the marked counter
-    // because it uses the marked counter to perform the simple loop
-    // optimisation
+    // because the newly opened capture group is the first one being quantified
+    // by it.
     elem.quant = prepareQuantifier();
+    if (LLVM_UNLIKELY(re_->markedCount() >= constants::kMaxCaptureGroupCount)) {
+      setError(constants::ErrorType::PatternExceedsParseLimits);
+      return;
+    }
     elem.mexp = re_->incrementMarkedCount();
     elem.splicePoint = re_->currentNode();
     stack.push_back(std::move(elem));
@@ -304,9 +293,11 @@ class Parser {
         break;
 
       case ParseStackElement::LookAround: {
-        quantifierAllowed = !(flags_.unicode);
         bool negate = elem.negateLookaround;
         bool forwards = elem.forwardLookaround;
+        // ES11 Annex B.1.4 extends RegExp to allow quantifiers for
+        // lookaheads when unicode is disabled.
+        quantifierAllowed = !(flags_.unicode) && forwards;
         auto mexpStart = elem.mexp;
         auto mexpEnd = re_->markedCount();
         auto expr = re_->spliceOut(elem.splicePoint);
@@ -350,10 +341,10 @@ class Parser {
         case '(': {
           // Open a new group of the right type.
           if (tryConsume("(?=")) {
-            // Positive lookeahead, negate = false, forwards = true
+            // Positive lookahead, negate = false, forwards = true
             openLookaround(stack, false, true);
           } else if (tryConsume("(?!")) {
-            // Negative lookeahead, negate = true, forwards = true
+            // Negative lookahead, negate = true, forwards = true
             openLookaround(stack, true, true);
           } else if (tryConsume("(?<=")) {
             // Positive lookbehind, negate = false, forwards = false
@@ -382,11 +373,6 @@ class Parser {
           closeGroup(stack);
           break;
         }
-      }
-
-      if (stack.size() > kMaxParseDepth) {
-        setError(constants::ErrorType::PatternExceedsParseLimits);
-        return;
       }
       consumeTerm();
     }
@@ -419,7 +405,17 @@ class Parser {
 
         case '\\': {
           consume('\\');
-          consumeAtomEscape();
+          // This may be an ES6 21.2.2.6 Assertion (\b or \B) or an AtomeEscape.
+          if (current_ == end_) {
+            setError(constants::ErrorType::EscapeIncomplete);
+            return;
+          } else if (*current_ == 'b' || *current_ == 'B') {
+            re_->pushWordBoundary(*current_ == 'B' /* invert */);
+            consume(*current_);
+            quantifierAllowed = false;
+          } else {
+            consumeAtomEscape();
+          }
           break;
         }
 
@@ -444,6 +440,7 @@ class Parser {
         case '{': {
           // Under Unicode, this is always an error.
           // Without Unicode, it is an error if it is a valid quantifier.
+          // (extension from ES11 Annex B.1.4)
           Quantifier tmp;
           if (tryConsumeQuantifier(&tmp)) {
             setError(constants::ErrorType::InvalidRepeat);
@@ -708,7 +705,7 @@ class Parser {
             if ((flags_.unicode) && tryConsume('-')) {
               return ClassAtom('-');
             }
-            // fallthrough
+            LLVM_FALLTHROUGH;
 
           default: {
             return ClassAtom(consumeCharacterEscape());
@@ -990,12 +987,6 @@ class Parser {
 
     CharT c = *current_;
     switch (c) {
-      case 'b':
-      case 'B':
-        consume(c);
-        re_->pushWordBoundary(c == 'B' /* invert */);
-        break;
-
       case 'd':
       case 'D':
         consume(c);
@@ -1034,7 +1025,9 @@ class Parser {
         if (unicode || decimal <= backRefLimit_) {
           // Backreference.
           maxBackRef_ = std::max(maxBackRef_, decimal);
-          re_->pushBackRef(decimal);
+          // Subtract 1 so the marked subexpression index starts at zero, to
+          // line up with other instructions.
+          re_->pushBackRef(decimal - 1);
         } else if (c < '8' && !unicode) {
           // Octal.
           current_ = saved;
@@ -1081,7 +1074,7 @@ class Parser {
   uint32_t maxBackRef() const {
     return maxBackRef_;
   }
-}; // namespace regex
+};
 
 template <typename Receiver>
 constants::ErrorType parseRegex(

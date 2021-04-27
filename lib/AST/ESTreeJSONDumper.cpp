@@ -20,19 +20,39 @@ using namespace hermes::ESTree;
 
 class ESTreeJSONDumper {
   JSONEmitter &json_;
-  SourceErrorManager *sm_{nullptr};
+  SourceErrorManager *sm_;
   ESTreeDumpMode mode_;
+  LocationDumpMode locMode_;
+  /// Whether to include or exclude the "raw" property where available.
+  ESTreeRawProp const rawProp_;
 
   /// A collection of fields to ignore if they are empty (null or []).
   /// Mapping from node name to a set of ignored field names for that node.
   llvh::StringMap<llvh::StringSet<>> ignoredEmptyFields_{};
 
+  /// If null, this is ignored.
+  /// If non-null, only print the source locations for kinds in this set.
+  const NodeKindSet *includeSourceLocs_;
+
  public:
   explicit ESTreeJSONDumper(
       JSONEmitter &json,
       SourceErrorManager *sm,
-      ESTreeDumpMode mode)
-      : json_(json), sm_(sm), mode_(mode) {
+      ESTreeDumpMode mode,
+      LocationDumpMode locMode,
+      ESTreeRawProp rawProp = ESTreeRawProp::Include,
+      const NodeKindSet *includeSourceLocs = nullptr)
+      : json_(json),
+        sm_(sm),
+        mode_(mode),
+        locMode_(locMode),
+        rawProp_(rawProp),
+        includeSourceLocs_(includeSourceLocs) {
+    if (locMode != LocationDumpMode::None) {
+      assert(sm && "SourceErrorManager required for dumping");
+    }
+
+    if (mode == ESTreeDumpMode::HideEmpty) {
 #define ESTREE_NODE_0_ARGS(NAME, ...)
 #define ESTREE_NODE_1_ARGS(NAME, ...)
 #define ESTREE_NODE_2_ARGS(NAME, ...)
@@ -45,6 +65,7 @@ class ESTreeJSONDumper {
 #define ESTREE_IGNORE_IF_EMPTY(NAME, FIELD) \
   ignoredEmptyFields_[#NAME].insert(#FIELD);
 #include "hermes/AST/ESTree.def"
+    }
   }
 
   void doIt(NodePtr rootNode) {
@@ -54,40 +75,41 @@ class ESTreeJSONDumper {
  private:
   /// Print the source location for the \p node.
   void printSourceLocation(Node *node) {
-    if (!sm_)
+    if (locMode_ == LocationDumpMode::None)
       return;
+    if (includeSourceLocs_ && !includeSourceLocs_->count(node->getKind()))
+      return;
+
     SourceErrorManager::SourceCoords start, end;
     SMRange rng = node->getSourceRange();
     if (!sm_->findBufferLineAndLoc(rng.Start, start) ||
         !sm_->findBufferLineAndLoc(rng.End, end))
       return;
 
-    json_.emitKey("loc");
-    json_.openDict();
-    json_.emitKey("start");
-    json_.openDict();
-    json_.emitKeyValue("line", start.line);
-    json_.emitKeyValue("column", start.col);
-    json_.closeDict();
-    json_.emitKey("end");
-    json_.openDict();
-    json_.emitKeyValue("line", end.line);
-    json_.emitKeyValue("column", end.col);
-    json_.closeDict();
-    json_.closeDict();
+    if (locMode_ == LocationDumpMode::Loc ||
+        locMode_ == LocationDumpMode::LocAndRange) {
+      json_.emitKey("loc");
+      json_.openDict();
+      json_.emitKey("start");
+      json_.openDict();
+      json_.emitKeyValue("line", start.line);
+      json_.emitKeyValue("column", start.col);
+      json_.closeDict();
+      json_.emitKey("end");
+      json_.openDict();
+      json_.emitKeyValue("line", end.line);
+      json_.emitKeyValue("column", end.col);
+      json_.closeDict();
+      json_.closeDict();
+    }
 
-    const llvh::MemoryBuffer *buffer = sm_->findBufferForLoc(rng.Start);
-    assert(buffer && "The buffer must exist");
-    const char *bufStart = buffer->getBufferStart();
-    assert(
-        rng.Start.getPointer() >= bufStart &&
-        rng.End.getPointer() <= buffer->getBufferEnd() &&
-        "The range must be within the buffer");
-    json_.emitKey("range");
-    json_.openArray();
-    json_.emitValues(
-        {rng.Start.getPointer() - bufStart, rng.End.getPointer() - bufStart});
-    json_.closeArray();
+    if (locMode_ == LocationDumpMode::Range ||
+        locMode_ == LocationDumpMode::LocAndRange) {
+      json_.emitKey("range");
+      json_.openArray();
+      dumpSMRangeJSON(json_, rng, sm_->findBufferForLoc(rng.Start));
+      json_.closeArray();
+    }
   }
 
   void visit(Node *node, StringRef type) {
@@ -103,11 +125,12 @@ class ESTreeJSONDumper {
     json_.emitKeyValue("type", type);
     dumpChildren(node);
     SMRange sr = node->getSourceRange();
-    if (sr.isValid()) {
+    if (sr.isValid() && rawProp_ == ESTreeRawProp::Include) {
       json_.emitKeyValue(
           "raw",
-          StringRef{sr.Start.getPointer(),
-                    (size_t)(sr.End.getPointer() - sr.Start.getPointer())});
+          StringRef{
+              sr.Start.getPointer(),
+              (size_t)(sr.End.getPointer() - sr.Start.getPointer())});
     }
     printSourceLocation(node);
     json_.closeDict();
@@ -122,7 +145,7 @@ class ESTreeJSONDumper {
   }
 
   static bool isEmpty(NodeBoolean val) {
-    return false;
+    return !val;
   }
 
   static bool isEmpty(NodeNumber num) {
@@ -217,18 +240,23 @@ class ESTreeJSONDumper {
     }
   }
 
-#define DUMP_KEY_VALUE_PAIR(PARENT, KEY, NODE)                 \
-  do {                                                         \
-    if (mode_ == ESTreeDumpMode::HideEmpty && isEmpty(NODE)) { \
-      auto it = ignoredEmptyFields_.find(#PARENT);             \
-      if (it != ignoredEmptyFields_.end()) {                   \
-        if (it->second.count(KEY)) {                           \
-          break;                                               \
-        }                                                      \
-      }                                                        \
-    }                                                          \
-    json_.emitKey(KEY);                                        \
-    dumpNode(NODE);                                            \
+#define DUMP_KEY_VALUE_PAIR(PARENT, KEY, NODE)       \
+  do {                                               \
+    if (isEmpty(NODE)) {                             \
+      if (mode_ == ESTreeDumpMode::Compact) {        \
+        break;                                       \
+      }                                              \
+      if (mode_ == ESTreeDumpMode::HideEmpty) {      \
+        auto it = ignoredEmptyFields_.find(#PARENT); \
+        if (it != ignoredEmptyFields_.end()) {       \
+          if (it->second.count(KEY)) {               \
+            break;                                   \
+          }                                          \
+        }                                            \
+      }                                              \
+    }                                                \
+    json_.emitKey(KEY);                              \
+    dumpNode(NODE);                                  \
   } while (0);
 
 /// Declare helper functions to recursively visit the children of a node.
@@ -422,14 +450,40 @@ class ESTreeJSONDumper {
 
 } // namespace
 
+void dumpSMRangeJSON(
+    JSONEmitter &json,
+    llvh::SMRange rng,
+    const llvh::MemoryBuffer *buffer) {
+  assert(buffer && "The buffer must exist");
+  const char *bufStart = buffer->getBufferStart();
+  assert(
+      rng.Start.getPointer() >= bufStart &&
+      rng.End.getPointer() <= buffer->getBufferEnd() &&
+      "The range must be within the buffer");
+  json.emitValues(
+      {rng.Start.getPointer() - bufStart, rng.End.getPointer() - bufStart});
+}
+
+void dumpESTreeJSON(
+    llvh::raw_ostream &os,
+    NodePtr rootNode,
+    bool pretty,
+    ESTreeDumpMode mode) {
+  JSONEmitter json{os, pretty};
+  ESTreeJSONDumper(json, nullptr, mode, LocationDumpMode::None).doIt(rootNode);
+  json.endJSONL();
+}
+
 void dumpESTreeJSON(
     llvh::raw_ostream &os,
     NodePtr rootNode,
     bool pretty,
     ESTreeDumpMode mode,
-    SourceErrorManager *sm) {
+    SourceErrorManager &sm,
+    LocationDumpMode locMode,
+    ESTreeRawProp rawProp) {
   JSONEmitter json{os, pretty};
-  ESTreeJSONDumper(json, sm, mode).doIt(rootNode);
+  ESTreeJSONDumper(json, &sm, mode, locMode, rawProp).doIt(rootNode);
   json.endJSONL();
 }
 
@@ -437,8 +491,12 @@ void dumpESTreeJSON(
     JSONEmitter &json,
     NodePtr rootNode,
     ESTreeDumpMode mode,
-    SourceErrorManager *sm) {
-  ESTreeJSONDumper(json, sm, mode).doIt(rootNode);
+    SourceErrorManager &sm,
+    LocationDumpMode locMode,
+    const NodeKindSet *includeSourceLocs,
+    ESTreeRawProp rawProp) {
+  ESTreeJSONDumper(json, &sm, mode, locMode, rawProp, includeSourceLocs)
+      .doIt(rootNode);
 }
 
 } // namespace hermes

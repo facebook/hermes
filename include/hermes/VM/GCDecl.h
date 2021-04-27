@@ -22,6 +22,12 @@ using GC = GenGC;
 #elif defined(HERMESVM_GC_HADES)
 class HadesGC;
 using GC = HadesGC;
+#elif defined(HERMESVM_GC_RUNTIME)
+class GCBase;
+class GenGC;
+class HadesGC;
+class MallocGC;
+using GC = GCBase;
 #else
 #error "Unsupported HermesVM GCKIND" #HERMESVM_GCKIND
 #endif

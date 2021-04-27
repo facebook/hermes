@@ -414,7 +414,7 @@ inline uint32_t utf16Decode(char16_t lead, char16_t trail) {
 CallResult<bool>
 instanceOfOperator_RJS(Runtime *runtime, Handle<> object, Handle<> constructor);
 
-/// ES6.0 19.4.3.2.1
+/// ES6.0 19.4.3.2.1 Runtime Semantics: SymbolDescriptiveString ( sym )
 /// Returns "Symbol([description])" given a symbol.
 CallResult<Handle<StringPrimitive>> symbolDescriptiveString(
     Runtime *runtime,

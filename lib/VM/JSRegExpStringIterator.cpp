@@ -20,7 +20,7 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 // class JSRegExpStringIterator
 
-ObjectVTable JSRegExpStringIterator::vt{
+const ObjectVTable JSRegExpStringIterator::vt{
     VTable(
         CellKind::RegExpStringIteratorKind,
         cellSize<JSRegExpStringIterator>()),
@@ -68,8 +68,7 @@ void RegExpStringIteratorDeserialize(Deserializer &d, CellKind kind) {
   assert(
       kind == CellKind::RegExpStringIteratorKind &&
       "Expected RegExpStringIterator");
-  void *mem = d.getRuntime()->alloc(cellSize<JSRegExpStringIterator>());
-  auto *cell = new (mem) JSRegExpStringIterator(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSRegExpStringIterator>(d);
   d.endObject(cell);
 }
 #endif
@@ -84,17 +83,17 @@ PseudoHandle<JSRegExpStringIterator> JSRegExpStringIterator::create(
   auto proto =
       Handle<JSObject>::vmcast(&runtime->regExpStringIteratorPrototype);
 
-  JSObjectAlloc<JSRegExpStringIterator> mem{runtime};
-  return mem.initToPseudoHandle(new (mem) JSRegExpStringIterator(
+  auto *cell = runtime->makeAFixed<JSRegExpStringIterator>(
       runtime,
-      *proto,
-      runtime->getHiddenClassForPrototypeRaw(
+      proto,
+      runtime->getHiddenClassForPrototype(
           *proto,
           numOverlapSlots<JSRegExpStringIterator>() + ANONYMOUS_PROPERTY_SLOTS),
-      *R,
-      *S,
+      R,
+      S,
       global,
-      fullUnicode));
+      fullUnicode);
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 /// ES11 21.2.7.1.1 %RegExpStringIteratorPrototype%.next ( ) 4-11
@@ -136,8 +135,7 @@ CallResult<HermesValue> JSRegExpStringIterator::nextElement(
     // a. If global is true, then
     if (O->global_) {
       //  i. Let matchStr be ? ToString(? Get(match, "0")).
-      Handle<> zeroHandle =
-          runtime->makeHandle(HermesValue::encodeNumberValue(0));
+      Handle<> zeroHandle = HandleRootOwner::getZeroValue();
       auto propRes = JSObject::getComputed_RJS(matchObj, runtime, zeroHandle);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;

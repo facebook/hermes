@@ -22,8 +22,10 @@ module.exports = {
         alt: 'Hermes Logo',
         src: 'img/logo.svg',
       },
-      links: [
-        { to: 'playground/', label: 'Playground', position: 'right' },
+      items: [
+        { to: 'docs/building-and-running', label: 'Docs', position: 'left' },
+        { to: 'playground/', label: 'Playground', position: 'left' },
+        // Please keep GitHub link to the right for consistency.
         {
           href: 'https://github.com/facebook/hermes',
           label: 'GitHub',
@@ -38,45 +40,93 @@ module.exports = {
           title: 'Docs',
           items: [
             {
-              label: 'Using Hermes in a React Native app',
+              label: 'Language Features',
+              to: 'docs/language-features',
+            },
+            {
+              label: 'Building and Running',
+              to: 'docs/building-and-running',
+            },
+            {
+              label: 'Building with Emscripten',
+              to: 'docs/emscripten',
+            },
+          ],
+        },
+        {
+          title: 'Integrations',
+          items: [
+            {
+              label: 'Using with React Native',
               to: 'https://reactnative.dev/docs/hermes',
             },
             {
-              label: 'Hermes Development',
+              label: 'Using a custom build with React Native',
+              to: 'docs/react-native-integration',
+            },
+          ],
+        },
+        {
+          title: 'More',
+          items: [
+            {
+              label: 'Twitter',
+              to: 'https://twitter.com/HermesEngine',
+            },
+            {
+              label: 'GitHub',
               to: 'https://github.com/facebook/hermes',
             },
           ],
         },
         {
-          title: 'Social',
+          title: 'Legal',
+          // Please do not remove the privacy and terms, it's a legal requirement.
           items: [
             {
-              label: 'Twitter',
-              to: 'https://twitter.com/HermesEngine',
+              label: 'Privacy',
+              href: 'https://opensource.facebook.com/legal/privacy/',
+            },
+            {
+              label: 'Terms',
+              href: 'https://opensource.facebook.com/legal/terms/',
+            },
+            {
+              label: 'Cookies',
+              href: 'https://opensource.facebook.com/legal/cookie-policy/',
             },
           ],
         },
       ],
       logo: {
         alt: 'Facebook Open Source Logo',
-        src: 'https://docusaurus.io/img/oss_logo.png',
+        src: 'img/oss_logo.png',
         href: 'https://opensource.facebook.com',
       },
       copyright: `Copyright © ${new Date().getFullYear()} Facebook, Inc. Built with Docusaurus.`,
     },
+    prism: {
+      defaultLanguage: 'shell',
+      theme: require('./src/prismTheme'),
+    }
   },
   presets: [
     [
       '@docusaurus/preset-classic',
       {
+        docs: {
+          showLastUpdateAuthor: false,
+          showLastUpdateTime: true,
+          editUrl:
+            'https://github.com/facebook/hermes/blob/master/website/',
+          path: '../doc',
+          sidebarPath: require.resolve('./sidebars.json'),
+        },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },
       },
     ],
-  ],
-  stylesheets: [
-    require.resolve('./node_modules/normalize.css/normalize.css'),
   ],
   plugins: [
     path.join(__dirname, '/plugins/monaco-editor'),

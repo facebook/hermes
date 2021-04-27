@@ -15,14 +15,15 @@
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/JSWeakMapImpl.h"
+#include "hermes/VM/RootAndSlotAcceptorDefault.h"
 #include "hermes/VM/Runtime.h"
-#include "hermes/VM/SlotAcceptorDefault.h"
 #include "hermes/VM/VTable.h"
 
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/FileSystem.h"
 #include "llvh/Support/Format.h"
 #include "llvh/Support/NativeFormatting.h"
+#include "llvh/Support/raw_os_ostream.h"
 #include "llvh/Support/raw_ostream.h"
 
 #include <inttypes.h>
@@ -43,23 +44,25 @@ GCBase::GCBase(
     GCCallbacks *gcCallbacks,
     PointerBase *pointerBase,
     const GCConfig &gcConfig,
-    std::shared_ptr<CrashManager> crashMgr)
+    std::shared_ptr<CrashManager> crashMgr,
+    HeapKind kind)
     : metaTable_(metaTable),
       gcCallbacks_(gcCallbacks),
       pointerBase_(pointerBase),
       crashMgr_(crashMgr),
+      heapKind_(kind),
       analyticsCallback_(gcConfig.getAnalyticsCallback()),
       recordGcStats_(gcConfig.getShouldRecordStats()),
       // Start off not in GC.
       inGC_(false),
       name_(gcConfig.getName()),
       allocationLocationTracker_(this),
+      samplingAllocationTracker_(this),
+#ifdef HERMESVM_SANITIZE_HANDLES
+      sanitizeRate_(gcConfig.getSanitizeConfig().getSanitizeRate()),
+#endif
       tripwireCallback_(gcConfig.getTripwireConfig().getCallback()),
       tripwireLimit_(gcConfig.getTripwireConfig().getLimit())
-#ifdef HERMESVM_SANITIZE_HANDLES
-      ,
-      sanitizeRate_(gcConfig.getSanitizeConfig().getSanitizeRate())
-#endif
 #ifndef NDEBUG
       ,
       randomizeAllocSpace_(gcConfig.getShouldRandomizeAllocSpace())
@@ -99,21 +102,19 @@ GCBase::GCCycle::GCCycle(
     : gc_(gc),
       gcCallbacksOpt_(gcCallbacksOpt),
       extraInfo_(std::move(extraInfo)),
-      previousInGC_(gc_->inGC_.load(std::memory_order_acquire)) {
+      previousInGC_(gc_->inGC_) {
   if (!previousInGC_) {
     if (gcCallbacksOpt_.hasValue()) {
       gcCallbacksOpt_.getValue()->onGCEvent(
           GCEventKind::CollectionStart, extraInfo_);
     }
-    bool wasInGC_ = gc_->inGC_.exchange(true, std::memory_order_acquire);
-    (void)wasInGC_;
-    assert(!wasInGC_ && "inGC_ should not be concurrently modified!");
+    gc_->inGC_ = true;
   }
 }
 
 GCBase::GCCycle::~GCCycle() {
   if (!previousInGC_) {
-    gc_->inGC_.store(false, std::memory_order_release);
+    gc_->inGC_ = false;
     if (gcCallbacksOpt_.hasValue()) {
       gcCallbacksOpt_.getValue()->onGCEvent(
           GCEventKind::CollectionEnd, extraInfo_);
@@ -143,27 +144,28 @@ std::error_code GCBase::createSnapshotToFile(const std::string &fileName) {
 
 namespace {
 
-constexpr GCBase::IDTracker::ReservedObjectID objectIDForRootSection(
+constexpr HeapSnapshot::NodeID objectIDForRootSection(
     RootAcceptor::Section section) {
   // Since root sections start at zero, and in IDTracker the root sections
-  // start one past the reserved super root, this number can be added to
+  // start one past the reserved GC root, this number can be added to
   // do conversions.
-  return static_cast<GCBase::IDTracker::ReservedObjectID>(
-      static_cast<uint64_t>(GCBase::IDTracker::ReservedObjectID::Root) + 1 +
-      static_cast<uint64_t>(section));
+  return GCBase::IDTracker::reserved(
+      static_cast<GCBase::IDTracker::ReservedObjectID>(
+          static_cast<HeapSnapshot::NodeID>(
+              GCBase::IDTracker::ReservedObjectID::GCRoots) +
+          1 + static_cast<HeapSnapshot::NodeID>(section)));
 }
 
 // Abstract base class for all snapshot acceptors.
-struct SnapshotAcceptor : public SlotAcceptorWithNamesDefault {
-  using SlotAcceptorWithNamesDefault::accept;
-  using SlotAcceptorWithNamesDefault::SlotAcceptorWithNamesDefault;
+struct SnapshotAcceptor : public RootAndSlotAcceptorWithNamesDefault {
+  using RootAndSlotAcceptorWithNamesDefault::accept;
 
-  SnapshotAcceptor(GC &gc, HeapSnapshot &snap)
-      : SlotAcceptorWithNamesDefault(gc), snap_(snap) {}
+  SnapshotAcceptor(PointerBase *base, HeapSnapshot &snap)
+      : RootAndSlotAcceptorWithNamesDefault(base), snap_(snap) {}
 
-  void accept(HermesValue &hv, const char *name) override {
+  void acceptHV(HermesValue &hv, const char *name) override {
     if (hv.isPointer()) {
-      auto ptr = hv.getPointer();
+      GCCell *ptr = static_cast<GCCell *>(hv.getPointer());
       accept(ptr, name);
     }
   }
@@ -175,13 +177,16 @@ struct SnapshotAcceptor : public SlotAcceptorWithNamesDefault {
 struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
   using SnapshotAcceptor::accept;
 
-  PrimitiveNodeAcceptor(GC &gc, HeapSnapshot &snap)
-      : SnapshotAcceptor(gc, snap) {}
+  PrimitiveNodeAcceptor(
+      PointerBase *base,
+      HeapSnapshot &snap,
+      GCBase::IDTracker &tracker)
+      : SnapshotAcceptor(base, snap), tracker_(tracker) {}
 
   // Do nothing for any value except a number.
-  void accept(void *&ptr, const char *name) override {}
+  void accept(GCCell *&ptr, const char *name) override {}
 
-  void accept(HermesValue &hv, const char *) override {
+  void acceptHV(HermesValue &hv, const char *) override {
     if (hv.isNumber()) {
       seenNumbers_.insert(hv.getNumber());
     }
@@ -193,7 +198,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
     snap_.endNode(
         HeapSnapshot::NodeType::Object,
         "undefined",
-        static_cast<HeapSnapshot::NodeID>(
+        GCBase::IDTracker::reserved(
             GCBase::IDTracker::ReservedObjectID::Undefined),
         0,
         0);
@@ -201,24 +206,21 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
     snap_.endNode(
         HeapSnapshot::NodeType::Object,
         "null",
-        static_cast<HeapSnapshot::NodeID>(
-            GCBase::IDTracker::ReservedObjectID::Null),
+        GCBase::IDTracker::reserved(GCBase::IDTracker::ReservedObjectID::Null),
         0,
         0);
     snap_.beginNode();
     snap_.endNode(
         HeapSnapshot::NodeType::Object,
         "true",
-        static_cast<HeapSnapshot::NodeID>(
-            GCBase::IDTracker::ReservedObjectID::True),
+        GCBase::IDTracker::reserved(GCBase::IDTracker::ReservedObjectID::True),
         0,
         0);
     snap_.beginNode();
     snap_.endNode(
         HeapSnapshot::NodeType::Object,
         "false",
-        static_cast<HeapSnapshot::NodeID>(
-            GCBase::IDTracker::ReservedObjectID::False),
+        GCBase::IDTracker::reserved(GCBase::IDTracker::ReservedObjectID::False),
         0,
         0);
     for (double num : seenNumbers_) {
@@ -231,7 +233,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
       snap_.endNode(
           HeapSnapshot::NodeType::Number,
           llvh::StringRef{buf, len},
-          gc.getIDTracker().getNumberID(num),
+          tracker_.getNumberID(num),
           // Numbers are zero-sized in the heap because they're stored inline.
           0,
           0);
@@ -239,6 +241,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
   }
 
  private:
+  GCBase::IDTracker &tracker_;
   // Track all numbers that are seen in a heap pass, and only emit one node for
   // each of them.
   llvh::DenseSet<double, GCBase::IDTracker::DoubleComparator> seenNumbers_;
@@ -247,23 +250,21 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
 struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
   using SnapshotAcceptor::accept;
 
-  EdgeAddingAcceptor(GC &gc, HeapSnapshot &snap) : SnapshotAcceptor(gc, snap) {}
+  EdgeAddingAcceptor(GCBase &gc, HeapSnapshot &snap)
+      : SnapshotAcceptor(gc.getPointerBase(), snap), gc_(gc) {}
 
-  void accept(void *&ptr, const char *name) override {
+  void accept(GCCell *&ptr, const char *name) override {
     if (!ptr) {
       return;
     }
     snap_.addNamedEdge(
         HeapSnapshot::EdgeType::Internal,
         llvh::StringRef::withNullAsEmpty(name),
-        gc.getObjectID(ptr));
+        gc_.getObjectID(ptr));
   }
 
-  void accept(HermesValue &hv, const char *name) override {
-    if (hv.isPointer()) {
-      auto ptr = hv.getPointer();
-      accept(ptr, name);
-    } else if (auto id = gc.getSnapshotID(hv)) {
+  void acceptHV(HermesValue &hv, const char *name) override {
+    if (auto id = gc_.getSnapshotID(hv)) {
       snap_.addNamedEdge(
           HeapSnapshot::EdgeType::Internal,
           llvh::StringRef::withNullAsEmpty(name),
@@ -287,10 +288,21 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
     snap_.addNamedEdge(
         HeapSnapshot::EdgeType::Weak,
         indexName,
-        gc.getObjectID(slot->getPointer()));
+        gc_.getObjectID(slot->getPointer()));
+  }
+
+  void acceptSym(SymbolID sym, const char *name) override {
+    if (sym.isInvalid()) {
+      return;
+    }
+    snap_.addNamedEdge(
+        HeapSnapshot::EdgeType::Internal,
+        llvh::StringRef::withNullAsEmpty(name),
+        gc_.getObjectID(sym));
   }
 
  private:
+  GCBase &gc_;
   // For unnamed edges, use indices instead.
   unsigned nextEdge_{0};
 };
@@ -300,10 +312,10 @@ struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
   using SnapshotAcceptor::accept;
   using WeakRootAcceptor::acceptWeak;
 
-  SnapshotRootSectionAcceptor(GC &gc, HeapSnapshot &snap)
-      : SnapshotAcceptor(gc, snap), WeakRootAcceptorDefault(gc) {}
+  SnapshotRootSectionAcceptor(PointerBase *base, HeapSnapshot &snap)
+      : SnapshotAcceptor(base, snap), WeakRootAcceptorDefault(base) {}
 
-  void accept(void *&, const char *) override {
+  void accept(GCCell *&, const char *) override {
     // While adding edges to root sections, there's no need to do anything for
     // pointers.
   }
@@ -312,7 +324,7 @@ struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
     // Same goes for weak refs.
   }
 
-  void acceptWeak(void *&ptr) override {
+  void acceptWeak(GCCell *&ptr) override {
     // Same goes for weak pointers.
   }
 
@@ -321,7 +333,7 @@ struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
     snap_.addIndexedEdge(
         HeapSnapshot::EdgeType::Element,
         rootSectionNum_++,
-        static_cast<HeapSnapshot::NodeID>(objectIDForRootSection(section)));
+        objectIDForRootSection(section));
   }
 
   void endRootSection() override {
@@ -338,14 +350,16 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
   using SnapshotAcceptor::accept;
   using WeakRootAcceptor::acceptWeak;
 
-  SnapshotRootAcceptor(GC &gc, HeapSnapshot &snap)
-      : SnapshotAcceptor(gc, snap), WeakRootAcceptorDefault(gc) {}
+  SnapshotRootAcceptor(GCBase &gc, HeapSnapshot &snap)
+      : SnapshotAcceptor(gc.getPointerBase(), snap),
+        WeakRootAcceptorDefault(gc.getPointerBase()),
+        gc_(gc) {}
 
-  void accept(void *&ptr, const char *name) override {
+  void accept(GCCell *&ptr, const char *name) override {
     pointerAccept(ptr, name, false);
   }
 
-  void acceptWeak(void *&ptr) override {
+  void acceptWeak(GCCell *&ptr) override {
     pointerAccept(ptr, nullptr, true);
   }
 
@@ -360,6 +374,25 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
       return;
     }
     pointerAccept(slot->getPointer(), nullptr, true);
+  }
+
+  void acceptSym(SymbolID sym, const char *name) override {
+    if (sym.isInvalid()) {
+      return;
+    }
+    auto nameRef = llvh::StringRef::withNullAsEmpty(name);
+    const auto id = gc_.getObjectID(sym);
+    if (!nameRef.empty()) {
+      snap_.addNamedEdge(HeapSnapshot::EdgeType::Internal, nameRef, id);
+    } else {
+      // Unnamed edges get indices.
+      snap_.addIndexedEdge(HeapSnapshot::EdgeType::Element, nextEdge_++, id);
+    }
+  }
+
+  void provideSnapshot(
+      const std::function<void(HeapSnapshot &)> &func) override {
+    func(snap_);
   }
 
   void beginRootSection(Section section) override {
@@ -381,8 +414,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
     snap_.endNode(
         HeapSnapshot::NodeType::Synthetic,
         rootNames[static_cast<unsigned>(currentSection_)],
-        static_cast<HeapSnapshot::NodeID>(
-            objectIDForRootSection(currentSection_)),
+        objectIDForRootSection(currentSection_),
         // The heap visualizer doesn't like it when these synthetic nodes have a
         // size (it describes them as living in the heap).
         0,
@@ -394,7 +426,8 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
   }
 
  private:
-  llvh::DenseSet<uint64_t> seenIDs_;
+  GCBase &gc_;
+  llvh::DenseSet<HeapSnapshot::NodeID> seenIDs_;
   // For unnamed edges, use indices instead.
   unsigned nextEdge_{0};
   Section currentSection_{Section::InvalidSection};
@@ -407,7 +440,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
       return;
     }
 
-    const auto id = gc.getObjectID(ptr);
+    const auto id = gc_.getObjectID(ptr);
     if (!seenIDs_.insert(id).second) {
       // Already seen this node, don't add another edge.
       return;
@@ -435,17 +468,34 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   JSONEmitter json(os);
   HeapSnapshot snap(json, gcCallbacks_->getStackTracesTree());
 
-  const auto rootScan = [gc, &snap]() {
+  const auto rootScan = [gc, &snap, this]() {
     {
       // Make the super root node and add edges to each root section.
-      SnapshotRootSectionAcceptor rootSectionAcceptor(*gc, snap);
+      SnapshotRootSectionAcceptor rootSectionAcceptor(getPointerBase(), snap);
+      // The super root has a single element pointing to the "(GC roots)"
+      // synthetic node. v8 also has some "shortcut" edges to things like the
+      // global object, but those don't seem necessary for correctness.
       snap.beginNode();
-      gc->markRoots(rootSectionAcceptor, true);
-      gc->markWeakRoots(rootSectionAcceptor);
+      snap.addIndexedEdge(
+          HeapSnapshot::EdgeType::Element,
+          1,
+          IDTracker::reserved(IDTracker::ReservedObjectID::GCRoots));
       snap.endNode(
           HeapSnapshot::NodeType::Synthetic,
-          "(GC Roots)",
-          static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::Root),
+          "",
+          IDTracker::reserved(IDTracker::ReservedObjectID::SuperRoot),
+          0,
+          0);
+      snapshotAddGCNativeNodes(snap);
+      snap.beginNode();
+      markRoots(rootSectionAcceptor, true);
+      markWeakRoots(rootSectionAcceptor);
+      snapshotAddGCNativeEdges(snap);
+      snap.endNode(
+          HeapSnapshot::NodeType::Synthetic,
+          "(GC roots)",
+          static_cast<HeapSnapshot::NodeID>(
+              IDTracker::reserved(IDTracker::ReservedObjectID::GCRoots)),
           0,
           0);
     }
@@ -455,9 +505,24 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
       // filters out duplicate edges because there cannot be duplicate edges to
       // nodes reachable from the super root.
       SnapshotRootAcceptor rootAcceptor(*gc, snap);
-      gc->markRoots(rootAcceptor, true);
-      gc->markWeakRoots(rootAcceptor);
+      markRoots(rootAcceptor, true);
+      markWeakRoots(rootAcceptor);
     }
+    gcCallbacks_->visitIdentifiers([&snap, this](
+                                       SymbolID sym,
+                                       const StringPrimitive *str) {
+      snap.beginNode();
+      if (str) {
+        snap.addNamedEdge(
+            HeapSnapshot::EdgeType::Internal, "description", getObjectID(str));
+      }
+      snap.endNode(
+          HeapSnapshot::NodeType::Symbol,
+          convertSymbolToUTF8(sym),
+          idTracker_.getObjectID(sym),
+          sizeof(SymbolID),
+          0);
+    });
   };
 
   snap.beginSection(HeapSnapshot::Section::Nodes);
@@ -468,32 +533,35 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   // haven't been recorded yet.
   // The acceptor is recording some state between objects, so define it outside
   // the loop.
-  PrimitiveNodeAcceptor primitiveAcceptor(*gc, snap);
+  PrimitiveNodeAcceptor primitiveAcceptor(
+      getPointerBase(), snap, getIDTracker());
   SlotVisitorWithNames<PrimitiveNodeAcceptor> primitiveVisitor{
       primitiveAcceptor};
   // Add a node for each object in the heap.
-  const auto snapshotForObject = [&snap, &primitiveVisitor, gc](GCCell *cell) {
-    auto &allocationLocationTracker = gc->getAllocationLocationTracker();
-    // First add primitive nodes.
-    GCBase::markCellWithNames(primitiveVisitor, cell, gc);
-    EdgeAddingAcceptor acceptor(*gc, snap);
-    SlotVisitorWithNames<EdgeAddingAcceptor> visitor(acceptor);
-    // Allow nodes to add extra nodes not in the JS heap.
-    cell->getVT()->snapshotMetaData.addNodes(cell, gc, snap);
-    snap.beginNode();
-    // Add all internal edges first.
-    GCBase::markCellWithNames(visitor, cell, gc);
-    // Allow nodes to add custom edges not represented by metadata.
-    cell->getVT()->snapshotMetaData.addEdges(cell, gc, snap);
-    auto stackTracesTreeNode =
-        allocationLocationTracker.getStackTracesTreeNodeForAlloc(cell);
-    snap.endNode(
-        cell->getVT()->snapshotMetaData.nodeType(),
-        cell->getVT()->snapshotMetaData.nameForNode(cell, gc),
-        gc->getObjectID(cell),
-        cell->getAllocatedSize(),
-        stackTracesTreeNode ? stackTracesTreeNode->id : 0);
-  };
+  const auto snapshotForObject =
+      [&snap, &primitiveVisitor, gc, this](GCCell *cell) {
+        auto &allocationLocationTracker = getAllocationLocationTracker();
+        // First add primitive nodes.
+        markCellWithNames(primitiveVisitor, cell);
+        EdgeAddingAcceptor acceptor(*gc, snap);
+        SlotVisitorWithNames<EdgeAddingAcceptor> visitor(acceptor);
+        // Allow nodes to add extra nodes not in the JS heap.
+        cell->getVT()->snapshotMetaData.addNodes(cell, gc, snap);
+        snap.beginNode();
+        // Add all internal edges first.
+        markCellWithNames(visitor, cell);
+        // Allow nodes to add custom edges not represented by metadata.
+        cell->getVT()->snapshotMetaData.addEdges(cell, gc, snap);
+        auto stackTracesTreeNode =
+            allocationLocationTracker.getStackTracesTreeNodeForAlloc(
+                gc->getObjectID(cell));
+        snap.endNode(
+            cell->getVT()->snapshotMetaData.nodeType(),
+            cell->getVT()->snapshotMetaData.nameForNode(cell, gc),
+            gc->getObjectID(cell),
+            cell->getAllocatedSize(),
+            stackTracesTreeNode ? stackTracesTreeNode->id : 0);
+      };
   gc->forAllObjs(snapshotForObject);
   // Write the singleton number nodes into the snapshot.
   primitiveAcceptor.writeAllNodes();
@@ -503,23 +571,58 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   rootScan();
   // No need to run the primitive scan again, as it only adds nodes, not edges.
   // Add edges between objects in the heap.
-  gc->forAllObjs(snapshotForObject);
+  forAllObjs(snapshotForObject);
   snap.endSection(HeapSnapshot::Section::Edges);
 
   snap.emitAllocationTraceInfo();
 
   snap.beginSection(HeapSnapshot::Section::Samples);
-  for (const auto &fragment : getAllocationLocationTracker().fragments()) {
-    json.emitValues({static_cast<uint64_t>(fragment.timestamp_.count()),
-                     fragment.lastSeenObjectID_});
-  }
+  getAllocationLocationTracker().addSamplesToSnapshot(snap);
   snap.endSection(HeapSnapshot::Section::Samples);
 
   snap.beginSection(HeapSnapshot::Section::Locations);
-  gc->forAllObjs([&snap, gc](GCCell *cell) {
+  forAllObjs([&snap, gc](GCCell *cell) {
     cell->getVT()->snapshotMetaData.addLocations(cell, gc, snap);
   });
   snap.endSection(HeapSnapshot::Section::Locations);
+}
+
+void GCBase::snapshotAddGCNativeNodes(HeapSnapshot &snap) {
+  snap.beginNode();
+  snap.endNode(
+      HeapSnapshot::NodeType::Native,
+      "std::deque<WeakRefSlot>",
+      IDTracker::reserved(IDTracker::ReservedObjectID::WeakRefSlotStorage),
+      weakSlots_.size() * sizeof(decltype(weakSlots_)::value_type),
+      0);
+}
+
+void GCBase::snapshotAddGCNativeEdges(HeapSnapshot &snap) {
+  snap.addNamedEdge(
+      HeapSnapshot::EdgeType::Internal,
+      "weakRefSlots",
+      IDTracker::reserved(IDTracker::ReservedObjectID::WeakRefSlotStorage));
+}
+
+void GCBase::enableHeapProfiler(
+    std::function<void(
+        uint64_t,
+        std::chrono::microseconds,
+        std::vector<GCBase::AllocationLocationTracker::HeapStatsUpdate>)>
+        fragmentCallback) {
+  getAllocationLocationTracker().enable(std::move(fragmentCallback));
+}
+
+void GCBase::disableHeapProfiler() {
+  getAllocationLocationTracker().disable();
+}
+
+void GCBase::enableSamplingHeapProfiler(size_t samplingInterval, int64_t seed) {
+  getSamplingAllocationTracker().enable(samplingInterval, seed);
+}
+
+void GCBase::disableSamplingHeapProfiler(llvh::raw_ostream &os) {
+  getSamplingAllocationTracker().disable(os);
 }
 
 void GCBase::checkTripwire(size_t dataSize) {
@@ -534,6 +637,12 @@ void GCBase::checkTripwire(size_t dataSize) {
 
     std::error_code createSnapshotToFile(const std::string &path) override {
       return gc_->createSnapshotToFile(path);
+    }
+
+    std::error_code createSnapshot(std::ostream &os) override {
+      llvh::raw_os_ostream ros(os);
+      gc_->createSnapshot(ros);
+      return std::error_code{};
     }
 
    private:
@@ -561,6 +670,13 @@ void GCBase::getHeapInfo(HeapInfo &info) {
   info.numCollections = cumStats_.numCollections;
 }
 
+void GCBase::getHeapInfoWithMallocSize(HeapInfo &info) {
+  // Assign to overwrite anything previously in the heap info.
+  // A deque doesn't have a capacity, so the size is the lower bound.
+  info.mallocSizeEstimate =
+      weakSlots_.size() * sizeof(decltype(weakSlots_)::value_type);
+}
+
 #ifndef NDEBUG
 void GCBase::getDebugHeapInfo(DebugHeapInfo &info) {
   recordNumAllocatedObjects();
@@ -571,6 +687,16 @@ void GCBase::getDebugHeapInfo(DebugHeapInfo &info) {
   info.numMarkedSymbols = numMarkedSymbols_;
   info.numHiddenClasses = numHiddenClasses_;
   info.numLeafHiddenClasses = numLeafHiddenClasses_;
+}
+
+size_t GCBase::countUsedWeakRefs() const {
+  size_t count = 0;
+  for (auto &slot : weakSlots_) {
+    if (slot.state() != WeakSlotState::Free) {
+      ++count;
+    }
+  }
+  return count;
 }
 #endif
 
@@ -674,11 +800,19 @@ void GCBase::printStats(JSONEmitter &json) {
     json.emitKeyValue("cause", event.cause);
     json.emitKeyValue("duration", event.duration.count());
     json.emitKeyValue("cpuDuration", event.cpuDuration.count());
-    json.emitKeyValue("preAllocated", event.preAllocated);
-    json.emitKeyValue("preSize", event.preSize);
-    json.emitKeyValue("postAllocated", event.postAllocated);
-    json.emitKeyValue("postSize", event.postSize);
+    json.emitKeyValue("preAllocated", event.allocated.before);
+    json.emitKeyValue("postAllocated", event.allocated.after);
+    json.emitKeyValue("preSize", event.size.before);
+    json.emitKeyValue("postSize", event.size.after);
+    json.emitKeyValue("preExternal", event.external.before);
+    json.emitKeyValue("postExternal", event.external.after);
     json.emitKeyValue("survivalRatio", event.survivalRatio);
+    json.emitKey("tags");
+    json.openArray();
+    for (const auto &tag : event.tags) {
+      json.emitValue(tag);
+    }
+    json.closeArray();
     json.closeDict();
   }
   json.closeArray();
@@ -686,25 +820,29 @@ void GCBase::printStats(JSONEmitter &json) {
 
 void GCBase::recordGCStats(
     const GCAnalyticsEvent &event,
-    CumulativeHeapStats *stats) {
-  stats->gcWallTime.record(
-      std::chrono::duration<double>(event.duration).count());
+    CumulativeHeapStats *stats,
+    bool onMutator) {
+  // Hades OG collections do not block the mutator, and so do not contribute to
+  // the max pause time or the total execution time.
+  if (onMutator)
+    stats->gcWallTime.record(
+        std::chrono::duration<double>(event.duration).count());
   stats->gcCPUTime.record(
       std::chrono::duration<double>(event.cpuDuration).count());
-  stats->finalHeapSize = event.postSize;
-  stats->usedBefore.record(event.preAllocated);
-  stats->usedAfter.record(event.postAllocated);
+  stats->finalHeapSize = event.size.after;
+  stats->usedBefore.record(event.allocated.before);
+  stats->usedAfter.record(event.allocated.after);
   stats->numCollections++;
 }
 
-void GCBase::recordGCStats(const GCAnalyticsEvent &event) {
+void GCBase::recordGCStats(const GCAnalyticsEvent &event, bool onMutator) {
   if (analyticsCallback_) {
     analyticsCallback_(event);
   }
   if (recordGcStats_) {
     analyticsEvents_.push_back(event);
   }
-  recordGCStats(event, &cumStats_);
+  recordGCStats(event, &cumStats_, onMutator);
 }
 
 void GCBase::oom(std::error_code reason) {
@@ -718,12 +856,14 @@ void GCBase::oom(std::error_code reason) {
       "Javascript heap memory exhausted: heap size = %d, allocated = %d.",
       heapInfo.heapSize,
       heapInfo.allocatedBytes);
+  // No need to run finalizeAll, the exception will propagate and eventually run
+  // ~Runtime.
   throw JSOutOfMemoryError(
       std::string(detailBuffer) + "\ncall stack:\n" +
       gcCallbacks_->getCallStackNoAlloc());
 #else
   oomDetail(reason);
-  hermes_fatal((llvh::Twine("OOM: ") + convert_error_to_message(reason)).str());
+  hermes_fatal("OOM", reason);
 #endif
 }
 
@@ -761,15 +901,78 @@ bool GCBase::isMostRecentCellInFinalizerVector(
 #ifdef HERMESVM_SANITIZE_HANDLES
 bool GCBase::shouldSanitizeHandles() {
   static std::uniform_real_distribution<> dist(0.0, 1.0);
-  return dist(randomEngine_) < sanitizeRate_;
+  return dist(randomEngine_) < sanitizeRate_
+#ifdef HERMESVM_SERIALIZE
+      && !deserializeInProgress_
+#endif
+      ;
 }
 #endif
 
+#ifdef HERMESVM_GC_RUNTIME
+
+#define GCBASE_BARRIER_1(name, type1)                                       \
+  void GCBase::name(type1 arg1) {                                           \
+    switch (getKind()) {                                                    \
+      case GCBase::HeapKind::HADES:                                         \
+        llvh::cast<HadesGC>(this)->name(arg1);                              \
+        break;                                                              \
+      case GCBase::HeapKind::NCGEN:                                         \
+        llvh::cast<GenGC>(this)->name(arg1);                                \
+        break;                                                              \
+      case GCBase::HeapKind::MALLOC:                                        \
+        llvm_unreachable(                                                   \
+            "MallocGC should not be used with the RuntimeGC build config"); \
+        break;                                                              \
+    }                                                                       \
+  }
+
+#define GCBASE_BARRIER_2(name, type1, type2)                                \
+  void GCBase::name(type1 arg1, type2 arg2) {                               \
+    switch (getKind()) {                                                    \
+      case GCBase::HeapKind::HADES:                                         \
+        llvh::cast<HadesGC>(this)->name(arg1, arg2);                        \
+        break;                                                              \
+      case GCBase::HeapKind::NCGEN:                                         \
+        llvh::cast<GenGC>(this)->name(arg1, arg2);                          \
+        break;                                                              \
+      case GCBase::HeapKind::MALLOC:                                        \
+        llvm_unreachable(                                                   \
+            "MallocGC should not be used with the RuntimeGC build config"); \
+        break;                                                              \
+    }                                                                       \
+  }
+#else
+#define GCBASE_BARRIER_1(name, type1) \
+  void GCBase::name(type1 arg1) {}
+#define GCBASE_BARRIER_2(name, type1, type2) \
+  void GCBase::name(type1 arg1, type2 arg2) {}
+#endif
+
+GCBASE_BARRIER_2(writeBarrier, const GCHermesValue *, HermesValue);
+GCBASE_BARRIER_2(writeBarrier, const GCPointerBase *, const GCCell *);
+GCBASE_BARRIER_1(writeBarrier, SymbolID);
+GCBASE_BARRIER_2(constructorWriteBarrier, const GCHermesValue *, HermesValue);
+GCBASE_BARRIER_2(
+    constructorWriteBarrier,
+    const GCPointerBase *,
+    const GCCell *);
+GCBASE_BARRIER_2(writeBarrierRange, const GCHermesValue *, uint32_t);
+GCBASE_BARRIER_2(constructorWriteBarrierRange, const GCHermesValue *, uint32_t);
+GCBASE_BARRIER_1(snapshotWriteBarrier, const GCHermesValue *);
+GCBASE_BARRIER_1(snapshotWriteBarrier, const GCPointerBase *);
+GCBASE_BARRIER_2(snapshotWriteBarrierRange, const GCHermesValue *, uint32_t);
+GCBASE_BARRIER_1(weakRefReadBarrier, GCCell *);
+GCBASE_BARRIER_1(weakRefReadBarrier, HermesValue);
+
+#undef GCBASE_BARRIER_1
+#undef GCBASE_BARRIER_2
+
 /*static*/
-std::list<detail::WeakRefKey *> GCBase::buildKeyList(
+std::vector<detail::WeakRefKey *> GCBase::buildKeyList(
     GC *gc,
     JSWeakMap *weakMap) {
-  std::list<detail::WeakRefKey *> res;
+  std::vector<detail::WeakRefKey *> res;
   for (auto iter = weakMap->keys_begin(), end = weakMap->keys_end();
        iter != end;
        iter++) {
@@ -834,6 +1037,29 @@ GCBase::IDTracker::IDTracker() {
   assert(lastID_ % 2 == 1 && "First JS object ID isn't odd");
 }
 
+void GCBase::IDTracker::moveObject(
+    BasedPointer oldLocation,
+    BasedPointer newLocation) {
+  if (oldLocation == newLocation) {
+    // Don't need to do anything if the object isn't moving anywhere. This can
+    // happen in old generations where it is compacted to the same location.
+    return;
+  }
+  std::lock_guard<Mutex> lk{mtx_};
+  auto old = objectIDMap_.find(oldLocation.getRawValue());
+  if (old == objectIDMap_.end()) {
+    // Avoid making new keys for objects that don't need to be tracked.
+    return;
+  }
+  const auto oldID = old->second;
+  assert(
+      objectIDMap_.count(newLocation.getRawValue()) == 0 &&
+      "Moving to a location that is already tracked");
+  // Have to erase first, because any other access can invalidate the iterator.
+  objectIDMap_.erase(old);
+  objectIDMap_[newLocation.getRawValue()] = oldID;
+}
+
 #ifdef HERMESVM_SERIALIZE
 void GCBase::AllocationLocationTracker::serialize(Serializer &s) const {
   if (enabled_) {
@@ -853,7 +1079,8 @@ void GCBase::IDTracker::serialize(Serializer &s) const {
   s.writeInt<HeapSnapshot::NodeID>(lastID_);
   s.writeInt<size_t>(objectIDMap_.size());
   for (auto it = objectIDMap_.begin(); it != objectIDMap_.end(); it++) {
-    s.writeRelocation(it->first);
+    s.writeRelocation(
+        s.getRuntime()->basedToPointerNonNull(BasedPointer{it->first}));
     s.writeInt<HeapSnapshot::NodeID>(it->second);
   }
 }
@@ -864,29 +1091,29 @@ void GCBase::IDTracker::deserialize(Deserializer &d) {
   for (size_t i = 0; i < size; i++) {
     // Heap must have been deserialized before this function. All deserialized
     // pointer must be non-null at this time.
-    const void *ptr = d.getNonNullPtr();
-    auto res =
-        objectIDMap_.try_emplace(ptr, d.readInt<HeapSnapshot::NodeID>()).second;
+    GCPointer<GCCell> ptr{nullptr};
+    d.readRelocation(&ptr, RelocationKind::GCPointer);
+    auto res = objectIDMap_
+                   .try_emplace(
+                       GCPointerBase::storageTypeToRaw(ptr.getStorageType()),
+                       d.readInt<HeapSnapshot::NodeID>())
+                   .second;
     (void)res;
     assert(res && "Shouldn't fail to insert during deserialization");
   }
 }
 #endif
 
-void GCBase::IDTracker::untrackUnmarkedSymbols(
-    const std::vector<bool> &markedSymbols) {
-  std::vector<uint32_t> toUntrack;
-  for (const auto &pair : symbolIDMap_) {
-    if (!markedSymbols[pair.first]) {
-      toUntrack.push_back(pair.first);
-    }
-  }
-  for (uint32_t symIdx : toUntrack) {
-    symbolIDMap_.erase(symIdx);
-  }
+llvh::SmallVector<HeapSnapshot::NodeID, 1>
+    &GCBase::IDTracker::getExtraNativeIDs(HeapSnapshot::NodeID node) {
+  std::lock_guard<Mutex> lk{mtx_};
+  // The operator[] will default construct the vector to be empty if it doesn't
+  // exist.
+  return extraNativeIDs_[node];
 }
 
 HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
+  std::lock_guard<Mutex> lk{mtx_};
   auto &numberRef = numberIDMap_[num];
   // If the entry didn't exist, the value was initialized to 0.
   if (numberRef != 0) {
@@ -896,23 +1123,28 @@ HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
   return numberRef = nextNumberID();
 }
 
+bool GCBase::IDTracker::hasNativeIDs() {
+  std::lock_guard<Mutex> lk{mtx_};
+  return !nativeIDMap_.empty();
+}
+
 void GCBase::AllocationLocationTracker::enable(
     std::function<
         void(uint64_t, std::chrono::microseconds, std::vector<HeapStatsUpdate>)>
         callback) {
   assert(!enabled_ && "Shouldn't enable twice");
   enabled_ = true;
-  GC *gc = static_cast<GC *>(gc_);
+  std::lock_guard<Mutex> lk{mtx_};
   // For correct visualization of the allocation timeline, it's necessary that
   // objects in the heap snapshot that existed before sampling was enabled have
   // numerically lower IDs than those allocated during sampling. We ensure this
   // by assigning IDs to everything here.
   uint64_t numObjects = 0;
   uint64_t numBytes = 0;
-  gc->forAllObjs([gc, &numObjects, &numBytes](GCCell *cell) {
+  gc_->forAllObjs([&numObjects, &numBytes, this](GCCell *cell) {
     numObjects++;
     numBytes += cell->getAllocatedSize();
-    gc->getIDTracker().getObjectID(cell);
+    gc_->getObjectID(cell);
   });
   fragmentCallback_ = std::move(callback);
   startTime_ = std::chrono::steady_clock::now();
@@ -921,7 +1153,7 @@ void GCBase::AllocationLocationTracker::enable(
   // enabled.
   // The ID and timestamp will be filled out via flushCallback.
   fragments_.emplace_back(Fragment{
-      static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::NoID),
+      IDTracker::kInvalidNode,
       std::chrono::microseconds(),
       numObjects,
       numBytes,
@@ -933,6 +1165,7 @@ void GCBase::AllocationLocationTracker::enable(
 }
 
 void GCBase::AllocationLocationTracker::disable() {
+  std::lock_guard<Mutex> lk{mtx_};
   flushCallback();
   enabled_ = false;
   fragmentCallback_ = nullptr;
@@ -944,63 +1177,62 @@ void GCBase::AllocationLocationTracker::newAlloc(const void *ptr, uint32_t sz) {
   // Note it's not very slow, it's slower than the non-virtual version
   // in Runtime though.
   const auto *ip = gc_->gcCallbacks_->getCurrentIPSlow();
-  if (enabled_) {
-    // This is stateful and causes the object to have an ID assigned.
-    const auto id = gc_->getIDTracker().getObjectID(ptr);
-    HERMES_SLOW_ASSERT(
-        &findFragmentForID(id) == &fragments_.back() &&
-        "Should only ever be allocating into the newest fragment");
-    (void)id;
-    Fragment &lastFrag = fragments_.back();
-    HERMES_SLOW_ASSERT(
-        lastFrag.lastSeenObjectID_ ==
-            static_cast<HeapSnapshot::NodeID>(
-                IDTracker::ReservedObjectID::NoID) &&
-        "Last fragment should not have an ID assigned yet");
-    lastFrag.numObjects_++;
-    lastFrag.numBytes_ += sz;
-    lastFrag.touchedSinceLastFlush_ = true;
-    if (lastFrag.numBytes_ >= kFlushThreshold) {
-      flushCallback();
-    }
-    if (auto node = gc_->gcCallbacks_->getCurrentStackTracesTreeNode(ip)) {
-      auto itAndDidInsert = stackMap_.try_emplace(ptr, node);
-      assert(itAndDidInsert.second && "Failed to create a new node");
-      (void)itAndDidInsert;
-    }
+  if (!enabled_) {
+    return;
+  }
+  std::lock_guard<Mutex> lk{mtx_};
+  // This is stateful and causes the object to have an ID assigned.
+  const auto id = gc_->getObjectID(ptr);
+  HERMES_SLOW_ASSERT(
+      &findFragmentForID(id) == &fragments_.back() &&
+      "Should only ever be allocating into the newest fragment");
+  Fragment &lastFrag = fragments_.back();
+  assert(
+      lastFrag.lastSeenObjectID_ == IDTracker::kInvalidNode &&
+      "Last fragment should not have an ID assigned yet");
+  lastFrag.numObjects_++;
+  lastFrag.numBytes_ += sz;
+  lastFrag.touchedSinceLastFlush_ = true;
+  if (lastFrag.numBytes_ >= kFlushThreshold) {
+    flushCallback();
+  }
+  if (auto node = gc_->gcCallbacks_->getCurrentStackTracesTreeNode(ip)) {
+    auto itAndDidInsert = stackMap_.try_emplace(id, node);
+    assert(itAndDidInsert.second && "Failed to create a new node");
+    (void)itAndDidInsert;
   }
 }
 
-void GCBase::AllocationLocationTracker::moveAlloc(
-    const void *oldPtr,
-    const void *newPtr) {
-  if (oldPtr == newPtr) {
-    // This can happen in old generations when compacting to the same location.
+void GCBase::AllocationLocationTracker::updateSize(
+    const void *ptr,
+    uint32_t oldSize,
+    uint32_t newSize) {
+  int32_t delta = static_cast<int32_t>(newSize) - static_cast<int32_t>(oldSize);
+  if (!delta || !enabled_) {
+    // Nothing to update.
     return;
   }
-  auto oldIt = stackMap_.find(oldPtr);
-  if (oldIt == stackMap_.end()) {
-    // This can happen if the tracker is turned on between collections, and
-    // something is being moved that didn't have a stack entry.
-    return;
-  }
-  const auto oldStackTracesTreeNode = oldIt->second;
-  assert(
-      stackMap_.count(newPtr) == 0 &&
-      "Moving to a location that is already tracked");
-  stackMap_.erase(oldIt);
-  stackMap_[newPtr] = oldStackTracesTreeNode;
+  std::lock_guard<Mutex> lk{mtx_};
+  const auto id = gc_->getObjectIDMustExist(ptr);
+  Fragment &frag = findFragmentForID(id);
+  frag.numBytes_ += delta;
+  frag.touchedSinceLastFlush_ = true;
 }
 
 void GCBase::AllocationLocationTracker::freeAlloc(
     const void *ptr,
     uint32_t sz) {
-  stackMap_.erase(ptr);
   if (!enabled_) {
     // Fragments won't exist if the heap profiler isn't enabled.
     return;
   }
-  const auto id = gc_->getIDTracker().getObjectIDMustExist(ptr);
+  // Hold a lock during freeAlloc because concurrent Hades might be creating an
+  // alloc (newAlloc) at the same time.
+  std::lock_guard<Mutex> lk{mtx_};
+  // The ID must exist here since the memory profiler guarantees everything has
+  // an ID (it does a heap pass at the beginning to assign them all).
+  const auto id = gc_->getObjectIDMustExist(ptr);
+  stackMap_.erase(id);
   Fragment &frag = findFragmentForID(id);
   assert(
       frag.numObjects_ >= 1 && "Num objects decremented too much for fragment");
@@ -1028,9 +1260,7 @@ void GCBase::AllocationLocationTracker::flushCallback() {
   const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
       std::chrono::steady_clock::now() - startTime_);
   assert(
-      lastFrag.lastSeenObjectID_ ==
-          static_cast<HeapSnapshot::NodeID>(
-              IDTracker::ReservedObjectID::NoID) &&
+      lastFrag.lastSeenObjectID_ == IDTracker::kInvalidNode &&
       "Last fragment should not have an ID assigned yet");
   // In case a flush happens without any allocations occurring, don't add a new
   // fragment.
@@ -1039,11 +1269,7 @@ void GCBase::AllocationLocationTracker::flushCallback() {
     lastFrag.timestamp_ = duration;
     // Place an empty fragment at the end, for any new allocs.
     fragments_.emplace_back(Fragment{
-        static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::NoID),
-        std::chrono::microseconds(),
-        0,
-        0,
-        false});
+        IDTracker::kInvalidNode, std::chrono::microseconds(), 0, 0, false});
   }
   if (fragmentCallback_) {
     std::vector<HeapStatsUpdate> updatedFragments;
@@ -1061,24 +1287,154 @@ void GCBase::AllocationLocationTracker::flushCallback() {
   }
 }
 
+void GCBase::AllocationLocationTracker::addSamplesToSnapshot(
+    HeapSnapshot &snap) {
+  std::lock_guard<Mutex> lk{mtx_};
+  if (enabled_) {
+    flushCallback();
+  }
+  // There might not be fragments if tracking has never been enabled. If there
+  // are, the last one is always invalid.
+  assert(
+      fragments_.empty() ||
+      fragments_.back().lastSeenObjectID_ == IDTracker::kInvalidNode &&
+          "Last fragment should not have an ID assigned yet");
+  // Loop over the fragments if we have any, and always skip the last one.
+  for (size_t i = 0, e = fragments_.size(); i + 1 < e; ++i) {
+    const auto &fragment = fragments_[i];
+    snap.addSample(fragment.timestamp_, fragment.lastSeenObjectID_);
+  }
+}
+
+void GCBase::SamplingAllocationLocationTracker::enable(
+    size_t samplingInterval,
+    int64_t seed) {
+  if (seed < 0) {
+    seed = std::random_device()();
+  }
+  randomEngine_.seed(seed);
+  dist_ = llvh::make_unique<std::poisson_distribution<>>(samplingInterval);
+  limit_ = nextSample();
+}
+
+void GCBase::SamplingAllocationLocationTracker::disable(llvh::raw_ostream &os) {
+  JSONEmitter json{os};
+  ChromeSamplingMemoryProfile profile{json};
+  std::lock_guard<Mutex> lk{mtx_};
+  // Track a map of size -> count for each stack tree node.
+  llvh::DenseMap<StackTracesTreeNode *, llvh::DenseMap<size_t, size_t>>
+      sizesToCounts;
+  // Do a pre-pass to compute sizesToCounts.
+  for (const auto &s : samples_) {
+    const Sample &sample = s.second;
+    sizesToCounts[sample.node][sample.size]++;
+  }
+
+  // Have to emit the tree of stack frames before emitting samples, Chrome
+  // requires the tree emitted first.
+  profile.emitTree(gc_->gcCallbacks_->getStackTracesTree(), sizesToCounts);
+  profile.beginSamples();
+  for (const auto &s : samples_) {
+    const Sample &sample = s.second;
+    profile.emitSample(sample.size, sample.node, sample.id);
+  }
+  profile.endSamples();
+  dist_.reset();
+  samples_.clear();
+  limit_ = 0;
+}
+
+void GCBase::SamplingAllocationLocationTracker::newAlloc(
+    const void *ptr,
+    uint32_t sz) {
+  // If the sampling profiler isn't enabled, don't check anything else.
+  if (!isEnabled()) {
+    return;
+  }
+  if (sz <= limit_) {
+    // Exit if it's not time for a sample yet.
+    limit_ -= sz;
+    return;
+  }
+  const auto *ip = gc_->gcCallbacks_->getCurrentIPSlow();
+  // This is stateful and causes the object to have an ID assigned.
+  const auto id = gc_->getObjectID(ptr);
+  if (StackTracesTreeNode *node =
+          gc_->gcCallbacks_->getCurrentStackTracesTreeNode(ip)) {
+    // Hold a lock while modifying samples_.
+    std::lock_guard<Mutex> lk{mtx_};
+    auto sampleItAndDidInsert =
+        samples_.try_emplace(id, Sample{sz, node, nextSampleID_++});
+    assert(sampleItAndDidInsert.second && "Failed to create a sample");
+    (void)sampleItAndDidInsert;
+  }
+  // Reset the limit.
+  limit_ = nextSample();
+}
+
+void GCBase::SamplingAllocationLocationTracker::freeAlloc(
+    const void *ptr,
+    uint32_t sz) {
+  // If the sampling profiler isn't enabled, don't check anything else.
+  if (!isEnabled()) {
+    return;
+  }
+  if (!gc_->hasObjectID(ptr)) {
+    // This object's lifetime isn't being tracked.
+    return;
+  }
+  const auto id = gc_->getObjectIDMustExist(ptr);
+  // Hold a lock while modifying samples_.
+  std::lock_guard<Mutex> lk{mtx_};
+  samples_.erase(id);
+}
+
+void GCBase::SamplingAllocationLocationTracker::updateSize(
+    const void *ptr,
+    uint32_t oldSize,
+    uint32_t newSize) {
+  int32_t delta = static_cast<int32_t>(newSize) - static_cast<int32_t>(oldSize);
+  if (!delta || !isEnabled() || !gc_->hasObjectID(ptr)) {
+    // Nothing to update.
+    return;
+  }
+  const auto id = gc_->getObjectIDMustExist(ptr);
+  // Hold a lock while modifying samples_.
+  std::lock_guard<Mutex> lk{mtx_};
+  const auto it = samples_.find(id);
+  if (it == samples_.end()) {
+    return;
+  }
+  Sample &sample = it->second;
+  // Update the size stored in the sample.
+  sample.size = newSize;
+}
+
+size_t GCBase::SamplingAllocationLocationTracker::nextSample() {
+  return (*dist_)(randomEngine_);
+}
+
 llvh::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
   if (val.isPointer() && val.getPointer()) {
     // Make nullptr HermesValue look like a JS null.
     // This should be rare, but is occasionally used by some parts of the VM.
     return val.getPointer()
         ? getObjectID(val.getPointer())
-        : static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::Null);
+        : IDTracker::reserved(IDTracker::ReservedObjectID::Null);
   } else if (val.isNumber()) {
     return idTracker_.getNumberID(val.getNumber());
+  } else if (val.isSymbol() && val.getSymbol().isValid()) {
+    return idTracker_.getObjectID(val.getSymbol());
   } else if (val.isUndefined()) {
-    return static_cast<HeapSnapshot::NodeID>(
-        IDTracker::ReservedObjectID::Undefined);
+    return IDTracker::reserved(IDTracker::ReservedObjectID::Undefined);
   } else if (val.isNull()) {
-    return static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::Null);
+    return static_cast<HeapSnapshot::NodeID>(
+        IDTracker::reserved(IDTracker::ReservedObjectID::Null));
   } else if (val.isBool()) {
     return static_cast<HeapSnapshot::NodeID>(
-        val.getBool() ? IDTracker::ReservedObjectID::True
-                      : IDTracker::ReservedObjectID::False);
+        val.getBool()
+            ? IDTracker::reserved(IDTracker::ReservedObjectID::True)
+            : IDTracker::reserved(IDTracker::ReservedObjectID::False));
   } else {
     return llvh::None;
   }

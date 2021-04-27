@@ -11,6 +11,7 @@
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/UTF8.h"
+#include "hermes/VM/GC.h"
 #include "hermes/VM/StackTracesTree.h"
 #include "hermes/VM/StringPrimitive.h"
 
@@ -119,6 +120,8 @@ void HeapSnapshot::endNode(
   json_.emitValue(selfSize);
   json_.emitValue(currEdgeCount_);
   json_.emitValue(traceNodeID);
+  // detachedness is always zero for hermes, since there's no DOM to attach to.
+  json_.emitValue(0);
 #ifndef NDEBUG
   expectedEdges_ += currEdgeCount_;
 #endif
@@ -190,6 +193,20 @@ void HeapSnapshot::addLocation(
   assert(column != 0 && "Column should be 1-based");
   json_.emitValue(line - 1);
   json_.emitValue(column - 1);
+}
+
+void HeapSnapshot::addSample(
+    std::chrono::microseconds timestamp,
+    NodeID lastSeenObjectID) {
+  assert(
+      nextSection_ == Section::Samples && sectionOpened_ &&
+      "Shouldn't be emitting samples until the sample section starts");
+  assert(
+      lastSeenObjectID != GCBase::IDTracker::kInvalidNode &&
+      "Last seen object ID must be valid");
+  json_.emitValues(
+      {static_cast<uint64_t>(timestamp.count()),
+       static_cast<uint64_t>(lastSeenObjectID)});
 }
 
 const char *HeapSnapshot::nodeTypeToName(NodeType type) {
@@ -285,7 +302,10 @@ void HeapSnapshot::emitMeta() {
 
   json_.emitKey("sample_fields");
   json_.openArray();
-  json_.emitValues({"timestamp_us", "last_assigned_id"});
+  json_.emitValues({
+#define V8_SAMPLE_FIELD(name) #name,
+#include "hermes/VM/HeapSnapshot.def"
+  });
   json_.closeArray(); // sample_fields
 
   json_.emitKey("location_fields");
@@ -342,24 +362,11 @@ void HeapSnapshot::emitAllocationTraceInfo() {
     return;
   }
 
-  struct FuncHashMapInfo {
-    static StackTracesTreeNode::SourceLoc getEmptyKey() {
-      return {SIZE_MAX, 0, -1, -1};
-    }
-    static inline StackTracesTreeNode::SourceLoc getTombstoneKey() {
-      return {SIZE_MAX - 1, 0, -1, -1};
-    }
-    static unsigned getHashValue(const StackTracesTreeNode::SourceLoc &v) {
-      return v.hash();
-    }
-    static bool isEqual(
-        const StackTracesTreeNode::SourceLoc &l,
-        const StackTracesTreeNode::SourceLoc &r) {
-      return l == r;
-    }
-  };
-  llvh::DenseMap<StackTracesTreeNode::SourceLoc, size_t, FuncHashMapInfo>
-      funcHashToFuncIdxMap;
+  llvh::DenseMap<
+      StackTracesTreeNode::SourceLoc,
+      size_t,
+      StackTracesTreeNode::SourceLocMapInfo>
+      sourceLocToFuncIdxMap;
   size_t nextFunctionIdx = 0;
 
   std::stack<
@@ -372,21 +379,20 @@ void HeapSnapshot::emitAllocationTraceInfo() {
   while (!nodeStack.empty()) {
     auto curNode = nodeStack.top();
     nodeStack.pop();
-    auto funcHashToFuncIdxMapEntry =
-        funcHashToFuncIdxMap.find(curNode->sourceLoc);
-    auto functionId = nextFunctionIdx;
-    if (funcHashToFuncIdxMapEntry == funcHashToFuncIdxMap.end()) {
-      funcHashToFuncIdxMap.try_emplace(curNode->sourceLoc, nextFunctionIdx++);
-    } else {
-      functionId = funcHashToFuncIdxMapEntry->second;
+    auto entry = sourceLocToFuncIdxMap.find(curNode->sourceLoc);
+    if (entry == sourceLocToFuncIdxMap.end()) {
+      const auto functionIdx = nextFunctionIdx++;
+      sourceLocToFuncIdxMap.try_emplace(curNode->sourceLoc, functionIdx);
+      // function_id needs to match the zero-based index of this function in the
+      // list.
+      json_.emitValue(functionIdx); // "function_id"
+      json_.emitValue(curNode->name); // "name"
+      json_.emitValue(curNode->sourceLoc.scriptName); // "script_name"
+      json_.emitValue(curNode->sourceLoc.scriptID); // "script_id"
+      // These should be emitted as 1-based, not 0-based like locations.
+      json_.emitValue(curNode->sourceLoc.lineNo); // "line"
+      json_.emitValue(curNode->sourceLoc.columnNo); // "column"
     }
-    json_.emitValue(functionId); // "function_id"
-    json_.emitValue(curNode->name); // "name"
-    json_.emitValue(curNode->sourceLoc.scriptName); // "script_name"
-    json_.emitValue(curNode->sourceLoc.scriptID); // "script_id"
-    // These should be emitted as 1-based, not 0-based like locations.
-    json_.emitValue(curNode->sourceLoc.lineNo); // "line"
-    json_.emitValue(curNode->sourceLoc.columnNo); // "column"
     for (auto child : curNode->getChildren()) {
       nodeStack.push(child);
     }
@@ -403,10 +409,12 @@ void HeapSnapshot::emitAllocationTraceInfo() {
       continue;
     }
     json_.emitValue(curNode->id);
-    auto sourceLocIdxIt = funcHashToFuncIdxMap.find(curNode->sourceLoc);
+    auto sourceLocIdxIt = sourceLocToFuncIdxMap.find(curNode->sourceLoc);
     assert(
-        sourceLocIdxIt != funcHashToFuncIdxMap.end() &&
+        sourceLocIdxIt != sourceLocToFuncIdxMap.end() &&
         "Could not find trace function info ID for sourceLoc");
+    // This index must correspond to the "function_id" emitted in the
+    // "trace_function_infos" section.
     json_.emitValue(sourceLocIdxIt->second); // "function_info_index"
     json_.emitValue(traceNodeStats_[curNode->id].count); // "count"
     json_.emitValue(traceNodeStats_[curNode->id].size); // "size"
@@ -427,6 +435,80 @@ void HeapSnapshot::emitStrings() {
   }
 
   endSection(Section::Strings);
+}
+
+ChromeSamplingMemoryProfile::ChromeSamplingMemoryProfile(JSONEmitter &json)
+    : json_(json) {
+  json_.openDict();
+}
+
+ChromeSamplingMemoryProfile::~ChromeSamplingMemoryProfile() {
+  json_.closeDict();
+}
+
+void ChromeSamplingMemoryProfile::emitTree(
+    StackTracesTree *stackTracesTree,
+    const llvh::DenseMap<StackTracesTreeNode *, llvh::DenseMap<size_t, size_t>>
+        &sizesToCounts) {
+  json_.emitKey("head");
+  emitNode(
+      stackTracesTree->getRootNode(),
+      *stackTracesTree->getStringTable(),
+      sizesToCounts);
+}
+
+void ChromeSamplingMemoryProfile::emitNode(
+    StackTracesTreeNode *node,
+    StringSetVector &strings,
+    const llvh::DenseMap<StackTracesTreeNode *, llvh::DenseMap<size_t, size_t>>
+        &sizesToCounts) {
+  json_.openDict();
+  json_.emitKey("callFrame");
+  json_.openDict();
+  json_.emitKeyValue("functionName", strings[node->name]);
+  json_.emitKeyValue("scriptId", oscompat::to_string(node->sourceLoc.scriptID));
+  json_.emitKeyValue("url", strings[node->sourceLoc.scriptName]);
+  // For the sampling memory profiler, lines should be 0-based. The source
+  // location is 1-based, so subtract 1 here.
+  json_.emitKeyValue("lineNumber", node->sourceLoc.lineNo - 1);
+  json_.emitKeyValue("columnNumber", node->sourceLoc.columnNo - 1);
+  json_.closeDict();
+
+  size_t selfSize = 0;
+  for (const auto &sizeAndCount : sizesToCounts.lookup(node)) {
+    // Size is the key, count is the value.
+    selfSize += sizeAndCount.first * sizeAndCount.second;
+  }
+  json_.emitKeyValue("selfSize", selfSize);
+  json_.emitKeyValue("id", node->id);
+
+  json_.emitKey("children");
+  json_.openArray();
+  for (StackTracesTreeNode *child : node->getChildren()) {
+    emitNode(child, strings, sizesToCounts);
+  }
+  json_.closeArray();
+  json_.closeDict();
+}
+
+void ChromeSamplingMemoryProfile::beginSamples() {
+  json_.emitKey("samples");
+  json_.openArray();
+}
+
+void ChromeSamplingMemoryProfile::emitSample(
+    size_t size,
+    StackTracesTreeNode *node,
+    uint64_t id) {
+  json_.openDict();
+  json_.emitKeyValue("size", size);
+  json_.emitKeyValue("nodeId", node->id);
+  json_.emitKeyValue("ordinal", id);
+  json_.closeDict();
+}
+
+void ChromeSamplingMemoryProfile::endSamples() {
+  json_.closeArray();
 }
 
 std::string converter(const char *name) {

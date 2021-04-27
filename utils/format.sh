@@ -38,9 +38,10 @@ if [ ! -x "$clang_format" ]; then
   echo "ERROR: Must have clang-format in PATH"
   exit 1
 fi
-if "$clang_format" --version | grep -q -v '8.0.0'
+clang_format_version="$("$clang_format" --version)"
+if echo "$clang_format_version" | grep -q -v '11.0.*'
 then
-   echo "ERROR: clang-format's version must be 8.0.0"
+   printf "ERROR: clang-format's version must match 11.0.*\n  clang-format path: %s\n  clang-format --version: %s" "$clang_format" "$clang_format_version"
    exit 1
 fi
 

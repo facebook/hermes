@@ -14,10 +14,10 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/JSError.h"
-#include "hermes/VM/JSGenerator.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/JSRegExp.h"
 #include "hermes/VM/PrimitiveBox.h"
+#include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringPrimitive.h"
@@ -222,8 +222,7 @@ toPrimitive_RJS(Runtime *runtime, Handle<> valueHandle, PreferredType hint) {
         runtime,
         valueHandle,
         HermesValue::encodeStringValue(runtime->getPredefinedString(
-            hint == PreferredType::NONE
-                ? Predefined::defaultStr
+            hint == PreferredType::NONE         ? Predefined::defaultStr
                 : hint == PreferredType::STRING ? Predefined::string
                                                 : Predefined::number)));
     if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
@@ -1554,11 +1553,16 @@ CallResult<bool> isRegExp(Runtime *runtime, Handle<> arg) {
 CallResult<Handle<StringPrimitive>> symbolDescriptiveString(
     Runtime *runtime,
     Handle<SymbolID> sym) {
+  // 1. Assert: Type(sym) is Symbol.
+  // 2. Let desc be sym's [[Description]] value.
+  // 3. If desc is undefined, set desc to the empty string.
+  // 4. Assert: Type(desc) is String.
   auto desc = runtime->makeHandle<StringPrimitive>(
       runtime->getStringPrimFromSymbolID(*sym));
   SafeUInt32 descLen(desc->getStringLength());
   descLen.add(8);
 
+  // 5. Return the string-concatenation of "Symbol(", desc, and ")".
   auto builder = StringBuilder::createStringBuilder(runtime, descLen);
   if (LLVM_UNLIKELY(builder == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;

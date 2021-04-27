@@ -72,16 +72,11 @@ BCProviderFromSrc::BCProviderFromSrc(
   objKeyBuffer_ = module_->getObjectBuffer().first;
   objValueBuffer_ = module_->getObjectBuffer().second;
 
-  cjsModuleOffset_ = module_->getCJSModuleOffset();
+  segmentID_ = module_->getSegmentID();
   cjsModuleTable_ = module_->getCJSModuleTable();
   cjsModuleTableStatic_ = module_->getCJSModuleTableStatic();
 
   debugInfo_ = &module_->getDebugInfo();
-
-  // Since we are executing from source, the serialization step that normally
-  // takes care of putting the jump table into the bytecode is not run and hence
-  // we do it here instead.
-  module_->inlineJumpTables();
 }
 
 std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
@@ -173,12 +168,9 @@ BCProviderFromSrc::createBCProviderFromSrc(
 
   context->setAllowFunctionToStringWithRuntimeSource(
       compileFlags.allowFunctionToStringWithRuntimeSource);
-#ifdef HERMES_ENABLE_DEBUGGER
+  context->setGeneratorEnabled(compileFlags.enableGenerator);
   context->setDebugInfoSetting(
       compileFlags.debug ? DebugInfoSetting::ALL : DebugInfoSetting::THROWING);
-#else
-  context->setDebugInfoSetting(DebugInfoSetting::THROWING);
-#endif
   context->setEmitAsyncBreakCheck(compileFlags.emitAsyncBreakCheck);
 
   // Populate the declFileList.
@@ -194,7 +186,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
   bool isLargeFile =
       buffer->size() >= context->getPreemptiveFileCompilationThreshold();
   int fileBufId = context->getSourceErrorManager().addNewSourceBuffer(
-      llvh::make_unique<HermesLLVMMemoryBuffer>(std::move(buffer), sourceURL));
+      std::make_unique<HermesLLVMMemoryBuffer>(std::move(buffer), sourceURL));
   if (sourceMap != nullptr) {
     auto sourceMapTranslator =
         std::make_shared<SourceMapTranslator>(context->getSourceErrorManager());
@@ -238,7 +230,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
   if (compileFlags.optimize && runOptimizationPasses)
     runOptimizationPasses(M);
 
-  BytecodeGenerationOptions opts{OutputFormatKind::Execute};
+  BytecodeGenerationOptions opts{compileFlags.format};
   opts.optimizationEnabled = compileFlags.optimize;
   opts.staticBuiltinsEnabled =
       context->getOptimizationSettings().staticBuiltins;

@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
   context->setParseJSX(true);
 #endif
 #if HERMES_PARSE_FLOW
-  context->setParseFlow(true);
+  context->setParseFlow(ParseFlowSetting::ALL);
 #endif
 
   int fileBufId =

@@ -34,20 +34,32 @@ unsigned BytecodeFunctionGenerator::getIdentifierID(
 }
 
 uint32_t BytecodeFunctionGenerator::addRegExp(CompiledRegExp regexp) {
+  assert(
+      !complete_ &&
+      "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
   return BMGen_.addRegExp(std::move(regexp));
 }
 
 uint32_t BytecodeFunctionGenerator::addFilename(StringRef filename) {
+  assert(
+      !complete_ &&
+      "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
   return BMGen_.addFilename(filename);
 }
 
 void BytecodeFunctionGenerator::addExceptionHandler(
     HBCExceptionHandlerInfo info) {
+  assert(
+      !complete_ &&
+      "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
   exceptionHandlers_.push_back(info);
 }
 
 void BytecodeFunctionGenerator::addDebugSourceLocation(
     const DebugSourceLocation &info) {
+  assert(
+      !complete_ &&
+      "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
   // If an address is repeated, it means no actual bytecode was emitted for the
   // previous source location.
   if (!debugLocations_.empty() &&
@@ -60,6 +72,9 @@ void BytecodeFunctionGenerator::addDebugSourceLocation(
 
 void BytecodeFunctionGenerator::setJumpTable(
     std::vector<uint32_t> &&jumpTable) {
+  assert(
+      !complete_ &&
+      "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
   assert(!jumpTable.empty() && "invoked with no jump table");
 
   jumpTable_ = std::move(jumpTable);
@@ -85,6 +100,9 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
     uint32_t paramCount,
     uint32_t environmentSize,
     uint32_t nameID) {
+  if (!complete_) {
+    bytecodeGenerationComplete();
+  }
   return std::unique_ptr<BytecodeFunction>(new BytecodeFunction(
       std::move(opcodes_),
       definitionKind,
@@ -98,8 +116,7 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
           nameID,
           highestReadCacheIndex_,
           highestWriteCacheIndex_),
-      std::move(exceptionHandlers_),
-      std::move(jumpTable_)));
+      std::move(exceptionHandlers_)));
 }
 
 unsigned BytecodeFunctionGenerator::getFunctionID(Function *F) {
@@ -146,8 +163,28 @@ void BytecodeFunctionGenerator::updateJumpTableOffset(
       sizeof(uint32_t));
 }
 
+void BytecodeFunctionGenerator::bytecodeGenerationComplete() {
+  assert(!complete_ && "Can only call bytecodeGenerationComplete once");
+  complete_ = true;
+  bytecodeSize_ = opcodes_.size();
+
+  // Add the jump tables inline with the opcodes, as a 4-byte aligned section at
+  // the end of the opcode array.
+  if (!jumpTable_.empty()) {
+    uint32_t alignedOpcodes = llvh::alignTo<sizeof(uint32_t)>(bytecodeSize_);
+    uint32_t jumpTableBytes = jumpTable_.size() * sizeof(uint32_t);
+    opcodes_.reserve(alignedOpcodes + jumpTableBytes);
+    opcodes_.resize(alignedOpcodes, 0);
+    const opcode_atom_t *jumpTableStart =
+        reinterpret_cast<opcode_atom_t *>(jumpTable_.data());
+    opcodes_.insert(
+        opcodes_.end(), jumpTableStart, jumpTableStart + jumpTableBytes);
+  }
+}
+
 unsigned BytecodeModuleGenerator::addFunction(Function *F) {
   lazyFunctions_ |= F->isLazy();
+  asyncFunctions_ |= llvh::isa<AsyncFunction>(F);
   return functionIDMap_.allocate(F);
 }
 
@@ -195,11 +232,7 @@ void BytecodeModuleGenerator::addCJSModuleStatic(
     uint32_t moduleID,
     uint32_t functionID) {
   assert(cjsModules_.empty() && "Unresolved modules must be in cjsModules_");
-  assert(
-      moduleID - cjsModuleOffset_ == cjsModulesStatic_.size() &&
-      "Module ID out of order in cjsModulesStatic_");
-  (void)moduleID;
-  cjsModulesStatic_.push_back(functionID);
+  cjsModulesStatic_.push_back({moduleID, functionID});
 }
 
 std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
@@ -216,6 +249,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
   auto hashes = stringTable_.getIdentifierHashes();
 
   BytecodeOptions bytecodeOptions;
+  bytecodeOptions.hasAsync = asyncFunctions_;
   bytecodeOptions.staticBuiltins = options_.staticBuiltinsEnabled;
   bytecodeOptions.cjsModulesStaticallyResolved = !cjsModulesStatic_.empty();
   std::unique_ptr<BytecodeModule> BM{new BytecodeModule(
@@ -230,7 +264,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
       std::move(arrayBuffer_),
       std::move(objKeyBuffer_),
       std::move(objValBuffer_),
-      cjsModuleOffset_,
+      segmentID_,
       std::move(cjsModules_),
       std::move(cjsModulesStatic_),
       bytecodeOptions)};
@@ -275,11 +309,11 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
 #ifdef HERMESVM_LEAN
       llvm_unreachable("Lazy support compiled out");
 #else
-      auto lazyData = llvh::make_unique<LazyCompilationData>();
+      auto lazyData = std::make_unique<LazyCompilationData>();
       lazyData->parentScope = F->getLazyScope();
       lazyData->nodeKind = F->getLazySource().nodeKind;
-      lazyData->isGeneratorInnerFunction =
-          F->getLazySource().isGeneratorInnerFunction;
+      lazyData->paramYield = F->getLazySource().paramYield;
+      lazyData->paramAwait = F->getLazySource().paramAwait;
       lazyData->bufferId = F->getLazySource().bufferId;
       lazyData->originalName = F->getOriginalOrInferredName();
       lazyData->closureAlias = F->getLazyClosureAlias()

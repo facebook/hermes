@@ -88,6 +88,14 @@ class SemContext {
 /// root, which should be ProgramNode.
 bool validateAST(Context &astContext, SemContext &semCtx, ESTree::NodePtr root);
 
+/// Perform semantic validation of the entire AST, without preparing the AST for
+/// compilation. This will not error on features we can parse but not compile,
+/// transform the AST, or perform compilation specific validation.
+bool validateASTForParser(
+    Context &astContext,
+    SemContext &semCtx,
+    ESTree::NodePtr root);
+
 /// Perform semantic validation of an individual function in the given context
 /// \param function must be a function node
 /// \param strict specifies parent strictness.

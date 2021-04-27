@@ -24,6 +24,14 @@
 
 namespace hermes {
 
+ConsoleHostContext::ConsoleHostContext(vm::Runtime *runtime) {
+  runtime->addCustomRootsFunction([this](vm::GC *, vm::RootAcceptor &acceptor) {
+    for (auto &entry : queuedJobs_) {
+      acceptor.acceptPtr(entry.second);
+    }
+  });
+}
+
 /// Raises an uncatchable quit exception.
 static vm::CallResult<vm::HermesValue>
 quit(void *, vm::Runtime *runtime, vm::NativeArgs) {
@@ -57,8 +65,11 @@ createHeapSnapshot(void *, vm::Runtime *runtime, vm::NativeArgs args) {
   if (fileName.empty()) {
     // "-" is recognized as stdout.
     fileName = "-";
-  } else if (!llvh::StringRef{fileName}.endswith(".heapsnapshot")) {
-    return runtime->raiseTypeError("Filename must end in .heapsnapshot");
+  } else if (
+      !llvh::StringRef{fileName}.endswith(".heapsnapshot") &&
+      !llvh::StringRef{fileName}.endswith(".heaptimeline")) {
+    return runtime->raiseTypeError(
+        "Filename must end in .heapsnapshot or .heaptimeline");
   }
   if (auto err = runtime->getHeap().createSnapshotToFile(fileName)) {
     // This isn't a TypeError, but no other built-in can express file errors,
@@ -96,7 +107,7 @@ loadSegment(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
   }
 
   auto ret = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-      llvh::make_unique<OwnedMemoryBuffer>(std::move(*fileBufRes)));
+      std::make_unique<OwnedMemoryBuffer>(std::move(*fileBufRes)));
   if (!ret.first) {
     return runtime->raiseTypeError("Error deserializing bytecode");
   }
@@ -107,6 +118,34 @@ loadSegment(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
+  return HermesValue::encodeUndefinedValue();
+}
+
+static vm::CallResult<vm::HermesValue>
+setTimeout(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
+  ConsoleHostContext *consoleHost = (ConsoleHostContext *)ctx;
+  using namespace hermes::vm;
+  Handle<Callable> callable = args.dyncastArg<Callable>(0);
+  if (!callable) {
+    return runtime->raiseTypeError("Argument to setTimeout must be a function");
+  }
+  CallResult<HermesValue> boundFunction = BoundFunction::create(
+      runtime, callable, args.getArgCount() - 1, args.begin() + 1);
+  if (boundFunction == ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+  uint32_t jobId = consoleHost->queueJob(
+      PseudoHandle<Callable>::vmcast(createPseudoHandle(*boundFunction)));
+  return HermesValue::encodeNumberValue(jobId);
+}
+
+static vm::CallResult<vm::HermesValue>
+clearTimeout(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
+  ConsoleHostContext *consoleHost = (ConsoleHostContext *)ctx;
+  using namespace hermes::vm;
+  if (!args.getArg(0).isNumber()) {
+    return runtime->raiseTypeError("Argument to clearTimeout must be a number");
+  }
+  consoleHost->clearJob(args.getArg(0).getNumberAs<uint32_t>());
   return HermesValue::encodeUndefinedValue();
 }
 
@@ -130,7 +169,7 @@ serializeVM(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
     const auto *fileName = reinterpret_cast<std::string *>(ctx);
     std::error_code EC;
     serializeStream =
-        llvh::make_unique<llvh::raw_fd_ostream>(llvh::StringRef(*fileName), EC);
+        std::make_unique<llvh::raw_fd_ostream>(llvh::StringRef(*fileName), EC);
     if (EC) {
       return runtime->raiseTypeError(
           TwineChar16("Could not write to file located at ") +
@@ -155,7 +194,7 @@ serializeVM(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
     }
     std::error_code EC;
     serializeStream =
-        llvh::make_unique<llvh::raw_fd_ostream>(llvh::StringRef(fileName), EC);
+        std::make_unique<llvh::raw_fd_ostream>(llvh::StringRef(fileName), EC);
     if (EC) {
       return runtime->raiseTypeError(
           TwineChar16("Could not write to file located at ") +
@@ -178,12 +217,15 @@ static std::vector<void *> getNativeFunctionPtrs() {
   res.push_back((void *)createHeapSnapshot);
   res.push_back((void *)serializeVM);
   res.push_back((void *)loadSegment);
+  res.push_back((void *)setTimeout);
+  res.push_back((void *)clearTimeout);
   return res;
 }
 #endif
 
 void installConsoleBindings(
     vm::Runtime *runtime,
+    ConsoleHostContext &ctx,
     vm::StatSamplingThread *statSampler,
 #ifdef HERMESVM_SERIALIZE
     const std::string *serializePath,
@@ -248,6 +290,41 @@ void installConsoleBindings(
       loadSegment,
       reinterpret_cast<void *>(const_cast<std::string *>(filename)),
       2);
+
+  defineGlobalFunc(
+      runtime
+          ->ignoreAllocationFailure(
+              runtime->getIdentifierTable().getSymbolHandle(
+                  runtime, llvh::createASCIIRef("setTimeout")))
+          .get(),
+      setTimeout,
+      &ctx,
+      2);
+  defineGlobalFunc(
+      runtime
+          ->ignoreAllocationFailure(
+              runtime->getIdentifierTable().getSymbolHandle(
+                  runtime, llvh::createASCIIRef("clearTimeout")))
+          .get(),
+      clearTimeout,
+      &ctx,
+      1);
+
+  // Define `setImmediate` to be the same as `setTimeout` here.
+  // `setTimeout` doesn't use the time provided to it, and due to this
+  // being CLI code, we don't have an event loop.
+  // This allows the Promise polyfill to work enough for testing in the
+  // terminal, though other hosts should provide their own implementation of the
+  // event loop.
+  defineGlobalFunc(
+      runtime
+          ->ignoreAllocationFailure(
+              runtime->getIdentifierTable().getSymbolHandle(
+                  runtime, llvh::createASCIIRef("setImmediate")))
+          .get(),
+      setTimeout,
+      &ctx,
+      1);
 }
 
 // If a function body might throw C++ exceptions other than
@@ -344,13 +421,20 @@ bool executeHBCBytecodeImpl(
   }
 
   if (shouldRecordGCStats) {
-    statSampler = llvh::make_unique<vm::StatSamplingThread>(
+    statSampler = std::make_unique<vm::StatSamplingThread>(
         std::chrono::milliseconds(100));
   }
 
+  if (options.heapTimeline) {
+    runtime->enableAllocationLocationTracker();
+  }
+
   vm::GCScope scope(runtime.get());
+  ConsoleHostContext ctx{runtime.get()};
+
   installConsoleBindings(
       runtime.get(),
+      ctx,
       statSampler.get(),
 #ifdef HERMESVM_SERIALIZE
       options.SerializeVMPath.empty() ? nullptr : &options.SerializeVMPath,
@@ -377,21 +461,22 @@ bool executeHBCBytecodeImpl(
     return true;
   }
 
-  if (options.runtimeConfig.getEnableSampleProfiling()) {
-    vm::SamplingProfiler::getInstance()->enable();
+  if (options.sampleProfiling) {
+    vm::SamplingProfiler::enable();
   }
 
   llvh::StringRef sourceURL{};
+  if (filename)
+    sourceURL = *filename;
   vm::CallResult<vm::HermesValue> status = runtime->runBytecode(
       std::move(bytecode),
       flags,
       sourceURL,
       vm::Runtime::makeNullHandle<vm::Environment>());
 
-  if (options.runtimeConfig.getEnableSampleProfiling()) {
-    auto profiler = vm::SamplingProfiler::getInstance();
-    profiler->dumpChromeTrace(llvh::errs());
-    profiler->disable();
+  if (options.sampleProfiling) {
+    vm::SamplingProfiler::disable();
+    vm::SamplingProfiler::dumpChromeTraceGlobal(llvh::errs());
   }
 
   bool threwException = status == vm::ExecutionStatus::EXCEPTION;
@@ -401,6 +486,24 @@ bool executeHBCBytecodeImpl(
     llvh::outs().flush();
     runtime->printException(
         llvh::errs(), runtime->makeHandle(runtime->getThrownValue()));
+  }
+
+  if (!threwException && !ctx.jobsEmpty()) {
+    vm::GCScopeMarkerRAII marker{scope};
+    // Run the jobs until there are no more.
+    vm::MutableHandle<vm::Callable> job{runtime.get()};
+    while (auto optJob = ctx.dequeueJob()) {
+      job = std::move(*optJob);
+      auto callRes = vm::Callable::executeCall0(
+          job, runtime.get(), vm::Runtime::getUndefinedValue(), false);
+      if (LLVM_UNLIKELY(callRes == vm::ExecutionStatus::EXCEPTION)) {
+        threwException = true;
+        llvh::outs().flush();
+        runtime->printException(
+            llvh::errs(), runtime->makeHandle(runtime->getThrownValue()));
+        break;
+      }
+    }
   }
 
   if (options.timeLimit > 0) {

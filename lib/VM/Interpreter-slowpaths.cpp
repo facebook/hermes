@@ -9,6 +9,8 @@
 #include "JSLib/JSLibInternal.h"
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/Interpreter.h"
+#include "hermes/VM/PropertyAccessor.h"
+#include "hermes/VM/Runtime-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 
@@ -154,10 +156,11 @@ ExecutionStatus Interpreter::caseIteratorBegin(
         runtime,
         Predefined::getSymbolID(Predefined::SymbolIterator),
         desc);
-    if (propObj) {
+    if (LLVM_LIKELY(propObj) && LLVM_LIKELY(!propObj->isProxyObject())) {
       HermesValue slotValue =
           JSObject::getNamedSlotValue(propObj, runtime, desc);
-      if (slotValue.getRaw() == runtime->arrayPrototypeValues.getRaw()) {
+      if (LLVM_LIKELY(
+              slotValue.getRaw() == runtime->arrayPrototypeValues.getRaw())) {
         O1REG(IteratorBegin) = HermesValue::encodeNumberValue(0);
         return ExecutionStatus::RETURNED;
       }
@@ -230,8 +233,9 @@ ExecutionStatus Interpreter::caseIteratorNext(
 
   GCScopeMarkerRAII marker{runtime};
 
-  IteratorRecord iterRecord{Handle<JSObject>::vmcast(&O2REG(IteratorNext)),
-                            Handle<Callable>::vmcast(&O3REG(IteratorNext))};
+  IteratorRecord iterRecord{
+      Handle<JSObject>::vmcast(&O2REG(IteratorNext)),
+      Handle<Callable>::vmcast(&O3REG(IteratorNext))};
 
   CallResult<PseudoHandle<JSObject>> resultObjRes =
       iteratorNext(runtime, iterRecord, llvh::None);
@@ -260,6 +264,67 @@ ExecutionStatus Interpreter::caseIteratorNext(
     O1REG(IteratorNext) = propRes->get();
     propRes->invalidate();
   }
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus Interpreter::caseGetPNameList(
+    Runtime *runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip) {
+  if (O2REG(GetPNameList).isUndefined() || O2REG(GetPNameList).isNull()) {
+    // Set the iterator to be undefined value.
+    O1REG(GetPNameList) = HermesValue::encodeUndefinedValue();
+    return ExecutionStatus::RETURNED;
+  }
+
+  // Convert to object and store it back to the register.
+  auto res = toObject(runtime, Handle<>(&O2REG(GetPNameList)));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  O2REG(GetPNameList) = res.getValue();
+
+  auto obj = runtime->makeMutableHandle(vmcast<JSObject>(res.getValue()));
+  uint32_t beginIndex;
+  uint32_t endIndex;
+  auto cr = getForInPropertyNames(runtime, obj, beginIndex, endIndex);
+  if (cr == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto arr = *cr;
+  O1REG(GetPNameList) = arr.getHermesValue();
+  O3REG(GetPNameList) = HermesValue::encodeNumberValue(beginIndex);
+  O4REG(GetPNameList) = HermesValue::encodeNumberValue(endIndex);
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus Interpreter::implCallBuiltin(
+    Runtime *runtime,
+    PinnedHermesValue *frameRegs,
+    CodeBlock *curCodeBlock,
+    uint32_t op3) {
+  const Inst *ip = runtime->getCurrentIP();
+  uint8_t methodIndex = ip->iCallBuiltin.op2;
+  Callable *callable = runtime->getBuiltinCallable(methodIndex);
+  assert(
+      isNativeBuiltin(methodIndex) &&
+      "CallBuiltin must take a native builtin.");
+  NativeFunction *nf = vmcast<NativeFunction>(callable);
+
+  auto newFrame = StackFramePtr::initFrame(
+      runtime->stackPointer_, FRAME, ip, curCodeBlock, op3 - 1, nf, false);
+  // "thisArg" is implicitly assumed to "undefined".
+  newFrame.getThisArgRef() = HermesValue::encodeUndefinedValue();
+
+  SLOW_DEBUG(dumpCallArguments(llvh::dbgs(), runtime, newFrame));
+
+  auto resPH = NativeFunction::_nativeCall(nf, runtime);
+  if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  O1REG(CallBuiltin) = std::move(resPH->get());
+  SLOW_DEBUG(
+      llvh::dbgs() << "native return value r" << (unsigned)ip->iCallBuiltin.op1
+                   << "=" << DumpHermesValue(O1REG(CallBuiltin)) << "\n");
   return ExecutionStatus::RETURNED;
 }
 

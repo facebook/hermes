@@ -9,12 +9,11 @@
 // it is included only by GC.h.  (For example, it assumes GCBase is declared.)
 #include "hermes/VM/GC.h"
 
+#include "GCBase-WeakMap.h"
 #include "hermes/Platform/Logging.h"
-#include "hermes/Support/DebugHelpers.h"
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
-#include "hermes/VM/AllocSource.h"
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 #include "hermes/VM/CompactionResult-inline.h"
@@ -22,12 +21,9 @@
 #include "hermes/VM/Deserializer.h"
 #include "hermes/VM/ExpectedPageSize.h"
 #include "hermes/VM/GCBase-inline.h"
-#include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HeapSnapshot.h"
-#include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/Serializer.h"
-#include "hermes/VM/SlotAcceptorDefault-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/SweepResultNC.h"
 #include "hermes/VM/SymbolID.h"
@@ -45,7 +41,6 @@
 #include <cinttypes>
 #include <clocale>
 #include <cstdint>
-#include <tuple>
 #include <utility>
 
 #define DEBUG_TYPE "gc"
@@ -55,6 +50,8 @@ using std::chrono::steady_clock;
 
 namespace hermes {
 namespace vm {
+
+static const char *kGCName = "gengc";
 
 GenGC::Size::Size(const GCConfig &gcConfig)
     : Size(gcConfig.getMinHeapSize(), gcConfig.getMaxHeapSize()) {}
@@ -72,6 +69,18 @@ gcheapsize_t GenGC::Size::minStorageFootprint() const {
   return ogs_.minStorageFootprint() + ygs_.minStorageFootprint();
 }
 
+llvh::ErrorOr<size_t> GenGC::getVMFootprintForTest() const {
+  size_t footprint = 0;
+  for (const auto &seg : segmentIndex_) {
+    auto segFootprint =
+        hermes::oscompat::vm_footprint(seg->start(), seg->hiLim());
+    if (!segFootprint)
+      return segFootprint;
+    footprint += *segFootprint;
+  }
+  return footprint;
+}
+
 std::pair<gcheapsize_t, gcheapsize_t> GenGC::Size::adjustSize(
     gcheapsize_t desired) const {
   const gcheapsize_t ygSize = ygs_.adjustSize(desired / kYoungGenFractionDenom);
@@ -85,13 +94,15 @@ GenGC::GenGC(
     PointerBase *pointerBase,
     const GCConfig &gcConfig,
     std::shared_ptr<CrashManager> crashMgr,
-    std::shared_ptr<StorageProvider> provider)
+    std::shared_ptr<StorageProvider> provider,
+    experiments::VMExperimentFlags vmExperimentFlags)
     : GCBase(
           metaTable,
           gcCallbacks,
           pointerBase,
           gcConfig,
-          std::move(crashMgr)),
+          std::move(crashMgr),
+          HeapKind::NCGEN),
       storageProvider_(std::move(provider)),
       generationSizes_(Size(gcConfig)),
       // ExpectedPageSize.h defines a static value for the expected page size,
@@ -114,6 +125,8 @@ GenGC::GenGC(
       occupancyTarget_(gcConfig.getOccupancyTarget()),
       oomThreshold_(gcConfig.getEffectiveOOMThreshold()),
       weightedUsed_(static_cast<double>(gcConfig.getInitHeapSize())) {
+  (void)vmExperimentFlags;
+  crashMgr_->setCustomData("HermesGC", kGCName);
   growTo(gcConfig.getInitHeapSize());
   claimAllocContext();
   updateCrashManagerHeapExtents();
@@ -321,6 +334,8 @@ void GenGC::collect(std::string cause, bool canEffectiveOOM) {
 
   const size_t usedBefore = used();
   const size_t sizeBefore = size();
+  const size_t externalBefore =
+      youngGen_.externalMemory() + oldGen_.externalMemory();
   cumPreBytes_ += used();
   const size_t ygUsedBefore = youngGen_.used();
   const size_t ogUsedBefore = oldGen_.used();
@@ -375,9 +390,6 @@ void GenGC::collect(std::string cause, bool canEffectiveOOM) {
         /* youngGenIsEmpty */ youngGen_.usedDirect() == 0);
 
     gcCallbacks_->freeSymbols(markedSymbols_);
-    if (idTracker_.isTrackingIDs()) {
-      idTracker_.untrackUnmarkedSymbols(markedSymbols_);
-    }
 
     // Update the exponential weighted average of live size, which we'll
     // consult if we need to shrink the heap.
@@ -405,8 +417,12 @@ void GenGC::collect(std::string cause, bool canEffectiveOOM) {
         sizeAfter,
         usedBefore,
         sizeBefore,
+        // Can't use ygExtMem or ogExtMem because those are taken after
+        // finalizers run.
+        externalBefore,
         usedAfter,
         sizeAfter,
+        youngGen_.externalMemory() + oldGen_.externalMemory(),
         &fullCollectionCumStats_);
 
     fullCollection.addArg("fullGCUsedAfter", usedAfter);
@@ -482,13 +498,13 @@ void GenGC::checkInvariants(
 
 #ifndef NDEBUG
 bool GenGC::dbgContains(const void *ptr) const {
-  AlignedHeapSegment *segment = segmentIndex_.segmentCovering(ptr);
+  GenGCHeapSegment *segment = segmentIndex_.segmentCovering(ptr);
   assert(!segment || segment->contains(ptr));
   return segment;
 }
 
 bool GenGC::validPointer(const void *ptr) const {
-  AlignedHeapSegment *segment = segmentIndex_.segmentCovering(ptr);
+  GenGCHeapSegment *segment = segmentIndex_.segmentCovering(ptr);
   return segment && segment->validPointer(ptr);
 }
 
@@ -524,17 +540,20 @@ size_t GenGC::usedDirect() const {
 /// This is used to detect whether the Runtime::markRoots ever invokes
 /// the acceptor on the same root location more than once, which is illegal.
 struct FullMSCDuplicateRootsDetectorAcceptor final
-    : public SlotAcceptorDefault {
+    : public RootAndSlotAcceptorDefault {
+  GenGC &gc;
   llvh::DenseSet<void *> markedLocs_;
 
-  using SlotAcceptorDefault::accept;
-  using SlotAcceptorDefault::SlotAcceptorDefault;
+  FullMSCDuplicateRootsDetectorAcceptor(GenGC &gc)
+      : RootAndSlotAcceptorDefault(gc.getPointerBase()), gc(gc) {}
 
-  void accept(void *&ptr) override {
+  using RootAndSlotAcceptorDefault::accept;
+
+  void accept(GCCell *&ptr) override {
     assert(markedLocs_.count(&ptr) == 0);
     markedLocs_.insert(&ptr);
   }
-  void accept(HermesValue &hv) override {
+  void acceptHV(HermesValue &hv) override {
     assert(markedLocs_.count(&hv) == 0);
     markedLocs_.insert(&hv);
   }
@@ -542,22 +561,25 @@ struct FullMSCDuplicateRootsDetectorAcceptor final
 #endif
 
 void GenGC::markPhase() {
-  struct FullMSCMarkInitialAcceptor final : public SlotAcceptorDefault {
-    using SlotAcceptorDefault::accept;
-    using SlotAcceptorDefault::SlotAcceptorDefault;
-    void accept(void *&ptr) override {
+  struct FullMSCMarkInitialAcceptor final : public RootAndSlotAcceptorDefault {
+    GenGC &gc;
+    FullMSCMarkInitialAcceptor(GenGC &gc)
+        : RootAndSlotAcceptorDefault(gc.getPointerBase()), gc(gc) {}
+
+    using RootAndSlotAcceptorDefault::accept;
+
+    void accept(GCCell *&ptr) override {
       if (ptr) {
         assert(gc.dbgContains(ptr));
-        GCCell *cell = reinterpret_cast<GCCell *>(ptr);
 #ifdef HERMES_EXTRA_DEBUG
-        if (!cell->isValid()) {
+        if (!ptr->isValid()) {
           hermes_fatal("HermesGC: marking pointer to invalid object.");
         }
 #endif
-        AlignedHeapSegment::setCellMarkBit(cell);
+        GenGCHeapSegment::setCellMarkBit(ptr);
       }
     }
-    void accept(HermesValue &hv) override {
+    void acceptHV(HermesValue &hv) override {
       if (hv.isPointer()) {
         void *ptr = hv.getPointer();
         if (ptr) {
@@ -568,13 +590,13 @@ void GenGC::markPhase() {
             hermes_fatal("HermesGC: marking pointer to invalid object.");
           }
 #endif
-          AlignedHeapSegment::setCellMarkBit(cell);
+          GenGCHeapSegment::setCellMarkBit(cell);
         }
       } else if (hv.isSymbol()) {
         gc.markSymbol(hv.getSymbol());
       }
     }
-    void accept(SymbolID sym) override {
+    void acceptSym(SymbolID sym) override {
       gc.markSymbol(sym);
     }
   };
@@ -665,11 +687,11 @@ void GenGC::completeWeakMapMarking() {
       this,
       acceptor,
       markState_.reachableWeakMaps_,
-      /*objIsMarked*/ AlignedHeapSegment::getCellMarkBit,
+      /*objIsMarked*/ GenGCHeapSegment::getCellMarkBit,
       /*checkValIsMarked*/
       [this, &acceptor](GCCell *valCell, GCHermesValue &valRef) {
-        if (!AlignedHeapSegment::getCellMarkBit(valCell)) {
-          AlignedHeapSegment::setCellMarkBit(valCell);
+        if (!GenGCHeapSegment::getCellMarkBit(valCell)) {
+          GenGCHeapSegment::setCellMarkBit(valCell);
           markState_.pushCell(valCell);
           markState_.drainMarkStack(this, acceptor);
           return true;
@@ -708,7 +730,7 @@ void GenGC::updateReferences(const SweepResult &sweepResult) {
   PerfSection fullGCUpdateReferencesSystraceRegion("fullGCUpdateReferences");
   std::unique_ptr<FullMSCUpdateAcceptor> acceptor =
       getFullMSCUpdateAcceptor(*this);
-  DroppingAcceptor<SlotAcceptor> nameAcceptor{*acceptor};
+  DroppingAcceptor<RootAndSlotAcceptor> nameAcceptor{*acceptor};
   markRoots(nameAcceptor, /*markLongLived*/ true);
   markWeakRoots(*acceptor);
 
@@ -746,7 +768,7 @@ void GenGC::compact(const SweepResult &sweepResult) {
   // preserve this order here, so that we re-associate the correct VTable
   // pointers, and match up the chunks we used with the segments they were
   // created from.
-  auto doCompaction = [&vTables](AlignedHeapSegment &segment) {
+  auto doCompaction = [&vTables](GenGCHeapSegment &segment) {
     segment.compact(vTables);
   };
 
@@ -807,7 +829,7 @@ void GenGC::checkWellFormedHeap() const {
 }
 #endif
 
-void GenGC::segmentMoved(AlignedHeapSegment *segment) {
+void GenGC::segmentMoved(GenGCHeapSegment *segment) {
   segmentIndex_.update(segment);
 }
 
@@ -858,18 +880,6 @@ void GenGC::shrinkTo(size_t hint) {
   oldGen_.shrinkTo(ogSize);
 }
 
-#ifndef NDEBUG
-size_t GenGC::countUsedWeakRefs() const {
-  size_t count = 0;
-  for (auto &slot : weakSlots_) {
-    if (slot.state() != WeakSlotState::Free) {
-      ++count;
-    }
-  }
-  return count;
-}
-#endif
-
 void GenGC::unmarkWeakReferences() {
   for (auto &slot : weakSlots_) {
     if (slot.state() == WeakSlotState::Marked) {
@@ -905,7 +915,7 @@ void GenGC::updateWeakReference(WeakRefSlot *slotPtr, bool fullGC) {
   GCCell *cell = (GCCell *)slotPtr->getPointer();
 
   if (fullGC) {
-    if (AlignedHeapSegment::getCellMarkBit(cell)) {
+    if (GenGCHeapSegment::getCellMarkBit(cell)) {
       slotPtr->setPointer(cell->getForwardingPointer());
     } else {
       slotPtr->clearPointer();
@@ -1097,13 +1107,13 @@ void GenGC::trackReachable(CellKind kind, unsigned sz) {
 #endif
 
 #ifndef NDEBUG
-bool GenGC::needsWriteBarrier(void *loc, void *value) {
+bool GenGC::needsWriteBarrier(void *loc, GCCell *value) {
   return !youngGen_.contains(loc) && youngGen_.contains(value);
 }
 #endif
 
 LLVM_ATTRIBUTE_NOINLINE
-void GenGC::writeBarrier(void *loc, HermesValue value) {
+void GenGC::writeBarrier(const GCHermesValue *loc, HermesValue value) {
   countWriteBarrier(/*hv*/ true, kNumWriteBarrierTotalCountIdx);
   if (!value.isPointer()) {
     return;
@@ -1113,24 +1123,12 @@ void GenGC::writeBarrier(void *loc, HermesValue value) {
 }
 
 LLVM_ATTRIBUTE_NOINLINE
-void GenGC::writeBarrier(void *loc, void *value) {
+void GenGC::writeBarrier(const GCPointerBase *loc, const GCCell *value) {
   countWriteBarrier(/*hv*/ false, kNumWriteBarrierTotalCountIdx);
   writeBarrierImpl(loc, value, /*hv*/ false);
 }
 
-LLVM_ATTRIBUTE_NOINLINE
-void GenGC::constructorWriteBarrier(void *loc, HermesValue value) {
-  // There's no difference for GenGC between the constructor and an assignment.
-  writeBarrier(loc, value);
-}
-
-LLVM_ATTRIBUTE_NOINLINE
-void GenGC::constructorWriteBarrier(void *loc, void *value) {
-  // There's no difference for GenGC between the constructor and an assignment.
-  writeBarrier(loc, value);
-}
-
-void GenGC::writeBarrierRange(GCHermesValue *start, uint32_t numHVs) {
+void GenGC::writeBarrierRange(const GCHermesValue *start, uint32_t numHVs) {
   countRangeWriteBarrier();
 
   // For now, in this case, we'll just dirty the cards in the range.  We could
@@ -1140,14 +1138,14 @@ void GenGC::writeBarrierRange(GCHermesValue *start, uint32_t numHVs) {
   // that the range to dirty is not in the young generation, but expect that in
   // most cases the cost of the check will be similar to the cost of dirtying
   // those addresses.
-  char *firstPtr = reinterpret_cast<char *>(start);
-  char *lastPtr = reinterpret_cast<char *>(start + numHVs) - 1;
+  const char *firstPtr = reinterpret_cast<const char *>(start);
+  const char *lastPtr = reinterpret_cast<const char *>(start + numHVs) - 1;
 
   assert(
       AlignedStorage::start(firstPtr) == AlignedStorage::start(lastPtr) &&
       "Range should be contained in the same segment");
 
-  AlignedHeapSegment::cardTableCovering(firstPtr)->dirtyCardsForAddressRange(
+  GenGCHeapSegment::cardTableCovering(firstPtr)->dirtyCardsForAddressRange(
       firstPtr, lastPtr);
 }
 
@@ -1175,6 +1173,7 @@ void GenGC::getCrashManagerHeapInfo(CrashManager::HeapInformation &info) {
 
 void GenGC::getHeapInfoWithMallocSize(HeapInfo &info) {
   getHeapInfo(info);
+  GCBase::getHeapInfoWithMallocSize(info);
   // In case the info is being re-used, ensure the count starts at 0.
   info.mallocSizeEstimate = 0;
 
@@ -1190,12 +1189,7 @@ void GenGC::getHeapInfoWithMallocSize(HeapInfo &info) {
     info.mallocSizeEstimate += youngGen_.mallocSizeFromFinalizerList();
   }
 
-  // Assume that the vector implementation doesn't use a separate bool for each
-  // bool, but groups them together as bits.
-  info.mallocSizeEstimate += markedSymbols_.capacity() / CHAR_BIT;
-  // A deque doesn't have a capacity, so the size is the lower bound.
-  info.mallocSizeEstimate +=
-      weakSlots_.size() * sizeof(decltype(weakSlots_)::value_type);
+  info.mallocSizeEstimate += markedSymbols_.getMemorySize();
 }
 
 #ifndef NDEBUG
@@ -1241,6 +1235,10 @@ void GenGC::dump(llvh::raw_ostream &os, bool verbose) {
      << "Range: " << numRangeBarriers_ << "\n"
      << "RangeFill: " << numRangeFillBarriers_ << "\n";
 #endif
+}
+
+std::string GenGC::getKindAsStr() const {
+  return kGCName;
 }
 
 gcheapsize_t GenGC::bytesAllocatedSinceLastGC() const {
@@ -1391,6 +1389,7 @@ void GenGC::deserializeHeap(Deserializer &d) {
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "gc"
 void GenGC::deserializeStart() {
+  GCBase::deserializeStart();
   // First, yield the allocation context, so the heap is well-formed.
   yieldAllocContext();
 
@@ -1407,6 +1406,7 @@ void GenGC::deserializeEnd() {
   // Now switch to doing YG alloc, and claim the alloc context from the YG.
   allocContextFromYG_ = true;
   claimAllocContext();
+  GCBase::deserializeEnd();
 }
 #endif
 
@@ -1414,7 +1414,7 @@ void GenGC::printStats(JSONEmitter &json) {
   GCBase::printStats(json);
   json.emitKey("specific");
   json.openDict();
-  json.emitKeyValue("collector", "noncontig-generational");
+  json.emitKeyValue("collector", kGCName);
 
   json.emitKey("stats");
   json.openDict();
@@ -1537,8 +1537,10 @@ void GenGC::CollectionSection::recordGCStats(
     size_t regionSize,
     size_t usedBefore,
     size_t sizeBefore,
+    size_t externalBefore,
     size_t usedAfter,
     size_t sizeAfter,
+    size_t externalAfter,
     CumulativeHeapStats *regionStats) {
   const TimePoint wallEnd = steady_clock::now();
   wallElapsedSecs_ = GCBase::clockDiffSeconds(wallStart_, wallEnd);
@@ -1551,21 +1553,21 @@ void GenGC::CollectionSection::recordGCStats(
   // Record as an overall collection.
   GCAnalyticsEvent event{
       gc_->getName(),
-      "gengc",
+      kGCName,
       cycle_.extraInfo(),
       std::move(cause_),
       std::chrono::duration_cast<std::chrono::milliseconds>(
           wallEnd - wallStart_),
       std::chrono::duration_cast<std::chrono::milliseconds>(cpuEnd - cpuStart_),
-      /*preAllocated*/ usedBefore,
-      /*preSize*/ sizeBefore,
-      /*postAllocated*/ usedAfter,
-      /*postSize*/ sizeAfter,
-      /*survivalRatio*/ usedBefore ? (usedAfter * 1.0) / usedBefore : 0};
+      /*allocated*/ BeforeAndAfter{usedBefore, usedAfter},
+      /*size*/ BeforeAndAfter{sizeBefore, sizeAfter},
+      /*external*/ BeforeAndAfter{externalBefore, externalAfter},
+      /*survivalRatio*/ usedBefore ? (usedAfter * 1.0) / usedBefore : 0,
+      /*tags*/ {}};
 
-  gc_->recordGCStats(event);
+  gc_->recordGCStats(event, /* onMutator */ true);
   // Also record as a region-specific collection.
-  gc_->recordGCStats(event, regionStats);
+  gc_->recordGCStats(event, regionStats, /* onMutator */ true);
 
   LLVM_DEBUG(
       dbgs() << "End garbage collection. numCollected="
@@ -1579,7 +1581,7 @@ void GenGC::doAllocCensus() {
   if (!recordGcStats_) {
     return;
   }
-  GC *gc = this;
+  GenGC *gc = this;
   auto callback = [gc](GCCell *cell) {
     gc->trackAlloc(cell->getKind(), cell->getAllocatedSize());
   };
@@ -1951,7 +1953,7 @@ void GenGC::sizeDiagnosticCensus() {
     }
   };
 
-  struct HeapSizeDiagnosticAcceptor final : public SlotAcceptor {
+  struct HeapSizeDiagnosticAcceptor final : public RootAndSlotAcceptor {
     // Can't be static in a local class.
     const int64_t HINT8_MIN = -(1 << 7);
     const int64_t HINT8_MAX = (1 << 7) - 1;
@@ -1968,18 +1970,21 @@ void GenGC::sizeDiagnosticCensus() {
 
     using SlotAcceptor::accept;
 
-    void accept(void *&ptr) override {
+    void accept(GCCell *&ptr) override {
       diagnostic.numPointer++;
     }
-#ifdef HERMESVM_COMPRESSED_POINTERS
-    void accept(BasedPointer &ptr) override {
-      diagnostic.numPointer++;
-    }
-#endif
+
     void accept(GCPointerBase &ptr) override {
       diagnostic.numPointer++;
     }
-    void accept(HermesValue &hv) override {
+
+    void accept(PinnedHermesValue &hv) override {
+      acceptHV(hv);
+    }
+    void accept(GCHermesValue &hv) override {
+      acceptHV(hv);
+    }
+    void acceptHV(HermesValue &hv) {
       diagnostic.hv.count++;
       if (hv.isBool()) {
         diagnostic.hv.numBool++;
@@ -2024,7 +2029,14 @@ void GenGC::sizeDiagnosticCensus() {
         assert(false && "Should be no other hermes values");
       }
     }
-    void accept(SymbolID sym) override {
+
+    void accept(RootSymbolID sym) override {
+      acceptSym(sym);
+    }
+    void accept(GCSymbolID sym) override {
+      acceptSym(sym);
+    }
+    void acceptSym(SymbolID sym) {
       diagnostic.numSymbol++;
     }
   };
@@ -2037,9 +2049,8 @@ void GenGC::sizeDiagnosticCensus() {
 
   hermesLog("HermesGC", "%s:", "Heap contents");
   HeapSizeDiagnosticAcceptor acceptor;
-  GC *gc = this;
-  forAllObjs([gc, &acceptor](GCCell *cell) {
-    GCBase::markCell(cell, gc, acceptor);
+  forAllObjs([&acceptor, this](GCCell *cell) {
+    markCell(cell, acceptor);
     acceptor.diagnostic.numCell++;
     acceptor.diagnostic.numVariableSizedObject +=
         static_cast<int>(cell->isVariableSize());

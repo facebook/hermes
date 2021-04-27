@@ -42,10 +42,15 @@ ForwardIt uninitializedCopyN(InputIt src, Size count, ForwardIt dst) {
   return std::uninitialized_copy_n(src, count, dst);
 }
 
-/// make_unique substitute that allows its use in C++11.
-template <class T, class... Args>
-std::unique_ptr<T> make_unique(Args &&... args) {
-  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+/// std::min and std::max are only made constexpr in C++14.
+template <class T>
+constexpr const T &max(const T &a, const T &b) {
+  return a < b ? b : a;
+}
+
+template <class T>
+constexpr const T &min(const T &a, const T &b) {
+  return b < a ? b : a;
 }
 
 } // namespace hermes

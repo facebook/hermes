@@ -30,7 +30,7 @@ struct NullStorageProvider : public StorageProvider {
 
 /* static */
 std::unique_ptr<NullStorageProvider> NullStorageProvider::create() {
-  return llvh::make_unique<NullStorageProvider>();
+  return std::make_unique<NullStorageProvider>();
 }
 
 llvh::ErrorOr<void *> NullStorageProvider::newStorageImpl(const char *) {

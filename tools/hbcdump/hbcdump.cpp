@@ -73,6 +73,11 @@ static llvh::cl::opt<DisassemblyFormat> DisassemblyOutputFormat(
             "objdump-disassemble",
             "Like objdump")));
 
+static llvh::cl::opt<bool> ListOpCodes(
+    "list-opcodes",
+    llvh::cl::init(false),
+    llvh::cl::desc("For objdump format, also include a list of all opcodes"));
+
 static llvh::cl::opt<std::string> AnalyzeMode(
     "mode",
     llvh::cl::desc(
@@ -154,6 +159,9 @@ static void printHelp(llvh::Optional<llvh::StringRef> command = llvh::None) {
       {"at-virtual",
        "Display information about the function at a given virtual offset.\n\n"
        "USAGE: at-virtual <OFFSET>\n"},
+      {"at-offset",
+       "Display information about the function at a given file offset.\n\n"
+       "USAGE: at-offset <OFFSET>\n"},
       {"help",
        "Help instructions for hbcdump tool commands.\n\n"
        "USAGE: help <COMMAND>\n"
@@ -212,6 +220,12 @@ static void enterCommandLoop(
     case DisassemblyFormat::Objdump:
       options = options | DisassemblyOptions::Objdump;
       break;
+  }
+  if (ListOpCodes) {
+    assert(
+        DisassemblyOutputFormat == DisassemblyFormat::Objdump &&
+        "only supported for objdump format");
+    options = options | DisassemblyOptions::IncludeOpCodeList;
   }
   disassembler.setOptions(options);
   ProfileAnalyzer analyzer(
@@ -395,6 +409,24 @@ static bool executeCommand(
       printHelp(command);
       return false;
     }
+  } else if (command == "at_offset" || command == "at-offset") {
+    JSONEmitter json(os, /* pretty */ true);
+    if (commandTokens.size() == 2) {
+      uint32_t offset;
+      if (commandTokens[1].getAsInteger(0, offset)) {
+        os << "Error: cannot parse offset as integer.\n";
+        return false;
+      }
+      auto funcId = analyzer.getFunctionFromOffset(offset);
+      if (funcId.hasValue()) {
+        analyzer.dumpFunctionInfo(*funcId, json);
+      } else {
+        os << "Offset " << offset << " is invalid.\n";
+      }
+    } else {
+      printHelp(command);
+      return false;
+    }
   } else if (command == "epilogue" || command == "epi") {
     analyzer.dumpEpilogue();
   } else if (command == "help" || command == "h") {
@@ -440,7 +472,7 @@ int main(int argc, char **argv) {
   }
 
   auto buffer =
-      llvh::make_unique<hermes::MemoryBuffer>(fileBufOrErr.get().get());
+      std::make_unique<hermes::MemoryBuffer>(fileBufOrErr.get().get());
   const uint8_t *bytecodeStart = buffer->data();
   auto ret =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(std::move(buffer));
@@ -480,7 +512,8 @@ int main(int argc, char **argv) {
                    << sourceMapBufOrErr.getError().message() << "\n";
       return -1;
     }
-    sourceMap = SourceMapParser::parse(*sourceMapBufOrErr.get().get());
+    SourceErrorManager sm;
+    sourceMap = SourceMapParser::parse(*sourceMapBufOrErr.get().get(), sm);
     if (!sourceMap) {
       llvh::errs() << "Error loading source map: " << SourceMapFilename << "\n";
       return -1;

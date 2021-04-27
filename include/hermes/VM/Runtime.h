@@ -12,6 +12,7 @@
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/ErrorHandling.h"
+#include "hermes/VM/AllocOptions.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/BasicBlockExecutionInfo.h"
 #include "hermes/VM/CallResult.h"
@@ -19,9 +20,10 @@
 #include "hermes/VM/Debugger/Debugger.h"
 #include "hermes/VM/Deserializer.h"
 #include "hermes/VM/GC.h"
+#include "hermes/VM/GCBase-inline.h"
+#include "hermes/VM/GCStorage.h"
 #include "hermes/VM/Handle-inline.h"
 #include "hermes/VM/HandleRootOwner-inline.h"
-#include "hermes/VM/HasFinalizer.h"
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/InterpreterState.h"
@@ -36,9 +38,10 @@
 #include "hermes/VM/RuntimeStats.h"
 #include "hermes/VM/Serializer.h"
 #include "hermes/VM/StackFrame.h"
-#include "hermes/VM/StackTracesTree.h"
+#include "hermes/VM/StackTracesTree-NoRuntime.h"
 #include "hermes/VM/SymbolRegistry.h"
 #include "hermes/VM/TwineChar16.h"
+#include "hermes/VM/VMExperiments.h"
 
 #ifdef HERMESVM_PROFILER_BB
 #include "hermes/VM/Profiler/InlineCacheProfiler.h"
@@ -60,7 +63,8 @@ class JSONEmitter;
 
 namespace inst {
 struct Inst;
-}
+enum class OpCode : uint8_t;
+} // namespace inst
 
 namespace hbc {
 class BytecodeModule;
@@ -84,6 +88,7 @@ class ScopedNativeCallFrame;
 class SamplingProfiler;
 class CodeCoverageProfiler;
 struct MockedEnvironment;
+struct StackTracesTree;
 
 #ifdef HERMESVM_PROFILER_BB
 class JSArray;
@@ -93,21 +98,6 @@ class JSArray;
 /// available. This is necessary so we can perform native calls with small
 /// number of arguments without checking.
 static const unsigned STACK_RESERVE = 32;
-
-/// List of active experiments, corresponding to getVMExperimentFlags().
-namespace experiments {
-enum {
-  Default = 0,
-  MAdviseSequential = 1 << 2,
-  MAdviseRandom = 1 << 3,
-  MAdviseStringsSequential = 1 << 4,
-  MAdviseStringsRandom = 1 << 5,
-  MAdviseStringsWillNeed = 1 << 6,
-  VerifyBytecodeChecksum = 1 << 7,
-};
-/// Set of flags for active VM experiments.
-using VMExperimentFlags = uint32_t;
-} // namespace experiments
 
 /// Type used to assign object unique integer identifiers.
 using ObjectID = uint32_t;
@@ -124,6 +114,88 @@ enum class PropCacheID {
       _COUNT
 };
 
+/// Trace of the last few instructions for debugging crashes.
+class CrashTraceImpl {
+  /// Record of the last executed instruction.
+  struct Record {
+    /// Offset from start of bytecode file.
+    uint32_t ipOffset;
+    /// Opcode of last executed instruction.
+    inst::OpCode opCode;
+  };
+
+ public:
+  /// Record the currently executing module, replacing the info of the
+  /// previous one.
+  inline void recordModule(
+      uint32_t segmentID,
+      llvh::StringRef sourceURL,
+      llvh::StringRef sourceHash);
+
+  /// Add a record to the circular trace buffer.
+  void recordInst(uint32_t ipOffset, inst::OpCode opCode) {
+    static_assert(
+        kTraceLength && (kTraceLength & (kTraceLength - 1)) == 0,
+        "kTraceLength must be a power of 2");
+    unsigned n = (last_ + 1) & (kTraceLength - 1);
+    last_ = n;
+    Record *p = trace_ + n;
+    p->ipOffset = ipOffset;
+    p->opCode = opCode;
+  }
+
+ private:
+  /// Size of the circular buffer.
+  static constexpr unsigned kTraceLength = 8;
+  /// The index of the last entry written to the buffer.
+  unsigned last_ = kTraceLength - 1;
+  /// A circular buffer of Record.
+  Record trace_[kTraceLength] = {};
+
+  /// Current segmentID.
+  uint32_t segmentID_ = 0;
+  /// Source URL, truncated, zero terminated.
+  char sourceURL_[16] = {};
+  /// SHA1 source hash.
+  uint8_t sourceHash_[20] = {};
+};
+
+inline void CrashTraceImpl::recordModule(
+    uint32_t segmentID,
+    llvh::StringRef sourceURL,
+    llvh::StringRef sourceHash) {
+  segmentID_ = segmentID;
+  size_t len = std::min(sizeof(sourceURL_) - 1, sourceURL.size());
+  ::memcpy(sourceURL_, sourceURL.data(), len);
+  sourceURL_[len] = 0;
+  ::memcpy(
+      sourceHash_,
+      sourceHash.data(),
+      std::min(sizeof(sourceHash_), sourceHash.size()));
+}
+
+class CrashTraceNoop {
+ public:
+  void recordModule(
+      uint32_t segmentID,
+      llvh::StringRef sourceURL,
+      llvh::StringRef sourceHash) {}
+
+  /// Add a record to the circular trace buffer.
+  void recordInst(uint32_t ipOffset, inst::OpCode opCode) {}
+};
+
+#ifndef HERMESVM_CRASH_TRACE
+// Make sure it is 0 or 1 so it can be checked in C++.
+#define HERMESVM_CRASH_TRACE 0
+#endif
+
+#if HERMESVM_CRASH_TRACE
+using CrashTrace = CrashTraceImpl;
+#else
+using CrashTrace = CrashTraceNoop;
+#endif
+
 /// The Runtime encapsulates the entire context of a VM. Multiple instances can
 /// exist and are completely independent from each other.
 class Runtime : public HandleRootOwner,
@@ -138,13 +210,23 @@ class Runtime : public HandleRootOwner,
   /// collection to mark additional GC roots that may not be known to the
   /// Runtime.
   void addCustomRootsFunction(
-      std::function<void(GC *, SlotAcceptor &)> markRootsFn);
+      std::function<void(GC *, RootAcceptor &)> markRootsFn);
 
   /// Add a custom function that will be executed sometime during garbage
   /// collection to mark additional weak GC roots that may not be known to the
   /// Runtime.
   void addCustomWeakRootsFunction(
       std::function<void(GC *, WeakRefAcceptor &)> markRootsFn);
+
+  /// Add a custom function that will be executed when a heap snapshot is taken,
+  /// to add any extra nodes.
+  /// \param nodes Use snap.beginNode() and snap.endNode() to create nodes in
+  ///   snapshot graph.
+  /// \param edges Use snap.addNamedEdge() or snap.addIndexedEdge() to create
+  ///   edges to the nodes defined in \p nodes.
+  void addCustomSnapshotFunction(
+      std::function<void(HeapSnapshot &)> nodes,
+      std::function<void(HeapSnapshot &)> edges);
 
   /// Make the runtime read from \p env to replay its environment-dependent
   /// behavior.
@@ -193,7 +275,7 @@ class Runtime : public HandleRootOwner,
       RuntimeModuleFlags runtimeModuleFlags,
       llvh::StringRef sourceURL,
       Handle<Environment> environment) {
-    heap_.runtimeWillExecute();
+    getHeap().runtimeWillExecute();
     return runBytecode(
         std::move(bytecode),
         runtimeModuleFlags,
@@ -208,7 +290,8 @@ class Runtime : public HandleRootOwner,
       RuntimeModuleFlags flags = {});
 
   /// Runs the internal bytecode. This is called once during initialization.
-  void runInternalBytecode();
+  /// \return the completion value of internal bytecode IIFE.
+  Handle<JSObject> runInternalBytecode();
 
   /// A convenience function to print an exception to a stream.
   void printException(llvh::raw_ostream &os, Handle<> valueHandle);
@@ -216,20 +299,27 @@ class Runtime : public HandleRootOwner,
   /// @name Heap management
   /// @{
 
-  /// Allocate a new cell of the specified size \p size.
-  /// If necessary perform a GC cycle, which may potentially move allocated
-  /// objects.
-  /// The \p fixedSize template argument indicates whether the allocation is for
-  /// a fixed-size cell, which can assumed to be small if true.  The
-  /// \p hasFinalizer template argument indicates whether the object
-  /// being allocated will have a finalizer.
-  template <bool fixedSize = true, HasFinalizer hasFinalizer = HasFinalizer::No>
-  void *alloc(uint32_t size);
+  /// Create a fixed size object of type T.
+  /// If necessary perform a GC cycle, which may potentially move
+  /// allocated objects.
+  /// \return a pointer to the newly created object in the GC heap.
+  template <
+      typename T,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::No,
+      class... Args>
+  T *makeAFixed(Args &&...args);
 
-  /// Like the above, but if the GC makes a distinction between short- and
-  /// long-lived objects, allocates an object that is expected to be long-lived.
-  template <HasFinalizer hasFinalizer = HasFinalizer::No>
-  void *allocLongLived(uint32_t size);
+  /// Create a variable size object of type T and size \p size.
+  /// If necessary perform a GC cycle, which may potentially move
+  /// allocated objects.
+  /// \return a pointer to the newly created object in the GC heap.
+  template <
+      typename T,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::No,
+      class... Args>
+  T *makeAVariable(uint32_t size, Args &&...args);
 
   /// Used as a placeholder for places where we should be checking for OOM
   /// but aren't yet.
@@ -248,7 +338,7 @@ class Runtime : public HandleRootOwner,
 
   /// Force a garbage collection cycle.
   void collect(std::string cause) {
-    heap_.collect(std::move(cause));
+    getHeap().collect(std::move(cause));
   }
 
   /// Potentially move the heap if handle sanitization is on.
@@ -294,15 +384,15 @@ class Runtime : public HandleRootOwner,
   FormatSymbolID formatSymbolID(SymbolID id);
 
   GC &getHeap() {
-    return heap_;
+    return *heapStorage_.get();
   }
 
   /// @}
 
-  /// Return a pointer to a builtin native function builtin identified by id.
+  /// Return a pointer to a callable builtin identified by id.
   /// Unfortunately we can't use the enum here, since we don't want to include
   /// the builtins header header.
-  inline NativeFunction *getBuiltinNativeFunction(unsigned builtinMethodID);
+  inline Callable *getBuiltinCallable(unsigned builtinMethodID);
 
   IdentifierTable &getIdentifierTable() {
     return identifierTable_;
@@ -440,17 +530,16 @@ class Runtime : public HandleRootOwner,
 
   /// Return a hidden class corresponding to the specified prototype object
   /// and number of reserved slots. For now we only use the latter.
-  /// Takes and returns raw pointers: standard warnings apply!
+  inline Handle<HiddenClass> getHiddenClassForPrototype(
+      JSObject *proto,
+      unsigned reservedSlots);
+
+  /// Same as above but returns a raw pointer: standard warnings apply!
+  /// TODO: Delete this function once all callers are replaced with
+  /// getHiddenClassForPrototype.
   inline HiddenClass *getHiddenClassForPrototypeRaw(
       JSObject *proto,
-      unsigned reservedSlots) {
-    assert(
-        reservedSlots <= InternalProperty::NumInternalProperties &&
-        "out of bounds");
-    auto *clazz = rootClazzRawPtr_[reservedSlots];
-    assert(clazz && "must initialize root classes before use");
-    return clazz;
-  }
+      unsigned reservedSlots);
 
   /// Return the global object.
   Handle<JSObject> getGlobal();
@@ -660,12 +749,14 @@ class Runtime : public HandleRootOwner,
   RegExpMatch regExpLastMatch{};
 
   /// Whether to allow eval and Function ctor.
-  const bool enableEval;
+  const bool enableEval : 1;
   /// Whether to verify the IR being generated by eval and the Function ctor.
-  const bool verifyEvalIR;
+  const bool verifyEvalIR : 1;
   /// Whether to optimize the code in the string passed to eval and the Function
   /// ctor.
-  const bool optimizedEval;
+  const bool optimizedEval : 1;
+  /// Whether to emit async break check instructions in eval().
+  const bool asyncBreakCheckInEval : 1;
 
 #ifdef HERMESVM_PROFILER_OPCODE
   /// Track the frequency of each opcode in the interpreter.
@@ -731,12 +822,20 @@ class Runtime : public HandleRootOwner,
     return runtimeModuleList_;
   }
 
+  bool hasES6Promise() const {
+    return hasES6Promise_;
+  }
+
   bool hasES6Proxy() const {
     return hasES6Proxy_;
   }
 
   bool hasES6Symbol() const {
     return hasES6Symbol_;
+  }
+
+  bool hasES6Intl() const {
+    return hasES6Intl_;
   }
 
   bool builtinsAreFrozen() const {
@@ -837,9 +936,10 @@ class Runtime : public HandleRootOwner,
   /// Called by the GC at the beginning of a collection. This method informs the
   /// GC of all runtime roots.  The \p markLongLived argument
   /// indicates whether root data structures that contain only
-  /// references to long-lived objects (allocated via allocLongLived)
+  /// references to long-lived objects (allocated directly as long lived)
   /// are required to be scanned.
-  void markRoots(RootAcceptor &acceptor, bool markLongLived) override;
+  void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool markLongLived)
+      override;
 
   /// Called by the GC during collections that may reset weak references. This
   /// method informs the GC of all runtime weak roots.
@@ -850,7 +950,8 @@ class Runtime : public HandleRootOwner,
   /// snapshots, as it is slow. The function passed as acceptor shouldn't
   /// perform any heap operations.
   void visitIdentifiers(
-      const std::function<void(UTF16Ref, uint32_t id)> &acceptor) override;
+      const std::function<void(SymbolID, const StringPrimitive *)> &acceptor)
+      override;
 
 #ifdef HERMESVM_PROFILER_BB
  public:
@@ -875,12 +976,16 @@ class Runtime : public HandleRootOwner,
 
   /// Called by the GC at the end of a collection to free all symbols not set in
   /// markedSymbols.
-  virtual void freeSymbols(const std::vector<bool> &markedSymbols) override;
+  virtual void freeSymbols(const llvh::BitVector &markedSymbols) override;
 
 #ifdef HERMES_SLOW_DEBUG
   /// \return true if the given symbol is a live entry in the identifier
   /// table.
   virtual bool isSymbolLive(SymbolID id) override;
+
+  /// \return An associated heap cell for the symbol if one exists, null
+  /// otherwise.
+  virtual const void *getStringForSymbol(SymbolID id) override;
 #endif
 
   /// See \c GCCallbacks for details.
@@ -907,19 +1012,27 @@ class Runtime : public HandleRootOwner,
   /// \param object is the object where the builtin method is defined as a
   ///   property.
   /// \param methodID is the SymbolID for the name of the method.
-  using ForEachBuiltinCallback = ExecutionStatus(
+  using ForEachPublicNativeBuiltinCallback = ExecutionStatus(
       unsigned methodIndex,
       Predefined::Str objectName,
       Handle<JSObject> &object,
       SymbolID methodID);
 
-  /// Enumerate the builtin methods, and invoke the callback on each method.
-  ExecutionStatus forEachBuiltin(
-      const std::function<ForEachBuiltinCallback> &callback);
+  /// Enumerate all public native builtin methods, and invoke the callback on
+  /// each method.
+  ExecutionStatus forEachPublicNativeBuiltin(
+      const std::function<ForEachPublicNativeBuiltinCallback> &callback);
 
-  /// Populate the builtins table by extracting the values from the global
-  /// object.
-  void initBuiltinTable();
+  /// Populate native builtins into the builtins table.
+  /// Public native builtins are added by extracting the values from the global
+  /// object. Private native builtins are added by \c createHermesBuiltins().
+  void initNativeBuiltins();
+
+  /// Populate JS builtins into the builtins table, after verifying they do
+  /// exist from the result of running internal bytecode.
+  void initJSBuiltins(
+      llvh::MutableArrayRef<Callable *> builtins,
+      Handle<JSObject> jsBuiltins);
 
   /// Walk all the builtin methods, assert that they are not overridden. If they
   /// are, throw an exception. This will be called at most once, before freezing
@@ -969,19 +1082,28 @@ class Runtime : public HandleRootOwner,
 #endif
 
  private:
-  GC heap_;
-  std::vector<std::function<void(GC *, SlotAcceptor &)>> customMarkRootFuncs_;
+  GCStorage heapStorage_;
+
+  std::vector<std::function<void(GC *, RootAcceptor &)>> customMarkRootFuncs_;
   std::vector<std::function<void(GC *, WeakRefAcceptor &)>>
       customMarkWeakRootFuncs_;
+  std::vector<std::function<void(HeapSnapshot &)>> customSnapshotNodeFuncs_;
+  std::vector<std::function<void(HeapSnapshot &)>> customSnapshotEdgeFuncs_;
 
   /// All state related to JIT compilation.
   JITContext jitContext_;
+
+  /// Set to true if we should enable ES6 Promise.
+  const bool hasES6Promise_;
 
   /// Set to true if we should enable ES6 Proxy.
   const bool hasES6Proxy_;
 
   /// Set to true if we should enable ES6 Symbol.
   const bool hasES6Symbol_;
+
+  /// Set to true if we should enable ES6 Intl APIs.
+  const bool hasES6Intl_;
 
   /// Set to true if we should randomize stack placement etc.
   const bool shouldRandomizeMemoryLayout_;
@@ -1054,6 +1176,9 @@ class Runtime : public HandleRootOwner,
   /// on construction and removes itself on destruction.
   RuntimeModuleList runtimeModuleList_{};
 
+  /// Optional record of the last few executed bytecodes in case of a crash.
+  CrashTrace crashTrace_{};
+
   /// @name Private VM State
   /// @{
 
@@ -1100,10 +1225,10 @@ class Runtime : public HandleRootOwner,
 #endif
       ;
 
-  /// rootClazzRawPtr_[i] is a raw pointer to a hidden class with its i first
-  /// slots pre-reserved.
-  HiddenClass *rootClazzRawPtr_[InternalProperty::NumInternalProperties + 1] = {
-      nullptr};
+  /// rootClazzes_[i] is a PinnedHermesValue pointing to a hidden class with
+  /// its i first slots pre-reserved.
+  std::array<PinnedHermesValue, InternalProperty::NumInternalProperties + 1>
+      rootClazzes_;
 
   /// Cache for property lookups in non-JS code.
   PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
@@ -1113,8 +1238,8 @@ class Runtime : public HandleRootOwner,
   /// to be scanned as roots in young-gen collections.
   std::vector<PinnedHermesValue> charStrings_{};
 
-  /// Pointers to native implementations of builtins.
-  std::vector<NativeFunction *> builtins_{};
+  /// Pointers to callable implementations of builtins.
+  std::vector<Callable *> builtins_{};
 
   /// True if the builtins are all frozen (non-writable, non-configurable).
   bool builtinsFrozen_{false};
@@ -1133,12 +1258,12 @@ class Runtime : public HandleRootOwner,
   /// This key will be unregistered in the destructor.
   const CrashManager::CallbackKey crashCallbackKey_;
 
-  /// Keep a strong reference to the SamplingProfiler so that
-  /// we are sure it's safe to unregisterRuntime in destructor.
-  std::shared_ptr<SamplingProfiler> samplingProfiler_;
+  /// Sampling profiler data for this runtime. The ctor/dtor of SamplingProfiler
+  /// will automatically register/unregister this runtime from profiling.
+  std::unique_ptr<SamplingProfiler> samplingProfiler_;
 
-  /// Reference to the code coverage profiler.
-  std::shared_ptr<CodeCoverageProfiler> codeCoverageProfiler_;
+  /// Pointer to the code coverage profiler.
+  const std::unique_ptr<CodeCoverageProfiler> codeCoverageProfiler_;
 
   /// A list of callbacks to call before runtime destruction.
   std::vector<DestructionCallback> destructionCallbacks_;
@@ -1351,6 +1476,17 @@ class Runtime : public HandleRootOwner,
   /// \param clearExistingTree is for use by tests and in general will break
   /// because old objects would end up with dead pointers to stack-trace nodes.
   void disableAllocationLocationTracker(bool clearExistingTree = false);
+
+  /// Enable the heap sampling profiler. About every \p samplingInterval bytes
+  /// allocated, the stack will be sampled. This will attribute the highest
+  /// allocating functions.
+  /// \param samplingInterval A number of bytes that a sample should be taken,
+  ///   on average.
+  /// \param seed If non-negative, used as the seed for the random engine.
+  void enableSamplingHeapProfiler(size_t samplingInterval, int64_t seed = -1);
+
+  /// Disable the heap sampling profiler and flush the results out to \p os.
+  void disableSamplingHeapProfiler(llvh::raw_ostream &os);
 
  private:
   void popCallStackImpl();
@@ -1591,7 +1727,7 @@ class NoAllocScope {
 // Runtime inline methods.
 
 inline void Runtime::addCustomRootsFunction(
-    std::function<void(GC *, SlotAcceptor &)> markRootsFn) {
+    std::function<void(GC *, RootAcceptor &)> markRootsFn) {
   customMarkRootFuncs_.emplace_back(std::move(markRootsFn));
 }
 
@@ -1600,40 +1736,45 @@ inline void Runtime::addCustomWeakRootsFunction(
   customMarkWeakRootFuncs_.emplace_back(std::move(markRootsFn));
 }
 
-template <bool fixedSize, HasFinalizer hasFinalizer>
-inline void *Runtime::alloc(uint32_t sz) {
-#if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
-  // If allocation location tracking is enabled we implicitly call
-  // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we
-  // always call getCurrentIP() in a debug build as this has the effect of
-  // asserting the IP is correctly set (not invalidated) at this point. This
-  // allows us to leverage our whole test-suite to find missing cases of
-  // CAPTURE_IP* macros in the interpreter loop.
-  (void)getCurrentIP();
-#endif
-  void *ptr = heap_.alloc<fixedSize, hasFinalizer>(sz);
-#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  heap_.getAllocationLocationTracker().newAlloc(ptr, sz);
-#endif
-  return ptr;
+inline void Runtime::addCustomSnapshotFunction(
+    std::function<void(HeapSnapshot &)> nodes,
+    std::function<void(HeapSnapshot &)> edges) {
+  customSnapshotNodeFuncs_.emplace_back(std::move(nodes));
+  customSnapshotEdgeFuncs_.emplace_back(std::move(edges));
 }
 
-template <HasFinalizer hasFinalizer>
-inline void *Runtime::allocLongLived(uint32_t size) {
-#if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
-  // If allocation location tracking is enabled we implicitly call
-  // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we always
-  // call getCurrentIP() in a debug build as this has the effect of
+template <
+    typename T,
+    HasFinalizer hasFinalizer,
+    LongLived longLived,
+    class... Args>
+T *Runtime::makeAFixed(Args &&...args) {
+#ifndef NDEBUG
+  // We always call getCurrentIP() in a debug build as this has the effect of
   // asserting the IP is correctly set (not invalidated) at this point. This
   // allows us to leverage our whole test-suite to find missing cases of
   // CAPTURE_IP* macros in the interpreter loop.
   (void)getCurrentIP();
 #endif
-  void *ptr = heap_.allocLongLived<hasFinalizer>(size);
-#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  heap_.getAllocationLocationTracker().newAlloc(ptr, size);
+  return getHeap().makeAFixed<T, hasFinalizer, longLived>(
+      std::forward<Args>(args)...);
+}
+
+template <
+    typename T,
+    HasFinalizer hasFinalizer,
+    LongLived longLived,
+    class... Args>
+T *Runtime::makeAVariable(uint32_t size, Args &&...args) {
+#ifndef NDEBUG
+  // We always call getCurrentIP() in a debug build as this has the effect of
+  // asserting the IP is correctly set (not invalidated) at this point. This
+  // allows us to leverage our whole test-suite to find missing cases of
+  // CAPTURE_IP* macros in the interpreter loop.
+  (void)getCurrentIP();
 #endif
-  return ptr;
+  return getHeap().makeAVariable<T, hasFinalizer, longLived>(
+      size, std::forward<Args>(args)...);
 }
 
 template <typename T>
@@ -1653,7 +1794,7 @@ inline void Runtime::ignoreAllocationFailure(ExecutionStatus status) {
 
 inline void Runtime::ttiReached() {
   // Currently, only the heap_ behavior can change at TTI.
-  heap_.ttiReached();
+  getHeap().ttiReached();
 }
 
 template <class T>
@@ -1770,14 +1911,15 @@ inline StackFramePtr Runtime::restoreStackAndPreviousFrame() {
 }
 
 inline llvh::iterator_range<StackFrameIterator> Runtime::getStackFrames() {
-  return {StackFrameIterator{currentFrame_},
-          StackFrameIterator{registerStackEnd_}};
+  return {
+      StackFrameIterator{currentFrame_}, StackFrameIterator{registerStackEnd_}};
 };
 
 inline llvh::iterator_range<ConstStackFrameIterator> Runtime::getStackFrames()
     const {
-  return {ConstStackFrameIterator{currentFrame_},
-          ConstStackFrameIterator{registerStackEnd_}};
+  return {
+      ConstStackFrameIterator{currentFrame_},
+      ConstStackFrameIterator{registerStackEnd_}};
 };
 
 inline ExecutionStatus Runtime::setThrownValue(HermesValue value) {

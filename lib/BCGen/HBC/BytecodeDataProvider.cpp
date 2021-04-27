@@ -298,8 +298,8 @@ bool BytecodeFileFields<Mutable>::populateFromBuffer(
       align(buf);
       if (h->options.cjsModulesStaticallyResolved) {
         // Modules have been statically resolved.
-        f.cjsModuleTableStatic =
-            castArrayRef<uint32_t>(buf, h->cjsModuleCount, end);
+        f.cjsModuleTableStatic = castArrayRef<std::pair<uint32_t, uint32_t>>(
+            buf, h->cjsModuleCount, end);
       } else {
         // Modules are not resolved, use the filename -> function ID mapping.
         f.cjsModuleTable = castArrayRef<std::pair<uint32_t, uint32_t>>(
@@ -530,17 +530,6 @@ void BCProviderFromBuffer::willNeedStringTable() {
   oscompat::vm_prefetch(start, prefetchLength);
 }
 
-void BCProviderFromBuffer::dontNeedIdentifierHashes() {
-  auto start = reinterpret_cast<uintptr_t>(identifierHashes_.begin());
-  auto end = reinterpret_cast<uintptr_t>(identifierHashes_.end());
-  const size_t PS = oscompat::page_size();
-  start = llvh::alignTo(start, PS);
-  end = llvh::alignDown(end, PS);
-  if (start < end) {
-    oscompat::vm_unused(reinterpret_cast<void *>(start), end - start);
-  }
-}
-
 #undef ASSERT_BOUNDED
 #undef ASSERT_TOTAL_ARRAY_LEN
 
@@ -580,7 +569,7 @@ BCProviderFromBuffer::BCProviderFromBuffer(
   objValueBuffer_ = fields.objValueBuffer;
   regExpTable_ = fields.regExpTable;
   regExpStorage_ = fields.regExpStorage;
-  cjsModuleOffset_ = fileHeader->cjsModuleOffset;
+  segmentID_ = fileHeader->segmentID;
   cjsModuleTable_ = fields.cjsModuleTable;
   cjsModuleTableStatic_ = fields.cjsModuleTableStatic;
 }

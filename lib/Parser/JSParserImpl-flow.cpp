@@ -54,7 +54,8 @@ Optional<ESTree::Node *> JSParserImpl::parseFlowDeclaration() {
   }
 
   if (checkN(interfaceIdent_, TokenKind::rw_interface)) {
-    auto optType = parseInterfaceDeclaration(kind == TypeAliasKind::Declare);
+    auto optType = parseInterfaceDeclaration(
+        kind == TypeAliasKind::Declare ? Optional<SMLoc>(start) : None);
     if (!optType)
       return None;
     return *optType;
@@ -66,7 +67,9 @@ Optional<ESTree::Node *> JSParserImpl::parseFlowDeclaration() {
   return None;
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseDeclare(SMLoc start) {
+Optional<ESTree::Node *> JSParserImpl::parseDeclare(
+    SMLoc start,
+    AllowDeclareExportType allowDeclareExportType) {
   if (checkAndEat(typeIdent_)) {
     return parseTypeAlias(start, TypeAliasKind::Declare);
   }
@@ -79,7 +82,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclare(SMLoc start) {
     return parseTypeAlias(start, TypeAliasKind::DeclareOpaque);
   }
   if (checkN(TokenKind::rw_interface, interfaceIdent_)) {
-    return parseInterfaceDeclaration(true);
+    return parseInterfaceDeclaration(start);
   }
   if (check(TokenKind::rw_class)) {
     return parseDeclareClass(start);
@@ -92,13 +95,20 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclare(SMLoc start) {
   }
   if (checkAndEat(TokenKind::rw_var)) {
     auto optIdent = parseBindingIdentifier(Param{});
-    if (!optIdent)
+    if (!optIdent) {
+      errorExpected(
+          TokenKind::identifier,
+          "in var declaration",
+          "start of declaration",
+          start);
       return None;
-    SMLoc end;
-    if (!eatSemi(end))
+    }
+    if (!eatSemi())
       return None;
     return setLocation(
-        start, end, new (context_) ESTree::DeclareVariableNode(*optIdent));
+        start,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::DeclareVariableNode(*optIdent));
   }
 
   if (!check(TokenKind::rw_export)) {
@@ -114,7 +124,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclare(SMLoc start) {
     return None;
   }
 
-  return parseDeclareExport(start);
+  return parseDeclareExport(start, allowDeclareExportType);
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeAlias(
@@ -127,7 +137,8 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAlias(
   ESTree::Node *id = setLocation(
       tok_,
       tok_,
-      new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
+      new (context_)
+          ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
   advance(JSLexer::GrammarContext::Flow);
 
   ESTree::Node *typeParams = nullptr;
@@ -163,35 +174,36 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAlias(
     right = *optRight;
   }
 
-  SMLoc end;
-  if (!eatSemi(end, true))
-    return None;
+  eatSemi(true);
 
   if (kind == TypeAliasKind::DeclareOpaque) {
     return setLocation(
         start,
-        end,
+        getPrevTokenEndLoc(),
         new (context_)
             ESTree::DeclareOpaqueTypeNode(id, typeParams, right, supertype));
   }
   if (kind == TypeAliasKind::Declare) {
     return setLocation(
         start,
-        end,
+        getPrevTokenEndLoc(),
         new (context_) ESTree::DeclareTypeAliasNode(id, typeParams, right));
   }
   if (kind == TypeAliasKind::Opaque) {
     return setLocation(
         start,
-        end,
+        getPrevTokenEndLoc(),
         new (context_)
             ESTree::OpaqueTypeNode(id, typeParams, right, supertype));
   }
   return setLocation(
-      start, end, new (context_) ESTree::TypeAliasNode(id, typeParams, right));
+      start,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::TypeAliasNode(id, typeParams, right));
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseInterfaceDeclaration(bool declare) {
+Optional<ESTree::Node *> JSParserImpl::parseInterfaceDeclaration(
+    Optional<SMLoc> declareStart) {
   assert(checkN(TokenKind::rw_interface, interfaceIdent_));
   SMLoc start = advance(JSLexer::GrammarContext::Flow).Start;
 
@@ -205,7 +217,8 @@ Optional<ESTree::Node *> JSParserImpl::parseInterfaceDeclaration(bool declare) {
   auto *id = setLocation(
       tok_,
       tok_,
-      new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
+      new (context_)
+          ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
   advance(JSLexer::GrammarContext::Flow);
 
   ESTree::Node *typeParams = nullptr;
@@ -222,9 +235,9 @@ Optional<ESTree::Node *> JSParserImpl::parseInterfaceDeclaration(bool declare) {
   if (!optBody)
     return None;
 
-  if (declare) {
+  if (declareStart.hasValue()) {
     return setLocation(
-        start,
+        *declareStart,
         *optBody,
         new (context_) ESTree::DeclareInterfaceNode(
             id, typeParams, std::move(extends), *optBody));
@@ -255,7 +268,8 @@ Optional<ESTree::Node *> JSParserImpl::parseInterfaceTail(
   if (!need(TokenKind::l_brace, "in interface", "location of interface", start))
     return None;
 
-  return parseObjectTypeAnnotation();
+  return parseObjectTypeAnnotation(
+      AllowProtoProperty::No, AllowStaticProperty::No, AllowSpreadProperty::No);
 }
 
 bool JSParserImpl::parseInterfaceExtends(
@@ -306,7 +320,8 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFunction(SMLoc start) {
     return None;
 
   ESTree::NodeList params{};
-  auto optRest = parseFunctionTypeAnnotationParams(params);
+  ESTree::Node *thisConstraint = nullptr;
+  auto optRest = parseFunctionTypeAnnotationParams(params, thisConstraint);
   if (!optRest)
     return None;
 
@@ -322,6 +337,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFunction(SMLoc start) {
   if (!optReturn)
     return None;
   ESTree::Node *returnType = *optReturn;
+  SMLoc funcEnd = getPrevTokenEndLoc();
 
   ESTree::Node *predicate = nullptr;
   if (check(checksIdent_)) {
@@ -331,23 +347,26 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFunction(SMLoc start) {
     predicate = *optPred;
   }
 
-  SMLoc end;
-  if (!eatSemi(end))
+  if (!eatSemi())
     return None;
 
   auto *func = setLocation(
       funcStart,
-      end,
+      funcEnd,
       new (context_) ESTree::TypeAnnotationNode(setLocation(
           funcStart,
-          end,
+          funcEnd,
           new (context_) ESTree::FunctionTypeAnnotationNode(
-              std::move(params), returnType, *optRest, typeParams))));
+              std::move(params),
+              thisConstraint,
+              returnType,
+              *optRest,
+              typeParams))));
   auto *ident = setLocation(
-      idStart, func, new (context_) ESTree::IdentifierNode(id, func));
+      idStart, func, new (context_) ESTree::IdentifierNode(id, func, false));
   return setLocation(
       start,
-      ident,
+      getPrevTokenEndLoc(),
       new (context_) ESTree::DeclareFunctionNode(ident, predicate));
 }
 
@@ -360,6 +379,8 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareModule(SMLoc start) {
       error(tok_->getSourceRange(), "expected module.exports declaration");
       return None;
     }
+
+    SMLoc annotStart = tok_->getStartLoc();
     if (!eat(
             TokenKind::colon,
             JSLexer::GrammarContext::Flow,
@@ -367,13 +388,14 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareModule(SMLoc start) {
             "start of declaration",
             start))
       return None;
-    auto optType = parseTypeAnnotation(/* wrapped */ true);
+    auto optType = parseTypeAnnotation(annotStart);
     if (!optType)
       return None;
-    SMLoc end;
-    eatSemi(end, true);
+    eatSemi(true);
     return setLocation(
-        start, end, new (context_) ESTree::DeclareModuleExportsNode(*optType));
+        start,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::DeclareModuleExportsNode(*optType));
   }
 
   // declare module Identifier {[opt]
@@ -394,7 +416,8 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareModule(SMLoc start) {
     id = setLocation(
         tok_,
         tok_,
-        new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
+        new (context_)
+            ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
   }
   advance(JSLexer::GrammarContext::Flow);
 
@@ -413,14 +436,29 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareModule(SMLoc start) {
   ESTree::NodeList declarations{};
 
   while (!check(TokenKind::r_brace)) {
+    if (check(TokenKind::rw_import)) {
+      // 'import' can be bare without a 'declare' before it.
+      auto optImport = parseImportDeclaration();
+      if (!optImport)
+        return None;
+      ESTree::ImportDeclarationNode *import = *optImport;
+      if (import->_importKind == valueIdent_) {
+        error(
+            import->getSourceRange(),
+            "imports within a `declare module` body must always be "
+            "`import type` or `import typeof`");
+      }
+      declarations.push_back(*import);
+      continue;
+    }
     if (!check(declareIdent_)) {
       error(
           tok_->getSourceRange(),
-          "expected 'declare' in module  declaration body");
+          "expected 'declare' in module declaration body");
       return None;
     }
     SMLoc declarationStart = advance(JSLexer::GrammarContext::Flow).Start;
-    auto optDecl = parseDeclare(declarationStart);
+    auto optDecl = parseDeclare(declarationStart, AllowDeclareExportType::Yes);
     if (!optDecl)
       return None;
     ESTree::Node *decl = *optDecl;
@@ -434,6 +472,28 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareModule(SMLoc start) {
         kind = commonJSIdent_;
         break;
       case ESTree::NodeKind::DeclareExportDeclaration:
+        if (llvh::dyn_cast_or_null<ESTree::InterfaceDeclarationNode>(
+                llvh::cast<ESTree::DeclareExportDeclarationNode>(decl)
+                    ->_declaration)) {
+          // declare export interface can show up in either module kind.
+          // Ignore it.
+          break;
+        }
+        if (llvh::dyn_cast_or_null<ESTree::TypeAliasNode>(
+                llvh::cast<ESTree::DeclareExportDeclarationNode>(decl)
+                    ->_declaration)) {
+          // declare export type can show up in either module kind.
+          // Ignore it.
+          break;
+        }
+        if (kind != nullptr && kind != esIdent_) {
+          error(
+              decl->getSourceRange(),
+              "cannot use ESM export in CommonJS module");
+        }
+        kind = esIdent_;
+        break;
+      case ESTree::NodeKind::DeclareExportAllDeclaration:
         if (kind != nullptr && kind != esIdent_) {
           error(
               decl->getSourceRange(),
@@ -482,7 +542,8 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareClass(SMLoc start) {
   auto *id = setLocation(
       tok_,
       tok_,
-      new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
+      new (context_)
+          ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
   advance(JSLexer::GrammarContext::Flow);
 
   ESTree::Node *typeParams = nullptr;
@@ -506,7 +567,18 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareClass(SMLoc start) {
   }
 
   ESTree::NodeList mixins{};
-  // TODO: Parse mixins.
+  if (checkAndEat(mixinsIdent_)) {
+    do {
+      if (!need(
+              TokenKind::identifier,
+              "in class 'mixins'",
+              "start of declaration",
+              start))
+        return None;
+      if (!parseInterfaceExtends(start, mixins))
+        return None;
+    } while (checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Flow));
+  }
 
   ESTree::NodeList implements{};
   if (checkAndEat(TokenKind::rw_implements)) {
@@ -531,7 +603,10 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareClass(SMLoc start) {
           start))
     return None;
 
-  auto optBody = parseObjectTypeAnnotation();
+  auto optBody = parseObjectTypeAnnotation(
+      AllowProtoProperty::Yes,
+      AllowStaticProperty::Yes,
+      AllowSpreadProperty::No);
   if (!optBody)
     return None;
 
@@ -550,7 +625,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareClass(SMLoc start) {
 Optional<ESTree::Node *> JSParserImpl::parseExportTypeDeclaration(
     SMLoc startLoc) {
   assert(check(typeIdent_));
-  advance();
+  SMLoc typeIdentLoc = advance().Start;
 
   if (checkAndEat(TokenKind::star)) {
     // export type * FromClause;
@@ -559,23 +634,21 @@ Optional<ESTree::Node *> JSParserImpl::parseExportTypeDeclaration(
     if (!optFromClause) {
       return None;
     }
-    SMLoc endLoc = optFromClause.getValue()->getEndLoc();
-    if (!eatSemi(endLoc)) {
+    if (!eatSemi()) {
       return None;
     }
     return setLocation(
         startLoc,
-        endLoc,
+        getPrevTokenEndLoc(),
         new (context_)
             ESTree::ExportAllDeclarationNode(*optFromClause, typeIdent_));
   }
 
   if (check(TokenKind::l_brace)) {
     ESTree::NodeList specifiers{};
-    SMLoc endLoc;
     llvh::SmallVector<SMRange, 2> invalids{};
 
-    auto optExportClause = parseExportClause(specifiers, endLoc, invalids);
+    auto optExportClause = parseExportClause(specifiers, invalids);
     if (!optExportClause) {
       return None;
     }
@@ -588,7 +661,6 @@ Optional<ESTree::Node *> JSParserImpl::parseExportTypeDeclaration(
         return None;
       }
       source = *optFromClause;
-      endLoc = source->getEndLoc();
     } else {
       // export ExportClause ;
       // ES9.0 15.2.3.1
@@ -599,19 +671,19 @@ Optional<ESTree::Node *> JSParserImpl::parseExportTypeDeclaration(
       }
     }
 
-    if (!eatSemi(endLoc)) {
+    if (!eatSemi()) {
       return None;
     }
 
     return setLocation(
         startLoc,
-        endLoc,
+        getPrevTokenEndLoc(),
         new (context_) ESTree::ExportNamedDeclarationNode(
             nullptr, std::move(specifiers), source, typeIdent_));
   }
 
   if (check(TokenKind::identifier)) {
-    auto optAlias = parseTypeAlias(startLoc, TypeAliasKind::None);
+    auto optAlias = parseTypeAlias(typeIdentLoc, TypeAliasKind::None);
     if (!optAlias)
       return None;
     return setLocation(
@@ -629,12 +701,15 @@ Optional<ESTree::Node *> JSParserImpl::parseExportTypeDeclaration(
   return None;
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(SMLoc start) {
+Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(
+    SMLoc start,
+    AllowDeclareExportType allowDeclareExportType) {
   assert(check(TokenKind::rw_export));
   advance(JSLexer::GrammarContext::Flow);
   SMLoc declareStart = tok_->getStartLoc();
 
   if (checkAndEat(TokenKind::rw_default, JSLexer::GrammarContext::Flow)) {
+    declareStart = tok_->getStartLoc();
     if (check(TokenKind::rw_function)) {
       auto optFunc = parseDeclareFunction(declareStart);
       if (!optFunc)
@@ -658,12 +733,11 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(SMLoc start) {
     auto optType = parseTypeAnnotation();
     if (!optType)
       return None;
-    SMLoc end;
-    if (!eatSemi(end))
+    if (!eatSemi())
       return None;
     return setLocation(
         start,
-        end,
+        getPrevTokenEndLoc(),
         new (context_)
             ESTree::DeclareExportDeclarationNode(*optType, {}, nullptr, true));
   }
@@ -690,19 +764,27 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(SMLoc start) {
             *optClass, {}, nullptr, false));
   }
 
-  if (checkAndEat(TokenKind::rw_var, JSLexer::GrammarContext::Flow)) {
+  if (check(TokenKind::rw_var)) {
+    SMLoc varStart = advance(JSLexer::GrammarContext::Flow).Start;
     auto optIdent = parseBindingIdentifier(Param{});
-    if (!optIdent)
+    if (!optIdent) {
+      errorExpected(
+          TokenKind::identifier,
+          "in var declaration",
+          "start of declaration",
+          start);
       return None;
-    SMLoc end;
-    if (!eatSemi(end))
+    }
+    if (!eatSemi())
       return None;
+
+    SMLoc end = getPrevTokenEndLoc();
     return setLocation(
         start,
         end,
         new (context_) ESTree::DeclareExportDeclarationNode(
             setLocation(
-                start,
+                varStart,
                 end,
                 new (context_) ESTree::DeclareVariableNode(*optIdent)),
             {},
@@ -726,10 +808,33 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(SMLoc start) {
             ESTree::DeclareExportDeclarationNode(*optType, {}, nullptr, false));
   }
 
+  if (allowDeclareExportType == AllowDeclareExportType::Yes &&
+      check(typeIdent_)) {
+    advance(JSLexer::GrammarContext::Flow);
+    auto optType = parseTypeAlias(declareStart, TypeAliasKind::None);
+    if (!optType)
+      return None;
+    return setLocation(
+        start,
+        *optType,
+        new (context_)
+            ESTree::DeclareExportDeclarationNode(*optType, {}, nullptr, false));
+  }
+
+  if (checkN(TokenKind::rw_interface, interfaceIdent_)) {
+    auto optInterface = parseInterfaceDeclaration();
+    if (!optInterface)
+      return None;
+    return setLocation(
+        start,
+        *optInterface,
+        new (context_) ESTree::DeclareExportDeclarationNode(
+            *optInterface, {}, nullptr, false));
+  }
+
   if (checkAndEat(TokenKind::star, JSLexer::GrammarContext::Flow)) {
     // declare export * from 'foo';
     //                  ^
-    ESTree::Node *source = nullptr;
     if (!check(fromIdent_)) {
       error(
           tok_->getStartLoc(), "expected 'from' clause in export declaration");
@@ -738,13 +843,11 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(SMLoc start) {
     auto optSource = parseFromClause();
     if (!optSource)
       return None;
-    source = *optSource;
-    SMLoc end;
-    if (!eatSemi(end))
+    if (!eatSemi())
       return None;
     return setLocation(
         start,
-        end,
+        getPrevTokenEndLoc(),
         new (context_) ESTree::DeclareExportAllDeclarationNode(*optSource));
   }
 
@@ -753,9 +856,8 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(SMLoc start) {
     return None;
 
   ESTree::NodeList specifiers{};
-  SMLoc end;
   llvh::SmallVector<SMRange, 2> invalids{};
-  if (!parseExportClause(specifiers, end, invalids))
+  if (!parseExportClause(specifiers, invalids))
     return None;
 
   ESTree::Node *source = nullptr;
@@ -766,18 +868,18 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(SMLoc start) {
     source = *optSource;
   }
 
-  if (!eatSemi(end))
+  if (!eatSemi())
     return None;
 
   return setLocation(
       start,
-      end,
+      getPrevTokenEndLoc(),
       new (context_) ESTree::DeclareExportDeclarationNode(
           nullptr, std::move(specifiers), source, false));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeAnnotation(
-    bool wrapped,
+    Optional<SMLoc> wrappedStart,
     AllowAnonFunctionType allowAnonFunctionType) {
   llvh::SaveAndRestore<bool> saveParam(
       allowAnonFunctionType_,
@@ -785,16 +887,17 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAnnotation(
   auto optType = parseUnionTypeAnnotation();
   if (!optType)
     return None;
-  if (wrapped) {
+  if (wrappedStart) {
     return setLocation(
-        *optType,
-        *optType,
+        *wrappedStart,
+        getPrevTokenEndLoc(),
         new (context_) ESTree::TypeAnnotationNode(*optType));
   }
   return *optType;
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseUnionTypeAnnotation() {
+  SMLoc start = tok_->getStartLoc();
   checkAndEat(TokenKind::pipe, JSLexer::GrammarContext::Flow);
 
   auto optFirst = parseIntersectionTypeAnnotation();
@@ -816,15 +919,14 @@ Optional<ESTree::Node *> JSParserImpl::parseUnionTypeAnnotation() {
     types.push_back(**optInt);
   }
 
-  SMLoc start = types.front().getStartLoc();
-  SMLoc end = types.back().getEndLoc();
   return setLocation(
       start,
-      end,
+      getPrevTokenEndLoc(),
       new (context_) ESTree::UnionTypeAnnotationNode(std::move(types)));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseIntersectionTypeAnnotation() {
+  SMLoc start = tok_->getStartLoc();
   checkAndEat(TokenKind::amp, JSLexer::GrammarContext::Flow);
 
   auto optFirst = parseAnonFunctionWithoutParensTypeAnnotation();
@@ -846,11 +948,9 @@ Optional<ESTree::Node *> JSParserImpl::parseIntersectionTypeAnnotation() {
     types.push_back(**optInt);
   }
 
-  SMLoc start = types.front().getStartLoc();
-  SMLoc end = types.back().getEndLoc();
   return setLocation(
       start,
-      end,
+      getPrevTokenEndLoc(),
       new (context_) ESTree::IntersectionTypeAnnotationNode(std::move(types)));
 }
 
@@ -875,7 +975,7 @@ JSParserImpl::parseAnonFunctionWithoutParensTypeAnnotation() {
     ESTree::Node *rest = nullptr;
     ESTree::Node *typeParams = nullptr;
     return parseFunctionTypeAnnotationWithParams(
-        start, std::move(params), rest, typeParams);
+        start, std::move(params), nullptr, rest, typeParams);
   }
 
   return *optParam;
@@ -889,19 +989,19 @@ Optional<ESTree::Node *> JSParserImpl::parsePrefixTypeAnnotation() {
       return None;
     return setLocation(
         start,
-        *optPrefix,
+        getPrevTokenEndLoc(),
         new (context_) ESTree::NullableTypeAnnotationNode(*optPrefix));
   }
   return parsePostfixTypeAnnotation();
 }
 
 Optional<ESTree::Node *> JSParserImpl::parsePostfixTypeAnnotation() {
+  SMLoc start = tok_->getStartLoc();
   auto optPrimary = parsePrimaryTypeAnnotation();
   if (!optPrimary)
     return None;
 
   ESTree::Node *result = *optPrimary;
-  SMLoc start = result->getStartLoc();
 
   // Parse any [] after the primary type.
   while (!lexer_.isNewLineBeforeCurrentToken() &&
@@ -931,8 +1031,12 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
       return parseFunctionOrGroupTypeAnnotation();
     case TokenKind::l_brace:
     case TokenKind::l_bracepipe:
-      return parseObjectTypeAnnotation();
+      return parseObjectTypeAnnotation(
+          AllowProtoProperty::No,
+          AllowStaticProperty::No,
+          AllowSpreadProperty::Yes);
     case TokenKind::rw_interface: {
+      advance(JSLexer::GrammarContext::Flow);
       ESTree::NodeList extends{};
       auto optBody = parseInterfaceTail(start, extends);
       if (!optBody)
@@ -950,7 +1054,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
         return None;
       return setLocation(
           start,
-          *optPrimary,
+          getPrevTokenEndLoc(),
           new (context_) ESTree::TypeofTypeAnnotationNode(*optPrimary));
     }
 
@@ -969,7 +1073,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
         return setLocation(
             start,
             advance(JSLexer::GrammarContext::Flow).End,
-            new (context_) ESTree::AnyTypeAnnotationNode());
+            new (context_) ESTree::MixedTypeAnnotationNode());
       }
       if (tok_->getResWordOrIdentifier() == emptyIdent_) {
         return setLocation(
@@ -977,7 +1081,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
             advance(JSLexer::GrammarContext::Flow).End,
             new (context_) ESTree::EmptyTypeAnnotationNode());
       }
-      if (tok_->getResWordOrIdentifier() == booleanIdent_) {
+      if (tok_->getResWordOrIdentifier() == booleanIdent_ ||
+          tok_->getResWordOrIdentifier() == boolIdent_) {
         return setLocation(
             start,
             advance(JSLexer::GrammarContext::Flow).End,
@@ -989,11 +1094,29 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
             advance(JSLexer::GrammarContext::Flow).End,
             new (context_) ESTree::NumberTypeAnnotationNode());
       }
+      if (tok_->getResWordOrIdentifier() == symbolIdent_) {
+        return setLocation(
+            start,
+            advance(JSLexer::GrammarContext::Flow).End,
+            new (context_) ESTree::SymbolTypeAnnotationNode());
+      }
       if (tok_->getResWordOrIdentifier() == stringIdent_) {
         return setLocation(
             start,
             advance(JSLexer::GrammarContext::Flow).End,
             new (context_) ESTree::StringTypeAnnotationNode());
+      }
+      if (tok_->getResWordOrIdentifier() == interfaceIdent_) {
+        advance(JSLexer::GrammarContext::Flow);
+        ESTree::NodeList extends{};
+        auto optBody = parseInterfaceTail(start, extends);
+        if (!optBody)
+          return None;
+        return setLocation(
+            start,
+            *optBody,
+            new (context_) ESTree::InterfaceTypeAnnotationNode(
+                std::move(extends), *optBody));
       }
 
       {
@@ -1020,7 +1143,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
       return setLocation(
           start,
           advance(JSLexer::GrammarContext::Flow).End,
-          new (context_) ESTree::StringLiteralNode(str));
+          new (context_) ESTree::StringLiteralTypeAnnotationNode(str));
     }
 
     case TokenKind::numeric_literal: {
@@ -1120,7 +1243,8 @@ Optional<ESTree::Node *> JSParserImpl::parseFunctionTypeAnnotation() {
     return None;
 
   ESTree::NodeList params{};
-  auto optRest = parseFunctionTypeAnnotationParams(params);
+  ESTree::Node *thisConstraint = nullptr;
+  auto optRest = parseFunctionTypeAnnotationParams(params, thisConstraint);
   if (!optRest)
     return None;
   ESTree::Node *rest = *optRest;
@@ -1133,12 +1257,13 @@ Optional<ESTree::Node *> JSParserImpl::parseFunctionTypeAnnotation() {
     return None;
 
   return parseFunctionTypeAnnotationWithParams(
-      start, std::move(params), rest, typeParams);
+      start, std::move(params), thisConstraint, rest, typeParams);
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseFunctionTypeAnnotationWithParams(
     SMLoc start,
     ESTree::NodeList &&params,
+    ESTree::Node *thisConstraint,
     ESTree::Node *rest,
     ESTree::Node *typeParams) {
   assert(check(TokenKind::equalgreater));
@@ -1150,9 +1275,9 @@ Optional<ESTree::Node *> JSParserImpl::parseFunctionTypeAnnotationWithParams(
 
   return setLocation(
       start,
-      *optReturnType,
+      getPrevTokenEndLoc(),
       new (context_) ESTree::FunctionTypeAnnotationNode(
-          std::move(params), *optReturnType, rest, typeParams));
+          std::move(params), thisConstraint, *optReturnType, rest, typeParams));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseFunctionOrGroupTypeAnnotation() {
@@ -1171,6 +1296,42 @@ Optional<ESTree::Node *> JSParserImpl::parseFunctionOrGroupTypeAnnotation() {
   ESTree::Node *type = nullptr;
   ESTree::Node *rest = nullptr;
   ESTree::NodeList params{};
+  ESTree::Node *thisConstraint = nullptr;
+
+  if (check(TokenKind::rw_this)) {
+    isFunction = true;
+    SMLoc thisStart = advance(JSLexer::GrammarContext::Flow).Start;
+    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+      auto optType = parseTypeAnnotation();
+      if (!optType)
+        return None;
+      ESTree::Node *typeAnnotation = *optType;
+
+      thisConstraint = setLocation(
+          thisStart,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::FunctionTypeParamNode(
+              /* name */ nullptr, typeAnnotation, /* optional */ false));
+    } else {
+      params.push_back(*setLocation(
+          thisStart,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::FunctionTypeParamNode(
+              nullptr,
+              setLocation(
+                  thisStart,
+                  getPrevTokenEndLoc(),
+                  new (context_) ESTree::GenericTypeAnnotationNode(
+                      setLocation(
+                          thisStart,
+                          getPrevTokenEndLoc(),
+                          new (context_) ESTree::IdentifierNode(
+                              thisIdent_, nullptr, false)),
+                      {})),
+              false)));
+    }
+    checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Flow);
+  }
 
   if (allowAnonFunctionType_ &&
       checkAndEat(TokenKind::dotdotdot, JSLexer::GrammarContext::Flow)) {
@@ -1252,7 +1413,7 @@ Optional<ESTree::Node *> JSParserImpl::parseFunctionOrGroupTypeAnnotation() {
   }
 
   auto optReturnType = parseTypeAnnotation(
-      false,
+      None,
       allowAnonFunctionType_ ? AllowAnonFunctionType::Yes
                              : AllowAnonFunctionType::No);
   if (!optReturnType)
@@ -1261,12 +1422,15 @@ Optional<ESTree::Node *> JSParserImpl::parseFunctionOrGroupTypeAnnotation() {
   ESTree::Node *typeParams = nullptr;
   return setLocation(
       start,
-      *optReturnType,
+      getPrevTokenEndLoc(),
       new (context_) ESTree::FunctionTypeAnnotationNode(
-          std::move(params), *optReturnType, rest, typeParams));
+          std::move(params), thisConstraint, *optReturnType, rest, typeParams));
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseObjectTypeAnnotation() {
+Optional<ESTree::Node *> JSParserImpl::parseObjectTypeAnnotation(
+    AllowProtoProperty allowProtoProperty,
+    AllowStaticProperty allowStaticProperty,
+    AllowSpreadProperty allowSpreadProperty) {
   assert(check(TokenKind::l_brace, TokenKind::l_bracepipe));
   bool exact = check(TokenKind::l_bracepipe);
   SMLoc start = advance(JSLexer::GrammarContext::Flow).Start;
@@ -1278,8 +1442,22 @@ Optional<ESTree::Node *> JSParserImpl::parseObjectTypeAnnotation() {
   bool inexact = false;
 
   if (!parseObjectTypeProperties(
-          properties, indexers, callProperties, internalSlots, inexact))
+          allowProtoProperty,
+          allowStaticProperty,
+          allowSpreadProperty,
+          properties,
+          indexers,
+          callProperties,
+          internalSlots,
+          inexact))
     return None;
+
+  if (exact && inexact) {
+    // Doesn't prevent parsing from continuing, but it is an error.
+    error(
+        start,
+        "Explicit inexact syntax cannot appear inside an explicit exact object type");
+  }
 
   SMLoc end = tok_->getEndLoc();
   if (!eat(
@@ -1303,6 +1481,9 @@ Optional<ESTree::Node *> JSParserImpl::parseObjectTypeAnnotation() {
 }
 
 bool JSParserImpl::parseObjectTypeProperties(
+    AllowProtoProperty allowProtoProperty,
+    AllowStaticProperty allowStaticProperty,
+    AllowSpreadProperty allowSpreadProperty,
     ESTree::NodeList &properties,
     ESTree::NodeList &indexers,
     ESTree::NodeList &callProperties,
@@ -1322,17 +1503,26 @@ bool JSParserImpl::parseObjectTypeProperties(
         inexact = true;
         return true;
       } else {
+        if (allowSpreadProperty == AllowSpreadProperty::No) {
+          error(
+              start, "Spreading a type is only allowed inside an object type");
+        }
         auto optType = parseTypeAnnotation();
         if (!optType)
           return false;
         properties.push_back(*setLocation(
             start,
-            *optType,
+            getPrevTokenEndLoc(),
             new (context_) ESTree::ObjectTypeSpreadPropertyNode(*optType)));
       }
     } else {
       if (!parsePropertyTypeAnnotation(
-              properties, indexers, callProperties, internalSlots))
+              allowProtoProperty,
+              allowStaticProperty,
+              properties,
+              indexers,
+              callProperties,
+              internalSlots))
         return false;
     }
 
@@ -1357,6 +1547,8 @@ bool JSParserImpl::parseObjectTypeProperties(
 }
 
 bool JSParserImpl::parsePropertyTypeAnnotation(
+    AllowProtoProperty allowProtoProperty,
+    AllowStaticProperty allowStaticProperty,
     ESTree::NodeList &properties,
     ESTree::NodeList &indexers,
     ESTree::NodeList &callProperties,
@@ -1366,6 +1558,17 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
 
   ESTree::Node *variance = nullptr;
   bool isStatic = false;
+  bool proto = false;
+
+  if (check(protoIdent_)) {
+    proto = true;
+    advance(JSLexer::GrammarContext::Flow);
+  }
+
+  if (!proto && (check(TokenKind::rw_static) || check(staticIdent_))) {
+    isStatic = true;
+    advance(JSLexer::GrammarContext::Flow);
+  }
 
   if (check(TokenKind::plus, TokenKind::minus)) {
     variance = setLocation(
@@ -1376,16 +1579,17 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
     advance(JSLexer::GrammarContext::Flow);
   }
 
-  if (variance == nullptr &&
-      (check(TokenKind::rw_static) || check(staticIdent_))) {
-    // 'static' disallowed when variance has been provided.
-    isStatic = true;
-    advance(JSLexer::GrammarContext::Flow);
-  }
-
   if (checkAndEat(TokenKind::l_square, JSLexer::GrammarContext::Flow)) {
-    if (variance == nullptr &&
-        checkAndEat(TokenKind::l_square, JSLexer::GrammarContext::Flow)) {
+    if (checkAndEat(TokenKind::l_square, JSLexer::GrammarContext::Flow)) {
+      if (variance) {
+        error(variance->getSourceRange(), "Unexpected variance sigil");
+      }
+      if (proto) {
+        error(startRange, "invalid 'proto' modifier");
+      }
+      if (isStatic && allowStaticProperty == AllowStaticProperty::No) {
+        error(startRange, "invalid 'static' modifier");
+      }
       // Internal slot
       if (!check(TokenKind::identifier) && !tok_->isResWord()) {
         errorExpected(
@@ -1398,8 +1602,8 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
       ESTree::IdentifierNode *id = setLocation(
           tok_,
           tok_,
-          new (context_)
-              ESTree::IdentifierNode(tok_->getResWordOrIdentifier(), nullptr));
+          new (context_) ESTree::IdentifierNode(
+              tok_->getResWordOrIdentifier(), nullptr, false));
       advance(JSLexer::GrammarContext::Flow);
 
       if (!eat(
@@ -1455,7 +1659,7 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
       assert(value && "value must be set by a branch");
       internalSlots.push_back(*setLocation(
           start,
-          value,
+          getPrevTokenEndLoc(),
           new (context_) ESTree::ObjectTypeInternalSlotNode(
               id, value, optional, isStatic, method)));
     } else {
@@ -1463,16 +1667,45 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
       auto optIndexer = parseTypeIndexerProperty(start, variance, isStatic);
       if (!optIndexer)
         return false;
+      if (proto) {
+        error(startRange, "invalid 'proto' modifier");
+      }
+      if (isStatic && allowStaticProperty == AllowStaticProperty::No) {
+        error(startRange, "invalid 'static' modifier");
+      }
       indexers.push_back(**optIndexer);
     }
     return true;
   }
 
+  ESTree::Node *key = nullptr;
+
   if (check(TokenKind::less, TokenKind::l_paren)) {
+    if ((isStatic && allowStaticProperty == AllowStaticProperty::No) ||
+        (proto && allowProtoProperty == AllowProtoProperty::No)) {
+      key = setLocation(
+          startRange,
+          startRange,
+          new (context_) ESTree::IdentifierNode(
+              isStatic ? staticIdent_ : protoIdent_, nullptr, false));
+      isStatic = false;
+      proto = false;
+      if (variance) {
+        error(variance->getSourceRange(), "Unexpected variance sigil");
+      }
+      auto optProp = parseMethodTypeProperty(start, isStatic, key);
+      if (!optProp)
+        return false;
+      properties.push_back(**optProp);
+      return true;
+    }
     if (variance != nullptr) {
       error(
           variance->getSourceRange(),
           "call property must not specify variance");
+    }
+    if (proto) {
+      error(startRange, "invalid 'proto' modifier");
     }
     auto optCall = parseTypeCallProperty(start, isStatic);
     if (!optCall)
@@ -1481,14 +1714,18 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
     return true;
   }
 
-  ESTree::Node *key = nullptr;
-  if (isStatic && check(TokenKind::colon, TokenKind::question)) {
-    isStatic = false;
+  if ((isStatic || proto) && check(TokenKind::colon, TokenKind::question)) {
+    if (variance) {
+      error(variance->getSourceRange(), "Unexpected variance sigil");
+    }
     key = setLocation(
         startRange,
         startRange,
-        new (context_) ESTree::IdentifierNode(staticIdent_, nullptr));
-    auto optProp = parseTypeProperty(start, variance, isStatic, key);
+        new (context_) ESTree::IdentifierNode(
+            isStatic ? staticIdent_ : protoIdent_, nullptr, false));
+    isStatic = false;
+    proto = false;
+    auto optProp = parseTypeProperty(start, variance, isStatic, proto, key);
     if (!optProp)
       return false;
     properties.push_back(**optProp);
@@ -1501,7 +1738,16 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
   key = *optKey;
 
   if (check(TokenKind::less, TokenKind::l_paren)) {
-    auto optProp = parseMethodTypeProperty(start, variance, isStatic, key);
+    if (variance) {
+      error(variance->getSourceRange(), "Unexpected variance sigil");
+    }
+    if (proto) {
+      error(startRange, "invalid 'proto' modifier");
+    }
+    if (isStatic && allowStaticProperty == AllowStaticProperty::No) {
+      error(startRange, "invalid 'static' modifier");
+    }
+    auto optProp = parseMethodTypeProperty(start, isStatic, key);
     if (!optProp)
       return false;
     properties.push_back(**optProp);
@@ -1509,7 +1755,13 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
   }
 
   if (check(TokenKind::colon, TokenKind::question)) {
-    auto optProp = parseTypeProperty(start, variance, isStatic, key);
+    if (proto && allowProtoProperty == AllowProtoProperty::No) {
+      error(startRange, "invalid 'proto' modifier");
+    }
+    if (isStatic && allowStaticProperty == AllowStaticProperty::No) {
+      error(startRange, "invalid 'static' modifier");
+    }
+    auto optProp = parseTypeProperty(start, variance, isStatic, proto, key);
     if (!optProp)
       return false;
     properties.push_back(**optProp);
@@ -1522,6 +1774,12 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
         error(
             variance->getSourceRange(),
             "accessor property must not specify variance");
+      }
+      if (proto) {
+        error(startRange, "invalid 'proto' modifier");
+      }
+      if (isStatic && allowStaticProperty == AllowStaticProperty::No) {
+        error(startRange, "invalid 'static' modifier");
       }
       auto optKey = parsePropertyName();
       if (!optKey)
@@ -1536,25 +1794,19 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
     }
   }
 
-  if (!check(TokenKind::colon, TokenKind::question)) {
-    errorExpected(
-        {TokenKind::colon, TokenKind::question},
-        "in property type annotation",
-        "start of properties",
-        start);
-    return false;
-  }
-  auto optProp = parseTypeProperty(start, variance, isStatic, key);
-  if (!optProp)
-    return false;
-  properties.push_back(**optProp);
-  return true;
+  errorExpected(
+      {TokenKind::colon, TokenKind::question},
+      "in property type annotation",
+      "start of properties",
+      start);
+  return false;
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeProperty(
     SMLoc start,
     ESTree::Node *variance,
     bool isStatic,
+    bool proto,
     ESTree::Node *key) {
   assert(check(TokenKind::colon, TokenKind::question));
 
@@ -1574,19 +1826,17 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeProperty(
   ESTree::Node *value = *optValue;
 
   bool method = false;
-  bool proto = false;
   UniqueString *kind = initIdent_;
 
   return setLocation(
       start,
-      value,
+      getPrevTokenEndLoc(),
       new (context_) ESTree::ObjectTypePropertyNode(
           key, value, method, optional, isStatic, proto, variance, kind));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseMethodTypeProperty(
     SMLoc start,
-    ESTree::Node *variance,
     bool isStatic,
     ESTree::Node *key) {
   assert(check(TokenKind::less, TokenKind::l_paren));
@@ -1611,9 +1861,16 @@ Optional<ESTree::Node *> JSParserImpl::parseMethodTypeProperty(
 
   return setLocation(
       start,
-      value,
+      getPrevTokenEndLoc(),
       new (context_) ESTree::ObjectTypePropertyNode(
-          key, value, method, optional, isStatic, proto, variance, kind));
+          key,
+          value,
+          method,
+          optional,
+          isStatic,
+          proto,
+          /* variance */ nullptr,
+          kind));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseGetOrSetTypeProperty(
@@ -1625,16 +1882,33 @@ Optional<ESTree::Node *> JSParserImpl::parseGetOrSetTypeProperty(
   if (!optValue)
     return None;
 
-  ESTree::Node *value = *optValue;
+  ESTree::FunctionTypeAnnotationNode *value = *optValue;
   bool method = false;
   bool optional = false;
   bool proto = false;
   ESTree::Node *variance = nullptr;
   UniqueString *kind = isGetter ? getIdent_ : setIdent_;
 
+  // Check the number of parameters, but we can continue parsing anyway.
+  if (isGetter) {
+    if (value->_params.size() != 0) {
+      error(value->getSourceRange(), "Getter must have 0 parameters");
+    }
+  } else {
+    if (value->_params.size() != 1) {
+      error(value->getSourceRange(), "Setter must have 1 parameter");
+    }
+  }
+
+  if (value->_this) {
+    error(
+        value->_this->getSourceRange(),
+        "Accessors must not have 'this' annotations");
+  }
+
   return setLocation(
       start,
-      value,
+      getPrevTokenEndLoc(),
       new (context_) ESTree::ObjectTypePropertyNode(
           key, value, method, optional, isStatic, proto, variance, kind));
 }
@@ -1696,7 +1970,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeIndexerProperty(
 
   return setLocation(
       start,
-      value,
+      getPrevTokenEndLoc(),
       new (context_)
           ESTree::ObjectTypeIndexerNode(id, key, value, isStatic, variance));
 }
@@ -1712,9 +1986,11 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeCallProperty(
     typeParams = *optTypeParams;
   }
   auto optValue = parseMethodishTypeAnnotation(start, typeParams);
+  if (!optValue)
+    return None;
   return setLocation(
       start,
-      *optValue,
+      getPrevTokenEndLoc(),
       new (context_) ESTree::ObjectTypeCallPropertyNode(*optValue, isStatic));
 }
 
@@ -1765,7 +2041,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeParam() {
   if (!need(TokenKind::identifier, "in type parameter", nullptr, {}))
     return None;
   UniqueString *name = tok_->getIdentifier();
-  SMLoc end = advance(JSLexer::GrammarContext::Flow).End;
+  advance(JSLexer::GrammarContext::Flow);
 
   ESTree::Node *bound = nullptr;
   if (check(TokenKind::colon)) {
@@ -1775,9 +2051,8 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeParam() {
       return None;
     bound = setLocation(
         boundStart,
-        *optType,
+        getPrevTokenEndLoc(),
         new (context_) ESTree::TypeAnnotationNode(*optType));
-    end = bound->getEndLoc();
   }
 
   ESTree::Node *initializer = nullptr;
@@ -1786,12 +2061,11 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeParam() {
     if (!optInit)
       return None;
     initializer = *optInit;
-    end = initializer->getEndLoc();
   }
 
   return setLocation(
       start,
-      end,
+      getPrevTokenEndLoc(),
       new (context_)
           ESTree::TypeParameterNode(name, bound, variance, initializer));
 }
@@ -1832,10 +2106,11 @@ JSParserImpl::parseMethodishTypeAnnotation(
     SMLoc start,
     ESTree::Node *typeParams) {
   ESTree::NodeList params{};
+  ESTree::Node *thisConstraint = nullptr;
 
   if (!need(TokenKind::l_paren, "at start of parameters", nullptr, {}))
     return None;
-  auto optRest = parseFunctionTypeAnnotationParams(params);
+  auto optRest = parseFunctionTypeAnnotationParams(params, thisConstraint);
   if (!optRest)
     return None;
 
@@ -1853,17 +2128,54 @@ JSParserImpl::parseMethodishTypeAnnotation(
 
   return setLocation(
       start,
-      *optReturn,
+      getPrevTokenEndLoc(),
       new (context_) ESTree::FunctionTypeAnnotationNode(
-          std::move(params), *optReturn, *optRest, typeParams));
+          std::move(params), thisConstraint, *optReturn, *optRest, typeParams));
 }
 
 Optional<ESTree::FunctionTypeParamNode *>
-JSParserImpl::parseFunctionTypeAnnotationParams(ESTree::NodeList &params) {
+JSParserImpl::parseFunctionTypeAnnotationParams(
+    ESTree::NodeList &params,
+    ESTree::NodePtr &thisConstraint) {
   assert(check(TokenKind::l_paren));
   SMLoc start = advance(JSLexer::GrammarContext::Flow).Start;
 
   ESTree::FunctionTypeParamNode *rest = nullptr;
+  thisConstraint = nullptr;
+
+  if (check(TokenKind::rw_this)) {
+    SMLoc thisStart = advance(JSLexer::GrammarContext::Flow).Start;
+    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+      auto optType = parseTypeAnnotation();
+      if (!optType)
+        return None;
+      ESTree::Node *typeAnnotation = *optType;
+
+      thisConstraint = setLocation(
+          thisStart,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::FunctionTypeParamNode(
+              /* name */ nullptr, typeAnnotation, /* optional */ false));
+    } else {
+      params.push_back(*setLocation(
+          thisStart,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::FunctionTypeParamNode(
+              nullptr,
+              setLocation(
+                  thisStart,
+                  getPrevTokenEndLoc(),
+                  new (context_) ESTree::GenericTypeAnnotationNode(
+                      setLocation(
+                          thisStart,
+                          getPrevTokenEndLoc(),
+                          new (context_) ESTree::IdentifierNode(
+                              thisIdent_, nullptr, false)),
+                      {})),
+              false)));
+    }
+    checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Flow);
+  }
 
   while (!check(TokenKind::r_paren)) {
     bool isRest =
@@ -1901,6 +2213,12 @@ Optional<ESTree::FunctionTypeParamNode *>
 JSParserImpl::parseFunctionTypeAnnotationParam() {
   SMLoc start = tok_->getStartLoc();
 
+  if (check(TokenKind::rw_this)) {
+    error(
+        tok_->getSourceRange(),
+        "'this' constraint must be the first parameter");
+  }
+
   auto optLeft = parseTypeAnnotation();
   if (!optLeft)
     return None;
@@ -1933,7 +2251,7 @@ JSParserImpl::parseFunctionTypeAnnotationParam() {
 
   return setLocation(
       start,
-      typeAnnotation,
+      getPrevTokenEndLoc(),
       new (context_)
           ESTree::FunctionTypeParamNode(name, typeAnnotation, optional));
 }
@@ -1945,8 +2263,8 @@ Optional<ESTree::GenericTypeAnnotationNode *> JSParserImpl::parseGenericType() {
   ESTree::Node *id = setLocation(
       tok_,
       tok_,
-      new (context_)
-          ESTree::IdentifierNode(tok_->getResWordOrIdentifier(), nullptr));
+      new (context_) ESTree::IdentifierNode(
+          tok_->getResWordOrIdentifier(), nullptr, false));
   advance(JSLexer::GrammarContext::Flow);
 
   while (checkAndEat(TokenKind::period, JSLexer::GrammarContext::Flow)) {
@@ -1961,26 +2279,24 @@ Optional<ESTree::GenericTypeAnnotationNode *> JSParserImpl::parseGenericType() {
     ESTree::Node *next = setLocation(
         tok_,
         tok_,
-        new (context_)
-            ESTree::IdentifierNode(tok_->getResWordOrIdentifier(), nullptr));
+        new (context_) ESTree::IdentifierNode(
+            tok_->getResWordOrIdentifier(), nullptr, false));
     advance(JSLexer::GrammarContext::Flow);
     id = setLocation(
         id, next, new (context_) ESTree::QualifiedTypeIdentifierNode(id, next));
   }
 
-  SMLoc end = id->getEndLoc();
   ESTree::Node *typeParams = nullptr;
   if (check(TokenKind::less)) {
     auto optTypeParams = parseTypeArgs();
     if (!optTypeParams)
       return None;
     typeParams = *optTypeParams;
-    end = typeParams->getEndLoc();
   }
 
   return setLocation(
       start,
-      end,
+      getPrevTokenEndLoc(),
       new (context_) ESTree::GenericTypeAnnotationNode(id, typeParams));
 }
 
@@ -1991,8 +2307,9 @@ Optional<ESTree::ClassImplementsNode *> JSParserImpl::parseClassImplements() {
   ESTree::Node *id = setLocation(
       tok_,
       tok_,
-      new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
-  SMLoc end = advance(JSLexer::GrammarContext::Flow).End;
+      new (context_)
+          ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
+  advance(JSLexer::GrammarContext::Flow);
 
   ESTree::Node *typeParams = nullptr;
   if (check(TokenKind::less)) {
@@ -2000,11 +2317,12 @@ Optional<ESTree::ClassImplementsNode *> JSParserImpl::parseClassImplements() {
     if (!optTypeParams)
       return None;
     typeParams = *optTypeParams;
-    end = typeParams->getEndLoc();
   }
 
   return setLocation(
-      start, end, new (context_) ESTree::ClassImplementsNode(id, typeParams));
+      start,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::ClassImplementsNode(id, typeParams));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parsePredicate() {
@@ -2042,6 +2360,8 @@ JSParserImpl::reparseTypeAnnotationAsIdentifier(ESTree::Node *typeAnnotation) {
     id = numberIdent_;
   } else if (isa<ESTree::StringTypeAnnotationNode>(typeAnnotation)) {
     id = stringIdent_;
+  } else if (isa<ESTree::SymbolTypeAnnotationNode>(typeAnnotation)) {
+    id = symbolIdent_;
   } else if (isa<ESTree::NullLiteralTypeAnnotationNode>(typeAnnotation)) {
     id = nullIdent_;
   } else if (
@@ -2059,7 +2379,7 @@ JSParserImpl::reparseTypeAnnotationAsIdentifier(ESTree::Node *typeAnnotation) {
   return setLocation(
       typeAnnotation,
       typeAnnotation,
-      new (context_) ESTree::IdentifierNode(id, nullptr));
+      new (context_) ESTree::IdentifierNode(id, nullptr, false));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseEnumDeclaration() {
@@ -2067,12 +2387,21 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumDeclaration() {
   SMLoc start = advance().Start;
 
   auto optIdent = parseBindingIdentifier(Param{});
-  if (!optIdent)
+  if (!optIdent) {
+    errorExpected(
+        TokenKind::identifier,
+        "in enum declaration",
+        "start of declaration",
+        start);
     return None;
+  }
   ESTree::Node *id = *optIdent;
 
   OptValue<EnumKind> optKind = llvh::None;
-  if (checkAndEat(ofIdent_)) {
+  Optional<SMLoc> explicitTypeStart = None;
+  if (check(ofIdent_)) {
+    explicitTypeStart = advance().Start;
+
     if (checkAndEat(stringIdent_)) {
       optKind = EnumKind::String;
     } else if (checkAndEat(numberIdent_)) {
@@ -2083,7 +2412,6 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumDeclaration() {
       optKind = EnumKind::Symbol;
     }
   }
-  bool explicitType = optKind.hasValue();
 
   if (!need(
           TokenKind::l_brace,
@@ -2092,7 +2420,7 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumDeclaration() {
           start))
     return None;
 
-  auto optBody = parseEnumBody(optKind, explicitType);
+  auto optBody = parseEnumBody(optKind, explicitTypeStart);
   if (!optBody)
     return None;
 
@@ -2104,12 +2432,25 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumDeclaration() {
 
 Optional<ESTree::Node *> JSParserImpl::parseEnumBody(
     OptValue<EnumKind> optKind,
-    bool explicitType) {
+    Optional<SMLoc> explicitTypeStart) {
   assert(check(TokenKind::l_brace));
   SMLoc start = advance().Start;
 
   ESTree::NodeList members{};
+  bool hasUnknownMembers = false;
   while (!check(TokenKind::r_brace)) {
+    if (check(TokenKind::dotdotdot)) {
+      SMLoc dotdotdotLoc = advance(JSLexer::GrammarContext::Flow).Start;
+      if (!check(TokenKind::r_brace)) {
+        error(
+            dotdotdotLoc,
+            "The `...` must come after all enum members. "
+            "Move it to the end of the enum body.");
+        return None;
+      }
+      hasUnknownMembers = true;
+      break;
+    }
     if (!need(
             TokenKind::identifier,
             "in enum declaration",
@@ -2185,12 +2526,17 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumBody(
           start))
     return None;
 
+  bool hasExplicitType = explicitTypeStart.hasValue();
+  if (hasExplicitType) {
+    start = *explicitTypeStart;
+  }
+
   if (!optKind.hasValue()) {
     return setLocation(
         start,
         end,
-        new (context_)
-            ESTree::EnumStringBodyNode(std::move(members), explicitType));
+        new (context_) ESTree::EnumStringBodyNode(
+            std::move(members), hasExplicitType, hasUnknownMembers));
   }
 
   // There are different node kinds per enum kind.
@@ -2199,27 +2545,30 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumBody(
       return setLocation(
           start,
           end,
-          new (context_)
-              ESTree::EnumStringBodyNode(std::move(members), explicitType));
+          new (context_) ESTree::EnumStringBodyNode(
+              std::move(members), hasExplicitType, hasUnknownMembers));
     case EnumKind::Number:
       return setLocation(
           start,
           end,
-          new (context_)
-              ESTree::EnumNumberBodyNode(std::move(members), explicitType));
+          new (context_) ESTree::EnumNumberBodyNode(
+              std::move(members), hasExplicitType, hasUnknownMembers));
     case EnumKind::Boolean:
       return setLocation(
           start,
           end,
-          new (context_)
-              ESTree::EnumBooleanBodyNode(std::move(members), explicitType));
+          new (context_) ESTree::EnumBooleanBodyNode(
+              std::move(members), hasExplicitType, hasUnknownMembers));
     case EnumKind::Symbol:
-      assert(explicitType && "symbol enums can only be made via explicit type");
+      assert(
+          hasExplicitType && "symbol enums can only be made via explicit type");
       return setLocation(
           start,
           end,
-          new (context_) ESTree::EnumSymbolBodyNode(std::move(members)));
+          new (context_) ESTree::EnumSymbolBodyNode(
+              std::move(members), hasUnknownMembers));
   }
+  llvm_unreachable("No other kind of enum");
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseEnumMember() {
@@ -2227,18 +2576,20 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumMember() {
   ESTree::Node *id = setLocation(
       tok_,
       tok_,
-      new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
+      new (context_)
+          ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
   advance();
 
   ESTree::Node *member = nullptr;
   if (checkAndEat(TokenKind::equal)) {
     // Parse initializer.
     if (check(TokenKind::rw_true, TokenKind::rw_false)) {
-      member = setLocation(
-          id,
+      ESTree::Node *init = setLocation(
           tok_,
-          new (context_)
-              ESTree::EnumBooleanMemberNode(id, check(TokenKind::rw_true)));
+          tok_,
+          new (context_) ESTree::BooleanLiteralNode(check(TokenKind::rw_true)));
+      member = setLocation(
+          id, tok_, new (context_) ESTree::EnumBooleanMemberNode(id, init));
     } else if (check(TokenKind::string_literal)) {
       ESTree::Node *init = setLocation(
           tok_,

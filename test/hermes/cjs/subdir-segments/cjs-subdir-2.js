@@ -10,3 +10,4 @@
 print('2: init');
 
 exports.alpha = 144;
+exports.shared = require('./cjs-subdir-shared.js');

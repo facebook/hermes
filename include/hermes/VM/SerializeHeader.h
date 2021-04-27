@@ -42,8 +42,10 @@ struct SerializeHeader {
   /// Runtime has the same runtime config as the Deserialize system. Write those
   /// flags that affects S/D in the header so we can check them too.
   bool enableEval;
+  bool hasES6Promise;
   bool hasES6Proxy;
   bool hasES6Symbol;
+  bool hasES6Intl;
   uint8_t bytecodeWarmupPercent;
   bool trackIO;
   /// Note: The following fields are not being checked right now because they

@@ -20,6 +20,7 @@
 #include <sys/prctl.h>
 #endif // __ANDROID__
 
+#include <vector>
 #include <functional>
 #ifndef _WIN32
 #include <pthread.h>
@@ -92,8 +93,11 @@ JNIEnv* attachCurrentThread() {
   JavaVMAttachArgs args{JNI_VERSION_1_6, nullptr, nullptr};
 
   const auto threadName = getThreadName();
+  std::vector<char> nameBuf;
   if (threadName.size()) {
-    args.name = threadName.c_str();
+    const char* cName = threadName.c_str();
+    nameBuf.assign(cName, cName + threadName.size() + 1);
+    args.name = nameBuf.data();
   }
 
   using AttachEnvType =

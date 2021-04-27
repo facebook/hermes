@@ -453,6 +453,7 @@ class DynamicStringPrimitive final
  private:
   static const VTable vt;
 
+ public:
   /// Construct from a DynamicStringPrimitive, perhaps with a SymbolID.
   /// If a non-empty SymbolID is provided, we must be a Uniqued string.
   explicit DynamicStringPrimitive(Runtime *runtime, uint32_t length)
@@ -466,6 +467,7 @@ class DynamicStringPrimitive final
 
   explicit DynamicStringPrimitive(Runtime *runtime, Ref src);
 
+ private:
   /// Copy a UTF-16 sequence into a new StringPrim. Throw \c RangeError if the
   /// string is longer than \c MAX_STRING_LENGTH characters. The new string is
   static CallResult<HermesValue> create(Runtime *runtime, Ref str);
@@ -560,11 +562,13 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
     return contents_.capacity() * sizeof(T);
   }
 
+ public:
   /// Construct an ExternalStringPrimitive from the given string \p contents,
   /// non-uniqued.
   template <class BasicString>
   ExternalStringPrimitive(Runtime *runtime, BasicString &&contents);
 
+ private:
   /// Destructor deallocates the contents_ string.
   ~ExternalStringPrimitive() = default;
 
@@ -688,25 +692,27 @@ class BufferedStringPrimitive final : public StringPrimitive {
  private:
   static const VTable vt;
 
+ public:
   /// Construct a BufferedStringPrimitive with the specified length \p length
   /// and the associated concatenation buffer \p storage. Note that the length
   /// of the primitive may be smaller than the length of the buffer.
   BufferedStringPrimitive(
       Runtime *runtime,
       uint32_t length,
-      ExternalStringPrimitive<T> *concatBuffer)
+      Handle<ExternalStringPrimitive<T>> concatBuffer)
       : StringPrimitive(
             runtime,
             &vt,
             sizeof(BufferedStringPrimitive<T>),
             length) {
     concatBufferHV_.set(
-        HermesValue::encodeObjectValue(concatBuffer), &runtime->getHeap());
+        HermesValue::encodeObjectValue(*concatBuffer), &runtime->getHeap());
     assert(
         concatBuffer->contents_.size() >= length &&
         "length exceeds size of concatenation buffer");
   }
 
+ private:
   /// Allocate a BufferedStringPrimitive with the specified length \p length
   /// and the associated concatenation buffer \p storage. Note that the length
   /// of the primitive may be smaller than the length of the buffer.
@@ -820,7 +826,7 @@ using DynamicUniquedASCIIStringPrimitive =
 template <typename T>
 const VTable ExternalStringPrimitive<T>::vt = VTable(
     ExternalStringPrimitive<T>::getCellKind(),
-    cellSize<ExternalStringPrimitive<T>>(),
+    0,
     ExternalStringPrimitive<T>::_finalizeImpl,
     nullptr, // markWeak.
     ExternalStringPrimitive<T>::_mallocSizeImpl,
@@ -840,7 +846,7 @@ using ExternalASCIIStringPrimitive = ExternalStringPrimitive<char>;
 template <typename T>
 const VTable BufferedStringPrimitive<T>::vt = VTable(
     BufferedStringPrimitive<T>::getCellKind(),
-    sizeof(BufferedStringPrimitive<T>),
+    0,
     nullptr, // finalize.
     nullptr, // markWeak.
     nullptr, // mallocSize

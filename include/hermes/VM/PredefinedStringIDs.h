@@ -21,6 +21,9 @@ namespace vm {
 /// predefined strings.  Returns None otherwise.
 llvh::Optional<vm::SymbolID> getPredefinedStringID(llvh::StringRef str);
 
+/// the length of each predefined property.
+extern const llvh::ArrayRef<uint8_t> predefPropertyLengths;
+
 /// the length of each predefined string.
 extern const llvh::ArrayRef<uint8_t> predefStringLengths;
 

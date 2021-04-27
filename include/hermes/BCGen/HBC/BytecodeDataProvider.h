@@ -126,16 +126,16 @@ class BCProviderBase {
   llvh::ArrayRef<RegExpTableEntry> regExpTable_{};
   llvh::ArrayRef<unsigned char> regExpStorage_{};
 
-  /// The ID of the first CJS module in this BytecodeModule.
-  uint32_t cjsModuleOffset_;
+  /// The segment ID corresponding to the bytecode module.
+  uint32_t segmentID_;
 
   /// Table which indicates where to find the different CommonJS modules.
   /// List of unsorted pairs from {filename ID => function index}.
   llvh::ArrayRef<std::pair<uint32_t, uint32_t>> cjsModuleTable_{};
 
   /// Table which indicates where to find the different CommonJS modules.
-  /// Vector of function indexes.
-  llvh::ArrayRef<uint32_t> cjsModuleTableStatic_{};
+  /// List of unsorted pairs from {global module ID => function index}.
+  llvh::ArrayRef<std::pair<uint32_t, uint32_t>> cjsModuleTableStatic_{};
 
   /// Pointer to the global debug info. This will not be eagerly initialized
   /// when loading bytecode from a buffer. Instead it will be constructed
@@ -187,13 +187,14 @@ class BCProviderBase {
   llvh::ArrayRef<unsigned char> getRegExpStorage() const {
     return regExpStorage_;
   }
-  uint32_t getCJSModuleOffset() const {
-    return cjsModuleOffset_;
+  uint32_t getSegmentID() const {
+    return segmentID_;
   }
   llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getCJSModuleTable() const {
     return cjsModuleTable_;
   }
-  llvh::ArrayRef<uint32_t> getCJSModuleTableStatic() const {
+  llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getCJSModuleTableStatic()
+      const {
     return cjsModuleTableStatic_;
   }
   const std::string getErrorStr() const {
@@ -273,10 +274,6 @@ class BCProviderBase {
   /// Advise the provider that string table metadata is going to be accessed
   /// soon.  Only forwards this information to the OS for buffers.
   virtual void willNeedStringTable() {}
-
-  /// Advise the provider that identifier hashes are no longer needed.
-  /// Only forwards this information to the OS for buffers.
-  virtual void dontNeedIdentifierHashes() {}
 
   /// Start tracking I/O (only implemented for buffers). Any access before this
   /// call (e.g. reading header to construct the provider) will not be recorded.
@@ -492,7 +489,6 @@ class BCProviderFromBuffer final : public BCProviderBase {
   void adviseStringTableSequential() override;
   void adviseStringTableRandom() override;
   void willNeedStringTable() override;
-  void dontNeedIdentifierHashes() override;
 
   void startPageAccessTracker() override;
 

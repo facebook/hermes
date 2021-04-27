@@ -45,13 +45,13 @@ set(source_files
   PredefinedStringIDs.cpp
   PrimitiveBox.cpp
   Profiler.cpp
+  PropertyAccessor.cpp
   Runtime.cpp Runtime-profilers.cpp
   RuntimeModule.cpp
   RuntimeStats.cpp
   Profiler/ChromeTraceSerializerPosix.cpp
   Profiler/CodeCoverageProfiler.cpp
   Profiler/InlineCacheProfiler.cpp
-  Profiler/SamplingProfilerStub.cpp
   Profiler/SamplingProfilerPosix.cpp
   Serializer.cpp
   SegmentedArray.cpp
@@ -74,6 +74,7 @@ set(source_files
   JSLib/Array.cpp
   JSLib/ArrayBuffer.cpp
   JSLib/ArrayIterator.cpp
+  JSLib/AsyncFunction.cpp
   JSLib/DataView.cpp
   JSLib/TypedArray.cpp
   JSLib/Error.cpp
@@ -126,32 +127,13 @@ set(jit_files
   JIT/ExternalCalls.cpp JIT/ExternalCalls.h
   )
 
-set(HERMES_OPTIONAL_SOURCES
-  gcs/FillerCell.cpp
-  gcs/GenGC.cpp
-  gcs/MallocGC.cpp
-  gcs/OldGen.cpp
-  gcs/Space.cpp
-  gcs/YoungGen.cpp
-  gcs/GCGeneration.cpp
-  gcs/GCSegmentAddressIndex.cpp
-  gcs/GenGCNC.cpp
-  gcs/OldGenNC.cpp
-  gcs/OldGenSegmentRanges.cpp
-  gcs/YoungGenNC.cpp
-  gcs/AlignedHeapSegment.cpp
-  gcs/AlignedStorage.cpp
-  gcs/CardTableNC.cpp
-  ${jit_files}
-)
-
 if (${HERMESVM_GCKIND} STREQUAL "NONCONTIG_GENERATIONAL")
   list(APPEND source_files gcs/AlignedHeapSegment.cpp gcs/AlignedStorage.cpp
                            gcs/CardTableNC.cpp gcs/FillerCell.cpp
                            gcs/CompleteMarkState.cpp gcs/GCGeneration.cpp
                            gcs/GCSegmentAddressIndex.cpp gcs/GenGCNC.cpp
                            gcs/OldGenNC.cpp gcs/OldGenSegmentRanges.cpp
-                           gcs/YoungGenNC.cpp)
+                           gcs/YoungGenNC.cpp gcs/GenGCHeapSegment.cpp)
 elseif (${HERMESVM_GCKIND} STREQUAL "MALLOC")
   list(APPEND source_files gcs/MallocGC.cpp gcs/FillerCell.cpp)
 elseif (${HERMESVM_GCKIND} STREQUAL "HADES")
@@ -159,9 +141,18 @@ elseif (${HERMESVM_GCKIND} STREQUAL "HADES")
             gcs/AlignedHeapSegment.cpp
             gcs/AlignedStorage.cpp
             gcs/CardTableNC.cpp
-            gcs/CompleteMarkState.cpp
             gcs/FillerCell.cpp
             gcs/HadesGC.cpp
+  )
+elseif (${HERMESVM_GCKIND} STREQUAL "RUNTIME")
+  list(APPEND source_files
+          gcs/AlignedHeapSegment.cpp gcs/AlignedStorage.cpp
+          gcs/CardTableNC.cpp gcs/FillerCell.cpp
+          gcs/HadesGC.cpp
+          gcs/CompleteMarkState.cpp gcs/GCGeneration.cpp
+          gcs/GCSegmentAddressIndex.cpp gcs/GenGCNC.cpp
+          gcs/OldGenNC.cpp gcs/OldGenSegmentRanges.cpp
+          gcs/YoungGenNC.cpp gcs/GenGCHeapSegment.cpp
   )
 else()
   message(WARNING "Not linking garbage collector")
@@ -193,7 +184,7 @@ set(link_libs
   hermesPlatform
   hermesPlatformIntl
   hermesHBCBackend
-  # TODO: hermesInternalBytecode
+  hermesInternalBytecode
   dtoa
   ${CORE_FOUNDATION}
 )

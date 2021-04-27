@@ -15,6 +15,7 @@
 #include "hermes/VM/HermesValueTraits.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PrimitiveBox.h"
+#include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/StringBuilder.h"
 
 namespace hermes {

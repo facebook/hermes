@@ -35,6 +35,7 @@
 // CHECK-NEXT:               "value": null,
 // CHECK-NEXT:               "computed": false,
 // CHECK-NEXT:               "static": false,
+// CHECK-NEXT:               "declare": false,
 // CHECK-NEXT:               "variance": {
 // CHECK-NEXT:                 "type": "Variance",
 // CHECK-NEXT:                 "kind": "plus"
@@ -57,6 +58,7 @@
 // CHECK-NEXT:               "value": null,
 // CHECK-NEXT:               "computed": false,
 // CHECK-NEXT:               "static": false,
+// CHECK-NEXT:               "declare": false,
 // CHECK-NEXT:               "variance": {
 // CHECK-NEXT:                 "type": "Variance",
 // CHECK-NEXT:                 "kind": "minus"
@@ -79,6 +81,7 @@
 // CHECK-NEXT:               "value": null,
 // CHECK-NEXT:               "computed": false,
 // CHECK-NEXT:               "static": false,
+// CHECK-NEXT:               "declare": false,
 // CHECK-NEXT:               "typeAnnotation": {
 // CHECK-NEXT:                 "type": "TypeAnnotation",
 // CHECK-NEXT:                 "typeAnnotation": {
@@ -97,6 +100,7 @@
 // CHECK-NEXT:               "value": null,
 // CHECK-NEXT:               "computed": false,
 // CHECK-NEXT:               "static": false,
+// CHECK-NEXT:               "declare": false,
 // CHECK-NEXT:               "typeAnnotation": {
 // CHECK-NEXT:                 "type": "TypeAnnotation",
 // CHECK-NEXT:                 "typeAnnotation": {
@@ -115,6 +119,7 @@
 // CHECK-NEXT:               "value": null,
 // CHECK-NEXT:               "computed": false,
 // CHECK-NEXT:               "static": false,
+// CHECK-NEXT:               "declare": false,
 // CHECK-NEXT:               "typeAnnotation": {
 // CHECK-NEXT:                 "type": "TypeAnnotation",
 // CHECK-NEXT:                 "typeAnnotation": {
@@ -179,6 +184,75 @@
 // CHECK-NEXT:         }
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+class C {
+  async: number
+}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ClassDeclaration",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "C"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "superClass": null,
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "ClassBody",
+// CHECK-NEXT:         "body": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "ClassProperty",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "async"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "value": null,
+// CHECK-NEXT:             "computed": false,
+// CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "declare": false,
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "NumberTypeAnnotation"
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+class C {
+  async
+  : number
+}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ClassDeclaration",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "C"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "superClass": null,
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "ClassBody",
+// CHECK-NEXT:         "body": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "ClassProperty",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "async"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "value": null,
+// CHECK-NEXT:             "computed": false,
+// CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "declare": false,
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "NumberTypeAnnotation"
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ]
+// CHECK-NEXT:       }
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

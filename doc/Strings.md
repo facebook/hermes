@@ -3,8 +3,6 @@ id: strings
 title: Strings
 ---
 
-# Strings
-
 ## Hermes Bytecode String Kinds
 
 Hermes bytecode has three kinds of string.  The simple JS program `Object.foo = "bar";` contains examples of all of them.

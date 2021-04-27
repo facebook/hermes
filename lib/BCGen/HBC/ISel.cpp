@@ -174,8 +174,8 @@ void HBCISel::generateJumpTable() {
   std::vector<uint32_t> res{};
 
   // Sort the jump table entries so iteration order is deterministic.
-  llvh::SmallVector<SwitchInfoEntry, 1> infoVector{switchImmInfo_.begin(),
-                                                   switchImmInfo_.end()};
+  llvh::SmallVector<SwitchInfoEntry, 1> infoVector{
+      switchImmInfo_.begin(), switchImmInfo_.end()};
   std::sort(
       infoVector.begin(),
       infoVector.end(),
@@ -211,11 +211,6 @@ bool HBCISel::getDebugSourceLocation(
   }
 
   if (debugIdCache_.currentBufId != coords.bufId) {
-    // This buffer is different from the last one. Refresh the source id cache.
-    auto *buffer = manager.getSourceBuffer(coords.bufId);
-    if (!buffer)
-      return false;
-
     StringRef filename = manager.getSourceUrl(coords.bufId);
     debugIdCache_.currentFilenameId = BCFGen_->addFilename(filename);
 
@@ -784,15 +779,20 @@ void HBCISel::generateHBCCreateFunctionInst(
   auto output = encodeValue(Inst);
   auto code = BCFGen_->getFunctionID(Inst->getFunctionCode());
   bool isGen = llvh::isa<GeneratorFunction>(Inst->getFunctionCode());
+  bool isAsync = llvh::isa<AsyncFunction>(Inst->getFunctionCode());
   if (LLVM_LIKELY(code <= UINT16_MAX)) {
     // Most of the cases, function index will be less than 2^16.
-    if (isGen) {
+    if (isAsync) {
+      BCFGen_->emitCreateAsyncClosure(output, env, code);
+    } else if (isGen) {
       BCFGen_->emitCreateGeneratorClosure(output, env, code);
     } else {
       BCFGen_->emitCreateClosure(output, env, code);
     }
   } else {
-    if (isGen) {
+    if (isAsync) {
+      BCFGen_->emitCreateAsyncClosureLongIndex(output, env, code);
+    } else if (isGen) {
       BCFGen_->emitCreateGeneratorClosureLongIndex(output, env, code);
     } else {
       BCFGen_->emitCreateClosureLongIndex(output, env, code);
@@ -886,10 +886,11 @@ void HBCISel::generateReturnInst(ReturnInst *Inst, BasicBlock *next) {
 void HBCISel::generateThrowInst(ThrowInst *Inst, BasicBlock *next) {
   BCFGen_->emitThrow(encodeValue(Inst->getThrownValue()));
 }
-void HBCISel::generateThrowIfUndefinedInst(
-    hermes::ThrowIfUndefinedInst *Inst,
+void HBCISel::generateThrowIfEmptyInst(
+    hermes::ThrowIfEmptyInst *Inst,
     hermes::BasicBlock *next) {
-  BCFGen_->emitThrowIfUndefinedInst(encodeValue(Inst->getCheckedValue()));
+  BCFGen_->emitThrowIfEmpty(
+      encodeValue(Inst), encodeValue(Inst->getCheckedValue()));
 }
 void HBCISel::generateSwitchInst(SwitchInst *Inst, BasicBlock *next) {
   llvm_unreachable("SwitchInst should have been lowered");
@@ -1181,12 +1182,22 @@ void HBCISel::generateCallBuiltinInst(CallBuiltinInst *Inst, BasicBlock *next) {
   auto output = encodeValue(Inst);
   verifyCall(Inst);
 
-  assert(
-      Inst->getNumArguments() <= UINT8_MAX &&
-      "too many arguments to CallBuiltin");
-  BCFGen_->emitCallBuiltin(
-      output, Inst->getBuiltinIndex(), Inst->getNumArguments());
+  if (Inst->getNumArguments() <= UINT8_MAX) {
+    BCFGen_->emitCallBuiltin(
+        output, Inst->getBuiltinIndex(), Inst->getNumArguments());
+  } else {
+    BCFGen_->emitCallBuiltinLong(
+        output, Inst->getBuiltinIndex(), Inst->getNumArguments());
+  }
 }
+
+void HBCISel::generateGetBuiltinClosureInst(
+    GetBuiltinClosureInst *Inst,
+    BasicBlock *next) {
+  auto output = encodeValue(Inst);
+  BCFGen_->emitGetBuiltinClosure(output, Inst->getBuiltinIndex());
+}
+
 void HBCISel::generateHBCCallDirectInst(
     HBCCallDirectInst *Inst,
     BasicBlock *next) {
@@ -1268,6 +1279,9 @@ void HBCISel::generateHBCLoadConstInst(
   auto output = encodeValue(Inst);
   Literal *literal = Inst->getConst();
   switch (literal->getKind()) {
+    case ValueKind::LiteralEmptyKind:
+      BCFGen_->emitLoadConstEmpty(output);
+      break;
     case ValueKind::LiteralUndefinedKind:
       BCFGen_->emitLoadConstUndefined(output);
       break;
@@ -1551,9 +1565,10 @@ void HBCISel::generate(Instruction *ii, BasicBlock *next) {
     case DebugInfoSetting::SOURCE_MAP:
     case DebugInfoSetting::ALL:
       if (ii->hasLocation()) {
-        relocations_.push_back({BCFGen_->getCurrentLocation(),
-                                Relocation::RelocationType::DebugInfo,
-                                ii});
+        relocations_.push_back(
+            {BCFGen_->getCurrentLocation(),
+             Relocation::RelocationType::DebugInfo,
+             ii});
       }
       break;
   }
@@ -1596,10 +1611,10 @@ void HBCISel::generate(SourceMapGenerator *outSourceMap) {
   resolveRelocations();
   resolveExceptionHandlers();
   addDebugSourceLocationInfo(outSourceMap);
-  BCFGen_->bytecodeGenerationComplete();
   generateJumpTable();
   addDebugLexicalInfo();
   populatePropertyCachingInfo();
+  BCFGen_->bytecodeGenerationComplete();
 }
 
 uint8_t HBCISel::acquirePropertyReadCacheIndex(unsigned id) {

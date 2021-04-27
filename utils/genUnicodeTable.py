@@ -29,9 +29,9 @@ LOWERCASE_FIELD = 13
 
 
 def print_template(s, **kwargs):
-    """ Substitute in the keyword arguments to the template string
-        (or direct template) s, and print the result, followed by a
-        newline.
+    """Substitute in the keyword arguments to the template string
+    (or direct template) s, and print the result, followed by a
+    newline.
     """
     text = Template(s).substitute(**kwargs)
     print(text.strip())

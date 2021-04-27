@@ -117,5 +117,35 @@ bool hasSimpleParams(FunctionLikeNode *node) {
   return true;
 }
 
+bool isGenerator(FunctionLikeNode *node) {
+  switch (node->getKind()) {
+    default:
+      assert(
+          node->getKind() == NodeKind::Program && "invalid FunctionLikeNode");
+      return false;
+    case NodeKind::FunctionExpression:
+      return cast<FunctionExpressionNode>(node)->_generator;
+    case NodeKind::ArrowFunctionExpression:
+      return false;
+    case NodeKind::FunctionDeclaration:
+      return cast<FunctionDeclarationNode>(node)->_generator;
+  }
+}
+
+bool isAsync(FunctionLikeNode *node) {
+  switch (node->getKind()) {
+    default:
+      assert(
+          node->getKind() == NodeKind::Program && "invalid FunctionLikeNode");
+      return false;
+    case NodeKind::FunctionExpression:
+      return cast<FunctionExpressionNode>(node)->_async;
+    case NodeKind::ArrowFunctionExpression:
+      return cast<ArrowFunctionExpressionNode>(node)->_async;
+    case NodeKind::FunctionDeclaration:
+      return cast<FunctionDeclarationNode>(node)->_async;
+  }
+}
+
 } // namespace ESTree
 } // namespace hermes

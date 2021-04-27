@@ -89,7 +89,7 @@ class DecoratedObject : public JSObject {
   }
 
   using Super = JSObject;
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
   static bool classof(const GCCell *cell) {
     return kindInRange(
         cell->getKind(),
@@ -97,22 +97,23 @@ class DecoratedObject : public JSObject {
         CellKind::DecoratedObjectKind_last);
   }
 
- protected:
+ public:
   ~DecoratedObject() = default;
 
   DecoratedObject(
       Runtime *runtime,
       const ObjectVTable *vt,
-      JSObject *parent,
-      HiddenClass *clazz,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
       std::unique_ptr<Decoration> decoration)
-      : JSObject(runtime, &vt->base, parent, clazz),
+      : JSObject(runtime, &vt->base, *parent, *clazz),
         decoration_(std::move(decoration)) {}
 
+ protected:
   static void _finalizeImpl(GCCell *cell, GC *);
   static size_t _mallocSizeImpl(GCCell *cell);
 
- private:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit DecoratedObject(Deserializer &d);
 
@@ -120,6 +121,7 @@ class DecoratedObject : public JSObject {
   friend void DecoratedObjectDeserialize(Deserializer &d, CellKind kind);
 #endif
 
+ private:
   std::unique_ptr<Decoration> decoration_;
 };
 

@@ -434,6 +434,7 @@ class StoreStackInst : public Instruction {
 
   explicit StoreStackInst(Value *storedValue, AllocStackInst *ptr)
       : Instruction(ValueKind::StoreStackInstKind) {
+    setType(Type::createNoType());
     pushOperand(storedValue);
     pushOperand(ptr);
   }
@@ -647,16 +648,11 @@ class CallBuiltinInst : public CallInst {
   void operator=(const CallBuiltinInst &) = delete;
 
  public:
-  static constexpr unsigned MAX_ARGUMENTS = UINT8_MAX;
-
   explicit CallBuiltinInst(
       LiteralNumber *callee,
       LiteralUndefined *thisValue,
       ArrayRef<Value *> args)
       : CallInst(ValueKind::CallBuiltinInstKind, callee, thisValue, args) {
-    assert(
-        getNumArguments() <= MAX_ARGUMENTS &&
-        "Too many arguments to CallBuiltin");
     assert(
         callee->getValue() == (int)callee->getValue() &&
         callee->getValue() < BuiltinMethod::_count && "invalid builtin call");
@@ -672,6 +668,45 @@ class CallBuiltinInst : public CallInst {
 
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::CallBuiltinInstKind);
+  }
+};
+
+class GetBuiltinClosureInst : public Instruction {
+  GetBuiltinClosureInst(const GetBuiltinClosureInst &) = delete;
+  void operator=(const GetBuiltinClosureInst &) = delete;
+
+ public:
+  enum { BuiltinIndexIdx };
+
+  explicit GetBuiltinClosureInst(LiteralNumber *builtinIndex)
+      : Instruction(ValueKind::GetBuiltinClosureInstKind) {
+    assert(
+        builtinIndex->asInt32() &&
+        builtinIndex->getValue() < BuiltinMethod::_count &&
+        "invalid builtin call");
+    pushOperand(builtinIndex);
+    setType(Type::createClosure());
+  }
+  explicit GetBuiltinClosureInst(
+      const GetBuiltinClosureInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::None;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  BuiltinMethod::Enum getBuiltinIndex() const {
+    return static_cast<BuiltinMethod::Enum>(
+        cast<LiteralNumber>(getOperand(BuiltinIndexIdx))->asInt32());
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::GetBuiltinClosureInstKind);
   }
 };
 
@@ -741,6 +776,7 @@ class StorePropertyInst : public Instruction {
       Value *object,
       Value *property)
       : Instruction(kind) {
+    setType(Type::createNoType());
     pushOperand(storedValue);
     pushOperand(object);
     pushOperand(property);
@@ -836,6 +872,7 @@ class StoreOwnPropertyInst : public Instruction {
       Value *property,
       LiteralBool *isEnumerable)
       : Instruction(kind) {
+    setType(Type::createNoType());
     pushOperand(storedValue);
     pushOperand(object);
     pushOperand(property);
@@ -959,6 +996,7 @@ class StoreGetterSetterInst : public Instruction {
       Value *property,
       LiteralBool *isEnumerable)
       : Instruction(ValueKind::StoreGetterSetterInstKind) {
+    setType(Type::createNoType());
     pushOperand(storedGetter);
     pushOperand(storedSetter);
     pushOperand(object);
@@ -2052,7 +2090,9 @@ class DebuggerInst : public Instruction {
   void operator=(const DebuggerInst &) = delete;
 
  public:
-  explicit DebuggerInst() : Instruction(ValueKind::DebuggerInstKind) {}
+  explicit DebuggerInst() : Instruction(ValueKind::DebuggerInstKind) {
+    setType(Type::createNoType());
+  }
   explicit DebuggerInst(
       const DebuggerInst *src,
       llvh::ArrayRef<Value *> operands)
@@ -2095,20 +2135,20 @@ class GetNewTargetInst : public Instruction {
   }
 };
 
-class ThrowIfUndefinedInst : public Instruction {
-  ThrowIfUndefinedInst(const ThrowIfUndefinedInst &) = delete;
-  void operator=(const ThrowIfUndefinedInst &) = delete;
+/// Throw if the operand is "empty", otherwise return it.
+class ThrowIfEmptyInst : public Instruction {
+  ThrowIfEmptyInst(const ThrowIfEmptyInst &) = delete;
+  void operator=(const ThrowIfEmptyInst &) = delete;
 
  public:
   enum { CheckedValueIdx };
 
-  explicit ThrowIfUndefinedInst(Value *checkedValue)
-      : Instruction(ValueKind::ThrowIfUndefinedInstKind) {
+  explicit ThrowIfEmptyInst(Value *checkedValue)
+      : Instruction(ValueKind::ThrowIfEmptyInstKind) {
     pushOperand(checkedValue);
-    setType(Type::createEmptyType());
   }
-  explicit ThrowIfUndefinedInst(
-      const ThrowIfUndefinedInst *src,
+  explicit ThrowIfEmptyInst(
+      const ThrowIfEmptyInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
@@ -2125,7 +2165,7 @@ class ThrowIfUndefinedInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::ThrowIfUndefinedInstKind);
+    return kindIsA(V->getKind(), ValueKind::ThrowIfEmptyInstKind);
   }
 };
 
@@ -2613,7 +2653,9 @@ class HBCReifyArgumentsInst : public SingleOperandInst {
 
  public:
   explicit HBCReifyArgumentsInst(AllocStackInst *reg)
-      : SingleOperandInst(ValueKind::HBCReifyArgumentsInstKind, reg) {}
+      : SingleOperandInst(ValueKind::HBCReifyArgumentsInstKind, reg) {
+    setType(Type::createNoType());
+  }
   explicit HBCReifyArgumentsInst(
       const HBCReifyArgumentsInst *src,
       llvh::ArrayRef<Value *> operands)

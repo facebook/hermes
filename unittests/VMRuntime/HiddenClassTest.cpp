@@ -426,11 +426,11 @@ TEST_F(HiddenClassTest, ForEachProperty) {
 
   std::vector<std::pair<SymbolID, NamedPropertyDescriptor>> expectedProperties{
       {aHnd.get(),
-       NamedPropertyDescriptor{PropertyFlags::defaultNewNamedPropertyFlags(),
-                               0}},
+       NamedPropertyDescriptor{
+           PropertyFlags::defaultNewNamedPropertyFlags(), 0}},
       {bHnd.get(),
-       NamedPropertyDescriptor{PropertyFlags::defaultNewNamedPropertyFlags(),
-                               1}}};
+       NamedPropertyDescriptor{
+           PropertyFlags::defaultNewNamedPropertyFlags(), 1}}};
 
   std::vector<std::pair<SymbolID, NamedPropertyDescriptor>> properties;
   HiddenClass::forEachProperty(
@@ -453,9 +453,8 @@ TEST_F(HiddenClassTest, ReservedSlots) {
   auto aHnd = *runtime->getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"a"));
   for (unsigned i = 0; i <= InternalProperty::NumInternalProperties; ++i) {
-    Handle<HiddenClass> clazz{
-        runtime,
-        runtime->getHiddenClassForPrototypeRaw(*runtime->getGlobal(), i)};
+    Handle<HiddenClass> clazz =
+        runtime->getHiddenClassForPrototype(*runtime->getGlobal(), i);
     EXPECT_FALSE(clazz->isDictionary());
     auto addRes = HiddenClass::addProperty(
         clazz, runtime, *aHnd, PropertyFlags::defaultNewNamedPropertyFlags());

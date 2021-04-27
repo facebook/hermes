@@ -22,13 +22,14 @@ namespace hermes {
 namespace vm {
 
 void SymbolRegistry::init(Runtime *runtime) {
-  stringMap_ = HermesValue::encodeObjectValue(
-      vmcast<OrderedHashMap>(*OrderedHashMap::create(runtime)));
+  stringMap_ = OrderedHashMap::create(runtime)->getHermesValue();
 }
 
 /// Mark the Strings and Symbols in the registry as roots.
-void SymbolRegistry::markRoots(SlotAcceptor &acceptor) {
+void SymbolRegistry::markRoots(RootAcceptor &acceptor) {
   acceptor.accept(stringMap_);
+  // registeredSymbols_ doesn't need to be marked, because its contents are a
+  // copy of the symbols present in the stringMap_.
 }
 
 CallResult<SymbolID> SymbolRegistry::getSymbolForKey(

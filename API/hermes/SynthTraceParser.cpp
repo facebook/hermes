@@ -5,12 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_API_TRACE
-
 #include "hermes/SynthTraceParser.h"
 
 #include "hermes/Parser/JSLexer.h"
 #include "hermes/Parser/JSONParser.h"
+#include "hermes/Support/OSCompat.h"
 #include "hermes/Support/SourceErrorManager.h"
 
 namespace facebook {
@@ -80,6 +79,9 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
   // This function should extract all fields from GCConfig that can affect
   // performance metrics. Configs for debugging can be ignored.
   ::hermes::vm::GCConfig::Builder gcconf;
+  if (!rtConfig) {
+    return gcconf;
+  }
   auto *val = rtConfig->get("gcConfig");
   if (!val) {
     return gcconf;
@@ -120,26 +122,27 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
   return gcconf;
 }
 
-::hermes::vm::RuntimeConfig::Builder getRuntimeConfig(JSONObject *root) {
-  JSONValue *val = root->get("runtimeConfig");
+::hermes::vm::RuntimeConfig::Builder getRuntimeConfig(JSONObject *rtConfig) {
   ::hermes::vm::RuntimeConfig::Builder conf;
-  if (!val) {
+  if (!rtConfig) {
     // If the config doesn't exist, return some default values.
     return conf;
   }
-  if (val->getKind() != JSONKind::Object) {
-    throw std::invalid_argument("runtimeConfig should be an object");
-  }
-  auto *rtConfig = llvh::cast<JSONObject>(val);
-
-  // It is required to pass the unittest SynthTraceTest
-  conf.withGCConfig(getGCConfig(rtConfig).build());
 
   if (auto *maxNumRegisters = rtConfig->get("maxNumRegisters")) {
     conf.withMaxNumRegisters(getNumberAs<unsigned>(maxNumRegisters));
   }
+  if (auto *promise = rtConfig->get("ES6Promise")) {
+    conf.withES6Promise(llvh::cast<JSONBoolean>(promise)->getValue());
+  }
+  if (auto *proxy = rtConfig->get("ES6Proxy")) {
+    conf.withES6Proxy(llvh::cast<JSONBoolean>(proxy)->getValue());
+  }
   if (auto *symbol = rtConfig->get("ES6Symbol")) {
     conf.withES6Symbol(llvh::cast<JSONBoolean>(symbol)->getValue());
+  }
+  if (auto *intl = rtConfig->get("ES6Intl")) {
+    conf.withES6Intl(llvh::cast<JSONBoolean>(intl)->getValue());
   }
   if (auto *enableSampledStats = rtConfig->get("enableSampledStats")) {
     conf.withEnableSampledStats(
@@ -566,10 +569,12 @@ parseSynthTrace(std::unique_ptr<llvh::MemoryBuffer> trace) {
   auto globalObjID =
       getNumberAs<SynthTrace::ObjectID>(root->get("globalObjID"));
   // Get and parse the records list.
+  JSONObject *const rtConfig =
+      llvh::cast_or_null<JSONObject>(root->get("runtimeConfig"));
   return std::make_tuple(
       getTrace(llvh::cast<JSONArray>(root->at("trace")), globalObjID),
-      getRuntimeConfig(root),
-      getGCConfig(root),
+      getRuntimeConfig(rtConfig),
+      getGCConfig(rtConfig),
       getMockedEnvironment(llvh::cast<JSONObject>(root->at("env"))));
 }
 
@@ -586,5 +591,3 @@ parseSynthTrace(const std::string &tracefile) {
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
-
-#endif

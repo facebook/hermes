@@ -56,10 +56,11 @@ void deserializeDynamicStringImpl(Deserializer &d) {
     uniqueID = SymbolID::unsafeCreate(d.readInt<uint32_t>());
   }
 
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ false>(
-      DynamicStringPrimitive<T, Uniqued>::allocationSize(length));
   auto *cell =
-      new (mem) DynamicStringPrimitive<T, Uniqued>(d.getRuntime(), length);
+      d.getRuntime()->makeAVariable<DynamicStringPrimitive<T, Uniqued>>(
+          DynamicStringPrimitive<T, Uniqued>::allocationSize(length),
+          d.getRuntime(),
+          length);
   if (uniqued)
     cell->convertToUniqued(uniqueID);
   d.readData(cell->getRawPointerForWrite(), length * sizeof(T));
@@ -176,10 +177,12 @@ void deserializeExternalStringImpl(Deserializer &d) {
   d.readData(&contents[0], length * sizeof(T));
 
   // Construct an ExternalStringPrimitive from what we deserialized.
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<ExternalStringPrimitive<T>>());
   auto *cell =
-      new (mem) ExternalStringPrimitive<T>(d.getRuntime(), std::move(contents));
+      d.getRuntime()
+          ->makeAVariable<ExternalStringPrimitive<T>, HasFinalizer::Yes>(
+              sizeof(ExternalStringPrimitive<T>),
+              d.getRuntime(),
+              std::move(contents));
   if (uniqued)
     cell->convertToUniqued(uniqueID);
 
@@ -462,10 +465,11 @@ std::string StringPrimitive::_snapshotNameImpl(GCCell *cell, GC *gc) {
   bool fullyWritten = true;
   if (self->isASCII()) {
     auto ref = self->castToASCIIRef();
-    out = std::string{ref.begin(),
-                      std::min(
-                          static_cast<uint32_t>(ref.size()),
-                          toRValue(EXTERNAL_STRING_THRESHOLD))};
+    out = std::string{
+        ref.begin(),
+        std::min(
+            static_cast<uint32_t>(ref.size()),
+            toRValue(EXTERNAL_STRING_THRESHOLD))};
     fullyWritten = ref.size() <= EXTERNAL_STRING_THRESHOLD;
   } else {
     fullyWritten = convertUTF16ToUTF8WithReplacements(
@@ -492,10 +496,9 @@ CallResult<HermesValue> DynamicStringPrimitive<T, Uniqued>::create(
     Runtime *runtime,
     Ref str) {
   assert(!isExternalLength(str.size()) && "length should not be external");
-  void *mem =
-      runtime->alloc</*fixedSize*/ false>(allocationSize((uint32_t)str.size()));
-  return HermesValue::encodeStringValue(
-      (new (mem) DynamicStringPrimitive<T, Uniqued>(runtime, str)));
+  auto *cell = runtime->makeAVariable<DynamicStringPrimitive<T, Uniqued>>(
+      allocationSize((uint32_t)str.size()), runtime, str);
+  return HermesValue::encodeStringValue(cell);
 }
 
 template <typename T, bool Uniqued>
@@ -503,18 +506,20 @@ CallResult<HermesValue> DynamicStringPrimitive<T, Uniqued>::createLongLived(
     Runtime *runtime,
     Ref str) {
   assert(!isExternalLength(str.size()) && "length should not be external");
-  void *mem = runtime->allocLongLived(allocationSize((uint32_t)str.size()));
-  return HermesValue::encodeStringValue(
-      (new (mem) DynamicStringPrimitive<T, Uniqued>(runtime, str)));
+  auto *obj = runtime->makeAVariable<
+      DynamicStringPrimitive<T, Uniqued>,
+      HasFinalizer::No,
+      LongLived::Yes>(allocationSize((uint32_t)str.size()), runtime, str);
+  return HermesValue::encodeStringValue(obj);
 }
 
 template <typename T, bool Uniqued>
 CallResult<HermesValue> DynamicStringPrimitive<T, Uniqued>::create(
     Runtime *runtime,
     uint32_t length) {
-  void *mem = runtime->alloc</*fixedSize*/ false>(allocationSize(length));
-  return HermesValue::encodeStringValue(
-      (new (mem) DynamicStringPrimitive<T, Uniqued>(runtime, length)));
+  auto *cell = runtime->makeAVariable<DynamicStringPrimitive<T, Uniqued>>(
+      allocationSize(length), runtime, length);
+  return HermesValue::encodeStringValue(cell);
 }
 
 template class DynamicStringPrimitive<char16_t, true /* Uniqued */>;
@@ -532,7 +537,7 @@ ExternalStringPrimitive<T>::ExternalStringPrimitive(
     : SymbolStringPrimitive(
           runtime,
           &vt,
-          cellSize<ExternalStringPrimitive<T>>(),
+          sizeof(ExternalStringPrimitive<T>),
           contents.size()),
       contents_(std::forward<BasicString>(contents)) {
   static_assert(
@@ -555,10 +560,14 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::create(
       "ExternalStringPrimitive mismatched char type");
   if (LLVM_UNLIKELY(str.size() > MAX_STRING_LENGTH))
     return runtime->raiseRangeError("String length exceeds limit");
-  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<ExternalStringPrimitive<T>>());
-  auto *extStr = new (mem)
-      ExternalStringPrimitive<T>(runtime, std::forward<BasicString>(str));
+  // We have to use a variable sized alloc here even though the size is already
+  // known, because ExternalStringPrimitive is derived from
+  // VariableSizeRuntimeCell
+  auto *extStr =
+      runtime->makeAVariable<ExternalStringPrimitive<T>, HasFinalizer::Yes>(
+          sizeof(ExternalStringPrimitive<T>),
+          runtime,
+          std::forward<BasicString>(str));
   runtime->getHeap().creditExternalMemory(
       extStr, extStr->calcExternalMemorySize());
   auto res = HermesValue::encodeStringValue(extStr);
@@ -576,9 +585,13 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::createLongLived(
     return runtime->raiseRangeError(
         "Cannot allocate an external string primitive.");
   }
-  void *mem = runtime->allocLongLived<HasFinalizer::Yes>(
-      cellSize<ExternalStringPrimitive<T>>());
-  auto *extStr = new (mem) ExternalStringPrimitive<T>(runtime, std::move(str));
+  // Use variable size alloc since ExternalStringPrimitive is derived from
+  // VariableSizeRuntimeCell.
+  auto *extStr = runtime->makeAVariable<
+      ExternalStringPrimitive<T>,
+      HasFinalizer::Yes,
+      LongLived::Yes>(
+      sizeof(ExternalStringPrimitive<T>), runtime, std::move(str));
   runtime->getHeap().creditExternalMemory(
       extStr, extStr->calcExternalMemorySize());
   return HermesValue::encodeStringValue(extStr);
@@ -681,10 +694,12 @@ PseudoHandle<StringPrimitive> BufferedStringPrimitive<T>::create(
     Runtime *runtime,
     uint32_t length,
     Handle<ExternalStringPrimitive<T>> storage) {
-  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::No>(
-      sizeof(BufferedStringPrimitive<T>));
-  return createPseudoHandle<StringPrimitive>(
-      new (mem) BufferedStringPrimitive<T>(runtime, length, storage.get()));
+  // We have to use a variable sized alloc here even though the size is already
+  // known, because BufferedStringPrimitive is derived from
+  // VariableSizeRuntimeCell.
+  auto *cell = runtime->makeAVariable<BufferedStringPrimitive<T>>(
+      sizeof(BufferedStringPrimitive<T>), runtime, length, storage);
+  return createPseudoHandle<StringPrimitive>(cell);
 }
 
 #ifndef NDEBUG

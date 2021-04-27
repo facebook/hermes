@@ -12,9 +12,9 @@
 #include "EmptyCell.h"
 #include "ExtStringForTest.h"
 #include "TestHelpers.h"
-#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCCell.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 
 #include <deque>
 
@@ -54,7 +54,7 @@ MetadataTableForTests getMetadataTable() {
 }
 
 namespace {
-const size_t kMaxYoungGenSize = AlignedHeapSegment::maxSize();
+const size_t kMaxYoungGenSize = GenGCHeapSegment::maxSize();
 } // namespace
 
 /// A parameterized test class, for a set of tests that allocate
@@ -67,14 +67,14 @@ TEST_P(ExtMemTests, ExtMemInYoungTest) {
   // it causes collection to happen earlier.
 
   // Ensure that the heap will be big enough for the young gen to accommodate
-  // its full size, and the old gen is GC::kYoungGenFractionDenom - 1 times that
-  // (so that YGSize = (YGSize + OGSize) / GC::kYoungGenFractionDenom).
+  // its full size, and the old gen is GenGC::kYoungGenFractionDenom - 1 times
+  // that (so that YGSize = (YGSize + OGSize) / GenGC::kYoungGenFractionDenom).
   static const GCConfig kGCConfig =
-      TestGCConfigFixedSize(kMaxYoungGenSize * GC::kYoungGenFractionDenom);
+      TestGCConfigFixedSize(kMaxYoungGenSize * GenGC::kYoungGenFractionDenom);
 
   auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
   DummyRuntime &rt = *runtime;
-  GC &gc = rt.gc;
+  GenGC &gc = rt.getHeap();
 
   // A cell a quarter of the young-gen size
   using QuarterYoungGenCell = EmptyCell<kMaxYoungGenSize / 4>;
@@ -107,24 +107,24 @@ TEST_P(ExtMemTests, ExtMemInYoungTest) {
 
 TEST_P(ExtMemTests, ExtMemInOldByAllocTest) {
   // Ensure that the heap will be big enough for the young gen to accommodate
-  // its full size, and the old gen is GC::kYoungGenFractionDenom - 1 times that
-  // (so that YGSize = (YGSize + OGSize) / GC::kYoungGenFractionDenom).
+  // its full size, and the old gen is GenGC::kYoungGenFractionDenom - 1 times
+  // that (so that YGSize = (YGSize + OGSize) / GenGC::kYoungGenFractionDenom).
   static const GCConfig kGCConfig =
-      TestGCConfigFixedSize(kMaxYoungGenSize * GC::kYoungGenFractionDenom);
+      TestGCConfigFixedSize(kMaxYoungGenSize * GenGC::kYoungGenFractionDenom);
 
   auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
   DummyRuntime &rt = *runtime;
-  auto &gc = rt.gc;
+  GenGC &gc = rt.getHeap();
 
-  // Allocate GC::kYoungGenFractionDenom - 3 young-gen-sized objects, and do a
-  // full collection to get them into the old gen, so that the old gen has 2
+  // Allocate GenGC::kYoungGenFractionDenom - 3 young-gen-sized objects, and do
+  // a full collection to get them into the old gen, so that the old gen has 2
   // young-gen's worth of free space.
   using YoungGenCell = EmptyCell<kMaxYoungGenSize>;
   using HalfYoungGenCell = EmptyCell<kMaxYoungGenSize / 2>;
 
   std::deque<GCCell *> roots;
 
-  for (size_t i = 0; i < GC::kYoungGenFractionDenom - 3; i++) {
+  for (size_t i = 0; i < GenGC::kYoungGenFractionDenom - 3; i++) {
     roots.push_back(YoungGenCell::create(rt));
     rt.pointerRoots.push_back(&roots.back());
   }
@@ -177,23 +177,23 @@ TEST_P(ExtMemTests, ExtMemInOldByAllocTest) {
 
 TEST_P(ExtMemTests, ExtMemInOldDirectTest) {
   // Ensure that the heap will be big enough for the young gen to accommodate
-  // its full size, and the old gen is GC::kYoungGenFractionDenom - 1 times that
-  // (so that YGSize = (YGSize + OGSize) / GC::kYoungGenFractionDenom).
+  // its full size, and the old gen is GenGC::kYoungGenFractionDenom - 1 times
+  // that (so that YGSize = (YGSize + OGSize) / GenGC::kYoungGenFractionDenom).
   static const GCConfig kGCConfig =
-      TestGCConfigFixedSize(kMaxYoungGenSize * GC::kYoungGenFractionDenom);
+      TestGCConfigFixedSize(kMaxYoungGenSize * GenGC::kYoungGenFractionDenom);
 
   auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
   DummyRuntime &rt = *runtime;
-  auto &gc = rt.gc;
+  GenGC &gc = rt.getHeap();
 
-  // Allocate GC::kYoungGenFractionDenom - 3 young-gen-sized objects, and do a
-  // full collection to get them into the old gen, so that the old gen has 2
+  // Allocate GenGC::kYoungGenFractionDenom - 3 young-gen-sized objects, and do
+  // a full collection to get them into the old gen, so that the old gen has 2
   // young-gen's worth of free space.
   using YoungGenCell = EmptyCell<kMaxYoungGenSize>;
 
   std::deque<GCCell *> roots;
 
-  for (size_t i = 0; i < GC::kYoungGenFractionDenom - 3; i++) {
+  for (size_t i = 0; i < GenGC::kYoungGenFractionDenom - 3; i++) {
     roots.push_back(YoungGenCell::create(rt));
     rt.pointerRoots.push_back(&roots.back());
   }
@@ -233,11 +233,11 @@ INSTANTIATE_TEST_CASE_P(ExtMemTests, ExtMemTests, testing::Bool());
 TEST(ExtMemNonParamTests, ExtMemDoesNotBreakFullGC) {
   // Ensure that the initial heap will be big enough for the young gen
   // to accommodate its full size, and the old gen is
-  // GC::kYoungGenFractionDenom - 1 times that (so that YGSize =
-  // (YGSize + OGSize) / GC::kYoungGenFractionDenom).  We want the max
+  // GenGC::kYoungGenFractionDenom - 1 times that (so that YGSize =
+  // (YGSize + OGSize) / GenGC::kYoungGenFractionDenom).  We want the max
   // size to be considerably larger than this.
   const size_t kInitSize =
-      AlignedHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
+      GenGCHeapSegment::maxSize() * GenGC::kYoungGenFractionDenom;
   GCConfig gcConfig = GCConfig::Builder(kTestGCConfigBuilder)
                           .withInitHeapSize(kInitSize)
                           .withMaxHeapSize(kInitSize * 4)
@@ -246,14 +246,14 @@ TEST(ExtMemNonParamTests, ExtMemDoesNotBreakFullGC) {
   auto runtime = DummyRuntime::create(getMetadataTable(), gcConfig);
   DummyRuntime &rt = *runtime;
 
-  using SegmentSizeCell = EmptyCell<AlignedHeapSegment::maxSize()>;
+  using SegmentSizeCell = EmptyCell<GenGCHeapSegment::maxSize()>;
 
   std::deque<GCCell *> roots;
 
-  // Allocate GC::kYoungGenFractionDenom - 3 segment-sized objects in
+  // Allocate GenGC::kYoungGenFractionDenom - 3 segment-sized objects in
   // the old gen, so that the old gen has 2 segments worth of free
   // space.
-  for (size_t i = 0; i < GC::kYoungGenFractionDenom - 3; i++) {
+  for (size_t i = 0; i < GenGC::kYoungGenFractionDenom - 3; i++) {
     roots.push_back(SegmentSizeCell::createLongLived(rt));
     rt.pointerRoots.push_back(&roots.back());
   }
@@ -262,7 +262,7 @@ TEST(ExtMemNonParamTests, ExtMemDoesNotBreakFullGC) {
   // After this, the effective size of the old gen should now be
   // greater than its current size.
   roots.push_back(ExtStringForTest::createLongLived(
-      rt, 5 * AlignedHeapSegment::maxSize() / 2));
+      rt, 5 * GenGCHeapSegment::maxSize() / 2));
   rt.pointerRoots.push_back(&roots.back());
 
   // Now allocate a YG object, filling the YG.
@@ -283,12 +283,12 @@ TEST(ExtMemNonParamDeathTest, SaturateYoungGen) {
 
   // The GC size is arranged so that the old gen is the smallest it can be for
   // a young gen that is as large as it can be.
-  const auto kTotalSize = kMaxYoungGenSize * GC::kYoungGenFractionDenom;
+  const auto kTotalSize = kMaxYoungGenSize * GenGC::kYoungGenFractionDenom;
   const auto kYGSize = kMaxYoungGenSize;
   const auto kOGSize = kTotalSize - kYGSize;
 
   // A segment-sized cell, to fill out the generations.
-  using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
+  using SegmentCell = EmptyCell<GenGCHeapSegment::maxSize()>;
 
   // An external allocation size that will certainly saturate the young
   // generation.
@@ -302,7 +302,7 @@ TEST(ExtMemNonParamDeathTest, SaturateYoungGen) {
   std::deque<GCCell *> roots;
 
   // Fill up the old generation.
-  for (size_t i = 0; i < GC::kYoungGenFractionDenom - 1; ++i) {
+  for (size_t i = 0; i < GenGC::kYoungGenFractionDenom - 1; ++i) {
     roots.push_back(SegmentCell::createLongLived(rt));
     rt.pointerRoots.push_back(&roots.back());
   }

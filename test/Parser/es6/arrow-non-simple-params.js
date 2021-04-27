@@ -77,7 +77,9 @@ let foo = (a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) => {}
 //CHECK-NEXT:                         }
 //CHECK-NEXT:                       },
 //CHECK-NEXT:                       "kind": "init",
-//CHECK-NEXT:                       "computed": false
+//CHECK-NEXT:                       "computed": false,
+//CHECK-NEXT:                       "method": false,
+//CHECK-NEXT:                       "shorthand": false
 //CHECK-NEXT:                     },
 //CHECK-NEXT:                     {
 //CHECK-NEXT:                       "type": "Property",
@@ -99,12 +101,16 @@ let foo = (a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) => {}
 //CHECK-NEXT:                               "name": "f"
 //CHECK-NEXT:                             },
 //CHECK-NEXT:                             "kind": "init",
-//CHECK-NEXT:                             "computed": false
+//CHECK-NEXT:                             "computed": false,
+//CHECK-NEXT:                             "method": false,
+//CHECK-NEXT:                             "shorthand": true
 //CHECK-NEXT:                           }
 //CHECK-NEXT:                         ]
 //CHECK-NEXT:                       },
 //CHECK-NEXT:                       "kind": "init",
-//CHECK-NEXT:                       "computed": false
+//CHECK-NEXT:                       "computed": false,
+//CHECK-NEXT:                       "method": false,
+//CHECK-NEXT:                       "shorthand": false
 //CHECK-NEXT:                     }
 //CHECK-NEXT:                   ]
 //CHECK-NEXT:                 },

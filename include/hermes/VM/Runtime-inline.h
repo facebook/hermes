@@ -14,10 +14,28 @@
 namespace hermes {
 namespace vm {
 
-inline NativeFunction *Runtime::getBuiltinNativeFunction(
-    unsigned builtinMethodID) {
-  assert(builtinMethodID < BuiltinMethod::_count && "invalid builtinMethodID");
+inline Callable *Runtime::getBuiltinCallable(unsigned builtinMethodID) {
+  assert(
+      builtinMethodID < BuiltinMethod::_count &&
+      "out of bound builtinMethodID");
   return builtins_[builtinMethodID];
+}
+
+inline Handle<HiddenClass> Runtime::getHiddenClassForPrototype(
+    JSObject *proto,
+    unsigned reservedSlots) {
+  assert(
+      reservedSlots <= InternalProperty::NumInternalProperties &&
+      "out of bounds");
+  PinnedHermesValue *clazz = &rootClazzes_[reservedSlots];
+  assert(!clazz->isUndefined() && "must initialize root classes before use");
+  return Handle<HiddenClass>::vmcast(clazz);
+}
+
+inline HiddenClass *Runtime::getHiddenClassForPrototypeRaw(
+    JSObject *proto,
+    unsigned reservedSlots) {
+  return *getHiddenClassForPrototype(proto, reservedSlots);
 }
 
 } // namespace vm

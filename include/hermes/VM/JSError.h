@@ -49,7 +49,7 @@ class JSError final : public JSObject {
 #endif
 
   using Super = JSObject;
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::ErrorKind;
   }
@@ -115,13 +115,12 @@ class JSError final : public JSObject {
   friend CallResult<HermesValue>
   errorStackSetter(void *, Runtime *runtime, NativeArgs args);
 
- protected:
   JSError(
       Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
       bool catchable)
-      : JSObject(runtime, &vt.base, parent, clazz), catchable_{catchable} {}
+      : JSObject(runtime, &vt.base, *parent, *clazz), catchable_{catchable} {}
 
  private:
   friend void ErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb);

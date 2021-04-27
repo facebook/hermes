@@ -530,8 +530,12 @@ inline PseudoHandle<> createPseudoHandle(HermesValue value) {
 /// TODO(T40600161): when we next change LLVM version, see if this is
 /// still necessary.
 namespace llvh {
-template <>
-struct isPodLike<hermes::vm::PseudoHandle<hermes::vm::HermesValue>> {
+
+// Instantiating Optional with a T "isPodLike" will result in a specialized
+// OptionalStorage class without move ctor and would only copy T. Since the
+// PseudoHandle is not copyable we spcialized the trait to be always false.
+template <typename T>
+struct isPodLike<hermes::vm::PseudoHandle<T>> {
   static const bool value = false;
 };
 } // namespace llvh

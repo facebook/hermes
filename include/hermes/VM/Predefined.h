@@ -16,8 +16,7 @@ namespace vm {
 namespace Predefined {
 
 enum IProp {
-#define PROP(i) InternalProperty##i,
-#define NAMED_PROP(name) InternalProperty##name,
+#define NAMED_PROP(name) name,
 #include "InternalProperties.def"
   _IPROP_AFTER_LAST
 };

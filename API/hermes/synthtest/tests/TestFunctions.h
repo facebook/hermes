@@ -27,6 +27,7 @@
   F(hostFunctionNameAndParams)       \
   F(hostFunctionReturn)              \
   F(hostFunctionReturnArgument)      \
+  F(hostFunctionReturnThis)          \
   F(hostGlobalObject)                \
   F(mathRandom)                      \
   F(nativePropertyNames)             \

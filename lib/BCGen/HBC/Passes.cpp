@@ -189,6 +189,11 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
        opIndex == CallBuiltinInst::ThisIdx))
     return true;
 
+  /// GetBuiltinClosureInst's builtin index is always literal.
+  if (llvh::isa<GetBuiltinClosureInst>(Inst) &&
+      opIndex == GetBuiltinClosureInst::BuiltinIndexIdx)
+    return true;
+
   if (llvh::isa<IteratorCloseInst>(Inst) &&
       opIndex == IteratorCloseInst::IgnoreInnerExceptionIdx) {
     return true;
@@ -725,20 +730,18 @@ bool SpillRegisters::requiresShortOutput(Instruction *I) {
     // (though GetNextPNameInst modifies operands).
     return false;
   }
+
+  // Instructions that produce no output, don't use the register, even when
+  // allocated.
+  if (I->getType().isNoType())
+    return false;
+
   switch (I->getKind()) {
     // Some instructions become Movs or other opcodes with long variants:
     case ValueKind::HBCSpillMovInstKind:
     case ValueKind::LoadStackInstKind:
     case ValueKind::MovInstKind:
     case ValueKind::PhiInstKind:
-    // Some instructions just don't use the register, even when allocated:
-    case ValueKind::DebuggerInstKind:
-    case ValueKind::HBCReifyArgumentsInstKind:
-    case ValueKind::HBCStoreToEnvironmentInstKind:
-    case ValueKind::StoreGetterSetterInstKind:
-    case ValueKind::StoreOwnPropertyInstKind:
-    case ValueKind::StorePropertyInstKind:
-    case ValueKind::StoreStackInstKind:
     // Some instructions aren't actually encoded at all:
     case ValueKind::AllocStackInstKind:
     case ValueKind::TryEndInstKind:

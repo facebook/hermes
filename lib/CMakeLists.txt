@@ -21,7 +21,6 @@ add_hermes_library(hermesOptimizer
   Optimizer/Scalar/ResolveStaticRequire.cpp
   Optimizer/Scalar/SimpleCallGraphProvider.cpp
   Optimizer/Scalar/FuncSigOpts.cpp
-  Optimizer/Scalar/BundlerUtils.cpp
   Optimizer/Scalar/Utils.cpp
   Optimizer/Scalar/Inlining.cpp
   Optimizer/Scalar/HoistStartGenerator.cpp
@@ -56,6 +55,7 @@ add_subdirectory(CompilerDriver)
 add_subdirectory(DependencyExtractor)
 add_subdirectory(ADT)
 add_subdirectory(AST)
+add_subdirectory(AST2JS)
 add_subdirectory(FlowParser)
 add_subdirectory(Parser)
 add_subdirectory(SourceMap)
@@ -64,4 +64,4 @@ add_subdirectory(BCGen)
 add_subdirectory(ConsoleHost)
 add_subdirectory(Regex)
 add_subdirectory(Platform)
-# TODO: add_subdirectory(InternalBytecode)
+add_subdirectory(InternalBytecode)

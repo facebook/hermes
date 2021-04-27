@@ -12,8 +12,6 @@
 #include "TestHelpers.h"
 #include "gtest/gtest.h"
 
-// Hades doesn't support tripwires yet.
-#ifndef HERMESVM_GC_HADES
 using namespace hermes::vm;
 
 namespace {
@@ -27,16 +25,22 @@ struct Dummy final : public GCCell {
   static const VTable vt;
 
   static Dummy *create(DummyRuntime &runtime) {
-    return new (runtime.alloc(128)) Dummy(&runtime.getHeap());
+    return runtime.makeAFixed<Dummy>(&runtime.getHeap());
   }
   static bool classof(const GCCell *cell) {
     return cell->getVT() == &vt;
   }
 
+  template <class C>
+  static constexpr uint32_t cellSizeImpl() {
+    static_assert(std::is_convertible<C *, Dummy *>::value, "must be a Dummy");
+    return 128;
+  }
+
   Dummy(GC *gc) : GCCell(gc, &vt) {}
 };
 
-const VTable Dummy::vt{CellKind::UninitializedKind, 128};
+const VTable Dummy::vt{CellKind::UninitializedKind, cellSize<Dummy>()};
 
 TEST(InstrumentationAPITest, RunCallbackWhenCollecting) {
   bool triggeredTripwire = false;
@@ -89,8 +93,8 @@ TEST(InstrumentationAPITest, RunCallbackOnlyOnce_UnderCooldownTime) {
           .build());
   DummyRuntime &runtime = *rt;
 
-  runtime.gc.checkTripwire(100);
-  runtime.gc.checkTripwire(100);
+  runtime.getHeap().checkTripwire(100);
+  runtime.getHeap().checkTripwire(100);
   EXPECT_EQ(timesTriggeredTripwire, 1);
 }
 
@@ -139,5 +143,3 @@ TEST(InstrumentationAPITest, DontRunCallbackAfterAllocatingMemoryUnderLimit) {
 }
 
 } // namespace
-
-#endif

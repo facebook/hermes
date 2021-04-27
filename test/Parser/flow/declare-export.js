@@ -24,6 +24,7 @@ declare export default function foo(): number;
 // CHECK-NEXT:               "typeAnnotation": {
 // CHECK-NEXT:                 "type": "FunctionTypeAnnotation",
 // CHECK-NEXT:                 "params": [],
+// CHECK-NEXT:                 "this": null,
 // CHECK-NEXT:                 "returnType": {
 // CHECK-NEXT:                   "type": "NumberTypeAnnotation"
 // CHECK-NEXT:                 },
@@ -96,6 +97,7 @@ declare export function foo(): number;
 // CHECK-NEXT:               "typeAnnotation": {
 // CHECK-NEXT:                 "type": "FunctionTypeAnnotation",
 // CHECK-NEXT:                 "params": [],
+// CHECK-NEXT:                 "this": null,
 // CHECK-NEXT:                 "returnType": {
 // CHECK-NEXT:                   "type": "NumberTypeAnnotation"
 // CHECK-NEXT:                 },

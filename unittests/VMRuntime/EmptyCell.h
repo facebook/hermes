@@ -29,12 +29,20 @@ struct EmptyCell final : public GCCell {
   }
 
   static EmptyCell *create(DummyRuntime &runtime) {
-    return new (runtime.alloc</*FixedSize*/ true>(size()))
-        EmptyCell(&runtime.getHeap());
+    return runtime.makeAFixed<EmptyCell>(&runtime.getHeap());
   }
 
   static EmptyCell *createLongLived(DummyRuntime &runtime) {
-    return new (runtime.allocLongLived(size())) EmptyCell(&runtime.getHeap());
+    return runtime
+        .makeAFixed<EmptyCell<Size>, HasFinalizer::No, LongLived::Yes>(
+            &runtime.getHeap());
+  }
+
+  template <class C>
+  static constexpr uint32_t cellSizeImpl() {
+    static_assert(
+        std::is_convertible<C *, EmptyCell *>::value, "must be an EmptyCell");
+    return C::size();
   }
 
   EmptyCell(GC *gc) : GCCell(gc, &vt) {}
@@ -57,13 +65,7 @@ struct VarSizedEmptyCell final : public VariableSizeRuntimeCell {
   }
 
   static VarSizedEmptyCell *create(DummyRuntime &runtime) {
-    return new (runtime.alloc</*FixedSize*/ false>(size()))
-        VarSizedEmptyCell(&runtime.getHeap());
-  }
-
-  static VarSizedEmptyCell *createLongLived(DummyRuntime &runtime) {
-    return new (runtime.allocLongLived(size()))
-        VarSizedEmptyCell(&runtime.getHeap());
+    return runtime.makeAVariable<VarSizedEmptyCell>(size(), &runtime.getHeap());
   }
 
   VarSizedEmptyCell(GC *gc) : VariableSizeRuntimeCell(gc, &vt, Size) {}

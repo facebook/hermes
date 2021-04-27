@@ -8,7 +8,7 @@ if (EMSCRIPTEN)
 
   add_hermes_tool(hermes-parser-wasm
     hermes-parser-wasm.cpp
-    HermesParserJSBuilder.cpp
+    HermesParserJSSerializer.cpp
     ${ALL_HEADER_FILES}
     )
 
@@ -17,16 +17,6 @@ if (EMSCRIPTEN)
     hermesParser
   )
 
-  add_custom_target(
-    hermes-parser-js-library
-    COMMAND ${CMAKE_C_COMPILER} -E -P -x c-header
-    -I ${CMAKE_SOURCE_DIR}/include
-    -o ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/HermesParserJSLibrary.js
-    ${CMAKE_CURRENT_LIST_DIR}/HermesParserJSLibrary.js.template
-  )
-
-  add_dependencies(hermes-parser-wasm hermes-parser-js-library)
-
   target_link_options(hermes-parser-wasm PRIVATE "SHELL: -s NODERAWFS=0 -s WASM=1")
   target_link_options(hermes-parser-wasm PRIVATE "SHELL: -s ALLOW_MEMORY_GROWTH=1")
   target_link_options(hermes-parser-wasm PRIVATE
@@ -34,6 +24,5 @@ if (EMSCRIPTEN)
   target_link_options(hermes-parser-wasm PRIVATE "SHELL: -s EXPORT_NAME=hermes_parser_wasm")
   target_link_options(hermes-parser-wasm PRIVATE
     "SHELL: -s BINARYEN_ASYNC_COMPILATION=0 -s SINGLE_FILE=1 -s WASM_ASYNC_COMPILATION=0")
-  target_link_options(hermes-parser-wasm PRIVATE
-    --js-library ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/HermesParserJSLibrary.js)
+  target_link_options(hermes-parser-wasm PRIVATE "SHELL: -s NODEJS_CATCH_EXIT=0")
 endif ()

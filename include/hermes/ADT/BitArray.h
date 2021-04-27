@@ -73,6 +73,43 @@ class BitArray {
     return idx;
   }
 
+  /// Find the first bit with value \p V strictly before \p idx.
+  /// \return an index before \p idx representing a set bit or N if no set bits
+  /// are found.
+  template <bool V>
+  size_t findPrevBitImpl(size_t idx) const {
+    assert(
+        idx <= N &&
+        "precondition: idx is less than or equal to number of bits");
+    if (!idx) {
+      return N;
+    }
+    // Start the search at idx-1
+    idx--;
+    size_t wordIdx = idx / kBitsPerWord;
+    size_t offset = idx % kBitsPerWord;
+    // Start looking from the given idx. Invert the word if we are looking for a
+    // 0 so it's the same as looking for a 1.
+    uintptr_t currentWord = V ? allBits_[wordIdx] : ~allBits_[wordIdx];
+    // Set all bits after idx in the word to zero so we skip past them.
+    currentWord &= llvh::maskTrailingOnes<uintptr_t>(offset + 1);
+
+    // Loops through word-sized values in the bit array. Note that at the end of
+    // this loop, wordIdx points to the element right before currentWord.
+    // Writing it in this way helps with handling the first and last element
+    // edge cases.
+    while (wordIdx-- > 0 && !currentWord) {
+      currentWord = V ? allBits_[wordIdx] : ~allBits_[wordIdx];
+    }
+    // Index is:
+    // (Index of currentWord) * (Bits per word) + (Index of last 1 in word)
+    // NOTE: In the case where no bits are found, we expect currentWord to be 0.
+    // As a result, idx will underflow and evaluate to UINT_MAX.
+    idx = (wordIdx + 1) * kBitsPerWord +
+        (kBitsPerWord - llvh::countLeadingZeros(currentWord) - 1);
+    return std::min(idx, N);
+  }
+
  public:
   BitArray() {
     std::fill_n(allBits_.begin(), kNumWords, 0);
@@ -119,6 +156,14 @@ class BitArray {
   /// Find the index of the first unset bit at or after \p idx.
   size_t findNextZeroBitFrom(size_t idx) const {
     return findNextBitImpl<false>(idx);
+  }
+  /// Find the index of the first set bit at or before \p idx.
+  size_t findPrevSetBitFrom(size_t idx) const {
+    return findPrevBitImpl<true>(idx);
+  }
+  /// Find the index of the first unset bit at or before \p idx.
+  size_t findPrevZeroBitFrom(size_t idx) const {
+    return findPrevBitImpl<false>(idx);
   }
 };
 } // namespace hermes

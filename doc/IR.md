@@ -1,12 +1,10 @@
 ---
 id: ir
-title: IR
+title: Design of the IR
 ---
 
-
-## Design of the Hermes high-level IR
-
 ### Introduction
+
 This document is a reference manual for the Hermes High-level IR. The IR is a
 Static Single Assignment (SSA) based representation that captures the JavaScript
 language semantics. It features optional types (values may be annotated with
@@ -355,11 +353,21 @@ Effects | May read and write memory.
 
 CallBuiltinInst | _
 --- | --- |
-Description | Calls a builtin function passing "undefined" for this  
+Description | Calls a builtin function passing "undefined" for this
 Example | %0 = CallBuiltinInst %builtinNumber, %undefined, %arg0, %arg1, %arg2, ...
 Arguments | %builtinNumber is the builtin to execute. Arguments %arg0 ... %argN are the arguments passed to the function.
 Semantics | The instruction passes the control to the builtin in a VM-specific way. The arguments are mapped to the parameters. Unmapped parameters are initialized to 'undefined'.
 Effects | May read and write memory.
+
+### GetBuiltinClosureInst
+
+GetBuiltinClosureInst | _
+--- | --- |
+Description | Get a closure of a builtin function
+Example | %0 = GetBuiltinClosureInst %builtinNumber
+Arguments | %builtinNumber is the builtin to return the closure of.
+Semantics |
+Effects | Reads from memory.
 
 ### LoadPropertyInst
 
@@ -368,7 +376,7 @@ LoadPropertyInst | _
 Description | Loads the value of a field from a JavaScript object.
 Example |  %0 = LoadPropertyInst %object, %property
 Arguments | %object is the object to load from. %property is the name of the field.
-Semantics | The instruction follows the rules of JavaScript property access in ES5.1 sec 11.2.1. The operation GetValue (ES5.1. sec 8.7.1) is then applied to the returned Reference. 
+Semantics | The instruction follows the rules of JavaScript property access in ES5.1 sec 11.2.1. The operation GetValue (ES5.1. sec 8.7.1) is then applied to the returned Reference.
 Effects | May read and write memory or throw.
 
 TryLoadGlobalPropertyInst | _
@@ -396,7 +404,7 @@ StorePropertyInst | _
 Description | Stores a value to field in a JavaScript object.
 Example |   %4 = StorePropertyInst %value, %object, %property
 Arguments | %value is the value to be stored. %object is the object where the field %property will be created or modified.
-Semantics | The instruction follows the rules of JavaScript property access in ES5.1 sec 11.2.1. The operation PutValue (ES5.1. sec 8.7.2) is then applied to the returned Reference. 
+Semantics | The instruction follows the rules of JavaScript property access in ES5.1 sec 11.2.1. The operation PutValue (ES5.1. sec 8.7.2) is then applied to the returned Reference.
 Effects | May read and write memory or throw.
 
 ### TryStoreGlobalPropertyInst
@@ -416,7 +424,7 @@ StoreOwnPropertyInst | _
 Description | Stores a value to an *own property* of JavaScript object.
 Example |   %4 = StoreOwnPropertyInst %value, %object, %property, %enumerable : boolean
 Arguments | %value is the value to be stored. %object is the object where the field with name %property will be created or modified. %enumerable determines whether a new property will be created as enumerable or not.
-Semantics | The instruction follows the rules of JavaScript *own* property access. The property is created or updated in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain. 
+Semantics | The instruction follows the rules of JavaScript *own* property access. The property is created or updated in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain.
 Effects | May read and write memory.
 
 ### StoreNewOwnPropertyInst
@@ -426,7 +434,7 @@ StoreNewOwnPropertyInst | _
 Description | Create a new *own property* in what is known to be a JavaScript object.
 Example |   `%4 = StoreNewOwnPropertyInst %value, %object, %property, %enumerable : boolean`
 Arguments | *%value* is the value to be stored. *%object*, which must be an object, is where the field with name *%property* will be created. *%property* must be a string literal, otherwise it is impossible to guarantee that it is new. *%enumerable* determines whether the new property will be created as enumerable or not.
-Semantics | The instruction follows the rules of JavaScript *own* property access. The property is created in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain. 
+Semantics | The instruction follows the rules of JavaScript *own* property access. The property is created in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain.
 Effects | May read and write memory.
 
 ### StoreGetterSetterInst
@@ -435,7 +443,7 @@ StoreGetterSetterInst | _
 --- | --- |
 Description | Associates a pair of getter and setter with an *own* field in a JavaScript object, replacing the previous value.
 Example |   %4 = StoreGetterSetterInst %getter, %setter, %object, %property, %enumerable
-Arguments | %getter is a getter accessor, or undefined. %setter is a setter accessor, or undefined. %object is the object where the field %property will be created or modified. %enumerable determines whether a new property will be created as enumerable or not. 
+Arguments | %getter is a getter accessor, or undefined. %setter is a setter accessor, or undefined. %object is the object where the field %property will be created or modified. %enumerable determines whether a new property will be created as enumerable or not.
 Semantics | The instruction follows the rules of JavaScript property access. The property is created or updated in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain. It replaces both accessors even if one or both of the parameters are undefined.
 Effects | May read and write memory.
 
@@ -444,9 +452,9 @@ Effects | May read and write memory.
 AllocObjectInst | _
 --- | --- |
 Description | Allocates a new JavaScript object on the heap.
-Example |  `%0 = AllocObjectInst %sizeHint : LiteralNumber, %parent : EmptySentinel or null or Value` 
+Example |  `%0 = AllocObjectInst %sizeHint : LiteralNumber, %parent : EmptySentinel or null or Value`
 Arguments | *%sizeHint% indicates that the object will need at least that many property slots. *%parent* is the optional parent to create the object with: *EmptySentinel* means use *Object.prototype*, *null* means no parent, or otherwise use the specified value.
-Semantics | The instruction creates a new JavaScript object on the heap. If the parent is invalid (not EmptySenyinel, null or object), it is silently ignored. 
+Semantics | The instruction creates a new JavaScript object on the heap. If the parent is invalid (not EmptySenyinel, null or object), it is silently ignored.
 Effects | Does not read or write to memory.
 
 ### AllocArrayInst
@@ -610,14 +618,14 @@ Arguments | None
 Semantics | It must only be called from a ES6 class constructor or ES5 function. If the callee was invoked from `new`, it returns the function object of the direct constructor, otherwise `undefined`.
 Effects | Does not read or write memory
 
-### ThrowIfUndefinedInst
+### ThrowIfEmptyInst
 
-ThrowIfUndefinedInst | _
+ThrowIfEmptyInst | _
 --- | --- |
-Description | Check whether the value is undefined, and if it is, throw ReferenceError.
-Example |  %_ = ThrowIfUndefinedInst %value
+Description | Check whether the value is "empty", and if it is, throw ReferenceError, otherwise return it.
+Example |  %_ = ThrowIfEmptyInst %value
 Arguments | The value to check.
-Semantics | It is used to implement ES6 TDZ functionality. Variables declared with `let` are *poisoned* with undefined until they are initialized.
+Semantics | It is used to implement ES6 TDZ functionality. Variables declared with `let` are *poisoned* with *empty* until they are initialized.
 Effects | Potentially throws an exception. Has no other side effects.
 
 ### CoerceThisNS
@@ -673,6 +681,7 @@ Effects | May read and write memory. (may throw)
 ### IteratorBegin
 
 IteratorBegin | _
+--- | --- |
 Description | Begins array destructuring on a given iterable source.
 Example |  %0 = IteratorBegin %sourceOrNext
 Arguments | %sourceOrNext[in/out] is the stack location for source to destructure from. Is set to source if performing array iteration, else set to the `.next()` method of the iterator.
@@ -682,6 +691,7 @@ Effects | May read and write memory, may throw or execute.
 ### IteratorNext
 
 IteratorNext | _
+--- | --- |
 Description | Destructures the next value from a given iterator.
 Example |  %0 = IteratorNext %iterator %sourceOrNext
 Arguments | %iterator is the index or the iterator. %sourceOrNext is the input stack location (source to destructure from) or the next method.
@@ -709,6 +719,7 @@ Effects | May read and write memory, may throw or execute.
 ### IteratorClose
 
 IteratorClose | _
+--- | --- |
 Description | Closes an iterator if it exists.
 Example |  %0 = IteratorClose %iterator %ignoreInnerException
 Arguments | %iterator is the index or the iterator. %ignoreInnerException is a boolean literal.

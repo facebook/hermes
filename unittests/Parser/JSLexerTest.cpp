@@ -342,38 +342,102 @@ TEST(JSLexerTest, OctalLiteralTest) {
   SourceErrorManager sm;
   DiagContext diag(sm);
 
-  JSLexer lex("01 010 09 019 0o11 0O11", sm, alloc);
+  {
+    JSLexer lex("01 010 09 019 0o11 0O11", sm, alloc);
 
-  auto tok = lex.advance();
+    auto tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(tok->getNumericLiteral(), 1.0);
+
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(tok->getNumericLiteral(), 8.0);
+
+    ASSERT_EQ(diag.getWarnCountClear(), 0);
+
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(tok->getNumericLiteral(), 9.0);
+    ASSERT_EQ(diag.getWarnCountClear(), 1);
+
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(tok->getNumericLiteral(), 19.0);
+    ASSERT_EQ(diag.getWarnCountClear(), 1);
+
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(tok->getNumericLiteral(), 9.0);
+
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(tok->getNumericLiteral(), 9.0);
+
+    ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+  }
+
+  {
+    JSLexer lex("08.1_1 07.11 07.9 08.9", sm, alloc);
+    lex.setStrictMode(false);
+
+    auto tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(tok->getNumericLiteral(), 8.11);
+    ASSERT_EQ(diag.getWarnCountClear(), 1);
+
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(diag.getErrCountClear(), 1);
+
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(diag.getErrCountClear(), 1);
+
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(tok->getNumericLiteral(), 8.9);
+    ASSERT_EQ(diag.getWarnCountClear(), 1);
+
+    ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+  }
+
+  {
+    JSLexer lex("08.1_1 07.11 07.9 08.9", sm, alloc);
+    lex.setStrictMode(true);
+
+    auto tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(diag.getErrCountClear(), 1);
+
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(diag.getErrCountClear(), 1);
+
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(diag.getErrCountClear(), 1);
+
+    tok = lex.advance();
+    ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+    ASSERT_EQ(diag.getErrCountClear(), 1);
+
+    ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+  }
+}
+
+#if HERMES_PARSE_FLOW
+TEST(JSLexerTest, FlowOctalLiteralTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  JSLexer lex("01", sm, alloc);
+  auto tok = lex.advance(JSLexer::GrammarContext::Flow);
   ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
   ASSERT_EQ(tok->getNumericLiteral(), 1.0);
-
-  tok = lex.advance();
-  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
-  ASSERT_EQ(tok->getNumericLiteral(), 8.0);
-
-  ASSERT_EQ(diag.getWarnCountClear(), 0);
-
-  tok = lex.advance();
-  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
-  ASSERT_EQ(tok->getNumericLiteral(), 9.0);
-  ASSERT_EQ(diag.getWarnCountClear(), 1);
-
-  tok = lex.advance();
-  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
-  ASSERT_EQ(tok->getNumericLiteral(), 19.0);
-  ASSERT_EQ(diag.getWarnCountClear(), 1);
-
-  tok = lex.advance();
-  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
-  ASSERT_EQ(tok->getNumericLiteral(), 9.0);
-
-  tok = lex.advance();
-  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
-  ASSERT_EQ(tok->getNumericLiteral(), 9.0);
-
-  ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+  ASSERT_EQ(1, diag.getErrCountClear());
 }
+#endif
 
 TEST(JSLexerTest, BinaryLiteralTest) {
   JSLexer::Allocator alloc;
@@ -444,6 +508,30 @@ TEST(JSLexerTest, IdentifierTest) {
   ASSERT_EQ(aa, lex.getCurToken()->getIdentifier());
 
   ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+}
+
+TEST(JSLexerTest, PrivateIdentifierTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  JSLexer lex(
+      " #foo"
+      " # foo"
+      " #64",
+      sm,
+      alloc);
+
+  ASSERT_EQ(TokenKind::private_identifier, lex.advance()->getKind());
+  EXPECT_EQ("foo", lex.getCurToken()->getPrivateIdentifier()->str());
+
+  ASSERT_EQ(TokenKind::identifier, lex.advance()->getKind());
+  EXPECT_EQ(1, diag.getErrCountClear());
+  EXPECT_EQ("foo", lex.getCurToken()->getIdentifier()->str());
+
+  ASSERT_EQ(TokenKind::numeric_literal, lex.advance()->getKind());
+  EXPECT_EQ(1, diag.getErrCountClear());
+  EXPECT_EQ(64, lex.getCurToken()->getNumericLiteral());
 }
 
 TEST(JSLexerTest, StringTest1) {
@@ -1081,6 +1169,103 @@ TEST(JSLexerTest, StoreCommentsTest) {
     EXPECT_EQ(" hello ", lex.getStoredComments()[0].getString());
     EXPECT_EQ(StoredComment::Kind::Block, lex.getStoredComments()[1].getKind());
     EXPECT_EQ("world", lex.getStoredComments()[1].getString());
+  }
+
+  {
+    JSLexer lex("#! hello world\n;", sm, alloc, nullptr, true, false);
+    lex.setStoreComments(true);
+
+    ASSERT_EQ(TokenKind::semi, lex.advance()->getKind());
+
+    ASSERT_EQ(1, lex.getStoredComments().size());
+    EXPECT_EQ(
+        StoredComment::Kind::Hashbang, lex.getStoredComments()[0].getKind());
+    EXPECT_EQ(" hello world", lex.getStoredComments()[0].getString());
+  }
+
+  {
+    JSLexer lex("/**/;//\n", sm, alloc, nullptr, true, false);
+    lex.setStoreComments(true);
+
+    ASSERT_EQ(TokenKind::semi, lex.advance()->getKind());
+    ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+
+    ASSERT_EQ(2, lex.getStoredComments().size());
+    EXPECT_EQ(StoredComment::Kind::Block, lex.getStoredComments()[0].getKind());
+    EXPECT_EQ("", lex.getStoredComments()[0].getString());
+    EXPECT_EQ(StoredComment::Kind::Line, lex.getStoredComments()[1].getKind());
+    EXPECT_EQ("", lex.getStoredComments()[1].getString());
+  }
+
+  {
+    JSLexer lex("/*one*/ < /*two*/ >", sm, alloc, nullptr, true, false);
+    lex.setStoreComments(true);
+
+    // Create save point between two comments
+    ASSERT_EQ(TokenKind::less, lex.advance()->getKind());
+    JSLexer::SavePoint savePoint{&lex};
+    ASSERT_EQ(TokenKind::greater, lex.advance()->getKind());
+
+    ASSERT_EQ(2, lex.getStoredComments().size());
+    EXPECT_EQ(StoredComment::Kind::Block, lex.getStoredComments()[0].getKind());
+    EXPECT_EQ("one", lex.getStoredComments()[0].getString());
+    EXPECT_EQ(StoredComment::Kind::Block, lex.getStoredComments()[1].getKind());
+    EXPECT_EQ("two", lex.getStoredComments()[1].getString());
+
+    // After restoring, comment after save point is removed from comment storage
+    savePoint.restore();
+
+    ASSERT_EQ(1, lex.getStoredComments().size());
+    EXPECT_EQ(StoredComment::Kind::Block, lex.getStoredComments()[0].getKind());
+    EXPECT_EQ("one", lex.getStoredComments()[0].getString());
+  }
+
+  {
+    JSLexer lex("/*one*/ A /*two*/ >", sm, alloc, nullptr, true, false);
+    lex.setStoreComments(true);
+
+    ASSERT_EQ(TokenKind::identifier, lex.advance()->getKind());
+    ASSERT_EQ(1, lex.getStoredComments().size());
+    EXPECT_EQ("one", lex.getStoredComments()[0].getString());
+
+    // Lookahead does not store comments
+    lex.lookahead1(TokenKind::semi);
+    ASSERT_EQ(1, lex.getStoredComments().size());
+    EXPECT_EQ("one", lex.getStoredComments()[0].getString());
+
+    ASSERT_EQ(TokenKind::greater, lex.advance()->getKind());
+    ASSERT_EQ(2, lex.getStoredComments().size());
+  }
+}
+
+TEST(JSLexerTest, PrevTokenEndLocTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  {
+    JSLexer lex("var x = 1", sm, alloc);
+
+    ASSERT_EQ(TokenKind::rw_var, lex.advance()->getKind());
+    SMLoc varEndLoc = lex.getCurToken()->getEndLoc();
+
+    ASSERT_EQ(TokenKind::identifier, lex.advance()->getKind());
+    ASSERT_EQ(varEndLoc, lex.getPrevTokenEndLoc());
+    SMLoc idEndLoc = lex.getCurToken()->getEndLoc();
+
+    // Create save point at identifier
+    JSLexer::SavePoint savePoint{&lex};
+
+    ASSERT_EQ(TokenKind::equal, lex.advance()->getKind());
+    ASSERT_EQ(idEndLoc, lex.getPrevTokenEndLoc());
+    SMLoc equalEndLoc = lex.getCurToken()->getEndLoc();
+
+    ASSERT_EQ(TokenKind::numeric_literal, lex.advance()->getKind());
+    ASSERT_EQ(equalEndLoc, lex.getPrevTokenEndLoc());
+
+    // Restoring to identifier. Last token is now the var keyword.
+    savePoint.restore();
+    ASSERT_EQ(varEndLoc, lex.getPrevTokenEndLoc());
   }
 }
 

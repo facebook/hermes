@@ -173,6 +173,10 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
     return Y->_delegate ? genYieldStarExpr(Y) : genYieldExpr(Y);
   }
 
+  if (auto *A = llvh::dyn_cast<ESTree::AwaitExpressionNode>(expr)) {
+    return genAwaitExpr(A);
+  }
+
   Builder.getModule()->getContext().getSourceErrorManager().error(
       expr->getSourceRange(), Twine("Invalid expression encountered"));
   return Builder.getLiteralUndefined();
@@ -527,6 +531,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
       return MemberExpressionResult{
           Builder.createDeletePropertyInst(baseValue, prop), baseValue};
   }
+  llvm_unreachable("No other kind of member expression");
 }
 
 ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genOptionalMemberExpression(
@@ -970,10 +975,19 @@ Value *ESTreeIRGen::genSequenceExpr(ESTree::SequenceExpressionNode *Sq) {
 Value *ESTreeIRGen::genYieldExpr(ESTree::YieldExpressionNode *Y) {
   assert(!Y->_delegate && "must use genYieldStarExpr for yield*");
 
-  auto *bb = Builder.getInsertionBlock();
-  auto *next = Builder.createBasicBlock(bb->getParent());
   Value *value = Y->_argument ? genExpression(Y->_argument)
                               : Builder.getLiteralUndefined();
+  return genYieldOrAwaitExpr(value);
+}
+
+Value *ESTreeIRGen::genAwaitExpr(ESTree::AwaitExpressionNode *A) {
+  Value *value = genExpression(A->_argument);
+  return genYieldOrAwaitExpr(value);
+}
+
+Value *ESTreeIRGen::genYieldOrAwaitExpr(Value *value) {
+  auto *bb = Builder.getInsertionBlock();
+  auto *next = Builder.createBasicBlock(bb->getParent());
 
   auto *resumeIsReturn =
       Builder.createAllocStackInst(genAnonymousLabelName("isReturn"));
@@ -981,7 +995,9 @@ Value *ESTreeIRGen::genYieldExpr(ESTree::YieldExpressionNode *Y) {
   Builder.createSaveAndYieldInst(value, next);
   Builder.setInsertionBlock(next);
   return genResumeGenerator(
-      Y, resumeIsReturn, Builder.createBasicBlock(bb->getParent()));
+      GenFinally::Yes,
+      resumeIsReturn,
+      Builder.createBasicBlock(bb->getParent()));
 }
 
 /// Generate the code for `yield* value`.
@@ -1155,7 +1171,8 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
         // SurroundingTry is correct for the genFinallyBeforeControlChange
         // call emitted by genResumeGenerator.
         Builder.setInsertionBlock(resumeBB);
-        genResumeGenerator(Y, resumeIsReturn, getNextBlock, received);
+        genResumeGenerator(
+            GenFinally::Yes, resumeIsReturn, getNextBlock, received);
 
         // SaveAndYieldInst is a Terminator, but emitTryCatchScaffolding
         // needs a block from which to Branch to the TryEnd instruction.
@@ -1234,7 +1251,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
 }
 
 Value *ESTreeIRGen::genResumeGenerator(
-    ESTree::YieldExpressionNode *yield,
+    GenFinally genFinally,
     AllocStackInst *isReturn,
     BasicBlock *nextBB,
     AllocStackInst *received) {
@@ -1252,7 +1269,7 @@ Value *ESTreeIRGen::genResumeGenerator(
   if (received) {
     Builder.createStoreStackInst(resume, received);
   }
-  if (yield) {
+  if (genFinally == GenFinally::Yes) {
     genFinallyBeforeControlChange(
         curFunction()->surroundingTry, nullptr, ControlFlowChange::Break);
   }
@@ -1730,13 +1747,6 @@ Value *ESTreeIRGen::genTemplateLiteralExpr(ESTree::TemplateLiteralNode *Expr) {
   assert(
       exprItr == Expr->_expressions.end() &&
       "All the substitutions must have been collected.");
-
-  if (argList.size() == 1 && firstCookedStr->getValue().str().empty()) {
-    // If the template literal only has one substitution and the opening
-    // string is empty, it looks something like `${expr}` and we can just
-    // convert the argument to a string.
-    return Builder.createAddEmptyStringInst(argList[0]);
-  }
 
   // Generate a function call to HermesInternal.concat() with these arguments.
   return genHermesInternalCall("concat", firstCookedStr, argList);

@@ -28,6 +28,16 @@ class HermesParserDiagHandler {
   /// \return the error string formatted for display.
   std::string getErrorString() const;
 
+  /// \return the line number of the error, if one exists.
+  uint32_t getErrorLine() const {
+    return firstError_.getLineNo();
+  }
+
+  /// \return the column number of the error, if one exists.
+  uint32_t getErrorColumn() const {
+    return firstError_.getColumnNo();
+  }
+
  private:
   /// The SourceErrorManager where this handler is installed.
   SourceErrorManager &sm_;
@@ -35,8 +45,16 @@ class HermesParserDiagHandler {
   /// First error given to handler(), if one exists.
   llvh::SMDiagnostic firstError_;
 
+  /// Notes that follow the first error, if one exists.
+  std::vector<llvh::SMDiagnostic> firstErrorNotes_;
+
+  /// Whether notes for the first error can still be collected.
+  bool collectNotes_ = true;
+
   /// The actual handler callback.
   static void handler(const llvh::SMDiagnostic &msg, void *ctx);
+
+  std::string formatDiagnostic(const llvh::SMDiagnostic &diag) const;
 };
 
 } // namespace hermes

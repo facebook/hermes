@@ -31,46 +31,49 @@ HERMES_LITERAL_NODE_TYPES = {
 # These are the keys in the JSON ASTs that should be omitted during diffing.
 # values in these sets are keys to a child node, and they should always be
 # omitted.
-HERMES_OMITTED_KEYS_COMMON = {"typeAnnotation"}
+HERMES_OMITTED_KEYS_COMMON = set()
 ESPRIMA_OMITTED_KEYS_COMMON = {"loc", "range", "errors"}
 # key is the type of a node, and value is the set of keys of a child node that
 # needs to be omitted.
 HERMES_OMITTED_KEYS = {
-    "FunctionDeclaration": {"returnType"},
-    "FunctionExpression": {"returnType"},
-    "ArrowFunctionExpression": {"returnType"},
-    "ClassDeclaration": {
-        "typeParameters",
-        "superTypeParameters",
-        "implements",
-        "decorators",
-    },
-    "ClassExpression": {
-        "typeParameters",
-        "superTypeParameters",
-        "implements",
-        "decorators",
-    },
     "ImportDeclaration": {"importKind"},
     "ImportSpecifier": {"importKind"},
     "ExportNamedDeclaration": {"exportKind"},
     "ExportAllDeclaration": {"exportKind"},
     "ArrayExpression": {"trailingComma"},
+    "ObjectTypeAnnotation": {"inexact"},
+    "ForOfStatement": {"await"},
+    "EnumStringBody": {"hasUnknownMembers"},
+    "EnumNumberBody": {"hasUnknownMembers"},
+    "EnumBooleanBody": {"hasUnknownMembers"},
+    "EnumSymbolBody": {"hasUnknownMembers"},
     # Some literals support "raw" and others don't.
     # ESPrima doesn't distinguish.
     "Literal": {"raw"},
+    "StringLiteralTypeAnnotation": {"raw"},
 }
 ESPRIMA_OMITTED_KEYS = {
     "Program": {"tokens", "sourceType", "comments"},
     "Literal": {"raw"},
+    "StringLiteralTypeAnnotation": {"raw"},
+    "ImportDeclaration": {"importKind"},
+    "ImportSpecifier": {"importKind"},
+    "ExportNamedDeclaration": {"exportKind"},
+    "ExportAllDeclaration": {"exportKind"},
     # ES6+ specific enhancement to the ESTree original definitions that Hermes
     # does not support yet.
     # TODO: remember to update or remove them once we update the parser.
-    "FunctionDeclaration": {"expression"},
-    "FunctionExpression": {"expression"},
+    "FunctionDeclaration": {"expression", "predicate"},
+    "FunctionExpression": {"expression", "predicate"},
     "ArrowFunctionExpression": {"generator"},
-    "Property": {"method", "shorthand"},
     "ForInStatement": {"each"},
+    "ForOfStatement": {"await"},
+    "Identifier": {"optional"},
+    "MethodDefinition": {"decorators"},
+    "ExportDefaultDeclaration": {"exportKind"},
+    # TODO: Flow conditionally outputs "inexact" depending on whether the parent
+    # node is an Interface or not.
+    "ObjectTypeAnnotation": {"inexact"},
 }
 
 # Collect the keys that should be omitted from either Hermes or esprima ASTs.
@@ -86,7 +89,7 @@ for k in list(HERMES_OMITTED_KEYS.keys()) + list(ESPRIMA_OMITTED_KEYS.keys()):
 OMITTED_KEYS_COMMON = HERMES_OMITTED_KEYS_COMMON.union(ESPRIMA_OMITTED_KEYS_COMMON)
 
 HERMES_TIMEOUT = 40
-COMPILER_ARGS = ["-hermes-parser", "-dump-ast"]
+COMPILER_ARGS = ["-hermes-parser"]
 
 
 class EsprimaTestRunner:
@@ -120,6 +123,8 @@ class EsprimaTestRunner:
                 ast["directive"] = "use strict"
             else:
                 del ast["directive"]
+        if ast["type"] == "Identifier" and ast["name"] == "this":
+            del ast["optional"]
         # convert the literal node types to ESTree standard form
         if ast["type"] in HERMES_LITERAL_NODE_TYPES:
             if ast["type"] == "NullLiteral":
@@ -139,10 +144,23 @@ class EsprimaTestRunner:
                 # the 'directive' field. Even if it's not 'use strict'
                 if "directive" in ast and ast["directive"] != "use strict":
                     del ast["directive"]
-            # If it is a regexp literal, the 'value' field is unnecessary and
-            # Hermes does not have it.
-            if "type" in ast and ast["type"] == "Literal" and "regex" in ast:
-                del ast["value"]
+            if "type" in ast:
+                # If it is a regexp literal, the 'value' field is unnecessary and
+                # Hermes does not have it.
+                if ast["type"] == "Literal" and "regex" in ast:
+                    del ast["value"]
+
+                # Flow outputs RestProperty/SpreadProperty sometimes.
+                if ast["type"] == "RestProperty":
+                    ast["type"] = "RestElement"
+                if ast["type"] == "SpreadProperty":
+                    ast["type"] = "SpreadElement"
+                if (
+                    ast["type"] == "ClassProperty"
+                    or ast["type"] == "ClassPrivateProperty"
+                ):
+                    if "declare" not in ast:
+                        ast["declare"] = False
             # If it is a template literal, the 'value' field contains
             # the 'cooked' and 'raw' strings, which should be moved.
             if "type" in ast and ast["type"] == "TemplateLiteral" and "quasis" in ast:
@@ -159,45 +177,45 @@ class EsprimaTestRunner:
             and key in ESPRIMA_OMITTED_KEYS[node["type"]]
         )
 
-    def hermes_should_omit_keys_count(self, node):
-        omit_count = 0
-        for elt in HERMES_OMITTED_KEYS_COMMON:
-            if elt in node:
-                omit_count += 1
+    def hermes_should_omit_keys(self, node):
+        omit = HERMES_OMITTED_KEYS_COMMON & node.keys()
         if "type" in node and node["type"] in HERMES_OMITTED_KEYS:
-            for elt in HERMES_OMITTED_KEYS[node["type"]]:
-                if elt in node:
-                    omit_count += 1
-        return omit_count
+            omit |= HERMES_OMITTED_KEYS[node["type"]] & node.keys()
+        return omit
 
     # Compare two AST nodes from Hermes and ESPrima.
     # node1 is from hermes ast, node2 is from esprima ast
-    def compare_nodes(self, node1, node2):
+    def compare_nodes(self, suite, node1, node2):
         node1 = self.process_hermes_ast(node1)
         node2 = self.process_esprima_ast(node2)
         if type(node1) != type(node2):
-            self.printDebug("Expected {}, found {}".format(type(node2), type(node1)))
+            self.printDebug(f"Expected {type(node2)}, found {type(node1)}")
+            if isinstance(node2, dict):
+                self.printDebug(f"  in {node2['type']}")
+            elif isinstance(node2, dict):
+                self.printDebug(f"  in Hermes {node1['type']}")
             return False
         if isinstance(node1, dict):
-            expected_count = 0
+            # Check if Hermes is missing keys.
             for key, val in node2.items():
                 if self.should_omit_esprima_key(node2, key):
                     continue
                 if key not in node1:
-                    self.printDebug("{} missing property: {}", node1["type"], key)
+                    self.printDebug(f"{node1['type']} missing property: {key}")
                     return False
-                expected_count += 1
-                if not self.compare_nodes(node1[key], val):
+                if not self.compare_nodes(suite, node1[key], val):
                     return False
-            # check if key-val pair counts match
-            real_count = len(node1) - self.hermes_should_omit_keys_count(node1)
-            if real_count != expected_count:
-                self.printDebug(
-                    "AST node element count mismatch in {}".format(node1["type"])
-                )
-                self.printDebug("Hermes count:   {}".format(real_count, node1))
-                self.printDebug("Expected count: {}".format(expected_count))
-                return False
+            # Check if Hermes has extra keys.
+            hermes_omit = self.hermes_should_omit_keys(node1)
+            for key, val in node1.items():
+                if key in hermes_omit:
+                    continue
+                if key not in node2 and val is not None:
+                    # Flow omits some keys which are null in Hermes output.
+                    # Ignore these keys in Hermes if they don't show up in
+                    # the expected AST if they have no value anyway.
+                    self.printDebug(f"{node1['type']} extra property: {key}")
+                    return False
             return True
         elif isinstance(node1, list):
             if len(node1) != len(node2):
@@ -206,7 +224,7 @@ class EsprimaTestRunner:
                 )
                 return False
             for i in range(len(node1)):
-                if not self.compare_nodes(node1[i], node2[i]):
+                if not self.compare_nodes(suite, node1[i], node2[i]):
                     return False
             return True
         else:
@@ -246,9 +264,11 @@ class EsprimaTestRunner:
             return node
 
     # Returns (TestStatus, error string)
-    def diff_test_output(self, output, expected):
+    def diff_test_output(self, suite, output, expected):
         try:
-            test_passed = self.compare_nodes(json.loads(output), json.loads(expected))
+            test_passed = self.compare_nodes(
+                suite, json.loads(output), json.loads(expected)
+            )
             if not test_passed:
                 if self.debug:
                     self.printDebug("ast not expected")
@@ -288,7 +308,16 @@ class EsprimaTestRunner:
         raise TypeError("Can't find expected file.")
 
     # Run Hermes parser on the test and return the result from the subprocess.
-    def parseSource(self, hermes, filename):
+    def parseSource(self, suite, hermes, filename, transformed=False):
+        extra_args = []
+        if "flow" in suite:
+            extra_args.append("-parse-flow")
+            extra_args.append("-parse-jsx")
+            extra_args.append("-Xinclude-empty-ast-nodes")
+        elif "JSX" in filename:
+            extra_args.append("-parse-jsx")
+        extra_args.append("-dump-transformed-ast" if transformed else "-dump-ast")
+        args = [hermes] + COMPILER_ARGS + extra_args
         # ".source.js" files has the format of "var source = \"...\";", and
         # the value of the 'source' variable should be the input to the parser.
         # So we evaluate the source with Hermes first and then parse the output.
@@ -314,14 +343,14 @@ class EsprimaTestRunner:
                         evaluated.flush()
                         # run the test through Hermes parser.
                         return subprocess.run(
-                            [hermes] + COMPILER_ARGS + [evaluated.name],
+                            args + [evaluated.name],
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE,
                             timeout=HERMES_TIMEOUT,
                         )
         else:
             return subprocess.run(
-                [hermes] + COMPILER_ARGS + [filename],
+                args + [filename],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 timeout=HERMES_TIMEOUT,
@@ -338,26 +367,39 @@ class EsprimaTestRunner:
     # Files ends with ".tokens.json" expect the parser to produce tokens, which
     # Hermes does not support, so skip them for now.
     # Returns (TestStatus, error string)
-    def run_test(self, filename, hermes):
+    def run_test(self, suite, filename, hermes):
         self.printDebug("testing", filename)
         expected_filename = self.get_expected_file_name(filename)
         try:
-            res = self.parseSource(hermes, filename)
+            res = self.parseSource(suite, hermes, filename)
             self.printDebug("process return code", res.returncode)
             if expected_filename.endswith(".tree.json"):
                 with open(expected_filename, "r") as expected_file:
                     expected_content = expected_file.read()
                     # If the expected file has an 'errors' field, Hermes parser should fail.
                     if '"errors":' in expected_content:
+                        if res.returncode == 0:
+                            # If it should error and it didn't,
+                            # try again with semantic validation.
+                            # Some tests only error in semantic validation,
+                            # but we want to avoid running it because it also
+                            # outputs errors for unsupported compiler features
+                            # that Hermes does parse correctly.
+                            res = self.parseSource(
+                                suite, hermes, filename, transformed=True
+                            )
                         if res.returncode != 0:
                             return (TestStatus.TEST_PASSED, "expected failure")
                         else:
                             return (TestStatus.TEST_FAILED, "test should fail")
                     # If no errors, diff the output and expected.
                     return self.diff_test_output(
-                        res.stdout.decode("utf-8"), expected_content
+                        suite, res.stdout.decode("utf-8"), expected_content
                     )
             elif expected_filename.endswith(".failure.json"):
+                if res.returncode == 0:
+                    # Retry with validation, as above.
+                    res = self.parseSource(suite, hermes, filename, transformed=True)
                 if res.returncode != 0:
                     return (TestStatus.TEST_PASSED, "expected failure")
                 else:

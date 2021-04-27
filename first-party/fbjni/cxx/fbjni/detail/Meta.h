@@ -293,19 +293,22 @@ private:
     return detail::SimpleFixedString<len>(Repr::get_instantiated_base_name());
   }
  public:
+  using descriptorType = decltype(jtype_traits<T>::descriptor());
+  using basenameType = decltype(jtype_traits<T>::base_name());
+
   // The jni type signature (described at
   // http://docs.oracle.com/javase/1.5.0/docs/guide/jni/spec/types.html).
-  static constexpr decltype(jtype_traits<T>::descriptor()) /* detail::SimpleFixedString<_> */ kDescriptor = descriptor();
+  static constexpr descriptorType /* detail::SimpleFixedString<_> */ kDescriptor = descriptor();
 
   // The signature used for class lookups. See
   // http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html#getName().
-  static constexpr decltype(jtype_traits<T>::base_name()) /* detail::SimpleFixedString<_> */ kBaseName = base_name();
+  static constexpr basenameType /* detail::SimpleFixedString<_> */ kBaseName = base_name();
 };
 
 template <typename T>
-constexpr decltype(jtype_traits<T>::descriptor()) jtype_traits<T>::kDescriptor;
+constexpr typename jtype_traits<T>::descriptorType jtype_traits<T>::kDescriptor;
 template <typename T>
-constexpr decltype(jtype_traits<T>::base_name())jtype_traits<T>::kBaseName;
+constexpr typename jtype_traits<T>::basenameType jtype_traits<T>::kBaseName;
 
 static_assert(
   std::is_same<jint, int>::value,

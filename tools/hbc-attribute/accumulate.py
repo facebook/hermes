@@ -15,39 +15,39 @@ LEAFNODE = "__LEAFNODE"
 
 class Accumulation:
     """Groups allocations and counts them both per group and globally.
-       The input is essentially:
+    The input is essentially:
 
-            Function    Type                DedupKey    Size
-            foo.js:1    data:string:header  42          8
-            bar.js:1    data:string:header  42          8
-            bar.js:2    data:string:header  1337        8
+         Function    Type                DedupKey    Size
+         foo.js:1    data:string:header  42          8
+         bar.js:1    data:string:header  42          8
+         bar.js:2    data:string:header  1337        8
 
-        and this is counted both globally (string header key 42 is used 2
-        times, 1337 once), and per filename (generally: group). foo.js uses
-        string header key 42, bar.js uses 42 and 1337.
+     and this is counted both globally (string header key 42 is used 2
+     times, 1337 once), and per filename (generally: group). foo.js uses
+     string header key 42, bar.js uses 42 and 1337.
 
-        Once all the data is counted, total space used by each group is
-        tallied, summed and itemized in a nested way, with three sums:
+     Once all the data is counted, total space used by each group is
+     tallied, summed and itemized in a nested way, with three sums:
 
-        * Private:   Data used only by this group
-        * Shared:    All data used by this group
-        * Amortized: Data used divided by number of users
+     * Private:   Data used only by this group
+     * Shared:    All data used by this group
+     * Amortized: Data used divided by number of users
 
-        In the example above, for bar.js:
+     In the example above, for bar.js:
 
-        * Private usage is 8 because #1337 is only used by bar.js
-        * Shared usage is 16, because bar.js uses #42 and #1337
-        * Amortized usage is 12, because bar.js owns all of #1337
-          but splits #42 equally with foo.js (8/1+8/2 = 12).
+     * Private usage is 8 because #1337 is only used by bar.js
+     * Shared usage is 16, because bar.js uses #42 and #1337
+     * Amortized usage is 12, because bar.js owns all of #1337
+       but splits #42 equally with foo.js (8/1+8/2 = 12).
 
-        The final result is a JSON object essentially representing:
+     The final result is a JSON object essentially representing:
 
-                                Pri Am  Shr
-        bar.js                   8  10  24
-           data                  8  10  24
-              string             8  10  24
-                 header          8   8  16
-                 chars           0   2   8
+                             Pri Am  Shr
+     bar.js                   8  10  24
+        data                  8  10  24
+           string             8  10  24
+              header          8   8  16
+              chars           0   2   8
 
     """
 

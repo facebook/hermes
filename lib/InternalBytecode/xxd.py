@@ -6,15 +6,18 @@
 
 """
 This module exists so that a Windows build can have access to functionality
-like xxd -i
+like xxd -i.
+This script is intended to be compliant with both py2 and py3.
 """
 
 import argparse
+import sys
 from os import path
 
 
 # This is about 80 characters long (4 characters per byte + comma + space)
 BYTES_PER_LINE = 12
+IS_PY3 = sys.version_info > (3, 0)
 
 
 def main():
@@ -24,7 +27,7 @@ def main():
 
     # Ensure the file exists before writing out anything
     if not path.exists(args.file):
-        raise Exception(f'File "{args.file}" doesn\'t exist')
+        raise Exception('File "{}" doesn\'t exist'.format(args.file))
 
     with open(args.file, "rb") as f:
         # Could read in chunks instead for extra performance, but this script
@@ -36,7 +39,14 @@ def main():
         file_as_bytes[i : i + BYTES_PER_LINE]
         for i in range(0, len(file_as_bytes), BYTES_PER_LINE)
     ]
-    print(",\n".join(", ".join("0x{:02x}".format(b) for b in l) for l in lines))
+    # in python2, byte is same as str and interating it yield strs.
+    # in python3, byte is distinct and interating it yield ints.
+    print(
+        ",\n".join(
+            ", ".join("0x{:02x}".format(b if IS_PY3 else ord(b)) for b in l)
+            for l in lines
+        )
+    )
 
 
 if __name__ == "__main__":

@@ -42,11 +42,14 @@ struct LazyCompilationData {
   /// The type of function, e.g. statement or expression.
   ESTree::NodeKind nodeKind;
 
-  /// Whether or not this is the inner function of a generator.
-  bool isGeneratorInnerFunction;
-
   /// Whether or not the function is strict.
   bool strictMode;
+
+  /// The Yield param to restore when parsing.
+  bool paramYield;
+
+  /// The Await param to restore when parsing.
+  bool paramAwait;
 };
 } // namespace hbc
 
@@ -62,11 +65,15 @@ bool generateIRFromESTree(
 
 /// Lowers an ESTree program into Hermes IR in \p M without a top-level
 /// function, so that it can be used as a CommonJS module.
+/// The same module can occur in any number of segments and all such copies of a
+/// module are interchangeable at runtime, but the IR is not shared across them.
+/// \param segmentID the ID of the segment containing this module.
 /// \param id the ID assigned to the CommonJS module when added to the IR
-///           (index when reading filenames for the first time)
+///           (index when reading filenames for the first time).
 /// \param filename the relative filename to the CommonJS module.
 void generateIRForCJSModule(
     ESTree::FunctionExpressionNode *node,
+    uint32_t segmentID,
     uint32_t id,
     llvh::StringRef filename,
     Module *M,

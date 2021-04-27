@@ -145,6 +145,12 @@ static opt<std::string> ProfilerSymbolsFile(
     cat(RuntimeCategory));
 #endif
 
+static opt<bool> ES6Promise(
+    "Xes6-promise",
+    desc("Enable support for ES6 Promise"),
+    init(RuntimeConfig::getDefaultES6Promise()),
+    cat(RuntimeCategory));
+
 static opt<bool> ES6Proxy(
     "Xes6-proxy",
     desc("Enable support for ES6 Proxy"),
@@ -155,6 +161,12 @@ static opt<bool> ES6Symbol(
     "Xes6-symbol",
     desc("Enable support for ES6 Symbol"),
     init(RuntimeConfig::getDefaultES6Symbol()),
+    cat(RuntimeCategory));
+
+static opt<bool> ES6Intl(
+    "Xes6-intl",
+    desc("Enable support for ES6 Intl APIs"),
+    init(RuntimeConfig::getDefaultES6Intl()),
     cat(RuntimeCategory));
 
 static llvh::cl::opt<bool> StopAfterInit(
@@ -179,7 +191,7 @@ static opt<bool> StableInstructionCount(
 static opt<uint32_t> VMExperimentFlags(
     "Xvm-experiment-flags",
     llvh::cl::desc("VM experiment flags."),
-    llvh::cl::init(0),
+    llvh::cl::init(RuntimeConfig::getDefaultVMExperimentFlags()),
     llvh::cl::Hidden,
     cat(RuntimeCategory));
 
@@ -192,6 +204,13 @@ static opt<bool> EnableHermesInternalTestMethods(
     llvh::cl::desc("Enable the HermesInternal test methods."),
     llvh::cl::init(RuntimeConfig::getDefaultEnableHermesInternalTestMethods()),
     llvh::cl::Hidden);
+
+static opt<bool> HeapTimeline(
+    "Xheap-timeline",
+    llvh::cl::desc(
+        "Track heap allocation stacks and add them to the output of createHeapSnapshot()"),
+    llvh::cl::init(false),
+    cat(RuntimeCategory));
 
 } // namespace cl
 

@@ -8,6 +8,7 @@
 #ifndef HERMES_PUBLIC_GCTRIPWIRECONTEXT_H
 #define HERMES_PUBLIC_GCTRIPWIRECONTEXT_H
 
+#include <iosfwd>
 #include <string>
 #include <system_error>
 
@@ -19,13 +20,17 @@ class GCTripwireContext {
  public:
   virtual ~GCTripwireContext() = default;
 
-  /// Captures the heap to a file
-  ///
-  /// \param path to save the heap capture
-  ///
+  /// Captures the heap to a file.
+  /// \param path to save the heap capture.
   /// \return Empty error code if the heap capture succeeded, else a real error
   ///   code.
   virtual std::error_code createSnapshotToFile(const std::string &path) = 0;
+
+  /// Captures the heap to a stream.
+  /// \param os stream to save the heap capture to.
+  /// \return Empty error code if the heap capture succeeded, else a real error
+  ///   code.
+  virtual std::error_code createSnapshot(std::ostream &os) = 0;
 };
 
 } // namespace vm

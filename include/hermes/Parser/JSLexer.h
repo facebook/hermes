@@ -146,6 +146,10 @@ class Token {
     assert(getKind() == TokenKind::identifier);
     return ident_;
   }
+  UniqueString *getPrivateIdentifier() const {
+    assert(getKind() == TokenKind::private_identifier);
+    return ident_;
+  }
   UniqueString *getResWordIdentifier() const {
     assert(isResWord());
     return ident_;
@@ -205,6 +209,10 @@ class Token {
     range_.End = SMLoc::getFromPointer(end);
   }
 
+  void setRange(SMRange range) {
+    range_ = range;
+  }
+
   void setPunctuator(TokenKind kind) {
     kind_ = kind;
   }
@@ -218,6 +226,10 @@ class Token {
   }
   void setIdentifier(UniqueString *ident) {
     kind_ = TokenKind::identifier;
+    ident_ = ident;
+  }
+  void setPrivateIdentifier(UniqueString *ident) {
+    kind_ = TokenKind::private_identifier;
     ident_ = ident;
   }
   void setStringLiteral(UniqueString *literal, bool containsEscapes) {
@@ -264,6 +276,8 @@ class StoredComment {
     Line,
     /// Comment that is delimited by "/*" and "*/".
     Block,
+    /// Comment that begins with "#!" and starts at the first byte of the file
+    Hashbang,
   };
 
   StoredComment(Kind kind, SMRange range) : kind_(kind), range_(range) {}
@@ -272,15 +286,15 @@ class StoredComment {
     return kind_;
   }
 
-  /// \return the comment with delimiters (//, /*, */) stripped,
+  /// \return the comment with delimiters (//, /*, */, #!) stripped,
   /// as a StringRef which points into the source buffer.
   StringRef getString() const {
     // Ignore opening delimiter.
     const char *start = range_.Start.getPointer() + 2;
     // Conditionally ignore closing delimiter.
-    const char *end = kind_ == Kind::Line ? range_.End.getPointer()
-                                          : range_.End.getPointer() - 2;
-    assert(end > start && "invalid comment range");
+    const char *end = kind_ == Kind::Block ? range_.End.getPointer() - 2
+                                           : range_.End.getPointer();
+    assert(end >= start && "invalid comment range");
     return StringRef{start, (size_t)(end - start)};
   }
 
@@ -293,6 +307,27 @@ class StoredComment {
   Kind kind_;
 
   /// Source range of the stored comment.
+  SMRange range_;
+};
+
+/// Stored token when lexing.
+class StoredToken {
+ public:
+  StoredToken(TokenKind kind, SMRange range) : kind_(kind), range_(range) {}
+
+  TokenKind getKind() const {
+    return kind_;
+  }
+
+  SMRange getSourceRange() const {
+    return range_;
+  }
+
+ private:
+  /// Kind of the token.
+  TokenKind kind_;
+
+  /// Source range of the token.
   SMRange range_;
 };
 
@@ -313,10 +348,18 @@ class JSLexer {
 
   StringTable &strTab_;
 
+#if HERMES_PARSE_JSX
+  /// Table of HTML entity names to their corresponding unicode code point.
+  const llvh::DenseMap<StringRef, uint32_t> &htmlEntities_;
+#endif
+
   bool strictMode_;
 
   /// Whether to store the comments instead of skipping them.
   bool storeComments_{false};
+
+  /// Whether to store the tokens as we lex.
+  bool storeTokens_{false};
 
   /// If true, when a surrogate pair sequence is encountered in a string literal
   /// in the source, convert that string literal to its canonical UTF-8
@@ -324,6 +367,9 @@ class JSLexer {
   bool convertSurrogates_;
 
   Token token_;
+
+  /// The ending source location for the previous token produced by the lexer.
+  SMLoc prevTokenEndLoc_;
 
   const char *bufferStart_;
   const char *curCharPtr_;
@@ -351,6 +397,9 @@ class JSLexer {
   /// and have the same lifetime as pointers such as bufferStart_ and
   /// bufferEnd_.
   std::vector<StoredComment> commentStorage_{};
+
+  /// Storage for tokens we store when storeTokens_ == true.
+  std::vector<StoredToken> tokenStorage_{};
 
  public:
   /// \param convertSurrogates See member variable \p convertSurrogates_.
@@ -426,6 +475,20 @@ class JSLexer {
     storeComments_ = storeComments;
   }
 
+  bool getStoreTokens() const {
+    return storeTokens_;
+  }
+
+  void setStoreTokens(bool storeTokens) {
+    storeTokens_ = storeTokens;
+  }
+
+  /// Unconditionally store the current token in the tokenStorage_.
+  void storeCurrentToken() {
+    assert(storeTokens_ && "Tokens shouldn't be stored unless the flag is set");
+    tokenStorage_.emplace_back(token_.getKind(), token_.getSourceRange());
+  }
+
   /// \return true if a line terminator was consumed before the current token.
   ///
   /// The caller can use that information to make decisions about inserting
@@ -442,6 +505,11 @@ class JSLexer {
   /// \return the current char pointer location.
   SMLoc getCurLoc() const {
     return SMLoc::getFromPointer(curCharPtr_);
+  }
+
+  /// \return the end location of the previous token.
+  SMLoc getPrevTokenEndLoc() const {
+    return prevTokenEndLoc_;
   }
 
   /// Force an EOF at the next token.
@@ -464,9 +532,11 @@ class JSLexer {
   /// \param grammarContext determines "/", "/=", regexp, and JSX identifiers.
   const Token *advance(GrammarContext grammarContext = AllowRegExp);
 
+#if HERMES_PARSE_JSX
   /// Consume the current token and scan a new one inside a JSX child.
   /// This scans JSXText or one of the punctuators: {, <, >, }.
   const Token *advanceInJSXChild();
+#endif
 
   /// Check whether the current token is a directive, in other words is it a
   /// string literal without escapes or new line continuations, followed by
@@ -536,6 +606,11 @@ class JSLexer {
     return commentStorage_;
   }
 
+  /// \return any stored comments to this point.
+  llvh::ArrayRef<StoredToken> getStoredTokens() const {
+    return tokenStorage_;
+  }
+
   /// Store state of the lexer and allow rescanning from that point.
   /// Can only save state when the current token is a punctuator or
   /// TokenKind::identifier.
@@ -551,6 +626,20 @@ class JSLexer {
     /// Saved curCharPtr_ from the lexer.
     SMLoc loc_;
 
+    /// Saved token range from the lexer.
+    SMRange range_;
+
+    // Saved previous token end location from the lexer.
+    SMLoc prevTokenEndLoc_;
+
+    /// Saved size of comment storage within the lexer. If we restore this save
+    /// point, comments past this index should be removed from the lexer.
+    size_t commentStorageSize_;
+
+    /// Stored token storage size.
+    /// If we backtrack, we must also delete the previously stored tokens.
+    size_t tokenStorageSize_;
+
    public:
     SavePoint(JSLexer *lexer)
         : lexer_(lexer),
@@ -559,7 +648,11 @@ class JSLexer {
               kind_ == TokenKind::identifier
                   ? lexer_->getCurToken()->getIdentifier()
                   : nullptr),
-          loc_(lexer_->getCurLoc()) {
+          loc_(lexer_->getCurLoc()),
+          range_(lexer_->getCurToken()->getSourceRange()),
+          prevTokenEndLoc_(lexer->getPrevTokenEndLoc()),
+          commentStorageSize_(lexer->getStoredComments().size()),
+          tokenStorageSize_(lexer_->getStoredTokens().size()) {
       assert(
           (isPunctuatorDbg(kind_) || kind_ == TokenKind::identifier) &&
           "SavePoint can only be used for punctuators");
@@ -568,9 +661,24 @@ class JSLexer {
     /// Restore the state of the lexer to the originally saved state.
     void restore() {
       if (kind_ == TokenKind::identifier) {
-        lexer_->unsafeSetIdentifier(ident_, loc_);
+        lexer_->unsafeSetIdentifier(ident_, loc_, range_);
       } else {
-        lexer_->unsafeSetPunctuator(kind_, loc_);
+        lexer_->unsafeSetPunctuator(kind_, loc_, range_);
+      }
+
+      lexer_->prevTokenEndLoc_ = prevTokenEndLoc_;
+
+      if (lexer_->storeComments_ &&
+          commentStorageSize_ < lexer_->commentStorage_.size()) {
+        lexer_->commentStorage_.erase(
+            lexer_->commentStorage_.begin() + commentStorageSize_,
+            lexer_->commentStorage_.end());
+      }
+
+      if (LLVM_UNLIKELY(lexer_->getStoreTokens())) {
+        lexer_->tokenStorage_.erase(
+            lexer_->tokenStorage_.begin() + tokenStorageSize_,
+            lexer_->tokenStorage_.end());
       }
     }
   };
@@ -622,6 +730,7 @@ class JSLexer {
   /// \return the decoded value and the incremented current pointer
   inline std::pair<uint32_t, const char *> _peekUTF8() const;
 
+  static inline bool isASCIIIdentifierStart(uint32_t ch);
   static inline bool isUnicodeIdentifierStart(uint32_t ch);
   static inline bool isUnicodeIdentifierPart(uint32_t ch);
 
@@ -688,6 +797,19 @@ class JSLexer {
   /// \return the resultant number on success, None on failure.
   llvh::Optional<uint32_t> consumeBracedCodePoint(bool errorOnFail = true);
 
+#if HERMES_PARSE_JSX
+  /// Decode an HTML entity in the form "&NAME;", "&#NUMBER;", or "&xHEX;".
+  ///
+  /// \ref curCharPtr_  must point to the ampersand at the start of the entity.
+  /// It will be updated to point to the first character after the semicolon. On
+  /// failure, curCharPtr_ will be reset to where it was when the function was
+  /// called.
+  ///
+  /// \return the resultant code point on success, None on failure if the
+  /// ampersand is not the start of an HTML entity.
+  llvh::Optional<uint32_t> consumeHTMLEntityOptional();
+#endif
+
   /// Skip until after the end of the line terminating the line or hashbang
   /// comment.
   /// \return the updated source pointer.
@@ -702,7 +824,7 @@ class JSLexer {
       llvh::StringRef name,
       const char *ptr);
 
-  void scanNumber();
+  void scanNumber(GrammarContext grammarContext);
 
   /// Recognise a reserved word depending on the mode (strict vs non-strict).
   /// \return \c TokenKind::identifier if the word wasn't recognized, or the
@@ -746,6 +868,11 @@ class JSLexer {
     }
   }
 
+  /// Scan a private identifier.
+  /// \pre curCharPtr_ is on the '#'.
+  /// \return true on success, false on error.
+  bool scanPrivateIdentifier();
+
   template <bool JSX>
   void scanString();
   void scanStringInContext(GrammarContext grammarContext) {
@@ -768,18 +895,31 @@ class JSLexer {
   /// Set the current token kind to \p kind without any checks and seek to
   /// \p loc.
   /// Should only be used for save point use-cases.
-  void unsafeSetPunctuator(TokenKind kind, SMLoc loc) {
+  void unsafeSetPunctuator(TokenKind kind, SMLoc loc, SMRange range) {
     assert(isPunctuatorDbg(kind) && "must set a punctuator");
     token_.setPunctuator(kind);
+    token_.setRange(range);
     seek(loc);
   }
 
   /// Set the current token kind to \p kind without any checks and seek to
   /// \p loc.
   /// Should only be used for save point use-cases.
-  void unsafeSetIdentifier(UniqueString *ident, SMLoc loc) {
+  void unsafeSetIdentifier(UniqueString *ident, SMLoc loc, SMRange range) {
     token_.setIdentifier(ident);
+    token_.setRange(range);
     seek(loc);
+  }
+
+  /// Finish a new token, setting the new token's end location.
+  /// Save the previous token's end location in prevTokenEndLoc_.
+  /// Store the current token in the storage if storeTokens_ is set.
+  inline void finishToken(const char *end) {
+    prevTokenEndLoc_ = token_.getEndLoc();
+    token_.setEnd(end);
+    if (LLVM_UNLIKELY(storeTokens_)) {
+      storeCurrentToken();
+    }
   }
 
   /// Initialize the parser for a given source buffer id.
@@ -865,9 +1005,12 @@ inline std::pair<uint32_t, const char *> JSLexer::_peekUTF8() const {
   return _peekUTF8(curCharPtr_);
 }
 
+inline bool JSLexer::isASCIIIdentifierStart(uint32_t ch) {
+  return ch == '_' || ch == '$' || ((ch | 32) >= 'a' && (ch | 32) <= 'z');
+}
+
 inline bool JSLexer::isUnicodeIdentifierStart(uint32_t ch) {
-  return ch == '_' || ch == '$' || ((ch | 32) >= 'a' && (ch | 32) <= 'z') ||
-      isUnicodeOnlyLetter(ch);
+  return isASCIIIdentifierStart(ch) || isUnicodeOnlyLetter(ch);
 }
 
 inline bool JSLexer::isUnicodeIdentifierPart(uint32_t ch) {

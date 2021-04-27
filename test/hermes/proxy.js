@@ -2173,5 +2173,58 @@ var p = new Proxy(Object.create([]), {});
 p[String('length')] = 0x123;
 p[0xABC] = 1111;
 
+// Regression test for heavy handle allocation path
+for (var b in new Proxy([], {
+  ownKeys: Reflect.ownKeys,
+  getOwnPropertyDescriptor: Reflect.getOwnPropertyDescriptor,
+})) {}
+
+// Test when the trap get revokes the proxy.
+var {
+  proxy,
+  revoke
+} = Proxy.revocable({}, new Proxy({}, {
+  get(t, k, r) {
+    revoke();
+  }
+}));
+Object.getPrototypeOf(proxy);
+
+var targetRan = false;
+
+var {
+  proxy,
+  revoke
+} = Proxy.revocable(
+  function() { targetRan = true; },
+  new Proxy({}, {
+    get: function(t, k, r) {
+      revoke();
+    }
+  }
+));
+proxy();
+
+assert.ok(targetRan);
+
+// This returns the proxy below as a descriptor.
+var p1 = new Proxy({}, {
+    getOwnPropertyDescriptor(t, p) { return p2; },
+});
+
+// Calling get on the Proxy p2 requires calling
+// getOwnPropertyDescriptor on the target, p1 above, to check
+// invariants.  This constructs a descriptor by getting
+// properties of the trap return (p2 below).  Calling get
+// on the proxy p2 is how we started, resulting in an infinite
+// recursion.
+
+var p2 = new Proxy(p1, {
+    has(t, p) { return true; },
+    get(t, p, r) { return {}; },
+});
+
+assert.throws(() => p2.foo, RangeError, "Maximum call stack size exceeded");
+
 print('done');
 // CHECK-LABEL: done

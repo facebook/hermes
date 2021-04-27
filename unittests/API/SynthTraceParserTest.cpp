@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_API_TRACE
 #include <hermes/SynthTraceParser.h>
 
 #include <gtest/gtest.h>
@@ -38,8 +37,9 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
       "allocInYoung": false,
     },
     "maxNumRegisters": 100,
-    "ES6Proxy": true,
+    "ES6Proxy": false,
     "ES6Symbol": false,
+    "ES6Intl": false,
     "enableSampledStats": true,
     "vmExperimentFlags": 123
   },
@@ -55,7 +55,8 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
 )";
   auto result = parseSynthTrace(bufFromStr(src));
   const SynthTrace &trace = std::get<0>(result);
-  const hermes::vm::RuntimeConfig &rtconf = std::get<1>(result).build();
+  hermes::vm::RuntimeConfig rtconf =
+      std::get<1>(result).withGCConfig(std::get<2>(result).build()).build();
   const hermes::vm::MockedEnvironment &env = std::get<3>(result);
 
   EXPECT_EQ(trace.records().size(), 0);
@@ -71,8 +72,9 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
   EXPECT_FALSE(gcconf.getAllocInYoung());
 
   EXPECT_EQ(rtconf.getMaxNumRegisters(), 100);
-  EXPECT_TRUE(rtconf.getES6Proxy());
+  EXPECT_FALSE(rtconf.getES6Proxy());
   EXPECT_FALSE(rtconf.getES6Symbol());
+  EXPECT_FALSE(rtconf.getES6Intl());
   EXPECT_TRUE(rtconf.getEnableSampledStats());
   EXPECT_EQ(rtconf.getVMExperimentFlags(), 123);
 
@@ -99,7 +101,7 @@ TEST_F(SynthTraceParserTest, RuntimeConfigDefaults) {
 }
   )";
   auto result = parseSynthTrace(bufFromStr(src));
-  const hermes::vm::RuntimeConfig &rtconf = std::get<1>(result).build();
+  hermes::vm::RuntimeConfig rtconf = std::get<1>(result).build();
 
   EXPECT_EQ(rtconf.getGCConfig().getMinHeapSize(), 0);
   EXPECT_EQ(rtconf.getGCConfig().getInitHeapSize(), 33554432);
@@ -175,5 +177,3 @@ TEST_F(SynthTraceParserTest, SynthMissingVersion) {
 }
 
 } // namespace
-
-#endif

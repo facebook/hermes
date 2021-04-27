@@ -162,10 +162,11 @@ ExceptionEntryList hermes::generateExceptionHandlers(
     catch_ranges.resize(nextIndex);
     // For each range, we register it as an exception handler entry.
     for (auto range : catch_ranges) {
-      exception_entries.push_back({(uint32_t)range.first,
-                                   (uint32_t)range.second,
-                                   (uint32_t)catchInfo.catchLocation,
-                                   catchInfo.depth});
+      exception_entries.push_back(
+          {(uint32_t)range.first,
+           (uint32_t)range.second,
+           (uint32_t)catchInfo.catchLocation,
+           catchInfo.depth});
     }
   }
   // Sort ranges by depth. In hermes, depth increase when you nest try inside

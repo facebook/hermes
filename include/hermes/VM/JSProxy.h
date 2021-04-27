@@ -171,7 +171,7 @@ class JSProxy : public JSObject {
       Runtime *runtime,
       OwnKeysFlags okFlags);
 
- private:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit JSProxy(Deserializer &d);
 
@@ -179,9 +179,10 @@ class JSProxy : public JSObject {
   friend void ProxyDeserialize(Deserializer &d, CellKind kind);
 #endif
 
-  JSProxy(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
-      : JSObject(runtime, &vt.base, parent, clazz) {}
+  JSProxy(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
+      : JSObject(runtime, &vt.base, *parent, *clazz) {}
 
+ private:
   detail::ProxySlots slots_;
 };
 

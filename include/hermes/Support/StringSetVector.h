@@ -12,6 +12,7 @@
 #include "llvh/ADT/StringRef.h"
 
 #include <deque>
+#include <limits>
 #include <string>
 
 namespace hermes {
@@ -66,7 +67,8 @@ struct StringSetVector final {
 
   /// A map from strings to their index in the storage.  The strings referred
   /// to in the keys of this mapping are owned by \c stringsToStorage_.
-  llvh::DenseMap<llvh::StringRef, uint32_t> stringsToIndex_;
+  using index_type = uint32_t;
+  llvh::DenseMap<llvh::StringRef, index_type> stringsToIndex_;
 };
 
 inline StringSetVector::size_type StringSetVector::insert(llvh::StringRef str) {
@@ -76,13 +78,18 @@ inline StringSetVector::size_type StringSetVector::insert(llvh::StringRef str) {
     return it->second;
   }
 
-  auto newIdx = stringsStorage_.size();
+  size_type storageSize = stringsStorage_.size();
+  assert(
+      storageSize < std::numeric_limits<index_type>::max() &&
+      "StringSetVector cannot store that many elements");
+  auto newIdx = static_cast<index_type>(storageSize);
+  assert(storageSize == newIdx && "casted value unexpectedly different");
   stringsStorage_.emplace_back(str.begin(), str.end());
   auto inserted = stringsToIndex_.insert({stringsStorage_.back(), newIdx});
   assert(inserted.second && "String already exists as key in mapping.");
   (void)inserted;
 
-  return newIdx;
+  return storageSize;
 }
 
 inline StringSetVector::iterator StringSetVector::find(llvh::StringRef str) {

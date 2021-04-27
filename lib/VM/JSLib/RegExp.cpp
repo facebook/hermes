@@ -521,7 +521,7 @@ CallResult<Handle<JSArray>> directRegExpExec(
 
   const auto dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
 
-  auto arrRes = JSArray::create(runtime, match.size(), 0);
+  auto arrRes = JSArray::create(runtime, match.size(), match.size());
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -541,17 +541,6 @@ CallResult<Handle<JSArray>> directRegExpExec(
 
   defineResult = JSObject::defineOwnProperty(
       A, runtime, Predefined::getSymbolID(Predefined::input), dpf, S);
-  assert(
-      defineResult != ExecutionStatus::EXCEPTION &&
-      "defineOwnProperty() failed on a new object");
-  (void)defineResult;
-
-  defineResult = JSObject::defineOwnProperty(
-      A,
-      runtime,
-      Predefined::getSymbolID(Predefined::length),
-      dpf,
-      runtime->makeHandle(HermesValue::encodeNumberValue(match.size())));
   assert(
       defineResult != ExecutionStatus::EXCEPTION &&
       "defineOwnProperty() failed on a new object");
@@ -580,8 +569,6 @@ CallResult<Handle<JSArray>> directRegExpExec(
     }
     idx++;
   }
-  if (JSArray::setLengthProperty(A, runtime, idx) == ExecutionStatus::EXCEPTION)
-    return ExecutionStatus::EXCEPTION;
   return A;
 }
 
@@ -1195,7 +1182,7 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
 
   // c. Let setStatus be Set(rx, "lastIndex", 0, true).
   // d. ReturnIfAbrupt(setStatus).
-  Handle<> zeroHandle = runtime->makeHandle(HermesValue::encodeNumberValue(0));
+  Handle<> zeroHandle = HandleRootOwner::getZeroValue();
   if (setLastIndex(rx, runtime, *zeroHandle) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1389,7 +1376,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
   bool fullUnicode = false;
 
   // 10. If global is true, then
-  Handle<> zeroHandle = runtime->makeHandle(HermesValue::encodeNumberValue(0));
+  Handle<> zeroHandle = HandleRootOwner::getZeroValue();
   if (global) {
     //   a. Let fullUnicode be ToBoolean(Get(rx, "unicode")).
     //   b. ReturnIfAbrupt(fullUnicode).
@@ -1603,11 +1590,12 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
         if (LLVM_UNLIKELY(replacerArgsCount >= UINT32_MAX))
           return runtime->raiseStackOverflow(
               Runtime::StackOverflowKind::JSRegisterStack);
-        ScopedNativeCallFrame newFrame{runtime,
-                                       static_cast<uint32_t>(replacerArgsCount),
-                                       *replaceFn,
-                                       false,
-                                       HermesValue::encodeUndefinedValue()};
+        ScopedNativeCallFrame newFrame{
+            runtime,
+            static_cast<uint32_t>(replacerArgsCount),
+            *replaceFn,
+            false,
+            HermesValue::encodeUndefinedValue()};
         if (LLVM_UNLIKELY(newFrame.overflowed()))
           return runtime->raiseStackOverflow(
               Runtime::StackOverflowKind::NativeStack);

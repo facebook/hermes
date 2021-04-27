@@ -80,6 +80,28 @@ TEST(Regex, Short) {
   EXPECT_EQ("(0-6) (1-5)", flatten(matchRanges));
 }
 
+MatchRuntimeResult searchResult(
+    const char16_t *text,
+    const char16_t *pattern,
+    const char16_t *flags = u"") {
+  cmatch m;
+  return searchWithBytecode(
+      cregex(pattern, flags).compile(),
+      text,
+      0,
+      std::char_traits<char16_t>::length(text),
+      &m,
+      constants::matchDefault);
+}
+
+TEST(Regex, ExecFail) {
+  EXPECT_EQ(
+      searchResult(u"", u"(){999999999}"), MatchRuntimeResult::StackOverflow);
+  EXPECT_EQ(
+      searchResult(u"", u"(?=^){999999999}"),
+      MatchRuntimeResult::StackOverflow);
+}
+
 /* The following tests are adapted from re.alg.search/ecma.pass.cpp in libc++ */
 TEST(Regex, FromLibCXX) {
   {
@@ -689,6 +711,11 @@ TEST(Regex, Invalid) {
   EXPECT_EQ(error_for(u"(?)"), ErrorType::InvalidRepeat);
   EXPECT_EQ(error_for(u"abc", u"a"), ErrorType::InvalidFlags);
   EXPECT_EQ(error_for(u"abc", u"gg"), ErrorType::InvalidFlags);
+  EXPECT_EQ(error_for(u"(?=a){1}", u"u"), ErrorType::InvalidRepeat);
+  EXPECT_EQ(error_for(u"(?<=a){1}", u"u"), ErrorType::InvalidRepeat);
+  EXPECT_EQ(error_for(u"(?=a){1}"), ErrorType::None);
+  EXPECT_EQ(error_for(u"(?!a){1}"), ErrorType::None);
+  EXPECT_EQ(error_for(u"(?<=a){1}"), ErrorType::InvalidRepeat);
 }
 
 TEST(Regex, InvalidFromLibCXX) {

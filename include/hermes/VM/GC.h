@@ -14,6 +14,10 @@
 #include "hermes/VM/GenGCNC.h"
 #elif defined(HERMESVM_GC_HADES)
 #include "hermes/VM/HadesGC.h"
+#elif defined(HERMESVM_GC_RUNTIME)
+#include "hermes/VM/GenGCNC.h"
+#include "hermes/VM/HadesGC.h"
+#include "hermes/VM/MallocGC.h"
 #else
 #error "Unsupported HermesVM GCKIND" #HERMESVM_GCKIND
 #endif

@@ -95,6 +95,23 @@ class ScopedHashTable {
     scope_->head_ = nullptr;
   }
 
+  /// Create a new node and insert it into the current scope.
+  void insertNewNode(
+      ScopedHashTableScope<K, V> *const scope,
+      const K &key,
+      const V &value,
+      ScopedHashTableNode<K, V> *&entry) {
+    // All Nodes allocated here.
+    auto *update = new ScopedHashTableNode<K, V>(scope->depth_, key, value);
+    assert(
+        (!entry || entry->depth_ <= scope->depth_) &&
+        "Can't insert values under existing names");
+    update->nextShadowed_ = entry;
+    update->nextInScope_ = scope->head_;
+    scope->head_ = update;
+    entry = update;
+  }
+
  public:
   ScopedHashTable() : map_() {}
   ~ScopedHashTable() {
@@ -109,21 +126,26 @@ class ScopedHashTable {
       const K &key,
       const V &value) {
     assert(scope && "No currently defined scope");
-    ScopedHashTableNode<K, V> *&entry = map_[key];
-    // All Nodes allocated here.
-    auto *update = new ScopedHashTableNode<K, V>(scope->depth_, key, value);
-    assert(
-        (!entry || entry->depth_ <= scope->depth_) &&
-        "Can't insert values under existing names");
-    update->nextShadowed_ = entry;
-    update->nextInScope_ = scope->head_;
-    scope->head_ = update;
-    entry = update;
+    insertNewNode(scope, key, value, map_[key]);
   }
 
   /// Inserts a value into the current scope.
   void insert(const K &key, const V &value) {
     insertIntoScope(scope_, key, value);
+  }
+
+  /// If the key exists in the current scope, update its value to the specified
+  /// one. Otherwise, create a new entry in current scope.
+  void setInCurrentScope(const K &key, const V &value) {
+    assert(scope_ && "No currently defined scope");
+    ScopedHashTableNode<K, V> *&entry = map_[key];
+    if (entry && entry->depth_ == scope_->depth_) {
+      // If the key exists in the current scope, update the value.
+      entry->value_ = value;
+    } else {
+      // Otherwise, create a new node in the current scope.
+      insertNewNode(scope_, key, value, entry);
+    }
   }
 
   /// Returns 1 if the value is defined, 0 if it's not.

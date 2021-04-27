@@ -114,30 +114,32 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
 /// Predefined enum value, and its value is rooted in \p VALUE.  If property
 /// definition fails, the exceptional execution status will be propogated to the
 /// outer function.
-#define SET_PROP(KEY, VALUE)                                             \
-  do {                                                                   \
-    GCScopeMarkerRAII marker{gcScope};                                   \
-    double val = VALUE;                                                  \
-    if (statsTable) {                                                    \
-      std::string key = oscompat::to_string(static_cast<unsigned>(KEY)); \
-      if (statsTable->count(key.c_str())) {                              \
-        val = (*statsTable)[StringRef(key.c_str(), key.size())].num();   \
-      }                                                                  \
-    }                                                                    \
-    tmpHandle = HermesValue::encodeDoubleValue(val);                     \
-    auto status = JSObject::defineNewOwnProperty(                        \
-        resultHandle,                                                    \
-        runtime,                                                         \
-        Predefined::getSymbolID(KEY),                                    \
-        PropertyFlags::defaultNewNamedPropertyFlags(),                   \
-        tmpHandle);                                                      \
-    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {           \
-      return ExecutionStatus::EXCEPTION;                                 \
-    }                                                                    \
-    if (newStatsTable) {                                                 \
-      std::string key = oscompat::to_string(static_cast<unsigned>(KEY)); \
-      newStatsTable->try_emplace(key, val);                              \
-    }                                                                    \
+#define SET_PROP(KEY, VALUE)                                                \
+  do {                                                                      \
+    GCScopeMarkerRAII marker{gcScope};                                      \
+    double val = VALUE;                                                     \
+    if (statsTable) {                                                       \
+      auto array = runtime->getPredefinedString(KEY)->getStringRef<char>(); \
+      std::string key(array.data(), array.size());                          \
+      if (statsTable->count(key.c_str())) {                                 \
+        val = (*statsTable)[StringRef(key.c_str(), key.size())].num();      \
+      }                                                                     \
+    }                                                                       \
+    tmpHandle = HermesValue::encodeDoubleValue(val);                        \
+    auto status = JSObject::defineNewOwnProperty(                           \
+        resultHandle,                                                       \
+        runtime,                                                            \
+        Predefined::getSymbolID(KEY),                                       \
+        PropertyFlags::defaultNewNamedPropertyFlags(),                      \
+        tmpHandle);                                                         \
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {              \
+      return ExecutionStatus::EXCEPTION;                                    \
+    }                                                                       \
+    if (newStatsTable) {                                                    \
+      auto array = runtime->getPredefinedString(KEY)->getStringRef<char>(); \
+      std::string key(array.data(), array.size());                          \
+      newStatsTable->try_emplace(key, val);                                 \
+    }                                                                       \
   } while (false)
 
   auto &stats = runtime->getRuntimeStats();
@@ -397,6 +399,32 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
 #undef SET_PROP_NEW
 }
 
+/// \return a static string summarising the presence and resolution type of
+/// CommonJS modules across all RuntimeModules that have been loaded into \c
+/// runtime.
+static const char *getCJSModuleModeDescription(Runtime *runtime) {
+  bool hasCJSModulesDynamic = false;
+  bool hasCJSModulesStatic = false;
+  for (const auto &runtimeModule : runtime->getRuntimeModules()) {
+    if (runtimeModule.hasCJSModules()) {
+      hasCJSModulesDynamic = true;
+    }
+    if (runtimeModule.hasCJSModulesStatic()) {
+      hasCJSModulesStatic = true;
+    }
+  }
+  if (hasCJSModulesDynamic && hasCJSModulesStatic) {
+    return "Mixed dynamic/static";
+  }
+  if (hasCJSModulesDynamic) {
+    return "Dynamically resolved";
+  }
+  if (hasCJSModulesStatic) {
+    return "Statically resolved";
+  }
+  return "None";
+}
+
 /// \return an object mapping keys to runtime property values.
 CallResult<HermesValue>
 hermesInternalGetRuntimeProperties(void *, Runtime *runtime, NativeArgs args) {
@@ -459,12 +487,53 @@ hermesInternalGetRuntimeProperties(void *, Runtime *runtime, NativeArgs args) {
       "Release"
 #endif
       ;
-  auto buildModeVal = StringPrimitive::create(
+  auto buildModeRes = StringPrimitive::create(
       runtime, ASCIIRef(buildMode, sizeof(buildMode) - 1));
+  if (LLVM_UNLIKELY(buildModeRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  tmpHandle = *buildModeRes;
   if (LLVM_UNLIKELY(
-          buildModeVal == ExecutionStatus::EXCEPTION ||
-          addProperty(runtime->makeHandle(*buildModeVal), "Build") ==
-              ExecutionStatus::EXCEPTION)) {
+          addProperty(tmpHandle, "Build") == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  std::string gcKind = runtime->getHeap().getKindAsStr();
+  auto gcKindRes = StringPrimitive::create(
+      runtime, ASCIIRef(gcKind.c_str(), gcKind.length()));
+  if (LLVM_UNLIKELY(gcKindRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  tmpHandle = *gcKindRes;
+  if (LLVM_UNLIKELY(
+          addProperty(tmpHandle, "GC") == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+#ifdef HERMES_RELEASE_VERSION
+  auto relVerRes =
+      StringPrimitive::create(runtime, createASCIIRef(HERMES_RELEASE_VERSION));
+  if (LLVM_UNLIKELY(relVerRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  tmpHandle = *relVerRes;
+  if (LLVM_UNLIKELY(
+          addProperty(tmpHandle, "OSS Release Version") ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+#endif
+
+  const char *cjsModuleMode = getCJSModuleModeDescription(runtime);
+  auto cjsModuleModeRes =
+      StringPrimitive::create(runtime, createASCIIRef(cjsModuleMode));
+  if (LLVM_UNLIKELY(cjsModuleModeRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  tmpHandle = *cjsModuleModeRes;
+  if (LLVM_UNLIKELY(
+          addProperty(tmpHandle, "CommonJS Modules") ==
+          ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
@@ -526,6 +595,11 @@ hermesInternalIsProxy(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(obj && obj->isProxyObject());
 }
 
+CallResult<HermesValue>
+hermesInternalHasPromise(void *, Runtime *runtime, NativeArgs args) {
+  return HermesValue::encodeBoolValue(runtime->hasES6Promise());
+}
+
 #ifdef HERMESVM_EXCEPTION_ON_OOM
 /// Gets the current call stack as a JS String value.  Intended (only)
 /// to allow testing of Runtime::callStack() from JS code.
@@ -579,7 +653,7 @@ static CallResult<HermesValue> getCodeBlockFileName(
 /// * fileName (string)
 /// * lineNumber (number) - 1 based
 /// * columnNumber (number) - 1 based
-/// * cjsModuleOffset (number) - 0 based
+/// * segmentID (number) - 0 based
 /// * virtualOffset (number) - 0 based
 /// * isNative (boolean)
 /// TypeError if func is not a function.
@@ -631,15 +705,14 @@ hermesInternalGetFunctionLocation(void *, Runtime *runtime, NativeArgs args) {
       (void)res;
     } else {
       tmpHandle = HermesValue::encodeNumberValue(
-          codeBlock->getRuntimeModule()->getBytecode()->getCJSModuleOffset());
+          codeBlock->getRuntimeModule()->getBytecode()->getSegmentID());
       res = JSObject::defineOwnProperty(
           resultHandle,
           runtime,
-          Predefined::getSymbolID(Predefined::cjsModuleOffset),
+          Predefined::getSymbolID(Predefined::segmentID),
           DefinePropertyFlags::getDefaultNewPropertyFlags(),
           tmpHandle);
-      assert(
-          res != ExecutionStatus::EXCEPTION && "Failed to set cjsModuleOffset");
+      assert(res != ExecutionStatus::EXCEPTION && "Failed to set segmentID");
       (void)res;
 
       tmpHandle = HermesValue::encodeNumberValue(codeBlock->getVirtualOffset());
@@ -672,47 +745,57 @@ hermesInternalGetFunctionLocation(void *, Runtime *runtime, NativeArgs args) {
   return resultHandle.getHermesValue();
 }
 
+/// \code
+///   HermesInternal.setPromiseRejectionTrackingHook = function (func) {}
+/// \endcode
+/// Register the function which can be used to *enable* Promise rejection
+/// tracking when the user calls it.
+/// For example, when using the npm `promise` polyfill:
+/// \code
+///   HermesInternal.setPromiseRejectionTrackingHook(
+///     require('./rejection-tracking.js').enable
+///   );
+/// \endcode
+CallResult<HermesValue> hermesInternalSetPromiseRejectionTrackingHook(
+    void *,
+    Runtime *runtime,
+    NativeArgs args) {
+  runtime->promiseRejectionTrackingHook_ = args.getArg(0);
+  return HermesValue::encodeUndefinedValue();
+}
+
+/// \code
+///   HermesInternal.enablePromiseRejectionTracker = function (opts) {}
+/// \endcode
+/// Enable promise rejection tracking with the given opts.
+CallResult<HermesValue> hermesInternalEnablePromiseRejectionTracker(
+    void *,
+    Runtime *runtime,
+    NativeArgs args) {
+  auto opts = args.getArgHandle(0);
+  auto func = Handle<Callable>::dyn_vmcast(
+      Handle<>(&runtime->promiseRejectionTrackingHook_));
+  if (!func) {
+    return runtime->raiseTypeError(
+        "Promise rejection tracking hook was not registered");
+  }
+  return Callable::executeCall1(
+             func, runtime, Runtime::getUndefinedValue(), opts.getHermesValue())
+      .toCallResultHermesValue();
+}
+
 Handle<JSObject> createHermesInternalObject(
     Runtime *runtime,
     const JSLibFlags &flags) {
+  namespace P = Predefined;
   Handle<JSObject> intern = runtime->makeHandle(JSObject::create(runtime));
+  GCScope gcScope{runtime};
 
   DefinePropertyFlags constantDPF =
       DefinePropertyFlags::getDefaultNewPropertyFlags();
   constantDPF.enumerable = 0;
   constantDPF.writable = 0;
   constantDPF.configurable = 0;
-
-  // Make a copy of the original String.prototype.concat implementation that we
-  // can use internally.
-  // TODO: we can't make HermesInternal.concat a static builtin method now
-  // because this method should be called with a meaningful `this`, but
-  // CallBuiltin instruction does not support it.
-  auto propRes = JSObject::getNamed_RJS(
-      runtime->makeHandle<JSObject>(runtime->stringPrototype),
-      runtime,
-      Predefined::getSymbolID(Predefined::concat));
-  assert(
-      propRes != ExecutionStatus::EXCEPTION && !(*propRes)->isUndefined() &&
-      "Failed to get String.prototype.concat.");
-  auto putRes = JSObject::defineOwnProperty(
-      intern,
-      runtime,
-      Predefined::getSymbolID(Predefined::concat),
-      constantDPF,
-      runtime->makeHandle(std::move(*propRes)));
-  assert(
-      putRes != ExecutionStatus::EXCEPTION && *putRes &&
-      "Failed to set HermesInternal.concat.");
-  (void)putRes;
-
-  // If `enableHermesInternal=false`, hide functions that aren't considered
-  // safe. All functions that are known to be safe should be defined above this
-  // check.
-  if (!flags.enableHermesInternal) {
-    JSObject::preventExtensions(*intern);
-    return intern;
-  }
 
   auto defineInternMethod =
       [&](Predefined::Str symID, NativeFunctionPtr func, uint8_t count = 0) {
@@ -744,8 +827,46 @@ Handle<JSObject> createHermesInternalObject(
   // suppress unused-variable warning
   (void)defineInternMethodAndSymbol;
 
+  // Make a copy of the original String.prototype.concat implementation that we
+  // can use internally.
+  // TODO: we can't make HermesInternal.concat a static builtin method now
+  // because this method should be called with a meaningful `this`, but
+  // CallBuiltin instruction does not support it.
+  auto propRes = JSObject::getNamed_RJS(
+      runtime->makeHandle<JSObject>(runtime->stringPrototype),
+      runtime,
+      Predefined::getSymbolID(Predefined::concat));
+  assert(
+      propRes != ExecutionStatus::EXCEPTION && !(*propRes)->isUndefined() &&
+      "Failed to get String.prototype.concat.");
+  auto putRes = JSObject::defineOwnProperty(
+      intern,
+      runtime,
+      Predefined::getSymbolID(Predefined::concat),
+      constantDPF,
+      runtime->makeHandle(std::move(*propRes)));
+  assert(
+      putRes != ExecutionStatus::EXCEPTION && *putRes &&
+      "Failed to set HermesInternal.concat.");
+  (void)putRes;
+
+  defineInternMethod(P::hasPromise, hermesInternalHasPromise);
+  defineInternMethod(
+      P::setPromiseRejectionTrackingHook,
+      hermesInternalSetPromiseRejectionTrackingHook);
+  defineInternMethod(
+      P::enablePromiseRejectionTracker,
+      hermesInternalEnablePromiseRejectionTracker);
+
+  // If `enableHermesInternal=false`, hide functions that aren't considered
+  // safe. All functions that are known to be safe should be defined above this
+  // check.
+  if (!flags.enableHermesInternal) {
+    JSObject::preventExtensions(*intern);
+    return intern;
+  }
+
   // HermesInternal function properties
-  namespace P = Predefined;
   if (flags.enableHermesInternalTestMethods) {
     defineInternMethod(
         P::detachArrayBuffer, hermesInternalDetachArrayBuffer, 1);

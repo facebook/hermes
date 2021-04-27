@@ -16,7 +16,7 @@
 namespace hermes {
 namespace vm {
 
-VTable SegmentedArray::Segment::vt(
+const VTable SegmentedArray::Segment::vt(
     CellKind::SegmentKind,
     cellSize<SegmentedArray::Segment>(),
     nullptr,
@@ -25,16 +25,16 @@ VTable SegmentedArray::Segment::vt(
     nullptr,
     nullptr,
     nullptr, // externalMemorySize
-    VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Array,
-                                 nullptr,
-                                 nullptr,
-                                 nullptr,
-                                 nullptr});
+    VTable::HeapSnapshotMetadata{
+        HeapSnapshot::NodeType::Array,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr});
 
 void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const SegmentedArray::Segment *>(cell);
-  mb.addArray<Metadata::ArrayData::ArrayType::HermesValue>(
-      "data", &self->data_, &self->length_, sizeof(GCHermesValue));
+  mb.addArray("data", self->data_, &self->length_, sizeof(GCHermesValue));
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -57,8 +57,7 @@ void SegmentSerialize(Serializer &s, const GCCell *cell) {
 
 void SegmentDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::SegmentKind && "Expected Segment");
-  void *mem = d.getRuntime()->alloc(cellSize<SegmentedArray::Segment>());
-  auto *cell = new (mem) SegmentedArray::Segment(d);
+  auto *cell = d.getRuntime()->makeAFixed<SegmentedArray::Segment>(d);
   d.endObject(cell);
 }
 #endif
@@ -68,8 +67,7 @@ PseudoHandle<SegmentedArray::Segment> SegmentedArray::Segment::create(
   // NOTE: This needs to live in the cpp file instead of the header because it
   // uses PseudoHandle, which requires a specialization of IsGCObject for the
   // type it constructs.
-  return createPseudoHandle(new (runtime->alloc(cellSize<Segment>()))
-                                Segment(runtime));
+  return createPseudoHandle(runtime->makeAFixed<Segment>(runtime));
 }
 
 void SegmentedArray::Segment::setLength(Runtime *runtime, uint32_t newLength) {
@@ -90,7 +88,7 @@ void SegmentedArray::Segment::setLength(Runtime *runtime, uint32_t newLength) {
   }
 }
 
-VTable SegmentedArray::vt(
+const VTable SegmentedArray::vt(
     CellKind::SegmentedArrayKind,
     /*variableSize*/ 0,
     nullptr,
@@ -99,15 +97,16 @@ VTable SegmentedArray::vt(
     _trimSizeCallback,
     _trimCallback,
     nullptr, // externalMemorySize
-    VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Array,
-                                 nullptr,
-                                 nullptr,
-                                 nullptr,
-                                 nullptr});
+    VTable::HeapSnapshotMetadata{
+        HeapSnapshot::NodeType::Array,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr});
 
 void SegmentedArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const SegmentedArray *>(cell);
-  mb.addArray<Metadata::ArrayData::ArrayType::HermesValue>(
+  mb.addArray(
       "slots",
       self->inlineStorage(),
       &self->numSlotsUsed_,
@@ -135,10 +134,11 @@ void SegmentedArrayDeserialize(Deserializer &d, CellKind kind) {
       d.readInt<SegmentedArray::size_type>();
   SegmentedArray::size_type numSlotsUsed =
       d.readInt<SegmentedArray::size_type>();
-  void *mem = d.getRuntime()->alloc<false /*fixedSize*/>(
-      SegmentedArray::allocationSizeForSlots(slotCapacity));
-  auto *cell =
-      new (mem) SegmentedArray(d.getRuntime(), slotCapacity, numSlotsUsed);
+  SegmentedArray *cell = d.getRuntime()->makeAVariable<SegmentedArray>(
+      SegmentedArray::allocationSizeForSlots(slotCapacity),
+      d.getRuntime(),
+      slotCapacity,
+      numSlotsUsed);
   for (auto it = cell->begin(); it != cell->end(); ++it) {
     d.readHermesValue(&*it);
   }
@@ -158,8 +158,8 @@ CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::create(
   // if it is larger than the inline storage space. That is in order to avoid
   // having an extra field to track, and the upper bound of "size" can be used
   // instead.
-  return createPseudoHandle(new (runtime->alloc<false /*fixedSize*/>(
-      allocationSizeForCapacity(capacity))) SegmentedArray(runtime, capacity));
+  return createPseudoHandle(runtime->makeAVariable<SegmentedArray>(
+      allocationSizeForCapacity(capacity), runtime, capacity));
 }
 
 CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::createLongLived(
@@ -170,8 +170,9 @@ CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::createLongLived(
   }
   // Leave the segments as null. Whenever the size is changed, the segments will
   // be allocated.
-  return createPseudoHandle(new (runtime->allocLongLived(
-      allocationSizeForCapacity(capacity))) SegmentedArray(runtime, capacity));
+  return createPseudoHandle(
+      runtime->makeAVariable<SegmentedArray, HasFinalizer::No, LongLived::Yes>(
+          allocationSizeForCapacity(capacity), runtime, capacity));
 }
 
 CallResult<PseudoHandle<SegmentedArray>>
@@ -218,7 +219,7 @@ ExecutionStatus SegmentedArray::push_back(
   if (growRight(self, runtime, 1) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto &elm = self->at(oldSize);
+  auto &elm = self->atRef(oldSize);
   new (&elm) GCHermesValue(*value, &runtime->getHeap());
   return ExecutionStatus::RETURNED;
 }
@@ -395,8 +396,8 @@ void SegmentedArray::increaseSizeWithinCapacity(
     size_type amount,
     bool fill) {
   assert(
-      !kConcurrentGC ||
-      fill && "If kConcurrentGC is true, fill must also be true");
+      (!kConcurrentGC || fill) &&
+      "If kConcurrentGC is true, fill must also be true");
   // This function has the same logic as increaseSize, but removes some
   // complexity from avoiding dealing with alllocations.
   const auto empty = HermesValue::encodeEmptyValue();
@@ -444,8 +445,8 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
     PseudoHandle<SegmentedArray> self,
     size_type amount) {
   assert(
-      !kConcurrentGC ||
-      Fill && "If kConcurrentGC is true, fill must also be true");
+      (!kConcurrentGC || Fill) &&
+      "If kConcurrentGC is true, fill must also be true");
   const auto empty = HermesValue::encodeEmptyValue();
   const auto currSize = self->size();
   const auto finalSize = currSize + amount;

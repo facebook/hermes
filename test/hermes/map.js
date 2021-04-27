@@ -298,6 +298,57 @@ function testForEach() {
 //CHECK-NEXT: abc  4
 }
 
+function testZero() {
+  print("testZero");
+//CHECK-LABEL: testZero
+
+  // -0 and +0 are normalized to +0
+  var m = new Map();
+  m.set(-0, 42);
+  print(m.has(-0));
+  print(m.has(+0));
+  print(m.get(-0));
+  print(m.get(+0));
+  print(Object.is(-0, [...m.keys()][0]));
+  print(Object.is(+0, [...m.keys()][0]));
+  print(m.delete(+0))
+  print(m.size === 0)
+//CHECK-NEXT: true
+//CHECK-NEXT: true
+//CHECK-NEXT: 42
+//CHECK-NEXT: 42
+//CHECK-NEXT: false
+//CHECK-NEXT: true
+//CHECK-NEXT: true
+//CHECK-NEXT: true
+  m.set(+0, 43);
+  print(m.has(-0));
+  print(m.has(+0));
+  print(m.get(-0));
+  print(m.get(+0));
+  print(Object.is(-0, [...m.keys()][0]));
+  print(Object.is(+0, [...m.keys()][0]));
+  print(m.delete(-0))
+  print(m.size === 0)
+//CHECK-NEXT: true
+//CHECK-NEXT: true
+//CHECK-NEXT: 43
+//CHECK-NEXT: 43
+//CHECK-NEXT: false
+//CHECK-NEXT: true
+//CHECK-NEXT: true
+//CHECK-NEXT: true
+
+  // Only key should be normalized.
+  var m = new Map();
+  m.set(-0, -0);
+  var [k, v] = m.entries().next().value;
+  print(Object.is(-0, k));
+  print(Object.is(-0, v));
+//CHECK-NEXT: false
+//CHECK-NEXT: true
+}
+
 var o1 = {};
 var o2 = {a: 1};
 var o3 = {a: 1, b: 2};
@@ -308,3 +359,4 @@ testDelete(s, o1, o2, o3);
 testClear(o1, o2, o3);
 testIteration();
 testForEach();
+testZero();

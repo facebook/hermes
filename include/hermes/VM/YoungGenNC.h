@@ -8,13 +8,13 @@
 #ifndef HERMES_VM_YOUNGGENNC_H
 #define HERMES_VM_YOUNGGENNC_H
 
-#include "hermes/VM/AlignedHeapSegment.h"
+#include "hermes/VM/AllocOptions.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/CompactionResult.h"
 #include "hermes/VM/GCGeneration.h"
 #include "hermes/VM/GCSegmentRange-inline.h"
 #include "hermes/VM/GCSegmentRange.h"
-#include "hermes/VM/HasFinalizer.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/SweepResultNC.h"
 
@@ -54,10 +54,10 @@ class YoungGen : public GCGeneration {
 
    private:
     /// The minimum size of the allocation region, in bytes.  This value will
-    /// not exceed \c AlignedHeapSegment::maxSize().
+    /// not exceed \c GenGCHeapSegment::maxSize().
     gcheapsize_t min_;
     /// The maximum size of the allocation region, in bytes.  This value will
-    /// not exceed \c AlignedHeapSegment::maxSize().
+    /// not exceed \c GenGCHeapSegment::maxSize().
     gcheapsize_t max_;
 
     static gcheapsize_t adjustSizeWithBounds(
@@ -136,10 +136,10 @@ class YoungGen : public GCGeneration {
   inline size_t effectiveSize() const;
 
   /// See GCGeneration.h for more information.
-  void sweepAndInstallForwardingPointers(GC *gc, SweepResult *sweepResult);
+  void sweepAndInstallForwardingPointers(GenGC *gc, SweepResult *sweepResult);
 
   /// See GCGeneration.h for more information.
-  void updateReferences(GC *gc, SweepResult::VTablesRemaining &vTables);
+  void updateReferences(GenGC *gc, SweepResult::VTablesRemaining &vTables);
 
   /// Moves any objects on the young-gen's finalizable object list that have
   /// been moved to the old generation to that generation's finalizable object
@@ -151,7 +151,7 @@ class YoungGen : public GCGeneration {
       CompactionResult::ChunksRemaining &usedChunks);
 
 #ifdef HERMES_SLOW_DEBUG
-  void checkWellFormed(const GC *gc) const;
+  void checkWellFormed(const GenGC *gc) const;
 #endif
 
   /// If *hv is a pointer into the current generation, check whether the
@@ -168,17 +168,14 @@ class YoungGen : public GCGeneration {
   /// already-installed forwarding pointer points.
   void ensureReferentCopied(GCCell **ptrLoc);
 
+  void ensureReferentCopied(BasedPointer *ptrLoc);
+
   /// Print stats (in JSON format) specific to young-gen collection to an output
   /// stream.
   void printStats(JSONEmitter &json) const;
 
   /// Fixup the tracked IDs of objects that were moved or deleted.
   void updateIDTracker();
-  void updateAllocationLocationTracker();
-
- private:
-  template <bool updateIDTracker, bool updateAllocationLocationTracker>
-  void updateTrackers();
 
  public:
   /// Finalizes all unreachable cells with finalizers. If the cell was moved to
@@ -196,7 +193,7 @@ class YoungGen : public GCGeneration {
   ///
   /// This function assumes that \p gc is a valid pointer to this space's owning
   /// GC.
-  void moveHeap(GC *gc, ptrdiff_t moveHeapDelta);
+  void moveHeap(GenGC *gc, ptrdiff_t moveHeapDelta);
 
   /// Update the extents of the young-gen segments with \p crashMgr.  Labels
   /// the crash manager key with the given \p runtimeName.

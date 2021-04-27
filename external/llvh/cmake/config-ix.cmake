@@ -476,7 +476,9 @@ set(RETSIGTYPE void)
 
 if( LLVM_ENABLE_THREADS )
   # Check if threading primitives aren't supported on this platform
-  if( NOT HAVE_PTHREAD_H AND NOT WIN32 )
+  # Disable threads on emscripten because it doesn't have a full implementation
+  # including support for pthread_sigmask
+  if( (NOT HAVE_PTHREAD_H AND NOT WIN32) OR EMSCRIPTEN )
     set(LLVM_ENABLE_THREADS 0)
   endif()
 endif()

@@ -43,7 +43,7 @@ class Domain final : public GCCell {
   using Super = GCCell;
   friend void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
-  static VTable vt;
+  static const VTable vt;
 
   /// Offsets for fields in the cjsModules_ ArrayStorage which contain
   /// information about each individual module.
@@ -72,6 +72,7 @@ class Domain final : public GCCell {
     CJSModuleSize,
   };
 
+  // TODO(T83098051): Consider optimising cjsModules_ for non-contiguous IDs.
   /// CJS Modules used when modules have been resolved ahead of time.
   /// Used during requireFast modules by index.
   /// Stores information on module i at entries (i * CJSModuleSize) through
@@ -97,6 +98,11 @@ class Domain final : public GCCell {
   /// to load new segments.
   /// Lazily allocated upon loading the first CJS modules into this domain.
   GCPointer<NativeFunction> throwingRequire_{};
+
+  /// The ID of the CJS module that should be evaluated immediately after the
+  /// first RuntimeModule has been loaded. This is set to the first CJS module
+  /// of the first RuntimeModule.
+  OptValue<uint32_t> cjsEntryModuleID_;
 
  public:
 #ifdef HERMESVM_SERIALIZE
@@ -127,15 +133,19 @@ class Domain final : public GCCell {
     self->runtimeModules_.push_back(runtimeModule, &runtime->getHeap());
   }
 
-  /// Import the CommonJS module table from the given \p runtimeModule.
-  /// Insert into the table starting at the \p cjsModuleOffset.
-  /// \pre the CommonJS module table must not already contain any of the module
-  /// IDs to be imported.
+  /// Import the CommonJS module table from the given \p runtimeModule,
+  /// ignoring modules with IDs / paths that have already been imported.
   LLVM_NODISCARD static ExecutionStatus importCJSModuleTable(
       Handle<Domain> self,
       Runtime *runtime,
-      RuntimeModule *runtimeModule,
-      uint32_t cjsModuleOffset);
+      RuntimeModule *runtimeModule);
+
+  /// \return the ID of the entry CJS module.
+  /// \pre at least one RuntimeModule has been imported with
+  /// importCJSModuleTable().
+  uint32_t getCJSEntryModuleID() const {
+    return *cjsEntryModuleID_;
+  }
 
   /// \return the offset of the CJS module corresponding to \p filename, None on
   /// failure.
@@ -198,9 +208,10 @@ class Domain final : public GCCell {
       uint32_t cjsModuleOffset,
       Runtime *runtime,
       HermesValue cachedExports) {
-    cjsModules_.get(runtime)
-        ->at(cjsModuleOffset + CachedExportsOffset)
-        .set(cachedExports, &runtime->getHeap());
+    cjsModules_.get(runtime)->set(
+        cjsModuleOffset + CachedExportsOffset,
+        cachedExports,
+        &runtime->getHeap());
   }
 
   /// Set the module object for the given cjsModuleOffset.
@@ -208,19 +219,20 @@ class Domain final : public GCCell {
       uint32_t cjsModuleOffset,
       Runtime *runtime,
       Handle<JSObject> module) {
-    cjsModules_.get(runtime)
-        ->at(cjsModuleOffset + ModuleOffset)
-        .set(module.getHermesValue(), &runtime->getHeap());
+    cjsModules_.get(runtime)->set(
+        cjsModuleOffset + ModuleOffset,
+        module.getHermesValue(),
+        &runtime->getHeap());
   }
 
   /// \return the throwing require function with require.context bound to a
   /// context for this domain.
   PseudoHandle<NativeFunction> getThrowingRequire(Runtime *runtime) const;
 
- private:
   /// Create a domain with no associated RuntimeModules.
   Domain(Runtime *runtime) : GCCell(&runtime->getHeap(), &vt) {}
 
+ private:
   /// Destroy associated RuntimeModules.
   ~Domain();
 
@@ -232,6 +244,10 @@ class Domain final : public GCCell {
 
   /// \return the amount of non-GC memory being used by the given \p cell.
   static size_t _mallocSizeImpl(GCCell *cell);
+
+  /// Heap snapshot callbacks.
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+  static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 
   /// Mark the WeakRefs in associated RuntimeModules which point to this Domain.
   void markWeakRefs(WeakRefAcceptor &acceptor);
@@ -246,7 +262,7 @@ class Domain final : public GCCell {
 class RequireContext final : public JSObject {
   using Super = JSObject;
 
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
   friend void RequireContextBuildMeta(
       const GCCell *cell,
       Metadata::Builder &mb);
@@ -286,15 +302,17 @@ class RequireContext final : public JSObject {
         JSObject::getInternalProperty(self, runtime, dirnamePropIndex()));
   }
 
- private:
 #ifdef HERMESVM_SERIALIZE
   explicit RequireContext(Deserializer &d);
 
   friend void RequireContextDeserialize(Deserializer &d, CellKind kind);
 #endif
 
-  RequireContext(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
-      : JSObject(runtime, &vt.base, parent, clazz) {}
+  RequireContext(
+      Runtime *runtime,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz)
+      : JSObject(runtime, &vt.base, *parent, *clazz) {}
 };
 
 } // namespace vm

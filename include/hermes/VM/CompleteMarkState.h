@@ -10,6 +10,7 @@
 
 #include "hermes/VM/GCBase.h"
 #include "hermes/VM/GCCell.h"
+#include "hermes/VM/GCDecl.h"
 #include "hermes/VM/MarkBitArrayNC.h"
 
 #include <list>
@@ -47,7 +48,7 @@ struct CompleteMarkState {
   /// on the mark stack.  If such a push would overflow the mark stack, sets a
   /// flag on this CompleteMarkState to indicate this.  Returns if this overflow
   /// happens, or when the mark stack is empty.
-  void drainMarkStack(GC *gc, FullMSCMarkTransitiveAcceptor &acceptor);
+  void drainMarkStack(GenGC *gc, FullMSCMarkTransitiveAcceptor &acceptor);
 
   /// The maximum size of the mark stack.
   static const size_t kMarkStackLimit = 1000;
@@ -107,7 +108,7 @@ struct CompleteMarkState {
 };
 
 /// Returns a heap acceptor for mark-sweep-compact pointer update.
-std::unique_ptr<FullMSCUpdateAcceptor> getFullMSCUpdateAcceptor(GC &gc);
+std::unique_ptr<FullMSCUpdateAcceptor> getFullMSCUpdateAcceptor(GenGC &gc);
 
 } // namespace vm
 } // namespace hermes

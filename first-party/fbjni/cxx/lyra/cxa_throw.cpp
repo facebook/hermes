@@ -19,8 +19,8 @@
 #include <stdexcept>
 #include <unordered_map>
 #include <cassert>
-#include <unwind.h>
 #ifndef _WIN32
+#include <unwind.h>
 #include <cxxabi.h>
 #endif
 

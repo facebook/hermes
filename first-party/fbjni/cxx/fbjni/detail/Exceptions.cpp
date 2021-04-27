@@ -23,7 +23,6 @@
 #endif
 
 #include <cstdlib>
-#include <cxxabi.h>
 #include <ios>
 #include <stdexcept>
 #include <stdio.h>
@@ -31,6 +30,10 @@
 #include <system_error>
 
 #include <jni.h>
+
+#ifndef _WIN32
+#include <cxxabi.h>
+#endif
 
 namespace facebook {
 namespace jni {
@@ -279,6 +282,9 @@ local_ref<JThrowable> convertCppExceptionToJavaException(std::exception_ptr ptr)
   } catch (const char* msg) {
     current = JUnknownCppException::create(msg);
   } catch (...) {
+#ifdef _WIN32
+    current = JUnknownCppException::create();
+#else
     const std::type_info* tinfo = abi::__cxa_current_exception_type();
     if (tinfo) {
       std::string msg = std::string("Unknown: ") + tinfo->name();
@@ -286,6 +292,7 @@ local_ref<JThrowable> convertCppExceptionToJavaException(std::exception_ptr ptr)
     } else {
       current = JUnknownCppException::create();
     }
+#endif
   }
 
   if (addCppStack) {

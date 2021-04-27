@@ -681,15 +681,11 @@ arrayPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
           if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
             tmpHandle = std::move(*propRes);
             nHandle = HermesValue::encodeDoubleValue(n);
-            auto cr = valueToSymbolID(runtime, nHandle);
-            if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
-              return ExecutionStatus::EXCEPTION;
-            }
             if (LLVM_UNLIKELY(
-                    JSArray::defineOwnProperty(
+                    JSArray::defineOwnComputedPrimitive(
                         A,
                         runtime,
-                        **cr,
+                        nHandle,
                         DefinePropertyFlags::getDefaultNewPropertyFlags(),
                         tmpHandle) == ExecutionStatus::EXCEPTION)) {
               return ExecutionStatus::EXCEPTION;
@@ -1205,6 +1201,119 @@ class StandardSortModel : public SortModel {
     }
   }
 };
+
+/// Perform a sort of a sparse object by querying its properties first.
+/// It cannot be a proxy or a host object because they are not guaranteed to
+/// be able to list their properties.
+CallResult<HermesValue> sortSparse(
+    Runtime *runtime,
+    Handle<JSObject> O,
+    Handle<Callable> compareFn,
+    uint64_t len) {
+  GCScope gcScope{runtime};
+
+  assert(
+      !O->isHostObject() && !O->isProxyObject() &&
+      "only non-exotic objects can be sparsely sorted");
+
+  // This is a "non-fast" object, meaning we need to create a symbol for every
+  // property name. On the assumption that it is sparse, get all properties
+  // first, so that we only have to read the existing properties.
+
+  auto crNames = JSObject::getOwnPropertyNames(O, runtime, false);
+  if (crNames == ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+  // Get the underlying storage containing the names.
+  auto names = runtime->makeHandle((*crNames)->getIndexedStorage());
+  if (!names) {
+    // Indexed storage can be null if there's nothing to store.
+    return O.getHermesValue();
+  }
+
+  // Find out how many sortable numeric properties we have.
+  JSArray::StorageType::size_type numProps = 0;
+  for (JSArray::StorageType::size_type e = names->size(); numProps != e;
+       ++numProps) {
+    HermesValue hv = names->at(numProps);
+    // Stop at the first non-number.
+    if (!hv.isNumber())
+      break;
+    // Stop if the property name is beyond "len".
+    if (hv.getNumberAs<uint64_t>() >= len)
+      break;
+  }
+
+  // If we didn't find any numeric properties, there is nothing to do.
+  if (numProps == 0)
+    return O.getHermesValue();
+
+  // Create a new array which we will actually sort.
+  auto crArray = JSArray::create(runtime, numProps, numProps);
+  if (crArray == ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+  auto array = runtime->makeHandle(std::move(*crArray));
+  if (JSArray::setStorageEndIndex(array, runtime, numProps) ==
+      ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  MutableHandle<> propName{runtime};
+  MutableHandle<> propVal{runtime};
+  GCScopeMarkerRAII gcMarker{gcScope};
+
+  // Copy all sortable properties into the array and delete them from the
+  // source. Deleting all sortable properties makes it easy to just copy the
+  // sorted result back in the end.
+  for (decltype(numProps) i = 0; i != numProps; ++i) {
+    gcMarker.flush();
+
+    propName = names->at(i);
+    auto res = JSObject::getComputed_RJS(O, runtime, propName);
+    if (res == ExecutionStatus::EXCEPTION)
+      return ExecutionStatus::EXCEPTION;
+    // Skip empty values.
+    if (res->getHermesValue().isEmpty())
+      continue;
+
+    JSArray::unsafeSetExistingElementAt(
+        *array, runtime, i, res->getHermesValue());
+
+    if (JSObject::deleteComputed(
+            O, runtime, propName, PropOpFlags().plusThrowOnError()) ==
+        ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  }
+  gcMarker.flush();
+
+  {
+    StandardSortModel sm(runtime, array, compareFn);
+    if (LLVM_UNLIKELY(
+            quickSort(&sm, 0u, numProps) == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+  }
+
+  // Time to copy back the values.
+  for (decltype(numProps) i = 0; i != numProps; ++i) {
+    gcMarker.flush();
+
+    auto hv = array->at(runtime, i);
+    assert(
+        !hv.isEmpty() &&
+        "empty values cannot appear in the array out of nowhere");
+    propVal = hv;
+
+    propName = HermesValue::encodeNumberValue(i);
+
+    if (JSObject::putComputed_RJS(
+            O, runtime, propName, propVal, PropOpFlags().plusThrowOnError()) ==
+        ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  }
+
+  return O.getHermesValue();
+}
 } // anonymous namespace
 
 /// ES5.1 15.4.4.11.
@@ -1233,6 +1342,13 @@ arrayPrototypeSort(void *, Runtime *runtime, NativeArgs args) {
   }
   uint64_t len = *intRes;
 
+  // If we are not sorting a regular dense array, use a special routine which
+  // first copies all properties into an array.
+  // Proxies  and host objects however are excluded because they are weird.
+  if (!O->isProxyObject() && !O->isHostObject() && !O->hasFastIndexProperties())
+    return sortSparse(runtime, O, compareFn, len);
+
+  // This is the "fast" path. We are sorting an array with indexed storage.
   StandardSortModel sm(runtime, O, compareFn);
 
   // Use our custom sort routine. We can't use std::sort because it performs
@@ -1614,10 +1730,11 @@ arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   double relativeStart = intRes->getNumber();
   // Index that we're currently copying from.
   // Starts at the actual start value, computed from relativeStart.
-  MutableHandle<> k{runtime,
-                    HermesValue::encodeDoubleValue(
-                        relativeStart < 0 ? std::max(len + relativeStart, 0.0)
-                                          : std::min(relativeStart, len))};
+  MutableHandle<> k{
+      runtime,
+      HermesValue::encodeDoubleValue(
+          relativeStart < 0 ? std::max(len + relativeStart, 0.0)
+                            : std::min(relativeStart, len))};
 
   // End index. If negative, then offset from the right side of the array.
   double relativeEnd;
@@ -2910,8 +3027,8 @@ reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
   }
 
   // Current index in the reduction iteration.
-  MutableHandle<> k{runtime,
-                    HermesValue::encodeDoubleValue(reverse ? len - 1 : 0)};
+  MutableHandle<> k{
+      runtime, HermesValue::encodeDoubleValue(reverse ? len - 1 : 0)};
   MutableHandle<JSObject> kDescObjHandle{runtime};
 
   MutableHandle<> accumulator{runtime};
@@ -3254,7 +3371,6 @@ CallResult<HermesValue> arrayOf(void *, Runtime *runtime, NativeArgs args) {
   // 7. Let k be 0.
   MutableHandle<> k{runtime, HermesValue::encodeNumberValue(0)};
   MutableHandle<> kValue{runtime};
-  MutableHandle<SymbolID> pk{runtime};
 
   GCScopeMarkerRAII marker{gcScope};
   // 8. Repeat, while k < len
@@ -3262,19 +3378,12 @@ CallResult<HermesValue> arrayOf(void *, Runtime *runtime, NativeArgs args) {
     // a. Let kValue be items[k].
     kValue = args.getArg(k->getNumber());
 
-    // b. Let Pk be ToString(k).
-    auto pkRes = valueToSymbolID(runtime, k);
-    if (LLVM_UNLIKELY(pkRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    pk = pkRes->get();
-
     // c. Let defineStatus be CreateDataPropertyOrThrow(A,Pk, kValue).
     if (LLVM_UNLIKELY(
-            JSObject::defineOwnProperty(
+            JSObject::defineOwnComputedPrimitive(
                 A,
                 runtime,
-                *pk,
+                k,
                 DefinePropertyFlags::getDefaultNewPropertyFlags(),
                 kValue,
                 PropOpFlags().plusThrowOnError()) ==
@@ -3375,12 +3484,6 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
     MutableHandle<> nextValue{runtime};
     while (true) {
       GCScopeMarkerRAII marker1{runtime};
-      // i. Let Pk be ToString(k).
-      auto pkRes = valueToSymbolID(runtime, k);
-      if (LLVM_UNLIKELY(pkRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      auto pkHandle = pkRes.getValue();
       // ii. Let next be IteratorStep(iteratorRecord).
       // iii. ReturnIfAbrupt(next).
       auto next = iteratorStep(runtime, iteratorRecord);
@@ -3431,10 +3534,10 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
       // x. If defineStatus is an abrupt completion, return
       // IteratorClose(iterator, defineStatus).
       if (LLVM_UNLIKELY(
-              JSObject::defineOwnProperty(
+              JSObject::defineOwnComputedPrimitive(
                   A,
                   runtime,
-                  *pkHandle,
+                  k,
                   DefinePropertyFlags::getDefaultNewPropertyFlags(),
                   mappedValue,
                   PropOpFlags().plusThrowOnError()) ==
@@ -3495,12 +3598,6 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<> mappedValue{runtime};
   while (k->getNumberAs<uint32_t>() < len) {
     GCScopeMarkerRAII marker2{runtime};
-    // a. Let Pk be ToString(k).
-    auto pkRes = valueToSymbolID(runtime, k);
-    if (LLVM_UNLIKELY(pkRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    auto pkHandle = pkRes.getValue();
     // b. Let kValue be Get(arrayLike, Pk).
     propRes = JSObject::getComputed_RJS(arrayLike, runtime, k);
     // c. ReturnIfAbrupt(kValue).
@@ -3524,10 +3621,10 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
     // f. Let defineStatus be CreateDataPropertyOrThrow(A, Pk, mappedValue).
     // g. ReturnIfAbrupt(defineStatus).
     if (LLVM_UNLIKELY(
-            JSObject::defineOwnProperty(
+            JSObject::defineOwnComputedPrimitive(
                 A,
                 runtime,
-                *pkHandle,
+                k,
                 DefinePropertyFlags::getDefaultNewPropertyFlags(),
                 mappedValue,
                 PropOpFlags().plusThrowOnError()) ==

@@ -60,7 +60,9 @@ let {b} = y;
 // CHECK-NEXT:                   "name": "b"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "kind": "init",
-// CHECK-NEXT:                 "computed": false
+// CHECK-NEXT:                 "computed": false,
+// CHECK-NEXT:                 "method": false,
+// CHECK-NEXT:                 "shorthand": true
 // CHECK-NEXT:               }
 // CHECK-NEXT:             ]
 // CHECK-NEXT:           }
@@ -90,7 +92,9 @@ function f1({x}: T) {}
 // CHECK-NEXT:                 "name": "x"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "init",
-// CHECK-NEXT:               "computed": false
+// CHECK-NEXT:               "computed": false,
+// CHECK-NEXT:               "method": false,
+// CHECK-NEXT:               "shorthand": true
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "typeAnnotation": {

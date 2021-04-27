@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermesc -dump-ast %s 2>&1 ) | %FileCheck --match-full-lines %s
+// RUN: (! %hermesc -dump-transformed-ast %s 2>&1 ) | %FileCheck --match-full-lines %s
 
 function *foo() { for (yield of x) print(1) }
 // CHECK: {{.*}}:10:24: error: invalid assignment left-hand side

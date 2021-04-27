@@ -51,8 +51,7 @@ void GeneratorSerialize(Serializer &s, const GCCell *cell) {
 
 void GeneratorDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::GeneratorKind && "Expected Generator");
-  void *mem = d.getRuntime()->alloc(cellSize<JSGenerator>());
-  auto *cell = new (mem) JSGenerator(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSGenerator>(d);
   d.endObject(cell);
 }
 #endif
@@ -61,15 +60,14 @@ CallResult<PseudoHandle<JSGenerator>> JSGenerator::create(
     Runtime *runtime,
     Handle<GeneratorInnerFunction> innerFunction,
     Handle<JSObject> parentHandle) {
-  JSObjectAlloc<JSGenerator> mem{runtime};
-  auto self = new (mem) JSGenerator(
+  auto *cell = runtime->makeAFixed<JSGenerator>(
       runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+      parentHandle,
+      runtime->getHiddenClassForPrototype(
           *parentHandle,
           numOverlapSlots<JSGenerator>() + ANONYMOUS_PROPERTY_SLOTS));
-  self->innerFunction_.set(runtime, *innerFunction, &runtime->getHeap());
-  return mem.initToPseudoHandle(self);
+  cell->innerFunction_.set(runtime, *innerFunction, &runtime->getHeap());
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 } // namespace vm

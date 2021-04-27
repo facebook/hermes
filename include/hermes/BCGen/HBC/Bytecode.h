@@ -34,8 +34,15 @@ using llvh::ArrayRef;
 
 // This class represents the in-memory representation of the bytecode function.
 class BytecodeFunction {
-  /// The bytecode executable.
-  std::vector<opcode_atom_t> opcodes_;
+  /// The bytecode executable. If this function contains switch statements, then
+  /// the jump tables are also inlined in a 4-byte aligned block at the end of
+  /// this vector.
+  /// During execution, this vector can be executed directly because the vector
+  /// storage will be 4-byte aligned.
+  /// During serialisation, the jump tables and opcodes have to be separated so
+  /// that the jump tables can be realigned based on the overall bytecode
+  /// layout.
+  const std::vector<opcode_atom_t> opcodesAndJumpTables_;
 
   /// Header that stores all the metadata of this function.
   FunctionHeader header_;
@@ -49,26 +56,18 @@ class BytecodeFunction {
   /// Data to lazily compile this BytecodeFunction, if applicable.
   std::unique_ptr<LazyCompilationData> lazyCompilationData_{};
 
-  /// Jump table section. This vector consists of a jump table for each
-  /// SwitchImm instruction in the function, laid out sequentially.
-  /// Entries are jumps relative to the corresponding
-  /// SwitchImm instruction that the jump table segment belongs to.
-  std::vector<uint32_t> jumpTables_;
-
  public:
   /// Used during serialization. \p opcodes will be swapped after this call.
   explicit BytecodeFunction(
-      std::vector<opcode_atom_t> &&opcodes,
+      std::vector<opcode_atom_t> &&opcodesAndJumpTables,
       Function::DefinitionKind definitionKind,
       ValueKind valueKind,
       bool strictMode,
       FunctionHeader &&header,
-      std::vector<HBCExceptionHandlerInfo> &&exceptionHandlers,
-      std::vector<uint32_t> &&jumpTables)
-      : opcodes_(std::move(opcodes)),
+      std::vector<HBCExceptionHandlerInfo> &&exceptionHandlers)
+      : opcodesAndJumpTables_(std::move(opcodesAndJumpTables)),
         header_(std::move(header)),
-        exceptions_(std::move(exceptionHandlers)),
-        jumpTables_(std::move(jumpTables)) {
+        exceptions_(std::move(exceptionHandlers)) {
     switch (definitionKind) {
       case Function::DefinitionKind::ES6Arrow:
       case Function::DefinitionKind::ES6Method:
@@ -78,8 +77,8 @@ class BytecodeFunction {
         header_.flags.prohibitInvoke = FunctionHeaderFlag::ProhibitCall;
         break;
       default:
-        // ES9.0 9.2.3 step 4 states that generator functions cannot be
-        // constructed.
+        // ES9.0 9.2.3 step 4 states that generator functions and async
+        // functions cannot be constructed.
         // We place this check outside the `DefinitionKind` because generator
         // functions may also be ES6 methods, for example, and are not included
         // in the DefinitionKind enum.
@@ -89,7 +88,8 @@ class BytecodeFunction {
         // As such, this is the only case in which we must change the
         // prohibitInvoke flag based on valueKind.
         header_.flags.prohibitInvoke =
-            valueKind == ValueKind::GeneratorFunctionKind
+            (valueKind == ValueKind::GeneratorFunctionKind ||
+             valueKind == ValueKind::AsyncFunctionKind)
             ? FunctionHeaderFlag::ProhibitConstruct
             : FunctionHeaderFlag::ProhibitNone;
         break;
@@ -121,13 +121,21 @@ class BytecodeFunction {
     return header_.flags.strictMode;
   }
 
+  /// Return the entire opcode array for execution, including the inlined jump
+  /// tables.
   ArrayRef<opcode_atom_t> getOpcodeArray() const {
-    return opcodes_;
+    return opcodesAndJumpTables_;
   }
 
-  ArrayRef<uint32_t> getJumpTables() const {
-    return jumpTables_;
+  /// Return only the opcodes for serialisation. The jump tables need to be
+  /// accessed separately so they can be correctly inlined.
+  ArrayRef<opcode_atom_t> getOpcodesOnly() const {
+    return {opcodesAndJumpTables_.data(), header_.bytecodeSizeInBytes};
   }
+
+  /// Return the jump table portion of the opcode array. This is useful for the
+  /// bytecode serialisation code when it is aligning the jump tables.
+  ArrayRef<uint32_t> getJumpTablesOnly() const;
 
   bool hasExceptionHandlers() const {
     return exceptions_.size() > 0;
@@ -167,9 +175,6 @@ class BytecodeFunction {
   bool isLazy() const {
     return (bool)lazyCompilationData_;
   }
-
-  /// Inlines the jump tables (if any) into the bytecode array.
-  void inlineJumpTables();
 };
 
 // This class represents the in-memory representation of the bytecode module.
@@ -217,10 +222,11 @@ class BytecodeModule {
   /// Object Value Buffer table.
   SerializableBufferTy objValBuffer_;
 
-  /// The ID of the first CJS module in this BytecodeModule.
-  /// This is the first entry in the Domain's CJS module table that will be
-  /// populated by the corresponding RuntimeModule.
-  uint32_t cjsModuleOffset_;
+  /// The segment ID corresponding to this BytecodeModule.
+  /// This uniquely identifies this BytecodeModule within a set of modules
+  /// which were compiled at the same time (and will correspond to a set of
+  /// RuntimeModules in a Domain).
+  uint32_t segmentID_;
 
   /// Table which indicates where to find the different CommonJS modules.
   /// Mapping from {filename ID => function index}.
@@ -228,8 +234,8 @@ class BytecodeModule {
 
   /// Table which indicates where to find the different CommonJS modules.
   /// Used if the modules have been statically resolved.
-  /// Element i contains the function index for module i + cjsModuleOffset.
-  std::vector<uint32_t> cjsModuleTableStatic_{};
+  /// Mapping from {global module ID => function index}.
+  std::vector<std::pair<uint32_t, uint32_t>> cjsModuleTableStatic_{};
 
   /// Storing information about the bytecode, needed when it is loaded by the
   /// runtime.
@@ -260,9 +266,9 @@ class BytecodeModule {
       std::vector<unsigned char> &&arrayBuffer,
       std::vector<unsigned char> &&objKeyBuffer,
       std::vector<unsigned char> &&objValBuffer,
-      uint32_t cjsModuleOffset,
+      uint32_t segmentID,
       std::vector<std::pair<uint32_t, uint32_t>> &&cjsModuleTable,
-      std::vector<uint32_t> &&cjsModuleTableStatic,
+      std::vector<std::pair<uint32_t, uint32_t>> &&cjsModuleTableStatic,
       BytecodeOptions options)
       : globalFunctionIndex_(globalFunctionIndex),
         stringKinds_(std::move(stringKinds)),
@@ -274,7 +280,7 @@ class BytecodeModule {
         arrayBuffer_(std::move(arrayBuffer)),
         objKeyBuffer_(std::move(objKeyBuffer)),
         objValBuffer_(std::move(objValBuffer)),
-        cjsModuleOffset_(cjsModuleOffset),
+        segmentID_(segmentID),
         cjsModuleTable_(std::move(cjsModuleTable)),
         cjsModuleTableStatic_(std::move(cjsModuleTableStatic)),
         options_(options) {
@@ -343,15 +349,16 @@ class BytecodeModule {
     return regExpStorage_;
   }
 
-  uint32_t getCJSModuleOffset() const {
-    return cjsModuleOffset_;
+  uint32_t getSegmentID() const {
+    return segmentID_;
   }
 
   llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getCJSModuleTable() const {
     return cjsModuleTable_;
   }
 
-  llvh::ArrayRef<uint32_t> getCJSModuleTableStatic() const {
+  llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getCJSModuleTableStatic()
+      const {
     return cjsModuleTableStatic_;
   }
 
@@ -385,26 +392,22 @@ class BytecodeModule {
   /// object keys and the second array represents the object values.
   std::pair<ArrayRef<unsigned char>, ArrayRef<unsigned char>> getObjectBuffer()
       const {
-    return {ArrayRef<unsigned char>(objKeyBuffer_),
-            ArrayRef<unsigned char>(objValBuffer_)};
+    return {
+        ArrayRef<unsigned char>(objKeyBuffer_),
+        ArrayRef<unsigned char>(objValBuffer_)};
   }
 
   /// Returns a pair, where the first element is the key buffer starting at
   /// keyIdx and the second element is the value buffer starting at valIdx
   std::pair<ArrayRef<unsigned char>, ArrayRef<unsigned char>>
   getObjectBufferAtOffset(unsigned keyIdx, unsigned valIdx) const {
-    return {ArrayRef<unsigned char>(objKeyBuffer_).slice(keyIdx),
-            ArrayRef<unsigned char>(objValBuffer_).slice(valIdx)};
+    return {
+        ArrayRef<unsigned char>(objKeyBuffer_).slice(keyIdx),
+        ArrayRef<unsigned char>(objValBuffer_).slice(valIdx)};
   }
 
   /// Populate the source map \p sourceMap with the debug information.
   void populateSourceMap(SourceMapGenerator *sourceMap) const;
-
-  /// Jump tables are inlined into bytecode segment, however this does not
-  /// happen until serialization. If we are executing straight from source
-  /// however this step never happens, this function will inline the jump table
-  /// into the opcode vector instead.
-  void inlineJumpTables();
 
   BytecodeOptions getBytecodeOptions() const {
     return options_;

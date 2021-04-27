@@ -15,49 +15,31 @@ namespace vm {
 
 /// No-op implementation of wall-time based JS sampling profiler.
 class SamplingProfiler {
- private:
-  SamplingProfiler() = default;
-
  public:
-  /// Return the singleton profiler instance.
-  static const std::shared_ptr<SamplingProfiler> &getInstance();
-
-  /// Register an active \p runtime and current thread with profiler.
-  /// Should only be called from the thread running hermes runtime.
-  void registerRuntime(Runtime *runtime) {}
-
-  /// Unregister an active \p runtime and current thread with profiler.
-  void unregisterRuntime(Runtime *runtime) {}
-
-  /// Reserve domain slots to avoid memory allocation in signal handler.
-  void increaseDomainCount() {}
-
-  /// Shrink domain storage to fit domains alive.
-  void decreaseDomainCount() {}
+  explicit SamplingProfiler(Runtime *){};
 
   /// Mark roots that are kept alive by the SamplingProfiler.
-  void markRoots(SlotAcceptorWithNames &acceptor) {}
+  void markRoots(RootAcceptor &acceptor) {}
 
   /// Dump sampled stack to \p OS.
   /// NOTE: this is for manual testing purpose.
-  void dumpSampledStack(llvh::raw_ostream &OS) {}
+  static void dumpSampledStackGlobal(llvh::raw_ostream &OS) {}
 
   /// Dump sampled stack to \p OS in chrome trace format.
-  void dumpChromeTrace(llvh::raw_ostream &OS) {}
+  static void dumpChromeTraceGlobal(llvh::raw_ostream &OS) {}
 
   /// Enable and start profiling.
-  bool enable() {
+  static bool enable() {
     return false;
   }
 
   /// Disable and stop profiling.
-  bool disable() {
+  static bool disable() {
     return true;
   }
 
   /// Called for various GC events.
-  void
-  onGCEvent(Runtime *runtime, GCEventKind kind, const std::string &extraInfo) {}
+  void onGCEvent(GCEventKind kind, const std::string &extraInfo) {}
 };
 
 } // namespace vm

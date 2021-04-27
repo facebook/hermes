@@ -10,14 +10,15 @@ end
 
 Pod::Spec.new do |spec|
   spec.name        = "hermes-engine"
-  spec.version     = "0.7.2"
+  spec.version     = "0.7.0"
   spec.summary     = "Hermes is a small and lightweight JavaScript engine optimized for running React Native."
   spec.description = "Hermes is a JavaScript engine optimized for fast start-up of React Native apps. It features ahead-of-time static optimization and compact bytecode."
   spec.homepage    = "https://hermesengine.dev"
   spec.license     = { type: "MIT", file: "LICENSE" }
   spec.author      = "Facebook"
-  # This env var should be supplied with a CDN URL for hermes-runtime-darwin.tgz on the Github releases before pod push.
+  # This env var should be supplied with a CDN URL of the "hermes-runtime-darwin.tgz" on the Github releases before pod push.
   # The podspec would be serialized to JSON and people will download prebuilt binaries instead of the source.
+  # TODO(use the hash field as a validation mechanism when the process is stable)
   spec.source      = ENV['hermes-artifact-url'] ? { http: ENV['hermes-artifact-url'] } : { git: "https://github.com/facebook/hermes.git", tag: "v#{spec.version}" }
   spec.platforms   = { :osx => "10.13", :ios => "10.0" }
 
@@ -38,7 +39,6 @@ Pod::Spec.new do |spec|
 
       # Build iOS framework
       ./utils/build-ios-framework.sh
-      
       # Build Mac framework
       ./utils/build-mac-framework.sh
     EOS

@@ -25,11 +25,9 @@ namespace {
 struct FinalizerCell final : public GCCell {
   static const VTable vt;
   int *numFinalized;
-#ifdef HERMESVM_GC_HADES
   // Some padding to meet the minimum cell size.
   uint64_t padding1_{0};
   uint64_t padding2_{0};
-#endif
 
   static void finalize(GCCell *cell, GC *) {
     auto *self = static_cast<FinalizerCell *>(cell);
@@ -37,15 +35,13 @@ struct FinalizerCell final : public GCCell {
   }
 
   static FinalizerCell *create(DummyRuntime &runtime, int *numFinalized) {
-    return new (runtime.allocWithFinalizer(sizeof(FinalizerCell)))
-        FinalizerCell(&runtime.getHeap(), numFinalized);
+    return runtime.makeAFixed<FinalizerCell, HasFinalizer::Yes>(
+        &runtime.getHeap(), numFinalized);
   }
 
   static FinalizerCell *create(Runtime &runtime, int *numFinalized) {
-    return new (
-        runtime.alloc</*fixedSize*/ true, /*hasFinalizers*/ HasFinalizer::Yes>(
-            sizeof(FinalizerCell)))
-        FinalizerCell(&runtime.getHeap(), numFinalized);
+    return runtime.makeAFixed<FinalizerCell, HasFinalizer::Yes>(
+        &runtime.getHeap(), numFinalized);
   }
 
   FinalizerCell(GC *gc, int *numFinalized)
@@ -54,22 +50,21 @@ struct FinalizerCell final : public GCCell {
 
 struct DummyCell final : public GCCell {
   static const VTable vt;
-#ifdef HERMESVM_GC_HADES
   // Some padding to meet the minimum cell size.
   uint64_t padding1_{0};
   uint64_t padding2_{0};
-#endif
 
   static DummyCell *create(DummyRuntime &runtime) {
-    return new (runtime.alloc(sizeof(DummyCell))) DummyCell(&runtime.getHeap());
+    return runtime.makeAFixed<DummyCell>(&runtime.getHeap());
   }
 
   DummyCell(GC *gc) : GCCell(gc, &vt) {}
 };
 
-const VTable FinalizerCell::vt{CellKind::FillerCellKind,
-                               sizeof(FinalizerCell),
-                               FinalizerCell::finalize};
+const VTable FinalizerCell::vt{
+    CellKind::FillerCellKind,
+    sizeof(FinalizerCell),
+    FinalizerCell::finalize};
 
 const VTable DummyCell::vt{CellKind::UninitializedKind, sizeof(DummyCell)};
 

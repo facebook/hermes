@@ -8,6 +8,7 @@
 #ifndef HERMES_SUPPORT_ERRORHANDLING_H
 #define HERMES_SUPPORT_ERRORHANDLING_H
 
+#include "llvh/ADT/StringRef.h"
 #include "llvh/Support/ErrorHandling.h"
 
 #include <cstdlib>
@@ -51,6 +52,9 @@ std::string convert_error_to_message(std::error_code code);
 /// handlers (or defaults to print the message to stderr), then calls exit(1).
 LLVM_ATTRIBUTE_NORETURN void hermes_fatal(const char *msg);
 LLVM_ATTRIBUTE_NORETURN void hermes_fatal(const std::string &msg);
+LLVM_ATTRIBUTE_NORETURN void hermes_fatal(
+    llvh::StringRef prefix,
+    std::error_code code);
 
 } // namespace hermes
 

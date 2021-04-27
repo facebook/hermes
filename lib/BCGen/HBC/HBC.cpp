@@ -131,8 +131,8 @@ UniquingStringLiteralAccumulator stringAccumulatorFromBCProvider(
   auto strStorage = bcProvider.getStringStorage();
   ConsecutiveStringStorage css{std::move(entries), strStorage.vec()};
 
-  return UniquingStringLiteralAccumulator{std::move(css),
-                                          std::move(isIdentifier)};
+  return UniquingStringLiteralAccumulator{
+      std::move(css), std::move(isIdentifier)};
 }
 
 } // namespace
@@ -141,7 +141,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     Module *M,
     Function *entryPoint,
     const BytecodeGenerationOptions &options,
-    OptValue<Context::SegmentRange> range,
+    hermes::OptValue<uint32_t> segment,
     SourceMapGenerator *sourceMapGen,
     std::unique_ptr<BCProviderBase> baseBCProvider) {
   return generateBytecodeModule(
@@ -149,7 +149,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
       entryPoint,
       entryPoint,
       options,
-      range,
+      segment,
       sourceMapGen,
       std::move(baseBCProvider));
 }
@@ -159,7 +159,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     Function *lexicalTopLevel,
     Function *entryPoint,
     const BytecodeGenerationOptions &options,
-    OptValue<Context::SegmentRange> range,
+    hermes::OptValue<uint32_t> segment,
     SourceMapGenerator *sourceMapGen,
     std::unique_ptr<BCProviderBase> baseBCProvider) {
   PerfSection perf("Bytecode Generation");
@@ -170,18 +170,18 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
 
   BytecodeModuleGenerator BMGen(options);
 
-  if (range) {
-    BMGen.setCJSModuleOffset(range->first);
+  if (segment) {
+    BMGen.setSegmentID(*segment);
   }
-
   // Empty if all functions should be generated (i.e. bundle splitting was not
   // requested).
-  llvh::DenseSet<Function *> functionsToGenerate =
-      range ? M->getFunctionsInSegment(*range) : llvh::DenseSet<Function *>{};
+  llvh::DenseSet<Function *> functionsToGenerate = segment
+      ? M->getFunctionsInSegment(*segment)
+      : llvh::DenseSet<Function *>{};
 
   /// \return true if we should generate function \p f.
   std::function<bool(const Function *)> shouldGenerate;
-  if (range) {
+  if (segment) {
     shouldGenerate = [entryPoint, &functionsToGenerate](const Function *f) {
       return f == entryPoint || functionsToGenerate.count(f) > 0;
     };
@@ -315,14 +315,14 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecode(
     raw_ostream &OS,
     const BytecodeGenerationOptions &options,
     const SHA1 &sourceHash,
-    OptValue<Context::SegmentRange> range,
+    hermes::OptValue<uint32_t> segment,
     SourceMapGenerator *sourceMapGen,
     std::unique_ptr<BCProviderBase> baseBCProvider) {
   auto BM = generateBytecodeModule(
       M,
       M->getTopLevelFunction(),
       options,
-      range,
+      segment,
       sourceMapGen,
       std::move(baseBCProvider));
   if (options.format == OutputFormatKind::EmitBundle) {

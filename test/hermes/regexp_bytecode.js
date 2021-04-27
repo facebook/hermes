@@ -51,18 +51,18 @@ print(/a(b(c)(d))e\1\2/);
 // CHECK:       4: /a(b(c)(d))e\1\2/
 // CHECK-NEXT:    Header: marked: 3 loops: 0 flags: 0 constraints: 4
 // CHECK-NEXT:    0000  MatchChar8: 'a'
-// CHECK-NEXT:    0002  BeginMarkedSubexpression: 1
+// CHECK-NEXT:    0002  BeginMarkedSubexpression: 0
 // CHECK-NEXT:    0005  MatchChar8: 'b'
-// CHECK-NEXT:    0007  BeginMarkedSubexpression: 2
+// CHECK-NEXT:    0007  BeginMarkedSubexpression: 1
 // CHECK-NEXT:    000a  MatchChar8: 'c'
-// CHECK-NEXT:    000c  EndMarkedSubexpression: 2
-// CHECK-NEXT:    000f  BeginMarkedSubexpression: 3
+// CHECK-NEXT:    000c  EndMarkedSubexpression: 1
+// CHECK-NEXT:    000f  BeginMarkedSubexpression: 2
 // CHECK-NEXT:    0012  MatchChar8: 'd'
-// CHECK-NEXT:    0014  EndMarkedSubexpression: 3
-// CHECK-NEXT:    0017  EndMarkedSubexpression: 1
+// CHECK-NEXT:    0014  EndMarkedSubexpression: 2
+// CHECK-NEXT:    0017  EndMarkedSubexpression: 0
 // CHECK-NEXT:    001a  MatchChar8: 'e'
-// CHECK-NEXT:    001c  BackRefInsn: 1
-// CHECK-NEXT:    001f  BackRefInsn: 2
+// CHECK-NEXT:    001c  BackRefInsn: 0
+// CHECK-NEXT:    001f  BackRefInsn: 1
 // CHECK-NEXT:    0022  Goal
 
 print(/\b\B/);
@@ -100,32 +100,32 @@ print(/a((b+){3})*/);
 // CHECK-NEXT:    Header: marked: 2 loops: 3 flags: 0 constraints: 4
 // CHECK-NEXT:     0000  MatchChar8: 'a'
 // CHECK-NEXT:     0002  BeginLoop: 2 greedy {0, 4294967295} (constraints: 4)
-// CHECK-NEXT:     001d  BeginMarkedSubexpression: 1
-// CHECK-NEXT:     0020  BeginLoop: 1 greedy {3, 3} (constraints: 4)
-// CHECK-NEXT:     003b  BeginMarkedSubexpression: 2
-// CHECK-NEXT:     003e  Width1Loop: 0 greedy {1, 4294967295}
-// CHECK-NEXT:     0050  MatchChar8: 'b'
-// CHECK-NEXT:     0052  EndMarkedSubexpression: 2
-// CHECK-NEXT:     0055  EndLoop: 0x20
-// CHECK-NEXT:     005a  EndMarkedSubexpression: 1
-// CHECK-NEXT:     005d  EndLoop: 0x02
-// CHECK-NEXT:     0062  Goal
+// CHECK-NEXT:     0019  BeginMarkedSubexpression: 0
+// CHECK-NEXT:     001c  BeginLoop: 1 greedy {3, 3} (constraints: 4)
+// CHECK-NEXT:     0033  BeginMarkedSubexpression: 1
+// CHECK-NEXT:     0036  Width1Loop: 0 greedy {1, 4294967295}
+// CHECK-NEXT:     0048  MatchChar8: 'b'
+// CHECK-NEXT:     004a  EndMarkedSubexpression: 1
+// CHECK-NEXT:     004d  EndLoop: 0x1c
+// CHECK-NEXT:     0052  EndMarkedSubexpression: 0
+// CHECK-NEXT:     0055  EndLoop: 0x02
+// CHECK-NEXT:     005a  Goal
 
 print(/(^b)+(c)*?/);
 // CHECK:        9: /(^b)+(c)*?/
 // CHECK-NEXT:    Header: marked: 2 loops: 2 flags: 0 constraints: 6
 // CHECK-NEXT:     0000  BeginLoop: 0 greedy {1, 4294967295} (constraints: 6)
-// CHECK-NEXT:     001b  BeginMarkedSubexpression: 1
-// CHECK-NEXT:     001e  LeftAnchor
-// CHECK-NEXT:     001f  MatchChar8: 'b'
-// CHECK-NEXT:     0021  EndMarkedSubexpression: 1
-// CHECK-NEXT:     0024  EndLoop: 0x00
-// CHECK-NEXT:     0029  BeginLoop: 1 nongreedy {0, 4294967295} (constraints: 4)
-// CHECK-NEXT:     0044  BeginMarkedSubexpression: 2
-// CHECK-NEXT:     0047  MatchChar8: 'c'
-// CHECK-NEXT:     0049  EndMarkedSubexpression: 2
-// CHECK-NEXT:     004c  EndLoop: 0x29
-// CHECK-NEXT:     0051  Goal
+// CHECK-NEXT:     0017  BeginMarkedSubexpression: 0
+// CHECK-NEXT:     001a  LeftAnchor
+// CHECK-NEXT:     001b  MatchChar8: 'b'
+// CHECK-NEXT:     001d  EndMarkedSubexpression: 0
+// CHECK-NEXT:     0020  EndLoop: 0x00
+// CHECK-NEXT:     0025  BeginLoop: 1 nongreedy {0, 4294967295} (constraints: 4)
+// CHECK-NEXT:     003c  BeginMarkedSubexpression: 1
+// CHECK-NEXT:     003f  MatchChar8: 'c'
+// CHECK-NEXT:     0041  EndMarkedSubexpression: 1
+// CHECK-NEXT:     0044  EndLoop: 0x25
+// CHECK-NEXT:     0049  Goal
 
 print(/[\u017f]/i);
 // CHECK:        10: /[\u017f]/i
@@ -160,10 +160,10 @@ print(/(?:a*)*/);
 // CHECK:        14: /(?:a*)*/
 // CHECK-NEXT:    Header: marked: 0 loops: 2 flags: 0 constraints: 0
 // CHECK-NEXT:     0000  BeginLoop: 1 greedy {0, 4294967295} (constraints: 0)
-// CHECK-NEXT:     001b  Width1Loop: 0 greedy {0, 4294967295}
-// CHECK-NEXT:     002d  MatchChar8: 'a'
-// CHECK-NEXT:     002f  EndLoop: 0x00
-// CHECK-NEXT:     0034  Goal
+// CHECK-NEXT:     0017  Width1Loop: 0 greedy {0, 4294967295}
+// CHECK-NEXT:     0029  MatchChar8: 'a'
+// CHECK-NEXT:     002b  EndLoop: 0x00
+// CHECK-NEXT:     0030  Goal
 
 print(/[a-zA-Z]*/);
 // CHECK:        15: /[a-zA-Z]*/
@@ -189,26 +189,26 @@ print(/a*/i);
 print(/(a)(?=(.))/i);
 // CHECK:        18: /(a)(?=(.))/i
 // CHECK-NEXT:   Header: marked: 2 loops: 0 flags: 1 constraints: 4
-// CHECK-NEXT:   0000  BeginMarkedSubexpression: 1
+// CHECK-NEXT:   0000  BeginMarkedSubexpression: 0
 // CHECK-NEXT:   0003  MatchCharICase8: 'A'
-// CHECK-NEXT:   0005  EndMarkedSubexpression: 1
+// CHECK-NEXT:   0005  EndMarkedSubexpression: 0
 // CHECK-NEXT:   0008  Lookaround: = (constraints: 4, marked expressions=[1,2), continuation 0x1c)
-// CHECK-NEXT:   0014  BeginMarkedSubexpression: 2
+// CHECK-NEXT:   0014  BeginMarkedSubexpression: 1
 // CHECK-NEXT:   0017  MatchAnyButNewline
-// CHECK-NEXT:   0018  EndMarkedSubexpression: 2
+// CHECK-NEXT:   0018  EndMarkedSubexpression: 1
 // CHECK-NEXT:   001b  Goal
 // CHECK-NEXT:   001c  Goal
 
 print(/(a)(?<!(.))/i);
 // CHECK:        19: /(a)(?<!(.))/i
 // CHECK-NEXT:   Header: marked: 2 loops: 0 flags: 1 constraints: 4
-// CHECK-NEXT:   0000  BeginMarkedSubexpression: 1
+// CHECK-NEXT:   0000  BeginMarkedSubexpression: 0
 // CHECK-NEXT:   0003  MatchCharICase8: 'A'
-// CHECK-NEXT:   0005  EndMarkedSubexpression: 1
+// CHECK-NEXT:   0005  EndMarkedSubexpression: 0
 // CHECK-NEXT:   0008  Lookaround: <! (constraints: 4, marked expressions=[1,2), continuation 0x1c)
-// CHECK-NEXT:   0014  BeginMarkedSubexpression: 2
+// CHECK-NEXT:   0014  BeginMarkedSubexpression: 1
 // CHECK-NEXT:   0017  MatchAnyButNewline
-// CHECK-NEXT:   0018  EndMarkedSubexpression: 2
+// CHECK-NEXT:   0018  EndMarkedSubexpression: 1
 // CHECK-NEXT:   001b  Goal
 // CHECK-NEXT:   001c  Goal
 
@@ -275,10 +275,10 @@ print(/a|b|c|d|e|f/);
 print(/(abc|def)/);
 // CHECK:       27: /(abc|def)/
 // CHECK-NEXT:    Header: marked: 1 loops: 0 flags: 0 constraints: 4
-// CHECK-NEXT:    0000  BeginMarkedSubexpression: 1
+// CHECK-NEXT:    0000  BeginMarkedSubexpression: 0
 // CHECK-NEXT:    0003  Alternation: Target 0x14, constraints 4,4
 // CHECK-NEXT:    000a  MatchNChar8: 'abc'
 // CHECK-NEXT:    000f  Jump32: 0x19
 // CHECK-NEXT:    0014  MatchNChar8: 'def'
-// CHECK-NEXT:    0019  EndMarkedSubexpression: 1
+// CHECK-NEXT:    0019  EndMarkedSubexpression: 0
 // CHECK-NEXT:    001c  Goal

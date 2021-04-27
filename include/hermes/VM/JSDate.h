@@ -18,7 +18,7 @@ class JSDate final : public JSObject {
   using Super = JSObject;
 
  public:
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   /// Need one anonymous slot for the [[PrimitiveValue]] internal property.
   static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS =
@@ -50,15 +50,15 @@ class JSDate final : public JSObject {
         self, runtime, JSDate::primitiveValuePropIndex(), value);
   }
 
- protected:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit JSDate(Deserializer &d);
 
   friend void DateDeserialize(Deserializer &d, CellKind kind);
 #endif
 
-  JSDate(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
-      : JSObject(runtime, &vt.base, parent, clazz) {}
+  JSDate(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
+      : JSObject(runtime, &vt.base, *parent, *clazz) {}
 
  protected:
   static constexpr SlotIndex primitiveValuePropIndex() {

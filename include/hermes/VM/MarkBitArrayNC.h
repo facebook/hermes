@@ -18,8 +18,8 @@ namespace hermes {
 namespace vm {
 
 /// Encapsulates the array of bits used for marking the allocation region of an
-/// AlignedHeapSegment.  The array expects to be constructed inside an
-/// AlignedHeapSegment's storage, at some position before the allocation region.
+/// GenGCHeapSegment.  The array expects to be constructed inside an
+/// GenGCHeapSegment's storage, at some position before the allocation region.
 class MarkBitArrayNC {
  public:
   MarkBitArrayNC() = default;
@@ -34,7 +34,7 @@ class MarkBitArrayNC {
   /// Returns the size of the bit array, counted as a number of bits.
   ///
   /// For the sake of simplicity, there are enough bits to cover an allocation
-  /// region that takes up all the space in an AlignedHeapSegment -- even though
+  /// region that takes up all the space in an GenGCHeapSegment -- even though
   /// some prefix of the storage is reserved for auxiliary data structures.
   static constexpr size_t size();
 
@@ -71,6 +71,17 @@ class MarkBitArrayNC {
   /// past the last array index if there is not another marked bit.
   inline size_t findNextUnmarkedBitFrom(size_t ind);
 
+  /// Finds the previous bit in the MarkBitArray that is set to 1, starting at
+  /// and
+  /// including \p ind, the index from which to begin searching. Returns one
+  /// past the last array index if there is not another marked bit.
+  inline size_t findPrevMarkedBitFrom(size_t ind);
+
+  /// Finds the previous bit in the MarkBitArray that is set to 0, starting at
+  /// and including \p ind, the index from which to begin searching. Returns one
+  /// past the last array index if there is not another marked bit.
+  inline size_t findPrevUnmarkedBitFrom(size_t ind);
+
 // Mangling scheme used by MSVC encode public/private into the name.
 // As a result, vanilla "ifdef public" trick leads to link errors.
 #if defined(UNIT_TEST) || defined(_MSC_VER)
@@ -94,11 +105,7 @@ class MarkBitArrayNC {
   static constexpr size_t kNumBits = AlignedStorage::size() >> LogHeapAlign;
   /// Bitset holding the contents of the mark bit array. Align it to the page
   /// size.
-  BitArray<kNumBits, pagesize::kExpectedPageSize> bitArray_;
-
-  static_assert(
-      sizeof(bitArray_) % pagesize::kExpectedPageSize == 0,
-      "Bit array does not meet alignment requirements!");
+  BitArray<kNumBits> bitArray_;
 };
 
 /* static */ constexpr size_t MarkBitArrayNC::size() {
@@ -147,6 +154,14 @@ size_t MarkBitArrayNC::findNextMarkedBitFrom(size_t ind) {
 
 size_t MarkBitArrayNC::findNextUnmarkedBitFrom(size_t ind) {
   return bitArray_.findNextZeroBitFrom(ind);
+}
+
+size_t MarkBitArrayNC::findPrevMarkedBitFrom(size_t ind) {
+  return bitArray_.findPrevSetBitFrom(ind);
+}
+
+size_t MarkBitArrayNC::findPrevUnmarkedBitFrom(size_t ind) {
+  return bitArray_.findPrevZeroBitFrom(ind);
 }
 
 char *MarkBitArrayNC::base() const {

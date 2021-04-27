@@ -8,6 +8,7 @@
 #define DEBUG_TYPE "vm"
 #include "hermes/VM/DictPropertyMap.h"
 #include "hermes/Support/Statistic.h"
+#include "hermes/VM/SymbolID-inline.h"
 
 HERMES_SLOW_STATISTIC(NumDictLookups, "Number of dictionary lookups");
 HERMES_SLOW_STATISTIC(NumExtraHashProbes, "Number of extra hash probes");
@@ -49,12 +50,12 @@ struct DictPropertyMap::detail {
       "too few bits to store max possible descriptor index");
 };
 
-VTable DictPropertyMap::vt{CellKind::DictPropertyMapKind, 0};
+const VTable DictPropertyMap::vt{CellKind::DictPropertyMapKind, 0};
 
 void DictPropertyMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const DictPropertyMap *>(cell);
-  mb.addArray<Metadata::ArrayData::ArrayType::Symbol>(
-      self->getDescriptorPairs(),
+  mb.addArray(
+      &self->getDescriptorPairs()->first,
       &self->numDescriptors_,
       sizeof(DictPropertyMap::DescriptorPair));
 }
@@ -72,10 +73,9 @@ CallResult<PseudoHandle<DictPropertyMap>> DictPropertyMap::create(
         " properties");
   }
   size_type hashCapacity = calcHashCapacity(capacity);
-  void *mem = runtime->alloc</*fixedSize*/ false>(
-      allocationSize(capacity, hashCapacity));
-  return createPseudoHandle(
-      new (mem) DictPropertyMap(runtime, capacity, hashCapacity));
+  auto *cell = runtime->makeAVariable<DictPropertyMap>(
+      allocationSize(capacity, hashCapacity), runtime, capacity, hashCapacity);
+  return createPseudoHandle(cell);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -115,10 +115,11 @@ void DictPropertyMapDeserialize(Deserializer &d, CellKind kind) {
       "deserialized hash capacity does not match with calculated hashCapacity");
 #endif
 
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ false>(
-      DictPropertyMap::allocationSize(descriptorCapacity, hashCapacity));
-  auto *cell = new (mem)
-      DictPropertyMap(d.getRuntime(), descriptorCapacity, hashCapacity);
+  auto *cell = d.getRuntime()->makeAVariable<DictPropertyMap>(
+      DictPropertyMap::allocationSize(descriptorCapacity, hashCapacity),
+      d.getRuntime(),
+      descriptorCapacity,
+      hashCapacity);
 
   cell->numDescriptors_.store(d.readInt<uint32_t>(), std::memory_order_release);
   cell->numProperties_ = d.readInt<uint32_t>();
@@ -203,9 +204,11 @@ ExecutionStatus DictPropertyMap::grow(
     if (src->first.isInvalid())
       continue;
 
-    auto key = src->first;
+    const SymbolID key = src->first;
 
-    dst->first = key;
+    // The new property map doesn't have any valid symbols in it yet, use a
+    // constructor instead of assignment to avoid an invalid write barrier.
+    new (&dst->first) GCSymbolID(key);
     dst->second = src->second;
 
     auto result = lookupEntryFor(newSelf, key);
@@ -233,7 +236,9 @@ ExecutionStatus DictPropertyMap::grow(
           src->first == SymbolID::deleted() &&
           "pair in the deleted list is not marked as deleted");
 
-      dst->first = SymbolID::deleted();
+      // The new property map doesn't have any valid symbols in it yet, use a
+      // constructor instead of assignment to avoid an invalid write barrier.
+      new (&dst->first) GCSymbolID(SymbolID::deleted());
       dst->second.slot = src->second.slot;
 
       deletedIndex = getNextDeletedIndex(src);
@@ -308,13 +313,16 @@ DictPropertyMap::findOrAdd(
 
   auto *descPair = self->getDescriptorPairs() + numDescriptors;
 
-  descPair->first = id;
+  descPair->first.set(id, &runtime->getHeap());
   self->numDescriptors_.fetch_add(1, std::memory_order_acq_rel);
 
   return std::make_pair(&descPair->second, true);
 }
 
-void DictPropertyMap::erase(DictPropertyMap *self, PropertyPos pos) {
+void DictPropertyMap::erase(
+    DictPropertyMap *self,
+    Runtime *runtime,
+    PropertyPos pos) {
   auto *hashPair = self->getHashPairs() + pos.hashPairIndex;
   auto descIndex = hashPair->getDescIndex();
   assert(
@@ -327,7 +335,7 @@ void DictPropertyMap::erase(DictPropertyMap *self, PropertyPos pos) {
       "accessing deleted descriptor pair");
 
   hashPair->setDeleted();
-  descPair->first = SymbolID::deleted();
+  descPair->first.set(SymbolID::deleted(), &runtime->getHeap());
   // Add the descriptor to the deleted list.
   setNextDeletedIndex(descPair, self->deletedListHead_);
   self->deletedListHead_ = descIndex;
@@ -338,7 +346,9 @@ void DictPropertyMap::erase(DictPropertyMap *self, PropertyPos pos) {
   self->incDeletedHashCount();
 }
 
-SlotIndex DictPropertyMap::allocatePropertySlot(DictPropertyMap *self) {
+SlotIndex DictPropertyMap::allocatePropertySlot(
+    DictPropertyMap *self,
+    Runtime *runtime) {
   // If there are no deleted properties, the number of properties corresponds
   // exactly to the number of slots.
   if (self->deletedListHead_ == END_OF_LIST)
@@ -354,7 +364,8 @@ SlotIndex DictPropertyMap::allocatePropertySlot(DictPropertyMap *self) {
   --self->deletedListSize_;
 
   // Mark the pair as "invalid" instead of "deleted".
-  deletedPair->first = SymbolID::empty();
+  // No need for symbol write barrier because the previous value was deleted.
+  new (&deletedPair->first) GCSymbolID(SymbolID::empty());
 
   return deletedPair->second.slot;
 }

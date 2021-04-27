@@ -72,7 +72,7 @@ void StackTracesTreeNode::addMapping(
     ChildBytecodeMap newBytecodeMapping;
     newBytecodeMapping.try_emplace(bytecodeOffset, childIndex);
     codeBlockToChildMap_.try_emplace(
-        (void *)codeBlock, std::move(newBytecodeMapping));
+        static_cast<const void *>(codeBlock), std::move(newBytecodeMapping));
   } else {
     auto &bytecodeMapping = matchingCodeBlockChildren->getSecond();
     assert(
@@ -130,16 +130,8 @@ void StackTracesTree::syncWithRuntimeStack(Runtime *runtime) {
     stack.emplace_back(savedCodeBlock, savedIP);
   }
 
-  // If the stack is empty, avoid the rend - 1 comparison issue by returning
-  // early.
-  if (stack.empty()) {
-    return;
-  }
-
-  // Iterate over the stack in reverse to push calls. The final frame is ignored
-  // because that is the native frame where enableAllocationLocationTracker is
-  // called, which isn't poppped.
-  for (auto it = stack.rbegin(); it != stack.rend() - 1; ++it) {
+  // Iterate over the stack in reverse to push calls.
+  for (auto it = stack.rbegin(); it != stack.rend(); ++it) {
     // Check that both the code block and ip are non-null, which means it was a
     // JS frame, and not a native frame.
     if (it->first && it->second) {
@@ -181,8 +173,13 @@ StackTracesTreeNode::SourceLoc StackTracesTree::computeSourceLoc(
   } else {
     auto sourceURL = runtimeModule->getSourceURL();
     scriptName = sourceURL.empty() ? "unknown" : sourceURL;
-    lineNo = -1;
-    columnNo = -1;
+    // Lines and columns in SourceLoc are 1-based.
+    lineNo = runtimeModule->getBytecode()->getSegmentID() + 1;
+    // Note the +1 for columnNo! This is *unlike* Error.prototype.stack (etc)
+    // where, for legacy reasons, we print columns as 1-based but virtual
+    // offsets as 0-based. Here we prefer to expose a simpler API at the cost
+    // of consistency with other places we surface this information.
+    columnNo = codeBlock->getVirtualOffset() + bytecodeOffset + 1;
   }
   return {strings_->insert(scriptName), scriptID, lineNo, columnNo};
 }
@@ -238,7 +235,7 @@ void StackTracesTree::pushCallStack(
   auto nameID =
       nameStr.empty() ? anonymousFunctionID_ : strings_->insert(nameStr);
 
-  auto newNode = hermes::make_unique<StackTracesTreeNode>(
+  auto newNode = std::make_unique<StackTracesTreeNode>(
       nextNodeID_++, head_, sourceLoc, codeBlock, ip, nameID);
   auto newNodePtr = newNode.get();
   nodes_.emplace_back(std::move(newNode));

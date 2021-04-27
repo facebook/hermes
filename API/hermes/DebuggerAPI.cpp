@@ -56,9 +56,10 @@ EvalResult ProgramState::getEvalResult() const {
       pauseReason_ == PauseReason::EvalComplete &&
       "No EvalResult because pause is not due to EvalComplete");
   ::facebook::jsi::Value copiedValue(*dbg_->runtime_, evalResult_.value);
-  return debugger::EvalResult{std::move(copiedValue),
-                              evalResult_.isException,
-                              evalResult_.exceptionDetails};
+  return debugger::EvalResult{
+      std::move(copiedValue),
+      evalResult_.isException,
+      evalResult_.exceptionDetails};
 }
 
 Command::~Command() = default;

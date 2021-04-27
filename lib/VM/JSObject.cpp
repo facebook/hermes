@@ -12,17 +12,16 @@
 #include "hermes/VM/HostModel.h"
 #include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/JSArray.h"
-#include "hermes/VM/JSDate.h"
 #include "hermes/VM/JSProxy.h"
 #include "hermes/VM/Operations.h"
-#include "hermes/VM/StringView.h"
+#include "hermes/VM/PropertyAccessor.h"
 
 #include "llvh/ADT/SmallSet.h"
 
 namespace hermes {
 namespace vm {
 
-ObjectVTable JSObject::vt{
+const ObjectVTable JSObject::vt{
     VTable(
         CellKind::ObjectKind,
         cellSize<JSObject>(),
@@ -32,11 +31,12 @@ ObjectVTable JSObject::vt{
         nullptr,
         nullptr,
         nullptr, // externalMemorySize
-        VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
-                                     JSObject::_snapshotNameImpl,
-                                     JSObject::_snapshotAddEdgesImpl,
-                                     nullptr,
-                                     JSObject::_snapshotAddLocationsImpl}),
+        VTable::HeapSnapshotMetadata{
+            HeapSnapshot::NodeType::Object,
+            JSObject::_snapshotNameImpl,
+            JSObject::_snapshotAddEdgesImpl,
+            nullptr,
+            JSObject::_snapshotAddLocationsImpl}),
     JSObject::_getOwnIndexedRangeImpl,
     JSObject::_haveOwnIndexedImpl,
     JSObject::_getOwnIndexedPropertyFlagsImpl,
@@ -98,9 +98,7 @@ void ObjectSerialize(Serializer &s, const GCCell *cell) {
 
 void ObjectDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::ObjectKind && "Expected JSObject");
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true>(cellSize<JSObject>());
-  auto *obj = new (mem) JSObject(d, &JSObject::vt.base);
-
+  auto *obj = d.getRuntime()->makeAFixed<JSObject>(d, &JSObject::vt.base);
   d.endObject(obj);
 }
 
@@ -126,41 +124,25 @@ JSObject::JSObject(Deserializer &d, const VTable *vtp)
 PseudoHandle<JSObject> JSObject::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  JSObjectAlloc<JSObject> mem{runtime};
-  return mem.initToPseudoHandle(new (mem) JSObject(
+  auto *cell = runtime->makeAFixed<JSObject>(
       runtime,
       &vt.base,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+      parentHandle,
+      runtime->getHiddenClassForPrototype(
           *parentHandle,
           numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
-      GCPointerBase::NoBarriers()));
+      GCPointerBase::NoBarriers());
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 PseudoHandle<JSObject> JSObject::create(Runtime *runtime) {
-  JSObjectAlloc<JSObject> mem{runtime};
-  JSObject *objProto = runtime->objectPrototypeRawPtr;
-  return mem.initToPseudoHandle(new (mem) JSObject(
-      runtime,
-      &vt.base,
-      objProto,
-      runtime->getHiddenClassForPrototypeRaw(
-          objProto, numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
-      GCPointerBase::NoBarriers()));
+  return create(runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype));
 }
 
 PseudoHandle<JSObject> JSObject::create(
     Runtime *runtime,
     unsigned propertyCount) {
-  JSObjectAlloc<JSObject> mem{runtime};
-  JSObject *objProto = runtime->objectPrototypeRawPtr;
-  auto self = mem.initToPseudoHandle(new (mem) JSObject(
-      runtime,
-      &vt.base,
-      objProto,
-      runtime->getHiddenClassForPrototypeRaw(
-          objProto, numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
-      GCPointerBase::NoBarriers()));
+  auto self = create(runtime);
 
   return runtime->ignoreAllocationFailure(
       JSObject::allocatePropStorage(std::move(self), runtime, propertyCount));
@@ -321,7 +303,7 @@ void JSObject::allocateNewSlotStorage(
       PropStorage::resizeWithinCapacity(propStorage, runtime, newSlotIndex + 1);
     }
     // If we don't need to resize, just store it directly.
-    propStorage->at(newSlotIndex).set(*valueHandle, &runtime->getHeap());
+    propStorage->set(newSlotIndex, *valueHandle, &runtime->getHeap());
   }
 }
 
@@ -1673,23 +1655,30 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
     if (!receiverHandle) {
       return false;
     }
+    ComputedPropertyDescriptor existingDesc;
     CallResult<bool> descDefinedRes = getOwnComputedPrimitiveDescriptor(
-        receiverHandle, runtime, nameValPrimitiveHandle, IgnoreProxy::No, desc);
+        receiverHandle,
+        runtime,
+        nameValPrimitiveHandle,
+        IgnoreProxy::No,
+        existingDesc);
     if (LLVM_UNLIKELY(descDefinedRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     DefinePropertyFlags dpf;
     if (*descDefinedRes) {
-      if (LLVM_UNLIKELY(desc.flags.accessor || !desc.flags.writable)) {
+      if (LLVM_UNLIKELY(
+              existingDesc.flags.accessor || !existingDesc.flags.writable)) {
         return false;
       }
 
       if (LLVM_LIKELY(
-              !desc.flags.internalSetter && !receiverHandle->isHostObject() &&
+              !existingDesc.flags.internalSetter &&
+              !receiverHandle->isHostObject() &&
               !receiverHandle->isProxyObject())) {
         if (LLVM_UNLIKELY(
                 setComputedSlotValue(
-                    receiverHandle, runtime, desc, valueHandle) ==
+                    receiverHandle, runtime, existingDesc, valueHandle) ==
                 ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -1697,8 +1686,11 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
       }
     }
 
+    // At this point, either the descriptor exists on the receiver,
+    // but it's a corner case; or, there was no descriptor.
     if (LLVM_UNLIKELY(
-            desc.flags.internalSetter || receiverHandle->isHostObject() ||
+            existingDesc.flags.internalSetter ||
+            receiverHandle->isHostObject() ||
             receiverHandle->isProxyObject())) {
       // If putComputed is called on a proxy whose target's prototype
       // is an array with a propname of 'length', then internalSetter
@@ -1720,12 +1712,12 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
       }
       SymbolID id{};
       LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, id);
-      if (desc.flags.internalSetter) {
+      if (existingDesc.flags.internalSetter) {
         return internalSetter(
             receiverHandle,
             runtime,
             id,
-            desc.castToNamedPropertyDescriptorRef(),
+            existingDesc.castToNamedPropertyDescriptorRef(),
             valueHandle,
             opFlags);
       }
@@ -1962,7 +1954,7 @@ CallResult<bool> JSObject::deleteComputed(
   return true;
 }
 
-CallResult<bool> JSObject::defineOwnProperty(
+CallResult<bool> JSObject::defineOwnPropertyInternal(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name,
@@ -2020,7 +2012,7 @@ CallResult<bool> JSObject::defineOwnProperty(
     // if the property was not found and the object is lazy we need to
     // initialize it and try again.
     JSObject::initializeLazyObject(runtime, selfHandle);
-    return defineOwnProperty(
+    return defineOwnPropertyInternal(
         selfHandle, runtime, name, dpFlags, valueOrAccessor, opFlags);
   }
 
@@ -2102,7 +2094,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
   // indexed storage, just pass to the named routine.
   if (!arrayIndex) {
     LAZY_TO_IDENTIFIER(runtime, nameValHandle, id);
-    return defineOwnProperty(
+    return defineOwnPropertyInternal(
         selfHandle, runtime, id, dpFlags, valueOrAccessor, opFlags);
   }
 
@@ -2418,8 +2410,8 @@ void JSObject::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
           return;
         }
         // Else, it's a user-visible property.
-        GCHermesValue &prop =
-            namedSlotRef(self, gc->getPointerBase(), desc.slot);
+        HermesValue prop =
+            getNamedSlotValue(self, gc->getPointerBase(), desc.slot);
         const llvh::Optional<HeapSnapshot::NodeID> idForProp =
             gc->getSnapshotID(prop);
         if (!idForProp) {
@@ -3142,19 +3134,22 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
   Handle<HiddenClass> clazz(runtime, obj->getClass(runtime));
 
   // Fast case: Check the cache.
-  MutableHandle<BigStorage> arr(runtime, clazz->getForInCache(runtime));
-  if (arr) {
-    beginIndex = matchesProtoClasses(runtime, obj, arr);
-    if (beginIndex) {
-      // Cache is valid for this object, so use it.
-      endIndex = arr->size();
-      return arr;
+  MutableHandle<BigStorage> arr(runtime);
+  if (obj->shouldCacheForIn(runtime)) {
+    arr = clazz->getForInCache(runtime);
+    if (arr) {
+      beginIndex = matchesProtoClasses(runtime, obj, arr);
+      if (beginIndex) {
+        // Cache is valid for this object, so use it.
+        endIndex = arr->size();
+        return arr;
+      }
+      // Invalid for this object. We choose to clear the cache since the
+      // changes to the prototype chain probably affect other objects too.
+      clazz->clearForInCache(runtime);
+      // Clear arr to slightly reduce risk of OOM from allocation below.
+      arr = nullptr;
     }
-    // Invalid for this object. We choose to clear the cache since the
-    // changes to the prototype chain probably affect other objects too.
-    clazz->clearForInCache(runtime);
-    // Clear arr to slightly reduce risk of OOM from allocation below.
-    arr = nullptr;
   }
 
   // Slow case: Build the array of properties.
@@ -3189,49 +3184,6 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
     clazz->setForInCache(*arr, runtime);
   }
   return arr;
-}
-
-//===----------------------------------------------------------------------===//
-// class PropertyAccessor
-
-VTable PropertyAccessor::vt{CellKind::PropertyAccessorKind,
-                            cellSize<PropertyAccessor>()};
-
-void PropertyAccessorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  const auto *self = static_cast<const PropertyAccessor *>(cell);
-  mb.addField("getter", &self->getter);
-  mb.addField("setter", &self->setter);
-}
-
-#ifdef HERMESVM_SERIALIZE
-PropertyAccessor::PropertyAccessor(Deserializer &d)
-    : GCCell(&d.getRuntime()->getHeap(), &vt) {
-  d.readRelocation(&getter, RelocationKind::GCPointer);
-  d.readRelocation(&setter, RelocationKind::GCPointer);
-}
-
-void PropertyAccessorSerialize(Serializer &s, const GCCell *cell) {
-  auto *self = vmcast<const PropertyAccessor>(cell);
-  s.writeRelocation(self->getter.get(s.getRuntime()));
-  s.writeRelocation(self->setter.get(s.getRuntime()));
-  s.endObject(cell);
-}
-
-void PropertyAccessorDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::PropertyAccessorKind && "Expected PropertyAccessor");
-  void *mem = d.getRuntime()->alloc(cellSize<PropertyAccessor>());
-  auto *cell = new (mem) PropertyAccessor(d);
-  d.endObject(cell);
-}
-#endif
-
-CallResult<HermesValue> PropertyAccessor::create(
-    Runtime *runtime,
-    Handle<Callable> getter,
-    Handle<Callable> setter) {
-  void *mem = runtime->alloc(cellSize<PropertyAccessor>());
-  return HermesValue::encodeObjectValue(
-      new (mem) PropertyAccessor(runtime, *getter, *setter));
 }
 
 } // namespace vm

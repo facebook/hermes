@@ -105,3 +105,81 @@ function test_rest_arguments() {
 //CHECK-NEXT:  %0 = CallBuiltinInst [HermesBuiltin.copyRestArgs] : number, undefined : undefined, 0 : number
 //CHECK-NEXT:  %1 = ReturnInst %0
 //CHECK-NEXT:function_end
+
+function test_generator() {
+  function* gen(x) { return x; }
+  return gen(1);
+}
+
+//CHECK-LABEL:function test_generator() : object
+//CHECK-NEXT:frame = []
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = CreateFunctionInst %gen() : object
+//CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined, 1 : number
+//CHECK-NEXT:  %2 = ReturnInst %1 : object
+//CHECK-NEXT:function_end
+
+//CHECK-LABEL:function gen() : object
+//CHECK-NEXT:frame = []
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_0_gen()
+//CHECK-NEXT:  %1 = ReturnInst %0 : object
+//CHECK-NEXT:function_end
+
+//CHECK-LABEL:function ?anon_0_gen(x)
+//CHECK-NEXT:frame = []
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = StartGeneratorInst
+//CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn_prologue
+//CHECK-NEXT:  %2 = ResumeGeneratorInst %1
+//CHECK-NEXT:  %3 = LoadStackInst %1
+//CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+//CHECK-NEXT:%BB2:
+//CHECK-NEXT:  %5 = ReturnInst %x
+//CHECK-NEXT:%BB1:
+//CHECK-NEXT:  %6 = ReturnInst %2
+//CHECK-NEXT:function_end
+
+function test_async() {
+  async function asyncFn(x) { return x; }
+  return asyncFn(1);
+}
+
+//CHECK-LABEL:function test_async()
+//CHECK-NEXT:frame = []
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = CreateFunctionInst %asyncFn()
+//CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined, 1 : number
+//CHECK-NEXT:  %2 = ReturnInst %1
+//CHECK-NEXT:function_end
+
+//CHECK-LABEL:function asyncFn()
+//CHECK-NEXT:frame = []
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = CreateArgumentsInst
+//CHECK-NEXT:  %1 = CreateFunctionInst %?anon_0_asyncFn() : object
+//CHECK-NEXT:  %2 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
+//CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined, %1 : closure, %this, %0 : object
+//CHECK-NEXT:  %4 = ReturnInst %3
+//CHECK-NEXT:function_end
+
+//CHECK-LABEL:function ?anon_0_asyncFn() : object
+//CHECK-NEXT:frame = []
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_0_?anon_0_asyncFn()
+//CHECK-NEXT:  %1 = ReturnInst %0 : object
+//CHECK-NEXT:function_end
+
+//CHECK-LABEL:function ?anon_0_?anon_0_asyncFn(x)
+//CHECK-NEXT:frame = []
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = StartGeneratorInst
+//CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn_prologue
+//CHECK-NEXT:  %2 = ResumeGeneratorInst %1
+//CHECK-NEXT:  %3 = LoadStackInst %1
+//CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+//CHECK-NEXT:%BB2:
+//CHECK-NEXT:  %5 = ReturnInst %x
+//CHECK-NEXT:%BB1:
+//CHECK-NEXT:  %6 = ReturnInst %2
+//CHECK-NEXT:function_end

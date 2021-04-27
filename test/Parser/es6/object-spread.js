@@ -28,7 +28,9 @@
 //CHECK-NEXT:                 "name": "a"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "kind": "init",
-//CHECK-NEXT:               "computed": false
+//CHECK-NEXT:               "computed": false,
+//CHECK-NEXT:               "method": false,
+//CHECK-NEXT:               "shorthand": true
 //CHECK-NEXT:             },
 //CHECK-NEXT:             {
 //CHECK-NEXT:               "type": "SpreadElement",
@@ -58,7 +60,9 @@
 //CHECK-NEXT:                 "name": "b"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "kind": "init",
-//CHECK-NEXT:               "computed": false
+//CHECK-NEXT:               "computed": false,
+//CHECK-NEXT:               "method": false,
+//CHECK-NEXT:               "shorthand": true
 //CHECK-NEXT:             },
 //CHECK-NEXT:             {
 //CHECK-NEXT:               "type": "SpreadElement",

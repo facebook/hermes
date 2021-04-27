@@ -1,12 +1,10 @@
 ---
 id: optimizer
-title: Optimizer
+title: Design of the Optimizer
 ---
 
-
-## Design of the Hermes Optimizer
-
 ### Introduction
+
 This document describes the high-level design of the Hermes optimizer. The
 Hermes optimizer transforms the Hermes IR into a more efficient representation
 that preserves the original semantics of the program. The IR.md document describes
@@ -83,4 +81,3 @@ This section describes a few key concepts and ideas:
     optimizer transforms loop indices into non-consecutive accesses that fit with
     the hardware instruction set. Another example is loop versioning where the body
     of the loop is duplicated and versioned multiple times .
-

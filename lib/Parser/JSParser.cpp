@@ -40,8 +40,16 @@ llvh::ArrayRef<StoredComment> JSParser::getStoredComments() const {
   return impl_->getStoredComments();
 }
 
+llvh::ArrayRef<StoredToken> JSParser::getStoredTokens() const {
+  return impl_->getStoredTokens();
+}
+
 void JSParser::setStoreComments(bool storeComments) {
   impl_->setStoreComments(storeComments);
+}
+
+void JSParser::setStoreTokens(bool storeTokens) {
+  impl_->setStoreTokens(storeTokens);
 }
 
 bool JSParser::getUseStaticBuiltin() const {
@@ -66,8 +74,10 @@ bool JSParser::preParseBuffer(
 
 llvh::Optional<ESTree::NodePtr> JSParser::parseLazyFunction(
     ESTree::NodeKind kind,
+    bool paramYield,
+    bool paramAwait,
     SMLoc start) {
-  return impl_->parseLazyFunction(kind, start);
+  return impl_->parseLazyFunction(kind, paramYield, paramAwait, start);
 }
 
 } // namespace parser

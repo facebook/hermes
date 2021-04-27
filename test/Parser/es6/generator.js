@@ -49,6 +49,87 @@ function *foo() {
 // CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     },
 
+(function *() { yield; if (true) {} });
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "FunctionExpression",
+// CHECK-NEXT:         "id": null,
+// CHECK-NEXT:         "params": [],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "BlockStatement",
+// CHECK-NEXT:           "body": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "ExpressionStatement",
+// CHECK-NEXT:               "expression": {
+// CHECK-NEXT:                 "type": "YieldExpression",
+// CHECK-NEXT:                 "argument": null,
+// CHECK-NEXT:                 "delegate": false
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "directive": null
+// CHECK-NEXT:             },
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "IfStatement",
+// CHECK-NEXT:               "test": {
+// CHECK-NEXT:                 "type": "BooleanLiteral",
+// CHECK-NEXT:                 "value": true
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "consequent": {
+// CHECK-NEXT:                 "type": "BlockStatement",
+// CHECK-NEXT:                 "body": []
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "alternate": null
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ]
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "generator": true,
+// CHECK-NEXT:         "async": false
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+(function *() {
+  yield
+  if (true) {}
+});
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "FunctionExpression",
+// CHECK-NEXT:         "id": null,
+// CHECK-NEXT:         "params": [],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "BlockStatement",
+// CHECK-NEXT:           "body": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "ExpressionStatement",
+// CHECK-NEXT:               "expression": {
+// CHECK-NEXT:                 "type": "YieldExpression",
+// CHECK-NEXT:                 "argument": null,
+// CHECK-NEXT:                 "delegate": false
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "directive": null
+// CHECK-NEXT:             },
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "IfStatement",
+// CHECK-NEXT:               "test": {
+// CHECK-NEXT:                 "type": "BooleanLiteral",
+// CHECK-NEXT:                 "value": true
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "consequent": {
+// CHECK-NEXT:                 "type": "BlockStatement",
+// CHECK-NEXT:                 "body": []
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "alternate": null
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ]
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "generator": true,
+// CHECK-NEXT:         "async": false
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
 (function *() {
   yield;
   yield

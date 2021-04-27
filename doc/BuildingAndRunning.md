@@ -1,13 +1,13 @@
 ---
 id: building-and-running
-title: Building and Running Hermes
+title: Building and Running
 ---
 
 This document describes how to build and run Hermes as a standalone compiler and VM. To use Hermes in the context of a React Native app, see the [React Native](https://reactnative.dev/docs/getting-started) documentation.
 
 ## Dependencies
 
-Hermes is a C++11 project. clang, gcc, and Visual C++ are supported. Hermes also requires cmake, git, ICU, Python, and zip. It builds with [CMake](https://cmake.org) and [ninja](https://ninja-build.org).
+Hermes is a C++14 project. clang, gcc, and Visual C++ are supported. Hermes also requires cmake, git, ICU, Python, and zip. It builds with [CMake](https://cmake.org) and [ninja](https://ninja-build.org).
 
 The Hermes REPL will also use libreadline, if available.
 
@@ -51,7 +51,7 @@ The above instructions create an unoptimized debug build. The `--distribute` fla
 The Windows build depends on which particular combination of GitBash/Cygwin/WSL and Visual Studio is used.
 
     git -c core.autocrlf=false clone https://github.com/facebook/hermes.git
-    hermes/utils/build/configure.py --build-system='Visual Studio 16 2019' --cmake-flags='-A x64' --distribute
+    hermes/utils/build/configure.py --build-system='Visual Studio 16 2019' --distribute
     cd build_release && MSBuild.exe ALL_BUILD.vcxproj /p:Configuration=Release
 
 ## Running Hermes

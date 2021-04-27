@@ -18,6 +18,7 @@ namespace vm {
 class GCPointerBase;
 class WeakRefBase;
 class WeakRootBase;
+class GCCell;
 
 /// SlotAcceptor is an interface to be implemented by acceptors of objects in
 /// the heap.
@@ -29,68 +30,17 @@ class WeakRootBase;
 /// pointer.  For example, if the pointer is in compressed form.)
 /// This is used by a visitor, see \c SlotVisitor.
 struct SlotAcceptor {
-  virtual ~SlotAcceptor() {}
-  virtual void accept(void *&ptr) = 0;
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  virtual void accept(BasedPointer &ptr) = 0;
-#endif
+  virtual ~SlotAcceptor() = default;
   virtual void accept(GCPointerBase &ptr) = 0;
-  virtual void accept(HermesValue &hv) = 0;
-  virtual void accept(SymbolID sym) = 0;
-
-  /// When we want to call an acceptor on "raw" root pointers of
-  /// some JSObject subtype T, this method does the necessary
-  /// reinterpret_cast to allow us to call the "void *&" accept
-  /// method above.
-  template <typename T>
-  void acceptPtr(T *&ptr) {
-    accept(reinterpret_cast<void *&>(ptr));
-  }
+  virtual void accept(GCHermesValue &hv) = 0;
+  virtual void accept(GCSymbolID sym) = 0;
 };
 
 /// Weak references are typically slower to find, and need to be done separately
 /// from normal references.
 struct WeakRefAcceptor {
-  virtual ~WeakRefAcceptor() {}
+  virtual ~WeakRefAcceptor() = default;
   virtual void accept(WeakRefBase &wr) = 0;
-};
-
-struct SlotAcceptorWithNames : public SlotAcceptor {
-  virtual ~SlotAcceptorWithNames() {}
-
-  using SlotAcceptor::acceptPtr;
-
-  void accept(void *&ptr) override final {
-    accept(ptr, nullptr);
-  }
-  virtual void accept(void *&ptr, const char *name) = 0;
-
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  void accept(BasedPointer &ptr) override final {
-    accept(ptr, nullptr);
-  }
-  virtual void accept(BasedPointer &ptr, const char *name) = 0;
-#endif
-
-  void accept(GCPointerBase &ptr) override final {
-    accept(ptr, nullptr);
-  }
-  virtual void accept(GCPointerBase &ptr, const char *name) = 0;
-
-  void accept(HermesValue &hv) override final {
-    accept(hv, nullptr);
-  }
-  virtual void accept(HermesValue &hv, const char *name) = 0;
-
-  void accept(SymbolID sym) override final {
-    accept(sym, nullptr);
-  }
-  virtual void accept(SymbolID sym, const char *name) = 0;
-
-  template <typename T>
-  void acceptPtr(T *&ptr, const char *name) {
-    accept(reinterpret_cast<void *&>(ptr), name);
-  }
 };
 
 struct RootSectionAcceptor {
@@ -108,9 +58,70 @@ struct RootSectionAcceptor {
   virtual void endRootSection() {}
 };
 
-struct RootAcceptor : public SlotAcceptorWithNames, RootSectionAcceptor {};
+struct RootAcceptor : public RootSectionAcceptor {
+  virtual void accept(GCCell *&ptr) = 0;
+  virtual void accept(PinnedHermesValue &hv) = 0;
+  virtual void accept(RootSymbolID sym) = 0;
+
+  /// When we want to call an acceptor on "raw" root pointers of
+  /// some JSObject subtype T, this method does the necessary
+  /// reinterpret_cast to allow us to call the "GCCell *&" accept
+  /// method above.
+  template <typename T>
+  void acceptPtr(T *&ptr) {
+    accept(reinterpret_cast<GCCell *&>(ptr));
+  }
+};
+
+struct RootAndSlotAcceptor : public RootAcceptor, public SlotAcceptor {
+  using RootAcceptor::accept;
+  using SlotAcceptor::accept;
+};
+
+struct RootAndSlotAcceptorWithNames : public RootAndSlotAcceptor {
+  void accept(GCCell *&ptr) final {
+    accept(ptr, nullptr);
+  }
+  virtual void accept(GCCell *&ptr, const char *name) = 0;
+
+  void accept(PinnedHermesValue &hv) final {
+    accept(hv, nullptr);
+  }
+  virtual void accept(PinnedHermesValue &hv, const char *name) = 0;
+
+  void accept(RootSymbolID sym) final {
+    accept(sym, nullptr);
+  }
+  virtual void accept(RootSymbolID sym, const char *name) = 0;
+
+  using RootAndSlotAcceptor::acceptPtr;
+  template <typename T>
+  void acceptPtr(T *&ptr, const char *name) {
+    accept(reinterpret_cast<GCCell *&>(ptr), name);
+  }
+
+  void accept(GCPointerBase &ptr) final {
+    accept(ptr, nullptr);
+  }
+  virtual void accept(GCPointerBase &ptr, const char *name) = 0;
+
+  void accept(GCHermesValue &hv) final {
+    accept(hv, nullptr);
+  }
+  virtual void accept(GCHermesValue &hv, const char *name) = 0;
+
+  void accept(GCSymbolID sym) final {
+    accept(sym, nullptr);
+  }
+  virtual void accept(GCSymbolID sym, const char *name) = 0;
+
+  /// Initiate the callback if this acceptor is part of heap snapshots.
+  virtual void provideSnapshot(
+      const std::function<void(HeapSnapshot &)> &func) {}
+};
+
 struct WeakRootAcceptor : public WeakRefAcceptor, RootSectionAcceptor {
-  virtual ~WeakRootAcceptor() = default;
+  ~WeakRootAcceptor() override = default;
 
   /// NOTE: This is called acceptWeak in order to avoid clashing with accept
   /// from SlotAcceptor, for classes that inherit from both.
@@ -118,35 +129,37 @@ struct WeakRootAcceptor : public WeakRefAcceptor, RootSectionAcceptor {
 };
 
 template <typename Acceptor>
-struct DroppingAcceptor final : public RootAcceptor {
+struct DroppingAcceptor final : public RootAndSlotAcceptorWithNames {
   static_assert(
-      std::is_base_of<SlotAcceptor, Acceptor>::value,
-      "Can only use this with a subclass of SlotAcceptor");
+      std::is_base_of<RootAndSlotAcceptor, Acceptor>::value,
+      "Can only use this with a subclass of RootAndSlotAcceptor");
   Acceptor &acceptor;
 
-  DroppingAcceptor(Acceptor &acceptor) : acceptor(acceptor) {}
+  explicit DroppingAcceptor(Acceptor &acceptor) : acceptor(acceptor) {}
 
-  using SlotAcceptorWithNames::accept;
+  using RootAndSlotAcceptorWithNames::accept;
 
-  void accept(void *&ptr, const char *) override {
+  void accept(GCCell *&ptr, const char *) override {
     acceptor.accept(ptr);
   }
-
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  void accept(BasedPointer &ptr, const char *) override {
-    acceptor.accept(ptr);
-  }
-#endif
 
   void accept(GCPointerBase &ptr, const char *) override {
     acceptor.accept(ptr);
   }
 
-  void accept(HermesValue &hv, const char *) override {
+  void accept(PinnedHermesValue &hv, const char *) override {
     acceptor.accept(hv);
   }
 
-  void accept(SymbolID sym, const char *) override {
+  void accept(GCHermesValue &hv, const char *) override {
+    acceptor.accept(hv);
+  }
+
+  void accept(RootSymbolID sym, const char *) override {
+    acceptor.accept(sym);
+  }
+
+  void accept(GCSymbolID sym, const char *) override {
     acceptor.accept(sym);
   }
 };

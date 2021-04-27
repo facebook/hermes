@@ -12,7 +12,6 @@
 #include "hermes/Support/OptValue.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/HermesValue.h"
-#include "hermes/VM/SymbolID.h"
 
 #include <cassert>
 #include <cstdint>
@@ -22,6 +21,9 @@
 
 namespace hermes {
 namespace vm {
+
+// Forward declare to avoid pulling in a runtime dependency.
+class GCSymbolID;
 
 /// Metadata is a the information about a class's pointers locations.
 /// This is used by the Garbage collector to know where potential pointers
@@ -102,25 +104,92 @@ struct Metadata final {
     void addField(const GCHermesValue *fieldLocation);
     void addField(const char *name, const GCHermesValue *fieldLocation);
     /// Adds a \c Symbol field.
-    void addField(const SymbolID *fieldLocation);
-    void addField(const char *name, const SymbolID *fieldLocation);
+    void addField(const GCSymbolID *fieldLocation);
+    void addField(const char *name, const GCSymbolID *fieldLocation);
 
     /// @}
 
     /// Adds an array to this class's metadata.
     /// \p startLocation The location of the first element in the array.
     /// \p lengthLocation The location of the size of the array.
-    /// The \c ArrayType parameter denotes which type of elements are in the
-    /// array.
-    template <ArrayData::ArrayType type>
-    inline void addArray(
-        const void *startLocation,
+    void addArray(
+        const GCHermesValue *startLocation,
         const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
-        std::size_t stride);
+        std::size_t stride) {
+      addArray(
+          nullptr,
+          ArrayData::ArrayType::HermesValue,
+          startLocation,
+          lengthLocation,
+          stride);
+    }
 
-    template <ArrayData::ArrayType type>
-    inline void addArray(
+    void addArray(
         const char *name,
+        const GCHermesValue *startLocation,
+        const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
+        std::size_t stride) {
+      addArray(
+          name,
+          ArrayData::ArrayType::HermesValue,
+          startLocation,
+          lengthLocation,
+          stride);
+    }
+
+    void addArray(
+        const GCPointerBase *startLocation,
+        const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
+        std::size_t stride) {
+      addArray(
+          nullptr,
+          ArrayData::ArrayType::Pointer,
+          startLocation,
+          lengthLocation,
+          stride);
+    }
+
+    void addArray(
+        const char *name,
+        const GCPointerBase *startLocation,
+        const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
+        std::size_t stride) {
+      addArray(
+          name,
+          ArrayData::ArrayType::Pointer,
+          startLocation,
+          lengthLocation,
+          stride);
+    }
+
+    void addArray(
+        const GCSymbolID *startLocation,
+        const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
+        std::size_t stride) {
+      addArray(
+          nullptr,
+          ArrayData::ArrayType::Symbol,
+          startLocation,
+          lengthLocation,
+          stride);
+    }
+
+    void addArray(
+        const char *name,
+        const GCSymbolID *startLocation,
+        const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
+        std::size_t stride) {
+      addArray(
+          name,
+          ArrayData::ArrayType::Symbol,
+          startLocation,
+          lengthLocation,
+          stride);
+    }
+
+    void addArray(
+        const char *name,
+        ArrayData::ArrayType type,
         const void *startLocation,
         const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
         std::size_t stride);
@@ -197,32 +266,6 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &os, Metadata::ArrayData array);
 llvh::raw_ostream &operator<<(
     llvh::raw_ostream &os,
     Metadata::ArrayData::ArrayType arraytype);
-
-/// @}
-
-/// @name Inline implementations
-/// @{
-
-template <Metadata::ArrayData::ArrayType type>
-inline void Metadata::Builder::addArray(
-    const void *startLocation,
-    const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
-    std::size_t stride) {
-  addArray<type>(nullptr, startLocation, lengthLocation, stride);
-}
-
-template <Metadata::ArrayData::ArrayType type>
-inline void Metadata::Builder::addArray(
-    const char *name,
-    const void *startLocation,
-    const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
-    std::size_t stride) {
-  array_ = ArrayData(
-      type,
-      reinterpret_cast<const char *>(startLocation) - base_,
-      reinterpret_cast<const char *>(lengthLocation) - base_,
-      stride);
-}
 
 /// @}
 

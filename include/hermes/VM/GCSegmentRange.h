@@ -19,7 +19,7 @@
 namespace hermes {
 namespace vm {
 
-class AlignedHeapSegment;
+class GenGCHeapSegment;
 
 /// An interface representing a sequence of segments, and a collection of
 /// implementations and factory functions for combining and manipulating them.
@@ -27,7 +27,7 @@ struct GCSegmentRange {
   using Ptr = std::unique_ptr<GCSegmentRange>;
 
   /// Factory function for creating a range from an iterator ranging over a
-  /// sequence of AlignedHeapSegments. Provided for convenenience as it offers
+  /// sequence of GenGCHeapSegments. Provided for convenenience as it offers
   /// better template deduction compared to the raw constructor invocation.
   ///
   /// \p begin The iterator pointing at the beginning of the sequence.
@@ -36,10 +36,10 @@ struct GCSegmentRange {
   template <typename I>
   static inline GCSegmentRange::Ptr fromConsumable(I begin, I end);
 
-  /// Factory function for creating a range over a single \c AlignedHeapSegment.
+  /// Factory function for creating a range over a single \c GenGCHeapSegment.
   ///
   /// \p seg Pointer to the segment the range will refer to.
-  static inline GCSegmentRange::Ptr singleton(AlignedHeapSegment *seg);
+  static inline GCSegmentRange::Ptr singleton(GenGCHeapSegment *seg);
 
   /// Factory function for creating a fused range from any other type conforming
   /// to the interface described in the documentation of \c GCSegmentRange.
@@ -77,7 +77,7 @@ struct GCSegmentRange {
   /// return value, and certain implementations may experience undefined
   /// behaviour if the underlying storage is mutated whilst a range is being
   /// consumed.
-  virtual AlignedHeapSegment *next() = 0;
+  virtual GenGCHeapSegment *next() = 0;
 
  private:
   template <typename I>
@@ -88,22 +88,22 @@ struct GCSegmentRange {
   struct Concat;
 };
 
-/// A range backed by a \c ConsumableRange of AlignedHeapSegments.
+/// A range backed by a \c ConsumableRange of GenGCHeapSegments.
 ///
 /// \p I A type representing an iterator whose value_type is expected to be
-///     AlignedHeapSegment.
+///     GenGCHeapSegment.
 template <typename I>
 struct GCSegmentRange::Consumable : public GCSegmentRange {
   /// Constructs a new range.
   ///
-  /// \p consumable The underlying ConsumableRange of AlignedHeapSegments.
+  /// \p consumable The underlying ConsumableRange of GenGCHeapSegments.
   inline Consumable(ConsumableRange<I> consumable);
 
   /// See docs for \c GCSegmentRange.
   ///
   /// This range will exhibit undefined behaviour if the iterators backing its
   /// underlying iterator are invalidated.
-  inline AlignedHeapSegment *next() override;
+  inline GenGCHeapSegment *next() override;
 
  private:
   ConsumableRange<I> consumable_;
@@ -118,7 +118,7 @@ struct GCSegmentRange::Fused : public GCSegmentRange {
 
   /// If calls to \c delegate_.next() have all succeeded so far, forwards the
   /// request for a segment to the delegate, otherwise fails immediately.
-  inline AlignedHeapSegment *next() override;
+  inline GenGCHeapSegment *next() override;
 
  private:
   bool hasFailed_{false};
@@ -141,7 +141,7 @@ struct GCSegmentRange::Concat : public GCSegmentRange {
   /// R0, R1, ..., RN is the  next segment of the first range in the sequence
   /// RI, R(I + 1), ..., RN to return successfully from a call to \c next, or
   /// \c nullptr if all ranges were unsuccessful in producing a next segment.
-  inline AlignedHeapSegment *next() override;
+  inline GenGCHeapSegment *next() override;
 
  private:
   Spine ranges_;
@@ -153,14 +153,14 @@ inline GCSegmentRange::Consumable<I>::Consumable(ConsumableRange<I> consumable)
     : consumable_{std::move(consumable)} {}
 
 template <typename I>
-inline AlignedHeapSegment *GCSegmentRange::Consumable<I>::next() {
+inline GenGCHeapSegment *GCSegmentRange::Consumable<I>::next() {
   return consumable_.hasNext() ? &consumable_.next() : nullptr;
 }
 
 inline GCSegmentRange::Fused::Fused(GCSegmentRange::Ptr delegate)
     : delegate_{std::move(delegate)} {}
 
-inline AlignedHeapSegment *GCSegmentRange::Fused::next() {
+inline GenGCHeapSegment *GCSegmentRange::Fused::next() {
   if (LLVM_UNLIKELY(hasFailed_))
     return nullptr;
 
@@ -173,9 +173,9 @@ inline AlignedHeapSegment *GCSegmentRange::Fused::next() {
 inline GCSegmentRange::Concat::Concat(Spine ranges)
     : ranges_{std::move(ranges)}, cursor_{ranges_.begin()} {}
 
-inline AlignedHeapSegment *GCSegmentRange::Concat::next() {
+inline GenGCHeapSegment *GCSegmentRange::Concat::next() {
   while (LLVM_LIKELY(cursor_ != ranges_.end())) {
-    if (AlignedHeapSegment *res = (*cursor_)->next()) {
+    if (GenGCHeapSegment *res = (*cursor_)->next()) {
       return res;
     } else {
       cursor_++;

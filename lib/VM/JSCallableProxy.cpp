@@ -60,25 +60,23 @@ void CallableProxySerialize(Serializer &s, const GCCell *cell) {
 
 void CallableProxyDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::CallableProxyKind && "Expected CallableProxy");
-  void *mem = d.getRuntime()->alloc(cellSize<JSCallableProxy>());
-  auto *cell = new (mem) JSCallableProxy(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSCallableProxy>(d);
   d.endObject(cell);
 }
 #endif
 
 PseudoHandle<JSCallableProxy> JSCallableProxy::create(Runtime *runtime) {
-  JSObjectAlloc<JSCallableProxy> mem{runtime};
-  JSCallableProxy *cproxy = new (mem) JSCallableProxy(
+  auto *cproxy = runtime->makeAFixed<JSCallableProxy>(
       runtime,
-      runtime->objectPrototypeRawPtr,
-      runtime->getHiddenClassForPrototypeRaw(
+      Handle<JSObject>::vmcast(&runtime->objectPrototype),
+      runtime->getHiddenClassForPrototype(
           runtime->objectPrototypeRawPtr,
           JSObject::numOverlapSlots<JSCallableProxy>() +
               ANONYMOUS_PROPERTY_SLOTS));
 
   cproxy->flags_.proxyObject = true;
 
-  return mem.initToPseudoHandle(cproxy);
+  return JSObjectInit::initToPseudoHandle(runtime, cproxy);
 }
 
 CallResult<HermesValue> JSCallableProxy::create(
@@ -105,6 +103,12 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
   StackFramePtr callerFrame = runtime->getCurrentFrame();
   auto selfHandle =
       Handle<JSCallableProxy>::vmcast(&callerFrame.getCalleeClosureOrCBRef());
+  // detail::slots() will always return the slots_ field here, but
+  // this isn't a member, so it can't see it.  It doesn't seem to be
+  // worth tweaking the abstractions to avoid the small overhead in
+  // this case.
+  Handle<JSObject> target =
+      runtime->makeHandle(detail::slots(*selfHandle).target);
   Predefined::Str trapName = callerFrame->isConstructorCall()
       ? Predefined::construct
       : Predefined::apply;
@@ -113,12 +117,6 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
   if (trapRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  // detail::slots() will always return the slots_ field here, but
-  // this isn't a member, so it can't see it.  It doesn't seem to be
-  // worth tweaking the abstractions to avoid the small overhead in
-  // this case.
-  Handle<JSObject> target =
-      runtime->makeHandle(detail::slots(*selfHandle).target);
   // 6. If trap is undefined, then
   if (!*trapRes) {
     //   a. Return ? Call(target, thisArgument, argumentsList).
@@ -128,11 +126,12 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
     HermesValue newTarget = callerFrame->isConstructorCall()
         ? callerFrame.getNewTargetRef()
         : HermesValue::encodeUndefinedValue();
-    ScopedNativeCallFrame newFrame{runtime,
-                                   callerFrame.getArgCount(),
-                                   target.getHermesValue(),
-                                   newTarget,
-                                   callerFrame.getThisArgRef()};
+    ScopedNativeCallFrame newFrame{
+        runtime,
+        callerFrame.getArgCount(),
+        target.getHermesValue(),
+        newTarget,
+        callerFrame.getThisArgRef()};
     if (LLVM_UNLIKELY(newFrame.overflowed()))
       return runtime->raiseStackOverflow(
           Runtime::StackOverflowKind::NativeStack);

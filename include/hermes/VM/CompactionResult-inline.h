@@ -8,10 +8,10 @@
 #ifndef HERMES_VM_COMPACTIONRESULT_INLINE_H
 #define HERMES_VM_COMPACTIONRESULT_INLINE_H
 
-#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/CompactionResult.h"
 #include "hermes/VM/GCGeneration.h"
 #include "hermes/VM/GCSegmentRange-inline.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 
 namespace hermes {
 namespace vm {
@@ -26,7 +26,7 @@ CompactionResult::CompactionResult(
   usedChunks_.emplace_back(seg);
 }
 
-inline CompactionResult::Chunk::Chunk(AlignedHeapSegment *segment)
+inline CompactionResult::Chunk::Chunk(GenGCHeapSegment *segment)
     : level_(segment->start()),
       segment_(segment),
       generation_(segment->generation_) {
@@ -41,7 +41,7 @@ inline CompactionResult::Allocator CompactionResult::Chunk::allocator() {
 
 template <AdviseUnused MU>
 inline void CompactionResult::Chunk::recordLevel(
-    AlignedHeapSegment *segment) const {
+    GenGCHeapSegment *segment) const {
   assert(segment->generation_ == generation_ && "Owning generation mismatch.");
   segment->setLevel<MU>(level_);
 }

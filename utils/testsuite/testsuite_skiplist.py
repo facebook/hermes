@@ -175,7 +175,6 @@ SKIP_LIST = [
     "test262/test/language/statements/labeled/let-identifier-with-newline.js",
     "test262/test/language/statements/while/let-identifier-with-newline.js",
     "test262/test/language/statements/with/let-identifier-with-newline.js",
-    "test262/test/built-ins/AsyncFunction/",
     "test262/test/built-ins/Function/prototype/toString/",
     "test262/test/built-ins/Promise/",
     "test262/test/language/block-scope/",
@@ -184,7 +183,6 @@ SKIP_LIST = [
     "test262/test/language/expressions/arrow-function/",
     "test262/test/language/expressions/assignment/destructuring/",
     "test262/test/language/expressions/async-arrow-function/",
-    "test262/test/language/expressions/async-function/",
     "test262/test/language/expressions/async-generator/",
     "test262/test/language/expressions/await/",
     "test262/test/language/expressions/class/",
@@ -195,7 +193,6 @@ SKIP_LIST = [
     "test262/test/language/expressions/super/",
     "test262/test/language/module-code/",
     "test262/test/language/rest-parameters/",
-    "test262/test/language/statements/async-function/",
     "test262/test/language/statements/async-generator/",
     "test262/test/language/statements/class/",
     "test262/test/language/statements/let/",
@@ -298,6 +295,11 @@ SKIP_LIST = [
     "mjsunit/harmony/async-debug-caught-exception-cases1.js",
     "mjsunit/harmony/async-debug-caught-exception-cases2.js",
     "mjsunit/harmony/async-debug-caught-exception-cases3.js",
+    # async function missing errors: TODO(T80014951)
+    "test262/test/language/statements/async-function/escaped-async.js",
+    "test262/test/language/statements/async-function/early-errors-declaration-formals-body-duplicate.js",
+    "test262/test/language/expressions/async-function/escaped-async.js",
+    "test262/test/language/expressions/async-function/early-errors-expression-formals-body-duplicate.js",
     # let/const (block scope)
     "esprima/test_fixtures/declaration/let/",
     "esprima/test_fixtures/declaration/const/",
@@ -557,12 +559,6 @@ SKIP_LIST = [
     "test262/test/built-ins/Array/prototype/reverse/length-exceeding-integer-limit-with-proxy.js",
     "test262/test/built-ins/Array/prototype/slice/length-exceeding-integer-limit-proxied-array.js",
     "test262/test/built-ins/Array/prototype/unshift/length-near-integer-limit.js",
-    # Very slow tests on some builds of Hermes. Handle-SAN, ASAN, and MallocGC
-    # make these very slow.
-    # TODO(T60938585): Make these conditional on the choice of build.
-    "test262/test/built-ins/decodeURI/S15.1.3.1_A2.5_T1.js",
-    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A2.5_T1.js",
-    "test262/test/built-ins/RegExp/character-class-escape-non-whitespace.js",
     # default arguments
     "esprima/test_fixtures/expression/primary/object/migrated_0038.js",
     "mjsunit/es6/default-parameters-debug.js",
@@ -1496,8 +1492,6 @@ SKIP_LIST = [
     "esprima/test_fixtures/es2017/async/arrows/invalid-async-line-terminator3.js",
     "esprima/test_fixtures/es2017/async/arrows/invalid-async-line-terminator1.js",
     # super property
-    "esprima/test_fixtures/ES6/super-property/invalid_super_access.js",
-    "esprima/test_fixtures/ES6/super-property/invalid_super_id.js",
     "esprima/test_fixtures/ES6/binding-pattern/array-pattern/patterned-catch-dupe.js",
     "esprima/test_fixtures/ES6/super-property/invalid_super_not_inside_function.js",
     # object init
@@ -1521,10 +1515,20 @@ SKIP_LIST = [
     "esprima/test_fixtures/directive-prolog/migrated_0000.js",
     "esprima/test_fixtures/directive-prolog/migrated_0001.js",
     "esprima/test_fixtures/statement/with/",
+    # Hermes does not yet support HTML entities in JSX
+    "esprima/test_fixtures/JSX/attribute-entity-hex.js",
+    "esprima/test_fixtures/JSX/attribute-non-hex-entity.js",
+    "esprima/test_fixtures/JSX/attribute-entity-decimal.js",
+    "esprima/test_fixtures/JSX/attribute-non-numeric-entity.js",
+    "esprima/test_fixtures/JSX/attribute-entity.js",
+    "esprima/test_fixtures/JSX/attribute-multi-entities.js",
+    # Hermes does not support JSX elements in attributes
+    "esprima/test_fixtures/JSX/attribute-element.js",
+    # ESPrima strips `\n` from CRLF in multiline JSX text
+    "esprima/test_fixtures/JSX/multiline-crlf-text.js",
     # unsupported features
     "esprima/test_fixtures/ES2016/",
     "esprima/test_fixtures/es2018/",
-    "esprima/test_fixtures/JSX/",
     # not sure why they fail yet
     "esprima/test_fixtures/statement/iteration/migrated_0003.js",
     "esprima/test_fixtures/expression/unary/migrated_0005.js",
@@ -1558,7 +1562,66 @@ SKIP_LIST = [
     "esprima/test_fixtures/invalid-syntax/migrated_0041.source.js",
     "esprima/test_fixtures/expression/primary/literal/regular-expression/migrated_0006.source.js",
     ### Unsupported Esprima tests end ###
+    ### Failing Flow tests ###
+    # Legacy octal literals in string literals
+    "flow/types/string_literal_invalid/migrated_0000.js",
+    # JSX HTML entities
+    "flow/JSX/html_entity_at_start_of_child.js",
+    # Destructuring identifier validation
+    "flow/ES6/binding-pattern/object-pattern/yield-prop-alias-assignment-strict.js",
+    # flow compiler "options" which disable features
+    "flow/async_arrow_functions/with_type_parameters_types_disabled.js",
+    "flow/class_properties/migrated_0003.js",
+    "flow/class_properties/migrated_0008.js",
+    "flow/class_properties/migrated_0026.js",
+    "flow/nullish_coalescing/missing-plugin.js",
+    "flow/optional_chaining/missing-plugin.js",
+    "flow/typeapp_call/disabled_ambiguous_call.js",
+    "flow/typeapp_call/disabled_ambiguous_new.js",
+    "flow/typeapp_call/function_call_optional.js",
+    "flow/typeapp_call/method_call_optional2.js",
+    # Semantic validation
+    "flow/ES6/super-property/super-call-in-static-constructor.js",
+    "flow/class_properties/super-call-in-arrow.js",
+    "flow/enums/enum-duplicate-member-name.js",
+    "flow/enums/enum-invalid-member-name.js",
+    "flow/types/declare_module_exports_invalid/migrated_0001.js",
+    "flow/types/declare_module_invalid/migrated_0002.js",
+    "flow/types/parameter_defaults/migrated_0023.js",
+    "flow/uninitialized_const_bindings/migrated_0000.js",
+    "flow/uninitialized_const_bindings_invalid/migrated_0000.js",
+    "flow/this_param/class_constructor.js",
+    # Reserved type names
+    "flow/types/aliases/reserved_type.js",
+    "flow/types/annotations/static_is_reserved_param.js",
+    "flow/types/annotations/static_is_reserved_type.js",
+    "flow/types/annotations/underscore_is_reserved_elsewhere.js",
+    "flow/types/import_type_shorthand/migrated_0002.js",
+    "flow/types/import_type_shorthand/typeof_reserved_value.js",
+    "flow/types/import_types/default_reserved_value.js",
+    "flow/types/import_types/named_reserved_value.js",
+    "flow/types/import_types/typeof_named_reserved_type_alias.js",
+    "flow/types/interfaces/implements_reserved_type.js",
+    "flow/types/interfaces/implements_reserved_value.js",
+    "flow/types/interfaces/reserved_type.js",
+    "flow/types/interfaces/reserved_value.js",
+    "flow/types/invalid_keywords/migrated_0000.js",
+    "flow/types/invalid_keywords/migrated_0001.js",
+    "flow/types/opaque_aliases/invalid/reserved_type.js",
+    "flow/types/opaque_aliases/valid/reserved_value.js",
+    # Potentially invalid JSX that is inconsistent across implementations.
+    "flow/JSX/invalid_unpaired_gt.js",
+    "flow/JSX/invalid_unpaired_rcurly.js",
+    ### Failing Flow tests end ###
 ]
+
+
+# Tests that we want to skip only when testing lazy compilation.
+LAZY_SKIP_LIST = [
+    # Variable resolution in catch handlers.
+    "test262/test/language/statements/try/scope-catch-param-lex-close.js",
+]
+
 
 # This skiplist is specifically for tests that Hermes never intends to support,
 # and so should not be counted in totals for targeting 100% coverage.
@@ -1630,7 +1693,6 @@ PERMANENT_SKIP_LIST = [
     "test262/test/language/literals/string/legacy-non-octal-escape-sequence-strict.js",
     "test262/test/language/literals/string/legacy-octal-escape-sequence-prologue-strict.js",
     "test262/test/annexB/language/expressions/object/__proto__-duplicate-computed.js",
-    "test262/test/annexB/language/literals/numeric/non-octal-decimal-integer.js",
     "test262/test/annexB/language/literals/regexp/class-escape.js",
     "test262/test/language/function-code/block-decl-onlystrict.js",
     "test262/test/language/function-code/switch-case-decl-onlystrict.js",
@@ -1672,6 +1734,47 @@ PERMANENT_SKIP_LIST = [
     "mjsunit/wasm/",
     "mjsunit/es6/proxies-",
     "mjsunit/es6/proxies.js",
+    # Flow AST features.
+    "flow/bigint/",
+    "flow/comment_interning/",
+    "flow/decorators/",
+    "flow/types/annotations_in_comments/",
+    "flow/types/annotations_in_comments_invalid/",
+    "flow/types/bigint_literal/",
+    # Flow bug
+    "flow/JSX_invalid/migrated_0000.js",
+]
+
+HANDLESAN_SKIP_LIST = [
+    # Very slow tests on some builds of Hermes. Handle-SAN, ASAN, and MallocGC
+    # make these very slow.
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A2.5_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A2.5_T1.js",
+    "test262/test/built-ins/RegExp/character-class-escape-non-whitespace.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.11_T2.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.11_T1.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.12_T1.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.12_T3.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.12_T2.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.2_T1.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.2_T2.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A2.1_T1.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A2.4_T1.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.10_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.10_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.12_T3.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.12_T2.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.11_T2.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.11_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.12_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.2_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.2_T2.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A2.1_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A2.4_T1.js",
+    "test262/test/built-ins/encodeURI/S15.1.3.3_A2.3_T1.js",
+    "test262/test/built-ins/encodeURIComponent/S15.1.3.4_A2.3_T1.js",
+    "test262/test/built-ins/parseInt/S15.1.2.2_A8.js",
+    "test262/test/built-ins/parseFloat/S15.1.2.3_A6.js",
 ]
 
 UNSUPPORTED_FEATURES = [
@@ -1681,8 +1784,6 @@ UNSUPPORTED_FEATURES = [
     "Symbol.species",
     "Symbol.prototype.description",
     "Symbol.unscopables",
-    "async",
-    "async-functions",
     "async-iteration",
     "caller",
     "class",

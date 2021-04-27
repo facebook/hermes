@@ -45,9 +45,11 @@ class HermesRuntimeTestBase : public ::testing::Test {
 class HermesRuntimeTest : public HermesRuntimeTestBase {
  public:
   HermesRuntimeTest()
-      : HermesRuntimeTestBase(
-            ::hermes::vm::RuntimeConfig::Builder().withES6Proxy(true).build()) {
-  }
+      : HermesRuntimeTestBase(::hermes::vm::RuntimeConfig::Builder()
+                                  .withES6Proxy(true)
+                                  .withES6Promise(true)
+                                  .withES6Intl(true)
+                                  .build()) {}
 };
 
 using HermesRuntimeDeathTest = HermesRuntimeTest;
@@ -133,6 +135,32 @@ TEST_F(HermesRuntimeTest, PreparedJavaScriptBytecodeTest) {
   EXPECT_EQ(rt->global().getProperty(*rt, "q").getNumber(), 1);
   rt->evaluatePreparedJavaScript(prep);
   EXPECT_EQ(rt->global().getProperty(*rt, "q").getNumber(), 2);
+}
+
+TEST_F(HermesRuntimeTest, JumpTableBytecodeTest) {
+  std::string code = R"xyz(
+    (function(){
+var i = 0;
+    switch (i) {
+      case 0:
+        return 5;
+      case 1:
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+      case 7:
+      case 8:
+      case 9:
+    }
+})();
+)xyz";
+  std::string bytecode;
+  ASSERT_TRUE(hermes::compileJS(code, bytecode));
+  auto ret =
+      rt->evaluateJavaScript(std::make_unique<StringBuffer>(bytecode), "");
+  ASSERT_EQ(ret.asNumber(), 5.0);
 }
 
 TEST_F(HermesRuntimeTest, PreparedJavaScriptInvalidSourceThrows) {
@@ -466,6 +494,8 @@ class HermesRuntimeTestWithAllowFunctionToString
       : HermesRuntimeTestBase(
             ::hermes::vm::RuntimeConfig::Builder()
                 .withES6Proxy(true)
+                .withES6Promise(true)
+                .withES6Intl(true)
                 .withAllowFunctionToStringWithRuntimeSource(true)
                 .build()) {}
 };
@@ -480,6 +510,38 @@ TEST_F(HermesRuntimeTestWithAllowFunctionToString, WithAllowFunctionToString) {
   eval(fooLazyFuncDef.c_str());
   EXPECT_EQ(
       eval("fooLazy.toString()").getString(*rt).utf8(*rt), fooLazyFuncDef);
+}
+
+class HermesRuntimeTestWithDisableGenerator : public HermesRuntimeTestBase {
+ public:
+  HermesRuntimeTestWithDisableGenerator()
+      : HermesRuntimeTestBase(::hermes::vm::RuntimeConfig::Builder()
+                                  .withEnableGenerator(false)
+                                  .build()) {}
+};
+
+TEST_F(HermesRuntimeTestWithDisableGenerator, WithDisableGenerator) {
+  try {
+    rt->evaluateJavaScript(
+        std::make_unique<StringBuffer>("function* foo() {}"), "");
+    FAIL() << "Expected JSIException";
+  } catch (const facebook::jsi::JSIException &err) {
+  }
+
+  try {
+    rt->evaluateJavaScript(
+        std::make_unique<StringBuffer>("obj = {*foo() {}}"), "");
+    FAIL() << "Expected JSIException";
+  } catch (const facebook::jsi::JSIException &err) {
+  }
+
+  // async function depends on generator.
+  try {
+    rt->evaluateJavaScript(
+        std::make_unique<StringBuffer>("async function foo() {}"), "");
+    FAIL() << "Expected JSIException";
+  } catch (const facebook::jsi::JSIException &err) {
+  }
 }
 
 } // namespace

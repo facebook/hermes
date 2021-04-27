@@ -88,7 +88,7 @@ class FunctionContext {
   /// Pointer to the "outer" object this is associated with.
   ESTreeIRGen *const irGen_;
 
-  /// Semantic info of the funciton we are emitting.
+  /// Semantic info of the function we are emitting.
   sem::FunctionInfo *const semInfo_;
 
   /// The old value which we save and will restore on destruction.
@@ -393,6 +393,7 @@ class ESTreeIRGen {
   void doCJSModule(
       Function *topLevelFunction,
       sem::FunctionInfo *semInfo,
+      uint32_t segmentID,
       uint32_t id,
       llvh::StringRef filename);
 
@@ -566,9 +567,15 @@ class ESTreeIRGen {
   Value *genSequenceExpr(ESTree::SequenceExpressionNode *Sq);
   Value *genYieldExpr(ESTree::YieldExpressionNode *Y);
   Value *genYieldStarExpr(ESTree::YieldExpressionNode *Y);
+  Value *genAwaitExpr(ESTree::AwaitExpressionNode *A);
   Value *genUnaryExpression(ESTree::UnaryExpressionNode *U);
   Value *genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr);
   Value *genLogicalExpression(ESTree::LogicalExpressionNode *logical);
+
+  /// A helper function to unify the largely same IRGen logic of \c genYieldExpr
+  /// and \c genAwaitExpr.
+  /// \param value the value operand of the will-generate SaveAndYieldInst.
+  Value *genYieldOrAwaitExpr(Value *value);
 
   /// Generate IR for the logical expression \p logical and jump to the
   /// corresponding label depending on its value.
@@ -596,16 +603,20 @@ class ESTreeIRGen {
   /// with the template object and substitution expressions.
   Value *genTaggedTemplateExpr(ESTree::TaggedTemplateExpressionNode *Expr);
 
+  /// Whether or not a finally clause is needed in \c genResumeGenerator.
+  enum class GenFinally { No, Yes };
+
   /// Generate IR for handling resuming a suspended generator.
-  /// \param yield the corresponding yield to resume from, nullptr if this is
-  ///   the first resume and there is no yield.
+  /// \param genFinally whether or not a finally clause need to be generated.
+  ///   It's true when there is a corresponding yield/await to resume from. It's
+  ///   not if this is the first resume and there is no yield/await.
   /// \param isReturn the slot indicating whether the user requested a return.
   /// \param nextBB the next BasicBlock to run if the user did not request a
   ///   return.
   /// \param received if non-null, the stack location at which to store the
   ///   value received from the user as the arg to next(), throw(), or return().
   Value *genResumeGenerator(
-      ESTree::YieldExpressionNode *yield,
+      GenFinally genFinally,
       AllocStackInst *isReturn,
       BasicBlock *nextBB,
       AllocStackInst *received = nullptr);
@@ -712,6 +723,35 @@ class ESTreeIRGen {
   ///   object method).
   /// \return the outer Function.
   Function *genGeneratorFunction(
+      Identifier originalName,
+      Variable *lazyClosureAlias,
+      ESTree::FunctionLikeNode *functionNode);
+
+  /// Set the current scope to the lazy scope on \p function
+  /// and assigns the proper source range and information in order to
+  /// continue later in lazy compilation.
+  /// \param bodyBlock the body of the function, must be a lazy function body.
+  void setupLazyScope(
+      ESTree::FunctionLikeNode *functionNode,
+      Function *function,
+      ESTree::BlockStatementNode *bodyBlock);
+
+  /// Generate the IR for an async function: it desugars async function to a
+  /// generator function wrapped in a call to the JS builtin `spawnAsync` and
+  /// return the result. To visualize it,
+  ///   async function<name>(<args>)<body>
+  /// is effectively lowered to
+  ///   function<name>(){return spawnAsync(function*()<body>, this, arguments)}
+  /// \param originalName is the original non-unique name specified by the user
+  ///   or inferred according to the rules of ES6.
+  /// \param lazyClosureAlias an optional variable in the parent that will
+  ///   contain the closure being created. It is non-null only if an alias
+  ///   binding from  \c originalName to the variable was created and is
+  ///   available inside the closure. Used only by lazy compilation.
+  /// \param functionNode is the ESTree function node (declaration, expression,
+  ///   object method).
+  /// \return the async Function.
+  Function *genAsyncFunction(
       Identifier originalName,
       Variable *lazyClosureAlias,
       ESTree::FunctionLikeNode *functionNode);

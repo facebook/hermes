@@ -12,71 +12,74 @@
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HermesValue-inline.h"
-#include "hermes/VM/SlotAcceptorDefault-inline.h"
+#include "hermes/VM/RootAndSlotAcceptorDefault.h"
 
 namespace hermes {
 namespace vm {
 
 struct CompleteMarkState::FullMSCMarkTransitiveAcceptor final
-    : public SlotAcceptorDefault {
+    : public RootAndSlotAcceptorDefault {
+  GenGC &gc;
   CompleteMarkState *markState;
-  FullMSCMarkTransitiveAcceptor(GC &gc, CompleteMarkState *markState)
-      : SlotAcceptorDefault(gc), markState(markState) {}
+  FullMSCMarkTransitiveAcceptor(GenGC &gc, CompleteMarkState *markState)
+      : RootAndSlotAcceptorDefault(gc.getPointerBase()),
+        gc(gc),
+        markState(markState) {}
 
-  using SlotAcceptorDefault::accept;
+  using RootAndSlotAcceptorDefault::accept;
 
-  void accept(void *&ptr) override {
+  void accept(GCCell *&ptr) override {
     if (ptr) {
       assert(gc.dbgContains(ptr));
       markState->markTransitive(ptr);
     }
   }
-  void accept(HermesValue &hv) override {
+  void acceptHV(HermesValue &hv) override {
     if (hv.isPointer()) {
-      void *cell = hv.getPointer();
+      GCCell *cell = static_cast<GCCell *>(hv.getPointer());
       accept(cell);
     } else if (hv.isSymbol()) {
-      accept(hv.getSymbol());
+      acceptSym(hv.getSymbol());
     }
   }
-  void accept(SymbolID sym) override {
+  void acceptSym(SymbolID sym) override {
     gc.markSymbol(sym);
   }
 };
 
 /// This acceptor is used for updating pointers via forwarding pointers
 /// in mark/sweep/compact.
-struct FullMSCUpdateAcceptor final : public SlotAcceptorDefault,
+struct FullMSCUpdateAcceptor final : public RootAndSlotAcceptorDefault,
                                      public WeakRootAcceptorDefault {
-  using SlotAcceptorDefault::accept;
+  GenGC &gc;
+  using RootAndSlotAcceptorDefault::accept;
   using WeakRootAcceptorDefault::acceptWeak;
 
-  FullMSCUpdateAcceptor(GC &gc)
-      : SlotAcceptorDefault(gc), WeakRootAcceptorDefault(gc) {}
+  FullMSCUpdateAcceptor(GenGC &gc)
+      : RootAndSlotAcceptorDefault(gc.getPointerBase()),
+        WeakRootAcceptorDefault(gc.getPointerBase()),
+        gc(gc) {}
 
-  void accept(void *&ptr) override {
+  void accept(GCCell *&ptr) override {
     if (ptr) {
       assert(gc.dbgContains(ptr) && "ptr not in heap");
-      auto *cell = reinterpret_cast<GCCell *>(ptr);
-      ptr = cell->getForwardingPointer();
+      ptr = ptr->getForwardingPointer();
     }
   }
 
-  void acceptWeak(void *&ptr) override {
+  void acceptWeak(GCCell *&ptr) override {
     if (ptr == nullptr) {
       return;
     }
-    auto *cell = reinterpret_cast<GCCell *>(ptr);
     assert(gc.dbgContains(ptr) && "ptr not in heap");
     // Reset weak root if target GCCell is dead.
-    ptr = AlignedHeapSegment::getCellMarkBit(cell)
-        ? cell->getForwardingPointer()
-        : nullptr;
+    ptr = AlignedHeapSegment::getCellMarkBit(ptr) ? ptr->getForwardingPointer()
+                                                  : nullptr;
   }
 
-  void accept(HermesValue &hv) override {
+  void acceptHV(HermesValue &hv) override {
     if (hv.isPointer()) {
-      auto *ptr = reinterpret_cast<GCCell *>(hv.getPointer());
+      auto *ptr = static_cast<GCCell *>(hv.getPointer());
       if (ptr) {
         assert(gc.dbgContains(ptr) && "ptr not in heap");
         hv.setInGC(hv.updatePointer(ptr->getForwardingPointer()), &gc);

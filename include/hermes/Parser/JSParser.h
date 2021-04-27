@@ -61,7 +61,11 @@ class JSParser {
 
   llvh::ArrayRef<StoredComment> getStoredComments() const;
 
+  llvh::ArrayRef<StoredToken> getStoredTokens() const;
+
   void setStoreComments(bool storeComments);
+
+  void setStoreTokens(bool storeTokens);
 
   /// Return true if the parser detected 'use static builtin' directive from the
   /// source.
@@ -86,6 +90,8 @@ class JSParser {
   /// the first call.
   llvh::Optional<ESTree::NodePtr> parseLazyFunction(
       ESTree::NodeKind kind,
+      bool paramYield,
+      bool paramAwait,
       SMLoc start);
 
  private:

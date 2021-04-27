@@ -19,11 +19,11 @@ using namespace hermes::parser;
 namespace hermes {
 
 std::unique_ptr<SourceMap> SourceMapParser::parse(
-    llvh::MemoryBufferRef sourceMap) {
+    llvh::MemoryBufferRef sourceMap,
+    SourceErrorManager &sm) {
   std::shared_ptr<parser::JSLexer::Allocator> alloc =
       std::make_shared<parser::JSLexer::Allocator>();
   parser::JSONFactory factory(*alloc);
-  SourceErrorManager sm;
   parser::JSONParser jsonParser(factory, sourceMap, sm);
 
   llvh::Optional<JSONValue *> parsedMap = jsonParser.parse();
@@ -105,7 +105,7 @@ std::unique_ptr<SourceMap> SourceMapParser::parse(
     sm.error(genericLoc, "Failed to parse source map mappings");
     return nullptr;
   }
-  return llvh::make_unique<SourceMap>(
+  return std::make_unique<SourceMap>(
       sourceRoot,
       std::move(sources),
       std::move(lines),

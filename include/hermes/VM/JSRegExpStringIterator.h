@@ -23,7 +23,7 @@ class JSRegExpStringIterator : public JSObject {
       Metadata::Builder &mb);
 
  public:
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::RegExpStringIteratorKind;
@@ -41,7 +41,7 @@ class JSRegExpStringIterator : public JSObject {
       Handle<JSRegExpStringIterator> self,
       Runtime *runtime);
 
- private:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit JSRegExpStringIterator(Deserializer &d);
 
@@ -51,18 +51,19 @@ class JSRegExpStringIterator : public JSObject {
 
   JSRegExpStringIterator(
       Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
-      JSObject *iteratedRegExp,
-      StringPrimitive *iteratedString,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      Handle<JSObject> iteratedRegExp,
+      Handle<StringPrimitive> iteratedString,
       bool global,
       bool unicode)
-      : JSObject(runtime, &vt.base, parent, clazz),
-        iteratedRegExp_(runtime, iteratedRegExp, &runtime->getHeap()),
-        iteratedString_(runtime, iteratedString, &runtime->getHeap()),
+      : JSObject(runtime, &vt.base, *parent, *clazz),
+        iteratedRegExp_(runtime, *iteratedRegExp, &runtime->getHeap()),
+        iteratedString_(runtime, *iteratedString, &runtime->getHeap()),
         global_(global),
         unicode_(unicode) {}
 
+ private:
   /// [[IteratingRegExp]]
   // Note: despite what the name is suggesting, it's actually unsafe to use
   // JSRegExp here. See regExpConstructorInternal for more details.

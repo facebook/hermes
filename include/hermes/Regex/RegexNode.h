@@ -26,7 +26,6 @@
 
 #include "llvh/ADT/SmallVector.h"
 
-#include <deque>
 #include <string>
 #include <vector>
 
@@ -38,7 +37,7 @@ class Node;
 /// A NodeList is list of Nodes.
 using NodeList = std::vector<Node *>;
 /// A NodeHolder is list of owned Nodes. Note it is move-only.
-using NodeHolder = std::deque<std::unique_ptr<Node>>;
+using NodeHolder = std::vector<std::unique_ptr<Node>>;
 
 /// Base class representing some part of a compiled regular expression.
 /// A Node is part of an expression that knows how to match against a State.
@@ -63,8 +62,14 @@ class Node {
 
   /// Compile a list of nodes \p nodes to a bytecode stream \p bcs.
   static void compile(const NodeList &nodes, RegexBytecodeStream &bcs) {
-    for (const auto &node : nodes) {
-      node->emit(bcs);
+    std::vector<Node *> stack;
+    stack.insert(stack.end(), nodes.rbegin(), nodes.rend());
+    while (!stack.empty()) {
+      if (auto n = stack.back()->emitStep(bcs)) {
+        stack.insert(stack.end(), n->rbegin(), n->rend());
+      } else {
+        stack.pop_back();
+      }
     }
   }
 
@@ -121,17 +126,26 @@ class Node {
   /// of that list and then recurse.
   virtual void reverseChildren() {}
 
-  /// Emit this node into the bytecode compiler \p bcs. This is an overrideable
-  /// function - subclasses should override this to emit node-specific bytecode.
-  /// The default emits nothing, so that base Node is just a no-op.
-  virtual void emit(RegexBytecodeStream &bcs) const {}
+ private:
+  /// Emit part of this node into the bytecode compiler \p bcs. This function
+  /// will be called repeatedly until it returns a nullptr. This is an
+  /// overrideable function - subclasses should override this to emit
+  /// node-specific bytecode. The default emits nothing, so that base Node is
+  /// just a no-op.
+  /// \return a pointer to a node that must be emitted fully before calling
+  /// emitStep again. If the returned pointer is null, this node has been fully
+  /// emitted and no further calls to emitStep are necessary.
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) {
+    return nullptr;
+  }
 };
 
 /// GoalNode is the terminal Node that represents successful execution.
 class GoalNode final : public Node {
- public:
-  void emit(RegexBytecodeStream &bcs) const override {
+ private:
+  NodeList *emitStep(RegexBytecodeStream &bcs) override {
     bcs.emit<GoalInsn>();
+    return nullptr;
   }
 
  protected:
@@ -154,11 +168,11 @@ class LoopNode final : public Node {
   uint32_t loopId_;
 
   /// First marked subexpression contained in our looped expression.
-  uint32_t mexpBegin_;
+  uint16_t mexpBegin_;
 
   /// One past the last marked subexpression contained in our looped expression.
   /// Marked subexpressions are [begin, end).
-  uint32_t mexpEnd_;
+  uint16_t mexpEnd_;
 
   /// Whether this loop is greedy.
   bool greedy_;
@@ -168,6 +182,10 @@ class LoopNode final : public Node {
 
   /// The constraints on what the loopee can match.
   MatchConstraintSet loopeeConstraints_;
+
+  /// The function to call to emit the end instructions for a loop node. See
+  /// emitStep for usage.
+  std::function<void()> endLoop_;
 
  public:
   /// Construct a LoopNode with the given \p loopId.
@@ -182,8 +200,8 @@ class LoopNode final : public Node {
       uint32_t min,
       uint32_t max,
       bool greedy,
-      uint32_t mexpBegin,
-      uint32_t mexpEnd,
+      uint16_t mexpBegin,
+      uint16_t mexpEnd,
       NodeList loopee)
       : min_(min),
         max_(max),
@@ -214,53 +232,53 @@ class LoopNode final : public Node {
   }
 
  private:
-  /// Override of emit() to compile our looped expression and add a jump
+  /// Override of emitStep() to compile our looped expression and add a jump
   /// back to the loop.
-  virtual void emit(RegexBytecodeStream &bcs) const override {
-    // The loop body comes immediately after, and we have a jump for the
-    // not-taken branch.
-    uint32_t loopEntryPosition = bcs.currentOffset();
-
-    if (isWidth1Loop()) {
-      assert(
-          mexpBegin_ == mexpEnd_ &&
-          "Width 1 loops should not contain capture groups");
-      auto loopInsn = bcs.emit<Width1LoopInsn>();
-      loopInsn->loopId = loopId_;
-      loopInsn->min = min_;
-      loopInsn->max = max_;
-      loopInsn->greedy = greedy_;
-
-      // Append the body. Width1 loops do not have or need a loop end.
-      compile(loopee_, bcs);
-
-      // Tell the loop how to exit.
-      loopInsn->notTakenTarget = bcs.currentOffset();
-    } else if (isSimpleLoop()) {
-      auto simpleLoopInsn = bcs.emit<BeginSimpleLoopInsn>();
-      simpleLoopInsn->loopeeConstraints = loopeeConstraints_;
-
-      compile(loopee_, bcs);
-      bcs.emit<EndSimpleLoopInsn>()->target = loopEntryPosition;
-
-      simpleLoopInsn->notTakenTarget = bcs.currentOffset();
-    } else {
-      auto loopInsn = bcs.emit<BeginLoopInsn>();
-      loopInsn->loopId = loopId_;
-      loopInsn->min = min_;
-      loopInsn->max = max_;
-      loopInsn->mexpBegin = mexpBegin_;
-      loopInsn->mexpEnd = mexpEnd_;
-      loopInsn->greedy = greedy_;
-      loopInsn->loopeeConstraints = loopeeConstraints_;
-
-      // Append the body and then the loop end.
-      compile(loopee_, bcs);
-      bcs.emit<EndLoopInsn>()->target = loopEntryPosition;
-
-      // Tell the loop how to exit.
-      loopInsn->notTakenTarget = bcs.currentOffset();
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
+    if (!endLoop_) {
+      // This is the first call to emitStep() for this node, set up the loop
+      // node
+      auto loopEntryPosition = bcs.currentOffset();
+      if (isWidth1Loop()) {
+        assert(
+            mexpBegin_ == mexpEnd_ &&
+            "Width 1 loops should not contain capture groups");
+        auto loopInsn = bcs.emit<Width1LoopInsn>();
+        loopInsn->loopId = loopId_;
+        loopInsn->min = min_;
+        loopInsn->max = max_;
+        loopInsn->greedy = greedy_;
+        endLoop_ = [loopInsn, &bcs]() mutable {
+          loopInsn->notTakenTarget = bcs.currentOffset();
+        };
+      } else if (isSimpleLoop()) {
+        auto loopInsn = bcs.emit<BeginSimpleLoopInsn>();
+        loopInsn->loopeeConstraints = loopeeConstraints_;
+        endLoop_ = [loopInsn, loopEntryPosition, &bcs]() mutable {
+          bcs.emit<EndSimpleLoopInsn>()->target = loopEntryPosition;
+          loopInsn->notTakenTarget = bcs.currentOffset();
+        };
+      } else {
+        auto loopInsn = bcs.emit<BeginLoopInsn>();
+        loopInsn->loopId = loopId_;
+        loopInsn->min = min_;
+        loopInsn->max = max_;
+        loopInsn->mexpBegin = mexpBegin_;
+        loopInsn->mexpEnd = mexpEnd_;
+        loopInsn->greedy = greedy_;
+        loopInsn->loopeeConstraints = loopeeConstraints_;
+        endLoop_ = [loopInsn, loopEntryPosition, &bcs]() mutable {
+          bcs.emit<EndLoopInsn>()->target = loopEntryPosition;
+          loopInsn->notTakenTarget = bcs.currentOffset();
+        };
+      }
+      return &loopee_;
     }
+    // This is the second call to emitStep, emit the end instructions and set
+    // notTakenTarget.
+    endLoop_();
+    endLoop_ = nullptr;
+    return nullptr;
   }
 
   // Checks if the loopee always matches exactly one character so that we can
@@ -295,6 +313,16 @@ class AlternationNode final : public Node {
   // intersection of the constraints for all nodes, whereas the last element
   // contains the constraint for only that element.
   std::vector<MatchConstraintSet> restConstraints_;
+  // Used to keep track of the jump instructions produced while emitting, these
+  // jumps need to be set at the end of emitting so the executor can jump
+  // directly to the end when a match is found.
+  std::vector<RegexBytecodeStream::InstructionWrapper<Jump32Insn>> jumps_;
+  // This corresponds to a function that should be called at the start of the
+  // next call to emitStep_. It is mostly used as a convenience to keep the
+  // logic simpler and to wrap up the state that needs to be preserved between
+  // two calls. It returns a boolean corresponding to whether the current call
+  // to emitStep is the last.
+  std::function<bool()> callNext_;
 
  public:
   /// Constructor for an Alternation.
@@ -304,6 +332,8 @@ class AlternationNode final : public Node {
         elementConstraints_(alternatives_.size()),
         restConstraints_(alternatives_.size()) {
     assert(alternatives_.size() > 1 && "Must give at least 2 alternatives");
+
+    jumps_.reserve(alternatives_.size());
 
     // restConstraints_ needs to be set in reverse order, since each element
     // depends on the element after it.
@@ -332,37 +362,55 @@ class AlternationNode final : public Node {
     return ret;
   }
 
-  void emit(RegexBytecodeStream &bcs) const override {
+  void reverseChildren() override {
+    for (auto &alternative : alternatives_) {
+      reverseNodeList(alternative);
+    }
+  }
+
+ private:
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     // Instruction stream looks like:
     //   [Alternation][PrimaryBranch][Jump][SecondaryBranch][...]
     //     |____________________________|____^               ^
     //                                  |____________________|
     // Where the Alternation has a JumpOffset to its secondary branch.
-    std::vector<RegexBytecodeStream::InstructionWrapper<Jump32Insn>> jumps;
-    jumps.reserve(alternatives_.size());
+
+    // Check if the callback is set, if so, call it and check whether this is
+    // the last call for emitStep
+    if (callNext_ && callNext_()) {
+      // This is the last call to emitStep, clean up and return nullptr
+      jumps_.clear();
+      callNext_ = nullptr;
+      return nullptr;
+    }
     // Do not emit an alternation instruction for the very last alternative
     // because it is simply the secondary option of the penultimate
-    // alternative.
-    for (size_t i = 0; i < alternatives_.size() - 1; ++i) {
+    // alternative. Note that jumps_.size() here is used to tell us how many
+    // times this function has already been called
+    if (jumps_.size() < alternatives_.size() - 1) {
       auto altInsn = bcs.emit<AlternationInsn>();
-      altInsn->primaryConstraints = elementConstraints_[i];
-      altInsn->secondaryConstraints = restConstraints_[i + 1];
-      compile(alternatives_[i], bcs);
-      jumps.push_back(bcs.emit<Jump32Insn>());
-      altInsn->secondaryBranch = bcs.currentOffset();
+      altInsn->primaryConstraints = elementConstraints_[jumps_.size()];
+      altInsn->secondaryConstraints = restConstraints_[jumps_.size() + 1];
+      callNext_ = [this, altInsn, &bcs]() mutable {
+        jumps_.push_back(bcs.emit<Jump32Insn>());
+        altInsn->secondaryBranch = bcs.currentOffset();
+        return false;
+      };
+      return &alternatives_[jumps_.size()];
     }
-    compile(alternatives_.back(), bcs);
-    // Set the jump instruction for every alternation to jump to the end of the
-    // block.
-    for (auto &jump : jumps) {
-      jump->target = bcs.currentOffset();
-    }
-  }
-
-  void reverseChildren() override {
-    for (auto &alternative : alternatives_) {
-      reverseNodeList(alternative);
-    }
+    // If the program reaches here, it means that the current call to emitStep
+    // is for the last alternative. On the next call, it should just clean
+    // things up and return.
+    callNext_ = [this, &bcs]() mutable {
+      // Set the jump instruction for every
+      // alternation to jump to the end of the block.
+      for (auto &jump : jumps_) {
+        jump->target = bcs.currentOffset();
+      }
+      return true;
+    };
+    return &alternatives_.back();
   }
 };
 
@@ -377,21 +425,16 @@ class MarkedSubexpressionNode final : public Node {
   MatchConstraintSet contentsConstraints_;
 
   // The index of the marked subexpression.
-  uint32_t mexp_;
+  uint16_t mexp_;
+
+  // Whether to emit the beginning or the end in emitStep
+  bool emitEnd_ = false;
 
  public:
-  explicit MarkedSubexpressionNode(NodeList contents, uint32_t mexp)
+  explicit MarkedSubexpressionNode(NodeList contents, uint16_t mexp)
       : contents_(std::move(contents)),
         contentsConstraints_(matchConstraintsForList(contents_)),
         mexp_(mexp) {}
-
-  virtual void emit(RegexBytecodeStream &bcs) const override {
-    uint16_t mexp16 = static_cast<uint16_t>(mexp_);
-    assert(mexp16 == mexp_ && "Subexpression too large");
-    bcs.emit<BeginMarkedSubexpressionInsn>()->mexp = mexp16;
-    compile(contents_, bcs);
-    bcs.emit<EndMarkedSubexpressionInsn>()->mexp = mexp16;
-  }
 
   void reverseChildren() override {
     reverseNodeList(contents_);
@@ -404,20 +447,32 @@ class MarkedSubexpressionNode final : public Node {
   virtual MatchConstraintSet matchConstraints() const override {
     return contentsConstraints_ | Super::matchConstraints();
   }
+
+ private:
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
+    if (!emitEnd_) {
+      bcs.emit<BeginMarkedSubexpressionInsn>()->mexp = mexp_;
+      emitEnd_ = true;
+      return &contents_;
+    }
+    emitEnd_ = false;
+    bcs.emit<EndMarkedSubexpressionInsn>()->mexp = mexp_;
+    return nullptr;
+  }
 };
 
 /// BackRefNode represents a backreference node.
 class BackRefNode final : public Node {
   // The backreference like \3.
-  uint32_t mexp_;
+  uint16_t mexp_;
 
  public:
   explicit BackRefNode(unsigned mexp) : mexp_(mexp) {}
 
-  virtual void emit(RegexBytecodeStream &bcs) const override {
-    assert(mexp_ > 0 && "Subexpression cannot be zero");
-    assert(static_cast<uint16_t>(mexp_) == mexp_ && "Subexpression too large");
-    bcs.emit<BackRefInsn>()->mexp = static_cast<uint16_t>(mexp_);
+ private:
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
+    bcs.emit<BackRefInsn>()->mexp = mexp_;
+    return nullptr;
   }
 };
 
@@ -431,8 +486,10 @@ class WordBoundaryNode final : public Node {
  public:
   WordBoundaryNode(bool invert) : invert_(invert) {}
 
-  virtual void emit(RegexBytecodeStream &bcs) const override {
+ private:
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     bcs.emit<WordBoundaryInsn>()->invert = invert_;
+    return nullptr;
   }
 };
 
@@ -455,8 +512,10 @@ class LeftAnchorNode final : public Node {
     return result | Super::matchConstraints();
   }
 
-  void emit(RegexBytecodeStream &bcs) const override {
+ private:
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     bcs.emit<LeftAnchorInsn>();
+    return nullptr;
   }
 };
 
@@ -467,8 +526,10 @@ class RightAnchorNode : public Node {
  public:
   RightAnchorNode() {}
 
-  void emit(RegexBytecodeStream &bcs) const override {
+ private:
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     bcs.emit<RightAnchorInsn>();
+    return nullptr;
   }
 };
 
@@ -476,6 +537,8 @@ class RightAnchorNode : public Node {
 /// flag is set).
 class MatchAnyNode final : public Node {
   using Super = Node;
+  bool unicode_;
+  bool dotAll_;
 
  public:
   /// Construct a MatchAny.
@@ -489,7 +552,13 @@ class MatchAnyNode final : public Node {
     return MatchConstraintNonEmpty | Super::matchConstraints();
   }
 
-  void emit(RegexBytecodeStream &bcs) const override {
+  virtual bool matchesExactlyOneCharacter() const override {
+    // In Unicode we may match a surrogate pair.
+    return !unicode_;
+  }
+
+ private:
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     if (unicode_) {
       if (dotAll_) {
         bcs.emit<U16MatchAnyInsn>();
@@ -503,16 +572,8 @@ class MatchAnyNode final : public Node {
         bcs.emit<MatchAnyButNewlineInsn>();
       }
     }
+    return nullptr;
   }
-
-  virtual bool matchesExactlyOneCharacter() const override {
-    // In Unicode we may match a surrogate pair.
-    return !unicode_;
-  }
-
- private:
-  bool unicode_;
-  bool dotAll_;
 };
 
 /// MatchChar matches one or more characters, specified as a parameter to the
@@ -528,6 +589,15 @@ class MatchCharNode final : public Node {
   /// The maximum number of characters supported in a MatchCharN instruction.
   static constexpr size_t kMaxMatchCharNCount = UINT8_MAX;
 
+  // The code points we wish to match against.
+  CodePointList chars_;
+
+  /// Whether we are case insensitive (true) or case sensitive (false).
+  const bool icase_;
+
+  /// Whether the unicode flag is set.
+  const bool unicode_;
+
  public:
   MatchCharNode(CodePointList chars, SyntaxFlags flags)
       : chars_(std::move(chars)),
@@ -541,21 +611,6 @@ class MatchCharNode final : public Node {
       result |= MatchConstraintNonASCII;
     }
     return result | Super::matchConstraints();
-  }
-
-  void emit(RegexBytecodeStream &bcs) const override {
-    llvh::ArrayRef<CodePoint> remaining{chars_};
-    while (!remaining.empty()) {
-      // Output any run (possibly empty) of ASCII chars.
-      auto asciis = remaining.take_while(isASCII);
-      emitASCIIList(asciis, bcs);
-      remaining = remaining.drop_front(asciis.size());
-
-      // Output any run (possibly empty) of non-ASCII chars.
-      auto nonAsciis = remaining.take_until(isASCII);
-      emitNonASCIIList(nonAsciis, bcs);
-      remaining = remaining.drop_front(nonAsciis.size());
-    }
   }
 
   void reverseChildren() override {
@@ -648,14 +703,21 @@ class MatchCharNode final : public Node {
   }
 
  private:
-  // The code points we wish to match against.
-  CodePointList chars_;
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
+    llvh::ArrayRef<CodePoint> remaining{chars_};
+    while (!remaining.empty()) {
+      // Output any run (possibly empty) of ASCII chars.
+      auto asciis = remaining.take_while(isASCII);
+      emitASCIIList(asciis, bcs);
+      remaining = remaining.drop_front(asciis.size());
 
-  /// Whether we are case insensitive (true) or case sensitive (false).
-  const bool icase_;
-
-  /// Whether the unicode flag is set.
-  const bool unicode_;
+      // Output any run (possibly empty) of non-ASCII chars.
+      auto nonAsciis = remaining.take_until(isASCII);
+      emitNonASCIIList(nonAsciis, bcs);
+      remaining = remaining.drop_front(nonAsciis.size());
+    }
+    return nullptr;
+  }
 };
 
 // BracketNode represents a character class: /[a-zA-Z]/...
@@ -772,17 +834,19 @@ class BracketNode : public Node {
     return result | Super::matchConstraints();
   }
 
-  virtual void emit(RegexBytecodeStream &bcs) const override {
+  virtual bool matchesExactlyOneCharacter() const override {
+    // A unicode bracket may match a surrogate pair.
+    return !unicode_;
+  }
+
+ private:
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     if (unicode_) {
       populateInstruction(bcs, bcs.emit<U16BracketInsn>());
     } else {
       populateInstruction(bcs, bcs.emit<BracketInsn>());
     }
-  }
-
-  virtual bool matchesExactlyOneCharacter() const override {
-    // A unicode bracket may match a surrogate pair.
-    return !unicode_;
+    return nullptr;
   }
 };
 
@@ -806,11 +870,14 @@ class LookaroundNode : public Node {
   uint16_t mexpBegin_;
   uint16_t mexpEnd_;
 
+  /// Callback to emit the end of a lookaround instruction
+  std::function<void()> endLookaround_;
+
  public:
   LookaroundNode(
       NodeList exp,
-      uint32_t mexpBegin,
-      uint32_t mexpEnd,
+      uint16_t mexpBegin,
+      uint16_t mexpEnd,
       bool invert,
       bool forwards)
       : exp_(move(exp)),
@@ -845,16 +912,24 @@ class LookaroundNode : public Node {
     return {&exp_};
   }
 
-  // Override emit() to compile our lookahead expression.
-  virtual void emit(RegexBytecodeStream &bcs) const override {
+ private:
+  // Override emitStep() to compile our lookahead expression.
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
+    if (endLookaround_) {
+      endLookaround_();
+      endLookaround_ = nullptr;
+      return nullptr;
+    }
     auto lookaround = bcs.emit<LookaroundInsn>();
     lookaround->invert = invert_;
     lookaround->forwards = forwards_;
     lookaround->constraints = expConstraints_;
     lookaround->mexpBegin = mexpBegin_;
     lookaround->mexpEnd = mexpEnd_;
-    compile(exp_, bcs);
-    lookaround->continuation = bcs.currentOffset();
+    endLookaround_ = [lookaround, &bcs]() mutable {
+      lookaround->continuation = bcs.currentOffset();
+    };
+    return &exp_;
   }
 };
 
@@ -884,7 +959,7 @@ void Node::optimizeNodeList(
     NodeList &rootNodes,
     SyntaxFlags flags,
     NodeHolder &nodeHolder) {
-  std::deque<NodeList *> stack;
+  std::vector<NodeList *> stack;
   stack.push_back(&rootNodes);
 
   while (!stack.empty()) {

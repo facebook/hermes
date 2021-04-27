@@ -314,7 +314,8 @@ int repl(const vm::RuntimeConfig &config) {
   auto runtime = vm::Runtime::create(config);
 
   vm::GCScope gcScope(runtime.get());
-  installConsoleBindings(runtime.get());
+  ConsoleHostContext ctx{runtime.get()};
+  installConsoleBindings(runtime.get(), ctx);
 
   std::string code;
   code.reserve(256);
@@ -366,6 +367,7 @@ int repl(const vm::RuntimeConfig &config) {
   }
 #endif
 
+  vm::MutableHandle<> resHandle{runtime.get()};
   // SetUnbuffered because there is no explicit flush after prompt (>>).
   // There is also no explicitly flush at end of line. (An automatic flush
   // mechanism is not guaranteed to be present, from my experiment on Windows)
@@ -402,6 +404,8 @@ int repl(const vm::RuntimeConfig &config) {
     // Ensure we don't keep accumulating handles.
     vm::GCScopeMarkerRAII gcMarker{runtime.get()};
 
+    bool threwException = false;
+
     if ((callRes = evaluateLineFn->executeCall2(
              evaluateLineFn,
              runtime.get(),
@@ -416,10 +420,36 @@ int repl(const vm::RuntimeConfig &config) {
           runtime->makeHandle(runtime->getThrownValue()));
       llvh::outs().resetColor();
       code.clear();
+      threwException = true;
+    } else {
+      resHandle = std::move(*callRes);
+    }
+
+    if (!ctx.jobsEmpty()) {
+      // Run the jobs until there are no more.
+      vm::MutableHandle<vm::Callable> job{runtime.get()};
+      while (auto optJob = ctx.dequeueJob()) {
+        job = std::move(*optJob);
+        auto jobCallRes = vm::Callable::executeCall0(
+            job, runtime.get(), vm::Runtime::getUndefinedValue(), false);
+        if (LLVM_UNLIKELY(jobCallRes == vm::ExecutionStatus::EXCEPTION)) {
+          threwException = true;
+          runtime->printException(
+              hasColors
+                  ? llvh::outs().changeColor(llvh::raw_ostream::Colors::RED)
+                  : llvh::outs(),
+              runtime->makeHandle(runtime->getThrownValue()));
+          llvh::outs().resetColor();
+          code.clear();
+        }
+      }
+    }
+
+    if (threwException) {
       continue;
     }
 
-    if ((*callRes)->isUndefined()) {
+    if (resHandle->isUndefined()) {
       code.clear();
       continue;
     }
@@ -429,9 +459,7 @@ int repl(const vm::RuntimeConfig &config) {
     vm::operator<<(
         llvh::outs(),
         vm::StringPrimitive::createStringView(
-            runtime.get(),
-            vm::Handle<vm::StringPrimitive>::vmcast(
-                runtime->makeHandle(std::move(*callRes))))
+            runtime.get(), vm::Handle<vm::StringPrimitive>::vmcast(resHandle))
             .getUTF16Ref(tmp))
         << "\n";
     code.clear();

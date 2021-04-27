@@ -26,7 +26,7 @@ class JSArrayBuffer final : public JSObject {
   // amount is larger than the native platform's `size_t`
   using size_type = std::size_t;
 
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::ArrayBufferKind;
@@ -99,6 +99,7 @@ class JSArrayBuffer final : public JSObject {
   size_type size_;
   bool attached_;
 
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit JSArrayBuffer(Deserializer &d);
 
@@ -106,9 +107,12 @@ class JSArrayBuffer final : public JSObject {
   friend void ArrayBufferDeserialize(Deserializer &d, CellKind kind);
 #endif
 
-  JSArrayBuffer(Runtime *runtime, JSObject *parent, HiddenClass *clazz);
+  JSArrayBuffer(
+      Runtime *runtime,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz);
 
-  ~JSArrayBuffer();
+  ~JSArrayBuffer() = default;
 };
 
 } // namespace vm

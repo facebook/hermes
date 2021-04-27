@@ -34,7 +34,7 @@ TEST_F(DecoratedObjectTest, DecoratedObjectFinalizerRunsOnce) {
     (void)runtime->makeHandle(DecoratedObject::create(
         runtime,
         Handle<JSObject>::vmcast(&runtime->objectPrototype),
-        llvh::make_unique<TestDecoration>(counter)));
+        std::make_unique<TestDecoration>(counter)));
     runtime->collect("test");
     // should not have been finalized yet
     EXPECT_EQ(0, *counter);
@@ -55,9 +55,9 @@ TEST_F(DecoratedObjectTest, ChangeDecoration) {
     auto handle = runtime->makeHandle(DecoratedObject::create(
         runtime,
         Handle<JSObject>::vmcast(&runtime->objectPrototype),
-        llvh::make_unique<TestDecoration>(counter)));
+        std::make_unique<TestDecoration>(counter)));
     EXPECT_EQ(0, *counter);
-    handle->setDecoration(llvh::make_unique<TestDecoration>(counter));
+    handle->setDecoration(std::make_unique<TestDecoration>(counter));
     // Old decoration was deallocated.
     EXPECT_EQ(1, *counter);
   }
@@ -83,7 +83,7 @@ TEST_F(DecoratedObjectTest, AdditionalSlots) {
   auto handle = runtime->makeHandle(DecoratedObject::create(
       runtime,
       Handle<JSObject>::vmcast(&runtime->objectPrototype),
-      llvh::make_unique<TestDecoration>(counter),
+      std::make_unique<TestDecoration>(counter),
       2));
   DecoratedObject::setAdditionalSlotValue(
       *handle, runtime, 0, HermesValue::encodeDoubleValue(10));

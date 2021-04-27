@@ -14,6 +14,7 @@
 #include "llvh/Support/raw_ostream.h"
 
 #include <algorithm>
+#include <future>
 
 using namespace hermes::vm;
 
@@ -23,17 +24,17 @@ namespace CodeCoverageTest {
 
 class CodeCoverageProfilerTest : public RuntimeTestFixture {
  public:
-  CodeCoverageProfilerTest() : profiler(CodeCoverageProfiler::getInstance()) {
-    profiler->enable();
+  CodeCoverageProfilerTest() {
+    CodeCoverageProfiler::enableGlobal();
   }
 
  protected:
   static CodeCoverageProfiler::FuncInfo getFuncInfo(Handle<JSFunction> func) {
     auto bcProvider = func->getCodeBlock()->getRuntimeModule()->getBytecode();
-    const uint32_t moduleId = bcProvider->getCJSModuleOffset();
+    const uint32_t segmentID = bcProvider->getSegmentID();
     const uint32_t funcVirtualOffset = bcProvider->getVirtualOffsetForFunction(
         func->getCodeBlock()->getFunctionID());
-    return {moduleId, funcVirtualOffset};
+    return {segmentID, funcVirtualOffset};
   }
 
   // Check if the function is executed or not.
@@ -59,9 +60,6 @@ class CodeCoverageProfilerTest : public RuntimeTestFixture {
       return ::testing::AssertionSuccess();
     }
   }
-
- protected:
-  std::shared_ptr<CodeCoverageProfiler> profiler;
 };
 
 TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnused) {
@@ -74,7 +72,7 @@ TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnused) {
   EXPECT_FALSE(isException(res));
 
   std::vector<CodeCoverageProfiler::FuncInfo> executedFuncInfos =
-      profiler->getExecutedFunctions();
+      CodeCoverageProfiler::getExecutedFunctions();
 
   Handle<JSArray> funcArr = runtime->makeHandle(vmcast<JSArray>(*res));
   Handle<JSFunction> funcUsed =
@@ -89,6 +87,52 @@ TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnused) {
   EXPECT_EQ(executedFuncInfos.size(), 2);
   EXPECT_TRUE(isFuncExecuted(executedFuncInfos, funcUsed));
   EXPECT_FALSE(isFuncExecuted(executedFuncInfos, funcUnused));
+}
+
+// Right now, this just tests that we can simultaneously run two code coverage
+// profilers.
+TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnusedTwoRuntimes) {
+  auto runtime2 = newRuntime();
+  GCScope scope{runtime2.get()};
+  std::vector<Runtime *> runtimes = {runtime, runtime2.get()};
+
+  std::vector<std::future<PinnedHermesValue>> resFuts;
+
+  for (auto *rt : runtimes) {
+    resFuts.push_back(
+        std::async(std::launch::async, [this, rt]() -> PinnedHermesValue {
+          hbc::CompileFlags flags;
+          flags.lazy = false;
+          CallResult<HermesValue> res = rt->run(
+              "function used() {}; function unused() {}; used(); [used, unused];",
+              "file:///fake.js",
+              flags);
+          EXPECT_FALSE(isException(res));
+          return *res;
+        }));
+  }
+
+  for (size_t i = 0; i < runtimes.size(); i++) {
+    Runtime *rt = runtimes[i];
+    HermesValue res = resFuts[i].get();
+
+    std::vector<CodeCoverageProfiler::FuncInfo> executedFuncInfos =
+        rt->codeCoverageProfiler_->getExecutedFunctionsLocal();
+
+    Handle<JSArray> funcArr = rt->makeHandle(vmcast<JSArray>(res));
+    Handle<JSFunction> funcUsed =
+        rt->makeHandle(vmcast<JSFunction>(funcArr->at(rt, 0)));
+    Handle<JSFunction> funcUnused =
+        rt->makeHandle(vmcast<JSFunction>(funcArr->at(rt, 1)));
+
+    // Used and unused functions should have different info.
+    EXPECT_TRUE(hasDifferentInfo(funcUsed, funcUnused));
+
+    // Global + used.
+    EXPECT_EQ(executedFuncInfos.size(), 2);
+    EXPECT_TRUE(isFuncExecuted(executedFuncInfos, funcUsed));
+    EXPECT_FALSE(isFuncExecuted(executedFuncInfos, funcUnused));
+  }
 }
 
 TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleModules) {
@@ -106,7 +150,7 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleModules) {
   EXPECT_FALSE(isException(res2));
 
   std::vector<CodeCoverageProfiler::FuncInfo> executedFuncInfos =
-      profiler->getExecutedFunctions();
+      CodeCoverageProfiler::getExecutedFunctions();
 
   Handle<JSArray> funcArr = runtime->makeHandle(vmcast<JSArray>(*res2));
   Handle<JSFunction> funcBar =
@@ -136,7 +180,7 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleDomains) {
   EXPECT_FALSE(isException(res));
 
   std::vector<CodeCoverageProfiler::FuncInfo> executedFuncInfos =
-      profiler->getExecutedFunctions();
+      CodeCoverageProfiler::getExecutedFunctions();
 
   Handle<JSArray> funcArr = runtime->makeHandle(vmcast<JSArray>(*res));
   Handle<JSFunction> funcUsed1 =

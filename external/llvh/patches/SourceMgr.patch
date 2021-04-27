@@ -1,0 +1,133 @@
+diff --git a/include/llvh/Support/SourceMgr.h b/include/llvh/Support/SourceMgr.h
+--- a/include/llvh/Support/SourceMgr.h
++++ b/include/llvh/Support/SourceMgr.h
+@@ -30,6 +30,7 @@
+ #include <string>
+ #include <utility>
+ #include <vector>
++#include <map>
+ 
+ namespace llvh {
+ 
+@@ -79,8 +80,9 @@
+     /// it points somewhere into \c Buffer. The static type parameter \p T
+     /// must be an unsigned integer type from uint{8,16,32,64}_t large
+     /// enough to store offsets inside \c Buffer.
++    /// \return a pointer to the start of the line and the line number.
+     template<typename T>
+-    unsigned getLineNumber(const char *Ptr) const;
++    std::pair<const char *, unsigned> getLineNumber(const char *Ptr) const;
+ 
+     /// This is the location of the parent include, or null if at the top level.
+     SMLoc IncludeLoc;
+@@ -95,6 +97,12 @@
+   /// This is all of the buffers that we are reading from.
+   std::vector<SrcBuffer> Buffers;
+ 
++  /// The end addresses of all buffers.
++  std::map<const char *, unsigned> BufferEnds;
++
++  /// The id of the buffer which FindBufferContainingLoc() found last.
++  mutable unsigned LastFoundBufId = 0;
++
+   // This is the list of directories we should search for include files in.
+   std::vector<std::string> IncludeDirectories;
+ 
+@@ -151,11 +159,14 @@
+   /// the memory buffer.
+   unsigned AddNewSourceBuffer(std::unique_ptr<MemoryBuffer> F,
+                               SMLoc IncludeLoc) {
++    const char * End = F->getBufferEnd();
+     SrcBuffer NB;
+     NB.Buffer = std::move(F);
+     NB.IncludeLoc = IncludeLoc;
+     Buffers.push_back(std::move(NB));
+-    return Buffers.size();
++    unsigned BufId = Buffers.size();
++    BufferEnds.emplace(End, BufId);
++    return BufId;
+   }
+ 
+   /// Search for a file with the specified name in the current directory or in
+diff --git a/lib/Support/SourceMgr.cpp b/lib/Support/SourceMgr.cpp
+--- a/lib/Support/SourceMgr.cpp
++++ b/lib/Support/SourceMgr.cpp
+@@ -59,18 +59,29 @@
+ }
+ 
+ unsigned SourceMgr::FindBufferContainingLoc(SMLoc Loc) const {
+-  for (unsigned i = 0, e = Buffers.size(); i != e; ++i)
+-    if (Loc.getPointer() >= Buffers[i].Buffer->getBufferStart() &&
+-        // Use <= here so that a pointer to the null at the end of the buffer
+-        // is included as part of the buffer.
+-        Loc.getPointer() <= Buffers[i].Buffer->getBufferEnd())
+-      return i + 1;
++  // Check the last buffer we found. Most searches are likely to be in the same
++  // one.
++  if (LLVM_LIKELY(
++          LastFoundBufId &&
++          Loc.getPointer() >=
++              Buffers[LastFoundBufId - 1].Buffer->getBufferStart() &&
++          Loc.getPointer() <=
++              Buffers[LastFoundBufId - 1].Buffer->getBufferEnd())) {
++    return LastFoundBufId;
++  }
++
++  auto it = BufferEnds.lower_bound(Loc.getPointer());
++  if (it != BufferEnds.end() &&
++      Loc.getPointer() >= Buffers[it->second - 1].Buffer->getBufferStart()) {
++    return LastFoundBufId = it->second;
++  }
++
+   return 0;
+ }
+ 
+ template <typename T>
+-unsigned SourceMgr::SrcBuffer::getLineNumber(const char *Ptr) const {
+-
++std::pair<const char *, unsigned> SourceMgr::SrcBuffer::getLineNumber(
++    const char *Ptr) const {
+   // Ensure OffsetCache is allocated and populated with offsets of all the
+   // '\n' bytes.
+   std::vector<T> *Offsets = nullptr;
+@@ -101,8 +112,12 @@
+   // EOL, returns end().
+   auto EOL = std::lower_bound(Offsets->begin(), Offsets->end(), PtrOffset);
+ 
++  // The start of the line is the previous line end + 1.
++  const char *LineStart =
++      EOL != Offsets->begin() ? BufStart + EOL[-1] + 1 : BufStart;
++
+   // Lines count from 1, so add 1 to the distance from the 0th line.
+-  return (1 + (EOL - Offsets->begin()));
++  return {LineStart, (1 + (EOL - Offsets->begin()))};
+ }
+ 
+ SourceMgr::SrcBuffer::SrcBuffer(SourceMgr::SrcBuffer &&Other)
+@@ -136,20 +151,17 @@
+   const char *Ptr = Loc.getPointer();
+ 
+   size_t Sz = SB.Buffer->getBufferSize();
+-  unsigned LineNo;
++  std::pair<const char *, unsigned> StartAndLineNo;
+   if (Sz <= std::numeric_limits<uint8_t>::max())
+-    LineNo = SB.getLineNumber<uint8_t>(Ptr);
++    StartAndLineNo = SB.getLineNumber<uint8_t>(Ptr);
+   else if (Sz <= std::numeric_limits<uint16_t>::max())
+-    LineNo = SB.getLineNumber<uint16_t>(Ptr);
++    StartAndLineNo = SB.getLineNumber<uint16_t>(Ptr);
+   else if (Sz <= std::numeric_limits<uint32_t>::max())
+-    LineNo = SB.getLineNumber<uint32_t>(Ptr);
++    StartAndLineNo = SB.getLineNumber<uint32_t>(Ptr);
+   else
+-    LineNo = SB.getLineNumber<uint64_t>(Ptr);
++    StartAndLineNo = SB.getLineNumber<uint64_t>(Ptr);
+ 
+-  const char *BufStart = SB.Buffer->getBufferStart();
+-  size_t NewlineOffs = StringRef(BufStart, Ptr-BufStart).find_last_of("\n\r");
+-  if (NewlineOffs == StringRef::npos) NewlineOffs = ~(size_t)0;
+-  return std::make_pair(LineNo, Ptr-BufStart-NewlineOffs);
++  return std::make_pair(StartAndLineNo.second, Ptr - StartAndLineNo.first + 1);
+ }
+ 
+ void SourceMgr::PrintIncludeStack(SMLoc IncludeLoc, raw_ostream &OS) const {

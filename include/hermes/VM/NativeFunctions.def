@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// Updated May 6, 2020
-#define NATIVE_FUNCTION_VERSION_VALUE 9
+// Updated June 04, 2020
+#define NATIVE_FUNCTION_VERSION_VALUE 10
 
 #ifndef NATIVE_FUNCTION
 #define NATIVE_FUNCTION(func)
@@ -67,6 +67,7 @@ NATIVE_FUNCTION(arrayPrototypeSlice)
 NATIVE_FUNCTION(arrayPrototypeSome)
 NATIVE_FUNCTION(arrayPrototypeUnshift)
 NATIVE_FUNCTION(arrayPrototypeSplice)
+NATIVE_FUNCTION(asyncFunctionConstructor)
 
 NATIVE_FUNCTION(booleanConstructor)
 NATIVE_FUNCTION(booleanPrototypeToString)
@@ -151,8 +152,12 @@ NATIVE_FUNCTION(hermesInternalGetInstrumentedStats)
 NATIVE_FUNCTION(hermesInternalGetRuntimeProperties)
 NATIVE_FUNCTION(hermesInternalGetWeakSize)
 NATIVE_FUNCTION(hermesInternalIsProxy)
+NATIVE_FUNCTION(hermesInternalHasPromise)
 NATIVE_FUNCTION(hermesInternalTTIReached)
 NATIVE_FUNCTION(hermesInternalTTRCReached)
+
+NATIVE_FUNCTION(hermesInternalSetPromiseRejectionTrackingHook)
+NATIVE_FUNCTION(hermesInternalEnablePromiseRejectionTracker)
 
 #ifdef HERMES_ENABLE_DEBUGGER
 NATIVE_FUNCTION(isDebuggerAttached)
@@ -326,6 +331,7 @@ NATIVE_FUNCTION(symbolConstructor)
 NATIVE_FUNCTION(symbolFor)
 NATIVE_FUNCTION(symbolKeyFor)
 NATIVE_FUNCTION(symbolPrototypeToString)
+NATIVE_FUNCTION(symbolPrototypeDescriptionGetter)
 NATIVE_FUNCTION(symbolPrototypeValueOf)
 NATIVE_FUNCTION(throwTypeError)
 NATIVE_FUNCTION(typedArrayBaseConstructor)
@@ -393,6 +399,7 @@ NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSSymbol>)
 NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSWeakMap>)
 NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSWeakSet>)
 NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSGeneratorFunction>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSAsyncFunction>)
 
 #define TYPED_ARRAY(name, type)  \
   NATIVE_CONSTRUCTOR_TYPED(      \

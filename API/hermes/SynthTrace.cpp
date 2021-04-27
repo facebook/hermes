@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_API_TRACE
-
 #include "SynthTrace.h"
 
 #include "hermes/Support/Algorithms.h"
@@ -71,6 +69,15 @@ std::string doublePrinter(double x) {
   return result;
 }
 
+uint64_t decodeID(const std::string &s) {
+  char *str_end;
+  // Signed so that we can easily check for negative.
+  auto id = strtoll(s.c_str(), &str_end, 10);
+  assert(id >= 0 && "Malformed id");
+  assert(str_end == s.c_str() + s.size() && "Malformed id");
+  return id;
+}
+
 } // namespace
 
 bool SynthTrace::TraceValue::operator==(const TraceValue &that) const {
@@ -127,8 +134,10 @@ SynthTrace::SynthTrace(
       json_->closeDict();
     }
     json_->emitKeyValue("maxNumRegisters", conf.getMaxNumRegisters());
+    json_->emitKeyValue("ES6Promise", conf.getES6Promise());
     json_->emitKeyValue("ES6Proxy", conf.getES6Proxy());
     json_->emitKeyValue("ES6Symbol", conf.getES6Symbol());
+    json_->emitKeyValue("ES6Intl", conf.getES6Intl());
     json_->emitKeyValue("enableSampledStats", conf.getEnableSampledStats());
     json_->emitKeyValue("vmExperimentFlags", conf.getVMExperimentFlags());
     json_->closeDict();
@@ -259,15 +268,16 @@ SynthTrace::TraceValue SynthTrace::decode(const std::string &str) {
   } else if (tag == "null") {
     return encodeNull();
   } else if (tag == "bool") {
+    assert((rest == "true" || rest == "false") && "Malformed bool value");
     return encodeBool(rest == "true");
   } else if (tag == "number") {
     return encodeNumber(decodeNumber(rest));
   } else if (tag == "object") {
-    return encodeObject(std::atol(rest.c_str()));
+    return encodeObject(decodeID(rest));
   } else if (tag == "string") {
-    return encodeString(std::atol(rest.c_str()));
+    return encodeString(decodeID(rest));
   } else if (tag == "propNameID") {
-    return encodePropNameID(std::atol(rest.c_str()));
+    return encodePropNameID(decodeID(rest));
   } else {
     llvm_unreachable("Illegal object encountered");
   }
@@ -837,5 +847,3 @@ std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type) {
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
-
-#endif

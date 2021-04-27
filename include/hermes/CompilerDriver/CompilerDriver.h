@@ -30,6 +30,8 @@ enum CompileStatus {
   InputFileError,
   /// An output file could not be written.
   OutputFileError,
+  /// An error occured during optimization.
+  OptimizationFailed,
 };
 
 /// Information about a bytecode file that is loaded into a buffer.
@@ -97,5 +99,6 @@ extern llvh::cl::opt<bool> EmitAsyncBreakCheck;
 extern llvh::cl::opt<bool> AllowFunctionToString;
 extern llvh::cl::list<std::string> InputFilenames;
 extern llvh::cl::opt<bool> OptimizedEval;
+extern llvh::cl::opt<bool> EmitAsyncBreakCheck;
 } // namespace cl
 #endif

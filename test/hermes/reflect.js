@@ -454,6 +454,11 @@ assert.arrayEqual(rTraps, []);
 assert.equal(o.a, 1);
 assert.equal(r.a, 2);
 
+// internalSetter on object but not receiver, sets on receiver
+var o = {};
+Reflect.set(Object.create([]),"length",10,o);
+assert.equal(o.length, 10);
+
 print('setPrototypeOf');
 // CHECK-LABEL: setPrototypeOf
 

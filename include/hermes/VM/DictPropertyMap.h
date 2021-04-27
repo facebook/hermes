@@ -11,6 +11,7 @@
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/PropertyDescriptor.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/SymbolID.h"
 
 #include "llvh/Support/TrailingObjects.h"
 
@@ -143,11 +144,12 @@ class DPMHashPair {
 
 } // namespace detail
 
-class DictPropertyMap final : public VariableSizeRuntimeCell,
-                              private llvh::TrailingObjects<
-                                  DictPropertyMap,
-                                  std::pair<SymbolID, NamedPropertyDescriptor>,
-                                  detail::DPMHashPair> {
+class DictPropertyMap final
+    : public VariableSizeRuntimeCell,
+      private llvh::TrailingObjects<
+          DictPropertyMap,
+          std::pair<GCSymbolID, NamedPropertyDescriptor>,
+          detail::DPMHashPair> {
   friend TrailingObjects;
   friend void DictPropertyMapBuildMeta(
       const GCCell *cell,
@@ -162,7 +164,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
   friend void DictPropertyMapDeserialize(Deserializer &d, CellKind kind);
 #endif
 
-  using DescriptorPair = std::pair<SymbolID, NamedPropertyDescriptor>;
+  using DescriptorPair = std::pair<GCSymbolID, NamedPropertyDescriptor>;
 
   static const size_type DEFAULT_CAPACITY = 2;
 
@@ -178,7 +180,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
     friend class OptValue<PropertyPos>;
   };
 
-  static VTable vt;
+  static const VTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::DictPropertyMapKind;
@@ -268,12 +270,14 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
 
   /// Remove the property at the specified position. This invalidates all
   /// positions.
-  static void erase(DictPropertyMap *self, PropertyPos pos);
+  static void erase(DictPropertyMap *self, Runtime *runtime, PropertyPos pos);
 
   /// Allocate a new property slot. Either pop the first entry in the deleted
   /// list, or, if the deleted list is empty, return slot \c numProperties_,
   /// which is the next slot at the end of the currently allocated storage.
-  static SlotIndex allocatePropertySlot(DictPropertyMap *self);
+  static SlotIndex allocatePropertySlot(
+      DictPropertyMap *self,
+      Runtime *runtime);
 
   void dump();
 
@@ -337,6 +341,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
     return symbolID.unsafeGetRaw();
   }
 
+ public:
   DictPropertyMap(
       Runtime *runtime,
       size_type descriptorCapacity,
@@ -351,6 +356,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
     std::fill_n(getHashPairs(), hashCapacity_, HashPair{});
   }
 
+ private:
   DescriptorPair *getDescriptorPairs() {
     return getTrailingObjects<DescriptorPair>();
   }

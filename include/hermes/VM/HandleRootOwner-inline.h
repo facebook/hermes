@@ -70,8 +70,8 @@ inline Handle<T> HandleRootOwner::makeHandleInParentScope(
 template <class T>
 inline Handle<T> HandleRootOwner::makeHandleInParentScope(
     PseudoHandle<HermesValue> &&pseudo) {
-  Handle<T> res{getTopGCScopesParent(),
-                PseudoHandle<T>::vmcast(std::move(pseudo)).get()};
+  Handle<T> res{
+      getTopGCScopesParent(), PseudoHandle<T>::vmcast(std::move(pseudo)).get()};
   return res;
 }
 
@@ -103,6 +103,18 @@ inline Handle<HermesValue> HandleRootOwner::getEmptyValue() {
 
 inline Handle<HermesValue> HandleRootOwner::getBoolValue(bool b) {
   return Handle<HermesValue>(b ? &trueValue_ : &falseValue_);
+}
+
+inline Handle<HermesValue> HandleRootOwner::getZeroValue() {
+  return Handle<HermesValue>(&zeroValue_);
+}
+
+inline Handle<HermesValue> HandleRootOwner::getOneValue() {
+  return Handle<HermesValue>(&oneValue_);
+}
+
+inline Handle<HermesValue> HandleRootOwner::getNegOneValue() {
+  return Handle<HermesValue>(&negOneValue_);
 }
 
 inline GCScope *HandleRootOwner::getTopGCScope() {

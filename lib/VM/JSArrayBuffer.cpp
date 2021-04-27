@@ -8,6 +8,7 @@
 #include "hermes/VM/JSArrayBuffer.h"
 
 #include "hermes/VM/BuildMetadata.h"
+#include "hermes/VM/Runtime-inline.h"
 
 #include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
@@ -18,7 +19,7 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 // class JSArrayBuffer
 
-ObjectVTable JSArrayBuffer::vt{
+const ObjectVTable JSArrayBuffer::vt{
     VTable(
         CellKind::ArrayBufferKind,
         cellSize<JSArrayBuffer>(),
@@ -28,11 +29,12 @@ ObjectVTable JSArrayBuffer::vt{
         nullptr,
         nullptr,
         _externalMemorySizeImpl, // externalMemorySize
-        VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
-                                     nullptr,
-                                     _snapshotAddEdgesImpl,
-                                     _snapshotAddNodesImpl,
-                                     nullptr}),
+        VTable::HeapSnapshotMetadata{
+            HeapSnapshot::NodeType::Object,
+            nullptr,
+            _snapshotAddEdgesImpl,
+            _snapshotAddNodesImpl,
+            nullptr}),
     _getOwnIndexedRangeImpl,
     _haveOwnIndexedImpl,
     _getOwnIndexedPropertyFlagsImpl,
@@ -88,9 +90,7 @@ void ArrayBufferSerialize(Serializer &s, const GCCell *cell) {
 }
 
 void ArrayBufferDeserialize(Deserializer &d, CellKind kind) {
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<JSArrayBuffer>());
-  auto *cell = new (mem) JSArrayBuffer(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSArrayBuffer, HasFinalizer::Yes>(d);
   d.endObject(cell);
 }
 #endif
@@ -98,13 +98,13 @@ void ArrayBufferDeserialize(Deserializer &d, CellKind kind) {
 PseudoHandle<JSArrayBuffer> JSArrayBuffer::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  JSObjectAlloc<JSArrayBuffer, HasFinalizer::Yes> mem{runtime};
-  return mem.initToPseudoHandle(new (mem) JSArrayBuffer(
+  auto *cell = runtime->makeAFixed<JSArrayBuffer, HasFinalizer::Yes>(
       runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+      parentHandle,
+      runtime->getHiddenClassForPrototype(
           *parentHandle,
-          numOverlapSlots<JSArrayBuffer>() + ANONYMOUS_PROPERTY_SLOTS)));
+          numOverlapSlots<JSArrayBuffer>() + ANONYMOUS_PROPERTY_SLOTS));
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 CallResult<Handle<JSArrayBuffer>> JSArrayBuffer::clone(
@@ -156,25 +156,19 @@ void JSArrayBuffer::copyDataBlockBytes(
 
 JSArrayBuffer::JSArrayBuffer(
     Runtime *runtime,
-    JSObject *parent,
-    HiddenClass *clazz)
-    : JSObject(runtime, &vt.base, parent, clazz),
+    Handle<JSObject> parent,
+    Handle<HiddenClass> clazz)
+    : JSObject(runtime, &vt.base, *parent, *clazz),
       data_(nullptr),
       size_(0),
       attached_(false) {}
-
-JSArrayBuffer::~JSArrayBuffer() {
-  // We expect this finalizer to be called only by _finalizerImpl,
-  // below.  That detaches the buffer; here we just assert that it
-  // has been detached, and that resources have been deallocated.
-  assert(!attached_ && !data_ && size_ == 0);
-}
 
 void JSArrayBuffer::_finalizeImpl(GCCell *cell, GC *gc) {
   auto *self = vmcast<JSArrayBuffer>(cell);
   // Need to untrack the native memory that may have been tracked by snapshots.
   gc->getIDTracker().untrackNative(self->data_);
-  self->detach(gc);
+  gc->debitExternalMemory(self, self->size_);
+  free(self->data_);
   self->~JSArrayBuffer();
 }
 

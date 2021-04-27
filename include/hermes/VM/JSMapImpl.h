@@ -49,7 +49,8 @@ class JSMapImpl final : public JSObject {
     if (LLVM_UNLIKELY(crtRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto storageHandle = runtime->makeHandle<OrderedHashMap>(*crtRes);
+    auto storageHandle =
+        runtime->makeHandle<OrderedHashMap>(std::move(*crtRes));
     self->storage_.set(runtime, storageHandle.get(), &runtime->getHeap());
     return ExecutionStatus::RETURNED;
   }
@@ -148,9 +149,11 @@ class JSMapImpl final : public JSObject {
   /// Build the metadata for this map implementation, and store it into \p mb.
   static void MapOrSetBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
- protected:
-  JSMapImpl(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
-      : JSObject(runtime, &vt.base, parent, clazz) {}
+  JSMapImpl(
+      Runtime *runtime,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz)
+      : JSObject(runtime, &vt.base, *parent, *clazz) {}
 
  private:
   /// The underlying storage.
@@ -265,7 +268,6 @@ class JSMapIteratorImpl final : public JSObject {
       const GCCell *cell,
       Metadata::Builder &mb);
 
- protected:
 #ifdef HERMESVM_SERIALIZE
   explicit JSMapIteratorImpl(Deserializer &d);
 
@@ -275,8 +277,11 @@ class JSMapIteratorImpl final : public JSObject {
   friend void SetIteratorDeserialize(Deserializer &d, CellKind kind);
 #endif
 
-  JSMapIteratorImpl(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
-      : JSObject(runtime, &vt.base, parent, clazz) {}
+  JSMapIteratorImpl(
+      Runtime *runtime,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz)
+      : JSObject(runtime, &vt.base, *parent, *clazz) {}
 
  private:
   /// The internal pointer to the Map data. nullptr if the iterator has not been

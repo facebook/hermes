@@ -180,24 +180,28 @@ void test1StringMemcpySafety(const StringType &s) {
   // its source; the string may have an internal buffer whose last bytes are
   // unused when the string is externally allocated, and these last bytes may
   // not be copied by the move ctor. That is, the move ctor may be conceptually
-  // a memcpy of only a prefix of the string. So copy the bits of the moved-from
-  // string into a buffer, and then use placement new with move ctor; this
-  // ensures that any ignored bytes have the same contents in both strings.
-  StringType s1 = s;
+  // a memcpy of only a prefix of the string. To avoid this, construct the
+  // strings in buffers that are initially zeroed out. This isn't guaranteed to
+  // always work because the constructors and the new operator may still modify
+  // those bytes, however, it seems to work in practice.
+  auto s1 = new (calloc(1, sizeof(StringType))) StringType(s);
   llvh::AlignedCharArrayUnion<StringType> savedBits;
-  memcpy(savedBits.buffer, &s1, sizeof(StringType));
+  memcpy(savedBits.buffer, s1, sizeof(StringType));
 
-  llvh::AlignedCharArrayUnion<StringType> b = savedBits;
-  StringType *movedString = new (b.buffer) StringType(std::move(s1));
+  auto movedString =
+      new (calloc(1, sizeof(StringType))) StringType(std::move(*s1));
   // We expect the move-constructed string to be bitwise identical to the string
   // before it was moved from. That is, the move ctor should be a memcpy.
-  EXPECT_EQ(0, memcmp(b.buffer, &savedBits.buffer, sizeof(StringType)))
+  EXPECT_EQ(0, memcmp(movedString, savedBits.buffer, sizeof(StringType)))
       << "string size: " << s.size();
   // Sanity check: the moved-from string should have changed, e.g. zeroed
   // pointer.
-  EXPECT_NE(0, memcmp(&s1, &savedBits.buffer, sizeof(StringType)))
+  EXPECT_NE(0, memcmp(s1, savedBits.buffer, sizeof(StringType)))
       << "string size: " << s.size();
   movedString->~StringType();
+  free(movedString);
+  s1->~StringType();
+  free(s1);
 }
 
 TEST_F(StringPrimTest, StringsAreMemcpySafe) {

@@ -24,7 +24,7 @@ class JSDataView final : public JSObject {
   using size_type = JSArrayBuffer::size_type;
   using Super = JSObject;
 
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::DataViewKind;
@@ -94,7 +94,7 @@ class JSDataView final : public JSObject {
     length_ = length;
   }
 
- private:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit JSDataView(Deserializer &d);
 
@@ -104,6 +104,7 @@ class JSDataView final : public JSObject {
 
   friend void DataViewBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
+ private:
   /// buffer_ is the underlying storage of the bytes for a DataView.
   GCPointer<JSArrayBuffer> buffer_;
   /// offset_ is the position within the buffer that the DataView begins at.
@@ -111,7 +112,11 @@ class JSDataView final : public JSObject {
   /// length_ is the amount of bytes the DataView views inside the storage.
   size_type length_;
 
-  JSDataView(Runtime *runtime, JSObject *parent, HiddenClass *clazz);
+ public:
+  JSDataView(
+      Runtime *runtime,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz);
 };
 
 /// @name Implementations

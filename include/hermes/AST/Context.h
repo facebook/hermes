@@ -19,9 +19,6 @@ namespace hbc {
 class BackendContext;
 }
 
-/// Choices for bundling format, applicable to cross module opts
-enum class BundlerKind { none, metromin };
-
 struct CodeGenerationSettings {
   /// Whether we should emit TDZ checks.
   bool enableTDZ{true};
@@ -41,30 +38,7 @@ struct CodeGenerationSettings {
   bool instrumentIR{false};
 };
 
-struct OutliningSettings {
-  /// If true, place outlined functions near one of their callers. Otherwise,
-  /// put them all together at the end of the module.
-  bool placeNearCaller{true};
-  /// Maximum number of outlining rounds.
-  unsigned maxRounds{1};
-  /// Minimum length (number of instructions) to consider outlining.
-  unsigned minLength{64};
-  /// Minimum number of parameters for outlined functions.
-  unsigned minParameters{0};
-  /// Maximum number of parameters for outlined functions.
-  unsigned maxParameters{5};
-};
-
 struct OptimizationSettings {
-  /// Enable constant property optimization
-  bool constantPropertyOptimizations{false};
-
-  /// Enable unused method optimization
-  bool uncalledMethodOptimizations{false};
-
-  /// Enable cross-module closure analysis (if CLA is enabled)
-  BundlerKind crossModuleClosureAnalysis{BundlerKind::none};
-
   /// Enable aggressive non-strict mode optimizations. These optimizations
   /// assume that:
   ///   - function arguments are never modified indirectly
@@ -76,9 +50,6 @@ struct OptimizationSettings {
 
   /// Enable IR outlining.
   bool outlining{false};
-
-  /// Specific settings for the outliner.
-  OutliningSettings outliningSettings;
 
   /// Reuse property cache entries for same property name.
   bool reusePropCache{true};
@@ -105,6 +76,23 @@ enum class DebugInfoSetting {
   ALL,
 };
 
+enum class ParseFlowSetting {
+  /// Do not parse any Flow type syntax.
+  NONE,
+
+  /// Parse all Flow type syntax.
+  ALL,
+
+  /// Parse all unambiguous Flow type syntax. Syntax that can be intepreted as
+  /// either Flow types or standard JavaScript is parsed as if it were standard
+  /// JavaScript.
+  ///
+  /// For example, `foo<T>(x)` is parsed as if it were standard JavaScript
+  /// containing two comparisons, even though it could otherwise be interpreted
+  /// as a call expression with Flow type arguments.
+  UNAMBIGUOUS,
+};
+
 /// Holds shared dependencies and state.
 class Context {
  public:
@@ -119,18 +107,6 @@ class Context {
   /// Strings owned by a JSON Parser allocator that the user of Context should
   /// manage.
   using ResolutionTable = llvh::DenseMap<llvh::StringRef, ResolutionTableEntry>;
-
-  /// Represents a range of modules used in a given segment.
-  struct SegmentRange {
-    /// ID of the segment this range represents.
-    uint32_t segment;
-
-    /// ID of the first module in this segment, inclusive.
-    uint32_t first;
-
-    /// ID of the last module in this segment, inclusive.
-    uint32_t last;
-  };
 
  private:
   /// The allocator for AST nodes, which may be rolled back to parse subtrees
@@ -177,6 +153,12 @@ class Context {
   /// to be retained after compilation.
   bool allowFunctionToStringWithRuntimeSource_{false};
 
+  /// If true, do not error on return statements that are not within functions.
+  bool allowReturnOutsideFunction_{false};
+
+  /// Allows generator functions to be compiled.
+  bool generatorEnabled_{true};
+
   /// If true, wrap each file in the CommonJS module wrapper function,
   /// and use that for requiring modules.
   bool useCJSModules_{false};
@@ -184,17 +166,15 @@ class Context {
   /// If true, allow parsing JSX as a primary expression.
   bool parseJSX_{false};
 
-  /// If true, allow parsing Flow type annotations.
-  bool parseFlow_{false};
+  /// Whether to parse Flow type syntax.
+  ParseFlowSetting parseFlow_{ParseFlowSetting::NONE};
 
   /// If non-null, the resolution table which resolves static require().
   const std::unique_ptr<ResolutionTable> resolutionTable_;
 
-  /// The table of segment ranges. The ranges are contiguous and generated based
-  /// on the user's metadata input to the compiler when splitting the bundle.
-  /// Determines which CJS modules are placed into which segment when splitting
-  /// the result bundle.
-  const std::vector<SegmentRange> segmentRanges_;
+  /// The list of segment IDs, based on the user's metadata input to the
+  /// compiler when splitting the bundle.
+  const std::vector<uint32_t> segments_;
 
   /// The level of debug information we should emit. Defaults to
   /// DebugInfoSetting::THROWING.
@@ -217,10 +197,10 @@ class Context {
       CodeGenerationSettings codeGenOpts = CodeGenerationSettings(),
       OptimizationSettings optimizationOpts = OptimizationSettings(),
       std::unique_ptr<ResolutionTable> resolutionTable = nullptr,
-      std::vector<SegmentRange> segmentRanges = {})
+      std::vector<uint32_t> segments = {})
       : sm_(sm),
         resolutionTable_(std::move(resolutionTable)),
-        segmentRanges_(std::move(segmentRanges)),
+        segments_(std::move(segments)),
         codeGenerationSettings_(std::move(codeGenOpts)),
         optimizationSettings_(std::move(optimizationOpts)) {}
 
@@ -228,11 +208,11 @@ class Context {
       CodeGenerationSettings codeGenOpts = CodeGenerationSettings(),
       OptimizationSettings optimizationOpts = OptimizationSettings(),
       std::unique_ptr<ResolutionTable> resolutionTable = nullptr,
-      std::vector<SegmentRange> segmentRanges = {})
+      std::vector<uint32_t> segments = {})
       : ownSm_(new SourceErrorManager()),
         sm_(*ownSm_),
         resolutionTable_(std::move(resolutionTable)),
-        segmentRanges_(std::move(segmentRanges)),
+        segments_(std::move(segments)),
         codeGenerationSettings_(std::move(codeGenOpts)),
         optimizationSettings_(std::move(optimizationOpts)) {}
 
@@ -249,7 +229,7 @@ class Context {
 
   parser::PreParsedBufferInfo *getPreParsedBufferInfo(uint32_t bufferId) {
     if (!preParsed_)
-      preParsed_ = llvh::make_unique<parser::PreParsedData>();
+      preParsed_ = std::make_unique<parser::PreParsedData>();
     return preParsed_->getBufferInfo(bufferId);
   }
 
@@ -258,8 +238,8 @@ class Context {
   }
 
   /// \return the table for static require resolution, nullptr if not supplied.
-  const std::vector<SegmentRange> &getSegmentRanges() const {
-    return segmentRanges_;
+  const std::vector<uint32_t> &getSegments() const {
+    return segments_;
   }
 
   /// \return the table for static require resolution, nullptr if not supplied.
@@ -320,11 +300,14 @@ class Context {
     return parseJSX_;
   }
 
-  void setParseFlow(bool parseFlow) {
+  void setParseFlow(ParseFlowSetting parseFlow) {
     parseFlow_ = parseFlow;
   }
   bool getParseFlow() const {
-    return parseFlow_;
+    return parseFlow_ != ParseFlowSetting::NONE;
+  }
+  bool getParseFlowAmbiguous() const {
+    return parseFlow_ == ParseFlowSetting::ALL;
   }
 
   bool isLazyCompilation() const {
@@ -357,6 +340,22 @@ class Context {
 
   void setAllowFunctionToStringWithRuntimeSource(bool v) {
     allowFunctionToStringWithRuntimeSource_ = v;
+  }
+
+  bool allowReturnOutsideFunction() const {
+    return allowReturnOutsideFunction_;
+  }
+
+  void setAllowReturnOutsideFunction(bool allowReturnOutsideFunction) {
+    allowReturnOutsideFunction_ = allowReturnOutsideFunction;
+  }
+
+  bool isGeneratorEnabled() const {
+    return generatorEnabled_;
+  }
+
+  void setGeneratorEnabled(bool v) {
+    generatorEnabled_ = v;
   }
 
   void setStaticBuiltinOptimization(bool staticBuiltins) {

@@ -91,7 +91,7 @@ void TransitionMap::uncleanMakeLarge(Runtime *runtime) {
 
 } // namespace detail
 
-VTable HiddenClass::vt{
+const VTable HiddenClass::vt{
     CellKind::HiddenClassKind,
     cellSize<HiddenClass>(),
     _finalizeImpl,
@@ -100,15 +100,16 @@ VTable HiddenClass::vt{
     nullptr,
     nullptr,
     nullptr,
-    VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
-                                 HiddenClass::_snapshotNameImpl,
-                                 HiddenClass::_snapshotAddEdgesImpl,
-                                 HiddenClass::_snapshotAddNodesImpl,
-                                 nullptr}};
+    VTable::HeapSnapshotMetadata{
+        HeapSnapshot::NodeType::Object,
+        HiddenClass::_snapshotNameImpl,
+        HiddenClass::_snapshotAddEdgesImpl,
+        HiddenClass::_snapshotAddNodesImpl,
+        nullptr}};
 
 void HiddenClassBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const HiddenClass *>(cell);
-  mb.addField(&self->symbolID_);
+  mb.addField("symbol", &self->symbolID_);
   mb.addField("parent", &self->parent_);
   mb.addField("propertyMap", &self->propertyMap_);
   mb.addField("forInCache", &self->forInCache_);
@@ -161,9 +162,7 @@ void HiddenClassDeserialize(Deserializer &d, CellKind kind) {
   d.readData(&classFlags, sizeof(ClassFlags));
   unsigned numProperties = d.readInt<uint32_t>();
 
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<HiddenClass>());
-  auto *cell = new (mem) HiddenClass(
+  auto *cell = d.getRuntime()->makeAFixed<HiddenClass, HasFinalizer::Yes>(
       d.getRuntime(),
       classFlags,
       d.getRuntime()->makeNullHandle<HiddenClass>(),
@@ -255,10 +254,10 @@ CallResult<HermesValue> HiddenClass::create(
   assert(
       (flags.dictionaryMode || numProperties == 0 || *parent) &&
       "non-empty non-dictionary orphan");
-  void *mem =
-      runtime->allocLongLived<HasFinalizer::Yes>(cellSize<HiddenClass>());
-  return HermesValue::encodeObjectValue(new (mem) HiddenClass(
-      runtime, flags, parent, symbolID, propertyFlags, numProperties));
+  auto *obj =
+      runtime->makeAFixed<HiddenClass, HasFinalizer::Yes, LongLived::Yes>(
+          runtime, flags, parent, symbolID, propertyFlags, numProperties);
+  return HermesValue::encodeObjectValue(obj);
 }
 
 Handle<HiddenClass> HiddenClass::copyToNewDictionary(
@@ -308,12 +307,13 @@ void HiddenClass::forEachPropertyNoAlloc(
   std::vector<std::pair<SymbolID, NamedPropertyDescriptor>> properties;
   HiddenClass *curr = self;
   while (curr && !curr->propertyMap_) {
-    // Skip invalid symbols stored in the hidden class chain.
-    if (curr->symbolID_.isValid()) {
+    // Skip invalid symbols stored in the hidden class chain, as well as
+    // flag-only transitions.
+    if (curr->symbolID_.isValid() && !curr->propertyFlags_.flagsTransition) {
       properties.emplace_back(
           curr->symbolID_,
-          NamedPropertyDescriptor{curr->propertyFlags_,
-                                  curr->numProperties_ - 1});
+          NamedPropertyDescriptor{
+              curr->propertyFlags_, curr->numProperties_ - 1});
     }
     curr = curr->parent_.get(base);
   }
@@ -402,8 +402,8 @@ llvh::Optional<NamedPropertyDescriptor> HiddenClass::findPropertyNoAlloc(
     // Else, no property map exists. Check the current hidden class before
     // moving up.
     if (curr->symbolID_ == name) {
-      return NamedPropertyDescriptor{curr->propertyFlags_,
-                                     curr->numProperties_ - 1};
+      return NamedPropertyDescriptor{
+          curr->propertyFlags_, curr->numProperties_ - 1};
     }
   }
   // Reached the root hidden class without finding a property map or the
@@ -441,7 +441,7 @@ Handle<HiddenClass> HiddenClass::deleteProperty(
 
   --newHandle->numProperties_;
 
-  DictPropertyMap::erase(newHandle->propertyMap_.get(runtime), pos);
+  DictPropertyMap::erase(newHandle->propertyMap_.get(runtime), runtime, pos);
 
   LLVM_DEBUG(
       dbgs() << "Deleting from Class:" << selfHandle->getDebugAllocationId()
@@ -471,7 +471,7 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
     // but not consume until we are sure (which is less efficient, but more
     // robust). T31555339.
     SlotIndex newSlot = DictPropertyMap::allocatePropertySlot(
-        selfHandle->propertyMap_.get(runtime));
+        selfHandle->propertyMap_.get(runtime), runtime);
 
     if (LLVM_UNLIKELY(
             addToPropertyMap(
@@ -1025,8 +1025,8 @@ void HiddenClass::stealPropertyMapFromParent(
         "new prop transition");
 
     // Create a descriptor for our property.
-    NamedPropertyDescriptor desc{self->propertyFlags_,
-                                 self->numProperties_ - 1};
+    NamedPropertyDescriptor desc{
+        self->propertyFlags_, self->numProperties_ - 1};
     // Return to handle mode to add the property.
     noAlloc.release();
     addToPropertyMap(selfHandle, runtime, selfHandle->symbolID_, desc);

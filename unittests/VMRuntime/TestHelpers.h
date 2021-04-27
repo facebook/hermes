@@ -95,6 +95,8 @@ class RuntimeTestFixtureBase : public ::testing::Test {
   // Convenience accessor that points to rt.
   Runtime *runtime;
 
+  RuntimeConfig rtConfig;
+
   GCScope gcScope;
 
   Handle<Domain> domain;
@@ -102,6 +104,7 @@ class RuntimeTestFixtureBase : public ::testing::Test {
   RuntimeTestFixtureBase(const RuntimeConfig &runtimeConfig)
       : rt(Runtime::create(runtimeConfig)),
         runtime(rt.get()),
+        rtConfig(runtimeConfig),
         gcScope(runtime),
         domain(runtime->makeHandle(Domain::create(runtime))) {}
 
@@ -115,6 +118,10 @@ class RuntimeTestFixtureBase : public ::testing::Test {
 
   ::testing::AssertionResult isException(ExecutionStatus status) {
     return ::hermes::vm::isException(runtime, status);
+  }
+
+  std::shared_ptr<Runtime> newRuntime() {
+    return Runtime::create(rtConfig);
   }
 };
 
@@ -254,12 +261,15 @@ class MetadataTableForTests final : public MetadataTable {
 };
 
 /// A Runtime that can take a custom VTableMap and Metadata table.
-struct DummyRuntime final : public HandleRootOwner,
-                            public PointerBase,
-                            private GCBase::GCCallbacks {
-  GC gc;
+class DummyRuntime final : public HandleRootOwner,
+                           public PointerBase,
+                           private GCBase::GCCallbacks {
+ private:
+  GCStorage gcStorage_;
+
+ public:
   std::vector<GCCell **> pointerRoots{};
-  std::vector<HermesValue *> valueRoots{};
+  std::vector<PinnedHermesValue *> valueRoots{};
   std::vector<WeakRoot<void> *> weakRoots{};
   std::function<void(WeakRefAcceptor &)> markExtraWeak{};
 
@@ -284,38 +294,35 @@ struct DummyRuntime final : public HandleRootOwner,
   /// function.
   static std::unique_ptr<StorageProvider> defaultProvider();
 
-  ~DummyRuntime() override {
-#ifndef NDEBUG
-    gc.getIDTracker().forEachID(
-        [this](const void *mem, HeapSnapshot::NodeID id) {
-          EXPECT_TRUE(gc.validPointer(mem));
-        });
-#endif
-    gc.finalizeAll();
+  ~DummyRuntime();
+
+  template <
+      typename T,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::No,
+      class... Args>
+  T *makeAFixed(Args &&...args) {
+    return getHeap().makeAFixed<T, hasFinalizer, longLived>(
+        std::forward<Args>(args)...);
   }
 
-  template <bool fixedSize = true>
-  void *alloc(uint32_t sz) {
-    return gc.alloc<fixedSize>(sz);
-  }
-  template <HasFinalizer hasFinalizer = HasFinalizer::No>
-  void *allocLongLived(uint32_t sz) {
-    return gc.allocLongLived<hasFinalizer>(sz);
-  }
-  template <bool fixedSize = true>
-  void *allocWithFinalizer(uint32_t sz) {
-    return gc.alloc<fixedSize, HasFinalizer::Yes>(sz);
+  template <
+      typename T,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::No,
+      class... Args>
+  T *makeAVariable(uint32_t size, Args &&...args) {
+    return getHeap().makeAVariable<T, hasFinalizer, longLived>(
+        size, std::forward<Args>(args)...);
   }
 
   GC &getHeap() {
-    return gc;
+    return *gcStorage_.get();
   }
 
-  void collect() {
-    gc.collect("test");
-  }
+  void collect();
 
-  void markRoots(RootAcceptor &acceptor, bool) override;
+  void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool) override;
 
   void markWeakRoots(WeakRootAcceptor &weakAcceptor) override;
 
@@ -325,20 +332,22 @@ struct DummyRuntime final : public HandleRootOwner,
 
   void unmarkSymbols() override {}
 
-  void freeSymbols(const std::vector<bool> &) override {}
+  void freeSymbols(const llvh::BitVector &) override {}
 
 #ifdef HERMES_SLOW_DEBUG
   bool isSymbolLive(SymbolID) override {
     return true;
+  }
+
+  const void *getStringForSymbol(SymbolID) override {
+    return nullptr;
   }
 #endif
 
   void printRuntimeGCStats(JSONEmitter &) const override {}
 
   void visitIdentifiers(
-      const std::function<void(UTF16Ref, uint32_t)> &acceptor) override {
-    acceptor(createUTF16Ref(u"DummyIdTableEntry0"), 0);
-    acceptor(createUTF16Ref(u"DummyIdTableEntry1"), 1);
+      const std::function<void(SymbolID, const StringPrimitive *)> &) override {
   }
 
   std::string convertSymbolToUTF8(SymbolID) override;
@@ -368,6 +377,14 @@ struct DummyRuntime final : public HandleRootOwner,
   }
 
  private:
+  static std::unique_ptr<GC> makeHeap(
+      DummyRuntime *runtime,
+      MetadataTableForTests metaTable,
+      const GCConfig &gcConfig,
+      std::shared_ptr<CrashManager> crashMgr,
+      std::shared_ptr<StorageProvider> provider,
+      experiments::VMExperimentFlags experiments);
+
   DummyRuntime(
       MetadataTableForTests metaTable,
       const GCConfig &gcConfig,

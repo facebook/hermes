@@ -63,15 +63,13 @@ void SetSerialize(Serializer &s, const GCCell *cell) {
 
 void MapDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::MapKind && "Expected Map");
-  void *mem = d.getRuntime()->alloc(cellSize<JSMap>());
-  auto *cell = new (mem) JSMap(d, &JSMap::vt.base);
+  auto *cell = d.getRuntime()->makeAFixed<JSMap>(d, &JSMap::vt.base);
   d.endObject(cell);
 }
 
 void SetDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::SetKind && "Expected Set");
-  void *mem = d.getRuntime()->alloc(cellSize<JSSet>());
-  auto *cell = new (mem) JSSet(d, &JSSet::vt.base);
+  auto *cell = d.getRuntime()->makeAFixed<JSSet>(d, &JSSet::vt.base);
   d.endObject(cell);
 }
 #endif
@@ -92,13 +90,13 @@ template <CellKind C>
 PseudoHandle<JSMapImpl<C>> JSMapImpl<C>::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  JSObjectAlloc<JSMapImpl> mem{runtime};
-  return mem.initToPseudoHandle(new (mem) JSMapImpl(
+  auto *cell = runtime->makeAFixed<JSMapImpl>(
       runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+      parentHandle,
+      runtime->getHiddenClassForPrototype(
           *parentHandle,
-          numOverlapSlots<JSMapImpl>() + ANONYMOUS_PROPERTY_SLOTS)));
+          numOverlapSlots<JSMapImpl>() + ANONYMOUS_PROPERTY_SLOTS));
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 template class JSMapImpl<CellKind::SetKind>;
@@ -160,14 +158,12 @@ void SetIteratorSerialize(Serializer &s, const GCCell *cell) {
 }
 
 void MapIteratorDeserialize(Deserializer &d, CellKind kind) {
-  void *mem = d.getRuntime()->alloc(cellSize<JSMapIterator>());
-  auto *cell = new (mem) JSMapIterator(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSMapIterator>(d);
   d.endObject(cell);
 }
 
 void SetIteratorDeserialize(Deserializer &d, CellKind kind) {
-  void *mem = d.getRuntime()->alloc(cellSize<JSSetIterator>());
-  auto *cell = new (mem) JSSetIterator(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSSetIterator>(d);
   d.endObject(cell);
 }
 #endif
@@ -188,13 +184,13 @@ template <CellKind C>
 PseudoHandle<JSMapIteratorImpl<C>> JSMapIteratorImpl<C>::create(
     Runtime *runtime,
     Handle<JSObject> prototype) {
-  JSObjectAlloc<JSMapIteratorImpl<C>> mem{runtime};
-  return mem.initToPseudoHandle(new (mem) JSMapIteratorImpl<C>(
+  auto *cell = runtime->makeAFixed<JSMapIteratorImpl<C>>(
       runtime,
-      *prototype,
-      runtime->getHiddenClassForPrototypeRaw(
+      prototype,
+      runtime->getHiddenClassForPrototype(
           *prototype,
-          numOverlapSlots<JSMapIteratorImpl>() + ANONYMOUS_PROPERTY_SLOTS)));
+          numOverlapSlots<JSMapIteratorImpl>() + ANONYMOUS_PROPERTY_SLOTS));
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 template class JSMapIteratorImpl<CellKind::MapIteratorKind>;

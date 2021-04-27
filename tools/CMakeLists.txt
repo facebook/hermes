@@ -17,7 +17,4 @@ add_subdirectory(emhermesc)
 add_subdirectory(fuzzers)
 add_subdirectory(dependency-extractor)
 add_subdirectory(hermes-parser)
-
-if (HERMESVM_API_TRACE)
-  add_subdirectory(synth)
-endif()
+add_subdirectory(synth)

@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
     return -1;
   }
 
-  auto buffer = llvh::make_unique<MemoryBuffer>(FileBufOrErr.get().get());
+  auto buffer = std::make_unique<MemoryBuffer>(FileBufOrErr.get().get());
   auto ret =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(std::move(buffer));
 
@@ -120,8 +120,10 @@ int main(int argc, char **argv) {
                   .withShouldReleaseUnused(vm::kReleaseUnusedNone)
                   .withName("hvm")
                   .build())
+          .withES6Promise(cl::ES6Promise)
           .withES6Proxy(cl::ES6Proxy)
           .withES6Symbol(cl::ES6Symbol)
+          .withES6Intl(cl::ES6Intl)
           .withTrackIO(cl::TrackBytecodeIO)
           .withEnableHermesInternal(cl::EnableHermesInternal)
           .withEnableHermesInternalTestMethods(

@@ -11,6 +11,7 @@
 #include "hermes/Support/OptValue.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Callable.h"
+#include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringView.h"
@@ -20,7 +21,7 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 // class JSError
 
-ObjectVTable JSError::vt{
+const ObjectVTable JSError::vt{
     VTable(
         CellKind::ErrorKind,
         cellSize<JSError>(),
@@ -73,10 +74,7 @@ void ErrorSerialize(Serializer &s, const GCCell *cell) {
 
 void ErrorDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::ErrorKind && "Expected JSError");
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<JSError>());
-
-  auto *cell = new (mem) JSError(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSError, HasFinalizer::Yes>(d);
   d.endObject(cell);
 }
 
@@ -159,13 +157,6 @@ errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 errorStackSetter(void *, Runtime *runtime, NativeArgs args) {
-  if (auto *errorObject = dyn_vmcast<JSError>(args.getThisArg())) {
-    auto &stacktrace = errorObject->stacktrace_;
-    if (stacktrace) {
-      // Release stacktrace_ if it's already set.
-      stacktrace.reset();
-    }
-  }
   auto res = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -202,13 +193,13 @@ PseudoHandle<JSError> JSError::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle,
     bool catchable) {
-  JSObjectAlloc<JSError, HasFinalizer::Yes> mem{runtime};
-  return mem.initToPseudoHandle(new (mem) JSError(
+  auto *cell = runtime->makeAFixed<JSError, HasFinalizer::Yes>(
       runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+      parentHandle,
+      runtime->getHiddenClassForPrototype(
           *parentHandle, numOverlapSlots<JSError>() + ANONYMOUS_PROPERTY_SLOTS),
-      catchable));
+      catchable);
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 ExecutionStatus JSError::setupStack(
@@ -357,7 +348,7 @@ static Handle<PropStorage> getCallStackFunctionNames(
       runtime->clearThrownValue();
       return Runtime::makeNullHandle<PropStorage>();
     }
-    names->at(namesIndex).set(name.getHermesValue(), &runtime->getHeap());
+    names->set(namesIndex, name.getHermesValue(), &runtime->getHeap());
     ++namesIndex;
     gcScope.flushToMarker(marker);
   }
@@ -607,12 +598,10 @@ ExecutionStatus JSError::constructStackTraceString(
         // Code block was not in the cache, update the cache.
         virtualOffset = sti.codeBlock->getVirtualOffset();
       }
-      // Add 1 to the CJSModuleOffset to account for 1-based indexing of
+      // Add 1 to the SegmentID to account for 1-based indexing of
       // symbolication tools.
-      lineNo = sti.codeBlock->getRuntimeModule()
-                   ->getBytecode()
-                   ->getCJSModuleOffset() +
-          1;
+      lineNo =
+          sti.codeBlock->getRuntimeModule()->getBytecode()->getSegmentID() + 1;
       columnNo = sti.bytecodeOffset + virtualOffset;
       isAddress = true;
     }

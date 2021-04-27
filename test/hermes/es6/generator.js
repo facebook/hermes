@@ -5,8 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O0 %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -lazy %s | %FileCheck --match-full-lines %s
 
 function show(iterResult) {
   print(iterResult.value, '|', iterResult.done);
@@ -49,6 +50,25 @@ show(it.next());
 // CHECK-NEXT: 111 | false
 show(it.next());
 // CHECK-NEXT: undefined | true
+
+(function() {
+function *useArgsLocal(x, y) {
+  yield x;
+  yield x + 1;
+  ++x;
+  yield x + y;
+}
+
+var it = useArgsLocal(100, 10);
+show(it.next());
+// CHECK-NEXT: 100 | false
+show(it.next());
+// CHECK-NEXT: 101 | false
+show(it.next());
+// CHECK-NEXT: 111 | false
+show(it.next());
+// CHECK-NEXT: undefined | true
+})();
 
 function *locals(x,y) {
   var a,b,c;
@@ -318,7 +338,6 @@ var iter = {
   }
 };
 
-var callCount = 0;
 var f = function*([x]) {
   print('START', x)
   return 5;
@@ -354,6 +373,17 @@ print(iterator.next().value);
 iterator.return(123);
 // CHECK-NEXT: 1
 // CHECK-NEXT: get return
+
+var gen = function* genAlias() { yield 1 };
+show(gen().next())
+// CHECK-NEXT: 1 | false
+
+var gen = function* genAlias() {
+  print(genAlias() !== undefined)
+};
+show(gen().next())
+// CHECK-NEXT: true
+// CHECK-NEXT: undefined | true
 
 // Make sure using SaveGeneratorLong works.
 function* saveGeneratorLong() {

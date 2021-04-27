@@ -5,23 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef PROP
-#define PROP(i)
-#endif
-
 #ifndef NAMED_PROP
 #define NAMED_PROP(name)
 #endif
 
-/// Anonymous internal properties
-PROP(0)
-PROP(1)
-PROP(2)
-PROP(3)
-
 /// Named internal properties
-/// NOTE: All named properties must be defined after all anonymous properties.
-NAMED_PROP(NamedPropForUnitTestOnly)
+NAMED_PROP(InternalProperty0)
+NAMED_PROP(InternalProperty1)
+NAMED_PROP(InternalProperty2)
+NAMED_PROP(InternalProperty3)
+NAMED_PROP(InternalPropertyNamedPropForUnitTestOnly)
 
-#undef PROP
 #undef NAMED_PROP

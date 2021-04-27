@@ -78,7 +78,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
 
   /// The table maps from a sequential string id in the bytecode to an
   /// SymbolID.
-  std::vector<SymbolID> stringIDMap_;
+  std::vector<RootSymbolID> stringIDMap_;
 
   /// Weak pointer to a GC-managed Domain that owns this RuntimeModule.
   /// NOTE: This will not be made invalid through marking, because the domain
@@ -349,7 +349,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   }
 
   /// Mark the non-weak roots owned by this RuntimeModule.
-  void markRoots(SlotAcceptor &acceptor, bool markLongLived);
+  void markRoots(RootAcceptor &acceptor, bool markLongLived);
 
   /// Mark the weak roots owned by this RuntimeModule.
   void markWeakRoots(WeakRootAcceptor &acceptor);
@@ -360,6 +360,10 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// \return an estimate of the size of additional memory used by this
   /// RuntimeModule.
   size_t additionalMemorySize() const;
+
+  /// Add native nodes and edges to heap snapshots.
+  void snapshotAddNodes(GC *gc, HeapSnapshot &snap) const;
+  void snapshotAddEdges(GC *gc, HeapSnapshot &snap) const;
 
   /// Find the cached hidden class for an object literal, if one exists.
   /// \param keyBufferIndex value of NewObjectWithBuffer instruction.

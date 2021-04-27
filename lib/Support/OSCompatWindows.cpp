@@ -154,12 +154,8 @@ llvh::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
     return addr;
   }
   // Free the oppotunistic allocation.
-  std::error_code err = vm_free_impl(addr, sz);
-  if (err) {
-    hermes_fatal(
-        (llvh::Twine("Failed to free memory region in vm_allocate_aligned: ") +
-         convert_error_to_message(err))
-            .str());
+  if (std::error_code err = vm_free_impl(addr, sz)) {
+    hermes_fatal("Failed to free memory region in vm_allocate_aligned", err);
   }
 
   for (int attempts = 0; attempts < aligned_allocation_attempts; attempts++) {
@@ -175,13 +171,8 @@ llvh::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
     char *aligned = alignAlloc(addr, alignment);
 
     // Free the larger allocation (including the desired subsection)
-    err = vm_free_impl(addr, sz);
-    if (err) {
-      hermes_fatal(
-          (llvh::Twine(
-               "Failed to free memory region in vm_allocate_aligned: ") +
-           convert_error_to_message(err))
-              .str());
+    if (std::error_code err = vm_free_impl(addr, sz)) {
+      hermes_fatal("Failed to free memory region in vm_allocate_aligned", err);
     }
 
     // Request allocation at the desired subsection
@@ -207,10 +198,8 @@ llvh::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
   result = vm_allocate_impl(addr, alignment, MEM_COMMIT);
   if (!result) {
     hermes_fatal(
-        (llvh::Twine(
-             "Failed to commit subsection of reserved memory in vm_allocate_aligned: ") +
-         convert_error_to_message(result.getError()))
-            .str());
+        "Failed to commit subsection of reserved memory in vm_allocate_aligned",
+        result.getError());
   }
   return result;
 }
@@ -223,11 +212,8 @@ void vm_free(void *p, size_t sz) {
   }
 #endif // !NDEBUG
 
-  std::error_code err = vm_free_impl(p, sz);
-  if (err) {
-    hermes_fatal((llvh::Twine("Failed to free virtual memory region: ") +
-                  convert_error_to_message(err))
-                     .str());
+  if (std::error_code err = vm_free_impl(p, sz)) {
+    hermes_fatal("Failed to free virtual memory region", err);
   }
 
 #ifndef NDEBUG
@@ -253,6 +239,12 @@ void vm_free_aligned(void *p, size_t sz) {
     totalVMAllocLimit += sz;
   }
 #endif
+}
+
+void vm_hugepage(void *p, size_t sz) {
+  assert(
+      reinterpret_cast<uintptr_t>(p) % page_size() == 0 &&
+      "Precondition: pointer is page-aligned.");
 }
 
 void vm_unused(void *p, size_t sz) {
@@ -307,6 +299,10 @@ bool vm_protect(void *p, size_t sz, ProtectMode mode) {
 bool vm_madvise(void *p, size_t sz, MAdvice advice) {
   // Not implemented.
   return false;
+}
+
+llvh::ErrorOr<size_t> vm_footprint(char *start, char *end) {
+  return std::error_code(errno, std::generic_category());
 }
 
 int pages_in_ram(const void *p, size_t sz, llvh::SmallVectorImpl<int> *runs) {

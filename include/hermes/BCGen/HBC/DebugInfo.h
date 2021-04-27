@@ -250,7 +250,7 @@ class DebugInfo {
   void populateSourceMap(
       SourceMapGenerator *sourceMap,
       std::vector<uint32_t> &&functionOffsets,
-      uint32_t cjsModuleOffset) const;
+      uint32_t segmentID) const;
 #endif
 };
 

@@ -24,7 +24,8 @@ for(a1 of b);
 //CHECK-NEXT:        },
 //CHECK-NEXT:        "body": {
 //CHECK-NEXT:          "type": "EmptyStatement"
-//CHECK-NEXT:        }
+//CHECK-NEXT:        },
+//CHECK-NEXT:        "await": false
 //CHECK-NEXT:      },
 
 for(var a2 of b);
@@ -50,7 +51,8 @@ for(var a2 of b);
 //CHECK-NEXT:        },
 //CHECK-NEXT:        "body": {
 //CHECK-NEXT:          "type": "EmptyStatement"
-//CHECK-NEXT:        }
+//CHECK-NEXT:        },
+//CHECK-NEXT:        "await": false
 //CHECK-NEXT:      },
 
 for(let a3 of b);
@@ -76,7 +78,8 @@ for(let a3 of b);
 //CHECK-NEXT:        },
 //CHECK-NEXT:        "body": {
 //CHECK-NEXT:          "type": "EmptyStatement"
-//CHECK-NEXT:        }
+//CHECK-NEXT:        },
+//CHECK-NEXT:        "await": false
 //CHECK-NEXT:      },
 
 for(const a4 of b);
@@ -102,7 +105,8 @@ for(const a4 of b);
 //CHECK-NEXT:        },
 //CHECK-NEXT:        "body": {
 //CHECK-NEXT:          "type": "EmptyStatement"
-//CHECK-NEXT:        }
+//CHECK-NEXT:        },
+//CHECK-NEXT:        "await": false
 //CHECK-NEXT:      },
 
 let a5, a6;

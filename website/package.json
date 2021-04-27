@@ -7,14 +7,15 @@
     "start": "docusaurus start",
     "build": "docusaurus build",
     "swizzle": "docusaurus swizzle",
-    "deploy": "docusaurus deploy"
+    "deploy": "docusaurus deploy",
+    "serve": "docusaurus serve",
+    "clear": "docusaurus clear"
   },
   "dependencies": {
-    "@docusaurus/core": "^2.0.0-alpha.54",
-    "@docusaurus/preset-classic": "^2.0.0-alpha.54",
+    "@docusaurus/core": "^2.0.0-alpha.69",
+    "@docusaurus/preset-classic": "^2.0.0-alpha.69",
     "classnames": "^2.2.6",
     "monaco-editor": "^0.19.2",
-    "normalize.css": "^8.0.1",
     "react": "^16.8.4",
     "react-dom": "^16.8.4",
     "react-monaco-editor": "^0.33.0"
@@ -35,6 +36,7 @@
     "case-sensitive-paths-webpack-plugin": "^2.3.0",
     "file-loader": "^5.0.2",
     "monaco-editor-webpack-plugin": "^1.8.2",
+    "url-loader": "^4.1.1",
     "worker-loader": "^2.0.0"
   }
 }

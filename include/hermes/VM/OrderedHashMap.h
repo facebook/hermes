@@ -23,7 +23,7 @@ namespace vm {
 /// tracks the list of entries in a hash table bucket for hash operations.
 class HashMapEntry final : public GCCell {
  public:
-  static VTable vt;
+  static const VTable vt;
 
   /// The key.
   GCHermesValue key;
@@ -44,7 +44,7 @@ class HashMapEntry final : public GCCell {
     return cell->getKind() == CellKind::HashMapEntryKind;
   }
 
-  static CallResult<HermesValue> create(Runtime *runtime);
+  static CallResult<PseudoHandle<HashMapEntry>> create(Runtime *runtime);
 
   /// Indicates whether this entry has been deleted.
   bool isDeleted() const {
@@ -58,7 +58,7 @@ class HashMapEntry final : public GCCell {
     value.setNonPtr(HermesValue::encodeEmptyValue(), &runtime->getHeap());
   }
 
- protected:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit HashMapEntry(Deserializer &d);
 
@@ -89,7 +89,7 @@ class OrderedHashMap final : public GCCell {
       Metadata::Builder &mb);
 
  public:
-  static VTable vt;
+  static const VTable vt;
 
 #ifdef HERMESVM_SERIALIZE
   OrderedHashMap(Deserializer &d);
@@ -101,7 +101,7 @@ class OrderedHashMap final : public GCCell {
     return cell->getKind() == CellKind::OrderedHashMapKind;
   }
 
-  static CallResult<HermesValue> create(Runtime *runtime);
+  static CallResult<PseudoHandle<OrderedHashMap>> create(Runtime *runtime);
 
   /// \return true if the map contains a given HermesValue.
   static bool has(Handle<OrderedHashMap> self, Runtime *runtime, Handle<> key);
@@ -143,7 +143,6 @@ class OrderedHashMap final : public GCCell {
   HashMapEntry *iteratorNext(Runtime *runtime, HashMapEntry *entry = nullptr)
       const;
 
- protected:
   OrderedHashMap(Runtime *runtime, Handle<ArrayStorage> hashTableStorage);
 
  private:

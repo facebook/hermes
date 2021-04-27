@@ -116,7 +116,9 @@ async function foo() {
 // CHECK-NEXT:               "async": true
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
-// CHECK-NEXT:             "computed": false
+// CHECK-NEXT:             "computed": false,
+// CHECK-NEXT:             "method": true,
+// CHECK-NEXT:             "shorthand": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },

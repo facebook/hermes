@@ -19,6 +19,7 @@
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/Support/Algorithms.h"
+#include "hermes/Support/SimpleDiagHandler.h"
 
 #include "llvh/Support/SHA1.h"
 
@@ -113,7 +114,7 @@ extern "C" CompileResult *hermesCompileToBytecode(
     const char *sourceURL,
     const char *sourceMapData,
     size_t sourceMapSize) {
-  auto compileRes = hermes::make_unique<CompileResult>();
+  auto compileRes = std::make_unique<CompileResult>();
   std::unique_ptr<SourceMap> sourceMap;
 
   if (source[sourceSize - 1] != 0) {
@@ -127,9 +128,12 @@ extern "C" CompileResult *hermesCompileToBytecode(
       return compileRes.release();
     }
 
-    sourceMap = SourceMapParser::parse({sourceMapData, sourceMapSize - 1});
+    SourceErrorManager sm;
+    SimpleDiagHandlerRAII diagHandler(sm);
+    sourceMap = SourceMapParser::parse({sourceMapData, sourceMapSize - 1}, sm);
     if (!sourceMap) {
-      compileRes->error_ = "Failed to parse source map";
+      compileRes->error_ =
+          "Failed to parse source map:" + diagHandler.getErrorString();
       return compileRes.release();
     }
   }
@@ -140,8 +144,7 @@ extern "C" CompileResult *hermesCompileToBytecode(
   // Note that we are relying the zero termination provided by str.data(),
   // because the parser requires it.
   auto res = hbc::BCProviderFromSrc::createBCProviderFromSrc(
-      hermes::make_unique<hermes::Buffer>(
-          (const uint8_t *)source, sourceSize - 1),
+      std::make_unique<hermes::Buffer>((const uint8_t *)source, sourceSize - 1),
       sourceURL ? sourceURL : "",
       std::move(sourceMap),
       flags);

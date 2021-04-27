@@ -32,8 +32,8 @@ METRIC_KEYS = ["filesize", "rw_data", "ro_data", "code", "bss", "symbols", "unwi
 
 
 def metric_key_for_section_name(secname):
-    """ Returns an attribute name for the given section name, or None
-        Note that not all sections are represented.
+    """Returns an attribute name for the given section name, or None
+    Note that not all sections are represented.
     """
     if secname in ["text", "init_array", "fini_array"]:
         return "code"
@@ -64,12 +64,12 @@ def metric_key_for_section_name(secname):
 
 
 def measure_executable(path):
-    """ Invoke `size` and parse its output, returning a dictionary.
+    """Invoke `size` and parse its output, returning a dictionary.
 
-        On Darwin, the interesting lines look like:
-          .rodata               366252   5048448
-        On Linux:
-          __const              25808   4295726400
+    On Darwin, the interesting lines look like:
+      .rodata               366252   5048448
+    On Linux:
+      __const              25808   4295726400
     """
     metrics = {key: 0 for key in METRIC_KEYS}
     reg = re.compile(
@@ -107,8 +107,8 @@ def measure_executable(path):
 
 
 def human_readable_size(size, show_sign=False):
-    """ Return a human-readable string for a given byte size.
-        If show_sign is set, write positive numbers with a leading + sign.
+    """Return a human-readable string for a given byte size.
+    If show_sign is set, write positive numbers with a leading + sign.
     """
     if size == 0:
         return "0"
@@ -120,8 +120,8 @@ def human_readable_size(size, show_sign=False):
 
 
 def compare_metrics(before_metrics, after_metrics):
-    """ Given before and after metrics, return a dictionary describing
-        their differences. """
+    """Given before and after metrics, return a dictionary describing
+    their differences."""
     result = OrderedDict()
     for key in METRIC_KEYS:
         # Extract the leading byte count from the humanized string
@@ -132,8 +132,8 @@ def compare_metrics(before_metrics, after_metrics):
 
 
 def read_or_measure_metrics(path):
-    """ Given a path (which may be to a JSON file or an executable),
-        return the metrics.
+    """Given a path (which may be to a JSON file or an executable),
+    return the metrics.
     """
     try:
         with open(path) as path_fd:
@@ -143,8 +143,8 @@ def read_or_measure_metrics(path):
 
 
 def subcommand_compare(args):
-    """ Implementation of compare subcommand
-        Compares two files (JSON or executables) specified in args.FILES
+    """Implementation of compare subcommand
+    Compares two files (JSON or executables) specified in args.FILES
     """
     before_path, after_path = args.FILES
     before_metrics = read_or_measure_metrics(before_path)
@@ -154,8 +154,8 @@ def subcommand_compare(args):
 
 
 def subcommand_measure(args):
-    """ Implementation of measure subcommand
-        Collects metrics about the files specified in args.FILES
+    """Implementation of measure subcommand
+    Collects metrics about the files specified in args.FILES
     """
     for argfile in args.FILES:
         metrics = measure_executable(argfile)

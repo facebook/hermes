@@ -47,8 +47,9 @@ class TerminatorInst;
 /// This is an instance of a JavaScript type.
 class Type {
   // Encodes the JavaScript type hierarchy.
-  // See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures
   enum TypeKind {
+    /// An uninitialized TDZ.
+    Empty,
     Undefined,
     Null,
     Boolean,
@@ -64,39 +65,41 @@ class Type {
   /// Return the string representation of the type at index \p idx.
   StringRef getKindStr(TypeKind idx) const {
     // The strings below match the values in TypeKind.
-    const char *Names[] = {"undefined",
-                           "null",
-                           "boolean",
-                           "string",
-                           "number",
-                           "object",
-                           "closure",
-                           "regexp"};
-    return Names[idx];
+    static const char *const names[] = {
+        "empty",
+        "undefined",
+        "null",
+        "boolean",
+        "string",
+        "number",
+        "object",
+        "closure",
+        "regexp"};
+    return names[idx];
   }
 
 #define BIT_TO_VAL(XX) (1 << TypeKind::XX)
 #define IS_VAL(XX) (bitmask_ == (1 << TypeKind::XX))
 
   // The 'Any' type means all possible types.
-  static constexpr uint8_t TYPE_ANY_MASK = (1u << TypeKind::LAST_TYPE) - 1;
+  static constexpr unsigned TYPE_ANY_MASK = (1u << TypeKind::LAST_TYPE) - 1;
 
-  static constexpr uint8_t PRIMITIVE_BITS = BIT_TO_VAL(Number) |
+  static constexpr unsigned PRIMITIVE_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(String) | BIT_TO_VAL(Null) | BIT_TO_VAL(Undefined) |
       BIT_TO_VAL(Boolean);
 
-  static constexpr uint8_t OBJECT_BITS =
+  static constexpr unsigned OBJECT_BITS =
       BIT_TO_VAL(Object) | BIT_TO_VAL(Closure) | BIT_TO_VAL(RegExp);
 
-  static constexpr uint8_t NONPTR_BITS = BIT_TO_VAL(Number) |
+  static constexpr unsigned NONPTR_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(Boolean) | BIT_TO_VAL(Null) | BIT_TO_VAL(Undefined);
 
   /// Each bit represent the possibility of the type being the type that's
   /// represented in the enum entry.
-  uint8_t bitmask_{TYPE_ANY_MASK};
+  unsigned bitmask_{TYPE_ANY_MASK};
 
   /// The constructor is only accessible by static builder methods.
-  constexpr explicit Type(uint8_t mask) : bitmask_(mask) {}
+  constexpr explicit Type(unsigned mask) : bitmask_(mask) {}
 
  public:
   constexpr Type() = default;
@@ -109,15 +112,23 @@ class Type {
     return Type(A.bitmask_ & B.bitmask_);
   }
 
-  constexpr bool isEmptyTy() const {
+  static constexpr Type subtractTy(Type A, Type B) {
+    return Type(A.bitmask_ & ~B.bitmask_);
+  }
+
+  constexpr bool isNoType() const {
     return bitmask_ == 0;
   }
 
-  static constexpr Type createEmptyType() {
+  static constexpr Type createNoType() {
     return Type(0);
   }
   static constexpr Type createAnyType() {
     return Type(TYPE_ANY_MASK);
+  }
+  /// Create an uninitialized TDZ type.
+  static constexpr Type createEmpty() {
+    return Type(BIT_TO_VAL(Empty));
   }
   static constexpr Type createUndefined() {
     return Type(BIT_TO_VAL(Undefined));
@@ -232,6 +243,11 @@ class Type {
     return canBeType(Type::createBoolean());
   }
 
+  /// \returns true if this type can represent an "empty" value.
+  constexpr bool canBeEmpty() const {
+    return canBeType(Type::createEmpty());
+  }
+
   /// \returns true if this type can represent an undefined value.
   constexpr bool canBeUndefined() const {
     return canBeType(Type::createUndefined());
@@ -338,13 +354,15 @@ class SerializedScope {
 struct LazySource {
   /// The type of node (such as a FunctionDeclaration or FunctionExpression).
   ESTree::NodeKind nodeKind{ESTree::NodeKind::Empty};
-  /// Whether or not this is the inner function of a generator
-  bool isGeneratorInnerFunction;
   /// The source buffer id in which this function can be find.
   uint32_t bufferId{0};
   /// The range of the function within the buffer (the whole function node, not
   /// just the lazily parsed body).
   SMRange functionRange;
+  /// The Yield param to restore when eagerly parsing.
+  bool paramYield{false};
+  /// The Await param to restore when eagerly parsing.
+  bool paramAwait{false};
 };
 #endif
 
@@ -555,6 +573,20 @@ class Literal : public Value {
 
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::LiteralKind);
+  }
+};
+
+class LiteralEmpty : public Literal {
+  LiteralEmpty(const LiteralEmpty &) = delete;
+  void operator=(const LiteralEmpty &) = delete;
+
+ public:
+  explicit LiteralEmpty() : Literal(ValueKind::LiteralEmptyKind) {
+    setType(Type::createEmpty());
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::LiteralEmptyKind;
   }
 };
 
@@ -791,10 +823,8 @@ class Variable : public Value {
   /// The scope that owns the variable.
   VariableScope *parent;
 
-  /// In a "let" or "const" variable this points to the validity flag.
-  /// In a "var" variable, if relatedVariable_ is non-null, then the variable is
-  /// itself the validity flag and relatedVariable_ points to the let/const.
-  Variable *relatedVariable_{};
+  /// If true, this variable obeys the TDZ rules.
+  bool obeysTDZ_ = false;
 
  protected:
   explicit Variable(
@@ -820,15 +850,11 @@ class Variable : public Value {
     return parent;
   }
 
-  Variable *getRelatedVariable() const {
-    return relatedVariable_;
+  bool getObeysTDZ() const {
+    return obeysTDZ_;
   }
-  void setRelatedVariable(Variable *relatedVariable) {
-    assert(
-        (!relatedVariable || !relatedVariable->relatedVariable_ ||
-         relatedVariable->relatedVariable_ == this) &&
-        "Related variable should be null or point back to us");
-    relatedVariable_ = relatedVariable;
+  void setObeysTDZ(bool value) {
+    obeysTDZ_ = value;
   }
 
   /// Return the index of this variable in the function's variable list.
@@ -1656,6 +1682,31 @@ class GeneratorInnerFunction final : public Function {
   }
 };
 
+class AsyncFunction final : public Function {
+ public:
+  explicit AsyncFunction(
+      Module *parent,
+      Identifier originalName,
+      DefinitionKind definitionKind,
+      bool strictMode,
+      bool isGlobal,
+      SMRange sourceRange,
+      Function *insertBefore)
+      : Function(
+            ValueKind::AsyncFunctionKind,
+            parent,
+            originalName,
+            definitionKind,
+            strictMode,
+            isGlobal,
+            sourceRange,
+            insertBefore) {}
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::AsyncFunctionKind);
+  }
+};
+
 } // namespace hermes
 
 //===----------------------------------------------------------------------===//
@@ -1708,6 +1759,7 @@ class Module : public Value {
   llvh::DenseMap<Identifier, GlobalObjectProperty *> globalPropertyMap_{};
 
   GlobalObject globalObject_{};
+  LiteralEmpty literalEmpty{};
   LiteralUndefined literalUndefined{};
   LiteralNull literalNull{};
   LiteralBool literalFalse{false};
@@ -1726,17 +1778,20 @@ class Module : public Value {
   llvh::DenseMap<Identifier, unsigned> internalNamesMap_;
 
   /// Storage for the CJS modules.
-  /// Element i will have the CJS module ID of i.
-  /// Use a deque to allow for non-copying push_back, to avoid invaliding the
-  /// pointers in the two DenseMaps below.
+  /// Use a deque to allow for non-copying push_back, to avoid invalidating the
+  /// pointers in cjsModuleFunctionMap_ below.
   std::deque<CJSModule> cjsModules_{};
 
   using CJSModuleIterator = std::deque<CJSModule>::iterator;
 
   /// Map from functions to members of the CJS module storage.
   llvh::DenseMap<Function *, CJSModule *> cjsModuleFunctionMap_{};
-  /// Map from file names to members of the CJS module storage.
-  llvh::DenseMap<Identifier, CJSModule *> cjsModuleFilenameMap_{};
+  /// Map from file names to CJS module IDs.
+  llvh::DenseMap<Identifier, uint32_t> cjsModuleFilenameMap_{};
+  /// Map from segment IDs to CJS module wrapper functions.
+  /// The vectors in the map have no duplicates; this is enforced using
+  /// cjsModuleFunctionMap_.
+  llvh::DenseMap<uint32_t, std::vector<Function *>> cjsModuleSegmentMap_{};
 
   /// true if all CJS modules have been resolved.
   bool cjsModulesResolved_{false};
@@ -1841,6 +1896,11 @@ class Module : public Value {
   /// Create a new literal bool of value \p value.
   LiteralBool *getLiteralBool(bool value);
 
+  /// Create a new literal 'empty'.
+  LiteralEmpty *getLiteralEmpty() {
+    return &literalEmpty;
+  }
+
   /// Create a new literal 'undefined'.
   LiteralUndefined *getLiteralUndefined() {
     return &literalUndefined;
@@ -1862,25 +1922,27 @@ class Module : public Value {
   }
 
   /// Add a new CJS module entry, given the function representing the module.
-  void addCJSModule(uint32_t id, Identifier name, Function *function) {
-    if (cjsModules_.size() <= id) {
-      cjsModules_.resize(id + 1);
-    }
-    CJSModule &module = cjsModules_[id];
-    assert(module.function == nullptr && "duplicate IDs in addCJSModule");
-    module.id = id;
-    module.filename = name;
-    module.function = function;
+  void addCJSModule(
+      uint32_t segmentID,
+      uint32_t id,
+      Identifier name,
+      Function *function) {
+    cjsModules_.emplace_back(CJSModule{id, name, function});
+    CJSModule &module = cjsModules_.back();
     {
-      auto result = cjsModuleFilenameMap_.try_emplace(name, &module);
+      auto result = cjsModuleFilenameMap_.try_emplace(name, id);
       (void)result;
-      assert(result.second && "Should only insert CJS module once");
+      assert(
+          (result.second || result.first->second == id) &&
+          "Module must have the same ID for the same name");
     }
     {
       auto result = cjsModuleFunctionMap_.try_emplace(function, &module);
       (void)result;
-      assert(result.second && "Should only insert CJS module once");
+      assert(
+          result.second && "Should only insert each CJS wrapper function once");
     }
+    cjsModuleSegmentMap_[segmentID].push_back(function);
   }
 
   /// \return the CommonJS module given the wrapping function if it is a module,
@@ -1890,11 +1952,14 @@ class Module : public Value {
     return it == cjsModuleFunctionMap_.end() ? nullptr : it->second;
   }
 
-  /// \return the CommonJS module given the filename if it is a module,
+  /// \return the CommonJS module ID given the filename if it is a module,
   /// else nullptr.
-  const CJSModule *findCJSModule(Identifier filename) const {
+  llvh::Optional<uint32_t> findCJSModuleID(Identifier filename) const {
     auto it = cjsModuleFilenameMap_.find(filename);
-    return it == cjsModuleFilenameMap_.end() ? nullptr : it->second;
+    if (it != cjsModuleFilenameMap_.end()) {
+      return it->second;
+    }
+    return llvh::None;
   }
 
   /// \return the registered CommonJS modules.
@@ -1913,9 +1978,9 @@ class Module : public Value {
   }
 
   /// \return the set of functions which are used by the modules in the segment
-  /// specified by \p range. Order is unspecified, so the return value should
-  /// not be used for iteration, only for checking membership.
-  llvh::DenseSet<Function *> getFunctionsInSegment(Context::SegmentRange range);
+  /// specified by \p segment. Order is unspecified, so the return value
+  /// should not be used for iteration, only for checking membership.
+  llvh::DenseSet<Function *> getFunctionsInSegment(uint32_t segment);
 
   /// Given a list of raw strings from a template literal, get its unique id.
   uint32_t getTemplateObjectID(RawStringList &&rawStrings);

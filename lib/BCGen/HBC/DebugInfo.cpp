@@ -322,7 +322,7 @@ void DebugInfo::disassembleLexicalData(llvh::raw_ostream &OS) const {
 void DebugInfo::populateSourceMap(
     SourceMapGenerator *sourceMap,
     std::vector<uint32_t> &&functionOffsets,
-    uint32_t cjsModuleOffset) const {
+    uint32_t segmentID) const {
   // Since our bytecode is not JavaScript, we interpret the source map in a
   // creative way: each bytecode module is represented as a line, and bytecode
   // addresses in the file are represented as column offsets.
@@ -355,8 +355,8 @@ void DebugInfo::populateSourceMap(
       segments.push_back(segmentFor(*loc, offsetInFile, offset));
     offset = fdid.getOffset();
   }
-  sourceMap->addMappingsLine(std::move(segments), cjsModuleOffset);
-  sourceMap->addFunctionOffsets(std::move(functionOffsets), cjsModuleOffset);
+  sourceMap->addMappingsLine(std::move(segments), segmentID);
+  sourceMap->addFunctionOffsets(std::move(functionOffsets), segmentID);
 }
 #endif
 
@@ -387,9 +387,10 @@ uint32_t DebugInfoGenerator::appendSourceLocations(
 
   for (auto &next : offsets) {
     if (next.filenameId != previous->filenameId) {
-      files_.push_back(DebugFileRegion{(unsigned)sourcesData_.size(),
-                                       next.filenameId,
-                                       start.sourceMappingUrlId});
+      files_.push_back(DebugFileRegion{
+          (unsigned)sourcesData_.size(),
+          next.filenameId,
+          start.sourceMappingUrlId});
     }
 
     int32_t adelta = delta(next.address, previous->address);

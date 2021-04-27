@@ -42,7 +42,6 @@ class JSCallableProxy : public NativeFunction {
         runtime, vmcast_or_null<Callable>(slots_.target.get(runtime)));
   }
 
- private:
 #ifdef HERMESVM_SERIALIZE
   explicit JSCallableProxy(Deserializer &d);
 
@@ -50,7 +49,10 @@ class JSCallableProxy : public NativeFunction {
   friend void CallableProxyDeserialize(Deserializer &d, CellKind kind);
 #endif
 
-  JSCallableProxy(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
+  JSCallableProxy(
+      Runtime *runtime,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz)
       : NativeFunction(
             runtime,
             &vt.base.base,
@@ -59,6 +61,7 @@ class JSCallableProxy : public NativeFunction {
             nullptr /* context */,
             &JSCallableProxy::_proxyNativeCall) {}
 
+ private:
   static CallResult<HermesValue>
   _proxyNativeCall(void *, Runtime *runtime, NativeArgs);
 

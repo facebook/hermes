@@ -18,7 +18,11 @@ namespace vm {
 /// exposes common interface elements to JSTypedArrays.
 class JSTypedArrayBase : public JSObject {
  public:
-  using size_type = std::size_t;
+  // The spec is silent about the maximum size of an ArrayBuffer.  If
+  // this is to be enlarged effectively, other changes (such as the
+  // use of uint32_t in ObjectVTable's indexed storage members, will
+  // need to be changed, too.
+  using size_type = uint32_t;
   using Super = JSObject;
 
   struct JSTypedArrayVTable {
@@ -173,8 +177,8 @@ class JSTypedArrayBase : public JSObject {
       Runtime *runtime,
       JSTypedArrayBase *self,
       JSArrayBuffer *buf,
-      JSArrayBuffer::size_type offset,
-      JSArrayBuffer::size_type size,
+      size_type offset,
+      size_type size,
       uint8_t byteWidth);
 
  protected:
@@ -198,8 +202,8 @@ class JSTypedArrayBase : public JSObject {
   explicit JSTypedArrayBase(
       Runtime *runtime,
       const VTable *vt,
-      JSObject *parent,
-      HiddenClass *clazz);
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz);
 
   /// Sets the current buffer's contents to the contents of a buffer from
   /// another TypedArray \p src.
@@ -313,7 +317,7 @@ class JSTypedArray final : public JSTypedArrayBase {
       uint32_t index,
       Handle<> value);
 
- private:
+ public:
   // NOTE: If any fields are ever added beyond the base class, then the
   // *BuildMeta functions must be updated to call addJSObjectOverlapSlots.
 
@@ -324,7 +328,10 @@ class JSTypedArray final : public JSTypedArrayBase {
   friend void deserializeTypedArray(Deserializer &d, CellKind kind);
 #endif
 
-  explicit JSTypedArray(Runtime *runtime, JSObject *parent, HiddenClass *clazz);
+  explicit JSTypedArray(
+      Runtime *runtime,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz);
 };
 
 /// @name toDestType specializations

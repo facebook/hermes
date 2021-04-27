@@ -11,29 +11,29 @@ set(RTSources
   Array.cpp
   ArrayTest.cpp
   ArrayStorageTest.cpp
+  BytecodeProviderTest.cpp
   CallResultTest.cpp
   CardObjectBoundaryNCTest.cpp
   CardTableNCTest.cpp
   CastingTest.cpp
   CodeCoverageProfilerTest.cpp
   CopyableVectorTest.cpp
+  CrashManagerTest.cpp
   DateUtilTest.cpp
   DecoratedObjectTest.cpp
   DictPropertyMapTest.cpp
   ExtStringForTest.cpp
   ExternalMemAccountingTest.cpp
-  Footprint.cpp
   GCBasicsTest.cpp
   GCFinalizerTest.cpp
-  GCFragmentationNCTest.cpp
+  GCFragmentationTest.cpp
   GCGuardPageNCTest.cpp
   GCInitTest.cpp
   GCLazySegmentNCTest.cpp
-  GCHeapExtentsInCrashManagerTest.cpp
   GCMarkWeakTest.cpp
   GCObjectIterationTest.cpp
-  GCOOMNCTest.cpp
-  GCReturnUnusedMemoryNCTest.cpp
+  GCOOMTest.cpp
+  GCReturnUnusedMemoryTest.cpp
   GCSanitizeHandlesTest.cpp
   GCSegmentAddressIndexTest.cpp
   GCSegmentRangeTest.cpp
@@ -56,6 +56,7 @@ set(RTSources
   PredefinedStringsTest.cpp
   HandleTest.cpp
   RuntimeConfigTest.cpp
+  SamplingHeapProfilerTest.cpp
   SegmentedArrayTest.cpp
   SerializerTest.cpp
   SmallXStringTest.cpp
@@ -65,8 +66,8 @@ set(RTSources
   StringPrimitiveTest.cpp
   StringViewTest.cpp
   SymbolIDTest.cpp
-  TestHelpers.h
-  TestHelpers.cpp
+  TestHelpers.cpp TestHelpers.h
+  TestHelpers1.cpp TestHelpers1.h
   TwineChar16Test.cpp
   WeakValueMapTest.cpp
   MetadataTest.cpp

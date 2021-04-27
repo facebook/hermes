@@ -165,7 +165,7 @@ class BytecodeFormConverter {
       BytecodeForm sourceForm)
       : bytes_(bytes), fields_(fields) {
     auto res = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-        hermes::make_unique<Buffer>(bytes.data(), bytes.size()), sourceForm);
+        std::make_unique<Buffer>(bytes.data(), bytes.size()), sourceForm);
     if (!res.first) {
       hermes_fatal(res.second.c_str());
     }
@@ -176,12 +176,13 @@ class BytecodeFormConverter {
   void perform() {
     // The list of steps, as member function pointers.
     using Step = void (BytecodeFormConverter::*)(void);
-    Step steps[] = {&BytecodeFormConverter::processMagicNumber,
-                    &BytecodeFormConverter::processInstructions,
-                    &BytecodeFormConverter::processOverflowFunctionHeaders,
-                    &BytecodeFormConverter::processFunctionHeaders,
-                    &BytecodeFormConverter::processStringTable,
-                    &BytecodeFormConverter::processOverflowStringTable
+    Step steps[] = {
+        &BytecodeFormConverter::processMagicNumber,
+        &BytecodeFormConverter::processInstructions,
+        &BytecodeFormConverter::processOverflowFunctionHeaders,
+        &BytecodeFormConverter::processFunctionHeaders,
+        &BytecodeFormConverter::processStringTable,
+        &BytecodeFormConverter::processOverflowStringTable
 
     };
     // Some steps adjust values that are used in computing other values. For

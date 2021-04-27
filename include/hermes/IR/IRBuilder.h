@@ -77,6 +77,17 @@ class IRBuilder {
       bool isGlobal = false,
       Function *insertBefore = nullptr);
 
+  /// Create a new AsyncFunction and add it to the Module.
+  /// \param OriginalName the original name specified by the user.
+  /// \param insertBefore Another function in the module where this function
+  ///   should be inserted before. If null, appends to the end of the module.
+  AsyncFunction *createAsyncFunction(
+      Identifier OriginalName,
+      Function::DefinitionKind definitionKind,
+      bool strictMode,
+      SMRange sourceRange = SMRange{},
+      Function *insertBefore = nullptr);
+
   /// Create a new GeneratorFunction and add it to the Module.
   /// \param OriginalName the original name specified by the user.
   /// \param insertBefore Another function in the module where this function
@@ -85,6 +96,7 @@ class IRBuilder {
       Identifier OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
+      SMRange sourceRange = SMRange{},
       Function *insertBefore = nullptr);
 
   /// Create a new GeneratorInnerFunction and add it to the Module.
@@ -153,6 +165,9 @@ class IRBuilder {
 
   /// Create a new literal bool of value \p value.
   LiteralBool *getLiteralBool(bool value);
+
+  /// Create a new literal 'empty'.
+  LiteralEmpty *getLiteralEmpty();
 
   /// Create a new literal 'undefined'.
   LiteralUndefined *getLiteralUndefined();
@@ -370,7 +385,7 @@ class IRBuilder {
 
   GetNewTargetInst *createGetNewTargetInst();
 
-  ThrowIfUndefinedInst *createThrowIfUndefinedInst(Value *checkedValue);
+  ThrowIfEmptyInst *createThrowIfEmptyInst(Value *checkedValue);
 
   HBCGetGlobalObjectInst *createHBCGetGlobalObjectInst();
 
@@ -484,6 +499,10 @@ class IRBuilder {
   CallBuiltinInst *createCallBuiltinInst(
       BuiltinMethod::Enum builtinIndex,
       ArrayRef<Value *> arguments);
+
+  GetBuiltinClosureInst *createGetBuiltinClosureInst(
+      BuiltinMethod::Enum builtinIndex);
+
   HBCCallDirectInst *createHBCCallDirectInst(
       Function *callee,
       Value *thisValue,

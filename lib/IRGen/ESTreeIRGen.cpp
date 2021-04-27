@@ -19,12 +19,10 @@ namespace irgen {
 
 Instruction *emitLoad(IRBuilder &builder, Value *from, bool inhibitThrow) {
   if (auto *var = llvh::dyn_cast<Variable>(from)) {
-    if (Variable::declKindNeedsTDZ(var->getDeclKind()) &&
-        var->getRelatedVariable()) {
-      builder.createThrowIfUndefinedInst(
-          builder.createLoadFrameInst(var->getRelatedVariable()));
-    }
-    return builder.createLoadFrameInst(var);
+    Instruction *res = builder.createLoadFrameInst(var);
+    if (var->getObeysTDZ())
+      res = builder.createThrowIfEmptyInst(res);
+    return res;
   } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(from)) {
     if (globalProp->isDeclared() || inhibitThrow)
       return builder.createLoadPropertyInst(
@@ -32,27 +30,18 @@ Instruction *emitLoad(IRBuilder &builder, Value *from, bool inhibitThrow) {
     else
       return builder.createTryLoadGlobalPropertyInst(globalProp);
   } else {
-    llvm_unreachable("unvalid value to load from");
+    llvm_unreachable("invalid value to load from");
   }
 }
 
 Instruction *
 emitStore(IRBuilder &builder, Value *storedValue, Value *ptr, bool declInit) {
   if (auto *var = llvh::dyn_cast<Variable>(ptr)) {
-    if (!declInit && Variable::declKindNeedsTDZ(var->getDeclKind()) &&
-        var->getRelatedVariable()) {
+    if (!declInit && var->getObeysTDZ()) {
       // Must verify whether the variable is initialized.
-      builder.createThrowIfUndefinedInst(
-          builder.createLoadFrameInst(var->getRelatedVariable()));
+      builder.createThrowIfEmptyInst(builder.createLoadFrameInst(var));
     }
-    auto *store = builder.createStoreFrameInst(storedValue, var);
-    if (declInit && Variable::declKindNeedsTDZ(var->getDeclKind()) &&
-        var->getRelatedVariable()) {
-      builder.createStoreFrameInst(
-          builder.getLiteralBool(true), var->getRelatedVariable());
-    }
-
-    return store;
+    return builder.createStoreFrameInst(storedValue, var);
   } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(ptr)) {
     if (globalProp->isDeclared() || !builder.getFunction()->isStrictMode())
       return builder.createStorePropertyInst(
@@ -265,6 +254,7 @@ void ESTreeIRGen::doIt() {
 void ESTreeIRGen::doCJSModule(
     Function *topLevelFunction,
     sem::FunctionInfo *semInfo,
+    uint32_t segmentID,
     uint32_t id,
     llvh::StringRef filename) {
   assert(Root && "no root in ESTreeIRGen");
@@ -288,7 +278,7 @@ void ESTreeIRGen::doCJSModule(
   Function *newFunc = genES5Function(functionName, nullptr, func);
 
   Builder.getModule()->addCJSModule(
-      id, Builder.createIdentifier(filename), newFunc);
+      segmentID, id, Builder.createIdentifier(filename), newFunc);
 }
 
 static int getDepth(const std::shared_ptr<SerializedScope> chain) {
@@ -349,11 +339,14 @@ std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
       !llvh::isa<ESTree::ArrowFunctionExpressionNode>(node) &&
       "lazy compilation not supported for arrow functions");
 
-  auto *func = genES5Function(
-      lazyData->originalName,
-      parentVar,
-      node,
-      lazyData->isGeneratorInnerFunction);
+  // Generators have had their lazy scope set up without setting one up
+  // for the inner functions. This means that we will never directly generate
+  // a GeneratorInnerFunction here.
+  Function *func = ESTree::isAsync(node)
+      ? genAsyncFunction(lazyData->originalName, parentVar, node)
+      : ESTree::isGenerator(node)
+      ? genGeneratorFunction(lazyData->originalName, parentVar, node)
+      : genES5Function(lazyData->originalName, parentVar, node, false);
   addLexicalDebugInfo(func, topLevel, lexicalScopeChain);
   return {func, topLevel};
 }
@@ -399,15 +392,7 @@ std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
     // For "let" and "const" create the related TDZ flag.
     if (Variable::declKindNeedsTDZ(vdc) &&
         Mod->getContext().getCodeGenerationSettings().enableTDZ) {
-      llvh::SmallString<32> strBuf{"tdz$"};
-      strBuf.append(name.str());
-
-      auto *related = Builder.createVariable(
-          var->getParent(),
-          Variable::DeclKind::Var,
-          genAnonymousLabelName(strBuf));
-      var->setRelatedVariable(related);
-      related->setRelatedVariable(var);
+      var->setObeysTDZ(true);
     }
 
     res = var;

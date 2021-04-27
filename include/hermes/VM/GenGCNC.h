@@ -13,7 +13,6 @@
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/PerfSection.h"
 #include "hermes/Support/SlowAssert.h"
-#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/AlignedStorage.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/CellKind.h"
@@ -22,9 +21,11 @@
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/GCSegmentAddressIndex.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/OldGenNC.h"
 #include "hermes/VM/SweepResultNC.h"
+#include "hermes/VM/VMExperiments.h"
 #include "hermes/VM/YoungGenNC.h"
 #include "llvh/Support/Casting.h"
 #include "llvh/Support/Compiler.h"
@@ -116,19 +117,14 @@ class GenGC final : public GCBase {
       PointerBase *pointerBase,
       const GCConfig &gcConfig,
       std::shared_ptr<CrashManager> crashMgr,
-      std::shared_ptr<StorageProvider> provider);
+      std::shared_ptr<StorageProvider> provider,
+      experiments::VMExperimentFlags vmExperimentFlags);
 
   ~GenGC();
 
-  /// Allocate a new cell of the specified size \p size.
-  /// If necessary perform a GC cycle, which may potentially move allocated
-  /// objects.
-  /// The \p fixedSize template argument indicates whether the allocation is for
-  /// a fixed-size cell, which can assumed to be small if true.  The
-  /// \p hasFinalizer template argument indicates whether the object
-  /// being allocated will have a finalizer.
-  template <bool fixedSize = true, HasFinalizer hasFinalizer = HasFinalizer::No>
-  inline void *alloc(uint32_t sz);
+  static bool classof(const GCBase *gc) {
+    return gc->getKind() == HeapKind::NCGEN;
+  }
 
 #ifndef NDEBUG
   /// Allocation path we use in debug builds, where we potentially follow
@@ -142,48 +138,65 @@ class GenGC final : public GCBase {
   debugAllocRandomize(uint32_t sz, HasFinalizer hasFinalizer, bool fixedSize);
 #endif
 
-  /// Like alloc above, but the resulting object is expected to be long-lived.
-  /// Allocate directly in the old generation (doing a full collection if
-  /// necessary to create room).
-  template <HasFinalizer hasFinalizer = HasFinalizer::No>
-  inline void *allocLongLived(uint32_t size);
+  /// Allocate a new cell of the specified size \p size by calling alloc.
+  /// Instantiate an object of type T with constructor arguments \p args in the
+  /// newly allocated cell.
+  /// \return a pointer to the newly created object in the GC heap.
+  template <
+      typename T,
+      bool fixedSize = true,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::No,
+      class... Args>
+  inline T *makeA(uint32_t size, Args &&...args);
 
   /// Returns whether an external allocation of the given \p size fits
   /// within the maximum heap size.  (Note that this does not guarantee that the
   /// allocation will "succeed" -- the size plus the used() of the heap may
   /// still exceed the max heap size.  But if it fails, the allocation can never
   /// succeed.)
-  bool canAllocExternalMemory(uint32_t size);
+  bool canAllocExternalMemory(uint32_t size) override;
 
   /// An allocation that yielded the given \p alloc has associated external
   /// memory of the given \p size.  Add that to the appropriate external memory
   /// charge.
-  void creditExternalMemory(GCCell *alloc, uint32_t size);
+  void creditExternalMemory(GCCell *alloc, uint32_t size) override;
 
   /// The object at \p alloc is being collected, and has associated external
   /// memory of the given \p size.  Decrease the external memory charge of the
   /// generation owning \p alloc by this amount.
-  void debitExternalMemory(GCCell *alloc, uint32_t size);
+  void debitExternalMemory(GCCell *alloc, uint32_t size) override;
 
   /// Write barriers.
 
   /// The given value is being written at the given loc (required to
   /// be in the heap).  If value is a pointer, execute a write barrier.
-  void writeBarrier(void *loc, HermesValue value);
+  void writeBarrier(const GCHermesValue *loc, HermesValue value);
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap).  The value is may be null.  Execute a write barrier.
-  void writeBarrier(void *loc, void *value);
+  void writeBarrier(const GCPointerBase *loc, const GCCell *value);
+
+  /// Write barriers for symbols are no-ops in GenGC.
+  void writeBarrier(SymbolID) {}
 
   /// The given value is being written at the given loc (required to
   /// be in the heap).  If value is a pointer, execute a write barrier.
   /// The memory pointed to by \p loc is guaranteed to not have a valid pointer.
-  void constructorWriteBarrier(void *loc, HermesValue value);
+  void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value) {
+    // There's no difference for GenGC between the constructor and an
+    // assignment.
+    writeBarrier(loc, value);
+  }
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap).  The value is may be null.  Execute a write barrier.
   /// The memory pointed to by \p loc is guaranteed to not have a valid pointer.
-  void constructorWriteBarrier(void *loc, void *value);
+  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value) {
+    // There's no difference for GenGC between the constructor and an
+    // assignment.
+    writeBarrier(loc, value);
+  }
 
 #ifndef NDEBUG
   /// Count the number of barriers executed.
@@ -204,7 +217,7 @@ class GenGC final : public GCBase {
   /// Returns whether a write of the given value into the given location
   /// requires a write barrier, assuming \p loc and \p value are both within the
   /// heap managed by this GC.
-  bool needsWriteBarrier(void *loc, void *value);
+  bool needsWriteBarrier(void *loc, GCCell *value) override;
 
   /// Statistics related to external memory associated with heap objects:
   ///   The number of objects with associated external memory.
@@ -232,25 +245,27 @@ class GenGC final : public GCBase {
   ///
   /// \pre The range described must be wholly contained within one segment of
   ///     the heap.
-  void writeBarrierRange(GCHermesValue *start, uint32_t numHVs);
+  void writeBarrierRange(const GCHermesValue *start, uint32_t numHVs);
 
   /// Same as \p writeBarrierRange, except this is for previously uninitialized
   /// memory.
-  void constructorWriteBarrierRange(GCHermesValue *start, uint32_t numHVs) {
+  void constructorWriteBarrierRange(
+      const GCHermesValue *start,
+      uint32_t numHVs) {
     // GenGC doesn't do anything special for uninitialized memory.
     writeBarrierRange(start, numHVs);
   }
 
+  void snapshotWriteBarrier(const GCHermesValue *loc) {}
+  void snapshotWriteBarrier(const GCPointerBase *loc) {}
+  void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs) {}
+  void weakRefReadBarrier(GCCell *value) {}
+  void weakRefReadBarrier(HermesValue value) {}
+
   /// Inform the GC that TTI has been reached.
-  void ttiReached();
+  void ttiReached() override;
 
-  /// Force a garbage collection cycle.
-  /// (Part of general GC API defined in GC.h).
-  /// Does a mark/sweep/compact collection of both generations.
-
-  /// \p canEffectiveOOM Indicates whether the GC can declare effective OOM as a
-  ///     result of this collection.
-  void collect(std::string cause, bool canEffectiveOOM = false);
+  void collect(std::string cause, bool canEffectiveOOM = false) override;
 
   static constexpr uint32_t minAllocationSize() {
     // NCGen doesn't enforce a minimum allocation requirement.
@@ -260,7 +275,7 @@ class GenGC final : public GCBase {
   static constexpr uint32_t maxAllocationSize() {
     // The largest allocation allowable in NCGen is the max size a single
     // segment supports.
-    return AlignedHeapSegment::maxSize();
+    return GenGCHeapSegment::maxSize();
   }
 
   /// The occupancy target guides heap sizing -- the fraction of the heap
@@ -270,26 +285,26 @@ class GenGC final : public GCBase {
   }
 
   /// Run the finalizers for all heap objects.
-  void finalizeAll();
+  void finalizeAll() override;
 
 #ifndef NDEBUG
 
   /// See comment in GCBase.
-  bool calledByGC() const {
-    return inGC_.load(std::memory_order_seq_cst);
+  bool calledByGC() const override {
+    return inGC();
   }
 
   /// Return true if \p ptr is within one of the virtual address ranges
   /// allocated for the heap. Not intended for use in normal production GC
   /// operation, debug mode only.
-  bool dbgContains(const void *ptr) const;
+  bool dbgContains(const void *ptr) const override;
 
   /// Return true if \p ptr is currently pointing at valid accessable memory,
   /// allocated to an object.
-  bool validPointer(const void *ptr) const;
+  bool validPointer(const void *ptr) const override;
 
   /// Returns true if \p cell is the most-recently allocated finalizable object.
-  bool isMostRecentFinalizableObj(const GCCell *cell) const;
+  bool isMostRecentFinalizableObj(const GCCell *cell) const override;
 
   /// Whether the last allocation was fixed size.  Used to check that the
   /// FixedSize parameter used in allocation matches the fixed-size attribute of
@@ -299,7 +314,7 @@ class GenGC final : public GCBase {
 #endif
 
   /// \return true if \p is in the young generation.
-  bool inYoungGen(const void *ptr) const {
+  bool inYoungGen(const void *ptr) const override {
     return youngGen_.contains(ptr);
   }
 
@@ -317,12 +332,6 @@ class GenGC final : public GCBase {
 
   /// The largest the size of this heap could ever grow to.
   inline size_t maxSize() const;
-
-#ifndef NDEBUG
-  /// \return Number of weak ref slots currently in use.
-  /// Inefficient. For testing/debugging.
-  size_t countUsedWeakRefs() const;
-#endif
 
   /// Cumulative stats over time so far.
   size_t getPeakLiveAfterGC() const override;
@@ -376,11 +385,13 @@ class GenGC final : public GCBase {
   /// Add some GenGC-specific stats to the output.
   void dump(llvh::raw_ostream &os, bool verbose = false) override;
 
+  std::string getKindAsStr() const override;
+
   // Stats maintainence.
 
   /// Iterate over all objects in the heap, and call \p callback on them.
   /// \param callback A function to call on each found object.
-  void forAllObjs(const std::function<void(GCCell *)> &callback);
+  void forAllObjs(const std::function<void(GCCell *)> &callback) override;
 
 #ifndef NDEBUG
   /// For testing purposes, we expose the ability to explicity request a
@@ -460,7 +471,7 @@ class GenGC final : public GCBase {
 
   /// Record that a cell of the given \p kind and size \p sz has been
   /// found reachable in a full GC.
-  void trackReachable(CellKind kind, unsigned sz);
+  void trackReachable(CellKind kind, unsigned sz) override;
 #endif
 
   /// Reset the number of finalized objects in each generation to zero.
@@ -480,11 +491,12 @@ class GenGC final : public GCBase {
 // As a result, vanilla "ifdef public" trick leads to link errors.
 #if defined(UNIT_TEST) || defined(_MSC_VER)
  public:
-  /// Return a reference to the segment index, for testing purposes.
-  inline const GCSegmentAddressIndex &segmentIndex() const;
 #else
  private:
 #endif
+
+  /// Return a number that is higher when the GC heap contains more dirty pages.
+  llvh::ErrorOr<size_t> getVMFootprintForTest() const;
 
   /// FIXME: This is for backwards compatibility, new users should use
   /// Size::kYoungGenFractionDenom.
@@ -501,17 +513,33 @@ class GenGC final : public GCBase {
   friend class YoungGen;
   friend class OldGen;
 
+  /// Allocate a new cell of the specified size \p size.
+  /// If necessary perform a GC cycle, which may potentially move allocated
+  /// objects.
+  /// The \p fixedSize template argument indicates whether the allocation is for
+  /// a fixed-size cell, which can assumed to be small if true.  The
+  /// \p hasFinalizer template argument indicates whether the object
+  /// being allocated will have a finalizer.
+  template <bool fixedSize = true, HasFinalizer hasFinalizer = HasFinalizer::No>
+  inline void *alloc(uint32_t sz);
+
   /// The slow path for allocation.  Same specification as alloc(),
   /// albeit with the template arguments passed as explicit dynamic
   /// arguments.
   void *allocSlow(uint32_t sz, bool fixedSize, HasFinalizer hasFinalizer);
+
+  /// Like alloc above, but the resulting object is expected to be long-lived.
+  /// Allocate directly in the old generation (doing a full collection if
+  /// necessary to create room).
+  template <HasFinalizer hasFinalizer = HasFinalizer::No>
+  inline void *allocLongLived(uint32_t size);
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap).  The value is may be null.  Execute a write
   /// barrier.  The \p hv argument indicates whether this is being
   /// called from the HV (true) or void* (false) version of the write
   /// barrier; this is used only in debug builds, for statistics.
-  inline void writeBarrierImpl(void *loc, void *value, bool hv);
+  inline void writeBarrierImpl(const void *loc, const void *value, bool hv);
 
   /// Returns the desired heap size for the given number of used bytes --
   /// determined by the occupancyTarget() ratio and the max heap size
@@ -547,7 +575,7 @@ class GenGC final : public GCBase {
   /// the constructor actually yielded it.
   class AllocContextYieldThenClaim {
    public:
-    AllocContextYieldThenClaim(GC *gc)
+    AllocContextYieldThenClaim(GenGC *gc)
         : gc_(gc), enable_(gc->allocContextClaimed()) {
       if (enable_) {
         gc_->yieldAllocContext();
@@ -560,7 +588,7 @@ class GenGC final : public GCBase {
     }
 
    private:
-    GC *gc_;
+    GenGC *gc_;
     bool enable_;
   };
 
@@ -597,17 +625,25 @@ class GenGC final : public GCBase {
     /// held for the region being collected at the moment (the young generation
     /// for young gen collections, and the entire heap for full collections).
     ///
-    /// \p regionSize The size of the region after the last GC.
-    /// \p usedBefore The number of bytes allocated just before the GC.
-    /// \p usedAfter The number of bytes live after the GC.
-    /// \p regionStats A pointer to the cumulative statistics struct for the
+    /// \param regionSize The size of the region after the last GC.
+    /// \param usedBefore The number of bytes allocated just before the GC.
+    /// \param sizeBefore The size of all segments in bytes just before the GC.
+    /// \param externalBefore The number of bytes external to the JS heap just
+    ///   before the GC.
+    /// \param usedAfter The number of bytes live after the GC.
+    /// \param sizeAfter The size of all segments in bytes after the GC.
+    /// \param externalAfter The number of bytes external to the JS heap after
+    ///   the GC.
+    /// \param regionStats A pointer to the cumulative statistics struct for the
     ///     region.
     void recordGCStats(
         size_t regionSize,
         size_t usedBefore,
         size_t sizeBefore,
+        size_t externalBefore,
         size_t usedAfter,
         size_t sizeAfter,
+        size_t externalAfter,
         CumulativeHeapStats *regionStats);
 
    private:
@@ -738,7 +774,7 @@ class GenGC final : public GCBase {
   /// The memory region the segment owns did not move.
   ///
   /// \p segment A pointer to the new location of the segment.
-  void segmentMoved(AlignedHeapSegment *segment);
+  void segmentMoved(GenGCHeapSegment *segment);
 
   /// Notify the GC that it should stop tracking the given segments.
   ///
@@ -771,7 +807,7 @@ class GenGC final : public GCBase {
   void unmarkWeakReferences();
 
   /// Allocate a new weak reference slot and return a pointer to it.
-  WeakRefSlot *allocWeakSlot(HermesValue init);
+  WeakRefSlot *allocWeakSlot(HermesValue init) override;
 
   /// Free a weak reference slot.
   void freeWeakSlot(WeakRefSlot *value);
@@ -866,10 +902,7 @@ class GenGC final : public GCBase {
 
   /// Every bit corresponds to a symbol id. It is set to true if the symbol is
   /// in use (was marked).
-  std::vector<bool> markedSymbols_{};
-
-  /// The weak reference slots.
-  std::deque<WeakRefSlot> weakSlots_{};
+  llvh::BitVector markedSymbols_{};
 
   /// Pointers to the slots (elements of weakSlots_, above) that may
   /// possibly have pointer referents that point into the young generation.
@@ -933,19 +966,11 @@ inline void *GenGC::alloc(uint32_t sz) {
     collect("handle-san");
   }
 
-#ifdef HERMESVM_GC_GENERATIONAL_MARKSWEEPCOMPACT
-  AllocResult res = oldGen_.alloc(sz, hasFinalizer);
-  assert(res.success && "Should never fail to allocate at the top level");
-#ifdef HERMES_SLOW_DEBUG
-  totalAllocatedBytesDebug_ += heapAlignSize(sz);
-#endif
-  return res.ptr;
-#else
 #ifndef NDEBUG
   AllocResult res = debugAlloc(sz, hasFinalizer, fixedSize);
   assert(res.success && "Should never fail to allocate at the top level");
 #ifdef HERMES_SLOW_DEBUG
-  totalAllocatedBytesDebug_ += heapAlignSize(sz);
+  totalAllocatedBytesDebug_ += sz;
 #endif
   return res.ptr;
 #else
@@ -956,9 +981,7 @@ inline void *GenGC::alloc(uint32_t sz) {
     return res.ptr;
   }
   return allocSlow(sz, fixedSize, hasFinalizer);
-
 #endif // NDEBUG
-#endif // HERMESVM_GC_GENERATIONAL_MARKSWEEPCOMPACT
 }
 
 template <HasFinalizer hasFinalizer>
@@ -979,14 +1002,14 @@ inline void *GenGC::allocLongLived(uint32_t size) {
     res = oldGen_.alloc(size, hasFinalizer);
     assert(res.success && "Should never fail to allocate at the top level");
 #ifdef HERMES_SLOW_DEBUG
-    totalAllocatedBytesDebug_ += heapAlignSize(size);
+    totalAllocatedBytesDebug_ += size;
 #endif
     return res.ptr;
   } else {
     res = allocContext_.alloc(size, hasFinalizer);
     if (LLVM_LIKELY(res.success)) {
 #ifdef HERMES_SLOW_DEBUG
-      totalAllocatedBytesDebug_ += heapAlignSize(size);
+      totalAllocatedBytesDebug_ += size;
 #endif
       return res.ptr;
     } else {
@@ -994,11 +1017,28 @@ inline void *GenGC::allocLongLived(uint32_t size) {
       res = oldGen_.alloc(size, hasFinalizer);
       assert(res.success && "Should never fail to allocate at the top level");
 #ifdef HERMES_SLOW_DEBUG
-      totalAllocatedBytesDebug_ += heapAlignSize(size);
+      totalAllocatedBytesDebug_ += size;
 #endif
       return res.ptr;
     }
   }
+}
+
+template <
+    typename T,
+    bool fixedSize,
+    HasFinalizer hasFinalizer,
+    LongLived longLived,
+    class... Args>
+inline T *GenGC::makeA(uint32_t size, Args &&...args) {
+  assert(
+      isSizeHeapAligned(size) &&
+      "Call to makeA must use a size aligned to HeapAlign");
+  // TODO: Once all callers are using makeA, remove allocLongLived.
+  void *mem = longLived == LongLived::Yes
+      ? allocLongLived<hasFinalizer>(size)
+      : alloc<fixedSize, hasFinalizer>(size);
+  return new (mem) T(std::forward<Args>(args)...);
 }
 
 inline void GenGC::countWriteBarrier(bool hv, unsigned filterLevel) {
@@ -1046,16 +1086,11 @@ inline GenGC::FixedSizeValue GenGC::lastAllocationWasFixedSize() const {
 }
 #endif
 
-#ifdef UNIT_TEST
-const GCSegmentAddressIndex &GenGC::segmentIndex() const {
-  return segmentIndex_;
-}
-#endif // UNIT_TEST
-
-inline void GenGC::writeBarrierImpl(void *loc, void *value, bool hv) {
+inline void
+GenGC::writeBarrierImpl(const void *loc, const void *value, bool hv) {
   HERMES_SLOW_ASSERT(dbgContains(loc));
 
-  char *locPtr = reinterpret_cast<char *>(loc);
+  const char *locPtr = reinterpret_cast<const char *>(loc);
 
   // value may be null.  But if that occurs: locPtr and value will not
   // be in the same AlignedStorage, so the first test below will fail,
@@ -1068,7 +1103,7 @@ inline void GenGC::writeBarrierImpl(void *loc, void *value, bool hv) {
   countWriteBarrier(hv, kNumWriteBarrierWithDifferentSegsIdx);
   if (youngGen_.contains(value)) {
     countWriteBarrier(hv, kNumWriteBarrierPtrInYGIdx);
-    AlignedHeapSegment::cardTableCovering(locPtr)->dirtyCardForAddress(locPtr);
+    GenGCHeapSegment::cardTableCovering(locPtr)->dirtyCardForAddress(locPtr);
   }
 }
 

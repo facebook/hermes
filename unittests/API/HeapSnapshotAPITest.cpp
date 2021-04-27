@@ -7,9 +7,12 @@
 
 #ifdef HERMES_ENABLE_DEBUGGER
 
+// gtest must come before folly, because folly/portability/Windows.h undefines
+// some windows standard library macros that gtest-port.h relies on.
+#include <gtest/gtest.h>
+
 #include <folly/dynamic.h>
 #include <folly/json.h>
-#include <gtest/gtest.h>
 #include <hermes/CompileJS.h>
 #include <hermes/hermes.h>
 #include <jsi/instrumentation.h>
@@ -20,14 +23,14 @@ using namespace facebook::hermes;
 class HeapSnapshotAPITest : public ::testing::TestWithParam<bool> {
  public:
   HeapSnapshotAPITest()
-      : rt(makeHermesRuntime(
-            ::hermes::vm::RuntimeConfig::Builder()
-                .withGCConfig(::hermes::vm::GCConfig::Builder()
-                                  .withAllocationLocationTrackerFromStart(
-                                      trackingFromBeginning())
-                                  .build())
-                .withES6Proxy(true)
-                .build())) {}
+      : rt(makeHermesRuntime(::hermes::vm::RuntimeConfig::Builder()
+                                 .withES6Proxy(true)
+                                 .withES6Intl(true)
+                                 .build())) {
+    if (trackingFromBeginning()) {
+      rt->instrumentation().startTrackingHeapObjectStackTraces(nullptr);
+    }
+  }
 
  protected:
   Value eval(const char *code) {
@@ -150,7 +153,7 @@ TEST_P(HeapSnapshotAPITest, HeapTimeline) {
          "the trace tree";
 
   // Search nodes for the objID.
-  const auto nodeTupleSize = 6;
+  const auto nodeTupleSize = 7;
   const auto nodeIDFieldIndex = 2;
   const auto nodeTraceIDFieldIndex = 5;
   uint64_t traceNodeID = 0;
@@ -175,8 +178,8 @@ TEST_P(HeapSnapshotAPITest, HeapTimeline) {
       stackTreeNode->second->buildStackTrace(traceFunctionInfos, strings),
       R"#(
 (root)(0) @ (0):0:0
-global(1) @ test.js(1):1:1
-alloc(2) @ test.js(1):1:27)#");
+global(1) @ test.js(2):1:1
+alloc(2) @ test.js(2):1:27)#");
 }
 
 INSTANTIATE_TEST_CASE_P(

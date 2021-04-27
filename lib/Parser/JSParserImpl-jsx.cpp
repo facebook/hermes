@@ -217,16 +217,18 @@ Optional<ESTree::Node *> JSParserImpl::parseJSXChildren(
     } else if (check(TokenKind::l_brace)) {
       // { JSXChildExpression[opt] }
       // ^
-      SMLoc start = advance().Start;
+      SMRange startRange = advance();
+      SMLoc start = startRange.Start;
       if (check(TokenKind::r_brace)) {
         // { }
         //   ^
+        SMRange endRange = tok_->getSourceRange();
         children.push_back(*setLocation(
             start,
-            tok_,
+            endRange.End,
             new (context_) ESTree::JSXExpressionContainerNode(setLocation(
-                start,
-                tok_,
+                startRange.End,
+                endRange.Start,
                 new (context_) ESTree::JSXEmptyExpressionNode()))));
       } else {
         // { JSXChildExpression }
@@ -263,16 +265,14 @@ Optional<ESTree::Node *> JSParserImpl::parseJSXChildExpression(SMLoc start) {
     if (!optAssign)
       return None;
     return setLocation(
-        start,
-        *optAssign,
-        new (context_) ESTree::JSXSpreadChildNode(*optAssign));
+        start, tok_, new (context_) ESTree::JSXSpreadChildNode(*optAssign));
   }
   auto optAssign = parseAssignmentExpression();
   if (!optAssign)
     return None;
   return setLocation(
       start,
-      *optAssign,
+      tok_,
       new (context_) ESTree::JSXExpressionContainerNode(*optAssign));
 }
 
@@ -295,6 +295,7 @@ Optional<ESTree::Node *> JSParserImpl::parseJSXSpreadAttribute() {
   if (!optAssign)
     return None;
 
+  SMLoc end = tok_->getEndLoc();
   if (!eat(
           TokenKind::r_brace,
           JSLexer::GrammarContext::AllowJSXIdentifier,
@@ -304,9 +305,7 @@ Optional<ESTree::Node *> JSParserImpl::parseJSXSpreadAttribute() {
     return None;
 
   return setLocation(
-      start,
-      *optAssign,
-      new (context_) ESTree::JSXSpreadAttributeNode(*optAssign));
+      start, end, new (context_) ESTree::JSXSpreadAttributeNode(*optAssign));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseJSXAttribute() {

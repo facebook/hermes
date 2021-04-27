@@ -18,7 +18,7 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 // class FinalizableNativeFunction
 
-CallableVTable FinalizableNativeFunction::vt{
+const CallableVTable FinalizableNativeFunction::vt{
     {
         VTable(
             CellKind::FinalizableNativeFunctionKind,
@@ -64,17 +64,18 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
     unsigned paramCount) {
   auto parentHandle = Handle<JSObject>::vmcast(&runtime->functionPrototype);
 
-  JSObjectAlloc<FinalizableNativeFunction, HasFinalizer::Yes> mem{runtime};
-  auto selfHandle = mem.initToHandle(new (mem) FinalizableNativeFunction(
-      runtime,
-      parentHandle,
-      createPseudoHandle(runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle,
-          numOverlapSlots<FinalizableNativeFunction>() +
-              ANONYMOUS_PROPERTY_SLOTS)),
-      context,
-      functionPtr,
-      finalizePtr));
+  auto *cell =
+      runtime->makeAFixed<FinalizableNativeFunction, HasFinalizer::Yes>(
+          runtime,
+          parentHandle,
+          runtime->getHiddenClassForPrototype(
+              *parentHandle,
+              numOverlapSlots<FinalizableNativeFunction>() +
+                  ANONYMOUS_PROPERTY_SLOTS),
+          context,
+          functionPtr,
+          finalizePtr);
+  auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
 
   auto prototypeObjectHandle = Handle<JSObject>(runtime);
 
@@ -95,7 +96,7 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
 
 HostObjectProxy::~HostObjectProxy() {}
 
-ObjectVTable HostObject::vt{
+const ObjectVTable HostObject::vt{
     VTable(
         CellKind::HostObjectKind,
         cellSize<HostObject>(),
@@ -131,18 +132,17 @@ CallResult<HermesValue> HostObject::createWithoutPrototype(
     std::unique_ptr<HostObjectProxy> proxy) {
   auto parentHandle = Handle<JSObject>::vmcast(&runtime->objectPrototype);
 
-  JSObjectAlloc<HostObject, HasFinalizer::Yes> mem{runtime};
-  HostObject *hostObj = new (mem) HostObject(
+  HostObject *hostObj = runtime->makeAFixed<HostObject, HasFinalizer::Yes>(
       runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+      parentHandle,
+      runtime->getHiddenClassForPrototype(
           *parentHandle,
           numOverlapSlots<HostObject>() + ANONYMOUS_PROPERTY_SLOTS),
       std::move(proxy));
 
   hostObj->flags_.hostObject = true;
 
-  return mem.initToHermesValue(hostObj);
+  return JSObjectInit::initToHermesValue(runtime, hostObj);
 }
 
 } // namespace vm

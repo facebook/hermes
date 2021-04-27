@@ -20,14 +20,6 @@ namespace vm {
 /// Runtime.
 class Interpreter {
  public:
-  /// Allocate a GeneratorFuncxtion for the specified function and the specified
-  /// environment. \param funcIndex function index in the global function table.
-  static CallResult<PseudoHandle<JSGeneratorFunction>> createGeneratorClosure(
-      Runtime *runtime,
-      RuntimeModule *runtimeModule,
-      unsigned funcIndex,
-      Handle<Environment> envHandle);
-
   /// Allocate a generator for the specified function and the specified
   /// environment. \param funcIndex function index in the global function table.
   static CallResult<PseudoHandle<JSGenerator>> createGenerator_RJS(
@@ -46,7 +38,7 @@ class Interpreter {
       const Inst *resumeIP);
 
   /// Slow path for ReifyArguments resReg, lazyReg
-  /// It assumes that he fast path has handled the case when 'lazyReg' is
+  /// It assumes that the fast path has handled the case when 'lazyReg' is
   /// already initialized. It creates a new 'arguments' object and populates it
   /// with the argument values.
   static CallResult<Handle<Arguments>> reifyArgumentsSlowPath(
@@ -81,11 +73,6 @@ class Interpreter {
       PinnedHermesValue *valueReg,
       Handle<Callable> curFunction,
       bool strictMode);
-
-  static ExecutionStatus handleGetPNameList(
-      Runtime *runtime,
-      PinnedHermesValue *frameRegs,
-      const Inst *ip);
 
   /// Implement the slow path of OpCode::Call/CallLong/Construct/ConstructLong.
   /// The callee frame must have been initialized already and the fast path
@@ -137,8 +124,11 @@ class Interpreter {
       Handle<> value,
       bool strictMode);
 
-  template <bool SingleStep>
-  static CallResult<HermesValue> interpretFunction(
+  /// Inlining this function is forbidden because it stores label values in a
+  /// local static variable. Due to a bug in LLVM, it may sometimes be inlined
+  /// anyway, so explicitly mark it as noinline.
+  template <bool SingleStep, bool EnableCrashTrace>
+  LLVM_ATTRIBUTE_NOINLINE static CallResult<HermesValue> interpretFunction(
       Runtime *runtime,
       InterpreterState &state);
 
@@ -223,7 +213,40 @@ class Interpreter {
       Runtime *runtime,
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
+
+  static ExecutionStatus caseGetPNameList(
+      Runtime *runtime,
+      PinnedHermesValue *frameRegs,
+      const Inst *ip);
+
+  /// Evaluate callBuiltin and store the result in the register stack. it must
+  /// must be invoked with CallBuiltin or CallBuiltinLong. \p op3 contains the
+  /// value of operand3, which is the only difference in encoding between the
+  /// two.
+  static ExecutionStatus implCallBuiltin(
+      Runtime *runtime,
+      PinnedHermesValue *frameRegs,
+      CodeBlock *curCodeBlock,
+      uint32_t op3);
 };
+
+#ifndef NDEBUG
+/// A tag used to instruct the output stream to dump more details about the
+/// HermesValue, like the length of the string, etc.
+struct DumpHermesValue {
+  const HermesValue hv;
+  DumpHermesValue(HermesValue hv) : hv(hv) {}
+};
+
+llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, DumpHermesValue dhv);
+
+/// Dump the arguments from a callee frame.
+void dumpCallArguments(
+    llvh::raw_ostream &OS,
+    Runtime *runtime,
+    StackFramePtr calleeFrame);
+
+#endif
 
 } // namespace vm
 } // namespace hermes

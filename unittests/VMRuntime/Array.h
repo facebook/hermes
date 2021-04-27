@@ -44,9 +44,8 @@ class Array final : public VariableSizeRuntimeCell,
   }
 
   static Array *create(DummyRuntime &runtime, uint32_t length) {
-    auto *self =
-        new (runtime.allocWithFinalizer</*fixedSize*/ false>(allocSize(length)))
-            Array(&runtime.getHeap(), length);
+    auto *self = runtime.makeAVariable<Array, HasFinalizer::Yes>(
+        allocSize(length), &runtime.getHeap(), length);
     GCHermesValue::fill(
         self->values(),
         self->values() + length,

@@ -7,7 +7,7 @@
 # This script creates a build subdirectory called "build_asmjs" and builds Hermes inside
 # it. The result (hermes.js, hermes.js.mem) will be under "build_asmjs/bin".
 # It requires two parameters:
-#  - the path to Emscripten, so that it can find 
+#  - the path to Emscripten, so that it can find
 #   "emscripten/cmake/Modules/Platform/Emscripten.cmake" relative to it
 #  - the path to the Hermes source tree
 #
@@ -41,8 +41,6 @@ mkdir build_asmjs && cd build_asmjs
 cmake "$HERMES_PATH" \
     -DCMAKE_TOOLCHAIN_FILE="$EMS_PATH/emscripten/cmake/Modules/Platform/Emscripten.cmake" \
     -DCMAKE_BUILD_TYPE=MinSizeRel \
-    -DEMSCRIPTEN_FASTCOMP=1 \
     -DCMAKE_EXE_LINKER_FLAGS="$FLAGS"
 
 make -j hermes
-

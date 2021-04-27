@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_API_TRACE
 #include "TracingRuntime.h"
 
+#include <hermes/BCGen/HBC/BytecodeDataProvider.h>
 #include <hermes/Platform/Logging.h>
 #include <hermes/Support/Algorithms.h>
 #include <hermes/Support/JSONEmitter.h>
@@ -404,8 +404,7 @@ jsi::Function TracingRuntime::createFunctionFromHostFunction(
       trt.trace_.emplace_back<SynthTrace::CallToNativeRecord>(
           trt.getTimeSinceStart(),
           functionID_,
-          // A host function does not have a this.
-          SynthTrace::encodeUndefined(),
+          trt.toTraceValue(thisVal),
           trt.argStringifyer(args, count));
 
       try {
@@ -622,7 +621,8 @@ namespace {
 void addRecordMarker(TracingRuntime &tracingRuntime) {
   jsi::Runtime &rt = tracingRuntime.plain();
   const char *funcName = "__nativeRecordTraceMarker";
-  if (tracingRuntime.global().hasProperty(tracingRuntime, funcName)) {
+  const auto funcProp = jsi::PropNameID::forAscii(tracingRuntime, funcName);
+  if (tracingRuntime.global().hasProperty(tracingRuntime, funcProp)) {
     // If this function is already defined, throw.
     throw jsi::JSINativeException(
         std::string("global.") + funcName +
@@ -630,10 +630,10 @@ void addRecordMarker(TracingRuntime &tracingRuntime) {
   }
   rt.global().setProperty(
       tracingRuntime,
-      funcName,
+      funcProp,
       jsi::Function::createFromHostFunction(
           tracingRuntime,
-          jsi::PropNameID::forAscii(tracingRuntime, funcName),
+          funcProp,
           0,
           [funcName, &tracingRuntime](
               jsi::Runtime &rt,
@@ -748,5 +748,3 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
-
-#endif

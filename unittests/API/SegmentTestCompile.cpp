@@ -25,16 +25,16 @@ namespace hermes {
 std::pair<std::string, std::string> genSplitCode(
     std::string &mainCode,
     std::string &segmentCode) {
-  std::vector<hermes::Context::SegmentRange> ranges{
-      hermes::Context::SegmentRange{0, 0, 0},
-      hermes::Context::SegmentRange{1, 1, 1},
+  std::vector<uint32_t> segments{
+      0,
+      1,
   };
 
   hermes::CodeGenerationSettings codeGenOpts;
   hermes::OptimizationSettings optimizationOpts;
 
   auto context = std::make_shared<hermes::Context>(
-      codeGenOpts, optimizationOpts, nullptr, ranges);
+      codeGenOpts, optimizationOpts, nullptr, segments);
   context->setUseCJSModules(true);
 
   hermes::Module M(context);
@@ -60,12 +60,14 @@ std::pair<std::string, std::string> genSplitCode(
   generateIRFromESTree(globalAST, &M, declFileList, {});
   auto *topLevelFunction = M.getTopLevelFunction();
 
-  auto genModule = [&](uint32_t id,
+  auto genModule = [&](uint32_t segmentID,
+                       uint32_t id,
                        std::unique_ptr<llvh::MemoryBuffer> fileBuf) {
     llvh::StringRef filename = fileBuf->getBufferIdentifier();
     auto *ast = parseJS(std::move(fileBuf), true);
     generateIRForCJSModule(
         cast<hermes::ESTree::FunctionExpressionNode>(ast),
+        segmentID,
         id,
         filename,
         &M,
@@ -73,21 +75,27 @@ std::pair<std::string, std::string> genSplitCode(
         declFileList);
   };
 
-  genModule(0, llvh::MemoryBuffer::getMemBufferCopy(mainCode, "main.js"));
-  genModule(1, llvh::MemoryBuffer::getMemBufferCopy(segmentCode, "foo.js"));
+  genModule(
+      segments[0],
+      0,
+      llvh::MemoryBuffer::getMemBufferCopy(mainCode, "main.js"));
+  genModule(
+      segments[1],
+      1,
+      llvh::MemoryBuffer::getMemBufferCopy(segmentCode, "foo.js"));
 
   hermes::BytecodeGenerationOptions genOpts{hermes::EmitBundle};
   hermes::SHA1 sourceHash;
 
-  auto genBC = [&](hermes::Context::SegmentRange range) {
+  auto genBC = [&](uint32_t segment) {
     std::string bc{};
     llvh::raw_string_ostream os{bc};
     hermes::hbc::generateBytecode(
-        &M, os, genOpts, sourceHash, range, nullptr, nullptr);
+        &M, os, genOpts, sourceHash, segment, nullptr, nullptr);
     return os.str();
   };
 
-  return std::make_pair(genBC(ranges[0]), genBC(ranges[1]));
+  return std::make_pair(genBC(segments[0]), genBC(segments[1]));
 }
 
 } // namespace hermes

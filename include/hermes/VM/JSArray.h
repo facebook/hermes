@@ -82,9 +82,8 @@ class ArrayImpl : public JSObject {
     assert(
         index >= self->beginIndex_ && index < self->endIndex_ &&
         "array index out of range");
-    self->indexedStorage_.getNonNull(runtime)
-        ->at(index - self->beginIndex_)
-        .set(value, &runtime->getHeap());
+    self->indexedStorage_.getNonNull(runtime)->set(
+        index - self->beginIndex_, value, &runtime->getHeap());
   }
 
   /// Set the element at index \p index to empty. This does not affect the
@@ -245,7 +244,7 @@ class Arguments final : public ArrayImpl {
   using Super = ArrayImpl;
 
  public:
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   // We need one more slot for the '.length' property.
   static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
@@ -263,7 +262,6 @@ class Arguments final : public ArrayImpl {
       Handle<Callable> curFunction,
       bool strictMode);
 
- private:
 #ifdef HERMESVM_SERIALIZE
   explicit Arguments(Deserializer &d);
 
@@ -272,14 +270,26 @@ class Arguments final : public ArrayImpl {
 
   Arguments(
       Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
-      StorageType *indexedStorage)
-      : ArrayImpl(runtime, &vt.base, parent, clazz, indexedStorage) {}
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      Handle<StorageType> indexedStorage)
+      : ArrayImpl(runtime, &vt.base, *parent, *clazz, *indexedStorage) {}
 };
 
 class JSArray final : public ArrayImpl {
   using Super = ArrayImpl;
+
+  // Object needs to be able to call setLength.
+  friend class JSObject;
+
+  static constexpr SlotIndex jsArrayPropertyCount() {
+    return numOverlapSlots<JSArray>() + ANONYMOUS_PROPERTY_SLOTS +
+        NAMED_PROPERTY_SLOTS;
+  }
+
+  static constexpr inline SlotIndex lengthPropIndex() {
+    return jsArrayPropertyCount() - 1;
+  }
 
  public:
 #ifdef HERMESVM_SERIALIZE
@@ -288,7 +298,7 @@ class JSArray final : public ArrayImpl {
   friend void ArraySerialize(Serializer &s, const GCCell *cell);
 #endif
 
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   // We need one more slot for the '.length' property.
   static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
@@ -305,7 +315,7 @@ class JSArray final : public ArrayImpl {
   }
 
   static uint32_t getLength(const JSArray *self) {
-    return self->shadowLength_;
+    return getDirectSlotValue<lengthPropIndex()>(self).getNumber();
   }
 
   /// Create an instance of Array, with [[Prototype]] initialized with
@@ -360,46 +370,26 @@ class JSArray final : public ArrayImpl {
         runtime->makeHandle(HermesValue::encodeNumberValue(newValue)));
   }
 
- private:
-  // Object needs to be able to call setLength.
-  friend class JSObject;
-
-  static constexpr SlotIndex jsArrayPropertyCount() {
-    return numOverlapSlots<JSArray>() + ANONYMOUS_PROPERTY_SLOTS +
-        NAMED_PROPERTY_SLOTS;
-  }
-
-  static constexpr inline SlotIndex lengthPropIndex() {
-    return jsArrayPropertyCount() - 1;
-  }
-
-  /// A copy of the ".length" property. We compare every putComputed()
-  /// index against ".length", and extracting it from property storage every
-  /// time would be too slow.
-  uint32_t shadowLength_{0};
-
   template <typename NeedsBarrier>
   JSArray(
       Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
-      StorageType *indexedStorage,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      Handle<StorageType> indexedStorage,
       NeedsBarrier needsBarrier)
       : ArrayImpl(
             runtime,
             &vt.base,
-            parent,
-            clazz,
-            indexedStorage,
+            *parent,
+            *clazz,
+            *indexedStorage,
             needsBarrier) {}
 
+ private:
   /// A helper to update the named '.length' property.
   static void putLength(JSArray *self, Runtime *runtime, uint32_t newLength) {
-    self->shadowLength_ = newLength;
-
-    namedSlotRef(self, runtime, lengthPropIndex())
-        .setNonPtr(
-            HermesValue::encodeNumberValue(newLength), &runtime->getHeap());
+    setDirectSlotValueNonPtr<lengthPropIndex()>(
+        self, HermesValue::encodeNumberValue(newLength), &runtime->getHeap());
   }
 
   /// Update the JavaScript '.length' property, which also resizes the array.
@@ -430,7 +420,7 @@ class JSArrayIterator : public JSObject {
   friend void ArrayIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
  public:
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::ArrayIteratorKind;
@@ -444,7 +434,7 @@ class JSArrayIterator : public JSObject {
       Handle<JSArrayIterator> self,
       Runtime *runtime);
 
- private:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit JSArrayIterator(Deserializer &d);
 
@@ -454,12 +444,12 @@ class JSArrayIterator : public JSObject {
 
   JSArrayIterator(
       Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
-      JSObject *iteratedObject,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      Handle<JSObject> iteratedObject,
       IterationKind iterationKind)
-      : JSObject(runtime, &vt.base, parent, clazz),
-        iteratedObject_(runtime, iteratedObject, &runtime->getHeap()),
+      : JSObject(runtime, &vt.base, *parent, *clazz),
+        iteratedObject_(runtime, *iteratedObject, &runtime->getHeap()),
         iterationKind_(iterationKind) {}
 
  private:

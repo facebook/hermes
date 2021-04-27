@@ -16,14 +16,14 @@
 namespace hermes {
 namespace vm {
 
-class AlignedHeapSegment;
+class GenGCHeapSegment;
 
 /// Data structure for associating aligned heap segments with their starting
 /// addresses.  Supports updating/inserting a segment into the index, and
 /// iteration over the inserted segments, in order of their starting address.
 class GCSegmentAddressIndex {
   using Keys = std::vector<char *>;
-  using Values = std::vector<AlignedHeapSegment *>;
+  using Values = std::vector<GenGCHeapSegment *>;
 
  public:
   using iterator = Values::iterator;
@@ -43,7 +43,7 @@ class GCSegmentAddressIndex {
   /// entry for the low lim address if it already exists.
   ///
   /// \pre \p segment cannot be \c nullptr.
-  void update(AlignedHeapSegment *segment);
+  void update(GenGCHeapSegment *segment);
 
   /// Removes entries from the index by key.
   ///
@@ -65,7 +65,7 @@ class GCSegmentAddressIndex {
   /// Finds the segment managed by this index that owns the storage pointed into
   /// by \p ptr, if such a segment exists.  Returns nullptr if such a segment
   /// does not exist.
-  AlignedHeapSegment *segmentCovering(const void *ptr) const;
+  GenGCHeapSegment *segmentCovering(const void *ptr) const;
 
   /// Iterators over the values (aligned heap segments), in order of their
   /// starting address.

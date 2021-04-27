@@ -197,6 +197,17 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   /// Unregister this runtime for execution time limit monitoring.
   void unwatchTimeLimit();
 
+  /// Same as \c evaluate JavaScript but with a source map, which will be
+  /// applied to exception traces and debug information.
+  ///
+  /// This is an experimental Hermes-specific API. In the future it may be
+  /// renamed, moved or combined with another API, but the provided
+  /// functionality will continue to be available in some form.
+  jsi::Value evaluateJavaScriptWithSourceMap(
+      const std::shared_ptr<const jsi::Buffer> &buffer,
+      const std::shared_ptr<const jsi::Buffer> &sourceMapBuf,
+      const std::string &sourceURL);
+
  private:
   // Only HermesRuntimeImpl can subclass this.
   HermesRuntime() = default;

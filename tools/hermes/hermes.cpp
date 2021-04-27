@@ -118,9 +118,12 @@ static int executeHBCBytecodeFromCL(
           .withEnableEval(cl::EnableEval)
           .withVerifyEvalIR(cl::VerifyIR)
           .withOptimizedEval(cl::OptimizedEval)
+          .withAsyncBreakCheckInEval(cl::EmitAsyncBreakCheck)
           .withVMExperimentFlags(cl::VMExperimentFlags)
+          .withES6Promise(cl::ES6Promise)
           .withES6Proxy(cl::ES6Proxy)
           .withES6Symbol(cl::ES6Symbol)
+          .withES6Intl(cl::ES6Intl)
           .withEnableSampleProfiling(cl::SampleProfiling)
           .withRandomizeMemoryLayout(cl::RandomizeMemoryLayout)
           .withTrackIO(cl::TrackBytecodeIO)
@@ -143,11 +146,13 @@ static int executeHBCBytecodeFromCL(
   options.stopAfterInit = cl::StopAfterInit;
   options.forceGCBeforeStats = cl::GCBeforeStats;
   options.stabilizeInstructionCount = cl::StableInstructionCount;
+  options.sampleProfiling = cl::SampleProfiling;
 #ifdef HERMESVM_SERIALIZE
   options.SerializeAfterInitFile = cl::SerializeAfterInitFile;
   options.DeserializeFile = cl::DeserializeFile;
   options.SerializeVMPath = cl::SerializeVMPath;
 #endif
+  options.heapTimeline = cl::HeapTimeline;
 
   bool success;
   if (cl::Repeat <= 1) {
@@ -181,8 +186,11 @@ static vm::RuntimeConfig getReplRuntimeConfig() {
                                       .build())
               .withShouldRecordStats(cl::GCPrintStats)
               .build())
+      .withVMExperimentFlags(cl::VMExperimentFlags)
+      .withES6Promise(cl::ES6Promise)
       .withES6Proxy(cl::ES6Proxy)
       .withES6Symbol(cl::ES6Symbol)
+      .withES6Intl(cl::ES6Intl)
       .withEnableHermesInternal(true)
       .withEnableHermesInternalTestMethods(true)
       .withAllowFunctionToStringWithRuntimeSource(cl::AllowFunctionToString)

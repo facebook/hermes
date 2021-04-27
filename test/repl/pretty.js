@@ -12,6 +12,10 @@
 // CHECK-LABEL: "pretty printer"
 1
 // CHECK-NEXT: 1
++0
+// CHECK-NEXT: 0
+-0
+// CHECK-NEXT: -0
 true
 // CHECK-NEXT: true
 undefined
@@ -22,6 +26,10 @@ null
 // CHECK-NEXT: "asdf"
 (function(){})
 // CHECK-NEXT: function () { [bytecode] }
+(function*(){})
+// CHECK-NEXT: function *() { [bytecode] }
+(async function(){})
+// CHECK-NEXT: async function () { [bytecode] }
 
 a = [1,2, function(){}, null]
 // CHECK-NEXT: [ 1, 2, [Function], null, [length]: 4 ]
@@ -88,6 +96,8 @@ a = new Map([[1,2], [3, 'asdf']])
 // CHECK-NEXT: Map { 1 => 2, 3 => "asdf" }
 a = new Map([[1,2], [3, 4], [3, 'asdf']])
 // CHECK-NEXT: Map { 1 => 2, 3 => "asdf" }
+a = new Map([[-0, -0]]);
+// CHECK-NEXT: Map { 0 => -0 }
 
 a = new Date(0)
 // CHECK-NEXT: [Date 1970-01-01T00:00:00.000Z]

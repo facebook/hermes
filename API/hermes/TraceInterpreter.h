@@ -7,9 +7,8 @@
 
 #pragma once
 
-#ifdef HERMESVM_API_TRACE
-
 #include <hermes/Public/RuntimeConfig.h>
+#include <hermes/Support/OptValue.h>
 #include <hermes/Support/SHA1.h>
 #include <hermes/SynthTrace.h>
 
@@ -96,44 +95,74 @@ class TraceInterpreter final {
       std::unordered_map<SynthTrace::ObjectID, HostObjectInfo>;
 
   /// Options for executing the trace.
-  /// \param useTraceConfig If true, command-line options override the
-  /// config options recorded in the trace.  If false, start from the default
-  /// config.
-  /// \param snapshotMarker If the given marker is seen, take a heap snapshot.
-  /// \param snapshotMarkerFileName If the marker given in snapshotMarker
-  ///   is seen, write the heap snapshot out to this file.
-  /// \param warmupReps Number of initial executions whose stats are discarded.
-  /// \param reps Number of repetitions of execution. Stats returned are those
-  ///   for the rep with the median totalTime.
-  /// \param minHeapSize if non-zero, the minimum heap size, overriding
-  ///   the value stored in the trace.
-  /// \param maxHeapSize if non-zero, the maximum heap size, overriding
-  ///   the value stored in the trace.
-  /// \param allocInYoung: determines whether the GC initially allocates in
-  ///   the young generation.
-  /// \param revertToYGAtTTI: if true, and if the GC was not allocating in the
-  ///   young generation, change back to young-gen allocation at TTI.
   struct ExecuteOptions {
-    // the embed RuntimeConfig instance that has all of the customization stuff
-    // it needs
-    // ::hermes::vm::RuntimeConfig::Builder rtConfigBuilder;
+    /// Customizes the GCConfig of the Runtime.
     ::hermes::vm::GCConfig::Builder gcConfigBuilder;
+
+    /// If true, trace again while replaying. After normalization (see
+    /// hermes/tools/synth/trace_normalize.py) the output trace should be
+    /// identical to the input trace. If they're not, there was a bug in replay.
     mutable bool traceEnabled{false};
 
-    // These are not config params.
+    /// If true, command-line options override the config options recorded in
+    /// the trace.  If false, start from the default config.
     bool useTraceConfig{false};
+
+    /// Number of initial executions whose stats are discarded.
     int warmupReps{0};
+
+    /// Number of repetitions of execution. Stats returned are those for the rep
+    /// with the median totalTime.
     int reps{1};
+
+    /// If true, run a complete collection before printing stats. Useful for
+    /// guaranteeing there's no garbage in heap size numbers.
     bool forceGCBeforeStats{false};
+
+    /// If true, make attempts to make the instruction count more stable. Useful
+    /// for using a tool like PIN to count instructions and compare runs.
     bool stabilizeInstructionCount{false};
-    std::string marker;
-    std::string snapshotMarker;
-    std::string snapshotMarkerFileName;
+
+    /// If true, remove the requirement that the input bytecode was compiled
+    /// from the same source used to record the trace. There must only be one
+    /// input bytecode file in this case. If its observable behavior deviates
+    /// from the trace, the results are undefined.
+    bool disableSourceHashCheck{false};
+
+    /// A trace contains many MarkerRecords which have a name used to identify
+    /// them. If the replay encounters this given marker, perform an action
+    /// described by MarkerAction. All actions will stop the trace early and
+    /// collect stats at the marker point, unless the marker is set to the
+    /// special marker "end". In that case the trace will run to completion.
+    std::string marker{"end"};
+
+    enum class MarkerAction {
+      NONE,
+      /// Take a snapshot at marker.
+      SNAPSHOT,
+      /// Take a heap timeline that ends at marker.
+      TIMELINE,
+      /// Take a sampling heap profile that ends at marker.
+      SAMPLE,
+    };
+
+    /// Sets the action to take upon encountering the marker. The action will
+    /// write results into the \p profileFileName.
+    MarkerAction action{MarkerAction::NONE};
+
+    /// Output file name for any profiling information.
+    std::string profileFileName;
 
     // These are the config parameters.  We wrap them in llvh::Optional
     // to indicate whether the corresponding command line flag was set
     // explicitly.  We override the trace's config only when that is true.
+
+    /// If true, track all disk I/O done by the runtime and print a report at
+    /// the end to stdout.
     llvh::Optional<bool> shouldTrackIO;
+
+    /// If present, do a bytecode warmup run that touches a percentage of the
+    /// bytecode. A value of 50 here means 50% of the bytecode should be warmed.
     llvh::Optional<unsigned> bytecodeWarmupPercent;
   };
 
@@ -170,8 +199,6 @@ class TraceInterpreter final {
   std::string stats_;
   /// Whether the marker was reached.
   bool markerFound_{false};
-  /// Whether the snapshot marker was reached.
-  bool snapshotMarkerFound_{false};
   /// Depth in the execution stack. Zero is the outermost function.
   uint64_t depth_{0};
 
@@ -256,6 +283,7 @@ class TraceInterpreter final {
   getSourceHashToBundleMap(
       std::vector<std::unique_ptr<llvh::MemoryBuffer>> &&codeBufs,
       const SynthTrace &trace,
+      const ExecuteOptions &options,
       bool *codeIsMmapped = nullptr,
       bool *isBytecode = nullptr);
 
@@ -360,20 +388,33 @@ class TraceInterpreter final {
   /// val to be of the corresponding runtime type.  Adds this
   /// occurrence at \p globalRecordNum as a local or global definition
   /// in \p locals or the global object map, respectively.
-  bool ifObjectAddToDefs(
+  ///
+  /// \p isThis should be true if and only if the value is a 'this' in a call
+  /// (only used for validation). TODO(T84791675): Remove this parameter.
+  ///
+  /// N.B. This method should be called even if you happen to know that the
+  /// value cannot be an Object or String, since it performs useful validation.
+  void ifObjectAddToDefs(
       const SynthTrace::TraceValue &traceValue,
       const jsi::Value &val,
       const Call &call,
       uint64_t globalRecordNum,
-      std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals);
+      std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals,
+      bool isThis = false);
 
   /// Same as above, except it avoids copies on temporary objects.
-  bool ifObjectAddToDefs(
+  void ifObjectAddToDefs(
       const SynthTrace::TraceValue &traceValue,
       jsi::Value &&val,
       const Call &call,
       uint64_t globalRecordNum,
-      std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals);
+      std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals,
+      bool isThis = false);
+
+  /// Check if the \p marker is the one that is being searched for. If this is
+  /// the first time encountering the matching marker, perform the actions set
+  /// up for that marker.
+  void checkMarker(const std::string &marker);
 
   std::string printStats();
 
@@ -385,5 +426,3 @@ class TraceInterpreter final {
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
-
-#endif

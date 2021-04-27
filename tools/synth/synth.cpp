@@ -19,6 +19,9 @@
 #include <iostream>
 #include <tuple>
 
+using MarkerAction =
+    facebook::hermes::tracing::TraceInterpreter::ExecuteOptions::MarkerAction;
+
 namespace cl {
 
 using llvh::cl::desc;
@@ -38,21 +41,39 @@ static opt<std::string>
 static list<std::string>
     BytecodeFiles(desc("input bytecode files"), Positional, OneOrMore);
 
-static opt<std::string> Marker("marker", desc("marker to stop at"), init(""));
+static opt<std::string> Marker(
+    "marker",
+    desc("marker to stop at, \"end\" means end of trace"),
+    init("end"));
 static llvh::cl::alias
     MarkerA("m", desc("alias for -marker"), llvh::cl::aliasopt(Marker));
 
-static opt<std::string> SnapshotMarker(
-    "snapshot-at-marker",
+static opt<MarkerAction> Action(
+    "action-at-marker",
     desc("Take a snapshot at the given marker"),
-    init(""));
+    init(MarkerAction::NONE),
+    llvh::cl::values(
+        clEnumValN(MarkerAction::NONE, "stop", "Stop the trace and get stats"),
+        clEnumValN(
+            MarkerAction::SNAPSHOT,
+            "snapshot",
+            "Take a heap snapshot at the marker to stop at"),
+        clEnumValN(
+            MarkerAction::TIMELINE,
+            "timeline",
+            "Take a heap timeline from the beginning of execution until the "
+            "marker to stop at"),
+        clEnumValN(
+            MarkerAction::SAMPLE,
+            "sample",
+            "Take a heap sampling profile at the marker to stop at")));
 
 static opt<bool> UseTraceConfig(
     "use-trace-config",
     desc("Controls what RuntimeConfig as the default that the various config "
          "modify.  True says to use the recorded config of the trace, false "
          "means start from the default config."),
-    init(false));
+    init(true));
 
 static opt<std::string> Trace(
     "trace",
@@ -77,6 +98,14 @@ static opt<int> Reps(
         "Number of repetitions of execution. Any GC stats printed are those for the "
         "rep with the median \"totalTime\"."),
     init(1));
+
+static opt<bool> DisableSourceHashCheck(
+    "disable-source-hash-check",
+    desc("Remove the requirement that the input bytecode was compiled from the "
+         "same source used to record the trace. There must only be one input "
+         "bytecode file in this case. If its observable behavior deviates "
+         "from the trace, the results are undefined."),
+    init(false));
 
 /// @}
 
@@ -154,6 +183,20 @@ static llvh::Optional<::hermes::vm::gcheapsize_t> execOption(
   }
 }
 
+static const char *fileExtensionForAction(MarkerAction action) {
+  switch (action) {
+    case MarkerAction::SNAPSHOT:
+      return "heapsnapshot";
+    case MarkerAction::TIMELINE:
+      return "heaptimeline";
+    case MarkerAction::SAMPLE:
+      return "heapprofile";
+    case MarkerAction::NONE:
+      llvm_unreachable(
+          "Should never call fileExtensionForAction with a none action");
+  }
+}
+
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
   llvh::sys::PrintStackTraceOnErrorSignal("Hermes synth");
@@ -171,17 +214,16 @@ int main(int argc, char **argv) {
     options.useTraceConfig = cl::UseTraceConfig;
     options.reps = cl::Reps;
     options.marker = cl::Marker;
-    std::string snapshotMarkerFileName;
-    if (!cl::SnapshotMarker.empty()) {
+    options.action = cl::Action;
+    if (options.action != MarkerAction::NONE) {
       llvh::SmallVector<char, 16> tmpfile;
       llvh::sys::fs::createTemporaryFile(
-          cl::SnapshotMarker, "heapsnapshot", tmpfile);
-      snapshotMarkerFileName = std::string{tmpfile.begin(), tmpfile.end()};
-      options.snapshotMarker = cl::SnapshotMarker;
-      options.snapshotMarkerFileName = snapshotMarkerFileName;
+          options.marker, fileExtensionForAction(options.action), tmpfile);
+      options.profileFileName = std::string{tmpfile.begin(), tmpfile.end()};
     }
     options.forceGCBeforeStats = cl::GCBeforeStats;
     options.stabilizeInstructionCount = cl::StableInstructionCount;
+    options.disableSourceHashCheck = cl::DisableSourceHashCheck;
 
     // These are the config parameters.
 
@@ -254,14 +296,18 @@ int main(int argc, char **argv) {
       options.gcConfigBuilder.withSanitizeConfig(sanitizeConfigBuilder.build());
     }
 
-    std::vector<std::string> bytecodeFiles{cl::BytecodeFiles.begin(),
-                                           cl::BytecodeFiles.end()};
+    std::vector<std::string> bytecodeFiles{
+        cl::BytecodeFiles.begin(), cl::BytecodeFiles.end()};
+    if (cl::DisableSourceHashCheck && bytecodeFiles.size() != 1) {
+      throw std::invalid_argument(
+          "Must have single bytecode file to disable source hash check");
+    }
     if (!cl::Trace.empty()) {
       // If this is tracing mode, get the trace instead of the stats.
       options.gcConfigBuilder.withShouldRecordStats(false);
       options.shouldTrackIO = false;
       std::error_code ec;
-      auto os = ::hermes::make_unique<llvh::raw_fd_ostream>(
+      auto os = std::make_unique<llvh::raw_fd_ostream>(
           cl::Trace.c_str(),
           ec,
           llvh::sys::fs::CD_CreateAlways,
@@ -283,9 +329,9 @@ int main(int argc, char **argv) {
     if (cl::PrintStats)
       llvh::PrintStatistics(llvh::outs());
 #endif
-    if (!cl::SnapshotMarker.empty()) {
-      llvh::outs() << "Wrote heap snapshot for marker \"" << cl::SnapshotMarker
-                   << "\" to " << snapshotMarkerFileName << "\n";
+    if (!options.profileFileName.empty()) {
+      llvh::outs() << "Wrote profile for marker \"" << options.marker
+                   << "\" to " << options.profileFileName << "\n";
     }
     return 0;
   } catch (const std::invalid_argument &e) {

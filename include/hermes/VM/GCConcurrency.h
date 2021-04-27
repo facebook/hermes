@@ -21,7 +21,8 @@ namespace vm {
 /// Hades will run with a single thread that interleaves work with the YG and
 /// OG. Has no effect on non-Hades GCs.
 static constexpr bool kConcurrentGC =
-#ifdef HERMESVM_GC_HADES
+#if defined(HERMESVM_ALLOW_CONCURRENT_GC) && \
+    (defined(HERMESVM_GC_HADES) || defined(HERMESVM_GC_RUNTIME))
     // Only use Hades concurrently if on a 64-bit platform.
     sizeof(void *) == 8
 #else
@@ -46,8 +47,8 @@ namespace impl {
 template <typename T>
 class FakeAtomic final {
  public:
-  constexpr explicit FakeAtomic() : data_{} {}
-  constexpr explicit FakeAtomic(T desired) : data_{desired} {}
+  constexpr FakeAtomic() : data_{} {}
+  constexpr FakeAtomic(T desired) : data_{desired} {}
 
   T load(std::memory_order order) const {
     (void)order;
@@ -87,8 +88,8 @@ class FakeAtomic final {
   T data_;
 };
 
-/// A DebugMutex wraps a std::mutex and also tracks which thread currently has
-/// the mutex locked. Only available in debug modes.
+/// A DebugMutex wraps a std::recursive_mutex and also tracks which thread
+/// currently has the mutex locked. Only available in debug modes.
 class DebugMutex {
  public:
   DebugMutex() : tid_() {}
@@ -97,34 +98,41 @@ class DebugMutex {
   operator bool() const {
     // Check that this thread owns the mutex.
     // The mutex must be held in order to check this condition safely.
-    return tid_ == std::this_thread::get_id();
+    return tid_.load(std::memory_order_relaxed) == std::this_thread::get_id();
   }
 
   void lock() {
     inner_.lock();
-    tid_ = std::this_thread::get_id();
+    depth_++;
+    tid_.store(std::this_thread::get_id(), std::memory_order_relaxed);
   }
 
   void unlock() {
-    tid_ = std::thread::id{};
+    assert(depth_ && "Should not unlock an unlocked mutex");
+    assert(
+        tid_.load(std::memory_order_relaxed) == std::this_thread::get_id() &&
+        "Mutex should be acquired and unlocked on the same thread");
+    depth_--;
+    if (!depth_) {
+      tid_.store(std::thread::id{}, std::memory_order_relaxed);
+    }
     inner_.unlock();
   }
 
-  /// Allow bypassing the guards for special cases, like
-  /// std::condition_variable.
-  std::mutex &inner() {
-    return inner_;
-  }
-
-  /// If inner() is used to handle locking, use assignThread to get the
-  /// DebugMutex back in a consistent state.
-  void assignThread(std::thread::id tid) {
-    tid_ = tid;
+  uint32_t depth() const {
+    assert(*this && "Must hold the inner mutex to call depth");
+    return depth_;
   }
 
  private:
-  std::mutex inner_;
-  std::thread::id tid_;
+  std::recursive_mutex inner_;
+  // Sometimes we want to assert that the the current thread does not hold the
+  // mutex. Since the mutex is not held, TSAN complains that the access to tid_
+  // is not thread safe. It is safe to use this atomic with any memory ordering
+  // because all we care about is the last value assigned to tid_ by the
+  // *current* thread.
+  std::atomic<std::thread::id> tid_;
+  uint32_t depth_{0};
 };
 
 /// A FakeMutex has the same API as a std::mutex but does nothing.
@@ -138,6 +146,10 @@ class FakeMutex {
     return true;
   }
 
+  uint32_t depth() const {
+    return 1;
+  }
+
   void lock() {}
   bool try_lock() {
     return true;
@@ -146,41 +158,6 @@ class FakeMutex {
 };
 
 } // namespace impl
-
-template <typename Predicate>
-void waitForConditionVariable(
-    std::condition_variable &cv,
-    std::unique_lock<std::mutex> &lk,
-    Predicate pred) {
-  cv.wait(lk, pred);
-}
-
-template <typename Predicate>
-void waitForConditionVariable(
-    std::condition_variable &cv,
-    std::unique_lock<impl::DebugMutex> &lk,
-    Predicate pred) {
-  std::unique_lock<std::mutex> waitableLock{lk.mutex()->inner(),
-                                            std::adopt_lock};
-  waitForConditionVariable(cv, waitableLock, pred);
-  // Since the condition_variable reacquires the lock before finishing wait,
-  // we need to assign the old thread id back to this DebugMutex.
-  lk.mutex()->assignThread(std::this_thread::get_id());
-  waitableLock.release();
-}
-
-// This must exist for compilation purposes, but should never be called.
-template <typename Predicate>
-void waitForConditionVariable(
-    std::condition_variable &cv,
-    std::unique_lock<impl::FakeMutex> &lk,
-    Predicate pred) {
-  (void)cv;
-  (void)lk;
-  (void)pred;
-  assert(
-      false && "Should never call waitForConditionVariable with a FakeMutex");
-}
 
 // Only these typedefs should be used by the rest of the VM.
 template <typename T>
@@ -192,7 +169,7 @@ using Mutex = std::conditional<
 #ifndef NDEBUG
     impl::DebugMutex
 #else
-    std::mutex
+    std::recursive_mutex
 #endif
     ,
     impl::FakeMutex>::type;

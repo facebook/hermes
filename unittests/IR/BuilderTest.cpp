@@ -197,12 +197,12 @@ TEST(BuilderTest, TestValueTypes) {
 
   X->setType(Type::createBoolean());
   EXPECT_TRUE(X->getType().isBooleanType());
-  EXPECT_FALSE(X->getType().isEmptyTy());
+  EXPECT_FALSE(X->getType().isNoType());
 }
 
 TEST(BuilderTest, Types) {
   Type T = Type::createAnyType();
-  EXPECT_FALSE(T.isEmptyTy());
+  EXPECT_FALSE(T.isNoType());
   EXPECT_TRUE(T.isAnyType());
 
   Type W = Type::unionTy(Type::createNumber(), Type::createBoolean());

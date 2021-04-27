@@ -120,6 +120,15 @@ class HandleRootOwner {
   /// An efficient way to pass bools to a function accepting Handle.
   static Handle<HermesValue> getBoolValue(bool b);
 
+  /// An efficient way to pass 0 to a function accepting Handle.
+  static Handle<HermesValue> getZeroValue();
+
+  /// An efficient way to pass 1 to a function accepting Handle.
+  static Handle<HermesValue> getOneValue();
+
+  /// An efficient way to pass -1 to a function accepting Handle.
+  static Handle<HermesValue> getNegOneValue();
+
   /// Return the top-most \c GCScope.
   GCScope *getTopGCScope();
 
@@ -128,18 +137,24 @@ class HandleRootOwner {
 
  protected:
   /// Used for efficient construction of Handle<>(..., nullptr).
-  static PinnedHermesValue nullPointer_;
+  static const PinnedHermesValue nullPointer_;
   /// Used for efficient construction of Handle(undefined).
-  static PinnedHermesValue undefinedValue_;
+  static const PinnedHermesValue undefinedValue_;
   /// Used for efficient construction of Handle(null).
-  static PinnedHermesValue nullValue_;
+  static const PinnedHermesValue nullValue_;
   /// Used for efficient construction of Handle(empty).
-  static PinnedHermesValue emptyValue_;
+  static const PinnedHermesValue emptyValue_;
   /// Used for efficient construction of Handle(bool).
-  static PinnedHermesValue trueValue_;
-  static PinnedHermesValue falseValue_;
+  static const PinnedHermesValue trueValue_;
+  static const PinnedHermesValue falseValue_;
+  /// Used for efficient construction of Handle(0).
+  static const PinnedHermesValue zeroValue_;
+  /// Used for efficient construction of Handle(1).
+  static const PinnedHermesValue oneValue_;
+  /// Used for efficient construction of Handle(-1).
+  static const PinnedHermesValue negOneValue_;
 
-  void markGCScopes(SlotAcceptor &acceptor);
+  void markGCScopes(RootAcceptor &acceptor);
 
   /// Mark the WeakRefs in the weakRefs_ list.
   void markWeakRefs(WeakRefAcceptor &acceptor);
@@ -460,12 +475,12 @@ class GCScope : public GCScopeDebugBase {
   PinnedHermesValue *_newChunkAndPHV(HermesValue value);
 
   /// Mark all handles in this scope.
-  void mark(SlotAcceptor &acceptor);
+  void mark(RootAcceptor &acceptor);
 };
 
 /// A RAII class which records a GCScope marker on construction and flushes the
 /// scope to the marker on destruction.
-/// It is fuctionally equivalent to creating a nested GCScope but can be more
+/// It is functionally equivalent to creating a nested GCScope but can be more
 /// lightweight because it doesn't consume a lot of stack and because it behaves
 /// better in cases when more than GCScope::CHUNK_SIZE handles are allocated in
 /// a loop - they would be allocated once in the parent and reused on every

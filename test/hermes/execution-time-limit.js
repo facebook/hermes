@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermes -O0 -emit-async-break-check -time-limit=1000 %s 2>&1 ) | %FileCheck --match-full-lines %s
+// RUN: (! %hermes -O0 -emit-async-break-check -time-limit=300 %s 2>&1 ) | %FileCheck --match-full-lines %s
+// RUN: (! %hermes -O0 -emit-async-break-check -time-limit=300 -lazy %s 2>&1 ) | %FileCheck --match-full-lines %s
 
 function entryPoint() {
   helper();
@@ -21,6 +22,6 @@ function helper() {
 entryPoint();
 
 //CHECK: Uncaught TimeoutError: Javascript execution has timed out.
-//CHECK: at helper ({{.*/execution-time-limit.js}}:17:5)
-//CHECK-NEXT: at entryPoint ({{.*/execution-time-limit.js}}:11:9)
-//CHECK-NEXT: at global ({{.*/execution-time-limit.js}}:21:11)
+//CHECK: at helper ({{.*/execution-time-limit.js}}:18:5)
+//CHECK-NEXT: at entryPoint ({{.*/execution-time-limit.js}}:12:9)
+//CHECK-NEXT: at global ({{.*/execution-time-limit.js}}:22:11)

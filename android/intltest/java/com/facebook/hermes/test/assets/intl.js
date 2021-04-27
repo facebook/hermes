@@ -103,9 +103,6 @@ try {
   throw new Error();
 } catch (e) {}
 
-var d = new Date();
-assert(d.toLocaleString() === Intl.DateTimeFormat().format(d));
-
 // These tests are especially weak, as there's no way to verify that
 // the ECMA 402 replacements are being used.  We'll need better tests
 // for that which use actual data.  But if they are used, this will
@@ -120,38 +117,3 @@ assert(typeof new Number().toLocaleString() === 'string');
 assert(typeof 'a'.localeCompare('b') === 'number');
 assert(typeof 'A'.toLocaleLowerCase() === 'string');
 assert(typeof 'a'.toLocaleUpperCase() === 'string');
-
-// The rest tests that the stubs can be called, but the results are
-// not spec-compliant (or even close).  It should be replaced with
-// real tests once the implementation is complete.
-
-var locales = Intl.Collator.supportedLocalesOf();
-assert(locales.length === 2);
-assert(locales[0] === 'en-CA');
-assert(locales[1] === 'de-DE');
-
-var collator = Intl.Collator();
-var options = collator.resolvedOptions();
-assert(options.numeric === false);
-assert(options.locale === 'en-US');
-
-for ([left, right, expected] of [
-       ['a', 'b', -1],
-       ['a', 'a', 0],
-       ['b', 'a', 1],
-       ['a', 'aa', -1],
-       ['aa', 'a', 1],
-]) {
-  assert(collator.compare(left, right) === expected);
-  assert(left.localeCompare(right) === expected);
-}
-
-var nf = Intl.NumberFormat();
-assert(nf.format(123.45).startsWith('123.45'));
-var parts = nf.formatToParts(123.45);
-assert(parts.length === 1);
-assert(parts[0].type === 'integer');
-assert(parts[0].value.startsWith('123.45'));
-
-assert('A'.toLocaleLowerCase() === 'lowered');
-assert('a'.toLocaleUpperCase() === 'uppered');

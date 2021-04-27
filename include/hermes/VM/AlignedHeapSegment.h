@@ -14,12 +14,12 @@
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/AllocSource.h"
 #include "hermes/VM/CardTableNC.h"
-#include "hermes/VM/CompleteMarkState.h"
 #include "hermes/VM/GCBase.h"
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/MarkBitArrayNC.h"
 #include "hermes/VM/PointerBase.h"
+#include "hermes/VM/SegmentInfo.h"
 #include "hermes/VM/SweepResultNC.h"
 
 #include "llvh/Support/MathExtras.h"
@@ -29,9 +29,6 @@
 
 namespace hermes {
 namespace vm {
-
-class CompactionResult;
-class GCGeneration;
 
 // In this class:
 // TODO (T25527350): Debug Dump
@@ -56,61 +53,64 @@ class GCGeneration;
 /// The tables in (1), and (2) cover the contiguous allocation space (3)
 /// into which GCCells are bump allocated.
 class AlignedHeapSegment {
-  friend CompactionResult::Allocator;
-  friend CompactionResult::Chunk;
-
  public:
+  explicit AlignedHeapSegment(AlignedStorage storage)
+      : storage_(std::move(storage)) {}
+
   /// Construct a null AlignedHeapSegment (one that does not own memory).
   AlignedHeapSegment() = default;
-
-  /// Construct a new AlignedHeapSegment.  Its allocation region is initially
-  /// empty, and must be grown to an appropriate size.
-  ///
-  /// \p storage The storage that this segment manages.
-  /// \p owner The generation that owns this segment.
-  AlignedHeapSegment(AlignedStorage &&storage, GCGeneration *owner = nullptr);
-
   AlignedHeapSegment(AlignedHeapSegment &&) = default;
   AlignedHeapSegment &operator=(AlignedHeapSegment &&) = default;
 
   ~AlignedHeapSegment();
 
-  /// The very beginning of a segment contains this small structure, which can
-  /// contain segment-specific information.
-  struct SegmentInfo {
-#ifdef HERMESVM_COMPRESSED_POINTERS
-    unsigned index;
-#endif
-  };
-
   /// Contents of the memory region managed by this segment.
   class Contents {
     friend class AlignedHeapSegment;
 
+    /// Note that because of the Contents object, the first few bytes of the
+    /// card table are unused, we instead use them to store a small SegmentInfo
+    /// struct.
     CardTable cardTable_;
-
-#ifdef HERMESVM_GC_HADES
-    // We use a MarkBitArray to mark the start of cells. Scan backwards from a
-    // card's address in this array to find a marked bit, then go from there to
-    // the actual cell that crosses the boundary.
-    // If every cell is alive after marking, then markBitArray_ has bitwise
-    // identical contents to startOfCells_.
-    MarkBitArrayNC startOfCells_;
-#endif
 
     MarkBitArrayNC markBitArray_;
 
+    static constexpr size_t kMetadataSize =
+        sizeof(cardTable_) + sizeof(markBitArray_);
+    /// Padding to ensure that the guard page is aligned to a page boundary.
+    static constexpr size_t kGuardPagePadding =
+        llvh::alignTo<pagesize::kExpectedPageSize>(kMetadataSize) -
+        kMetadataSize;
+
     /// Memory made inaccessible through protectGuardPage, for security and
-    /// earlier detection of corruption.
-    char guardPage_[pagesize::kExpectedPageSize];
+    /// earlier detection of corruption. Padded to contain at least one full
+    /// aligned page.
+    char paddedGuardPage_[pagesize::kExpectedPageSize + kGuardPagePadding];
+
+    static constexpr size_t kMetadataAndGuardSize =
+        kMetadataSize + sizeof(paddedGuardPage_);
 
     /// The first byte of the allocation region, which extends past the "end" of
     /// the struct, to the end of the memory region that contains it.
     char allocRegion_[1];
 
-    /// Set the protection mode of guardPage_ (if system page size allows it).
+   public:
+    /// Set the protection mode of paddedGuardPage_ (if system page size allows
+    /// it).
     void protectGuardPage(oscompat::ProtectMode mode);
   };
+
+  static_assert(
+      offsetof(Contents, paddedGuardPage_) == Contents::kMetadataSize,
+      "Should not need padding after metadata.");
+
+  /// The total space at the start of the CardTable taken up by the metadata and
+  /// guard page in the Contents struct.
+  static constexpr size_t kCardTableUnusedPrefixBytes =
+      Contents::kMetadataAndGuardSize / CardTable::kHeapBytesPerCardByte;
+  static_assert(
+      sizeof(SegmentInfo) < kCardTableUnusedPrefixBytes,
+      "SegmentInfo does not fit in available unused CardTable space.");
 
   /// The offset from the beginning of a segment of the allocatable region.
   static constexpr size_t offsetOfAllocRegion{offsetof(Contents, allocRegion_)};
@@ -120,8 +120,34 @@ class AlignedHeapSegment {
       "Allocation region must start at a heap aligned offset");
 
   static_assert(
-      offsetof(Contents, guardPage_) % sizeof(Contents::guardPage_) == 0,
+      (offsetof(Contents, paddedGuardPage_) + Contents::kGuardPagePadding) %
+              pagesize::kExpectedPageSize ==
+          0,
       "Guard page must be aligned to likely page size");
+
+  class HeapCellIterator : public llvh::iterator_facade_base<
+                               HeapCellIterator,
+                               std::forward_iterator_tag,
+                               GCCell *> {
+   public:
+    HeapCellIterator(GCCell *cell) : cell_(cell) {}
+
+    bool operator==(const HeapCellIterator &R) const {
+      return cell_ == R.cell_;
+    }
+
+    GCCell *const &operator*() const {
+      return cell_;
+    }
+
+    HeapCellIterator &operator++() {
+      cell_ = cell_->nextCell();
+      return *this;
+    }
+
+   private:
+    GCCell *cell_{nullptr};
+  };
 
   /// Attempt an allocation of the given size in the segment.  If there is
   /// sufficent space, cast the space as a GCCell, and returns an uninitialized
@@ -129,25 +155,11 @@ class AlignedHeapSegment {
   /// space, returns {nullptr, false}.
   inline AllocResult alloc(uint32_t size);
 
-  /// The given amount of external memory is credited to objects allocated in
-  /// this space.  Adjust the effective size of the space accordingly.
-  void creditExternalMemory(uint32_t size);
-
-  /// The given amount of external memory is debited to objects allocated in
-  /// this space.  Adjust the effective size of the space accordingly.
-  void debitExternalMemory(uint32_t size);
-
   /// Given the \p lowLim of some valid AlignedStorage's memory region, returns
   /// a pointer to the AlignedHeapSegment::Contents laid out in that storage,
   /// assuming it exists.
   inline static Contents *contents(void *lowLim);
   inline static const Contents *contents(const void *lowLim);
-
-  /// Given the \p lowLim of some valid AlignedStorage's memory region, returns
-  /// a pointer to the AlignedHeapSegment::SegmentInfo laid out in that storage,
-  /// assuming it exists.
-  inline static SegmentInfo *segmentInfo(void *lowLim);
-  inline static const SegmentInfo *segmentInfo(const void *lowLim);
 
   /// Given a \p ptr into the memory region of some valid AlignedStorage \c s,
   /// returns a pointer to the CardTable covering the segment containing the
@@ -155,20 +167,6 @@ class AlignedHeapSegment {
   ///
   /// \pre There exists a currently alive heap that claims to contain \c ptr.
   inline static CardTable *cardTableCovering(const void *ptr);
-
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  /// Returns the index of the segment containing \p ptr.
-  inline static unsigned segmentIndex(const void *ptr);
-
-  /// Returns the index of the segment containing \p ptr, which is required to
-  /// be the start of its containing segment.  (This can allow extra efficiency,
-  /// in cases where the segment start has already been computed.)
-  inline static unsigned segmentIndexFromStart(const void *ptr);
-
-  /// Requires that \p segStart is the start address of a segment, and sets
-  /// that segment's index to \p index.
-  inline static void setSegmentIndexFromStart(void *segStart, unsigned index);
-#endif // HERMESVM_COMPRESSED_POINTERS
 
   /// Given a \p ptr into the memory region of some valid AlignedStorage \c s,
   /// returns a pointer to the MarkBitArrayNC covering the segment containing
@@ -233,6 +231,9 @@ class AlignedHeapSegment {
   /// Returns the address at which the next allocation, if any, will occur.
   inline char *level() const;
 
+  /// Returns an iterator range corresponding to the cells in this segment.
+  inline llvh::iterator_range<HeapCellIterator> cells();
+
   /// Returns whether \p a and \p b are contained in the same
   /// AlignedHeapSegment.
   inline static bool containedInSame(const void *a, const void *b);
@@ -246,22 +247,6 @@ class AlignedHeapSegment {
   /// managed by this segment.
   inline MarkBitArrayNC &markBitArray() const;
 
-#ifdef HERMESVM_GC_HADES
-  /// Return a reference to the heads of objects. This needs to be updated
-  /// whenever a new object is allocated.
-  MarkBitArrayNC &cellHeads() {
-    return contents()->startOfCells_;
-  }
-
-  const MarkBitArrayNC &cellHeads() const {
-    return contents()->startOfCells_;
-  }
-
-  static MarkBitArrayNC &cellHeadsCovering(const void *ptr) {
-    return contents(AlignedStorage::start(ptr))->startOfCells_;
-  }
-#endif
-
   explicit inline operator bool() const;
 
   /// \return \c true if and only if \p ptr is within the memory range owned by
@@ -271,6 +256,11 @@ class AlignedHeapSegment {
   /// Assumes that the segment's card object boundaries may not have been
   /// maintained, and recreates it, ensuring that it's valid.
   void recreateCardTableBoundaries();
+
+  /// Mark a set of pages as unused.
+  ///
+  /// \pre start and end must be aligned to the page boundary.
+  void markUnused(char *start, char *end);
 
   /// Clear allocations after \p level in this segment.
   ///
@@ -312,73 +302,6 @@ class AlignedHeapSegment {
   /// underlying storage).
   bool growToFit(size_t amount);
 
-  /// Assume that marking from the roots has marked some cells, and the
-  /// markStack found in markState is empty.  Traverse the objects in the space,
-  /// finding objects whose mark bits are set.  For each such object, push its
-  /// address on the markStack, then enter a loop in which we pop objects from
-  /// markStack while it is non-empty, and scan their pointers, marking unmarked
-  /// referents, and pushing their addresses on markStack.  If we overflow the
-  /// max size of markStack sets a flag and returns.
-  void completeMarking(GC *gc, CompleteMarkState *markState);
-
-  /// Assumes marking is complete.  Scans the heap, determining, for each live
-  /// object, the address to which it will later be compacted.  Objects are
-  /// compacted into chunks, in the order they are provided by
-  /// sweepResult->compactionResult.  The first object that doesn't fit in a
-  /// chunk causes this chunk to be complete, and further allocation to occur in
-  /// the next.  For each live object, installs a forwarding pointer to the
-  /// post-compaction address in the VTable slot, after saving the VTable value
-  /// in sweepResult->displacedVtablePtrs, which becomes the return result of
-  /// the call.  Dead objects with finalizers have their finalizers executed.
-  /// Sequences of dead objects have a DeadRegion containing a pointer to the
-  /// next live object inserted, allowing them to be skipped efficiently n
-  /// subsequent heap traversals.
-  void sweepAndInstallForwardingPointers(GC *gc, SweepResult *sweepResult);
-
-  /// Assumes sweeping is complete.  Traverses the live objects, scanning their
-  /// pointers.  For each pointer to another heap object, update the pointer by
-  /// following the referent's forwarding pointer.  Marked cells are considered
-  /// live, and it is assumed that the first N pointers in the range
-  /// vTables are the VTables of the N remaining live cells in the segment.
-  /// This function is expected to consume N elements from this range,
-  /// denote that those pointers have been used and accounted for.
-  void updateReferences(
-      GC *gc,
-      FullMSCUpdateAcceptor *acceptor,
-      SweepResult::VTablesRemaining &vTables);
-
-  /// Assumes updateReferences is complete, there are N live cells in this
-  /// segment, and that the first N pointers in [*vTableBegin, vTableEnd) are
-  /// the VTable pointers of the N remaining live cells.  Moves each live cell
-  /// to the post-compaction address indicated by its forwarding pointer and
-  /// restores its displaced VTable pointer, consuming it in the process
-  /// (indicated by incrementing *vTableBegin).
-  void compact(SweepResult::VTablesRemaining &vTables);
-
-  /// TODO (T25573911): the next two methods are usually debug-only; exposed
-  /// in opt for temporary old-to-young pointer traversal.
-
-  /// Call \p callback on each cell between \p low and \p high.
-  void forObjsInRange(
-      const std::function<void(GCCell *)> &callback,
-      char *low,
-      const char *high);
-  void forObjsInRange(
-      const std::function<void(const GCCell *)> &callback,
-      const char *low,
-      const char *high) const;
-
-  /// Call \p callback on every cell allocated in this segment.
-  void forAllObjs(const std::function<void(GCCell *)> &callback);
-  void forAllObjs(const std::function<void(const GCCell *)> &callback) const;
-
-  /// Adds a representation of segments address range to *\p buf,
-  /// ensuring that we don't write more than \p sz characters.  Writes
-  /// min(*sz, <length of string for seg>) characters.  Updates buf to
-  /// point after the last character written, and decreases *\p sz by the
-  /// number of chars written.
-  void addExtentToString(char **buf, int *sz);
-
 #ifndef NDEBUG
   /// Returns true iff \p lvl could refer to a level within this segment.
   bool dbgContainsLevel(const void *lvl) const;
@@ -395,45 +318,10 @@ class AlignedHeapSegment {
   static void checkUnwritten(char *start, char *end);
 #endif
 
-#ifdef HERMES_SLOW_DEBUG
-  /// For debugging: iterates over objects, asserting that all GCCells have
-  /// vtables with valid cell kinds, and that all object pointers point to
-  /// GCCells whose vtables have valid cell kinds.  Sums the external memory
-  /// rooted by objects in the space, and, if \p externalMemory is non-null,
-  /// sets \p *externalMemory to that sum.
-  void checkWellFormed(const GC *gc, uint64_t *externalMemory = nullptr) const;
-#endif
-
-#ifdef HERMES_EXTRA_DEBUG
-  /// Extra debugging: at the end of GC we "summarize" the vtable pointers of
-  /// old-gen objects.  Conceptually, this means treat them as if they
-  /// were concatenated, and take the hash of a string form.
-  /// TODO(T56364255): remove these when the problem is diagnosed.
-
-  /// Summarize the vtables of objects in the segment, and record the results
-  /// (including the address after the last object summarized).
-  void summarizeVTables();
-
-  /// Resummarize the vtables of the old-gen objects, and return whether the
-  /// result is the same as the last summary.
-  bool checkSummarizedVTables() const;
-#endif
-
- private:
+ protected:
   /// Return a pointer to the contents of the memory region managed by this
   /// segment.
   inline Contents *contents() const;
-
-  void deleteDeadObjectIDs(GC *gc);
-  void updateObjectIDs(GC *gc, SweepResult::VTablesRemaining &vTables);
-
-#ifdef HERMES_EXTRA_DEBUG
-  /// TODO(T56364255): remove these when the problem is diagnosed.
-
-  /// Summarize the vtables of objects in the segment, up to but not
-  /// including \p level.
-  size_t summarizeVTablesWork(const char *level) const;
-#endif
 
   AlignedStorage storage_;
 
@@ -447,9 +335,6 @@ class AlignedHeapSegment {
   /// The end of the allocation region.  Initially set to the start (making the
   /// allocation region empty), but fixed up in the body of the constructor.
   char *end_{start()};
-
-  /// Pointer to the generation that owns this segment.
-  GCGeneration *generation_{nullptr};
 
 #ifdef HERMES_EXTRA_DEBUG
   /// Support summarization of the vtables in the segment.
@@ -466,7 +351,7 @@ class AlignedHeapSegment {
 AllocResult AlignedHeapSegment::alloc(uint32_t size) {
   assert(lowLim() != nullptr && "Cannot allocate in a null segment");
   assert(size >= sizeof(GCCell) && "cell must be larger than GCCell");
-  size = heapAlignSize(size);
+  assert(isSizeHeapAligned(size) && "size must be heap aligned");
 
   char *cellPtr; // Initialized in the if below.
 
@@ -528,41 +413,9 @@ bool AlignedHeapSegment::getCellMarkBit(const GCCell *cell) {
   return reinterpret_cast<const Contents *>(lowLim);
 }
 
-/* static */ AlignedHeapSegment::SegmentInfo *AlignedHeapSegment::segmentInfo(
-    void *lowLim) {
-  static_assert(
-      sizeof(SegmentInfo) < CardTable::kUnusedPrefixSize,
-      "SegmentInfo does not fit in available unused CardTable space.");
-  return reinterpret_cast<SegmentInfo *>(lowLim);
-}
-
-/* static */ const AlignedHeapSegment::SegmentInfo *
-AlignedHeapSegment::segmentInfo(const void *lowLim) {
-  return reinterpret_cast<const SegmentInfo *>(lowLim);
-}
-
 /* static */ CardTable *AlignedHeapSegment::cardTableCovering(const void *ptr) {
   return &AlignedHeapSegment::contents(AlignedStorage::start(ptr))->cardTable_;
 }
-
-#ifdef HERMESVM_COMPRESSED_POINTERS
-/* static */ unsigned AlignedHeapSegment::segmentIndex(const void *ptr) {
-  return segmentIndexFromStart(AlignedStorage::start(ptr));
-}
-
-/* static */ unsigned AlignedHeapSegment::segmentIndexFromStart(
-    const void *ptr) {
-  assert(ptr == AlignedStorage::start(ptr) && "Precondition.");
-  return AlignedHeapSegment::segmentInfo(ptr)->index;
-}
-
-/* static */ void AlignedHeapSegment::setSegmentIndexFromStart(
-    void *segStart,
-    unsigned index) {
-  assert(segStart == AlignedStorage::start(segStart) && "Precondition.");
-  AlignedHeapSegment::segmentInfo(segStart)->index = index;
-}
-#endif // HERMESVM_COMPRESSED_POINTERS
 
 /* static */ constexpr size_t AlignedHeapSegment::maxSize() {
   return AlignedStorage::size() - offsetof(Contents, allocRegion_);
@@ -602,6 +455,13 @@ char *AlignedHeapSegment::end() const {
 
 char *AlignedHeapSegment::level() const {
   return level_;
+}
+
+llvh::iterator_range<AlignedHeapSegment::HeapCellIterator>
+AlignedHeapSegment::cells() {
+  return {
+      HeapCellIterator(reinterpret_cast<GCCell *>(start())),
+      HeapCellIterator(reinterpret_cast<GCCell *>(level()))};
 }
 
 /* static */

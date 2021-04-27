@@ -699,7 +699,7 @@ stringPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
 
     // Allocations can't be performed here,
     // and we know we're in bounds because we preallocated.
-    strings->at(i).set(strRes->getHermesValue(), &runtime->getHeap());
+    strings->set(i, strRes->getHermesValue(), &runtime->getHeap());
     uint32_t strLength = strRes->get()->getStringLength();
 
     size.add(strLength);

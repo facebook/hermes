@@ -69,6 +69,17 @@ def parse_args():
     parser.add_argument("--enable-asan", dest="enable_asan", action="store_true")
     parser.add_argument("--enable-ubsan", dest="enable_ubsan", action="store_true")
     parser.add_argument("--enable-tsan", dest="enable_tsan", action="store_true")
+    parser.add_argument(
+        "--code-coverage",
+        dest="code_coverage",
+        action="store_true",
+        help="Enables code coverage to be collected from binaries. Coverage "
+        'output will be placed in a subdirectory called "coverage" of the '
+        "build directory",
+    )
+    parser.add_argument(
+        "--enable-trace-pc-guard", dest="enable_trace_pc_guard", action="store_true"
+    )
     parser.add_argument("--icu", type=str, dest="icu_root", default="")
     parser.add_argument("--fbsource", type=str, dest="fbsource_dir", default="")
     parser.add_argument("--opcode-stats", dest="opcode_stats", action="store_true")
@@ -93,9 +104,10 @@ def parse_args():
         "--emscripten-platform",
         dest="emscripten_platform",
         choices=("upstream", "fastcomp"),
-        default="fastcomp",
+        default="upstream",
         help="Use either the upstream emscripten backend based on LLVM or the "
-        "fastcomp backend",
+        "fastcomp backend. Note that the fastcomp backend is deprecated as of "
+        "emscripten v2 and above",
     )
     args = parser.parse_args()
     if args.icu_root:
@@ -163,7 +175,7 @@ def which(cmd):
         resolved = shutil.which(cmd)
         if not resolved:
             raise Exception("{} not found on PATH".format(cmd))
-        return os.path.realpath(resolved)
+        return resolved
     else:
         # Manually check PATH
         for p in os.environ["PATH"].split(os.path.pathsep):
@@ -176,10 +188,10 @@ def which(cmd):
                     if os.path.exists(p_and_extension) and os.access(
                         p_and_extension, os.X_OK
                     ):
-                        return os.path.realpath(p_and_extension)
+                        return p_and_extension
             else:
                 if os.path.isfile(p) and os.access(p, os.X_OK):
-                    return os.path.realpath(p)
+                    return p
         raise Exception("{} not found on PATH".format(cmd))
 
 
@@ -232,6 +244,10 @@ def main():
         cmake_flags += ["-DHERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER=ON"]
     if args.enable_tsan:
         cmake_flags += ["-DHERMES_ENABLE_THREAD_SANITIZER=ON"]
+    if args.code_coverage:
+        cmake_flags += ["-DHERMES_ENABLE_CODE_COVERAGE=ON"]
+    if args.enable_trace_pc_guard:
+        cmake_flags += ["-DHERMES_ENABLE_TRACE_PC_GUARD=ON"]
     if args.fbsource_dir:
         cmake_flags += ["-DFBSOURCE_DIR=" + args.fbsource_dir]
     if args.wasm:

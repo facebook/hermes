@@ -429,16 +429,7 @@ Variable::Variable(
   scope->addVariable(this);
 }
 
-Variable::~Variable() {
-  // Clear the related variable.
-  if (relatedVariable_) {
-    assert(
-        (!relatedVariable_->relatedVariable_ ||
-         relatedVariable_->relatedVariable_ == this) &&
-        "related variable should be null or point back to us");
-    relatedVariable_->relatedVariable_ = nullptr;
-  }
-}
+Variable::~Variable() {}
 
 int Variable::getIndexInVariableList() const {
   int index = 0;
@@ -578,8 +569,7 @@ void Module::populateCJSModuleUseGraph() {
   }
 }
 
-llvh::DenseSet<Function *> Module::getFunctionsInSegment(
-    Context::SegmentRange range) {
+llvh::DenseSet<Function *> Module::getFunctionsInSegment(uint32_t segment) {
   populateCJSModuleUseGraph();
 
   // Final set of functions which must be output when generating this segment.
@@ -590,9 +580,9 @@ llvh::DenseSet<Function *> Module::getFunctionsInSegment(
   llvh::SetVector<Function *> worklist{};
 
   // Populate the worklist initially with the wrapper functions for each module
-  // in the given range.
-  for (auto i = range.first; i <= range.last; ++i) {
-    worklist.insert(cjsModules_[i].function);
+  // in the given segment.
+  for (Function *fn : cjsModuleSegmentMap_[segment]) {
+    worklist.insert(fn);
   }
 
   while (!worklist.empty()) {

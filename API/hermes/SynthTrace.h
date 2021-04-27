@@ -8,16 +8,12 @@
 #ifndef HERMES_SYNTHTRACE_H
 #define HERMES_SYNTHTRACE_H
 
-#ifdef HERMESVM_API_TRACE
-
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/JSONEmitter.h"
+#include "hermes/Support/SHA1.h"
 #include "hermes/Support/StringSetVector.h"
 #include "hermes/VM/GCExecTrace.h"
-#include "hermes/VM/HermesValue.h"
 #include "hermes/VM/MockedEnvironment.h"
-#include "hermes/VM/Operations.h"
-#include "hermes/VM/SymbolID.h"
 
 #include <chrono>
 #include <cstdlib>
@@ -259,7 +255,7 @@ class SynthTrace {
       std::unique_ptr<llvh::raw_ostream> traceStream = nullptr);
 
   template <typename T, typename... Args>
-  void emplace_back(Args &&... args) {
+  void emplace_back(Args &&...args) {
     records_.emplace_back(new T(std::forward<Args>(args)...));
     flushRecordsIfNecessary();
   }
@@ -1087,7 +1083,5 @@ std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type);
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMESVM_API_TRACE
 
 #endif // HERMES_SYNTHTRACE_H

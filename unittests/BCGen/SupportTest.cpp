@@ -625,8 +625,9 @@ TEST(StringStorageTest, DeltaOptimizingModeTest) {
       "amomisminium", "ucetminyan",  "lierendrafty"};
 
   hbc::UniquingStringLiteralAccumulator baseAccumulator{
-      hbc::ConsecutiveStringStorage{std::vector<StringTableEntry>{baseEntries},
-                                    std::vector<unsigned char>{baseBuffer}},
+      hbc::ConsecutiveStringStorage{
+          std::vector<StringTableEntry>{baseEntries},
+          std::vector<unsigned char>{baseBuffer}},
       std::vector<bool>(baseEntries.size(), false)};
 
   auto newTable = tableForStrings(newStrings, std::move(baseAccumulator));

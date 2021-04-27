@@ -1,0 +1,5 @@
+{
+  "version": 3,
+  "sources": ["/fake/source/of/mappedFunction.js", "/fake/source/of/partially-mapped.js"],
+  "mappings": ";;;;;;;AAAA;AAAA;AAAA;;A;A;A;;ACAA"
+}

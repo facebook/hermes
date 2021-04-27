@@ -9,7 +9,7 @@
 
 // TODO (T25686322): In non-Malloc GCs, handle sanitization doesn't fully move
 // the heap on every alloc.
-#if defined(HERMESVM_GC_MALLOC)
+#ifdef HERMESVM_GC_MALLOC
 
 #include "TestHelpers.h"
 #include "gtest/gtest.h"
@@ -49,12 +49,11 @@ struct DummyObject final : public GCCell {
   DummyObject(GC *gc) : GCCell(gc, &vt), pointer() {}
 
   void setPointer(DummyRuntime &rt, DummyObject *obj) {
-    pointer.set(&rt, obj, &rt.gc);
+    pointer.set(&rt, obj, &rt.getHeap());
   }
 
   static DummyObject *create(DummyRuntime &runtime) {
-    return new (runtime.alloc(sizeof(DummyObject)))
-        DummyObject(&runtime.getHeap());
+    return runtime.makeAFixed<DummyObject>(&runtime.getHeap());
   }
 
   static bool classof(const GCCell *cell) {
@@ -169,6 +168,6 @@ TEST(GCSanitizeHandlesTest, DoesNotMoveNativeValues) {
 } // namespace unittest
 } // namespace hermes
 
-#endif // !HERMESVM_GC_NONCONTIG_GENERATIONAL
+#endif
 
 #endif

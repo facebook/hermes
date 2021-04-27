@@ -23,6 +23,6 @@
     super`asdf`;
   }
 });
-// CHECK: {{.*}}:23:5: error: invalid use of 'super' as a template literal tag
+// CHECK: {{.*}}:23:10: error: '(', '[' or '.' expected after 'super' keyword
 // CHECK:     super`asdf`;
-// CHECK:     ^~~~~
+// CHECK:     ~~~~~^

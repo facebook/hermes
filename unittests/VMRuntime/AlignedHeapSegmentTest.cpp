@@ -103,7 +103,7 @@ TEST_F(AlignedHeapSegmentTest, SmallSize) {
 
   EXPECT_GE(PS, s.size());
 
-  AllocResult failed = s.alloc(s.available() + 1);
+  AllocResult failed = s.alloc(heapAlignSize(s.available() + 1));
   EXPECT_FALSE(failed.success);
   EXPECT_EQ(nullptr, failed.ptr);
 
@@ -152,7 +152,7 @@ TEST_F(AlignedHeapSegmentTest, SuccessfulGrowToFit) {
 }
 
 TEST_F(AlignedHeapSegmentTest, GrowToFitTooBig) {
-  const size_t TOO_BIG = AlignedStorage::size() + 1;
+  const size_t TOO_BIG = heapAlignSize(AlignedStorage::size() + 1);
 
   EXPECT_FALSE(s.growToFit(TOO_BIG));
   EXPECT_EQ(0, s.size());

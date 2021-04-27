@@ -17,3 +17,4 @@ function subFun() {
 subFun();
 
 exports.x = bar.y;
+exports.shared = require('../cjs-subdir-shared.js');

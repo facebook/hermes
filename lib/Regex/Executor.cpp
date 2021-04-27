@@ -7,6 +7,7 @@
 
 #include "hermes/Regex/Executor.h"
 #include "hermes/Regex/RegexTraits.h"
+#include "hermes/Support/OptValue.h"
 
 #include "llvh/ADT/SmallVector.h"
 #include "llvh/Support/TrailingObjects.h"
@@ -396,9 +397,12 @@ struct Context {
 
   /// Backtrack the given state \p s with the backtrack stack \p bts.
   /// \return true if we backatracked, false if we exhausted the stack.
-  bool backtrack(BacktrackStack &bts, State<Traits> *s);
+  LLVM_NODISCARD
+  OptValue<bool> backtrack(BacktrackStack &bts, State<Traits> *s);
 
   /// Set the state's position to the body of a non-greedy loop.
+  /// \return true if backtracking was prepared, false if it overflowed.
+  LLVM_NODISCARD
   bool performEnterNonGreedyLoop(
       State<Traits> *s,
       const BeginLoopInsn *loop,
@@ -409,6 +413,7 @@ struct Context {
   /// Add a backtrack instruction to the backtrack stack \p bts.
   /// On overflow, set error_ to Overflow.
   /// \return true on success, false if we overflow.
+  LLVM_NODISCARD
   bool pushBacktrack(BacktrackStack &bts, BacktrackInsn insn) {
     bts.push_back(insn);
     if (LLVM_UNLIKELY(bts.size() > kMaxBacktrackDepth) ||
@@ -423,7 +428,8 @@ struct Context {
   /// Run the given Width1Loop \p insn on the given state \p s with the
   /// backtrack stack \p bts.
   /// \return true on success, false if we should backtrack.
-  bool matchWidth1Loop(
+  LLVM_NODISCARD
+  OptValue<bool> matchWidth1Loop(
       const Width1LoopInsn *insn,
       State<Traits> *s,
       BacktrackStack &bts);
@@ -433,6 +439,7 @@ struct Context {
   /// described by the LoopInsn \p loop, including setting up any backtracking
   /// state.
   /// \return true if backtracking was prepared, false if it overflowed.
+  LLVM_NODISCARD
   bool prepareToEnterLoopBody(
       State<Traits> *state,
       const BeginLoopInsn *loop,
@@ -610,9 +617,10 @@ bool bracketMatchesChar(
   // affect which character class a character is in (i.e. a character doesn't
   // become a digit after uppercasing).
   if (insn->positiveCharClasses || insn->negativeCharClasses) {
-    for (auto charClass : {CharacterClass::Digits,
-                           CharacterClass::Spaces,
-                           CharacterClass::Words}) {
+    for (auto charClass :
+         {CharacterClass::Digits,
+          CharacterClass::Spaces,
+          CharacterClass::Words}) {
       if ((insn->positiveCharClasses & charClass) &&
           traits.characterHasType(ch, charClass))
         return true ^ insn->negate;
@@ -670,12 +678,13 @@ bool Context<Traits>::performEnterNonGreedyLoop(
   // loop.
   s->ip_ = bodyIp;
   s->cursor_.setCurrentPointer(first_ + loopData.entryPosition);
-  prepareToEnterLoopBody(s, loop, backtrackStack);
-  return true;
+  return prepareToEnterLoopBody(s, loop, backtrackStack);
 }
 
 template <class Traits>
-bool Context<Traits>::backtrack(BacktrackStack &bts, State<Traits> *s) {
+OptValue<bool> Context<Traits>::backtrack(
+    BacktrackStack &bts,
+    State<Traits> *s) {
   while (!bts.empty()) {
     BacktrackInsn &binsn = bts.back();
     switch (binsn.op) {
@@ -699,8 +708,9 @@ bool Context<Traits>::backtrack(BacktrackStack &bts, State<Traits> *s) {
       case BacktrackOp::EnterNonGreedyLoop: {
         auto fields = binsn.enterNonGreedyLoop;
         bts.pop_back();
-        performEnterNonGreedyLoop(
-            s, fields.loopInsn, fields.bodyIp, fields.loopData, bts);
+        if (!performEnterNonGreedyLoop(
+                s, fields.loopInsn, fields.bodyIp, fields.loopData, bts))
+          return llvh::None;
         return true;
       }
 
@@ -807,7 +817,7 @@ uint32_t Context<Traits>::matchWidth1LoopBody(
 }
 
 template <class Traits>
-bool Context<Traits>::matchWidth1Loop(
+OptValue<bool> Context<Traits>::matchWidth1Loop(
     const Width1LoopInsn *insn,
     State<Traits> *s,
     BacktrackStack &bts) {
@@ -869,14 +879,14 @@ bool Context<Traits>::matchWidth1Loop(
   // If min == max (e.g. /a{3}/) then no backtracking is possible. If min < max,
   // backtracking is possible and we need to add a backtracking instruction.
   if (minMatch < matched) {
-    BacktrackInsn backtrack{insn->greedy ? BacktrackOp::GreedyWidth1Loop
-                                         : BacktrackOp::NongreedyWidth1Loop};
+    BacktrackInsn backtrack{
+        insn->greedy ? BacktrackOp::GreedyWidth1Loop
+                     : BacktrackOp::NongreedyWidth1Loop};
     backtrack.width1Loop.continuation = insn->notTakenTarget;
     backtrack.width1Loop.min = minPos;
     backtrack.width1Loop.max = maxPos;
-    if (!pushBacktrack(bts, backtrack)) {
-      return false;
-    }
+    if (!pushBacktrack(bts, backtrack))
+      return llvh::None;
   }
   // Set the state's current position to either the minimum or maximum location,
   // and point it to the exit of the loop.
@@ -948,11 +958,14 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
       "Can only check one location when cursor is backwards");
 
   // Macro used when a state fails to match.
-#define BACKTRACK()                   \
-  do {                                \
-    if (backtrack(backtrackStack, s)) \
-      goto backtrackingSucceeded;     \
-    goto backtrackingExhausted;       \
+#define BACKTRACK()                            \
+  do {                                         \
+    auto btRes = backtrack(backtrackStack, s); \
+    if (LLVM_UNLIKELY(!btRes))                 \
+      return nullptr;                          \
+    if (*btRes)                                \
+      goto backtrackingSucceeded;              \
+    goto backtrackingExhausted;                \
   } while (0)
 
   for (size_t locIndex = 0; locIndex < locsToCheckCount;
@@ -962,6 +975,9 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
     s->ip_ = startIp;
   backtrackingSucceeded:
     for (;;) {
+      assert(
+          error_ == MatchRuntimeErrorType::None &&
+          "Should exit immediately after error");
       const Insn *base = reinterpret_cast<const Insn *>(&bytecode[s->ip_]);
       switch (base->opcode) {
         case Opcode::Goal:
@@ -1048,7 +1064,6 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
 
         case Opcode::U16MatchCharICase32: {
           const auto *insn = llvh::cast<U16MatchCharICase32Insn>(base);
-          assert(insn->c >= 0x010000 && "Character should be astral");
           bool matched = false;
           if (!c.atEnd()) {
             CodePoint cp = c.consumeUTF16();
@@ -1158,12 +1173,12 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           if (!pushBacktrack(
                   backtrackStack,
                   BacktrackInsn::makeSetCaptureGroup(
-                      insn->mexp - 1, {kNotMatched, kNotMatched}))) {
+                      insn->mexp, {kNotMatched, kNotMatched}))) {
             return nullptr;
           }
           // When tracking backwards (in a lookbehind assertion) we traverse our
           // input backwards, so set the end before the start.
-          auto &range = s->getCapturedRange(insn->mexp - 1);
+          auto &range = s->getCapturedRange(insn->mexp);
           if (c.forwards()) {
             range.start = c.offsetFromLeft();
           } else {
@@ -1175,7 +1190,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
 
         case Opcode::EndMarkedSubexpression: {
           const auto *insn = llvh::cast<EndMarkedSubexpressionInsn>(base);
-          auto &range = s->getCapturedRange(insn->mexp - 1);
+          auto &range = s->getCapturedRange(insn->mexp);
           if (c.forwards()) {
             assert(
                 range.start != kNotMatched && "Capture group was not entered");
@@ -1194,7 +1209,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           const auto insn = llvh::cast<BackRefInsn>(base);
           // a. Let cap be x's captures List.
           // b. Let s be cap[n].
-          CapturedRange cr = s->getCapturedRange(insn->mexp - 1);
+          CapturedRange cr = s->getCapturedRange(insn->mexp);
 
           // c. If s is undefined, return c(x).
           // Note we have to check both cr.start and cr.end here. If we are
@@ -1343,11 +1358,9 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           auto &loopData = s->getLoop(loop->loopId);
           uint32_t iteration = loopData.iterations;
 
-          uint32_t loopTakenIp = s->ip_ + sizeof(BeginLoopInsn);
-          uint32_t loopNotTakenIp = loop->notTakenTarget;
+          const uint32_t loopTakenIp = s->ip_ + sizeof(BeginLoopInsn);
 
-          bool doLoopBody = iteration < loop->max;
-          bool doNotTaken = iteration >= loop->min;
+          assert(loop->min <= loop->max && "Inconsistent loop bounds");
 
           // Check to see if we have looped more than the minimum number of
           // iterations, and if so, whether the subexpression we looped over
@@ -1359,18 +1372,16 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
               loopData.entryPosition == c.offsetFromLeft())
             BACKTRACK();
 
-          if (!doLoopBody && !doNotTaken) {
-            BACKTRACK();
-          } else if (doLoopBody && !doNotTaken) {
-            prepareToEnterLoopBody(s, loop, backtrackStack);
+          if (iteration < loop->min) {
+            if (!prepareToEnterLoopBody(s, loop, backtrackStack))
+              return nullptr;
             s->ip_ = loopTakenIp;
-
-          } else if (doNotTaken && !doLoopBody) {
+          } else if (iteration == loop->max) {
             s->ip_ = loop->notTakenTarget;
           } else {
-            assert(
-                doNotTaken && doLoopBody &&
-                "Must be exploring loop not taken and body");
+            // We are within the target iteration range, figure out whether we
+            // should continue or exit.
+            assert(iteration >= loop->min && iteration < loop->max);
             if (!loop->greedy) {
               // Backtrack by entering this non-greedy loop.
               loopData.entryPosition = c.offsetFromLeft();
@@ -1378,7 +1389,6 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
                       backtrackStack,
                       BacktrackInsn::makeEnterNonGreedyLoop(
                           loop, loopTakenIp, loopData))) {
-                error_ = MatchRuntimeErrorType::MaxStackDepth;
                 return nullptr;
               }
               s->ip_ = loop->notTakenTarget;
@@ -1387,11 +1397,12 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
               if (!pushBacktrack(
                       backtrackStack,
                       BacktrackInsn::makeSetPosition(
-                          loopNotTakenIp, c.currentPointer()))) {
+                          loop->notTakenTarget, c.currentPointer()))) {
                 error_ = MatchRuntimeErrorType::MaxStackDepth;
                 return nullptr;
               }
-              prepareToEnterLoopBody(s, loop, backtrackStack);
+              if (!prepareToEnterLoopBody(s, loop, backtrackStack))
+                return nullptr;
               s->ip_ = loopTakenIp;
             }
           }
@@ -1435,7 +1446,10 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
 
         case Opcode::Width1Loop: {
           const Width1LoopInsn *loop = llvh::cast<Width1LoopInsn>(base);
-          if (!matchWidth1Loop(loop, s, backtrackStack))
+          auto matchRes = matchWidth1Loop(loop, s, backtrackStack);
+          if (LLVM_UNLIKELY(!matchRes))
+            return nullptr;
+          if (!*matchRes)
             BACKTRACK();
           break;
         }
@@ -1445,6 +1459,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
   backtrackingExhausted:
     continue;
   }
+#undef BACKTRACK
   // The match failed.
   return nullptr;
 }
