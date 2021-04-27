@@ -37,8 +37,11 @@ static constexpr uint32_t cellSize() {
 /// traversal in a contiguous space: given a pointer to the head, you
 /// can get the size, and thus get to the head of the next cell.
 class GCCell {
-  /// Pointer to the virtual table which also serves as a forwarding pointer.
-  const VTable *vtp_;
+  /// Pointer to the virtual table or a forwarding pointer.
+  union {
+    const VTable *vtp_;
+    GCCell *forwardingPointer_;
+  };
 
 #ifndef NDEBUG
   static constexpr uint16_t kMagic{0xce11};
@@ -107,6 +110,12 @@ class GCCell {
     return vtp_;
   }
 
+  /// Set the VTable pointer of this GCCell to \p vtp.
+  /// NOTE: this should only be used by the GC.
+  void setVT(const VTable *vtp) {
+    vtp_ = vtp;
+  }
+
   /// We distinguish between two styles of forwarding pointer:
   /// "marked" and "unmarked".  When marked forwarding pointers are
   /// used, we can make efficient queries on a GCCell to determine
@@ -122,8 +131,8 @@ class GCCell {
 
   /// Sets this cell to contain a forwarding pointer to another cell.
   /// NOTE: this should only be used by the GC.
-  void setForwardingPointer(const GCCell *cell) {
-    vtp_ = reinterpret_cast<const VTable *>(cell);
+  void setForwardingPointer(GCCell *cell) {
+    forwardingPointer_ = cell;
   }
 
   /// \return a forwarding pointer to another object, if one exists. If one
@@ -131,16 +140,19 @@ class GCCell {
   /// guaranteed to not return a pointer into the GC heap.
   /// NOTE: this should only be used by the GC.
   GCCell *getForwardingPointer() const {
-    return reinterpret_cast<GCCell *>(const_cast<VTable *>(vtp_));
+    return forwardingPointer_;
   }
 
   /// These three functions implement marked forwarding pointers.
 
-  /// Sets this cell to contain a forwarding pointer to another cell.
+  /// Sets this cell to contain a forwarding pointer to another cell. Note that
+  /// the heap is not well-formed in phases that set mark bits in live objects;
+  /// the mark bits must be removed, or the objects declared dead, for
+  /// well-formedness to be restored.
   /// NOTE: this should only be used by the GC.
-  void setMarkedForwardingPointer(const GCCell *cell) {
-    vtp_ = reinterpret_cast<const VTable *>(cell);
-    setMarkBit();
+  void setMarkedForwardingPointer(GCCell *cell) {
+    forwardingPointer_ =
+        reinterpret_cast<GCCell *>(reinterpret_cast<uintptr_t>(cell) | 0x1);
   }
 
   /// Assumes (and asserts) that a forwarding pointer has been set in
@@ -148,8 +160,9 @@ class GCCell {
   /// \return the forwarding pointer that was set.
   /// NOTE: this should only be used by the GC.
   GCCell *getMarkedForwardingPointer() const {
+    assert(isMarked());
     return reinterpret_cast<GCCell *>(
-        const_cast<VTable *>(removeKnownMarkBit(vtp_)));
+        reinterpret_cast<uintptr_t>(forwardingPointer_) - 0x1);
   }
 
   /// \return whether a forwarding pointer has been set in this cell via
@@ -206,38 +219,15 @@ class GCCell {
 #endif
   }
 
-  /// Sets the cell's mark bit.  May be used, for example, to indicate that
-  /// the cell contains a forwarding pointer.  Note that the heap is not
-  /// well-formed in phases that set mark bits in live objects; the mark bits
-  /// must be removed, or the objects declared dead, for well-formedness to be
-  /// restored.
-  void setMarkBit() {
-    vtp_ = reinterpret_cast<const VTable *>(
-        reinterpret_cast<uintptr_t>(vtp_) | 0x1);
-  }
-
   /// Returns whether the cell's mark bit is set.
   bool isMarked() const {
-    return isMarked(vtp_);
-  }
-
-  static bool isMarked(const VTable *vtp) {
-    return reinterpret_cast<uintptr_t>(vtp) & 0x1;
+    return reinterpret_cast<uintptr_t>(forwardingPointer_) & 0x1;
   }
 
   /// If the cell has any associated external memory, return the size (in bytes)
   /// of that external memory, else zero.
   inline gcheapsize_t externalMemorySize() const {
     return getVT()->externalMemorySize(this);
-  }
-
- private:
-  /// This version assumes that the bit is set, and that it can
-  /// therefore subtract 1.
-  template <typename T>
-  static T *removeKnownMarkBit(T *vt) {
-    assert(isMarked(vt));
-    return reinterpret_cast<T *>(reinterpret_cast<uintptr_t>(vt) - 0x1);
   }
 };
 
