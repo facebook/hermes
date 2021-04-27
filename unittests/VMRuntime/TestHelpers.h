@@ -281,7 +281,7 @@ class DummyRuntime final : public HandleRootOwner,
 
   /// Create a DummyRuntime with the default parameters.
   static std::shared_ptr<DummyRuntime> create(
-      MetadataTableForTests metaTable,
+      MetadataTable metaTable,
       const GCConfig &gcConfig);
 
   /// Use a custom storage provider and/or a custom crash manager.
@@ -289,7 +289,7 @@ class DummyRuntime final : public HandleRootOwner,
   ///   StorageProvider::defaultProvider eventually or the test will fail.
   /// \param crashMgr
   static std::shared_ptr<DummyRuntime> create(
-      MetadataTableForTests metaTable,
+      MetadataTable metaTable,
       const GCConfig &gcConfig,
       std::shared_ptr<StorageProvider> provider,
       std::shared_ptr<CrashManager> crashMgr =
@@ -386,16 +386,8 @@ class DummyRuntime final : public HandleRootOwner,
   }
 
  private:
-  static std::unique_ptr<GC> makeHeap(
-      DummyRuntime *runtime,
-      MetadataTableForTests metaTable,
-      const GCConfig &gcConfig,
-      std::shared_ptr<CrashManager> crashMgr,
-      std::shared_ptr<StorageProvider> provider,
-      experiments::VMExperimentFlags experiments);
-
   DummyRuntime(
-      MetadataTableForTests metaTable,
+      MetadataTable metaTable,
       const GCConfig &gcConfig,
       std::shared_ptr<StorageProvider> storageProvider,
       std::shared_ptr<CrashManager> crashMgr);

@@ -24,37 +24,6 @@ using namespace hermes::vm;
 
 namespace {
 
-MetadataTableForTests getMetadataTable() {
-  static_assert(
-      cellKindsContiguousAscending(
-          CellKind::UninitializedKind,
-          CellKind::FillerCellKind,
-          CellKind::FreelistKind,
-          CellKind::DynamicUTF16StringPrimitiveKind,
-          CellKind::DynamicASCIIStringPrimitiveKind,
-          CellKind::BufferedUTF16StringPrimitiveKind,
-          CellKind::BufferedASCIIStringPrimitiveKind,
-          CellKind::DynamicUniquedUTF16StringPrimitiveKind,
-          CellKind::DynamicUniquedASCIIStringPrimitiveKind,
-          CellKind::ExternalUTF16StringPrimitiveKind,
-          CellKind::ExternalASCIIStringPrimitiveKind),
-      "Cell kinds in unexpected order");
-  static const Metadata storage[] = {
-      Metadata(), // Uninitialized
-      Metadata(), // FillerCell
-      Metadata(), // Freelist
-      Metadata(), // DynamicUTF16StringPrimitive
-      Metadata(), // DynamicASCIIStringPrimitive
-      Metadata(), // BufferedUTF16StringPrimitive
-      Metadata(), // BufferedASCIIStringPrimitive
-      Metadata(), // DynamicUniquedUTF16StringPrimitive
-      Metadata(), // DynamicUniquedASCIIStringPrimitive
-      Metadata(), // ExternalUTF16StringPrimitive
-      Metadata(), // ExternalASCIIStringPrimitive
-  };
-  return MetadataTableForTests(storage);
-}
-
 TEST(GCFragmentationTest, TestCoalescing) {
   // Fill the heap with increasingly larger cells, in order to test
   // defragmentation code.

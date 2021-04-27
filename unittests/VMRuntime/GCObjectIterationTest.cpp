@@ -21,11 +21,6 @@ using namespace hermes::vm;
 
 namespace {
 
-const MetadataTableForTests getMetadataTable() {
-  static const Metadata table[] = {Metadata()};
-  return MetadataTableForTests(table);
-}
-
 TEST(GCObjectIterationTest, ForAllObjsGetsAllObjects) {
   auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfigLarge);
   DummyRuntime &rt = *runtime;

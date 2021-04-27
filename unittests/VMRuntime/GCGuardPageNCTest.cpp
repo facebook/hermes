@@ -19,11 +19,6 @@ namespace {
 
 const GCConfig kGCConfig = TestGCConfigFixedSize(16 << 20);
 
-const MetadataTableForTests getMetadataTable() {
-  static const Metadata table[] = {Metadata()};
-  return MetadataTableForTests(table);
-}
-
 TEST(GCGuardPageNCTest, ObjectUnderflow) {
   // Guard page is currently only protected when page size is as expected.
   if (hermes::oscompat::page_size() != pagesize::kExpectedPageSize)

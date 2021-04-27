@@ -19,13 +19,6 @@ using namespace hermes::vm;
 
 namespace {
 
-MetadataTableForTests getMetadataTable() {
-  static const Metadata storage[] = {
-      Metadata() // Uninitialized
-  };
-  return MetadataTableForTests(storage);
-}
-
 TEST(GCOOMDeathTest, SuperSegment) {
   if (GC::maxAllocationSize() == std::numeric_limits<uint32_t>::max()) {
     // This test won't work if there is no limit on allocation sizes.

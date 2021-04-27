@@ -16,11 +16,6 @@ using namespace hermes::vm;
 
 namespace {
 
-const MetadataTableForTests getMetadataTable() {
-  static const Metadata table[] = {Metadata()};
-  return MetadataTableForTests(table);
-}
-
 struct Dummy final : public GCCell {
   static const VTable vt;
 
