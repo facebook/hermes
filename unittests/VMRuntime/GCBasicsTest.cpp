@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "Array.h"
 #include "EmptyCell.h"
 #include "TestHelpers.h"
 #include "hermes/VM/BuildMetadata.h"
@@ -19,7 +18,6 @@
 #include "gtest/gtest.h"
 
 using namespace hermes::vm;
-using namespace hermes::unittest;
 
 namespace {
 
@@ -62,23 +60,10 @@ const VTable Dummy::vt{
     nullptr,
     getExtraSize};
 
-const MetadataTableForTests getMetadataTable() {
-  // It would seem that the full namespace qualification below would not be
-  // necessary, but without it the compiler is unable to properly infer a
-  // template argument.
-  static const Metadata storage[] = {
-      Metadata(),
-      buildMetadata(
-          CellKind::FillerCellKind, ::hermes::unittest::ArrayBuildMeta)};
-  return MetadataTableForTests(storage);
-}
-
 } // namespace
 
 namespace hermes {
 namespace vm {
-template <>
-struct IsGCObject<Array> : public std::true_type {};
 template <>
 struct IsGCObject<Dummy> : public std::true_type {};
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
@@ -181,12 +166,12 @@ TEST_F(GCBasicsTest, MovedObjectTest) {
 
   gcheapsize_t totalAlloc = 0;
 
-  Array::create(rt, 0);
-  totalAlloc += heapAlignSize(Array::allocSize(0));
-  auto *a1 = Array::create(rt, 3);
-  totalAlloc += heapAlignSize(Array::allocSize(3));
-  auto *a2 = Array::create(rt, 3);
-  totalAlloc += heapAlignSize(Array::allocSize(3));
+  ArrayStorage::createForTest(&gc, 0);
+  totalAlloc += heapAlignSize(ArrayStorage::allocationSize(0));
+  auto *a1 = ArrayStorage::createForTest(&gc, 3);
+  totalAlloc += heapAlignSize(ArrayStorage::allocationSize(3));
+  auto *a2 = ArrayStorage::createForTest(&gc, 3);
+  totalAlloc += heapAlignSize(ArrayStorage::allocationSize(3));
   // Verify the initial state.
   gc.getHeapInfo(info);
   gc.getDebugHeapInfo(debugInfo);
@@ -199,32 +184,32 @@ TEST_F(GCBasicsTest, MovedObjectTest) {
 
   // Initialize a reachable graph.
   rt.pointerRoots.push_back(reinterpret_cast<GCCell **>(&a2));
-  a2->values()[0].set(HermesValue::encodeObjectValue(a1), &gc);
-  a2->values()[2].set(HermesValue::encodeObjectValue(a2), &gc);
-  a1->values()[0].set(HermesValue::encodeObjectValue(a1), &gc);
-  a1->values()[1].set(HermesValue::encodeObjectValue(a2), &gc);
+  a2->set(0, HermesValue::encodeObjectValue(a1), &gc);
+  a2->set(2, HermesValue::encodeObjectValue(a2), &gc);
+  a1->set(0, HermesValue::encodeObjectValue(a1), &gc);
+  a1->set(1, HermesValue::encodeObjectValue(a2), &gc);
 
   rt.collect();
-  totalAlloc -= heapAlignSize(Array::allocSize(0));
+  totalAlloc -= heapAlignSize(ArrayStorage::allocationSize(0));
   gc.getHeapInfo(info);
   gc.getDebugHeapInfo(debugInfo);
   EXPECT_EQ(2u, debugInfo.numAllocatedObjects);
   EXPECT_EQ(2u, debugInfo.numReachableObjects);
   EXPECT_EQ(1u, debugInfo.numCollectedObjects);
-  EXPECT_EQ(1u, debugInfo.numFinalizedObjects);
+  EXPECT_EQ(0u, debugInfo.numFinalizedObjects);
   EXPECT_EQ(1u, info.numCollections);
   EXPECT_EQ(totalAlloc, info.allocatedBytes);
 
   // Extract what we know was a pointer to a1.
-  a1 = reinterpret_cast<Array *>(a2->values()[0].getPointer());
+  a1 = vmcast<ArrayStorage>(a2->at(0));
 
   // Ensure the contents of the objects changed.
-  EXPECT_EQ(a1, a2->values()[0].getPointer());
-  EXPECT_EQ(HermesValue::encodeEmptyValue(), a2->values()[1]);
-  EXPECT_EQ(a2, a2->values()[2].getPointer());
-  EXPECT_EQ(a1, a1->values()[0].getPointer());
-  EXPECT_EQ(a2, a1->values()[1].getPointer());
-  EXPECT_EQ(HermesValue::encodeEmptyValue(), a1->values()[2]);
+  EXPECT_EQ(a1, a2->at(0).getPointer());
+  EXPECT_EQ(HermesValue::encodeEmptyValue(), a2->at(1));
+  EXPECT_EQ(a2, a2->at(2).getPointer());
+  EXPECT_EQ(a1, a1->at(0).getPointer());
+  EXPECT_EQ(a2, a1->at(1).getPointer());
+  EXPECT_EQ(HermesValue::encodeEmptyValue(), a1->at(2));
 }
 
 TEST_F(GCBasicsTest, WeakRefSlotTest) {
@@ -275,16 +260,16 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   gc.getDebugHeapInfo(debugInfo);
   EXPECT_EQ(0u, debugInfo.numAllocatedObjects);
 
-  auto *a1 = Array::create(rt, 10);
-  auto *a2 = Array::create(rt, 10);
+  auto *a1 = ArrayStorage::createForTest(&gc, 10);
+  auto *a2 = ArrayStorage::createForTest(&gc, 10);
 
   gc.getDebugHeapInfo(debugInfo);
   EXPECT_EQ(2u, debugInfo.numAllocatedObjects);
 
   WeakRefMutex &mtx = gc.weakRefMutex();
   mtx.lock();
-  WeakRef<Array> wr1{&gc, a1};
-  WeakRef<Array> wr2{&gc, a2};
+  WeakRef<ArrayStorage> wr1{&gc, a1};
+  WeakRef<ArrayStorage> wr2{&gc, a2};
 
   ASSERT_TRUE(wr1.isValid());
   ASSERT_TRUE(wr2.isValid());
@@ -324,8 +309,8 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   ASSERT_EQ(WeakSlotState::Free, wr1.unsafeGetSlot()->state());
 
   // Create a new weak ref, possibly reusing the just freed slot.
-  auto *a3 = Array::create(rt, 10);
-  WeakRef<Array> wr3{&gc, a3};
+  auto *a3 = ArrayStorage::createForTest(&gc, 10);
+  WeakRef<ArrayStorage> wr3{&gc, a3};
 
   ASSERT_TRUE(wr3.isValid());
   ASSERT_EQ(a3, getNoHandle(wr3, &gc));
@@ -425,8 +410,9 @@ TEST_F(GCBasicsTest, TestYoungGenStats) {
 #endif // !NDEBUG && !HERMESVM_GC_HADES && !HERMESVM_GC_RUNTIME
 
 TEST_F(GCBasicsTest, VariableSizeRuntimeCellOffsetTest) {
-  auto *cell = Array::create(rt, 1);
-  EXPECT_EQ(cell->getAllocatedSize(), heapAlignSize(Array::allocSize(1)));
+  auto *cell = ArrayStorage::createForTest(&rt.getHeap(), 1);
+  EXPECT_EQ(
+      cell->getAllocatedSize(), heapAlignSize(ArrayStorage::allocationSize(1)));
 }
 
 TEST_F(GCBasicsTest, TestFixedRuntimeCell) {

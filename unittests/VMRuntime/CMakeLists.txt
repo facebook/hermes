@@ -12,7 +12,6 @@ set(CMAKE_UNITY_BUILD OFF)
 set(RTSources
   AlignedHeapSegmentTest.cpp
   AlignedStorageTest.cpp
-  Array.cpp
   ArrayTest.cpp
   ArrayStorageTest.cpp
   BytecodeProviderTest.cpp
