@@ -24,7 +24,7 @@ TEST(GCOOMDeathTest, SuperSegment) {
     // This test won't work if there is no limit on allocation sizes.
     return;
   }
-  using SuperSegmentCell = VarSizedEmptyCell<GC::maxAllocationSize() * 2>;
+  using SuperSegmentCell = EmptyCell<GC::maxAllocationSize() * 2>;
   auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfig);
   EXPECT_OOM(SuperSegmentCell::create(*runtime));
 }
@@ -36,32 +36,11 @@ TEST(GCOOMDeathTest, SuperSegment) {
 /// reasonably good chance that the the young gen ends up smaller than the cell.
 static constexpr size_t kCellSize = 256 * 1024;
 
-/// Allocating a fixed size cell that is too big for the young gen should cause
-/// an OOM
-TEST(GCOOMDeathTest, FixedSizeDeath) {
-  const size_t kHeapSizeHint = kCellSize * GenGC::kYoungGenFractionDenom / 2;
-  using FixedCell = EmptyCell<kCellSize>;
-
-  auto runtime = DummyRuntime::create(
-      getMetadataTable(), TestGCConfigFixedSize(kHeapSizeHint));
-  DummyRuntime &rt = *runtime;
-  GenGC &gc = rt.getHeap();
-
-  const size_t kYGSize = gc.youngGenSize(kHeapSizeHint);
-  const size_t kOGSizeHint = kHeapSizeHint - kYGSize;
-
-  ASSERT_GT(FixedCell::size(), kYGSize);
-  ASSERT_LE(FixedCell::size(), kOGSizeHint);
-
-  // Fixed size cells should not be too big to fit in the young gen.
-  EXPECT_OOM(FixedCell::create(rt));
-}
-
 // Allocating a variable sized cell that is too big for the young gen (but fits
 // in the old gen) should be fine.
 TEST(GCOOMTest, VarSize) {
   const size_t kHeapSizeHint = kCellSize * GenGC::kYoungGenFractionDenom / 2;
-  using VarCell = VarSizedEmptyCell<kCellSize>;
+  using VarCell = EmptyCell<kCellSize>;
 
   auto runtime = DummyRuntime::create(
       getMetadataTable(), TestGCConfigFixedSize(kHeapSizeHint));

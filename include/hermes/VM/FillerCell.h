@@ -16,7 +16,7 @@ namespace vm {
 
 /// This class exists for cases where the GC wants to fill some heap region
 /// with a non-object, just to allow a contiguous heap to "parse" correctly.
-class FillerCell final : public VariableSizeRuntimeCell {
+class FillerCell : public VariableSizeRuntimeCell {
   static const VTable vt;
 
  public:
