@@ -69,7 +69,9 @@ void ArrayStorageSmallDeserialize(Deserializer &d, CellKind kind) {
   const uint32_t capacity = d.readInt<ArrayStorageSmall::size_type>();
   assert(capacity <= ArrayStorageSmall::maxElements() && "invalid capacity");
   auto *cell = d.getRuntime()->makeAVariable<ArrayStorageSmall>(
-      ArrayStorageSmall::allocationSize(capacity), d.getRuntime(), capacity);
+      ArrayStorageSmall::allocationSize(capacity),
+      &d.getRuntime()->getHeap(),
+      capacity);
   assert(cell->size() <= capacity && "size cannot be greater than capacity");
   cell->size_.store(
       d.readInt<ArrayStorageSmall::size_type>(), std::memory_order_release);
@@ -104,7 +106,7 @@ ArrayStorageBase<HermesValue>
       "invalid capacity");
   auto *cell = d.getRuntime()->makeAVariable<ArrayStorageBase<HermesValue>>(
       ArrayStorageBase<HermesValue>::allocationSize(capacity),
-      d.getRuntime(),
+      &d.getRuntime()->getHeap(),
       capacity);
   assert(cell->size() <= capacity && "size cannot be greater than capacity");
   cell->size_.store(d.readInt<size_type>(), std::memory_order_release);
@@ -120,11 +122,8 @@ ArrayStorageBase<HermesValue>
 #endif
 
 template <typename HVType>
-ArrayStorageBase<HVType>::ArrayStorageBase(Runtime *runtime, size_type capacity)
-    : VariableSizeRuntimeCell(
-          &runtime->getHeap(),
-          &vt,
-          allocationSize(capacity)),
+ArrayStorageBase<HVType>::ArrayStorageBase(GC *gc, size_type capacity)
+    : VariableSizeRuntimeCell(gc, &vt, allocationSize(capacity)),
       capacity_(capacity) {}
 
 template <typename HVType>
@@ -201,7 +200,7 @@ ExecutionStatus ArrayStorageBase<HVType>::reallocateToLarger(
 template <typename HVType>
 void ArrayStorageBase<HVType>::resizeWithinCapacity(
     ArrayStorageBase<HVType> *self,
-    Runtime *runtime,
+    GC *gc,
     size_type newSize) {
   assert(
       newSize <= self->capacity_ &&
@@ -219,14 +218,14 @@ void ArrayStorageBase<HVType>::resizeWithinCapacity(
         self->data() + sz,
         self->data() + newSize,
         HVType::encodeEmptyValue(),
-        &runtime->getHeap());
+        gc);
   } else if (newSize < sz) {
     // Execute write barriers on elements about to be conceptually changed to
     // null.
     // This also means if an array is refilled, it can treat the memory here
     // as uninitialized safely.
     GCHVType::rangeUnreachableWriteBarrier(
-        self->data() + newSize, self->data() + sz, &runtime->getHeap());
+        self->data() + newSize, self->data() + sz, gc);
   }
   self->size_.store(newSize, std::memory_order_release);
 }
