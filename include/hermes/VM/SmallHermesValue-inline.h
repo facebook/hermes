@@ -136,8 +136,8 @@ double HermesValue32::getNumber(PointerBase *pb) const {
 #ifndef HERMESVM_SANITIZE_HANDLES
   const SmiType i = doubleToSmi(d);
   if (LLVM_LIKELY(
-          i == d && llvh::isInt<kNumSmiBits>(i) &&
-          llvh::DoubleToBits(d) != llvh::DoubleToBits(-0.0)))
+          llvh::DoubleToBits(d) == llvh::DoubleToBits(i) &&
+          llvh::isInt<kNumSmiBits>(i)))
     return fromTagAndValue(Tag::SmallInt, i);
 #endif
   return encodePointerImpl(
