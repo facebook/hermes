@@ -2663,14 +2663,14 @@ void HadesGC::updateYoungGenSizeFactor() {
   assert(
       ygSizeFactor_ <= 1.0 && ygSizeFactor_ >= 0.25 && "YG size out of range.");
   const auto ygDuration = ygCollectionStats_->getElapsedTime().count();
-  // If the YG collection has taken less than 40% of our budgeted time, increase
+  // If the YG collection has taken less than 20% of our budgeted time, increase
   // the size of the YG by 10%.
-  if (ygDuration < kTargetMaxPauseMs * 0.4)
+  if (ygDuration < kTargetMaxPauseMs * 0.2)
     ygSizeFactor_ = std::min(ygSizeFactor_ * 1.1, 1.0);
-  // If the YG collection has taken more than 60% of our budgeted time, decrease
+  // If the YG collection has taken more than 40% of our budgeted time, decrease
   // the size of the YG by 10%. This is meant to leave some time for OG work.
   // However, don't let the YG size drop below 25% of the segment size.
-  else if (ygDuration > kTargetMaxPauseMs * 0.6)
+  else if (ygDuration > kTargetMaxPauseMs * 0.4)
     ygSizeFactor_ = std::max(ygSizeFactor_ * 0.9, 0.25);
 }
 
