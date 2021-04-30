@@ -20,7 +20,13 @@ namespace testhelpers {
 
 const VTable DummyObject::vt{
     CellKind::DummyObjectKind,
-    cellSize<DummyObject>()};
+    cellSize<DummyObject>(),
+    _finalizeImpl,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    _externalMemorySizeImpl};
 
 DummyObject::DummyObject(GC *gc) : GCCell(gc, &vt), other(), x(1), y(2) {
   hvBool.setNonPtr(HermesValue::encodeBoolValue(true), gc);
@@ -31,16 +37,39 @@ DummyObject::DummyObject(GC *gc) : GCCell(gc, &vt), other(), x(1), y(2) {
   hvNull.setNonPtr(HermesValue::encodeNullValue(), gc);
 }
 
+void DummyObject::acquireExtMem(GC *gc, uint32_t sz) {
+  assert(externalBytes == 0);
+  externalBytes = sz;
+  gc->creditExternalMemory(this, sz);
+}
+void DummyObject::releaseExtMem(GC *gc) {
+  gc->debitExternalMemory(this, externalBytes);
+  externalBytes = 0;
+}
+
 void DummyObject::setPointer(GC *gc, DummyObject *obj) {
   other.set(gc->getPointerBase(), obj, gc);
 }
 
 DummyObject *DummyObject::create(GC *gc) {
-  return gc->makeAFixed<DummyObject>(gc);
+  return gc->makeAFixed<DummyObject, HasFinalizer::Yes>(gc);
+}
+DummyObject *DummyObject::createLongLived(GC *gc) {
+  return gc->makeAFixed<DummyObject, HasFinalizer::Yes, LongLived::Yes>(gc);
 }
 
 bool DummyObject::classof(const GCCell *cell) {
   return cell->getKind() == CellKind::DummyObjectKind;
+}
+
+void DummyObject::_finalizeImpl(GCCell *cell, GC *gc) {
+  auto *self = vmcast<DummyObject>(cell);
+  self->releaseExtMem(gc);
+  self->~DummyObject();
+}
+
+gcheapsize_t DummyObject::_externalMemorySizeImpl(const GCCell *cell) {
+  return vmcast<DummyObject>(cell)->externalBytes;
 }
 
 } // namespace testhelpers

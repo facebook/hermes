@@ -28,12 +28,19 @@ struct DummyObject final : public GCCell {
   GCHermesValue hvEmpty;
   GCHermesValue hvNative;
   GCHermesValue hvNull;
+  uint32_t externalBytes{};
 
   DummyObject(GC *gc);
 
+  void acquireExtMem(GC *gc, uint32_t sz);
+  void releaseExtMem(GC *gc);
   void setPointer(GC *gc, DummyObject *obj);
+
   static DummyObject *create(GC *gc);
+  static DummyObject *createLongLived(GC *gc);
   static bool classof(const GCCell *cell);
+  static void _finalizeImpl(GCCell *cell, GC *);
+  static gcheapsize_t _externalMemorySizeImpl(const GCCell *cell);
 };
 
 } // namespace testhelpers
