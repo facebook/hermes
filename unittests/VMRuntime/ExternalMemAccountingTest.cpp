@@ -10,8 +10,8 @@
 #include "gtest/gtest.h"
 
 #include "EmptyCell.h"
-#include "ExtStringForTest.h"
 #include "TestHelpers.h"
+#include "hermes/VM/DummyObject.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/GenGCHeapSegment.h"
@@ -25,6 +25,8 @@ namespace {
 namespace {
 const size_t kMaxYoungGenSize = GenGCHeapSegment::maxSize();
 } // namespace
+
+using testhelpers::DummyObject;
 
 /// A parameterized test class, for a set of tests that allocate
 /// external memory, and then may optionally, controlled by the bool
@@ -53,18 +55,20 @@ TEST_P(ExtMemTests, ExtMemInYoungTest) {
   roots.push_back(QuarterYoungGenCell::create(rt));
   rt.pointerRoots.push_back(&roots.back());
 
-  // The 1/4 + 1/2 + 1/4 = 1, but the size of the ExtStringForTest object itself
+  auto *extObj = DummyObject::create(&gc);
+  // The 1/4 + 1/2 + 1/4 = 1, but the size of the DummyObject object itself
   // will cause the sum to exceed the YG size.
   // (If the length created is zero, the subsequent allocation does *not* cause
   // a collection, and the test fails.)
-  roots.push_back(ExtStringForTest::create(rt, kMaxYoungGenSize / 2));
+  extObj->acquireExtMem(&gc, kMaxYoungGenSize / 2);
+  roots.push_back(extObj);
   rt.pointerRoots.push_back(&roots.back());
 
   EXPECT_EQ(0, gc.numYoungGCs());
   EXPECT_EQ(0, gc.numFullGCs());
 
   if (GetParam()) {
-    vmcast<ExtStringForTest>(roots.back())->releaseMem(&gc);
+    vmcast<DummyObject>(roots.back())->releaseExtMem(&gc);
   }
 
   roots.push_back(QuarterYoungGenCell::create(rt));
@@ -117,7 +121,9 @@ TEST_P(ExtMemTests, ExtMemInOldByAllocTest) {
   // Now allocate an object with 1.5 young-gen-sizes of external memory.
   // (If the length is zero, instead, this test fails: the creates at the end
   // cause a YG collection rather than a full GC.)
-  roots.push_back(ExtStringForTest::create(rt, 3 * kMaxYoungGenSize / 2));
+  auto *extObj = DummyObject::create(&gc);
+  extObj->acquireExtMem(&gc, 3 * kMaxYoungGenSize / 2);
+  roots.push_back(extObj);
   rt.pointerRoots.push_back(&roots.back());
 
   // Get it in the old generation.
@@ -126,7 +132,7 @@ TEST_P(ExtMemTests, ExtMemInOldByAllocTest) {
   EXPECT_EQ(2, gc.numFullGCs());
 
   if (GetParam()) {
-    vmcast<ExtStringForTest>(roots.back())->releaseMem(&gc);
+    vmcast<DummyObject>(roots.back())->releaseExtMem(&gc);
   }
 
   // Now we do allocations that would cause a YG collection.  If we haven't
@@ -175,11 +181,11 @@ TEST_P(ExtMemTests, ExtMemInOldDirectTest) {
   // in the old generation.
   // (If the length is zero, instead, this test fails: the creates at the end
   // cause a YG collection rather than a full GC.)
-  ExtStringForTest *extString =
-      ExtStringForTest::createLongLived(rt, 3 * kMaxYoungGenSize / 2);
+  auto *extObj = DummyObject::createLongLived(&gc);
+  extObj->acquireExtMem(&gc, 3 * kMaxYoungGenSize / 2);
 
   if (GetParam()) {
-    extString->releaseMem(&gc);
+    extObj->releaseExtMem(&gc);
   }
 
   // Now we do allocations that would cause a collection.  If we did
@@ -230,8 +236,9 @@ TEST(ExtMemNonParamTests, ExtMemDoesNotBreakFullGC) {
   // Now allocate an object with 2.5 segment-sizes of external memory.
   // After this, the effective size of the old gen should now be
   // greater than its current size.
-  roots.push_back(ExtStringForTest::createLongLived(
-      rt, 5 * GenGCHeapSegment::maxSize() / 2));
+  auto *extObj = DummyObject::createLongLived(&rt.getHeap());
+  extObj->acquireExtMem(&rt.getHeap(), 5 * GenGCHeapSegment::maxSize() / 2);
+  roots.push_back(extObj);
   rt.pointerRoots.push_back(&roots.back());
 
   // Now allocate a YG object, filling the YG.
@@ -261,7 +268,7 @@ TEST(ExtMemNonParamDeathTest, SaturateYoungGen) {
 
   // An external allocation size that will certainly saturate the young
   // generation.
-  const auto kExtAllocSize = kOGSize - sizeof(ExtStringForTest);
+  const auto kExtAllocSize = kOGSize - sizeof(DummyObject);
   ASSERT_GT(kExtAllocSize, kYGSize);
 
   const auto gcConfig = TestGCConfigFixedSize(kTotalSize);
@@ -277,11 +284,13 @@ TEST(ExtMemNonParamDeathTest, SaturateYoungGen) {
   }
 
   // Saturate the young generation.
-  roots.push_back(ExtStringForTest::create(rt, kExtAllocSize));
+  auto *extObj = DummyObject::create(&rt.getHeap());
+  extObj->acquireExtMem(&rt.getHeap(), kExtAllocSize);
+  roots.push_back(extObj);
   rt.pointerRoots.push_back(&roots.back());
 
   // Expect that a subsequent allocation should fail, with an OOM.
-  EXPECT_OOM(ExtStringForTest::create(rt, kExtAllocSize));
+  EXPECT_OOM(DummyObject::create(&rt.getHeap()));
 }
 
 } // namespace

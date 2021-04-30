@@ -8,9 +8,9 @@
 #include "gtest/gtest.h"
 
 #include "EmptyCell.h"
-#include "ExtStringForTest.h"
 #include "TestHelpers.h"
 #include "hermes/VM/AlignedHeapSegment.h"
+#include "hermes/VM/DummyObject.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCCell.h"
 
@@ -182,9 +182,10 @@ TEST(GCFragmentationTest, ExternalMemoryTest) {
     rt.pointerRoots.push_back(&roots.back());
   }
 
-  // Now allocate an external string half as big as a segment.
-  roots.push_back(
-      ExtStringForTest::create(rt, GenGCHeapSegment::maxSize() / 2));
+  // Now allocate external memory half as big as a segment.
+  auto *extObj = testhelpers::DummyObject::create(&gc);
+  extObj->acquireExtMem(&gc, GenGCHeapSegment::maxSize() / 2);
+  roots.push_back(extObj);
   rt.pointerRoots.push_back(&roots.back());
 
   { // (3) Force a full collection to make sure all the allocated cells so far
