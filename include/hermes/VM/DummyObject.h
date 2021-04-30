@@ -29,6 +29,7 @@ struct DummyObject final : public GCCell {
   GCHermesValue hvNative;
   GCHermesValue hvNull;
   uint32_t externalBytes{};
+  uint32_t extraBytes{};
 
   DummyObject(GC *gc);
 
@@ -41,6 +42,7 @@ struct DummyObject final : public GCCell {
   static bool classof(const GCCell *cell);
   static void _finalizeImpl(GCCell *cell, GC *);
   static gcheapsize_t _externalMemorySizeImpl(const GCCell *cell);
+  static size_t _mallocSizeImpl(GCCell *cell);
 };
 
 } // namespace testhelpers

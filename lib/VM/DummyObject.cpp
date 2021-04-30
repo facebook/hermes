@@ -23,7 +23,7 @@ const VTable DummyObject::vt{
     cellSize<DummyObject>(),
     _finalizeImpl,
     nullptr,
-    nullptr,
+    _mallocSizeImpl,
     nullptr,
     nullptr,
     _externalMemorySizeImpl};
@@ -70,6 +70,10 @@ void DummyObject::_finalizeImpl(GCCell *cell, GC *gc) {
 
 gcheapsize_t DummyObject::_externalMemorySizeImpl(const GCCell *cell) {
   return vmcast<DummyObject>(cell)->externalBytes;
+}
+
+size_t DummyObject::_mallocSizeImpl(GCCell *cell) {
+  return vmcast<DummyObject>(cell)->extraBytes;
 }
 
 } // namespace testhelpers

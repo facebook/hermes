@@ -8,6 +8,7 @@
 #include "EmptyCell.h"
 #include "TestHelpers.h"
 #include "hermes/VM/BuildMetadata.h"
+#include "hermes/VM/DummyObject.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/WeakRef.h"
 
@@ -25,55 +26,7 @@ namespace {
 using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
 #endif
 
-struct Dummy final : public GCCell {
-  static const VTable vt;
-  // Some padding to meet the minimum cell size.
-  uint64_t padding1_{0};
-  uint64_t padding2_{0};
-
-  static Dummy *create(DummyRuntime &runtime) {
-    return runtime.makeAFixed<Dummy, HasFinalizer::Yes>(&runtime.getHeap());
-  }
-  static Dummy *createLongLived(DummyRuntime &runtime) {
-    return runtime.makeAFixed<Dummy, HasFinalizer::Yes, LongLived::Yes>(
-        &runtime.getHeap());
-  }
-  static bool classof(const GCCell *cell) {
-    return cell->getVT() == &vt;
-  }
-
-  Dummy(GC *gc) : GCCell(gc, &vt) {}
-};
-
-size_t getExtraSize(GCCell *) {
-  return 1;
-}
-
-void finalize(GCCell *, GC *) {}
-
-/// A virtual table with extra storage space, hence also a (dummy) finalizer,
-/// but no weak ref marker.
-const VTable Dummy::vt{
-    CellKind::UninitializedKind,
-    sizeof(Dummy),
-    finalize,
-    nullptr,
-    getExtraSize};
-
-} // namespace
-
-namespace hermes {
-namespace vm {
-template <>
-struct IsGCObject<Dummy> : public std::true_type {};
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
-template <>
-struct IsGCObject<SegmentCell> : public std::true_type {};
-#endif
-} // namespace vm
-} // namespace hermes
-
-namespace {
+using testhelpers::DummyObject;
 
 struct GCBasicsTest : public ::testing::Test {
   std::shared_ptr<DummyRuntime> runtime;
@@ -113,7 +66,7 @@ TEST_F(GCBasicsTest, SmokeTest) {
   ASSERT_EQ(0u, info.allocatedBytes);
 
   // Allocate a single object without GC.
-  Dummy::create(rt);
+  DummyObject::create(&rt.getHeap());
   gc.getHeapInfo(info);
   gc.getDebugHeapInfo(debugInfo);
   ASSERT_EQ(1u, debugInfo.numAllocatedObjects);
@@ -121,7 +74,7 @@ TEST_F(GCBasicsTest, SmokeTest) {
   ASSERT_EQ(0u, debugInfo.numCollectedObjects);
   ASSERT_EQ(0u, debugInfo.numFinalizedObjects);
   ASSERT_EQ(1u, info.numCollections);
-  ASSERT_EQ(sizeof(Dummy), info.allocatedBytes);
+  ASSERT_EQ(sizeof(DummyObject), info.allocatedBytes);
 
   // Now free the unreachable object.
   rt.collect();
@@ -135,8 +88,8 @@ TEST_F(GCBasicsTest, SmokeTest) {
   ASSERT_EQ(0u, info.allocatedBytes);
 
   // Allocate two objects.
-  Dummy::create(rt);
-  GCCell *o2 = Dummy::create(rt);
+  DummyObject::create(&rt.getHeap());
+  GCCell *o2 = DummyObject::create(&rt.getHeap());
   gc.getHeapInfo(info);
   gc.getDebugHeapInfo(debugInfo);
   ASSERT_EQ(2u, debugInfo.numAllocatedObjects);
@@ -144,7 +97,7 @@ TEST_F(GCBasicsTest, SmokeTest) {
   ASSERT_EQ(1u, debugInfo.numCollectedObjects);
   ASSERT_EQ(1u, debugInfo.numFinalizedObjects);
   ASSERT_EQ(2u, info.numCollections);
-  ASSERT_EQ(2 * sizeof(Dummy), info.allocatedBytes);
+  ASSERT_EQ(2 * sizeof(DummyObject), info.allocatedBytes);
 
   // Make only the second object reachable and collect.
   rt.pointerRoots.push_back(&o2);
@@ -156,7 +109,7 @@ TEST_F(GCBasicsTest, SmokeTest) {
   ASSERT_EQ(1u, debugInfo.numCollectedObjects);
   ASSERT_EQ(1u, debugInfo.numFinalizedObjects);
   ASSERT_EQ(3u, info.numCollections);
-  ASSERT_EQ(sizeof(Dummy), info.allocatedBytes);
+  ASSERT_EQ(sizeof(DummyObject), info.allocatedBytes);
 }
 
 TEST_F(GCBasicsTest, MovedObjectTest) {
@@ -333,18 +286,18 @@ TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
   gc.getDebugHeapInfo(debugInfo);
   EXPECT_EQ(0u, debugInfo.numAllocatedObjects);
 
-  auto *d0 = Dummy::create(rt);
-  auto *d1 = Dummy::create(rt);
-  auto *dOld = Dummy::createLongLived(rt);
+  auto *d0 = DummyObject::create(&rt.getHeap());
+  auto *d1 = DummyObject::create(&rt.getHeap());
+  auto *dOld = DummyObject::createLongLived(&rt.getHeap());
 
   gc.getDebugHeapInfo(debugInfo);
   EXPECT_EQ(3u, debugInfo.numAllocatedObjects);
 
   WeakRefMutex &mtx = gc.weakRefMutex();
   WeakRefLock lk{mtx};
-  WeakRef<Dummy> wr0{&gc, d0};
-  WeakRef<Dummy> wr1{&gc, d1};
-  WeakRef<Dummy> wrOld{&gc, dOld};
+  WeakRef<DummyObject> wr0{&gc, d0};
+  WeakRef<DummyObject> wr1{&gc, d1};
+  WeakRef<DummyObject> wrOld{&gc, dOld};
 
   ASSERT_TRUE(wr0.isValid());
   ASSERT_TRUE(wr1.isValid());
@@ -388,10 +341,10 @@ TEST_F(GCBasicsTest, TestYoungGenStats) {
   ASSERT_EQ(0u, debugInfo.numReachableObjects);
   ASSERT_EQ(0u, debugInfo.numCollectedObjects);
 
-  GCCell *cell = Dummy::create(rt);
+  GCCell *cell = DummyObject::create(&rt.getHeap());
   rt.pointerRoots.push_back(&cell);
 
-  Dummy::create(rt);
+  DummyObject::create(&rt.getHeap());
 
   gc.getDebugHeapInfo(debugInfo);
   ASSERT_EQ(0u, gc.numGCs());
@@ -416,8 +369,8 @@ TEST_F(GCBasicsTest, VariableSizeRuntimeCellOffsetTest) {
 }
 
 TEST_F(GCBasicsTest, TestFixedRuntimeCell) {
-  auto *cell = Dummy::create(rt);
-  EXPECT_EQ(cell->getAllocatedSize(), heapAlignSize(sizeof(Dummy)));
+  auto *cell = DummyObject::create(&rt.getHeap());
+  EXPECT_EQ(cell->getAllocatedSize(), heapAlignSize(sizeof(DummyObject)));
 }
 
 /// Test that the extra bytes in the heap are reported correctly.
@@ -426,33 +379,35 @@ TEST_F(GCBasicsTest, ExtraBytes) {
 
   {
     GCBase::HeapInfo info;
-    (void)Dummy::create(rt);
+    auto *obj = DummyObject::create(&rt.getHeap());
+    obj->extraBytes = 1;
     gc.getHeapInfoWithMallocSize(info);
     // Since there have been no collections, and there is one Dummy in the heap,
     // it should be exactly equal to the number returned by getExtraSize.
-    EXPECT_EQ(info.mallocSizeEstimate, getExtraSize(nullptr));
+    EXPECT_EQ(info.mallocSizeEstimate, 1);
   }
 
   {
     GCBase::HeapInfo info;
-    (void)Dummy::create(rt);
+    auto *obj = DummyObject::create(&rt.getHeap());
+    obj->extraBytes = 1;
     gc.getHeapInfoWithMallocSize(info);
-    EXPECT_EQ(info.mallocSizeEstimate, getExtraSize(nullptr) * 2);
+    EXPECT_EQ(info.mallocSizeEstimate, 2);
   }
 }
 
 /// Test that the id is set to a unique number for each allocated object.
 TEST_F(GCBasicsTest, TestIDIsUnique) {
-  auto *cell = Dummy::create(rt);
+  auto *cell = DummyObject::create(&rt.getHeap());
   auto id1 = rt.getHeap().getObjectID(cell);
-  cell = Dummy::create(rt);
+  cell = DummyObject::create(&rt.getHeap());
   auto id2 = rt.getHeap().getObjectID(cell);
   EXPECT_NE(id1, id2);
 }
 
 TEST_F(GCBasicsTest, TestIDPersistsAcrossCollections) {
   GCScope scope{&rt};
-  auto handle = rt.makeHandle<Dummy>(Dummy::create(rt));
+  auto handle = rt.makeHandle(DummyObject::create(&rt.getHeap()));
   const auto idBefore = rt.getHeap().getObjectID(*handle);
   rt.collect();
   const auto idAfter = rt.getHeap().getObjectID(*handle);
@@ -462,7 +417,7 @@ TEST_F(GCBasicsTest, TestIDPersistsAcrossCollections) {
 /// Test that objects that die during (YG) GC are untracked.
 TEST_F(GCBasicsTest, TestIDDeathInYoung) {
   GCScope scope{&rt};
-  rt.getHeap().getObjectID(Dummy::create(rt));
+  rt.getHeap().getObjectID(DummyObject::create(&rt.getHeap()));
   rt.collect();
   // ~DummyRuntime will verify all pointers in ID map.
 }
