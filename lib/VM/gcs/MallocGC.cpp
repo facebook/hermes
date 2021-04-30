@@ -488,7 +488,9 @@ void MallocGC::getHeapInfo(HeapInfo &info) {
 }
 void MallocGC::getHeapInfoWithMallocSize(HeapInfo &info) {
   getHeapInfo(info);
-  info.mallocSizeEstimate = 0;
+  GCBase::getHeapInfoWithMallocSize(info);
+  // Note that info.mallocSizeEstimate is initialized by the call to
+  // GCBase::getHeapInfoWithMallocSize.
   for (CellHeader *header : pointers_) {
     GCCell *cell = header->data();
     info.mallocSizeEstimate += cell->getVT()->getMallocSize(cell);

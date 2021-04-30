@@ -24,11 +24,6 @@ namespace {
 
 const GCConfig kGCConfig = TestGCConfigFixedSize(16 << 20);
 
-const MetadataTableForTests getMetadataTable() {
-  static const Metadata table[] = {Metadata()};
-  return MetadataTableForTests(table);
-}
-
 TEST(GCReturnUnusedMemoryTest, CollectReturnsFreeMemory) {
   // TODO(T40416012) Re-enable this test when vm_unused is fixed.
   // Skip this test in Windows because vm_unused has a no-op implementation.

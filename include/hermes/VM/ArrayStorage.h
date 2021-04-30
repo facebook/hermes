@@ -95,9 +95,22 @@ class ArrayStorageBase final
       return throwExcessiveCapacityError(runtime, capacity);
     }
     auto *cell = runtime->makeAVariable<ArrayStorageBase<HVType>>(
-        allocationSize(capacity), runtime, capacity);
+        allocationSize(capacity), &runtime->getHeap(), capacity);
     return HermesValue::encodeObjectValue(cell);
   }
+
+#ifdef UNIT_TEST
+  /// Make it possible to construct an ArrayStorage with just a GC* that is
+  /// immediately resized to its capacity. This is used only in tests, where we
+  /// have a GC* but not a Runtime*.
+  static ArrayStorageBase *createForTest(GC *gc, size_type capacity) {
+    assert(capacity <= maxElements());
+    auto *cell = gc->makeAVariable<ArrayStorageBase>(
+        allocationSize(capacity), gc, capacity);
+    ArrayStorageBase::resizeWithinCapacity(cell, gc, capacity);
+    return cell;
+  }
+#endif
 
   /// Create a new long-lived instance with specified capacity.
   static CallResult<HermesValue> createLongLived(
@@ -106,11 +119,11 @@ class ArrayStorageBase final
     if (LLVM_UNLIKELY(capacity > maxElements())) {
       return throwExcessiveCapacityError(runtime, capacity);
     }
-    return HermesValue::encodeObjectValue(
-        runtime->makeAVariable<
-            ArrayStorageBase<HVType>,
-            HasFinalizer::No,
-            LongLived::Yes>(allocationSize(capacity), runtime, capacity));
+    return HermesValue::encodeObjectValue(runtime->makeAVariable<
+                                          ArrayStorageBase<HVType>,
+                                          HasFinalizer::No,
+                                          LongLived::Yes>(
+        allocationSize(capacity), &runtime->getHeap(), capacity));
   }
 
   /// Create a new instance with specified capacity and size.
@@ -252,8 +265,15 @@ class ArrayStorageBase final
   /// need to reallocate.
   static void resizeWithinCapacity(
       ArrayStorageBase<HVType> *self,
-      Runtime *runtime,
+      GC *gc,
       size_type newSize);
+
+  static void resizeWithinCapacity(
+      ArrayStorageBase<HVType> *self,
+      Runtime *runtime,
+      size_type newSize) {
+    resizeWithinCapacity(self, &runtime->getHeap(), newSize);
+  }
 
  private:
   /// The capacity is the maximum number of elements this array can ever
@@ -269,7 +289,7 @@ class ArrayStorageBase final
   void operator=(const ArrayStorageBase &) = delete;
   ~ArrayStorageBase() = delete;
 
-  ArrayStorageBase(Runtime *runtime, size_type capacity);
+  ArrayStorageBase(GC *gc, size_type capacity);
 
  private:
   /// Throws a RangeError with a descriptive message describing the attempted

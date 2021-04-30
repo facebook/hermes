@@ -31,15 +31,8 @@ using ::testing::MatchesRegex;
 
 namespace {
 
-const MetadataTableForTests getMetadataTable() {
-  static const Metadata storage[] = {
-      Metadata() // Uninitialized
-  };
-  return MetadataTableForTests(storage);
-}
-
 // We make this not FixedSize, to allow direct allocation in the old generation.
-using SegmentCell = VarSizedEmptyCell<AlignedHeapSegment::maxSize()>;
+using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
 
 class TestCrashManager : public CrashManager {
  public:

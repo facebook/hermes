@@ -62,11 +62,6 @@ namespace {
 
 // Hades doesn't call markWeak the same number of times as other GCs.
 #if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
-MetadataTableForTests getMetadataTable() {
-  // Nothing to mark for either of them, leave a blank metadata.
-  static const Metadata storage[] = {Metadata(), Metadata()};
-  return MetadataTableForTests(storage);
-}
 
 TEST(GCMarkWeakTest, MarkWeak) {
   constexpr int checkHeapOn =

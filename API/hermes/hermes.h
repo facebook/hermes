@@ -136,6 +136,16 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   uint64_t getUniqueID(const jsi::String &s) const;
   uint64_t getUniqueID(const jsi::PropNameID &pni) const;
 
+  /// Same as the other \c getUniqueID, except it can return 0 for some values.
+  /// 0 means there is no ID associated with the value.
+  uint64_t getUniqueID(const jsi::Value &val) const;
+
+  /// From an ID retrieved from \p getUniqueID, go back to the object.
+  /// NOTE: This is much slower in general than the reverse operation, and takes
+  /// up more memory. Don't use this unless it's absolutely necessary.
+  /// \return a jsi::Object if a matching object is found, else returns null.
+  jsi::Value getObjectForID(uint64_t id);
+
   /// Get a structure representing the environment-dependent behavior, so
   /// it can be written into the trace for later replay.
   const ::hermes::vm::MockedEnvironment &getMockedEnvironment() const;

@@ -141,8 +141,7 @@ void GenGCHeapSegment::compact(SweepResult::VTablesRemaining &vTables) {
       char *newAddr = reinterpret_cast<char *>(cell->getForwardingPointer());
       // Put back the vtable.
       assert(vTables.hasNext() && "Need a displaced vtable pointer");
-      cell->setForwardingPointer(
-          reinterpret_cast<const GCCell *>(vTables.next()));
+      cell->setVT(vTables.next());
       assert(
           cell->isValid() &&
           "Cell was invalid after placing the vtable back in");

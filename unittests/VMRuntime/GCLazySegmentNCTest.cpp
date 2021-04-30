@@ -25,14 +25,6 @@ using namespace hermes;
 using namespace hermes::vm;
 
 namespace {
-
-const MetadataTableForTests getMetadataTable() {
-  static const Metadata storage[] = {
-      Metadata() // Uninitialized
-  };
-  return MetadataTableForTests(storage);
-}
-
 struct GCLazySegmentNCTest : public ::testing::Test {
   ~GCLazySegmentNCTest() {
     oscompat::unset_test_vm_allocate_limit();

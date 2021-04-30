@@ -1215,9 +1215,9 @@ void GenGC::getCrashManagerHeapInfo(CrashManager::HeapInformation &info) {
 void GenGC::getHeapInfoWithMallocSize(HeapInfo &info) {
   getHeapInfo(info);
   GCBase::getHeapInfoWithMallocSize(info);
-  // In case the info is being re-used, ensure the count starts at 0.
-  info.mallocSizeEstimate = 0;
 
+  // Note that info.mallocSizeEstimate is initialized by the call to
+  // GCBase::getHeapInfoWithMallocSize.
   // First add the usage by the runtime's roots.
   info.mallocSizeEstimate += gcCallbacks_->mallocSize();
 

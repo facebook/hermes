@@ -678,7 +678,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
     } else if (value.isBool()) {
       return vm::HermesValue::encodeBoolValue(value.getBool());
     } else if (value.isNumber()) {
-      return vm::HermesValue::encodeNumberValue(value.getNumber());
+      return vm::HermesValue::encodeUntrustedDoubleValue(value.getNumber());
     } else if (value.isSymbol() || value.isString() || value.isObject()) {
       return phv(value);
     } else {
@@ -695,7 +695,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       return vm::Runtime::getBoolValue(value.getBool());
     } else if (value.isNumber()) {
       return runtime_.makeHandle(
-          vm::HermesValue::encodeNumberValue(value.getNumber()));
+          vm::HermesValue::encodeUntrustedDoubleValue(value.getNumber()));
     } else if (value.isSymbol() || value.isString() || value.isObject()) {
       return vm::Handle<vm::HermesValue>(&phv(value));
     } else {
@@ -1239,6 +1239,26 @@ uint64_t HermesRuntime::getUniqueID(const jsi::String &s) const {
 uint64_t HermesRuntime::getUniqueID(const jsi::PropNameID &pni) const {
   return impl(this)->runtime_.getHeap().getObjectID(
       impl(this)->phv(pni).getSymbol());
+}
+
+uint64_t HermesRuntime::getUniqueID(const jsi::Value &val) const {
+  vm::HermesValue hv = HermesRuntimeImpl::hvFromValue(val);
+  // 0 is reserved as a non-ID.
+  return impl(this)->runtime_.getHeap().getSnapshotID(hv).getValueOr(0);
+}
+
+jsi::Value HermesRuntime::getObjectForID(uint64_t id) {
+  vm::GCCell *ptr = static_cast<vm::GCCell *>(
+      impl(this)->runtime_.getHeap().getObjectForID(id));
+  if (ptr && vm::vmisa<vm::JSObject>(ptr)) {
+    return impl(this)->add<jsi::Object>(
+        vm::HermesValue::encodeObjectValue(ptr));
+  }
+  // If the ID doesn't map to a pointer, or that pointer isn't an object,
+  // return null.
+  // This is because a jsi::Object can't be used to represent something internal
+  // to the VM like a HiddenClass.
+  return jsi::Value::null();
 }
 
 /// Get a structure representing the enviroment-dependent behavior, so
