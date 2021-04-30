@@ -13,6 +13,7 @@
 #include "hermes/Support/Allocator.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/VM/CellKind.h"
+#include "hermes/VM/DummyObject.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HermesValue.h"
@@ -33,72 +34,7 @@ namespace hermes {
 namespace unittest {
 namespace heapsnapshottest {
 
-// Forward declaration to allow IsGCObject.
-struct DummyObject;
-
-} // namespace heapsnapshottest
-} // namespace unittest
-
-namespace vm {
-template <>
-struct IsGCObject<unittest::heapsnapshottest::DummyObject>
-    : public std::true_type {};
-} // namespace vm
-
-namespace unittest {
-namespace heapsnapshottest {
-
-struct DummyObject final : public GCCell {
-  static const VTable vt;
-  GCPointer<DummyObject> other;
-  const uint32_t x;
-  const uint32_t y;
-  GCHermesValue hvBool;
-  GCHermesValue hvDouble;
-  GCHermesValue hvUndefined;
-  GCHermesValue hvEmpty;
-  GCHermesValue hvNative;
-  GCHermesValue hvNull;
-
-  DummyObject(GC *gc) : GCCell(gc, &vt), other(), x(1), y(2) {
-    hvBool.setNonPtr(HermesValue::encodeBoolValue(true), gc);
-    hvDouble.setNonPtr(HermesValue::encodeNumberValue(3.14), gc);
-    hvNative.setNonPtr(HermesValue::encodeNativeUInt32(0xE), gc);
-    hvUndefined.setNonPtr(HermesValue::encodeUndefinedValue(), gc);
-    hvEmpty.setNonPtr(HermesValue::encodeEmptyValue(), gc);
-    hvNull.setNonPtr(HermesValue::encodeNullValue(), gc);
-  }
-
-  void setPointer(DummyRuntime &rt, DummyObject *obj) {
-    other.set(&rt, obj, &rt.getHeap());
-  }
-
-  static DummyObject *create(DummyRuntime &runtime) {
-    return runtime.makeAFixed<DummyObject>(&runtime.getHeap());
-  }
-
-  static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::UninitializedKind;
-  }
-};
-const VTable DummyObject::vt{CellKind::UninitializedKind, sizeof(DummyObject)};
-
-static void DummyObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  const auto *self = static_cast<const DummyObject *>(cell);
-  mb.addField("HermesBool", &self->hvBool);
-  mb.addField("HermesDouble", &self->hvDouble);
-  mb.addField("HermesUndefined", &self->hvUndefined);
-  mb.addField("HermesEmpty", &self->hvEmpty);
-  mb.addField("HermesNative", &self->hvNative);
-  mb.addField("HermesNull", &self->hvNull);
-  mb.addField("other", &self->other);
-}
-
-static MetadataTableForTests getMetadataTable() {
-  static const Metadata storage[] = {
-      buildMetadata(CellKind::UninitializedKind, DummyObjectBuildMeta)};
-  return MetadataTableForTests(storage);
-}
+using vm::testhelpers::DummyObject;
 
 struct Node {
   HeapSnapshot::NodeType type;
@@ -496,7 +432,7 @@ TEST(HeapSnapshotTest, IDReversibleTest) {
   GCScope gcScope(&rt);
 
   // Make a dummy object.
-  auto obj = rt.makeHandle(DummyObject::create(rt));
+  auto obj = rt.makeHandle(DummyObject::create(&gc));
   const auto objID = gc.getObjectID(obj.get());
   // Make sure the ID can be translated back to the object pointer.
   EXPECT_EQ(obj.get(), gc.getObjectForID(objID));
@@ -651,9 +587,9 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
   auto &gc = rt.getHeap();
   GCScope gcScope(&rt);
 
-  auto dummy = rt.makeHandle(DummyObject::create(rt));
-  auto *dummy2 = DummyObject::create(rt);
-  dummy->setPointer(rt, dummy2);
+  auto dummy = rt.makeHandle(DummyObject::create(&gc));
+  auto *dummy2 = DummyObject::create(&gc);
+  dummy->setPointer(&gc, dummy2);
   const auto blockSize = dummy->getAllocatedSize();
 
   JSONObject *root = TAKE_SNAPSHOT(gc, jsonFactory);
@@ -760,7 +696,7 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
           .build());
   DummyRuntime &rt = *runtime;
   GCScope scope{&rt};
-  auto dummy = rt.makeHandle(DummyObject::create(rt));
+  auto dummy = rt.makeHandle(DummyObject::create(&runtime->getHeap()));
   const auto dummyID = runtime->getHeap().getObjectID(dummy.get());
   rt.collect();
   ASSERT_TRUE(triggeredTripwire);
@@ -777,7 +713,7 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
   auto dummyNode = FIND_NODE_FOR_ID(dummyID, nodes, strings);
   Node expected{
       HeapSnapshot::NodeType::Object,
-      "Uninitialized",
+      "DummyObject",
       dummyID,
       dummy->getAllocatedSize(),
       4};

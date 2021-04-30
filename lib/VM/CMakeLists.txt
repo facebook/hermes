@@ -15,6 +15,7 @@ set(source_files
   Deserializer.cpp
   DictPropertyMap.cpp
   Domain.cpp
+  DummyObject.cpp
   GCBase.cpp
   GCCell.cpp
   OrderedHashMap.cpp
