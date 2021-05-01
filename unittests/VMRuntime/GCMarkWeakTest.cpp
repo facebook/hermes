@@ -8,6 +8,7 @@
 #include "TestHelpers.h"
 #include "gtest/gtest.h"
 #include "hermes/VM/AllocResult.h"
+#include "hermes/VM/DummyObject.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCPointer-inline.h"
 
@@ -20,48 +21,19 @@ using namespace hermes::vm;
 ///
 /// Test uses GC::countUsedWeakRefs which doesn't exist in opt mode
 #ifndef NDEBUG
-
-namespace hermes {
-namespace vm {
-
-class TestCell final : public GCCell {
- public:
-  static const VTable vt;
-  int *numMarkWeakCalls;
-  WeakRef<TestCell> weak;
-
-  static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::FillerCellKind;
-  }
-
-  static TestCell *create(DummyRuntime &runtime, int *numMarkWeakCalls) {
-    return runtime.makeAFixed<TestCell>(&runtime.getHeap(), numMarkWeakCalls);
-  }
-
-  static void _markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
-    auto *self = reinterpret_cast<TestCell *>(cell);
-    acceptor.accept(self->weak);
-    ++*self->numMarkWeakCalls;
-  }
-
-  // Creates a cell that weakly references itself.
-  TestCell(GC *gc, int *numMarkWeakCalls)
-      : GCCell(gc, &vt), numMarkWeakCalls(numMarkWeakCalls), weak(gc, this) {}
-};
-
-const VTable TestCell::vt{
-    CellKind::FillerCellKind,
-    sizeof(TestCell),
-    nullptr,
-    TestCell::_markWeakImpl};
-
-} // namespace vm
-} // namespace hermes
-
 namespace {
 
 // Hades doesn't call markWeak the same number of times as other GCs.
 #if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
+
+using testhelpers::DummyObject;
+
+static DummyObject *createWithMarkWeakCount(GC *gc, int *numMarkWeakCalls) {
+  auto *obj = DummyObject::create(gc);
+  obj->markWeakCallback = std::make_unique<DummyObject::Callback>(
+      [numMarkWeakCalls]() mutable { (*numMarkWeakCalls)++; });
+  return obj;
+}
 
 TEST(GCMarkWeakTest, MarkWeak) {
   constexpr int checkHeapOn =
@@ -80,13 +52,13 @@ TEST(GCMarkWeakTest, MarkWeak) {
   // Probably zero, but we only care about the increase/decrease.
   const int initUsedWeak = gc.countUsedWeakRefs();
 
-  GCCell *g = TestCell::create(rt, &numMarkWeakCalls);
+  GCCell *g = createWithMarkWeakCount(&gc, &numMarkWeakCalls);
   rt.pointerRoots.push_back(&g);
   rt.collect();
 
   {
     WeakRefLock lk{gc.weakRefMutex()};
-    TestCell *t = vmcast<TestCell>(g);
+    DummyObject *t = vmcast<DummyObject>(g);
     ASSERT_TRUE(t->weak.isValid());
     EXPECT_EQ(t, getNoHandle(t->weak, &gc));
     // Exactly one call to _markWeakImpl

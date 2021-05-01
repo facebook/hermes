@@ -610,8 +610,9 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
       cellKindStr(dummy->getKind()),
       gc.getObjectID(dummy.get()),
       blockSize,
-      // One edge to the second dummy, 4 for primitive singletons.
-      5};
+      // One edge to the second dummy, 4 for primitive singletons, and a WeakRef
+      // to self.
+      6};
   Node undefinedNode{
       HeapSnapshot::NodeType::Object,
       "undefined",
@@ -647,8 +648,8 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
       cellKindStr(dummy->getKind()),
       gc.getObjectID(dummy->other),
       blockSize,
-      // No edges except for the primitive singletons.
-      4};
+      // No edges except for the primitive singletons and the WeakRef to self.
+      5};
 
   // Common edges.
   Edge trueEdge =
@@ -670,13 +671,19 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
               trueEdge,
               numberEdge,
               undefinedEdge,
-              nullEdge}));
+              nullEdge,
+              Edge{HeapSnapshot::EdgeType::Weak, "0", firstDummy.id}}));
 
   EXPECT_EQ(
       FIND_NODE_AND_EDGES_FOR_ID(secondDummy.id, nodes, edges, strings),
       std::make_pair(
           secondDummy,
-          std::vector<Edge>{trueEdge, numberEdge, undefinedEdge, nullEdge}));
+          std::vector<Edge>{
+              trueEdge,
+              numberEdge,
+              undefinedEdge,
+              nullEdge,
+              Edge{HeapSnapshot::EdgeType::Weak, "0", secondDummy.id}}));
 }
 
 TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
@@ -716,7 +723,7 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
       "DummyObject",
       dummyID,
       dummy->getAllocatedSize(),
-      4};
+      5};
   EXPECT_EQ(dummyNode, expected);
 }
 

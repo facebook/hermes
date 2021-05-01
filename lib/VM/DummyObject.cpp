@@ -22,13 +22,14 @@ const VTable DummyObject::vt{
     CellKind::DummyObjectKind,
     cellSize<DummyObject>(),
     _finalizeImpl,
-    nullptr,
+    _markWeakImpl,
     _mallocSizeImpl,
     nullptr,
     nullptr,
     _externalMemorySizeImpl};
 
-DummyObject::DummyObject(GC *gc) : GCCell(gc, &vt), other(), x(1), y(2) {
+DummyObject::DummyObject(GC *gc)
+    : GCCell(gc, &vt), other(), x(1), y(2), weak(gc, this) {
   hvBool.setNonPtr(HermesValue::encodeBoolValue(true), gc);
   hvDouble.setNonPtr(HermesValue::encodeNumberValue(3.14), gc);
   hvNative.setNonPtr(HermesValue::encodeNativeUInt32(0xE), gc);
@@ -76,6 +77,13 @@ gcheapsize_t DummyObject::_externalMemorySizeImpl(const GCCell *cell) {
 
 size_t DummyObject::_mallocSizeImpl(GCCell *cell) {
   return vmcast<DummyObject>(cell)->extraBytes;
+}
+
+void DummyObject::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
+  auto *self = reinterpret_cast<DummyObject *>(cell);
+  if (self->markWeakCallback)
+    (*self->markWeakCallback)();
+  acceptor.accept(self->weak);
 }
 
 } // namespace testhelpers

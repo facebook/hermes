@@ -382,9 +382,9 @@ TEST_F(GCBasicsTest, ExtraBytes) {
     auto *obj = DummyObject::create(&rt.getHeap());
     obj->extraBytes = 1;
     gc.getHeapInfoWithMallocSize(info);
-    // Since there have been no collections, and there is one Dummy in the heap,
-    // it should be exactly equal to the number returned by getExtraSize.
-    EXPECT_EQ(info.mallocSizeEstimate, 1);
+    // Since there is one dummy in the heap, the malloc size is the size of its
+    // corresponding WeakRefSlot and one extra byte.
+    EXPECT_EQ(info.mallocSizeEstimate, sizeof(WeakRefSlot) + 1);
   }
 
   {
@@ -392,7 +392,7 @@ TEST_F(GCBasicsTest, ExtraBytes) {
     auto *obj = DummyObject::create(&rt.getHeap());
     obj->extraBytes = 1;
     gc.getHeapInfoWithMallocSize(info);
-    EXPECT_EQ(info.mallocSizeEstimate, 2);
+    EXPECT_EQ(info.mallocSizeEstimate, sizeof(WeakRefSlot) * 2 + 2);
   }
 }
 

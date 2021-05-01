@@ -11,6 +11,7 @@
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/HermesValue.h"
+#include "hermes/VM/WeakRef.h"
 
 namespace hermes {
 namespace vm {
@@ -28,11 +29,13 @@ struct DummyObject final : public GCCell {
   GCHermesValue hvEmpty;
   GCHermesValue hvNative;
   GCHermesValue hvNull;
+  WeakRef<DummyObject> weak;
   uint32_t externalBytes{};
   uint32_t extraBytes{};
 
   using Callback = std::function<void()>;
   std::unique_ptr<Callback> finalizerCallback;
+  std::unique_ptr<Callback> markWeakCallback;
 
   DummyObject(GC *gc);
 
@@ -46,6 +49,7 @@ struct DummyObject final : public GCCell {
   static void _finalizeImpl(GCCell *cell, GC *);
   static gcheapsize_t _externalMemorySizeImpl(const GCCell *cell);
   static size_t _mallocSizeImpl(GCCell *cell);
+  static void _markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor);
 };
 
 } // namespace testhelpers
