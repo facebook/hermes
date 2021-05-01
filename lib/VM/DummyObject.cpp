@@ -64,6 +64,8 @@ bool DummyObject::classof(const GCCell *cell) {
 
 void DummyObject::_finalizeImpl(GCCell *cell, GC *gc) {
   auto *self = vmcast<DummyObject>(cell);
+  if (self->finalizerCallback)
+    (*self->finalizerCallback)();
   self->releaseExtMem(gc);
   self->~DummyObject();
 }

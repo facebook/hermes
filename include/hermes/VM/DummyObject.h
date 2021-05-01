@@ -31,6 +31,9 @@ struct DummyObject final : public GCCell {
   uint32_t externalBytes{};
   uint32_t extraBytes{};
 
+  using Callback = std::function<void()>;
+  std::unique_ptr<Callback> finalizerCallback;
+
   DummyObject(GC *gc);
 
   void acquireExtMem(GC *gc, uint32_t sz);
