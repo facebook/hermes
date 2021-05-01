@@ -73,6 +73,12 @@ HERMES_VM_GCOBJECT(HostObject);
 HERMES_VM_GCOBJECT(SegmentedArray);
 #ifdef UNIT_TEST
 HERMES_VM_GCOBJECT(TestCell);
+
+namespace testhelpers {
+struct DummyObject;
+}
+template <>
+struct IsGCObject<testhelpers::DummyObject> : public std::true_type {};
 #endif
 
 // Typed arrays use templates and cannot use the macro above

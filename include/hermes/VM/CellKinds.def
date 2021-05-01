@@ -92,11 +92,14 @@ CELL_KIND(GeneratorInnerFunction)
 CELL_KIND(AsyncFunction)
 CELL_CLASS(Function, "Function")
 
+// Dummy object used only in tests.
+CELL_KIND(DummyObject)
+
 // Update AllCells, below, if new CellKinds are added.
 // (AllCells is useful for checking that a CellKind is valid.)
 
 // Define inheritance ranges.
-CELL_RANGE(AllCells, Uninitialized, Function)
+CELL_RANGE(AllCells, Uninitialized, DummyObject)
 CELL_RANGE(Object, Object, Function)
 CELL_RANGE(DecoratedObject, DecoratedObject, HostObject)
 CELL_RANGE(ArrayImpl, Arguments, Array)

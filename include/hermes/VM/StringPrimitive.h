@@ -526,11 +526,6 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
       Handle<StringPrimitive> leftHnd,
       Handle<StringPrimitive> rightHnd);
 
-#ifdef UNIT_TEST
-  // Test version needs access.
-  friend class ExtStringForTest;
-#endif
-
   using Ref = llvh::ArrayRef<T>;
   using StdString = std::basic_string<T>;
   using CopyableStdString = CopyableBasicString<T>;

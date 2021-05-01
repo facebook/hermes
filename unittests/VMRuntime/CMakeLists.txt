@@ -25,7 +25,6 @@ set(RTSources
   DateUtilTest.cpp
   DecoratedObjectTest.cpp
   DictPropertyMapTest.cpp
-  ExtStringForTest.cpp
   ExternalMemAccountingTest.cpp
   GCBasicsTest.cpp
   GCFinalizerTest.cpp
