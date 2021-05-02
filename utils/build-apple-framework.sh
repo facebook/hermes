@@ -46,8 +46,6 @@ function build_host_hermesc {
 # Utility function to configure an Apple framework
 function configure_apple_framework {
   local build_cli_tools enable_bitcode
-  local catalyst="false"
-  local platform=$1
 
   if [[ $1 == iphoneos || $1 == catalyst ]]; then
     enable_bitcode="true"
@@ -59,16 +57,11 @@ function configure_apple_framework {
   else
     build_cli_tools="false"
   fi
-  if [[ $1 == catalyst ]]; then
-    catalyst="true"
-    platform="macosx"
-  fi
 
   local cmake_flags=" \
-    -DHERMES_APPLE_TARGET_PLATFORM:STRING=$platform \
+    -DHERMES_APPLE_TARGET_PLATFORM:STRING=$1 \
     -DCMAKE_OSX_ARCHITECTURES:STRING=$2 \
     -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=$3 \
-    -DHERMES_APPLE_CATALYST:BOOLEAN=$catalyst \
     -DHERMES_ENABLE_DEBUGGER:BOOLEAN=true \
     -DHERMES_ENABLE_LIBFUZZER:BOOLEAN=false \
     -DHERMES_ENABLE_FUZZILLI:BOOLEAN=false \
@@ -100,18 +93,21 @@ function build_apple_framework {
   fi
 }
 
-# Merges compiled frameworks and combines all of
-# the architectures into the single xcframework
+# Accepts an array of frameworks and will place all of
+# the architectures into the first one in the list
 function create_universal_framework {
   cd ./destroot/Library/Frameworks || exit 1
 
-  echo "Creating universal framework for Apple Platforms"
+  local platforms=("$@")
+  local args=""
 
-  xcodebuild -create-xcframework -framework iphoneos/hermes.framework -framework iphonesimulator/hermes.framework -framework macosx/hermes.framework -output iphoneos/hermes.xcframework
+  echo "Creating universal framework for platforms: ${platforms[*]}"
 
-  rm -r iphonesimulator
-  rm -r macosx
-  rm -r iphoneos/hermes.framework
+  for i in "${!platforms[@]}"; do
+    args+="-framework ${platforms[$i]}/hermes.framework "
+  done
+
+  xcodebuild -create-xcframework $args -output "${platforms[0]}/hermes.xcframework"
 
   cd - || exit 1
 }

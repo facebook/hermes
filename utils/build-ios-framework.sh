@@ -13,7 +13,7 @@ if [ ! -d destroot/Library/Frameworks/iphoneos/hermes.framework ]; then
     build_apple_framework "iphonesimulator" "x86_64;arm64" "$ios_deployment_target"
     build_apple_framework "catalyst" "x86_64;arm64" "$ios_deployment_target"
 
-    create_universal_framework
+    create_universal_framework "iphoneos" "iphonesimulator" "catalyst"
 else
     echo "Skipping; Clean \"destroot\" to rebuild".
 fi
