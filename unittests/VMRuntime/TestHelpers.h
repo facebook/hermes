@@ -257,15 +257,6 @@ inline HermesValue operator"" _hd(long double d) {
   return HermesValue::encodeDoubleValue(d);
 }
 
-/// A MetadataTable that has a public constructor for tests to use.
-class MetadataTableForTests final : public MetadataTable {
- public:
-  // The constructor is explicit to avoid incompatibilities between compilers.
-  template <int length>
-  explicit constexpr MetadataTableForTests(const Metadata (&table)[length])
-      : MetadataTable(table) {}
-};
-
 /// A Runtime that can take a custom VTableMap and Metadata table.
 class DummyRuntime final : public HandleRootOwner,
                            public PointerBase,
@@ -405,9 +396,7 @@ class DummyRuntimeTestFixtureBase : public ::testing::Test {
 
   GCScope gcScope;
 
-  DummyRuntimeTestFixtureBase(
-      MetadataTableForTests metaTable,
-      const GCConfig &gcConfig)
+  DummyRuntimeTestFixtureBase(MetadataTable metaTable, const GCConfig &gcConfig)
       : rt(DummyRuntime::create(metaTable, gcConfig)),
         runtime(rt.get()),
         gcScope(runtime) {}
