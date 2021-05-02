@@ -6,6 +6,7 @@
  */
 
 #include <hermes/VM/BuildMetadata.h>
+#include <hermes/VM/DummyObject.h>
 #include <hermes/VM/GC.h>
 #include <chrono>
 #include <functional>
@@ -16,26 +17,7 @@ using namespace hermes::vm;
 
 namespace {
 
-struct Dummy final : public GCCell {
-  static const VTable vt;
-
-  static Dummy *create(DummyRuntime &runtime) {
-    return runtime.makeAFixed<Dummy>(&runtime.getHeap());
-  }
-  static bool classof(const GCCell *cell) {
-    return cell->getVT() == &vt;
-  }
-
-  template <class C>
-  static constexpr uint32_t cellSizeImpl() {
-    static_assert(std::is_convertible<C *, Dummy *>::value, "must be a Dummy");
-    return 128;
-  }
-
-  Dummy(GC *gc) : GCCell(gc, &vt) {}
-};
-
-const VTable Dummy::vt{CellKind::UninitializedKind, cellSize<Dummy>()};
+using testhelpers::DummyObject;
 
 TEST(InstrumentationAPITest, RunCallbackWhenCollecting) {
   bool triggeredTripwire = false;
@@ -109,7 +91,7 @@ TEST(InstrumentationAPITest, RunCallbackAfterAllocatingMemoryOverLimit) {
   DummyRuntime &runtime = *rt;
   runtime.collect();
   EXPECT_FALSE(triggeredTripwire);
-  GCCell *cell = Dummy::create(runtime);
+  GCCell *cell = DummyObject::create(&runtime.getHeap());
   runtime.pointerRoots.push_back(&cell);
   runtime.collect();
   EXPECT_TRUE(triggeredTripwire);
@@ -131,7 +113,7 @@ TEST(InstrumentationAPITest, DontRunCallbackAfterAllocatingMemoryUnderLimit) {
   DummyRuntime &runtime = *rt;
   runtime.collect();
   EXPECT_FALSE(triggeredTripwire);
-  GCCell *cell = Dummy::create(runtime);
+  GCCell *cell = DummyObject::create(&runtime.getHeap());
   runtime.pointerRoots.push_back(&cell);
   runtime.collect();
   EXPECT_FALSE(triggeredTripwire);
