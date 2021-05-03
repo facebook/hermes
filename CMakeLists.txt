@@ -168,6 +168,9 @@ set(HERMES_ENABLE_CODE_COVERAGE OFF CACHE BOOL
 set(HERMES_ENABLE_LIBFUZZER OFF CACHE BOOL
   "Enable libfuzzer")
 
+set(HERMES_ENABLE_LPMFUZZERS OFF CACHE BOOL
+        "Enable LPM fuzzers based on libfuzzer")
+
 set(HERMES_ENABLE_FUZZILLI OFF CACHE BOOL
   "Enable fuzzilli")
 
