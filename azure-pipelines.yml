@@ -42,6 +42,19 @@ jobs:
 
     steps:
       - task: PowerShell@2
+        displayName: Build Hermes Compiler
+        inputs:
+          targetType: filePath
+          filePath: $(Build.SourcesDirectory)\cibuild.ps1
+          arguments:
+            -SourcesPath:$(Build.SourcesDirectory)
+            -OutputPath:$(Build.ArtifactStagingDirectory)
+            -Platform:x86
+            -Configuration:Release
+            -AppPlatform:win32
+            -CompilerBuild
+
+      - task: PowerShell@2
         displayName: Run the build script
         inputs:
           targetType: filePath
@@ -51,6 +64,7 @@ jobs:
             -OutputPath:$(Build.ArtifactStagingDirectory)
             -Platform:$(BuildPlatform)
             -Configuration:$(BuildConfiguration)
+            -AppPlatform:uwp
 
       - task: PublishBuildArtifacts@1
         displayName: "Publish artifacts"
@@ -83,6 +97,19 @@ jobs:
           BuildPlatform: arm64
 
     steps:
+      - task: PowerShell@2
+        displayName: Build Hermes Compiler
+        inputs:
+          targetType: filePath
+          filePath: $(Build.SourcesDirectory)\cibuild.ps1
+          arguments:
+            -SourcesPath:$(Build.SourcesDirectory)
+            -OutputPath:$(Build.ArtifactStagingDirectory)
+            -Platform:x86
+            -Configuration:Release
+            -AppPlatform:win32
+            -CompilerBuild
+
       - task: PowerShell@2
         displayName: Run the build script
         inputs:
