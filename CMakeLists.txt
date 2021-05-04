@@ -118,6 +118,15 @@ set(HERMESVM_PROFILER_NATIVECALL OFF CACHE BOOL
 set(HERMESVM_SERIALIZE OFF CACHE BOOL
   "Enable heap serialization and deserialization")
 
+CHECK_CXX_SOURCE_COMPILES(
+        "int main() { void *p = &&label; goto *p; label: return 0; }"
+        HAVE_COMPUTED_GOTO)
+if(HAVE_COMPUTED_GOTO)
+    set(DEFAULT_INTERPRETER_THREADING ON)
+else()
+    set(DEFAULT_INTERPRETER_THREADING OFF)
+endif()
+
 set(HERMESVM_INDIRECT_THREADING ${DEFAULT_INTERPRETER_THREADING} CACHE BOOL
   "Enable the indirect threaded interpreter")
 
@@ -282,16 +291,6 @@ if (HERMES_STATIC_LINK)
   set(CMAKE_EXE_LINKER_FLAGS "-static")
   set(HERMES_USE_STATIC_ICU ON)
   set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_STATIC_LIBRARY_SUFFIX}")
-endif()
-
-CHECK_CXX_SOURCE_COMPILES(
-  "int main() { void *p = &&label; goto *p; label: return 0; }"
-  HAVE_COMPUTED_GOTO)
-
-if(HAVE_COMPUTED_GOTO)
-  set(DEFAULT_INTERPRETER_THREADING ON)
-else()
-  set(DEFAULT_INTERPRETER_THREADING OFF)
 endif()
 
 # Check if the linker supports --gc-sections
