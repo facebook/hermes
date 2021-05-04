@@ -41,8 +41,9 @@ template <typename NeedsBarriers>
 GCHermesValueBase<HVType>::GCHermesValueBase(HVType hv, GC *gc, std::nullptr_t)
     : HVType{hv} {
   assert(!hv.isPointer() || !hv.getPointer(gc->getPointerBase()));
-  if (NeedsBarriers::value)
-    gc->constructorWriteBarrier(this, hv);
+  // No need to invoke any write barriers here, since the old value is
+  // uninitialized (so the snapshot barrier does not apply), and the new value
+  // is not a pointer (so the generational/relocation barrier does not apply).
 }
 
 template <typename HVType>
