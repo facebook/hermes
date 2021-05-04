@@ -514,9 +514,11 @@ hermesBuiltinCopyRestArgs(void *, Runtime *runtime, NativeArgs args) {
   auto array = *cr;
   JSArray::setStorageEndIndex(array, runtime, length);
 
+  NoAllocScope noAlloc{runtime};
+  JSArray *arrPtr = array.get();
   for (uint32_t i = 0; i != length; ++i) {
-    array->unsafeSetExistingElementAt(
-        array.get(), runtime, i, it->getArgRef(from));
+    JSArray::unsafeSetExistingElementAt(
+        arrPtr, runtime, i, it->getArgRef(from));
     ++from;
   }
 
