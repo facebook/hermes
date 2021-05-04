@@ -29,21 +29,6 @@ using namespace hermes;
 namespace cl {
 using llvh::cl::opt;
 
-static opt<bool> EnableJIT(
-    "jit",
-    llvh::cl::desc("enable JIT compilation"),
-    llvh::cl::init(false));
-
-static opt<bool> DumpJITCode(
-    "dump-jitcode",
-    llvh::cl::desc("dump JIT'ed code"),
-    llvh::cl::init(false));
-
-static opt<bool> JITCrashOnError(
-    "jit-crash-on-error",
-    llvh::cl::desc("crash on any JIT compilation error"),
-    llvh::cl::init(false));
-
 static opt<unsigned> Repeat(
     "Xrepeat",
     llvh::cl::desc("Repeat execution N number of times"),
@@ -114,7 +99,6 @@ static int executeHBCBytecodeFromCL(
                   .withAllocInYoung(cl::GCAllocYoung)
                   .withRevertToYGAtTTI(cl::GCRevertToYGAtTTI)
                   .build())
-          .withEnableJIT(cl::DumpJITCode || cl::EnableJIT)
           .withEnableEval(cl::EnableEval)
           .withVerifyEvalIR(cl::VerifyIR)
           .withOptimizedEval(cl::OptimizedEval)
@@ -122,8 +106,7 @@ static int executeHBCBytecodeFromCL(
           .withVMExperimentFlags(cl::VMExperimentFlags)
           .withES6Promise(cl::ES6Promise)
           .withES6Proxy(cl::ES6Proxy)
-          .withES6Symbol(cl::ES6Symbol)
-          .withES6Intl(cl::ES6Intl)
+          .withIntl(cl::Intl)
           .withEnableSampleProfiling(cl::SampleProfiling)
           .withRandomizeMemoryLayout(cl::RandomizeMemoryLayout)
           .withTrackIO(cl::TrackBytecodeIO)
@@ -141,8 +124,6 @@ static int executeHBCBytecodeFromCL(
   options.profilerSymbolsFile = cl::ProfilerSymbolsFile;
 #endif
   options.timeLimit = cl::ExecutionTimeLimit;
-  options.dumpJITCode = cl::DumpJITCode;
-  options.jitCrashOnError = cl::JITCrashOnError;
   options.stopAfterInit = cl::StopAfterInit;
   options.forceGCBeforeStats = cl::GCBeforeStats;
   options.stabilizeInstructionCount = cl::StableInstructionCount;
@@ -189,10 +170,9 @@ static vm::RuntimeConfig getReplRuntimeConfig() {
       .withVMExperimentFlags(cl::VMExperimentFlags)
       .withES6Promise(cl::ES6Promise)
       .withES6Proxy(cl::ES6Proxy)
-      .withES6Symbol(cl::ES6Symbol)
-      .withES6Intl(cl::ES6Intl)
-      .withEnableHermesInternal(true)
-      .withEnableHermesInternalTestMethods(true)
+      .withIntl(cl::Intl)
+      .withEnableHermesInternal(cl::EnableHermesInternal)
+      .withEnableHermesInternalTestMethods(cl::EnableHermesInternalTestMethods)
       .withAllowFunctionToStringWithRuntimeSource(cl::AllowFunctionToString)
       .build();
 }

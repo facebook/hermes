@@ -50,11 +50,6 @@ struct Type2 : public GCCell {
 };
 VTable Type2::vt(CellKind::UninitializedKind, sizeof(Type2));
 
-MetadataTableForTests getMetadataTable() {
-  static const Metadata storage[] = {Metadata(), Metadata()};
-  return MetadataTableForTests(storage);
-}
-
 TEST(CastingTest, SmokeTest) {
   auto rt = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);
   DummyRuntime &runtime = *rt;

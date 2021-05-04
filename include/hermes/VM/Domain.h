@@ -293,13 +293,15 @@ class RequireContext final : public JSObject {
   /// \return the domain for this require context.
   static Domain *getDomain(Runtime *runtime, RequireContext *self) {
     return vmcast<Domain>(
-        JSObject::getInternalProperty(self, runtime, domainPropIndex()));
+        JSObject::getDirectSlotValue<domainPropIndex()>(self).getObject(
+            runtime));
   }
 
   /// \return the current dirname for this require context.
   static StringPrimitive *getDirname(Runtime *runtime, RequireContext *self) {
     return vmcast<StringPrimitive>(
-        JSObject::getInternalProperty(self, runtime, dirnamePropIndex()));
+        JSObject::getDirectSlotValue<dirnamePropIndex()>(self).getString(
+            runtime));
   }
 
 #ifdef HERMESVM_SERIALIZE

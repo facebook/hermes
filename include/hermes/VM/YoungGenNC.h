@@ -160,6 +160,7 @@ class YoungGen : public GCGeneration {
   /// redirect *hv to point where the already-installed forwarding pointer
   /// points.
   void ensureReferentCopied(HermesValue *hv);
+  void ensureReferentCopied(SmallHermesValue *hv);
 
   /// If *ptrLoc is a pointer into the current generation, check
   /// whether the referent has already been evacuated.  If not, copy

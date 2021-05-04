@@ -133,16 +133,40 @@ Value CrashFunction(
     const Value *args,
     size_t numArgs) {
   // crashes when calling FuzzilliCrash(1) and FuzzilliCrash(2)
-  if (numArgs != 1 || !args[0].isNumber())
+  if (numArgs != 2 || !args[0].isString())
     return Value();
-  auto crashCode = args[0].getNumber();
-  if (crashCode == 1) {
-    *((int *)0x1) = 2;
-    exit(-1);
-  } else if (crashCode == 2)
-    assert(0);
-  else
-    return Value();
+  String funcString = args[0].getString(rt);
+  if (String::strictEquals(
+          rt, funcString, String::createFromAscii(rt, "FUZZILLI_PRINT"))) {
+    // The Fuzzilli Print operation can take either a number or a string
+    static FILE *fzliout = fdopen(REPRL_DWFD, "w");
+    if (!fzliout) {
+      fprintf(
+          stderr,
+          "Fuzzer output channel not available, printing to stdout instead\n");
+      fzliout = stdout;
+    }
+    if (args[1].isNumber()) {
+      double num = args[1].asNumber();
+      fprintf(fzliout, "%.0f\n", num);
+    } else if (args[1].isString()) {
+      std::string outputString = args[1].getString(rt).utf8(rt);
+      fprintf(fzliout, "%s\n", outputString.c_str());
+    }
+    fflush(fzliout);
+  } else if (
+      String::strictEquals(
+          rt, funcString, String::createFromAscii(rt, "FUZZILLI_CRASH")) &&
+      args[1].isNumber()) {
+    double crashCode = args[1].getNumber();
+    if (crashCode == 0.0) {
+      *((int *)0x1) = 2;
+      exit(-1);
+    } else if (crashCode == 1.0) {
+      assert(1 == 0);
+    }
+  }
+  return Value();
 }
 
 class MemoryBuffer : public facebook::jsi::Buffer {
@@ -178,13 +202,10 @@ int main(int argc, char **argv) {
   while (true) {
     auto runtime = makeHermesRuntime(::hermes::vm::RuntimeConfig::Builder()
                                          .withES6Proxy(true)
-                                         .withES6Intl(true)
-                                         .withES6Symbol(true)
                                          .withEnableGenerator(true)
                                          .withEnableHermesInternal(true)
-                                         .withEnableJIT(true)
                                          .build());
-    auto crashFunctionName = "FuzzilliCrash";
+    auto crashFunctionName = "fuzzilli";
     auto crashFunctionProp =
         facebook::jsi::PropNameID::forAscii(*runtime, crashFunctionName);
     auto crashFunctionDef = Function::createFromHostFunction(

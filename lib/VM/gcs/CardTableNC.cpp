@@ -182,3 +182,4 @@ void CardTable::verifyBoundaries(char *start, char *level) const {
 
 } // namespace vm
 } // namespace hermes
+#undef DEBUG_TYPE

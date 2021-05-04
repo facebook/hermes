@@ -15,9 +15,21 @@ namespace vm {
 
 /// A container object for primitive HermesValues.
 class PrimitiveBox : public JSObject {
- public:
   using Super = JSObject;
 
+ protected:
+  PrimitiveBox(
+      Runtime *runtime,
+      const VTable *vt,
+      JSObject *parent,
+      HiddenClass *clazz)
+      : JSObject(runtime, vt, parent, clazz) {}
+
+  static constexpr SlotIndex primitiveValuePropIndex() {
+    return numOverlapSlots<PrimitiveBox>() + ANONYMOUS_PROPERTY_SLOTS - 1;
+  }
+
+ public:
 #ifdef HERMESVM_SERIALIZE
   PrimitiveBox(Deserializer &d, const VTable *vt);
 #endif
@@ -34,28 +46,17 @@ class PrimitiveBox : public JSObject {
   }
 
   /// \return the [[PrimitiveValue]] internal property.
-  static HermesValue getPrimitiveValue(JSObject *self, Runtime *runtime) {
-    return JSObject::getInternalProperty(
-        self, runtime, PrimitiveBox::primitiveValuePropIndex());
+  static SmallHermesValue getPrimitiveValue(JSObject *self) {
+    return JSObject::getDirectSlotValue<
+        PrimitiveBox::primitiveValuePropIndex()>(self);
   }
 
   /// Set the [[PrimitiveValue]] internal property.
   static void
-  setPrimitiveValue(JSObject *self, Runtime *runtime, HermesValue value) {
-    return JSObject::setInternalProperty(
-        self, runtime, PrimitiveBox::primitiveValuePropIndex(), value);
-  }
-
- protected:
-  PrimitiveBox(
-      Runtime *runtime,
-      const VTable *vt,
-      JSObject *parent,
-      HiddenClass *clazz)
-      : JSObject(runtime, vt, parent, clazz) {}
-
-  static constexpr SlotIndex primitiveValuePropIndex() {
-    return numOverlapSlots<PrimitiveBox>() + ANONYMOUS_PROPERTY_SLOTS - 1;
+  setPrimitiveValue(JSObject *self, Runtime *runtime, SmallHermesValue value) {
+    return JSObject::setDirectSlotValue<
+        PrimitiveBox::primitiveValuePropIndex()>(
+        self, value, &runtime->getHeap());
   }
 };
 
@@ -101,7 +102,7 @@ class JSString final : public PrimitiveBox {
   static const StringPrimitive *getPrimitiveString(
       JSObject *self,
       Runtime *runtime) {
-    return getPrimitiveValue(self, runtime).getString();
+    return getPrimitiveValue(self).getString(runtime);
   }
 
   JSString(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
@@ -219,12 +220,10 @@ class JSNumber final : public PrimitiveBox {
     return cell->getKind() == CellKind::NumberObjectKind;
   }
 
-  static PseudoHandle<JSNumber>
+  static Handle<JSNumber>
   create(Runtime *runtime, double value, Handle<JSObject> prototype);
 
-  static PseudoHandle<JSNumber> create(
-      Runtime *runtime,
-      Handle<JSObject> prototype) {
+  static Handle<JSNumber> create(Runtime *runtime, Handle<JSObject> prototype) {
     return create(runtime, 0.0, prototype);
   }
 
@@ -280,11 +279,8 @@ class JSSymbol final : public PrimitiveBox {
   }
 
   /// Return the [[PrimitiveValue]] internal property as a string.
-  static const PseudoHandle<SymbolID> getPrimitiveSymbol(
-      JSObject *self,
-      Runtime *runtime) {
-    return PseudoHandle<SymbolID>::create(
-        HermesValueTraits<SymbolID>::decode(getPrimitiveValue(self, runtime)));
+  static const PseudoHandle<SymbolID> getPrimitiveSymbol(JSObject *self) {
+    return PseudoHandle<SymbolID>::create(getPrimitiveValue(self).getSymbol());
   }
 
 #ifdef HERMESVM_SERIALIZE

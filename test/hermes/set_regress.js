@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -gc-sanitize-handles=0 -gc-max-heap=4M %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -gc-sanitize-handles=0 -gc-max-heap=12M %s | %FileCheck --match-full-lines %s
 
 function testCompact() {
   print("testCompact");

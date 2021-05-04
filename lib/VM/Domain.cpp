@@ -463,13 +463,18 @@ Handle<RequireContext> RequireContext::create(
       runtime->getHiddenClassForPrototype(*objProto, ANONYMOUS_PROPERTY_SLOTS));
   auto self = JSObjectInit::initToHandle(runtime, cell);
 
-  JSObject::setInternalProperty(
-      *self, runtime, domainPropIndex(), domain.getHermesValue());
-  JSObject::setInternalProperty(
-      *self, runtime, dirnamePropIndex(), dirname.getHermesValue());
-
+  JSObject::setDirectSlotValue<domainPropIndex()>(
+      *self,
+      SmallHermesValue::encodeObjectValue(domain.get(), runtime),
+      &runtime->getHeap());
+  JSObject::setDirectSlotValue<dirnamePropIndex()>(
+      *self,
+      SmallHermesValue::encodeStringValue(dirname.get(), runtime),
+      &runtime->getHeap());
   return self;
 }
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

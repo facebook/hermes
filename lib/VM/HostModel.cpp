@@ -147,3 +147,5 @@ CallResult<HermesValue> HostObject::createWithoutPrototype(
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

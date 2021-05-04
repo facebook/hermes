@@ -480,3 +480,5 @@ CallResult<bool> JSTypedArray<T, C>::_setOwnIndexedImpl(
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

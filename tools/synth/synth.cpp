@@ -64,9 +64,13 @@ static opt<MarkerAction> Action(
             "Take a heap timeline from the beginning of execution until the "
             "marker to stop at"),
         clEnumValN(
-            MarkerAction::SAMPLE,
-            "sample",
-            "Take a heap sampling profile at the marker to stop at")));
+            MarkerAction::SAMPLE_MEMORY,
+            "sample-memory",
+            "Take a heap sampling profile at the marker to stop at"),
+        clEnumValN(
+            MarkerAction::SAMPLE_TIME,
+            "sample-time",
+            "Take a CPU sampling profile at the marker to stop at")));
 
 static opt<bool> UseTraceConfig(
     "use-trace-config",
@@ -189,9 +193,11 @@ static const char *fileExtensionForAction(MarkerAction action) {
       return "heapsnapshot";
     case MarkerAction::TIMELINE:
       return "heaptimeline";
-    case MarkerAction::SAMPLE:
+    case MarkerAction::SAMPLE_MEMORY:
       return "heapprofile";
-    case MarkerAction::NONE:
+    case MarkerAction::SAMPLE_TIME:
+      return "cpuprofile";
+    default:
       llvm_unreachable(
           "Should never call fileExtensionForAction with a none action");
   }

@@ -61,3 +61,4 @@ void FreelistDeserialize(Deserializer &, CellKind) {
 
 } // namespace vm
 } // namespace hermes
+#undef DEBUG_TYPE

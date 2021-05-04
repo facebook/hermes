@@ -118,6 +118,38 @@ static CallResult<HermesValue> constructErrorObject(
     }
   }
 
+  // https://tc39.es/proposal-error-cause/
+  // InstallErrorCause(O, options).
+  // If Type(options) is Object and ? HasProperty(options, "cause") is true
+  if (Handle<JSObject> options = args.dyncastArg<JSObject>(1)) {
+    GCScopeMarkerRAII marker{runtime};
+    NamedPropertyDescriptor desc;
+    Handle<JSObject> propObj =
+        runtime->makeHandle(JSObject::getNamedDescriptorPredefined(
+            options, runtime, Predefined::cause, desc));
+    if (propObj) {
+      // a. Let cause be ? Get(options, "cause").
+      auto causeRes = JSObject::getNamedPropertyValue_RJS(
+          selfHandle, runtime, std::move(propObj), desc);
+      if (LLVM_UNLIKELY(causeRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      Handle<> cause = runtime->makeHandle(std::move(*causeRes));
+      // b. Perform ! CreateNonEnumerableDataPropertyOrThrow(O, "cause", cause).
+      if (LLVM_UNLIKELY(
+              JSObject::defineOwnProperty(
+                  selfHandle,
+                  runtime,
+                  Predefined::getSymbolID(Predefined::cause),
+                  DefinePropertyFlags::getNewNonEnumerableFlags(),
+                  cause,
+                  PropOpFlags().plusThrowOnError()) ==
+              ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+    }
+  }
+
   return selfHandle.getHermesValue();
 }
 

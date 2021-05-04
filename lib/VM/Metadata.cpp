@@ -20,6 +20,7 @@ using ArrayType = ArrayData::ArrayType;
 Metadata::Metadata(Builder &&mb)
     : pointers_(mb.pointers_.size()),
       values_(mb.values_.size()),
+      smallValues_(mb.smallValues_.size()),
       symbols_(mb.symbols_.size()),
       array_(std::move(mb.array_)) {
   auto copier =
@@ -38,12 +39,14 @@ Metadata::Metadata(Builder &&mb)
       };
   copier(mb.pointers_, pointers_);
   copier(mb.values_, values_);
+  copier(mb.smallValues_, smallValues_);
   copier(mb.symbols_, symbols_);
 }
 
 Metadata::Metadata(Metadata &&that)
     : pointers_(std::move(that.pointers_)),
       values_(std::move(that.values_)),
+      smallValues_(std::move(that.smallValues_)),
       symbols_(std::move(that.symbols_)),
       array_(std::move(that.array_)) {}
 
@@ -51,6 +54,7 @@ Metadata::Builder::Builder(const void *base)
     : base_(reinterpret_cast<const char *>(base)),
       pointers_(),
       values_(),
+      smallValues_(),
       symbols_(),
       array_() {}
 
@@ -78,6 +82,19 @@ void Metadata::Builder::addField(
   size_t size = sizeof(GCHermesValue);
   assert(!fieldConflicts(offset, size) && "fields should not overlap");
   values_[offset] = std::make_pair(name, size);
+}
+
+void Metadata::Builder::addField(const GCSmallHermesValue *fieldLocation) {
+  addField(nullptr, fieldLocation);
+}
+
+void Metadata::Builder::addField(
+    const char *name,
+    const GCSmallHermesValue *fieldLocation) {
+  offset_t offset = reinterpret_cast<const char *>(fieldLocation) - base_;
+  size_t size = sizeof(GCSmallHermesValue);
+  assert(!fieldConflicts(offset, size) && "fields should not overlap");
+  smallValues_[offset] = std::make_pair(name, size);
 }
 
 void Metadata::Builder::addField(const GCSymbolID *fieldLocation) {
@@ -146,6 +163,7 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const Metadata &meta) {
   };
   printOffsetAndNameAndSizes(os, meta.pointers_);
   printOffsetAndNameAndSizes(os, meta.values_);
+  printOffsetAndNameAndSizes(os, meta.smallValues_);
   printOffsetAndNameAndSizes(os, meta.symbols_);
   os << "]";
   if (meta.array_) {
@@ -170,6 +188,9 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &os, ArrayType arraytype) {
       break;
     case ArrayType::HermesValue:
       os << "HermesValue";
+      break;
+    case ArrayType::SmallHermesValue:
+      os << "SmallHermesValue";
       break;
     case ArrayType::Symbol:
       os << "Symbol";

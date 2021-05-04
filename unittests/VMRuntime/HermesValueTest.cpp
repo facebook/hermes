@@ -240,8 +240,8 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
   // Encode symbols.
   for (int i = 0; i < 1000; i++) {
     // Check that we can encode the whole range of ints.
-    SymbolID value =
-        SymbolID::unsafeCreate((uint32_t)getRandomUInt64(0, UINT32_MAX));
+    SymbolID value = SymbolID::unsafeCreate(
+        (uint32_t)getRandomUInt64(0, SymbolID::LAST_INVALID_ID - 1));
     auto V = HermesValue::encodeSymbolValue(value);
     EXPECT_FALSE(V.isNumber());
     EXPECT_FALSE(V.isDouble());

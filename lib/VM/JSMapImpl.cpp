@@ -198,3 +198,5 @@ template class JSMapIteratorImpl<CellKind::SetIteratorKind>;
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

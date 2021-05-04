@@ -483,6 +483,30 @@ takeSnapshot(GC &gc, JSONFactory &factory, const char *file, int line) {
 #define PARSE_SNAPSHOT(...) parseSnapshot(__VA_ARGS__, __FILE__, __LINE__)
 #define TAKE_SNAPSHOT(...) takeSnapshot(__VA_ARGS__, __FILE__, __LINE__)
 
+TEST(HeapSnapshotTest, IDReversibleTest) {
+  // Make sure an ID <-> Object mapping is preserved across collections.
+  auto runtime = DummyRuntime::create(
+      getMetadataTable(),
+      GCConfig::Builder()
+          .withInitHeapSize(1024)
+          .withMaxHeapSize(1024 * 100)
+          .build());
+  DummyRuntime &rt = *runtime;
+  auto &gc = rt.getHeap();
+  GCScope gcScope(&rt);
+
+  // Make a dummy object.
+  auto obj = rt.makeHandle(DummyObject::create(rt));
+  const auto objID = gc.getObjectID(obj.get());
+  // Make sure the ID can be translated back to the object pointer.
+  EXPECT_EQ(obj.get(), gc.getObjectForID(objID));
+  // Run a collection to move things around.
+  gc.collect("test");
+  // Test that the ID is the same and it can be reversed.
+  EXPECT_EQ(objID, gc.getObjectID(obj.get()));
+  EXPECT_EQ(obj.get(), gc.getObjectForID(objID));
+}
+
 TEST(HeapSnapshotTest, HeaderTest) {
   JSONFactory::Allocator alloc;
   JSONFactory jsonFactory{alloc};
@@ -762,6 +786,12 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
 
 using HeapSnapshotRuntimeTest = RuntimeTestFixture;
 
+template <typename T>
+size_t firstNamedPropertyEdge() {
+  // parent, __proto__, class, directProp$i
+  return JSObject::DIRECT_PROPERTY_SLOTS - JSObject::numOverlapSlots<T>() + 3;
+}
+
 TEST_F(HeapSnapshotRuntimeTest, FunctionLocationForLazyCode) {
   // Similar test to the above, but for lazy-compiled source.
   JSONFactory::Allocator alloc;
@@ -795,7 +825,7 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationForLazyCode) {
       "myGlobal",
       funcID,
       func->getAllocatedSize(),
-      7};
+      firstNamedPropertyEdge<JSFunction>() + 3};
   EXPECT_EQ(node, expected);
   // Edges aren't tested in this test.
 
@@ -838,7 +868,7 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationAndNameTest) {
       "foo",
       funcID,
       func->getAllocatedSize(),
-      7};
+      firstNamedPropertyEdge<JSFunction>() + 3};
   EXPECT_EQ(node, expected);
   // Edges aren't tested in this test.
 
@@ -882,7 +912,7 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionDisplayNameTest) {
       "bar",
       funcID,
       func->getAllocatedSize(),
-      12};
+      firstNamedPropertyEdge<JSFunction>() + 8};
   EXPECT_EQ(node, expected);
 }
 
@@ -906,6 +936,7 @@ TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
 
   const auto mapID = runtime->getHeap().getObjectID(map.get());
   auto nodesAndEdges = FIND_NODE_AND_EDGES_FOR_ID(mapID, nodes, edges, strings);
+  auto firstNamed = firstNamedPropertyEdge<JSWeakMap>();
   EXPECT_EQ(
       nodesAndEdges.first,
       Node(
@@ -913,12 +944,12 @@ TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
           "WeakMap",
           mapID,
           map->getAllocatedSize(),
-          6));
-  EXPECT_EQ(nodesAndEdges.second.size(), 6);
+          firstNamed + 3));
+  EXPECT_EQ(nodesAndEdges.second.size(), firstNamed + 3);
 
   // Test the weak edge.
   EXPECT_EQ(
-      nodesAndEdges.second[3],
+      nodesAndEdges.second[firstNamed],
       Edge(
           HeapSnapshot::EdgeType::Weak,
           "0",
@@ -926,7 +957,7 @@ TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
   // Test the native edge.
   const auto nativeMapID = map->getMapID(&runtime->getHeap());
   EXPECT_EQ(
-      nodesAndEdges.second[5],
+      nodesAndEdges.second[firstNamed + 2],
       Edge(HeapSnapshot::EdgeType::Internal, "map", nativeMapID));
   EXPECT_EQ(
       FIND_NODE_FOR_ID(nativeMapID, nodes, strings),
@@ -995,9 +1026,7 @@ TEST_F(HeapSnapshotRuntimeTest, PropertyUpdatesTest) {
   const auto objID = runtime->getHeap().getObjectID(obj.get());
   auto nodesAndEdges = FIND_NODE_AND_EDGES_FOR_ID(objID, nodes, edges, strings);
 
-  const auto FIRST_NAMED_PROPERTY_EDGE =
-      // parent, __proto__, class, directProp$i
-      JSObject::DIRECT_PROPERTY_SLOTS + 3;
+  const auto FIRST_NAMED_PROPERTY_EDGE = firstNamedPropertyEdge<JSObject>();
 
   EXPECT_EQ(
       nodesAndEdges.first,
@@ -1053,6 +1082,7 @@ TEST_F(HeapSnapshotRuntimeTest, ArrayElements) {
   const JSONArray &edges = *llvh::cast<JSONArray>(root->at("edges"));
   const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
 
+  const auto FIRST_NAMED_PROPERTY_EDGE = firstNamedPropertyEdge<JSArray>();
   auto nodeAndEdges =
       FIND_NODE_AND_EDGES_FOR_ID(arrayID, nodes, edges, strings);
   EXPECT_EQ(
@@ -1062,22 +1092,22 @@ TEST_F(HeapSnapshotRuntimeTest, ArrayElements) {
           "Array",
           arrayID,
           array->getAllocatedSize(),
-          10));
+          FIRST_NAMED_PROPERTY_EDGE + 5));
   // The last edges are the element edges.
   EXPECT_EQ(
-      nodeAndEdges.second[7],
+      nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 1],
       Edge(
           HeapSnapshot::EdgeType::Element,
           (1 << 20) + 1000,
           runtime->getHeap().getObjectID(thirdElement.get())));
   EXPECT_EQ(
-      nodeAndEdges.second[8],
+      nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 3],
       Edge(
           HeapSnapshot::EdgeType::Element,
           10,
           runtime->getHeap().getObjectID(firstElement.get())));
   EXPECT_EQ(
-      nodeAndEdges.second[9],
+      nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 4],
       Edge(
           HeapSnapshot::EdgeType::Element,
           15,

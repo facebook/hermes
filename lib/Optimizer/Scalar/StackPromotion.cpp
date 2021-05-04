@@ -445,3 +445,5 @@ bool StackPromotion::runOnFunction(Function *F) {
 Pass *hermes::createStackPromotion() {
   return new StackPromotion();
 }
+
+#undef DEBUG_TYPE

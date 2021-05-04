@@ -318,7 +318,7 @@ CallResult<HermesValue> createDynamicFunction(
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto params = runtime->makeHandle(std::move(*arrRes));
+  auto params = *arrRes;
 
   // Body of the resultant function.
   MutableHandle<StringPrimitive> body{runtime};

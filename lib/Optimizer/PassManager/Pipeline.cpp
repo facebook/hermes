@@ -102,3 +102,5 @@ void hermes::runDebugOptimizationPasses(Module &M) {
 void hermes::runNoOptimizationPasses(Module &) {
   LLVM_DEBUG(dbgs() << "Running -O0 optimizations...\n");
 }
+
+#undef DEBUG_TYPE

@@ -150,3 +150,5 @@ bool Auditor::runOnFunction(Function *F) {
 Pass *hermes::createAuditor() {
   return new Auditor();
 }
+
+#undef DEBUG_TYPE

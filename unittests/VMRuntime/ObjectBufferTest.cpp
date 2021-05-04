@@ -168,3 +168,4 @@ TEST_F(ObjectBufferTest, TestNewObjectWithBuffer) {
 }
 
 } // anonymous namespace
+#undef DEBUG_TYPE

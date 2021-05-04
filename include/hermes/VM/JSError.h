@@ -134,7 +134,7 @@ class JSError final : public JSObject {
   StackTracePtr stacktrace_;
 
   /// A list of Domains which are referenced by the stacktrace_.
-  GCPointer<ArrayStorage> domains_;
+  GCPointer<ArrayStorageSmall> domains_;
 
   /// If not null, an array of function names as the 'name' property of the
   /// Callables. This is parallel to the stack trace array.

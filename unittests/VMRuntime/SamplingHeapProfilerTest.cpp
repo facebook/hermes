@@ -167,7 +167,7 @@ foo();
   // Hold onto this array so it isn't collected when the profile is finished.
   auto arrayToHold = runtime->makeHandle<JSArray>(*res);
   // Make sure it's the correct array.
-  ASSERT_EQ(JSArray::getLength(*arrayToHold), 500);
+  ASSERT_EQ(JSArray::getLength(*arrayToHold, runtime), 500);
 
   JSONObject *root = TAKE_PROFILE(runtime, jsonFactory);
   ASSERT_NE(root, nullptr);

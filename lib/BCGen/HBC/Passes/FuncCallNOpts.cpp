@@ -58,3 +58,5 @@ bool FuncCallNOpts::runOnFunction(Function *F) {
   }
   return changed;
 }
+
+#undef DEBUG_TYPE

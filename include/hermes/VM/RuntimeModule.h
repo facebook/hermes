@@ -318,6 +318,11 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// \return a raw pointer to the domain which owns this RuntimeModule.
   inline Domain *getDomainUnsafe(Runtime *);
 
+  /// \return a raw pointer to the domain which owns this RuntimeModule.
+  /// Does not execute any read or write barriers on the GC. Should only be
+  /// used during a signal handler or from a non-mutator thread.
+  inline Domain *getDomainForSamplingProfiler();
+
   /// \return the Runtime of this module.
   Runtime *getRuntime() {
     return runtime_;

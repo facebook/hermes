@@ -179,6 +179,20 @@ void Serializer::writeCurrentOffset() {
   writeInt<size_t>(writtenBytes_);
 }
 
+void Serializer::writeSmallHermesValue(SmallHermesValue shv) {
+  if (shv.isPointer()) {
+    void *pointer = shv.getPointer(runtime_);
+    uint32_t id = lookupObject(pointer);
+    // Replace the pointer with the ID.
+    shv.unsafeUpdateRelocationID(id);
+    writeData(&shv, sizeof(shv));
+  } else {
+    writeData(&shv, sizeof(shv));
+  }
+}
+
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE
 #endif

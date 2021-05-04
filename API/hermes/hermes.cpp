@@ -57,6 +57,7 @@
 #include <list>
 #include <mutex>
 #include <system_error>
+#include <unordered_map>
 
 #ifdef HERMESJSI_ON_STACK
 #include <future>
@@ -677,7 +678,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
     } else if (value.isBool()) {
       return vm::HermesValue::encodeBoolValue(value.getBool());
     } else if (value.isNumber()) {
-      return vm::HermesValue::encodeNumberValue(value.getNumber());
+      return vm::HermesValue::encodeUntrustedDoubleValue(value.getNumber());
     } else if (value.isSymbol() || value.isString() || value.isObject()) {
       return phv(value);
     } else {
@@ -694,7 +695,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       return vm::Runtime::getBoolValue(value.getBool());
     } else if (value.isNumber()) {
       return runtime_.makeHandle(
-          vm::HermesValue::encodeNumberValue(value.getNumber()));
+          vm::HermesValue::encodeUntrustedDoubleValue(value.getNumber()));
     } else if (value.isSymbol() || value.isString() || value.isObject()) {
       return vm::Handle<vm::HermesValue>(&phv(value));
     } else {
@@ -738,6 +739,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::Value evaluateJavaScript(
       const std::shared_ptr<const jsi::Buffer> &buffer,
       const std::string &sourceURL) override;
+  bool drainMicrotasks(int maxMicrotasksHint = -1) override;
   jsi::Object global() override;
 
   std::string description() override;
@@ -919,8 +921,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
         if (arrayRes == vm::ExecutionStatus::EXCEPTION) {
           return vm::ExecutionStatus::EXCEPTION;
         }
-        vm::Handle<vm::JSArray> arrayHandle =
-            rt_.runtime_.makeHandle(std::move(*arrayRes));
+        vm::Handle<vm::JSArray> arrayHandle = *arrayRes;
 
         vm::GCScope gcScope{&rt_.runtime_};
         vm::MutableHandle<vm::SymbolID> tmpHandle{&rt_.runtime_};
@@ -1145,18 +1146,33 @@ void HermesRuntime::dumpSampledTraceToStream(llvh::raw_ostream &stream) {
   ::hermes::vm::SamplingProfiler::dumpChromeTraceGlobal(stream);
 }
 
-/*static*/ std::vector<int64_t> HermesRuntime::getExecutedFunctions() {
-  std::vector<::hermes::vm::CodeCoverageProfiler::FuncInfo> executedFuncs =
-      ::hermes::vm::CodeCoverageProfiler::getExecutedFunctions();
-  std::vector<int64_t> res;
-  std::transform(
-      executedFuncs.begin(),
-      executedFuncs.end(),
-      std::back_inserter(res),
-      [](const ::hermes::vm::CodeCoverageProfiler::FuncInfo &entry) {
-        return ((int64_t)entry.moduleId << 32) + entry.funcVirtualOffset;
-      });
-  return res;
+/*static*/ std::unordered_map<std::string, std::vector<std::string>>
+HermesRuntime::getExecutedFunctions() {
+  std::unordered_map<
+      std::string,
+      std::vector<::hermes::vm::CodeCoverageProfiler::FuncInfo>>
+      executedFunctionsByVM =
+          ::hermes::vm::CodeCoverageProfiler::getExecutedFunctions();
+  std::unordered_map<std::string, std::vector<std::string>> result;
+
+  for (auto const &x : executedFunctionsByVM) {
+    std::vector<std::string> res;
+    std::transform(
+        x.second.begin(),
+        x.second.end(),
+        std::back_inserter(res),
+        [](const ::hermes::vm::CodeCoverageProfiler::FuncInfo &entry) {
+          std::stringstream ss;
+          ss << entry.moduleId;
+          ss << ":";
+          ss << entry.funcVirtualOffset;
+          ss << ":";
+          ss << entry.debugInfo;
+          return ss.str();
+        });
+    result.emplace(x.first, res);
+  }
+  return result;
 }
 
 /*static*/ bool HermesRuntime::isCodeCoverageProfilerEnabled() {
@@ -1225,6 +1241,26 @@ uint64_t HermesRuntime::getUniqueID(const jsi::PropNameID &pni) const {
       impl(this)->phv(pni).getSymbol());
 }
 
+uint64_t HermesRuntime::getUniqueID(const jsi::Value &val) const {
+  vm::HermesValue hv = HermesRuntimeImpl::hvFromValue(val);
+  // 0 is reserved as a non-ID.
+  return impl(this)->runtime_.getHeap().getSnapshotID(hv).getValueOr(0);
+}
+
+jsi::Value HermesRuntime::getObjectForID(uint64_t id) {
+  vm::GCCell *ptr = static_cast<vm::GCCell *>(
+      impl(this)->runtime_.getHeap().getObjectForID(id));
+  if (ptr && vm::vmisa<vm::JSObject>(ptr)) {
+    return impl(this)->add<jsi::Object>(
+        vm::HermesValue::encodeObjectValue(ptr));
+  }
+  // If the ID doesn't map to a pointer, or that pointer isn't an object,
+  // return null.
+  // This is because a jsi::Object can't be used to represent something internal
+  // to the VM like a HiddenClass.
+  return jsi::Value::null();
+}
+
 /// Get a structure representing the enviroment-dependent behavior, so
 /// it can be written into the trace for later replay.
 const ::hermes::vm::MockedEnvironment &HermesRuntime::getMockedEnvironment()
@@ -1286,12 +1322,12 @@ void HermesRuntime::debugJavaScript(
 
 void HermesRuntime::registerForProfiling() {
   vm::Runtime &runtime = impl(this)->runtime_;
-  runtime.samplingProfiler_ =
+  runtime.samplingProfiler =
       std::make_unique<::hermes::vm::SamplingProfiler>(&runtime);
 }
 
 void HermesRuntime::unregisterForProfiling() {
-  impl(this)->runtime_.samplingProfiler_.reset();
+  impl(this)->runtime_.samplingProfiler.reset();
 }
 
 void HermesRuntime::watchTimeLimit(uint32_t timeoutInMs) {
@@ -1454,6 +1490,15 @@ jsi::Value HermesRuntimeImpl::evaluateJavaScript(
     const std::shared_ptr<const jsi::Buffer> &buffer,
     const std::string &sourceURL) {
   return evaluateJavaScriptWithSourceMap(buffer, nullptr, sourceURL);
+}
+
+bool HermesRuntimeImpl::drainMicrotasks(int maxMicrotasksHint) {
+  if (runtime_.useJobQueue()) {
+    checkStatus(runtime_.drainJobs());
+  }
+  // \c drainJobs is currently an unbounded execution, hence no exceptions
+  // implies drained until TODO(T89426441): \c maxMicrotasksHint is supported
+  return true;
 }
 
 jsi::Object HermesRuntimeImpl::global() {

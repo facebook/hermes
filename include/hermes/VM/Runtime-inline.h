@@ -21,6 +21,10 @@ inline Callable *Runtime::getBuiltinCallable(unsigned builtinMethodID) {
   return builtins_[builtinMethodID];
 }
 
+inline void Runtime::enqueueJob(Callable *job) {
+  jobQueue_.push_back(job);
+}
+
 inline Handle<HiddenClass> Runtime::getHiddenClassForPrototype(
     JSObject *proto,
     unsigned reservedSlots) {

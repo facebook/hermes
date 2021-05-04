@@ -55,7 +55,7 @@ booleanConstructor(void *, Runtime *runtime, NativeArgs args) {
   if (args.isConstructorCall()) {
     auto *self = vmcast<JSBoolean>(args.getThisArg());
     JSBoolean::setPrimitiveValue(
-        self, runtime, HermesValue::encodeBoolValue(value));
+        self, runtime, SmallHermesValue::encodeBoolValue(value));
     return args.getThisArg();
   }
 
@@ -73,7 +73,7 @@ booleanPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
       return runtime->raiseTypeError(
           "Boolean.prototype.valueOf() can only be used on Boolean");
     }
-    value = JSBoolean::getPrimitiveValue(boolPtr, runtime).getBool();
+    value = JSBoolean::getPrimitiveValue(boolPtr).getBool();
   }
   return HermesValue::encodeStringValue(
       value ? runtime->getPredefinedString(Predefined::trueStr)
@@ -90,7 +90,7 @@ booleanPrototypeValueOf(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Boolean.prototype.valueOf() can only be used on Boolean");
   }
-  return JSBoolean::getPrimitiveValue(boolPtr, runtime);
+  return JSBoolean::getPrimitiveValue(boolPtr).unboxToHV(runtime);
 }
 
 } // namespace vm

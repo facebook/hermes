@@ -17,12 +17,13 @@ using namespace hermes::vm;
 namespace {
 
 /// Assert that obj.prop has flag set to val.
-#define EXPECT_PROPERTY_FLAG(val, obj, prop, flag)                          \
-  {                                                                         \
-    NamedPropertyDescriptor desc;                                           \
-    ASSERT_TRUE(                                                            \
-        JSObject::getNamedDescriptor(obj, runtime, prop, desc) != nullptr); \
-    EXPECT_##val(desc.flags.flag);                                          \
+#define EXPECT_PROPERTY_FLAG(val, obj, prop, flag)                      \
+  {                                                                     \
+    NamedPropertyDescriptor desc;                                       \
+    ASSERT_TRUE(                                                        \
+        JSObject::getNamedDescriptorUnsafe(obj, runtime, prop, desc) != \
+        nullptr);                                                       \
+    EXPECT_##val(desc.flags.flag);                                      \
   }
 
 static inline Handle<Callable> makeSimpleJSFunction(
@@ -489,7 +490,8 @@ TEST_F(ObjectModelTest, SimpleDeleteTest) {
 
   // Make sure it is deleted.
   ASSERT_EQ(
-      nullptr, JSObject::getNamedDescriptor(obj, runtime, *prop1ID, desc));
+      nullptr,
+      JSObject::getNamedDescriptorUnsafe(obj, runtime, *prop1ID, desc));
   EXPECT_CALLRESULT_UNDEFINED(JSObject::getNamed_RJS(obj, runtime, *prop1ID));
 
   // Make sure obj.prop2 is still there.
@@ -512,7 +514,8 @@ TEST_F(ObjectModelTest, SimpleDeleteTest) {
 
   // Make sure it is deleted.
   ASSERT_EQ(
-      nullptr, JSObject::getNamedDescriptor(obj, runtime, *prop2ID, desc));
+      nullptr,
+      JSObject::getNamedDescriptorUnsafe(obj, runtime, *prop2ID, desc));
   EXPECT_CALLRESULT_UNDEFINED(JSObject::getNamed_RJS(obj, runtime, *prop2ID));
 
   // obj.prop4 = 40.0;
@@ -607,26 +610,30 @@ TEST_F(ObjectModelTest, NonArrayComputedTest) {
 
   // Make sure we can obtain "prop1" as a named property.
   NamedPropertyDescriptor ndesc;
-  ASSERT_TRUE(JSObject::getNamedDescriptor(obj1, runtime, *prop1ID, ndesc));
+  ASSERT_TRUE(
+      JSObject::getNamedDescriptorUnsafe(obj1, runtime, *prop1ID, ndesc));
 
   // Get the two properties computed descriptors and the values using the
   // descriptors.
   ComputedPropertyDescriptor cdesc;
   MutableHandle<JSObject> propObjHandle{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   JSObject::getComputedPrimitiveDescriptor(
-      obj1, runtime, index5, propObjHandle, cdesc);
+      obj1, runtime, index5, propObjHandle, tmpPropNameStorage, cdesc);
   ASSERT_TRUE(propObjHandle);
   ASSERT_FALSE(cdesc.flags.indexed);
   ASSERT_EQ(
       value10.get(),
-      JSObject::getComputedSlotValue(obj1.get(), runtime, cdesc));
+      JSObject::getComputedSlotValue(obj1, runtime, tmpPropNameStorage, cdesc)
+          ->get());
   JSObject::getComputedPrimitiveDescriptor(
-      obj1, runtime, prop1Name, propObjHandle, cdesc);
+      obj1, runtime, prop1Name, propObjHandle, tmpPropNameStorage, cdesc);
   ASSERT_TRUE(propObjHandle);
   ASSERT_FALSE(cdesc.flags.indexed);
   ASSERT_EQ(
       value11.get(),
-      JSObject::getComputedSlotValue(obj1.get(), runtime, cdesc));
+      JSObject::getComputedSlotValue(obj1, runtime, tmpPropNameStorage, cdesc)
+          ->get());
 
   // Use getComputed() to obtain the values.
   EXPECT_CALLRESULT_VALUE(
@@ -645,10 +652,10 @@ TEST_F(ObjectModelTest, NonArrayComputedTest) {
 
   // Try to get missing properties.
   JSObject::getComputedPrimitiveDescriptor(
-      obj1, runtime, index6, propObjHandle, cdesc);
+      obj1, runtime, index6, propObjHandle, tmpPropNameStorage, cdesc);
   ASSERT_FALSE(propObjHandle);
   JSObject::getComputedPrimitiveDescriptor(
-      obj1, runtime, prop2Name, propObjHandle, cdesc);
+      obj1, runtime, prop2Name, propObjHandle, tmpPropNameStorage, cdesc);
   ASSERT_FALSE(propObjHandle);
 
   // Delete a missing property.
@@ -658,11 +665,11 @@ TEST_F(ObjectModelTest, NonArrayComputedTest) {
   // Delete existing properties.
   ASSERT_TRUE(*JSObject::deleteComputed(obj1, runtime, index5));
   JSObject::getComputedPrimitiveDescriptor(
-      obj1, runtime, index5, propObjHandle, cdesc);
+      obj1, runtime, index5, propObjHandle, tmpPropNameStorage, cdesc);
   ASSERT_FALSE(propObjHandle);
   ASSERT_TRUE(*JSObject::deleteComputed(obj1, runtime, prop1Name));
   JSObject::getComputedPrimitiveDescriptor(
-      obj1, runtime, prop1Name, propObjHandle, cdesc);
+      obj1, runtime, prop1Name, propObjHandle, tmpPropNameStorage, cdesc);
   ASSERT_FALSE(propObjHandle);
 }
 
@@ -683,7 +690,7 @@ TEST_F(ObjectModelTest, NamedOrIndexed) {
 
   auto indexObjRes = JSArray::create(runtime, 10, 0);
   ASSERT_EQ(indexObjRes.getStatus(), ExecutionStatus::RETURNED);
-  auto indexObj = runtime->makeHandle(std::move(*indexObjRes));
+  auto indexObj = *indexObjRes;
 
   auto value1 = runtime->makeHandle(HermesValue::encodeDoubleValue(101));
   auto value2 = runtime->makeHandle(HermesValue::encodeDoubleValue(102));
@@ -777,7 +784,7 @@ TEST_F(ObjectModelTest, HasProperty) {
       runtime, createUTF16Ref(u"10"));
   auto indexID2Num = runtime->makeHandle(HermesValue::encodeNumberValue(10));
 
-  auto self = runtime->makeHandle(std::move(*JSArray::create(runtime, 0, 0)));
+  auto self = *JSArray::create(runtime, 0, 0);
 
   ASSERT_FALSE(*JSObject::hasComputed(self, runtime, nonIndexIDString));
   ASSERT_FALSE(*JSObject::hasComputed(self, runtime, indexIDNum));

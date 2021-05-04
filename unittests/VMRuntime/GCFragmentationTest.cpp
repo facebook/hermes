@@ -24,41 +24,11 @@ using namespace hermes::vm;
 
 namespace {
 
-MetadataTableForTests getMetadataTable() {
-  static_assert(
-      cellKindsContiguousAscending(
-          CellKind::UninitializedKind,
-          CellKind::FillerCellKind,
-          CellKind::FreelistKind,
-          CellKind::DynamicUTF16StringPrimitiveKind,
-          CellKind::DynamicASCIIStringPrimitiveKind,
-          CellKind::BufferedUTF16StringPrimitiveKind,
-          CellKind::BufferedASCIIStringPrimitiveKind,
-          CellKind::DynamicUniquedUTF16StringPrimitiveKind,
-          CellKind::DynamicUniquedASCIIStringPrimitiveKind,
-          CellKind::ExternalUTF16StringPrimitiveKind,
-          CellKind::ExternalASCIIStringPrimitiveKind),
-      "Cell kinds in unexpected order");
-  static const Metadata storage[] = {
-      Metadata(), // Uninitialized
-      Metadata(), // FillerCell
-      Metadata(), // Freelist
-      Metadata(), // DynamicUTF16StringPrimitive
-      Metadata(), // DynamicASCIIStringPrimitive
-      Metadata(), // BufferedUTF16StringPrimitive
-      Metadata(), // BufferedASCIIStringPrimitive
-      Metadata(), // DynamicUniquedUTF16StringPrimitive
-      Metadata(), // DynamicUniquedASCIIStringPrimitive
-      Metadata(), // ExternalUTF16StringPrimitive
-      Metadata(), // ExternalASCIIStringPrimitive
-  };
-  return MetadataTableForTests(storage);
-}
-
 TEST(GCFragmentationTest, TestCoalescing) {
   // Fill the heap with increasingly larger cells, in order to test
   // defragmentation code.
-  static const size_t kNumSegments = 3;
+  static const size_t kNumSegments = 4;
+  static const size_t kNumOGSegments = kNumSegments - 1;
   static const size_t kHeapSize = AlignedHeapSegment::maxSize() * kNumSegments;
   static const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSize);
 
@@ -71,7 +41,7 @@ TEST(GCFragmentationTest, TestCoalescing) {
 
   {
     GCScope scope(&rt);
-    for (size_t i = 0; i < 16 * kNumSegments; i++)
+    for (size_t i = 0; i < 16 * kNumOGSegments; i++)
       rt.makeHandle(SixteenthCell::create(rt));
   }
 
@@ -83,11 +53,9 @@ TEST(GCFragmentationTest, TestCoalescing) {
 
   {
     GCScope scope(&rt);
-    for (size_t i = 0; i < 8 * kNumSegments; i++)
+    for (size_t i = 0; i < 8 * kNumOGSegments; i++)
       rt.makeHandle(EighthCell::create(rt));
   }
-
-  rt.pointerRoots.clear();
 
 #if defined(HERMESVM_GC_HADES) || defined(HERMESVM_GC_RUNTIME)
   rt.collect();
@@ -95,7 +63,7 @@ TEST(GCFragmentationTest, TestCoalescing) {
 
   {
     GCScope scope(&rt);
-    for (size_t i = 0; i < 4 * kNumSegments; i++)
+    for (size_t i = 0; i < 4 * kNumOGSegments; i++)
       rt.makeHandle(QuarterCell::create(rt));
   }
 }

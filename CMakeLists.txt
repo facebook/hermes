@@ -67,7 +67,7 @@ set(CMAKE_OSX_SYSROOT ${HERMES_APPLE_TARGET_PLATFORM})
 # - npm/package.json
 # - hermes-engine.podspec
 project(Hermes
-        VERSION 0.7.2
+        VERSION 0.8.0
         LANGUAGES C CXX)
 # Optional suffix like "-rc3"
 set(VERSION_SUFFIX "")
@@ -95,7 +95,7 @@ set(HERMES_IS_ANDROID OFF CACHE BOOL
 set(HERMES_IS_MOBILE_BUILD ${HERMES_IS_ANDROID} CACHE BOOL
   "Building for a mobile device")
 
-set(HERMESVM_GCKIND NONCONTIG_GENERATIONAL
+set(HERMESVM_GCKIND HADES
   CACHE STRING
   "HermesVM GC type: either NONCONTIG_GENERATIONAL, MALLOC, or HADES")
 
@@ -178,13 +178,6 @@ set(HERMES_ENABLE_TOOLS ON CACHE BOOL
 set(HERMES_ENABLE_BITCODE OFF CACHE BOOL
   "Include bitcode with the framework")
 
-set(HERMES_ENABLE_TOOLS ON CACHE BOOL
-  "Enable CLI tools")
-
-# Enable bitcode
-set(HERMES_ENABLE_BITCODE OFF CACHE BOOL
-  "Include bitcode with the framework")
-
 # Set linker flag for building the fuzzer
 set(HERMES_FUZZING_FLAG "-fsanitize=fuzzer" CACHE STRING
   "Linker argument to link fuzz targets against a given fuzzer.")
@@ -220,12 +213,6 @@ set(HERMESVM_EXCEPTION_ON_OOM OFF CACHE BOOL
 
 set(HERMESVM_PLATFORM_LOGGING OFF CACHE BOOL
     "hermesLog(...) is enabled, using the platform's logging mechanism")
-
-set(HERMESVM_JIT OFF CACHE BOOL
-  "Enable the JIT")
-
-set(HERMESVM_JIT_DISASSEMBLER OFF CACHE BOOL
-  "Enable the JIT disassembler")
 
 set(HERMES_USE_FLOWPARSER OFF CACHE BOOL
   "Use libflowparser for parsing es6")
@@ -405,12 +392,6 @@ endif()
 if(HERMESVM_PLATFORM_LOGGING)
     add_definitions(-DHERMESVM_PLATFORM_LOGGING)
 endif()
-if(HERMESVM_JIT)
-  add_definitions(-DHERMESVM_JIT)
-endif()
-if(HERMESVM_JIT_DISASSEMBLER)
-  add_definitions(-DHERMESVM_JIT_DISASSEMBLER)
-endif()
 if (NOT (ANDROID_LINUX_PERF_PATH STREQUAL ""))
   add_definitions(-DANDROID_LINUX_PERF_PATH="${ANDROID_LINUX_PERF_PATH}")
 endif()
@@ -450,16 +431,6 @@ if (NOT (GENERATOR_IS_MULTI_CONFIG OR CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_C
     # and not GCC
     # GCC currently fails to link Hermes with LTO (see t16557748)
     option(HERMES_ENABLE_LTO "Build Hermes with LTO" ON)
-endif()
-
-if (CMAKE_COMPILER_IS_GNUCXX)
-  # Suppress uninteresting warnings about initializing ArrayRef from initializer lists.
-  check_cxx_compiler_flag("-Winit-list-lifetime" INIT_LIST_LIFETIME_FLAG)
-  append_if(INIT_LIST_LIFETIME_FLAG "-Wno-init-list-lifetime" CMAKE_CXX_FLAGS)
-  # Suppress the redundant move warnings in GCC 9, because it leads to suboptimal
-  # recommendations for older compilers that do not implement C++ Core Issue 1579.
-  check_cxx_compiler_flag("-Wredundant-move" REDUNDANT_MOVE_FLAG)
-  append_if(REDUNDANT_MOVE_FLAG "-Wno-redundant-move" CMAKE_CXX_FLAGS)
 endif()
 
 if (GCC_COMPATIBLE)
@@ -700,8 +671,6 @@ if(HERMES_ENABLE_TEST_SUITE)
     unittests_dir=${HERMES_BINARY_DIR}/unittests
     debugger_enabled=${HERMES_ENABLE_DEBUGGER}
     use_flowparser=${HERMES_USE_FLOWPARSER}
-    jit_enabled=${HERMESVM_JIT}
-    jit_disassembler_enabled=${HERMESVM_JIT_DISASSEMBLER}
     hbc_deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
     dependency_extractor=${HERMES_TOOLS_OUTPUT_DIR}/dependency-extractor
     FileCheck=${HERMES_TOOLS_OUTPUT_DIR}//FileCheck

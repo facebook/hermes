@@ -945,3 +945,5 @@ bool LowerSwitchIntoJumpTables::lowerIntoJumpTable(SwitchInst *switchInst) {
 
 } // namespace hbc
 } // namespace hermes
+
+#undef DEBUG_TYPE

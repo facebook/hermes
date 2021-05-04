@@ -37,3 +37,5 @@ bool HoistStartGenerator::runOnFunction(Function *F) {
 Pass *hermes::createHoistStartGenerator() {
   return new HoistStartGenerator();
 }
+
+#undef DEBUG_TYPE

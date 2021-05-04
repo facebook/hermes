@@ -11,6 +11,7 @@
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/Metadata.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/SmallHermesValue-inline.h"
 
 #include "llvh/Support/TrailingObjects.h"
 
@@ -25,42 +26,67 @@ namespace vm {
 /// However a convenience method is provided to serialize an ArrayStorage, as
 /// part of the record of its owning object. In this case the ArrayStorage must
 /// not contain any native pointers.
-class ArrayStorage final
+template <typename HVType>
+class ArrayStorageBase final
     : public VariableSizeRuntimeCell,
-      private llvh::TrailingObjects<ArrayStorage, GCHermesValue> {
-  friend TrailingObjects;
+      private llvh::
+          TrailingObjects<ArrayStorageBase<HVType>, GCHermesValueBase<HVType>> {
+  using GCHVType = GCHermesValueBase<HVType>;
+  friend llvh::TrailingObjects<ArrayStorageBase<HVType>, GCHVType>;
   friend void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend void ArrayStorageSmallBuildMeta(
+      const GCCell *cell,
+      Metadata::Builder &mb);
+
+  friend void ArrayStorageSmallSerialize(Serializer &s, const GCCell *cell);
+  friend void ArrayStorageSmallDeserialize(Deserializer &d, CellKind kind);
 
  public:
   using size_type = uint32_t;
-  using iterator = GCHermesValue *;
+  using iterator = GCHVType *;
 
   static const VTable vt;
 
 #ifdef HERMESVM_SERIALIZE
-  /// A convinience method to serialize an ArrayStorage which does not contain
-  /// any native pointers.
-  static void serializeArrayStorage(Serializer &s, const ArrayStorage *cell);
+  /// There is intentionally no implementation of SmallHermesValue
+  /// specializations of serialize/deserializeArrayStorage, because
+  /// SmallHermesValue cannot contain native pointers, so there is no need for
+  /// these helper functions.
 
-  /// A convinience method to deserialize an ArrayStorage which does not contain
+  /// A convenience method to serialize an ArrayStorage which does not contain
   /// any native pointers.
-  static ArrayStorage *deserializeArrayStorage(Deserializer &d);
+  static void serializeArrayStorage(
+      Serializer &s,
+      const ArrayStorageBase<HVType> *cell);
+
+  /// A convenience method to deserialize an ArrayStorage which does not contain
+  /// any native pointers.
+  static ArrayStorageBase<HVType> *deserializeArrayStorage(Deserializer &d);
 #endif
 
   /// Gets the amount of memory used by this object for a given \p capacity.
   static constexpr uint32_t allocationSize(size_type capacity) {
-    return totalSizeToAlloc<GCHermesValue>(capacity);
+    return ArrayStorageBase::template totalSizeToAlloc<GCHVType>(capacity);
   }
 
   /// \return The maximum number of elements we can fit in a single array in the
   /// current GC.
   static constexpr size_type maxElements() {
-    return (GC::maxAllocationSize() - allocationSize(0)) /
-        sizeof(GCHermesValue);
+    return (GC::maxAllocationSize() - allocationSize(0)) / sizeof(HVType);
   }
 
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::ArrayStorageKind;
+    return cell->getKind() == getCellKind();
+  }
+
+  static constexpr CellKind getCellKind() {
+    static_assert(
+        std::is_same<HVType, HermesValue>::value ||
+            std::is_same<HVType, SmallHermesValue>::value,
+        "Illegal HVType.");
+    return std::is_same<HVType, HermesValue>::value
+        ? CellKind::ArrayStorageKind
+        : CellKind::ArrayStorageSmallKind;
   }
 
   /// Create a new instance with specified capacity.
@@ -68,7 +94,7 @@ class ArrayStorage final
     if (LLVM_UNLIKELY(capacity > maxElements())) {
       return throwExcessiveCapacityError(runtime, capacity);
     }
-    auto *cell = runtime->makeAVariable<ArrayStorage>(
+    auto *cell = runtime->makeAVariable<ArrayStorageBase<HVType>>(
         allocationSize(capacity), runtime, capacity);
     return HermesValue::encodeObjectValue(cell);
   }
@@ -81,8 +107,10 @@ class ArrayStorage final
       return throwExcessiveCapacityError(runtime, capacity);
     }
     return HermesValue::encodeObjectValue(
-        runtime->makeAVariable<ArrayStorage, HasFinalizer::No, LongLived::Yes>(
-            allocationSize(capacity), runtime, capacity));
+        runtime->makeAVariable<
+            ArrayStorageBase<HVType>,
+            HasFinalizer::No,
+            LongLived::Yes>(allocationSize(capacity), runtime, capacity));
   }
 
   /// Create a new instance with specified capacity and size.
@@ -94,17 +122,17 @@ class ArrayStorage final
       return ExecutionStatus::EXCEPTION;
     }
 
-    ArrayStorage::resizeWithinCapacity(
-        vmcast<ArrayStorage>(*arrRes), runtime, size);
+    resizeWithinCapacity(
+        vmcast<ArrayStorageBase<HVType>>(*arrRes), runtime, size);
     return arrRes;
   }
 
   /// \return a pointer to the underlying data storage.
-  GCHermesValue *data() {
-    return getTrailingObjects<GCHermesValue>();
+  GCHVType *data() {
+    return ArrayStorageBase<HVType>::template getTrailingObjects<GCHVType>();
   }
-  const GCHermesValue *data() const {
-    return getTrailingObjects<GCHermesValue>();
+  const GCHVType *data() const {
+    return ArrayStorageBase<HVType>::template getTrailingObjects<GCHVType>();
   }
 
   /// This enum is not needed here but is used for compatibility with
@@ -114,21 +142,21 @@ class ArrayStorage final
 
   /// \return the element at index \p index
   template <Inline inl = Inline::No>
-  HermesValue at(size_type index) const {
+  HVType at(size_type index) const {
     assert(index < size() && "index out of range");
     return data()[index];
   }
 
   /// \return the element at index \p index
   template <Inline inl = Inline::No>
-  void set(size_type index, HermesValue val, GC *gc) {
+  void set(size_type index, HVType val, GC *gc) {
     assert(index < size() && "index out of range");
     data()[index].set(val, gc);
   }
 
   /// \return the element at index \p index
   template <Inline inl = Inline::No>
-  void setNonPtr(size_type index, HermesValue val, GC *gc) {
+  void setNonPtr(size_type index, HVType val, GC *gc) {
     assert(index < size() && "index out of range");
     data()[index].setNonPtr(val, gc);
   }
@@ -149,16 +177,23 @@ class ArrayStorage final
 
   /// Append the given element to the end (increasing size by 1).
   static ExecutionStatus push_back(
-      MutableHandle<ArrayStorage> &selfHandle,
+      MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime *runtime,
       Handle<> value) {
     auto *self = selfHandle.get();
     const auto currSz = self->size();
+    // This must be done before the capacity check, because encodeHermesValue
+    // may allocate, which could cause trimming of the ArrayStorage. If the
+    // capacity check fails, then this work is wasted, but that's okay because
+    // it's a slow path.
+    auto hv = HVType::encodeHermesValue(value.get(), runtime);
+    // For SmallHermesValue, the above may allocate, so update self.
+    if (std::is_same<HVType, SmallHermesValue>::value)
+      self = selfHandle.get();
     if (LLVM_LIKELY(currSz < self->capacity_)) {
       // Use the constructor of GCHermesValue to use the correct write barrier
       // for uninitialized memory.
-      new (&self->data()[currSz])
-          GCHermesValue(value.get(), &runtime->getHeap());
+      new (&self->data()[currSz]) GCHVType(hv, &runtime->getHeap());
       self->size_.store(currSz + 1, std::memory_order_release);
       return ExecutionStatus::RETURNED;
     }
@@ -166,10 +201,10 @@ class ArrayStorage final
   }
 
   /// Pop the last element off the array and return it.
-  HermesValue pop_back(Runtime *runtime) {
+  HVType pop_back(Runtime *runtime) {
     const size_type sz = size();
     assert(sz > 0 && "Can't pop from empty ArrayStorage");
-    HermesValue val = data()[sz - 1];
+    HVType val = data()[sz - 1];
     // In Hades, a snapshot write barrier must be executed on the value that is
     // conceptually being changed to null. The write doesn't need to occur, but
     // it is the only correct way to use the write barrier.
@@ -185,7 +220,7 @@ class ArrayStorage final
   /// Ensure that the capacity of the array is at least \p capacity,
   /// reallocating if needed.
   static ExecutionStatus ensureCapacity(
-      MutableHandle<ArrayStorage> &selfHandle,
+      MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime *runtime,
       size_type capacity);
 
@@ -193,7 +228,7 @@ class ArrayStorage final
   /// (in which case the new elements will be initialized to empty), or decrease
   /// the size.
   static ExecutionStatus resize(
-      MutableHandle<ArrayStorage> &selfHandle,
+      MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime *runtime,
       size_type newSize) {
     return shift(selfHandle, runtime, 0, 0, newSize);
@@ -206,7 +241,7 @@ class ArrayStorage final
   /// If the capacity is not sufficient, then the performance will be the same
   /// as \c resize.
   static ExecutionStatus resizeLeft(
-      MutableHandle<ArrayStorage> &selfHandle,
+      MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime *runtime,
       size_type newSize) {
     return shift(selfHandle, runtime, 0, newSize - selfHandle->size(), newSize);
@@ -215,8 +250,10 @@ class ArrayStorage final
   /// Set the size to a value <= the capacity. This is a special
   /// case of resize() but has a simpler interface since we know that it doesn't
   /// need to reallocate.
-  static void
-  resizeWithinCapacity(ArrayStorage *self, Runtime *runtime, size_type newSize);
+  static void resizeWithinCapacity(
+      ArrayStorageBase<HVType> *self,
+      Runtime *runtime,
+      size_type newSize);
 
  private:
   /// The capacity is the maximum number of elements this array can ever
@@ -227,17 +264,12 @@ class ArrayStorage final
   AtomicIfConcurrentGC<size_type> size_{0};
 
  public:
-  ArrayStorage() = delete;
-  ArrayStorage(const ArrayStorage &) = delete;
-  void operator=(const ArrayStorage &) = delete;
-  ~ArrayStorage() = delete;
+  ArrayStorageBase() = delete;
+  ArrayStorageBase(const ArrayStorageBase &) = delete;
+  void operator=(const ArrayStorageBase &) = delete;
+  ~ArrayStorageBase() = delete;
 
-  ArrayStorage(Runtime *runtime, size_type capacity)
-      : VariableSizeRuntimeCell(
-            &runtime->getHeap(),
-            &vt,
-            allocationSize(capacity)),
-        capacity_(capacity) {}
+  ArrayStorageBase(Runtime *runtime, size_type capacity);
 
  private:
   /// Throws a RangeError with a descriptive message describing the attempted
@@ -250,7 +282,7 @@ class ArrayStorage final
   /// Append the given element to the end when the capacity has been exhausted
   /// and a reallocation is needed.
   static ExecutionStatus pushBackSlowPath(
-      MutableHandle<ArrayStorage> &selfHandle,
+      MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime *runtime,
       Handle<> value);
 
@@ -266,7 +298,7 @@ class ArrayStorage final
   ///   length = min(size - fromFirst, toLast - toFirst).
   /// "length" number of elements are copied from "fromFirst" to "toFirst".
   static ExecutionStatus reallocateToLarger(
-      MutableHandle<ArrayStorage> &selfHandle,
+      MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime *runtime,
       size_type capacity,
       size_type fromFirst,
@@ -289,12 +321,15 @@ class ArrayStorage final
   /// 3. Set all elements before `toFirst` and after the last copied element to
   ///   "empty".
   static ExecutionStatus shift(
-      MutableHandle<ArrayStorage> &selfHandle,
+      MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime *runtime,
       size_type fromFirst,
       size_type toFirst,
       size_type toLast);
 };
+
+using ArrayStorage = ArrayStorageBase<HermesValue>;
+using ArrayStorageSmall = ArrayStorageBase<SmallHermesValue>;
 
 static_assert(
     ArrayStorage::allocationSize(ArrayStorage::maxElements()) <=
@@ -304,6 +339,18 @@ static_assert(
 static_assert(
     GC::maxAllocationSize() -
             ArrayStorage::allocationSize(ArrayStorage::maxElements()) <
+        HeapAlign,
+    "maxElements() is too small");
+
+static_assert(
+    ArrayStorageSmall::allocationSize(ArrayStorageSmall::maxElements()) <=
+        GC::maxAllocationSize(),
+    "maxElements() is too big");
+
+static_assert(
+    GC::maxAllocationSize() -
+            ArrayStorageSmall::allocationSize(
+                ArrayStorageSmall::maxElements()) <
         HeapAlign,
     "maxElements() is too small");
 

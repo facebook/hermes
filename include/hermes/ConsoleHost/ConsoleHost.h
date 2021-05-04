@@ -23,51 +23,78 @@ namespace hermes {
 
 /// Stores state used in certain NativeFunctions in the ConsoleHost.
 /// `ConsoleHostContext *` can be passed as the ctx pointer to NativeFunctions.
-/// In particular, it stores the job queue which powers setTimeout and friends,
+/// In particular, it stores the task queue which powers setTimeout and friends,
 /// which are only available by default in Hermes when using the ConsoleHost.
 class ConsoleHostContext {
-  /// Queue of jobs that have been added via setTimeout and clearTimeout.
+  /// The task queue to implement a minimalistic event loop. The only type of
+  /// task at this moment is timer task added via setTimeout and friends.
   /// Values are marked by registering a custom roots function with the Runtime.
-  llvh::MapVector<uint32_t, vm::Callable *> queuedJobs_{};
+  llvh::MapVector<uint32_t, vm::Callable *> taskQueue_{};
 
-  /// Next job ID to be allocated by queueJob.
-  uint32_t nextJobId_{1};
+  /// Next task ID to be allocated by queueTask.
+  uint32_t nextTaskId_{1};
 
  public:
   /// Registers the ConsoleHostContext roots with \p runtime.
   ConsoleHostContext(vm::Runtime *runtime);
 
-  /// \return true when there are no queued jobs remaining.
-  bool jobsEmpty() const {
-    return queuedJobs_.empty();
+  /// \return true when there are no queued tasks remaining.
+  bool tasksEmpty() const {
+    return taskQueue_.empty();
   }
 
-  /// Enqueue a job for setTimeout.
-  /// \return the ID of the job.
-  uint32_t queueJob(vm::PseudoHandle<vm::Callable> job) {
-    queuedJobs_.insert({nextJobId_, job.get()});
-    job.invalidate();
-    return nextJobId_++;
+  /// Enqueue a task.
+  /// \return the ID of the task.
+  uint32_t queueTask(vm::PseudoHandle<vm::Callable> task) {
+    taskQueue_.insert({nextTaskId_, task.get()});
+    task.invalidate();
+    return nextTaskId_++;
   }
 
-  /// \param id the job to clear from the queue.
-  void clearJob(uint32_t id) {
-    queuedJobs_.remove_if([id](std::pair<uint32_t, vm::Callable *> it) {
+  /// \param id the task to clear from the queue.
+  void clearTask(uint32_t id) {
+    taskQueue_.remove_if([id](std::pair<uint32_t, vm::Callable *> it) {
       return it.first == id;
     });
   }
 
-  /// Remove the first job from the queue.
-  /// \return the Callable which represents the queued job, None if empty queue.
-  llvh::Optional<vm::PseudoHandle<vm::Callable>> dequeueJob() {
-    if (queuedJobs_.empty())
+  /// Remove the first task from the queue.
+  /// \return the Callable that represents the queued task, None if empty queue.
+  llvh::Optional<vm::PseudoHandle<vm::Callable>> dequeueTask() {
+    if (taskQueue_.empty())
       return llvh::None;
     vm::PseudoHandle<vm::Callable> result =
-        createPseudoHandle(queuedJobs_.front().second);
-    queuedJobs_.erase(queuedJobs_.begin());
+        createPseudoHandle(taskQueue_.front().second);
+    taskQueue_.erase(taskQueue_.begin());
     return result;
   }
 };
+
+/// Microtask checkpoint.
+/// https://html.spec.whatwg.org/C#perform-a-microtask-checkpoint
+///
+/// The algorithm needs to exhaust the event loop's microtask queue. Since the
+/// only type of microtask in ConsoleHost environments is ECMAScript Job, It
+/// is implemented by draining the job queue of \p runtime.
+/// It needs to be performed as steps of 8.1.4.4 Calling scripts and 8.1.6.3
+/// Process model (event loop), notably when the JS call stack is emptied.
+namespace microtask {
+
+/// Complete a checkpoint by repetitively trying to drain the engine job queue
+/// until there was no errors (implying queue exhaustiveness).
+/// Note that exceptions are directly printed to stderr.
+inline void performCheckpoint(vm::Runtime *runtime) {
+  if (!runtime->useJobQueue())
+    return;
+
+  while (
+      LLVM_UNLIKELY(runtime->drainJobs() == vm::ExecutionStatus::EXCEPTION)) {
+    runtime->printException(
+        llvh::errs(), runtime->makeHandle(runtime->getThrownValue()));
+  };
+}
+
+} // namespace microtask
 
 /// Installs console host functions in Runtime \p runtime.
 /// Host functions installed:
@@ -110,12 +137,6 @@ struct ExecuteOptions {
 
   /// Execution time limit.
   uint32_t timeLimit{0};
-
-  /// Dump JIT'ed code.
-  bool dumpJITCode{false};
-
-  /// Fatally crash on any JIT compilation error.
-  bool jitCrashOnError{false};
 
   /// Perform a full GC just before printing any statistics.
   bool forceGCBeforeStats{false};

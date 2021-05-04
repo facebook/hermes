@@ -20,14 +20,6 @@ namespace hermes {
 namespace parser {
 namespace detail {
 
-/// Declare a RAII recursion tracker. Check whether the recursion limit has
-/// been exceeded, and if so generate an error and return an empty
-/// llvh::Optional<>.
-#define CHECK_RECURSION                \
-  TrackRecursion trackRecursion{this}; \
-  if (recursionDepthCheck())           \
-    return llvh::None;
-
 JSParserImpl::JSParserImpl(
     Context &context,
     std::unique_ptr<llvh::MemoryBuffer> input)
@@ -3218,6 +3210,9 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
   SMLoc puncLoc = tok_->getStartLoc();
   bool optional = checkAndEat(TokenKind::questiondot);
   if (checkAndEat(TokenKind::l_square)) {
+    // Parsing another Expression directly without going through
+    // PrimaryExpression. This can overflow, so check.
+    CHECK_RECURSION;
     auto propExpr = parseExpression();
     if (!propExpr)
       return None;

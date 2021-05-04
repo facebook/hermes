@@ -11,7 +11,10 @@
       "modules",
       "regexp",
       "strings",
-      "memory-profilers"
+      "memory-profilers",
+      "gengc",
+      "hades",
+      "intl"
     ],
     "Integrations": [
       "react-native-integration"

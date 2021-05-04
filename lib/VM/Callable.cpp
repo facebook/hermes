@@ -848,7 +848,7 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
     // Initialize "thisArg". When constructing we must use the original 'this',
     // not the bound one.
     newCalleeFrame.getThisArgRef() = !originalNewTarget.isUndefined()
-        ? callerFrame.getScratchRef()
+        ? static_cast<HermesValue>(callerFrame.getScratchRef())
         : self->getArgsWithThis(runtime)[0];
 
     res =
@@ -996,17 +996,20 @@ Handle<NativeFunction> NativeFunction::create(
     unsigned paramCount,
     Handle<JSObject> prototypeObjectHandle,
     unsigned additionalSlotCount) {
+  size_t reservedSlots = numOverlapSlots<NativeFunction>() +
+      ANONYMOUS_PROPERTY_SLOTS + additionalSlotCount;
   auto *cell = runtime->makeAFixed<NativeFunction>(
       runtime,
       &vt.base.base,
       parentHandle,
-      runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS +
-              additionalSlotCount),
+      runtime->getHiddenClassForPrototype(*parentHandle, reservedSlots),
       context,
       functionPtr);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
+
+  // Allocate a propStorage if the number of additional slots requires it.
+  runtime->ignoreAllocationFailure(
+      JSObject::allocatePropStorage(selfHandle, runtime, reservedSlots));
 
   auto st = defineNameLengthAndPrototype(
       selfHandle,
@@ -1291,11 +1294,7 @@ CallResult<PseudoHandle<>> JSFunction::_callImpl(
     Runtime *runtime) {
   auto *self = vmcast<JSFunction>(selfHandle.get());
   CallResult<HermesValue> result{ExecutionStatus::EXCEPTION};
-  if (auto *jitPtr = self->getCodeBlock()->getJITCompiled()) {
-    result = (*jitPtr)(runtime);
-  } else {
-    result = runtime->interpretFunction(self->getCodeBlock());
-  }
+  result = runtime->interpretFunction(self->getCodeBlock());
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1537,7 +1536,7 @@ GeneratorInnerFunction::GeneratorInnerFunction(Deserializer &d)
         ArrayStorage::deserializeArrayStorage(d),
         &d.getRuntime()->getHeap());
   }
-  d.readHermesValue(&result_);
+  d.readSmallHermesValue(&result_);
   nextIPOffset_ = d.readInt<uint32_t>();
   action_ = (Action)d.readInt<uint8_t>();
 }
@@ -1554,7 +1553,7 @@ void GeneratorInnerFunctionSerialize(Serializer &s, const GCCell *cell) {
     ArrayStorage::serializeArrayStorage(
         s, self->savedContext_.get(s.getRuntime()));
   }
-  s.writeHermesValue(self->result_);
+  s.writeSmallHermesValue(self->result_);
   s.writeInt<uint32_t>(self->nextIPOffset_);
   s.writeInt<uint8_t>((uint8_t)self->action_);
   s.endObject(cell);
@@ -1618,7 +1617,9 @@ CallResult<PseudoHandle<>> GeneratorInnerFunction::callInnerFunction(
     Action action) {
   auto self = Handle<GeneratorInnerFunction>::vmcast(selfHandle);
 
-  self->result_.set(arg.getHermesValue(), &runtime->getHeap());
+  SmallHermesValue shv =
+      SmallHermesValue::encodeHermesValue(arg.getHermesValue(), runtime);
+  self->result_.set(shv, &runtime->getHeap());
   self->action_ = action;
 
   auto ctx = runtime->makeMutableHandle(selfHandle->savedContext_);
@@ -1674,7 +1675,7 @@ void GeneratorInnerFunction::restoreStack(Runtime *runtime) {
         dst >= runtime->getStackPointer())) &&
       "reading off the end of the stack");
   const GCHermesValue *src = savedContext_.get(runtime)->data() + frameOffset;
-  GCHermesValue::copyToPinned(src, src + frameSize, dst);
+  GCHermesValueUtil::copyToPinned(src, src + frameSize, dst);
 }
 
 void GeneratorInnerFunction::saveStack(Runtime *runtime) {
@@ -1700,3 +1701,5 @@ void GeneratorInnerFunction::saveStack(Runtime *runtime) {
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

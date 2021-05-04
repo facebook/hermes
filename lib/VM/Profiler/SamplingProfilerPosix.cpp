@@ -130,8 +130,8 @@ void SamplingProfiler::GlobalProfiler::profilingSignalHandler(int signo) {
     assert(
         profilerInstance != nullptr &&
         "Why is GlobalProfiler::instance_ not initialized yet?");
-    profilerInstance->sampledStackDepth_ =
-        localProfiler->walkRuntimeStack(profilerInstance->sampleStorage_);
+    profilerInstance->sampledStackDepth_ = localProfiler->walkRuntimeStack(
+        profilerInstance->sampleStorage_, SaveDomains::Yes);
   } else {
     // GC in process. Copy pre-captured stack instead.
 
@@ -231,6 +231,7 @@ void SamplingProfiler::GlobalProfiler::timerLoop() {
 
 uint32_t SamplingProfiler::walkRuntimeStack(
     StackTrace &sampleStorage,
+    SaveDomains saveDomains,
     uint32_t startIndex) {
   unsigned count = startIndex;
 
@@ -250,7 +251,10 @@ uint32_t SamplingProfiler::walkRuntimeStack(
       auto *module = calleeCodeBlock->getRuntimeModule();
       assert(module != nullptr && "Cannot fetch runtimeModule for code block");
       frameStorage.jsFrame.module = module;
-      registerDomain(module->getDomainUnsafe(runtime_));
+      // Don't execute a read or write barrier here because this is a signal
+      // handler.
+      if (saveDomains == SaveDomains::Yes)
+        registerDomain(module->getDomainForSamplingProfiler());
     } else if (
         auto *nativeFunction =
             dyn_vmcast_or_null<NativeFunction>(frame.getCalleeClosure())) {
@@ -319,8 +323,10 @@ bool SamplingProfiler::GlobalProfiler::enabled() {
     assert(
         profilerInstance != nullptr &&
         "Why is GlobalProfiler::instance_ not initialized yet?");
-    sampledStackDepth =
-        localProfiler->walkRuntimeStack(profilerInstance->sampleStorage_);
+    // Do not register domains for Loom profiling, since we don't use them for
+    // symbolication.
+    sampledStackDepth = localProfiler->walkRuntimeStack(
+        profilerInstance->sampleStorage_, SaveDomains::No);
   } else {
     // TODO: log "GC in process" meta event.
     sampledStackDepth = 0;
@@ -546,7 +552,7 @@ void SamplingProfiler::recordPreGCStack(const std::string &extraInfo) {
 
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
   // Leaf frame slot has been used, filling from index 1.
-  preGCStackDepth_ = walkRuntimeStack(preGCStackStorage_, 1);
+  preGCStackDepth_ = walkRuntimeStack(preGCStackStorage_, SaveDomains::Yes, 1);
 }
 
 bool operator==(

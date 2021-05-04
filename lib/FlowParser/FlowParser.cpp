@@ -244,4 +244,6 @@ llvh::Optional<ESTree::ProgramNode *> parseFlowParser(
 } // namespace parser
 } // namespace hermes
 
+#undef DEBUG_TYPE
+
 #endif // HERMES_USE_FLOWPARSER

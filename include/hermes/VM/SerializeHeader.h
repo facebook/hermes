@@ -17,7 +17,12 @@ namespace hermes {
 namespace vm {
 
 /// Relocation kind. Used to distinguish different kind of pointers
-enum class RelocationKind { NativePointer, GCPointer, HermesValue };
+enum class RelocationKind {
+  NativePointer,
+  GCPointer,
+  HermesValue,
+  SmallHermesValue
+};
 
 constexpr uint32_t SD_MAGIC = 0xad082463;
 
@@ -44,8 +49,7 @@ struct SerializeHeader {
   bool enableEval;
   bool hasES6Promise;
   bool hasES6Proxy;
-  bool hasES6Symbol;
-  bool hasES6Intl;
+  bool hasIntl;
   uint8_t bytecodeWarmupPercent;
   bool trackIO;
   /// Note: The following fields are not being checked right now because they

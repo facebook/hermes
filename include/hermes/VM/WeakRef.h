@@ -72,6 +72,18 @@ class WeakRef : public WeakRefBase {
     return Traits::decode(value);
   }
 
+  /// Same as \c unsafeGetOptional, but without a read barrier to the GC.
+  /// Do not use this unless it is within a signal handler or on a
+  /// non-mutator thread. If you call this in normal VM operations, the pointer
+  /// might be garbage collected from underneath you at some time in the future,
+  /// even if it's placed in a handle.
+  OptValue<typename Traits::value_type> unsafeGetOptionalNoReadBarrier() const {
+    if (!isValid()) {
+      return OptValue<typename Traits::value_type>(llvh::None);
+    }
+    return Traits::decode(slot_->value());
+  }
+
   /// This function returns the stored HermesValue and wraps it into a new
   /// handle, ensuring that it cannot be freed while the handle is alive.
   /// If the weak reference is not live, returns None.

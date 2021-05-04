@@ -68,12 +68,6 @@ const VTable FinalizerCell::vt{
 
 const VTable DummyCell::vt{CellKind::UninitializedKind, sizeof(DummyCell)};
 
-MetadataTableForTests getMetadataTable() {
-  // Nothing to mark for either of them, leave a blank metadata.
-  static const Metadata storage[] = {Metadata(), Metadata()};
-  return MetadataTableForTests(storage);
-}
-
 TEST(GCFinalizerTest, NoDeadFinalizables) {
   int finalized = 0;
   auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);

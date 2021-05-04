@@ -429,9 +429,6 @@ class DictPropertyMap final
   /// Calculate the maximum capacity of DictPropertyMap at compile time using
   /// binary search in the solution space, since we can't solve the equation
   /// directly.
-  ///
-  /// Some of these constexpr functions can be made more readable and or more
-  /// efficient c++14 by using variables (T31421960).
   /// @{
 
   /// The maximum alignment padding a compiler might insert before a field or at
@@ -469,15 +466,18 @@ class DictPropertyMap final
     return constApproxAllocSize64(cap) <= GC::maxAllocationSize();
   }
 
-  /// In the range of capacity values [first ... first + len), find the largest
+  /// In the range of capacity values [lower ... upper), find the largest
   /// value for which wouldFitAllocation() returns true.
   /// NOTE: it must not be used at runtime since it might be slow.
-  static constexpr uint32_t constFindMaxCapacity(uint32_t first, uint32_t len) {
-    return len == 0
-        ? first - 1
-        : (constWouldFitAllocation(first + len / 2)
-               ? constFindMaxCapacity(first + len / 2 + 1, len - len / 2 - 1)
-               : constFindMaxCapacity(first, len / 2));
+  static constexpr uint32_t constFindMaxCapacity(
+      uint32_t lower,
+      uint32_t upper) {
+    assert(constWouldFitAllocation(lower) && "lower must always fit");
+    if (upper - lower <= 1)
+      return lower;
+    const auto mid = (lower + upper) / 2;
+    return constWouldFitAllocation(mid) ? constFindMaxCapacity(mid, upper)
+                                        : constFindMaxCapacity(lower, mid);
   }
 
   /// A place to put things in order to avoid restructins on using constexpr

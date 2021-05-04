@@ -460,3 +460,5 @@ CodeBlock *CodeBlock::deserialize(
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

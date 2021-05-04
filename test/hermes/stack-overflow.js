@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-//RUN: %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
+//RUN: %hermes -O -gc-sanitize-handles=0 -target=HBC %s | %FileCheck --match-full-lines %s
 
 var cnt = 0;
 function func() {

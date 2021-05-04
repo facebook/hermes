@@ -58,7 +58,7 @@ hermesInternalGetEpilogues(void *, Runtime *runtime, NativeArgs args) {
   if (outerResult == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto outer = runtime->makeHandle(std::move(*outerResult));
+  auto outer = *outerResult;
   if (outer->setStorageEndIndex(outer, runtime, outerLen) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -600,6 +600,39 @@ hermesInternalHasPromise(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(runtime->hasES6Promise());
 }
 
+CallResult<HermesValue>
+hermesInternalUseEngineQueue(void *, Runtime *runtime, NativeArgs args) {
+  return HermesValue::encodeBoolValue(runtime->useJobQueue());
+}
+
+/// \code
+///   HermesInternal.enqueueJob = function (func) {}
+/// \endcode
+CallResult<HermesValue>
+hermesInternalEnqueueJob(void *, Runtime *runtime, NativeArgs args) {
+  auto callable = args.dyncastArg<Callable>(0);
+  if (!callable) {
+    return runtime->raiseTypeError(
+        "Argument to HermesInternal.enqueueJob must be callable");
+  }
+  runtime->enqueueJob(callable.get());
+  return HermesValue::encodeUndefinedValue();
+}
+
+/// \code
+///   HermesInternal.drainJobs = function () {}
+/// \endcode
+/// Throw if the drainJobs throws.
+CallResult<HermesValue>
+hermesInternalDrainJobs(void *, Runtime *runtime, NativeArgs args) {
+  auto drainRes = runtime->drainJobs();
+  if (drainRes == ExecutionStatus::EXCEPTION) {
+    // No need to rethrow since it's already throw.
+    return ExecutionStatus::EXCEPTION;
+  }
+  return HermesValue::encodeUndefinedValue();
+}
+
 #ifdef HERMESVM_EXCEPTION_ON_OOM
 /// Gets the current call stack as a JS String value.  Intended (only)
 /// to allow testing of Runtime::callStack() from JS code.
@@ -850,31 +883,27 @@ Handle<JSObject> createHermesInternalObject(
       "Failed to set HermesInternal.concat.");
   (void)putRes;
 
+  // HermesInternal functions that are known to be safe and are required to be
+  // present by the VM internals even under a security-sensitive environment
+  // where HermesInternal might be explicitly disabled.
   defineInternMethod(P::hasPromise, hermesInternalHasPromise);
+  defineInternMethod(P::enqueueJob, hermesInternalEnqueueJob);
   defineInternMethod(
       P::setPromiseRejectionTrackingHook,
       hermesInternalSetPromiseRejectionTrackingHook);
   defineInternMethod(
       P::enablePromiseRejectionTracker,
       hermesInternalEnablePromiseRejectionTracker);
+  defineInternMethod(P::useEngineQueue, hermesInternalUseEngineQueue);
 
-  // If `enableHermesInternal=false`, hide functions that aren't considered
-  // safe. All functions that are known to be safe should be defined above this
-  // check.
+  // All functions are known to be safe can be defined above this flag check.
   if (!flags.enableHermesInternal) {
     JSObject::preventExtensions(*intern);
     return intern;
   }
 
-  // HermesInternal function properties
-  if (flags.enableHermesInternalTestMethods) {
-    defineInternMethod(
-        P::detachArrayBuffer, hermesInternalDetachArrayBuffer, 1);
-    defineInternMethod(P::getWeakSize, hermesInternalGetWeakSize);
-    defineInternMethod(
-        P::copyDataProperties, hermesBuiltinCopyDataProperties, 3);
-    defineInternMethodAndSymbol("isProxy", hermesInternalIsProxy);
-  }
+  // HermesInternal functions that are not necessarily required but are
+  // generally considered harmless to be exposed by default.
   defineInternMethod(P::getEpilogues, hermesInternalGetEpilogues);
   defineInternMethod(
       P::getInstrumentedStats, hermesInternalGetInstrumentedStats);
@@ -883,6 +912,18 @@ Handle<JSObject> createHermesInternalObject(
   defineInternMethod(P::ttiReached, hermesInternalTTIReached);
   defineInternMethod(P::ttrcReached, hermesInternalTTRCReached);
   defineInternMethod(P::getFunctionLocation, hermesInternalGetFunctionLocation);
+
+  // HermesInternal function that are only meant to be used for testing purpose.
+  // They can change language semantics and are security risks.
+  if (flags.enableHermesInternalTestMethods) {
+    defineInternMethod(
+        P::detachArrayBuffer, hermesInternalDetachArrayBuffer, 1);
+    defineInternMethod(P::getWeakSize, hermesInternalGetWeakSize);
+    defineInternMethod(
+        P::copyDataProperties, hermesBuiltinCopyDataProperties, 3);
+    defineInternMethodAndSymbol("isProxy", hermesInternalIsProxy);
+    defineInternMethod(P::drainJobs, hermesInternalDrainJobs);
+  }
 
 #ifdef HERMESVM_EXCEPTION_ON_OOM
   defineInternMethodAndSymbol("getCallStack", hermesInternalGetCallStack, 0);

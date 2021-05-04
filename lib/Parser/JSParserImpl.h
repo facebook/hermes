@@ -1192,6 +1192,15 @@ class JSParserImpl {
       --parser_->recursionDepth_;
     }
   };
+
+/// Declare a RAII recursion tracker. Check whether the recursion limit has
+/// been exceeded, and if so generate an error and return an empty
+/// llvh::Optional<>.
+/// The macro only works from inside JSParserImpl methods.
+#define CHECK_RECURSION                \
+  TrackRecursion trackRecursion{this}; \
+  if (recursionDepthCheck())           \
+    return llvh::None;
 };
 
 } // namespace detail

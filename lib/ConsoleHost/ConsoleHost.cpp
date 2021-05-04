@@ -26,7 +26,7 @@ namespace hermes {
 
 ConsoleHostContext::ConsoleHostContext(vm::Runtime *runtime) {
   runtime->addCustomRootsFunction([this](vm::GC *, vm::RootAcceptor &acceptor) {
-    for (auto &entry : queuedJobs_) {
+    for (auto &entry : taskQueue_) {
       acceptor.acceptPtr(entry.second);
     }
   });
@@ -133,9 +133,9 @@ setTimeout(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
       runtime, callable, args.getArgCount() - 1, args.begin() + 1);
   if (boundFunction == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
-  uint32_t jobId = consoleHost->queueJob(
+  uint32_t taskId = consoleHost->queueTask(
       PseudoHandle<Callable>::vmcast(createPseudoHandle(*boundFunction)));
-  return HermesValue::encodeNumberValue(jobId);
+  return HermesValue::encodeNumberValue(taskId);
 }
 
 static vm::CallResult<vm::HermesValue>
@@ -145,7 +145,7 @@ clearTimeout(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
   if (!args.getArg(0).isNumber()) {
     return runtime->raiseTypeError("Argument to clearTimeout must be a number");
   }
-  consoleHost->clearJob(args.getArg(0).getNumberAs<uint32_t>());
+  consoleHost->clearTask(args.getArg(0).getNumberAs<uint32_t>());
   return HermesValue::encodeUndefinedValue();
 }
 
@@ -404,8 +404,6 @@ bool executeHBCBytecodeImpl(
 #else
   auto runtime = vm::Runtime::create(options.runtimeConfig);
 #endif
-  runtime->getJITContext().setDumpJITCode(options.dumpJITCode);
-  runtime->getJITContext().setCrashOnError(options.jitCrashOnError);
   if (options.stabilizeInstructionCount) {
     // Try to limit features that can introduce unpredictable CPU instruction
     // behavior. Date is a potential cause, but is not handled currently.
@@ -488,14 +486,17 @@ bool executeHBCBytecodeImpl(
         llvh::errs(), runtime->makeHandle(runtime->getThrownValue()));
   }
 
-  if (!threwException && !ctx.jobsEmpty()) {
+  // Perform a microtask checkpoint after running script.
+  microtask::performCheckpoint(runtime.get());
+
+  if (!ctx.tasksEmpty()) {
     vm::GCScopeMarkerRAII marker{scope};
-    // Run the jobs until there are no more.
-    vm::MutableHandle<vm::Callable> job{runtime.get()};
-    while (auto optJob = ctx.dequeueJob()) {
-      job = std::move(*optJob);
+    // Run the tasks until there are no more.
+    vm::MutableHandle<vm::Callable> task{runtime.get()};
+    while (auto optTask = ctx.dequeueTask()) {
+      task = std::move(*optTask);
       auto callRes = vm::Callable::executeCall0(
-          job, runtime.get(), vm::Runtime::getUndefinedValue(), false);
+          task, runtime.get(), vm::Runtime::getUndefinedValue(), false);
       if (LLVM_UNLIKELY(callRes == vm::ExecutionStatus::EXCEPTION)) {
         threwException = true;
         llvh::outs().flush();
@@ -503,6 +504,9 @@ bool executeHBCBytecodeImpl(
             llvh::errs(), runtime->makeHandle(runtime->getThrownValue()));
         break;
       }
+
+      // Perform a microtask checkpoint at the end of every task tick.
+      microtask::performCheckpoint(runtime.get());
     }
   }
 

@@ -163,9 +163,15 @@ inline const GCConfig TestGCConfigFixedSize(
 #define ASSERT_RETURNED(x) ASSERT_EQ(ExecutionStatus::RETURNED, x)
 
 /// Expect that 'x' is a string primitive with value 'str'
-#define EXPECT_STRINGPRIM(str, x) \
-  EXPECT_TRUE(isSameValue(        \
-      StringPrimitive::createNoThrow(runtime, str).getHermesValue(), x));
+#define EXPECT_STRINGPRIM(str, x)                                           \
+  do {                                                                      \
+    GCScopeMarkerRAII marker{runtime};                                      \
+    Handle<> xHandle{runtime, x};                                           \
+    Handle<StringPrimitive> strHandle =                                     \
+        StringPrimitive::createNoThrow(runtime, str);                       \
+    EXPECT_TRUE(                                                            \
+        isSameValue(strHandle.getHermesValue(), xHandle.getHermesValue())); \
+  } while (0)
 
 /// Assert that execution of 'x' didn't throw and returned the expected bool.
 #define EXPECT_CALLRESULT_BOOL_RAW(B, x) \
@@ -275,7 +281,7 @@ class DummyRuntime final : public HandleRootOwner,
 
   /// Create a DummyRuntime with the default parameters.
   static std::shared_ptr<DummyRuntime> create(
-      MetadataTableForTests metaTable,
+      MetadataTable metaTable,
       const GCConfig &gcConfig);
 
   /// Use a custom storage provider and/or a custom crash manager.
@@ -283,7 +289,7 @@ class DummyRuntime final : public HandleRootOwner,
   ///   StorageProvider::defaultProvider eventually or the test will fail.
   /// \param crashMgr
   static std::shared_ptr<DummyRuntime> create(
-      MetadataTableForTests metaTable,
+      MetadataTable metaTable,
       const GCConfig &gcConfig,
       std::shared_ptr<StorageProvider> provider,
       std::shared_ptr<CrashManager> crashMgr =
@@ -325,6 +331,9 @@ class DummyRuntime final : public HandleRootOwner,
   void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool) override;
 
   void markWeakRoots(WeakRootAcceptor &weakAcceptor) override;
+
+  void markRootsForCompleteMarking(
+      RootAndSlotAcceptorWithNames &acceptor) override;
 
   unsigned int getSymbolsEnd() const override {
     return 0;
@@ -386,7 +395,7 @@ class DummyRuntime final : public HandleRootOwner,
       experiments::VMExperimentFlags experiments);
 
   DummyRuntime(
-      MetadataTableForTests metaTable,
+      MetadataTable metaTable,
       const GCConfig &gcConfig,
       std::shared_ptr<StorageProvider> storageProvider,
       std::shared_ptr<CrashManager> crashMgr);

@@ -820,3 +820,5 @@ llvh::StringRef getStringFromEntry(
 
 } // namespace hbc
 } // namespace hermes
+
+#undef DEBUG_TYPE

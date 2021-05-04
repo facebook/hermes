@@ -424,7 +424,7 @@ std::pair<std::string, std::string> SourceErrorManager::buildSourceAndCaretLine(
 
   // Build the line with the caret and ranges.
   std::string caretLine(numColumns + 1, ' ');
-  for (const auto range : ranges) {
+  for (const auto &range : ranges) {
     if (range.first < caretLine.size()) {
       std::fill(
           &caretLine[range.first],
@@ -454,7 +454,7 @@ std::pair<std::string, std::string> SourceErrorManager::buildSourceAndCaretLine(
   // Note ranges are of the form [start, end) and not [start, length)
   int focusStart = columnNo;
   int focusLength = 1;
-  for (const auto r : ranges) {
+  for (const auto &r : ranges) {
     if (r.first <= size_t(columnNo) && size_t(columnNo) < r.second) {
       focusStart = r.first;
       focusLength = r.second - r.first;

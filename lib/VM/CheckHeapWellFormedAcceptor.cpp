@@ -8,6 +8,7 @@
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 
 #include "hermes/VM/GC.h"
+#include "hermes/VM/SmallHermesValue-inline.h"
 
 namespace hermes {
 namespace vm {
@@ -38,6 +39,15 @@ void CheckHeapWellFormedAcceptor::acceptHV(HermesValue &hv) {
   assert(!hv.isInvalid() && "HermesValue with InvalidTag encountered by GC.");
   if (hv.isPointer()) {
     GCCell *cell = static_cast<GCCell *>(hv.getPointer());
+    accept(cell);
+  } else if (hv.isSymbol()) {
+    acceptSym(hv.getSymbol());
+  }
+}
+
+void CheckHeapWellFormedAcceptor::acceptSHV(SmallHermesValue &hv) {
+  if (hv.isPointer()) {
+    GCCell *cell = static_cast<GCCell *>(hv.getPointer(pointerBase_));
     accept(cell);
   } else if (hv.isSymbol()) {
     acceptSym(hv.getSymbol());

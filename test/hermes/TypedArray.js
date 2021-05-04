@@ -544,6 +544,20 @@ cons.forEach(function(c, i) {
   assert.throws(function() {
     from([]);
   }, TypeError);
+
+  // Test a TypedArray whose length is greater than 2 ^ 32 - 1
+  // NOTE: This behavior differs from v8 and JSC, because we use uint32_t as our
+  // indexing type. They also disagree with each other.
+  assert.throws(function() {
+    var ta = new c();
+    Object.defineProperty(ta, "length", {
+      get: function() {
+        // This number is 2 ^ 32 + 1.
+        return 4294967297;
+      }
+    });
+    return c.from(ta);
+  }, TypeError);
 });
 
 /// @}
