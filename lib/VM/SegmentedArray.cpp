@@ -456,20 +456,9 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
     return self;
   }
 
-  if (currSize <= kValueToSegmentThreshold &&
-      finalSize <= kValueToSegmentThreshold) {
-    // currSize and finalSize are inside inline storage, bump and fill.
-    if (Fill) {
-      GCHermesValue::uninitialized_fill(
-          self->inlineStorage() + currSize,
-          self->inlineStorage() + finalSize,
-          empty,
-          &runtime->getHeap());
-    }
-    // Set the final size.
-    self->numSlotsUsed_.store(finalSize, std::memory_order_release);
-    return self;
-  }
+  // Inline slots must be reserved by the caller. Since finalSize is greater
+  // than the capacity, we know that it must require adding segments.
+  assert(finalSize > kValueToSegmentThreshold);
 
   // currSize might be in inline storage, but finalSize is definitely in
   // segments.
