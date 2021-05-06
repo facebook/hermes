@@ -1871,10 +1871,10 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
       diag.breakdown[hvType].size += hvBytes;
     }
 
-    void accept(RootSymbolID sym) override {
+    void accept(const RootSymbolID &sym) override {
       acceptSym(sym);
     }
-    void accept(GCSymbolID sym) override {
+    void accept(const GCSymbolID &sym) override {
       acceptSym(sym);
     }
     void acceptSym(SymbolID sym) {

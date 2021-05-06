@@ -35,7 +35,7 @@ class SkipWeakRefsAcceptor final : public SlotAcceptor {
   void accept(GCSmallHermesValue &hv) override {
     acceptor_->accept(hv);
   }
-  void accept(GCSymbolID sym) override {
+  void accept(const GCSymbolID &sym) override {
     acceptor_->accept(sym);
   }
 

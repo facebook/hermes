@@ -341,7 +341,7 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
         accept(hv.getPointer(gc.getPointerBase()), &hv);
     }
 
-    void accept(GCSymbolID hv) override {}
+    void accept(const GCSymbolID &hv) override {}
   };
 
   if (kVerifyCardTable) {

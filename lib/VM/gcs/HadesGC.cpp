@@ -504,8 +504,8 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     }
   }
 
-  void accept(RootSymbolID sym) override {}
-  void accept(GCSymbolID sym) override {}
+  void accept(const RootSymbolID &sym) override {}
+  void accept(const GCSymbolID &sym) override {}
 
   /// There is no need to do anything with WeakRefs, since they are not
   /// collected in a YG/compaction pass.
@@ -739,11 +739,11 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
     markedSymbols_[idx] = true;
   }
 
-  void accept(RootSymbolID sym) override {
+  void accept(const RootSymbolID &sym) override {
     acceptSym(sym);
   }
-  void accept(GCSymbolID sym) override {
-    acceptSym(sym);
+  void accept(const GCSymbolID &sym) override {
+    acceptSym(concurrentRead<SymbolID>(sym));
   }
 
   /// Interface for symbols marked by a write barrier.
@@ -942,7 +942,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
     union {
       Storage storage;
       T val;
-    } ret;
+    } ret{};
 
     // There is a benign data race here, as the GC can read a pointer while
     // it's being modified by the mutator; however, the following rules we
@@ -3242,7 +3242,7 @@ void HadesGC::verifyCardTable() {
         acceptHelper(hv.getPointer(gc.getPointerBase()), &hv);
     }
 
-    void accept(GCSymbolID hv) override {}
+    void accept(const GCSymbolID &hv) override {}
   };
 
   VerifyCardDirtyAcceptor acceptor{*this};
