@@ -81,18 +81,6 @@ class SegmentedArray final
     /// the segment with empty values.
     void setLength(Runtime *runtime, uint32_t newLength);
 
-    /// Same as above, except it doesn't fill with empty values.
-    /// It is the caller's responsibility to ensure that the newly used portion
-    /// will contain valid values before they are accessed (including accesses
-    /// by the GC).
-    /// \pre This cannot be called if kConcurrentGC is true, since the GC might
-    ///   read uninitialized memory even if the mutator wouldn't.
-    void setLengthWithoutFilling(uint32_t newLength) {
-      assert(!kConcurrentGC && "Cannot avoid filling for a concurrent GC");
-      assert(newLength <= kMaxLength && "Cannot set length to more than size");
-      length_.store(newLength, std::memory_order_release);
-    }
-
 #ifdef HERMESVM_SERIALIZE
     explicit Segment(Deserializer &d);
 
@@ -584,14 +572,11 @@ class SegmentedArray final
   void shrinkLeft(Runtime *runtime, size_type amount);
 
   /// Increases the size by \p amount, without doing any allocation.
-  /// \param fill If true, fill the newly usable space with empty HermesValues.
-  void
-  increaseSizeWithinCapacity(Runtime *runtime, size_type amount, bool fill);
+  void increaseSizeWithinCapacity(Runtime *runtime, size_type amount);
 
   /// Increases the size by \p amount, and adjusts segment sizes
   /// accordingly.
   /// NOTE: increasing size can potentially allocate new segments.
-  template <bool Fill>
   static PseudoHandle<SegmentedArray> increaseSize(
       Runtime *runtime,
       PseudoHandle<SegmentedArray> self,
