@@ -1165,7 +1165,7 @@ void GenGC::writeBarrierRange(const GCHermesValue *start, uint32_t numHVs) {
   // most cases the cost of the check will be similar to the cost of dirtying
   // those addresses.
   const char *firstPtr = reinterpret_cast<const char *>(start);
-  const char *lastPtr = reinterpret_cast<const char *>(start + numHVs) - 1;
+  const char *lastPtr = reinterpret_cast<const char *>(start + numHVs);
 
   assert(
       AlignedStorage::start(firstPtr) == AlignedStorage::start(lastPtr) &&
@@ -1180,7 +1180,7 @@ void GenGC::writeBarrierRange(
     uint32_t numHVs) {
   countRangeWriteBarrier();
   const char *firstPtr = reinterpret_cast<const char *>(start);
-  const char *lastPtr = reinterpret_cast<const char *>(start + numHVs) - 1;
+  const char *lastPtr = reinterpret_cast<const char *>(start + numHVs);
 
   assert(
       AlignedStorage::start(firstPtr) == AlignedStorage::start(lastPtr) &&
