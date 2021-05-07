@@ -282,6 +282,12 @@ class JSParserImpl {
 
 #endif
 
+#if HERMES_PARSE_TS
+  UniqueString *namespaceIdent_;
+  UniqueString *readonlyIdent_;
+  UniqueString *isIdent_;
+#endif
+
   /// String representation of all tokens.
   UniqueString *tokenIdent_[NUM_JS_TOKENS];
 
@@ -489,6 +495,21 @@ class JSParserImpl {
         return optNext.hasValue() && (*optNext == TokenKind::identifier);
       }
       if (checkN(typeIdent_, interfaceIdent_)) {
+        auto optNext = lexer_.lookahead1(llvh::None);
+        return optNext.hasValue() && *optNext == TokenKind::identifier;
+      }
+      if (check(TokenKind::rw_interface)) {
+        return true;
+      }
+      if (check(TokenKind::rw_enum)) {
+        return true;
+      }
+    }
+#endif
+
+#if HERMES_PARSE_TS
+    if (context_.getParseTS()) {
+      if (checkN(typeIdent_, interfaceIdent_, namespaceIdent_)) {
         auto optNext = lexer_.lookahead1(llvh::None);
         return optNext.hasValue() && *optNext == TokenKind::identifier;
       }
@@ -926,6 +947,7 @@ class JSParserImpl {
           AllowTypedArrowFunction::Yes,
       CoverTypedParameters coverTypedParameters = CoverTypedParameters::Yes,
       ESTree::Node *typeParams = nullptr);
+
   Optional<ESTree::Node *> parseExpression(
       Param param = ParamIn,
       CoverTypedParameters coverTypedParameters = CoverTypedParameters::Yes);
@@ -992,10 +1014,25 @@ class JSParserImpl {
       AllowJSXMemberExpression allowJSXMemberExpression);
 #endif
 
-#if HERMES_PARSE_FLOW
-
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
   enum class AllowAnonFunctionType { No, Yes };
 
+  Optional<ESTree::Node *> parseTypeAnnotation(
+      Optional<SMLoc> wrappedStart = None,
+      AllowAnonFunctionType allowAnonFunctionType =
+          AllowAnonFunctionType::Yes) {
+    assert(context_.getParseFlow() || context_.getParseTS());
+#if HERMES_PARSE_FLOW
+    if (context_.getParseFlow())
+      return parseTypeAnnotationFlow(wrappedStart, allowAnonFunctionType);
+#endif
+#if HERMES_PARSE_TS
+    return parseTypeAnnotationTS(wrappedStart);
+#endif
+  }
+#endif
+
+#if HERMES_PARSE_FLOW
   /// \param wrappedStart if set, the type annotation should be wrapped in a
   /// TypeAnnotationNode starting at this location. If not set, the type
   /// annotation should not be wrapped in a TypeAnnotationNode.
@@ -1174,6 +1211,52 @@ class JSParserImpl {
       OptValue<EnumKind> optKind,
       Optional<SMLoc> explicitTypeStart);
   Optional<ESTree::Node *> parseEnumMemberFlow();
+#endif
+
+#if HERMES_PARSE_TS
+  /// Whether a TS function type is a constructor.
+  enum class IsConstructorType { No, Yes };
+
+  Optional<ESTree::Node *> parseTypeAnnotationTS(
+      Optional<SMLoc> wrappedStart = None);
+
+  Optional<ESTree::Node *> parseTSDeclaration();
+  Optional<ESTree::Node *> parseTSTypeAliasDeclaration(SMLoc start);
+  Optional<ESTree::Node *> parseTSInterfaceDeclaration();
+  Optional<ESTree::Node *> parseTSEnumDeclaration();
+  Optional<ESTree::Node *> parseTSEnumMember();
+  Optional<ESTree::Node *> parseTSNamespaceDeclaration();
+
+  Optional<ESTree::Node *> parseTSTypeParameters();
+  Optional<ESTree::Node *> parseTSTypeParameter();
+
+  Optional<ESTree::Node *> parseTSUnionType();
+  Optional<ESTree::Node *> parseTSIntersectionType();
+  Optional<ESTree::Node *> parseTSTupleType();
+  Optional<ESTree::Node *> parseTSFunctionOrParenthesizedType(
+      SMLoc start,
+      ESTree::Node *typeParams,
+      IsConstructorType isConstructorType);
+  bool parseTSFunctionTypeParams(SMLoc start, ESTree::NodeList &params);
+  Optional<ESTree::Node *> parseTSFunctionTypeParam();
+  Optional<ESTree::Node *> parseTSFunctionTypeWithParams(
+      SMLoc start,
+      ESTree::NodeList &&params,
+      ESTree::Node *typeParams);
+
+  Optional<ESTree::Node *> parseTSObjectType();
+  Optional<ESTree::Node *> parseTSObjectTypeMember();
+  Optional<ESTree::Node *> parseTSIndexSignature(SMLoc start);
+
+  Optional<ESTree::Node *> parseTSPostfixType();
+  Optional<ESTree::Node *> parseTSPrimaryType();
+  Optional<ESTree::TSTypeReferenceNode *> parseTSTypeReference();
+  Optional<ESTree::Node *> parseTSQualifiedName();
+  Optional<ESTree::Node *> parseTSTypeQuery();
+  Optional<ESTree::Node *> parseTSTypeArguments();
+
+  ESTree::Node *reparseIdentifierAsTSTypeAnnotation(
+      ESTree::IdentifierNode *ident);
 #endif
 
   /// RAII to save and restore the current setting of "strict mode".

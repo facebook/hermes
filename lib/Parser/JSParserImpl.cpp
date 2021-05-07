@@ -107,6 +107,14 @@ void JSParserImpl::initializeIdentifiers() {
 
 #endif
 
+#if HERMES_PARSE_TS
+
+  namespaceIdent_ = lexer_.getIdentifier("namespace");
+  readonlyIdent_ = lexer_.getIdentifier("readonly");
+  isIdent_ = lexer_.getIdentifier("is");
+
+#endif
+
   // Generate the string representation of all tokens.
   for (unsigned i = 0; i != NUM_JS_TOKENS; ++i)
     tokenIdent_[i] = lexer_.getIdentifier(tokenKindStr((TokenKind)i));
@@ -710,6 +718,15 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclaration(Param param) {
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow()) {
     auto optDecl = parseFlowDeclaration();
+    if (!optDecl)
+      return None;
+    return *optDecl;
+  }
+#endif
+
+#if HERMES_PARSE_TS
+  if (context_.getParseTS()) {
+    auto optDecl = parseTSDeclaration();
     if (!optDecl)
       return None;
     return *optDecl;

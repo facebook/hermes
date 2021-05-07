@@ -320,6 +320,11 @@ class Context {
     return parseTS_;
   }
 
+  /// \return true if either TS or Flow is being parsed.
+  bool getParseTypes() const {
+    return getParseFlow() || getParseTS();
+  }
+
   bool isLazyCompilation() const {
     return lazyCompilation_;
   }
