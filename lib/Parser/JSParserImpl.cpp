@@ -387,9 +387,19 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
   }
 
   ESTree::Node *typeParams = nullptr;
+
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow() && check(TokenKind::less)) {
     auto optTypeParams = parseTypeParamsFlow();
+    if (!optTypeParams)
+      return None;
+    typeParams = *optTypeParams;
+  }
+#endif
+
+#if HERMES_PARSE_TS
+  if (context_.getParseTS() && check(TokenKind::less)) {
+    auto optTypeParams = parseTSTypeParameters();
     if (!optTypeParams)
       return None;
     typeParams = *optTypeParams;
@@ -432,6 +442,17 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
       if (!optPred)
         return None;
       predicate = *optPred;
+    }
+  }
+#endif
+#if HERMES_PARSE_TS
+  if (context_.getParseTS() && check(TokenKind::colon)) {
+    SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
+    if (!check(checksIdent_)) {
+      auto optRet = parseTypeAnnotationTS(annotStart);
+      if (!optRet)
+        return None;
+      returnType = *optRet;
     }
   }
 #endif
@@ -923,8 +944,8 @@ Optional<ESTree::IdentifierNode *> JSParserImpl::parseBindingIdentifier(
 
   ESTree::Node *type = nullptr;
   bool optional = false;
-#if HERMES_PARSE_FLOW
-  if (context_.getParseFlow()) {
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+  if (context_.getParseTypes()) {
     if (check(TokenKind::question)) {
       optional = true;
       advance(JSLexer::GrammarContext::Type);
@@ -932,7 +953,7 @@ Optional<ESTree::IdentifierNode *> JSParserImpl::parseBindingIdentifier(
 
     if (check(TokenKind::colon)) {
       SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-      auto optType = parseTypeAnnotationFlow(annotStart);
+      auto optType = parseTypeAnnotation(annotStart);
       if (!optType)
         return None;
       type = *optType;
@@ -1149,11 +1170,11 @@ Optional<ESTree::ArrayPatternNode *> JSParserImpl::parseArrayBindingPattern(
     return None;
 
   ESTree::Node *type = nullptr;
-#if HERMES_PARSE_FLOW
-  if (context_.getParseFlow()) {
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+  if (context_.getParseTypes()) {
     if (check(TokenKind::colon)) {
       SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-      auto optType = parseTypeAnnotationFlow(annotStart);
+      auto optType = parseTypeAnnotation(annotStart);
       if (!optType)
         return None;
       type = *optType;
@@ -1280,11 +1301,11 @@ Optional<ESTree::ObjectPatternNode *> JSParserImpl::parseObjectBindingPattern(
     return None;
 
   ESTree::Node *type = nullptr;
-#if HERMES_PARSE_FLOW
-  if (context_.getParseFlow()) {
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+  if (context_.getParseTypes()) {
     if (check(TokenKind::colon)) {
       SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-      auto optType = parseTypeAnnotationFlow(annotStart);
+      auto optType = parseTypeAnnotation(annotStart);
       if (!optType)
         return None;
       type = *optType;
@@ -2516,8 +2537,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           identRng,
           identRng,
           new (context_) ESTree::IdentifierNode(ident, nullptr, false));
-#if HERMES_PARSE_FLOW
-    } else if (context_.getParseFlow() && check(TokenKind::less)) {
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+    } else if (context_.getParseTypes() && check(TokenKind::less)) {
       // This is a method definition.
       method = true;
       key = setLocation(
@@ -2564,10 +2585,10 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
         return None;
 
       ESTree::Node *returnType = nullptr;
-#if HERMES_PARSE_FLOW
-      if (context_.getParseFlow() && check(TokenKind::colon)) {
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+      if (context_.getParseTypes() && check(TokenKind::colon)) {
         SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-        auto optRet = parseTypeAnnotationFlow(annotStart);
+        auto optRet = parseTypeAnnotation(annotStart);
         if (!optRet)
           return None;
         returnType = *optRet;
@@ -2614,8 +2635,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           identRng,
           identRng,
           new (context_) ESTree::IdentifierNode(ident, nullptr, false));
-#if HERMES_PARSE_FLOW
-    } else if (context_.getParseFlow() && check(TokenKind::less)) {
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+    } else if (context_.getParseTypes() && check(TokenKind::less)) {
       // This is a method definition.
       method = true;
       key = setLocation(
@@ -2668,10 +2689,10 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
         return None;
 
       ESTree::Node *returnType = nullptr;
-#if HERMES_PARSE_FLOW
-      if (context_.getParseFlow() && check(TokenKind::colon)) {
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+      if (context_.getParseTypes() && check(TokenKind::colon)) {
         SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-        auto optRet = parseTypeAnnotationFlow(annotStart);
+        auto optRet = parseTypeAnnotation(annotStart);
         if (!optRet)
           return None;
         returnType = *optRet;
@@ -2718,8 +2739,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           identRng,
           identRng,
           new (context_) ESTree::IdentifierNode(ident, nullptr, false));
-#if HERMES_PARSE_FLOW
-    } else if (context_.getParseFlow() && check(TokenKind::less)) {
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+    } else if (context_.getParseTypes() && check(TokenKind::less)) {
       // This is a method definition.
       method = true;
       key = setLocation(
@@ -2827,6 +2848,14 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       typeParams = *optTypeParams;
     }
 #endif
+#if HERMES_PARSE_TS
+    if (context_.getParseTS() && check(TokenKind::less)) {
+      auto optTypeParams = parseTSTypeParameters();
+      if (!optTypeParams)
+        return None;
+      typeParams = *optTypeParams;
+    }
+#endif
 
     // (
     if (!need(
@@ -2841,10 +2870,10 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       return None;
 
     ESTree::Node *returnType = nullptr;
-#if HERMES_PARSE_FLOW
-    if (context_.getParseFlow() && check(TokenKind::colon)) {
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+    if (context_.getParseTypes() && check(TokenKind::colon)) {
       SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-      auto optRet = parseTypeAnnotationFlow(annotStart);
+      auto optRet = parseTypeAnnotation(annotStart);
       if (!optRet)
         return None;
       returnType = *optRet;
@@ -3343,6 +3372,23 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
         return None;
     }
 #endif
+#if HERMES_PARSE_TS
+    if (context_.getParseTS() && check(TokenKind::less)) {
+      auto optTypeArgs = parseTSTypeArguments();
+      if (!optTypeArgs) {
+        return None;
+      }
+
+      typeArgs = *optTypeArgs;
+
+      if (!need(
+              TokenKind::l_paren,
+              "after type arguments in optional call",
+              "start of optional call",
+              objectLoc))
+        return None;
+    }
+#endif
 
     ESTree::NodeList argList;
     SMLoc endLoc;
@@ -3374,16 +3420,17 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
   SMLoc objectLoc = startLoc;
 
   for (;;) {
-#if HERMES_PARSE_FLOW
-    if (context_.getParseFlowAmbiguous() && !typeArgs &&
-        check(TokenKind::less)) {
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+    if ((context_.getParseFlowAmbiguous() || context_.getParseTS()) &&
+        !typeArgs && check(TokenKind::less)) {
       JSLexer::SavePoint savePoint{&lexer_};
       // Each call in a chain may have type arguments.
       // As such, we must attempt to parse them upon encountering '<',
       // but roll back if it just ended up being a comparison operator.
       SourceErrorManager::SaveAndSuppressMessages suppress{
           &sm_, Subsystem::Parser};
-      auto optTypeArgs = parseTypeArgsFlow();
+      auto optTypeArgs =
+          context_.getParseTS() ? parseTSTypeArguments() : parseTypeArgsFlow();
       if (optTypeArgs && check(TokenKind::l_paren)) {
         // Call expression with type arguments.
         typeArgs = *optTypeArgs;
@@ -3521,14 +3568,16 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrOptionalExpression(
   ESTree::NodePtr expr = optExpr.getValue();
 
   ESTree::Node *typeArgs = nullptr;
-#if HERMES_PARSE_FLOW
-  if (context_.getParseFlowAmbiguous() && check(TokenKind::less)) {
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+  if ((context_.getParseFlowAmbiguous() || context_.getParseTS()) &&
+      check(TokenKind::less)) {
     JSLexer::SavePoint savePoint{&lexer_};
     // Attempt to parse type args upon encountering '<',
     // but roll back if it just ended up being a comparison operator.
     SourceErrorManager::SaveAndSuppressMessages suppress{
         &sm_, Subsystem::Parser};
-    auto optTypeArgs = parseTypeArgsFlow();
+    auto optTypeArgs =
+        context_.getParseTS() ? parseTSTypeArguments() : parseTypeArgsFlow();
     if (optTypeArgs) {
       // New expression with type arguments.
       typeArgs = *optTypeArgs;
@@ -3592,16 +3641,19 @@ Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
         llvh::isa<ESTree::OptionalCallExpressionNode>(expr)));
 
   ESTree::Node *typeArgs = nullptr;
-#if HERMES_PARSE_FLOW
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
   // If the less than sign is immediately following a question dot then it
   // cannot be a binary expression and is unambiguously Flow type syntax.
-  if ((optional ? context_.getParseFlow() : context_.getParseFlowAmbiguous()) &&
+  if (((optional ? context_.getParseFlow()
+                 : context_.getParseFlowAmbiguous()) ||
+       context_.getParseTS()) &&
       check(TokenKind::less)) {
     JSLexer::SavePoint savePoint{&lexer_};
     // Suppress messages from the parser while still displaying lexer messages.
     SourceErrorManager::SaveAndSuppressMessages suppress{
         &sm_, Subsystem::Parser};
-    auto optTypeArgs = parseTypeArgsFlow();
+    auto optTypeArgs =
+        context_.getParseTS() ? parseTSTypeArguments() : parseTypeArgsFlow();
     if (optTypeArgs && check(TokenKind::l_paren)) {
       // Call expression with type arguments.
       typeArgs = *optTypeArgs;
@@ -3902,8 +3954,10 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
     // No '?', so this isn't a conditional expression.
     // If CoverTypedParameters::Yes, we still need to account for this
     // being formal parameters, so try that.
-#if HERMES_PARSE_FLOW
-    if (context_.getParseFlow() &&
+    // TS doesn't have type casts with this syntax, but we must still
+    // cover the typed identifier node for when it turns into an arrow function.
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+    if (context_.getParseTypes() &&
         coverTypedParameters == CoverTypedParameters::Yes) {
       auto optCover = tryParseCoverTypedIdentifierNode(test, false);
       if (!optCover)
@@ -3920,8 +3974,8 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
   ESTree::Node *consequent = nullptr;
   SMRange questionRange = tok_->getSourceRange();
 
-#if HERMES_PARSE_FLOW
-  if (context_.getParseFlow()) {
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+  if (context_.getParseTypes()) {
     // Save here to save the question mark (we can only save on punctuators).
     // Early returns will happen if we find anything that leads to
     // short-circuiting out of the traditional conditional expression.
@@ -4015,25 +4069,24 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
           ESTree::ConditionalExpressionNode(test, alternate, consequent));
 }
 
-#if HERMES_PARSE_FLOW
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
 Optional<ESTree::Node *> JSParserImpl::tryParseCoverTypedIdentifierNode(
     ESTree::Node *test,
     bool optional) {
-  assert(context_.getParseFlow() && "must be parsing Flow");
+  assert(context_.getParseTypes() && "must be parsing types");
   // In the case of flow types in arrow function parameters, we may have
   // optional parameters which look like:
   // Identifier ? : TypeAnnotation
   // Because the colon and the type annotation are optional, we check and
   // consume the colon here and return a CoverTypedIdentifierNode if it's
   // possible we are parsing typed arrow parameters.
-  if (context_.getParseFlow() && check(TokenKind::colon) &&
-      test->getParens() == 0) {
+  if (check(TokenKind::colon) && test->getParens() == 0) {
     if (isa<ESTree::IdentifierNode>(test) ||
         isa<ESTree::ObjectExpressionNode>(test) ||
         isa<ESTree::ArrayExpressionNode>(test)) {
       // Deliberately wrap the type annotation later when reparsing.
       SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-      auto optRet = parseTypeAnnotationFlow(annotStart);
+      auto optRet = parseTypeAnnotation(annotStart);
       if (!optRet)
         return None;
       ESTree::Node *type = *optRet;
@@ -4121,6 +4174,14 @@ Optional<ESTree::ClassDeclarationNode *> JSParserImpl::parseClassDeclaration(
     typeParams = *optParams;
   }
 #endif
+#if HERMES_PARSE_TS
+  if (context_.getParseTS() && check(TokenKind::less)) {
+    auto optParams = parseTSTypeParameters();
+    if (!optParams)
+      return None;
+    typeParams = *optParams;
+  }
+#endif
 
   auto optClass =
       parseClassTail(startLoc, name, typeParams, ClassParseKind::Declaration);
@@ -4142,7 +4203,8 @@ Optional<ESTree::ClassExpressionNode *> JSParserImpl::parseClassExpression() {
 
   if (!check(TokenKind::rw_extends, TokenKind::l_brace) &&
       !(context_.getParseFlow() &&
-        check(TokenKind::rw_implements, TokenKind::less))) {
+        check(TokenKind::rw_implements, TokenKind::less)) &&
+      !(context_.getParseTS() && check(TokenKind::less))) {
     // Try to parse a BindingIdentifier if we did not see a ClassHeritage
     // or a '{'.
     auto optName = parseBindingIdentifier(Param{});
@@ -4160,6 +4222,14 @@ Optional<ESTree::ClassExpressionNode *> JSParserImpl::parseClassExpression() {
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow() && check(TokenKind::less)) {
     auto optParams = parseTypeParamsFlow();
+    if (!optParams)
+      return None;
+    typeParams = *optParams;
+  }
+#endif
+#if HERMES_PARSE_TS
+  if (context_.getParseTS() && check(TokenKind::less)) {
+    auto optParams = parseTSTypeParameters();
     if (!optParams)
       return None;
     typeParams = *optParams;
@@ -4191,6 +4261,14 @@ Optional<ESTree::Node *> JSParserImpl::parseClassTail(
 #if HERMES_PARSE_FLOW
     if (context_.getParseFlow() && check(TokenKind::less)) {
       auto optParams = parseTypeArgsFlow();
+      if (!optParams)
+        return None;
+      superTypeParams = *optParams;
+    }
+#endif
+#if HERMES_PARSE_TS
+    if (context_.getParseTS() && check(TokenKind::less)) {
+      auto optParams = parseTSTypeArguments();
       if (!optParams)
         return None;
       superTypeParams = *optParams;
@@ -4274,6 +4352,7 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
     SMRange startRange = tok_->getSourceRange();
 
     bool declare = false;
+    bool isPrivate = false;
 
 #if HERMES_PARSE_FLOW
     if (context_.getParseFlow() && check(declareIdent_)) {
@@ -4283,6 +4362,19 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
           (*optNext == TokenKind::rw_static ||
            *optNext == TokenKind::identifier)) {
         declare = true;
+        advance();
+      }
+    }
+#endif
+
+#if HERMES_PARSE_TS
+    if (context_.getParseTS() && check(TokenKind::rw_private)) {
+      // Check for "private" class properties.
+      auto optNext = lexer_.lookahead1(llvh::None);
+      if (optNext.hasValue() &&
+          (*optNext == TokenKind::rw_static ||
+           *optNext == TokenKind::identifier)) {
+        isPrivate = true;
         advance();
       }
     }
@@ -4301,7 +4393,8 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
         // intentional fallthrough
       default: {
         // ClassElement
-        auto optElem = parseClassElement(isStatic, startRange, declare);
+        auto optElem =
+            parseClassElement(isStatic, startRange, declare, isPrivate);
         if (!optElem)
           return None;
         if (auto *method = dyn_cast<ESTree::MethodDefinitionNode>(*optElem)) {
@@ -4355,8 +4448,11 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     bool isStatic,
     SMRange startRange,
     bool declare,
+    bool isPrivate,
     bool eagerly) {
   SMLoc startLoc = tok_->getStartLoc();
+
+  bool optional = false;
 
   enum class SpecialKind {
     None,
@@ -4463,7 +4559,6 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
 #endif
 
   bool computed = false;
-  bool isPrivate = false;
   if (doParsePropertyName) {
     if (check(TokenKind::private_identifier)) {
       isPrivate = true;
@@ -4501,10 +4596,15 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     // FieldDefinition ;
     //                 ^
     ESTree::Node *typeAnnotation = nullptr;
-#if HERMES_PARSE_FLOW
-    if (context_.getParseFlow() && check(TokenKind::colon)) {
+#if HERMES_PARSE_TS
+    if (context_.getParseTS() && checkAndEat(TokenKind::question)) {
+      optional = true;
+    }
+#endif
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+    if (context_.getParseTypes() && check(TokenKind::colon)) {
       SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-      auto optType = parseTypeAnnotationFlow(annotStart);
+      auto optType = parseTypeAnnotation(annotStart);
       if (!optType)
         return None;
       typeAnnotation = *optType;
@@ -4536,7 +4636,13 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
           prop,
           getPrevTokenEndLoc(),
           new (context_) ESTree::ClassPrivatePropertyNode(
-              prop, value, isStatic, declare, variance, typeAnnotation));
+              prop,
+              value,
+              isStatic,
+              declare,
+              optional,
+              variance,
+              typeAnnotation));
     }
     return setLocation(
         startRange,
@@ -4547,6 +4653,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
             computed,
             isStatic,
             declare,
+            optional,
             variance,
             typeAnnotation));
   }
@@ -5361,6 +5468,50 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
   }
 #endif
 
+#if HERMES_PARSE_TS
+  if (context_.getParseTS()) {
+    // Separate logic for TS parsing here, because the semantics don't
+    // require as much complexity as Flow due to a lack of predicates.
+    if (allowTypedArrowFunction == AllowTypedArrowFunction::Yes &&
+        ((*optLeftExpr)->getParens() != 0 ||
+         isa<ESTree::CoverEmptyArgsNode>(*optLeftExpr)) &&
+        check(TokenKind::colon)) {
+      JSLexer::SavePoint savePoint{&lexer_};
+      // Defer our decision on whether to show or suppress messages for this
+      // next section.
+      // If we are unsuccessful during the parse, it can mean that we need to
+      // start parsing JSX children inside tags, instead of function type
+      // parameters. We need to suppress lexer messages because the lexing rules
+      // inside JSX are quite different from TS.
+      // For example:
+      // x ? (1) : <tag>#{foo}</tag>;
+      //         ^
+      // and
+      // x ? (1) : <tag>"</tag>;
+      //         ^
+      // must be able to handle the lexer errors that would occur if we lexed
+      // the inside of the JSX tags as JS.
+      CollectMessagesRAII collect{&sm_, true};
+      SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
+      auto optType = parseTypeAnnotationTS(annotStart);
+      if (optType)
+        returnType = *optType;
+      if (optType) {
+        if (check(TokenKind::equalgreater)) {
+          // Done parsing the return type.
+          // Successful parse, show any messages that the lexer emitted.
+          collect.setDiscardMessages(false);
+        } else {
+          savePoint.restore();
+        }
+      } else {
+        savePoint.restore();
+      }
+    }
+  }
+
+#endif
+
   // Check for ArrowFunction.
   //   ArrowFunction : ArrowParameters [no line terminator] => ConciseBody.
   //   AsyncArrowFunction :
@@ -5666,6 +5817,14 @@ Optional<UniqueString *> JSParserImpl::parseImportClause(
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow()) {
     if (checkN(typeIdent_, TokenKind::rw_typeof)) {
+      kind = tok_->getResWordOrIdentifier();
+      kindRange = advance();
+    }
+  }
+#endif
+#if HERMES_PARSE_TS
+  if (context_.getParseTS()) {
+    if (checkN(typeIdent_)) {
       kind = tok_->getResWordOrIdentifier();
       kindRange = advance();
     }

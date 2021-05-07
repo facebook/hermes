@@ -879,6 +879,7 @@ class JSParserImpl {
       bool isStatic,
       SMRange startRange,
       bool declare,
+      bool isPrivate,
       bool eagerly = false);
 
   /// Reparse the specified node as arrow function parameter list and store the

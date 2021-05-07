@@ -125,6 +125,9 @@ class EsprimaTestRunner:
                 del ast["directive"]
         if ast["type"] == "Identifier" and ast["name"] == "this":
             del ast["optional"]
+        if ast["type"] == "ClassProperty" or ast["type"] == "ClassPrivateProperty":
+            if not ast["optional"]:
+                del ast["optional"]
         # convert the literal node types to ESTree standard form
         if ast["type"] in HERMES_LITERAL_NODE_TYPES:
             if ast["type"] == "NullLiteral":
