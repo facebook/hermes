@@ -3751,6 +3751,35 @@ Optional<ESTree::Node *> JSParserImpl::parseUnaryExpression() {
               ESTree::UpdateExpressionNode(op, expr.getValue(), true));
     }
 
+#if HERMES_PARSE_TS
+    case TokenKind::less:
+      if (context_.getParseTS() && !context_.getParseJSX()) {
+        // TSTypeAssertions are only parsed if JSX is disabled,
+        // so there's no backtracking necessary here.
+        // < Type > UnaryExpression
+        // ^
+        advance(JSLexer::GrammarContext::Type);
+        auto optType = parseTypeAnnotationTS();
+        if (!optType)
+          return None;
+        if (!eat(
+                TokenKind::greater,
+                JSLexer::GrammarContext::AllowRegExp,
+                "in type assertion",
+                "start of assertion",
+                startLoc))
+          return None;
+        CHECK_RECURSION;
+        auto optExpr = parseUnaryExpression();
+        if (!optExpr)
+          return None;
+        return setLocation(
+            startLoc,
+            getPrevTokenEndLoc(),
+            new (context_) ESTree::TSTypeAssertionNode(*optType, *optExpr));
+      }
+#endif
+
     case TokenKind::identifier:
       if (check(awaitIdent_) && paramAwait_) {
         advance();

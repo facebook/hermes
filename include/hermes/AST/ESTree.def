@@ -986,6 +986,11 @@ ESTREE_NODE_1_ARGS(
     TSTupleType, Base,
     NodeList, elementTypes, false)
 
+ESTREE_NODE_2_ARGS(
+    TSTypeAssertion, Base,
+    NodePtr, typeAnnotation, false,
+    NodePtr, expression, false)
+
 ESTREE_NODE_5_ARGS(
     TSParameterProperty, Base,
     NodePtr, parameter, false,
