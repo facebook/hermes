@@ -199,7 +199,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       case '{':
         token_.setStart(curCharPtr_);
         if (HERMES_PARSE_FLOW &&
-            LLVM_UNLIKELY(grammarContext == GrammarContext::Flow) &&
+            LLVM_UNLIKELY(grammarContext == GrammarContext::Type) &&
             curCharPtr_[1] == '|') {
           token_.setPunctuator(TokenKind::l_bracepipe);
           curCharPtr_ += 2;
@@ -259,7 +259,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       case '|':
         token_.setStart(curCharPtr_);
         if (HERMES_PARSE_FLOW &&
-            LLVM_UNLIKELY(grammarContext == GrammarContext::Flow) &&
+            LLVM_UNLIKELY(grammarContext == GrammarContext::Type) &&
             curCharPtr_[1] == '}') {
           token_.setPunctuator(TokenKind::piper_brace);
           curCharPtr_ += 2;
@@ -286,7 +286,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       case '?':
         token_.setStart(curCharPtr_);
         if (HERMES_PARSE_FLOW &&
-            LLVM_UNLIKELY(grammarContext == GrammarContext::Flow)) {
+            LLVM_UNLIKELY(grammarContext == GrammarContext::Type)) {
           token_.setPunctuator(TokenKind::question);
           curCharPtr_ += 1;
         } else if (curCharPtr_[1] == '.' && !isdigit(curCharPtr_[2])) {
@@ -337,7 +337,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       case '%':
       token_.setStart(curCharPtr_);
         if (HERMES_PARSE_FLOW &&
-            LLVM_UNLIKELY(grammarContext == GrammarContext::Flow) &&
+            LLVM_UNLIKELY(grammarContext == GrammarContext::Type) &&
             curCharPtr_ + 7 <= bufferEnd_ &&
             llvh::StringRef(curCharPtr_, 7) == "%checks") {
           token_.setIdentifier(getStringLiteral("%checks"));
@@ -449,7 +449,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       case '<':
         token_.setStart(curCharPtr_);
         if (HERMES_PARSE_FLOW &&
-            LLVM_UNLIKELY(grammarContext == JSLexer::GrammarContext::Flow)) {
+            LLVM_UNLIKELY(grammarContext == JSLexer::GrammarContext::Type)) {
           token_.setPunctuator(TokenKind::less);
           curCharPtr_ += 1;
         } else if (curCharPtr_[1] == '=') {
@@ -473,7 +473,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       case '>':
         token_.setStart(curCharPtr_);
         if ((HERMES_PARSE_FLOW &&
-             LLVM_UNLIKELY(grammarContext == JSLexer::GrammarContext::Flow)) ||
+             LLVM_UNLIKELY(grammarContext == JSLexer::GrammarContext::Type)) ||
             (HERMES_PARSE_JSX &&
              LLVM_UNLIKELY(
                  grammarContext ==
@@ -544,7 +544,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       case '@':
         token_.setStart(curCharPtr_);
         if (HERMES_PARSE_FLOW &&
-            LLVM_UNLIKELY(grammarContext == GrammarContext::Flow)) {
+            LLVM_UNLIKELY(grammarContext == GrammarContext::Type)) {
           scanIdentifierFastPathInContext(curCharPtr_, grammarContext);
         } else {
           curCharPtr_ += 1;
@@ -1502,7 +1502,7 @@ end:
     val = ival;
   } else if (real || radix == 10) {
     if (legacyOctal) {
-      if (strictMode_ || grammarContext == GrammarContext::Flow) {
+      if (strictMode_ || grammarContext == GrammarContext::Type) {
         if (!errorRange(
                 token_.getStartLoc(),
                 "Decimals with leading zeros are not allowed in strict mode")) {
@@ -1565,7 +1565,7 @@ end:
     }
   } else {
     if (legacyOctal &&
-        (strictMode_ || grammarContext == GrammarContext::Flow) &&
+        (strictMode_ || grammarContext == GrammarContext::Type) &&
         curCharPtr_ - start > 1) {
       if (!errorRange(
               token_.getStartLoc(),

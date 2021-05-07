@@ -78,7 +78,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFLow(
       error(tok_->getStartLoc(), "'type' required in opaque type declaration");
       return None;
     }
-    advance(JSLexer::GrammarContext::Flow);
+    advance(JSLexer::GrammarContext::Type);
     return parseTypeAliasFlow(start, TypeAliasKind::DeclareOpaque);
   }
   if (checkN(TokenKind::rw_interface, interfaceIdent_)) {
@@ -139,7 +139,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(
       tok_,
       new (context_)
           ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
-  advance(JSLexer::GrammarContext::Flow);
+  advance(JSLexer::GrammarContext::Type);
 
   ESTree::Node *typeParams = nullptr;
   if (check(TokenKind::less)) {
@@ -151,7 +151,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(
 
   ESTree::Node *supertype = nullptr;
   if ((kind == TypeAliasKind::Opaque || kind == TypeAliasKind::DeclareOpaque) &&
-      checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+      checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Type)) {
     auto optSuper = parseTypeAnnotationFlow();
     if (!optSuper)
       return None;
@@ -162,7 +162,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(
   if (kind != TypeAliasKind::DeclareOpaque) {
     if (!eat(
             TokenKind::equal,
-            JSLexer::GrammarContext::Flow,
+            JSLexer::GrammarContext::Type,
             "in type alias",
             "start of type alias",
             start))
@@ -205,7 +205,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(
 Optional<ESTree::Node *> JSParserImpl::parseInterfaceDeclarationFlow(
     Optional<SMLoc> declareStart) {
   assert(checkN(TokenKind::rw_interface, interfaceIdent_));
-  SMLoc start = advance(JSLexer::GrammarContext::Flow).Start;
+  SMLoc start = advance(JSLexer::GrammarContext::Type).Start;
 
   if (!need(
           TokenKind::identifier,
@@ -219,7 +219,7 @@ Optional<ESTree::Node *> JSParserImpl::parseInterfaceDeclarationFlow(
       tok_,
       new (context_)
           ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
-  advance(JSLexer::GrammarContext::Flow);
+  advance(JSLexer::GrammarContext::Type);
 
   ESTree::Node *typeParams = nullptr;
   if (check(TokenKind::less)) {
@@ -262,7 +262,7 @@ Optional<ESTree::Node *> JSParserImpl::parseInterfaceTailFlow(
         return None;
       if (!parseInterfaceExtends(start, extends))
         return None;
-    } while (checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Flow));
+    } while (checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type));
   }
 
   if (!need(TokenKind::l_brace, "in interface", "location of interface", start))
@@ -290,7 +290,7 @@ bool JSParserImpl::parseInterfaceExtends(
 
 Optional<ESTree::Node *> JSParserImpl::parseDeclareFunctionFlow(SMLoc start) {
   assert(check(TokenKind::rw_function));
-  advance(JSLexer::GrammarContext::Flow);
+  advance(JSLexer::GrammarContext::Type);
 
   if (!need(
           TokenKind::identifier,
@@ -300,7 +300,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFunctionFlow(SMLoc start) {
     return None;
 
   UniqueString *id = tok_->getIdentifier();
-  SMLoc idStart = advance(JSLexer::GrammarContext::Flow).Start;
+  SMLoc idStart = advance(JSLexer::GrammarContext::Type).Start;
 
   SMLoc funcStart = tok_->getStartLoc();
 
@@ -327,7 +327,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFunctionFlow(SMLoc start) {
 
   if (!eat(
           TokenKind::colon,
-          JSLexer::GrammarContext::Flow,
+          JSLexer::GrammarContext::Type,
           "in declare function type",
           "location of declare",
           start))
@@ -372,10 +372,10 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFunctionFlow(SMLoc start) {
 
 Optional<ESTree::Node *> JSParserImpl::parseDeclareModuleFlow(SMLoc start) {
   assert(check(moduleIdent_));
-  advance(JSLexer::GrammarContext::Flow);
+  advance(JSLexer::GrammarContext::Type);
 
-  if (checkAndEat(TokenKind::period, JSLexer::GrammarContext::Flow)) {
-    if (!checkAndEat(exportsIdent_, JSLexer::GrammarContext::Flow)) {
+  if (checkAndEat(TokenKind::period, JSLexer::GrammarContext::Type)) {
+    if (!checkAndEat(exportsIdent_, JSLexer::GrammarContext::Type)) {
       error(tok_->getSourceRange(), "expected module.exports declaration");
       return None;
     }
@@ -383,7 +383,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareModuleFlow(SMLoc start) {
     SMLoc annotStart = tok_->getStartLoc();
     if (!eat(
             TokenKind::colon,
-            JSLexer::GrammarContext::Flow,
+            JSLexer::GrammarContext::Type,
             "in module.exports declaration",
             "start of declaration",
             start))
@@ -419,14 +419,14 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareModuleFlow(SMLoc start) {
         new (context_)
             ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
   }
-  advance(JSLexer::GrammarContext::Flow);
+  advance(JSLexer::GrammarContext::Type);
 
   // declare module Identifier {
   //                           ^
   SMLoc bodyStart = tok_->getStartLoc();
   if (!eat(
           TokenKind::l_brace,
-          JSLexer::GrammarContext::Flow,
+          JSLexer::GrammarContext::Type,
           "in module declaration",
           "start of declaration",
           start))
@@ -457,7 +457,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareModuleFlow(SMLoc start) {
           "expected 'declare' in module declaration body");
       return None;
     }
-    SMLoc declarationStart = advance(JSLexer::GrammarContext::Flow).Start;
+    SMLoc declarationStart = advance(JSLexer::GrammarContext::Type).Start;
     auto optDecl =
         parseDeclareFLow(declarationStart, AllowDeclareExportType::Yes);
     if (!optDecl)
@@ -508,7 +508,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareModuleFlow(SMLoc start) {
     declarations.push_back(*decl);
   }
 
-  SMLoc bodyEnd = advance(JSLexer::GrammarContext::Flow).End;
+  SMLoc bodyEnd = advance(JSLexer::GrammarContext::Type).End;
 
   ESTree::Node *body = setLocation(
       bodyStart,
@@ -527,7 +527,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareModuleFlow(SMLoc start) {
 
 Optional<ESTree::Node *> JSParserImpl::parseDeclareClassFlow(SMLoc start) {
   assert(check(TokenKind::rw_class));
-  advance(JSLexer::GrammarContext::Flow);
+  advance(JSLexer::GrammarContext::Type);
 
   // NOTE: Class definition is always strict mode code.
   SaveStrictMode saveStrictMode{this};
@@ -545,7 +545,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareClassFlow(SMLoc start) {
       tok_,
       new (context_)
           ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
-  advance(JSLexer::GrammarContext::Flow);
+  advance(JSLexer::GrammarContext::Type);
 
   ESTree::Node *typeParams = nullptr;
   if (check(TokenKind::less)) {
@@ -578,7 +578,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareClassFlow(SMLoc start) {
         return None;
       if (!parseInterfaceExtends(start, mixins))
         return None;
-    } while (checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Flow));
+    } while (checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type));
   }
 
   ESTree::NodeList implements{};
@@ -594,7 +594,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareClassFlow(SMLoc start) {
       if (!optImpl)
         return None;
       implements.push_back(**optImpl);
-    } while (checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Flow));
+    } while (checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type));
   }
 
   if (!need(
@@ -706,10 +706,10 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(
     SMLoc start,
     AllowDeclareExportType allowDeclareExportType) {
   assert(check(TokenKind::rw_export));
-  advance(JSLexer::GrammarContext::Flow);
+  advance(JSLexer::GrammarContext::Type);
   SMLoc declareStart = tok_->getStartLoc();
 
-  if (checkAndEat(TokenKind::rw_default, JSLexer::GrammarContext::Flow)) {
+  if (checkAndEat(TokenKind::rw_default, JSLexer::GrammarContext::Type)) {
     declareStart = tok_->getStartLoc();
     if (check(TokenKind::rw_function)) {
       auto optFunc = parseDeclareFunctionFlow(declareStart);
@@ -766,7 +766,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(
   }
 
   if (check(TokenKind::rw_var)) {
-    SMLoc varStart = advance(JSLexer::GrammarContext::Flow).Start;
+    SMLoc varStart = advance(JSLexer::GrammarContext::Type).Start;
     auto optIdent = parseBindingIdentifier(Param{});
     if (!optIdent) {
       errorExpected(
@@ -793,12 +793,12 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(
             false));
   }
 
-  if (checkAndEat(opaqueIdent_, JSLexer::GrammarContext::Flow)) {
+  if (checkAndEat(opaqueIdent_, JSLexer::GrammarContext::Type)) {
     if (!check(typeIdent_)) {
       error(tok_->getStartLoc(), "'type' required in opaque type declaration");
       return None;
     }
-    advance(JSLexer::GrammarContext::Flow);
+    advance(JSLexer::GrammarContext::Type);
     auto optType =
         parseTypeAliasFlow(declareStart, TypeAliasKind::DeclareOpaque);
     if (!optType)
@@ -812,7 +812,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(
 
   if (allowDeclareExportType == AllowDeclareExportType::Yes &&
       check(typeIdent_)) {
-    advance(JSLexer::GrammarContext::Flow);
+    advance(JSLexer::GrammarContext::Type);
     auto optType = parseTypeAliasFlow(declareStart, TypeAliasKind::None);
     if (!optType)
       return None;
@@ -834,7 +834,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(
             *optInterface, {}, nullptr, false));
   }
 
-  if (checkAndEat(TokenKind::star, JSLexer::GrammarContext::Flow)) {
+  if (checkAndEat(TokenKind::star, JSLexer::GrammarContext::Type)) {
     // declare export * from 'foo';
     //                  ^
     if (!check(fromIdent_)) {
@@ -900,7 +900,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAnnotationFlow(
 
 Optional<ESTree::Node *> JSParserImpl::parseUnionTypeAnnotationFlow() {
   SMLoc start = tok_->getStartLoc();
-  checkAndEat(TokenKind::pipe, JSLexer::GrammarContext::Flow);
+  checkAndEat(TokenKind::pipe, JSLexer::GrammarContext::Type);
 
   auto optFirst = parseIntersectionTypeAnnotationFlow();
   if (!optFirst)
@@ -914,7 +914,7 @@ Optional<ESTree::Node *> JSParserImpl::parseUnionTypeAnnotationFlow() {
   ESTree::NodeList types{};
   types.push_back(**optFirst);
 
-  while (checkAndEat(TokenKind::pipe, JSLexer::GrammarContext::Flow)) {
+  while (checkAndEat(TokenKind::pipe, JSLexer::GrammarContext::Type)) {
     auto optInt = parseIntersectionTypeAnnotationFlow();
     if (!optInt)
       return None;
@@ -929,7 +929,7 @@ Optional<ESTree::Node *> JSParserImpl::parseUnionTypeAnnotationFlow() {
 
 Optional<ESTree::Node *> JSParserImpl::parseIntersectionTypeAnnotationFlow() {
   SMLoc start = tok_->getStartLoc();
-  checkAndEat(TokenKind::amp, JSLexer::GrammarContext::Flow);
+  checkAndEat(TokenKind::amp, JSLexer::GrammarContext::Type);
 
   auto optFirst = parseAnonFunctionWithoutParensTypeAnnotationFlow();
   if (!optFirst)
@@ -943,7 +943,7 @@ Optional<ESTree::Node *> JSParserImpl::parseIntersectionTypeAnnotationFlow() {
   ESTree::NodeList types{};
   types.push_back(**optFirst);
 
-  while (checkAndEat(TokenKind::amp, JSLexer::GrammarContext::Flow)) {
+  while (checkAndEat(TokenKind::amp, JSLexer::GrammarContext::Type)) {
     auto optInt = parseAnonFunctionWithoutParensTypeAnnotationFlow();
     if (!optInt)
       return None;
@@ -985,7 +985,7 @@ JSParserImpl::parseAnonFunctionWithoutParensTypeAnnotationFlow() {
 
 Optional<ESTree::Node *> JSParserImpl::parsePrefixTypeAnnotationFlow() {
   SMLoc start = tok_->getStartLoc();
-  if (checkAndEat(TokenKind::question, JSLexer::GrammarContext::Flow)) {
+  if (checkAndEat(TokenKind::question, JSLexer::GrammarContext::Type)) {
     auto optPrefix = parsePrefixTypeAnnotationFlow();
     if (!optPrefix)
       return None;
@@ -1006,8 +1006,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePostfixTypeAnnotationFlow() {
   ESTree::Node *result = *optPrimary;
 
   while (!lexer_.isNewLineBeforeCurrentToken() &&
-         checkAndEat(TokenKind::l_square, JSLexer::GrammarContext::Flow)) {
-    if (checkAndEat(TokenKind::r_square, JSLexer::GrammarContext::Flow)) {
+         checkAndEat(TokenKind::l_square, JSLexer::GrammarContext::Type)) {
+    if (checkAndEat(TokenKind::r_square, JSLexer::GrammarContext::Type)) {
       // Legacy Array syntax `T[]`
       result = setLocation(
           start,
@@ -1026,7 +1026,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePostfixTypeAnnotationFlow() {
         return None;
       result = setLocation(
           start,
-          advance(JSLexer::GrammarContext::Flow).End,
+          advance(JSLexer::GrammarContext::Type).End,
           new (context_) ESTree::IndexedAccessTypeNode(result, *optIndexType));
     }
   }
@@ -1040,7 +1040,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
     case TokenKind::star:
       return setLocation(
           start,
-          advance(JSLexer::GrammarContext::Flow).End,
+          advance(JSLexer::GrammarContext::Type).End,
           new (context_) ESTree::ExistsTypeAnnotationNode());
     case TokenKind::less:
       return parseFunctionTypeAnnotationFlow();
@@ -1053,7 +1053,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
           AllowStaticProperty::No,
           AllowSpreadProperty::Yes);
     case TokenKind::rw_interface: {
-      advance(JSLexer::GrammarContext::Flow);
+      advance(JSLexer::GrammarContext::Type);
       ESTree::NodeList extends{};
       auto optBody = parseInterfaceTailFlow(start, extends);
       if (!optBody)
@@ -1065,7 +1065,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
               std::move(extends), *optBody));
     }
     case TokenKind::rw_typeof: {
-      advance(JSLexer::GrammarContext::Flow);
+      advance(JSLexer::GrammarContext::Type);
       auto optPrimary = parsePrimaryTypeAnnotationFlow();
       if (!optPrimary)
         return None;
@@ -1083,48 +1083,48 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
       if (tok_->getResWordOrIdentifier() == anyIdent_) {
         return setLocation(
             start,
-            advance(JSLexer::GrammarContext::Flow).End,
+            advance(JSLexer::GrammarContext::Type).End,
             new (context_) ESTree::AnyTypeAnnotationNode());
       }
       if (tok_->getResWordOrIdentifier() == mixedIdent_) {
         return setLocation(
             start,
-            advance(JSLexer::GrammarContext::Flow).End,
+            advance(JSLexer::GrammarContext::Type).End,
             new (context_) ESTree::MixedTypeAnnotationNode());
       }
       if (tok_->getResWordOrIdentifier() == emptyIdent_) {
         return setLocation(
             start,
-            advance(JSLexer::GrammarContext::Flow).End,
+            advance(JSLexer::GrammarContext::Type).End,
             new (context_) ESTree::EmptyTypeAnnotationNode());
       }
       if (tok_->getResWordOrIdentifier() == booleanIdent_ ||
           tok_->getResWordOrIdentifier() == boolIdent_) {
         return setLocation(
             start,
-            advance(JSLexer::GrammarContext::Flow).End,
+            advance(JSLexer::GrammarContext::Type).End,
             new (context_) ESTree::BooleanTypeAnnotationNode());
       }
       if (tok_->getResWordOrIdentifier() == numberIdent_) {
         return setLocation(
             start,
-            advance(JSLexer::GrammarContext::Flow).End,
+            advance(JSLexer::GrammarContext::Type).End,
             new (context_) ESTree::NumberTypeAnnotationNode());
       }
       if (tok_->getResWordOrIdentifier() == symbolIdent_) {
         return setLocation(
             start,
-            advance(JSLexer::GrammarContext::Flow).End,
+            advance(JSLexer::GrammarContext::Type).End,
             new (context_) ESTree::SymbolTypeAnnotationNode());
       }
       if (tok_->getResWordOrIdentifier() == stringIdent_) {
         return setLocation(
             start,
-            advance(JSLexer::GrammarContext::Flow).End,
+            advance(JSLexer::GrammarContext::Type).End,
             new (context_) ESTree::StringTypeAnnotationNode());
       }
       if (tok_->getResWordOrIdentifier() == interfaceIdent_) {
-        advance(JSLexer::GrammarContext::Flow);
+        advance(JSLexer::GrammarContext::Type);
         ESTree::NodeList extends{};
         auto optBody = parseInterfaceTailFlow(start, extends);
         if (!optBody)
@@ -1146,20 +1146,20 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
     case TokenKind::rw_null:
       return setLocation(
           start,
-          advance(JSLexer::GrammarContext::Flow).End,
+          advance(JSLexer::GrammarContext::Type).End,
           new (context_) ESTree::NullLiteralTypeAnnotationNode());
 
     case TokenKind::rw_void:
       return setLocation(
           start,
-          advance(JSLexer::GrammarContext::Flow).End,
+          advance(JSLexer::GrammarContext::Type).End,
           new (context_) ESTree::VoidTypeAnnotationNode());
 
     case TokenKind::string_literal: {
       UniqueString *str = tok_->getStringLiteral();
       return setLocation(
           start,
-          advance(JSLexer::GrammarContext::Flow).End,
+          advance(JSLexer::GrammarContext::Type).End,
           new (context_) ESTree::StringLiteralTypeAnnotationNode(str));
     }
 
@@ -1168,12 +1168,12 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
       UniqueString *raw = lexer_.getStringLiteral(tok_->inputStr());
       return setLocation(
           start,
-          advance(JSLexer::GrammarContext::Flow).End,
+          advance(JSLexer::GrammarContext::Type).End,
           new (context_) ESTree::NumberLiteralTypeAnnotationNode(value, raw));
     }
 
     case TokenKind::minus: {
-      advance(JSLexer::GrammarContext::Flow);
+      advance(JSLexer::GrammarContext::Type);
       if (!need(
               TokenKind::numeric_literal,
               "in type annotation",
@@ -1187,7 +1187,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
           tok_->getEndLoc().getPointer() - start.getPointer()));
       return setLocation(
           start,
-          advance(JSLexer::GrammarContext::Flow).End,
+          advance(JSLexer::GrammarContext::Type).End,
           new (context_) ESTree::NumberLiteralTypeAnnotationNode(value, raw));
     }
 
@@ -1197,7 +1197,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
       auto *raw = tok_->getResWordIdentifier();
       return setLocation(
           start,
-          advance(JSLexer::GrammarContext::Flow).End,
+          advance(JSLexer::GrammarContext::Type).End,
           new (context_) ESTree::BooleanLiteralTypeAnnotationNode(value, raw));
     }
     default:
@@ -1214,7 +1214,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
 
 Optional<ESTree::Node *> JSParserImpl::parseTupleTypeAnnotationFlow() {
   assert(check(TokenKind::l_square));
-  SMLoc start = advance(JSLexer::GrammarContext::Flow).Start;
+  SMLoc start = advance(JSLexer::GrammarContext::Type).Start;
 
   ESTree::NodeList types{};
 
@@ -1224,7 +1224,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTupleTypeAnnotationFlow() {
       return None;
     types.push_back(**optType);
 
-    if (!checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Flow))
+    if (!checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type))
       break;
   }
 
@@ -1237,7 +1237,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTupleTypeAnnotationFlow() {
 
   return setLocation(
       start,
-      advance(JSLexer::GrammarContext::Flow).End,
+      advance(JSLexer::GrammarContext::Type).End,
       new (context_) ESTree::TupleTypeAnnotationNode(std::move(types)));
 }
 
@@ -1285,7 +1285,7 @@ JSParserImpl::parseFunctionTypeAnnotationWithParamsFlow(
     ESTree::Node *rest,
     ESTree::Node *typeParams) {
   assert(check(TokenKind::equalgreater));
-  advance(JSLexer::GrammarContext::Flow);
+  advance(JSLexer::GrammarContext::Type);
 
   auto optReturnType = parseTypeAnnotationFlow();
   if (!optReturnType)
@@ -1309,7 +1309,7 @@ JSParserImpl::parseFunctionOrGroupTypeAnnotationFlow() {
   // ^
   // so we use a similar approach to arrow function parameters by keeping track
   // and reparsing in certain cases.
-  SMLoc start = advance(JSLexer::GrammarContext::Flow).Start;
+  SMLoc start = advance(JSLexer::GrammarContext::Type).Start;
 
   bool isFunction = false;
   ESTree::Node *type = nullptr;
@@ -1319,8 +1319,8 @@ JSParserImpl::parseFunctionOrGroupTypeAnnotationFlow() {
 
   if (check(TokenKind::rw_this)) {
     isFunction = true;
-    SMLoc thisStart = advance(JSLexer::GrammarContext::Flow).Start;
-    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+    SMLoc thisStart = advance(JSLexer::GrammarContext::Type).Start;
+    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Type)) {
       auto optType = parseTypeAnnotationFlow();
       if (!optType)
         return None;
@@ -1349,11 +1349,11 @@ JSParserImpl::parseFunctionOrGroupTypeAnnotationFlow() {
                       {})),
               false)));
     }
-    checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Flow);
+    checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type);
   }
 
   if (allowAnonFunctionType_ &&
-      checkAndEat(TokenKind::dotdotdot, JSLexer::GrammarContext::Flow)) {
+      checkAndEat(TokenKind::dotdotdot, JSLexer::GrammarContext::Type)) {
     isFunction = true;
     // Must be parameters, and this must be the last one.
     auto optParam = parseFunctionTypeAnnotationParamFlow();
@@ -1383,31 +1383,31 @@ JSParserImpl::parseFunctionOrGroupTypeAnnotationFlow() {
   // If isFunction was already forced by something previously then we
   // have no choice but to attempt to parse as a function type annotation.
   if ((isFunction || allowAnonFunctionType_) &&
-      checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Flow)) {
+      checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type)) {
     isFunction = true;
     while (!check(TokenKind::r_paren)) {
       bool isRest = !rest &&
-          checkAndEat(TokenKind::dotdotdot, JSLexer::GrammarContext::Flow);
+          checkAndEat(TokenKind::dotdotdot, JSLexer::GrammarContext::Type);
 
       auto optParam = parseFunctionTypeAnnotationParamFlow();
       if (!optParam)
         return None;
       if (isRest) {
         rest = *optParam;
-        checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Flow);
+        checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type);
         break;
       } else {
         params.push_back(**optParam);
       }
 
-      if (!checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Flow))
+      if (!checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type))
         break;
     }
   }
 
   if (!eat(
           TokenKind::r_paren,
-          JSLexer::GrammarContext::Flow,
+          JSLexer::GrammarContext::Type,
           "at end of function annotation parameters",
           "start of parameters",
           start))
@@ -1416,13 +1416,13 @@ JSParserImpl::parseFunctionOrGroupTypeAnnotationFlow() {
   if (isFunction) {
     if (!eat(
             TokenKind::equalgreater,
-            JSLexer::GrammarContext::Flow,
+            JSLexer::GrammarContext::Type,
             "in function type annotation",
             "start of function",
             start))
       return None;
   } else if (allowAnonFunctionType_) {
-    if (checkAndEat(TokenKind::equalgreater, JSLexer::GrammarContext::Flow)) {
+    if (checkAndEat(TokenKind::equalgreater, JSLexer::GrammarContext::Type)) {
       isFunction = true;
     }
   }
@@ -1452,7 +1452,7 @@ Optional<ESTree::Node *> JSParserImpl::parseObjectTypeAnnotationFlow(
     AllowSpreadProperty allowSpreadProperty) {
   assert(check(TokenKind::l_brace, TokenKind::l_bracepipe));
   bool exact = check(TokenKind::l_bracepipe);
-  SMLoc start = advance(JSLexer::GrammarContext::Flow).Start;
+  SMLoc start = advance(JSLexer::GrammarContext::Type).Start;
 
   ESTree::NodeList properties{};
   ESTree::NodeList indexers{};
@@ -1481,7 +1481,7 @@ Optional<ESTree::Node *> JSParserImpl::parseObjectTypeAnnotationFlow(
   SMLoc end = tok_->getEndLoc();
   if (!eat(
           exact ? TokenKind::piper_brace : TokenKind::r_brace,
-          JSLexer::GrammarContext::Flow,
+          JSLexer::GrammarContext::Type,
           "at end of exact object type annotation",
           "start of object",
           start))
@@ -1512,10 +1512,10 @@ bool JSParserImpl::parseObjectTypePropertiesFlow(
     SMLoc start = tok_->getStartLoc();
     if (check(TokenKind::dotdotdot)) {
       // Spread property or explicit '...' for inexact.
-      advance(JSLexer::GrammarContext::Flow);
+      advance(JSLexer::GrammarContext::Type);
       if (check(TokenKind::comma, TokenKind::semi)) {
         inexact = true;
-        advance(JSLexer::GrammarContext::Flow);
+        advance(JSLexer::GrammarContext::Type);
         // Explicit '...' must be the last element in the type annotation.
         return true;
       } else if (check(TokenKind::r_brace, TokenKind::piper_brace)) {
@@ -1546,7 +1546,7 @@ bool JSParserImpl::parseObjectTypePropertiesFlow(
     }
 
     if (check(TokenKind::comma, TokenKind::semi)) {
-      advance(JSLexer::GrammarContext::Flow);
+      advance(JSLexer::GrammarContext::Type);
     } else if (check(TokenKind::r_brace, TokenKind::piper_brace)) {
       return true;
     } else {
@@ -1581,12 +1581,12 @@ bool JSParserImpl::parsePropertyTypeAnnotationFlow(
 
   if (check(protoIdent_)) {
     proto = true;
-    advance(JSLexer::GrammarContext::Flow);
+    advance(JSLexer::GrammarContext::Type);
   }
 
   if (!proto && (check(TokenKind::rw_static) || check(staticIdent_))) {
     isStatic = true;
-    advance(JSLexer::GrammarContext::Flow);
+    advance(JSLexer::GrammarContext::Type);
   }
 
   if (check(TokenKind::plus, TokenKind::minus)) {
@@ -1595,11 +1595,11 @@ bool JSParserImpl::parsePropertyTypeAnnotationFlow(
         tok_,
         new (context_) ESTree::VarianceNode(
             check(TokenKind::plus) ? plusIdent_ : minusIdent_));
-    advance(JSLexer::GrammarContext::Flow);
+    advance(JSLexer::GrammarContext::Type);
   }
 
-  if (checkAndEat(TokenKind::l_square, JSLexer::GrammarContext::Flow)) {
-    if (checkAndEat(TokenKind::l_square, JSLexer::GrammarContext::Flow)) {
+  if (checkAndEat(TokenKind::l_square, JSLexer::GrammarContext::Type)) {
+    if (checkAndEat(TokenKind::l_square, JSLexer::GrammarContext::Type)) {
       if (variance) {
         error(variance->getSourceRange(), "Unexpected variance sigil");
       }
@@ -1623,18 +1623,18 @@ bool JSParserImpl::parsePropertyTypeAnnotationFlow(
           tok_,
           new (context_) ESTree::IdentifierNode(
               tok_->getResWordOrIdentifier(), nullptr, false));
-      advance(JSLexer::GrammarContext::Flow);
+      advance(JSLexer::GrammarContext::Type);
 
       if (!eat(
               TokenKind::r_square,
-              JSLexer::GrammarContext::Flow,
+              JSLexer::GrammarContext::Type,
               "at end of internal slot",
               "start of internal slot",
               start))
         return false;
       if (!eat(
               TokenKind::r_square,
-              JSLexer::GrammarContext::Flow,
+              JSLexer::GrammarContext::Type,
               "at end of internal slot",
               "start of internal slot",
               start))
@@ -1661,10 +1661,10 @@ bool JSParserImpl::parsePropertyTypeAnnotationFlow(
       } else {
         // Standard type annotation.
         optional =
-            checkAndEat(TokenKind::question, JSLexer::GrammarContext::Flow);
+            checkAndEat(TokenKind::question, JSLexer::GrammarContext::Type);
         if (!eat(
                 TokenKind::colon,
-                JSLexer::GrammarContext::Flow,
+                JSLexer::GrammarContext::Type,
                 "in type annotation",
                 "start of annotation",
                 start))
@@ -1830,10 +1830,10 @@ Optional<ESTree::Node *> JSParserImpl::parseTypePropertyFlow(
   assert(check(TokenKind::colon, TokenKind::question));
 
   bool optional =
-      checkAndEat(TokenKind::question, JSLexer::GrammarContext::Flow);
+      checkAndEat(TokenKind::question, JSLexer::GrammarContext::Type);
   if (!eat(
           TokenKind::colon,
-          JSLexer::GrammarContext::Flow,
+          JSLexer::GrammarContext::Type,
           "in type property",
           "start of property",
           start))
@@ -1953,7 +1953,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeIndexerPropertyFlow(
   ESTree::IdentifierNode *id = nullptr;
   ESTree::Node *key = nullptr;
 
-  if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+  if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Type)) {
     auto optId = reparseTypeAnnotationAsIdentifierFlow(*optLeft);
     if (!optId)
       return None;
@@ -1968,7 +1968,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeIndexerPropertyFlow(
 
   if (!eat(
           TokenKind::r_square,
-          JSLexer::GrammarContext::Flow,
+          JSLexer::GrammarContext::Type,
           "in indexer",
           "start of indexer",
           start))
@@ -1976,7 +1976,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeIndexerPropertyFlow(
 
   if (!eat(
           TokenKind::colon,
-          JSLexer::GrammarContext::Flow,
+          JSLexer::GrammarContext::Type,
           "in indexer",
           "start of indexer",
           start))
@@ -2015,7 +2015,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeCallPropertyFlow(
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeParamsFlow() {
   assert(check(TokenKind::less));
-  SMLoc start = advance(JSLexer::GrammarContext::Flow).Start;
+  SMLoc start = advance(JSLexer::GrammarContext::Type).Start;
 
   ESTree::NodeList params{};
 
@@ -2025,14 +2025,14 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeParamsFlow() {
       return None;
     params.push_back(**optType);
 
-    if (!checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Flow))
+    if (!checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type))
       break;
   } while (!check(TokenKind::greater));
 
   SMLoc end = tok_->getEndLoc();
   if (!eat(
           TokenKind::greater,
-          JSLexer::GrammarContext::Flow,
+          JSLexer::GrammarContext::Type,
           "at end of type parameters",
           "start of type parameters",
           start))
@@ -2054,17 +2054,17 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeParamFlow() {
         tok_,
         new (context_) ESTree::VarianceNode(
             check(TokenKind::plus) ? plusIdent_ : minusIdent_));
-    advance(JSLexer::GrammarContext::Flow);
+    advance(JSLexer::GrammarContext::Type);
   }
 
   if (!need(TokenKind::identifier, "in type parameter", nullptr, {}))
     return None;
   UniqueString *name = tok_->getIdentifier();
-  advance(JSLexer::GrammarContext::Flow);
+  advance(JSLexer::GrammarContext::Type);
 
   ESTree::Node *bound = nullptr;
   if (check(TokenKind::colon)) {
-    SMLoc boundStart = advance(JSLexer::GrammarContext::Flow).Start;
+    SMLoc boundStart = advance(JSLexer::GrammarContext::Type).Start;
     auto optType = parseTypeAnnotationFlow();
     if (!optType)
       return None;
@@ -2075,7 +2075,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeParamFlow() {
   }
 
   ESTree::Node *initializer = nullptr;
-  if (checkAndEat(TokenKind::equal, JSLexer::GrammarContext::Flow)) {
+  if (checkAndEat(TokenKind::equal, JSLexer::GrammarContext::Type)) {
     auto optInit = parseTypeAnnotationFlow();
     if (!optInit)
       return None;
@@ -2091,7 +2091,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeParamFlow() {
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeArgsFlow() {
   assert(check(TokenKind::less));
-  SMLoc start = advance(JSLexer::GrammarContext::Flow).Start;
+  SMLoc start = advance(JSLexer::GrammarContext::Type).Start;
 
   ESTree::NodeList params{};
 
@@ -2101,14 +2101,14 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeArgsFlow() {
       return None;
     params.push_back(**optType);
 
-    if (!checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Flow))
+    if (!checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type))
       break;
   }
 
   SMLoc end = tok_->getEndLoc();
   if (!eat(
           TokenKind::greater,
-          JSLexer::GrammarContext::Flow,
+          JSLexer::GrammarContext::Type,
           "at end of type parameters",
           "start of type parameters",
           start))
@@ -2135,7 +2135,7 @@ JSParserImpl::parseMethodishTypeAnnotationFlow(
 
   if (!eat(
           TokenKind::colon,
-          JSLexer::GrammarContext::Flow,
+          JSLexer::GrammarContext::Type,
           "in function type annotation",
           "start of annotation",
           start))
@@ -2157,14 +2157,14 @@ JSParserImpl::parseFunctionTypeAnnotationParamsFlow(
     ESTree::NodeList &params,
     ESTree::NodePtr &thisConstraint) {
   assert(check(TokenKind::l_paren));
-  SMLoc start = advance(JSLexer::GrammarContext::Flow).Start;
+  SMLoc start = advance(JSLexer::GrammarContext::Type).Start;
 
   ESTree::FunctionTypeParamNode *rest = nullptr;
   thisConstraint = nullptr;
 
   if (check(TokenKind::rw_this)) {
-    SMLoc thisStart = advance(JSLexer::GrammarContext::Flow).Start;
-    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+    SMLoc thisStart = advance(JSLexer::GrammarContext::Type).Start;
+    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Type)) {
       auto optType = parseTypeAnnotationFlow();
       if (!optType)
         return None;
@@ -2193,12 +2193,12 @@ JSParserImpl::parseFunctionTypeAnnotationParamsFlow(
                       {})),
               false)));
     }
-    checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Flow);
+    checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type);
   }
 
   while (!check(TokenKind::r_paren)) {
     bool isRest =
-        checkAndEat(TokenKind::dotdotdot, JSLexer::GrammarContext::Flow);
+        checkAndEat(TokenKind::dotdotdot, JSLexer::GrammarContext::Type);
 
     auto optParam = parseFunctionTypeAnnotationParamFlow();
     if (!optParam)
@@ -2207,11 +2207,11 @@ JSParserImpl::parseFunctionTypeAnnotationParamsFlow(
     if (isRest) {
       // Rest param must be the last param.
       rest = *optParam;
-      checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Flow);
+      checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type);
       break;
     } else {
       params.push_back(**optParam);
-      if (!checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Flow)) {
+      if (!checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type)) {
         break;
       }
     }
@@ -2219,7 +2219,7 @@ JSParserImpl::parseFunctionTypeAnnotationParamsFlow(
 
   if (!eat(
           TokenKind::r_paren,
-          JSLexer::GrammarContext::Flow,
+          JSLexer::GrammarContext::Type,
           "at end of function annotation parameters",
           "start of parameters",
           start))
@@ -2252,10 +2252,10 @@ JSParserImpl::parseFunctionTypeAnnotationParamFlow() {
     if (!optName)
       return None;
     name = *optName;
-    optional = checkAndEat(TokenKind::question, JSLexer::GrammarContext::Flow);
+    optional = checkAndEat(TokenKind::question, JSLexer::GrammarContext::Type);
     if (!eat(
             TokenKind::colon,
-            JSLexer::GrammarContext::Flow,
+            JSLexer::GrammarContext::Type,
             "in function parameter type annotation",
             "start of parameter",
             start))
@@ -2285,9 +2285,9 @@ JSParserImpl::parseGenericTypeFlow() {
       tok_,
       new (context_) ESTree::IdentifierNode(
           tok_->getResWordOrIdentifier(), nullptr, false));
-  advance(JSLexer::GrammarContext::Flow);
+  advance(JSLexer::GrammarContext::Type);
 
-  while (checkAndEat(TokenKind::period, JSLexer::GrammarContext::Flow)) {
+  while (checkAndEat(TokenKind::period, JSLexer::GrammarContext::Type)) {
     if (!check(TokenKind::identifier) && !tok_->isResWord()) {
       errorExpected(
           TokenKind::identifier,
@@ -2301,7 +2301,7 @@ JSParserImpl::parseGenericTypeFlow() {
         tok_,
         new (context_) ESTree::IdentifierNode(
             tok_->getResWordOrIdentifier(), nullptr, false));
-    advance(JSLexer::GrammarContext::Flow);
+    advance(JSLexer::GrammarContext::Type);
     id = setLocation(
         id, next, new (context_) ESTree::QualifiedTypeIdentifierNode(id, next));
   }
@@ -2330,7 +2330,7 @@ JSParserImpl::parseClassImplementsFlow() {
       tok_,
       new (context_)
           ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
-  advance(JSLexer::GrammarContext::Flow);
+  advance(JSLexer::GrammarContext::Type);
 
   ESTree::Node *typeParams = nullptr;
   if (check(TokenKind::less)) {
@@ -2348,7 +2348,7 @@ JSParserImpl::parseClassImplementsFlow() {
 
 Optional<ESTree::Node *> JSParserImpl::parsePredicateFlow() {
   assert(check(checksIdent_));
-  SMRange checksRng = advance(JSLexer::GrammarContext::Flow);
+  SMRange checksRng = advance(JSLexer::GrammarContext::Type);
   if (checkAndEat(TokenKind::l_paren, JSLexer::GrammarContext::AllowRegExp)) {
     auto optCond = parseConditionalExpression();
     if (!optCond)
@@ -2356,7 +2356,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePredicateFlow() {
     SMLoc end = tok_->getEndLoc();
     if (!eat(
             TokenKind::r_paren,
-            JSLexer::GrammarContext::Flow,
+            JSLexer::GrammarContext::Type,
             "in declared predicate",
             "start of predicate",
             checksRng.Start))
@@ -2462,7 +2462,7 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumBodyFlow(
   bool hasUnknownMembers = false;
   while (!check(TokenKind::r_brace)) {
     if (check(TokenKind::dotdotdot)) {
-      SMLoc dotdotdotLoc = advance(JSLexer::GrammarContext::Flow).Start;
+      SMLoc dotdotdotLoc = advance(JSLexer::GrammarContext::Type).Start;
       if (!check(TokenKind::r_brace)) {
         error(
             dotdotdotLoc,
