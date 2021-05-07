@@ -3828,9 +3828,22 @@ inline bool isLeftAssoc(TokenKind kind) {
   return kind != TokenKind::starstar;
 }
 
-/// Return the precedence of \p kind unless it happens to be equal to \p except,
-/// in which case return 0.
-inline unsigned getPrecedenceExcept(TokenKind kind, TokenKind except) {
+/// Return the precedence of \p token unless it happens to be equal to \p
+/// except, in which case return 0.
+/// \param asIdent if not null, the "as" UniqueString used to parse TS
+///   AsExpressions.
+inline unsigned getPrecedenceExcept(
+    const Token *token,
+    TokenKind except,
+    UniqueString *asIdent) {
+  const TokenKind kind = token->getKind();
+#if HERMES_PARSE_TS
+  // 'as' has the same precedence as 'in' in TS.
+  if (LLVM_UNLIKELY(kind == TokenKind::identifier) &&
+      LLVM_UNLIKELY(token->getIdentifier() == asIdent)) {
+    return getPrecedence(TokenKind::rw_in);
+  }
+#endif
   return LLVM_LIKELY(kind != except) ? getPrecedence(kind) : 0;
 }
 } // namespace
@@ -3892,6 +3905,15 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
           startLoc,
           endLoc,
           new (context_) ESTree::LogicalExpressionNode(left, right, opIdent));
+#if HERMES_PARSE_TS
+    } else if (LLVM_UNLIKELY(opKind == TokenKind::identifier)) {
+      // The only identifier used as a binary operator is 'as' in TS
+      // and it would only have been pushed if TS parsing was enabled.
+      return setLocation(
+          startLoc,
+          endLoc,
+          new (context_) ESTree::TSAsExpressionNode(left, right));
+#endif
     } else {
       return setLocation(
           startLoc,
@@ -3912,8 +3934,10 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
   SMLoc topExprEndLoc = getPrevTokenEndLoc();
 
   // While the current token is a binary operator.
-  while (unsigned precedence =
-             getPrecedenceExcept(tok_->getKind(), exceptKind)) {
+  while (unsigned precedence = getPrecedenceExcept(
+             tok_,
+             exceptKind,
+             HERMES_PARSE_TS && context_.getParseTS() ? asIdent_ : nullptr)) {
     // If the next operator has no greater precedence than the operator on the
     // stack, pop the stack, creating a new binary expression.
     while (!stack.empty() && precedence <= getPrecedence(stack.back().opKind)) {
@@ -3944,11 +3968,22 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
     advance();
 
     topExprStartLoc = tok_->getStartLoc();
-    auto optRightExpr = parseUnaryExpression();
-    if (!optRightExpr)
-      return None;
+#if HERMES_PARSE_TS
+    if (context_.getParseTS() &&
+        LLVM_UNLIKELY(stack.back().opKind == TokenKind::identifier)) {
+      auto optRightExpr = parseTypeAnnotationTS();
+      if (!optRightExpr)
+        return None;
+      topExpr = optRightExpr.getValue();
+    } else
+#endif
+    {
+      auto optRightExpr = parseUnaryExpression();
+      if (!optRightExpr)
+        return None;
+      topExpr = optRightExpr.getValue();
+    }
 
-    topExpr = optRightExpr.getValue();
     topExprEndLoc = getPrevTokenEndLoc();
   }
 

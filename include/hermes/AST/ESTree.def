@@ -990,6 +990,10 @@ ESTREE_NODE_2_ARGS(
     TSTypeAssertion, Base,
     NodePtr, typeAnnotation, false,
     NodePtr, expression, false)
+ESTREE_NODE_2_ARGS(
+    TSAsExpression, Base,
+    NodePtr, expression, false,
+    NodePtr, typeAnnotation, false)
 
 ESTREE_NODE_5_ARGS(
     TSParameterProperty, Base,
