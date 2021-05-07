@@ -1543,7 +1543,7 @@ void HadesGC::oldGenCollection(std::string cause, bool forceCompaction) {
     ogCollectionStats_->beginCPUTimeSection();
   ogCollectionStats_->setBeginTime();
   ogCollectionStats_->setBeforeSizes(
-      oldGen_.allocatedBytes(), oldGen_.externalBytes(), heapFootprint());
+      oldGen_.allocatedBytes(), oldGen_.externalBytes(), segmentFootprint());
 
   if (revertToYGAtTTI_) {
     // If we've reached the first OG collection, and reverting behavior is
@@ -1672,7 +1672,7 @@ void HadesGC::incrementalCollect(bool backgroundThread) {
       if (!oldGen_.sweepNext(backgroundThread)) {
         // Finish any collection bookkeeping.
         ogCollectionStats_->setEndTime();
-        ogCollectionStats_->setAfterSize(heapFootprint());
+        ogCollectionStats_->setAfterSize(segmentFootprint());
         compacteeHandleForSweep_.reset();
         concurrentPhase_ = Phase::None;
         if (!backgroundThread)
@@ -2465,7 +2465,7 @@ void HadesGC::youngGenCollection(
     // Don't update the average YG survival ratio since no liveness was
     // calculated for the promotion case.
     ygCollectionStats_->setBeforeSizes(
-        heapBytes.before, externalBytes.before, heapFootprint());
+        heapBytes.before, externalBytes.before, segmentFootprint());
     ygCollectionStats_->addCollectionType("promotion");
     assert(!doCompaction && "Cannot do compactions during YG promotions.");
   } else {
@@ -2561,13 +2561,13 @@ void HadesGC::youngGenCollection(
     // We have to set these after the collection, in case a compaction took
     // place and updated these metrics.
     ygCollectionStats_->setBeforeSizes(
-        heapBytes.before, externalBytes.before, heapFootprint());
+        heapBytes.before, externalBytes.before, segmentFootprint());
 
     // The swept bytes are just the bytes that were not evacuated.
     ygCollectionStats_->setSweptBytes(heapBytes.before - heapBytes.after);
     ygCollectionStats_->setSweptExternalBytes(
         externalBytes.before - externalBytes.after);
-    ygCollectionStats_->setAfterSize(heapFootprint());
+    ygCollectionStats_->setAfterSize(segmentFootprint());
     // If this is not a compacting YG, the average survival ratio should be
     // updated before starting an OG collection. In a compacting YG, since the
     // evacuatedBytes counter tracks both segments, this survival ratio is not
@@ -2934,9 +2934,13 @@ uint64_t HadesGC::externalBytes() const {
   return ygExternalBytes_ + oldGen_.externalBytes();
 }
 
-uint64_t HadesGC::heapFootprint() const {
+uint64_t HadesGC::segmentFootprint() const {
   size_t totalSegments = oldGen_.numSegments() + (youngGen_ ? 1 : 0);
-  return totalSegments * AlignedStorage::size() + externalBytes();
+  return totalSegments * AlignedStorage::size();
+}
+
+uint64_t HadesGC::heapFootprint() const {
+  return segmentFootprint() + externalBytes();
 }
 
 uint64_t HadesGC::OldGen::allocatedBytes() const {

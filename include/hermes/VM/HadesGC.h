@@ -899,6 +899,10 @@ class HadesGC final : public GCBase {
   ///   heap, but is not in the heap itself.
   uint64_t externalBytes() const;
 
+  /// \return the total number of bytes used by heap segments, including segment
+  /// metadata.
+  uint64_t segmentFootprint() const;
+
   /// \return the total number of bytes used by the heap, including segment
   /// metadata and external memory.
   uint64_t heapFootprint() const;
