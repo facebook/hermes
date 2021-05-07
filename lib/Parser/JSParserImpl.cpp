@@ -380,7 +380,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
   ESTree::Node *typeParams = nullptr;
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow() && check(TokenKind::less)) {
-    auto optTypeParams = parseTypeParams();
+    auto optTypeParams = parseTypeParamsFlow();
     if (!optTypeParams)
       return None;
     typeParams = *optTypeParams;
@@ -412,14 +412,14 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
   if (context_.getParseFlow() && check(TokenKind::colon)) {
     SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
     if (!check(checksIdent_)) {
-      auto optRet = parseTypeAnnotation(annotStart);
+      auto optRet = parseTypeAnnotationFlow(annotStart);
       if (!optRet)
         return None;
       returnType = *optRet;
     }
 
     if (check(checksIdent_)) {
-      auto optPred = parsePredicate();
+      auto optPred = parsePredicateFlow();
       if (!optPred)
         return None;
       predicate = *optPred;
@@ -541,7 +541,7 @@ bool JSParserImpl::parseFormalParameters(
             thisParamStart))
       return false;
 
-    auto optType = parseTypeAnnotation(annotStart);
+    auto optType = parseTypeAnnotationFlow(annotStart);
     if (!optType)
       return false;
     ESTree::Node *type = *optType;
@@ -734,7 +734,7 @@ bool JSParserImpl::parseStatementListItem(
   } else if (context_.getParseFlow() && checkDeclareType()) {
     // declare var, declare function, declare interface, etc.
     SMLoc start = advance(JSLexer::GrammarContext::Flow).Start;
-    auto decl = parseDeclare(start, AllowDeclareExportType::No);
+    auto decl = parseDeclareFLow(start, AllowDeclareExportType::No);
     if (!decl)
       return false;
     stmtList.push_back(*decl.getValue());
@@ -914,7 +914,7 @@ Optional<ESTree::IdentifierNode *> JSParserImpl::parseBindingIdentifier(
 
     if (check(TokenKind::colon)) {
       SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
-      auto optType = parseTypeAnnotation(annotStart);
+      auto optType = parseTypeAnnotationFlow(annotStart);
       if (!optType)
         return None;
       type = *optType;
@@ -1135,7 +1135,7 @@ Optional<ESTree::ArrayPatternNode *> JSParserImpl::parseArrayBindingPattern(
   if (context_.getParseFlow()) {
     if (check(TokenKind::colon)) {
       SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
-      auto optType = parseTypeAnnotation(annotStart);
+      auto optType = parseTypeAnnotationFlow(annotStart);
       if (!optType)
         return None;
       type = *optType;
@@ -1266,7 +1266,7 @@ Optional<ESTree::ObjectPatternNode *> JSParserImpl::parseObjectBindingPattern(
   if (context_.getParseFlow()) {
     if (check(TokenKind::colon)) {
       SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
-      auto optType = parseTypeAnnotation(annotStart);
+      auto optType = parseTypeAnnotationFlow(annotStart);
       if (!optType)
         return None;
       type = *optType;
@@ -2295,7 +2295,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
           }
         } else if (check(TokenKind::colon)) {
           SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
-          auto optType = parseTypeAnnotation(annotStart);
+          auto optType = parseTypeAnnotationFlow(annotStart);
           if (!optType)
             return None;
           ESTree::Node *type = *optType;
@@ -2549,7 +2549,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
 #if HERMES_PARSE_FLOW
       if (context_.getParseFlow() && check(TokenKind::colon)) {
         SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
-        auto optRet = parseTypeAnnotation(annotStart);
+        auto optRet = parseTypeAnnotationFlow(annotStart);
         if (!optRet)
           return None;
         returnType = *optRet;
@@ -2653,7 +2653,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
 #if HERMES_PARSE_FLOW
       if (context_.getParseFlow() && check(TokenKind::colon)) {
         SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
-        auto optRet = parseTypeAnnotation(annotStart);
+        auto optRet = parseTypeAnnotationFlow(annotStart);
         if (!optRet)
           return None;
         returnType = *optRet;
@@ -2803,7 +2803,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
     ESTree::Node *typeParams = nullptr;
 #if HERMES_PARSE_FLOW
     if (context_.getParseFlow() && check(TokenKind::less)) {
-      auto optTypeParams = parseTypeParams();
+      auto optTypeParams = parseTypeParamsFlow();
       if (!optTypeParams)
         return None;
       typeParams = *optTypeParams;
@@ -2826,7 +2826,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
 #if HERMES_PARSE_FLOW
     if (context_.getParseFlow() && check(TokenKind::colon)) {
       SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
-      auto optRet = parseTypeAnnotation(annotStart);
+      auto optRet = parseTypeAnnotationFlow(annotStart);
       if (!optRet)
         return None;
       returnType = *optRet;
@@ -3297,7 +3297,7 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
     ESTree::NodePtr typeArgs = nullptr;
 #if HERMES_PARSE_FLOW
     if (context_.getParseFlow() && check(TokenKind::less)) {
-      auto optTypeArgs = parseTypeArgs();
+      auto optTypeArgs = parseTypeArgsFlow();
       if (!optTypeArgs) {
         return None;
       }
@@ -3352,7 +3352,7 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
       // but roll back if it just ended up being a comparison operator.
       SourceErrorManager::SaveAndSuppressMessages suppress{
           &sm_, Subsystem::Parser};
-      auto optTypeArgs = parseTypeArgs();
+      auto optTypeArgs = parseTypeArgsFlow();
       if (optTypeArgs && check(TokenKind::l_paren)) {
         // Call expression with type arguments.
         typeArgs = *optTypeArgs;
@@ -3497,7 +3497,7 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrOptionalExpression(
     // but roll back if it just ended up being a comparison operator.
     SourceErrorManager::SaveAndSuppressMessages suppress{
         &sm_, Subsystem::Parser};
-    auto optTypeArgs = parseTypeArgs();
+    auto optTypeArgs = parseTypeArgsFlow();
     if (optTypeArgs) {
       // New expression with type arguments.
       typeArgs = *optTypeArgs;
@@ -3570,7 +3570,7 @@ Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
     // Suppress messages from the parser while still displaying lexer messages.
     SourceErrorManager::SaveAndSuppressMessages suppress{
         &sm_, Subsystem::Parser};
-    auto optTypeArgs = parseTypeArgs();
+    auto optTypeArgs = parseTypeArgsFlow();
     if (optTypeArgs && check(TokenKind::l_paren)) {
       // Call expression with type arguments.
       typeArgs = *optTypeArgs;
@@ -4002,7 +4002,7 @@ Optional<ESTree::Node *> JSParserImpl::tryParseCoverTypedIdentifierNode(
         isa<ESTree::ArrayExpressionNode>(test)) {
       // Deliberately wrap the type annotation later when reparsing.
       SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
-      auto optRet = parseTypeAnnotation(annotStart);
+      auto optRet = parseTypeAnnotationFlow(annotStart);
       if (!optRet)
         return None;
       ESTree::Node *type = *optRet;
@@ -4084,7 +4084,7 @@ Optional<ESTree::ClassDeclarationNode *> JSParserImpl::parseClassDeclaration(
 
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow() && check(TokenKind::less)) {
-    auto optParams = parseTypeParams();
+    auto optParams = parseTypeParamsFlow();
     if (!optParams)
       return None;
     typeParams = *optParams;
@@ -4128,7 +4128,7 @@ Optional<ESTree::ClassExpressionNode *> JSParserImpl::parseClassExpression() {
 
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow() && check(TokenKind::less)) {
-    auto optParams = parseTypeParams();
+    auto optParams = parseTypeParamsFlow();
     if (!optParams)
       return None;
     typeParams = *optParams;
@@ -4159,7 +4159,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassTail(
     superClass = *optSuperClass;
 #if HERMES_PARSE_FLOW
     if (context_.getParseFlow() && check(TokenKind::less)) {
-      auto optParams = parseTypeArgs();
+      auto optParams = parseTypeArgsFlow();
       if (!optParams)
         return None;
       superTypeParams = *optParams;
@@ -4179,7 +4179,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassTail(
                 "start of class",
                 startLoc))
           return None;
-        auto optImpl = parseClassImplements();
+        auto optImpl = parseClassImplementsFlow();
         if (!optImpl)
           return None;
         implements.push_back(**optImpl);
@@ -4473,7 +4473,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
 #if HERMES_PARSE_FLOW
     if (context_.getParseFlow() && check(TokenKind::colon)) {
       SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
-      auto optType = parseTypeAnnotation(annotStart);
+      auto optType = parseTypeAnnotationFlow(annotStart);
       if (!optType)
         return None;
       typeAnnotation = *optType;
@@ -4529,7 +4529,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
   ESTree::Node *typeParams = nullptr;
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow() && check(TokenKind::less)) {
-    auto optTypeParams = parseTypeParams();
+    auto optTypeParams = parseTypeParamsFlow();
     if (!optTypeParams)
       return None;
     typeParams = *optTypeParams;
@@ -4561,7 +4561,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow() && check(TokenKind::colon)) {
     SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
-    auto optRet = parseTypeAnnotation(annotStart);
+    auto optRet = parseTypeAnnotationFlow(annotStart);
     if (!optRet)
       return None;
     returnType = *optRet;
@@ -5121,7 +5121,7 @@ Optional<ESTree::Node *> JSParserImpl::tryParseTypedAsyncArrowFunction(
     SourceErrorManager::SaveAndSuppressMessages suppress{
         &sm_, Subsystem::Parser};
     if (check(TokenKind::less)) {
-      auto optTypeParams = parseTypeParams();
+      auto optTypeParams = parseTypeParamsFlow();
       if (!optTypeParams) {
         savePoint.restore();
         return None;
@@ -5146,7 +5146,7 @@ Optional<ESTree::Node *> JSParserImpl::tryParseTypedAsyncArrowFunction(
       SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
       if (!check(checksIdent_)) {
         auto optType =
-            parseTypeAnnotation(annotStart, AllowAnonFunctionType::No);
+            parseTypeAnnotationFlow(annotStart, AllowAnonFunctionType::No);
         if (!optType) {
           savePoint.restore();
           return None;
@@ -5154,7 +5154,7 @@ Optional<ESTree::Node *> JSParserImpl::tryParseTypedAsyncArrowFunction(
         returnType = *optType;
       }
       if (check(checksIdent_)) {
-        auto optPredicate = parsePredicate();
+        auto optPredicate = parsePredicateFlow();
         if (!optPredicate) {
           savePoint.restore();
           return None;
@@ -5240,7 +5240,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
     } else {
       // Consume the type parameters and try again.
       savePoint.restore();
-      auto optTypeParams = parseTypeParams();
+      auto optTypeParams = parseTypeParamsFlow();
       // Type parameters must be followed by a '(' to be meaningful.
       if (optTypeParams && check(TokenKind::l_paren)) {
         typeParams = *optTypeParams;
@@ -5300,7 +5300,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
       bool startsWithPredicate = check(checksIdent_);
       auto optType = startsWithPredicate
           ? llvh::None
-          : parseTypeAnnotation(annotStart, AllowAnonFunctionType::No);
+          : parseTypeAnnotationFlow(annotStart, AllowAnonFunctionType::No);
       if (optType)
         returnType = *optType;
       if (optType || startsWithPredicate) {
@@ -5311,7 +5311,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
           // Successful parse, show any messages that the lexer emitted.
           collect.setDiscardMessages(false);
         } else if (check(checksIdent_)) {
-          auto optPred = parsePredicate();
+          auto optPred = parsePredicateFlow();
           if (optPred && check(TokenKind::equalgreater)) {
             // Done parsing the return type and predicate.
             predicate = *optPred;
@@ -5868,7 +5868,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
 
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow() && check(typeIdent_)) {
-    return parseExportTypeDeclaration(startLoc);
+    return parseExportTypeDeclarationFlow(startLoc);
   }
 #endif
 
@@ -5943,7 +5943,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
           new (context_) ESTree::ExportDefaultDeclarationNode(*optClassDecl));
 #if HERMES_PARSE_FLOW
     } else if (context_.getParseFlow() && check(TokenKind::rw_enum)) {
-      auto optEnum = parseEnumDeclaration();
+      auto optEnum = parseEnumDeclarationFlow();
       if (!optEnum) {
         return None;
       }
