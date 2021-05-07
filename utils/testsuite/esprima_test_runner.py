@@ -36,7 +36,7 @@ ESPRIMA_OMITTED_KEYS_COMMON = {"loc", "range", "errors"}
 # key is the type of a node, and value is the set of keys of a child node that
 # needs to be omitted.
 HERMES_OMITTED_KEYS = {
-    "ImportDeclaration": {"importKind"},
+    "ImportDeclaration": {"importKind", "attributes"},
     "ImportSpecifier": {"importKind"},
     "ExportNamedDeclaration": {"exportKind"},
     "ExportAllDeclaration": {"exportKind"},
@@ -56,7 +56,7 @@ ESPRIMA_OMITTED_KEYS = {
     "Program": {"tokens", "sourceType", "comments"},
     "Literal": {"raw"},
     "StringLiteralTypeAnnotation": {"raw"},
-    "ImportDeclaration": {"importKind"},
+    "ImportDeclaration": {"importKind", "attributes"},
     "ImportSpecifier": {"importKind"},
     "ExportNamedDeclaration": {"exportKind"},
     "ExportAllDeclaration": {"exportKind"},

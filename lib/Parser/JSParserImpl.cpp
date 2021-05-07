@@ -75,6 +75,7 @@ void JSParserImpl::initializeIdentifiers() {
   typeIdent_ = lexer_.getIdentifier("type");
   asyncIdent_ = lexer_.getIdentifier("async");
   awaitIdent_ = lexer_.getIdentifier("await");
+  assertIdent_ = lexer_.getIdentifier("assert");
 
 #if HERMES_PARSE_FLOW
 
@@ -3062,6 +3063,17 @@ Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew(
       return None;
     ESTree::Node *source = *optSource;
 
+    checkAndEat(TokenKind::comma);
+
+    ESTree::Node *attributes = nullptr;
+    if (!check(TokenKind::r_paren)) {
+      auto optAttributes = parseAssignmentExpression();
+      if (!optAttributes)
+        return None;
+      attributes = *optAttributes;
+      checkAndEat(TokenKind::comma);
+    }
+
     SMLoc endLoc = tok_->getEndLoc();
     if (!eat(
             TokenKind::r_paren,
@@ -3072,7 +3084,9 @@ Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew(
       return None;
 
     expr = setLocation(
-        startLoc, endLoc, new (context_) ESTree::ImportExpressionNode(source));
+        startLoc,
+        endLoc,
+        new (context_) ESTree::ImportExpressionNode(source, attributes));
   } else {
     auto primExpr = parsePrimaryExpression();
     if (!primExpr)
@@ -5478,6 +5492,92 @@ Optional<ESTree::StringLiteralNode *> JSParserImpl::parseFromClause() {
   return source;
 }
 
+bool JSParserImpl::parseAssertClause(ESTree::NodeList &attributes) {
+  assert(check(assertIdent_));
+  SMLoc start = advance().Start;
+
+  // assert { }
+  // assert { AssertEntries ,[opt] }
+  //        ^
+
+  if (!eat(
+          TokenKind::l_brace,
+          JSLexer::GrammarContext::AllowRegExp,
+          "in import assertion",
+          "start of assertion",
+          start))
+    return false;
+
+  while (!check(TokenKind::r_brace)) {
+    // AssertionKey : StringLiteral
+    // ^
+    ESTree::Node *key = nullptr;
+    if (check(TokenKind::string_literal)) {
+      key = setLocation(
+          tok_,
+          tok_,
+          new (context_) ESTree::StringLiteralNode(tok_->getStringLiteral()));
+      advance();
+    } else {
+      if (!need(
+              TokenKind::identifier,
+              "in import assertion",
+              "start of assertion",
+              start))
+        return false;
+
+      key = setLocation(
+          tok_,
+          tok_,
+          new (context_)
+              ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
+      advance();
+    }
+
+    if (!eat(
+            TokenKind::colon,
+            JSLexer::GrammarContext::AllowRegExp,
+            "in import assertion",
+            "start of assertion",
+            start))
+      return false;
+
+    // AssertionKey : StringLiteral
+    //                ^
+
+    if (!need(
+            TokenKind::string_literal,
+            "in import assertion",
+            "start of assertion",
+            start))
+      return false;
+
+    ESTree::Node *value = setLocation(
+        tok_,
+        tok_,
+        new (context_) ESTree::StringLiteralNode(tok_->getStringLiteral()));
+    advance();
+    attributes.push_back(*setLocation(
+        key, value, new (context_) ESTree::ImportAttributeNode(key, value)));
+
+    if (!checkAndEat(TokenKind::comma))
+      break;
+  }
+
+  // assert { AssertEntries ,[opt] }
+  //                               ^
+
+  if (!eat(
+          TokenKind::r_brace,
+          JSLexer::GrammarContext::AllowRegExp,
+          "in import assertion",
+          "start of assertion",
+          start))
+    return false;
+
+  return true;
+}
+
 Optional<ESTree::ImportDeclarationNode *>
 JSParserImpl::parseImportDeclaration() {
   assert(
@@ -5494,13 +5594,22 @@ JSParserImpl::parseImportDeclaration() {
         tok_,
         new (context_) ESTree::StringLiteralNode(tok_->getStringLiteral()));
     advance();
+
+    ESTree::NodeList attributes{};
+    if (check(assertIdent_) && !lexer_.isNewLineBeforeCurrentToken()) {
+      if (!parseAssertClause(attributes))
+        return None;
+    }
+
     if (!eatSemi()) {
       return None;
     }
+
     return setLocation(
         startLoc,
         getPrevTokenEndLoc(),
-        new (context_) ESTree::ImportDeclarationNode({}, source, valueIdent_));
+        new (context_) ESTree::ImportDeclarationNode(
+            {}, source, std::move(attributes), valueIdent_));
   }
 
   ESTree::NodeList specifiers;
@@ -5514,6 +5623,12 @@ JSParserImpl::parseImportDeclaration() {
     return None;
   }
 
+  ESTree::NodeList attributes{};
+  if (check(assertIdent_) && !lexer_.isNewLineBeforeCurrentToken()) {
+    if (!parseAssertClause(attributes))
+      return None;
+  }
+
   if (!eatSemi()) {
     return None;
   }
@@ -5522,7 +5637,7 @@ JSParserImpl::parseImportDeclaration() {
       startLoc,
       getPrevTokenEndLoc(),
       new (context_) ESTree::ImportDeclarationNode(
-          std::move(specifiers), *optFromClause, kind));
+          std::move(specifiers), *optFromClause, std::move(attributes), kind));
 }
 
 Optional<UniqueString *> JSParserImpl::parseImportClause(

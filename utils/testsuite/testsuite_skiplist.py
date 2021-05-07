@@ -1612,6 +1612,8 @@ SKIP_LIST = [
     # Potentially invalid JSX that is inconsistent across implementations.
     "flow/JSX/invalid_unpaired_gt.js",
     "flow/JSX/invalid_unpaired_rcurly.js",
+    # Import attributes
+    "flow/dynamic_import/migrated_0005.js",
     ### Failing Flow tests end ###
 ]
 

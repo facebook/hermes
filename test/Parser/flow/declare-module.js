@@ -196,6 +196,7 @@ declare module WithImport {
 // CHECK-NEXT:               "type": "StringLiteral",
 // CHECK-NEXT:               "value": "Foo"
 // CHECK-NEXT:             },
+// CHECK-NEXT:             "attributes": [],
 // CHECK-NEXT:             "importKind": "type"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
