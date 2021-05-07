@@ -8,6 +8,7 @@
 #ifndef HERMES_PARSER_JSPARSERIMPL_H
 #define HERMES_PARSER_JSPARSERIMPL_H
 
+#include "hermes/AST/Config.h"
 #include "hermes/AST/Context.h"
 #include "hermes/AST/ESTree.h"
 #include "hermes/Parser/JSLexer.h"

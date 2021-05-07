@@ -452,6 +452,14 @@ static opt<bool> ParseFlow(
     cat(CompilerCategory));
 #endif
 
+#if HERMES_PARSE_TS
+static opt<bool> ParseTS(
+    "parse-ts",
+    desc("Parse TypeScript"),
+    init(false),
+    cat(CompilerCategory));
+#endif
+
 static CLFlag StaticRequire(
     'f',
     "static-require",
@@ -1110,6 +1118,12 @@ std::shared_ptr<Context> createContext(
 #if HERMES_PARSE_FLOW
   if (cl::ParseFlow) {
     context->setParseFlow(ParseFlowSetting::ALL);
+  }
+#endif
+
+#if HERMES_PARSE_TS
+  if (cl::ParseTS) {
+    context->setParseTS(true);
   }
 #endif
 

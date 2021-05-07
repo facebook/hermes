@@ -24,4 +24,12 @@
 #endif
 #endif
 
+#if !defined(HERMES_PARSE_TS)
+#if defined(HERMES_IS_MOBILE_BUILD)
+#define HERMES_PARSE_TS 0
+#else
+#define HERMES_PARSE_TS 1
+#endif
+#endif
+
 #endif
