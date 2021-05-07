@@ -129,8 +129,8 @@ inline OutputIt GCHermesValueBase<HVType>::copy(
     GC *gc) {
 #if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
   static_assert(
-      !std::is_same<InputIt, HVType *>::value ||
-          !std::is_same<OutputIt, HVType *>::value,
+      !std::is_same<InputIt, GCHermesValueBase *>::value ||
+          !std::is_same<OutputIt, GCHermesValueBase *>::value,
       "Pointer arguments must invoke pointer overload.");
 #endif
   for (; first != last; ++first, (void)++result) {
@@ -146,12 +146,10 @@ inline OutputIt GCHermesValueBase<HVType>::uninitialized_copy(
     InputIt last,
     OutputIt result,
     GC *gc) {
-#if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
   static_assert(
-      !std::is_same<InputIt, HVType *>::value ||
-          !std::is_same<OutputIt, HVType *>::value,
+      !std::is_same<InputIt, GCHermesValueBase *>::value ||
+          !std::is_same<OutputIt, GCHermesValueBase *>::value,
       "Pointer arguments must invoke pointer overload.");
-#endif
   for (; first != last; ++first, (void)++result) {
     new (&*result) GCHermesValueBase<HVType>(*first, gc);
   }
@@ -182,6 +180,7 @@ inline GCHermesValueBase<HVType> *GCHermesValueBase<HVType>::copy(
       (last - first) * sizeof(GCHermesValueBase<HVType>));
   return result + (last - first);
 }
+#endif
 
 /// Specialization for raw pointers to do a ranged write barrier.
 template <typename HVType>
@@ -190,13 +189,22 @@ inline GCHermesValueBase<HVType> *GCHermesValueBase<HVType>::uninitialized_copy(
     GCHermesValueBase<HVType> *last,
     GCHermesValueBase<HVType> *result,
     GC *gc) {
+#ifndef NDEBUG
+  uintptr_t fromFirst = reinterpret_cast<uintptr_t>(first),
+            fromLast = reinterpret_cast<uintptr_t>(last);
+  uintptr_t toFirst = reinterpret_cast<uintptr_t>(result),
+            toLast = toFirst + fromFirst - fromLast;
+  assert(
+      (toLast < fromFirst || fromLast < toFirst) &&
+      "Uninitialized range cannot overlap with an initialized one.");
+#endif
+
   gc->constructorWriteBarrierRange(result, last - first);
-  // memmove is fine for an uninitialized copy.
-  std::memmove(
+  // memcpy is fine for an uninitialized copy.
+  std::memcpy(
       reinterpret_cast<void *>(result), first, (last - first) * sizeof(HVType));
   return result + (last - first);
 }
-#endif
 
 template <typename HVType>
 template <typename InputIt, typename OutputIt>

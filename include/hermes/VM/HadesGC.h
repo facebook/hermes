@@ -175,6 +175,12 @@ class HadesGC final : public GCBase {
       const GCSmallHermesValue *loc,
       SmallHermesValue value);
   void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
+  void constructorWriteBarrierRange(
+      const GCHermesValue *start,
+      uint32_t numHVs);
+  void constructorWriteBarrierRange(
+      const GCSmallHermesValue *start,
+      uint32_t numHVs);
 
   void snapshotWriteBarrier(const GCHermesValue *loc);
   void snapshotWriteBarrier(const GCSmallHermesValue *loc);

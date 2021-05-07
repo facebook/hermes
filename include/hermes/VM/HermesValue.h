@@ -608,14 +608,17 @@ class GCHermesValueBase final : public HVType {
       GCHermesValueBase<HVType> *last,
       GCHermesValueBase<HVType> *result,
       GC *gc);
+#endif
 
-  /// Same as \p uninitialized_copy, but specialised for raw pointers.
+  /// Same as \p uninitialized_copy, but specialised for raw pointers. This is
+  /// unsafe to use if the memory region being copied into (pointed to by
+  /// \p result) is reachable by the GC (for instance, memory within the
+  /// size of an ArrayStorage), since it does not update elements atomically.
   static inline GCHermesValueBase<HVType> *uninitialized_copy(
       GCHermesValueBase<HVType> *first,
       GCHermesValueBase<HVType> *last,
       GCHermesValueBase<HVType> *result,
       GC *gc);
-#endif
 
   /// Copies a range of values and performs a write barrier on each.
   template <typename InputIt, typename OutputIt>

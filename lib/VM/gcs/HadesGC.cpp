@@ -1939,6 +1939,35 @@ void HadesGC::constructorWriteBarrier(
   relocationWriteBarrier(loc, value);
 }
 
+void HadesGC::constructorWriteBarrierRange(
+    const GCHermesValue *start,
+    uint32_t numHVs) {
+  assert(
+      AlignedStorage::containedInSame(start, start + numHVs) &&
+      "Range must start and end within a heap segment.");
+
+  // Most constructors should be running in the YG, so in the common case, we
+  // can avoid doing anything for the whole range. If the range is in the OG,
+  // then just dirty all the cards corresponding to it, and we can scan them for
+  // pointers later. This is less precise but makes the write barrier faster.
+  if (inYoungGen(start))
+    return;
+  AlignedHeapSegment::cardTableCovering(start)->dirtyCardsForAddressRange(
+      start, start + numHVs);
+}
+
+void HadesGC::constructorWriteBarrierRange(
+    const GCSmallHermesValue *start,
+    uint32_t numHVs) {
+  assert(
+      AlignedStorage::containedInSame(start, start + numHVs) &&
+      "Range must start and end within a heap segment.");
+  if (inYoungGen(start))
+    return;
+  AlignedHeapSegment::cardTableCovering(start)->dirtyCardsForAddressRange(
+      start, start + numHVs);
+}
+
 void HadesGC::snapshotWriteBarrier(const GCHermesValue *loc) {
   if (inYoungGen(loc)) {
     // A pointer that lives in YG never needs any write barriers.
