@@ -285,11 +285,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       // ? ?? ?.
       case '?':
         token_.setStart(curCharPtr_);
-        if (HERMES_PARSE_FLOW &&
-            LLVM_UNLIKELY(grammarContext == GrammarContext::Type)) {
-          token_.setPunctuator(TokenKind::question);
-          curCharPtr_ += 1;
-        } else if (curCharPtr_[1] == '.' && !isdigit(curCharPtr_[2])) {
+        if (curCharPtr_[1] == '.' && !isdigit(curCharPtr_[2])) {
           // OptionalChainingPunctuator ::
           // ?. [lookahead does not contain DecimalDigit]
           // This is done to prevent `x?.3:y` from being recognized

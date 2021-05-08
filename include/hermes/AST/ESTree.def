@@ -736,6 +736,11 @@ ESTREE_NODE_2_ARGS(
     IndexedAccessType, Base,
     NodePtr, objectType, false,
     NodePtr, indexType, false)
+ESTREE_NODE_3_ARGS(
+    OptionalIndexedAccessType, Base,
+    NodePtr, objectType, false,
+    NodePtr, indexType, false,
+    NodeBoolean, optional, false)
 
 ESTREE_NODE_2_ARGS(
     InterfaceTypeAnnotation, Base,

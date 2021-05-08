@@ -1004,17 +1004,30 @@ Optional<ESTree::Node *> JSParserImpl::parsePostfixTypeAnnotationFlow() {
     return None;
 
   ESTree::Node *result = *optPrimary;
+  bool seenOptionalIndexedAccess = false;
 
-  while (!lexer_.isNewLineBeforeCurrentToken() &&
-         checkAndEat(TokenKind::l_square, JSLexer::GrammarContext::Type)) {
-    if (checkAndEat(TokenKind::r_square, JSLexer::GrammarContext::Type)) {
+  while (check(TokenKind::l_square, TokenKind::questiondot) &&
+         !lexer_.isNewLineBeforeCurrentToken()) {
+    bool optional = checkAndEat(TokenKind::questiondot);
+    seenOptionalIndexedAccess = seenOptionalIndexedAccess || optional;
+
+    if (!eat(
+            TokenKind::l_square,
+            JSLexer::GrammarContext::Type,
+            "in indexed access type or postfix array type syntax",
+            "start of a type",
+            start))
+      return None;
+
+    if (!optional &&
+        checkAndEat(TokenKind::r_square, JSLexer::GrammarContext::Type)) {
       // Legacy Array syntax `T[]`
       result = setLocation(
           start,
           getPrevTokenEndLoc(),
           new (context_) ESTree::ArrayTypeAnnotationNode(result));
     } else {
-      // Indexed Access `T[K]`
+      // Indexed Access `T[K]` (`T?.[K]` if `optional`)
       auto optIndexType = parseTypeAnnotationFlow();
       if (!optIndexType)
         return None;
@@ -1024,10 +1037,19 @@ Optional<ESTree::Node *> JSParserImpl::parsePostfixTypeAnnotationFlow() {
               "start of type",
               start))
         return None;
-      result = setLocation(
-          start,
-          advance(JSLexer::GrammarContext::Type).End,
-          new (context_) ESTree::IndexedAccessTypeNode(result, *optIndexType));
+      if (seenOptionalIndexedAccess) {
+        result = setLocation(
+            start,
+            advance(JSLexer::GrammarContext::Type).End,
+            new (context_) ESTree::OptionalIndexedAccessTypeNode(
+                result, *optIndexType, optional));
+      } else {
+        result = setLocation(
+            start,
+            advance(JSLexer::GrammarContext::Type).End,
+            new (context_)
+                ESTree::IndexedAccessTypeNode(result, *optIndexType));
+      }
     }
   }
 
