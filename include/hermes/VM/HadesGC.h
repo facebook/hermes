@@ -673,6 +673,7 @@ class HadesGC final : public GCBase {
   ExponentialMovingAverage ygAverageSurvivalRatio_;
 
   /// The amount of bytes of external memory credited to objects in the YG.
+  /// Only accessible to the mutator.
   uint64_t ygExternalBytes_{0};
 
   struct CompacteeState {
@@ -917,6 +918,10 @@ class HadesGC final : public GCBase {
   /// Set a given segment as the YG segment.
   /// \return the previous YG segment.
   HeapSegment setYoungGen(HeapSegment seg);
+
+  /// Get/set the current number of external bytes used by the YG.
+  size_t getYoungGenExternalBytes() const;
+  void setYoungGenExternalBytes(size_t sz);
 
   /// Searches the old gen for this pointer. This is O(number of OG segments).
   /// NOTE: In any non-debug case, \c inYoungGen should be used instead, because

@@ -1806,11 +1806,12 @@ void HadesGC::finalizeAllLocked() {
 void HadesGC::creditExternalMemory(GCCell *cell, uint32_t sz) {
   assert(canAllocExternalMemory(sz) && "Precondition");
   if (inYoungGen(cell)) {
-    ygExternalBytes_ += sz;
+    size_t newYGExtBytes = getYoungGenExternalBytes() + sz;
+    setYoungGenExternalBytes(newYGExtBytes);
     // If the YG now contains an entire segment worth of external memory, set
     // the effective end to the level, which will force a GC to occur on the
     // next YG alloc.
-    if (ygExternalBytes_ >= HeapSegment::maxSize())
+    if (newYGExtBytes >= HeapSegment::maxSize())
       youngGen_.setEffectiveEnd(youngGen_.level());
   } else {
     std::lock_guard<Mutex> lk{gcMutex_};
@@ -1822,10 +1823,10 @@ void HadesGC::creditExternalMemory(GCCell *cell, uint32_t sz) {
 
 void HadesGC::debitExternalMemory(GCCell *cell, uint32_t sz) {
   if (inYoungGen(cell)) {
+    size_t oldYGExtBytes = getYoungGenExternalBytes();
     assert(
-        ygExternalBytes_ >= sz &&
-        "Debiting more native memory than was credited");
-    ygExternalBytes_ -= sz;
+        oldYGExtBytes >= sz && "Debiting more native memory than was credited");
+    setYoungGenExternalBytes(oldYGExtBytes - sz);
     // Don't modify the effective end here. creditExternalMemory is in charge
     // of tracking this. We don't expect many debits to not be from finalizers
     // anyway.
@@ -2450,7 +2451,7 @@ void HadesGC::youngGenCollection(
     uint64_t after{0};
   } heapBytes, externalBytes;
   heapBytes.before = youngGen().used();
-  externalBytes.before = ygExternalBytes_;
+  externalBytes.before = getYoungGenExternalBytes();
   // scannedSize tracks the total number of bytes that were involved in this
   // collection. In a normal YG collection, this is just the YG size, during a
   // compaction, also add in the size of the compactee.
@@ -2506,7 +2507,7 @@ void HadesGC::youngGenCollection(
     finalizeYoungGenObjects();
     // This was modified by debitExternalMemoryFromFinalizer, called by
     // finalizers. The difference in the value before to now was the swept bytes
-    externalBytes.after = ygExternalBytes_;
+    externalBytes.after = getYoungGenExternalBytes();
     // Now the copy list is drained, and all references point to the old
     // gen. Clear the level of the young gen.
     yg.resetLevel();
@@ -2683,8 +2684,8 @@ void HadesGC::checkTripwireAndResetStats() {
 }
 
 void HadesGC::transferExternalMemoryToOldGen() {
-  oldGen_.creditExternalMemory(ygExternalBytes_);
-  ygExternalBytes_ = 0;
+  oldGen_.creditExternalMemory(getYoungGenExternalBytes());
+  setYoungGenExternalBytes(0);
   youngGen_.clearExternalMemoryCharge();
 }
 
@@ -2931,7 +2932,7 @@ uint64_t HadesGC::allocatedBytes() const {
 }
 
 uint64_t HadesGC::externalBytes() const {
-  return ygExternalBytes_ + oldGen_.externalBytes();
+  return getYoungGenExternalBytes() + oldGen_.externalBytes();
 }
 
 uint64_t HadesGC::segmentFootprint() const {
@@ -2997,6 +2998,19 @@ const HadesGC::HeapSegment &HadesGC::youngGen() const {
 
 bool HadesGC::inYoungGen(const void *p) const {
   return youngGen_.lowLim() == AlignedStorage::start(p);
+}
+
+size_t HadesGC::getYoungGenExternalBytes() const {
+  assert(
+      !calledByBackgroundThread() &&
+      "ygExternalBytes_ is only accessible from the mutator.");
+  return ygExternalBytes_;
+}
+void HadesGC::setYoungGenExternalBytes(size_t sz) {
+  assert(
+      !calledByBackgroundThread() &&
+      "ygExternalBytes_ is only accessible from the mutator.");
+  ygExternalBytes_ = sz;
 }
 
 llvh::ErrorOr<size_t> HadesGC::getVMFootprintForTest() const {
