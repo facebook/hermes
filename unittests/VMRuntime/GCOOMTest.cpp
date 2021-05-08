@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#ifndef HERMESVM_GC_MALLOC
+
 #include "gtest/gtest.h"
 
 #include "EmptyCell.h"
@@ -20,13 +22,34 @@ using namespace hermes::vm;
 namespace {
 
 TEST(GCOOMDeathTest, SuperSegment) {
-  if (GC::maxAllocationSize() == std::numeric_limits<uint32_t>::max()) {
-    // This test won't work if there is no limit on allocation sizes.
-    return;
-  }
   using SuperSegmentCell = EmptyCell<GC::maxAllocationSize() * 2>;
   auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfig);
   EXPECT_OOM(SuperSegmentCell::create(*runtime));
+}
+
+static void exceedMaxHeap(
+    GCConfig::Builder baseConfig = kTestGCConfigBaseBuilder) {
+  static constexpr size_t kSegments = 10;
+  static constexpr size_t kHeapSizeHint =
+      AlignedHeapSegment::maxSize() * kSegments;
+  // Only one of these cells will fit into a segment, with the maximum amount of
+  // space wasted in the segment.
+  using AwkwardCell = EmptyCell<AlignedHeapSegment::maxSize() / 2 + 1>;
+
+  auto runtime = DummyRuntime::create(
+      getMetadataTable(), TestGCConfigFixedSize(kHeapSizeHint, baseConfig));
+  DummyRuntime &rt = *runtime;
+  GCScope scope{&rt};
+
+  // Exceed the maximum size of the heap. Note we need 2 extra segments instead
+  // of just one because Hades can sometimes hide the memory for a segment
+  // during compaction.
+  for (size_t i = 0; i < kSegments + 2; ++i)
+    rt.makeHandle(AwkwardCell::create(rt));
+}
+
+TEST(GCOOMDeathTest, Fragmentation) {
+  EXPECT_OOM(exceedMaxHeap());
 }
 
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
@@ -56,36 +79,6 @@ TEST(GCOOMTest, VarSize) {
   // Even though this is too big to fit in the young gen, this should be okay,
   // because it will fit in the old gen.
   VarCell::create(rt);
-}
-
-TEST(GCOOMDeathTest, Fragmentation) {
-  const size_t kHeapSizeHint =
-      AlignedHeapSegment::maxSize() * GenGC::kYoungGenFractionDenom;
-  // Only one of these cells will fit into a segment, with the maximum amount of
-  // space wasted in the segment.
-  using AwkwardCell = EmptyCell<AlignedHeapSegment::maxSize() / 2 + 1>;
-
-  auto runtime = DummyRuntime::create(
-      getMetadataTable(), TestGCConfigFixedSize(kHeapSizeHint));
-  DummyRuntime &rt = *runtime;
-  GenGC &gc = rt.getHeap();
-
-  // Ensure that the heap will be big enough for the YoungGen to accommodate its
-  // full size, and the OldGen is segment aligned.
-  const size_t kSegments = GenGC::kYoungGenFractionDenom;
-  ASSERT_EQ(kSegments * AlignedHeapSegment::maxSize(), gc.size());
-
-  std::deque<GCCell *> roots;
-
-  // Fill each segment in the heap with an awkward cell.
-  for (size_t i = 0; i < kSegments; ++i) {
-    roots.push_back(AwkwardCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
-  }
-
-  // Now there isn't a contiguous space big enough to fit an awkward cell, we
-  // expect the GC to OOM when we try.
-  EXPECT_OOM(AwkwardCell::create(rt));
 }
 
 TEST(GCOOMDeathTest, Effective) {
@@ -205,3 +198,5 @@ TEST(GCOOMTest, VALimitFullGC) {
 #endif // HERMESVM_GC_NONCONTIG_GENERATIONAL
 
 } // namespace
+
+#endif

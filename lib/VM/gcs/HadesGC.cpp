@@ -3078,11 +3078,9 @@ HadesGC::HeapSegment &HadesGC::OldGen::operator[](size_t i) {
 llvh::ErrorOr<HadesGC::HeapSegment> HadesGC::createSegment() {
   // No heap size limit when Handle-SAN is on, to allow the heap enough room to
   // keep moving things around.
-#ifndef HERMESVM_SANITIZE_HANDLES
-  if (heapFootprint() >= maxHeapSize_) {
+  if (!sanitizeRate_ && heapFootprint() >= maxHeapSize_)
     return make_error_code(OOMError::MaxHeapReached);
-  }
-#endif
+
   auto res = AlignedStorage::create(provider_.get(), "hades-segment");
   if (!res) {
     return res.getError();
