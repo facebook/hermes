@@ -209,15 +209,17 @@ TEST_F(GCBasicsTest, WeakRefSlotTest) {
 TEST_F(GCBasicsTest, WeakRefTest) {
   auto &gc = rt.getHeap();
   GCBase::DebugHeapInfo debugInfo;
+  GCScope scope{&rt};
 
   gc.getDebugHeapInfo(debugInfo);
   EXPECT_EQ(0u, debugInfo.numAllocatedObjects);
 
+  auto dummyObj = rt.makeHandle(DummyObject::create(&gc));
+  auto a2 = rt.makeHandle(ArrayStorage::createForTest(&gc, 10));
   auto *a1 = ArrayStorage::createForTest(&gc, 10);
-  auto *a2 = ArrayStorage::createForTest(&gc, 10);
 
   gc.getDebugHeapInfo(debugInfo);
-  EXPECT_EQ(2u, debugInfo.numAllocatedObjects);
+  EXPECT_EQ(3u, debugInfo.numAllocatedObjects);
 
   WeakRefMutex &mtx = gc.weakRefMutex();
   mtx.lock();
@@ -228,34 +230,39 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   ASSERT_TRUE(wr2.isValid());
 
   ASSERT_EQ(a1, getNoHandle(wr1, &gc));
-  ASSERT_EQ(a2, getNoHandle(wr2, &gc));
+  ASSERT_EQ(*a2, getNoHandle(wr2, &gc));
 
-  // Test that freeing an object correctly "empties" the weak ref slot but
-  // preserves the other slot.
-  rt.pointerRoots.push_back(reinterpret_cast<GCCell **>(&a2));
-  rt.markExtraWeak = [&](WeakRefAcceptor &acceptor) {
-    acceptor.accept(wr1);
-    acceptor.accept(wr2);
-  };
+  /// Use the MarkWeakCallback of DummyObject as a hack to update these
+  /// WeakRefs.
+  dummyObj->markWeakCallback = std::make_unique<DummyObject::MarkWeakCallback>(
+      [&wr1, &wr2](GCCell *, WeakRefAcceptor &acceptor) mutable {
+        acceptor.accept(wr1);
+        acceptor.accept(wr2);
+      });
 
   // a1 is supposed to be freed during the following collection, so clear
   // the pointer to avoid mistakes.
   a1 = nullptr;
 
   mtx.unlock();
+  // Test that freeing an object correctly "empties" the weak ref slot but
+  // preserves the other slot.
   rt.collect();
   gc.getDebugHeapInfo(debugInfo);
   mtx.lock();
-  EXPECT_EQ(1u, debugInfo.numAllocatedObjects);
+  EXPECT_EQ(2u, debugInfo.numAllocatedObjects);
   ASSERT_FALSE(wr1.isValid());
   // Though the slot is empty, it's still reachable, so must not be freed yet.
   ASSERT_NE(WeakSlotState::Free, wr1.unsafeGetSlot()->state());
   ASSERT_TRUE(wr2.isValid());
-  ASSERT_EQ(a2, getNoHandle(wr2, &gc));
+  ASSERT_EQ(*a2, getNoHandle(wr2, &gc));
 
   // Make the slot unreachable and test that it is freed.
   mtx.unlock();
-  rt.markExtraWeak = [&](WeakRefAcceptor &acceptor) { acceptor.accept(wr2); };
+  dummyObj->markWeakCallback = std::make_unique<DummyObject::MarkWeakCallback>(
+      [&wr2](GCCell *, WeakRefAcceptor &acceptor) mutable {
+        acceptor.accept(wr2);
+      });
   rt.collect();
   mtx.lock();
 
@@ -310,11 +317,12 @@ TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
   // Create a root for d0.  We'll only be doing young-gen collections, so
   // we don't have to root dOld.
   rt.pointerRoots.push_back(reinterpret_cast<GCCell **>(&d0));
-  rt.markExtraWeak = [&](WeakRefAcceptor &acceptor) {
-    acceptor.accept(wr0);
-    acceptor.accept(wr1);
-    acceptor.accept(wrOld);
-  };
+  d0->markWeakCallback = std::make_unique<DummyObject::MarkWeakCallback>(
+      [&](GCCell *, WeakRefAcceptor &acceptor) {
+        acceptor.accept(wr0);
+        acceptor.accept(wr1);
+        acceptor.accept(wrOld);
+      });
 
   // d1 is supposed to be freed during the following collection, so clear
   // the pointer to avoid mistakes.

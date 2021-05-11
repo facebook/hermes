@@ -82,7 +82,7 @@ size_t DummyObject::_mallocSizeImpl(GCCell *cell) {
 void DummyObject::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
   auto *self = reinterpret_cast<DummyObject *>(cell);
   if (self->markWeakCallback)
-    (*self->markWeakCallback)();
+    (*self->markWeakCallback)(cell, acceptor);
   acceptor.accept(self->weak);
 }
 

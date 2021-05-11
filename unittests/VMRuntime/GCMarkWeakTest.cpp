@@ -30,8 +30,10 @@ using testhelpers::DummyObject;
 
 static DummyObject *createWithMarkWeakCount(GC *gc, int *numMarkWeakCalls) {
   auto *obj = DummyObject::create(gc);
-  obj->markWeakCallback = std::make_unique<DummyObject::Callback>(
-      [numMarkWeakCalls]() mutable { (*numMarkWeakCalls)++; });
+  obj->markWeakCallback = std::make_unique<DummyObject::MarkWeakCallback>(
+      [numMarkWeakCalls](GCCell *, WeakRefAcceptor &) mutable {
+        (*numMarkWeakCalls)++;
+      });
   return obj;
 }
 

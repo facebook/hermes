@@ -35,7 +35,8 @@ struct DummyObject final : public GCCell {
 
   using Callback = std::function<void()>;
   std::unique_ptr<Callback> finalizerCallback;
-  std::unique_ptr<Callback> markWeakCallback;
+  using MarkWeakCallback = std::function<VTable::MarkWeakCallback>;
+  std::unique_ptr<MarkWeakCallback> markWeakCallback;
 
   DummyObject(GC *gc);
 
