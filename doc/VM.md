@@ -1,6 +1,6 @@
 ---
 id: vm
-title: Hermes VM
+title: VM Overview
 ---
 
 ## Value Representation

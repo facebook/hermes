@@ -48,6 +48,23 @@ const features = [
   },
 ];
 
+function ELIVideo() {
+  return (
+    <div className={styles.videoContainer}>
+      <div className={styles.videoWrapper}>
+        <iframe
+          width="560"
+          height="315"
+          src="https://www.youtube.com/embed/JsppO1HUYx4"
+          title="Explained Like I'm 5: Hermes"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen></iframe>
+      </div>
+    </div>
+  );
+}
+
 function Home() {
   const context = useDocusaurusContext();
   const {siteConfig = {}} = context;
@@ -97,6 +114,11 @@ function Home() {
             </div>
           </section>
         )}
+        <div className={classnames(styles.videoSection)}>
+          <div className="container">
+            <ELIVideo />
+          </div>
+        </div>
       </main>
     </Layout>
   );

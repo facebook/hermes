@@ -3,18 +3,19 @@
     "Documentation": [
       "building-and-running",
       "emscripten",
+      "cross-compilation",
+      "language-features",
+      "intl",
+      "memory-profilers",
       "design",
       "ir",
       "optimizer",
-      "language-features",
       "vm",
-      "modules",
-      "regexp",
-      "strings",
-      "memory-profilers",
       "gengc",
       "hades",
-      "intl"
+      "modules",
+      "strings",
+      "regexp"
     ],
     "Integrations": [
       "react-native-integration"
