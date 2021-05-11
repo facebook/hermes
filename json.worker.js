@@ -1,92 +1,8 @@
-/******/ (function(modules) { // webpackBootstrap
-/******/ 	// The module cache
-/******/ 	var installedModules = {};
-/******/
-/******/ 	// The require function
-/******/ 	function __webpack_require__(moduleId) {
-/******/
-/******/ 		// Check if module is in cache
-/******/ 		if(installedModules[moduleId]) {
-/******/ 			return installedModules[moduleId].exports;
-/******/ 		}
-/******/ 		// Create a new module (and put it into the cache)
-/******/ 		var module = installedModules[moduleId] = {
-/******/ 			i: moduleId,
-/******/ 			l: false,
-/******/ 			exports: {}
-/******/ 		};
-/******/
-/******/ 		// Execute the module function
-/******/ 		modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
-/******/
-/******/ 		// Flag the module as loaded
-/******/ 		module.l = true;
-/******/
-/******/ 		// Return the exports of the module
-/******/ 		return module.exports;
-/******/ 	}
-/******/
-/******/
-/******/ 	// expose the modules object (__webpack_modules__)
-/******/ 	__webpack_require__.m = modules;
-/******/
-/******/ 	// expose the module cache
-/******/ 	__webpack_require__.c = installedModules;
-/******/
-/******/ 	// define getter function for harmony exports
-/******/ 	__webpack_require__.d = function(exports, name, getter) {
-/******/ 		if(!__webpack_require__.o(exports, name)) {
-/******/ 			Object.defineProperty(exports, name, { enumerable: true, get: getter });
-/******/ 		}
-/******/ 	};
-/******/
-/******/ 	// define __esModule on exports
-/******/ 	__webpack_require__.r = function(exports) {
-/******/ 		if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
-/******/ 			Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-/******/ 		}
-/******/ 		Object.defineProperty(exports, '__esModule', { value: true });
-/******/ 	};
-/******/
-/******/ 	// create a fake namespace object
-/******/ 	// mode & 1: value is a module id, require it
-/******/ 	// mode & 2: merge all properties of value into the ns
-/******/ 	// mode & 4: return value when already ns object
-/******/ 	// mode & 8|1: behave like require
-/******/ 	__webpack_require__.t = function(value, mode) {
-/******/ 		if(mode & 1) value = __webpack_require__(value);
-/******/ 		if(mode & 8) return value;
-/******/ 		if((mode & 4) && typeof value === 'object' && value && value.__esModule) return value;
-/******/ 		var ns = Object.create(null);
-/******/ 		__webpack_require__.r(ns);
-/******/ 		Object.defineProperty(ns, 'default', { enumerable: true, value: value });
-/******/ 		if(mode & 2 && typeof value != 'string') for(var key in value) __webpack_require__.d(ns, key, function(key) { return value[key]; }.bind(null, key));
-/******/ 		return ns;
-/******/ 	};
-/******/
-/******/ 	// getDefaultExport function for compatibility with non-harmony modules
-/******/ 	__webpack_require__.n = function(module) {
-/******/ 		var getter = module && module.__esModule ?
-/******/ 			function getDefault() { return module['default']; } :
-/******/ 			function getModuleExports() { return module; };
-/******/ 		__webpack_require__.d(getter, 'a', getter);
-/******/ 		return getter;
-/******/ 	};
-/******/
-/******/ 	// Object.prototype.hasOwnProperty.call
-/******/ 	__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
-/******/
-/******/ 	// __webpack_public_path__
-/******/ 	__webpack_require__.p = "/";
-/******/
-/******/
-/******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 1);
-/******/ })
-/************************************************************************/
-/******/ ([
-/* 0 */
-/***/ (function(module, exports, __webpack_require__) {
+/******/ (() => { // webpackBootstrap
+/******/ 	var __webpack_modules__ = ({
+
+/***/ 561:
+/***/ (function() {
 
 /*!
 Copyright (c) 2014 Taylor Hakes
@@ -94,7 +10,7 @@ Copyright (c) 2014 Forbes Lindesay
  */
 (function (global, factory) {
 	 true ? factory() :
-		undefined;
+		0;
 }(this, (function () {
 	'use strict';
 
@@ -380,15 +296,41 @@ Copyright (c) 2014 Forbes Lindesay
 })));
 
 
-/***/ }),
-/* 1 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
+/***/ })
 
+/******/ 	});
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 		if (cachedModule !== undefined) {
+/******/ 			return cachedModule.exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			// no module.id needed
+/******/ 			// no module.loaded needed
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/************************************************************************/
+var __webpack_exports__ = {};
+// This entry need to be wrapped in an IIFE because it need to be in strict mode.
+(() => {
 "use strict";
-// ESM COMPAT FLAG
-__webpack_require__.r(__webpack_exports__);
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/errors.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/errors.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -483,7 +425,7 @@ function illegalState(name) {
     }
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/lifecycle.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/lifecycle.js
 /**
  * Enables logging of potentially leaked disposables.
  *
@@ -522,7 +464,7 @@ function isDisposable(thing) {
     return typeof thing.dispose === 'function'
         && thing.dispose.length === 0;
 }
-function lifecycle_dispose(disposables) {
+function dispose(disposables) {
     if (Array.isArray(disposables)) {
         disposables.forEach(function (d) {
             if (d) {
@@ -547,7 +489,7 @@ function combinedDisposable() {
         disposables[_i] = arguments[_i];
     }
     disposables.forEach(markTracked);
-    return trackDisposable({ dispose: function () { return lifecycle_dispose(disposables); } });
+    return trackDisposable({ dispose: function () { return dispose(disposables); } });
 }
 function toDisposable(fn) {
     var self = trackDisposable({
@@ -674,7 +616,7 @@ var ImmortalReference = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/platform.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/platform.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -687,7 +629,7 @@ var _isNative = false;
 var _isWeb = false;
 var _isIOS = false;
 var _locale = undefined;
-var _language = LANGUAGE_DEFAULT;
+var _language = (/* unused pure expression or super */ null && (LANGUAGE_DEFAULT));
 var _translationsConfigFile = undefined;
 var _userAgent = undefined;
 var isElectronRenderer = (typeof process !== 'undefined' && typeof process.versions !== 'undefined' && typeof process.versions.electron !== 'undefined' && process.type === 'renderer');
@@ -734,11 +676,11 @@ else if (_isLinux) {
     _platform = 2 /* Linux */;
 }
 var isWindows = _isWindows;
-var isMacintosh = _isMacintosh;
-var isLinux = _isLinux;
-var isNative = _isNative;
-var isWeb = _isWeb;
-var isIOS = _isIOS;
+var isMacintosh = (/* unused pure expression or super */ null && (_isMacintosh));
+var isLinux = (/* unused pure expression or super */ null && (_isLinux));
+var isNative = (/* unused pure expression or super */ null && (_isNative));
+var platform_isWeb = (/* unused pure expression or super */ null && (_isWeb));
+var isIOS = (/* unused pure expression or super */ null && (_isIOS));
 var _globals = (typeof self === 'object' ? self : typeof global === 'object' ? global : {});
 var globals = _globals;
 var setImmediate = (function defineSetImmediate() {
@@ -775,9 +717,9 @@ var setImmediate = (function defineSetImmediate() {
     var _promise = Promise.resolve();
     return function (callback) { return _promise.then(callback); };
 })();
-var OS = (_isMacintosh ? 2 /* Macintosh */ : (_isWindows ? 1 /* Windows */ : 3 /* Linux */));
+var OS = ((/* unused pure expression or super */ null && (_isMacintosh ? 2 /* Macintosh */ : (_isWindows ? 1 /* Windows */ : 3 /* Linux */))));
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/types.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/types.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -955,7 +897,7 @@ function withUndefinedAsNull(x) {
     return typeof x === 'undefined' ? null : x;
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/worker/simpleWorker.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/worker/simpleWorker.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -990,7 +932,7 @@ function logOnceWebWorkerWarning(err) {
     }
     console.warn(err.message);
 }
-var simpleWorker_SimpleWorkerProtocol = /** @class */ (function () {
+var SimpleWorkerProtocol = /** @class */ (function () {
     function SimpleWorkerProtocol(handler) {
         this._workerId = -1;
         this._handler = handler;
@@ -1095,7 +1037,7 @@ var simpleWorker_SimpleWorkerProtocol = /** @class */ (function () {
 /**
  * Main thread side
  */
-var simpleWorker_SimpleWorkerClient = /** @class */ (function (_super) {
+var SimpleWorkerClient = /** @class */ (function (_super) {
     __extends(SimpleWorkerClient, _super);
     function SimpleWorkerClient(workerFactory, moduleId, host) {
         var _this = _super.call(this) || this;
@@ -1109,7 +1051,7 @@ var simpleWorker_SimpleWorkerClient = /** @class */ (function (_super) {
                 lazyProxyReject(err);
             }
         }));
-        _this._protocol = new simpleWorker_SimpleWorkerProtocol({
+        _this._protocol = new SimpleWorkerProtocol({
             sendMessage: function (msg, transfer) {
                 _this._worker.postMessage(msg, transfer);
             },
@@ -1180,12 +1122,12 @@ var simpleWorker_SimpleWorkerClient = /** @class */ (function (_super) {
 /**
  * Worker side
  */
-var simpleWorker_SimpleWorkerServer = /** @class */ (function () {
+var SimpleWorkerServer = /** @class */ (function () {
     function SimpleWorkerServer(postMessage, requestHandlerFactory) {
         var _this = this;
         this._requestHandlerFactory = requestHandlerFactory;
         this._requestHandler = null;
-        this._protocol = new simpleWorker_SimpleWorkerProtocol({
+        this._protocol = new SimpleWorkerProtocol({
             sendMessage: function (msg, transfer) {
                 postMessage(msg, transfer);
             },
@@ -1254,10 +1196,10 @@ var simpleWorker_SimpleWorkerServer = /** @class */ (function () {
  * Called on the worker side
  */
 function create(postMessage) {
-    return new simpleWorker_SimpleWorkerServer(postMessage, null);
+    return new SimpleWorkerServer(postMessage, null);
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/arrays.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/arrays.js
 /**
  * Returns the last element of an array.
  * @param array The array.
@@ -1462,7 +1404,7 @@ function flatten(arr) {
     var _a;
     return (_a = []).concat.apply(_a, arr);
 }
-function arrays_range(arg, to) {
+function range(arg, to) {
     var from = typeof to === 'number' ? arg : 0;
     if (typeof to === 'number') {
         from = arg;
@@ -1526,7 +1468,7 @@ function asArray(x) {
     return Array.isArray(x) ? x : [x];
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/diff/diffChange.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/diff/diffChange.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -1562,7 +1504,7 @@ var DiffChange = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/hash.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/hash.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -1618,7 +1560,7 @@ function objectHash(obj, initialHashVal) {
     }, initialHashVal);
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/diff/diff.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/diff/diff.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -1641,7 +1583,7 @@ var StringDiffSequence = /** @class */ (function () {
 }());
 
 function stringDiff(original, modified, pretty) {
-    return new diff_LcsDiff(new StringDiffSequence(original), new StringDiffSequence(modified)).ComputeDiff(pretty).changes;
+    return new LcsDiff(new StringDiffSequence(original), new StringDiffSequence(modified)).ComputeDiff(pretty).changes;
 }
 //
 // The code below has been ported from a C# implementation in VS
@@ -1696,7 +1638,7 @@ var MyArray = /** @class */ (function () {
  * distinct changes. At the end, the Changes property can be called to retrieve
  * the constructed changes.
  */
-var diff_DiffChangeHelper = /** @class */ (function () {
+var DiffChangeHelper = /** @class */ (function () {
     /**
      * Constructs a new DiffChangeHelper for the given DiffSequences.
      */
@@ -1775,7 +1717,7 @@ var diff_DiffChangeHelper = /** @class */ (function () {
  * An implementation of the difference algorithm described in
  * "An O(ND) Difference Algorithm and its variations" by Eugene W. Myers
  */
-var diff_LcsDiff = /** @class */ (function () {
+var LcsDiff = /** @class */ (function () {
     /**
      * Constructs the DiffFinder
      */
@@ -1930,7 +1872,7 @@ var diff_LcsDiff = /** @class */ (function () {
         var forwardChanges = null;
         var reverseChanges = null;
         // First, walk backward through the forward diagonals history
-        var changeHelper = new diff_DiffChangeHelper();
+        var changeHelper = new DiffChangeHelper();
         var diagonalMin = diagonalForwardStart;
         var diagonalMax = diagonalForwardEnd;
         var diagonalRelative = (midOriginalArr[0] - midModifiedArr[0]) - diagonalForwardOffset;
@@ -1988,7 +1930,7 @@ var diff_LcsDiff = /** @class */ (function () {
         }
         else {
             // Now walk backward through the reverse diagonals history
-            changeHelper = new diff_DiffChangeHelper();
+            changeHelper = new DiffChangeHelper();
             diagonalMin = diagonalReverseStart;
             diagonalMax = diagonalReverseEnd;
             diagonalRelative = (midOriginalArr[0] - midModifiedArr[0]) - diagonalReverseOffset;
@@ -2441,7 +2383,7 @@ var diff_LcsDiff = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/iterator.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/iterator.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -2686,7 +2628,7 @@ var MappedIterator = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/uri.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/uri.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -2704,7 +2646,7 @@ var uri_extends = (undefined && undefined.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var uri_a;
+var _a;
 
 var _schemePattern = /^\w[\w\d+.-]*$/;
 var _singleSlashStart = /^\//;
@@ -2784,7 +2726,7 @@ var _regexp = /^(([^:/?#]+?):)?(\/\/([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?/;
  *       / \ /                        \
  *       urn:example:animal:ferret:nose
  */
-var uri_URI = /** @class */ (function () {
+var URI = /** @class */ (function () {
     /**
      * @internal
      */
@@ -3067,29 +3009,29 @@ var _URI = /** @class */ (function (_super) {
         return res;
     };
     return _URI;
-}(uri_URI));
+}(URI));
 // reserved characters: https://tools.ietf.org/html/rfc3986#section-2.2
-var encodeTable = (uri_a = {},
-    uri_a[58 /* Colon */] = '%3A',
-    uri_a[47 /* Slash */] = '%2F',
-    uri_a[63 /* QuestionMark */] = '%3F',
-    uri_a[35 /* Hash */] = '%23',
-    uri_a[91 /* OpenSquareBracket */] = '%5B',
-    uri_a[93 /* CloseSquareBracket */] = '%5D',
-    uri_a[64 /* AtSign */] = '%40',
-    uri_a[33 /* ExclamationMark */] = '%21',
-    uri_a[36 /* DollarSign */] = '%24',
-    uri_a[38 /* Ampersand */] = '%26',
-    uri_a[39 /* SingleQuote */] = '%27',
-    uri_a[40 /* OpenParen */] = '%28',
-    uri_a[41 /* CloseParen */] = '%29',
-    uri_a[42 /* Asterisk */] = '%2A',
-    uri_a[43 /* Plus */] = '%2B',
-    uri_a[44 /* Comma */] = '%2C',
-    uri_a[59 /* Semicolon */] = '%3B',
-    uri_a[61 /* Equals */] = '%3D',
-    uri_a[32 /* Space */] = '%20',
-    uri_a);
+var encodeTable = (_a = {},
+    _a[58 /* Colon */] = '%3A',
+    _a[47 /* Slash */] = '%2F',
+    _a[63 /* QuestionMark */] = '%3F',
+    _a[35 /* Hash */] = '%23',
+    _a[91 /* OpenSquareBracket */] = '%5B',
+    _a[93 /* CloseSquareBracket */] = '%5D',
+    _a[64 /* AtSign */] = '%40',
+    _a[33 /* ExclamationMark */] = '%21',
+    _a[36 /* DollarSign */] = '%24',
+    _a[38 /* Ampersand */] = '%26',
+    _a[39 /* SingleQuote */] = '%27',
+    _a[40 /* OpenParen */] = '%28',
+    _a[41 /* CloseParen */] = '%29',
+    _a[42 /* Asterisk */] = '%2A',
+    _a[43 /* Plus */] = '%2B',
+    _a[44 /* Comma */] = '%2C',
+    _a[59 /* Semicolon */] = '%3B',
+    _a[61 /* Equals */] = '%3D',
+    _a[32 /* Space */] = '%20',
+    _a);
 function encodeURIComponentFast(uriComponent, allowSlash) {
     var res = undefined;
     var nativeEncodePos = -1;
@@ -3278,7 +3220,7 @@ function percentDecode(str) {
     return str.replace(_rEncodedAsHex, function (match) { return decodeURIComponentGraceful(match); });
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/core/position.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/core/position.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -3420,7 +3362,7 @@ var Position = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/core/range.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/core/range.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -3429,7 +3371,7 @@ var Position = /** @class */ (function () {
 /**
  * A range in the editor. (startLineNumber,startColumn) is <= (endLineNumber,endColumn)
  */
-var range_Range = /** @class */ (function () {
+var Range = /** @class */ (function () {
     function Range(startLineNumber, startColumn, endLineNumber, endColumn) {
         if ((startLineNumber > endLineNumber) || (startLineNumber === endLineNumber && startColumn > endColumn)) {
             this.startLineNumber = endLineNumber;
@@ -3773,7 +3715,7 @@ var range_Range = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/strings.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/strings.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -4507,7 +4449,7 @@ function getGraphemeBreakRawData() {
 }
 //#endregion
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/diff/diffComputer.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/diff/diffComputer.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -4516,7 +4458,7 @@ function getGraphemeBreakRawData() {
 
 var MINIMUM_MATCHING_CHARACTER_LENGTH = 3;
 function computeDiff(originalSequence, modifiedSequence, continueProcessingPredicate, pretty) {
-    var diffAlgo = new diff_LcsDiff(originalSequence, modifiedSequence, continueProcessingPredicate);
+    var diffAlgo = new LcsDiff(originalSequence, modifiedSequence, continueProcessingPredicate);
     return diffAlgo.ComputeDiff(pretty);
 }
 var LineSequence = /** @class */ (function () {
@@ -4904,7 +4846,7 @@ function createContinueProcessingPredicate(maximumRuntime) {
     };
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/uint.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/uint.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -4936,7 +4878,7 @@ function toUint32Array(arr) {
     return r;
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/viewModel/prefixSumComputer.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/viewModel/prefixSumComputer.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -4950,7 +4892,7 @@ var PrefixSumIndexOfResult = /** @class */ (function () {
     return PrefixSumIndexOfResult;
 }());
 
-var prefixSumComputer_PrefixSumComputer = /** @class */ (function () {
+var PrefixSumComputer = /** @class */ (function () {
     function PrefixSumComputer(values) {
         this.values = values;
         this.prefixSum = new Uint32Array(values.length);
@@ -5083,7 +5025,7 @@ var PrefixSumComputerWithCache = /** @class */ (function () {
     function PrefixSumComputerWithCache(values) {
         this._cacheAccumulatedValueStart = 0;
         this._cache = null;
-        this._actual = new prefixSumComputer_PrefixSumComputer(values);
+        this._actual = new PrefixSumComputer(values);
         this._bustCache();
     }
     PrefixSumComputerWithCache.prototype._bustCache = function () {
@@ -5138,14 +5080,14 @@ var PrefixSumComputerWithCache = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/model/mirrorTextModel.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/model/mirrorTextModel.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
 
-var mirrorTextModel_MirrorTextModel = /** @class */ (function () {
+var MirrorTextModel = /** @class */ (function () {
     function MirrorTextModel(uri, lines, eol, versionId) {
         this._uri = uri;
         this._lines = lines;
@@ -5181,7 +5123,7 @@ var mirrorTextModel_MirrorTextModel = /** @class */ (function () {
             for (var i = 0; i < linesLength; i++) {
                 lineStartValues[i] = this._lines[i].length + eolLength;
             }
-            this._lineStarts = new prefixSumComputer_PrefixSumComputer(lineStartValues);
+            this._lineStarts = new PrefixSumComputer(lineStartValues);
         }
     };
     /**
@@ -5248,7 +5190,7 @@ var mirrorTextModel_MirrorTextModel = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/model/wordHelper.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/model/wordHelper.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -5362,7 +5304,7 @@ function getWordAtText(column, wordDefinition, text, textOffset) {
     return ret;
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/core/characterClassifier.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/core/characterClassifier.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -5371,7 +5313,7 @@ function getWordAtText(column, wordDefinition, text, textOffset) {
 /**
  * A fast character classifier that uses a compact array for ASCII values.
  */
-var characterClassifier_CharacterClassifier = /** @class */ (function () {
+var CharacterClassifier = /** @class */ (function () {
     function CharacterClassifier(_defaultValue) {
         var defaultValue = toUint8(_defaultValue);
         this._defaultValue = defaultValue;
@@ -5407,7 +5349,7 @@ var characterClassifier_CharacterClassifier = /** @class */ (function () {
 
 var CharacterSet = /** @class */ (function () {
     function CharacterSet() {
-        this._actual = new characterClassifier_CharacterClassifier(0 /* False */);
+        this._actual = new CharacterClassifier(0 /* False */);
     }
     CharacterSet.prototype.add = function (charCode) {
         this._actual.set(charCode, 1 /* True */);
@@ -5419,7 +5361,7 @@ var CharacterSet = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/modes/linkComputer.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/modes/linkComputer.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -5513,7 +5455,7 @@ function getStateMachine() {
 var _classifier = null;
 function getClassifier() {
     if (_classifier === null) {
-        _classifier = new characterClassifier_CharacterClassifier(0 /* None */);
+        _classifier = new CharacterClassifier(0 /* None */);
         var FORCE_TERMINATION_CHARACTERS = ' \t<>\'\"、。｡､，．：；？！＠＃＄％＆＊‘“〈《「『【〔（［｛｢｣｝］）〕】』」》〉”’｀～…';
         for (var i = 0; i < FORCE_TERMINATION_CHARACTERS.length; i++) {
             _classifier.set(FORCE_TERMINATION_CHARACTERS.charCodeAt(i), 1 /* ForceTermination */);
@@ -5683,7 +5625,7 @@ function computeLinks(model) {
     return LinkComputer.computeLinks(model);
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/modes/supports/inplaceReplaceSupport.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/modes/supports/inplaceReplaceSupport.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -5773,14 +5715,13 @@ var BasicInplaceReplace = /** @class */ (function () {
 
 
 // EXTERNAL MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/standalone/promise-polyfill/polyfill.js
-var polyfill = __webpack_require__(0);
-
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/functional.js
+var polyfill = __webpack_require__(561);
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/functional.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-function functional_once(fn) {
+function once(fn) {
     var _this = this;
     var didCall = false;
     var result;
@@ -5794,7 +5735,7 @@ function functional_once(fn) {
     };
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/linkedList.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/linkedList.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -5809,7 +5750,7 @@ var Node = /** @class */ (function () {
     Node.Undefined = new Node(undefined);
     return Node;
 }());
-var linkedList_LinkedList = /** @class */ (function () {
+var LinkedList = /** @class */ (function () {
     function LinkedList() {
         this._first = Node.Undefined;
         this._last = Node.Undefined;
@@ -5941,7 +5882,7 @@ var linkedList_LinkedList = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/event.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/event.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -5963,7 +5904,7 @@ var event_extends = (undefined && undefined.__extends) || (function () {
 
 
 
-var event_Event;
+var Event;
 (function (Event) {
     Event.None = function () { return Disposable.None; };
     /**
@@ -6064,7 +6005,7 @@ var event_Event;
      */
     function snapshot(event) {
         var listener;
-        var emitter = new event_Emitter({
+        var emitter = new Emitter({
             onFirstListenerAdd: function () {
                 listener = event(emitter.fire, emitter);
             },
@@ -6082,7 +6023,7 @@ var event_Event;
         var output = undefined;
         var handle = undefined;
         var numDebouncedCalls = 0;
-        var emitter = new event_Emitter({
+        var emitter = new Emitter({
             leakWarningThreshold: leakWarningThreshold,
             onFirstListenerAdd: function () {
                 subscription = event(function (cur) {
@@ -6175,7 +6116,7 @@ var event_Event;
             }
             buffer = null;
         };
-        var emitter = new event_Emitter({
+        var emitter = new Emitter({
             onFirstListenerAdd: function () {
                 if (!listener) {
                     listener = event(function (e) { return emitter.fire(e); });
@@ -6248,7 +6189,7 @@ var event_Event;
         };
         var onFirstListenerAdd = function () { return emitter.on(eventName, fn); };
         var onLastListenerRemove = function () { return emitter.removeListener(eventName, fn); };
-        var result = new event_Emitter({ onFirstListenerAdd: onFirstListenerAdd, onLastListenerRemove: onLastListenerRemove });
+        var result = new Emitter({ onFirstListenerAdd: onFirstListenerAdd, onLastListenerRemove: onLastListenerRemove });
         return result.event;
     }
     Event.fromNodeEventEmitter = fromNodeEventEmitter;
@@ -6263,12 +6204,12 @@ var event_Event;
         };
         var onFirstListenerAdd = function () { return emitter.addEventListener(eventName, fn); };
         var onLastListenerRemove = function () { return emitter.removeEventListener(eventName, fn); };
-        var result = new event_Emitter({ onFirstListenerAdd: onFirstListenerAdd, onLastListenerRemove: onLastListenerRemove });
+        var result = new Emitter({ onFirstListenerAdd: onFirstListenerAdd, onLastListenerRemove: onLastListenerRemove });
         return result.event;
     }
     Event.fromDOMEventEmitter = fromDOMEventEmitter;
     function fromPromise(promise) {
-        var emitter = new event_Emitter();
+        var emitter = new Emitter();
         var shouldEmit = false;
         promise
             .then(undefined, function () { return null; })
@@ -6288,7 +6229,7 @@ var event_Event;
         return new Promise(function (c) { return once(event)(c); });
     }
     Event.toPromise = toPromise;
-})(event_Event || (event_Event = {}));
+})(Event || (Event = {}));
 var _globalLeakWarningThreshold = -1;
 var LeakageMonitor = /** @class */ (function () {
     function LeakageMonitor(customThreshold, name) {
@@ -6362,7 +6303,7 @@ var LeakageMonitor = /** @class */ (function () {
         }
     }
  */
-var event_Emitter = /** @class */ (function () {
+var Emitter = /** @class */ (function () {
     function Emitter(options) {
         this._disposed = false;
         this._options = options;
@@ -6380,7 +6321,7 @@ var event_Emitter = /** @class */ (function () {
             if (!this._event) {
                 this._event = function (listener, thisArgs, disposables) {
                     if (!_this._listeners) {
-                        _this._listeners = new linkedList_LinkedList();
+                        _this._listeners = new LinkedList();
                     }
                     var firstListener = _this._listeners.isEmpty();
                     if (firstListener && _this._options && _this._options.onFirstListenerAdd) {
@@ -6440,7 +6381,7 @@ var event_Emitter = /** @class */ (function () {
             // then emit all event. an inner/nested event might be
             // the driver of this
             if (!this._deliveryQueue) {
-                this._deliveryQueue = new linkedList_LinkedList();
+                this._deliveryQueue = new LinkedList();
             }
             for (var iter = this._listeners.iterator(), e = iter.next(); !e.done; e = iter.next()) {
                 this._deliveryQueue.push([e.value, event]);
@@ -6477,12 +6418,12 @@ var event_Emitter = /** @class */ (function () {
     return Emitter;
 }());
 
-var event_PauseableEmitter = /** @class */ (function (_super) {
+var PauseableEmitter = /** @class */ (function (_super) {
     event_extends(PauseableEmitter, _super);
     function PauseableEmitter(options) {
         var _this = _super.call(this, options) || this;
         _this._isPaused = 0;
-        _this._eventQueue = new linkedList_LinkedList();
+        _this._eventQueue = new LinkedList();
         _this._mergeFn = options && options.merge;
         return _this;
     }
@@ -6518,14 +6459,14 @@ var event_PauseableEmitter = /** @class */ (function (_super) {
         }
     };
     return PauseableEmitter;
-}(event_Emitter));
+}(Emitter));
 
-var event_EventMultiplexer = /** @class */ (function () {
+var EventMultiplexer = /** @class */ (function () {
     function EventMultiplexer() {
         var _this = this;
         this.hasListeners = false;
         this.events = [];
-        this.emitter = new event_Emitter({
+        this.emitter = new Emitter({
             onFirstListenerAdd: function () { return _this.onFirstListenerAdd(); },
             onLastListenerRemove: function () { return _this.onLastListenerRemove(); }
         });
@@ -6551,7 +6492,7 @@ var event_EventMultiplexer = /** @class */ (function () {
             var idx = _this.events.indexOf(e);
             _this.events.splice(idx, 1);
         };
-        return toDisposable(functional_once(dispose));
+        return toDisposable(once(dispose));
     };
     EventMultiplexer.prototype.onFirstListenerAdd = function () {
         var _this = this;
@@ -6634,13 +6575,13 @@ var EventBufferer = /** @class */ (function () {
  * events from that input event through its own `event` property. The `input`
  * can be changed at any point in time.
  */
-var event_Relay = /** @class */ (function () {
+var Relay = /** @class */ (function () {
     function Relay() {
         var _this = this;
         this.listening = false;
-        this.inputEvent = event_Event.None;
+        this.inputEvent = Event.None;
         this.inputEventListener = Disposable.None;
-        this.emitter = new event_Emitter({
+        this.emitter = new Emitter({
             onFirstListenerDidAdd: function () {
                 _this.listening = true;
                 _this.inputEventListener = _this.inputEvent(_this.emitter.fire, _this.emitter);
@@ -6671,7 +6612,7 @@ var event_Relay = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/cancellation.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/cancellation.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -6681,13 +6622,13 @@ var shortcutEvent = Object.freeze(function (callback, context) {
     var handle = setTimeout(callback.bind(context), 0);
     return { dispose: function () { clearTimeout(handle); } };
 });
-var cancellation_CancellationToken;
+var CancellationToken;
 (function (CancellationToken) {
     function isCancellationToken(thing) {
         if (thing === CancellationToken.None || thing === CancellationToken.Cancelled) {
             return true;
         }
-        if (thing instanceof cancellation_MutableToken) {
+        if (thing instanceof MutableToken) {
             return true;
         }
         if (!thing || typeof thing !== 'object') {
@@ -6699,14 +6640,14 @@ var cancellation_CancellationToken;
     CancellationToken.isCancellationToken = isCancellationToken;
     CancellationToken.None = Object.freeze({
         isCancellationRequested: false,
-        onCancellationRequested: event_Event.None
+        onCancellationRequested: Event.None
     });
     CancellationToken.Cancelled = Object.freeze({
         isCancellationRequested: true,
         onCancellationRequested: shortcutEvent
     });
-})(cancellation_CancellationToken || (cancellation_CancellationToken = {}));
-var cancellation_MutableToken = /** @class */ (function () {
+})(CancellationToken || (CancellationToken = {}));
+var MutableToken = /** @class */ (function () {
     function MutableToken() {
         this._isCancelled = false;
         this._emitter = null;
@@ -6733,7 +6674,7 @@ var cancellation_MutableToken = /** @class */ (function () {
                 return shortcutEvent;
             }
             if (!this._emitter) {
-                this._emitter = new event_Emitter();
+                this._emitter = new Emitter();
             }
             return this._emitter.event;
         },
@@ -6759,7 +6700,7 @@ var CancellationTokenSource = /** @class */ (function () {
             if (!this._token) {
                 // be lazy and create the token only when
                 // actually needed
-                this._token = new cancellation_MutableToken();
+                this._token = new MutableToken();
             }
             return this._token;
         },
@@ -6771,9 +6712,9 @@ var CancellationTokenSource = /** @class */ (function () {
             // save an object by returning the default
             // cancelled token when cancellation happens
             // before someone asks for the token
-            this._token = cancellation_CancellationToken.Cancelled;
+            this._token = CancellationToken.Cancelled;
         }
-        else if (this._token instanceof cancellation_MutableToken) {
+        else if (this._token instanceof MutableToken) {
             // actually cancel
             this._token.cancel();
         }
@@ -6788,9 +6729,9 @@ var CancellationTokenSource = /** @class */ (function () {
         }
         if (!this._token) {
             // ensure to initialize with an empty token if we had none
-            this._token = cancellation_CancellationToken.None;
+            this._token = CancellationToken.None;
         }
-        else if (this._token instanceof cancellation_MutableToken) {
+        else if (this._token instanceof MutableToken) {
             // actually dispose
             this._token.dispose();
         }
@@ -6799,7 +6740,7 @@ var CancellationTokenSource = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/keyCodes.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/keyCodes.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -6979,12 +6920,12 @@ function createKeybinding(keybinding, OS) {
     var firstPart = (keybinding & 0x0000FFFF) >>> 0;
     var chordPart = (keybinding & 0xFFFF0000) >>> 16;
     if (chordPart !== 0) {
-        return new keyCodes_ChordKeybinding([
+        return new ChordKeybinding([
             createSimpleKeybinding(firstPart, OS),
             createSimpleKeybinding(chordPart, OS)
         ]);
     }
-    return new keyCodes_ChordKeybinding([createSimpleKeybinding(firstPart, OS)]);
+    return new ChordKeybinding([createSimpleKeybinding(firstPart, OS)]);
 }
 function createSimpleKeybinding(keybinding, OS) {
     var ctrlCmd = (keybinding & 2048 /* CtrlCmd */ ? true : false);
@@ -7019,7 +6960,7 @@ var SimpleKeybinding = /** @class */ (function () {
             || this.keyCode === 4 /* Shift */);
     };
     SimpleKeybinding.prototype.toChord = function () {
-        return new keyCodes_ChordKeybinding([this]);
+        return new ChordKeybinding([this]);
     };
     /**
      * Does this keybinding refer to the key code of a modifier and it also has the modifier flag?
@@ -7033,7 +6974,7 @@ var SimpleKeybinding = /** @class */ (function () {
     return SimpleKeybinding;
 }());
 
-var keyCodes_ChordKeybinding = /** @class */ (function () {
+var ChordKeybinding = /** @class */ (function () {
     function ChordKeybinding(parts) {
         if (parts.length === 0) {
             throw illegalArgument("parts");
@@ -7079,7 +7020,7 @@ var ResolvedKeybinding = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/core/selection.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/core/selection.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -7103,7 +7044,7 @@ var selection_extends = (undefined && undefined.__extends) || (function () {
  * A selection in the editor.
  * The selection is a range that has an orientation.
  */
-var selection_Selection = /** @class */ (function (_super) {
+var Selection = /** @class */ (function (_super) {
     selection_extends(Selection, _super);
     function Selection(selectionStartLineNumber, selectionStartColumn, positionLineNumber, positionColumn) {
         var _this = _super.call(this, selectionStartLineNumber, selectionStartColumn, positionLineNumber, positionColumn) || this;
@@ -7221,10 +7162,10 @@ var selection_Selection = /** @class */ (function (_super) {
         return new Selection(endLineNumber, endColumn, startLineNumber, startColumn);
     };
     return Selection;
-}(range_Range));
+}(Range));
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/core/token.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/core/token.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -7258,7 +7199,7 @@ var TokenizationResult2 = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/standalone/standaloneEnums.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/standalone/standaloneEnums.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -8052,7 +7993,7 @@ var WrappingIndent;
     WrappingIndent[WrappingIndent["DeepIndent"] = 3] = "DeepIndent";
 })(WrappingIndent || (WrappingIndent = {}));
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/standalone/standaloneBase.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/standalone/standaloneBase.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -8067,7 +8008,7 @@ var WrappingIndent;
 
 
 
-var standaloneBase_KeyMod = /** @class */ (function () {
+var KeyMod = /** @class */ (function () {
     function KeyMod() {
     }
     KeyMod.chord = function (firstPart, secondPart) {
@@ -8085,21 +8026,21 @@ function createMonacoBaseAPI() {
         editor: undefined,
         languages: undefined,
         CancellationTokenSource: CancellationTokenSource,
-        Emitter: event_Emitter,
+        Emitter: Emitter,
         KeyCode: KeyCode,
-        KeyMod: standaloneBase_KeyMod,
+        KeyMod: KeyMod,
         Position: Position,
-        Range: range_Range,
-        Selection: selection_Selection,
+        Range: Range,
+        Selection: Selection,
         SelectionDirection: SelectionDirection,
         MarkerSeverity: MarkerSeverity,
         MarkerTag: MarkerTag,
-        Uri: uri_URI,
+        Uri: URI,
         Token: Token
     };
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/services/editorSimpleWorker.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/services/editorSimpleWorker.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -8170,7 +8111,7 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 /**
  * @internal
  */
-var editorSimpleWorker_MirrorModel = /** @class */ (function (_super) {
+var MirrorModel = /** @class */ (function (_super) {
     editorSimpleWorker_extends(MirrorModel, _super);
     function MirrorModel() {
         return _super !== null && _super.apply(this, arguments) || this;
@@ -8211,7 +8152,7 @@ var editorSimpleWorker_MirrorModel = /** @class */ (function (_super) {
     MirrorModel.prototype.getWordAtPosition = function (position, wordDefinition) {
         var wordAtText = getWordAtText(position.column, ensureValidWordDefinition(wordDefinition), this._lines[position.lineNumber - 1], 0);
         if (wordAtText) {
-            return new range_Range(position.lineNumber, wordAtText.startColumn, position.lineNumber, wordAtText.endColumn);
+            return new Range(position.lineNumber, wordAtText.startColumn, position.lineNumber, wordAtText.endColumn);
         }
         return null;
     };
@@ -8358,11 +8299,11 @@ var editorSimpleWorker_MirrorModel = /** @class */ (function (_super) {
         }
     };
     return MirrorModel;
-}(mirrorTextModel_MirrorTextModel));
+}(MirrorTextModel));
 /**
  * @internal
  */
-var editorSimpleWorker_EditorSimpleWorker = /** @class */ (function () {
+var EditorSimpleWorker = /** @class */ (function () {
     function EditorSimpleWorker(host, foreignModuleFactory) {
         this._host = host;
         this._models = Object.create(null);
@@ -8382,7 +8323,7 @@ var editorSimpleWorker_EditorSimpleWorker = /** @class */ (function () {
         return all;
     };
     EditorSimpleWorker.prototype.acceptNewModel = function (data) {
-        this._models[data.url] = new editorSimpleWorker_MirrorModel(uri_URI.parse(data.url), data.lines, data.EOL, data.versionId);
+        this._models[data.url] = new MirrorModel(URI.parse(data.url), data.lines, data.EOL, data.versionId);
     };
     EditorSimpleWorker.prototype.acceptModelChanged = function (strURL, e) {
         if (!this._models[strURL]) {
@@ -8453,7 +8394,7 @@ var editorSimpleWorker_EditorSimpleWorker = /** @class */ (function () {
                 lastEol = undefined;
                 edits = mergeSort(edits, function (a, b) {
                     if (a.range && b.range) {
-                        return range_Range.compareRangesUsingStarts(a.range, b.range);
+                        return Range.compareRangesUsingStarts(a.range, b.range);
                     }
                     // eol only changes should go to the end
                     var aRng = a.range ? 0 : 1;
@@ -8465,7 +8406,7 @@ var editorSimpleWorker_EditorSimpleWorker = /** @class */ (function () {
                     if (typeof eol === 'number') {
                         lastEol = eol;
                     }
-                    if (range_Range.isEmpty(range) && !text) {
+                    if (Range.isEmpty(range) && !text) {
                         // empty change
                         continue;
                     }
@@ -8481,7 +8422,7 @@ var editorSimpleWorker_EditorSimpleWorker = /** @class */ (function () {
                         continue;
                     }
                     changes = stringDiff(original, text, false);
-                    editOffset = model.offsetAt(range_Range.lift(range).getStartPosition());
+                    editOffset = model.offsetAt(Range.lift(range).getStartPosition());
                     for (_b = 0, changes_1 = changes; _b < changes_1.length; _b++) {
                         change = changes_1[_b];
                         start = model.positionAt(editOffset + change.originalStart);
@@ -8667,14 +8608,14 @@ var editorSimpleWorker_EditorSimpleWorker = /** @class */ (function () {
  * @internal
  */
 function editorSimpleWorker_create(host) {
-    return new editorSimpleWorker_EditorSimpleWorker(host, null);
+    return new EditorSimpleWorker(host, null);
 }
 if (typeof importScripts === 'function') {
     // Running in a web worker
     globals.monaco = createMonacoBaseAPI();
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/editor.worker.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/editor.worker.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -8687,9 +8628,9 @@ function initialize(foreignModule) {
         return;
     }
     initialized = true;
-    var simpleWorker = new simpleWorker_SimpleWorkerServer(function (msg) {
+    var simpleWorker = new SimpleWorkerServer(function (msg) {
         self.postMessage(msg);
-    }, function (host) { return new editorSimpleWorker_EditorSimpleWorker(host, foreignModule); });
+    }, function (host) { return new EditorSimpleWorker(host, foreignModule); });
     self.onmessage = function (e) {
         simpleWorker.onmessage(e.data);
     };
@@ -8701,7 +8642,7 @@ self.onmessage = function (e) {
     }
 };
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/jsonc-parser/impl/scanner.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/jsonc-parser/impl/scanner.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -9066,7 +9007,7 @@ function isDigit(ch) {
     return ch >= 48 /* _0 */ && ch <= 57 /* _9 */;
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/jsonc-parser/impl/format.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/jsonc-parser/impl/format.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -9083,11 +9024,11 @@ function format_format(documentText, range, options) {
         rangeStart = range.offset;
         rangeEnd = rangeStart + range.length;
         formatTextStart = rangeStart;
-        while (formatTextStart > 0 && !isEOL(documentText, formatTextStart - 1)) {
+        while (formatTextStart > 0 && !format_isEOL(documentText, formatTextStart - 1)) {
             formatTextStart--;
         }
         var endOffset = rangeEnd;
-        while (endOffset < documentText.length && !isEOL(documentText, endOffset)) {
+        while (endOffset < documentText.length && !format_isEOL(documentText, endOffset)) {
             endOffset++;
         }
         formatText = documentText.substring(formatTextStart, endOffset);
@@ -9258,11 +9199,11 @@ function getEOL(options, text) {
     }
     return (options && options.eol) || '\n';
 }
-function isEOL(text, offset) {
+function format_isEOL(text, offset) {
     return '\r\n'.indexOf(text.charAt(offset)) !== -1;
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/jsonc-parser/impl/parser.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/jsonc-parser/impl/parser.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -9447,7 +9388,7 @@ function parse(text, errors, options) {
 /**
  * Parses the given text and returns a tree representation the JSON content. On invalid input, the parser tries to be as fault tolerant as possible, but still return a result.
  */
-function parseTree(text, errors, options) {
+function parser_parseTree(text, errors, options) {
     if (errors === void 0) { errors = []; }
     if (options === void 0) { options = ParseOptions.DEFAULT; }
     var currentParent = { type: 'array', offset: -1, length: -1, children: [], parent: undefined }; // artificial root
@@ -9510,7 +9451,7 @@ function parseTree(text, errors, options) {
 /**
  * Finds the node at the given path in a JSON DOM.
  */
-function findNodeAtLocation(root, path) {
+function parser_findNodeAtLocation(root, path) {
     if (!root) {
         return undefined;
     }
@@ -9889,7 +9830,7 @@ function getNodeType(value) {
     }
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/jsonc-parser/impl/edit.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/jsonc-parser/impl/edit.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -10039,7 +9980,7 @@ function withFormatting(text, edit, formattingOptions) {
             end++;
         }
     }
-    var edits = format_format(newText, { offset: begin, length: end - begin }, formattingOptions);
+    var edits = format(newText, { offset: begin, length: end - begin }, formattingOptions);
     // apply the formatting edits and track the begin and end offsets of the changes
     for (var i = edits.length - 1; i >= 0; i--) {
         var edit_1 = edits[i];
@@ -10059,7 +10000,7 @@ function isWS(text, offset) {
     return '\r\n \t'.indexOf(text.charAt(offset)) !== -1;
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/jsonc-parser/main.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/jsonc-parser/main.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -10086,11 +10027,11 @@ var main_parse = parse;
 /**
  * Parses the given text and returns a tree representation the JSON content. On invalid input, the parser tries to be as fault tolerant as possible, but still return a result.
  */
-var main_parseTree = parseTree;
+var main_parseTree = parser_parseTree;
 /**
  * Finds the node at the given path in a JSON DOM.
  */
-var main_findNodeAtLocation = findNodeAtLocation;
+var main_findNodeAtLocation = parser_findNodeAtLocation;
 /**
  * Finds the innermost node at the given offset. If includeRightBound is set, also finds nodes that end at the given offset.
  */
@@ -10165,19 +10106,19 @@ function main_format(documentText, range, options) {
  * To apply edits to an input, you can use `applyEdits`.
  */
 function modify(text, path, value, options) {
-    return setProperty(text, path, value, options.formattingOptions, options.getInsertionIndex);
+    return edit.setProperty(text, path, value, options.formattingOptions, options.getInsertionIndex);
 }
 /**
  * Applies edits to a input string.
  */
 function applyEdits(text, edits) {
     for (var i = edits.length - 1; i >= 0; i--) {
-        text = applyEdit(text, edits[i]);
+        text = edit.applyEdit(text, edits[i]);
     }
     return text;
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/utils/objects.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/utils/objects.js
 /*---------------------------------------------------------------------------------------------
 *  Copyright (c) Microsoft Corporation. All rights reserved.
 *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -10244,7 +10185,7 @@ function objects_isString(val) {
     return typeof val === 'string';
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-languageserver-types/main.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-languageserver-types/main.js
 /* --------------------------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
@@ -11543,7 +11484,7 @@ var SelectionRange;
     }
     SelectionRange.is = is;
 })(SelectionRange || (SelectionRange = {}));
-var EOL = ['\n', '\r\n', '\r'];
+var EOL = (/* unused pure expression or super */ null && (['\n', '\r\n', '\r']));
 /**
  * @deprecated Use the text document from the new vscode-languageserver-textdocument package.
  */
@@ -11773,7 +11714,7 @@ var Is;
     Is.typedArray = typedArray;
 })(Is || (Is = {}));
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-languageserver-textdocument/lib/esm/main.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-languageserver-textdocument/lib/esm/main.js
 /* --------------------------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
@@ -12040,7 +11981,7 @@ function getWellformedEdit(textEdit) {
     return textEdit;
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/jsonLanguageTypes.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/jsonLanguageTypes.js
 
 
 
@@ -12068,7 +12009,7 @@ var ErrorCode;
     ErrorCode[ErrorCode["CommentNotPermitted"] = 521] = "CommentNotPermitted";
     ErrorCode[ErrorCode["SchemaResolveError"] = 768] = "SchemaResolveError";
 })(ErrorCode || (ErrorCode = {}));
-var jsonLanguageTypes_ClientCapabilities;
+var ClientCapabilities;
 (function (ClientCapabilities) {
     ClientCapabilities.LATEST = {
         textDocument: {
@@ -12080,9 +12021,9 @@ var jsonLanguageTypes_ClientCapabilities;
             }
         }
     };
-})(jsonLanguageTypes_ClientCapabilities || (jsonLanguageTypes_ClientCapabilities = {}));
+})(ClientCapabilities || (ClientCapabilities = {}));
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/fillers/vscode-nls.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/fillers/vscode-nls.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -12110,11 +12051,11 @@ function localize(key, message) {
 function loadMessageBundle(file) {
     return localize;
 }
-function vscode_nls_config(opt) {
+function config(opt) {
     return loadMessageBundle;
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/parser/jsonParser.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/parser/jsonParser.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -12311,7 +12252,7 @@ var NoOpSchemaCollector = /** @class */ (function () {
     NoOpSchemaCollector.instance = new NoOpSchemaCollector();
     return NoOpSchemaCollector;
 }());
-var jsonParser_ValidationResult = /** @class */ (function () {
+var ValidationResult = /** @class */ (function () {
     function ValidationResult() {
         this.problems = [];
         this.propertiesMatches = 0;
@@ -12374,7 +12315,7 @@ var jsonParser_ValidationResult = /** @class */ (function () {
 
 function newJSONDocument(root, diagnostics) {
     if (diagnostics === void 0) { diagnostics = []; }
-    return new jsonParser_JSONDocument(root, diagnostics, []);
+    return new JSONDocument(root, diagnostics, []);
 }
 function jsonParser_getNodeValue(node) {
     return main_getNodeValue(node);
@@ -12386,7 +12327,7 @@ function jsonParser_contains(node, offset, includeRightBound) {
     if (includeRightBound === void 0) { includeRightBound = false; }
     return offset >= node.offset && offset < (node.offset + node.length) || includeRightBound && offset === (node.offset + node.length);
 }
-var jsonParser_JSONDocument = /** @class */ (function () {
+var JSONDocument = /** @class */ (function () {
     function JSONDocument(root, syntaxErrors, comments) {
         if (syntaxErrors === void 0) { syntaxErrors = []; }
         if (comments === void 0) { comments = []; }
@@ -12418,7 +12359,7 @@ var jsonParser_JSONDocument = /** @class */ (function () {
     };
     JSONDocument.prototype.validate = function (textDocument, schema) {
         if (this.root && schema) {
-            var validationResult = new jsonParser_ValidationResult();
+            var validationResult = new ValidationResult();
             validate(this.root, schema, validationResult, NoOpSchemaCollector.instance);
             return validationResult.problems.map(function (p) {
                 var range = main_Range.create(textDocument.positionAt(p.location.offset), textDocument.positionAt(p.location.offset + p.location.length));
@@ -12432,7 +12373,7 @@ var jsonParser_JSONDocument = /** @class */ (function () {
         if (exclude === void 0) { exclude = null; }
         var matchingSchemas = new SchemaCollector(focusOffset, exclude);
         if (this.root && schema) {
-            validate(this.root, schema, new jsonParser_ValidationResult(), matchingSchemas);
+            validate(this.root, schema, new ValidationResult(), matchingSchemas);
         }
         return matchingSchemas.schemas;
     };
@@ -12491,7 +12432,7 @@ function validate(node, schema, validationResult, matchingSchemas) {
         }
         var notSchema = asSchema(schema.not);
         if (notSchema) {
-            var subValidationResult = new jsonParser_ValidationResult();
+            var subValidationResult = new ValidationResult();
             var subMatchingSchemas = matchingSchemas.newSub();
             validate(node, notSchema, subValidationResult, subMatchingSchemas);
             if (!subValidationResult.hasProblems()) {
@@ -12514,7 +12455,7 @@ function validate(node, schema, validationResult, matchingSchemas) {
             for (var _i = 0, alternatives_1 = alternatives; _i < alternatives_1.length; _i++) {
                 var subSchemaRef = alternatives_1[_i];
                 var subSchema = asSchema(subSchemaRef);
-                var subValidationResult = new jsonParser_ValidationResult();
+                var subValidationResult = new ValidationResult();
                 var subMatchingSchemas = matchingSchemas.newSub();
                 validate(node, subSchema, subValidationResult, subMatchingSchemas);
                 if (!subValidationResult.hasProblems()) {
@@ -12566,7 +12507,7 @@ function validate(node, schema, validationResult, matchingSchemas) {
             testAlternatives(schema.oneOf, true);
         }
         var testBranch = function (schema) {
-            var subValidationResult = new jsonParser_ValidationResult();
+            var subValidationResult = new ValidationResult();
             var subMatchingSchemas = matchingSchemas.newSub();
             validate(node, asSchema(schema), subValidationResult, subMatchingSchemas);
             validationResult.merge(subValidationResult);
@@ -12576,7 +12517,7 @@ function validate(node, schema, validationResult, matchingSchemas) {
         };
         var testCondition = function (ifSchema, thenSchema, elseSchema) {
             var subSchema = asSchema(ifSchema);
-            var subValidationResult = new jsonParser_ValidationResult();
+            var subValidationResult = new ValidationResult();
             var subMatchingSchemas = matchingSchemas.newSub();
             validate(node, subSchema, subValidationResult, subMatchingSchemas);
             matchingSchemas.merge(subMatchingSchemas);
@@ -12772,7 +12713,7 @@ function validate(node, schema, validationResult, matchingSchemas) {
             for (var index = 0; index < subSchemas.length; index++) {
                 var subSchemaRef = subSchemas[index];
                 var subSchema = asSchema(subSchemaRef);
-                var itemValidationResult = new jsonParser_ValidationResult();
+                var itemValidationResult = new ValidationResult();
                 var item = node.items[index];
                 if (item) {
                     validate(item, subSchema, itemValidationResult, matchingSchemas);
@@ -12785,7 +12726,7 @@ function validate(node, schema, validationResult, matchingSchemas) {
             if (node.items.length > subSchemas.length) {
                 if (typeof schema.additionalItems === 'object') {
                     for (var i = subSchemas.length; i < node.items.length; i++) {
-                        var itemValidationResult = new jsonParser_ValidationResult();
+                        var itemValidationResult = new ValidationResult();
                         validate(node.items[i], schema.additionalItems, itemValidationResult, matchingSchemas);
                         validationResult.mergePropertyMatch(itemValidationResult);
                     }
@@ -12804,7 +12745,7 @@ function validate(node, schema, validationResult, matchingSchemas) {
             if (itemSchema) {
                 for (var _i = 0, _a = node.items; _i < _a.length; _i++) {
                     var item = _a[_i];
-                    var itemValidationResult = new jsonParser_ValidationResult();
+                    var itemValidationResult = new ValidationResult();
                     validate(item, itemSchema, itemValidationResult, matchingSchemas);
                     validationResult.mergePropertyMatch(itemValidationResult);
                 }
@@ -12813,7 +12754,7 @@ function validate(node, schema, validationResult, matchingSchemas) {
         var containsSchema = asSchema(schema.contains);
         if (containsSchema) {
             var doesContain = node.items.some(function (item) {
-                var itemValidationResult = new jsonParser_ValidationResult();
+                var itemValidationResult = new ValidationResult();
                 validate(item, containsSchema, itemValidationResult, NoOpSchemaCollector.instance);
                 return !itemValidationResult.hasProblems();
             });
@@ -12905,7 +12846,7 @@ function validate(node, schema, validationResult, matchingSchemas) {
                         }
                     }
                     else {
-                        var propertyValidationResult = new jsonParser_ValidationResult();
+                        var propertyValidationResult = new ValidationResult();
                         validate(child, propertySchema, propertyValidationResult, matchingSchemas);
                         validationResult.mergePropertyMatch(propertyValidationResult);
                     }
@@ -12938,7 +12879,7 @@ function validate(node, schema, validationResult, matchingSchemas) {
                                 }
                             }
                             else {
-                                var propertyValidationResult = new jsonParser_ValidationResult();
+                                var propertyValidationResult = new ValidationResult();
                                 validate(child, propertySchema, propertyValidationResult, matchingSchemas);
                                 validationResult.mergePropertyMatch(propertyValidationResult);
                             }
@@ -12952,7 +12893,7 @@ function validate(node, schema, validationResult, matchingSchemas) {
                 var propertyName = unprocessedProperties_1[_k];
                 var child = seenKeys[propertyName];
                 if (child) {
-                    var propertyValidationResult = new jsonParser_ValidationResult();
+                    var propertyValidationResult = new ValidationResult();
                     validate(child, schema.additionalProperties, propertyValidationResult, matchingSchemas);
                     validationResult.mergePropertyMatch(propertyValidationResult);
                 }
@@ -13016,7 +12957,7 @@ function validate(node, schema, validationResult, matchingSchemas) {
                     else {
                         var propertySchema = asSchema(propertyDep);
                         if (propertySchema) {
-                            var propertyValidationResult = new jsonParser_ValidationResult();
+                            var propertyValidationResult = new ValidationResult();
                             validate(node, propertySchema, propertyValidationResult, matchingSchemas);
                             validationResult.mergePropertyMatch(propertyValidationResult);
                         }
@@ -13319,10 +13260,10 @@ function jsonParser_parse(textDocument, config) {
             _error(jsonParser_localize('End of file expected', 'End of file expected.'), ErrorCode.Undefined);
         }
     }
-    return new jsonParser_JSONDocument(_root, problems, commentRanges);
+    return new JSONDocument(_root, problems, commentRanges);
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/utils/json.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/utils/json.js
 /*---------------------------------------------------------------------------------------------
 *  Copyright (c) Microsoft Corporation. All rights reserved.
 *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -13366,7 +13307,7 @@ function stringifyObject(obj, indent, stringifyLiteral) {
     return stringifyLiteral(obj);
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/utils/strings.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/utils/strings.js
 /*---------------------------------------------------------------------------------------------
 *  Copyright (c) Microsoft Corporation. All rights reserved.
 *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -13412,7 +13353,7 @@ function strings_repeat(value, count) {
     return s;
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/services/jsonCompletion.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/services/jsonCompletion.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -13427,7 +13368,7 @@ function strings_repeat(value, count) {
 var jsonCompletion_localize = loadMessageBundle();
 var valueCommitCharacters = [',', '}', ']'];
 var propertyCommitCharacters = [':'];
-var jsonCompletion_JSONCompletion = /** @class */ (function () {
+var JSONCompletion = /** @class */ (function () {
     function JSONCompletion(schemaService, contributions, promiseConstructor, clientCapabilities) {
         if (contributions === void 0) { contributions = []; }
         if (promiseConstructor === void 0) { promiseConstructor = Promise; }
@@ -14279,14 +14220,14 @@ var jsonCompletion_JSONCompletion = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/services/jsonHover.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/services/jsonHover.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
 
-var jsonHover_JSONHover = /** @class */ (function () {
+var JSONHover = /** @class */ (function () {
     function JSONHover(schemaService, contributions, promiseConstructor) {
         if (contributions === void 0) { contributions = []; }
         this.schemaService = schemaService;
@@ -14393,7 +14334,7 @@ function toMarkdownCodeBlock(content) {
     return content;
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-uri/index.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-uri/index.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -14991,7 +14932,7 @@ function vscode_uri_asFormatted(uri, skipEncoding) {
     return res;
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/services/jsonSchemaService.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/services/jsonSchemaService.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -15002,7 +14943,7 @@ function vscode_uri_asFormatted(uri, skipEncoding) {
 
 
 var jsonSchemaService_localize = loadMessageBundle();
-var jsonSchemaService_FilePatternAssociation = /** @class */ (function () {
+var FilePatternAssociation = /** @class */ (function () {
     function FilePatternAssociation(pattern) {
         try {
             this.patternRegExp = new RegExp(strings_convertSimple2RegExpPattern(pattern) + '$');
@@ -15064,7 +15005,7 @@ var UnresolvedSchema = /** @class */ (function () {
     return UnresolvedSchema;
 }());
 
-var jsonSchemaService_ResolvedSchema = /** @class */ (function () {
+var ResolvedSchema = /** @class */ (function () {
     function ResolvedSchema(schema, errors) {
         if (errors === void 0) { errors = []; }
         this.schema = schema;
@@ -15109,7 +15050,7 @@ var jsonSchemaService_ResolvedSchema = /** @class */ (function () {
     return ResolvedSchema;
 }());
 
-var jsonSchemaService_JSONSchemaService = /** @class */ (function () {
+var JSONSchemaService = /** @class */ (function () {
     function JSONSchemaService(requestService, contextService, promiseConstructor) {
         this.contextService = contextService;
         this.requestService = requestService;
@@ -15204,7 +15145,7 @@ var jsonSchemaService_JSONSchemaService = /** @class */ (function () {
     JSONSchemaService.prototype.getOrAddFilePatternAssociation = function (pattern) {
         var fpa = this.filePatternAssociationById[pattern];
         if (!fpa) {
-            fpa = new jsonSchemaService_FilePatternAssociation(pattern);
+            fpa = new FilePatternAssociation(pattern);
             this.filePatternAssociationById[pattern] = fpa;
             this.filePatternAssociations.push(fpa);
         }
@@ -15283,7 +15224,7 @@ var jsonSchemaService_JSONSchemaService = /** @class */ (function () {
         if (schema.$schema) {
             var id = this.normalizeId(schema.$schema);
             if (id === 'http://json-schema.org/draft-03/schema') {
-                return this.promise.resolve(new jsonSchemaService_ResolvedSchema({}, [jsonSchemaService_localize('json.schema.draft03.notsupported', "Draft-03 schemas are not supported.")]));
+                return this.promise.resolve(new ResolvedSchema({}, [jsonSchemaService_localize('json.schema.draft03.notsupported', "Draft-03 schemas are not supported.")]));
             }
             else if (id === 'https://json-schema.org/draft/2019-09/schema') {
                 schemaToResolve.errors.push(jsonSchemaService_localize('json.schema.draft201909.notsupported', "Draft 2019-09 schemas are not yet fully supported."));
@@ -15417,7 +15358,7 @@ var jsonSchemaService_JSONSchemaService = /** @class */ (function () {
             }
             return _this.promise.all(openPromises);
         };
-        return resolveRefs(schema, schema, schemaURL, dependencies).then(function (_) { return new jsonSchemaService_ResolvedSchema(schema, resolveErrors); });
+        return resolveRefs(schema, schema, schemaURL, dependencies).then(function (_) { return new ResolvedSchema(schema, resolveErrors); });
     };
     JSONSchemaService.prototype.getSchemaForResource = function (resource, document) {
         // first use $schema if present
@@ -15481,7 +15422,7 @@ function toDisplayString(url) {
     return url;
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/services/jsonValidation.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/services/jsonValidation.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -15491,7 +15432,7 @@ function toDisplayString(url) {
 
 
 var jsonValidation_localize = loadMessageBundle();
-var jsonValidation_JSONValidation = /** @class */ (function () {
+var JSONValidation = /** @class */ (function () {
     function JSONValidation(jsonSchemaService, promiseConstructor) {
         this.jsonSchemaService = jsonSchemaService;
         this.promise = promiseConstructor;
@@ -15626,7 +15567,7 @@ function toDiagnosticSeverity(severityLevel) {
     return void 0;
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/utils/colors.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/utils/colors.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -15634,8 +15575,8 @@ function toDiagnosticSeverity(severityLevel) {
 var Digit0 = 48;
 var Digit9 = 57;
 var A = 65;
-var colors_a = 97;
-var colors_f = 102;
+var a = 97;
+var f = 102;
 function hexDigit(charCode) {
     if (charCode < Digit0) {
         return 0;
@@ -15643,11 +15584,11 @@ function hexDigit(charCode) {
     if (charCode <= Digit9) {
         return charCode - Digit0;
     }
-    if (charCode < colors_a) {
-        charCode += (colors_a - A);
+    if (charCode < a) {
+        charCode += (a - A);
     }
-    if (charCode >= colors_a && charCode <= colors_f) {
-        return charCode - colors_a + 10;
+    if (charCode >= a && charCode <= f) {
+        return charCode - a + 10;
     }
     return 0;
 }
@@ -15697,7 +15638,7 @@ function colorFrom256RGB(red, green, blue, alpha) {
     };
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/services/jsonDocumentSymbols.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/services/jsonDocumentSymbols.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -15706,7 +15647,7 @@ function colorFrom256RGB(red, green, blue, alpha) {
 
 
 
-var jsonDocumentSymbols_JSONDocumentSymbols = /** @class */ (function () {
+var JSONDocumentSymbols = /** @class */ (function () {
     function JSONDocumentSymbols(schemaService) {
         this.schemaService = schemaService;
     }
@@ -15959,7 +15900,7 @@ function getRange(document, node) {
     return main_Range.create(document.positionAt(node.offset), document.positionAt(node.offset + node.length));
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/services/configuration.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/services/configuration.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -16471,23 +16412,23 @@ var descriptions = {
     else: configuration_localize('schema.json.else', "The \"else\" subschema is used for validation when the \"if\" subschema fails.")
 };
 for (var schemaName in schemaContributions.schemas) {
-    var configuration_schema = schemaContributions.schemas[schemaName];
-    for (var configuration_property in configuration_schema.properties) {
-        var propertyObject = configuration_schema.properties[configuration_property];
+    var schema = schemaContributions.schemas[schemaName];
+    for (var property in schema.properties) {
+        var propertyObject = schema.properties[property];
         if (propertyObject === true) {
-            propertyObject = configuration_schema.properties[configuration_property] = {};
+            propertyObject = schema.properties[property] = {};
         }
-        var description = descriptions[configuration_property];
+        var description = descriptions[property];
         if (description) {
             propertyObject['description'] = description;
         }
         else {
-            console.log(configuration_property + ": localize('schema.json." + configuration_property + "', \"\")");
+            console.log(property + ": localize('schema.json." + property + "', \"\")");
         }
     }
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/services/jsonFolding.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/services/jsonFolding.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -16610,7 +16551,7 @@ function getFoldingRanges(document, context) {
     return result;
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/services/jsonSelectionRanges.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/services/jsonSelectionRanges.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -16673,7 +16614,7 @@ function getSelectionRanges(document, positions, doc) {
     return positions.map(getSelectionRange);
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/jsonLanguageService.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/_deps/vscode-json-languageservice/jsonLanguageService.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -16692,12 +16633,12 @@ function getSelectionRanges(document, positions, doc) {
 
 function getLanguageService(params) {
     var promise = params.promiseConstructor || Promise;
-    var jsonSchemaService = new jsonSchemaService_JSONSchemaService(params.schemaRequestService, params.workspaceContext, promise);
+    var jsonSchemaService = new JSONSchemaService(params.schemaRequestService, params.workspaceContext, promise);
     jsonSchemaService.setSchemaContributions(schemaContributions);
-    var jsonCompletion = new jsonCompletion_JSONCompletion(jsonSchemaService, params.contributions, promise, params.clientCapabilities);
-    var jsonHover = new jsonHover_JSONHover(jsonSchemaService, params.contributions, promise);
-    var jsonDocumentSymbols = new jsonDocumentSymbols_JSONDocumentSymbols(jsonSchemaService);
-    var jsonValidation = new jsonValidation_JSONValidation(jsonSchemaService, promise);
+    var jsonCompletion = new JSONCompletion(jsonSchemaService, params.contributions, promise, params.clientCapabilities);
+    var jsonHover = new JSONHover(jsonSchemaService, params.contributions, promise);
+    var jsonDocumentSymbols = new JSONDocumentSymbols(jsonSchemaService);
+    var jsonValidation = new JSONValidation(jsonSchemaService, promise);
     return {
         configure: function (settings) {
             jsonSchemaService.clearExternalSchemas();
@@ -16737,7 +16678,7 @@ function getLanguageService(params) {
     };
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/jsonWorker.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/jsonWorker.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -16770,7 +16711,7 @@ var PromiseAdapter = /** @class */ (function () {
     };
     return PromiseAdapter;
 }());
-var jsonWorker_JSONWorker = /** @class */ (function () {
+var JSONWorker = /** @class */ (function () {
     function JSONWorker(ctx, createData) {
         this._ctx = ctx;
         this._languageSettings = createData.languageSettings;
@@ -16853,10 +16794,10 @@ var jsonWorker_JSONWorker = /** @class */ (function () {
 }());
 
 function jsonWorker_create(ctx, createData) {
-    return new jsonWorker_JSONWorker(ctx, createData);
+    return new JSONWorker(ctx, createData);
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/json.worker.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/language/json/json.worker.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -16867,10 +16808,11 @@ function jsonWorker_create(ctx, createData) {
 self.onmessage = function () {
     // ignore the first message
     initialize(function (ctx, createData) {
-        return new jsonWorker_JSONWorker(ctx, createData);
+        return new JSONWorker(ctx, createData);
     });
 };
 
+})();
 
-/***/ })
-/******/ ]);
+/******/ })()
+;

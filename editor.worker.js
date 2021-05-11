@@ -1,92 +1,8 @@
-/******/ (function(modules) { // webpackBootstrap
-/******/ 	// The module cache
-/******/ 	var installedModules = {};
-/******/
-/******/ 	// The require function
-/******/ 	function __webpack_require__(moduleId) {
-/******/
-/******/ 		// Check if module is in cache
-/******/ 		if(installedModules[moduleId]) {
-/******/ 			return installedModules[moduleId].exports;
-/******/ 		}
-/******/ 		// Create a new module (and put it into the cache)
-/******/ 		var module = installedModules[moduleId] = {
-/******/ 			i: moduleId,
-/******/ 			l: false,
-/******/ 			exports: {}
-/******/ 		};
-/******/
-/******/ 		// Execute the module function
-/******/ 		modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
-/******/
-/******/ 		// Flag the module as loaded
-/******/ 		module.l = true;
-/******/
-/******/ 		// Return the exports of the module
-/******/ 		return module.exports;
-/******/ 	}
-/******/
-/******/
-/******/ 	// expose the modules object (__webpack_modules__)
-/******/ 	__webpack_require__.m = modules;
-/******/
-/******/ 	// expose the module cache
-/******/ 	__webpack_require__.c = installedModules;
-/******/
-/******/ 	// define getter function for harmony exports
-/******/ 	__webpack_require__.d = function(exports, name, getter) {
-/******/ 		if(!__webpack_require__.o(exports, name)) {
-/******/ 			Object.defineProperty(exports, name, { enumerable: true, get: getter });
-/******/ 		}
-/******/ 	};
-/******/
-/******/ 	// define __esModule on exports
-/******/ 	__webpack_require__.r = function(exports) {
-/******/ 		if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
-/******/ 			Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-/******/ 		}
-/******/ 		Object.defineProperty(exports, '__esModule', { value: true });
-/******/ 	};
-/******/
-/******/ 	// create a fake namespace object
-/******/ 	// mode & 1: value is a module id, require it
-/******/ 	// mode & 2: merge all properties of value into the ns
-/******/ 	// mode & 4: return value when already ns object
-/******/ 	// mode & 8|1: behave like require
-/******/ 	__webpack_require__.t = function(value, mode) {
-/******/ 		if(mode & 1) value = __webpack_require__(value);
-/******/ 		if(mode & 8) return value;
-/******/ 		if((mode & 4) && typeof value === 'object' && value && value.__esModule) return value;
-/******/ 		var ns = Object.create(null);
-/******/ 		__webpack_require__.r(ns);
-/******/ 		Object.defineProperty(ns, 'default', { enumerable: true, value: value });
-/******/ 		if(mode & 2 && typeof value != 'string') for(var key in value) __webpack_require__.d(ns, key, function(key) { return value[key]; }.bind(null, key));
-/******/ 		return ns;
-/******/ 	};
-/******/
-/******/ 	// getDefaultExport function for compatibility with non-harmony modules
-/******/ 	__webpack_require__.n = function(module) {
-/******/ 		var getter = module && module.__esModule ?
-/******/ 			function getDefault() { return module['default']; } :
-/******/ 			function getModuleExports() { return module; };
-/******/ 		__webpack_require__.d(getter, 'a', getter);
-/******/ 		return getter;
-/******/ 	};
-/******/
-/******/ 	// Object.prototype.hasOwnProperty.call
-/******/ 	__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
-/******/
-/******/ 	// __webpack_public_path__
-/******/ 	__webpack_require__.p = "/";
-/******/
-/******/
-/******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 1);
-/******/ })
-/************************************************************************/
-/******/ ([
-/* 0 */
-/***/ (function(module, exports, __webpack_require__) {
+/******/ (() => { // webpackBootstrap
+/******/ 	var __webpack_modules__ = ({
+
+/***/ 561:
+/***/ (function() {
 
 /*!
 Copyright (c) 2014 Taylor Hakes
@@ -94,7 +10,7 @@ Copyright (c) 2014 Forbes Lindesay
  */
 (function (global, factory) {
 	 true ? factory() :
-		undefined;
+		0;
 }(this, (function () {
 	'use strict';
 
@@ -380,18 +296,43 @@ Copyright (c) 2014 Forbes Lindesay
 })));
 
 
-/***/ }),
-/* 1 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
+/***/ })
 
+/******/ 	});
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 		if (cachedModule !== undefined) {
+/******/ 			return cachedModule.exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			// no module.id needed
+/******/ 			// no module.loaded needed
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/************************************************************************/
+var __webpack_exports__ = {};
+// This entry need to be wrapped in an IIFE because it need to be in strict mode.
+(() => {
 "use strict";
-// ESM COMPAT FLAG
-__webpack_require__.r(__webpack_exports__);
 
-// EXPORTS
-__webpack_require__.d(__webpack_exports__, "initialize", function() { return /* binding */ initialize; });
+// UNUSED EXPORTS: initialize
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/errors.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/errors.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -486,7 +427,7 @@ function illegalState(name) {
     }
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/lifecycle.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/lifecycle.js
 /**
  * Enables logging of potentially leaked disposables.
  *
@@ -525,7 +466,7 @@ function isDisposable(thing) {
     return typeof thing.dispose === 'function'
         && thing.dispose.length === 0;
 }
-function lifecycle_dispose(disposables) {
+function dispose(disposables) {
     if (Array.isArray(disposables)) {
         disposables.forEach(function (d) {
             if (d) {
@@ -550,7 +491,7 @@ function combinedDisposable() {
         disposables[_i] = arguments[_i];
     }
     disposables.forEach(markTracked);
-    return trackDisposable({ dispose: function () { return lifecycle_dispose(disposables); } });
+    return trackDisposable({ dispose: function () { return dispose(disposables); } });
 }
 function toDisposable(fn) {
     var self = trackDisposable({
@@ -677,7 +618,7 @@ var ImmortalReference = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/platform.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/platform.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -690,7 +631,7 @@ var _isNative = false;
 var _isWeb = false;
 var _isIOS = false;
 var _locale = undefined;
-var _language = LANGUAGE_DEFAULT;
+var _language = (/* unused pure expression or super */ null && (LANGUAGE_DEFAULT));
 var _translationsConfigFile = undefined;
 var _userAgent = undefined;
 var isElectronRenderer = (typeof process !== 'undefined' && typeof process.versions !== 'undefined' && typeof process.versions.electron !== 'undefined' && process.type === 'renderer');
@@ -737,11 +678,11 @@ else if (_isLinux) {
     _platform = 2 /* Linux */;
 }
 var isWindows = _isWindows;
-var isMacintosh = _isMacintosh;
-var isLinux = _isLinux;
-var isNative = _isNative;
-var isWeb = _isWeb;
-var isIOS = _isIOS;
+var isMacintosh = (/* unused pure expression or super */ null && (_isMacintosh));
+var isLinux = (/* unused pure expression or super */ null && (_isLinux));
+var isNative = (/* unused pure expression or super */ null && (_isNative));
+var platform_isWeb = (/* unused pure expression or super */ null && (_isWeb));
+var isIOS = (/* unused pure expression or super */ null && (_isIOS));
 var _globals = (typeof self === 'object' ? self : typeof global === 'object' ? global : {});
 var globals = _globals;
 var setImmediate = (function defineSetImmediate() {
@@ -778,9 +719,9 @@ var setImmediate = (function defineSetImmediate() {
     var _promise = Promise.resolve();
     return function (callback) { return _promise.then(callback); };
 })();
-var OS = (_isMacintosh ? 2 /* Macintosh */ : (_isWindows ? 1 /* Windows */ : 3 /* Linux */));
+var OS = ((/* unused pure expression or super */ null && (_isMacintosh ? 2 /* Macintosh */ : (_isWindows ? 1 /* Windows */ : 3 /* Linux */))));
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/types.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/types.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -958,7 +899,7 @@ function withUndefinedAsNull(x) {
     return typeof x === 'undefined' ? null : x;
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/worker/simpleWorker.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/worker/simpleWorker.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -993,7 +934,7 @@ function logOnceWebWorkerWarning(err) {
     }
     console.warn(err.message);
 }
-var simpleWorker_SimpleWorkerProtocol = /** @class */ (function () {
+var SimpleWorkerProtocol = /** @class */ (function () {
     function SimpleWorkerProtocol(handler) {
         this._workerId = -1;
         this._handler = handler;
@@ -1098,7 +1039,7 @@ var simpleWorker_SimpleWorkerProtocol = /** @class */ (function () {
 /**
  * Main thread side
  */
-var simpleWorker_SimpleWorkerClient = /** @class */ (function (_super) {
+var SimpleWorkerClient = /** @class */ (function (_super) {
     __extends(SimpleWorkerClient, _super);
     function SimpleWorkerClient(workerFactory, moduleId, host) {
         var _this = _super.call(this) || this;
@@ -1112,7 +1053,7 @@ var simpleWorker_SimpleWorkerClient = /** @class */ (function (_super) {
                 lazyProxyReject(err);
             }
         }));
-        _this._protocol = new simpleWorker_SimpleWorkerProtocol({
+        _this._protocol = new SimpleWorkerProtocol({
             sendMessage: function (msg, transfer) {
                 _this._worker.postMessage(msg, transfer);
             },
@@ -1183,12 +1124,12 @@ var simpleWorker_SimpleWorkerClient = /** @class */ (function (_super) {
 /**
  * Worker side
  */
-var simpleWorker_SimpleWorkerServer = /** @class */ (function () {
+var SimpleWorkerServer = /** @class */ (function () {
     function SimpleWorkerServer(postMessage, requestHandlerFactory) {
         var _this = this;
         this._requestHandlerFactory = requestHandlerFactory;
         this._requestHandler = null;
-        this._protocol = new simpleWorker_SimpleWorkerProtocol({
+        this._protocol = new SimpleWorkerProtocol({
             sendMessage: function (msg, transfer) {
                 postMessage(msg, transfer);
             },
@@ -1257,10 +1198,10 @@ var simpleWorker_SimpleWorkerServer = /** @class */ (function () {
  * Called on the worker side
  */
 function create(postMessage) {
-    return new simpleWorker_SimpleWorkerServer(postMessage, null);
+    return new SimpleWorkerServer(postMessage, null);
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/arrays.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/arrays.js
 /**
  * Returns the last element of an array.
  * @param array The array.
@@ -1465,7 +1406,7 @@ function flatten(arr) {
     var _a;
     return (_a = []).concat.apply(_a, arr);
 }
-function arrays_range(arg, to) {
+function range(arg, to) {
     var from = typeof to === 'number' ? arg : 0;
     if (typeof to === 'number') {
         from = arg;
@@ -1529,7 +1470,7 @@ function asArray(x) {
     return Array.isArray(x) ? x : [x];
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/diff/diffChange.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/diff/diffChange.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -1565,7 +1506,7 @@ var DiffChange = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/hash.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/hash.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -1621,7 +1562,7 @@ function objectHash(obj, initialHashVal) {
     }, initialHashVal);
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/diff/diff.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/diff/diff.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -1644,7 +1585,7 @@ var StringDiffSequence = /** @class */ (function () {
 }());
 
 function stringDiff(original, modified, pretty) {
-    return new diff_LcsDiff(new StringDiffSequence(original), new StringDiffSequence(modified)).ComputeDiff(pretty).changes;
+    return new LcsDiff(new StringDiffSequence(original), new StringDiffSequence(modified)).ComputeDiff(pretty).changes;
 }
 //
 // The code below has been ported from a C# implementation in VS
@@ -1699,7 +1640,7 @@ var MyArray = /** @class */ (function () {
  * distinct changes. At the end, the Changes property can be called to retrieve
  * the constructed changes.
  */
-var diff_DiffChangeHelper = /** @class */ (function () {
+var DiffChangeHelper = /** @class */ (function () {
     /**
      * Constructs a new DiffChangeHelper for the given DiffSequences.
      */
@@ -1778,7 +1719,7 @@ var diff_DiffChangeHelper = /** @class */ (function () {
  * An implementation of the difference algorithm described in
  * "An O(ND) Difference Algorithm and its variations" by Eugene W. Myers
  */
-var diff_LcsDiff = /** @class */ (function () {
+var LcsDiff = /** @class */ (function () {
     /**
      * Constructs the DiffFinder
      */
@@ -1933,7 +1874,7 @@ var diff_LcsDiff = /** @class */ (function () {
         var forwardChanges = null;
         var reverseChanges = null;
         // First, walk backward through the forward diagonals history
-        var changeHelper = new diff_DiffChangeHelper();
+        var changeHelper = new DiffChangeHelper();
         var diagonalMin = diagonalForwardStart;
         var diagonalMax = diagonalForwardEnd;
         var diagonalRelative = (midOriginalArr[0] - midModifiedArr[0]) - diagonalForwardOffset;
@@ -1991,7 +1932,7 @@ var diff_LcsDiff = /** @class */ (function () {
         }
         else {
             // Now walk backward through the reverse diagonals history
-            changeHelper = new diff_DiffChangeHelper();
+            changeHelper = new DiffChangeHelper();
             diagonalMin = diagonalReverseStart;
             diagonalMax = diagonalReverseEnd;
             diagonalRelative = (midOriginalArr[0] - midModifiedArr[0]) - diagonalReverseOffset;
@@ -2444,7 +2385,7 @@ var diff_LcsDiff = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/iterator.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/iterator.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -2689,7 +2630,7 @@ var MappedIterator = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/uri.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/uri.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -2707,7 +2648,7 @@ var uri_extends = (undefined && undefined.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var uri_a;
+var _a;
 
 var _schemePattern = /^\w[\w\d+.-]*$/;
 var _singleSlashStart = /^\//;
@@ -2787,7 +2728,7 @@ var _regexp = /^(([^:/?#]+?):)?(\/\/([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?/;
  *       / \ /                        \
  *       urn:example:animal:ferret:nose
  */
-var uri_URI = /** @class */ (function () {
+var URI = /** @class */ (function () {
     /**
      * @internal
      */
@@ -3070,29 +3011,29 @@ var _URI = /** @class */ (function (_super) {
         return res;
     };
     return _URI;
-}(uri_URI));
+}(URI));
 // reserved characters: https://tools.ietf.org/html/rfc3986#section-2.2
-var encodeTable = (uri_a = {},
-    uri_a[58 /* Colon */] = '%3A',
-    uri_a[47 /* Slash */] = '%2F',
-    uri_a[63 /* QuestionMark */] = '%3F',
-    uri_a[35 /* Hash */] = '%23',
-    uri_a[91 /* OpenSquareBracket */] = '%5B',
-    uri_a[93 /* CloseSquareBracket */] = '%5D',
-    uri_a[64 /* AtSign */] = '%40',
-    uri_a[33 /* ExclamationMark */] = '%21',
-    uri_a[36 /* DollarSign */] = '%24',
-    uri_a[38 /* Ampersand */] = '%26',
-    uri_a[39 /* SingleQuote */] = '%27',
-    uri_a[40 /* OpenParen */] = '%28',
-    uri_a[41 /* CloseParen */] = '%29',
-    uri_a[42 /* Asterisk */] = '%2A',
-    uri_a[43 /* Plus */] = '%2B',
-    uri_a[44 /* Comma */] = '%2C',
-    uri_a[59 /* Semicolon */] = '%3B',
-    uri_a[61 /* Equals */] = '%3D',
-    uri_a[32 /* Space */] = '%20',
-    uri_a);
+var encodeTable = (_a = {},
+    _a[58 /* Colon */] = '%3A',
+    _a[47 /* Slash */] = '%2F',
+    _a[63 /* QuestionMark */] = '%3F',
+    _a[35 /* Hash */] = '%23',
+    _a[91 /* OpenSquareBracket */] = '%5B',
+    _a[93 /* CloseSquareBracket */] = '%5D',
+    _a[64 /* AtSign */] = '%40',
+    _a[33 /* ExclamationMark */] = '%21',
+    _a[36 /* DollarSign */] = '%24',
+    _a[38 /* Ampersand */] = '%26',
+    _a[39 /* SingleQuote */] = '%27',
+    _a[40 /* OpenParen */] = '%28',
+    _a[41 /* CloseParen */] = '%29',
+    _a[42 /* Asterisk */] = '%2A',
+    _a[43 /* Plus */] = '%2B',
+    _a[44 /* Comma */] = '%2C',
+    _a[59 /* Semicolon */] = '%3B',
+    _a[61 /* Equals */] = '%3D',
+    _a[32 /* Space */] = '%20',
+    _a);
 function encodeURIComponentFast(uriComponent, allowSlash) {
     var res = undefined;
     var nativeEncodePos = -1;
@@ -3281,7 +3222,7 @@ function percentDecode(str) {
     return str.replace(_rEncodedAsHex, function (match) { return decodeURIComponentGraceful(match); });
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/core/position.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/core/position.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -3423,7 +3364,7 @@ var Position = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/core/range.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/core/range.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -3432,7 +3373,7 @@ var Position = /** @class */ (function () {
 /**
  * A range in the editor. (startLineNumber,startColumn) is <= (endLineNumber,endColumn)
  */
-var range_Range = /** @class */ (function () {
+var Range = /** @class */ (function () {
     function Range(startLineNumber, startColumn, endLineNumber, endColumn) {
         if ((startLineNumber > endLineNumber) || (startLineNumber === endLineNumber && startColumn > endColumn)) {
             this.startLineNumber = endLineNumber;
@@ -3776,7 +3717,7 @@ var range_Range = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/strings.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/strings.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -4510,7 +4451,7 @@ function getGraphemeBreakRawData() {
 }
 //#endregion
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/diff/diffComputer.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/diff/diffComputer.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -4519,7 +4460,7 @@ function getGraphemeBreakRawData() {
 
 var MINIMUM_MATCHING_CHARACTER_LENGTH = 3;
 function computeDiff(originalSequence, modifiedSequence, continueProcessingPredicate, pretty) {
-    var diffAlgo = new diff_LcsDiff(originalSequence, modifiedSequence, continueProcessingPredicate);
+    var diffAlgo = new LcsDiff(originalSequence, modifiedSequence, continueProcessingPredicate);
     return diffAlgo.ComputeDiff(pretty);
 }
 var LineSequence = /** @class */ (function () {
@@ -4907,7 +4848,7 @@ function createContinueProcessingPredicate(maximumRuntime) {
     };
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/uint.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/uint.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -4939,7 +4880,7 @@ function toUint32Array(arr) {
     return r;
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/viewModel/prefixSumComputer.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/viewModel/prefixSumComputer.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -4953,7 +4894,7 @@ var PrefixSumIndexOfResult = /** @class */ (function () {
     return PrefixSumIndexOfResult;
 }());
 
-var prefixSumComputer_PrefixSumComputer = /** @class */ (function () {
+var PrefixSumComputer = /** @class */ (function () {
     function PrefixSumComputer(values) {
         this.values = values;
         this.prefixSum = new Uint32Array(values.length);
@@ -5086,7 +5027,7 @@ var PrefixSumComputerWithCache = /** @class */ (function () {
     function PrefixSumComputerWithCache(values) {
         this._cacheAccumulatedValueStart = 0;
         this._cache = null;
-        this._actual = new prefixSumComputer_PrefixSumComputer(values);
+        this._actual = new PrefixSumComputer(values);
         this._bustCache();
     }
     PrefixSumComputerWithCache.prototype._bustCache = function () {
@@ -5141,14 +5082,14 @@ var PrefixSumComputerWithCache = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/model/mirrorTextModel.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/model/mirrorTextModel.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
 
-var mirrorTextModel_MirrorTextModel = /** @class */ (function () {
+var MirrorTextModel = /** @class */ (function () {
     function MirrorTextModel(uri, lines, eol, versionId) {
         this._uri = uri;
         this._lines = lines;
@@ -5184,7 +5125,7 @@ var mirrorTextModel_MirrorTextModel = /** @class */ (function () {
             for (var i = 0; i < linesLength; i++) {
                 lineStartValues[i] = this._lines[i].length + eolLength;
             }
-            this._lineStarts = new prefixSumComputer_PrefixSumComputer(lineStartValues);
+            this._lineStarts = new PrefixSumComputer(lineStartValues);
         }
     };
     /**
@@ -5251,7 +5192,7 @@ var mirrorTextModel_MirrorTextModel = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/model/wordHelper.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/model/wordHelper.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -5365,7 +5306,7 @@ function getWordAtText(column, wordDefinition, text, textOffset) {
     return ret;
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/core/characterClassifier.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/core/characterClassifier.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -5374,7 +5315,7 @@ function getWordAtText(column, wordDefinition, text, textOffset) {
 /**
  * A fast character classifier that uses a compact array for ASCII values.
  */
-var characterClassifier_CharacterClassifier = /** @class */ (function () {
+var CharacterClassifier = /** @class */ (function () {
     function CharacterClassifier(_defaultValue) {
         var defaultValue = toUint8(_defaultValue);
         this._defaultValue = defaultValue;
@@ -5410,7 +5351,7 @@ var characterClassifier_CharacterClassifier = /** @class */ (function () {
 
 var CharacterSet = /** @class */ (function () {
     function CharacterSet() {
-        this._actual = new characterClassifier_CharacterClassifier(0 /* False */);
+        this._actual = new CharacterClassifier(0 /* False */);
     }
     CharacterSet.prototype.add = function (charCode) {
         this._actual.set(charCode, 1 /* True */);
@@ -5422,7 +5363,7 @@ var CharacterSet = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/modes/linkComputer.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/modes/linkComputer.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -5516,7 +5457,7 @@ function getStateMachine() {
 var _classifier = null;
 function getClassifier() {
     if (_classifier === null) {
-        _classifier = new characterClassifier_CharacterClassifier(0 /* None */);
+        _classifier = new CharacterClassifier(0 /* None */);
         var FORCE_TERMINATION_CHARACTERS = ' \t<>\'\"、。｡､，．：；？！＠＃＄％＆＊‘“〈《「『【〔（［｛｢｣｝］）〕】』」》〉”’｀～…';
         for (var i = 0; i < FORCE_TERMINATION_CHARACTERS.length; i++) {
             _classifier.set(FORCE_TERMINATION_CHARACTERS.charCodeAt(i), 1 /* ForceTermination */);
@@ -5686,7 +5627,7 @@ function computeLinks(model) {
     return LinkComputer.computeLinks(model);
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/modes/supports/inplaceReplaceSupport.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/modes/supports/inplaceReplaceSupport.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -5776,14 +5717,13 @@ var BasicInplaceReplace = /** @class */ (function () {
 
 
 // EXTERNAL MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/standalone/promise-polyfill/polyfill.js
-var polyfill = __webpack_require__(0);
-
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/functional.js
+var polyfill = __webpack_require__(561);
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/functional.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-function functional_once(fn) {
+function once(fn) {
     var _this = this;
     var didCall = false;
     var result;
@@ -5797,7 +5737,7 @@ function functional_once(fn) {
     };
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/linkedList.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/linkedList.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -5812,7 +5752,7 @@ var Node = /** @class */ (function () {
     Node.Undefined = new Node(undefined);
     return Node;
 }());
-var linkedList_LinkedList = /** @class */ (function () {
+var LinkedList = /** @class */ (function () {
     function LinkedList() {
         this._first = Node.Undefined;
         this._last = Node.Undefined;
@@ -5944,7 +5884,7 @@ var linkedList_LinkedList = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/event.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/event.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -5966,7 +5906,7 @@ var event_extends = (undefined && undefined.__extends) || (function () {
 
 
 
-var event_Event;
+var Event;
 (function (Event) {
     Event.None = function () { return Disposable.None; };
     /**
@@ -6067,7 +6007,7 @@ var event_Event;
      */
     function snapshot(event) {
         var listener;
-        var emitter = new event_Emitter({
+        var emitter = new Emitter({
             onFirstListenerAdd: function () {
                 listener = event(emitter.fire, emitter);
             },
@@ -6085,7 +6025,7 @@ var event_Event;
         var output = undefined;
         var handle = undefined;
         var numDebouncedCalls = 0;
-        var emitter = new event_Emitter({
+        var emitter = new Emitter({
             leakWarningThreshold: leakWarningThreshold,
             onFirstListenerAdd: function () {
                 subscription = event(function (cur) {
@@ -6178,7 +6118,7 @@ var event_Event;
             }
             buffer = null;
         };
-        var emitter = new event_Emitter({
+        var emitter = new Emitter({
             onFirstListenerAdd: function () {
                 if (!listener) {
                     listener = event(function (e) { return emitter.fire(e); });
@@ -6251,7 +6191,7 @@ var event_Event;
         };
         var onFirstListenerAdd = function () { return emitter.on(eventName, fn); };
         var onLastListenerRemove = function () { return emitter.removeListener(eventName, fn); };
-        var result = new event_Emitter({ onFirstListenerAdd: onFirstListenerAdd, onLastListenerRemove: onLastListenerRemove });
+        var result = new Emitter({ onFirstListenerAdd: onFirstListenerAdd, onLastListenerRemove: onLastListenerRemove });
         return result.event;
     }
     Event.fromNodeEventEmitter = fromNodeEventEmitter;
@@ -6266,12 +6206,12 @@ var event_Event;
         };
         var onFirstListenerAdd = function () { return emitter.addEventListener(eventName, fn); };
         var onLastListenerRemove = function () { return emitter.removeEventListener(eventName, fn); };
-        var result = new event_Emitter({ onFirstListenerAdd: onFirstListenerAdd, onLastListenerRemove: onLastListenerRemove });
+        var result = new Emitter({ onFirstListenerAdd: onFirstListenerAdd, onLastListenerRemove: onLastListenerRemove });
         return result.event;
     }
     Event.fromDOMEventEmitter = fromDOMEventEmitter;
     function fromPromise(promise) {
-        var emitter = new event_Emitter();
+        var emitter = new Emitter();
         var shouldEmit = false;
         promise
             .then(undefined, function () { return null; })
@@ -6291,7 +6231,7 @@ var event_Event;
         return new Promise(function (c) { return once(event)(c); });
     }
     Event.toPromise = toPromise;
-})(event_Event || (event_Event = {}));
+})(Event || (Event = {}));
 var _globalLeakWarningThreshold = -1;
 var LeakageMonitor = /** @class */ (function () {
     function LeakageMonitor(customThreshold, name) {
@@ -6365,7 +6305,7 @@ var LeakageMonitor = /** @class */ (function () {
         }
     }
  */
-var event_Emitter = /** @class */ (function () {
+var Emitter = /** @class */ (function () {
     function Emitter(options) {
         this._disposed = false;
         this._options = options;
@@ -6383,7 +6323,7 @@ var event_Emitter = /** @class */ (function () {
             if (!this._event) {
                 this._event = function (listener, thisArgs, disposables) {
                     if (!_this._listeners) {
-                        _this._listeners = new linkedList_LinkedList();
+                        _this._listeners = new LinkedList();
                     }
                     var firstListener = _this._listeners.isEmpty();
                     if (firstListener && _this._options && _this._options.onFirstListenerAdd) {
@@ -6443,7 +6383,7 @@ var event_Emitter = /** @class */ (function () {
             // then emit all event. an inner/nested event might be
             // the driver of this
             if (!this._deliveryQueue) {
-                this._deliveryQueue = new linkedList_LinkedList();
+                this._deliveryQueue = new LinkedList();
             }
             for (var iter = this._listeners.iterator(), e = iter.next(); !e.done; e = iter.next()) {
                 this._deliveryQueue.push([e.value, event]);
@@ -6480,12 +6420,12 @@ var event_Emitter = /** @class */ (function () {
     return Emitter;
 }());
 
-var event_PauseableEmitter = /** @class */ (function (_super) {
+var PauseableEmitter = /** @class */ (function (_super) {
     event_extends(PauseableEmitter, _super);
     function PauseableEmitter(options) {
         var _this = _super.call(this, options) || this;
         _this._isPaused = 0;
-        _this._eventQueue = new linkedList_LinkedList();
+        _this._eventQueue = new LinkedList();
         _this._mergeFn = options && options.merge;
         return _this;
     }
@@ -6521,14 +6461,14 @@ var event_PauseableEmitter = /** @class */ (function (_super) {
         }
     };
     return PauseableEmitter;
-}(event_Emitter));
+}(Emitter));
 
-var event_EventMultiplexer = /** @class */ (function () {
+var EventMultiplexer = /** @class */ (function () {
     function EventMultiplexer() {
         var _this = this;
         this.hasListeners = false;
         this.events = [];
-        this.emitter = new event_Emitter({
+        this.emitter = new Emitter({
             onFirstListenerAdd: function () { return _this.onFirstListenerAdd(); },
             onLastListenerRemove: function () { return _this.onLastListenerRemove(); }
         });
@@ -6554,7 +6494,7 @@ var event_EventMultiplexer = /** @class */ (function () {
             var idx = _this.events.indexOf(e);
             _this.events.splice(idx, 1);
         };
-        return toDisposable(functional_once(dispose));
+        return toDisposable(once(dispose));
     };
     EventMultiplexer.prototype.onFirstListenerAdd = function () {
         var _this = this;
@@ -6637,13 +6577,13 @@ var EventBufferer = /** @class */ (function () {
  * events from that input event through its own `event` property. The `input`
  * can be changed at any point in time.
  */
-var event_Relay = /** @class */ (function () {
+var Relay = /** @class */ (function () {
     function Relay() {
         var _this = this;
         this.listening = false;
-        this.inputEvent = event_Event.None;
+        this.inputEvent = Event.None;
         this.inputEventListener = Disposable.None;
-        this.emitter = new event_Emitter({
+        this.emitter = new Emitter({
             onFirstListenerDidAdd: function () {
                 _this.listening = true;
                 _this.inputEventListener = _this.inputEvent(_this.emitter.fire, _this.emitter);
@@ -6674,7 +6614,7 @@ var event_Relay = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/cancellation.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/cancellation.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -6684,13 +6624,13 @@ var shortcutEvent = Object.freeze(function (callback, context) {
     var handle = setTimeout(callback.bind(context), 0);
     return { dispose: function () { clearTimeout(handle); } };
 });
-var cancellation_CancellationToken;
+var CancellationToken;
 (function (CancellationToken) {
     function isCancellationToken(thing) {
         if (thing === CancellationToken.None || thing === CancellationToken.Cancelled) {
             return true;
         }
-        if (thing instanceof cancellation_MutableToken) {
+        if (thing instanceof MutableToken) {
             return true;
         }
         if (!thing || typeof thing !== 'object') {
@@ -6702,14 +6642,14 @@ var cancellation_CancellationToken;
     CancellationToken.isCancellationToken = isCancellationToken;
     CancellationToken.None = Object.freeze({
         isCancellationRequested: false,
-        onCancellationRequested: event_Event.None
+        onCancellationRequested: Event.None
     });
     CancellationToken.Cancelled = Object.freeze({
         isCancellationRequested: true,
         onCancellationRequested: shortcutEvent
     });
-})(cancellation_CancellationToken || (cancellation_CancellationToken = {}));
-var cancellation_MutableToken = /** @class */ (function () {
+})(CancellationToken || (CancellationToken = {}));
+var MutableToken = /** @class */ (function () {
     function MutableToken() {
         this._isCancelled = false;
         this._emitter = null;
@@ -6736,7 +6676,7 @@ var cancellation_MutableToken = /** @class */ (function () {
                 return shortcutEvent;
             }
             if (!this._emitter) {
-                this._emitter = new event_Emitter();
+                this._emitter = new Emitter();
             }
             return this._emitter.event;
         },
@@ -6762,7 +6702,7 @@ var CancellationTokenSource = /** @class */ (function () {
             if (!this._token) {
                 // be lazy and create the token only when
                 // actually needed
-                this._token = new cancellation_MutableToken();
+                this._token = new MutableToken();
             }
             return this._token;
         },
@@ -6774,9 +6714,9 @@ var CancellationTokenSource = /** @class */ (function () {
             // save an object by returning the default
             // cancelled token when cancellation happens
             // before someone asks for the token
-            this._token = cancellation_CancellationToken.Cancelled;
+            this._token = CancellationToken.Cancelled;
         }
-        else if (this._token instanceof cancellation_MutableToken) {
+        else if (this._token instanceof MutableToken) {
             // actually cancel
             this._token.cancel();
         }
@@ -6791,9 +6731,9 @@ var CancellationTokenSource = /** @class */ (function () {
         }
         if (!this._token) {
             // ensure to initialize with an empty token if we had none
-            this._token = cancellation_CancellationToken.None;
+            this._token = CancellationToken.None;
         }
-        else if (this._token instanceof cancellation_MutableToken) {
+        else if (this._token instanceof MutableToken) {
             // actually dispose
             this._token.dispose();
         }
@@ -6802,7 +6742,7 @@ var CancellationTokenSource = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/keyCodes.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/base/common/keyCodes.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -6982,12 +6922,12 @@ function createKeybinding(keybinding, OS) {
     var firstPart = (keybinding & 0x0000FFFF) >>> 0;
     var chordPart = (keybinding & 0xFFFF0000) >>> 16;
     if (chordPart !== 0) {
-        return new keyCodes_ChordKeybinding([
+        return new ChordKeybinding([
             createSimpleKeybinding(firstPart, OS),
             createSimpleKeybinding(chordPart, OS)
         ]);
     }
-    return new keyCodes_ChordKeybinding([createSimpleKeybinding(firstPart, OS)]);
+    return new ChordKeybinding([createSimpleKeybinding(firstPart, OS)]);
 }
 function createSimpleKeybinding(keybinding, OS) {
     var ctrlCmd = (keybinding & 2048 /* CtrlCmd */ ? true : false);
@@ -7022,7 +6962,7 @@ var SimpleKeybinding = /** @class */ (function () {
             || this.keyCode === 4 /* Shift */);
     };
     SimpleKeybinding.prototype.toChord = function () {
-        return new keyCodes_ChordKeybinding([this]);
+        return new ChordKeybinding([this]);
     };
     /**
      * Does this keybinding refer to the key code of a modifier and it also has the modifier flag?
@@ -7036,7 +6976,7 @@ var SimpleKeybinding = /** @class */ (function () {
     return SimpleKeybinding;
 }());
 
-var keyCodes_ChordKeybinding = /** @class */ (function () {
+var ChordKeybinding = /** @class */ (function () {
     function ChordKeybinding(parts) {
         if (parts.length === 0) {
             throw illegalArgument("parts");
@@ -7082,7 +7022,7 @@ var ResolvedKeybinding = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/core/selection.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/core/selection.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -7106,7 +7046,7 @@ var selection_extends = (undefined && undefined.__extends) || (function () {
  * A selection in the editor.
  * The selection is a range that has an orientation.
  */
-var selection_Selection = /** @class */ (function (_super) {
+var Selection = /** @class */ (function (_super) {
     selection_extends(Selection, _super);
     function Selection(selectionStartLineNumber, selectionStartColumn, positionLineNumber, positionColumn) {
         var _this = _super.call(this, selectionStartLineNumber, selectionStartColumn, positionLineNumber, positionColumn) || this;
@@ -7224,10 +7164,10 @@ var selection_Selection = /** @class */ (function (_super) {
         return new Selection(endLineNumber, endColumn, startLineNumber, startColumn);
     };
     return Selection;
-}(range_Range));
+}(Range));
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/core/token.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/core/token.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -7261,7 +7201,7 @@ var TokenizationResult2 = /** @class */ (function () {
 }());
 
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/standalone/standaloneEnums.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/standalone/standaloneEnums.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -8055,7 +7995,7 @@ var WrappingIndent;
     WrappingIndent[WrappingIndent["DeepIndent"] = 3] = "DeepIndent";
 })(WrappingIndent || (WrappingIndent = {}));
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/standalone/standaloneBase.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/standalone/standaloneBase.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -8070,7 +8010,7 @@ var WrappingIndent;
 
 
 
-var standaloneBase_KeyMod = /** @class */ (function () {
+var KeyMod = /** @class */ (function () {
     function KeyMod() {
     }
     KeyMod.chord = function (firstPart, secondPart) {
@@ -8088,21 +8028,21 @@ function createMonacoBaseAPI() {
         editor: undefined,
         languages: undefined,
         CancellationTokenSource: CancellationTokenSource,
-        Emitter: event_Emitter,
+        Emitter: Emitter,
         KeyCode: KeyCode,
-        KeyMod: standaloneBase_KeyMod,
+        KeyMod: KeyMod,
         Position: Position,
-        Range: range_Range,
-        Selection: selection_Selection,
+        Range: Range,
+        Selection: Selection,
         SelectionDirection: SelectionDirection,
         MarkerSeverity: MarkerSeverity,
         MarkerTag: MarkerTag,
-        Uri: uri_URI,
+        Uri: URI,
         Token: Token
     };
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/services/editorSimpleWorker.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/services/editorSimpleWorker.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -8173,7 +8113,7 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 /**
  * @internal
  */
-var editorSimpleWorker_MirrorModel = /** @class */ (function (_super) {
+var MirrorModel = /** @class */ (function (_super) {
     editorSimpleWorker_extends(MirrorModel, _super);
     function MirrorModel() {
         return _super !== null && _super.apply(this, arguments) || this;
@@ -8214,7 +8154,7 @@ var editorSimpleWorker_MirrorModel = /** @class */ (function (_super) {
     MirrorModel.prototype.getWordAtPosition = function (position, wordDefinition) {
         var wordAtText = getWordAtText(position.column, ensureValidWordDefinition(wordDefinition), this._lines[position.lineNumber - 1], 0);
         if (wordAtText) {
-            return new range_Range(position.lineNumber, wordAtText.startColumn, position.lineNumber, wordAtText.endColumn);
+            return new Range(position.lineNumber, wordAtText.startColumn, position.lineNumber, wordAtText.endColumn);
         }
         return null;
     };
@@ -8361,11 +8301,11 @@ var editorSimpleWorker_MirrorModel = /** @class */ (function (_super) {
         }
     };
     return MirrorModel;
-}(mirrorTextModel_MirrorTextModel));
+}(MirrorTextModel));
 /**
  * @internal
  */
-var editorSimpleWorker_EditorSimpleWorker = /** @class */ (function () {
+var EditorSimpleWorker = /** @class */ (function () {
     function EditorSimpleWorker(host, foreignModuleFactory) {
         this._host = host;
         this._models = Object.create(null);
@@ -8385,7 +8325,7 @@ var editorSimpleWorker_EditorSimpleWorker = /** @class */ (function () {
         return all;
     };
     EditorSimpleWorker.prototype.acceptNewModel = function (data) {
-        this._models[data.url] = new editorSimpleWorker_MirrorModel(uri_URI.parse(data.url), data.lines, data.EOL, data.versionId);
+        this._models[data.url] = new MirrorModel(URI.parse(data.url), data.lines, data.EOL, data.versionId);
     };
     EditorSimpleWorker.prototype.acceptModelChanged = function (strURL, e) {
         if (!this._models[strURL]) {
@@ -8456,7 +8396,7 @@ var editorSimpleWorker_EditorSimpleWorker = /** @class */ (function () {
                 lastEol = undefined;
                 edits = mergeSort(edits, function (a, b) {
                     if (a.range && b.range) {
-                        return range_Range.compareRangesUsingStarts(a.range, b.range);
+                        return Range.compareRangesUsingStarts(a.range, b.range);
                     }
                     // eol only changes should go to the end
                     var aRng = a.range ? 0 : 1;
@@ -8468,7 +8408,7 @@ var editorSimpleWorker_EditorSimpleWorker = /** @class */ (function () {
                     if (typeof eol === 'number') {
                         lastEol = eol;
                     }
-                    if (range_Range.isEmpty(range) && !text) {
+                    if (Range.isEmpty(range) && !text) {
                         // empty change
                         continue;
                     }
@@ -8484,7 +8424,7 @@ var editorSimpleWorker_EditorSimpleWorker = /** @class */ (function () {
                         continue;
                     }
                     changes = stringDiff(original, text, false);
-                    editOffset = model.offsetAt(range_Range.lift(range).getStartPosition());
+                    editOffset = model.offsetAt(Range.lift(range).getStartPosition());
                     for (_b = 0, changes_1 = changes; _b < changes_1.length; _b++) {
                         change = changes_1[_b];
                         start = model.positionAt(editOffset + change.originalStart);
@@ -8670,14 +8610,14 @@ var editorSimpleWorker_EditorSimpleWorker = /** @class */ (function () {
  * @internal
  */
 function editorSimpleWorker_create(host) {
-    return new editorSimpleWorker_EditorSimpleWorker(host, null);
+    return new EditorSimpleWorker(host, null);
 }
 if (typeof importScripts === 'function') {
     // Running in a web worker
     globals.monaco = createMonacoBaseAPI();
 }
 
-// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/editor.worker.js
+;// CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/editor.worker.js
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -8690,9 +8630,9 @@ function initialize(foreignModule) {
         return;
     }
     initialized = true;
-    var simpleWorker = new simpleWorker_SimpleWorkerServer(function (msg) {
+    var simpleWorker = new SimpleWorkerServer(function (msg) {
         self.postMessage(msg);
-    }, function (host) { return new editorSimpleWorker_EditorSimpleWorker(host, foreignModule); });
+    }, function (host) { return new EditorSimpleWorker(host, foreignModule); });
     self.onmessage = function (e) {
         simpleWorker.onmessage(e.data);
     };
@@ -8704,6 +8644,7 @@ self.onmessage = function (e) {
     }
 };
 
+})();
 
-/***/ })
-/******/ ]);
+/******/ })()
+;
