@@ -10,14 +10,14 @@
 import React, {useEffect, useState, useReducer, useCallback} from 'react';
 import Head from '@docusaurus/Head';
 import Layout from '@theme/Layout';
-import Worker from 'worker-loader!@site/src/workers/hermes.js';
+import HermesWorker from 'worker-loader!@site/src/workers/hermesWorker.js';
 import Code from '@site/src/components/Code';
 import Spinner from '@site/src/components/Spinner';
 import styles from './styles.module.css';
 
-let worker;
+let hermesWorker;
 if (typeof window !== 'undefined') {
-  worker = new Worker();
+  hermesWorker = new HermesWorker();
 }
 
 const initialState = {
@@ -32,7 +32,7 @@ function reducer(state, action) {
     case 'RUN':
       if (state.runRequested) return state;
       const args = action.args.split(/\s+/).filter(x => x);
-      worker.postMessage(['run', args, action.source]);
+      hermesWorker.postMessage(['run', args, action.source]);
       return {...state, runRequested: true, lastTime: new Date()};
     case 'RUN_COMPLETE':
       return {
@@ -55,7 +55,7 @@ function Playground() {
   const run = args => dispatch({tag: 'RUN', args, source});
 
   useEffect(() => {
-    worker.onmessage = e => {
+    hermesWorker.onmessage = e => {
       let [tag, payload] = e.data;
       switch (tag) {
         case 'runResult':
