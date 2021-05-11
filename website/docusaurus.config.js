@@ -3,6 +3,8 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
+ *
+ * @format
  */
 
 const path = require('path');
@@ -23,8 +25,8 @@ module.exports = {
         src: 'img/logo.svg',
       },
       items: [
-        { to: 'docs/building-and-running', label: 'Docs', position: 'left' },
-        { to: 'playground/', label: 'Playground', position: 'left' },
+        {to: 'docs/building-and-running', label: 'Docs', position: 'left'},
+        {to: 'playground/', label: 'Playground', position: 'left'},
         // Please keep GitHub link to the right for consistency.
         {
           href: 'https://github.com/facebook/hermes',
@@ -108,7 +110,7 @@ module.exports = {
     prism: {
       defaultLanguage: 'shell',
       theme: require('./src/prismTheme'),
-    }
+    },
   },
   presets: [
     [
@@ -117,8 +119,7 @@ module.exports = {
         docs: {
           showLastUpdateAuthor: false,
           showLastUpdateTime: true,
-          editUrl:
-            'https://github.com/facebook/hermes/blob/master/website/',
+          editUrl: 'https://github.com/facebook/hermes/blob/master/website/',
           path: '../doc',
           sidebarPath: require.resolve('./sidebars.json'),
         },
@@ -130,6 +131,6 @@ module.exports = {
   ],
   plugins: [
     path.join(__dirname, '/plugins/monaco-editor'),
-    path.join(__dirname, '/plugins/case-sensitive-paths')
+    path.join(__dirname, '/plugins/case-sensitive-paths'),
   ],
 };
