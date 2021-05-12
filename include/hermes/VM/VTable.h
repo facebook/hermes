@@ -131,6 +131,10 @@ struct VTable {
   /// Any metadata associated with heap snapshots.
   const HeapSnapshotMetadata snapshotMetaData;
 
+  /// Static array storing the VTable corresponding to each CellKind. This is
+  /// initialized by getMetadataTable.
+  static std::array<const VTable *, kNumCellKinds> vtableArray;
+
   constexpr explicit VTable(
       CellKind kind,
       uint32_t size,

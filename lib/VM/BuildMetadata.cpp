@@ -48,6 +48,22 @@ MetadataTable getMetadataTable() {
 #include "hermes/VM/CellKinds.def"
 #undef CELL_KIND
   };
+
+  // Once the storage is initialized, also initialize the global array of VTable
+  // pointers using the new metadata.
+  static std::once_flag flag;
+  std::call_once(flag, [] {
+    assert(
+        !VTable::vtableArray[0] &&
+        "VTable array should not be initialized before this point.");
+    VTable::vtableArray = {
+#define CELL_KIND(name) \
+  (*storage)[static_cast<uint8_t>(CellKind::name##Kind)].vtp_,
+#include "hermes/VM/CellKinds.def"
+#undef CELL_KIND
+    };
+  });
+
   return *storage;
 }
 
