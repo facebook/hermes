@@ -1695,12 +1695,17 @@ void HadesGC::prepareCompactee(bool forceCompaction) {
   llvh::Optional<size_t> compacteeIdx;
 #ifndef HERMESVM_SANITIZE_HANDLES
   // We should compact if the target size of the heap has fallen below its
-  // actual size, or if compaction was specifically requested.
-  if (forceCompaction || oldGen_.targetSizeBytes() < oldGen_.size()) {
+  // actual size. Since the selected segment will be removed from the heap, we
+  // only want to compact if there are at least 2 segments in the OG.
+  if ((forceCompaction || oldGen_.targetSizeBytes() < oldGen_.size()) &&
+      oldGen_.numSegments() > 1) {
     // Select the one with the fewest allocated bytes, to
-    // minimise scanning and copying.
+    // minimise scanning and copying. We intentionally avoid selecting the very
+    // last segment, since that is going to be the most recently added segment
+    // and is unlikely to be fragmented enough to be a good compaction
+    // candidate.
     uint64_t minBytes = HeapSegment::maxSize();
-    for (size_t i = 0; i < oldGen_.numSegments(); ++i) {
+    for (size_t i = 0; i < oldGen_.numSegments() - 1; ++i) {
       const size_t curBytes = oldGen_.allocatedBytes(i);
       if (curBytes < minBytes) {
         compacteeIdx = i;
