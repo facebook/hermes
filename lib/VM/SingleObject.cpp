@@ -14,12 +14,14 @@ void MathBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(
       JSObject::numOverlapSlots<SingleObject<CellKind::MathKind>>());
   ObjectBuildMeta(cell, mb);
+  mb.setVTable(&JSMath::vt.base);
 }
 
 void JSONBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(
       JSObject::numOverlapSlots<SingleObject<CellKind::JSONKind>>());
   ObjectBuildMeta(cell, mb);
+  mb.setVTable(&JSJSON::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE

@@ -322,10 +322,12 @@ void JSWeakMapImpl<C>::WeakMapOrSetBuildMeta(
 
 void WeakMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSWeakMapImpl<CellKind::WeakMapKind>::WeakMapOrSetBuildMeta(cell, mb);
+  mb.setVTable(&JSWeakMap::vt.base);
 }
 
 void WeakSetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSWeakMapImpl<CellKind::WeakSetKind>::WeakMapOrSetBuildMeta(cell, mb);
+  mb.setVTable(&JSWeakSet::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE

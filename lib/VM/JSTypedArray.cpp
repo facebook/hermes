@@ -315,6 +315,8 @@ void deserializeTypedArray(Deserializer &d, CellKind kind) {
 #define TYPED_ARRAY(name, type)                                          \
   void name##ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) { \
     TypedArrayBaseBuildMeta(cell, mb);                                   \
+    mb.setVTable(                                                        \
+        &JSTypedArray<type, CellKind::name##ArrayKind>::vt.base.base);   \
   }                                                                      \
   void name##ArraySerialize(Serializer &s, const GCCell *cell) {         \
     serializeTypedArrayBase(s, cell);                                    \
@@ -327,6 +329,8 @@ void deserializeTypedArray(Deserializer &d, CellKind kind) {
 #define TYPED_ARRAY(name, type)                                          \
   void name##ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) { \
     TypedArrayBaseBuildMeta(cell, mb);                                   \
+    mb.setVTable(                                                        \
+        &JSTypedArray<type, CellKind::name##ArrayKind>::vt.base.base);   \
   }
 #endif // HERMESVM_SERIALIZE
 #include "hermes/VM/TypedArrays.def"

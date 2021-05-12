@@ -31,10 +31,12 @@ void JSMapImpl<C>::MapOrSetBuildMeta(
 
 void MapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSMapImpl<CellKind::MapKind>::MapOrSetBuildMeta(cell, mb);
+  mb.setVTable(&JSMap::vt.base);
 }
 
 void SetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSMapImpl<CellKind::SetKind>::MapOrSetBuildMeta(cell, mb);
+  mb.setVTable(&JSSet::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -119,11 +121,13 @@ void JSMapIteratorImpl<C>::MapOrSetIteratorBuildMeta(
 void MapIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSMapIteratorImpl<CellKind::MapIteratorKind>::MapOrSetIteratorBuildMeta(
       cell, mb);
+  mb.setVTable(&JSMapIterator::vt.base);
 }
 
 void SetIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSMapIteratorImpl<CellKind::SetIteratorKind>::MapOrSetIteratorBuildMeta(
       cell, mb);
+  mb.setVTable(&JSSetIterator::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE

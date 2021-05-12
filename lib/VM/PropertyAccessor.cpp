@@ -16,6 +16,7 @@ const VTable PropertyAccessor::vt{
 
 void PropertyAccessorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const PropertyAccessor *>(cell);
+  mb.setVTable(&PropertyAccessor::vt);
   mb.addField("getter", &self->getter);
   mb.addField("setter", &self->setter);
 }

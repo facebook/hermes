@@ -33,6 +33,7 @@ const ObjectVTable JSDate::vt{
 void DateBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSDate>());
   ObjectBuildMeta(cell, mb);
+  mb.setVTable(&JSDate::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE

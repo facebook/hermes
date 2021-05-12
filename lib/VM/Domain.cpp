@@ -36,6 +36,7 @@ const VTable Domain::vt{
 
 void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const Domain *>(cell);
+  mb.setVTable(&Domain::vt);
   mb.addField("cjsModules", &self->cjsModules_);
   mb.addField("throwingRequire", &self->throwingRequire_);
 }
@@ -434,6 +435,7 @@ const ObjectVTable RequireContext::vt{
 void RequireContextBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<RequireContext>());
   ObjectBuildMeta(cell, mb);
+  mb.setVTable(&RequireContext::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE

@@ -33,6 +33,7 @@ void GeneratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSGenerator>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSGenerator *>(cell);
+  mb.setVTable(&JSGenerator::vt.base);
   mb.addField("innerFunction", &self->innerFunction_);
 }
 

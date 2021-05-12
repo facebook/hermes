@@ -38,6 +38,23 @@ const VTable HadesGC::OldGen::FreelistCell::vt{
     CellKind::FreelistKind,
     /*variableSize*/ 0};
 
+void FreelistBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.setVTable(&HadesGC::OldGen::FreelistCell::vt);
+}
+
+#ifdef HERMESVM_SERIALIZE
+void FreelistSerialize(Serializer &, const GCCell *) {
+  LLVM_DEBUG(
+      llvh::dbgs() << "Serialize function not implemented for FreelistCell\n");
+}
+
+void FreelistDeserialize(Deserializer &, CellKind) {
+  LLVM_DEBUG(
+      llvh::dbgs()
+      << "Deserialize function not implemented for FreelistCell\n");
+}
+#endif
+
 HadesGC::HeapSegment::HeapSegment(AlignedStorage storage)
     : AlignedHeapSegment{std::move(storage)} {
   // Make sure end() is at the maxSize.

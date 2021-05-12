@@ -242,6 +242,10 @@ struct Metadata final {
       return *jsObjectOverlapSlots_;
     }
 
+    void setVTable(const VTable *vtp) {
+      vtp_ = vtp;
+    }
+
     /// Build creates a Metadata, and destroys this builder.
     Metadata build();
 
@@ -264,17 +268,14 @@ struct Metadata final {
     /// For subclasses of JSObject, the number of unused direct property slots.
     OptValue<unsigned> jsObjectOverlapSlots_;
 
+    /// The VTable pointer for the cell that this metadata describes.
+    const VTable *vtp_{nullptr};
+
     friend Metadata;
   };
 
-  /// Construct an empty metadata.
-  Metadata() = default;
-  Metadata(Metadata &&);
   /// Construct from a builder.
   Metadata(Builder &&mb);
-  ~Metadata() = default;
-
-  Metadata &operator=(Metadata &&) = default;
 
   /// A mapping from an offset to a name for that field
   Fields pointers_;
@@ -285,6 +286,9 @@ struct Metadata final {
   /// The optional array for this object to hold.
   /// NOTE: this format currently does not support multiple arrays.
   OptValue<ArrayData> array_;
+
+  /// The VTable pointer for the cell that this metadata describes.
+  const VTable *vtp_;
 };
 
 /// @name Formatters

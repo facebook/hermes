@@ -82,6 +82,7 @@ void ProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSProxy>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSProxy *>(cell);
+  mb.setVTable(&JSProxy::vt.base);
   mb.addField("@target", &self->slots_.target);
   mb.addField("@handler", &self->slots_.handler);
 }

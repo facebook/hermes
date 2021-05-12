@@ -37,6 +37,7 @@ const ObjectVTable DecoratedObject::vt{
 void DecoratedObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<DecoratedObject>());
   ObjectBuildMeta(cell, mb);
+  mb.setVTable(&DecoratedObject::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE

@@ -34,6 +34,7 @@ const VTable SegmentedArray::Segment::vt(
 
 void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const SegmentedArray::Segment *>(cell);
+  mb.setVTable(&SegmentedArray::Segment::vt);
   mb.addArray("data", self->data_, &self->length_, sizeof(GCHermesValue));
 }
 
@@ -106,6 +107,7 @@ const VTable SegmentedArray::vt(
 
 void SegmentedArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const SegmentedArray *>(cell);
+  mb.setVTable(&SegmentedArray::vt);
   mb.addArray(
       "slots",
       self->inlineStorage(),

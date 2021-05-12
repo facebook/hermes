@@ -90,6 +90,7 @@ void DummyObject::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
 
 void DummyObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const testhelpers::DummyObject *>(cell);
+  mb.setVTable(&testhelpers::DummyObject::vt);
   mb.addField("HermesBool", &self->hvBool);
   mb.addField("HermesDouble", &self->hvDouble);
   mb.addField("HermesUndefined", &self->hvUndefined);

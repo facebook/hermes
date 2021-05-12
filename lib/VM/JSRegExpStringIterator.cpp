@@ -38,6 +38,7 @@ void RegExpStringIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       JSObject::numOverlapSlots<JSRegExpStringIterator>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSRegExpStringIterator *>(cell);
+  mb.setVTable(&JSRegExpStringIterator::vt.base);
   mb.addField("iteratedRegExp", &self->iteratedRegExp_);
   mb.addField("iteratedString", &self->iteratedString_);
 }

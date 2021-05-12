@@ -26,6 +26,7 @@ const VTable HashMapEntry::vt{
 
 void HashMapEntryBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const HashMapEntry *>(cell);
+  mb.setVTable(&HashMapEntry::vt);
   mb.addField("key", &self->key);
   mb.addField("value", &self->value);
   mb.addField("prevIterationEntry", &self->prevIterationEntry);
@@ -73,6 +74,7 @@ const VTable OrderedHashMap::vt{
 
 void OrderedHashMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const OrderedHashMap *>(cell);
+  mb.setVTable(&OrderedHashMap::vt);
   mb.addField("hashTable", &self->hashTable_);
   mb.addField("firstIterationEntry", &self->firstIterationEntry_);
   mb.addField("lastIterationEntry", &self->lastIterationEntry_);

@@ -54,6 +54,7 @@ const ObjectVTable JSRegExp::vt{
 void RegExpBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSRegExp>());
   ObjectBuildMeta(cell, mb);
+  mb.setVTable(&JSRegExp::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE

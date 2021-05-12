@@ -385,6 +385,8 @@ class HadesGC final : public GCBase {
     }
 
     class FreelistCell final : public VariableSizeRuntimeCell {
+      friend void FreelistBuildMeta(const GCCell *, Metadata::Builder &);
+
      private:
       static const VTable vt;
 

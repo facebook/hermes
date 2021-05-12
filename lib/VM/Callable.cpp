@@ -31,6 +31,7 @@ const VTable Environment::vt{CellKind::EnvironmentKind, 0};
 
 void EnvironmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const Environment *>(cell);
+  mb.setVTable(&Environment::vt);
   mb.addField("parentEnvironment", &self->parentEnvironment_);
   mb.addArray(self->getSlots(), &self->size_, sizeof(GCHermesValue));
 }
@@ -69,6 +70,7 @@ void CallableBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<Callable>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const Callable *>(cell);
+  mb.setVTable(&Callable::vt.base);
   mb.addField("environment", &self->environment_);
 }
 
@@ -520,6 +522,7 @@ void BoundFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<BoundFunction>());
   CallableBuildMeta(cell, mb);
   const auto *self = static_cast<const BoundFunction *>(cell);
+  mb.setVTable(&BoundFunction::vt.base.base);
   mb.addField("target", &self->target_);
   mb.addField("argStorage", &self->argStorage_);
 }
@@ -924,6 +927,7 @@ const CallableVTable NativeFunction::vt{
 void NativeFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<NativeFunction>());
   CallableBuildMeta(cell, mb);
+  mb.setVTable(&NativeFunction::vt.base.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -1112,6 +1116,7 @@ const CallableVTable NativeConstructor::vt{
 void NativeConstructorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<NativeConstructor>());
   NativeFunctionBuildMeta(cell, mb);
+  mb.setVTable(&NativeConstructor::vt.base.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -1226,6 +1231,7 @@ void FunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   CallableBuildMeta(cell, mb);
   const auto *self = static_cast<const JSFunction *>(cell);
   mb.addField("domain", &self->domain_);
+  mb.setVTable(&JSFunction::vt.base.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -1367,6 +1373,7 @@ const CallableVTable JSAsyncFunction::vt{
 void AsyncFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSAsyncFunction>());
   FunctionBuildMeta(cell, mb);
+  mb.setVTable(&JSAsyncFunction::vt.base.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -1441,6 +1448,7 @@ const CallableVTable JSGeneratorFunction::vt{
 void GeneratorFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSGeneratorFunction>());
   FunctionBuildMeta(cell, mb);
+  mb.setVTable(&JSGeneratorFunction::vt.base.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -1521,6 +1529,7 @@ void GeneratorInnerFunctionBuildMeta(
       JSObject::numOverlapSlots<GeneratorInnerFunction>());
   FunctionBuildMeta(cell, mb);
   const auto *self = static_cast<const GeneratorInnerFunction *>(cell);
+  mb.setVTable(&GeneratorInnerFunction::vt.base.base);
   mb.addField("savedContext", &self->savedContext_);
   mb.addField("result", &self->result_);
 }

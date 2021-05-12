@@ -389,6 +389,7 @@ const ObjectVTable Arguments::vt{
 void ArgumentsBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<Arguments>());
   ArrayImplBuildMeta(cell, mb);
+  mb.setVTable(&Arguments::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -519,6 +520,7 @@ const ObjectVTable JSArray::vt{
 void ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSArray>());
   ArrayImplBuildMeta(cell, mb);
+  mb.setVTable(&JSArray::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -778,6 +780,7 @@ void ArrayIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSArrayIterator>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSArrayIterator *>(cell);
+  mb.setVTable(&JSArrayIterator::vt.base);
   mb.addField("iteratedObject", &self->iteratedObject_);
 }
 

@@ -51,6 +51,7 @@ void ObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSObject>());
 
   const auto *self = static_cast<const JSObject *>(cell);
+  mb.setVTable(&JSObject::vt.base);
   mb.addField("parent", &self->parent_);
   mb.addField("class", &self->clazz_);
   mb.addField("propStorage", &self->propStorage_);

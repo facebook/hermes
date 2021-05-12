@@ -423,6 +423,18 @@ class DynamicStringPrimitive final
   friend class llvh::TrailingObjects<DynamicStringPrimitive<T, Uniqued>, T>;
   friend class StringBuilder;
   friend class StringPrimitive;
+  friend void DynamicASCIIStringPrimitiveBuildMeta(
+      const GCCell *,
+      Metadata::Builder &);
+  friend void DynamicUTF16StringPrimitiveBuildMeta(
+      const GCCell *,
+      Metadata::Builder &);
+  friend void DynamicUniquedASCIIStringPrimitiveBuildMeta(
+      const GCCell *,
+      Metadata::Builder &);
+  friend void DynamicUniquedUTF16StringPrimitiveBuildMeta(
+      const GCCell *,
+      Metadata::Builder &);
   using OptSymbolStringPrimitive<Uniqued>::isExternalLength;
   using OptSymbolStringPrimitive<Uniqued>::getStringLength;
 
@@ -525,6 +537,12 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
       Runtime *runtime,
       Handle<StringPrimitive> leftHnd,
       Handle<StringPrimitive> rightHnd);
+  friend void ExternalASCIIStringPrimitiveBuildMeta(
+      const GCCell *,
+      Metadata::Builder &);
+  friend void ExternalUTF16StringPrimitiveBuildMeta(
+      const GCCell *,
+      Metadata::Builder &);
 
   using Ref = llvh::ArrayRef<T>;
   using StdString = std::basic_string<T>;

@@ -47,6 +47,7 @@ const ObjectVTable JSArrayBuffer::vt{
 void ArrayBufferBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSArrayBuffer>());
   ObjectBuildMeta(cell, mb);
+  mb.setVTable(&JSArrayBuffer::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE

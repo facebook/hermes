@@ -34,11 +34,13 @@ const VTable ArrayStorageBase<HVType>::vt(
 
 void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const ArrayStorage *>(cell);
+  mb.setVTable(&ArrayStorage::vt);
   mb.addArray("storage", self->data(), &self->size_, sizeof(GCHermesValue));
 }
 
 void ArrayStorageSmallBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const ArrayStorageSmall *>(cell);
+  mb.setVTable(&ArrayStorageSmall::vt);
   mb.addArray(
       "storage", self->data(), &self->size_, sizeof(GCSmallHermesValue));
 }

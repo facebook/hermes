@@ -34,6 +34,7 @@ void CallableProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSCallableProxy>());
   NativeFunctionBuildMeta(cell, mb);
   const auto *self = static_cast<const JSCallableProxy *>(cell);
+  mb.setVTable(&JSCallableProxy::vt.base.base);
   mb.addField("@target", &self->slots_.target);
   mb.addField("@handler", &self->slots_.handler);
 }

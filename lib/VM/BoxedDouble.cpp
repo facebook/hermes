@@ -16,7 +16,9 @@ namespace vm {
 const VTable BoxedDouble::vt{
     CellKind::BoxedDoubleKind,
     cellSize<BoxedDouble>()};
-void BoxedDoubleBuildMeta(const GCCell *cell, Metadata::Builder &mb) {}
+void BoxedDoubleBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.setVTable(&BoxedDouble::vt);
+}
 
 #ifdef HERMESVM_SERIALIZE
 void BoxedDoubleSerialize(Serializer &s, const GCCell *cell) {

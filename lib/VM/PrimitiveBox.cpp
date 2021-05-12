@@ -34,6 +34,7 @@ const ObjectVTable JSString::vt{
 void StringObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSString>());
   ObjectBuildMeta(cell, mb);
+  mb.setVTable(&JSString::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -206,6 +207,7 @@ void StringIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSStringIterator>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSStringIterator *>(cell);
+  mb.setVTable(&JSStringIterator::vt.base);
   mb.addField("iteratedString", &self->iteratedString_);
 }
 
@@ -322,6 +324,7 @@ const ObjectVTable JSNumber::vt{
 void NumberObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSNumber>());
   ObjectBuildMeta(cell, mb);
+  mb.setVTable(&JSNumber::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -371,6 +374,7 @@ const ObjectVTable JSBoolean::vt{
 void BooleanObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSBoolean>());
   ObjectBuildMeta(cell, mb);
+  mb.setVTable(&JSBoolean::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -420,6 +424,7 @@ const ObjectVTable JSSymbol::vt{
 void SymbolObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSSymbol>());
   ObjectBuildMeta(cell, mb);
+  mb.setVTable(&JSSymbol::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
