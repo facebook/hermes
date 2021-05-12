@@ -125,9 +125,9 @@ class RootAndSlotAcceptorWithNamesDefault
   PointerBase *pointerBase_;
 };
 
-class WeakRootAcceptorDefault : public WeakRootAcceptor {
+class WeakAcceptorDefault : public WeakRefAcceptor, public WeakRootAcceptor {
  public:
-  explicit WeakRootAcceptorDefault(PointerBase *base)
+  explicit WeakAcceptorDefault(PointerBase *base)
       : pointerBaseForWeakRoot_(base) {}
 
   void acceptWeak(WeakRootBase &ptr) final;
@@ -161,14 +161,14 @@ inline void RootAndSlotAcceptorDefault::accept(BasedPointer &ptr) {
   ptr = pointerBase_->pointerToBased(actualizedPointer);
 }
 
-inline void WeakRootAcceptorDefault::acceptWeak(WeakRootBase &ptr) {
+inline void WeakAcceptorDefault::acceptWeak(WeakRootBase &ptr) {
   GCPointerBase::StorageType weakRootStorage = ptr.getNoBarrierUnsafe();
   acceptWeak(weakRootStorage);
   // Assign back to the input pointer location.
   ptr = weakRootStorage;
 }
 
-inline void WeakRootAcceptorDefault::acceptWeak(BasedPointer &ptr) {
+inline void WeakAcceptorDefault::acceptWeak(BasedPointer &ptr) {
   if (!ptr) {
     return;
   }

@@ -327,12 +327,12 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
 };
 
 struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
-                                     public WeakRootAcceptorDefault {
+                                     public WeakAcceptorDefault {
   using SnapshotAcceptor::accept;
   using WeakRootAcceptor::acceptWeak;
 
   SnapshotRootSectionAcceptor(PointerBase *base, HeapSnapshot &snap)
-      : SnapshotAcceptor(base, snap), WeakRootAcceptorDefault(base) {}
+      : SnapshotAcceptor(base, snap), WeakAcceptorDefault(base) {}
 
   void accept(GCCell *&, const char *) override {
     // While adding edges to root sections, there's no need to do anything for
@@ -365,13 +365,13 @@ struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
 };
 
 struct SnapshotRootAcceptor : public SnapshotAcceptor,
-                              public WeakRootAcceptorDefault {
+                              public WeakAcceptorDefault {
   using SnapshotAcceptor::accept;
   using WeakRootAcceptor::acceptWeak;
 
   SnapshotRootAcceptor(GCBase &gc, HeapSnapshot &snap)
       : SnapshotAcceptor(gc.getPointerBase(), snap),
-        WeakRootAcceptorDefault(gc.getPointerBase()),
+        WeakAcceptorDefault(gc.getPointerBase()),
         gc_(gc) {}
 
   void accept(GCCell *&ptr, const char *name) override {

@@ -67,8 +67,6 @@ struct YoungGen::EvacAcceptor final : public RootAndSlotAcceptorDefault,
       wr = nullptr;
     }
   }
-
-  void accept(WeakRefBase &wr) override {}
 };
 
 } // namespace vm

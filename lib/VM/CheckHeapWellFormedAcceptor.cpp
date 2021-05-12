@@ -17,7 +17,7 @@ namespace vm {
 
 CheckHeapWellFormedAcceptor::CheckHeapWellFormedAcceptor(GCBase &gc)
     : RootAndSlotAcceptorDefault(gc.getPointerBase()),
-      WeakRootAcceptorDefault(gc.getPointerBase()),
+      WeakAcceptorDefault(gc.getPointerBase()),
       gc(gc) {}
 
 void CheckHeapWellFormedAcceptor::accept(GCCell *&ptr) {

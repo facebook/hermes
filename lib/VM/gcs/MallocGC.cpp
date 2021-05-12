@@ -29,7 +29,7 @@ namespace vm {
 static const char *kGCName = "malloc";
 
 struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
-                                         public WeakRootAcceptorDefault {
+                                         public WeakAcceptorDefault {
   MallocGC &gc;
   std::vector<CellHeader *> worklist_;
 
@@ -44,7 +44,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
 
   MarkingAcceptor(MallocGC &gc)
       : RootAndSlotAcceptorDefault(gc.getPointerBase()),
-        WeakRootAcceptorDefault(gc.getPointerBase()),
+        WeakAcceptorDefault(gc.getPointerBase()),
         gc(gc),
         markedSymbols_(gc.gcCallbacks_->getSymbolsEnd()) {}
 

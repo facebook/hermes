@@ -127,7 +127,7 @@ struct RootAndSlotAcceptorWithNames : public RootAndSlotAcceptor {
       const std::function<void(HeapSnapshot &)> &func) {}
 };
 
-struct WeakRootAcceptor : public WeakRefAcceptor, RootSectionAcceptor {
+struct WeakRootAcceptor : RootSectionAcceptor {
   ~WeakRootAcceptor() override = default;
 
   /// NOTE: This is called acceptWeak in order to avoid clashing with accept

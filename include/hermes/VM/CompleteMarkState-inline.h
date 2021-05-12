@@ -59,14 +59,14 @@ struct CompleteMarkState::FullMSCMarkTransitiveAcceptor final
 /// This acceptor is used for updating pointers via forwarding pointers
 /// in mark/sweep/compact.
 struct FullMSCUpdateAcceptor final : public RootAndSlotAcceptorDefault,
-                                     public WeakRootAcceptorDefault {
+                                     public WeakAcceptorDefault {
   GenGC &gc;
   using RootAndSlotAcceptorDefault::accept;
-  using WeakRootAcceptorDefault::acceptWeak;
+  using WeakAcceptorDefault::acceptWeak;
 
   FullMSCUpdateAcceptor(GenGC &gc)
       : RootAndSlotAcceptorDefault(gc.getPointerBase()),
-        WeakRootAcceptorDefault(gc.getPointerBase()),
+        WeakAcceptorDefault(gc.getPointerBase()),
         gc(gc) {}
 
   void accept(GCCell *&ptr) override {

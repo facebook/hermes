@@ -383,13 +383,10 @@ HadesGC::CollectionStats::~CollectionStats() {
 
 template <bool CompactionEnabled>
 class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
-                                    public WeakRootAcceptorDefault {
+                                    public WeakRootAcceptor {
  public:
   EvacAcceptor(HadesGC &gc)
-      : WeakRootAcceptorDefault{gc.getPointerBase()},
-        gc{gc},
-        copyListHead_{nullptr},
-        isTrackingIDs_{gc.isTrackingIDs()} {}
+      : gc{gc}, copyListHead_{nullptr}, isTrackingIDs_{gc.isTrackingIDs()} {}
 
   ~EvacAcceptor() {}
 
@@ -494,7 +491,12 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     }
   }
 
-  void acceptWeak(GCCell *&ptr) override {
+  void acceptWeak(WeakRootBase &wr) override {
+    // It's safe to not do a read barrier here since this is happening in the GC
+    // and does not extend the lifetime of the referent.
+    GCCell *const ptr = GCPointerBase::storageTypeToPointer(
+        wr.getNoBarrierUnsafe(), gc.getPointerBase());
+
     if (!shouldForward(ptr))
       return;
 
@@ -502,18 +504,16 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
       // Get the forwarding pointer from the header of the object.
       GCCell *const forwardedCell = ptr->getMarkedForwardingPointer();
       assert(forwardedCell->isValid() && "Cell was forwarded incorrectly");
-      ptr = forwardedCell;
+      // Assign back to the input pointer location.
+      wr = GCPointerBase::pointerToStorageType(
+          forwardedCell, gc.getPointerBase());
     } else {
-      ptr = nullptr;
+      wr = nullptr;
     }
   }
 
   void accept(const RootSymbolID &sym) override {}
   void accept(const GCSymbolID &sym) override {}
-
-  /// There is no need to do anything with WeakRefs, since they are not
-  /// collected in a YG/compaction pass.
-  void accept(WeakRefBase &wr) override {}
 
   uint64_t evacuatedBytes() const {
     return evacuatedBytes_;
@@ -1009,17 +1009,6 @@ class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
     }
     // Reset weak root if target GCCell is dead.
     ptrStorage = nullptr;
-  }
-
-  void accept(WeakRefBase &wr) override {
-    // Duplicated from MarkAcceptor, since some weak roots are also weak refs.
-    WeakRefSlot *slot = wr.unsafeGetSlot();
-    assert(
-        slot->state() != WeakSlotState::Free &&
-        "marking a freed weak ref slot");
-    if (slot->state() != WeakSlotState::Marked) {
-      slot->mark();
-    }
   }
 
  private:
