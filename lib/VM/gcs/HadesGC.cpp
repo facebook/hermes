@@ -212,7 +212,7 @@ void HadesGC::HeapSegment::forCompactedObjs(CallbackFunction callback) {
       // This cell has been evacuated, do nothing.
       cell = reinterpret_cast<GCCell *>(
           reinterpret_cast<char *>(cell) +
-          static_cast<CopyListCell *>(cell)->originalSize_);
+          cell->getMarkedForwardingPointer()->getAllocatedSize());
     } else {
       // This cell is being compacted away, call the callback on it.
       // NOTE: We do not check if it is a FreelistCell here in order to avoid
@@ -410,35 +410,23 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
       return;
     }
     assert(cell->isValid() && "Encountered an invalid cell");
-    const auto originalSize = cell->getAllocatedSize();
-    // If a cell is from a compacting segment, trim it before moving to a new
-    // location.
-    const auto sz = CompactionEnabled && gc.compactee_.evacContains(cell)
-        ? cell->getVT()->getTrimmedSize(cell, originalSize)
-        : originalSize;
+    const auto cellSize = cell->getAllocatedSize();
     // Newly discovered cell, first forward into the old gen.
-    GCCell *const newCell = gc.oldGen_.alloc(sz);
+    GCCell *const newCell = gc.oldGen_.alloc(cellSize);
     HERMES_SLOW_ASSERT(
         gc.inOldGen(newCell) && "Evacuated cell not in the old gen");
     assert(
         HeapSegment::getCellMarkBit(newCell) &&
         "Cell must be marked when it is allocated into the old gen");
     // Copy the contents of the existing cell over before modifying it.
-    std::memcpy(newCell, cell, sz);
+    std::memcpy(newCell, cell, cellSize);
     assert(newCell->isValid() && "Cell was copied incorrectly");
-    if (originalSize != sz) {
-      auto *const newVarSizeCell =
-          static_cast<VariableSizeRuntimeCell *>(newCell);
-      newVarSizeCell->setSizeFromGC(sz);
-      newVarSizeCell->getVT()->trim(newVarSizeCell);
-    }
-    evacuatedBytes_ += sz;
+    evacuatedBytes_ += cellSize;
     CopyListCell *const copyCell = static_cast<CopyListCell *>(cell);
-    copyCell->originalSize_ = originalSize;
     // Set the forwarding pointer in the old spot
     copyCell->setMarkedForwardingPointer(newCell);
     if (isTrackingIDs_) {
-      gc.moveObject(cell, originalSize, newCell, sz);
+      gc.moveObject(cell, cellSize, newCell, cellSize);
     }
     // Push onto the copied list.
     push(copyCell);
@@ -1693,7 +1681,6 @@ void HadesGC::prepareCompactee(bool forceCompaction) {
     return;
 
   llvh::Optional<size_t> compacteeIdx;
-#ifndef HERMESVM_SANITIZE_HANDLES
   // We should compact if the target size of the heap has fallen below its
   // actual size. Since the selected segment will be removed from the heap, we
   // only want to compact if there are at least 2 segments in the OG.
@@ -1713,10 +1700,9 @@ void HadesGC::prepareCompactee(bool forceCompaction) {
       }
     }
   }
-#else
-  // Handle-SAN forces a compaction to happen anyway.
-  (void)forceCompaction;
-  if (oldGen_.numSegments()) {
+#ifdef HERMESVM_SANITIZE_HANDLES
+  // Handle-SAN forces a compaction on random segments to move the heap.
+  if (sanitizeRate_ && oldGen_.numSegments()) {
     std::uniform_int_distribution<> distrib(0, oldGen_.numSegments() - 1);
     compacteeIdx = distrib(randomEngine_);
   }

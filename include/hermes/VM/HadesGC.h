@@ -267,10 +267,6 @@ class HadesGC final : public GCBase {
   struct CopyListCell final : public GCCell {
     // Linked list of cells pointing to the next cell that was copied.
     CopyListCell *next_;
-    // If the cell was trimmed, this field will have the original size of the
-    // object stored. If the cell wasn't trimmed it'll have the same size as the
-    // forwarded pointer.
-    uint32_t originalSize_;
   };
 
   /// Similar to AlignedHeapSegment except it uses a free list.
