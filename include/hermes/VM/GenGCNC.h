@@ -929,7 +929,7 @@ class GenGC final : public GCBase {
   WeakRefSlot *firstFreeWeak_{nullptr};
 
   /// VTable pointers overwritten with forwarding pointers are stored here.
-  std::vector<const VTable *> displacedVtablePtrs_;
+  std::vector<KindAndSize> displacedKinds_;
 
   /// Status by kind of collection.
   CumulativeHeapStats youngGenCollectionCumStats_;

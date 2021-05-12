@@ -20,13 +20,13 @@ namespace vm {
 /// Holds the state of a collection's sweep phase over all segments managed by
 /// the GC.
 struct SweepResult {
-  /// Type used for incrementally processing the displaced VTable pointers.
-  using VTablesRemaining =
-      ConsumableRange<std::vector<const VTable *>::const_iterator>;
+  /// Type used for incrementally processing the displaced KindAndSize values.
+  using KindAndSizesRemaining =
+      ConsumableRange<std::vector<KindAndSize>::const_iterator>;
 
   /// The VTable pointers that were displaced in order to write forwarding
   /// pointers, in the order they were displaced.
-  std::vector<const VTable *> displacedVtablePtrs;
+  std::vector<KindAndSize> displacedKinds;
 
   /// An abstraction over the space available to compact into, as well as how
   /// much to use, and the next address to compact into.

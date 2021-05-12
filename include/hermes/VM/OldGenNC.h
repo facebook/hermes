@@ -294,7 +294,9 @@ class OldGen : public GCGeneration {
   void sweepAndInstallForwardingPointers(GenGC *gc, SweepResult *sweepResult);
 
   /// See GCGeneration.h for more information.
-  void updateReferences(GenGC *gc, SweepResult::VTablesRemaining &vTables);
+  void updateReferences(
+      GenGC *gc,
+      SweepResult::KindAndSizesRemaining &kindAndSizes);
 
   /// See GCGeneration.h for more information.
   void recordLevelAfterCompaction(

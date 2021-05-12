@@ -749,15 +749,14 @@ void GenGC::updateReferences(const SweepResult &sweepResult) {
   markRoots(nameAcceptor, /*markLongLived*/ true);
   markWeakRoots(*acceptor, /*markLongLived*/ true);
 
-  SweepResult::VTablesRemaining vTables(
-      sweepResult.displacedVtablePtrs.begin(),
-      sweepResult.displacedVtablePtrs.end());
+  SweepResult::KindAndSizesRemaining kindAndSizes(
+      sweepResult.displacedKinds.begin(), sweepResult.displacedKinds.end());
 
   // We swept the old gen into itself before sweeping the young gen.  We must
   // preserve this order here, to match up cells with their displaced VTable
   // pointers.
-  oldGen_.updateReferences(this, vTables);
-  youngGen_.updateReferences(this, vTables);
+  oldGen_.updateReferences(this, kindAndSizes);
+  youngGen_.updateReferences(this, kindAndSizes);
 
   updateWeakReferences(/*fullGC*/ true);
   updateReferencesSecs_ +=
@@ -771,9 +770,8 @@ void GenGC::compact(const SweepResult &sweepResult) {
 
   auto &compactionResult = sweepResult.compactionResult;
 
-  SweepResult::VTablesRemaining vTables(
-      sweepResult.displacedVtablePtrs.begin(),
-      sweepResult.displacedVtablePtrs.end());
+  SweepResult::KindAndSizesRemaining kindAndSizes(
+      sweepResult.displacedKinds.begin(), sweepResult.displacedKinds.end());
 
   CompactionResult::ChunksRemaining chunks(
       compactionResult.usedChunks().begin(),
@@ -783,8 +781,8 @@ void GenGC::compact(const SweepResult &sweepResult) {
   // preserve this order here, so that we re-associate the correct VTable
   // pointers, and match up the chunks we used with the segments they were
   // created from.
-  auto doCompaction = [&vTables](GenGCHeapSegment &segment) {
-    segment.compact(vTables);
+  auto doCompaction = [&kindAndSizes](GenGCHeapSegment &segment) {
+    segment.compact(kindAndSizes);
   };
 
   oldGen_.forUsedSegments(doCompaction);
@@ -793,7 +791,7 @@ void GenGC::compact(const SweepResult &sweepResult) {
   oldGen_.recordLevelAfterCompaction(chunks);
   youngGen_.recordLevelAfterCompaction(chunks);
 
-  assert(!vTables.hasNext() && "Not all vtable pointers replaced.");
+  assert(!kindAndSizes.hasNext() && "Not all vtable pointers replaced.");
   assert(!chunks.hasNext() && "Not all chunks written back to their segments.");
 
   youngGen_.compactFinalizableObjectList();

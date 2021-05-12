@@ -117,13 +117,13 @@ void YoungGen::sweepAndInstallForwardingPointers(
 
 void YoungGen::updateReferences(
     GenGC *gc,
-    SweepResult::VTablesRemaining &vTables) {
+    SweepResult::KindAndSizesRemaining &kindAndSizes) {
   auto acceptor = getFullMSCUpdateAcceptor(*gc);
 
   // Update reachable cells with finalizers to their after-compaction location.
   updateFinalizableCellListReferences();
 
-  activeSegment().updateReferences(gc, acceptor.get(), vTables);
+  activeSegment().updateReferences(gc, acceptor.get(), kindAndSizes);
 }
 
 void YoungGen::compactFinalizableObjectList() {

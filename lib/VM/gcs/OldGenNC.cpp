@@ -564,10 +564,10 @@ void OldGen::sweepAndInstallForwardingPointers(
 
 void OldGen::updateReferences(
     GenGC *gc,
-    SweepResult::VTablesRemaining &vTables) {
+    SweepResult::KindAndSizesRemaining &kindAndSizes) {
   auto acceptor = getFullMSCUpdateAcceptor(*gc);
-  forUsedSegments([&acceptor, gc, &vTables](GenGCHeapSegment &segment) {
-    segment.updateReferences(gc, acceptor.get(), vTables);
+  forUsedSegments([&acceptor, gc, &kindAndSizes](GenGCHeapSegment &segment) {
+    segment.updateReferences(gc, acceptor.get(), kindAndSizes);
   });
   updateFinalizableCellListReferences();
 }

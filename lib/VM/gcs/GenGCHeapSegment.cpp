@@ -104,19 +104,20 @@ void GenGCHeapSegment::deleteDeadObjectIDs(GenGC *gc) {
 void GenGCHeapSegment::updateReferences(
     GenGC *gc,
     FullMSCUpdateAcceptor *acceptor,
-    SweepResult::VTablesRemaining &vTables) {
+    SweepResult::KindAndSizesRemaining &kindAndSizes) {
   MarkBitArrayNC &markBits = markBitArray();
   char *ptr = start();
   size_t ind = markBits.addressToIndex(ptr);
   while (ptr < level()) {
     if (markBits.at(ind)) {
       GCCell *cell = reinterpret_cast<GCCell *>(ptr);
-      // Get the VTable.
-      assert(vTables.hasNext() && "Need a displaced vtable pointer");
-      const VTable *vtp = vTables.next();
+      // Get the KindAndSize.
+      assert(kindAndSizes.hasNext() && "Need a displaced KindAndSize");
+      const auto kindAndSize = kindAndSizes.next();
+      const VTable *vtp = kindAndSize.getVT();
       // Scan the pointer fields, updating via forwarding pointers.
       gc->markCell(cell, vtp, *acceptor);
-      uint32_t cellSize = cell->getAllocatedSize(vtp);
+      uint32_t cellSize = kindAndSize.getSize();
       ptr += cellSize;
       ind += (cellSize >> LogHeapAlign);
     } else {
@@ -127,7 +128,8 @@ void GenGCHeapSegment::updateReferences(
   }
 }
 
-void GenGCHeapSegment::compact(SweepResult::VTablesRemaining &vTables) {
+void GenGCHeapSegment::compact(
+    SweepResult::KindAndSizesRemaining &kindAndSizes) {
   // If we're using ASAN, we've poisoned the unallocated portion of the space;
   // unpoison that now, since we may copy into it.
   __asan_unpoison_memory_region(level(), end() - level());
@@ -140,8 +142,8 @@ void GenGCHeapSegment::compact(SweepResult::VTablesRemaining &vTables) {
       // Read the new address from the forwarding pointer.
       char *newAddr = reinterpret_cast<char *>(cell->getForwardingPointer());
       // Put back the vtable.
-      assert(vTables.hasNext() && "Need a displaced vtable pointer");
-      cell->setVT(vTables.next());
+      assert(kindAndSizes.hasNext() && "Need a displaced vtable pointer");
+      cell->setVT(kindAndSizes.next().getVT());
       assert(
           cell->isValid() &&
           "Cell was invalid after placing the vtable back in");
@@ -229,7 +231,8 @@ void GenGCHeapSegment::sweepAndInstallForwardingPointers(
         new (adjacentPtr) DeadRegion(ptr - adjacentPtr);
       }
 
-      sweepResult->displacedVtablePtrs.push_back(cell->getVT());
+      sweepResult->displacedKinds.push_back(
+          KindAndSize(cell->getKind(), cell->getAllocatedSize()));
       cell->setForwardingPointer(reinterpret_cast<GCCell *>(res.ptr));
       if (gc->isTrackingIDs()) {
         gc->moveObject(
