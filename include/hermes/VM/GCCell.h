@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_GCCELL_H
 #define HERMES_VM_GCCELL_H
 
+#include "hermes/Support/Algorithms.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/VTable.h"
@@ -32,6 +33,46 @@ static constexpr uint32_t cellSize() {
   static_assert(HeapAlign % alignof(C) == 0, "insufficient heap alignment");
   return heapAlignSize(C::template cellSizeImpl<C>());
 }
+
+/// This class stores a CellKind and the size of a cell in 32 bits.
+class KindAndSize {
+ public:
+  size_t getSize() const {
+    return size_;
+  }
+  CellKind getKind() const {
+    return static_cast<CellKind>(kind_);
+  }
+  const VTable *getVT() const {
+    return VTable::vtableArray[kind_];
+  }
+  KindAndSize(CellKind kind, size_t sz)
+      : size_(sz), kind_(static_cast<uint8_t>(kind)) {
+    assert((sz & 1) == 0 && "LSB of size must always be zero.");
+  }
+
+  static constexpr uint32_t maxSize() {
+    return (1ULL << kNumSizeBits) - 1;
+  }
+
+ private:
+  static constexpr size_t kNumBits = sizeof(uintptr_t) * 8;
+  static constexpr size_t kNumKindBits = 8;
+  // On 64 bit platforms, just make the size 32 bits so that it can be accessed
+  // without any masking or shifting.
+  static constexpr size_t kNumSizeBits =
+      min<size_t>(kNumBits - kNumKindBits, 32);
+  static_assert(
+      kNumCellKinds < 256,
+      "More cell kinds than available kind bits.");
+
+  /// The size of the cell. Due to heap alignment, we are guaranteed that the
+  /// least significant bit will always be zero, so it can be used for the
+  /// mark bit. In order for that to work, this has to come first.
+  uintptr_t size_ : kNumSizeBits;
+  /// The CellKind of the cell.
+  uintptr_t kind_ : kNumKindBits;
+};
 
 /// This include file defines a GCCell that allows forward heap
 /// traversal in a contiguous space: given a pointer to the head, you
