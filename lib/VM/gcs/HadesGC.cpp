@@ -2750,7 +2750,7 @@ void HadesGC::scanDirtyCardsForSegment(
 
     // Mark the first object with respect to the dirty card boundaries.
     if (visitUnmarked || HeapSegment::getCellMarkBit(obj))
-      markCellWithinRange(visitor, obj, obj->getVT(), begin, end);
+      markCellWithinRange(visitor, obj, obj->getKind(), begin, end);
 
     obj = obj->nextCell();
     // If there are additional objects in this card, scan them.
@@ -2762,7 +2762,7 @@ void HadesGC::scanDirtyCardsForSegment(
       for (GCCell *next = obj->nextCell(); next < boundary;
            next = next->nextCell()) {
         if (visitUnmarked || HeapSegment::getCellMarkBit(obj))
-          markCell(visitor, obj, obj->getVT());
+          markCell(visitor, obj, obj->getKind());
         obj = next;
       }
 
@@ -2772,7 +2772,7 @@ void HadesGC::scanDirtyCardsForSegment(
           obj < boundary && obj->nextCell() >= boundary &&
           "Last object in card must touch or cross cross the card boundary");
       if (visitUnmarked || HeapSegment::getCellMarkBit(obj))
-        markCellWithinRange(visitor, obj, obj->getVT(), begin, end);
+        markCellWithinRange(visitor, obj, obj->getKind(), begin, end);
     }
 
     from = iEnd;

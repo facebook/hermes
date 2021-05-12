@@ -105,52 +105,52 @@ constexpr uint32_t GCBase::minAllocationSize() {
 template <typename Acceptor>
 void GCBase::markWeakRefsIfNecessary(
     GCCell *cell,
-    const VTable *vt,
+    CellKind kind,
     Acceptor &acceptor) {
   markWeakRefsIfNecessary(
-      cell, vt, acceptor, std::is_convertible<Acceptor &, WeakRefAcceptor &>{});
+      cell,
+      kind,
+      acceptor,
+      std::is_convertible<Acceptor &, WeakRefAcceptor &>{});
 }
 
 template <typename Acceptor>
 inline void GCBase::markCell(GCCell *cell, Acceptor &acceptor) {
-  markCell(cell, cell->getVT(), acceptor);
+  markCell(cell, cell->getKind(), acceptor);
+}
+
+template <typename Acceptor>
+inline void GCBase::markCell(GCCell *cell, CellKind kind, Acceptor &acceptor) {
+  SlotVisitor<Acceptor> visitor(acceptor);
+  markCell(visitor, cell, kind);
 }
 
 template <typename Acceptor>
 inline void
-GCBase::markCell(GCCell *cell, const VTable *vt, Acceptor &acceptor) {
-  SlotVisitor<Acceptor> visitor(acceptor);
-  markCell(visitor, cell, vt);
-}
-
-template <typename Acceptor>
-inline void GCBase::markCell(
-    SlotVisitor<Acceptor> &visitor,
-    GCCell *cell,
-    const VTable *vt) {
-  visitor.visit(cell, metaTable_[static_cast<size_t>(vt->kind)]);
-  markWeakRefsIfNecessary(cell, vt, visitor.acceptor_);
+GCBase::markCell(SlotVisitor<Acceptor> &visitor, GCCell *cell, CellKind kind) {
+  visitor.visit(cell, metaTable_[static_cast<size_t>(kind)]);
+  markWeakRefsIfNecessary(cell, kind, visitor.acceptor_);
 }
 
 template <typename Acceptor>
 inline void GCBase::markCellWithinRange(
     SlotVisitor<Acceptor> &visitor,
     GCCell *cell,
-    const VTable *vt,
+    CellKind kind,
     const char *begin,
     const char *end) {
   visitor.visitWithinRange(
-      cell, metaTable_[static_cast<size_t>(vt->kind)], begin, end);
-  markWeakRefsIfNecessary(cell, vt, visitor.acceptor_);
+      cell, metaTable_[static_cast<size_t>(kind)], begin, end);
+  markWeakRefsIfNecessary(cell, kind, visitor.acceptor_);
 }
 
 template <typename Acceptor>
 inline void GCBase::markCellWithNames(
     SlotVisitorWithNames<Acceptor> &visitor,
     GCCell *cell) {
-  const VTable *vt = cell->getVT();
-  visitor.visit(cell, metaTable_[static_cast<size_t>(vt->kind)]);
-  markWeakRefsIfNecessary(cell, vt, visitor.acceptor_);
+  const CellKind kind = cell->getKind();
+  visitor.visit(cell, metaTable_[static_cast<size_t>(kind)]);
+  markWeakRefsIfNecessary(cell, kind, visitor.acceptor_);
 }
 
 } // namespace vm

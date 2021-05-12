@@ -1280,14 +1280,14 @@ class GCBase {
   inline void markCell(GCCell *cell, Acceptor &acceptor);
 
   /// Same as the normal \c markCell, but for cells that don't have a valid
-  /// vtable pointer.
+  /// CellKind.
   template <typename Acceptor>
-  inline void markCell(GCCell *cell, const VTable *vt, Acceptor &acceptor);
+  inline void markCell(GCCell *cell, CellKind kind, Acceptor &acceptor);
 
   /// Same as the normal \c markCell, but takes a visitor instead.
   template <typename Acceptor>
   inline void
-  markCell(SlotVisitor<Acceptor> &visitor, GCCell *cell, const VTable *vt);
+  markCell(SlotVisitor<Acceptor> &visitor, GCCell *cell, CellKind kind);
 
   /// Marks a cell by its metadata, but only for the slots that point between
   /// [begin, end).
@@ -1295,7 +1295,7 @@ class GCBase {
   inline void markCellWithinRange(
       SlotVisitor<Acceptor> &visitor,
       GCCell *cell,
-      const VTable *vt,
+      CellKind kind,
       const char *begin,
       const char *end);
 
@@ -1600,7 +1600,7 @@ class GCBase {
   /// marking them, mark those weak references.
   template <typename Acceptor>
   static void
-  markWeakRefsIfNecessary(GCCell *cell, const VTable *vt, Acceptor &acceptor);
+  markWeakRefsIfNecessary(GCCell *cell, CellKind kind, Acceptor &acceptor);
 
   /// Overload of \p markWeakRefsIfNecessary for acceptors that support marking
   /// weak references.
@@ -1608,13 +1608,14 @@ class GCBase {
   template <typename Acceptor>
   static void markWeakRefsIfNecessary(
       GCCell *cell,
-      const VTable *vt,
+      CellKind kind,
       Acceptor &acceptor,
       std::true_type) {
     // In C++17, we could implement this via "constexpr if" rather than
     // overloads with std::true_type.
     // Once C++17 is available, switch to using that.
-    vt->markWeakIfExists(cell, acceptor);
+    VTable::vtableArray[static_cast<size_t>(kind)]->markWeakIfExists(
+        cell, acceptor);
   }
 
   /// Overload of \p markWeakRefsIfNecessary for acceptors that do not support
@@ -1623,7 +1624,7 @@ class GCBase {
   template <typename Acceptor>
   static void markWeakRefsIfNecessary(
       GCCell *,
-      const VTable *,
+      CellKind kind,
       Acceptor &,
       std::false_type) {}
 

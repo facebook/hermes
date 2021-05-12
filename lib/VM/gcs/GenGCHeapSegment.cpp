@@ -114,9 +114,8 @@ void GenGCHeapSegment::updateReferences(
       // Get the KindAndSize.
       assert(kindAndSizes.hasNext() && "Need a displaced KindAndSize");
       const auto kindAndSize = kindAndSizes.next();
-      const VTable *vtp = kindAndSize.getVT();
       // Scan the pointer fields, updating via forwarding pointers.
-      gc->markCell(cell, vtp, *acceptor);
+      gc->markCell(cell, kindAndSize.getKind(), *acceptor);
       uint32_t cellSize = kindAndSize.getSize();
       ptr += cellSize;
       ind += (cellSize >> LogHeapAlign);

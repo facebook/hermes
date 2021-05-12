@@ -457,7 +457,7 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
 #endif
 
       // Mark the first object with respect to the dirty card boundaries.
-      gc_->markCellWithinRange(visitor, obj, obj->getVT(), begin, end);
+      gc_->markCellWithinRange(visitor, obj, obj->getKind(), begin, end);
 
       obj = obj->nextCell();
       // If there are additional objects in this card, scan them.
@@ -468,7 +468,7 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
         // object where next is within the card.
         for (GCCell *next = obj->nextCell(); next < boundary;
              next = next->nextCell()) {
-          gc_->markCell(visitor, obj, obj->getVT());
+          gc_->markCell(visitor, obj, obj->getKind());
           obj = next;
         }
 
@@ -477,7 +477,7 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
         assert(
             obj < boundary && obj->nextCell() >= boundary &&
             "Last object in card must touch or cross cross the card boundary");
-        gc_->markCellWithinRange(visitor, obj, obj->getVT(), begin, end);
+        gc_->markCellWithinRange(visitor, obj, obj->getKind(), begin, end);
       }
 
       from = iEnd;
