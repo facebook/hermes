@@ -82,7 +82,7 @@ void DummyRuntime::markRoots(RootAndSlotAcceptorWithNames &acceptor, bool) {
 }
 
 void DummyRuntime::markWeakRoots(WeakRootAcceptor &acceptor, bool) {
-  for (WeakRoot<void> *ptr : weakRoots) {
+  for (WeakRoot<GCCell> *ptr : weakRoots) {
     acceptor.acceptWeak(*ptr);
   }
   if (markExtraWeak)

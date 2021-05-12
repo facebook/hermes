@@ -267,7 +267,7 @@ class DummyRuntime final : public HandleRootOwner,
  public:
   std::vector<GCCell **> pointerRoots{};
   std::vector<PinnedHermesValue *> valueRoots{};
-  std::vector<WeakRoot<void> *> weakRoots{};
+  std::vector<WeakRoot<GCCell> *> weakRoots{};
   std::function<void(WeakRootAcceptor &)> markExtraWeak{};
 
   /// Create a DummyRuntime with the default parameters.

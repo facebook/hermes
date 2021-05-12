@@ -370,6 +370,23 @@ TEST_F(GCBasicsTest, TestYoungGenStats) {
 #endif // HERMES_GC_GENERATIONAL || HERMES_GC_NONCONTIG_GENERATIONAL
 #endif // !NDEBUG && !HERMESVM_GC_HADES && !HERMESVM_GC_RUNTIME
 
+TEST_F(GCBasicsTest, WeakRootTest) {
+  GCScope scope{&rt};
+  GC &gc = rt.getHeap();
+
+  WeakRoot<GCCell> wr;
+  rt.weakRoots.push_back(&wr);
+  {
+    GCScopeMarkerRAII marker{&rt};
+    auto obj = rt.makeHandle(DummyObject::create(&gc));
+    wr.set(&rt, *obj);
+    rt.collect();
+    ASSERT_EQ(wr.get(&rt, &gc), *obj);
+  }
+  rt.collect();
+  ASSERT_EQ(wr.get(&rt, &gc), nullptr);
+}
+
 TEST_F(GCBasicsTest, VariableSizeRuntimeCellOffsetTest) {
   auto *cell = ArrayStorage::createForTest(&rt.getHeap(), 1);
   EXPECT_EQ(
