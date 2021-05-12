@@ -286,12 +286,12 @@ class GenGC final : public GCBase {
 
   void collect(std::string cause, bool canEffectiveOOM = false) override;
 
-  static constexpr uint32_t minAllocationSize() {
+  static constexpr uint32_t minAllocationSizeImpl() {
     // NCGen doesn't enforce a minimum allocation requirement.
     return 0;
   }
 
-  static constexpr uint32_t maxAllocationSize() {
+  static constexpr uint32_t maxAllocationSizeImpl() {
     // The largest allocation allowable in NCGen is the max size a single
     // segment supports.
     return GenGCHeapSegment::maxSize();

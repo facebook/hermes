@@ -270,6 +270,10 @@ class GCCell {
   inline gcheapsize_t externalMemorySize() const {
     return getVT()->externalMemorySize(this);
   }
+
+  static constexpr uint32_t maxSize() {
+    return KindAndSize::maxSize();
+  }
 };
 
 /// A VariableSizeRuntimeCell is a GCCell with a variable size only known

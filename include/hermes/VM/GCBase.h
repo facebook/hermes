@@ -316,7 +316,7 @@ using WeakSlotState = WeakRefSlot::State;
 ///   void collect(std::string cause);
 ///
 /// The maximum size of any one allocation allowable by the GC in any state.
-///   static constexpr uint32_t maxAllocationSize();
+///   static constexpr uint32_t maxAllocationSizeImpl();
 ///
 /// Mark a pointer to a GCCell.
 ///   template <class T> void mark(T *&ptr);
@@ -1103,10 +1103,14 @@ class GCBase {
 #endif
 
 #ifdef HERMESVM_GC_RUNTIME
+  inline static constexpr uint32_t minAllocationSizeImpl();
+
+  inline static constexpr uint32_t maxAllocationSizeImpl();
+#endif
+
   inline static constexpr uint32_t minAllocationSize();
 
   inline static constexpr uint32_t maxAllocationSize();
-#endif
 
   /// Dump detailed heap contents to the given output stream, \p os.
   virtual void dump(llvh::raw_ostream &os, bool verbose = false);

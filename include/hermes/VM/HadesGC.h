@@ -78,13 +78,13 @@ class HadesGC final : public GCBase {
     return gc->getKind() == HeapKind::HADES;
   }
 
-  static constexpr uint32_t maxAllocationSize() {
+  static constexpr uint32_t maxAllocationSizeImpl() {
     // The largest allocation allowable in Hades is the max size a single
     // segment supports.
     return HeapSegment::maxSize();
   }
 
-  static constexpr uint32_t minAllocationSize() {
+  static constexpr uint32_t minAllocationSizeImpl() {
     return heapAlignSize(
         max(sizeof(OldGen::FreelistCell), sizeof(CopyListCell)));
   }
