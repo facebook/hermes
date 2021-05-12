@@ -313,13 +313,13 @@ class HermesRuntimeImpl final : public HermesRuntime,
           }
         });
     runtime_.addCustomWeakRootsFunction(
-        [this](vm::GC *, vm::WeakRefAcceptor &acceptor) {
+        [this](vm::GC *, vm::WeakRootAcceptor &acceptor) {
           for (auto it = weakHermesValues_->begin();
                it != weakHermesValues_->end();) {
             if (it->get() == 0) {
               it = weakHermesValues_->erase(it);
             } else {
-              acceptor.accept(it->wr);
+              acceptor.acceptWeak(it->wr);
               ++it;
             }
           }
@@ -431,9 +431,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
   };
 
   struct WeakRefPointerValue final : CountedPointerValue {
-    WeakRefPointerValue(vm::WeakRef<vm::HermesValue> _wr) : wr(_wr) {}
+    WeakRefPointerValue(vm::WeakRoot<vm::JSObject> _wr) : wr(_wr) {}
 
-    vm::WeakRef<vm::HermesValue> wr;
+    vm::WeakRoot<vm::JSObject> wr;
   };
 
   HermesPointerValue *clone(const Runtime::PointerValue *pv) {
@@ -455,7 +455,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
     return make<T>(&(hermesValues_->front()));
   }
 
-  jsi::WeakObject addWeak(::hermes::vm::WeakRef<vm::HermesValue> wr) {
+  jsi::WeakObject addWeak(::hermes::vm::WeakRoot<vm::JSObject> wr) {
     weakHermesValues_->emplace_front(wr);
     return make<jsi::WeakObject>(&(weakHermesValues_->front()));
   }
@@ -660,7 +660,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
     return ::hermes::vm::Handle<::hermes::vm::JSArrayBuffer>::vmcast(&phv(arr));
   }
 
-  static ::hermes::vm::WeakRef<vm::HermesValue> &wrhv(jsi::Pointer &pointer) {
+  static ::hermes::vm::WeakRoot<vm::JSObject> &weakRoot(jsi::Pointer &pointer) {
     assert(
         dynamic_cast<WeakRefPointerValue *>(getPointerValue(pointer)) &&
         "Pointer does not contain a WeakRefPointerValue");
@@ -1863,22 +1863,18 @@ jsi::Array HermesRuntimeImpl::getPropertyNames(const jsi::Object &obj) {
 
 jsi::WeakObject HermesRuntimeImpl::createWeakObject(const jsi::Object &obj) {
   return maybeRethrow([&] {
-    vm::WeakRefLock lk{runtime_.getHeap().weakRefMutex()};
-    return addWeak(vm::WeakRef<vm::HermesValue>(&runtime_.getHeap(), phv(obj)));
+    return addWeak(vm::WeakRoot<vm::JSObject>(
+        static_cast<vm::JSObject *>(phv(obj).getObject()), &runtime_));
   });
 }
 
 jsi::Value HermesRuntimeImpl::lockWeakObject(jsi::WeakObject &wo) {
-  vm::WeakRefLock lk{runtime_.getHeap().weakRefMutex()};
-  vm::WeakRef<vm::HermesValue> &wr = wrhv(wo);
-  const auto optValue = wr.unsafeGetOptional(&runtime_.getHeap());
-  if (!optValue) {
-    return jsi::Value();
-  }
-  assert(
-      optValue.getValue().isObject() &&
-      "jsi::WeakObject referent is not an Object");
-  return add<jsi::Object>(optValue.getValue());
+  vm::WeakRoot<vm::JSObject> &wr = weakRoot(wo);
+
+  if (const auto ptr = wr.get(&runtime_, &runtime_.getHeap()))
+    return add<jsi::Object>(vm::HermesValue::encodeObjectValue(ptr));
+
+  return jsi::Value();
 }
 
 jsi::Array HermesRuntimeImpl::createArray(size_t length) {

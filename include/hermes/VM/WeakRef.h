@@ -177,6 +177,8 @@ class WeakRoot final : public WeakRootBase {
  public:
   explicit WeakRoot() : WeakRootBase() {}
   explicit WeakRoot(std::nullptr_t) : WeakRootBase(nullptr) {}
+  explicit WeakRoot(T *ptr, PointerBase *base)
+      : WeakRootBase(GCPointerBase::pointerToStorageType(ptr, base)) {}
 
   T *get(PointerBase *base, GC *gc) const {
     return static_cast<T *>(WeakRootBase::get(base, gc));

@@ -214,7 +214,7 @@ class Runtime : public HandleRootOwner,
   /// collection to mark additional weak GC roots that may not be known to the
   /// Runtime.
   void addCustomWeakRootsFunction(
-      std::function<void(GC *, WeakRefAcceptor &)> markRootsFn);
+      std::function<void(GC *, WeakRootAcceptor &)> markRootsFn);
 
   /// Add a custom function that will be executed when a heap snapshot is taken,
   /// to add any extra nodes.
@@ -1129,7 +1129,7 @@ class Runtime : public HandleRootOwner,
   GCStorage heapStorage_;
 
   std::vector<std::function<void(GC *, RootAcceptor &)>> customMarkRootFuncs_;
-  std::vector<std::function<void(GC *, WeakRefAcceptor &)>>
+  std::vector<std::function<void(GC *, WeakRootAcceptor &)>>
       customMarkWeakRootFuncs_;
   std::vector<std::function<void(HeapSnapshot &)>> customSnapshotNodeFuncs_;
   std::vector<std::function<void(HeapSnapshot &)>> customSnapshotEdgeFuncs_;
@@ -1764,7 +1764,7 @@ inline void Runtime::addCustomRootsFunction(
 }
 
 inline void Runtime::addCustomWeakRootsFunction(
-    std::function<void(GC *, WeakRefAcceptor &)> markRootsFn) {
+    std::function<void(GC *, WeakRootAcceptor &)> markRootsFn) {
   customMarkWeakRootFuncs_.emplace_back(std::move(markRootsFn));
 }
 
