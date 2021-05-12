@@ -78,9 +78,10 @@ class KindAndSize {
 /// traversal in a contiguous space: given a pointer to the head, you
 /// can get the size, and thus get to the head of the next cell.
 class GCCell {
-  /// Pointer to the virtual table or a forwarding pointer.
+  /// Either contains the CellKind and size of this cell, or a forwarding
+  /// pointer.
   union {
-    const VTable *vtp_;
+    KindAndSize kindAndSize_;
     GCCell *forwardingPointer_;
   };
 
@@ -101,20 +102,16 @@ class GCCell {
   /// a GC parameter, so this should only be used in cases where the debug
   /// checks will be wrong.
   explicit GCCell(const VTable *vtp);
+  explicit GCCell(CellKind kind, size_t sz);
 
   // GCCell-s are not copyable (in the C++ sense).
   GCCell(const GCCell &) = delete;
   void operator=(const GCCell &) = delete;
 
   /// Return the allocated size of the object in bytes.
-  uint32_t getAllocatedSize() const;
-
-  /// Return the allocated size of the object in bytes, assuming \p vtp
-  /// is the proper VTable for this cell.
-  /// (Some GC's like MarkSweepCompact temporarily overwrite the vtp
-  /// and store it elsewhere, but still need to find the object size
-  /// when vtp is incorrect.)
-  uint32_t getAllocatedSize(const VTable *vtp) const;
+  uint32_t getAllocatedSize() const {
+    return kindAndSize_.getSize();
+  }
 
   /// Implementation of cellSize. Do not use this directly.
   template <class C>
@@ -141,20 +138,26 @@ class GCCell {
 
   /// \return the kind of this cell.
   CellKind getKind() const {
-    return getVT()->kind;
+    return kindAndSize_.getKind();
   }
 
   /// \return the vtable for this cell.
   /// \pre The cell must be valid.
   const VTable *getVT() const {
     assert(isValid() && "Called getVT() on an invalid cell");
-    return vtp_;
+    return kindAndSize_.getVT();
   }
 
-  /// Set the VTable pointer of this GCCell to \p vtp.
+  /// \return the KindAndSize for this cell.
   /// NOTE: this should only be used by the GC.
-  void setVT(const VTable *vtp) {
-    vtp_ = vtp;
+  KindAndSize getKindAndSize() const {
+    return kindAndSize_;
+  }
+
+  /// Set the KindAndSize of this GCCell to \p kindAndSize.
+  /// NOTE: this should only be used by the GC.
+  void setKindAndSize(KindAndSize kindAndSize) {
+    kindAndSize_ = kindAndSize;
   }
 
   /// We distinguish between two styles of forwarding pointer:
@@ -229,16 +232,16 @@ class GCCell {
   bool isValid() const {
 #ifndef NDEBUG
     // We only do the cell magic number check in debug builds.
-    return magic_ == kMagic && vtp_ && vtp_->isValid();
+    return magic_ == kMagic && kindAndSize_.getVT()->isValid();
 #else
-    return vtp_ && vtp_->isValid();
+    return kindAndSize_.getVT()->isValid();
 #endif
   }
 
   /// \return true iff the cell is valid (i.e., its vtable is valid)
   // and has the given \p expectedKind.
   bool isValid(CellKind expectedKind) const {
-    return vtp_ && vtp_->isValid(expectedKind);
+    return kindAndSize_.getVT()->isValid(expectedKind);
   }
 
   /// Placement new
@@ -281,15 +284,11 @@ class GCCell {
 /// \see ArrayStorage for how to inherit from this class correctly.
 class VariableSizeRuntimeCell : public GCCell {
  protected:
-  /// variableSize_ represents the number of bytes used by this object at
-  /// runtime. This field will never increase, but may decrease during a GC
-  /// compaction.
-  uint32_t variableSize_;
   /// A VariableSizeRuntimeCell must be constructed from a fixed size, and has
   /// that same size for its lifetime.
   /// To change the size, allocate a new object.
   VariableSizeRuntimeCell(GC *gc, const VTable *vtp, uint32_t size)
-      : GCCell(gc, vtp), variableSize_(heapAlignSize(size)) {
+      : GCCell(vtp->kind, heapAlignSize(size)) {
     // Need to align to the GC here, since the GC doesn't know about this field.
     assert(
         size >= sizeof(VariableSizeRuntimeCell) &&
@@ -299,7 +298,7 @@ class VariableSizeRuntimeCell : public GCCell {
 
   /// Makes a new VariableSizeRuntimeCell with only a type and a size.
   VariableSizeRuntimeCell(const VTable *vtp, uint32_t size)
-      : GCCell(vtp), variableSize_(heapAlignSize(size)) {
+      : GCCell(vtp->kind, heapAlignSize(size)) {
     // Need to align to the GC here, since the GC doesn't know about this field.
     assert(
         size >= sizeof(VariableSizeRuntimeCell) &&
@@ -309,7 +308,7 @@ class VariableSizeRuntimeCell : public GCCell {
 
  public:
   uint32_t getSize() const {
-    return variableSize_;
+    return getAllocatedSize();
   }
 
   /// Sets the size of the current cell to be \p sz.
@@ -323,7 +322,7 @@ class VariableSizeRuntimeCell : public GCCell {
         sz >= sizeof(VariableSizeRuntimeCell) &&
         "Should not allocate a VariableSizeRuntimeCell of size less than "
         "the size of a cell");
-    variableSize_ = sz;
+    setKindAndSize(KindAndSize{getKind(), sz});
   }
 };
 
@@ -332,33 +331,17 @@ static_assert(
     "GCCell's alignment exceeds the alignment requirement of the heap");
 
 #ifdef NDEBUG
-inline GCCell::GCCell(GC *, const VTable *vtp) : vtp_(vtp) {}
+inline GCCell::GCCell(GC *, const VTable *vtp) : GCCell(vtp->kind, vtp->size) {}
 
-inline GCCell::GCCell(const VTable *vtp) : vtp_(vtp) {}
+inline GCCell::GCCell(const VTable *vtp) : GCCell(vtp->kind, vtp->size) {}
+
+inline GCCell::GCCell(CellKind kind, size_t sz) : kindAndSize_(kind, sz) {}
+
+static_assert(
+    sizeof(GCCell) == sizeof(void *) &&
+        sizeof(VariableSizeRuntimeCell) == sizeof(void *),
+    "Cell metadata should only be the size of a single pointer.");
 #endif
-
-inline uint32_t GCCell::getAllocatedSize(const VTable *vtp) const {
-  // The size is either fixed in the VTable, or variable and stored as some
-  // offset in that VTable
-  assert(vtp && "Should not have a null vtable pointer");
-  uint32_t size = 0;
-  if (isVariableSize(vtp)) {
-    // Variable size.
-    size = static_cast<const VariableSizeRuntimeCell *>(this)->getSize();
-  } else {
-    // Fixed size
-    size = vtp->size;
-  }
-  assert(
-      size != 0 &&
-      "Should not have zero size stored into a "
-      "cell");
-  return size;
-}
-
-inline uint32_t GCCell::getAllocatedSize() const {
-  return getAllocatedSize(getVT());
-}
 
 static const char kInvalidHeapValue = (char)0xcc;
 

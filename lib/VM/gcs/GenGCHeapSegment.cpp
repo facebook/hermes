@@ -143,7 +143,7 @@ void GenGCHeapSegment::compact(
       char *newAddr = reinterpret_cast<char *>(cell->getForwardingPointer());
       // Put back the vtable.
       assert(kindAndSizes.hasNext() && "Need a displaced vtable pointer");
-      cell->setVT(kindAndSizes.next().getVT());
+      cell->setKindAndSize(kindAndSizes.next());
       assert(
           cell->isValid() &&
           "Cell was invalid after placing the vtable back in");
@@ -231,8 +231,7 @@ void GenGCHeapSegment::sweepAndInstallForwardingPointers(
         new (adjacentPtr) DeadRegion(ptr - adjacentPtr);
       }
 
-      sweepResult->displacedKinds.push_back(
-          KindAndSize(cell->getKind(), cell->getAllocatedSize()));
+      sweepResult->displacedKinds.push_back(cell->getKindAndSize());
       cell->setForwardingPointer(reinterpret_cast<GCCell *>(res.ptr));
       if (gc->isTrackingIDs()) {
         gc->moveObject(

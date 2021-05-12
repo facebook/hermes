@@ -24,11 +24,6 @@ class BoxedDouble final : public GCCell {
   double value_;
 
  public:
-#if (defined(HERMESVM_GC_HADES) || defined(HERMESVM_GC_RUNTIME))
-  // Unused padding just to meet the minimum allocation requirements from Hades.
-  int8_t _padding_[4];
-#endif
-
 #ifdef HERMESVM_SERIALIZE
   explicit BoxedDouble(Deserializer &d);
 
