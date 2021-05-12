@@ -321,7 +321,7 @@ class DummyRuntime final : public HandleRootOwner,
 
   void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool) override;
 
-  void markWeakRoots(WeakRootAcceptor &weakAcceptor) override;
+  void markWeakRoots(WeakRootAcceptor &weakAcceptor, bool) override;
 
   void markRootsForCompleteMarking(
       RootAndSlotAcceptorWithNames &acceptor) override;

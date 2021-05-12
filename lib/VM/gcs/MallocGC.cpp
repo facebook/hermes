@@ -253,7 +253,7 @@ void MallocGC::checkWellFormed() {
   CheckHeapWellFormedAcceptor acceptor(*this);
   DroppingAcceptor<CheckHeapWellFormedAcceptor> nameAcceptor{acceptor};
   markRoots(nameAcceptor, true);
-  markWeakRoots(acceptor);
+  markWeakRoots(acceptor, /*markLongLived*/ true);
   for (CellHeader *header : pointers_) {
     GCCell *cell = header->data();
     assert(cell->isValid() && "Invalid cell encountered in heap");
@@ -298,7 +298,7 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
     completeWeakMapMarking(acceptor);
 
     // Update weak roots references.
-    markWeakRoots(acceptor);
+    markWeakRoots(acceptor, /*markLongLived*/ true);
 
     // Update and remove weak references.
     updateWeakReferences();

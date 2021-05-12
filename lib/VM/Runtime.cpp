@@ -560,14 +560,16 @@ void Runtime::markRoots(
   }
 }
 
-void Runtime::markWeakRoots(WeakRootAcceptor &acceptor) {
+void Runtime::markWeakRoots(WeakRootAcceptor &acceptor, bool markLongLived) {
   MarkRootsPhaseTimer timer(this, RootAcceptor::Section::WeakRefs);
   acceptor.beginRootSection(RootAcceptor::Section::WeakRefs);
-  for (auto &entry : fixedPropCache_) {
-    acceptor.acceptWeak(entry.clazz);
+  if (markLongLived) {
+    for (auto &entry : fixedPropCache_) {
+      acceptor.acceptWeak(entry.clazz);
+    }
+    for (auto &rm : runtimeModuleList_)
+      rm.markWeakRoots(acceptor);
   }
-  for (auto &rm : runtimeModuleList_)
-    rm.markWeakRoots(acceptor);
   for (auto &fn : customMarkWeakRootFuncs_)
     fn(&getHeap(), acceptor);
   acceptor.endRootSection();

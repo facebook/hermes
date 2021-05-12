@@ -508,7 +508,7 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
       snapshotAddGCNativeNodes(snap);
       snap.beginNode();
       markRoots(rootSectionAcceptor, true);
-      markWeakRoots(rootSectionAcceptor);
+      markWeakRoots(rootSectionAcceptor, /*markLongLived*/ true);
       snapshotAddGCNativeEdges(snap);
       snap.endNode(
           HeapSnapshot::NodeType::Synthetic,
@@ -525,7 +525,7 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
       // nodes reachable from the super root.
       SnapshotRootAcceptor rootAcceptor(*gc, snap);
       markRoots(rootAcceptor, true);
-      markWeakRoots(rootAcceptor);
+      markWeakRoots(rootAcceptor, /*markLongLived*/ true);
     }
     gcCallbacks_->visitIdentifiers([&snap, this](
                                        SymbolID sym,

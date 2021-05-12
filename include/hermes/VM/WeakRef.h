@@ -137,6 +137,12 @@ class WeakRootBase {
     return *this;
   }
 
+  WeakRootBase &operator=(std::nullptr_t) {
+    // No need for a write barrier on weak roots currently.
+    ptr_ = nullptr;
+    return *this;
+  }
+
   bool operator==(GCPointerBase::StorageType that) const {
     // Checking for equality to another pointer does not change the possible
     // lifetime of the weak root, so there's no need for a read barrier

@@ -983,7 +983,8 @@ class Runtime : public HandleRootOwner,
 
   /// Called by the GC during collections that may reset weak references. This
   /// method informs the GC of all runtime weak roots.
-  void markWeakRoots(WeakRootAcceptor &weakAcceptor) override;
+  void markWeakRoots(WeakRootAcceptor &weakAcceptor, bool markLongLived)
+      override;
 
   /// See documentation on \c GCBase::GCCallbacks.
   void markRootsForCompleteMarking(

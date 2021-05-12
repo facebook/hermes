@@ -747,7 +747,7 @@ void GenGC::updateReferences(const SweepResult &sweepResult) {
       getFullMSCUpdateAcceptor(*this);
   DroppingAcceptor<RootAndSlotAcceptor> nameAcceptor{*acceptor};
   markRoots(nameAcceptor, /*markLongLived*/ true);
-  markWeakRoots(*acceptor);
+  markWeakRoots(*acceptor, /*markLongLived*/ true);
 
   SweepResult::VTablesRemaining vTables(
       sweepResult.displacedVtablePtrs.begin(),
@@ -838,7 +838,7 @@ void GenGC::checkWellFormedHeap() const {
   CheckHeapWellFormedAcceptor acceptor(*gc);
   DroppingAcceptor<CheckHeapWellFormedAcceptor> nameAcceptor{acceptor};
   gc->markRoots(nameAcceptor, /*markLongLived*/ true);
-  gc->markWeakRoots(acceptor);
+  gc->markWeakRoots(acceptor, /*markLongLived*/ true);
   youngGen_.checkWellFormed(gc);
   oldGen_.checkWellFormed(gc);
 }

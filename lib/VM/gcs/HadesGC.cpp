@@ -495,8 +495,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
   }
 
   void acceptWeak(GCCell *&ptr) override {
-    assert(!gc.inYoungGen(ptr) && "Weak roots cannot point into YG");
-    if (!gc.compactee_.evacContains(ptr))
+    if (!shouldForward(ptr))
       return;
 
     if (ptr->hasMarkedForwardingPointer()) {
@@ -1003,7 +1002,6 @@ class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
     GCPointerBase::StorageType &ptrStorage = wr.getNoBarrierUnsafe();
     GCCell *const cell =
         GCPointerBase::storageTypeToPointer(ptrStorage, gc_.getPointerBase());
-    assert(!gc_.inYoungGen(cell) && "Pointer should be into the OG");
     HERMES_SLOW_ASSERT(gc_.dbgContains(cell) && "ptr not in heap");
     if (HeapSegment::getCellMarkBit(cell)) {
       // If the cell is marked, no need to do any writes.
@@ -1766,7 +1764,7 @@ void HadesGC::completeMarking() {
   // Reset weak roots to null after full reachability has been
   // determined.
   MarkWeakRootsAcceptor acceptor{*this};
-  markWeakRoots(acceptor);
+  markWeakRoots(acceptor, /*markLongLived*/ true);
 
   // Now free symbols and weak refs.
   gcCallbacks_->freeSymbols(oldGenMarker_->markedSymbols());
@@ -2427,10 +2425,10 @@ void HadesGC::youngGenEvacuateImpl(Acceptor &acceptor, bool doCompaction) {
     GCCell *const cell = copyCell->getMarkedForwardingPointer();
     markCell(cell, acceptor);
   }
-  // All weak roots point into the OG, we only need to mark them if part of
-  // the OG is getting compacted.
-  if (doCompaction)
-    markWeakRoots(acceptor);
+
+  // Mark weak roots. We only need to update the long lived weak roots if we are
+  // evacuating part of the OG.
+  markWeakRoots(acceptor, /*markLongLived*/ doCompaction);
 }
 
 void HadesGC::youngGenCollection(
@@ -3257,7 +3255,7 @@ void HadesGC::checkWellFormed() {
     DroppingAcceptor<CheckHeapWellFormedAcceptor> nameAcceptor{acceptor};
     markRoots(nameAcceptor, true);
   }
-  markWeakRoots(acceptor);
+  markWeakRoots(acceptor, /*markLongLived*/ true);
   forAllObjs([this, &acceptor](GCCell *cell) {
     assert(cell->isValid() && "Invalid cell encountered in heap");
     markCell(cell, acceptor);

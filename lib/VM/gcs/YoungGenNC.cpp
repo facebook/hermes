@@ -390,6 +390,7 @@ void YoungGen::collect() {
   {
     PerfSection ygUpdateWeakRefsSystraceRegion("ygUpdateWeakRefs");
     gc_->updateWeakReferences(/*fullGC*/ false);
+    gc_->markWeakRoots(acceptor, /*markLongLived*/ false);
   }
 
   // Call the finalizers of unreachable objects. Assumes all cells that survived

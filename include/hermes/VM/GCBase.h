@@ -424,7 +424,9 @@ class GCBase {
 
     /// Callback that will be invoked by the GC to mark all weak roots in the
     /// beginning of every GC.
-    virtual void markWeakRoots(WeakRootAcceptor &weakAcceptor) = 0;
+    virtual void markWeakRoots(
+        WeakRootAcceptor &weakAcceptor,
+        bool markLongLived = true) = 0;
 
     /// Callback that might be invoked by the GC before it completes marking.
     /// Not all GCs will call this. It should be used to mark any roots that
@@ -1555,8 +1557,8 @@ class GCBase {
 
   /// Convenience method to invoke the mark weak roots function provided at
   /// initialization, using the context provided then (on this heap).
-  void markWeakRoots(WeakRootAcceptor &acceptor) {
-    gcCallbacks_->markWeakRoots(acceptor);
+  void markWeakRoots(WeakRootAcceptor &acceptor, bool markLongLived) {
+    gcCallbacks_->markWeakRoots(acceptor, markLongLived);
   }
 
   /// Print the cumulative statistics.
