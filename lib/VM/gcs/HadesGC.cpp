@@ -1238,7 +1238,6 @@ constexpr double kYGInitialSurvivalRatio = 0.3;
 HadesGC::OldGen::OldGen(HadesGC *gc) : gc_(gc) {}
 
 HadesGC::HadesGC(
-    MetadataTable metaTable,
     GCCallbacks *gcCallbacks,
     PointerBase *pointerBase,
     const GCConfig &gcConfig,
@@ -1246,7 +1245,6 @@ HadesGC::HadesGC(
     std::shared_ptr<StorageProvider> provider,
     experiments::VMExperimentFlags vmExperimentFlags)
     : GCBase(
-          metaTable,
           gcCallbacks,
           pointerBase,
           gcConfig,

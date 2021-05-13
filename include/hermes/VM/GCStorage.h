@@ -18,7 +18,6 @@ namespace vm {
 class GCStorage {
  public:
   GCStorage(
-      MetadataTable metaTable,
       GCBase::GCCallbacks *gcCallbacks,
       PointerBase *pointerBase,
       const GCConfig &gcConfig,
@@ -27,7 +26,6 @@ class GCStorage {
       experiments::VMExperimentFlags vmExperimentFlags)
 #ifndef HERMESVM_GC_RUNTIME
       : heap_(
-            metaTable,
             gcCallbacks,
             pointerBase,
             gcConfig,
@@ -44,7 +42,6 @@ class GCStorage {
     switch (heapKind) {
       case GCBase::HeapKind::HADES:
         heap = new (storage_.buffer) HadesGC(
-            metaTable,
             gcCallbacks,
             pointerBase,
             gcConfig,
@@ -54,7 +51,6 @@ class GCStorage {
         break;
       case GCBase::HeapKind::NCGEN:
         heap = new (storage_.buffer) GenGC(
-            metaTable,
             gcCallbacks,
             pointerBase,
             gcConfig,

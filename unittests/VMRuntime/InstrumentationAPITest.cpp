@@ -22,7 +22,6 @@ using testhelpers::DummyObject;
 TEST(InstrumentationAPITest, RunCallbackWhenCollecting) {
   bool triggeredTripwire = false;
   auto rt = DummyRuntime::create(
-      getMetadataTable(),
       kTestGCConfigSmall.rebuild()
           .withTripwireConfig(
               GCTripwireConfig::Builder()
@@ -40,7 +39,6 @@ TEST(InstrumentationAPITest, RunCallbackWhenCollecting) {
 TEST(InstrumentationAPITest, DontRunCallbackWhenCollecting_underSizeLimit) {
   bool triggeredTripwire = false;
   auto rt = DummyRuntime::create(
-      getMetadataTable(),
       kTestGCConfigSmall.rebuild()
           .withTripwireConfig(
               GCTripwireConfig::Builder()
@@ -58,7 +56,6 @@ TEST(InstrumentationAPITest, DontRunCallbackWhenCollecting_underSizeLimit) {
 TEST(InstrumentationAPITest, RunCallbackOnlyOnce_UnderCooldownTime) {
   int timesTriggeredTripwire = 0;
   auto rt = DummyRuntime::create(
-      getMetadataTable(),
       kTestGCConfigSmall.rebuild()
           .withTripwireConfig(
               GCTripwireConfig::Builder()
@@ -78,7 +75,6 @@ TEST(InstrumentationAPITest, RunCallbackOnlyOnce_UnderCooldownTime) {
 TEST(InstrumentationAPITest, RunCallbackAfterAllocatingMemoryOverLimit) {
   bool triggeredTripwire = false;
   auto rt = DummyRuntime::create(
-      getMetadataTable(),
       kTestGCConfigSmall.rebuild()
           .withTripwireConfig(
               GCTripwireConfig::Builder()
@@ -100,7 +96,6 @@ TEST(InstrumentationAPITest, RunCallbackAfterAllocatingMemoryOverLimit) {
 TEST(InstrumentationAPITest, DontRunCallbackAfterAllocatingMemoryUnderLimit) {
   bool triggeredTripwire = false;
   auto rt = DummyRuntime::create(
-      getMetadataTable(),
       kTestGCConfigSmall.rebuild()
           .withTripwireConfig(
               GCTripwireConfig::Builder()

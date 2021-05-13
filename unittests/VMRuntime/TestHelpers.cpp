@@ -26,12 +26,10 @@ namespace vm {
 }
 
 DummyRuntime::DummyRuntime(
-    MetadataTable metaTable,
     const GCConfig &gcConfig,
     std::shared_ptr<StorageProvider> storageProvider,
     std::shared_ptr<CrashManager> crashMgr)
     : gcStorage_{
-          metaTable,
           this,
           this,
           gcConfig,
@@ -47,18 +45,15 @@ DummyRuntime::~DummyRuntime() {
 }
 
 std::shared_ptr<DummyRuntime> DummyRuntime::create(
-    MetadataTable metaTable,
     const GCConfig &gcConfig,
     std::shared_ptr<StorageProvider> provider,
     std::shared_ptr<CrashManager> crashMgr) {
-  DummyRuntime *rt = new DummyRuntime(metaTable, gcConfig, provider, crashMgr);
+  DummyRuntime *rt = new DummyRuntime(gcConfig, provider, crashMgr);
   return std::shared_ptr<DummyRuntime>{rt};
 }
 
-std::shared_ptr<DummyRuntime> DummyRuntime::create(
-    MetadataTable metaTable,
-    const GCConfig &gcConfig) {
-  return create(metaTable, gcConfig, defaultProvider());
+std::shared_ptr<DummyRuntime> DummyRuntime::create(const GCConfig &gcConfig) {
+  return create(gcConfig, defaultProvider());
 }
 
 std::unique_ptr<StorageProvider> DummyRuntime::defaultProvider() {

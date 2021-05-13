@@ -146,7 +146,6 @@ class MallocGC final : public GCBase {
   };
 
   MallocGC(
-      MetadataTable metaTable,
       GCCallbacks *gcCallbacks,
       PointerBase *pointerBase,
       const GCConfig &gcConfig,

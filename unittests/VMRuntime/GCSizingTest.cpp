@@ -22,12 +22,10 @@ struct GCSizingTest : public ::testing::Test {
   std::shared_ptr<DummyRuntime> runtime;
   DummyRuntime &rt;
   GCSizingTest()
-      : runtime(DummyRuntime::create(
-            getMetadataTable(),
-            GCConfig::Builder()
-                .withInitHeapSize(256)
-                .withMaxHeapSize(100000000)
-                .build())),
+      : runtime(DummyRuntime::create(GCConfig::Builder()
+                                         .withInitHeapSize(256)
+                                         .withMaxHeapSize(100000000)
+                                         .build())),
         rt(*runtime) {}
 };
 
@@ -197,13 +195,11 @@ TEST(GCSizingMinHeapTest, TestHeapDoesNotShrinkPastMinSize) {
   // do several with a low occupancy, the heap size shrinks again.
   const gcheapsize_t kMinHeap = 40 * 1000000;
   const gcheapsize_t kMaxHeap = 100 * 1000000;
-  auto runtime = DummyRuntime::create(
-      getMetadataTable(),
-      GCConfig::Builder()
-          .withMinHeapSize(kMinHeap)
-          .withInitHeapSize(kMinHeap)
-          .withMaxHeapSize(kMaxHeap)
-          .build());
+  auto runtime = DummyRuntime::create(GCConfig::Builder()
+                                          .withMinHeapSize(kMinHeap)
+                                          .withInitHeapSize(kMinHeap)
+                                          .withMaxHeapSize(kMaxHeap)
+                                          .build());
   DummyRuntime &rt = *runtime;
 
   GenGC &gc = rt.getHeap();

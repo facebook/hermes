@@ -32,7 +32,7 @@ TEST(GCFragmentationTest, TestCoalescing) {
   static const size_t kHeapSize = AlignedHeapSegment::maxSize() * kNumSegments;
   static const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSize);
 
-  auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
+  auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
 
   using SixteenthCell = EmptyCell<AlignedHeapSegment::maxSize() / 16>;
@@ -80,7 +80,7 @@ TEST(GCFragmentationTest, Test) {
 
   static const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
 
-  auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
+  auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
 
@@ -157,7 +157,7 @@ TEST(GCFragmentationTest, ExternalMemoryTest) {
   // \c kHeapSize bytes in total.
   static constexpr size_t kOGSize = kHeapSize - GenGCHeapSegment::maxSize();
 
-  auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
+  auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
 

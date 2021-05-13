@@ -958,7 +958,6 @@ class GCBase {
   enum class HeapKind { NCGEN, HADES, MALLOC };
 
   GCBase(
-      MetadataTable metaTable,
       GCCallbacks *gcCallbacks,
       PointerBase *pointerBase,
       const GCConfig &gcConfig,

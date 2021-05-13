@@ -94,10 +94,7 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
                           .build();
   auto testCrashMgr = std::make_shared<TestCrashManager>();
   auto runtime = DummyRuntime::create(
-      getMetadataTable(),
-      gcConfig,
-      DummyRuntime::defaultProvider(),
-      testCrashMgr);
+      gcConfig, DummyRuntime::defaultProvider(), testCrashMgr);
   DummyRuntime &rt = *runtime;
 
   std::deque<GCCell *> roots;
@@ -241,10 +238,7 @@ TEST(CrashManagerTest, PromotedYGHasCorrectName) {
                           .build();
   auto testCrashMgr = std::make_shared<TestCrashManager>();
   auto runtime = DummyRuntime::create(
-      getMetadataTable(),
-      gcConfig,
-      DummyRuntime::defaultProvider(),
-      testCrashMgr);
+      gcConfig, DummyRuntime::defaultProvider(), testCrashMgr);
   DummyRuntime &rt = *runtime;
 
   std::deque<GCCell *> roots;
@@ -276,10 +270,7 @@ TEST(CrashManagerTest, GCNameIncluded) {
       GCConfig::Builder(kTestGCConfigBuilder).withName("XYZ").build();
   auto testCrashMgr = std::make_shared<TestCrashManager>();
   auto runtime = DummyRuntime::create(
-      getMetadataTable(),
-      gcConfig,
-      DummyRuntime::defaultProvider(),
-      testCrashMgr);
+      gcConfig, DummyRuntime::defaultProvider(), testCrashMgr);
 
   const auto &crashData = testCrashMgr->customData();
   auto gcName = crashData.find("HermesGC");

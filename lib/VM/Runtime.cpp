@@ -155,7 +155,6 @@ Runtime::Runtime(
       optimizedEval(runtimeConfig.getOptimizedEval()),
       asyncBreakCheckInEval(runtimeConfig.getAsyncBreakCheckInEval()),
       heapStorage_(
-          getMetadataTable(),
           this,
           this,
           runtimeConfig.getGCConfig(),

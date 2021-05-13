@@ -47,7 +47,7 @@ using SegmentCell = EmptyCell<GenGCHeapSegment::maxSize()>;
 
 /// We are able to materialize every segment.
 TEST_F(GCLazySegmentNCTest, MaterializeAll) {
-  auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
+  auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
 
   std::deque<GCCell *> roots;
@@ -64,8 +64,7 @@ TEST_F(GCLazySegmentNCTest, MaterializeAll) {
 TEST_F(GCLazySegmentNCTest, MaterializeEnough) {
   auto provider = std::make_unique<LimitedStorageProvider>(
       DummyRuntime::defaultProvider(), kHeapVALimited);
-  auto runtime =
-      DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
+  auto runtime = DummyRuntime::create(kGCConfig, std::move(provider));
   DummyRuntime &rt = *runtime;
 
   std::deque<GCCell *> roots;
@@ -83,8 +82,7 @@ TEST_F(GCLazySegmentNCTest, MaterializeEnough) {
 TEST_F(GCLazySegmentNCTest, YoungGenNoMaterialize) {
   auto provider = std::make_unique<LimitedStorageProvider>(
       DummyRuntime::defaultProvider(), kHeapVALimited);
-  auto runtime =
-      DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
+  auto runtime = DummyRuntime::create(kGCConfig, std::move(provider));
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
 
@@ -126,8 +124,7 @@ TEST_F(GCLazySegmentNCTest, OldGenAllocMaterialize) {
                               .build();
   auto provider = DummyRuntime::defaultProvider();
   auto &counter = *provider;
-  auto runtime =
-      DummyRuntime::create(getMetadataTable(), config, std::move(provider));
+  auto runtime = DummyRuntime::create(config, std::move(provider));
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
 
@@ -156,8 +153,7 @@ TEST_F(GCLazySegmentNCTest, OldGenAllocMaterialize) {
 TEST_F(GCLazySegmentNCDeathTest, FailToMaterialize) {
   auto provider = std::make_unique<LimitedStorageProvider>(
       DummyRuntime::defaultProvider(), kHeapVALimited);
-  auto runtime =
-      DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
+  auto runtime = DummyRuntime::create(kGCConfig, std::move(provider));
   DummyRuntime &rt = *runtime;
 
   std::deque<GCCell *> roots;
@@ -174,8 +170,7 @@ TEST_F(GCLazySegmentNCDeathTest, FailToMaterialize) {
 TEST_F(GCLazySegmentNCDeathTest, FailToMaterializeContinue) {
   auto provider = std::make_unique<LimitedStorageProvider>(
       DummyRuntime::defaultProvider(), kHeapVALimited);
-  auto runtime =
-      DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
+  auto runtime = DummyRuntime::create(kGCConfig, std::move(provider));
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
 

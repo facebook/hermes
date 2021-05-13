@@ -30,8 +30,7 @@ TEST(GCReturnUnusedMemoryTest, CollectReturnsFreeMemory) {
 #ifndef _WINDOWS
   // Use an mmap-based storage for this test.
   std::unique_ptr<StorageProvider> provider = StorageProvider::mmapProvider();
-  auto runtime =
-      DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
+  auto runtime = DummyRuntime::create(kGCConfig, std::move(provider));
   DummyRuntime &rt = *runtime;
   auto &gc = rt.getHeap();
 

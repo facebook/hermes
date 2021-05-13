@@ -16,7 +16,7 @@ using namespace hermes::vm;
 namespace {
 
 TEST(CastingTest, SmokeTest) {
-  auto rt = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);
+  auto rt = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &runtime = *rt;
   GCScope gcScope(&runtime);
 

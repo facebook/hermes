@@ -421,12 +421,10 @@ takeSnapshot(GC &gc, JSONFactory &factory, const char *file, int line) {
 
 TEST(HeapSnapshotTest, IDReversibleTest) {
   // Make sure an ID <-> Object mapping is preserved across collections.
-  auto runtime = DummyRuntime::create(
-      getMetadataTable(),
-      GCConfig::Builder()
-          .withInitHeapSize(1024)
-          .withMaxHeapSize(1024 * 100)
-          .build());
+  auto runtime = DummyRuntime::create(GCConfig::Builder()
+                                          .withInitHeapSize(1024)
+                                          .withMaxHeapSize(1024 * 100)
+                                          .build());
   DummyRuntime &rt = *runtime;
   auto &gc = rt.getHeap();
   GCScope gcScope(&rt);
@@ -446,12 +444,10 @@ TEST(HeapSnapshotTest, IDReversibleTest) {
 TEST(HeapSnapshotTest, HeaderTest) {
   JSONFactory::Allocator alloc;
   JSONFactory jsonFactory{alloc};
-  auto runtime = DummyRuntime::create(
-      getMetadataTable(),
-      GCConfig::Builder()
-          .withInitHeapSize(1024)
-          .withMaxHeapSize(1024 * 100)
-          .build());
+  auto runtime = DummyRuntime::create(GCConfig::Builder()
+                                          .withInitHeapSize(1024)
+                                          .withMaxHeapSize(1024 * 100)
+                                          .build());
   DummyRuntime &rt = *runtime;
   auto &gc = rt.getHeap();
 
@@ -577,12 +573,10 @@ TEST(HeapSnapshotTest, HeaderTest) {
 TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
   JSONFactory::Allocator alloc;
   JSONFactory jsonFactory{alloc};
-  auto runtime = DummyRuntime::create(
-      getMetadataTable(),
-      GCConfig::Builder()
-          .withInitHeapSize(1024)
-          .withMaxHeapSize(1024 * 100)
-          .build());
+  auto runtime = DummyRuntime::create(GCConfig::Builder()
+                                          .withInitHeapSize(1024)
+                                          .withMaxHeapSize(1024 * 100)
+                                          .build());
   DummyRuntime &rt = *runtime;
   auto &gc = rt.getHeap();
   GCScope gcScope(&rt);
@@ -690,7 +684,6 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
   bool triggeredTripwire = false;
   std::ostringstream stream;
   auto runtime = DummyRuntime::create(
-      getMetadataTable(),
       kTestGCConfigSmall.rebuild()
           .withTripwireConfig(GCTripwireConfig::Builder()
                                   .withLimit(32)

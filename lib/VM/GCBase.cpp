@@ -42,13 +42,12 @@ const char GCBase::kNaturalCauseForAnalytics[] = "natural";
 const char GCBase::kHandleSanCauseForAnalytics[] = "handle-san";
 
 GCBase::GCBase(
-    MetadataTable metaTable,
     GCCallbacks *gcCallbacks,
     PointerBase *pointerBase,
     const GCConfig &gcConfig,
     std::shared_ptr<CrashManager> crashMgr,
     HeapKind kind)
-    : metaTable_(metaTable),
+    : metaTable_(getMetadataTable()),
       gcCallbacks_(gcCallbacks),
       pointerBase_(pointerBase),
       crashMgr_(crashMgr),

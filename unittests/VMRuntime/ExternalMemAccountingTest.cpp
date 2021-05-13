@@ -43,7 +43,7 @@ TEST_P(ExtMemTests, ExtMemInYoungTest) {
   static const GCConfig kGCConfig =
       TestGCConfigFixedSize(kMaxYoungGenSize * GenGC::kYoungGenFractionDenom);
 
-  auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
+  auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
 
@@ -85,7 +85,7 @@ TEST_P(ExtMemTests, ExtMemInOldByAllocTest) {
   static const GCConfig kGCConfig =
       TestGCConfigFixedSize(kMaxYoungGenSize * GenGC::kYoungGenFractionDenom);
 
-  auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
+  auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
 
@@ -157,7 +157,7 @@ TEST_P(ExtMemTests, ExtMemInOldDirectTest) {
   static const GCConfig kGCConfig =
       TestGCConfigFixedSize(kMaxYoungGenSize * GenGC::kYoungGenFractionDenom);
 
-  auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
+  auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
 
@@ -218,7 +218,7 @@ TEST(ExtMemNonParamTests, ExtMemDoesNotBreakFullGC) {
                           .withMaxHeapSize(kInitSize * 4)
                           .build();
 
-  auto runtime = DummyRuntime::create(getMetadataTable(), gcConfig);
+  auto runtime = DummyRuntime::create(gcConfig);
   DummyRuntime &rt = *runtime;
 
   using SegmentSizeCell = EmptyCell<GenGCHeapSegment::maxSize()>;
@@ -272,7 +272,7 @@ TEST(ExtMemNonParamDeathTest, SaturateYoungGen) {
   ASSERT_GT(kExtAllocSize, kYGSize);
 
   const auto gcConfig = TestGCConfigFixedSize(kTotalSize);
-  auto runtime = DummyRuntime::create(getMetadataTable(), gcConfig);
+  auto runtime = DummyRuntime::create(gcConfig);
   DummyRuntime &rt = *runtime;
 
   std::deque<GCCell *> roots;

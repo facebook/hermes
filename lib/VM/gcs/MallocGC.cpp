@@ -184,7 +184,6 @@ gcheapsize_t MallocGC::Size::minStorageFootprint() const {
 }
 
 MallocGC::MallocGC(
-    MetadataTable metaTable,
     GCCallbacks *gcCallbacks,
     PointerBase *pointerBase,
     const GCConfig &gcConfig,
@@ -192,7 +191,6 @@ MallocGC::MallocGC(
     std::shared_ptr<StorageProvider> provider,
     experiments::VMExperimentFlags vmExperimentFlags)
     : GCBase(
-          metaTable,
           gcCallbacks,
           pointerBase,
           gcConfig,

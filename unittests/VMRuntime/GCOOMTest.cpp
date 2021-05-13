@@ -23,7 +23,7 @@ namespace {
 
 TEST(GCOOMDeathTest, SuperSegment) {
   using SuperSegmentCell = EmptyCell<GC::maxAllocationSize() * 2>;
-  auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfig);
+  auto runtime = DummyRuntime::create(kTestGCConfig);
   EXPECT_OOM(SuperSegmentCell::create(*runtime));
 }
 
@@ -36,8 +36,8 @@ static void exceedMaxHeap(
   // space wasted in the segment.
   using AwkwardCell = EmptyCell<AlignedHeapSegment::maxSize() / 2 + 1>;
 
-  auto runtime = DummyRuntime::create(
-      getMetadataTable(), TestGCConfigFixedSize(kHeapSizeHint, baseConfig));
+  auto runtime =
+      DummyRuntime::create(TestGCConfigFixedSize(kHeapSizeHint, baseConfig));
   DummyRuntime &rt = *runtime;
   GCScope scope{&rt};
 
@@ -65,8 +65,7 @@ TEST(GCOOMTest, VarSize) {
   const size_t kHeapSizeHint = kCellSize * GenGC::kYoungGenFractionDenom / 2;
   using VarCell = EmptyCell<kCellSize>;
 
-  auto runtime = DummyRuntime::create(
-      getMetadataTable(), TestGCConfigFixedSize(kHeapSizeHint));
+  auto runtime = DummyRuntime::create(TestGCConfigFixedSize(kHeapSizeHint));
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
 
@@ -85,12 +84,10 @@ TEST(GCOOMDeathTest, Effective) {
   const size_t kHeapSizeHint =
       AlignedHeapSegment::maxSize() * GenGC::kYoungGenFractionDenom;
 
-  auto runtime = DummyRuntime::create(
-      getMetadataTable(),
-      TestGCConfigFixedSize(kHeapSizeHint)
-          .rebuild()
-          .withEffectiveOOMThreshold(3)
-          .build());
+  auto runtime = DummyRuntime::create(TestGCConfigFixedSize(kHeapSizeHint)
+                                          .rebuild()
+                                          .withEffectiveOOMThreshold(3)
+                                          .build());
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
 
@@ -116,12 +113,11 @@ TEST(GCOOMDeathTest, EffectiveIntegration) {
   using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
 
   const unsigned kOOMThreshold = 3;
-  auto runtime = DummyRuntime::create(
-      getMetadataTable(),
-      TestGCConfigFixedSize(kHeapSizeHint)
-          .rebuild()
-          .withEffectiveOOMThreshold(kOOMThreshold)
-          .build());
+  auto runtime =
+      DummyRuntime::create(TestGCConfigFixedSize(kHeapSizeHint)
+                               .rebuild()
+                               .withEffectiveOOMThreshold(kOOMThreshold)
+                               .build());
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
 
@@ -172,8 +168,7 @@ TEST(GCOOMTest, VALimitFullGC) {
   auto provider = std::make_unique<LimitedStorageProvider>(
       DummyRuntime::defaultProvider(), AlignedStorage::size() * 2);
 
-  auto runtime =
-      DummyRuntime::create(getMetadataTable(), config, std::move(provider));
+  auto runtime = DummyRuntime::create(config, std::move(provider));
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
 

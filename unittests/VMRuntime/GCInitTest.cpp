@@ -38,7 +38,7 @@ TEST_P(GCInitTests, InitSizeTest) {
                         .withMaxHeapSize(32 * kM)
                         .build();
 
-  auto runtime = DummyRuntime::create(getMetadataTable(), config);
+  auto runtime = DummyRuntime::create(config);
   oscompat::reset_test_page_size();
 }
 

@@ -112,7 +112,6 @@ class GenGC final : public GCBase {
   /// sizes.
   /// \param provider A provider of storage to be used by segments.
   GenGC(
-      MetadataTable metaTable,
       GCCallbacks *gcCallbacks,
       PointerBase *pointerBase,
       const GCConfig &gcConfig,

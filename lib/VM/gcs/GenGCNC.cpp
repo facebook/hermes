@@ -86,7 +86,6 @@ std::pair<gcheapsize_t, gcheapsize_t> GenGC::Size::adjustSize(
 }
 
 GenGC::GenGC(
-    MetadataTable metaTable,
     GCCallbacks *gcCallbacks,
     PointerBase *pointerBase,
     const GCConfig &gcConfig,
@@ -94,7 +93,6 @@ GenGC::GenGC(
     std::shared_ptr<StorageProvider> provider,
     experiments::VMExperimentFlags vmExperimentFlags)
     : GCBase(
-          metaTable,
           gcCallbacks,
           pointerBase,
           gcConfig,

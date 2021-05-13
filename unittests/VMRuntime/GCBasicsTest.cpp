@@ -32,8 +32,7 @@ struct GCBasicsTest : public ::testing::Test {
   std::shared_ptr<DummyRuntime> runtime;
   DummyRuntime &rt;
   GCBasicsTest()
-      : runtime(DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall)),
-        rt(*runtime) {}
+      : runtime(DummyRuntime::create(kTestGCConfigSmall)), rt(*runtime) {}
 };
 
 // Hades doesn't report its stats the same way as other GCs.
@@ -479,7 +478,7 @@ TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
       AlignedHeapSegment::maxSize() * GenGC::kYoungGenFractionDenom;
 
   const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
-  auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
+  auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
 
   GCScope scope{&rt};

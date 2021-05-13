@@ -64,7 +64,6 @@ class HadesGC final : public GCBase {
   /// sizes.
   /// \param provider A provider of storage to be used by segments.
   HadesGC(
-      MetadataTable metaTable,
       GCCallbacks *gcCallbacks,
       PointerBase *pointerBase,
       const GCConfig &gcConfig,

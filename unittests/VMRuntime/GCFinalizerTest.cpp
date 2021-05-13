@@ -34,7 +34,7 @@ static DummyObject *createWithFinalizeCount(GC *gc, int *numFinalized) {
 
 TEST(GCFinalizerTest, NoDeadFinalizables) {
   int finalized = 0;
-  auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);
+  auto runtime = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
 
   DummyObject::create(&rt.getHeap());
@@ -47,7 +47,7 @@ TEST(GCFinalizerTest, NoDeadFinalizables) {
 
 TEST(GCFinalizerTest, FinalizablesOnly) {
   int finalized = 0;
-  auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);
+  auto runtime = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
 
   createWithFinalizeCount(&rt.getHeap(), &finalized);
@@ -60,7 +60,7 @@ TEST(GCFinalizerTest, FinalizablesOnly) {
 
 TEST(GCFinalizerTest, MultipleCollect) {
   int finalized = 0;
-  auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);
+  auto runtime = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
 
   createWithFinalizeCount(&rt.getHeap(), &finalized);
@@ -83,7 +83,7 @@ TEST(GCFinalizerTest, MultipleCollect) {
 TEST(GCFinalizerTest, FinalizeAllOnRuntimeDestructDummyRuntime) {
   int finalized = 0;
   {
-    auto rt = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);
+    auto rt = DummyRuntime::create(kTestGCConfigSmall);
 
     GCCell *r1 = createWithFinalizeCount(&rt->getHeap(), &finalized);
     GCCell *r2 = createWithFinalizeCount(&rt->getHeap(), &finalized);

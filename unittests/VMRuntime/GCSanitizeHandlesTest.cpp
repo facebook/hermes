@@ -33,14 +33,12 @@ struct TestHarness {
   std::shared_ptr<DummyRuntime> runtime;
 
   TestHarness() {
-    runtime = DummyRuntime::create(
-        getMetadataTable(),
-        TestGCConfigFixedSize(
-            1u << 20,
-            GCConfig::Builder(kTestGCConfigBuilder)
-                .withSanitizeConfig(vm::GCSanitizeConfig::Builder()
-                                        .withSanitizeRate(1.0)
-                                        .build())));
+    runtime = DummyRuntime::create(TestGCConfigFixedSize(
+        1u << 20,
+        GCConfig::Builder(kTestGCConfigBuilder)
+            .withSanitizeConfig(vm::GCSanitizeConfig::Builder()
+                                    .withSanitizeRate(1.0)
+                                    .build())));
   }
 
   void triggerFreshHeap() {

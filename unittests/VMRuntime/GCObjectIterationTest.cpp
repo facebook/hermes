@@ -22,7 +22,7 @@ using namespace hermes::vm;
 namespace {
 
 TEST(GCObjectIterationTest, ForAllObjsGetsAllObjects) {
-  auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfigLarge);
+  auto runtime = DummyRuntime::create(kTestGCConfigLarge);
   DummyRuntime &rt = *runtime;
   auto &gc = rt.getHeap();
 

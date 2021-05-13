@@ -48,7 +48,7 @@ TEST(GCMarkWeakTest, MarkWeak) {
 #endif
       ;
   int numMarkWeakCalls = 0;
-  auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);
+  auto runtime = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
   auto &gc = rt.getHeap();
   // Probably zero, but we only care about the increase/decrease.

@@ -257,7 +257,7 @@ inline HermesValue operator"" _hd(long double d) {
   return HermesValue::encodeDoubleValue(d);
 }
 
-/// A Runtime that can take a custom VTableMap and Metadata table.
+/// A minimal Runtime for GC tests.
 class DummyRuntime final : public HandleRootOwner,
                            public PointerBase,
                            private GCBase::GCCallbacks {
@@ -271,16 +271,13 @@ class DummyRuntime final : public HandleRootOwner,
   std::function<void(WeakRootAcceptor &)> markExtraWeak{};
 
   /// Create a DummyRuntime with the default parameters.
-  static std::shared_ptr<DummyRuntime> create(
-      MetadataTable metaTable,
-      const GCConfig &gcConfig);
+  static std::shared_ptr<DummyRuntime> create(const GCConfig &gcConfig);
 
   /// Use a custom storage provider and/or a custom crash manager.
   /// \param provider A pointer to a StorageProvider. It *must* use
   ///   StorageProvider::defaultProvider eventually or the test will fail.
   /// \param crashMgr
   static std::shared_ptr<DummyRuntime> create(
-      MetadataTable metaTable,
       const GCConfig &gcConfig,
       std::shared_ptr<StorageProvider> provider,
       std::shared_ptr<CrashManager> crashMgr =
@@ -378,14 +375,13 @@ class DummyRuntime final : public HandleRootOwner,
 
  private:
   DummyRuntime(
-      MetadataTable metaTable,
       const GCConfig &gcConfig,
       std::shared_ptr<StorageProvider> storageProvider,
       std::shared_ptr<CrashManager> crashMgr);
 };
 
 /// A DummyRuntimeTestFixtureBase should be used by any test that requires a
-/// DummyRuntime. It takes a metadata table and a GCConfig, the latter can be
+/// DummyRuntime. It takes a GCConfig, which can be
 /// used to specify heap size using the constants i.e kInitHeapSize.
 class DummyRuntimeTestFixtureBase : public ::testing::Test {
   std::shared_ptr<DummyRuntime> rt;
@@ -396,8 +392,8 @@ class DummyRuntimeTestFixtureBase : public ::testing::Test {
 
   GCScope gcScope;
 
-  DummyRuntimeTestFixtureBase(MetadataTable metaTable, const GCConfig &gcConfig)
-      : rt(DummyRuntime::create(metaTable, gcConfig)),
+  DummyRuntimeTestFixtureBase(const GCConfig &gcConfig)
+      : rt(DummyRuntime::create(gcConfig)),
         runtime(rt.get()),
         gcScope(runtime) {}
 
