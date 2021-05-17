@@ -116,7 +116,7 @@ TEST_F(AlignedHeapSegmentTest, ResetLevel) {
   s.growToLimit();
 
   // Make the level different from the start of the region.
-  AllocResult res = s.alloc(sizeof(GCCell));
+  AllocResult res = s.alloc(cellSize<GCCell>());
   ASSERT_TRUE(res.success);
   ASSERT_NE(s.start(), s.level());
 
