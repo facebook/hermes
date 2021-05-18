@@ -65,22 +65,6 @@ HermesValue HermesValue32::toHV(PointerBase *pb) const {
   return unboxToHV(pb);
 }
 
-GCCell *HermesValue32::getPointer(PointerBase *pb) const {
-  assert(isPointer());
-  return getPointer().get(pb);
-}
-
-GCCell *HermesValue32::getObject(PointerBase *pb) const {
-  assert(isObject());
-  // Since object pointers are the most common type, we have them as the
-  // zero-tag and can decode them without needing to remove the tag.
-  static_assert(
-      static_cast<uint8_t>(Tag::Object) == 0,
-      "Object tag must be zero for fast path.");
-  return CompressedPointer::storageTypeToPointer(
-      CompressedPointer::rawToStorageType(raw_), pb);
-}
-
 StringPrimitive *HermesValue32::getString(PointerBase *pb) const {
   assert(isString());
   return vmcast<StringPrimitive>(getPointer(pb));
@@ -142,19 +126,6 @@ double HermesValue32::getNumber(PointerBase *pb) const {
       BoxedDouble::create(d, runtime), Tag::BoxedDouble, runtime);
 }
 
-/* static */ HermesValue32
-HermesValue32::encodePointerImpl(GCCell *ptr, Tag tag, PointerBase *pb) {
-  return encodePointerImpl(CompressedPointer(pb, ptr), tag);
-}
-
-HermesValue32 HermesValue32::updatePointer(GCCell *ptr, PointerBase *pb) const {
-  return encodePointerImpl(ptr, getTag(), pb);
-}
-
-void HermesValue32::unsafeUpdatePointer(GCCell *ptr, PointerBase *pb) {
-  setNoBarrier(encodePointerImpl(ptr, getTag(), pb));
-}
-
 /* static */ HermesValue32 HermesValue32::encodeObjectValue(
     GCCell *ptr,
     PointerBase *pb) {
@@ -163,12 +134,6 @@ void HermesValue32::unsafeUpdatePointer(GCCell *ptr, PointerBase *pb) {
       "Strings must use encodeStringValue");
   return encodePointerImpl(ptr, Tag::Object, pb);
 }
-/* static */ HermesValue32 HermesValue32::encodeStringValue(
-    StringPrimitive *ptr,
-    PointerBase *pb) {
-  return encodePointerImpl(static_cast<GCCell *>(ptr), Tag::String, pb);
-}
-
 } // namespace vm
 } // namespace hermes
 

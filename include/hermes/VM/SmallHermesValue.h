@@ -24,7 +24,6 @@ namespace hermes {
 namespace vm {
 
 class StringPrimitive;
-class PointerBase;
 class GCCell;
 class Runtime;
 
@@ -273,8 +272,10 @@ class HermesValue32 {
 
   constexpr explicit HermesValue32(RawType raw) : raw_(raw) {}
 
-  inline static HermesValue32
-  encodePointerImpl(GCCell *ptr, Tag tag, PointerBase *pb);
+  static HermesValue32
+  encodePointerImpl(GCCell *ptr, Tag tag, PointerBase *pb) {
+    return encodePointerImpl(CompressedPointer(pb, ptr), tag);
+  }
 
   static HermesValue32 encodePointerImpl(CompressedPointer ptr, Tag tag) {
     RawType p = ptr.getRaw();
@@ -338,8 +339,21 @@ class HermesValue32 {
   inline HermesValue unboxToHV(PointerBase *pb) const;
 
   /// Methods to access pointer values.
-  inline GCCell *getPointer(PointerBase *pb) const;
-  inline GCCell *getObject(PointerBase *pb) const;
+  GCCell *getPointer(PointerBase *pb) const {
+    assert(isPointer());
+    return getPointer().get(pb);
+  }
+  GCCell *getObject(PointerBase *pb) const {
+    assert(isObject());
+    // Since object pointers are the most common type, we have them as the
+    // zero-tag and can decode them without needing to remove the tag.
+    static_assert(
+        static_cast<uint8_t>(Tag::Object) == 0,
+        "Object tag must be zero for fast path.");
+    return CompressedPointer::storageTypeToPointer(
+        CompressedPointer::rawToStorageType(raw_), pb);
+  }
+
   inline StringPrimitive *getString(PointerBase *pb) const;
   inline double getNumber(PointerBase *pb) const;
 
@@ -359,9 +373,13 @@ class HermesValue32 {
   }
 
   inline void setInGC(HermesValue32 hv, GC *gc);
-  inline HermesValue32 updatePointer(GCCell *ptr, PointerBase *pb) const;
-  inline void unsafeUpdatePointer(GCCell *ptr, PointerBase *pb);
 
+  HermesValue32 updatePointer(GCCell *ptr, PointerBase *pb) const {
+    return encodePointerImpl(ptr, getTag(), pb);
+  }
+  void unsafeUpdatePointer(GCCell *ptr, PointerBase *pb) {
+    setNoBarrier(encodePointerImpl(ptr, getTag(), pb));
+  }
   HermesValue32 updatePointer(CompressedPointer ptr) const {
     assert(isPointer());
     return encodePointerImpl(ptr, getTag());
@@ -390,9 +408,12 @@ class HermesValue32 {
   inline static HermesValue32 encodeNumberValue(double d, Runtime *runtime);
 
   inline static HermesValue32 encodeObjectValue(GCCell *ptr, PointerBase *pb);
-  inline static HermesValue32 encodeStringValue(
+
+  static HermesValue32 encodeStringValue(
       StringPrimitive *ptr,
-      PointerBase *pb);
+      PointerBase *pb) {
+    return encodePointerImpl(reinterpret_cast<GCCell *>(ptr), Tag::String, pb);
+  }
 
   static HermesValue32 encodeSymbolValue(SymbolID s) {
     return fromTagAndValue(Tag::Symbol, s.unsafeGetRaw());
