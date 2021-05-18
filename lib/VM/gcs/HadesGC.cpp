@@ -494,8 +494,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
   void acceptWeak(WeakRootBase &wr) override {
     // It's safe to not do a read barrier here since this is happening in the GC
     // and does not extend the lifetime of the referent.
-    GCCell *const ptr = GCPointerBase::storageTypeToPointer(
-        wr.getNoBarrierUnsafe(), gc.getPointerBase());
+    GCCell *const ptr = wr.getNoBarrierUnsafe(gc.getPointerBase());
 
     if (!shouldForward(ptr))
       return;
@@ -505,8 +504,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
       GCCell *const forwardedCell = ptr->getMarkedForwardingPointer();
       assert(forwardedCell->isValid() && "Cell was forwarded incorrectly");
       // Assign back to the input pointer location.
-      wr = GCPointerBase::pointerToStorageType(
-          forwardedCell, gc.getPointerBase());
+      wr = CompressedPointer(gc.getPointerBase(), forwardedCell);
     } else {
       wr = nullptr;
     }
@@ -999,16 +997,14 @@ class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
     if (!wr) {
       return;
     }
-    GCPointerBase::StorageType &ptrStorage = wr.getNoBarrierUnsafe();
-    GCCell *const cell =
-        GCPointerBase::storageTypeToPointer(ptrStorage, gc_.getPointerBase());
+    GCCell *const cell = wr.getNoBarrierUnsafe(gc_.getPointerBase());
     HERMES_SLOW_ASSERT(gc_.dbgContains(cell) && "ptr not in heap");
     if (HeapSegment::getCellMarkBit(cell)) {
       // If the cell is marked, no need to do any writes.
       return;
     }
     // Reset weak root if target GCCell is dead.
-    ptrStorage = nullptr;
+    wr = nullptr;
   }
 
  private:

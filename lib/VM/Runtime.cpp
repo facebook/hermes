@@ -87,7 +87,7 @@ CallResult<PseudoHandle<>> Runtime::getNamed(
     PropCacheID id) {
   auto clazzGCPtr = obj->getClassGCPtr();
   auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
-  if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
+  if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr)) {
     // The slot is cached, so it is safe to use the Internal function.
     return createPseudoHandle(
         JSObject::getNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
@@ -105,7 +105,7 @@ CallResult<PseudoHandle<>> Runtime::getNamed(
     auto *clazz = clazzGCPtr.getNonNull(this);
     if (LLVM_LIKELY(!clazz->isDictionary())) {
       // Cache the class, id and property slot.
-      cacheEntry->clazz = clazzGCPtr.getStorageType();
+      cacheEntry->clazz = clazzGCPtr;
       cacheEntry->slot = desc.slot;
     }
     return JSObject::getNamedSlotValue(createPseudoHandle(*obj), this, desc);
@@ -119,7 +119,7 @@ ExecutionStatus Runtime::putNamedThrowOnError(
     HermesValue hv) {
   auto clazzGCPtr = obj->getClassGCPtr();
   auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
-  if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
+  if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr)) {
     auto shv = SmallHermesValue::encodeHermesValue(hv, this);
     JSObject::setNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
         *obj, this, cacheEntry->slot, shv);
@@ -134,7 +134,7 @@ ExecutionStatus Runtime::putNamedThrowOnError(
     auto *clazz = clazzGCPtr.getNonNull(this);
     if (LLVM_LIKELY(!clazz->isDictionary())) {
       // Cache the class and property slot.
-      cacheEntry->clazz = clazzGCPtr.getStorageType();
+      cacheEntry->clazz = clazzGCPtr;
       cacheEntry->slot = desc.slot;
     }
     auto shv = SmallHermesValue::encodeHermesValue(hv, this);

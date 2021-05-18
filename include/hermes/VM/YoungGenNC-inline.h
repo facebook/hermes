@@ -50,8 +50,7 @@ struct YoungGen::EvacAcceptor final : public RootAndSlotAcceptorDefault,
   void acceptWeak(WeakRootBase &wr) override {
     // It's safe to not do a read barrier here since this is happening in the GC
     // and does not extend the lifetime of the referent.
-    GCCell *const ptr = GCPointerBase::storageTypeToPointer(
-        wr.getNoBarrierUnsafe(), gen.gc_->getPointerBase());
+    GCCell *const ptr = wr.getNoBarrierUnsafe(gen.gc_->getPointerBase());
 
     if (!gen.contains(ptr))
       return;
@@ -61,8 +60,7 @@ struct YoungGen::EvacAcceptor final : public RootAndSlotAcceptorDefault,
       GCCell *const forwardedCell = ptr->getMarkedForwardingPointer();
       assert(forwardedCell->isValid() && "Cell was forwarded incorrectly");
       // Assign back to the input pointer location.
-      wr = GCPointerBase::pointerToStorageType(
-          forwardedCell, gen.gc_->getPointerBase());
+      wr = CompressedPointer(gen.gc_->getPointerBase(), forwardedCell);
     } else {
       wr = nullptr;
     }

@@ -2292,7 +2292,7 @@ tailCall:
 
         // If we have a cache hit, reuse the cached offset and immediately
         // return the property.
-        if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
+        if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr)) {
           ++NumGetByIdCacheHits;
           CAPTURE_IP(
               O1REG(GetById) =
@@ -2318,14 +2318,13 @@ tailCall:
           if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) &&
               LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
 #ifdef HERMES_SLOW_DEBUG
-            if (cacheEntry->clazz &&
-                cacheEntry->clazz != clazzGCPtr.getStorageType())
+            if (cacheEntry->clazz && cacheEntry->clazz != clazzGCPtr)
               ++NumGetByIdCacheEvicts;
 #else
             (void)NumGetByIdCacheEvicts;
 #endif
             // Cache the class, id and property slot.
-            cacheEntry->clazz = clazzGCPtr.getStorageType();
+            cacheEntry->clazz = clazzGCPtr;
             cacheEntry->slot = desc.slot;
           }
 
@@ -2350,8 +2349,7 @@ tailCall:
           // having no properties and therefore cannot contain the property.
           // This check does not belong here, it should be merged into
           // tryGetOwnNamedDescriptorFast().
-          if (parent &&
-              cacheEntry->clazz == parent->getClassGCPtr().getStorageType() &&
+          if (parent && cacheEntry->clazz == parent->getClassGCPtr() &&
               LLVM_LIKELY(!obj->isLazy())) {
             ++NumGetByIdProtoHits;
             // We've already checked that this isn't a Proxy.
@@ -2480,7 +2478,7 @@ tailCall:
         auto clazzGCPtr = obj->getClassGCPtr();
         // If we have a cache hit, reuse the cached offset and immediately
         // return the property.
-        if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
+        if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr)) {
           ++NumPutByIdCacheHits;
           CAPTURE_IP(
               JSObject::setNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
@@ -2504,14 +2502,13 @@ tailCall:
           if (LLVM_LIKELY(!clazz->isDictionary()) &&
               LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
 #ifdef HERMES_SLOW_DEBUG
-            if (cacheEntry->clazz &&
-                cacheEntry->clazz != clazzGCPtr.getStorageType())
+            if (cacheEntry->clazz && cacheEntry->clazz != clazzGCPtr)
               ++NumPutByIdCacheEvicts;
 #else
             (void)NumPutByIdCacheEvicts;
 #endif
             // Cache the class and property slot.
-            cacheEntry->clazz = clazzGCPtr.getStorageType();
+            cacheEntry->clazz = clazzGCPtr;
             cacheEntry->slot = desc.slot;
           }
 

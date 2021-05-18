@@ -1082,7 +1082,7 @@ CallResult<PseudoHandle<>> JSObject::getNamedWithReceiver_RJS(
           !desc.flags.proxyObject)) {
     // Populate the cache if requested.
     if (cacheEntry && !propObj->getClass(runtime)->isDictionaryNoCache()) {
-      cacheEntry->clazz = propObj->getClassGCPtr().getStorageType();
+      cacheEntry->clazz = propObj->getClassGCPtr();
       cacheEntry->slot = desc.slot;
     }
     return createPseudoHandle(

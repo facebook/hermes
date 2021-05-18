@@ -162,10 +162,7 @@ inline void RootAndSlotAcceptorDefault::accept(BasedPointer &ptr) {
 }
 
 inline void WeakAcceptorDefault::acceptWeak(WeakRootBase &ptr) {
-  GCPointerBase::StorageType weakRootStorage = ptr.getNoBarrierUnsafe();
-  acceptWeak(weakRootStorage);
-  // Assign back to the input pointer location.
-  ptr = weakRootStorage;
+  acceptWeak(ptr.getLocNoBarrierUnsafe());
 }
 
 inline void WeakAcceptorDefault::acceptWeak(BasedPointer &ptr) {
