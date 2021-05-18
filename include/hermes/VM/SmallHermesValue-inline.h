@@ -67,9 +67,7 @@ HermesValue HermesValue32::toHV(PointerBase *pb) const {
 
 GCCell *HermesValue32::getPointer(PointerBase *pb) const {
   assert(isPointer());
-  RawType rawPtr = raw_ & llvh::maskLeadingOnes<RawType>(kNumValueBits);
-  return GCPointerBase::storageTypeToPointer(
-      GCPointerBase::rawToStorageType(rawPtr), pb);
+  return getPointer().get(pb);
 }
 
 GCCell *HermesValue32::getObject(PointerBase *pb) const {
@@ -79,8 +77,8 @@ GCCell *HermesValue32::getObject(PointerBase *pb) const {
   static_assert(
       static_cast<uint8_t>(Tag::Object) == 0,
       "Object tag must be zero for fast path.");
-  return GCPointerBase::storageTypeToPointer(
-      GCPointerBase::rawToStorageType(raw_), pb);
+  return CompressedPointer::storageTypeToPointer(
+      CompressedPointer::rawToStorageType(raw_), pb);
 }
 
 StringPrimitive *HermesValue32::getString(PointerBase *pb) const {
@@ -146,13 +144,7 @@ double HermesValue32::getNumber(PointerBase *pb) const {
 
 /* static */ HermesValue32
 HermesValue32::encodePointerImpl(GCCell *ptr, Tag tag, PointerBase *pb) {
-  static_assert(
-      sizeof(RawType) == sizeof(GCPointerBase::StorageType),
-      "Raw storage must fit a GCPointer");
-  RawType p = GCPointerBase::storageTypeToRaw(
-      GCPointerBase::pointerToStorageType(ptr, pb));
-  validatePointer(p);
-  return fromRaw(p | static_cast<RawType>(tag));
+  return encodePointerImpl(CompressedPointer(pb, ptr), tag);
 }
 
 HermesValue32 HermesValue32::updatePointer(GCCell *ptr, PointerBase *pb) const {

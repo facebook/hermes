@@ -9,6 +9,7 @@
 #define HERMES_VM_SMALLHERMESVALUE_H
 
 #include "hermes/Support/Algorithms.h"
+#include "hermes/VM/CompressedPointer.h"
 #include "hermes/VM/GCDecl.h"
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/HermesValue.h"
@@ -69,6 +70,13 @@ class SmallHermesValueAdaptor : protected HermesValue {
   GCCell *getPointer(PointerBase *) const {
     return static_cast<GCCell *>(HermesValue::getPointer());
   }
+  CompressedPointer getPointer() const {
+    assert(
+        sizeof(uintptr_t) == sizeof(CompressedPointer::RawType) &&
+        "Adaptor should not be used when compressed pointers are enabled.");
+    uintptr_t rawPtr = reinterpret_cast<uintptr_t>(HermesValue::getPointer());
+    return CompressedPointer(CompressedPointer::rawToStorageType(rawPtr));
+  }
   GCCell *getObject(PointerBase *) const {
     return static_cast<GCCell *>(HermesValue::getObject());
   }
@@ -86,6 +94,13 @@ class SmallHermesValueAdaptor : protected HermesValue {
 
   SmallHermesValueAdaptor updatePointer(GCCell *ptr, PointerBase *) const {
     return SmallHermesValueAdaptor{HermesValue::updatePointer(ptr)};
+  }
+  SmallHermesValueAdaptor updatePointer(CompressedPointer ptr) const {
+    assert(
+        sizeof(uintptr_t) == sizeof(CompressedPointer::RawType) &&
+        "Adaptor should not be used when compressed pointers are enabled.");
+    GCCell *cellPtr = reinterpret_cast<GCCell *>(ptr.getRaw());
+    return SmallHermesValueAdaptor{HermesValue::updatePointer(cellPtr)};
   }
   void unsafeUpdateRelocationID(uint32_t id) {
     HermesValue::unsafeUpdatePointer(
@@ -137,24 +152,14 @@ class SmallHermesValueAdaptor : protected HermesValue {
   }
 };
 
-/// A compressed HermesValue that is always equal to the size of a GCPointer. It
-/// uses the least significant bits (guaranteed to be zero by the heap
-/// alignment) as a tag to determine what the type of the remaining bits is.
-/// Some types may use an additional tag bit to form an "extended tag". Doubles
-/// have to be boxed on the heap so that they can then be held as pointers.
-/// Native values are not supported.
+/// A compressed HermesValue that is always equal to the size of a
+/// CompressedPointer. It uses the least significant bits (guaranteed to be zero
+/// by the heap alignment) as a tag to determine what the type of the remaining
+/// bits is. Some types may use an additional tag bit to form an "extended tag".
+/// Doubles have to be boxed on the heap so that they can then be held as
+/// pointers. Native values are not supported.
 class HermesValue32 {
-  /// If compressed pointers are enabled, then the size of this type should be
-  /// equal to the size of a compressed pointer. Otherwise, the size of this
-  /// type should be equal to the size of a normal pointer for this platform.
-  /// This guarantees that we can always fit a pointer inside this class.
-  using RawType =
-#ifdef HERMESVM_COMPRESSED_POINTERS
-      uint32_t
-#else
-      uintptr_t
-#endif
-      ;
+  using RawType = CompressedPointer::RawType;
   using SmiType = std::make_signed<RawType>::type;
 
   static constexpr size_t kNumTagBits = LogHeapAlign;
@@ -271,6 +276,12 @@ class HermesValue32 {
   inline static HermesValue32
   encodePointerImpl(GCCell *ptr, Tag tag, PointerBase *pb);
 
+  static HermesValue32 encodePointerImpl(CompressedPointer ptr, Tag tag) {
+    RawType p = ptr.getRaw();
+    validatePointer(p);
+    return fromRaw(p | static_cast<RawType>(tag));
+  }
+
   static constexpr SmiType doubleToSmi(double d)
       LLVM_NO_SANITIZE("float-cast-overflow") {
     return d;
@@ -332,6 +343,12 @@ class HermesValue32 {
   inline StringPrimitive *getString(PointerBase *pb) const;
   inline double getNumber(PointerBase *pb) const;
 
+  CompressedPointer getPointer() const {
+    assert(isPointer());
+    RawType rawPtr = raw_ & llvh::maskLeadingOnes<RawType>(kNumValueBits);
+    return CompressedPointer(CompressedPointer::rawToStorageType(rawPtr));
+  }
+
   SymbolID getSymbol() const {
     assert(isSymbol());
     return SymbolID::unsafeCreate(getValue());
@@ -344,6 +361,11 @@ class HermesValue32 {
   inline void setInGC(HermesValue32 hv, GC *gc);
   inline HermesValue32 updatePointer(GCCell *ptr, PointerBase *pb) const;
   inline void unsafeUpdatePointer(GCCell *ptr, PointerBase *pb);
+
+  HermesValue32 updatePointer(CompressedPointer ptr) const {
+    assert(isPointer());
+    return encodePointerImpl(ptr, getTag());
+  }
 
   /// Serializer/Deserializer helpers.
   inline uint32_t getRelocationID() const {
