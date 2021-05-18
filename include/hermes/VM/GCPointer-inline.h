@@ -26,7 +26,7 @@ GCPointer<T>::GCPointer(PointerBase *base, T *ptr, GC *gc, NeedsBarriers)
   if (NeedsBarriers::value) {
     gc->constructorWriteBarrier(this, ptr);
   } else {
-    assert(!gc->needsWriteBarrier(&ptr_, ptr));
+    assert(!gc->needsWriteBarrier(this, ptr));
   }
 }
 
@@ -36,12 +36,12 @@ inline void GCPointerBase::set(PointerBase *base, GCCell *ptr, GC *gc) {
       "Cannot set a GCPointer to an invalid pointer");
   // Write barrier must happen before the write.
   gc->writeBarrier(this, ptr);
-  ptr_ = pointerToStorageType(ptr, base);
+  setNoBarrier(CompressedPointer(base, ptr));
 }
 
 inline void GCPointerBase::setNull(GC *gc) {
   gc->snapshotWriteBarrier(this);
-  ptr_ = StorageType{};
+  setNoBarrier(CompressedPointer(nullptr));
 }
 
 } // namespace vm
