@@ -52,7 +52,7 @@ module.exports = {
 `;
 
 // Format then sign file and write to disk
-const formattedContents = execSync('prettier', {
+const formattedContents = execSync('prettier --parser=flow', {
   input: visitorKeysFileContents,
 }).toString();
 fs.writeFileSync(OUTPUT_FILE, formattedContents);
