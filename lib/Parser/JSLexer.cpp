@@ -292,7 +292,9 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
           // as `x ?. 3 : y` instead of `x ? .3 : y`.
           token_.setPunctuator(TokenKind::questiondot);
           curCharPtr_ += 2;
-        } else if (curCharPtr_[1] == '?') {
+        } else if (
+            curCharPtr_[1] == '?' &&
+            LLVM_LIKELY(grammarContext != GrammarContext::Type)) {
           if (curCharPtr_[2] == '=') {
             token_.setPunctuator(TokenKind::questionquestionequal);
             curCharPtr_ += 3;
@@ -324,14 +326,14 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
         }
         break;
 
-      // * *=
-      // ^ ^=
-      // / /=
-      PUNC_L2_2('^', TokenKind::caret, '=', TokenKind::caretequal);
+        // * *=
+        // ^ ^=
+        // / /=
+        PUNC_L2_2('^', TokenKind::caret, '=', TokenKind::caretequal);
 
       // % %=
       case '%':
-      token_.setStart(curCharPtr_);
+        token_.setStart(curCharPtr_);
         if (HERMES_PARSE_FLOW &&
             LLVM_UNLIKELY(grammarContext == GrammarContext::Type) &&
             curCharPtr_ + 7 <= bufferEnd_ &&
