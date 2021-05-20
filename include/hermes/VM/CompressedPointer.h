@@ -130,6 +130,30 @@ static_assert(
     std::is_trivial<CompressedPointer>::value,
     "CompressedPointer must be trivial");
 
+class AssignableCompressedPointer : public CompressedPointer {
+ public:
+  explicit AssignableCompressedPointer() = default;
+  AssignableCompressedPointer(const AssignableCompressedPointer &) = default;
+
+  constexpr explicit AssignableCompressedPointer(std::nullptr_t)
+      : CompressedPointer(nullptr) {}
+
+  AssignableCompressedPointer &operator=(CompressedPointer ptr) {
+    setNoBarrier(ptr);
+    return *this;
+  }
+  AssignableCompressedPointer &operator=(AssignableCompressedPointer ptr) {
+    setNoBarrier(ptr);
+    return *this;
+  }
+  AssignableCompressedPointer &operator=(std::nullptr_t) {
+    setNoBarrier(CompressedPointer(nullptr));
+    return *this;
+  }
+
+  using CompressedPointer::get;
+};
+
 } // namespace vm
 } // namespace hermes
 

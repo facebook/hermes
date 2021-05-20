@@ -94,7 +94,8 @@ void HadesGC::OldGen::addCellToFreelist(FreelistCell *cell, size_t segmentIdx) {
   const uint32_t bucket = getFreelistBucket(sz);
   // Push onto the size-specific free list for this bucket and segment.
   cell->next_ = freelistSegmentsBuckets_[segmentIdx][bucket];
-  freelistSegmentsBuckets_[segmentIdx][bucket] = cell;
+  freelistSegmentsBuckets_[segmentIdx][bucket] =
+      CompressedPointer(gc_->getPointerBase(), cell);
 
   // Set a bit indicating that there are now available blocks in this segment
   // for the given bucket.
@@ -129,7 +130,8 @@ void HadesGC::OldGen::addCellToFreelistFromSweep(
   const uint32_t bucket = getFreelistBucket(newCellSize);
   // Push onto the size-specific free list for this bucket and segment.
   newCell->next_ = freelistSegmentsBuckets_[sweepIterator_.segNumber][bucket];
-  freelistSegmentsBuckets_[sweepIterator_.segNumber][bucket] = newCell;
+  freelistSegmentsBuckets_[sweepIterator_.segNumber][bucket] =
+      CompressedPointer(gc_->getPointerBase(), newCell);
   __asan_poison_memory_region(newCell + 1, newCellSize - sizeof(FreelistCell));
 }
 
@@ -141,10 +143,11 @@ HadesGC::OldGen::FreelistCell *HadesGC::OldGen::removeCellFromFreelist(
 }
 
 HadesGC::OldGen::FreelistCell *HadesGC::OldGen::removeCellFromFreelist(
-    FreelistCell **prevLoc,
+    AssignableCompressedPointer *prevLoc,
     size_t bucket,
     size_t segmentIdx) {
-  FreelistCell *cell = *prevLoc;
+  FreelistCell *cell =
+      vmcast<FreelistCell>(prevLoc->get(gc_->getPointerBase()));
   assert(cell && "Cannot get a null cell from freelist");
 
   // Update whatever was pointing to the cell we are removing.
@@ -521,9 +524,10 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     if (!copyListHead_) {
       return nullptr;
     } else {
-      CopyListCell *const cell = copyListHead_;
+      CopyListCell *const cell =
+          static_cast<CopyListCell *>(copyListHead_.get(gc.getPointerBase()));
       assert(HeapSegment::getCellMarkBit(cell) && "Discovered unmarked object");
-      copyListHead_ = copyListHead_->next_;
+      copyListHead_ = cell->next_;
       return cell;
     }
   }
@@ -531,13 +535,13 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
  private:
   HadesGC &gc;
   /// The copy list is managed implicitly in the body of each copied YG object.
-  CopyListCell *copyListHead_;
+  AssignableCompressedPointer copyListHead_;
   const bool isTrackingIDs_;
   uint64_t evacuatedBytes_{0};
 
   void push(CopyListCell *cell) {
     cell->next_ = copyListHead_;
-    copyListHead_ = cell;
+    copyListHead_ = CompressedPointer(gc.getPointerBase(), cell);
   }
 };
 
@@ -2330,17 +2334,19 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
           freelistSegmentsBuckets_[segmentIdx][bucket] &&
           "Empty bucket should not have bit set!");
       // Need to track the previous entry in order to change the next pointer.
-      FreelistCell **prevLoc = &freelistSegmentsBuckets_[segmentIdx][bucket];
-      FreelistCell *cell = freelistSegmentsBuckets_[segmentIdx][bucket];
+      AssignableCompressedPointer *prevLoc =
+          &freelistSegmentsBuckets_[segmentIdx][bucket];
+      AssignableCompressedPointer cellCP =
+          freelistSegmentsBuckets_[segmentIdx][bucket];
 
-      while (cell) {
+      while (cellCP) {
+        auto *cell = vmcast<FreelistCell>(cellCP.get(gc_->getPointerBase()));
         assert(
-            cell == *prevLoc && "prevLoc should be updated in each iteration");
+            cellCP == *prevLoc &&
+            "prevLoc should be updated in each iteration");
         assert(
-            vmisa<FreelistCell>(cell) &&
-            "Non-free-list cell found in the free list");
-        assert(
-            (!cell->next_ || cell->next_->isValid()) &&
+            (!cell->next_ ||
+             cell->next_.get(gc_->getPointerBase())->isValid()) &&
             "Next pointer points to an invalid cell");
         const auto cellSize = cell->getAllocatedSize();
         assert(
@@ -2379,7 +2385,7 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
         // alternative only works if the empty is small enough to fit in any gap
         // in the heap. That's not true in debug modes currently.
         prevLoc = &cell->next_;
-        cell = cell->next_;
+        cellCP = cell->next_;
       }
     }
   }

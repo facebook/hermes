@@ -265,7 +265,7 @@ class HadesGC final : public GCBase {
 
   struct CopyListCell final : public GCCell {
     // Linked list of cells pointing to the next cell that was copied.
-    CopyListCell *next_;
+    AssignableCompressedPointer next_;
   };
 
   /// Similar to AlignedHeapSegment except it uses a free list.
@@ -391,7 +391,7 @@ class HadesGC final : public GCBase {
 
      public:
       // If null, this is the tail of the free list.
-      FreelistCell *next_{nullptr};
+      AssignableCompressedPointer next_{nullptr};
 
       explicit FreelistCell(uint32_t sz) : VariableSizeRuntimeCell{&vt, sz} {}
 
@@ -415,7 +415,7 @@ class HadesGC final : public GCBase {
     /// the given \p segmentIdx and \p bucket in the freelist.
     /// \return a pointer to the removed cell.
     FreelistCell *removeCellFromFreelist(
-        FreelistCell **prevLoc,
+        AssignableCompressedPointer *prevLoc,
         size_t bucket,
         size_t segmentIdx);
 
@@ -524,7 +524,7 @@ class HadesGC final : public GCBase {
 
     /// Maintain a freelist as described above for every segment. Each element
     /// is the head of a freelist for the given segment + bucket pair.
-    std::vector<std::array<FreelistCell *, kNumFreelistBuckets>>
+    std::vector<std::array<AssignableCompressedPointer, kNumFreelistBuckets>>
         freelistSegmentsBuckets_;
 
     /// Keep track of which freelist buckets have valid elements to make search
