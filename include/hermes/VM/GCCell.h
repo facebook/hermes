@@ -10,6 +10,7 @@
 
 #include "hermes/Support/Algorithms.h"
 #include "hermes/VM/CellKind.h"
+#include "hermes/VM/CompressedPointer.h"
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/VTable.h"
 
@@ -56,10 +57,11 @@ class KindAndSize {
   }
 
  private:
-  static constexpr size_t kNumBits = sizeof(uintptr_t) * 8;
+  using RawType = CompressedPointer::RawType;
+  static constexpr size_t kNumBits = sizeof(RawType) * 8;
   static constexpr size_t kNumKindBits = 8;
-  // On 64 bit platforms, just make the size 32 bits so that it can be accessed
-  // without any masking or shifting.
+  // On 64 bit platforms without compressed pointers, just make the size 32 bits
+  // so that it can be accessed without any masking or shifting.
   static constexpr size_t kNumSizeBits =
       min<size_t>(kNumBits - kNumKindBits, 32);
   static_assert(
@@ -69,9 +71,9 @@ class KindAndSize {
   /// The size of the cell. Due to heap alignment, we are guaranteed that the
   /// least significant bit will always be zero, so it can be used for the
   /// mark bit. In order for that to work, this has to come first.
-  uintptr_t size_ : kNumSizeBits;
+  RawType size_ : kNumSizeBits;
   /// The CellKind of the cell.
-  uintptr_t kind_ : kNumKindBits;
+  RawType kind_ : kNumKindBits;
 };
 
 /// This include file defines a GCCell that allows forward heap
@@ -82,7 +84,7 @@ class GCCell {
   /// pointer.
   union {
     KindAndSize kindAndSize_;
-    GCCell *forwardingPointer_;
+    AssignableCompressedPointer forwardingPointer_;
   };
 
 #ifndef NDEBUG
@@ -91,7 +93,7 @@ class GCCell {
   const uint16_t magic_{kMagic};
   /// Semi-unique (until the global counter overflows) id associated with every
   /// allocation.
-  uint64_t _debugAllocationId_;
+  uint32_t _debugAllocationId_;
 #endif
 
  public:
@@ -175,7 +177,7 @@ class GCCell {
 
   /// Sets this cell to contain a forwarding pointer to another cell.
   /// NOTE: this should only be used by the GC.
-  void setForwardingPointer(GCCell *cell) {
+  void setForwardingPointer(CompressedPointer cell) {
     forwardingPointer_ = cell;
   }
 
@@ -183,7 +185,7 @@ class GCCell {
   /// has not yet been set by \c setForwardingPointer(), this function is
   /// guaranteed to not return a pointer into the GC heap.
   /// NOTE: this should only be used by the GC.
-  GCCell *getForwardingPointer() const {
+  CompressedPointer getForwardingPointer() const {
     return forwardingPointer_;
   }
 
@@ -194,19 +196,19 @@ class GCCell {
   /// the mark bits must be removed, or the objects declared dead, for
   /// well-formedness to be restored.
   /// NOTE: this should only be used by the GC.
-  void setMarkedForwardingPointer(GCCell *cell) {
-    forwardingPointer_ =
-        reinterpret_cast<GCCell *>(reinterpret_cast<uintptr_t>(cell) | 0x1);
+  void setMarkedForwardingPointer(CompressedPointer cell) {
+    forwardingPointer_ = CompressedPointer(
+        CompressedPointer::rawToStorageType(cell.getRaw() | 0x1));
   }
 
   /// Assumes (and asserts) that a forwarding pointer has been set in
   /// this cell via setMarkedForwardingPointer.
   /// \return the forwarding pointer that was set.
   /// NOTE: this should only be used by the GC.
-  GCCell *getMarkedForwardingPointer() const {
+  CompressedPointer getMarkedForwardingPointer() const {
     assert(isMarked());
-    return reinterpret_cast<GCCell *>(
-        reinterpret_cast<uintptr_t>(forwardingPointer_) - 0x1);
+    return CompressedPointer(
+        CompressedPointer::rawToStorageType(forwardingPointer_.getRaw() - 0x1));
   }
 
   /// \return whether a forwarding pointer has been set in this cell via
@@ -265,7 +267,7 @@ class GCCell {
 
   /// Returns whether the cell's mark bit is set.
   bool isMarked() const {
-    return reinterpret_cast<uintptr_t>(forwardingPointer_) & 0x1;
+    return forwardingPointer_.getRaw() & 0x1;
   }
 
   /// If the cell has any associated external memory, return the size (in bytes)
@@ -338,8 +340,8 @@ inline GCCell::GCCell(const VTable *vtp) : GCCell(vtp->kind, vtp->size) {}
 inline GCCell::GCCell(CellKind kind, size_t sz) : kindAndSize_(kind, sz) {}
 
 static_assert(
-    sizeof(GCCell) == sizeof(void *) &&
-        sizeof(VariableSizeRuntimeCell) == sizeof(void *),
+    sizeof(GCCell) == sizeof(CompressedPointer) &&
+        sizeof(VariableSizeRuntimeCell) == sizeof(CompressedPointer),
     "Cell metadata should only be the size of a single pointer.");
 #endif
 

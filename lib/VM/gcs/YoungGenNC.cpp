@@ -563,7 +563,7 @@ GCCell *YoungGen::forwardPointer(GCCell *ptr) {
 
   // If the object has already been forwarded, we return the new location.
   if (cell->hasMarkedForwardingPointer()) {
-    return cell->getMarkedForwardingPointer();
+    return cell->getMarkedForwardingPointer().getNonNull(gc_->getPointerBase());
   }
 
   uint32_t size = cell->getAllocatedSize();
@@ -588,7 +588,8 @@ GCCell *YoungGen::forwardPointer(GCCell *ptr) {
 #endif
 
   // Store the forwarding pointer in the original object.
-  cell->setMarkedForwardingPointer(newCell);
+  cell->setMarkedForwardingPointer(
+      CompressedPointer(gc_->getPointerBase(), newCell));
 
   // Update the source pointer.
   return newCell;
@@ -600,7 +601,8 @@ void YoungGen::updateIDTracker() {
   while (ptr < lvl) {
     GCCell *cell = reinterpret_cast<GCCell *>(ptr);
     if (cell->hasMarkedForwardingPointer()) {
-      auto *fptr = cell->getMarkedForwardingPointer();
+      auto *fptr =
+          cell->getMarkedForwardingPointer().getNonNull(gc_->getPointerBase());
       const auto sz = reinterpret_cast<GCCell *>(fptr)->getAllocatedSize();
       // YG promotions never change size.
       gc_->moveObject(cell, sz, fptr, sz);
@@ -617,7 +619,8 @@ void YoungGen::finalizeUnreachableAndTransferReachableObjects() {
   numFinalizedObjects_ = 0;
   for (const auto &cell : cellsWithFinalizers()) {
     if (cell->hasMarkedForwardingPointer()) {
-      nextGen_->addToFinalizerList(cell->getMarkedForwardingPointer());
+      nextGen_->addToFinalizerList(
+          cell->getMarkedForwardingPointer().getNonNull(gc_->getPointerBase()));
       continue;
     }
     cell->getVT()->finalize(cell, gc_);

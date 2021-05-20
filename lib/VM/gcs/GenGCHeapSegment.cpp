@@ -128,7 +128,8 @@ void GenGCHeapSegment::updateReferences(
 }
 
 void GenGCHeapSegment::compact(
-    SweepResult::KindAndSizesRemaining &kindAndSizes) {
+    SweepResult::KindAndSizesRemaining &kindAndSizes,
+    PointerBase *base) {
   // If we're using ASAN, we've poisoned the unallocated portion of the space;
   // unpoison that now, since we may copy into it.
   __asan_unpoison_memory_region(level(), end() - level());
@@ -139,7 +140,8 @@ void GenGCHeapSegment::compact(
     if (markBits.at(ind)) {
       GCCell *cell = reinterpret_cast<GCCell *>(ptr);
       // Read the new address from the forwarding pointer.
-      char *newAddr = reinterpret_cast<char *>(cell->getForwardingPointer());
+      char *newAddr = reinterpret_cast<char *>(
+          cell->getForwardingPointer().getNonNull(base));
       // Put back the vtable.
       assert(kindAndSizes.hasNext() && "Need a displaced vtable pointer");
       cell->setKindAndSize(kindAndSizes.next());
@@ -231,10 +233,14 @@ void GenGCHeapSegment::sweepAndInstallForwardingPointers(
       }
 
       sweepResult->displacedKinds.push_back(cell->getKindAndSize());
-      cell->setForwardingPointer(reinterpret_cast<GCCell *>(res.ptr));
+      cell->setForwardingPointer(CompressedPointer(
+          gc->getPointerBase(), static_cast<GCCell *>(res.ptr)));
       if (gc->isTrackingIDs()) {
         gc->moveObject(
-            cell, cellSize, cell->getForwardingPointer(), trimmedSize);
+            cell,
+            cellSize,
+            cell->getForwardingPointer().getNonNull(gc->getPointerBase()),
+            trimmedSize);
       }
       adjacentPtr = ptr += cellSize;
     }

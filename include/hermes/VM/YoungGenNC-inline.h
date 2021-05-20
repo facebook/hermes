@@ -57,10 +57,12 @@ struct YoungGen::EvacAcceptor final : public RootAndSlotAcceptorDefault,
 
     if (ptr->hasMarkedForwardingPointer()) {
       // Get the forwarding pointer from the header of the object.
-      GCCell *const forwardedCell = ptr->getMarkedForwardingPointer();
-      assert(forwardedCell->isValid() && "Cell was forwarded incorrectly");
+      CompressedPointer forwardedCell = ptr->getMarkedForwardingPointer();
+      assert(
+          forwardedCell.getNonNull(gen.gc_->getPointerBase())->isValid() &&
+          "Cell was forwarded incorrectly");
       // Assign back to the input pointer location.
-      wr = CompressedPointer(gen.gc_->getPointerBase(), forwardedCell);
+      wr = forwardedCell;
     } else {
       wr = nullptr;
     }

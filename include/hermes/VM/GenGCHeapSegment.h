@@ -66,7 +66,9 @@ class GenGCHeapSegment final : public AlignedHeapSegment {
   /// to the post-compaction address indicated by its forwarding pointer and
   /// restores its displaced KindAndSize, consuming it in the process
   /// (indicated by incrementing *kindAndSizeBegin).
-  void compact(SweepResult::KindAndSizesRemaining &kindAndSizes);
+  void compact(
+      SweepResult::KindAndSizesRemaining &kindAndSizes,
+      PointerBase *base);
 
   /// Assumes marking is complete.  Scans the heap, determining, for each live
   /// object, the address to which it will later be compacted.  Objects are

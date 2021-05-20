@@ -779,8 +779,9 @@ void GenGC::compact(const SweepResult &sweepResult) {
   // preserve this order here, so that we re-associate the correct VTable
   // pointers, and match up the chunks we used with the segments they were
   // created from.
-  auto doCompaction = [&kindAndSizes](GenGCHeapSegment &segment) {
-    segment.compact(kindAndSizes);
+  auto doCompaction = [&kindAndSizes,
+                       base = getPointerBase()](GenGCHeapSegment &segment) {
+    segment.compact(kindAndSizes, base);
   };
 
   oldGen_.forUsedSegments(doCompaction);
@@ -927,7 +928,8 @@ void GenGC::updateWeakReference(WeakRefSlot *slotPtr, bool fullGC) {
 
   if (fullGC) {
     if (GenGCHeapSegment::getCellMarkBit(cell)) {
-      slotPtr->setPointer(cell->getForwardingPointer());
+      slotPtr->setPointer(
+          cell->getForwardingPointer().getNonNull(getPointerBase()));
     } else {
       slotPtr->clearPointer();
     }
@@ -936,7 +938,8 @@ void GenGC::updateWeakReference(WeakRefSlot *slotPtr, bool fullGC) {
     // it survived collection.  If so, update the slot.
     if (youngGen_.contains(cell)) {
       if (cell->hasMarkedForwardingPointer()) {
-        slotPtr->setPointer(cell->getMarkedForwardingPointer());
+        slotPtr->setPointer(
+            cell->getMarkedForwardingPointer().getNonNull(getPointerBase()));
       } else {
         slotPtr->clearPointer();
       }

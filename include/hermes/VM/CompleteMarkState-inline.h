@@ -72,7 +72,7 @@ struct FullMSCUpdateAcceptor final : public RootAndSlotAcceptorDefault,
   void accept(GCCell *&ptr) override {
     if (ptr) {
       assert(gc.dbgContains(ptr) && "ptr not in heap");
-      ptr = ptr->getForwardingPointer();
+      ptr = ptr->getForwardingPointer().getNonNull(pointerBase_);
     }
   }
 
@@ -82,8 +82,9 @@ struct FullMSCUpdateAcceptor final : public RootAndSlotAcceptorDefault,
     }
     assert(gc.dbgContains(ptr) && "ptr not in heap");
     // Reset weak root if target GCCell is dead.
-    ptr = AlignedHeapSegment::getCellMarkBit(ptr) ? ptr->getForwardingPointer()
-                                                  : nullptr;
+    ptr = AlignedHeapSegment::getCellMarkBit(ptr)
+        ? ptr->getForwardingPointer().getNonNull(pointerBase_)
+        : nullptr;
   }
 
   void acceptHV(HermesValue &hv) override {
@@ -91,7 +92,10 @@ struct FullMSCUpdateAcceptor final : public RootAndSlotAcceptorDefault,
       auto *ptr = static_cast<GCCell *>(hv.getPointer());
       if (ptr) {
         assert(gc.dbgContains(ptr) && "ptr not in heap");
-        hv.setInGC(hv.updatePointer(ptr->getForwardingPointer()), &gc);
+        hv.setInGC(
+            hv.updatePointer(
+                ptr->getForwardingPointer().getNonNull(pointerBase_)),
+            &gc);
       }
     }
   }
@@ -101,8 +105,7 @@ struct FullMSCUpdateAcceptor final : public RootAndSlotAcceptorDefault,
       auto *ptr = static_cast<GCCell *>(hv.getPointer(pointerBase_));
       if (ptr) {
         assert(gc.dbgContains(ptr) && "ptr not in heap");
-        hv.setInGC(
-            hv.updatePointer(ptr->getForwardingPointer(), pointerBase_), &gc);
+        hv.setInGC(hv.updatePointer(ptr->getForwardingPointer()), &gc);
       }
     }
   }

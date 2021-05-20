@@ -224,7 +224,9 @@ void HadesGC::HeapSegment::forAllObjs(CallbackFunction callback) {
 }
 
 template <typename CallbackFunction>
-void HadesGC::HeapSegment::forCompactedObjs(CallbackFunction callback) {
+void HadesGC::HeapSegment::forCompactedObjs(
+    CallbackFunction callback,
+    PointerBase *base) {
   void *const stop = level();
   GCCell *cell = reinterpret_cast<GCCell *>(start());
   while (cell < stop) {
@@ -232,7 +234,9 @@ void HadesGC::HeapSegment::forCompactedObjs(CallbackFunction callback) {
       // This cell has been evacuated, do nothing.
       cell = reinterpret_cast<GCCell *>(
           reinterpret_cast<char *>(cell) +
-          cell->getMarkedForwardingPointer()->getAllocatedSize());
+          cell->getMarkedForwardingPointer()
+              .getNonNull(base)
+              ->getAllocatedSize());
     } else {
       // This cell is being compacted away, call the callback on it.
       // NOTE: We do not check if it is a FreelistCell here in order to avoid
@@ -421,7 +425,8 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
         HeapSegment::getCellMarkBit(cell) && "Cannot forward unmarked object");
     if (cell->hasMarkedForwardingPointer()) {
       // Get the forwarding pointer from the header of the object.
-      GCCell *const forwardedCell = cell->getMarkedForwardingPointer();
+      GCCell *const forwardedCell =
+          cell->getMarkedForwardingPointer().getNonNull(gc.getPointerBase());
       assert(forwardedCell->isValid() && "Cell was forwarded incorrectly");
       cell = forwardedCell;
       return;
@@ -441,7 +446,8 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     evacuatedBytes_ += cellSize;
     CopyListCell *const copyCell = static_cast<CopyListCell *>(cell);
     // Set the forwarding pointer in the old spot
-    copyCell->setMarkedForwardingPointer(newCell);
+    copyCell->setMarkedForwardingPointer(
+        CompressedPointer(gc.getPointerBase(), newCell));
     if (isTrackingIDs_) {
       gc.moveObject(cell, cellSize, newCell, cellSize);
     }
@@ -504,10 +510,12 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
 
     if (ptr->hasMarkedForwardingPointer()) {
       // Get the forwarding pointer from the header of the object.
-      GCCell *const forwardedCell = ptr->getMarkedForwardingPointer();
-      assert(forwardedCell->isValid() && "Cell was forwarded incorrectly");
+      CompressedPointer forwardedCell = ptr->getMarkedForwardingPointer();
+      assert(
+          forwardedCell.getNonNull(gc.getPointerBase())->isValid() &&
+          "Cell was forwarded incorrectly");
       // Assign back to the input pointer location.
-      wr = CompressedPointer(gc.getPointerBase(), forwardedCell);
+      wr = forwardedCell;
     } else {
       wr = nullptr;
     }
@@ -1790,7 +1798,7 @@ void HadesGC::finalizeAllLocked() {
     cell->getVT()->finalizeIfExists(cell, this);
   };
   if (compactee_.segment)
-    compactee_.segment->forCompactedObjs(finalizeCallback);
+    compactee_.segment->forCompactedObjs(finalizeCallback, getPointerBase());
 
   for (HeapSegment &seg : oldGen_)
     seg.forAllObjs(finalizeCallback);
@@ -2411,7 +2419,8 @@ void HadesGC::youngGenEvacuateImpl(Acceptor &acceptor, bool doCompaction) {
         "Unexpected object in YG collection");
     // Update the pointers inside the forwarded object, since the old
     // object is only there for the forwarding pointer.
-    GCCell *const cell = copyCell->getMarkedForwardingPointer();
+    GCCell *const cell =
+        copyCell->getMarkedForwardingPointer().getNonNull(getPointerBase());
     markCell(cell, acceptor);
   }
 
@@ -2493,9 +2502,9 @@ void HadesGC::youngGenCollection(
           untrackObject(cell, cell->getAllocatedSize());
         }
       };
-      yg.forCompactedObjs(trackerCallback);
+      yg.forCompactedObjs(trackerCallback, getPointerBase());
       if (doCompaction) {
-        compactee_.segment->forCompactedObjs(trackerCallback);
+        compactee_.segment->forCompactedObjs(trackerCallback, getPointerBase());
       }
     }
     // Run finalizers for young gen objects.
@@ -2517,9 +2526,9 @@ void HadesGC::youngGenCollection(
       uint64_t ogExternalBefore = oldGen_.externalBytes();
       scannedSize += compactee_.segment->size();
       // Run finalisers on compacted objects.
-      compactee_.segment->forCompactedObjs([this](GCCell *cell) {
-        cell->getVT()->finalizeIfExists(cell, this);
-      });
+      compactee_.segment->forCompactedObjs(
+          [this](GCCell *cell) { cell->getVT()->finalizeIfExists(cell, this); },
+          getPointerBase());
       const uint64_t externalCompactedBytes =
           ogExternalBefore - oldGen_.externalBytes();
       // Since we can't track the actual number of external bytes that were in
@@ -2845,10 +2854,12 @@ void HadesGC::updateWeakReferencesForYoungGen() {
         // references, so be conservative and do nothing to the slot.
         // The value must also be forwarded.
         if (cell->hasMarkedForwardingPointer()) {
+          GCCell *const forwardedCell =
+              cell->getMarkedForwardingPointer().getNonNull(getPointerBase());
           HERMES_SLOW_ASSERT(
-              validPointer(cell->getMarkedForwardingPointer()) &&
+              validPointer(forwardedCell) &&
               "Forwarding weak ref must be to a valid cell");
-          slot.setPointer(cell->getMarkedForwardingPointer());
+          slot.setPointer(forwardedCell);
         } else {
           // Can't free this slot because it might only be used by an OG
           // object.

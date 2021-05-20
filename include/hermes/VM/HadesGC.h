@@ -291,7 +291,7 @@ class HadesGC final : public GCBase {
     void forAllObjs(CallbackFunction callback);
     /// Only call the callback on cells without forwarding pointers.
     template <typename CallbackFunction>
-    void forCompactedObjs(CallbackFunction callback);
+    void forCompactedObjs(CallbackFunction callback, PointerBase *base);
   };
 
   class OldGen final {

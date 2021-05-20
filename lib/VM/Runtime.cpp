@@ -809,9 +809,8 @@ void Runtime::potentiallyMoveHeap() {
   // is on.
   FillerCell::create(
       this,
-      std::max(
-          sizeof(FillerCell),
-          static_cast<size_t>(toRValue(GC::minAllocationSize()))));
+      std::max<size_t>(
+          heapAlignSize(sizeof(FillerCell)), GC::minAllocationSize()));
 }
 #endif
 
