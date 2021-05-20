@@ -54,11 +54,14 @@ const ObjectVTable JSRegExp::vt{
 void RegExpBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSRegExp>());
   ObjectBuildMeta(cell, mb);
+  const auto *self = static_cast<const JSRegExp *>(cell);
   mb.setVTable(&JSRegExp::vt.base);
+  mb.addField(&self->pattern_);
 }
 
 #ifdef HERMESVM_SERIALIZE
 JSRegExp::JSRegExp(Deserializer &d) : JSObject(d, &vt.base) {
+  d.readRelocation(&pattern_, RelocationKind::GCPointer);
   uint32_t size = d.readInt<uint32_t>();
   initializeBytecode(d.readArrayRef<uint8_t>(size), d.getRuntime());
   // bytecode_ is tracked by IDTracker for heapsnapshot. We should do
@@ -71,6 +74,7 @@ JSRegExp::JSRegExp(Deserializer &d) : JSObject(d, &vt.base) {
 void RegExpSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSRegExp>(cell);
   JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSRegExp>());
+  s.writeRelocation(self->pattern_.get(s.getRuntime()));
   s.writeInt<uint32_t>(self->bytecodeSize_);
   s.writeData(self->bytecode_, self->bytecodeSize_);
   // bytecode_ is tracked by IDTracker for heapsnapshot. We should do
@@ -98,25 +102,14 @@ Handle<JSRegExp> JSRegExp::create(
       runtime->getHiddenClassForPrototype(
           *parentHandle,
           numOverlapSlots<JSRegExp>() + ANONYMOUS_PROPERTY_SLOTS));
-  auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
-
-  JSObject::setDirectSlotValue<patternPropIndex()>(
-      *selfHandle,
-      SmallHermesValue::encodeStringValue(
-          runtime->getPredefinedString(Predefined::emptyString), runtime),
-      &runtime->getHeap());
-
-  return selfHandle;
+  return JSObjectInit::initToHandle(runtime, cell);
 }
 
 void JSRegExp::initializeProperties(
     Handle<JSRegExp> selfHandle,
     Runtime *runtime,
     Handle<StringPrimitive> pattern) {
-  JSObject::setDirectSlotValue<patternPropIndex()>(
-      *selfHandle,
-      SmallHermesValue::encodeStringValue(*pattern, runtime),
-      &runtime->getHeap());
+  selfHandle->pattern_.set(runtime, *pattern, &runtime->getHeap());
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.enumerable = 0;
@@ -214,8 +207,7 @@ ExecutionStatus JSRegExp::initializeBytecode(
 PseudoHandle<StringPrimitive> JSRegExp::getPattern(
     JSRegExp *self,
     PointerBase *base) {
-  return createPseudoHandle(
-      JSObject::getDirectSlotValue<patternPropIndex()>(self).getString(base));
+  return createPseudoHandle(self->pattern_.get(base));
 }
 
 template <typename CharT, typename Traits>
@@ -387,7 +379,7 @@ CallResult<HermesValue> JSRegExp::escapePattern(
         result.append(isBackslashed ? "/" : "\\/");
         break;
 
-      // Escape line terminators. See ES5.1 7.3.
+        // Escape line terminators. See ES5.1 7.3.
       case u'\n':
         result.append(isBackslashed ? "n" : "\\n");
         break;

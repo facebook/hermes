@@ -105,6 +105,7 @@ class JSRegExp final : public JSObject {
       uint32_t searchStartOffset);
 
  public:
+  friend void RegExpBuildMeta(const GCCell *, Metadata::Builder &);
 #ifdef HERMESVM_SERIALIZE
   explicit JSRegExp(Deserializer &d);
 
@@ -113,7 +114,11 @@ class JSRegExp final : public JSObject {
 #endif
 
   JSRegExp(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
-      : JSObject(runtime, &vt.base, *parent, *clazz) {}
+      : JSObject(runtime, &vt.base, *parent, *clazz),
+        pattern_(
+            runtime,
+            runtime->getPredefinedString(Predefined::emptyString),
+            &runtime->getHeap()) {}
 
  private:
   ~JSRegExp();
@@ -122,6 +127,12 @@ class JSRegExp final : public JSObject {
   ExecutionStatus initializeBytecode(
       llvh::ArrayRef<uint8_t> bytecode,
       Runtime *runtime);
+
+  /// The order of properties here is important to avoid wasting space. When
+  /// compressed pointers are enabled, JSObject has an odd number of 4 byte
+  /// properties. So putting this GCPointer before the native pointer guarantees
+  /// that the native pointer is always 8 byte aligned without extra padding.
+  GCPointer<StringPrimitive> pattern_;
 
   uint8_t *bytecode_{};
   uint32_t bytecodeSize_{0};
@@ -135,21 +146,11 @@ class JSRegExp final : public JSObject {
   static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
   static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
   static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
-
-  // Property storage slots.
-  static constexpr inline SlotIndex patternPropIndex() {
-    return numOverlapSlots<JSRegExp>() + ANONYMOUS_PROPERTY_SLOTS - 1;
-  }
-
- public:
-  // pattern
-  static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS =
-      Super::ANONYMOUS_PROPERTY_SLOTS + 1;
-
-  // lastIndex
-  static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
-      Super::NAMED_PROPERTY_SLOTS + 1;
 };
+
+static_assert(
+    sizeof(JSRegExp) <= sizeof(JSObjectAndDirectProps),
+    "Possible unnecessary padding in JSRegExp");
 
 } // namespace vm
 } // namespace hermes
