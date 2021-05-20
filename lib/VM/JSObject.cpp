@@ -62,8 +62,7 @@ void ObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       "directProp1",
       "directProp2",
       "directProp3",
-      "directProp4",
-      "directProp5"};
+      "directProp4"};
   for (unsigned i = mb.getJSObjectOverlapSlots();
        i < JSObject::DIRECT_PROPERTY_SLOTS;
        ++i) {
