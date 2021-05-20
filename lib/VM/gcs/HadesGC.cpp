@@ -402,25 +402,28 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
         (CompactionEnabled && gc.compactee_.evacContains(ptr));
   }
 
-  void acceptRoot(GCCell *&ptr) {
+  LLVM_NODISCARD GCCell *acceptRoot(GCCell *ptr) {
     if (shouldForward(ptr))
-      forwardCell(ptr);
+      return forwardCell(ptr);
+    return ptr;
   }
 
-  void acceptHeap(GCCell *&ptr, void *heapLoc) {
+  LLVM_NODISCARD GCCell *acceptHeap(GCCell *ptr, void *heapLoc) {
     if (shouldForward(ptr)) {
       assert(
           HeapSegment::getCellMarkBit(ptr) &&
           "Should only evacuate marked objects.");
-      forwardCell(ptr);
-    } else if (CompactionEnabled && gc.compactee_.contains(ptr)) {
+      return forwardCell(ptr);
+    }
+    if (CompactionEnabled && gc.compactee_.contains(ptr)) {
       // If a compaction is about to take place, dirty the card for any newly
       // evacuated cells, since the marker may miss them.
       HeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(heapLoc);
     }
+    return ptr;
   }
 
-  void forwardCell(GCCell *&cell) {
+  LLVM_NODISCARD GCCell *forwardCell(GCCell *const cell) {
     assert(
         HeapSegment::getCellMarkBit(cell) && "Cannot forward unmarked object");
     if (cell->hasMarkedForwardingPointer()) {
@@ -428,8 +431,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
       GCCell *const forwardedCell =
           cell->getMarkedForwardingPointer().getNonNull(gc.getPointerBase());
       assert(forwardedCell->isValid() && "Cell was forwarded incorrectly");
-      cell = forwardedCell;
-      return;
+      return forwardedCell;
     }
     assert(cell->isValid() && "Encountered an invalid cell");
     const auto cellSize = cell->getAllocatedSize();
@@ -454,49 +456,48 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     // Push onto the copied list.
     push(copyCell);
     // Fixup the pointer.
-    cell = newCell;
+    return newCell;
   }
 
-  void acceptHeap(BasedPointer &ptr, void *heapLoc) {
+  LLVM_NODISCARD BasedPointer acceptHeap(BasedPointer ptr, void *heapLoc) {
     if (!ptr) {
-      return;
+      return BasedPointer{};
     }
     PointerBase *const base = gc.getPointerBase();
     GCCell *actualizedPointer =
         static_cast<GCCell *>(base->basedToPointerNonNull(ptr));
-    acceptHeap(actualizedPointer, heapLoc);
-    ptr = base->pointerToBasedNonNull(actualizedPointer);
+    actualizedPointer = acceptHeap(actualizedPointer, heapLoc);
+    return base->pointerToBasedNonNull(actualizedPointer);
   }
 
   void accept(GCCell *&ptr) override {
-    acceptRoot(ptr);
+    ptr = acceptRoot(ptr);
   }
 
   void accept(GCPointerBase &ptr) override {
-    acceptHeap(ptr.getLoc(), &ptr);
+    ptr.getLoc() = acceptHeap(ptr.getStorageType(), &ptr);
   }
 
   void accept(PinnedHermesValue &hv) override {
     if (hv.isPointer()) {
-      GCCell *ptr = static_cast<GCCell *>(hv.getPointer());
-      acceptRoot(ptr);
-      hv.setInGC(hv.updatePointer(ptr), &gc);
+      GCCell *forwardedPtr = acceptRoot(static_cast<GCCell *>(hv.getPointer()));
+      hv.setInGC(hv.updatePointer(forwardedPtr), &gc);
     }
   }
 
   void accept(GCHermesValue &hv) override {
     if (hv.isPointer()) {
-      GCCell *ptr = static_cast<GCCell *>(hv.getPointer());
-      acceptHeap(ptr, &hv);
-      hv.setInGC(hv.updatePointer(ptr), &gc);
+      GCCell *forwardedPtr =
+          acceptHeap(static_cast<GCCell *>(hv.getPointer()), &hv);
+      hv.setInGC(hv.updatePointer(forwardedPtr), &gc);
     }
   }
 
   void accept(GCSmallHermesValue &hv) override {
     if (hv.isPointer()) {
       GCCell *ptr = static_cast<GCCell *>(hv.getPointer(gc.getPointerBase()));
-      acceptHeap(ptr, &hv);
-      hv.setInGC(hv.updatePointer(ptr, gc.getPointerBase()), &gc);
+      GCCell *forwardedPtr = acceptHeap(ptr, &hv);
+      hv.setInGC(hv.updatePointer(forwardedPtr, gc.getPointerBase()), &gc);
     }
   }
 
