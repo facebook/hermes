@@ -85,9 +85,9 @@ std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
 CallResult<PseudoHandle<>> Runtime::getNamed(
     Handle<JSObject> obj,
     PropCacheID id) {
-  auto clazzGCPtr = obj->getClassGCPtr();
+  CompressedPointer clazzPtr{obj->getClassGCPtr()};
   auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
-  if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr)) {
+  if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
     // The slot is cached, so it is safe to use the Internal function.
     return createPseudoHandle(
         JSObject::getNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
@@ -102,10 +102,10 @@ CallResult<PseudoHandle<>> Runtime::getNamed(
           JSObject::tryGetOwnNamedDescriptorFast(*obj, this, sym, desc)) &&
       !desc.flags.accessor && desc.flags.writable &&
       !desc.flags.internalSetter) {
-    auto *clazz = clazzGCPtr.getNonNull(this);
+    HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(this));
     if (LLVM_LIKELY(!clazz->isDictionary())) {
       // Cache the class, id and property slot.
-      cacheEntry->clazz = clazzGCPtr;
+      cacheEntry->clazz = clazzPtr;
       cacheEntry->slot = desc.slot;
     }
     return JSObject::getNamedSlotValue(createPseudoHandle(*obj), this, desc);
@@ -117,9 +117,9 @@ ExecutionStatus Runtime::putNamedThrowOnError(
     Handle<JSObject> obj,
     PropCacheID id,
     HermesValue hv) {
-  auto clazzGCPtr = obj->getClassGCPtr();
+  CompressedPointer clazzPtr{obj->getClassGCPtr()};
   auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
-  if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr)) {
+  if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
     auto shv = SmallHermesValue::encodeHermesValue(hv, this);
     JSObject::setNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
         *obj, this, cacheEntry->slot, shv);
@@ -131,10 +131,10 @@ ExecutionStatus Runtime::putNamedThrowOnError(
           JSObject::tryGetOwnNamedDescriptorFast(*obj, this, sym, desc)) &&
       !desc.flags.accessor && desc.flags.writable &&
       !desc.flags.internalSetter) {
-    auto *clazz = clazzGCPtr.getNonNull(this);
+    HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(this));
     if (LLVM_LIKELY(!clazz->isDictionary())) {
       // Cache the class and property slot.
-      cacheEntry->clazz = clazzGCPtr;
+      cacheEntry->clazz = clazzPtr;
       cacheEntry->slot = desc.slot;
     }
     auto shv = SmallHermesValue::encodeHermesValue(hv, this);

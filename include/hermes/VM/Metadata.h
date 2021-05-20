@@ -78,6 +78,7 @@ struct Metadata final {
           startOffset(startOffset),
           lengthOffset(lengthOffset),
           stride(stride) {}
+    ArrayData(const ArrayData &data) = default;
     ArrayData &operator=(const ArrayData &data) = default;
   };
 

@@ -73,6 +73,7 @@ class GCPointer : public GCPointerBase {
   /// We are not allowed to copy-construct or assign GCPointers.
   GCPointer(const GCPointerBase &) = delete;
   GCPointer &operator=(const GCPointerBase &) = delete;
+  GCPointer(const GCPointer<T> &) = delete;
   GCPointer &operator=(const GCPointer<T> &) = delete;
 
   /// Get the raw pointer value.

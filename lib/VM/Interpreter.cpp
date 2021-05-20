@@ -2282,9 +2282,9 @@ tailCall:
         }
         gcScope.flushToSmallCount(KEEP_HANDLES);
 #endif
-        auto clazzGCPtr = obj->getClassGCPtr();
+        CompressedPointer clazzPtr{obj->getClassGCPtr()};
 #ifndef NDEBUG
-        if (clazzGCPtr.get(runtime)->isDictionary())
+        if (vmcast<HiddenClass>(clazzPtr.get(runtime))->isDictionary())
           ++NumGetByIdDict;
 #else
         (void)NumGetByIdDict;
@@ -2292,7 +2292,7 @@ tailCall:
 
         // If we have a cache hit, reuse the cached offset and immediately
         // return the property.
-        if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr)) {
+        if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
           ++NumGetByIdCacheHits;
           CAPTURE_IP(
               O1REG(GetById) =
@@ -2314,17 +2314,18 @@ tailCall:
 
           // cacheIdx == 0 indicates no caching so don't update the cache in
           // those cases.
-          auto *clazz = clazzGCPtr.getNonNull(runtime);
+          HiddenClass *clazz =
+              vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
           if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) &&
               LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
 #ifdef HERMES_SLOW_DEBUG
-            if (cacheEntry->clazz && cacheEntry->clazz != clazzGCPtr)
+            if (cacheEntry->clazz && cacheEntry->clazz != clazzPtr)
               ++NumGetByIdCacheEvicts;
 #else
             (void)NumGetByIdCacheEvicts;
 #endif
             // Cache the class, id and property slot.
-            cacheEntry->clazz = clazzGCPtr;
+            cacheEntry->clazz = clazzPtr;
             cacheEntry->slot = desc.slot;
           }
 
@@ -2475,10 +2476,10 @@ tailCall:
         }
         gcScope.flushToSmallCount(KEEP_HANDLES);
 #endif
-        auto clazzGCPtr = obj->getClassGCPtr();
+        CompressedPointer clazzPtr{obj->getClassGCPtr()};
         // If we have a cache hit, reuse the cached offset and immediately
         // return the property.
-        if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr)) {
+        if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
           ++NumPutByIdCacheHits;
           CAPTURE_IP(
               JSObject::setNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
@@ -2498,17 +2499,18 @@ tailCall:
 
           // cacheIdx == 0 indicates no caching so don't update the cache in
           // those cases.
-          auto *clazz = clazzGCPtr.getNonNull(runtime);
+          HiddenClass *clazz =
+              vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
           if (LLVM_LIKELY(!clazz->isDictionary()) &&
               LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
 #ifdef HERMES_SLOW_DEBUG
-            if (cacheEntry->clazz && cacheEntry->clazz != clazzGCPtr)
+            if (cacheEntry->clazz && cacheEntry->clazz != clazzPtr)
               ++NumPutByIdCacheEvicts;
 #else
             (void)NumPutByIdCacheEvicts;
 #endif
             // Cache the class and property slot.
-            cacheEntry->clazz = clazzGCPtr;
+            cacheEntry->clazz = clazzPtr;
             cacheEntry->slot = desc.slot;
           }
 
