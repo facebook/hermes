@@ -410,7 +410,10 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
                                     public WeakRootAcceptor {
  public:
   EvacAcceptor(HadesGC &gc)
-      : gc{gc}, copyListHead_{nullptr}, isTrackingIDs_{gc.isTrackingIDs()} {}
+      : gc{gc},
+        pointerBase_{gc.getPointerBase()},
+        copyListHead_{nullptr},
+        isTrackingIDs_{gc.isTrackingIDs()} {}
 
   ~EvacAcceptor() {}
 
@@ -445,7 +448,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
 
   LLVM_NODISCARD CompressedPointer
   acceptHeap(CompressedPointer cptr, void *heapLoc) {
-    GCCell *ptr = cptr.get(gc.getPointerBase());
+    GCCell *ptr = cptr.get(pointerBase_);
     if (shouldForward(ptr)) {
       assert(
           HeapSegment::getCellMarkBit(ptr) &&
@@ -468,9 +471,9 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
       // Get the forwarding pointer from the header of the object.
       CompressedPointer forwardedCell = cell->getMarkedForwardingPointer();
       assert(
-          forwardedCell.getNonNull(gc.getPointerBase())->isValid() &&
+          forwardedCell.getNonNull(pointerBase_)->isValid() &&
           "Cell was forwarded incorrectly");
-      return convertPtr<T>(gc.getPointerBase(), forwardedCell);
+      return convertPtr<T>(pointerBase_, forwardedCell);
     }
     assert(cell->isValid() && "Encountered an invalid cell");
     const auto cellSize = cell->getAllocatedSize();
@@ -488,13 +491,13 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     CopyListCell *const copyCell = static_cast<CopyListCell *>(cell);
     // Set the forwarding pointer in the old spot
     copyCell->setMarkedForwardingPointer(
-        CompressedPointer(gc.getPointerBase(), newCell));
+        CompressedPointer(pointerBase_, newCell));
     if (isTrackingIDs_) {
       gc.moveObject(cell, cellSize, newCell, cellSize);
     }
     // Push onto the copied list.
     push(copyCell);
-    return convertPtr<T>(gc.getPointerBase(), newCell);
+    return convertPtr<T>(pointerBase_, newCell);
   }
 
   void accept(GCCell *&ptr) override {
@@ -530,7 +533,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
   void acceptWeak(WeakRootBase &wr) override {
     // It's safe to not do a read barrier here since this is happening in the GC
     // and does not extend the lifetime of the referent.
-    GCCell *const ptr = wr.getNoBarrierUnsafe(gc.getPointerBase());
+    GCCell *const ptr = wr.getNoBarrierUnsafe(pointerBase_);
 
     if (!shouldForward(ptr))
       return;
@@ -539,7 +542,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
       // Get the forwarding pointer from the header of the object.
       CompressedPointer forwardedCell = ptr->getMarkedForwardingPointer();
       assert(
-          forwardedCell.getNonNull(gc.getPointerBase())->isValid() &&
+          forwardedCell.getNonNull(pointerBase_)->isValid() &&
           "Cell was forwarded incorrectly");
       // Assign back to the input pointer location.
       wr = forwardedCell;
@@ -560,7 +563,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
       return nullptr;
     } else {
       CopyListCell *const cell =
-          static_cast<CopyListCell *>(copyListHead_.get(gc.getPointerBase()));
+          static_cast<CopyListCell *>(copyListHead_.get(pointerBase_));
       assert(HeapSegment::getCellMarkBit(cell) && "Discovered unmarked object");
       copyListHead_ = cell->next_;
       return cell;
@@ -569,6 +572,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
 
  private:
   HadesGC &gc;
+  PointerBase *const pointerBase_;
   /// The copy list is managed implicitly in the body of each copied YG object.
   AssignableCompressedPointer copyListHead_;
   const bool isTrackingIDs_;
@@ -576,7 +580,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
 
   void push(CopyListCell *cell) {
     cell->next_ = copyListHead_;
-    copyListHead_ = CompressedPointer(gc.getPointerBase(), cell);
+    copyListHead_ = CompressedPointer(pointerBase_, cell);
   }
 };
 
@@ -693,6 +697,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
  public:
   MarkAcceptor(HadesGC &gc)
       : gc{gc},
+        pointerBase_{gc.getPointerBase()},
         markedSymbols_{gc.gcCallbacks_->getSymbolsEnd()},
         writeBarrierMarkedSymbols_{gc.gcCallbacks_->getSymbolsEnd()},
         bytesToMark_{gc.oldGen_.allocatedBytes()} {}
@@ -727,9 +732,8 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
     if (!ptr) {
       return;
     }
-    PointerBase *const base = gc.getPointerBase();
     GCCell *actualizedPointer =
-        static_cast<GCCell *>(base->basedToPointerNonNull(ptr));
+        static_cast<GCCell *>(pointerBase_->basedToPointerNonNull(ptr));
     acceptHeap(actualizedPointer, heapLoc);
   }
 
@@ -763,8 +767,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
   void accept(GCSmallHermesValue &hvRef) override {
     const SmallHermesValue hv = concurrentRead<SmallHermesValue>(hvRef);
     if (hv.isPointer()) {
-      acceptHeap(
-          static_cast<GCCell *>(hv.getPointer(gc.getPointerBase())), &hvRef);
+      acceptHeap(static_cast<GCCell *>(hv.getPointer(pointerBase_)), &hvRef);
     } else if (hv.isSymbol()) {
       acceptSym(hv.getSymbol());
     }
@@ -916,6 +919,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
 
  private:
   HadesGC &gc;
+  PointerBase *const pointerBase_;
 
   /// A worklist local to the marking thread, that is only pushed onto by the
   /// marking thread. If this is empty, the global worklist must be consulted
