@@ -703,9 +703,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
         bytesToMark_{gc.oldGen_.allocatedBytes()} {}
 
   void acceptHeap(GCCell *cell, const void *heapLoc) {
-    if (!cell) {
-      return;
-    }
+    assert(cell && "Cannot pass null pointer to acceptHeap");
     assert(!gc.inYoungGen(heapLoc) && "YG slot found in OG marking");
     if (gc.compactee_.contains(cell) && !gc.compactee_.contains(heapLoc)) {
       // This is a pointer in the heap pointing into the compactee, dirty the
@@ -728,27 +726,20 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
       push(cell);
   }
 
-  void acceptHeap(BasedPointer ptr, const void *heapLoc) {
-    if (!ptr) {
-      return;
-    }
-    GCCell *actualizedPointer =
-        static_cast<GCCell *>(pointerBase_->basedToPointerNonNull(ptr));
-    acceptHeap(actualizedPointer, heapLoc);
-  }
-
   void accept(GCCell *&ptr) override {
     acceptRoot(ptr);
   }
 
   void accept(GCPointerBase &ptr) override {
-    acceptHeap(concurrentRead(ptr.getLoc()), &ptr);
+    if (auto cp = concurrentRead<CompressedPointer>(ptr))
+      acceptHeap(cp.get(pointerBase_), &ptr);
   }
 
   void accept(GCHermesValue &hvRef) override {
     HermesValue hv = concurrentRead<HermesValue>(hvRef);
     if (hv.isPointer()) {
-      acceptHeap(static_cast<GCCell *>(hv.getPointer()), &hvRef);
+      if (auto *ptr = hv.getPointer())
+        acceptHeap(static_cast<GCCell *>(ptr), &hvRef);
     } else if (hv.isSymbol()) {
       acceptSym(hv.getSymbol());
     }
@@ -767,7 +758,8 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
   void accept(GCSmallHermesValue &hvRef) override {
     const SmallHermesValue hv = concurrentRead<SmallHermesValue>(hvRef);
     if (hv.isPointer()) {
-      acceptHeap(static_cast<GCCell *>(hv.getPointer(pointerBase_)), &hvRef);
+      if (auto cp = hv.getPointer())
+        acceptHeap(cp.get(pointerBase_), &hvRef);
     } else if (hv.isSymbol()) {
       acceptSym(hv.getSymbol());
     }
