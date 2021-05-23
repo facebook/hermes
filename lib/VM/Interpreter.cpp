@@ -3327,12 +3327,8 @@ tailCall:
               auto bytecode,
               curCodeBlock->getRuntimeModule()->getRegExpBytecodeFromRegExpID(
                   ip->iCreateRegExp.op4));
-          CAPTURE_IP_ASSIGN(
-              auto initRes,
+          CAPTURE_IP(
               JSRegExp::initialize(re, runtime, pattern, flags, bytecode));
-          if (LLVM_UNLIKELY(initRes == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
         }
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(CreateRegExp);

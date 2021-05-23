@@ -38,12 +38,15 @@ class JSRegExp final : public JSObject {
     return create(runtime, Handle<JSObject>::vmcast(&runtime->regExpPrototype));
   }
 
-  /// Initialize the internal properties of the RegExp such as the pattern and
-  /// lastIndex.
-  static void initializeProperties(
+  /// Initializes RegExp with existing bytecode. Populates fields for the
+  /// pattern and flags, but performs no validation on them. It is assumed that
+  /// the bytecode is correct and corresponds to the given pattern/flags.
+  static void initialize(
       Handle<JSRegExp> selfHandle,
       Runtime *runtime,
-      Handle<StringPrimitive> pattern);
+      Handle<StringPrimitive> pattern,
+      Handle<StringPrimitive> flags,
+      llvh::ArrayRef<uint8_t> bytecode);
 
   /// Initialize a RegExp based on another RegExp \p otherHandle. If \p flags
   /// matches the internal flags of the other RegExp, this lets us avoid
@@ -58,14 +61,12 @@ class JSRegExp final : public JSObject {
   /// error. If valid, set the source and flags to the given strings, and set
   /// the standard properties of the RegExp according to the flags. Note that
   /// RegExps are not mutable (with the exception of the lastIndex property).
-  /// If \p bytecode is given, initialize the regex with that bytecode.
-  /// Otherwise compile the pattern and flags into a new regexp.
+  /// Compiles the \p pattern and \p flags to RegExp bytecode.
   static ExecutionStatus initialize(
       Handle<JSRegExp> selfHandle,
       Runtime *runtime,
       Handle<StringPrimitive> pattern,
-      Handle<StringPrimitive> flags,
-      OptValue<llvh::ArrayRef<uint8_t>> bytecode = llvh::None);
+      Handle<StringPrimitive> flags);
 
   /// \return the pattern string used to initialize this RegExp.
   /// Note this is not suitable for interpolation between //, nor for
@@ -126,9 +127,7 @@ class JSRegExp final : public JSObject {
   ~JSRegExp();
 
   /// Store a copy of the \p bytecode array.
-  ExecutionStatus initializeBytecode(
-      llvh::ArrayRef<uint8_t> bytecode,
-      Runtime *runtime);
+  void initializeBytecode(llvh::ArrayRef<uint8_t> bytecode);
 
   /// The order of properties here is important to avoid wasting space. When
   /// compressed pointers are enabled, JSObject has an odd number of 4 byte

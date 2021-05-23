@@ -63,7 +63,7 @@ void RegExpBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 JSRegExp::JSRegExp(Deserializer &d) : JSObject(d, &vt.base) {
   d.readRelocation(&pattern_, RelocationKind::GCPointer);
   uint32_t size = d.readInt<uint32_t>();
-  initializeBytecode(d.readArrayRef<uint8_t>(size), d.getRuntime());
+  initializeBytecode(d.readArrayRef<uint8_t>(size));
   // bytecode_ is tracked by IDTracker for heapsnapshot. We should do
   // relocation for it.
   d.endObject(bytecode_);
@@ -105,10 +105,15 @@ PseudoHandle<JSRegExp> JSRegExp::create(
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
-void JSRegExp::initializeProperties(
+void JSRegExp::initialize(
     Handle<JSRegExp> selfHandle,
     Runtime *runtime,
-    Handle<StringPrimitive> pattern) {
+    Handle<StringPrimitive> pattern,
+    Handle<StringPrimitive> flags,
+    llvh::ArrayRef<uint8_t> bytecode) {
+  assert(
+      pattern && flags &&
+      "Null pattern and/or flags passed to JSRegExp::initialize");
   selfHandle->pattern_.set(runtime, *pattern, &runtime->getHeap());
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
@@ -125,6 +130,8 @@ void JSRegExp::initializeProperties(
   assert(
       res != ExecutionStatus::EXCEPTION && *res &&
       "defineOwnProperty() failed");
+
+  selfHandle->initializeBytecode(bytecode);
 }
 
 ExecutionStatus JSRegExp::initialize(
@@ -145,12 +152,15 @@ ExecutionStatus JSRegExp::initialize(
   // Fast path to avoid recompiling the RegExp if the flags match
   if (LLVM_LIKELY(
           sflags->toByte() == getSyntaxFlags(otherHandle.get()).toByte())) {
-    initializeProperties(selfHandle, runtime, pattern);
-    selfHandle->syntaxFlags_ = *sflags;
-    return selfHandle->initializeBytecode(
-        {otherHandle->bytecode_, otherHandle->bytecodeSize_}, runtime);
+    initialize(
+        selfHandle,
+        runtime,
+        pattern,
+        flags,
+        {otherHandle->bytecode_, otherHandle->bytecodeSize_});
+    return ExecutionStatus::RETURNED;
   }
-  return initialize(selfHandle, runtime, pattern, flags, llvh::None);
+  return initialize(selfHandle, runtime, pattern, flags);
 }
 
 /// ES11 21.2.3.2.2 RegExpInitialize ( obj, pattern, flags )
@@ -158,50 +168,41 @@ ExecutionStatus JSRegExp::initialize(
     Handle<JSRegExp> selfHandle,
     Runtime *runtime,
     Handle<StringPrimitive> pattern,
-    Handle<StringPrimitive> flags,
-    OptValue<llvh::ArrayRef<uint8_t>> bytecode) {
+    Handle<StringPrimitive> flags) {
   assert(
       pattern && flags &&
       "Null pattern and/or flags passed to JSRegExp::initialize");
-  initializeProperties(selfHandle, runtime, pattern);
+  llvh::SmallVector<char16_t, 6> flagsText16;
+  flags->appendUTF16String(flagsText16);
 
-  if (bytecode) {
-    return selfHandle->initializeBytecode(*bytecode, runtime);
-  } else {
-    llvh::SmallVector<char16_t, 6> flagsText16;
-    flags->appendUTF16String(flagsText16);
+  llvh::SmallVector<char16_t, 16> patternText16;
+  pattern->appendUTF16String(patternText16);
 
-    llvh::SmallVector<char16_t, 16> patternText16;
-    pattern->appendUTF16String(patternText16);
+  // Build the regex.
+  regex::Regex<regex::UTF16RegexTraits> regex(patternText16, flagsText16);
 
-    // Build the regex.
-    regex::Regex<regex::UTF16RegexTraits> regex(patternText16, flagsText16);
-
-    if (!regex.valid()) {
-      return runtime->raiseSyntaxError(
-          TwineChar16("Invalid RegExp: ") +
-          regex::constants::messageForError(regex.getError()));
-    }
-    // The regex is valid. Compile and store its bytecode.
-    auto bytecode = regex.compile();
-    return selfHandle->initializeBytecode(bytecode, runtime);
+  if (!regex.valid()) {
+    return runtime->raiseSyntaxError(
+        TwineChar16("Invalid RegExp: ") +
+        regex::constants::messageForError(regex.getError()));
   }
+  // The regex is valid. Compile and store its bytecode.
+  auto bytecode = regex.compile();
+  initialize(selfHandle, runtime, pattern, flags, bytecode);
+  return ExecutionStatus::RETURNED;
 }
 
-ExecutionStatus JSRegExp::initializeBytecode(
-    llvh::ArrayRef<uint8_t> bytecode,
-    Runtime *runtime) {
+void JSRegExp::initializeBytecode(llvh::ArrayRef<uint8_t> bytecode) {
   size_t sz = bytecode.size();
-  if (sz > std::numeric_limits<decltype(bytecodeSize_)>::max()) {
-    return runtime->raiseRangeError("RegExp size overflow");
-  }
+  assert(
+      sz <= std::numeric_limits<uint32_t>::max() &&
+      "Bytecode size cannot exceed 32 bits");
   auto header =
       reinterpret_cast<const regex::RegexBytecodeHeader *>(bytecode.data());
   syntaxFlags_ = regex::SyntaxFlags::fromByte(header->syntaxFlags);
   bytecodeSize_ = sz;
   bytecode_ = (uint8_t *)checkedMalloc(sz);
   memcpy(bytecode_, bytecode.data(), sz);
-  return ExecutionStatus::RETURNED;
 }
 
 PseudoHandle<StringPrimitive> JSRegExp::getPattern(
