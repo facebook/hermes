@@ -93,7 +93,7 @@ void RegExpDeserialize(Deserializer &d, CellKind kind) {
 }
 #endif
 
-Handle<JSRegExp> JSRegExp::create(
+PseudoHandle<JSRegExp> JSRegExp::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
   auto *cell = runtime->makeAFixed<JSRegExp, HasFinalizer::Yes>(
@@ -102,7 +102,7 @@ Handle<JSRegExp> JSRegExp::create(
       runtime->getHiddenClassForPrototype(
           *parentHandle,
           numOverlapSlots<JSRegExp>() + ANONYMOUS_PROPERTY_SLOTS));
-  return JSObjectInit::initToHandle(runtime, cell);
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 void JSRegExp::initializeProperties(

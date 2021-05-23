@@ -3309,7 +3309,9 @@ tailCall:
       CASE(CreateRegExp) {
         {
           // Create the RegExp object.
-          CAPTURE_IP_ASSIGN(auto re, JSRegExp::create(runtime));
+          CAPTURE_IP(
+              O1REG(CreateRegExp) = JSRegExp::create(runtime).getHermesValue());
+          auto re = Handle<JSRegExp>::vmcast(&O1REG(CreateRegExp));
           // Initialize the regexp.
           CAPTURE_IP_ASSIGN(
               auto pattern,
@@ -3331,8 +3333,6 @@ tailCall:
           if (LLVM_UNLIKELY(initRes == ExecutionStatus::EXCEPTION)) {
             goto exception;
           }
-          // Done, return the new object.
-          O1REG(CreateRegExp) = re.getHermesValue();
         }
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(CreateRegExp);

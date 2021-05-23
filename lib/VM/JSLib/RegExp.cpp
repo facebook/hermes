@@ -398,7 +398,7 @@ static CallResult<Handle<JSRegExp>> regExpConstructorFastCopy(
     Handle<> pattern,
     Handle<StringPrimitive> flags) {
   if (auto R = Handle<JSRegExp>::dyn_vmcast(pattern)) {
-    auto newRegexp = JSRegExp::create(runtime);
+    auto newRegexp = runtime->makeHandle(JSRegExp::create(runtime));
     if (LLVM_UNLIKELY(
             JSRegExp::initialize(newRegexp, runtime, R, flags) ==
             ExecutionStatus::EXCEPTION)) {
