@@ -1395,7 +1395,7 @@ HermesRuntimeImpl::prepareJavaScriptWithSourceMap(
     const std::shared_ptr<const jsi::Buffer> &sourceMapBuf,
     std::string sourceURL) {
   std::pair<std::unique_ptr<hbc::BCProvider>, std::string> bcErr{};
-  auto buffer = std::make_unique<BufferAdapter>(std::move(jsiBuffer));
+  auto buffer = std::make_unique<BufferAdapter>(jsiBuffer);
   vm::RuntimeModuleFlags runtimeFlags{};
   runtimeFlags.persistent = true;
 
@@ -1448,6 +1448,15 @@ HermesRuntimeImpl::prepareJavaScriptWithSourceMap(
     os << " Buffer size " << bufSize << " starts with: ";
     for (size_t i = 0; i < sizeof(bufPrefix) && i < bufSize; ++i)
       os << llvh::format_hex_no_prefix(bufPrefix[i], 2);
+    std::string bufferModes = "";
+    for (const auto &mode : ::hermes::oscompat::get_vm_protect_modes(
+             jsiBuffer->data(), jsiBuffer->size())) {
+      // We only expect one match, but if there are multiple, we want to know.
+      bufferModes += mode;
+    }
+    if (!bufferModes.empty()) {
+      os << " and has protection mode(s): " << bufferModes;
+    }
     LOG_EXCEPTION_CAUSE(
         "Compiling JS failed: %s, %s", bcErr.second.c_str(), os.str().c_str());
     throw jsi::JSINativeException(
