@@ -34,7 +34,7 @@ set(JS_COMPILER_FLAGS "-O" "-Wno-undefined-variable")
 
 # Concatenate all JS files into one source file for compilation.
 # This way there is only one RuntimeModule made for them.
-if(NOT WIN32)
+if(NOT CMAKE_HOST_WIN32)
   set(concatenate "cat")
 else()
   set(concatenate "type")
