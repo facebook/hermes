@@ -1397,7 +1397,7 @@ CallResult<HermesValue> intlDatePrototypeToSomeLocaleString(
     const NativeArgs &args,
     JSDate *date,
     int dtoFlags) {
-  double x = JSDate::getPrimitiveValue(date).getNumber(runtime);
+  double x = date->getPrimitiveValue();
   std::u16string str;
   if (isnan(x)) {
     str = u"Invalid Date";
