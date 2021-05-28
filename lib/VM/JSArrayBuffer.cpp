@@ -27,7 +27,6 @@ const ObjectVTable JSArrayBuffer::vt{
         nullptr,
         _mallocSizeImpl,
         nullptr,
-        nullptr,
         _externalMemorySizeImpl, // externalMemorySize
         VTable::HeapSnapshotMetadata{
             HeapSnapshot::NodeType::Object,

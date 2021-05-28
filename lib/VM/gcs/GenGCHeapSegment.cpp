@@ -158,7 +158,6 @@ void GenGCHeapSegment::compact(
         // Set the new cell size.
         auto *newCell = reinterpret_cast<VariableSizeRuntimeCell *>(newAddr);
         newCell->setSizeFromGC(trimmedSize);
-        newCell->getVT()->trim(newCell);
       }
 
       ptr += cellSize;

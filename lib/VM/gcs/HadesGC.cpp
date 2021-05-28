@@ -1149,7 +1149,6 @@ bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
       if (LLVM_UNLIKELY(trimmableBytes >= minAllocationSize())) {
         static_cast<VariableSizeRuntimeCell *>(cell)->setSizeFromGC(
             trimmedSize);
-        cell->getVT()->trim(cell);
         GCCell *newCell = cell->nextCell();
         // Just create a FillerCell, the next iteration will free it.
         new (newCell) FillerCell{gc_, trimmableBytes};

@@ -375,7 +375,6 @@ const ObjectVTable Arguments::vt{
         nullptr,
         nullptr,
         nullptr,
-        nullptr,
         nullptr, // externalMemorySize
         VTable::HeapSnapshotMetadata{
             HeapSnapshot::NodeType::Object,
@@ -502,7 +501,6 @@ const ObjectVTable JSArray::vt{
     VTable(
         CellKind::ArrayKind,
         cellSize<JSArray>(),
-        nullptr,
         nullptr,
         nullptr,
         nullptr,

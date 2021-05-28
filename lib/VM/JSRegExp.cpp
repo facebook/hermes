@@ -34,7 +34,6 @@ const ObjectVTable JSRegExp::vt{
         nullptr,
         JSRegExp::_mallocSizeImpl,
         nullptr,
-        nullptr,
         nullptr, // externalMemorySize
         VTable::HeapSnapshotMetadata{
             HeapSnapshot::NodeType::Regexp,

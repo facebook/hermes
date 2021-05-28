@@ -23,7 +23,6 @@ const VTable ArrayStorageBase<HVType>::vt(
     nullptr,
     nullptr,
     _trimSizeCallback,
-    _trimCallback,
     nullptr,
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::Array,
@@ -335,9 +334,6 @@ gcheapsize_t ArrayStorageBase<HVType>::_trimSizeCallback(const GCCell *cell) {
   const auto *self = reinterpret_cast<const ArrayStorageBase<HVType> *>(cell);
   return allocationSize(self->size());
 }
-
-template <typename HVType>
-void ArrayStorageBase<HVType>::_trimCallback(GCCell *) {}
 
 template class ArrayStorageBase<HermesValue>;
 template class ArrayStorageBase<SmallHermesValue>;

@@ -499,7 +499,6 @@ const CallableVTable BoundFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr,
             nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
@@ -905,7 +904,6 @@ const CallableVTable NativeFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr,
             nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
@@ -1094,7 +1092,6 @@ const CallableVTable NativeConstructor::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr,
             nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
@@ -1203,7 +1200,6 @@ const CallableVTable JSFunction::vt{
         VTable(
             CellKind::FunctionKind,
             cellSize<JSFunction>(),
-            nullptr,
             nullptr,
             nullptr,
             nullptr,
@@ -1351,7 +1347,6 @@ const CallableVTable JSAsyncFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr,
             nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
@@ -1422,7 +1417,6 @@ const CallableVTable JSGeneratorFunction::vt{
         VTable(
             CellKind::GeneratorFunctionKind,
             cellSize<JSGeneratorFunction>(),
-            nullptr,
             nullptr,
             nullptr,
             nullptr,
@@ -1499,7 +1493,6 @@ const CallableVTable GeneratorInnerFunction::vt{
         VTable(
             CellKind::GeneratorInnerFunctionKind,
             cellSize<GeneratorInnerFunction>(),
-            nullptr,
             nullptr,
             nullptr,
             nullptr,

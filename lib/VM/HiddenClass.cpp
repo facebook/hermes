@@ -99,7 +99,6 @@ const VTable HiddenClass::vt{
     _mallocSizeImpl,
     nullptr,
     nullptr,
-    nullptr,
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::Object,
         HiddenClass::_snapshotNameImpl,

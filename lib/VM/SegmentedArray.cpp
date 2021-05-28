@@ -23,7 +23,6 @@ const VTable SegmentedArray::Segment::vt(
     nullptr,
     nullptr,
     nullptr,
-    nullptr,
     nullptr, // externalMemorySize
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::Array,
@@ -96,7 +95,6 @@ const VTable SegmentedArray::vt(
     nullptr,
     nullptr,
     _trimSizeCallback,
-    _trimCallback,
     nullptr, // externalMemorySize
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::Array,
@@ -535,8 +533,6 @@ gcheapsize_t SegmentedArray::_trimSizeCallback(const GCCell *cell) {
   return allocationSizeForSlots(
       self->numSlotsUsed_.load(std::memory_order_relaxed));
 }
-
-void SegmentedArray::_trimCallback(GCCell *cell) {}
 
 } // namespace vm
 } // namespace hermes

@@ -419,7 +419,6 @@ const ObjectVTable JSWeakMapImpl<C>::vt{
         JSWeakMapImpl::_mallocSizeImpl,
         nullptr,
         nullptr,
-        nullptr,
         VTable::HeapSnapshotMetadata{
             HeapSnapshot::NodeType::Object,
             nullptr,

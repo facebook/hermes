@@ -26,7 +26,6 @@ const VTable Domain::vt{
     _mallocSizeImpl,
     nullptr,
     nullptr,
-    nullptr,
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::Code,
         nullptr,

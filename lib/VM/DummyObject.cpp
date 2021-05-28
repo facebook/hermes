@@ -25,7 +25,6 @@ const VTable DummyObject::vt{
     _markWeakImpl,
     _mallocSizeImpl,
     nullptr,
-    nullptr,
     _externalMemorySizeImpl};
 
 DummyObject::DummyObject(GC *gc)
