@@ -118,7 +118,7 @@ void SegmentedArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 #ifdef HERMESVM_SERIALIZE
 void SegmentedArraySerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const SegmentedArray>(cell);
-  s.writeInt<SegmentedArray::size_type>(self->slotCapacity_);
+  s.writeInt<SegmentedArray::size_type>(self->slotCapacity());
   s.writeInt<SegmentedArray::size_type>(
       self->numSlotsUsed_.load(std::memory_order_relaxed));
 
@@ -136,11 +136,9 @@ void SegmentedArrayDeserialize(Deserializer &d, CellKind kind) {
       d.readInt<SegmentedArray::size_type>();
   SegmentedArray::size_type numSlotsUsed =
       d.readInt<SegmentedArray::size_type>();
+  const auto allocSize = SegmentedArray::allocationSizeForSlots(slotCapacity);
   SegmentedArray *cell = d.getRuntime()->makeAVariable<SegmentedArray>(
-      SegmentedArray::allocationSizeForSlots(slotCapacity),
-      d.getRuntime(),
-      slotCapacity,
-      numSlotsUsed);
+      allocSize, d.getRuntime(), allocSize, numSlotsUsed);
   for (auto it = cell->begin(); it != cell->end(); ++it) {
     d.readHermesValue(&*it);
   }
@@ -160,8 +158,9 @@ CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::create(
   // if it is larger than the inline storage space. That is in order to avoid
   // having an extra field to track, and the upper bound of "size" can be used
   // instead.
-  return createPseudoHandle(runtime->makeAVariable<SegmentedArray>(
-      allocationSizeForCapacity(capacity), runtime, capacity));
+  const auto allocSize = allocationSizeForCapacity(capacity);
+  return createPseudoHandle(
+      runtime->makeAVariable<SegmentedArray>(allocSize, runtime, allocSize));
 }
 
 CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::createLongLived(
@@ -172,9 +171,10 @@ CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::createLongLived(
   }
   // Leave the segments as null. Whenever the size is changed, the segments will
   // be allocated.
+  const auto allocSize = allocationSizeForCapacity(capacity);
   return createPseudoHandle(
       runtime->makeAVariable<SegmentedArray, HasFinalizer::No, LongLived::Yes>(
-          allocationSizeForCapacity(capacity), runtime, capacity));
+          allocSize, runtime, allocSize));
 }
 
 CallResult<PseudoHandle<SegmentedArray>>
@@ -196,7 +196,7 @@ SegmentedArray::size_type SegmentedArray::capacity() const {
     // In the case where the size is less than the number of inline elements,
     // the capacity is at most slotCapacity, or the segment threshold if slot
     // capacity goes beyond that.
-    return std::min(slotCapacity_, size_type{kValueToSegmentThreshold});
+    return std::min(slotCapacity(), size_type{kValueToSegmentThreshold});
   } else {
     // Any slot after numSlotsUsed_ is guaranteed to be null.
     return kValueToSegmentThreshold +
@@ -205,11 +205,12 @@ SegmentedArray::size_type SegmentedArray::capacity() const {
 }
 
 SegmentedArray::size_type SegmentedArray::totalCapacityOfSpine() const {
-  if (slotCapacity_ <= kValueToSegmentThreshold) {
-    return slotCapacity_;
+  const auto slotCap = slotCapacity();
+  if (slotCap <= kValueToSegmentThreshold) {
+    return slotCap;
   } else {
     return kValueToSegmentThreshold +
-        (slotCapacity_ - kValueToSegmentThreshold) * Segment::kMaxLength;
+        (slotCap - kValueToSegmentThreshold) * Segment::kMaxLength;
   }
 }
 
@@ -535,11 +536,7 @@ gcheapsize_t SegmentedArray::_trimSizeCallback(const GCCell *cell) {
       self->numSlotsUsed_.load(std::memory_order_relaxed));
 }
 
-void SegmentedArray::_trimCallback(GCCell *cell) {
-  auto *self = reinterpret_cast<SegmentedArray *>(cell);
-  // Shrink so that the capacity is equal to the size.
-  self->slotCapacity_ = self->numSlotsUsed_.load(std::memory_order_relaxed);
-}
+void SegmentedArray::_trimCallback(GCCell *cell) {}
 
 } // namespace vm
 } // namespace hermes

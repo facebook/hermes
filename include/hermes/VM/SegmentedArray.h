@@ -132,11 +132,19 @@ class SegmentedArray final
   /// is at most \c Segment::kMaxLength - 1.
   using InteriorIndex = uint32_t;
 
+  /// The number of slots a SegmentedArray with allocation size \p allocSize can
+  /// hold.
+  static constexpr size_type slotCapacityForAllocationSize(uint32_t allocSize) {
+    return (allocSize - allocationSizeForSlots(0)) / sizeof(GCHermesValue);
+  }
+
   /// The number of slots for either inline storage or segments that this
-  /// SegmentedArray can hold. This is decided at creation time. In order to
-  /// have more slots, a new SegmentedArray must be allocated.
+  /// SegmentedArray can hold. This is a function of the allocated size.
   /// NOTE: This can be changed during compaction.
-  size_type slotCapacity_;
+  size_type slotCapacity() const {
+    return slotCapacityForAllocationSize(getAllocatedSize());
+  }
+
   /// The number of slots that are currently valid. The \c size() is a derived
   /// field from this value.
   AtomicIfConcurrentGC<size_type> numSlotsUsed_;
@@ -364,28 +372,15 @@ class SegmentedArray final
       Metadata::Builder &mb);
 
  public:
-  SegmentedArray(Runtime *runtime, size_type capacity)
-      : VariableSizeRuntimeCell(
-            &runtime->getHeap(),
-            &vt,
-            allocationSizeForCapacity(capacity)),
-        slotCapacity_(numSlotsForCapacity(capacity)),
+  SegmentedArray(Runtime *runtime, uint32_t allocSize)
+      : VariableSizeRuntimeCell(&runtime->getHeap(), &vt, allocSize),
         numSlotsUsed_(0) {}
 
 #ifdef HERMESVM_SERIALIZE
-  /// Constructor used during deserialization. Takes argument \p slotCapacity
-  /// instead of \p capacity like in common constructor.
-  /// \param slotCapacity The number of slots for either inline storage or
-  /// segments that this SegmentedArray can hold.
-  SegmentedArray(
-      Runtime *runtime,
-      size_type slotCapacity,
-      size_type numSlotsUsed)
-      : VariableSizeRuntimeCell(
-            &runtime->getHeap(),
-            &vt,
-            allocationSizeForSlots(slotCapacity)),
-        slotCapacity_(slotCapacity),
+  /// Constructor used during deserialization. Allows number of used slots to be
+  /// initialized to a non-zero value.
+  SegmentedArray(Runtime *runtime, uint32_t allocSize, size_type numSlotsUsed)
+      : VariableSizeRuntimeCell(&runtime->getHeap(), &vt, allocSize),
         numSlotsUsed_(numSlotsUsed) {}
 #endif
  private:
@@ -484,7 +479,7 @@ class SegmentedArray final
   }
 
   /// Same as \c segmentAt, except for any segment, including ones between
-  /// numSlotsUsed_ and slotCapacity_.
+  /// numSlotsUsed_ and slotCapacity().
   GCHermesValue *segmentAtPossiblyUnallocated(SegmentNumber segment) {
     return const_cast<GCHermesValue *>(
         static_cast<const SegmentedArray *>(this)->segmentAtPossiblyUnallocated(
@@ -523,9 +518,10 @@ class SegmentedArray final
   /// This number does not represent the number of allocated segments, only the
   /// total number of segments that could exist.
   SegmentNumber numSegments() const {
-    return slotCapacity_ <= kValueToSegmentThreshold
+    const auto slotCap = slotCapacity();
+    return slotCap <= kValueToSegmentThreshold
         ? 0
-        : slotCapacity_ - kValueToSegmentThreshold;
+        : slotCap - kValueToSegmentThreshold;
   }
 
   /// \return the number of segments in active use by this SegmentedArray.
@@ -605,8 +601,7 @@ constexpr SegmentedArray::size_type SegmentedArray::maxElements() {
 
 constexpr SegmentedArray::SegmentNumber SegmentedArray::maxNumSegments() {
   const SegmentedArray::SegmentNumber maxAllocSlots =
-      (GC::maxAllocationSize() - allocationSizeForCapacity(0)) /
-      sizeof(GCHermesValue);
+      slotCapacityForAllocationSize(GC::maxAllocationSize());
   const SegmentedArray::SegmentNumber maxAllocSegments =
       maxAllocSlots - kValueToSegmentThreshold;
   return min(maxAllocSegments, maxNumSegmentsWithoutOverflow());
