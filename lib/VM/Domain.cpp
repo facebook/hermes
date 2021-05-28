@@ -435,15 +435,24 @@ const ObjectVTable RequireContext::vt{
 void RequireContextBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<RequireContext>());
   ObjectBuildMeta(cell, mb);
+  const auto *self = static_cast<const RequireContext *>(cell);
   mb.setVTable(&RequireContext::vt.base);
+  mb.addField(&self->domain_);
+  mb.addField(&self->dirname_);
 }
 
 #ifdef HERMESVM_SERIALIZE
-RequireContext::RequireContext(Deserializer &d) : JSObject(d, &vt.base) {}
+RequireContext::RequireContext(Deserializer &d) : JSObject(d, &vt.base) {
+  d.readRelocation(&domain_, RelocationKind::GCPointer);
+  d.readRelocation(&dirname_, RelocationKind::GCPointer);
+}
 
 void RequireContextSerialize(Serializer &s, const GCCell *cell) {
   JSObject::serializeObjectImpl(
       s, cell, JSObject::numOverlapSlots<RequireContext>());
+  const auto *self = static_cast<const RequireContext *>(cell);
+  s.writeRelocation(self->domain_.get(s.getRuntime()));
+  s.writeRelocation(self->dirname_.get(s.getRuntime()));
   s.endObject(cell);
 }
 
@@ -464,15 +473,8 @@ Handle<RequireContext> RequireContext::create(
       objProto,
       runtime->getHiddenClassForPrototype(*objProto, ANONYMOUS_PROPERTY_SLOTS));
   auto self = JSObjectInit::initToHandle(runtime, cell);
-
-  JSObject::setDirectSlotValue<domainPropIndex()>(
-      *self,
-      SmallHermesValue::encodeObjectValue(domain.get(), runtime),
-      &runtime->getHeap());
-  JSObject::setDirectSlotValue<dirnamePropIndex()>(
-      *self,
-      SmallHermesValue::encodeStringValue(dirname.get(), runtime),
-      &runtime->getHeap());
+  self->domain_.set(runtime, *domain, &runtime->getHeap());
+  self->dirname_.set(runtime, *dirname, &runtime->getHeap());
   return self;
 }
 
