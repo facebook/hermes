@@ -436,7 +436,7 @@ dateConstructor(void *, Runtime *runtime, NativeArgs args) {
       if (auto *dateArg = dyn_vmcast<JSDate>(args.getArg(0))) {
         // No handle needed here because we just retrieve a double.
         NoAllocScope noAlloc(runtime);
-        finalDate = JSDate::getPrimitiveValue(dateArg).getNumber(runtime);
+        finalDate = dateArg->getPrimitiveValue();
       } else {
         // Parse the argument if it's a string, else just convert to number.
         auto res =
@@ -470,8 +470,7 @@ dateConstructor(void *, Runtime *runtime, NativeArgs args) {
       // and call utcTime to get the final UTC value we want to store.
       finalDate = timeClip(utcTime(*cr));
     }
-    auto shv = SmallHermesValue::encodeNumberValue(finalDate, runtime);
-    JSDate::setPrimitiveValue(self.get(), runtime, shv);
+    self->setPrimitiveValue(finalDate);
     return self.getHermesValue();
   }
 
@@ -564,7 +563,7 @@ datePrototypeToStringHelper(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.toString() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(date).getNumber(runtime);
+  double t = date->getPrimitiveValue();
   if (!std::isfinite(t)) {
     if (opts->throwOnError) {
       return runtime->raiseRangeError("Date value out of bounds");
@@ -619,7 +618,7 @@ CallResult<HermesValue> datePrototypeToLocaleStringHelper(
     return runtime->raiseTypeError(
         "Date.prototype.toString() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(date).getNumber(runtime);
+  double t = date->getPrimitiveValue();
   if (!std::isfinite(t)) {
     // "Invalid Date" in non-finite or NaN cases.
     return HermesValue::encodeStringValue(
@@ -640,7 +639,7 @@ datePrototypeGetTime(void *, Runtime *runtime, NativeArgs args) {
         "Date.prototype.getTime() called on non-Date object");
   }
 
-  return JSDate::getPrimitiveValue(date).unboxToHV(runtime);
+  return HermesValue::encodeDoubleValue(date->getPrimitiveValue());
 }
 
 CallResult<HermesValue>
@@ -674,7 +673,7 @@ datePrototypeGetterHelper(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.toString() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(date).getNumber(runtime);
+  double t = date->getPrimitiveValue();
   if (std::isnan(t)) {
     return HermesValue::encodeNaNValue();
   }
@@ -734,8 +733,7 @@ datePrototypeSetTime(void *ctx, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   double t = timeClip(res->getNumber());
-  auto v = SmallHermesValue::encodeNumberValue(t, runtime);
-  JSDate::setPrimitiveValue(self.get(), runtime, v);
+  self->setPrimitiveValue(t);
   return HermesValue::encodeDoubleValue(t);
 }
 
@@ -748,7 +746,7 @@ datePrototypeSetMilliseconds(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.setMilliseconds() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(self.get()).getNumber(runtime);
+  double t = self->getPrimitiveValue();
   if (!isUTC) {
     t = localTime(t);
   }
@@ -760,8 +758,7 @@ datePrototypeSetMilliseconds(void *ctx, Runtime *runtime, NativeArgs args) {
   double date = makeDate(
       day(t), makeTime(hourFromTime(t), minFromTime(t), secFromTime(t), ms));
   double utcT = !isUTC ? timeClip(utcTime(date)) : timeClip(date);
-  auto shv = SmallHermesValue::encodeNumberValue(utcT, runtime);
-  JSDate::setPrimitiveValue(self.get(), runtime, shv);
+  self->setPrimitiveValue(utcT);
   return HermesValue::encodeDoubleValue(utcT);
 }
 
@@ -775,7 +772,7 @@ datePrototypeSetSeconds(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.setSeconds() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(self.get()).getNumber(runtime);
+  double t = self->getPrimitiveValue();
   if (!isUTC) {
     t = localTime(t);
   }
@@ -798,8 +795,7 @@ datePrototypeSetSeconds(void *ctx, Runtime *runtime, NativeArgs args) {
   double date =
       makeDate(day(t), makeTime(hourFromTime(t), minFromTime(t), s, milli));
   double utcT = !isUTC ? timeClip(utcTime(date)) : timeClip(date);
-  auto shv = SmallHermesValue::encodeNumberValue(utcT, runtime);
-  JSDate::setPrimitiveValue(self.get(), runtime, shv);
+  self->setPrimitiveValue(utcT);
   return HermesValue::encodeDoubleValue(utcT);
 }
 
@@ -813,7 +809,7 @@ datePrototypeSetMinutes(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.setMinutes() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(self.get()).getNumber(runtime);
+  double t = self->getPrimitiveValue();
   if (!isUTC) {
     t = localTime(t);
   }
@@ -845,8 +841,7 @@ datePrototypeSetMinutes(void *ctx, Runtime *runtime, NativeArgs args) {
 
   double date = makeDate(day(t), makeTime(hourFromTime(t), m, s, milli));
   double utcT = !isUTC ? timeClip(utcTime(date)) : timeClip(date);
-  auto shv = SmallHermesValue::encodeNumberValue(utcT, runtime);
-  JSDate::setPrimitiveValue(self.get(), runtime, shv);
+  self->setPrimitiveValue(utcT);
   return HermesValue::encodeDoubleValue(utcT);
 }
 
@@ -860,7 +855,7 @@ datePrototypeSetHours(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.setHours() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(self.get()).getNumber(runtime);
+  double t = self->getPrimitiveValue();
   if (!isUTC) {
     t = localTime(t);
   }
@@ -902,8 +897,7 @@ datePrototypeSetHours(void *ctx, Runtime *runtime, NativeArgs args) {
 
   double date = makeDate(day(t), makeTime(h, m, s, milli));
   double utcT = !isUTC ? timeClip(utcTime(date)) : timeClip(date);
-  auto shv = SmallHermesValue::encodeNumberValue(utcT, runtime);
-  JSDate::setPrimitiveValue(self.get(), runtime, shv);
+  self->setPrimitiveValue(utcT);
   return HermesValue::encodeDoubleValue(utcT);
 }
 
@@ -916,7 +910,7 @@ datePrototypeSetDate(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.setDate() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(self.get()).getNumber(runtime);
+  double t = self->getPrimitiveValue();
   if (!isUTC) {
     t = localTime(t);
   }
@@ -928,8 +922,7 @@ datePrototypeSetDate(void *ctx, Runtime *runtime, NativeArgs args) {
   double newDate = makeDate(
       makeDay(yearFromTime(t), monthFromTime(t), dt), timeWithinDay(t));
   double utcT = !isUTC ? timeClip(utcTime(newDate)) : timeClip(newDate);
-  auto shv = SmallHermesValue::encodeNumberValue(utcT, runtime);
-  JSDate::setPrimitiveValue(self.get(), runtime, shv);
+  self->setPrimitiveValue(utcT);
   return HermesValue::encodeDoubleValue(utcT);
 }
 
@@ -943,7 +936,7 @@ datePrototypeSetMonth(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.setMonth() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(self.get()).getNumber(runtime);
+  double t = self->getPrimitiveValue();
   if (!isUTC) {
     t = localTime(t);
   }
@@ -964,8 +957,7 @@ datePrototypeSetMonth(void *ctx, Runtime *runtime, NativeArgs args) {
   }
   double newDate = makeDate(makeDay(yearFromTime(t), m, dt), timeWithinDay(t));
   double utcT = !isUTC ? timeClip(utcTime(newDate)) : timeClip(newDate);
-  auto shv = SmallHermesValue::encodeNumberValue(utcT, runtime);
-  JSDate::setPrimitiveValue(self.get(), runtime, shv);
+  self->setPrimitiveValue(utcT);
   return HermesValue::encodeDoubleValue(utcT);
 }
 
@@ -979,7 +971,7 @@ datePrototypeSetFullYear(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.setFullYear() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(self.get()).getNumber(runtime);
+  double t = self->getPrimitiveValue();
   if (!isUTC) {
     t = localTime(t);
   }
@@ -1013,8 +1005,7 @@ datePrototypeSetFullYear(void *ctx, Runtime *runtime, NativeArgs args) {
   }
   double newDate = makeDate(makeDay(y, m, dt), timeWithinDay(t));
   double utcT = !isUTC ? timeClip(utcTime(newDate)) : timeClip(newDate);
-  auto shv = SmallHermesValue::encodeNumberValue(utcT, runtime);
-  JSDate::setPrimitiveValue(self.get(), runtime, shv);
+  self->setPrimitiveValue(utcT);
   return HermesValue::encodeDoubleValue(utcT);
 }
 
@@ -1028,7 +1019,7 @@ datePrototypeSetYear(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.setYear() called on non-Date object");
   }
-  double t = JSDate::getPrimitiveValue(self.get()).getNumber(runtime);
+  double t = self->getPrimitiveValue();
   t = localTime(t);
   if (std::isnan(t)) {
     t = 0;
@@ -1039,9 +1030,7 @@ datePrototypeSetYear(void *ctx, Runtime *runtime, NativeArgs args) {
   }
   double y = res->getNumber();
   if (std::isnan(y)) {
-    auto shv = SmallHermesValue::encodeHermesValue(
-        HermesValue::encodeNaNValue(), runtime);
-    JSDate::setPrimitiveValue(self.get(), runtime, shv);
+    self->setPrimitiveValue(std::numeric_limits<double>::quiet_NaN());
     return HermesValue::encodeNaNValue();
   }
   double yint = oscompat::trunc(y);
@@ -1049,8 +1038,7 @@ datePrototypeSetYear(void *ctx, Runtime *runtime, NativeArgs args) {
   double date = utcTime(makeDate(
       makeDay(yr, monthFromTime(t), dateFromTime(t)), timeWithinDay(t)));
   double d = timeClip(date);
-  auto v = SmallHermesValue::encodeNumberValue(timeClip(date), runtime);
-  JSDate::setPrimitiveValue(self.get(), runtime, v);
+  self->setPrimitiveValue(d);
   return HermesValue::encodeDoubleValue(d);
 }
 

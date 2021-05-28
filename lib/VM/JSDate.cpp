@@ -37,10 +37,16 @@ void DateBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
-JSDate::JSDate(Deserializer &d) : JSObject(d, &vt.base) {}
+JSDate::JSDate(Deserializer &d) : JSObject(d, &vt.base) {
+  HermesValue hv;
+  d.readHermesValue(&hv);
+  primitiveValue_ = hv.getNumber();
+}
 
 void DateSerialize(Serializer &s, const GCCell *cell) {
   JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSDate>());
+  const auto *self = static_cast<const JSDate *>(cell);
+  s.writeHermesValue(HermesValue::encodeNumberValue(self->primitiveValue_));
   s.endObject(cell);
 }
 
@@ -55,6 +61,7 @@ PseudoHandle<JSDate>
 JSDate::create(Runtime *runtime, double value, Handle<JSObject> parentHandle) {
   auto *cell = runtime->makeAFixed<JSDate>(
       runtime,
+      value,
       parentHandle,
       runtime->getHiddenClassForPrototype(
           *parentHandle, numOverlapSlots<JSDate>() + ANONYMOUS_PROPERTY_SLOTS));
