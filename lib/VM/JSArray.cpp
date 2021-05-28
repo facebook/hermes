@@ -25,6 +25,10 @@ namespace vm {
 void ArrayImplBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<ArrayImpl>());
   ObjectBuildMeta(cell, mb);
+  const auto *self = static_cast<const ArrayImpl *>(cell);
+  // This edge has to be called "elements" in order for Chrome to attribute
+  // the size of the indexed storage as part of total usage of "JS Arrays".
+  mb.addField("elements", &self->indexedStorage_);
 }
 
 void ArrayImpl::_snapshotAddEdgesImpl(
@@ -61,6 +65,7 @@ void ArrayImpl::_snapshotAddEdgesImpl(
 ArrayImpl::ArrayImpl(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
   beginIndex_ = d.readInt<uint32_t>();
   endIndex_ = d.readInt<uint32_t>();
+  d.readRelocation(&indexedStorage_, RelocationKind::GCPointer);
 }
 
 void serializeArrayImpl(
@@ -71,6 +76,7 @@ void serializeArrayImpl(
   JSObject::serializeObjectImpl(s, cell, overlapSlots);
   s.writeInt<uint32_t>(self->beginIndex_);
   s.writeInt<uint32_t>(self->endIndex_);
+  s.writeRelocation(self->indexedStorage_.get(s.getRuntime()));
 }
 #endif
 

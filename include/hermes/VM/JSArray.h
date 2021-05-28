@@ -20,10 +20,6 @@ class ArrayImpl : public JSObject {
   using Super = JSObject;
   friend void ArrayImplBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
-  static constexpr size_t indexedStoragePropIndex() {
-    return numOverlapSlots<ArrayImpl>() + ANONYMOUS_PROPERTY_SLOTS - 1;
-  }
-
  public:
 #ifdef HERMESVM_SERIALIZE
   ArrayImpl(Deserializer &d, const VTable *vt);
@@ -31,10 +27,6 @@ class ArrayImpl : public JSObject {
   friend void
   serializeArrayImpl(Serializer &s, const GCCell *cell, unsigned overlapSlots);
 #endif
-
-  /// Add an anonymous property slot to hold the indexedStorage pointer.
-  static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS =
-      Super::ANONYMOUS_PROPERTY_SLOTS + 1;
 
   static bool classof(const GCCell *cell) {
     return kindInRange(
@@ -130,16 +122,13 @@ class ArrayImpl : public JSObject {
   /// Get a pointer to the indexed storage for this array. The returned value
   /// may be null if there is no indexed storage.
   StorageType *getIndexedStorage(PointerBase *base) const {
-    return vmcast_or_null<StorageType>(
-        JSObject::getDirectSlotValue<indexedStoragePropIndex()>(this).getObject(
-            base));
+    return indexedStorage_.get(base);
   }
 
   /// Set the indexed storage of this array to be \p p. The pointer is allowed
   /// to be null.
   void setIndexedStorage(PointerBase *base, StorageType *p, GC *gc) {
-    JSObject::setDirectSlotValue<indexedStoragePropIndex()>(
-        this, SmallHermesValue::encodeObjectValue(p, base), gc);
+    indexedStorage_.set(base, p, gc);
   }
 
   /// @}
@@ -241,6 +230,8 @@ class ArrayImpl : public JSObject {
   uint32_t beginIndex_{0};
   /// One past the last index contained in the storage.
   uint32_t endIndex_{0};
+  /// The indexed storage for this array.
+  GCPointer<StorageType> indexedStorage_;
 };
 
 class Arguments final : public ArrayImpl {
