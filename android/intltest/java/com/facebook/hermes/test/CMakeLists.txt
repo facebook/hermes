@@ -30,7 +30,7 @@ if(ANDROID)
       libhermes
       hermesapi
       compileJS
-      hermesfbjni
+      fbjni::fbjni
       jsi
       ${CORE_FOUNDATION}
   )
@@ -43,7 +43,7 @@ if(ANDROID)
       libhermes
       hermesapi
       compileJS
-      hermesfbjni
+      fbjni::fbjni
       jsi
       ${CORE_FOUNDATION}
   )
