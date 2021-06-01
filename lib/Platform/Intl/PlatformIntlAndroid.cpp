@@ -508,7 +508,9 @@ struct NumberFormat::Impl {
 
 NumberFormat::NumberFormat() : impl_(std::make_unique<Impl>()) {}
 
-NumberFormat::~NumberFormat() {}
+NumberFormat::~NumberFormat() {
+  jni::ThreadScope::WithClassLoader([&] { impl_.reset(); });
+}
 
 vm::CallResult<std::vector<std::u16string>> NumberFormat::supportedLocalesOf(
     vm::Runtime *runtime,
