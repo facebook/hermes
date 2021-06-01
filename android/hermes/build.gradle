@@ -77,7 +77,7 @@ android {
     intl {
       java {
         srcDirs = [
-                "${rootProject.ext.hermes_ws}/hermes/lib/Platform/Intl/java",
+                "../../lib/Platform/Intl/java",
         ]
       }
     }
