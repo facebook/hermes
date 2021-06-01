@@ -11,7 +11,7 @@ set(source_files
    CharacterProperties.cpp
 )
 
-if(HERMES_IS_ANDROID)
+if(ANDROID)
   add_hermes_library(hermesPlatformUnicode STATIC ${source_files}
       LINK_LIBS
       hermesfbjni

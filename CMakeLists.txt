@@ -3,14 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-if(NOT HERMES_IS_ANDROID)
-  # We need FindICU from 3.7
-  cmake_minimum_required(VERSION 3.7.0)
-else()
-  # We'll be using ICU through Java, so we don't need FindICU.
-  # 3.6.0 is the minimum version shipped with the Android SDK.
-  cmake_minimum_required(VERSION 3.6.0)
-endif()
+cmake_minimum_required(VERSION 3.7.0)
 
 # Set the VERSION variables based on the project command
 if (POLICY CMP0048)
@@ -89,10 +82,13 @@ endif()
 
 # Project options.
 
-set(HERMES_IS_ANDROID OFF CACHE BOOL
-  "Building for Android")
+if(ANDROID)
+    set(DEFAULT_IS_MOBILE_BUILD ON)
+else()
+    set(DEFAULT_IS_MOBILE_BUILD OFF)
+endif()
 
-set(HERMES_IS_MOBILE_BUILD ${HERMES_IS_ANDROID} CACHE BOOL
+set(HERMES_IS_MOBILE_BUILD ${DEFAULT_IS_MOBILE_BUILD} CACHE BOOL
   "Building for a mobile device")
 
 set(HERMESVM_GCKIND HADES
@@ -257,9 +253,7 @@ set(HERMES_BUILD_APPLE_FRAMEWORK ON CACHE BOOL
 set(HERMES_BUILD_APPLE_DSYM OFF CACHE BOOL
   "Whether to build a DWARF debugging symbols bundle")
 
-if (HERMES_IS_ANDROID)
-  set(HERMES_IS_MOBILE_BUILD TRUE)
-
+if (ANDROID)
   add_definitions(-DHERMES_PLATFORM_UNICODE=HERMES_PLATFORM_UNICODE_JAVA)
 
   # The toolchain passes -Wa,--noexecstack which is valid for compiling
@@ -396,7 +390,7 @@ if (NOT (ANDROID_LINUX_PERF_PATH STREQUAL ""))
 endif()
 
 if (HERMES_ENABLE_INTL)
-  if (HERMES_IS_ANDROID)
+  if (ANDROID)
     add_definitions(-DHERMES_PLATFORM_INTL=HERMES_PLATFORM_INTL_ANDROID)
   else()
     add_definitions(-DHERMES_PLATFORM_INTL=HERMES_PLATFORM_INTL_DUMMY)
@@ -513,7 +507,7 @@ if (NOT ICU_FOUND AND HERMES_ENABLE_WIN10_ICU_FALLBACK AND
 endif()
 
 # If we have no ICU, then error out.
-if (NOT HERMES_IS_ANDROID AND NOT ICU_FOUND)
+if (NOT ANDROID AND NOT ICU_FOUND)
   message(FATAL_ERROR "Unable to find ICU.")
 endif()
 
@@ -593,7 +587,7 @@ include_directories(BEFORE
   ${CMAKE_CURRENT_SOURCE_DIR}/external
   )
 
-if(HERMES_IS_ANDROID)
+if(ANDROID)
   if(EXISTS ${HERMES_SOURCE_DIR}/first-party/fbjni/cxx)
     set(FBJNI_PATH ${HERMES_SOURCE_DIR}/first-party/fbjni)
   elseif(EXISTS ${FBSOURCE_DIR}/fbandroid/libraries/fbjni/cxx)

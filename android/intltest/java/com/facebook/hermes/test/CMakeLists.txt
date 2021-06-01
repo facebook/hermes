@@ -23,7 +23,7 @@ set(epi_source_files
 
 # fbjni is currently only configured for Android, so make this rule
 # conditional to avoid unnecessarily breaking host build targets.
-if(HERMES_IS_ANDROID)
+if(ANDROID)
   add_hermes_library(jsijni SHARED
       ${jni_source_files}
       LINK_LIBS

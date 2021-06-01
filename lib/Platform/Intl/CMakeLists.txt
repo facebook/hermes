@@ -8,7 +8,7 @@ set(source_files
    PlatformIntlDummy.cpp
 )
 
-if(HERMES_IS_ANDROID)
+if(ANDROID)
   add_hermes_library(hermesPlatformIntl STATIC ${source_files}
       LINK_LIBS
       hermesfbjni
