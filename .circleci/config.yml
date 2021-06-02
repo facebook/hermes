@@ -70,7 +70,7 @@ jobs:
       - run:
           name: Set up workspace and install dependencies
           command: |
-            yes | sdkmanager "cmake;3.6.4111459" &
+            yes | sdkmanager "cmake;3.10.2.4988404" &
             mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
             ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
             sudo apt-get update
@@ -79,7 +79,7 @@ jobs:
             sudo cp /usr/bin/ninja /usr/bin/ninja.real
             # See top comment
             printf '%s\n' '#!/bin/sh' 'ninja.real -j4 "$@" || ninja.real -j1 "$@"' | sudo tee /usr/bin/ninja
-            ln -sf /usr/bin/ninja /opt/android/sdk/cmake/3.6.4111459/bin/ninja
+            ln -sf /usr/bin/ninja /opt/android/sdk/cmake/3.10.2.4988404/bin/ninja
       - run:
           name: Build Hermes Compiler
           command: |
