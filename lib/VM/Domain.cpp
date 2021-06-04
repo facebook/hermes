@@ -108,16 +108,20 @@ void DomainDeserialize(Deserializer &d, CellKind kind) {
 }
 
 void Domain::serializeArrayStorage(Serializer &s, const ArrayStorage *cell) {
-  assert(
-      cell->size() % runtimeModuleOffset == 0 && "Invalid ArrayStorage size");
+  assert(cell->size() % CJSModuleSize == 0 && "Invalid ArrayStorage size");
   s.writeInt<ArrayStorage::size_type>(cell->capacity());
   s.writeInt<ArrayStorage::size_type>(cell->size());
   for (ArrayStorage::size_type i = 0; i < cell->size(); i += CJSModuleSize) {
     s.writeHermesValue(cell->data()[i + CachedExportsOffset]);
     s.writeHermesValue(cell->data()[i + ModuleOffset]);
     s.writeHermesValue(cell->data()[i + FunctionIndexOffset]);
+    HermesValue rm = cell->data()[i + runtimeModuleOffset];
+    assert(
+        (rm.isEmpty() || rm.isNativeValue()) &&
+        "RuntimeModule must be empty or a native pointer.");
     s.writeHermesValue(
-        cell->data()[i + runtimeModuleOffset], /* nativePointer */ true);
+        rm.isEmpty() ? HermesValue::encodeNativePointer(nullptr) : rm,
+        /* nativePointer */ true);
   }
   s.endObject(cell);
 }
@@ -125,7 +129,7 @@ void Domain::serializeArrayStorage(Serializer &s, const ArrayStorage *cell) {
 ArrayStorage *Domain::deserializeArrayStorage(Deserializer &d) {
   ArrayStorage::size_type capacity = d.readInt<ArrayStorage::size_type>();
   ArrayStorage::size_type size = d.readInt<ArrayStorage::size_type>();
-  assert(size % runtimeModuleOffset == 0 && "Invalid ArrayStorage size");
+  assert(size % CJSModuleSize == 0 && "Invalid ArrayStorage size");
   auto cjsModulesRes = ArrayStorage::create(d.getRuntime(), capacity, size);
   if (LLVM_UNLIKELY(cjsModulesRes == ExecutionStatus::EXCEPTION)) {
     hermes_fatal("fail to allocate memory for CJSModules");
