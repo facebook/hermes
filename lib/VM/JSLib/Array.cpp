@@ -3413,8 +3413,12 @@ CallResult<HermesValue> arrayOf(void *, Runtime *runtime, NativeArgs args) {
   auto C = args.getThisHandle();
 
   MutableHandle<JSObject> A{runtime};
+  CallResult<bool> isConstructorRes = isConstructor(runtime, *C);
+  if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
   // 4. If IsConstructor(C) is true, then
-  if (isConstructor(runtime, *C)) {
+  if (*isConstructorRes) {
     // a. Let A be Construct(C, «len»).
     auto aRes = Callable::executeConstruct1(
         Handle<Callable>::vmcast(C),
@@ -3512,8 +3516,12 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<JSObject> A{runtime};
   // 6. If usingIterator is not undefined, then
   if (!usingIterator->isUndefined()) {
+    CallResult<bool> isConstructorRes = isConstructor(runtime, *C);
+    if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
     // a. If IsConstructor(C) is true, then
-    if (isConstructor(runtime, *C)) {
+    if (*isConstructorRes) {
       GCScopeMarkerRAII markerConstruct{gcScope};
       // i. Let A be Construct(C).
       auto callRes =
@@ -3633,8 +3641,12 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   uint64_t len = lengthRes->getNumberAs<uint64_t>();
+  CallResult<bool> isConstructorRes = isConstructor(runtime, *C);
+  if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
   // 12. If IsConstructor(C) is true, then
-  if (isConstructor(runtime, *C)) {
+  if (*isConstructorRes) {
     // a. Let A be Construct(C, «len»).
     auto callRes = Callable::executeConstruct1(
         Handle<Callable>::vmcast(C),

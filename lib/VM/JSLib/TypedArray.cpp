@@ -513,8 +513,12 @@ typedArrayConstructor(void *, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue>
 typedArrayFrom(void *, Runtime *runtime, NativeArgs args) {
   auto source = args.getArgHandle(0);
+  CallResult<bool> isConstructorRes = isConstructor(runtime, args.getThisArg());
+  if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
   // 1. Let C be the this value.
-  if (!isConstructor(runtime, args.getThisArg())) {
+  if (!*isConstructorRes) {
     // 2. If IsConstructor(C) is false, throw a TypeError exception.
     return runtime->raiseTypeError(
         "Cannot invoke when the this is not a constructor");
@@ -600,7 +604,11 @@ typedArrayOf(void *, Runtime *runtime, NativeArgs args) {
   // 2. Let items be the List of arguments passed to this function. (args is
   // items).
   // 3. Let C be the this value.
-  if (!isConstructor(runtime, args.getThisArg())) {
+  CallResult<bool> isConstructorRes = isConstructor(runtime, args.getThisArg());
+  if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (!*isConstructorRes) {
     // 4. If IsConstructor(C) is false, throw a TypeError exception.
     return runtime->raiseTypeError(
         "Cannot invoke %TypedArray%.of when %TypedArray% is not a constructor "

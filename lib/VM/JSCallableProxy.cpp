@@ -97,6 +97,15 @@ void JSCallableProxy::setTargetAndHandler(
   slots_.handler.set(runtime, handler.get(), &runtime->getHeap());
 }
 
+CallResult<bool> JSCallableProxy::isConstructor(Runtime *runtime) {
+  ScopedNativeDepthTracker depthTracker(runtime);
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
+  return vm::isConstructor(
+      runtime, vmcast_or_null<Callable>(slots_.target.get(runtime)));
+}
+
 CallResult<HermesValue>
 JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
   // We don't use NativeArgs; the implementations just read the current
@@ -200,7 +209,12 @@ CallResult<PseudoHandle<JSObject>> JSCallableProxy::_newObjectImpl(
     Handle<Callable> callable,
     Runtime *runtime,
     Handle<JSObject> protoHandle) {
-  if (!vmcast<JSCallableProxy>(*callable)->isConstructor(runtime)) {
+  CallResult<bool> isConstructorRes =
+      vmcast<JSCallableProxy>(*callable)->isConstructor(runtime);
+  if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (!*isConstructorRes) {
     return runtime->raiseTypeError("Function is not a constructor");
   }
   return vm::Callable::newObject(
