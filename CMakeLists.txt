@@ -651,6 +651,7 @@ if(HERMES_ENABLE_TEST_SUITE)
     hbc-deltaprep
     hbc-diff
     dependency-extractor
+    node-hermes
     )
 
   set(coverage_directory "")
@@ -672,6 +673,7 @@ if(HERMES_ENABLE_TEST_SUITE)
     hbcdump=${HERMES_TOOLS_OUTPUT_DIR}/hbcdump
     hbc-deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
     hbc_diff=${HERMES_TOOLS_OUTPUT_DIR}/hbc-diff
+    node-hermes=${HERMES_TOOLS_OUTPUT_DIR}/node-hermes
     build_mode=${HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST}
     exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
     serialize_enabled=${HERMESVM_SERIALIZE}
