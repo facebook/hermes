@@ -223,6 +223,8 @@ print(JSON.stringify(result));
 print(result[1], result[7]);
 // CHECK-NEXT: ["A",null,"B","bold","/","B","and",null,"CODE","coded","/","CODE",""]
 // CHECK-NEXT: undefined undefined
+print('  '.split(/()()()()()()()()()()/).length);
+// CHECK-NEXT: 12
 
 // Ensure we step over surrogate pairs iff Unicode is set.
 print("\u{12345}".split(/(?:)/u).length);
