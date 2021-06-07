@@ -51,6 +51,13 @@ class FileBuffer : public jsi::Buffer {
   std::unique_ptr<llvh::MemoryBuffer> buffer_;
 };
 
+static jsi::Value require(
+    const std::string &filename,
+    jsi::Runtime &rt,
+    std::unordered_map<std::string, jsi::Object> &fileTracker) {
+  return jsi::Value::undefined();
+}
+
 int main(int argc, char **argv) {
   // Normalize the arg vector.
   llvh::InitLLVM initLLVM(argc, argv);
@@ -85,9 +92,27 @@ int main(int argc, char **argv) {
 
   auto runtime = facebook::hermes::makeHermesRuntime();
 
+  // Maps from filename to JS module object
+  std::unordered_map<std::string, jsi::Object> fileTracker;
+
   try {
-    // add function headers for require, value of last expression becomes the
-    // return value
+    // creates require js function and links it to the c++ version
+    jsi::Function req = jsi::Function::createFromHostFunction(
+        *runtime,
+        jsi::PropNameID::forAscii(*runtime, "require"),
+        1,
+        [&fileTracker](
+            jsi::Runtime &rt,
+            const jsi::Value &,
+            const jsi::Value *args,
+            size_t count) -> jsi::Value {
+          if (count == 0) {
+            throw jsi::JSError(rt, "Not enough arguments passed in");
+          }
+          return require(args[0].toString(rt).utf8(rt), rt, fileTracker);
+        });
+    runtime->global().setProperty(*runtime, "require", req);
+
     auto result = runtime->evaluateJavaScript(jsiBuffer, srcPath);
 
   } catch (const jsi::JSIException &e) {
