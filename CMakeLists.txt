@@ -587,20 +587,7 @@ include_directories(BEFORE
   )
 
 if(HERMES_IS_ANDROID)
-  if(EXISTS ${HERMES_SOURCE_DIR}/first-party/fbjni/cxx)
-    set(FBJNI_PATH ${HERMES_SOURCE_DIR}/first-party/fbjni)
-  elseif(EXISTS ${FBSOURCE_DIR}/fbandroid/libraries/fbjni/cxx)
-    set(FBJNI_PATH ${FBSOURCE_DIR}/fbandroid/libraries/fbjni)
-  elseif(EXISTS ${HERMES_SOURCE_DIR}/../../fbandroid/libraries/fbjni/cxx)
-    set(FBJNI_PATH ${HERMES_SOURCE_DIR}/../../fbandroid/libraries/fbjni)
-  else()
-    message(FATAL_ERROR "Unable to find fbjni.")
-  endif()
-  include_directories("${FBJNI_PATH}/cxx/")
-  add_subdirectory(first-party/fbjni)
-
-  # JNI requires that JNI_OnLoad is (re-)exported for initialization.
-  set(OPTIONAL_JNI_ONLOAD "-Wl,--undefined=JNI_OnLoad")
+  find_package(fbjni REQUIRED CONFIG)
 endif()
 
 set(CMAKE_CXX_STANDARD 14)
