@@ -9,19 +9,11 @@
 
 // RUN: %node-hermes %s | %FileCheck --match-full-lines %s
 
-print('Basic Requires');
-// CHECK-LABEL: Basic Requires
+print('Path test 2');
+// CHECK-LABEL: Path test 2
 
-var test1 = require('./example-exports.js');
-print(typeof require);
-// CHECK-NEXT: function
-print(test1.x);
+var test = require('../path-tests-help/example-exports.js');
+print(test.x);
 // CHECK-NEXT: 5
-print(test1.y);
-// CHECK-NEXT: 3
-
-var test2 = require('./example-exports.js');
-print(test2.x);
-// CHECK-NEXT: 5
-print(test2.y);
+print(test.y);
 // CHECK-NEXT: 3

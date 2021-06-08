@@ -12,6 +12,7 @@
 #include "llvh/Support/FileSystem.h"
 #include "llvh/Support/InitLLVM.h"
 #include "llvh/Support/MemoryBuffer.h"
+#include "llvh/Support/Path.h"
 #include "llvh/Support/PrettyStackTrace.h"
 #include "llvh/Support/Program.h"
 #include "llvh/Support/Signals.h"
@@ -51,11 +52,82 @@ class FileBuffer : public jsi::Buffer {
   std::unique_ptr<llvh::MemoryBuffer> buffer_;
 };
 
+/// Given the directory that the original JS file runs from and the
+/// relative path of the target, forms the absolute path
+/// for the target.
+static void canonicalizePath(
+    llvh::SmallVectorImpl<char> &dirname,
+    llvh::StringRef target) {
+  if (!target.empty() && target[0] == '/') {
+    // If the target is absolute (starts with a '/'), resolve from the module
+    // root (disregard the dirname).
+    dirname.clear();
+    llvh::sys::path::append(dirname, target.drop_front(1));
+    return;
+  }
+  llvh::sys::path::append(dirname, llvh::sys::path::Style::posix, target);
+
+  // Remove all dots. This is done to get rid of ../ or anything like ././.
+  llvh::sys::path::remove_dots(dirname, true, llvh::sys::path::Style::posix);
+}
+
+/// Adds a JS function wrapper around the StringRef buffer passed in.
+static const std::shared_ptr<jsi::Buffer> addjsWrapper(
+    llvh::StringRef strBuffer) {
+  std::string wrappedBuffer =
+      "(function(exports, require, module, __filename, __dirname) {";
+  wrappedBuffer += strBuffer;
+  wrappedBuffer += "});";
+  return std::make_unique<jsi::StringBuffer>(std::move(wrappedBuffer));
+}
+
+/// Reads and exports the values from a given file.
 static jsi::Value require(
     const std::string &filename,
+    const std::string &dirname,
     jsi::Runtime &rt,
     std::unordered_map<std::string, jsi::Object> &fileTracker) {
-  return jsi::Value::undefined();
+  if (filename.empty()) {
+    throw jsi::JSError(
+        rt, "A valid file name must be inputted to require call");
+  }
+  if (filename[0] != '.') {
+    throw jsi::JSError(rt, "Modules not supported yet");
+  }
+  auto iterAlreadyExists = fileTracker.find(filename);
+  if (iterAlreadyExists != fileTracker.end()) {
+    return iterAlreadyExists->second.getProperty(rt, "exports");
+  }
+  llvh::SmallString<32> fullFileName{dirname};
+  canonicalizePath(fullFileName, filename);
+
+  auto memBuffer = llvh::MemoryBuffer::getFileOrSTDIN(fullFileName.str());
+  if (!memBuffer) {
+    std::string fullErrorMessage{"Failed to open file: "};
+    fullErrorMessage += fullFileName;
+    throw jsi::JSError(rt, std::move(fullErrorMessage));
+  }
+  auto wrappedBuffer = addjsWrapper(memBuffer.get()->getBuffer());
+
+  jsi::Value result = rt.evaluateJavaScript(wrappedBuffer, filename);
+  jsi::Object mod{rt};
+  jsi::Object exports{rt};
+
+  mod.setProperty(rt, "exports", exports);
+  auto iterAndSuccess =
+      fileTracker.emplace(std::make_pair(filename, std::move(mod)));
+  assert(iterAndSuccess.second && "Insertion must succeed.");
+
+  jsi::Value out = result.asObject(rt).asFunction(rt).call(
+      rt,
+      exports,
+      rt.global().getProperty(rt, "require"),
+      iterAndSuccess.first->second,
+      filename,
+      dirname,
+      5);
+
+  return iterAndSuccess.first->second.getProperty(rt, "exports");
 }
 
 int main(int argc, char **argv) {
@@ -92,16 +164,19 @@ int main(int argc, char **argv) {
 
   auto runtime = facebook::hermes::makeHermesRuntime();
 
-  // Maps from filename to JS module object
+  // Maps from filename to JS module object.
   std::unordered_map<std::string, jsi::Object> fileTracker;
 
+  llvh::SmallString<32> dirName{InputFilename};
+  llvh::sys::path::remove_filename(dirName, llvh::sys::path::Style::posix);
+  const std::string strDirname{dirName.data(), dirName.size()};
   try {
-    // creates require js function and links it to the c++ version
+    // Creates require JS function and links it to the c++ version.
     jsi::Function req = jsi::Function::createFromHostFunction(
         *runtime,
         jsi::PropNameID::forAscii(*runtime, "require"),
         1,
-        [&fileTracker](
+        [&fileTracker, &strDirname](
             jsi::Runtime &rt,
             const jsi::Value &,
             const jsi::Value *args,
@@ -109,7 +184,8 @@ int main(int argc, char **argv) {
           if (count == 0) {
             throw jsi::JSError(rt, "Not enough arguments passed in");
           }
-          return require(args[0].toString(rt).utf8(rt), rt, fileTracker);
+          return require(
+              args[0].toString(rt).utf8(rt), strDirname, rt, fileTracker);
         });
     runtime->global().setProperty(*runtime, "require", req);
 
