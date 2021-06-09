@@ -2473,6 +2473,13 @@ indexOfHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
   }
   double len = *lenRes;
 
+  // Early return before running into any coercions on args.
+  // 2. Let len be ? LengthOfArrayLike(O).
+  // 3. If len is 0, return -1.
+  if (len == 0) {
+    return HermesValue::encodeDoubleValue(-1);
+  }
+
   // Relative index to start the search at.
   auto intRes = toInteger(runtime, args.getArgHandle(1));
   double n;

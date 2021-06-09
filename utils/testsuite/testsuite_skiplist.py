@@ -433,9 +433,6 @@ SKIP_LIST = [
     "test262/test/built-ins/Array/prototype/at/",
     "test262/test/built-ins/TypedArray/prototype/at/",
     "test262/test/built-ins/String/prototype/at/",
-    # TODO(T90541025) length-zero array early return
-    "test262/test/built-ins/Array/prototype/indexOf/length-zero-returns-minus-one.js",
-    "test262/test/built-ins/Array/prototype/lastIndexOf/length-zero-returns-minus-one.js",
     # TODO(T90541287) array length coercion order
     "test262/test/built-ins/Array/length/define-own-prop-length-coercion-order-set.js",
     "test262/test/built-ins/Array/length/define-own-prop-length-coercion-order.js",
