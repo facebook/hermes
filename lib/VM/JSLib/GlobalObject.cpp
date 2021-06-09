@@ -273,6 +273,12 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
   DefinePropertyFlags normalDPF =
       DefinePropertyFlags::getNewNonEnumerableFlags();
 
+  // Not enumerable, not writable but configurable.
+  DefinePropertyFlags configurableOnlyPDF =
+      DefinePropertyFlags::getDefaultNewPropertyFlags();
+  configurableOnlyPDF.enumerable = 0;
+  configurableOnlyPDF.writable = 0;
+
   /// Clear the configurable flag.
   DefinePropertyFlags clearConfigurableDPF{};
   clearConfigurableDPF.setConfigurable = 1;
@@ -356,8 +362,8 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
       Handle<JSObject>::vmcast(&runtime->functionPrototype),
       runtime,
       Predefined::getSymbolID(Predefined::length),
-      clearConfigurableDPF,
-      Runtime::getUndefinedValue()));
+      configurableOnlyPDF,
+      Runtime::getZeroValue()));
 
   // [[ThrowTypeError]].
   auto throwTypeErrorFunction = NativeFunction::create(

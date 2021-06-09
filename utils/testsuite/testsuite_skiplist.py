@@ -838,8 +838,6 @@ SKIP_LIST = [
     "test262/test/built-ins/Function/prototype/restricted-property-arguments.js",
     "test262/test/built-ins/Function/prototype/restricted-property-caller.js",
     "test262/test/built-ins/Function/prototype/bind/BoundFunction_restricted-properties.js",
-    # TODO(T90542855) Function.prototype.length should be configurable
-    "test262/test/built-ins/Function/prototype/length.js",
     # Object() changes
     "test262/test/built-ins/Object/prototype/toLocaleString/primitive_this_value.js",
     "test262/test/built-ins/Object/prototype/toLocaleString/primitive_this_value_getter.js",
