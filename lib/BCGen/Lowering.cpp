@@ -250,9 +250,9 @@ LowerAllocObjectFuncContext::collectInstructions() const {
         continue;
       }
       auto *SI = llvh::dyn_cast<StoreOwnPropertyInst>(&I);
-      if (!SI) {
-        // A user that's not a StoreOwnPropertyInst. We have to
-        // stop processing here.
+      if (!SI || SI->getObject() != allocInst_) {
+        // A user that's not a StoreOwnPropertyInst storing into the object
+        // created by allocInst_. We have to stop processing here.
         terminate = true;
         break;
       }
