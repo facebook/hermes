@@ -161,6 +161,7 @@ SKIP_LIST = [
     "test262/test/built-ins/AsyncArrowFunction/is-a-constructor.js",
     "test262/test/language/statements/for/head-init-async-of.js",
     "test262/test/language/statements/switch/scope-lex-async-generator.js",
+    "test262/test/language/expressions/object/__proto__-permitted-dup.js",
     # TODO(T90539602) switch default create its own scope
     "test262/test/language/statements/switch/scope-lex-class.js",
     "test262/test/language/statements/switch/scope-lex-generator.js",
@@ -668,9 +669,6 @@ SKIP_LIST = [
     "test262/test/language/expressions/object/scope-setter-paramsbody-var-close.js",
     "test262/test/language/expressions/object/scope-setter-paramsbody-var-open.js",
     "test262/test/language/expressions/typeof/get-value.js",
-    # TODO(T90542037) duplicated __proto__ is permitted
-    "test262/test/language/expressions/object/__proto__-permitted-dup.js",
-    "test262/test/language/expressions/object/__proto__-permitted-dup-shorthand.js",
     "test262/test/language/expressions/object/getter-super-prop.js",
     "test262/test/language/expressions/object/setter-super-prop.js",
     # TODO(T90542236)

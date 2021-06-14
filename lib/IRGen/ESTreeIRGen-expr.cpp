@@ -768,9 +768,16 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       propValue->setSetter(cast<ESTree::FunctionExpressionNode>(prop->_value));
     } else {
       assert(prop->_kind->str() == "init" && "invalid PropertyNode kind");
-      propValue->setValue(prop->_value);
-      if (!protoProperty && propName == "__proto__")
-        protoProperty = prop;
+      // protoProperty should only be recorded if the property is not a method
+      // nor a shorthand value.
+      if (propName == "__proto__" && !prop->_method && !prop->_shorthand) {
+        if (!protoProperty) {
+          protoProperty = prop;
+        }
+      } else {
+        // We record the propValue if this is a regular property
+        propValue->setValue(prop->_value);
+      }
     }
   }
 
@@ -899,8 +906,9 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
 
       propValue->isIRGenerated = true;
     } else {
-      // The __proto__ property requires special handling.
-      if (keyStr == "__proto__") {
+      // A __proto__ that needs special handling is a __proto__ that is not
+      // a method nor a shorthand value
+      if (keyStr == "__proto__" && !prop->_method && !prop->_shorthand) {
         if (prop == protoProperty) {
           // This is the first definition of __proto__. If we already used it
           // as an object parent we just skip it, but otherwise we must
@@ -917,7 +925,9 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
                 {Obj, parent});
           }
         } else {
-          // __proto__ was defined more than once, which is an error.
+          // If this prop is not a method and not a shorthand value, and
+          // it is not the first protoProperty, then __proto__ was defined
+          // more than once, which is an error.
           Builder.getModule()->getContext().getSourceErrorManager().error(
               prop->getSourceRange(),
               "__proto__ was set multiple times in the object definition.");
