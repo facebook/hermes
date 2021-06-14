@@ -7,6 +7,7 @@
 
 #include "hermes/Support/OSCompat.h"
 #include "hermes/hermes.h"
+#include "nodelib/NodeBytecode.h"
 
 #include "llvh/Support/CommandLine.h"
 #include "llvh/Support/FileSystem.h"
@@ -30,6 +31,9 @@ static llvh::cl::opt<std::string> InputFilename(
     llvh::cl::desc("<file>"),
     llvh::cl::init("-"));
 
+/// Takes an StringRef to a file path and
+/// creates a jsi::Buffer pointing to it without copying or taking ownership.
+/// The StringRef must outlive the class.
 class FileBuffer : public jsi::Buffer {
  public:
   static std::shared_ptr<jsi::Buffer> bufferFromFile(llvh::StringRef path) {
@@ -50,6 +54,23 @@ class FileBuffer : public jsi::Buffer {
 
  private:
   std::unique_ptr<llvh::MemoryBuffer> buffer_;
+};
+
+/// Takes an ArrayRef to a series of bytes and
+/// creates a jsi::Buffer pointing to it without copying or taking ownership.
+/// The ArrayRef must outlive the class.
+class ArrayRefBuffer : public jsi::Buffer {
+ public:
+  ArrayRefBuffer(llvh::ArrayRef<uint8_t> array) : array_(array){};
+  const uint8_t *data() const override {
+    return array_.data();
+  }
+  size_t size() const override {
+    return array_.size();
+  }
+
+ private:
+  llvh::ArrayRef<uint8_t> array_;
 };
 
 /// Given the directory that the original JS file runs from and the
@@ -81,35 +102,55 @@ static const std::shared_ptr<jsi::Buffer> addjsWrapper(
   return std::make_unique<jsi::StringBuffer>(std::move(wrappedBuffer));
 }
 
+/// Given the requested module name/file name, which is either a builtin
+/// module that has already been compiled to byte code or a JS file which
+/// needs to be directly read from disk,
+/// returns the wrapper function which is called to `require` it.
+static jsi::Function resolveRequireCall(
+    const std::string &filename,
+    const std::string &dirname,
+    jsi::Runtime &rt) {
+  std::shared_ptr<jsi::Buffer> buf;
+  if (filename == "fs") {
+    llvh::ArrayRef<uint8_t> module = getNodeBytecode();
+    assert(facebook::hermes::HermesRuntime::isHermesBytecode(
+        module.data(), module.size()));
+    buf = std::make_shared<ArrayRefBuffer>(module);
+  } else {
+    if (filename.empty()) {
+      throw jsi::JSError(
+          rt, "A valid file name must be inputted to require call");
+    }
+    if (filename[0] != '.') {
+      throw jsi::JSError(rt, "This module is not supported yet");
+    }
+    llvh::SmallString<32> fullFileName{dirname};
+    canonicalizePath(fullFileName, filename);
+
+    auto memBuffer = llvh::MemoryBuffer::getFileOrSTDIN(fullFileName.str());
+    if (!memBuffer) {
+      std::string fullErrorMessage{"Failed to open file: "};
+      fullErrorMessage += fullFileName;
+      throw jsi::JSError(rt, std::move(fullErrorMessage));
+    }
+    buf = addjsWrapper(memBuffer.get()->getBuffer());
+  }
+  jsi::Value result = rt.evaluateJavaScript(buf, filename);
+  return result.asObject(rt).asFunction(rt);
+}
+
 /// Reads and exports the values from a given file.
 static jsi::Value require(
     const std::string &filename,
     const std::string &dirname,
     jsi::Runtime &rt,
     std::unordered_map<std::string, jsi::Object> &fileTracker) {
-  if (filename.empty()) {
-    throw jsi::JSError(
-        rt, "A valid file name must be inputted to require call");
-  }
-  if (filename[0] != '.') {
-    throw jsi::JSError(rt, "Modules not supported yet");
-  }
   auto iterAlreadyExists = fileTracker.find(filename);
   if (iterAlreadyExists != fileTracker.end()) {
     return iterAlreadyExists->second.getProperty(rt, "exports");
   }
-  llvh::SmallString<32> fullFileName{dirname};
-  canonicalizePath(fullFileName, filename);
 
-  auto memBuffer = llvh::MemoryBuffer::getFileOrSTDIN(fullFileName.str());
-  if (!memBuffer) {
-    std::string fullErrorMessage{"Failed to open file: "};
-    fullErrorMessage += fullFileName;
-    throw jsi::JSError(rt, std::move(fullErrorMessage));
-  }
-  auto wrappedBuffer = addjsWrapper(memBuffer.get()->getBuffer());
-
-  jsi::Value result = rt.evaluateJavaScript(wrappedBuffer, filename);
+  jsi::Function result = resolveRequireCall(filename, dirname, rt);
   jsi::Object mod{rt};
   jsi::Object exports{rt};
 
@@ -118,7 +159,7 @@ static jsi::Value require(
       fileTracker.emplace(std::make_pair(filename, std::move(mod)));
   assert(iterAndSuccess.second && "Insertion must succeed.");
 
-  jsi::Value out = result.asObject(rt).asFunction(rt).call(
+  jsi::Value out = result.call(
       rt,
       exports,
       rt.global().getProperty(rt, "require"),

@@ -10,8 +10,9 @@ set(HERMES_ENABLE_EH ON)
 set(CXX_STANDARD 14)
 set(CXX_STANDARD_REQUIRED ON)
 
+add_subdirectory(nodelib)
 add_hermes_tool(node-hermes
   node-hermes.cpp
   ${ALL_HEADER_FILES}
-  LINK_LIBS hermesapi
+  LINK_LIBS hermesapi hermesNodeBytecode
   )
