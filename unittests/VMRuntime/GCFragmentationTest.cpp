@@ -83,6 +83,7 @@ TEST(GCFragmentationTest, Test) {
   auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
+  GCScope scope{&rt};
 
   // Number of bytes allocatable in the old generation, assuming the heap
   // contains \c kHeapSizeHint bytes in total.
@@ -94,20 +95,16 @@ TEST(GCFragmentationTest, Test) {
   // A cell whose size makes it awkward to pack into an allocation region.
   using AwkwardCell = EmptyCell<GenGCHeapSegment::maxSize() / 2 + 1>;
 
-  std::deque<GCCell *> roots;
-
   { // (1) Allocate enough segment cells to fill every segment in the old gen
     //     except the last two (the full one and the overhang).
     const int cells = kOGSizeHint / SegmentCell::size() - 1;
     for (int i = 0; i < cells; ++i) {
-      roots.push_back(SegmentCell::create(rt));
-      rt.pointerRoots.push_back(&roots.back());
+      rt.makeHandle(SegmentCell::create(rt));
     }
   }
 
   { // (2) Then allocate an awkward cell.
-    roots.push_back(AwkwardCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(AwkwardCell::create(rt));
   }
 
   { // (3) Force a full collection to make sure all the allocated cells so far
@@ -132,8 +129,7 @@ TEST(GCFragmentationTest, Test) {
   { // (4) Without increasing `E`, it is impossible to fit another awkward cell
     //     into the old generation, so let's see what happens when we try.
 
-    roots.push_back(AwkwardCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(AwkwardCell::create(rt));
 
     // This should cause a young generation collection, evacuating the rooted
     // awkward cell above to the old generation.
@@ -166,27 +162,23 @@ TEST(GCFragmentationTest, ExternalMemoryTest) {
   // A cell whose size makes it awkward to pack into an allocation region.
   using AwkwardCell = EmptyCell<GenGCHeapSegment::maxSize() / 2 + 1>;
 
-  std::deque<GCCell *> roots;
+  GCScope scope{&rt};
 
   { // (1) Allocate enough segment cells to fill every segment in the old gen
     //     except the last two.
     const int cells = kOGSize / SegmentCell::size() - 2;
     for (int i = 0; i < cells; ++i) {
-      roots.push_back(SegmentCell::create(rt));
-      rt.pointerRoots.push_back(&roots.back());
+      rt.makeHandle(SegmentCell::create(rt));
     }
   }
 
   { // (2) Then allocate an awkward cell.
-    roots.push_back(AwkwardCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(AwkwardCell::create(rt));
   }
 
   // Now allocate external memory half as big as a segment.
-  auto *extObj = testhelpers::DummyObject::create(&gc);
+  auto extObj = rt.makeHandle(testhelpers::DummyObject::create(&gc));
   extObj->acquireExtMem(&gc, GenGCHeapSegment::maxSize() / 2);
-  roots.push_back(extObj);
-  rt.pointerRoots.push_back(&roots.back());
 
   { // (3) Force a full collection to make sure all the allocated cells so far
     //     end up in the old generation.  The external memory charge should also
@@ -212,8 +204,7 @@ TEST(GCFragmentationTest, ExternalMemoryTest) {
   { // (4) Without increasing `E`, it is impossible to fit another awkward cell
     //     into the old generation, so let's see what happens when we try.
 
-    roots.push_back(AwkwardCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(AwkwardCell::create(rt));
 
     // This should cause a young generation collection, evacuating the rooted
     // awkward cell above to the old generation.
