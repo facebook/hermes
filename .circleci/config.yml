@@ -586,11 +586,9 @@ jobs:
             nvm use 14
             # Reinstall the latest version of Yarn.
             npm install --global yarn
-            brew install gnu-sed
-            brew install md5sha1sum
             brew tap homebrew/cask
-            brew cask install android-sdk
-            brew cask install android-ndk
+            brew install --cask android-sdk
+            brew install --cask android-ndk
             echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:$PATH"' >> $BASH_ENV
             # At some point, adb ended up in platform-tools/platform-tools. Work around that.
             echo 'export PATH="/usr/local/share/android-sdk/platform-tools/platform-tools:$PATH"' >> $BASH_ENV
@@ -647,7 +645,7 @@ jobs:
           name: Setup dependencies
           command: |
             brew tap homebrew/cask
-            brew cask install android-sdk
+            brew install --cask android-sdk
             (yes | sdkmanager "platform-tools" "platforms;android-26" --verbose) || true
             echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:$PATH"' >>  ~/.bash_profile
       - run:
@@ -664,7 +662,6 @@ jobs:
       - run:
           name: Set up build dependencies
           command: |
-            brew install python3
             (yes | sdkmanager "ndk;21.0.6113669" "cmake;3.10.2.4988404" --verbose) || true
             echo 'export PATH="/usr/local/share/android-sdk/cmake/3.10.2.4988404/bin:$PATH"' >>  ~/.bash_profile
       - run:
