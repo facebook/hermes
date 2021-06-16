@@ -36,27 +36,24 @@ TEST(GCReturnUnusedMemoryTest, CollectReturnsFreeMemory) {
 
   using SemiCell = EmptyCell<AlignedHeapSegment::maxSize() * 8 / 10>;
 
-  // Allocate cells directly in the old generation.
-  auto *cell1 = SemiCell::createLongLived(rt);
-  rt.pointerRoots.push_back(reinterpret_cast<GCCell **>(&cell1));
+  llvh::ErrorOr<size_t> before = 0;
+  {
+    GCScope scope{&rt};
+    // Allocate cells directly in the old generation.
+    auto cell1 = rt.makeHandle(SemiCell::createLongLived(rt));
+    auto cell2 = rt.makeHandle(SemiCell::createLongLived(rt));
+    rt.makeHandle(SemiCell::createLongLived(rt));
 
-  auto *cell2 = SemiCell::createLongLived(rt);
-  rt.pointerRoots.push_back(reinterpret_cast<GCCell **>(&cell2));
+    before = gc.getVMFootprintForTest();
+    ASSERT_TRUE(before);
 
-  auto *cell3 = SemiCell::createLongLived(rt);
-  rt.pointerRoots.push_back(reinterpret_cast<GCCell **>(&cell3));
-
-  auto before = gc.getVMFootprintForTest();
-  ASSERT_TRUE(before);
-
-  // Make the pages dirty
-  (void)cell1->touch();
-  (void)cell2->touch();
+    // Make the pages dirty
+    (void)cell1->touch();
+    (void)cell2->touch();
+  }
 
   auto touched = gc.getVMFootprintForTest();
   ASSERT_TRUE(touched);
-
-  rt.pointerRoots.clear();
 
   // Collect should return the unused memory back to the OS.
   rt.collect();
