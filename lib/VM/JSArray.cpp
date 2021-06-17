@@ -590,7 +590,6 @@ CallResult<Handle<JSArray>> JSArray::create(
           runtime, prototypeHandle, classHandle, GCPointerBase::NoBarriers()));
 
   // Only allocate the storage if capacity is not zero.
-  StorageType *indexedStorage = nullptr;
   if (capacity) {
     if (LLVM_UNLIKELY(capacity > StorageType::maxElements()))
       return runtime->raiseRangeError("Out of memory for array elements");
@@ -598,11 +597,8 @@ CallResult<Handle<JSArray>> JSArray::create(
     if (arrRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    indexedStorage = arrRes->get();
+    self->setIndexedStorage(runtime, arrRes->get(), &runtime->getHeap());
   }
-  // Note that if there is no indexed storage, we still need to explicitly set
-  // this to null, because JSObjectInit defaults it to undefined.
-  self->setIndexedStorage(runtime, indexedStorage, &runtime->getHeap());
   auto shv = SmallHermesValue::encodeNumberValue(length, runtime);
   putLength(self.get(), runtime, shv);
 
