@@ -53,22 +53,19 @@ TEST(GCMarkWeakTest, MarkWeak) {
   auto &gc = rt.getHeap();
   // Probably zero, but we only care about the increase/decrease.
   const int initUsedWeak = gc.countUsedWeakRefs();
-
-  GCCell *g = createWithMarkWeakCount(&gc, &numMarkWeakCalls);
-  rt.pointerRoots.push_back(&g);
-  rt.collect();
-
   {
+    GCScope scope{&rt};
+    auto t = rt.makeHandle(createWithMarkWeakCount(&gc, &numMarkWeakCalls));
+    rt.collect();
+
     WeakRefLock lk{gc.weakRefMutex()};
-    DummyObject *t = vmcast<DummyObject>(g);
     ASSERT_TRUE(t->weak.isValid());
-    EXPECT_EQ(t, getNoHandle(t->weak, &gc));
+    EXPECT_EQ(*t, getNoHandle(t->weak, &gc));
     // Exactly one call to _markWeakImpl
     EXPECT_EQ(1 + 2 * checkHeapOn, numMarkWeakCalls);
     EXPECT_EQ(initUsedWeak + 1, gc.countUsedWeakRefs());
   }
 
-  rt.pointerRoots.pop_back();
   rt.collect();
   // The weak ref is live at the beginning of the collection, but not by the
   // end, so the call in updateReferences isn't run, nor the second
