@@ -25,15 +25,6 @@
 
 using namespace facebook::jni;
 
-namespace {
-
-template <typename K, typename V>
-struct JHashMap : public JavaClass<JHashMap<K,V>, JMap<K,V>> {
-  constexpr static auto kJavaDescriptor = "Ljava/util/HashMap;";
-};
-
-}
-
 jboolean nativeTestListIterator(
     alias_ref<jclass>,
     alias_ref<JList<jstring>> jlist) {

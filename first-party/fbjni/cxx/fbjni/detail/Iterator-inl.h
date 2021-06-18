@@ -175,6 +175,13 @@ size_t JCollection<E>::size() const {
   return sizeMethod(this->self());
 }
 
+template <typename E>
+bool JCollection<E>::add(alias_ref<E> elem) {
+  static auto addMethod = JCollection<E>::javaClassStatic()->
+    template getMethod<jboolean(alias_ref<JObject>)>("add");
+  return addMethod(this->self(), elem);
+}
+
 template <typename K, typename V>
 struct JMap<K,V>::Iterator : public detail::Iterator<detail::MapIteratorHelper<K,V>> {
   using detail::Iterator<detail::MapIteratorHelper<K,V>>::Iterator;
@@ -200,6 +207,28 @@ typename JMap<K,V>::Iterator JMap<K,V>::begin() const {
 template <typename K, typename V>
 typename JMap<K,V>::Iterator JMap<K,V>::end() const {
   return Iterator();
+}
+
+template <typename K, typename V>
+local_ref<JObject> JMap<K,V>::put(alias_ref<K> key, alias_ref<V> val) {
+  static auto putMethod = JMap<K,V>::javaClassStatic()->
+    template getMethod<JObject(alias_ref<JObject>, alias_ref<JObject>)>("put");
+  return putMethod(this->self(), key, val);
+}
+
+template <typename E>
+local_ref<JArrayList<E>> JArrayList<E>::create() {
+  return JArrayList<E>::newInstance();
+}
+
+template <typename E>
+local_ref<JArrayList<E>> JArrayList<E>::create(int initialCapacity) {
+  return JArrayList<E>::newInstance(initialCapacity);
+}
+
+template <typename K, typename V>
+local_ref<JHashMap<K, V>> JHashMap<K,V>::create() {
+  return JHashMap<K,V>::newInstance();
 }
 
 }

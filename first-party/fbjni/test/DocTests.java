@@ -22,6 +22,7 @@ import static org.fest.assertions.api.Assertions.failBecauseExceptionWasNotThrow
 import com.facebook.soloader.nativeloader.NativeLoader;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -180,6 +181,17 @@ public class DocTests extends BaseFBJniTests {
     names.put("c", 3);
     names.put("d", 7);
     assertThat(concatMatches(Arrays.asList(1, 2), names)).isEqualTo("bc");
+  }
+
+  // SECTION collections
+  static native Map<String, List<Integer>> buildCollections();
+  // END
+
+  @Test
+  public void testBuildCollections() {
+    Map<String, List<Integer>> ret = buildCollections();
+    assertThat(ret.keySet()).isEqualTo(new HashSet<>(Arrays.asList("primes")));
+    assertThat(ret.get("primes")).isEqualTo(Arrays.asList(2, 3));
   }
 
   // SECTION byte_buffer
