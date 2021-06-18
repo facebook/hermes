@@ -144,6 +144,21 @@ public class DocTests extends BaseFBJniTests {
     assertThat(str).startsWith("data=com.facebook.jni.DataHolder@");
   }
 
+  static native void catchAndThrow();
+
+  @Test
+  public void testCatchAndThrow() {
+    try {
+      catchAndThrow();
+      failBecauseExceptionWasNotThrown(RuntimeException.class);
+    } catch (RuntimeException e) {
+      assertThat(e)
+          .hasMessageStartingWith("Caught 'java.lang.NoSuchMethodError:")
+          .hasMessageContaining("doesNotExist")
+          ;
+    }
+  }
+
   // SECTION boxed
   static native Double scaleUp(Integer number);
   // END
@@ -165,21 +180,6 @@ public class DocTests extends BaseFBJniTests {
     names.put("c", 3);
     names.put("d", 7);
     assertThat(concatMatches(Arrays.asList(1, 2), names)).isEqualTo("bc");
-  }
-
-  static native void catchAndThrow();
-
-  @Test
-  public void testCatchAndThrow() {
-    try {
-      catchAndThrow();
-      failBecauseExceptionWasNotThrown(RuntimeException.class);
-    } catch (RuntimeException e) {
-      assertThat(e)
-          .hasMessageStartingWith("Caught 'java.lang.NoSuchMethodError:")
-          .hasMessageContaining("doesNotExist")
-          ;
-    }
   }
 
   // SECTION byte_buffer
