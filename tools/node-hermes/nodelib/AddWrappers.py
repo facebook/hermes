@@ -22,16 +22,25 @@ def main():
     parser.add_argument("files", nargs="*")
     args = parser.parse_args()
 
+    print("({")
     for arg in args.files:
         # Ensure the file exists before writing out anything
         if not path.exists(arg):
             raise Exception('File "{}" doesn\'t exist'.format(arg))
 
-        wrappedString = "(function(exports, require, module, __filename, __dirname) {"
+        # Extracts the filename out of the full path and excludes the ".js" extension
+        print(
+            '"{filename}" : (function(exports, require, module, __filename, __dirname) {{'.format(
+                filename=arg[
+                    arg.index("nodelib") + len("nodelib") + 1 : -len(".js")
+                ].replace("\\", "/")
+            )
+        )
         with open(arg, "r") as f:
-            wrappedString += f.read()
-        wrappedString += "});"
-        print(wrappedString)
+            print(f.read())
+        print("}),")
+
+    print("});")
 
 
 if __name__ == "__main__":

@@ -538,8 +538,8 @@ StatsBase.prototype.isSocket = function () {
   return this._checkModeProperty(S_IFSOCK);
 };
 
-var kNsPerMsBigInt = Math.pow(10n, 6n);
-var kNsPerSecBigInt = Math.pow(10n, 9n);
+var kNsPerMsBigInt = Math.pow(10, 6);
+var kNsPerSecBigInt = Math.pow(10, 9);
 var kMsPerSec = Math.pow(10, 3);
 var kNsPerMs = Math.pow(10, 6);
 
@@ -960,8 +960,8 @@ var validatePosition = hideStackFrames(function (position, name) {
   if (typeof position === 'number') {
     validateInteger(position, 'position');
   } else if (typeof position === 'bigint') {
-    if (!(position >= -Math.pow(2n, 63n) && position <= Math.pow(2n, 63n) - 1n)) {
-      throw new ERR_OUT_OF_RANGE('position', ">= ".concat(-Math.pow(2n, 63n), " && <= ").concat(Math.pow(2n, 63n) - 1n), position);
+    if (!(position >= -Math.pow(2, 63) && position <= Math.pow(2, 63) - 1)) {
+      throw new ERR_OUT_OF_RANGE('position', ">= ".concat(-Math.pow(2, 63), " && <= ").concat(Math.pow(2, 63) - 1), position);
     }
   } else {
     throw new ERR_INVALID_ARG_TYPE('position', ['integer', 'bigint'], position);

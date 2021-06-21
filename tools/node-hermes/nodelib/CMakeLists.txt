@@ -41,7 +41,7 @@ else()
 endif()
 
 # Grabs all js files in the current directory
-file(GLOB node_bytecode_sources "*.js")
+file(GLOB_RECURSE node_bytecode_sources "*.js")
 
 # Convert path from cmake style (`/`) to native style (`\` on Win and `/` elsewhere) for Win.
 set(node_bytecode_sources_native_path "")

@@ -107,25 +107,25 @@ static const std::shared_ptr<jsi::Buffer> addjsWrapper(
 /// needs to be directly read from disk,
 /// returns the wrapper function which is called to `require` it.
 static jsi::Function resolveRequireCall(
-    const std::string &filename,
+    const jsi::String &filename,
     const std::string &dirname,
-    jsi::Runtime &rt) {
-  std::shared_ptr<jsi::Buffer> buf;
-  if (filename == "fs") {
-    llvh::ArrayRef<uint8_t> module = getNodeBytecode();
-    assert(facebook::hermes::HermesRuntime::isHermesBytecode(
-        module.data(), module.size()));
-    buf = std::make_shared<ArrayRefBuffer>(module);
+    jsi::Runtime &rt,
+    jsi::Object &builtinModules) {
+  jsi::Value result;
+  if (builtinModules.hasProperty(rt, filename)) {
+    result = builtinModules.getProperty(rt, filename);
   } else {
-    if (filename.empty()) {
+    std::string filenameUTF8 = filename.utf8(rt);
+    if (filenameUTF8.empty()) {
       throw jsi::JSError(
           rt, "A valid file name must be inputted to require call");
     }
-    if (filename[0] != '.') {
-      throw jsi::JSError(rt, "This module is not supported yet");
+    if (filenameUTF8[0] != '.') {
+      throw jsi::JSError(
+          rt, "The following module is not supported yet: " + filenameUTF8);
     }
     llvh::SmallString<32> fullFileName{dirname};
-    canonicalizePath(fullFileName, filename);
+    canonicalizePath(fullFileName, filenameUTF8);
 
     auto memBuffer = llvh::MemoryBuffer::getFileOrSTDIN(fullFileName.str());
     if (!memBuffer) {
@@ -133,32 +133,32 @@ static jsi::Function resolveRequireCall(
       fullErrorMessage += fullFileName;
       throw jsi::JSError(rt, std::move(fullErrorMessage));
     }
-    buf = addjsWrapper(memBuffer.get()->getBuffer());
+    std::shared_ptr<jsi::Buffer> buf =
+        addjsWrapper(memBuffer.get()->getBuffer());
+    result = rt.evaluateJavaScript(buf, filenameUTF8);
   }
-  jsi::Value result = rt.evaluateJavaScript(buf, filename);
   return result.asObject(rt).asFunction(rt);
 }
 
 /// Reads and exports the values from a given file.
 static jsi::Value require(
-    const std::string &filename,
+    const jsi::String &filename,
     const std::string &dirname,
     jsi::Runtime &rt,
-    std::unordered_map<std::string, jsi::Object> &fileTracker) {
-  auto iterAlreadyExists = fileTracker.find(filename);
+    std::unordered_map<std::string, jsi::Object> &fileTracker,
+    jsi::Object &builtinModules) {
+  auto iterAlreadyExists = fileTracker.find(filename.utf8(rt));
   if (iterAlreadyExists != fileTracker.end()) {
     return iterAlreadyExists->second.getProperty(rt, "exports");
   }
-
-  jsi::Function result = resolveRequireCall(filename, dirname, rt);
+  jsi::Function result =
+      resolveRequireCall(filename, dirname, rt, builtinModules);
   jsi::Object mod{rt};
   jsi::Object exports{rt};
-
   mod.setProperty(rt, "exports", exports);
   auto iterAndSuccess =
-      fileTracker.emplace(std::make_pair(filename, std::move(mod)));
+      fileTracker.emplace(std::make_pair(filename.utf8(rt), std::move(mod)));
   assert(iterAndSuccess.second && "Insertion must succeed.");
-
   jsi::Value out = result.call(
       rt,
       exports,
@@ -167,8 +167,38 @@ static jsi::Value require(
       filename,
       dirname,
       5);
-
   return iterAndSuccess.first->second.getProperty(rt, "exports");
+}
+
+// Initializes all the builtin modules as well as several of
+// the functions/properties needed to execute the modules
+static void initialize(
+    facebook::hermes::HermesRuntime &runtime,
+    std::unordered_map<std::string, jsi::Object> &fileTracker,
+    const std::string &dirname,
+    jsi::Object &builtinModules) {
+  // Creates require JS function and links it to the c++ version.
+  jsi::Function req = jsi::Function::createFromHostFunction(
+      runtime,
+      jsi::PropNameID::forAscii(runtime, "require"),
+      1,
+      [&fileTracker, &dirname, &builtinModules](
+          jsi::Runtime &rt,
+          const jsi::Value &,
+          const jsi::Value *args,
+          size_t count) -> jsi::Value {
+        if (count == 0) {
+          throw jsi::JSError(rt, "Not enough arguments passed in");
+        }
+        return require(
+            args[0].toString(rt), dirname, rt, fileTracker, builtinModules);
+      });
+  runtime.global().setProperty(runtime, "require", req);
+
+  jsi::Object primordials{runtime};
+  runtime.global().setProperty(runtime, "primordials", primordials);
+
+  runtime.global().setProperty(runtime, "global", runtime.global());
 }
 
 int main(int argc, char **argv) {
@@ -211,25 +241,19 @@ int main(int argc, char **argv) {
   llvh::SmallString<32> dirName{InputFilename};
   llvh::sys::path::remove_filename(dirName, llvh::sys::path::Style::posix);
   const std::string strDirname{dirName.data(), dirName.size()};
-  try {
-    // Creates require JS function and links it to the c++ version.
-    jsi::Function req = jsi::Function::createFromHostFunction(
-        *runtime,
-        jsi::PropNameID::forAscii(*runtime, "require"),
-        1,
-        [&fileTracker, &strDirname](
-            jsi::Runtime &rt,
-            const jsi::Value &,
-            const jsi::Value *args,
-            size_t count) -> jsi::Value {
-          if (count == 0) {
-            throw jsi::JSError(rt, "Not enough arguments passed in");
-          }
-          return require(
-              args[0].toString(rt).utf8(rt), strDirname, rt, fileTracker);
-        });
-    runtime->global().setProperty(*runtime, "require", req);
 
+  llvh::ArrayRef<uint8_t> moduleObj = getNodeBytecode();
+  assert(
+      facebook::hermes::HermesRuntime::isHermesBytecode(
+          moduleObj.data(), moduleObj.size()) &&
+      "internal module bytecode invalid");
+  std::shared_ptr<jsi::Buffer> buf =
+      std::make_shared<ArrayRefBuffer>(moduleObj);
+  jsi::Object builtinModules =
+      runtime->evaluateJavaScript(buf, "NodeBytecode.js").asObject(*runtime);
+
+  try {
+    initialize(*runtime, fileTracker, strDirname, builtinModules);
     auto result = runtime->evaluateJavaScript(jsiBuffer, srcPath);
 
   } catch (const jsi::JSIException &e) {
