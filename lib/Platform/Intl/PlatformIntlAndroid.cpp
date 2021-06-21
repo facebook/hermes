@@ -24,6 +24,47 @@ namespace platform_intl {
 
 namespace {
 
+template <typename E = jobject>
+struct JArrayList : jni::JavaClass<JArrayList<E>, jni::JList<E>> {
+  constexpr static auto kJavaDescriptor = "Ljava/util/ArrayList;";
+
+  using Super = jni::JavaClass<JArrayList<E>, jni::JList<E>>;
+
+  static jni::local_ref<JArrayList<E>> create() {
+    return Super::newInstance();
+  }
+
+  static jni::local_ref<JArrayList<E>> create(int initialCapacity) {
+    return Super::newInstance(initialCapacity);
+  }
+
+  bool add(jni::alias_ref<jobject> elem) {
+    static auto addMethod =
+        Super::javaClassStatic()
+            ->template getMethod<jboolean(jni::alias_ref<jobject>)>("add");
+    return addMethod(Super::self(), elem);
+  }
+};
+
+template <typename K = jobject, typename V = jobject>
+struct JHashMap : jni::JavaClass<JHashMap<K, V>, jni::JMap<K, V>> {
+  constexpr static auto kJavaDescriptor = "Ljava/util/HashMap;";
+
+  using Super = jni::JavaClass<JHashMap<K, V>, jni::JMap<K, V>>;
+
+  static jni::local_ref<JHashMap<K, V>> create() {
+    return Super::newInstance();
+  }
+
+  void put(jni::alias_ref<jobject> key, jni::alias_ref<jobject> val) {
+    static auto putMethod =
+        Super::javaClassStatic()
+            ->template getMethod<jni::alias_ref<jobject>(
+                jni::alias_ref<jobject>, jni::alias_ref<jobject>)>("put");
+    putMethod(Super::self(), key, val);
+  }
+};
+
 using JLocalesList = jni::JList<jni::JString>;
 using JOptionsMap = jni::JMap<jni::JString, jni::JObject>;
 using JPartMap = jni::JMap<jni::JString, jni::JString>;
@@ -35,7 +76,8 @@ jni::local_ref<jstring> stringToJava(std::u16string str) {
 
 jni::local_ref<JLocalesList> localesToJava(
     std::vector<std::u16string> locales) {
-  auto ret = jni::JArrayList<jni::JString>::create(locales.size());
+  jni::local_ref<JArrayList<jni::JString>> ret =
+      JArrayList<jni::JString>::create(locales.size());
   for (const auto &locale : locales) {
     ret->add(jni::make_jstring(locale));
   }
@@ -43,7 +85,7 @@ jni::local_ref<JLocalesList> localesToJava(
 }
 
 jni::local_ref<JOptionsMap> optionsToJava(const Options &options) {
-  auto ret = jni::JHashMap<jni::JString, jni::JObject>::create();
+  auto ret = JHashMap<jni::JString, jni::JObject>::create();
   for (const auto &kv : options) {
     jni::local_ref<jni::JObject> jvalue;
     if (kv.second.isBool()) {
