@@ -91,17 +91,16 @@ function memberExpr() {
 //CHECK-NEXT:frame = [obj]
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [obj]
-//CHECK-NEXT:  %1 = AllocObjectInst 1 : number, empty
-//CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "dummy" : string
-//CHECK-NEXT:  %3 = StoreNewOwnPropertyInst %2, %1 : object, "func" : string, true : boolean
-//CHECK-NEXT:  %4 = StoreFrameInst %1 : object, [obj]
-//CHECK-NEXT:  %5 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, 5 : number, true : boolean, "hello world!" : string
-//CHECK-NEXT:  %6 = LoadFrameInst [obj]
-//CHECK-NEXT:  %7 = LoadPropertyInst %6, "func" : string
-//CHECK-NEXT:  %8 = CallInst %7, %6, %5
-//CHECK-NEXT:  %9 = ReturnInst %8
+//CHECK-NEXT:  %1 = LoadPropertyInst globalObject : object, "dummy" : string
+//CHECK-NEXT:  %2 = AllocObjectLiteralInst "func" : string, %1
+//CHECK-NEXT:  %3 = StoreFrameInst %2 : object, [obj]
+//CHECK-NEXT:  %4 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, 5 : number, true : boolean, "hello world!" : string
+//CHECK-NEXT:  %5 = LoadFrameInst [obj]
+//CHECK-NEXT:  %6 = LoadPropertyInst %5, "func" : string
+//CHECK-NEXT:  %7 = CallInst %6, %5, %4
+//CHECK-NEXT:  %8 = ReturnInst %7
 //CHECK-NEXT:%BB1:
-//CHECK-NEXT:  %10 = ReturnInst undefined : undefined
+//CHECK-NEXT:  %9 = ReturnInst undefined : undefined
 //CHECK-NEXT:function_end
 
 function callExpr() {

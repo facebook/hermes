@@ -21,12 +21,9 @@ function protoShorthand(func) {
 //CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [__proto__]
 //CHECK-NEXT:  %1 = StoreFrameInst %func, [func]
 //CHECK-NEXT:  %2 = StoreFrameInst 42 : number, [__proto__]
-//CHECK-NEXT:  %3 = AllocObjectInst 3 : number, empty
-//CHECK-NEXT:  %4 = LoadFrameInst [__proto__]
-//CHECK-NEXT:  %5 = StoreNewOwnPropertyInst %4, %3 : object, "__proto__" : string, true : boolean
-//CHECK-NEXT:  %6 = StoreNewOwnPropertyInst 2 : number, %3 : object, "a" : string, true : boolean
-//CHECK-NEXT:  %7 = StoreNewOwnPropertyInst 3 : number, %3 : object, "b" : string, true : boolean
-//CHECK-NEXT:  %8 = ReturnInst %3 : object
+//CHECK-NEXT:  %3 = LoadFrameInst [__proto__]
+//CHECK-NEXT:  %4 = AllocObjectLiteralInst "__proto__" : string, %3, "a" : string, 2 : number, "b" : string, 3 : number
+//CHECK-NEXT:  %5 = ReturnInst %4 : object
 
 // __proto__ with shorthand syntax is a regular own property that allows
 // duplication.
@@ -40,11 +37,10 @@ function protoShorthandDup(func) {
 //CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [__proto__]
 //CHECK-NEXT:  %1 = StoreFrameInst %func, [func]
 //CHECK-NEXT:  %2 = StoreFrameInst 42 : number, [__proto__]
-//CHECK-NEXT:  %3 = AllocObjectInst 1 : number, empty
+//CHECK-NEXT:  %3 = LoadFrameInst [__proto__]
 //CHECK-NEXT:  %4 = LoadFrameInst [__proto__]
-//CHECK-NEXT:  %5 = LoadFrameInst [__proto__]
-//CHECK-NEXT:  %6 = StoreNewOwnPropertyInst %5, %3 : object, "__proto__" : string, true : boolean
-//CHECK-NEXT:  %7 = ReturnInst %3 : object
+//CHECK-NEXT:  %5 = AllocObjectLiteralInst "__proto__" : string, %4
+//CHECK-NEXT:  %6 = ReturnInst %5 : object
 
 // __proto__: AssignmentExpression syntax mixed with shorthand syntax.
 function protoShorthandMix1(func) {

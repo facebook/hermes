@@ -1237,6 +1237,53 @@ class HBCAllocObjectFromBufferInst : public Instruction {
   }
 };
 
+class AllocObjectLiteralInst : public Instruction {
+  AllocObjectLiteralInst(const AllocObjectLiteralInst &) = delete;
+  void operator=(const AllocObjectLiteralInst &) = delete;
+
+ public:
+  using ObjectPropertyMap =
+      llvh::SmallVector<std::pair<LiteralString *, Value *>, 4>;
+
+  explicit AllocObjectLiteralInst(const ObjectPropertyMap &propMap)
+      : Instruction(ValueKind::AllocObjectLiteralInstKind) {
+    setType(Type::createObject());
+    for (size_t i = 0; i < propMap.size(); i++) {
+      pushOperand(propMap[i].first);
+      pushOperand(propMap[i].second);
+    }
+  }
+
+  explicit AllocObjectLiteralInst(
+      const AllocObjectLiteralInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::None;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  unsigned getKeyValuePairCount() const {
+    return getNumOperands() / 2;
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::AllocObjectLiteralInstKind);
+  }
+
+  Literal *getKey(unsigned index) const {
+    return cast<Literal>(getOperand(2 * index));
+  }
+
+  Value *getValue(unsigned index) const {
+    return getOperand(2 * index + 1);
+  }
+};
+
 class AllocArrayInst : public Instruction {
   AllocArrayInst(const AllocArrayInst &) = delete;
   void operator=(const AllocArrayInst &) = delete;

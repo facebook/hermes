@@ -373,6 +373,9 @@ class IRBuilder {
       uint32_t size,
       Value *parent = nullptr);
 
+  AllocObjectLiteralInst *createAllocObjectLiteralInst(
+      const AllocObjectLiteralInst::ObjectPropertyMap &propMap);
+
   AllocArrayInst *createAllocArrayInst(
       LiteralNumber *sizeHint,
       AllocArrayInst::ArrayValueList val_list);

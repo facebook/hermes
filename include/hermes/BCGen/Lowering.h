@@ -63,6 +63,22 @@ class LowerAllocObject : public FunctionPass {
       llvh::SmallVectorImpl<StoreOwnPropertyInst *> &users);
 };
 
+/// Lowers AllocObjectLiterals which target object literals with
+/// constant properties.
+class LowerAllocObjectLiteral : public FunctionPass {
+ public:
+  explicit LowerAllocObjectLiteral()
+      : FunctionPass("LowerAllocObjectLiteral") {}
+  ~LowerAllocObjectLiteral() override = default;
+
+  bool runOnFunction(Function *F) override;
+
+ private:
+  uint32_t estimateBestNumElemsToSerialize(AllocObjectLiteralInst *allocInst);
+  bool lowerAlloc(AllocObjectLiteralInst *allocInst);
+  bool lowerAllocObjectBuffer(AllocObjectLiteralInst *allocInst);
+};
+
 /// Lowers Store instructions down to MOVs after register allocation.
 class LowerStoreInstrs : public FunctionPass {
  public:
