@@ -59,7 +59,7 @@ function ELIVideo() {
           title="Explained Like I'm 5: Hermes"
           frameborder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowfullscreen></iframe>
+          allowfullscreen="true"></iframe>
       </div>
     </div>
   );
