@@ -34,17 +34,23 @@ const ObjectVTable JSString::vt{
 void StringObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSString>());
   ObjectBuildMeta(cell, mb);
+  const auto *self = static_cast<const JSString *>(cell);
   mb.setVTable(&JSString::vt.base);
+  mb.addField(&self->primitiveValue_);
 }
 
 #ifdef HERMESVM_SERIALIZE
 PrimitiveBox::PrimitiveBox(Deserializer &d, const VTable *vt)
     : JSObject(d, vt) {}
 
-JSString::JSString(Deserializer &d, const VTable *vt) : PrimitiveBox(d, vt) {}
+JSString::JSString(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
+  d.readRelocation(&primitiveValue_, RelocationKind::GCPointer);
+}
 
 void StringObjectSerialize(Serializer &s, const GCCell *cell) {
   JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSString>());
+  const auto *self = static_cast<const JSString *>(cell);
+  s.writeRelocation(JSString::getPrimitiveString(self, s.getRuntime()));
   s.endObject(cell);
 }
 
@@ -61,14 +67,10 @@ CallResult<Handle<JSString>> JSString::create(
     Handle<JSObject> parentHandle) {
   auto clazzHandle = runtime->getHiddenClassForPrototype(
       *parentHandle, numOverlapSlots<JSString>() + ANONYMOUS_PROPERTY_SLOTS);
-  auto obj = runtime->makeAFixed<JSString>(runtime, parentHandle, clazzHandle);
+  auto obj =
+      runtime->makeAFixed<JSString>(runtime, value, parentHandle, clazzHandle);
 
   auto selfHandle = JSObjectInit::initToHandle(runtime, obj);
-
-  JSObject::setDirectSlotValue<PrimitiveBox::primitiveValuePropIndex()>(
-      *selfHandle,
-      SmallHermesValue::encodeStringValue(value.get(), runtime),
-      &runtime->getHeap());
 
   PropertyFlags pf;
   pf.writable = 0;
@@ -103,10 +105,7 @@ void JSString::setPrimitiveString(
   auto shv =
       SmallHermesValue::encodeNumberValue(string->getStringLength(), runtime);
   JSObject::setNamedSlotValueUnsafe(*selfHandle, runtime, desc, shv);
-  return JSObject::setDirectSlotValue<PrimitiveBox::primitiveValuePropIndex()>(
-      *selfHandle,
-      SmallHermesValue::encodeStringValue(string.get(), runtime),
-      &runtime->getHeap());
+  selfHandle->primitiveValue_.set(runtime, *string, &runtime->getHeap());
 }
 
 bool JSString::_haveOwnIndexedImpl(

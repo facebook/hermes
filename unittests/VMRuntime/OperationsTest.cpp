@@ -836,9 +836,9 @@ TEST_F(OperationsTest, ToObjectTest) {
     auto res = toObject(runtime, scopedVal);
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());
     EXPECT_TRUE(res->isObject());
-    auto obj = static_cast<PrimitiveBox *>(res->getPointer());
-    auto objStrHandle = runtime->makeHandle(
-        PrimitiveBox::getPrimitiveValue(obj).getString(runtime));
+    auto obj = vmcast<JSString>(static_cast<GCCell *>(res->getObject()));
+    auto objStrHandle =
+        runtime->makeHandle(JSString::getPrimitiveString(obj, runtime));
     EXPECT_TRUE(StringPrimitive::createStringView(runtime, objStrHandle)
                     .equals(strRef));
   }

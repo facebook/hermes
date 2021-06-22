@@ -61,9 +61,11 @@ class PrimitiveBox : public JSObject {
 };
 
 /// String object.
-class JSString final : public PrimitiveBox {
+class JSString final : public JSObject {
  public:
-  using Super = PrimitiveBox;
+  using Super = JSObject;
+
+  friend void StringObjectBuildMeta(const GCCell *, Metadata::Builder &);
 
 #ifdef HERMESVM_SERIALIZE
   JSString(Deserializer &d, const VTable *vt);
@@ -99,14 +101,19 @@ class JSString final : public PrimitiveBox {
       Handle<StringPrimitive> string);
 
   /// Return the [[PrimitiveValue]] internal property as a string.
-  static const StringPrimitive *getPrimitiveString(
-      JSObject *self,
+  static StringPrimitive *getPrimitiveString(
+      const JSString *self,
       Runtime *runtime) {
-    return getPrimitiveValue(self).getString(runtime);
+    return self->primitiveValue_.get(runtime);
   }
 
-  JSString(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
-      : PrimitiveBox(runtime, &vt.base, *parent, *clazz) {
+  JSString(
+      Runtime *runtime,
+      Handle<StringPrimitive> value,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz)
+      : JSObject(runtime, &vt.base, *parent, *clazz),
+        primitiveValue_(runtime, *value, &runtime->getHeap()) {
     flags_.indexedStorage = true;
     flags_.fastIndexProperties = true;
   }
@@ -156,6 +163,9 @@ class JSString final : public PrimitiveBox {
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       uint32_t index);
+
+ private:
+  GCPointer<StringPrimitive> primitiveValue_;
 };
 
 /// StringIterator object.
