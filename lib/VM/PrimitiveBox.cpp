@@ -425,14 +425,20 @@ const ObjectVTable JSSymbol::vt{
 void SymbolObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSSymbol>());
   ObjectBuildMeta(cell, mb);
+  const auto *self = static_cast<const JSSymbol *>(cell);
   mb.setVTable(&JSSymbol::vt.base);
+  mb.addField(&self->primitiveValue_);
 }
 
 #ifdef HERMESVM_SERIALIZE
-JSSymbol::JSSymbol(Deserializer &d) : PrimitiveBox(d, &vt.base) {}
+JSSymbol::JSSymbol(Deserializer &d)
+    : JSObject(d, &vt.base),
+      primitiveValue_(SymbolID::unsafeCreate(d.readInt<SymbolID::RawType>())) {}
 
 void SymbolObjectSerialize(Serializer &s, const GCCell *cell) {
   JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSSymbol>());
+  const auto *self = static_cast<const JSSymbol *>(cell);
+  s.writeInt<uint32_t>(self->getPrimitiveSymbol().get().unsafeGetRaw());
   s.endObject(cell);
 }
 
@@ -449,15 +455,9 @@ PseudoHandle<JSSymbol> JSSymbol::create(
     Handle<JSObject> parentHandle) {
   auto clazzHandle = runtime->getHiddenClassForPrototype(
       *parentHandle, numOverlapSlots<JSSymbol>() + ANONYMOUS_PROPERTY_SLOTS);
-  auto *obj = runtime->makeAFixed<JSSymbol>(runtime, parentHandle, clazzHandle);
-  auto self = JSObjectInit::initToPseudoHandle(runtime, obj);
-
-  JSObject::setDirectSlotValue<PrimitiveBox::primitiveValuePropIndex()>(
-      self.get(),
-      SmallHermesValue::encodeSymbolValue(value),
-      &runtime->getHeap());
-
-  return self;
+  auto *obj =
+      runtime->makeAFixed<JSSymbol>(runtime, value, parentHandle, clazzHandle);
+  return JSObjectInit::initToPseudoHandle(runtime, obj);
 }
 
 } // namespace vm

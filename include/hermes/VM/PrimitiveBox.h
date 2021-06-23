@@ -300,7 +300,9 @@ class JSBoolean final : public JSObject {
 };
 
 /// Symbol object.
-class JSSymbol final : public PrimitiveBox {
+class JSSymbol final : public JSObject {
+  friend void SymbolObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+
  public:
   static const ObjectVTable vt;
 
@@ -317,19 +319,24 @@ class JSSymbol final : public PrimitiveBox {
     return create(runtime, SymbolID{}, prototype);
   }
 
-  /// Return the [[PrimitiveValue]] internal property as a string.
-  static const PseudoHandle<SymbolID> getPrimitiveSymbol(JSObject *self) {
-    return PseudoHandle<SymbolID>::create(getPrimitiveValue(self).getSymbol());
+  /// Return the [[PrimitiveValue]] internal property as a SymbolID.
+  PseudoHandle<SymbolID> getPrimitiveSymbol() const {
+    return PseudoHandle<SymbolID>::create(primitiveValue_);
   }
 
 #ifdef HERMESVM_SERIALIZE
   explicit JSSymbol(Deserializer &d);
-
-  friend void SymbolObjectDeserialize(Deserializer &d, CellKind kind);
 #endif
 
-  JSSymbol(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
-      : PrimitiveBox(runtime, &vt.base, *parent, *clazz) {}
+  JSSymbol(
+      Runtime *runtime,
+      SymbolID value,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz)
+      : JSObject(runtime, &vt.base, *parent, *clazz), primitiveValue_(value) {}
+
+ private:
+  const GCSymbolID primitiveValue_;
 };
 
 } // namespace vm
