@@ -380,11 +380,15 @@ void BooleanObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
-JSBoolean::JSBoolean(Deserializer &d, const VTable *vt) : PrimitiveBox(d, vt) {}
+JSBoolean::JSBoolean(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
+  setPrimitiveBoolean(d.readInt<bool>());
+}
 
 void BooleanObjectSerialize(Serializer &s, const GCCell *cell) {
   JSObject::serializeObjectImpl(
       s, cell, JSObject::numOverlapSlots<JSBoolean>());
+  const auto *self = static_cast<const JSBoolean *>(cell);
+  s.writeInt(self->getPrimitiveBoolean());
   s.endObject(cell);
 }
 
@@ -399,14 +403,9 @@ PseudoHandle<JSBoolean>
 JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
   auto clazzHandle = runtime->getHiddenClassForPrototype(
       *parentHandle, numOverlapSlots<JSBoolean>() + ANONYMOUS_PROPERTY_SLOTS);
-  auto obj = runtime->makeAFixed<JSBoolean>(runtime, parentHandle, clazzHandle);
-  auto self = JSObjectInit::initToPseudoHandle(runtime, obj);
-
-  JSObject::setDirectSlotValue<PrimitiveBox::primitiveValuePropIndex()>(
-      self.get(),
-      SmallHermesValue::encodeBoolValue(value),
-      &runtime->getHeap());
-  return self;
+  auto obj =
+      runtime->makeAFixed<JSBoolean>(runtime, value, parentHandle, clazzHandle);
+  return JSObjectInit::initToPseudoHandle(runtime, obj);
 }
 
 //===----------------------------------------------------------------------===//

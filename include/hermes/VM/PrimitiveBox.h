@@ -259,7 +259,7 @@ class JSNumber final : public JSObject {
 };
 
 /// Boolean object.
-class JSBoolean final : public PrimitiveBox {
+class JSBoolean final : public JSObject {
  public:
   static const ObjectVTable vt;
 
@@ -282,9 +282,21 @@ class JSBoolean final : public PrimitiveBox {
 
   JSBoolean(
       Runtime *runtime,
+      bool value,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
-      : PrimitiveBox(runtime, &vt.base, *parent, *clazz) {}
+      : JSObject(runtime, &vt.base, *parent, *clazz), primitiveValue_(value) {}
+
+  void setPrimitiveBoolean(bool b) {
+    primitiveValue_ = b;
+  }
+
+  bool getPrimitiveBoolean() const {
+    return primitiveValue_;
+  }
+
+ private:
+  bool primitiveValue_;
 };
 
 /// Symbol object.

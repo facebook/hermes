@@ -820,7 +820,7 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
     //  Else if value has a [[BooleanData]] internal slot, then
     //      Set value to value.[[BooleanData]].
     operationStrValue_ =
-        PrimitiveBox::getPrimitiveValue(jsBool).unboxToHV(runtime_);
+        HermesValue::encodeBoolValue(jsBool->getPrimitiveBoolean());
   }
 
   // Str.5.
