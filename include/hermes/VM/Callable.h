@@ -659,9 +659,7 @@ class NativeFunction : public Callable {
       Runtime *runtime,
       unsigned index) {
     return JSObject::getInternalProperty(
-        self,
-        runtime,
-        numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS + index);
+        self, runtime, numOverlapSlots<NativeFunction>() + index);
   }
 
   /// Set the value in an additional slot.
@@ -673,10 +671,7 @@ class NativeFunction : public Callable {
       unsigned index,
       SmallHermesValue value) {
     JSObject::setInternalProperty(
-        self,
-        runtime,
-        numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS + index,
-        value);
+        self, runtime, numOverlapSlots<NativeFunction>() + index, value);
   }
 
  public:
@@ -783,8 +778,7 @@ class NativeConstructor final : public NativeFunction {
         runtime,
         parentHandle,
         runtime->getHiddenClassForPrototype(
-            *parentHandle,
-            numOverlapSlots<NativeConstructor>() + ANONYMOUS_PROPERTY_SLOTS),
+            *parentHandle, numOverlapSlots<NativeConstructor>()),
         context,
         functionPtr,
         creator,
@@ -809,8 +803,7 @@ class NativeConstructor final : public NativeFunction {
         runtime,
         parentHandle,
         runtime->getHiddenClassForPrototype(
-            *parentHandle,
-            numOverlapSlots<NativeConstructor>() + ANONYMOUS_PROPERTY_SLOTS),
+            *parentHandle, numOverlapSlots<NativeConstructor>()),
         parentEnvHandle,
         context,
         functionPtr,

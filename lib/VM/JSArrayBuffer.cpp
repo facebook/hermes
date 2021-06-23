@@ -102,8 +102,7 @@ PseudoHandle<JSArrayBuffer> JSArrayBuffer::create(
       runtime,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<JSArrayBuffer>() + ANONYMOUS_PROPERTY_SLOTS));
+          *parentHandle, numOverlapSlots<JSArrayBuffer>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 

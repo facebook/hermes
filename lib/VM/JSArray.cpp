@@ -418,8 +418,7 @@ CallResult<Handle<Arguments>> Arguments::create(
     Handle<Callable> curFunction,
     bool strictMode) {
   auto clazz = runtime->getHiddenClassForPrototype(
-      runtime->objectPrototypeRawPtr,
-      numOverlapSlots<Arguments>() + ANONYMOUS_PROPERTY_SLOTS);
+      runtime->objectPrototypeRawPtr, numOverlapSlots<Arguments>());
   auto obj = runtime->makeAFixed<Arguments>(
       runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype), clazz);
   auto selfHandle = JSObjectInit::initToHandle(runtime, obj);
@@ -546,7 +545,7 @@ Handle<HiddenClass> JSArray::createClass(
     Runtime *runtime,
     Handle<JSObject> prototypeHandle) {
   Handle<HiddenClass> classHandle = runtime->getHiddenClassForPrototype(
-      *prototypeHandle, numOverlapSlots<JSArray>() + ANONYMOUS_PROPERTY_SLOTS);
+      *prototypeHandle, numOverlapSlots<JSArray>());
 
   PropertyFlags pf{};
   pf.enumerable = 0;
@@ -814,7 +813,7 @@ PseudoHandle<JSArrayIterator> JSArrayIterator::create(
     IterationKind iterationKind) {
   auto proto = Handle<JSObject>::vmcast(&runtime->arrayIteratorPrototype);
   auto clazz = runtime->getHiddenClassForPrototype(
-      *proto, numOverlapSlots<JSArrayIterator>() + ANONYMOUS_PROPERTY_SLOTS);
+      *proto, numOverlapSlots<JSArrayIterator>());
   auto *obj = runtime->makeAFixed<JSArrayIterator>(
       runtime, proto, clazz, array, iterationKind);
   return JSObjectInit::initToPseudoHandle(runtime, obj);

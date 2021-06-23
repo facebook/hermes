@@ -36,8 +36,7 @@ class SingleObject final : public JSObject {
         runtime,
         parentHandle,
         runtime->getHiddenClassForPrototype(
-            *parentHandle,
-            numOverlapSlots<SingleObject>() + ANONYMOUS_PROPERTY_SLOTS));
+            *parentHandle, numOverlapSlots<SingleObject>()));
     return JSObjectInit::initToHermesValue(runtime, cell);
   }
 

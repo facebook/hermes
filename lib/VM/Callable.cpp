@@ -576,8 +576,7 @@ CallResult<HermesValue> BoundFunction::create(
       runtime,
       Handle<JSObject>::vmcast(&runtime->functionPrototype),
       runtime->getHiddenClassForPrototype(
-          runtime->functionPrototypeRawPtr,
-          numOverlapSlots<BoundFunction>() + ANONYMOUS_PROPERTY_SLOTS),
+          runtime->functionPrototypeRawPtr, numOverlapSlots<BoundFunction>()),
       target,
       argStorageHandle);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
@@ -998,8 +997,8 @@ Handle<NativeFunction> NativeFunction::create(
     unsigned paramCount,
     Handle<JSObject> prototypeObjectHandle,
     unsigned additionalSlotCount) {
-  size_t reservedSlots = numOverlapSlots<NativeFunction>() +
-      ANONYMOUS_PROPERTY_SLOTS + additionalSlotCount;
+  size_t reservedSlots =
+      numOverlapSlots<NativeFunction>() + additionalSlotCount;
   auto *cell = runtime->makeAFixed<NativeFunction>(
       runtime,
       &vt.base.base,
@@ -1044,8 +1043,7 @@ Handle<NativeFunction> NativeFunction::create(
       parentHandle,
       runtime->getHiddenClassForPrototype(
           *parentHandle,
-          numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS +
-              additionalSlotCount),
+          numOverlapSlots<NativeFunction>() + additionalSlotCount),
       parentEnvHandle,
       context,
       functionPtr);
@@ -1270,8 +1268,7 @@ PseudoHandle<JSFunction> JSFunction::create(
       domain,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<JSFunction>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, numOverlapSlots<JSFunction>()),
       envHandle,
       codeBlock);
   auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
@@ -1400,8 +1397,7 @@ PseudoHandle<JSAsyncFunction> JSAsyncFunction::create(
       domain,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<JSAsyncFunction>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, numOverlapSlots<JSAsyncFunction>()),
       envHandle,
       codeBlock);
   auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
@@ -1476,8 +1472,7 @@ PseudoHandle<JSGeneratorFunction> JSGeneratorFunction::create(
       domain,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<JSGeneratorFunction>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, numOverlapSlots<JSGeneratorFunction>()),
       envHandle,
       codeBlock);
   auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
@@ -1582,8 +1577,7 @@ CallResult<Handle<GeneratorInnerFunction>> GeneratorInnerFunction::create(
       domain,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<GeneratorInnerFunction>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, numOverlapSlots<GeneratorInnerFunction>()),
       envHandle,
       codeBlock,
       args.getArgCount());

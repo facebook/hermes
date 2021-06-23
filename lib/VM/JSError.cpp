@@ -170,7 +170,7 @@ PseudoHandle<JSError> JSError::create(
       runtime,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSError>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, numOverlapSlots<JSError>()),
       catchable);
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }

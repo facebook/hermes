@@ -276,8 +276,7 @@ class JSArray final : public ArrayImpl {
   friend class JSObject;
 
   static constexpr SlotIndex jsArrayPropertyCount() {
-    return numOverlapSlots<JSArray>() + ANONYMOUS_PROPERTY_SLOTS +
-        NAMED_PROPERTY_SLOTS;
+    return numOverlapSlots<JSArray>() + NAMED_PROPERTY_SLOTS;
   }
 
   static constexpr inline SlotIndex lengthPropIndex() {

@@ -383,8 +383,7 @@ PseudoHandle<JSTypedArray<T, C>> JSTypedArray<T, C>::create(
       runtime,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<JSTypedArray>() + ANONYMOUS_PROPERTY_SLOTS));
+          *parentHandle, numOverlapSlots<JSTypedArray>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
   // NOTE: If any fields are ever added beyond the base class, then the
   // *BuildMeta functions must be updated to call addJSObjectOverlapSlots.

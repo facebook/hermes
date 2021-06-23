@@ -448,8 +448,7 @@ CallResult<PseudoHandle<JSWeakMapImpl<C>>> JSWeakMapImpl<C>::create(
       runtime,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<JSWeakMapImpl>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, numOverlapSlots<JSWeakMapImpl>()),
       valueStorage);
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }

@@ -23,8 +23,7 @@ size_t numAdditionalSlotsForTest() {
       InternalProperty::NumInternalProperties > JSObject::DIRECT_PROPERTY_SLOTS,
       "Must use both direct and indirect prop storage.");
   constexpr size_t numAdditionalSlots =
-      InternalProperty::NumInternalProperties - T::ANONYMOUS_PROPERTY_SLOTS -
-      JSObject::numOverlapSlots<T>();
+      InternalProperty::NumInternalProperties - JSObject::numOverlapSlots<T>();
   static_assert(
       numAdditionalSlots > 1, "At least 2 properties needed for this test");
   return numAdditionalSlots;

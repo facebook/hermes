@@ -64,7 +64,7 @@ JSDate::create(Runtime *runtime, double value, Handle<JSObject> parentHandle) {
       value,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSDate>() + ANONYMOUS_PROPERTY_SLOTS));
+          *parentHandle, numOverlapSlots<JSDate>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 

@@ -63,7 +63,7 @@ CallResult<Handle<JSString>> JSString::create(
     Handle<StringPrimitive> value,
     Handle<JSObject> parentHandle) {
   auto clazzHandle = runtime->getHiddenClassForPrototype(
-      *parentHandle, numOverlapSlots<JSString>() + ANONYMOUS_PROPERTY_SLOTS);
+      *parentHandle, numOverlapSlots<JSString>());
   auto obj =
       runtime->makeAFixed<JSString>(runtime, value, parentHandle, clazzHandle);
 
@@ -235,7 +235,7 @@ PseudoHandle<JSStringIterator> JSStringIterator::create(
     Handle<StringPrimitive> string) {
   auto proto = Handle<JSObject>::vmcast(&runtime->stringIteratorPrototype);
   auto clazzHandle = runtime->getHiddenClassForPrototype(
-      *proto, numOverlapSlots<JSStringIterator>() + ANONYMOUS_PROPERTY_SLOTS);
+      *proto, numOverlapSlots<JSStringIterator>());
   auto obj = runtime->makeAFixed<JSStringIterator>(
       runtime, proto, clazzHandle, string);
   return JSObjectInit::initToPseudoHandle(runtime, obj);
@@ -350,7 +350,7 @@ PseudoHandle<JSNumber> JSNumber::create(
     double value,
     Handle<JSObject> parentHandle) {
   auto clazzHandle = runtime->getHiddenClassForPrototype(
-      *parentHandle, numOverlapSlots<JSNumber>() + ANONYMOUS_PROPERTY_SLOTS);
+      *parentHandle, numOverlapSlots<JSNumber>());
   auto obj =
       runtime->makeAFixed<JSNumber>(runtime, value, parentHandle, clazzHandle);
   return JSObjectInit::initToPseudoHandle(runtime, obj);
@@ -399,7 +399,7 @@ void BooleanObjectDeserialize(Deserializer &d, CellKind kind) {
 PseudoHandle<JSBoolean>
 JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
   auto clazzHandle = runtime->getHiddenClassForPrototype(
-      *parentHandle, numOverlapSlots<JSBoolean>() + ANONYMOUS_PROPERTY_SLOTS);
+      *parentHandle, numOverlapSlots<JSBoolean>());
   auto obj =
       runtime->makeAFixed<JSBoolean>(runtime, value, parentHandle, clazzHandle);
   return JSObjectInit::initToPseudoHandle(runtime, obj);
@@ -451,7 +451,7 @@ PseudoHandle<JSSymbol> JSSymbol::create(
     SymbolID value,
     Handle<JSObject> parentHandle) {
   auto clazzHandle = runtime->getHiddenClassForPrototype(
-      *parentHandle, numOverlapSlots<JSSymbol>() + ANONYMOUS_PROPERTY_SLOTS);
+      *parentHandle, numOverlapSlots<JSSymbol>());
   auto *obj =
       runtime->makeAFixed<JSSymbol>(runtime, value, parentHandle, clazzHandle);
   return JSObjectInit::initToPseudoHandle(runtime, obj);

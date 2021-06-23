@@ -99,8 +99,7 @@ PseudoHandle<JSRegExp> JSRegExp::create(
       runtime,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<JSRegExp>() + ANONYMOUS_PROPERTY_SLOTS));
+          *parentHandle, numOverlapSlots<JSRegExp>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 

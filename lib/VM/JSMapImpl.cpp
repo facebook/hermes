@@ -96,8 +96,7 @@ PseudoHandle<JSMapImpl<C>> JSMapImpl<C>::create(
       runtime,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<JSMapImpl>() + ANONYMOUS_PROPERTY_SLOTS));
+          *parentHandle, numOverlapSlots<JSMapImpl>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
@@ -192,8 +191,7 @@ PseudoHandle<JSMapIteratorImpl<C>> JSMapIteratorImpl<C>::create(
       runtime,
       prototype,
       runtime->getHiddenClassForPrototype(
-          *prototype,
-          numOverlapSlots<JSMapIteratorImpl>() + ANONYMOUS_PROPERTY_SLOTS));
+          *prototype, numOverlapSlots<JSMapIteratorImpl>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
