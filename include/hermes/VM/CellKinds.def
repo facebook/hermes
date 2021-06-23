@@ -108,7 +108,6 @@ CELL_RANGE(ArrayImpl, Arguments, Array)
 CELL_RANGE(Callable, BoundFunction, Function)
 CELL_RANGE(CodeBlockFunction, GeneratorFunction, Function)
 CELL_RANGE(NativeFunction, NativeFunction, FinalizableNativeFunction)
-CELL_RANGE(PrimitiveBox, BooleanObject, SymbolObject)
 CELL_RANGE(TypedArrayBase, Int8Array, Float64Array)
 CELL_RANGE(WeakMapImplBase, WeakMap, WeakSet)
 CELL_RANGE(

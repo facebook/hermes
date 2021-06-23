@@ -36,8 +36,7 @@ namespace vm {
 /// String.
 
 Handle<JSObject> createStringConstructor(Runtime *runtime) {
-  auto stringPrototype =
-      Handle<PrimitiveBox>::vmcast(&runtime->stringPrototype);
+  auto stringPrototype = Handle<JSString>::vmcast(&runtime->stringPrototype);
 
   auto cons = defineSystemConstructor<JSString>(
       runtime,

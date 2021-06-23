@@ -40,9 +40,6 @@ void StringObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
-PrimitiveBox::PrimitiveBox(Deserializer &d, const VTable *vt)
-    : JSObject(d, vt) {}
-
 JSString::JSString(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
   d.readRelocation(&primitiveValue_, RelocationKind::GCPointer);
 }

@@ -13,53 +13,6 @@
 namespace hermes {
 namespace vm {
 
-/// A container object for primitive HermesValues.
-class PrimitiveBox : public JSObject {
-  using Super = JSObject;
-
- protected:
-  PrimitiveBox(
-      Runtime *runtime,
-      const VTable *vt,
-      JSObject *parent,
-      HiddenClass *clazz)
-      : JSObject(runtime, vt, parent, clazz) {}
-
-  static constexpr SlotIndex primitiveValuePropIndex() {
-    return numOverlapSlots<PrimitiveBox>() + ANONYMOUS_PROPERTY_SLOTS - 1;
-  }
-
- public:
-#ifdef HERMESVM_SERIALIZE
-  PrimitiveBox(Deserializer &d, const VTable *vt);
-#endif
-
-  // We need one slot for the boxed value.
-  static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS =
-      Super::ANONYMOUS_PROPERTY_SLOTS + 1;
-
-  static bool classof(const GCCell *cell) {
-    return kindInRange(
-        cell->getKind(),
-        CellKind::PrimitiveBoxKind_first,
-        CellKind::PrimitiveBoxKind_last);
-  }
-
-  /// \return the [[PrimitiveValue]] internal property.
-  static SmallHermesValue getPrimitiveValue(JSObject *self) {
-    return JSObject::getDirectSlotValue<
-        PrimitiveBox::primitiveValuePropIndex()>(self);
-  }
-
-  /// Set the [[PrimitiveValue]] internal property.
-  static void
-  setPrimitiveValue(JSObject *self, Runtime *runtime, SmallHermesValue value) {
-    return JSObject::setDirectSlotValue<
-        PrimitiveBox::primitiveValuePropIndex()>(
-        self, value, &runtime->getHeap());
-  }
-};
-
 /// String object.
 class JSString final : public JSObject {
  public:
