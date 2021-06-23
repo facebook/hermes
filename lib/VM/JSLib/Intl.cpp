@@ -1480,7 +1480,7 @@ intlNumberPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
       return runtime->raiseTypeError(
           "Number.prototype.toLocaleString() can only be used on numbers");
     }
-    x = JSNumber::getPrimitiveValue(*numPtr).getNumber(runtime);
+    x = numPtr->getPrimitiveNumber();
   }
 
   CallResult<std::vector<std::u16string>> localesRes =

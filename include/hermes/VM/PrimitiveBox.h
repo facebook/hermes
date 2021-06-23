@@ -218,7 +218,7 @@ class JSStringIterator : public JSObject {
 };
 
 /// Number object.
-class JSNumber final : public PrimitiveBox {
+class JSNumber final : public JSObject {
  public:
   static const ObjectVTable vt;
 
@@ -230,15 +230,32 @@ class JSNumber final : public PrimitiveBox {
     return cell->getKind() == CellKind::NumberObjectKind;
   }
 
-  static Handle<JSNumber>
+  static PseudoHandle<JSNumber>
   create(Runtime *runtime, double value, Handle<JSObject> prototype);
 
-  static Handle<JSNumber> create(Runtime *runtime, Handle<JSObject> prototype) {
+  static PseudoHandle<JSNumber> create(
+      Runtime *runtime,
+      Handle<JSObject> prototype) {
     return create(runtime, 0.0, prototype);
   }
 
-  JSNumber(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
-      : PrimitiveBox(runtime, &vt.base, *parent, *clazz) {}
+  JSNumber(
+      Runtime *runtime,
+      double value,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz)
+      : JSObject(runtime, &vt.base, *parent, *clazz), primitiveValue_(value) {}
+
+  double getPrimitiveNumber() const {
+    return primitiveValue_;
+  }
+
+  void setPrimitiveNumber(double value) {
+    primitiveValue_ = value;
+  }
+
+ private:
+  double primitiveValue_;
 };
 
 /// Boolean object.

@@ -824,8 +824,8 @@ TEST_F(OperationsTest, ToObjectTest) {
     auto res = toObject(runtime, scopedVal);
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());
     EXPECT_TRUE(res->isObject());
-    auto obj = static_cast<PrimitiveBox *>(res->getPointer());
-    EXPECT_EQ(m, PrimitiveBox::getPrimitiveValue(obj).getNumber(runtime));
+    auto obj = vmcast<JSNumber>(static_cast<GCCell *>(res->getObject()));
+    EXPECT_EQ(m, obj->getPrimitiveNumber());
   }
 
   {

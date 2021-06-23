@@ -327,10 +327,17 @@ void NumberObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
-JSNumber::JSNumber(Deserializer &d, const VTable *vt) : PrimitiveBox(d, vt) {}
+JSNumber::JSNumber(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
+  HermesValue hv;
+  d.readHermesValue(&hv);
+  setPrimitiveNumber(hv.getNumber());
+}
 
 void NumberObjectSerialize(Serializer &s, const GCCell *cell) {
   JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSNumber>());
+  const auto *self = static_cast<const JSNumber *>(cell);
+  s.writeHermesValue(
+      HermesValue::encodeNumberValue(self->getPrimitiveNumber()));
   s.endObject(cell);
 }
 
@@ -341,19 +348,15 @@ void NumberObjectDeserialize(Deserializer &d, CellKind kind) {
 }
 #endif
 
-Handle<JSNumber> JSNumber::create(
+PseudoHandle<JSNumber> JSNumber::create(
     Runtime *runtime,
     double value,
     Handle<JSObject> parentHandle) {
   auto clazzHandle = runtime->getHiddenClassForPrototype(
       *parentHandle, numOverlapSlots<JSNumber>() + ANONYMOUS_PROPERTY_SLOTS);
-  auto obj = runtime->makeAFixed<JSNumber>(runtime, parentHandle, clazzHandle);
-  auto self = JSObjectInit::initToHandle(runtime, obj);
-  auto shv = SmallHermesValue::encodeNumberValue(value, runtime);
-  JSObject::setDirectSlotValue<PrimitiveBox::primitiveValuePropIndex()>(
-      self.get(), shv, &runtime->getHeap());
-
-  return self;
+  auto obj =
+      runtime->makeAFixed<JSNumber>(runtime, value, parentHandle, clazzHandle);
+  return JSObjectInit::initToPseudoHandle(runtime, obj);
 }
 
 //===----------------------------------------------------------------------===//
