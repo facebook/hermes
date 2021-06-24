@@ -9,12 +9,11 @@
 
 // RUN: %node-hermes %s | %FileCheck --match-full-lines %s
 
-print('Node Requires');
-// CHECK-LABEL: Node Requires
+print('Primordials');
+// CHECK-LABEL: Primordials
 
-try {
-  var test1 = require('fs');
-} catch (e) {
-  print('caught:', e.name, e.message);
-}
-//CHECK: caught: {{.*}}
+var _primordials = primordials,
+  MathMin = _primordials.MathMin;
+
+print(MathMin(0, 1, 2));
+// CHECK-NEXT: 0

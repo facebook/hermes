@@ -287,10 +287,19 @@ static void initialize(
   runtime.global().setProperty(runtime, "internalBinding", intBinding);
 
   // Will add more properties as they are required.
-  jsi::Object primordials{runtime};
-  runtime.global().setProperty(runtime, "primordials", primordials);
+  jsi::Object process{runtime};
+  runtime.global().setProperty(runtime, "process", process);
 
   runtime.global().setProperty(runtime, "global", runtime.global());
+
+  jsi::Object primordials{runtime};
+  runtime.global().setProperty(runtime, "primordials", primordials);
+  require(
+      jsi::String::createFromAscii(runtime, "internal/per_context/primordials"),
+      dirname,
+      runtime,
+      rs,
+      builtinModules);
 }
 
 int main(int argc, char **argv) {

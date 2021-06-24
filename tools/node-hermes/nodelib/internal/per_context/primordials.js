@@ -205,7 +205,7 @@ function copyPrototype(src, dest, prefix) {
   copyPropsRenamed(global[name], primordials, name);
 }); // Create copies of intrinsic objects
 
-['AggregateError', 'Array', 'ArrayBuffer', 'BigInt', 'BigInt64Array', 'BigUint64Array', 'Boolean', 'DataView', 'Date', 'Error', 'EvalError', 'FinalizationRegistry', 'Float32Array', 'Float64Array', 'Function', 'Int16Array', 'Int32Array', 'Int8Array', 'Map', 'Number', 'Object', 'RangeError', 'ReferenceError', 'RegExp', 'Set', 'String', 'Symbol', 'SyntaxError', 'TypeError', 'URIError', 'Uint16Array', 'Uint32Array', 'Uint8Array', 'Uint8ClampedArray', 'WeakMap', 'WeakRef', 'WeakSet'].forEach(function (name) {
+['Array', 'ArrayBuffer', 'Boolean', 'DataView', 'Date', 'Error', 'EvalError', 'Float32Array', 'Float64Array', 'Function', 'Int16Array', 'Int32Array', 'Int8Array', 'Map', 'Number', 'Object', 'RangeError', 'ReferenceError', 'RegExp', 'Set', 'String', 'Symbol', 'SyntaxError', 'TypeError', 'URIError', 'Uint16Array', 'Uint32Array', 'Uint8Array', 'Uint8ClampedArray', 'WeakMap', 'WeakSet'].forEach(function (name) {
   // eslint-disable-next-line no-restricted-globals
   var original = global[name];
   primordials[name] = original;
@@ -407,34 +407,7 @@ primordials.SafeWeakSet = makeSafe(WeakSet, /*#__PURE__*/function (_WeakSet) {
 
   return SafeWeakSet;
 }(WeakSet));
-primordials.SafeFinalizationRegistry = makeSafe(FinalizationRegistry, /*#__PURE__*/function (_FinalizationRegistry) {
-  _inherits(SafeFinalizationRegistry, _FinalizationRegistry);
 
-  var _super5 = _createSuper(SafeFinalizationRegistry);
-
-  // eslint-disable-next-line no-useless-constructor
-  function SafeFinalizationRegistry(cleanupCallback) {
-    _classCallCheck(this, SafeFinalizationRegistry);
-
-    return _super5.call(this, cleanupCallback);
-  }
-
-  return SafeFinalizationRegistry;
-}(FinalizationRegistry));
-primordials.SafeWeakRef = makeSafe(WeakRef, /*#__PURE__*/function (_WeakRef) {
-  _inherits(SafeWeakRef, _WeakRef);
-
-  var _super6 = _createSuper(SafeWeakRef);
-
-  // eslint-disable-next-line no-useless-constructor
-  function SafeWeakRef(target) {
-    _classCallCheck(this, SafeWeakRef);
-
-    return _super6.call(this, target);
-  }
-
-  return SafeWeakRef;
-}(WeakRef));
 var SafePromise = makeSafe(Promise, /*#__PURE__*/function (_Promise) {
   _inherits(SafePromise, _Promise);
 
