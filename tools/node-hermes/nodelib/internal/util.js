@@ -43,17 +43,17 @@ var _require = require('internal/errors'),
 
 var signals = internalBinding('constants').os.signals;
 
-var _internalBinding = internalBinding('util'),
-    getHiddenValue = _internalBinding.getHiddenValue,
-    setHiddenValue = _internalBinding.setHiddenValue,
-    kArrowMessagePrivateSymbolIndex = _internalBinding.arrow_message_private_symbol,
-    kDecoratedPrivateSymbolIndex = _internalBinding.decorated_private_symbol,
-    _sleep = _internalBinding.sleep;
+// var _internalBinding = internalBinding('util'),
+//     getHiddenValue = _internalBinding.getHiddenValue,
+//     setHiddenValue = _internalBinding.setHiddenValue,
+//     kArrowMessagePrivateSymbolIndex = _internalBinding.arrow_message_private_symbol,
+//     kDecoratedPrivateSymbolIndex = _internalBinding.decorated_private_symbol,
+//     _sleep = _internalBinding.sleep;
 
-var _internalBinding2 = internalBinding('types'),
-    isNativeError = _internalBinding2.isNativeError;
+// var _internalBinding2 = internalBinding('types'),
+//     isNativeError = _internalBinding2.isNativeError;
 
-var noCrypto = !process.versions.openssl;
+var noCrypto = false; //!process.versions.openssl;
 var experimentalWarnings = new SafeSet();
 var colorRegExp = /\u001b\[\d\d?m/g; // eslint-disable-line no-control-regex
 

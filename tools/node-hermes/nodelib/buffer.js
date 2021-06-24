@@ -72,11 +72,11 @@ var _internalBinding = internalBinding('buffer'),
     kMaxLength = _internalBinding.kMaxLength,
     kStringMaxLength = _internalBinding.kStringMaxLength;
 
-var _internalBinding2 = internalBinding('util'),
-    getOwnNonIndexProperties = _internalBinding2.getOwnNonIndexProperties,
-    _internalBinding2$pro = _internalBinding2.propertyFilter,
-    ALL_PROPERTIES = _internalBinding2$pro.ALL_PROPERTIES,
-    ONLY_ENUMERABLE = _internalBinding2$pro.ONLY_ENUMERABLE;
+// var _internalBinding2 = internalBinding('util'),
+//     getOwnNonIndexProperties = _internalBinding2.getOwnNonIndexProperties,
+//     _internalBinding2$pro = _internalBinding2.propertyFilter,
+//     ALL_PROPERTIES = _internalBinding2$pro.ALL_PROPERTIES,
+//     ONLY_ENUMERABLE = _internalBinding2$pro.ONLY_ENUMERABLE;
 
 var _require = require('internal/util'),
     customInspectSymbol = _require.customInspectSymbol,
@@ -84,16 +84,16 @@ var _require = require('internal/util'),
     normalizeEncoding = _require.normalizeEncoding,
     kIsEncodingSymbol = _require.kIsEncodingSymbol;
 
-var _require2 = require('internal/util/types'),
-    isAnyArrayBuffer = _require2.isAnyArrayBuffer,
-    isArrayBufferView = _require2.isArrayBufferView,
-    isUint8Array = _require2.isUint8Array;
+// var _require2 = require('internal/util/types'),
+//     isAnyArrayBuffer = _require2.isAnyArrayBuffer,
+//     isArrayBufferView = _require2.isArrayBufferView,
+//     isUint8Array = _require2.isUint8Array;
 
-var _require3 = require('internal/util/inspect'),
-    utilInspect = _require3.inspect;
+// var _require3 = require('internal/util/inspect'),
+//     utilInspect = _require3.inspect;
 
-var _internalBinding3 = internalBinding('string_decoder'),
-    encodings = _internalBinding3.encodings;
+// var _internalBinding3 = internalBinding('string_decoder'),
+//     encodings = _internalBinding3.encodings;
 
 var _require4 = require('internal/errors'),
     _require4$codes = _require4.codes,
@@ -104,7 +104,7 @@ var _require4 = require('internal/errors'),
     ERR_OUT_OF_RANGE = _require4$codes.ERR_OUT_OF_RANGE,
     ERR_UNKNOWN_ENCODING = _require4$codes.ERR_UNKNOWN_ENCODING,
     hideStackFrames = _require4.hideStackFrames;
-
+// print("buffer.js 2");
 var _require5 = require('internal/validators'),
     validateArray = _require5.validateArray,
     validateBuffer = _require5.validateBuffer,
@@ -112,7 +112,7 @@ var _require5 = require('internal/validators'),
     validateInteger = _require5.validateInteger,
     validateString = _require5.validateString; // Provide validateInteger() but with kMaxLength as the default maximum value.
 
-
+// print("buffer.js 3");
 var validateOffset = function validateOffset(value, name) {
   var min = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
   var max = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : kMaxLength;
@@ -125,8 +125,8 @@ var _require6 = require('internal/buffer'),
     addBufferPrototypeMethods = _require6.addBufferPrototypeMethods,
     createUnsafeBuffer = _require6.createUnsafeBuffer;
 
-var _require7 = require('internal/blob'),
-    Blob = _require7.Blob;
+// var _require7 = require('internal/blob'),
+//     Blob = _require7.Blob;
 
 FastBuffer.prototype.constructor = Buffer;
 Buffer.prototype = FastBuffer.prototype;
@@ -147,14 +147,14 @@ Buffer.poolSize = 8 * 1024;
 var poolSize, poolOffset, allocPool;
 var encodingsMap = ObjectCreate(null);
 
-for (var i = 0; i < encodings.length; ++i) {
-  encodingsMap[encodings[i]] = i;
-}
+// for (var i = 0; i < encodings.length; ++i) {
+//   encodingsMap[encodings[i]] = i;
+// }
 
 function createPool() {
   poolSize = Buffer.poolSize;
   allocPool = createUnsafeBuffer(poolSize).buffer;
-  markAsUntransferable(allocPool);
+  // markAsUntransferable(allocPool);
   poolOffset = 0;
 }
 
@@ -236,7 +236,10 @@ function _copyActual(source, target, targetStart, sourceStart, sourceEnd) {
   var nb = sourceEnd - sourceStart;
   var sourceLen = source.length - sourceStart;
   if (nb > sourceLen) nb = sourceLen;
-  if (sourceStart !== 0 || sourceEnd < source.length) source = new Uint8Array(source.buffer, source.byteOffset + sourceStart, nb);
+  if (sourceStart !== 0 || sourceEnd < source.length){
+    source = new Uint8Array(source.buffer, source.byteOffset + sourceStart, nb);
+  }
+
   TypedArrayPrototypeSet(target, source, targetStart);
   return nb;
 }
@@ -254,7 +257,6 @@ function _copyActual(source, target, targetStart, sourceStart, sourceEnd) {
 
 function Buffer(arg, encodingOrOffset, length) {
   showFlaggedDeprecation(); // Common case.
-
   if (typeof arg === 'number') {
     if (typeof encodingOrOffset === 'string') {
       throw new ERR_INVALID_ARG_TYPE('string', 'string', arg);
@@ -332,7 +334,6 @@ ObjectSetPrototypeOf(Buffer, Uint8Array); // The 'assertSize' method will remove
 
 var assertSize = hideStackFrames(function (size) {
   validateNumber(size, 'size');
-
   if (!(size >= 0 && size <= kMaxLength)) {
     throw new ERR_INVALID_ARG_VALUE.RangeError('size', size);
   }
@@ -388,7 +389,6 @@ function allocate(size) {
   if (size <= 0) {
     return new FastBuffer();
   }
-
   if (size < Buffer.poolSize >>> 1) {
     if (size > poolSize - poolOffset) createPool();
     var b = new FastBuffer(allocPool, poolOffset, size);
@@ -396,7 +396,6 @@ function allocate(size) {
     alignPool();
     return b;
   }
-
   return createUnsafeBuffer(size);
 }
 
@@ -535,19 +534,15 @@ Buffer.concat = function concat(list, length) {
 
   var buffer = Buffer.allocUnsafe(length);
   var pos = 0;
-
   for (var _i2 = 0; _i2 < list.length; _i2++) {
     var buf = list[_i2];
-
-    if (!isUint8Array(buf)) {
+    if (!(buf instanceof Uint8Array)) {
       // TODO(BridgeAR): This should not be of type ERR_INVALID_ARG_TYPE.
       // Instead, find the proper error code for this.
       throw new ERR_INVALID_ARG_TYPE("list[".concat(_i2, "]"), ['Buffer', 'Uint8Array'], list[_i2]);
     }
-
     pos += _copyActual(buf, buffer, pos, 0, buf.length);
   } // Note: `length` is always equal to `buffer.length` at this point
-
 
   if (pos < length) {
     // Zero-fill the remaining bytes if the specified `length` was more than
@@ -555,7 +550,6 @@ Buffer.concat = function concat(list, length) {
     // there were not initialized.
     TypedArrayPrototypeFill(buffer, 0, pos, length);
   }
-
   return buffer;
 };
 
@@ -698,7 +692,6 @@ var encodingOps = {
 
 function getEncodingOps(encoding) {
   encoding += '';
-
   switch (encoding.length) {
     case 4:
       if (encoding === 'utf8') return encodingOps.utf8;
@@ -1148,33 +1141,33 @@ Buffer.prototype.swap64 = function swap64() {
 Buffer.prototype.toLocaleString = Buffer.prototype.toString;
 var transcode;
 
-if (internalBinding('config').hasIntl) {
-  var _internalBinding4 = internalBinding('icu'),
-      icuErrName = _internalBinding4.icuErrName,
-      _transcode = _internalBinding4.transcode; // Transcodes the Buffer from one encoding to another, returning a new
-  // Buffer instance.
+// if (internalBinding('config').hasIntl) {
+//   var _internalBinding4 = internalBinding('icu'),
+//       icuErrName = _internalBinding4.icuErrName,
+//       _transcode = _internalBinding4.transcode; // Transcodes the Buffer from one encoding to another, returning a new
+//   // Buffer instance.
 
 
-  transcode = function transcode(source, fromEncoding, toEncoding) {
-    if (!isUint8Array(source)) {
-      throw new ERR_INVALID_ARG_TYPE('source', ['Buffer', 'Uint8Array'], source);
-    }
+//   transcode = function transcode(source, fromEncoding, toEncoding) {
+//     if (!isUint8Array(source)) {
+//       throw new ERR_INVALID_ARG_TYPE('source', ['Buffer', 'Uint8Array'], source);
+//     }
 
-    if (source.length === 0) return Buffer.alloc(0);
-    fromEncoding = normalizeEncoding(fromEncoding) || fromEncoding;
-    toEncoding = normalizeEncoding(toEncoding) || toEncoding;
+//     if (source.length === 0) return Buffer.alloc(0);
+//     fromEncoding = normalizeEncoding(fromEncoding) || fromEncoding;
+//     toEncoding = normalizeEncoding(toEncoding) || toEncoding;
 
-    var result = _transcode(source, fromEncoding, toEncoding);
+//     var result = _transcode(source, fromEncoding, toEncoding);
 
-    if (typeof result !== 'number') return result;
-    var code = icuErrName(result); // eslint-disable-next-line no-restricted-syntax
+//     if (typeof result !== 'number') return result;
+//     var code = icuErrName(result); // eslint-disable-next-line no-restricted-syntax
 
-    var err = new Error("Unable to transcode Buffer [".concat(code, "]"));
-    err.code = code;
-    err.errno = result;
-    throw err;
-  };
-}
+//     var err = new Error("Unable to transcode Buffer [".concat(code, "]"));
+//     err.code = code;
+//     err.errno = result;
+//     throw err;
+//   };
+// }
 
 var DOMException;
 var lazyInvalidCharError = hideStackFrames(function (message, name) {
@@ -1212,7 +1205,7 @@ function atob(input) {
 }
 
 module.exports = {
-  Blob: Blob,
+  // Blob: Blob,
   Buffer: Buffer,
   SlowBuffer: SlowBuffer,
   transcode: transcode,

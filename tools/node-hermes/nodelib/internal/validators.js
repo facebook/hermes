@@ -30,8 +30,8 @@ var _require = require('internal/errors'),
 var _require2 = require('internal/util'),
     normalizeEncoding = _require2.normalizeEncoding;
 
-var _require3 = require('internal/util/types'),
-    isArrayBufferView = _require3.isArrayBufferView;
+// var _require3 = require('internal/util/types'),
+//     isArrayBufferView = _require3.isArrayBufferView;
 
 var signals = internalBinding('constants').os.signals;
 

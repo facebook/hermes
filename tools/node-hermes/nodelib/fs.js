@@ -67,8 +67,8 @@ var S_IFIFO = constants.S_IFIFO,
 
 var pathModule = require('path');
 
-var _require = require('internal/util/types'),
-    isArrayBufferView = _require.isArrayBufferView; // We need to get the statValues from the binding at the callsite since
+// var _require = require('internal/util/types'),
+//     isArrayBufferView = _require.isArrayBufferView; // We need to get the statValues from the binding at the callsite since
 // it's re-initialized after deserialization.
 
 
@@ -77,78 +77,78 @@ var binding = internalBinding('fs');
 var _require2 = require('buffer'),
     Buffer = _require2.Buffer;
 
-var _require3 = require('internal/errors'),
-    aggregateTwoErrors = _require3.aggregateTwoErrors,
-    _require3$codes = _require3.codes,
-    ERR_FS_FILE_TOO_LARGE = _require3$codes.ERR_FS_FILE_TOO_LARGE,
-    ERR_INVALID_ARG_VALUE = _require3$codes.ERR_INVALID_ARG_VALUE,
-    ERR_INVALID_ARG_TYPE = _require3$codes.ERR_INVALID_ARG_TYPE,
-    ERR_FEATURE_UNAVAILABLE_ON_PLATFORM = _require3$codes.ERR_FEATURE_UNAVAILABLE_ON_PLATFORM,
-    AbortError = _require3.AbortError,
-    uvErrmapGet = _require3.uvErrmapGet,
-    uvException = _require3.uvException;
+// var _require3 = require('internal/errors'),
+//     aggregateTwoErrors = _require3.aggregateTwoErrors,
+//     _require3$codes = _require3.codes,
+//     ERR_FS_FILE_TOO_LARGE = _require3$codes.ERR_FS_FILE_TOO_LARGE,
+//     ERR_INVALID_ARG_VALUE = _require3$codes.ERR_INVALID_ARG_VALUE,
+//     ERR_INVALID_ARG_TYPE = _require3$codes.ERR_INVALID_ARG_TYPE,
+//     ERR_FEATURE_UNAVAILABLE_ON_PLATFORM = _require3$codes.ERR_FEATURE_UNAVAILABLE_ON_PLATFORM,
+//     AbortError = _require3.AbortError,
+//     uvErrmapGet = _require3.uvErrmapGet,
+//     uvException = _require3.uvException;
 
-var FSReqCallback = binding.FSReqCallback;
+// var FSReqCallback = binding.FSReqCallback;
 
-var _require4 = require('internal/url'),
-    toPathIfFileURL = _require4.toPathIfFileURL;
+// var _require4 = require('internal/url'),
+//     toPathIfFileURL = _require4.toPathIfFileURL;
 
-var internalUtil = require('internal/util');
+// var internalUtil = require('internal/util');
 
-var _require5 = require('internal/fs/utils'),
-    _require5$constants = _require5.constants,
-    kIoMaxLength = _require5$constants.kIoMaxLength,
-    kMaxUserId = _require5$constants.kMaxUserId,
-    copyObject = _require5.copyObject,
-    Dirent = _require5.Dirent,
-    emitRecursiveRmdirWarning = _require5.emitRecursiveRmdirWarning,
-    getDirents = _require5.getDirents,
-    getOptions = _require5.getOptions,
-    getValidatedFd = _require5.getValidatedFd,
-    getValidatedPath = _require5.getValidatedPath,
-    getValidMode = _require5.getValidMode,
-    handleErrorFromBinding = _require5.handleErrorFromBinding,
-    nullCheck = _require5.nullCheck,
-    preprocessSymlinkDestination = _require5.preprocessSymlinkDestination,
-    Stats = _require5.Stats,
-    getStatsFromBinding = _require5.getStatsFromBinding,
-    realpathCacheKey = _require5.realpathCacheKey,
-    stringToFlags = _require5.stringToFlags,
-    stringToSymlinkType = _require5.stringToSymlinkType,
-    toUnixTimestamp = _require5.toUnixTimestamp,
-    validateBufferArray = _require5.validateBufferArray,
-    validateOffsetLengthRead = _require5.validateOffsetLengthRead,
-    validateOffsetLengthWrite = _require5.validateOffsetLengthWrite,
-    validatePath = _require5.validatePath,
-    validatePosition = _require5.validatePosition,
-    validateRmOptions = _require5.validateRmOptions,
-    validateRmOptionsSync = _require5.validateRmOptionsSync,
-    validateRmdirOptions = _require5.validateRmdirOptions,
-    validateStringAfterArrayBufferView = _require5.validateStringAfterArrayBufferView,
-    warnOnNonPortableTemplate = _require5.warnOnNonPortableTemplate;
+// var _require5 = require('internal/fs/utils'),
+//     _require5$constants = _require5.constants,
+//     kIoMaxLength = _require5$constants.kIoMaxLength,
+//     kMaxUserId = _require5$constants.kMaxUserId,
+//     copyObject = _require5.copyObject,
+//     Dirent = _require5.Dirent,
+//     emitRecursiveRmdirWarning = _require5.emitRecursiveRmdirWarning,
+//     getDirents = _require5.getDirents,
+//     getOptions = _require5.getOptions,
+//     getValidatedFd = _require5.getValidatedFd,
+//     getValidatedPath = _require5.getValidatedPath,
+//     getValidMode = _require5.getValidMode,
+//     handleErrorFromBinding = _require5.handleErrorFromBinding,
+//     nullCheck = _require5.nullCheck,
+//     preprocessSymlinkDestination = _require5.preprocessSymlinkDestination,
+//     Stats = _require5.Stats,
+//     getStatsFromBinding = _require5.getStatsFromBinding,
+//     realpathCacheKey = _require5.realpathCacheKey,
+//     stringToFlags = _require5.stringToFlags,
+//     stringToSymlinkType = _require5.stringToSymlinkType,
+//     toUnixTimestamp = _require5.toUnixTimestamp,
+//     validateBufferArray = _require5.validateBufferArray,
+//     validateOffsetLengthRead = _require5.validateOffsetLengthRead,
+//     validateOffsetLengthWrite = _require5.validateOffsetLengthWrite,
+//     validatePath = _require5.validatePath,
+//     validatePosition = _require5.validatePosition,
+//     validateRmOptions = _require5.validateRmOptions,
+//     validateRmOptionsSync = _require5.validateRmOptionsSync,
+//     validateRmdirOptions = _require5.validateRmdirOptions,
+//     validateStringAfterArrayBufferView = _require5.validateStringAfterArrayBufferView,
+//     warnOnNonPortableTemplate = _require5.warnOnNonPortableTemplate;
 
-var _require6 = require('internal/fs/dir'),
-    Dir = _require6.Dir,
-    opendir = _require6.opendir,
-    opendirSync = _require6.opendirSync;
+// var _require6 = require('internal/fs/dir'),
+//     Dir = _require6.Dir,
+//     opendir = _require6.opendir,
+//     opendirSync = _require6.opendirSync;
 
-var _require7 = require('internal/constants'),
-    CHAR_FORWARD_SLASH = _require7.CHAR_FORWARD_SLASH,
-    CHAR_BACKWARD_SLASH = _require7.CHAR_BACKWARD_SLASH;
+// var _require7 = require('internal/constants'),
+//     CHAR_FORWARD_SLASH = _require7.CHAR_FORWARD_SLASH,
+//     CHAR_BACKWARD_SLASH = _require7.CHAR_BACKWARD_SLASH;
 
-var _require8 = require('internal/validators'),
-    isUint32 = _require8.isUint32,
-    parseFileMode = _require8.parseFileMode,
-    validateBoolean = _require8.validateBoolean,
-    validateBuffer = _require8.validateBuffer,
-    validateCallback = _require8.validateCallback,
-    validateEncoding = _require8.validateEncoding,
-    validateFunction = _require8.validateFunction,
-    validateInteger = _require8.validateInteger;
+// var _require8 = require('internal/validators'),
+//     isUint32 = _require8.isUint32,
+//     parseFileMode = _require8.parseFileMode,
+//     validateBoolean = _require8.validateBoolean,
+//     validateBuffer = _require8.validateBuffer,
+//     validateCallback = _require8.validateCallback,
+//     validateEncoding = _require8.validateEncoding,
+//     validateFunction = _require8.validateFunction,
+//     validateInteger = _require8.validateInteger;
 
-var watchers = require('internal/fs/watchers');
+// var watchers = require('internal/fs/watchers');
 
-var ReadFileContext = require('internal/fs/read_file_context');
+// var ReadFileContext = require('internal/fs/read_file_context');
 
 var truncateWarn = true;
 var fs; // Lazy loaded
@@ -162,8 +162,8 @@ var rimrafSync; // These have to be separate because of how graceful-fs happens 
 
 var FileReadStream;
 var FileWriteStream;
-var isWindows = process.platform === 'win32';
-var isOSX = process.platform === 'darwin';
+// var isWindows = process.platform === 'win32';
+// var isOSX = process.platform === 'darwin';
 
 function showTruncateDeprecation() {
   if (truncateWarn) {
