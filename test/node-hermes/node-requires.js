@@ -17,4 +17,4 @@ try {
 } catch (e) {
   print('caught:', e.name, e.message);
 }
-//CHECK: caught: ReferenceError {{.*}}
+//CHECK: caught: Error The following module is not supported yet: {{.*}}

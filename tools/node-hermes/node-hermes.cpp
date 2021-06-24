@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "RuntimeState.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/hermes.h"
 #include "nodelib/NodeBytecode.h"
@@ -18,9 +19,11 @@
 #include "llvh/Support/Program.h"
 #include "llvh/Support/Signals.h"
 
+#include <fcntl.h>
+
 using namespace facebook;
 
-// -help options
+// -help options.
 static llvh::cl::opt<std::string> EvalScript(
     "eval",
     llvh::cl::desc("evaluate script"),
@@ -73,6 +76,42 @@ class ArrayRefBuffer : public jsi::Buffer {
   llvh::ArrayRef<uint8_t> array_;
 };
 
+// Defines the constants needed by fs.js.
+static void defineConstants(jsi::Runtime &runtime, jsi::Object &target) {
+#define DEFINE_CONSTANT(runtime, name)        \
+  do {                                        \
+    target.setProperty(runtime, #name, name); \
+  } while (0)
+#ifdef S_IFIFO
+  DEFINE_CONSTANT(runtime, S_IFIFO);
+#endif
+#ifdef S_IFLNK
+  DEFINE_CONSTANT(runtime, S_IFLNK);
+#endif
+#ifdef S_IFSOCK
+  DEFINE_CONSTANT(runtime, S_IFSOCK);
+#endif
+#ifdef F_OK
+  DEFINE_CONSTANT(runtime, F_OK);
+#endif
+#ifdef R_OK
+  DEFINE_CONSTANT(runtime, R_OK);
+#endif
+#ifdef W_OK
+  DEFINE_CONSTANT(runtime, W_OK);
+#endif
+#ifdef X_OK
+  DEFINE_CONSTANT(runtime, X_OK);
+#endif
+#ifdef O_SYMLINK
+  DEFINE_CONSTANT(runtime, O_SYMLINK);
+#endif
+  DEFINE_CONSTANT(runtime, S_IFMT);
+  DEFINE_CONSTANT(runtime, S_IFREG);
+  DEFINE_CONSTANT(runtime, O_WRONLY);
+#undef DEFINE_CONSTANT
+}
+
 /// Given the directory that the original JS file runs from and the
 /// relative path of the target, forms the absolute path
 /// for the target.
@@ -100,6 +139,41 @@ static const std::shared_ptr<jsi::Buffer> addjsWrapper(
   wrappedBuffer += strBuffer;
   wrappedBuffer += "});";
   return std::make_unique<jsi::StringBuffer>(std::move(wrappedBuffer));
+}
+
+// Adds the 'constants' object as a property of internalBinding. Currently
+// this object only has the fs property defined on it.
+static jsi::Value constantsBinding(jsi::Runtime &rt, RuntimeState &rs) {
+  jsi::Object fsProp{rt};
+  defineConstants(rt, fsProp);
+  jsi::Object constants{rt};
+  constants.setProperty(rt, jsi::String::createFromAscii(rt, "fs"), fsProp);
+  jsi::String constantsLabel = jsi::String::createFromAscii(rt, "constants");
+  rs.setInternalBindingProp(constantsLabel, std::move(constants));
+  return rs.getInternalBindingProp(constantsLabel);
+}
+
+// Implements the internal binding JS functionality. Currently only includes
+// constants that are relevant to the execution of fs.js.
+static jsi::Value internalBinding(
+    const jsi::String &propName,
+    jsi::Runtime &rt,
+    RuntimeState &rs) {
+  if (rs.internalBindingPropExists(propName)) {
+    return rs.getInternalBindingProp(propName);
+  }
+  std::string propNameUTF8 = propName.utf8(rt);
+  if (propNameUTF8 == "constants") {
+    return constantsBinding(rt, rs);
+  } else if (propNameUTF8 == "fs") { // Next to be implemented.
+    return jsi::Value::undefined();
+  }
+  // Will not go into this case but keeping it in case some other internal
+  // binding functionality is going to be added in the future.
+  throw jsi::JSError(
+      rt,
+      "This functionality of internalBinding has not been implemented yet: " +
+          propNameUTF8);
 }
 
 /// Given the requested module name/file name, which is either a builtin
@@ -145,44 +219,45 @@ static jsi::Value require(
     const jsi::String &filename,
     const std::string &dirname,
     jsi::Runtime &rt,
-    std::unordered_map<std::string, jsi::Object> &fileTracker,
+    RuntimeState &rs,
     jsi::Object &builtinModules) {
-  auto iterAlreadyExists = fileTracker.find(filename.utf8(rt));
-  if (iterAlreadyExists != fileTracker.end()) {
-    return iterAlreadyExists->second.getProperty(rt, "exports");
+  std::string filenameUTF8 = filename.utf8(rt);
+  llvh::Optional<jsi::Object> existingMod = rs.findRequiredModule(filenameUTF8);
+  if (existingMod.hasValue()) {
+    return std::move(*existingMod);
   }
   jsi::Function result =
       resolveRequireCall(filename, dirname, rt, builtinModules);
   jsi::Object mod{rt};
   jsi::Object exports{rt};
   mod.setProperty(rt, "exports", exports);
-  auto iterAndSuccess =
-      fileTracker.emplace(std::make_pair(filename.utf8(rt), std::move(mod)));
-  assert(iterAndSuccess.second && "Insertion must succeed.");
+
+  jsi::Object &mapModule = rs.addRequiredModule(filenameUTF8, std::move(mod));
+
   jsi::Value out = result.call(
       rt,
       exports,
       rt.global().getProperty(rt, "require"),
-      iterAndSuccess.first->second,
+      mapModule,
       filename,
       dirname,
       5);
-  return iterAndSuccess.first->second.getProperty(rt, "exports");
+  return mapModule.getProperty(rt, "exports");
 }
 
 // Initializes all the builtin modules as well as several of
-// the functions/properties needed to execute the modules
+// the functions/properties needed to execute the modules.
 static void initialize(
     facebook::hermes::HermesRuntime &runtime,
-    std::unordered_map<std::string, jsi::Object> &fileTracker,
     const std::string &dirname,
+    RuntimeState &rs,
     jsi::Object &builtinModules) {
   // Creates require JS function and links it to the c++ version.
   jsi::Function req = jsi::Function::createFromHostFunction(
       runtime,
       jsi::PropNameID::forAscii(runtime, "require"),
       1,
-      [&fileTracker, &dirname, &builtinModules](
+      [&rs, &dirname, &builtinModules](
           jsi::Runtime &rt,
           const jsi::Value &,
           const jsi::Value *args,
@@ -190,11 +265,28 @@ static void initialize(
         if (count == 0) {
           throw jsi::JSError(rt, "Not enough arguments passed in");
         }
-        return require(
-            args[0].toString(rt), dirname, rt, fileTracker, builtinModules);
+        return require(args[0].toString(rt), dirname, rt, rs, builtinModules);
       });
   runtime.global().setProperty(runtime, "require", req);
 
+  // Creates internalBinding JS function and links it to the c++ version.
+  jsi::Function intBinding = jsi::Function::createFromHostFunction(
+      runtime,
+      jsi::PropNameID::forAscii(runtime, "internalBinding"),
+      1,
+      [&rs](
+          jsi::Runtime &rt,
+          const jsi::Value &,
+          const jsi::Value *args,
+          size_t count) -> jsi::Value {
+        if (count == 0) {
+          throw jsi::JSError(rt, "Not enough arguments passed in");
+        }
+        return internalBinding(args[0].toString(rt), rt, rs);
+      });
+  runtime.global().setProperty(runtime, "internalBinding", intBinding);
+
+  // Will add more properties as they are required.
   jsi::Object primordials{runtime};
   runtime.global().setProperty(runtime, "primordials", primordials);
 
@@ -234,9 +326,7 @@ int main(int argc, char **argv) {
                                             : std::string(InputFilename);
 
   auto runtime = facebook::hermes::makeHermesRuntime();
-
-  // Maps from filename to JS module object.
-  std::unordered_map<std::string, jsi::Object> fileTracker;
+  RuntimeState rs{*runtime};
 
   llvh::SmallString<32> dirName{InputFilename};
   llvh::sys::path::remove_filename(dirName, llvh::sys::path::Style::posix);
@@ -253,7 +343,7 @@ int main(int argc, char **argv) {
       runtime->evaluateJavaScript(buf, "NodeBytecode.js").asObject(*runtime);
 
   try {
-    initialize(*runtime, fileTracker, strDirname, builtinModules);
+    initialize(*runtime, strDirname, rs, builtinModules);
     auto result = runtime->evaluateJavaScript(jsiBuffer, srcPath);
 
   } catch (const jsi::JSIException &e) {
