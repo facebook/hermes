@@ -231,5 +231,10 @@ local_ref<JHashMap<K, V>> JHashMap<K,V>::create() {
   return JHashMap<K,V>::newInstance();
 }
 
+template <typename K, typename V>
+local_ref<JHashMap<K, V>> JHashMap<K,V>::create(int initialCapacity) {
+  return JHashMap<K,V>::newInstance(initialCapacity);
+}
+
 }
 }
