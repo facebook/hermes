@@ -94,7 +94,8 @@ function build_apple_framework {
 }
 
 # Accepts an array of frameworks and will place all of
-# the architectures into the first one in the list
+# the architectures into an universal folder and then remove
+# the merged frameworks from destroot
 function create_universal_framework {
   cd ./destroot/Library/Frameworks || exit 1
 
@@ -107,14 +108,12 @@ function create_universal_framework {
     args+="-framework ${platforms[$i]}/hermes.framework "
   done
 
-  # Once all was linked into a single framework, clean destroot
-  # from unused frameworks
-  for platform in "${@:2}"; do
+  mkdir universal
+  xcodebuild -create-xcframework $args -output "universal/hermes.xcframework"
+
+  for platform in $@; do
     rm -r "$platform"
   done
-
-  xcodebuild -create-xcframework $args -output "${platforms[0]}/hermes.xcframework"
-  lipo -info "${platforms[0]}"
 
   cd - || exit 1
 }
