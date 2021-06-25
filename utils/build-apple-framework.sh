@@ -107,7 +107,14 @@ function create_universal_framework {
     args+="-framework ${platforms[$i]}/hermes.framework "
   done
 
+  # Once all was linked into a single framework, clean destroot
+  # from unused frameworks
+  for platform in "${@:2}"; do
+    rm -r "$platform"
+  done
+
   xcodebuild -create-xcframework $args -output "${platforms[0]}/hermes.xcframework"
+  lipo -info "${platforms[0]}"
 
   cd - || exit 1
 }
