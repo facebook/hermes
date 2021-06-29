@@ -256,7 +256,7 @@ test('Babel identifierName', () => {
             type: 'Identifier',
             loc: {
               identifierName: 'test',
-            }
+            },
           },
         },
       ],
@@ -1696,6 +1696,44 @@ describe('This type annotations', () => {
           },
         },
       ],
+    });
+  });
+});
+
+describe('Indexed Access Type annotations in Babel', () => {
+  test('Basic Indexed Access Type', () => {
+    expect(parse(`type T = O[k]`, {babel: true})).toMatchObject({
+      type: 'File',
+      program: {
+        type: 'Program',
+        body: [
+          {
+            type: 'TypeAlias',
+            right: {
+              type: 'AnyTypeAnnotation',
+            },
+            typeParameters: null,
+          },
+        ],
+      },
+    });
+  });
+
+  test('Optional Indexed Access Type', () => {
+    expect(parse(`type T = O?.[k]`, {babel: true})).toMatchObject({
+      type: 'File',
+      program: {
+        type: 'Program',
+        body: [
+          {
+            type: 'TypeAlias',
+            right: {
+              type: 'AnyTypeAnnotation',
+            },
+            typeParameters: null,
+          },
+        ],
+      },
     });
   });
 });
