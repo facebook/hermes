@@ -322,6 +322,11 @@ JNIEnv* Environment::ensureCurrentThreadIsAttached() {
 }
 
 /* static */
+void Environment::ensureCurrentThreadAttachDetachInScope(std::function<void()>&& runnable) {
+  ThreadScope::WithClassLoader(std::move(runnable));
+}
+
+/* static */
 bool Environment::isGlobalJvmAvailable() {
   return g_vm != nullptr;
 }
