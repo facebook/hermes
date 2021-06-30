@@ -27,8 +27,8 @@ struct hash<hermes::inst::OpCode> {
 namespace hermes {
 
 using namespace hermes::parser;
-using namespace hermes::inst;
 using namespace hermes::hbc;
+using inst::OpCode;
 
 static uint64_t getFunctionRuntimeInstructionCount(
     std::unordered_map<uint16_t, uint64_t> &basicBlockRuntimeInstCountMap) {

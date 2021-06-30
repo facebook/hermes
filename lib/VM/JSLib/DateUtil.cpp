@@ -840,6 +840,7 @@ static double parseISODate(StringView u16str) {
       if (!scanInt(it, end, tzm)) {
         return nan;
       }
+      tzm *= sign;
     }
   }
 
@@ -994,8 +995,13 @@ static double parseESDate(StringView str) {
 
   // Space and time zone.
   consumeSpaces();
-  if (it == end)
-    goto complete;
+
+  if (it == end) {
+    // Default to local time zone if no time zone provided
+    double t = makeDate(makeDay(y, m - 1, d), makeTime(h, min, s, ms));
+    t = utcTime(t);
+    return t;
+  }
 
   struct KnownTZ {
     const char *tz;

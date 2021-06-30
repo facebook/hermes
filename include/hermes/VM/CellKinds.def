@@ -28,7 +28,9 @@
 
 CELL_KIND(Uninitialized)
 CELL_KIND(FillerCell)
+#if defined(HERMESVM_GC_HADES) || defined(HERMESVM_GC_RUNTIME)
 CELL_KIND(Freelist)
+#endif
 CELL_KIND(DynamicUTF16StringPrimitive)
 CELL_KIND(DynamicASCIIStringPrimitive)
 CELL_KIND(BufferedUTF16StringPrimitive)
@@ -41,12 +43,14 @@ CELL_KIND(DictPropertyMap)
 CELL_KIND(Domain)
 CELL_KIND(HiddenClass)
 CELL_KIND(ArrayStorage)
+CELL_KIND(ArrayStorageSmall)
 CELL_KIND(SegmentedArray)
 CELL_KIND(Segment)
 CELL_KIND(PropertyAccessor)
 CELL_KIND(Environment)
 CELL_KIND(HashMapEntry)
 CELL_KIND(OrderedHashMap)
+CELL_KIND(BoxedDouble)
 
 CELL_CLASS(Object, "Object")
 CELL_CLASS(DecoratedObject, "DecoratedObject")
@@ -90,18 +94,20 @@ CELL_KIND(GeneratorInnerFunction)
 CELL_KIND(AsyncFunction)
 CELL_CLASS(Function, "Function")
 
+// Dummy object used only in tests.
+CELL_KIND(DummyObject)
+
 // Update AllCells, below, if new CellKinds are added.
 // (AllCells is useful for checking that a CellKind is valid.)
 
 // Define inheritance ranges.
-CELL_RANGE(AllCells, Uninitialized, Function)
+CELL_RANGE(AllCells, Uninitialized, DummyObject)
 CELL_RANGE(Object, Object, Function)
 CELL_RANGE(DecoratedObject, DecoratedObject, HostObject)
 CELL_RANGE(ArrayImpl, Arguments, Array)
 CELL_RANGE(Callable, BoundFunction, Function)
 CELL_RANGE(CodeBlockFunction, GeneratorFunction, Function)
 CELL_RANGE(NativeFunction, NativeFunction, FinalizableNativeFunction)
-CELL_RANGE(PrimitiveBox, BooleanObject, NumberObject)
 CELL_RANGE(TypedArrayBase, Int8Array, Float64Array)
 CELL_RANGE(WeakMapImplBase, WeakMap, WeakSet)
 CELL_RANGE(

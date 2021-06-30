@@ -22,6 +22,7 @@ import static org.fest.assertions.api.Assertions.failBecauseExceptionWasNotThrow
 import com.facebook.soloader.nativeloader.NativeLoader;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -144,6 +145,21 @@ public class DocTests extends BaseFBJniTests {
     assertThat(str).startsWith("data=com.facebook.jni.DataHolder@");
   }
 
+  static native void catchAndThrow();
+
+  @Test
+  public void testCatchAndThrow() {
+    try {
+      catchAndThrow();
+      failBecauseExceptionWasNotThrown(RuntimeException.class);
+    } catch (RuntimeException e) {
+      assertThat(e)
+          .hasMessageStartingWith("Caught 'java.lang.NoSuchMethodError:")
+          .hasMessageContaining("doesNotExist")
+          ;
+    }
+  }
+
   // SECTION boxed
   static native Double scaleUp(Integer number);
   // END
@@ -167,19 +183,15 @@ public class DocTests extends BaseFBJniTests {
     assertThat(concatMatches(Arrays.asList(1, 2), names)).isEqualTo("bc");
   }
 
-  static native void catchAndThrow();
+  // SECTION collections
+  static native Map<String, List<Integer>> buildCollections();
+  // END
 
   @Test
-  public void testCatchAndThrow() {
-    try {
-      catchAndThrow();
-      failBecauseExceptionWasNotThrown(RuntimeException.class);
-    } catch (RuntimeException e) {
-      assertThat(e)
-          .hasMessageStartingWith("Caught 'java.lang.NoSuchMethodError:")
-          .hasMessageContaining("doesNotExist")
-          ;
-    }
+  public void testBuildCollections() {
+    Map<String, List<Integer>> ret = buildCollections();
+    assertThat(ret.keySet()).isEqualTo(new HashSet<>(Arrays.asList("primes")));
+    assertThat(ret.get("primes")).isEqualTo(Arrays.asList(2, 3));
   }
 
   // SECTION byte_buffer

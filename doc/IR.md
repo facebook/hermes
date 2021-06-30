@@ -457,6 +457,16 @@ Arguments | *%sizeHint% indicates that the object will need at least that many p
 Semantics | The instruction creates a new JavaScript object on the heap. If the parent is invalid (not EmptySenyinel, null or object), it is silently ignored.
 Effects | Does not read or write to memory.
 
+### AllocObjectLiteralInst
+
+AllocObjectLiteralInst | _
+--- | --- |
+Description | Allocates a new JavaScript object on the heap. During lowering pass it will be lowered to either an AllocObjectInst or a HBCAllocObjectFromBufferInst.
+Example |  %0 = AllocObjectLiteralInst "prop1" : string, 10 : number
+Arguments | %prop_map is a vector of (Literal*, value*) pairs which represents the properties and their keys in the object literal.
+Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties.
+Effects | Does not read or write to memory.
+
 ### AllocArrayInst
 
 AllocArrayInst | _

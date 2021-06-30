@@ -432,7 +432,7 @@ TEST(JSLexerTest, FlowOctalLiteralTest) {
   DiagContext diag(sm);
 
   JSLexer lex("01", sm, alloc);
-  auto tok = lex.advance(JSLexer::GrammarContext::Flow);
+  auto tok = lex.advance(JSLexer::GrammarContext::Type);
   ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
   ASSERT_EQ(tok->getNumericLiteral(), 1.0);
   ASSERT_EQ(1, diag.getErrCountClear());

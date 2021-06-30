@@ -41,6 +41,7 @@ void ErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSError>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSError *>(cell);
+  mb.setVTable(&JSError::vt.base);
   mb.addField("funcNames", &self->funcNames_);
   mb.addField("domains", &self->domains_);
 }
@@ -52,22 +53,8 @@ void ErrorSerialize(Serializer &s, const GCCell *cell) {
   // serialize/deserialize after user code.
 
   auto *self = vmcast<const JSError>(cell);
-  // If we have an ArrayStorage, it doesn't store any native pointers. Serialize
-  // it here.
-  bool hasArray = (bool)self->domains_;
-  s.writeInt<uint8_t>(hasArray);
-  if (hasArray) {
-    ArrayStorage::serializeArrayStorage(s, self->domains_.get(s.getRuntime()));
-  }
-
-  // funcNames_ : GCPointer<PropStorage> is also ArrayStorage. Serialize it with
-  // JSError.
-  hasArray = (bool)self->funcNames_;
-  s.writeInt<uint8_t>(hasArray);
-  if (hasArray) {
-    ArrayStorage::serializeArrayStorage(
-        s, self->funcNames_.get(s.getRuntime()));
-  }
+  s.writeRelocation(self->domains_.get(s.getRuntime()));
+  s.writeRelocation(self->funcNames_.get(s.getRuntime()));
   s.writeInt<uint8_t>(self->catchable_);
   s.endObject(cell);
 }
@@ -79,22 +66,8 @@ void ErrorDeserialize(Deserializer &d, CellKind kind) {
 }
 
 JSError::JSError(Deserializer &d) : JSObject(d, &vt.base) {
-  // Deserialize domains.
-  if (d.readInt<uint8_t>()) {
-    domains_.set(
-        d.getRuntime(),
-        ArrayStorage::deserializeArrayStorage(d),
-        &d.getRuntime()->getHeap());
-  }
-
-  // Deserialize funcNames_.
-  if (d.readInt<uint8_t>()) {
-    funcNames_.set(
-        d.getRuntime(),
-        ArrayStorage::deserializeArrayStorage(d),
-        &d.getRuntime()->getHeap());
-  }
-
+  d.readRelocation(&domains_, RelocationKind::GCPointer);
+  d.readRelocation(&funcNames_, RelocationKind::GCPointer);
   catchable_ = d.readInt<uint8_t>();
 }
 #endif
@@ -197,7 +170,7 @@ PseudoHandle<JSError> JSError::create(
       runtime,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSError>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, numOverlapSlots<JSError>()),
       catchable);
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
@@ -316,22 +289,19 @@ static Handle<PropStorage> getCallStackFunctionNames(
     if (auto callableHandle = Handle<Callable>::dyn_vmcast(
             Handle<>(&cf.getCalleeClosureOrCBRef()))) {
       NamedPropertyDescriptor desc;
-      JSObject *propObj = JSObject::getNamedDescriptor(
-          callableHandle,
-          runtime,
-          Predefined::getSymbolID(Predefined::displayName),
-          desc);
+      JSObject *propObj = JSObject::getNamedDescriptorPredefined(
+          callableHandle, runtime, Predefined::displayName, desc);
 
       if (!propObj) {
-        propObj = JSObject::getNamedDescriptor(
-            callableHandle,
-            runtime,
-            Predefined::getSymbolID(Predefined::name),
-            desc);
+        propObj = JSObject::getNamedDescriptorPredefined(
+            callableHandle, runtime, Predefined::name, desc);
       }
 
-      if (propObj && !desc.flags.accessor && !desc.flags.proxyObject) {
-        name = JSObject::getNamedSlotValue(propObj, runtime, desc);
+      if (propObj && !desc.flags.accessor &&
+          LLVM_LIKELY(!desc.flags.proxyObject) &&
+          LLVM_LIKELY(!desc.flags.hostObject)) {
+        name = JSObject::getNamedSlotValueUnsafe(propObj, runtime, desc)
+                   .unboxToHV(runtime);
       } else if (desc.flags.proxyObject) {
         name = HermesValue::encodeStringValue(
             runtime->getPredefinedString(Predefined::proxyTrap));
@@ -348,7 +318,9 @@ static Handle<PropStorage> getCallStackFunctionNames(
       runtime->clearThrownValue();
       return Runtime::makeNullHandle<PropStorage>();
     }
-    names->set(namesIndex, name.getHermesValue(), &runtime->getHeap());
+    auto shv =
+        SmallHermesValue::encodeHermesValue(name.getHermesValue(), runtime);
+    names->set(namesIndex, shv, &runtime->getHeap());
     ++namesIndex;
     gcScope.flushToMarker(marker);
   }
@@ -375,12 +347,12 @@ ExecutionStatus JSError::recordStackTrace(
   }
 
   StackTracePtr stack{new StackTrace()};
-  auto domainsRes = ArrayStorage::create(runtime, 1);
+  auto domainsRes = ArrayStorageSmall::create(runtime, 1);
   if (LLVM_UNLIKELY(domainsRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto domains = runtime->makeMutableHandle<ArrayStorage>(
-      vmcast<ArrayStorage>(*domainsRes));
+  auto domains = runtime->makeMutableHandle<ArrayStorageSmall>(
+      vmcast<ArrayStorageSmall>(*domainsRes));
 
   // Add the domain to the domains list, provided that it's not the same as the
   // last domain in the list. This allows us to save storage with a constant
@@ -391,10 +363,11 @@ ExecutionStatus JSError::recordStackTrace(
     GCScopeMarkerRAII marker{runtime};
     Handle<Domain> domain = codeBlock->getRuntimeModule()->getDomain(runtime);
     if (domains->size() > 0 &&
-        vmcast<Domain>(domains->at(domains->size() - 1)) == domain.get()) {
+        vmcast<Domain>(domains->at(domains->size() - 1).getObject(runtime)) ==
+            domain.get()) {
       return ExecutionStatus::RETURNED;
     }
-    return ArrayStorage::push_back(domains, runtime, domain);
+    return ArrayStorageSmall::push_back(domains, runtime, domain);
   };
 
   if (!skipTopFrame) {
@@ -483,7 +456,7 @@ bool JSError::appendFunctionNameAtIndex(
         index < selfHandle->funcNames_.get(runtime)->size() &&
         "Index out of bounds");
     name = dyn_vmcast<StringPrimitive>(
-        selfHandle->funcNames_.get(runtime)->at(index));
+        selfHandle->funcNames_.get(runtime)->at(index).unboxToHV(runtime));
   }
 
   if (!name || name->getStringLength() == 0) {

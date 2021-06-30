@@ -36,7 +36,7 @@ ESPRIMA_OMITTED_KEYS_COMMON = {"loc", "range", "errors"}
 # key is the type of a node, and value is the set of keys of a child node that
 # needs to be omitted.
 HERMES_OMITTED_KEYS = {
-    "ImportDeclaration": {"importKind"},
+    "ImportDeclaration": {"importKind", "attributes"},
     "ImportSpecifier": {"importKind"},
     "ExportNamedDeclaration": {"exportKind"},
     "ExportAllDeclaration": {"exportKind"},
@@ -56,7 +56,7 @@ ESPRIMA_OMITTED_KEYS = {
     "Program": {"tokens", "sourceType", "comments"},
     "Literal": {"raw"},
     "StringLiteralTypeAnnotation": {"raw"},
-    "ImportDeclaration": {"importKind"},
+    "ImportDeclaration": {"importKind", "attributes"},
     "ImportSpecifier": {"importKind"},
     "ExportNamedDeclaration": {"exportKind"},
     "ExportAllDeclaration": {"exportKind"},
@@ -125,6 +125,9 @@ class EsprimaTestRunner:
                 del ast["directive"]
         if ast["type"] == "Identifier" and ast["name"] == "this":
             del ast["optional"]
+        if ast["type"] == "ClassProperty" or ast["type"] == "ClassPrivateProperty":
+            if not ast["optional"]:
+                del ast["optional"]
         # convert the literal node types to ESTree standard form
         if ast["type"] in HERMES_LITERAL_NODE_TYPES:
             if ast["type"] == "NullLiteral":

@@ -139,7 +139,9 @@ class YoungGen : public GCGeneration {
   void sweepAndInstallForwardingPointers(GenGC *gc, SweepResult *sweepResult);
 
   /// See GCGeneration.h for more information.
-  void updateReferences(GenGC *gc, SweepResult::VTablesRemaining &vTables);
+  void updateReferences(
+      GenGC *gc,
+      SweepResult::KindAndSizesRemaining &kindAndSizes);
 
   /// Moves any objects on the young-gen's finalizable object list that have
   /// been moved to the old generation to that generation's finalizable object
@@ -160,6 +162,7 @@ class YoungGen : public GCGeneration {
   /// redirect *hv to point where the already-installed forwarding pointer
   /// points.
   void ensureReferentCopied(HermesValue *hv);
+  void ensureReferentCopied(SmallHermesValue *hv);
 
   /// If *ptrLoc is a pointer into the current generation, check
   /// whether the referent has already been evacuated.  If not, copy

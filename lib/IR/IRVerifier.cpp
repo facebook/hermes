@@ -754,6 +754,13 @@ void Verifier::visitHBCAllocObjectFromBufferInst(
       "Cannot allocate an empty HBCAllocObjectFromBufferInst");
 }
 
+void Verifier::visitAllocObjectLiteralInst(
+    const hermes::AllocObjectLiteralInst &Inst) {
+  Assert(
+      Inst.getKeyValuePairCount() > 0,
+      "Cannot allocate an empty AllocObjectLiteralInst");
+}
+
 void Verifier::visitHBCGetGlobalObjectInst(const HBCGetGlobalObjectInst &Inst) {
   // Nothing to verify at this point.
 }

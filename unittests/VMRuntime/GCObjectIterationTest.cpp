@@ -5,14 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
-#ifndef NDEBUG
-
 #include "EmptyCell.h"
 #include "TestHelpers.h"
+#include "hermes/Support/Algorithms.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/GC.h"
-#include "hermes/VM/GenGCHeapSegment.h"
 #include "hermes/VM/HeapAlign.h"
 
 #include "gtest/gtest.h"
@@ -21,20 +18,20 @@ using namespace hermes::vm;
 
 namespace {
 
-const MetadataTableForTests getMetadataTable() {
-  static const Metadata table[] = {Metadata()};
-  return MetadataTableForTests(table);
-}
-
 TEST(GCObjectIterationTest, ForAllObjsGetsAllObjects) {
-  auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfigLarge);
+  auto runtime = DummyRuntime::create(kTestGCConfigLarge);
   DummyRuntime &rt = *runtime;
   auto &gc = rt.getHeap();
 
-  // 2/3 the size of a segment.
+  // For Hades and GenGC, ensure that we iterate across multiple segments.
   constexpr size_t kLargeSize =
-      heapAlignSize((GenGCHeapSegment::maxSize() / 3) * 2);
-  using LargeCell = VarSizedEmptyCell<kLargeSize>;
+#ifdef HERMESVM_GC_MALLOC
+      1024 * 1024
+#else
+      heapAlignSize((GC::maxAllocationSize() / 3) * 2)
+#endif
+      ;
+  using LargeCell = EmptyCell<kLargeSize>;
   // Divide by 8 bytes per HermesValue to get elements.
   GCCell *largeCell0 = LargeCell::create(rt);
   rt.pointerRoots.push_back(&largeCell0);
@@ -59,6 +56,3 @@ TEST(GCObjectIterationTest, ForAllObjsGetsAllObjects) {
 }
 
 } // namespace
-
-#endif // !NDEBUG
-#endif // HERMESVM_GC_NONCONTIG_GENERATIONAL

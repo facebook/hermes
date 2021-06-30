@@ -15,109 +15,77 @@ using namespace hermes::vm;
 
 namespace {
 
-struct Type1 : public GCCell {
-  static VTable vt;
-  int tag1;
-  // Need to meet minimum allocation size requirements.
-  uint64_t dummy_{0};
-  uint64_t dummy2_{0};
-
-  explicit Type1(GC *gc, int64_t tag) : GCCell(gc, &vt), tag1(tag) {}
-
-  static Type1 *create(DummyRuntime *runtime, int64_t tag) {
-    return runtime->makeAFixed<Type1>(&runtime->getHeap(), tag);
-  }
-  static bool classof(const GCCell *cell) {
-    return cell->getVT() == &vt;
-  }
-};
-VTable Type1::vt(CellKind::UninitializedKind, sizeof(Type1));
-
-struct Type2 : public GCCell {
-  static VTable vt;
-  int tag2;
-  // Need to meet minimum allocation size requirements.
-  uint64_t dummy_{0};
-  uint64_t dummy2_{0};
-
-  explicit Type2(GC *gc, int64_t tag) : GCCell(gc, &vt), tag2(tag) {}
-  static Type2 *create(DummyRuntime *runtime, int64_t tag) {
-    return runtime->makeAFixed<Type2>(&runtime->getHeap(), tag);
-  }
-  static bool classof(const GCCell *cell) {
-    return cell->getVT() == &vt;
-  }
-};
-VTable Type2::vt(CellKind::UninitializedKind, sizeof(Type2));
-
-MetadataTableForTests getMetadataTable() {
-  static const Metadata storage[] = {Metadata(), Metadata()};
-  return MetadataTableForTests(storage);
-}
-
 TEST(CastingTest, SmokeTest) {
-  auto rt = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);
+  auto rt = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &runtime = *rt;
   GCScope gcScope(&runtime);
 
   const int TAG1 = 1234;
-  const int TAG2 = 5678;
+  const SymbolID TAG2 = SymbolID::unsafeCreate(4567);
 
-  auto h1 = runtime.makeHandle(
-      HermesValue::encodeObjectValue(Type1::create(&runtime, TAG1)));
+  const auto HVTAG1 = HermesValue::encodeNumberValue(1234);
+  // Using a Symbol here gives us a completely different internal representation
+  // than the HV (even when HV32 is disabled), and works around the fact that
+  // SmallHermesValue does not support DummyRuntime.
+  const auto SHVTAG2 = SmallHermesValue::encodeSymbolValue(TAG2);
+
+  auto h1 =
+      runtime.makeHandle(ArrayStorage::createForTest(&runtime.getHeap(), 1));
+  h1->set(0, HVTAG1, &runtime.getHeap());
   auto h2 = runtime.makeHandle(
-      HermesValue::encodeObjectValue(Type2::create(&runtime, TAG2)));
+      ArrayStorageSmall::createForTest(&runtime.getHeap(), 1));
+  h2->set(0, SHVTAG2, &runtime.getHeap());
 
-  GCCell *p1 = (GCCell *)h1.get().getObject();
-  GCCell *p2 = (GCCell *)h2.get().getObject();
+  GCCell *p1 = h1.get();
+  GCCell *p2 = h2.get();
 
   auto v1 = HermesValue::encodeObjectValue(p1);
   auto v2 = HermesValue::encodeObjectValue(p2);
   auto nullv = HermesValue::encodeObjectValue(nullptr);
 
-  EXPECT_EQ(TAG1, vmcast<Type1>(p1)->tag1);
-  EXPECT_EQ(TAG2, vmcast<Type2>(p2)->tag2);
-  EXPECT_EQ(TAG1, vmcast<Type1>(v1)->tag1);
-  EXPECT_EQ(TAG2, vmcast<Type2>(v2)->tag2);
+  EXPECT_EQ(TAG1, vmcast<ArrayStorage>(p1)->at(0).getNumber());
+  EXPECT_EQ(TAG2, vmcast<ArrayStorageSmall>(p2)->at(0).getSymbol());
+  EXPECT_EQ(TAG1, vmcast<ArrayStorage>(v1)->at(0).getNumber());
+  EXPECT_EQ(TAG2, vmcast<ArrayStorageSmall>(v2)->at(0).getSymbol());
 
-  EXPECT_EQ(TAG1, vmcast_or_null<Type1>(p1)->tag1);
-  EXPECT_EQ(TAG2, vmcast_or_null<Type2>(p2)->tag2);
-  EXPECT_EQ(TAG1, vmcast_or_null<Type1>(v1)->tag1);
-  EXPECT_EQ(TAG2, vmcast_or_null<Type2>(v2)->tag2);
+  EXPECT_EQ(TAG1, vmcast_or_null<ArrayStorage>(p1)->at(0).getNumber());
+  EXPECT_EQ(TAG2, vmcast_or_null<ArrayStorageSmall>(p2)->at(0).getSymbol());
+  EXPECT_EQ(TAG1, vmcast_or_null<ArrayStorage>(v1)->at(0).getNumber());
+  EXPECT_EQ(TAG2, vmcast_or_null<ArrayStorageSmall>(v2)->at(0).getSymbol());
 
-  EXPECT_EQ(nullptr, vmcast_or_null<Type1>(nullptr));
-  EXPECT_EQ(nullptr, vmcast_or_null<Type1>(nullv));
+  EXPECT_EQ(nullptr, vmcast_or_null<ArrayStorage>(nullptr));
+  EXPECT_EQ(nullptr, vmcast_or_null<ArrayStorage>(nullv));
 
-  EXPECT_NE(nullptr, dyn_vmcast<Type1>(p1));
-  EXPECT_NE(nullptr, dyn_vmcast<Type2>(p2));
-  EXPECT_NE(nullptr, dyn_vmcast<Type1>(v1));
-  EXPECT_NE(nullptr, dyn_vmcast<Type2>(v2));
+  EXPECT_NE(nullptr, dyn_vmcast<ArrayStorage>(p1));
+  EXPECT_NE(nullptr, dyn_vmcast<ArrayStorageSmall>(p2));
+  EXPECT_NE(nullptr, dyn_vmcast<ArrayStorage>(v1));
+  EXPECT_NE(nullptr, dyn_vmcast<ArrayStorageSmall>(v2));
 
-  EXPECT_EQ(nullptr, dyn_vmcast<Type1>(p2));
-  EXPECT_EQ(nullptr, dyn_vmcast<Type2>(p1));
-  EXPECT_EQ(nullptr, dyn_vmcast<Type1>(v2));
-  EXPECT_EQ(nullptr, dyn_vmcast<Type2>(v1));
+  EXPECT_EQ(nullptr, dyn_vmcast<ArrayStorage>(p2));
+  EXPECT_EQ(nullptr, dyn_vmcast<ArrayStorageSmall>(p1));
+  EXPECT_EQ(nullptr, dyn_vmcast<ArrayStorage>(v2));
+  EXPECT_EQ(nullptr, dyn_vmcast<ArrayStorageSmall>(v1));
 
-  EXPECT_EQ(TAG1, dyn_vmcast<Type1>(p1)->tag1);
-  EXPECT_EQ(TAG2, dyn_vmcast<Type2>(p2)->tag2);
-  EXPECT_EQ(TAG1, dyn_vmcast<Type1>(v1)->tag1);
-  EXPECT_EQ(TAG2, dyn_vmcast<Type2>(v2)->tag2);
+  EXPECT_EQ(TAG1, dyn_vmcast<ArrayStorage>(p1)->at(0).getNumber());
+  EXPECT_EQ(TAG2, dyn_vmcast<ArrayStorageSmall>(p2)->at(0).getSymbol());
+  EXPECT_EQ(TAG1, dyn_vmcast<ArrayStorage>(v1)->at(0).getNumber());
+  EXPECT_EQ(TAG2, dyn_vmcast<ArrayStorageSmall>(v2)->at(0).getSymbol());
 
-  EXPECT_NE(nullptr, dyn_vmcast_or_null<Type1>(p1));
-  EXPECT_NE(nullptr, dyn_vmcast_or_null<Type2>(p2));
-  EXPECT_NE(nullptr, dyn_vmcast_or_null<Type1>(v1));
-  EXPECT_NE(nullptr, dyn_vmcast_or_null<Type2>(v2));
+  EXPECT_NE(nullptr, dyn_vmcast_or_null<ArrayStorage>(p1));
+  EXPECT_NE(nullptr, dyn_vmcast_or_null<ArrayStorageSmall>(p2));
+  EXPECT_NE(nullptr, dyn_vmcast_or_null<ArrayStorage>(v1));
+  EXPECT_NE(nullptr, dyn_vmcast_or_null<ArrayStorageSmall>(v2));
 
-  EXPECT_EQ(nullptr, dyn_vmcast_or_null<Type1>(p2));
-  EXPECT_EQ(nullptr, dyn_vmcast_or_null<Type2>(p1));
-  EXPECT_EQ(nullptr, dyn_vmcast_or_null<Type1>(v2));
-  EXPECT_EQ(nullptr, dyn_vmcast_or_null<Type2>(v1));
-  EXPECT_EQ(nullptr, dyn_vmcast_or_null<Type1>(nullptr));
-  EXPECT_EQ(nullptr, dyn_vmcast_or_null<Type1>(nullv));
+  EXPECT_EQ(nullptr, dyn_vmcast_or_null<ArrayStorage>(p2));
+  EXPECT_EQ(nullptr, dyn_vmcast_or_null<ArrayStorageSmall>(p1));
+  EXPECT_EQ(nullptr, dyn_vmcast_or_null<ArrayStorage>(v2));
+  EXPECT_EQ(nullptr, dyn_vmcast_or_null<ArrayStorageSmall>(v1));
+  EXPECT_EQ(nullptr, dyn_vmcast_or_null<ArrayStorage>(nullptr));
+  EXPECT_EQ(nullptr, dyn_vmcast_or_null<ArrayStorage>(nullv));
 
-  EXPECT_EQ(TAG1, dyn_vmcast_or_null<Type1>(p1)->tag1);
-  EXPECT_EQ(TAG2, dyn_vmcast_or_null<Type2>(p2)->tag2);
-  EXPECT_EQ(TAG1, dyn_vmcast_or_null<Type1>(v1)->tag1);
-  EXPECT_EQ(TAG2, dyn_vmcast_or_null<Type2>(v2)->tag2);
+  EXPECT_EQ(TAG1, dyn_vmcast_or_null<ArrayStorage>(p1)->at(0).getNumber());
+  EXPECT_EQ(TAG2, dyn_vmcast_or_null<ArrayStorageSmall>(p2)->at(0).getSymbol());
+  EXPECT_EQ(TAG1, dyn_vmcast_or_null<ArrayStorage>(v1)->at(0).getNumber());
+  EXPECT_EQ(TAG2, dyn_vmcast_or_null<ArrayStorageSmall>(v2)->at(0).getSymbol());
 }
 } // namespace

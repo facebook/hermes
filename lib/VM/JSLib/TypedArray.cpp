@@ -46,9 +46,11 @@ T convertNegativeBoundsRelativeToLength(T value, T length) {
 CallResult<Handle<JSTypedArrayBase>> typedArrayCreate(
     Runtime *runtime,
     Handle<Callable> constructor,
-    HermesValue length) {
+    uint64_t length) {
   auto callRes = Callable::executeConstruct1(
-      constructor, runtime, runtime->makeHandle(length));
+      constructor,
+      runtime,
+      runtime->makeHandle(HermesValue::encodeNumberValue(length)));
   if (callRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -60,15 +62,11 @@ CallResult<Handle<JSTypedArrayBase>> typedArrayCreate(
   auto newTypedArray =
       Handle<JSTypedArrayBase>::vmcast(runtime->makeHandle(std::move(retval)));
   // If `argumentList` is a single number, then
-  if (LLVM_LIKELY(length.isNumber())) {
-    // If the value of newTypedArray's [[ArrayLength]] internal slot <
-    // argumentList[0], throw a TypeError exception.
-    if (LLVM_UNLIKELY(
-            newTypedArray->getLength() <
-            length.getNumberAs<JSTypedArrayBase::size_type>())) {
-      return runtime->raiseTypeError(
-          "TypedArray constructor created an array that was too small");
-    }
+  // If the value of newTypedArray's [[ArrayLength]] internal slot <
+  // argumentList[0], throw a TypeError exception.
+  if (LLVM_UNLIKELY(newTypedArray->getLength() < length)) {
+    return runtime->raiseTypeError(
+        "TypedArray constructor created an array that was too small");
   }
   return newTypedArray;
 }
@@ -515,8 +513,12 @@ typedArrayConstructor(void *, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue>
 typedArrayFrom(void *, Runtime *runtime, NativeArgs args) {
   auto source = args.getArgHandle(0);
+  CallResult<bool> isConstructorRes = isConstructor(runtime, args.getThisArg());
+  if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
   // 1. Let C be the this value.
-  if (!isConstructor(runtime, args.getThisArg())) {
+  if (!*isConstructorRes) {
     // 2. If IsConstructor(C) is false, throw a TypeError exception.
     return runtime->raiseTypeError(
         "Cannot invoke when the this is not a constructor");
@@ -552,7 +554,7 @@ typedArrayFrom(void *, Runtime *runtime, NativeArgs args) {
   if (intRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto len = intRes.getValue();
+  uint64_t len = intRes.getValue().getNumberAs<uint64_t>();
   // 8. Let targetObj be ? TypedArrayCreate(C, len).
   auto targetObj = typedArrayCreate(runtime, C, len);
   if (targetObj == ExecutionStatus::EXCEPTION) {
@@ -561,7 +563,7 @@ typedArrayFrom(void *, Runtime *runtime, NativeArgs args) {
   // 9. Let k be 0.
   MutableHandle<> k(runtime, HermesValue::encodeNumberValue(0));
   // 10. Repeat, while k < len.
-  for (; k->getNumberAs<uint64_t>() < len.getNumberAs<uint64_t>();
+  for (; k->getNumberAs<uint64_t>() < len;
        k = HermesValue::encodeNumberValue(k->getNumberAs<uint64_t>() + 1)) {
     GCScopeMarkerRAII marker{runtime};
     // a - b. Get the value of the property at k.
@@ -598,11 +600,15 @@ typedArrayFrom(void *, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue>
 typedArrayOf(void *, Runtime *runtime, NativeArgs args) {
   // 1. Let len be the actual number of arguments passed to this function.
-  auto len = args.getArgCount();
+  uint64_t len = args.getArgCount();
   // 2. Let items be the List of arguments passed to this function. (args is
   // items).
   // 3. Let C be the this value.
-  if (!isConstructor(runtime, args.getThisArg())) {
+  CallResult<bool> isConstructorRes = isConstructor(runtime, args.getThisArg());
+  if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (!*isConstructorRes) {
     // 4. If IsConstructor(C) is false, throw a TypeError exception.
     return runtime->raiseTypeError(
         "Cannot invoke %TypedArray%.of when %TypedArray% is not a constructor "
@@ -610,8 +616,7 @@ typedArrayOf(void *, Runtime *runtime, NativeArgs args) {
   }
   auto C = Handle<Callable>::vmcast(args.getThisHandle());
   // 5. Let newObj be ? TypedArrayCreate(C, len).
-  auto newObj =
-      typedArrayCreate(runtime, C, HermesValue::encodeNumberValue(len));
+  auto newObj = typedArrayCreate(runtime, C, len);
   if (newObj == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1084,7 +1089,7 @@ typedArrayPrototypeMapFilter(void *ctx, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto values = runtime->makeHandle(std::move(*arrRes));
+  auto values = *arrRes;
   JSTypedArrayBase::size_type insert = 0;
   CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
   if (map) {
@@ -1175,7 +1180,7 @@ typedArrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strings = runtime->makeHandle(std::move(*arrRes));
+  auto strings = *arrRes;
 
   // Call toString on all the elements of the array.
   {
@@ -1497,7 +1502,7 @@ typedArrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strings = runtime->makeHandle(std::move(*arrRes));
+  auto strings = *arrRes;
 
   // Index into the array.
   MutableHandle<> storage(runtime);

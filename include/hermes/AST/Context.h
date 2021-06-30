@@ -169,6 +169,9 @@ class Context {
   /// Whether to parse Flow type syntax.
   ParseFlowSetting parseFlow_{ParseFlowSetting::NONE};
 
+  /// Whether to parse TypeScript syntax.
+  bool parseTS_{false};
+
   /// If non-null, the resolution table which resolves static require().
   const std::unique_ptr<ResolutionTable> resolutionTable_;
 
@@ -308,6 +311,18 @@ class Context {
   }
   bool getParseFlowAmbiguous() const {
     return parseFlow_ == ParseFlowSetting::ALL;
+  }
+
+  void setParseTS(bool parseTS) {
+    parseTS_ = parseTS;
+  }
+  bool getParseTS() const {
+    return parseTS_;
+  }
+
+  /// \return true if either TS or Flow is being parsed.
+  bool getParseTypes() const {
+    return getParseFlow() || getParseTS();
   }
 
   bool isLazyCompilation() const {

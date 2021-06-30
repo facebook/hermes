@@ -246,13 +246,20 @@ class SamplingProfiler {
   /// Refer to Domain.h for relationship between Domain and RuntimeModule.
   void registerDomain(Domain *domain);
 
+  enum class SaveDomains { No, Yes };
+
   /// Walk runtime stack frames and store in \p sampleStorage.
   /// This function is called from signal handler so should obey all
   /// rules of signal handler(no lock, no memory allocation etc...)
   /// \param startIndex specifies the start index in \p sampleStorage to fill.
+  /// \param saveDomains specifies whether domains should be registered, so that
+  /// they are available when dumping a trace.
   /// \return total number of stack frames captured in \p sampleStorage
   /// including existing frames before \p startIndex.
-  uint32_t walkRuntimeStack(StackTrace &sampleStorage, uint32_t startIndex = 0);
+  uint32_t walkRuntimeStack(
+      StackTrace &sampleStorage,
+      SaveDomains saveDomains,
+      uint32_t startIndex = 0);
 
   /// Record JS stack at time of the GC.
   void recordPreGCStack(const std::string &extraInfo);

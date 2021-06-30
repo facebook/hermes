@@ -8,9 +8,9 @@
 #include "gtest/gtest.h"
 
 #include "EmptyCell.h"
-#include "ExtStringForTest.h"
 #include "TestHelpers.h"
 #include "hermes/VM/AlignedHeapSegment.h"
+#include "hermes/VM/DummyObject.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCCell.h"
 
@@ -24,45 +24,15 @@ using namespace hermes::vm;
 
 namespace {
 
-MetadataTableForTests getMetadataTable() {
-  static_assert(
-      cellKindsContiguousAscending(
-          CellKind::UninitializedKind,
-          CellKind::FillerCellKind,
-          CellKind::FreelistKind,
-          CellKind::DynamicUTF16StringPrimitiveKind,
-          CellKind::DynamicASCIIStringPrimitiveKind,
-          CellKind::BufferedUTF16StringPrimitiveKind,
-          CellKind::BufferedASCIIStringPrimitiveKind,
-          CellKind::DynamicUniquedUTF16StringPrimitiveKind,
-          CellKind::DynamicUniquedASCIIStringPrimitiveKind,
-          CellKind::ExternalUTF16StringPrimitiveKind,
-          CellKind::ExternalASCIIStringPrimitiveKind),
-      "Cell kinds in unexpected order");
-  static const Metadata storage[] = {
-      Metadata(), // Uninitialized
-      Metadata(), // FillerCell
-      Metadata(), // Freelist
-      Metadata(), // DynamicUTF16StringPrimitive
-      Metadata(), // DynamicASCIIStringPrimitive
-      Metadata(), // BufferedUTF16StringPrimitive
-      Metadata(), // BufferedASCIIStringPrimitive
-      Metadata(), // DynamicUniquedUTF16StringPrimitive
-      Metadata(), // DynamicUniquedASCIIStringPrimitive
-      Metadata(), // ExternalUTF16StringPrimitive
-      Metadata(), // ExternalASCIIStringPrimitive
-  };
-  return MetadataTableForTests(storage);
-}
-
 TEST(GCFragmentationTest, TestCoalescing) {
   // Fill the heap with increasingly larger cells, in order to test
   // defragmentation code.
-  static const size_t kNumSegments = 3;
+  static const size_t kNumSegments = 4;
+  static const size_t kNumOGSegments = kNumSegments - 1;
   static const size_t kHeapSize = AlignedHeapSegment::maxSize() * kNumSegments;
   static const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSize);
 
-  auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
+  auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
 
   using SixteenthCell = EmptyCell<AlignedHeapSegment::maxSize() / 16>;
@@ -71,7 +41,7 @@ TEST(GCFragmentationTest, TestCoalescing) {
 
   {
     GCScope scope(&rt);
-    for (size_t i = 0; i < 16 * kNumSegments; i++)
+    for (size_t i = 0; i < 16 * kNumOGSegments; i++)
       rt.makeHandle(SixteenthCell::create(rt));
   }
 
@@ -83,11 +53,9 @@ TEST(GCFragmentationTest, TestCoalescing) {
 
   {
     GCScope scope(&rt);
-    for (size_t i = 0; i < 8 * kNumSegments; i++)
+    for (size_t i = 0; i < 8 * kNumOGSegments; i++)
       rt.makeHandle(EighthCell::create(rt));
   }
-
-  rt.pointerRoots.clear();
 
 #if defined(HERMESVM_GC_HADES) || defined(HERMESVM_GC_RUNTIME)
   rt.collect();
@@ -95,7 +63,7 @@ TEST(GCFragmentationTest, TestCoalescing) {
 
   {
     GCScope scope(&rt);
-    for (size_t i = 0; i < 4 * kNumSegments; i++)
+    for (size_t i = 0; i < 4 * kNumOGSegments; i++)
       rt.makeHandle(QuarterCell::create(rt));
   }
 }
@@ -112,9 +80,10 @@ TEST(GCFragmentationTest, Test) {
 
   static const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
 
-  auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
+  auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
+  GCScope scope{&rt};
 
   // Number of bytes allocatable in the old generation, assuming the heap
   // contains \c kHeapSizeHint bytes in total.
@@ -126,20 +95,16 @@ TEST(GCFragmentationTest, Test) {
   // A cell whose size makes it awkward to pack into an allocation region.
   using AwkwardCell = EmptyCell<GenGCHeapSegment::maxSize() / 2 + 1>;
 
-  std::deque<GCCell *> roots;
-
   { // (1) Allocate enough segment cells to fill every segment in the old gen
     //     except the last two (the full one and the overhang).
     const int cells = kOGSizeHint / SegmentCell::size() - 1;
     for (int i = 0; i < cells; ++i) {
-      roots.push_back(SegmentCell::create(rt));
-      rt.pointerRoots.push_back(&roots.back());
+      rt.makeHandle(SegmentCell::create(rt));
     }
   }
 
   { // (2) Then allocate an awkward cell.
-    roots.push_back(AwkwardCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(AwkwardCell::create(rt));
   }
 
   { // (3) Force a full collection to make sure all the allocated cells so far
@@ -164,8 +129,7 @@ TEST(GCFragmentationTest, Test) {
   { // (4) Without increasing `E`, it is impossible to fit another awkward cell
     //     into the old generation, so let's see what happens when we try.
 
-    roots.push_back(AwkwardCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(AwkwardCell::create(rt));
 
     // This should cause a young generation collection, evacuating the rooted
     // awkward cell above to the old generation.
@@ -189,7 +153,7 @@ TEST(GCFragmentationTest, ExternalMemoryTest) {
   // \c kHeapSize bytes in total.
   static constexpr size_t kOGSize = kHeapSize - GenGCHeapSegment::maxSize();
 
-  auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
+  auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
 
@@ -198,26 +162,23 @@ TEST(GCFragmentationTest, ExternalMemoryTest) {
   // A cell whose size makes it awkward to pack into an allocation region.
   using AwkwardCell = EmptyCell<GenGCHeapSegment::maxSize() / 2 + 1>;
 
-  std::deque<GCCell *> roots;
+  GCScope scope{&rt};
 
   { // (1) Allocate enough segment cells to fill every segment in the old gen
     //     except the last two.
     const int cells = kOGSize / SegmentCell::size() - 2;
     for (int i = 0; i < cells; ++i) {
-      roots.push_back(SegmentCell::create(rt));
-      rt.pointerRoots.push_back(&roots.back());
+      rt.makeHandle(SegmentCell::create(rt));
     }
   }
 
   { // (2) Then allocate an awkward cell.
-    roots.push_back(AwkwardCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(AwkwardCell::create(rt));
   }
 
-  // Now allocate an external string half as big as a segment.
-  roots.push_back(
-      ExtStringForTest::create(rt, GenGCHeapSegment::maxSize() / 2));
-  rt.pointerRoots.push_back(&roots.back());
+  // Now allocate external memory half as big as a segment.
+  auto extObj = rt.makeHandle(testhelpers::DummyObject::create(&gc));
+  extObj->acquireExtMem(&gc, GenGCHeapSegment::maxSize() / 2);
 
   { // (3) Force a full collection to make sure all the allocated cells so far
     //     end up in the old generation.  The external memory charge should also
@@ -243,8 +204,7 @@ TEST(GCFragmentationTest, ExternalMemoryTest) {
   { // (4) Without increasing `E`, it is impossible to fit another awkward cell
     //     into the old generation, so let's see what happens when we try.
 
-    roots.push_back(AwkwardCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(AwkwardCell::create(rt));
 
     // This should cause a young generation collection, evacuating the rooted
     // awkward cell above to the old generation.

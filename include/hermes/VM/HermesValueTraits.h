@@ -45,9 +45,7 @@ HERMES_VM_GCOBJECT(Environment);
 HERMES_VM_GCOBJECT(DictPropertyMap);
 HERMES_VM_GCOBJECT(HiddenClass);
 HERMES_VM_GCOBJECT(PropertyAccessor);
-HERMES_VM_GCOBJECT(ArrayStorage);
 HERMES_VM_GCOBJECT(JSArray);
-HERMES_VM_GCOBJECT(PrimitiveBox);
 HERMES_VM_GCOBJECT(JSArrayBuffer);
 HERMES_VM_GCOBJECT(JSDataView);
 HERMES_VM_GCOBJECT(JSTypedArrayBase);
@@ -72,9 +70,12 @@ HERMES_VM_GCOBJECT(JSCallableProxy);
 HERMES_VM_GCOBJECT(DecoratedObject);
 HERMES_VM_GCOBJECT(HostObject);
 HERMES_VM_GCOBJECT(SegmentedArray);
-#ifdef UNIT_TEST
-HERMES_VM_GCOBJECT(TestCell);
-#endif
+
+namespace testhelpers {
+struct DummyObject;
+}
+template <>
+struct IsGCObject<testhelpers::DummyObject> : public std::true_type {};
 
 // Typed arrays use templates and cannot use the macro above
 template <typename T, CellKind C>
@@ -115,6 +116,11 @@ template <size_t Size>
 struct EmptyCell;
 template <size_t Size>
 struct IsGCObject<EmptyCell<Size>> : public std::true_type {};
+
+template <typename HVType>
+class ArrayStorageBase;
+template <typename HVType>
+struct IsGCObject<ArrayStorageBase<HVType>> : public std::true_type {};
 
 template <typename T, bool isGCObject = IsGCObject<T>::value>
 struct HermesValueTraits;

@@ -14,6 +14,7 @@
 
 #include "llvh/ADT/DenseMap.h"
 
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -23,15 +24,22 @@ namespace vm {
 /// Function code coverage profiler.
 class CodeCoverageProfiler {
  public:
-  /// Executed function info of a single runtime.
+  /// Executed function info.
   struct FuncInfo {
-    FuncInfo(uint32_t moduleId, uint32_t funcVirtualOffset)
-        : moduleId(moduleId), funcVirtualOffset(funcVirtualOffset) {}
+    FuncInfo(
+        uint32_t moduleId,
+        uint32_t funcVirtualOffset,
+        std::string debugInfo)
+        : moduleId(moduleId),
+          funcVirtualOffset(funcVirtualOffset),
+          debugInfo(debugInfo) {}
 
     /// Runtime module unique id.
     uint32_t moduleId;
     /// Executed function bytecode virtual offset.
     uint32_t funcVirtualOffset;
+
+    std::string debugInfo;
   };
 
   explicit CodeCoverageProfiler(Runtime *runtime) : runtime_(runtime) {
@@ -44,8 +52,10 @@ class CodeCoverageProfiler {
     allProfilers().erase(this);
   }
 
-  /// \return executed function information for a single runtime.
-  static std::vector<CodeCoverageProfiler::FuncInfo> getExecutedFunctions();
+  /// \return executed function information indexed per runtime.
+  static std::
+      unordered_map<std::string, std::vector<CodeCoverageProfiler::FuncInfo>>
+      getExecutedFunctions();
 
   /// globally enable the code coverage profiler.
   static void enableGlobal() {
@@ -93,14 +103,8 @@ class CodeCoverageProfiler {
   std::vector<CodeCoverageProfiler::FuncInfo> getExecutedFunctionsLocal();
 
  private:
-  static std::unordered_set<CodeCoverageProfiler *> &allProfilers() {
-    static std::unordered_set<CodeCoverageProfiler *> allProfilers;
-    return allProfilers;
-  }
-  static std::mutex &globalMutex() {
-    static std::mutex globalMutex;
-    return globalMutex;
-  }
+  static std::unordered_set<CodeCoverageProfiler *> &allProfilers();
+  static std::mutex &globalMutex();
   static std::atomic<bool> &globalEnabledFlag() {
     static std::atomic<bool> globalEnabledFlag;
     return globalEnabledFlag;

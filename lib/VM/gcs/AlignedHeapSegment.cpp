@@ -35,6 +35,19 @@ void AlignedHeapSegment::Contents::protectGuardPage(
   }
 }
 
+AlignedHeapSegment::AlignedHeapSegment(AlignedStorage storage)
+    : storage_(std::move(storage)) {
+  // Storage end must be page-aligned so that markUnused below stays in
+  // segment.
+  assert(
+      reinterpret_cast<uintptr_t>(hiLim()) % oscompat::page_size() == 0 &&
+      "storage end must be page-aligned");
+  if (*this) {
+    new (contents()) Contents();
+    contents()->protectGuardPage(oscompat::ProtectMode::None);
+  }
+}
+
 AlignedHeapSegment::~AlignedHeapSegment() {
   if (lowLim() == nullptr) {
     return;

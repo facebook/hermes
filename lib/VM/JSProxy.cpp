@@ -82,6 +82,7 @@ void ProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSProxy>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSProxy *>(cell);
+  mb.setVTable(&JSProxy::vt.base);
   mb.addField("@target", &self->slots_.target);
   mb.addField("@handler", &self->slots_.handler);
 }
@@ -113,7 +114,7 @@ PseudoHandle<JSProxy> JSProxy::create(Runtime *runtime) {
       Handle<JSObject>::vmcast(&runtime->objectPrototype),
       runtime->getHiddenClassForPrototype(
           runtime->objectPrototypeRawPtr,
-          JSObject::numOverlapSlots<JSProxy>() + ANONYMOUS_PROPERTY_SLOTS));
+          JSObject::numOverlapSlots<JSProxy>()));
 
   proxy->flags_.proxyObject = true;
 
@@ -501,14 +502,20 @@ CallResult<bool> JSProxy::getOwnProperty(
   if (trapRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   // 7. If trap is undefined, then
   if (!*trapRes) {
     //   a. Return ? target.[[GetOwnProperty]](P).
     return valueOrAccessor
         ? JSObject::getOwnComputedDescriptor(
-              target, runtime, nameValHandle, desc, *valueOrAccessor)
+              target,
+              runtime,
+              nameValHandle,
+              tmpPropNameStorage,
+              desc,
+              *valueOrAccessor)
         : JSObject::getOwnComputedDescriptor(
-              target, runtime, nameValHandle, desc);
+              target, runtime, nameValHandle, tmpPropNameStorage, desc);
   }
   // 8. Let trapResultObj be ? Call(trap, handler, « target, P »).
   // 9. If Type(trapResultObj) is neither Object nor Undefined, throw a
@@ -527,7 +534,12 @@ CallResult<bool> JSProxy::getOwnProperty(
   ComputedPropertyDescriptor targetDesc;
   MutableHandle<> targetValueOrAccessor{runtime};
   CallResult<bool> targetDescRes = JSObject::getOwnComputedDescriptor(
-      target, runtime, nameValHandle, targetDesc, targetValueOrAccessor);
+      target,
+      runtime,
+      nameValHandle,
+      tmpPropNameStorage,
+      targetDesc,
+      targetValueOrAccessor);
   if (targetDescRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -693,8 +705,14 @@ CallResult<bool> JSProxy::defineOwnProperty(
   // 11. Let targetDesc be ? target.[[GetOwnProperty]](P).
   ComputedPropertyDescriptor targetDesc;
   MutableHandle<> targetDescValueOrAccessor{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   CallResult<bool> targetDescRes = JSObject::getOwnComputedDescriptor(
-      target, runtime, nameValHandle, targetDesc, targetDescValueOrAccessor);
+      target,
+      runtime,
+      nameValHandle,
+      tmpPropNameStorage,
+      targetDesc,
+      targetDescValueOrAccessor);
   if (targetDescRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -771,8 +789,9 @@ CallResult<bool> hasWithTrap(
   if (!trapResult) {
     //   a. Let targetDesc be ? target.[[GetOwnProperty]](P).
     ComputedPropertyDescriptor targetDesc;
+    MutableHandle<SymbolID> tmpPropNameStorage{runtime};
     CallResult<bool> targetDescRes = JSObject::getOwnComputedDescriptor(
-        target, runtime, nameValHandle, targetDesc);
+        target, runtime, nameValHandle, tmpPropNameStorage, targetDesc);
     if (targetDescRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -888,8 +907,14 @@ CallResult<PseudoHandle<>> getWithTrap(
   // 9. Let targetDesc be ? target.[[GetOwnProperty]](P).
   ComputedPropertyDescriptor targetDesc;
   MutableHandle<> targetValueOrAccessor{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   CallResult<bool> targetDescRes = JSObject::getOwnComputedDescriptor(
-      target, runtime, nameValHandle, targetDesc, targetValueOrAccessor);
+      target,
+      runtime,
+      nameValHandle,
+      tmpPropNameStorage,
+      targetDesc,
+      targetValueOrAccessor);
   if (targetDescRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1021,8 +1046,14 @@ CallResult<bool> setWithTrap(
   // 10. Let targetDesc be ? target.[[GetOwnProperty]](P).
   ComputedPropertyDescriptor targetDesc;
   MutableHandle<> targetValueOrAccessor{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   CallResult<bool> targetDescRes = JSObject::getOwnComputedDescriptor(
-      target, runtime, nameValHandle, targetDesc, targetValueOrAccessor);
+      target,
+      runtime,
+      nameValHandle,
+      tmpPropNameStorage,
+      targetDesc,
+      targetValueOrAccessor);
   if (targetDescRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1158,8 +1189,14 @@ CallResult<bool> deleteWithTrap(
   // 10. Let targetDesc be ? target.[[GetOwnProperty]](P).
   ComputedPropertyDescriptor targetDesc;
   MutableHandle<> targetValueOrAccessor{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   CallResult<bool> targetDescRes = JSObject::getOwnComputedDescriptor(
-      target, runtime, nameValHandle, targetDesc, targetValueOrAccessor);
+      target,
+      runtime,
+      nameValHandle,
+      tmpPropNameStorage,
+      targetDesc,
+      targetValueOrAccessor);
   if (targetDescRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1258,7 +1295,7 @@ CallResult<PseudoHandle<JSArray>> filterKeys(
        (okFlags.getIncludeNonSymbols() ? 0 : 1)) == 1 &&
       "Exactly one of Symbols or non-Symbols is included here");
   bool onlySymbols = okFlags.getIncludeSymbols();
-  uint32_t len = JSArray::getLength(*keys);
+  uint32_t len = JSArray::getLength(*keys, runtime);
   uint32_t count = 0;
   // Verify this loop is alloc-free
   {
@@ -1279,7 +1316,7 @@ CallResult<PseudoHandle<JSArray>> filterKeys(
   if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> resultHandle = runtime->makeHandle(std::move(*resultRes));
+  Handle<JSArray> resultHandle = *resultRes;
   MutableHandle<> elemHandle{runtime};
   uint32_t resultIndex = 0;
   GCScopeMarkerRAII marker{runtime};
@@ -1384,7 +1421,7 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   if (LLVM_UNLIKELY(trapResultRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> trapResult = runtime->makeHandle(std::move(*trapResultRes));
+  Handle<JSArray> trapResult = *trapResultRes;
   CallResult<PseudoHandle<OrderedHashMap>> dupcheckRes =
       OrderedHashMap::create(runtime);
   if (LLVM_UNLIKELY(dupcheckRes == ExecutionStatus::EXCEPTION)) {
@@ -1442,13 +1479,19 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   // 14. Let targetConfigurableKeys be a new empty List.
   // 15. Let targetNonconfigurableKeys be a new empty List.
   llvh::SmallSet<uint32_t, 8> nonConfigurable;
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   // 16. For each element key of targetKeys, do
   auto marker2 = runtime->getTopGCScope()->createMarker();
-  for (uint32_t i = 0, len = JSArray::getLength(*targetKeys); i < len; ++i) {
+  for (uint32_t i = 0, len = JSArray::getLength(*targetKeys, runtime); i < len;
+       ++i) {
     //   a. Let desc be ? target.[[GetOwnProperty]](key).
     ComputedPropertyDescriptor desc;
     CallResult<bool> descRes = JSObject::getOwnComputedDescriptor(
-        target, runtime, runtime->makeHandle(targetKeys->at(runtime, i)), desc);
+        target,
+        runtime,
+        runtime->makeHandle(targetKeys->at(runtime, i)),
+        tmpPropNameStorage,
+        desc);
     if (descRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1472,7 +1515,9 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   //   a. If key is not an element of uncheckedResultKeys, throw a TypeError
   //   exception. b. Remove key from uncheckedResultKeys.
   auto inTrapResult = [&runtime, &trapResult](HermesValue value) {
-    for (uint32_t j = 0, len = JSArray::getLength(*trapResult); j < len; ++j) {
+    for (uint32_t j = 0, len = JSArray::getLength(*trapResult, runtime);
+         j < len;
+         ++j) {
       if (isSameValue(value, trapResult->at(runtime, j))) {
         return true;
       }
@@ -1492,7 +1537,8 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   // 21. For each key that is an element of targetConfigurableKeys, do
   //   a. If key is not an element of uncheckedResultKeys, throw a TypeError
   //   exception. b. Remove key from uncheckedResultKeys.
-  for (uint32_t i = 0, len = JSArray::getLength(*targetKeys); i < len; ++i) {
+  for (uint32_t i = 0, len = JSArray::getLength(*targetKeys, runtime); i < len;
+       ++i) {
     if (nonConfigurable.count(i) > 0) {
       continue;
     }
@@ -1502,7 +1548,8 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
     }
   }
   // 22. If uncheckedResultKeys is not empty, throw a TypeError exception.
-  if (JSArray::getLength(*targetKeys) != JSArray::getLength(*trapResult)) {
+  if (JSArray::getLength(*targetKeys, runtime) !=
+      JSArray::getLength(*trapResult, runtime)) {
     return runtime->raiseTypeError(
         "ownKeys target is non-extensible but trap result keys differ from target keys");
   }

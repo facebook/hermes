@@ -153,15 +153,13 @@ Handle<JSObject> createObjectConstructor(Runtime *runtime) {
       ctx,
       objectGetOwnPropertyNames,
       1);
-  if (runtime->hasES6Symbol()) {
-    defineMethod(
-        runtime,
-        cons,
-        Predefined::getSymbolID(Predefined::getOwnPropertySymbols),
-        ctx,
-        objectGetOwnPropertySymbols,
-        1);
-  }
+  defineMethod(
+      runtime,
+      cons,
+      Predefined::getSymbolID(Predefined::getOwnPropertySymbols),
+      ctx,
+      objectGetOwnPropertySymbols,
+      1);
   defineMethod(
       runtime,
       cons,
@@ -334,9 +332,10 @@ CallResult<HermesValue> getOwnPropertyDescriptor(
     Handle<> key) {
   ComputedPropertyDescriptor desc;
   MutableHandle<> valueOrAccessor{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   {
     auto result = JSObject::getOwnComputedDescriptor(
-        object, runtime, key, desc, valueOrAccessor);
+        object, runtime, key, tmpPropNameStorage, desc, valueOrAccessor);
     if (result == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -399,7 +398,7 @@ objectGetOwnPropertyDescriptors(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   Handle<JSArray> ownKeys = *ownKeysRes;
-  uint32_t len = JSArray::getLength(*ownKeys);
+  uint32_t len = JSArray::getLength(*ownKeys, runtime);
 
   // 3. Let descriptors be ! ObjectCreate(%ObjectPrototype%).
   auto descriptors = runtime->makeHandle<JSObject>(JSObject::create(runtime));
@@ -605,12 +604,13 @@ objectDefinePropertiesInternal(Runtime *runtime, Handle<> obj, Handle<> props) {
   // We store each property name here. This is hoisted out of the loop
   // to avoid allocating a handle per property.
   MutableHandle<> propName{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
 
   for (unsigned i = 0, e = propNames->getEndIndex(); i < e; ++i) {
     propName = propNames->at(runtime, i);
     ComputedPropertyDescriptor desc;
     CallResult<bool> descRes = JSObject::getOwnComputedDescriptor(
-        propsHandle, runtime, propName, desc);
+        propsHandle, runtime, propName, tmpPropNameStorage, desc);
     if (LLVM_UNLIKELY(descRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -619,7 +619,7 @@ objectDefinePropertiesInternal(Runtime *runtime, Handle<> obj, Handle<> props) {
     }
     CallResult<PseudoHandle<>> propRes = propsHandle->isProxyObject()
         ? JSObject::getComputed_RJS(propsHandle, runtime, propName)
-        : JSObject::getComputedPropertyValue_RJS(
+        : JSObject::getComputedPropertyValueInternal_RJS(
               propsHandle, runtime, propsHandle, desc);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -802,17 +802,18 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
     return *namesRes;
   }
   auto names = runtime->makeHandle<JSArray>(*namesRes);
-  uint32_t len = JSArray::getLength(*names);
+  uint32_t len = JSArray::getLength(*names, runtime);
 
   auto propertiesRes = JSArray::create(runtime, len, len);
   if (LLVM_UNLIKELY(propertiesRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto properties = runtime->makeHandle(std::move(*propertiesRes));
+  auto properties = *propertiesRes;
 
   MutableHandle<StringPrimitive> name{runtime};
   MutableHandle<> value{runtime};
   MutableHandle<> entry{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
 
   uint32_t targetIdx = 0;
 
@@ -821,14 +822,20 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
   // modified by a getter at any point in the loop, so `i` will not necessarily
   // correspond to `targetIdx`.
   auto marker = gcScope.createMarker();
-  for (uint32_t i = 0, len = JSArray::getLength(*names); i < len; ++i) {
+  for (uint32_t i = 0, len = JSArray::getLength(*names, runtime); i < len;
+       ++i) {
     gcScope.flushToMarker(marker);
 
     name = names->at(runtime, i).getString();
     // By calling getString, name is guaranteed to be primitive.
     ComputedPropertyDescriptor desc;
     CallResult<bool> descRes = JSObject::getOwnComputedPrimitiveDescriptor(
-        objHandle, runtime, name, JSObject::IgnoreProxy::Yes, desc);
+        objHandle,
+        runtime,
+        name,
+        JSObject::IgnoreProxy::Yes,
+        tmpPropNameStorage,
+        desc);
     if (LLVM_UNLIKELY(descRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -836,7 +843,8 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
       // Ensure that the property is still there and that it is enumerable,
       // as descriptors can be modified by a getter at any point.
 
-      auto valueRes = JSObject::getComputedPropertyValue_RJS(
+      // Safe to call the Internal version here because we ignored Proxy above.
+      auto valueRes = JSObject::getComputedPropertyValueInternal_RJS(
           objHandle, runtime, objHandle, desc);
       if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -1000,6 +1008,8 @@ objectAssign(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<> nextKeyHandle{runtime};
   // Handle for the property value being copied.
   MutableHandle<> propValueHandle{runtime};
+  // Handle for the property value being copied.
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
 
   for (uint32_t argIdx = 1; argIdx < args.getArgCount(); argIdx++) {
     GCScopeMarkerRAII markerOuter(gcScope);
@@ -1042,7 +1052,7 @@ objectAssign(void *, Runtime *runtime, NativeArgs args) {
 
       // 5.c.i. Let desc be from.[[GetOwnProperty]](nextKey).
       auto descCr = JSObject::getOwnComputedDescriptor(
-          fromHandle, runtime, nextKeyHandle, desc);
+          fromHandle, runtime, nextKeyHandle, tmpPropNameStorage, desc);
       if (LLVM_UNLIKELY(descCr == ExecutionStatus::EXCEPTION)) {
         // 5.c.ii. ReturnIfAbrupt(desc).
         return ExecutionStatus::EXCEPTION;
@@ -1061,7 +1071,12 @@ objectAssign(void *, Runtime *runtime, NativeArgs args) {
       CallResult<PseudoHandle<>> propRes = fromHandle->isProxyObject()
           ? JSObject::getComputed_RJS(fromHandle, runtime, nextKeyHandle)
           : JSObject::getComputedPropertyValue_RJS(
-                fromHandle, runtime, fromHandle, desc);
+                fromHandle,
+                runtime,
+                fromHandle,
+                tmpPropNameStorage,
+                desc,
+                nextKeyHandle);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         // 5.c.iii.2. ReturnIfAbrupt(propValue).
         return ExecutionStatus::EXCEPTION;
@@ -1266,8 +1281,9 @@ objectPrototypeHasOwnProperty(void *, Runtime *runtime, NativeArgs args) {
 
   /// 3. Return ? HasOwnProperty(O, P).
   ComputedPropertyDescriptor desc;
-  CallResult<bool> hasProp =
-      JSObject::getOwnComputedDescriptor(O, runtime, P, desc);
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
+  CallResult<bool> hasProp = JSObject::getOwnComputedDescriptor(
+      O, runtime, P, tmpPropNameStorage, desc);
   if (LLVM_UNLIKELY(hasProp == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1322,6 +1338,7 @@ objectPrototypeIsPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 objectPrototypePropertyIsEnumerable(void *, Runtime *runtime, NativeArgs args) {
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   auto res = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1331,6 +1348,7 @@ objectPrototypePropertyIsEnumerable(void *, Runtime *runtime, NativeArgs args) {
       runtime->makeHandle<JSObject>(res.getValue()),
       runtime,
       args.getArgHandle(0),
+      tmpPropNameStorage,
       desc);
   if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1480,10 +1498,11 @@ CallResult<PropertyAccessor *> lookupAccessor(
       runtime->makeMutableHandle(vmcast<JSObject>(*res));
   Handle<> key = args.getArgHandle(0);
   MutableHandle<> valueOrAccessor{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   do {
     ComputedPropertyDescriptor desc;
     CallResult<bool> definedRes = JSObject::getOwnComputedDescriptor(
-        O, runtime, key, desc, valueOrAccessor);
+        O, runtime, key, tmpPropNameStorage, desc, valueOrAccessor);
     if (LLVM_UNLIKELY(definedRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

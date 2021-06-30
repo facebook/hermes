@@ -11,7 +11,8 @@
 namespace hermes {
 
 using namespace hermes::hbc;
-using namespace hermes::inst;
+using inst::OpCode;
+using inst::OperandType;
 
 /// Visitor to calculate each basic block's static instruction count
 /// in a function.

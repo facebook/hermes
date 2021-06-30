@@ -33,6 +33,7 @@ void GeneratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSGenerator>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSGenerator *>(cell);
+  mb.setVTable(&JSGenerator::vt.base);
   mb.addField("innerFunction", &self->innerFunction_);
 }
 
@@ -64,11 +65,12 @@ CallResult<PseudoHandle<JSGenerator>> JSGenerator::create(
       runtime,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<JSGenerator>() + ANONYMOUS_PROPERTY_SLOTS));
+          *parentHandle, numOverlapSlots<JSGenerator>()));
   cell->innerFunction_.set(runtime, *innerFunction, &runtime->getHeap());
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

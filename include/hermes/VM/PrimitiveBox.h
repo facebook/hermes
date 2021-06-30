@@ -13,56 +13,12 @@
 namespace hermes {
 namespace vm {
 
-/// A container object for primitive HermesValues.
-class PrimitiveBox : public JSObject {
+/// String object.
+class JSString final : public JSObject {
  public:
   using Super = JSObject;
 
-#ifdef HERMESVM_SERIALIZE
-  PrimitiveBox(Deserializer &d, const VTable *vt);
-#endif
-
-  // We need one slot for the boxed value.
-  static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS =
-      Super::ANONYMOUS_PROPERTY_SLOTS + 1;
-
-  static bool classof(const GCCell *cell) {
-    return kindInRange(
-        cell->getKind(),
-        CellKind::PrimitiveBoxKind_first,
-        CellKind::PrimitiveBoxKind_last);
-  }
-
-  /// \return the [[PrimitiveValue]] internal property.
-  static HermesValue getPrimitiveValue(JSObject *self, Runtime *runtime) {
-    return JSObject::getInternalProperty(
-        self, runtime, PrimitiveBox::primitiveValuePropIndex());
-  }
-
-  /// Set the [[PrimitiveValue]] internal property.
-  static void
-  setPrimitiveValue(JSObject *self, Runtime *runtime, HermesValue value) {
-    return JSObject::setInternalProperty(
-        self, runtime, PrimitiveBox::primitiveValuePropIndex(), value);
-  }
-
- protected:
-  PrimitiveBox(
-      Runtime *runtime,
-      const VTable *vt,
-      JSObject *parent,
-      HiddenClass *clazz)
-      : JSObject(runtime, vt, parent, clazz) {}
-
-  static constexpr SlotIndex primitiveValuePropIndex() {
-    return numOverlapSlots<PrimitiveBox>() + ANONYMOUS_PROPERTY_SLOTS - 1;
-  }
-};
-
-/// String object.
-class JSString final : public PrimitiveBox {
- public:
-  using Super = PrimitiveBox;
+  friend void StringObjectBuildMeta(const GCCell *, Metadata::Builder &);
 
 #ifdef HERMESVM_SERIALIZE
   JSString(Deserializer &d, const VTable *vt);
@@ -98,14 +54,19 @@ class JSString final : public PrimitiveBox {
       Handle<StringPrimitive> string);
 
   /// Return the [[PrimitiveValue]] internal property as a string.
-  static const StringPrimitive *getPrimitiveString(
-      JSObject *self,
+  static StringPrimitive *getPrimitiveString(
+      const JSString *self,
       Runtime *runtime) {
-    return getPrimitiveValue(self, runtime).getString();
+    return self->primitiveValue_.get(runtime);
   }
 
-  JSString(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
-      : PrimitiveBox(runtime, &vt.base, *parent, *clazz) {
+  JSString(
+      Runtime *runtime,
+      Handle<StringPrimitive> value,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz)
+      : JSObject(runtime, &vt.base, *parent, *clazz),
+        primitiveValue_(runtime, *value, &runtime->getHeap()) {
     flags_.indexedStorage = true;
     flags_.fastIndexProperties = true;
   }
@@ -155,6 +116,9 @@ class JSString final : public PrimitiveBox {
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       uint32_t index);
+
+ private:
+  GCPointer<StringPrimitive> primitiveValue_;
 };
 
 /// StringIterator object.
@@ -207,7 +171,7 @@ class JSStringIterator : public JSObject {
 };
 
 /// Number object.
-class JSNumber final : public PrimitiveBox {
+class JSNumber final : public JSObject {
  public:
   static const ObjectVTable vt;
 
@@ -228,12 +192,27 @@ class JSNumber final : public PrimitiveBox {
     return create(runtime, 0.0, prototype);
   }
 
-  JSNumber(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
-      : PrimitiveBox(runtime, &vt.base, *parent, *clazz) {}
+  JSNumber(
+      Runtime *runtime,
+      double value,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz)
+      : JSObject(runtime, &vt.base, *parent, *clazz), primitiveValue_(value) {}
+
+  double getPrimitiveNumber() const {
+    return primitiveValue_;
+  }
+
+  void setPrimitiveNumber(double value) {
+    primitiveValue_ = value;
+  }
+
+ private:
+  double primitiveValue_;
 };
 
 /// Boolean object.
-class JSBoolean final : public PrimitiveBox {
+class JSBoolean final : public JSObject {
  public:
   static const ObjectVTable vt;
 
@@ -256,13 +235,27 @@ class JSBoolean final : public PrimitiveBox {
 
   JSBoolean(
       Runtime *runtime,
+      bool value,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
-      : PrimitiveBox(runtime, &vt.base, *parent, *clazz) {}
+      : JSObject(runtime, &vt.base, *parent, *clazz), primitiveValue_(value) {}
+
+  void setPrimitiveBoolean(bool b) {
+    primitiveValue_ = b;
+  }
+
+  bool getPrimitiveBoolean() const {
+    return primitiveValue_;
+  }
+
+ private:
+  bool primitiveValue_;
 };
 
 /// Symbol object.
-class JSSymbol final : public PrimitiveBox {
+class JSSymbol final : public JSObject {
+  friend void SymbolObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+
  public:
   static const ObjectVTable vt;
 
@@ -279,22 +272,24 @@ class JSSymbol final : public PrimitiveBox {
     return create(runtime, SymbolID{}, prototype);
   }
 
-  /// Return the [[PrimitiveValue]] internal property as a string.
-  static const PseudoHandle<SymbolID> getPrimitiveSymbol(
-      JSObject *self,
-      Runtime *runtime) {
-    return PseudoHandle<SymbolID>::create(
-        HermesValueTraits<SymbolID>::decode(getPrimitiveValue(self, runtime)));
+  /// Return the [[PrimitiveValue]] internal property as a SymbolID.
+  PseudoHandle<SymbolID> getPrimitiveSymbol() const {
+    return PseudoHandle<SymbolID>::create(primitiveValue_);
   }
 
 #ifdef HERMESVM_SERIALIZE
   explicit JSSymbol(Deserializer &d);
-
-  friend void SymbolObjectDeserialize(Deserializer &d, CellKind kind);
 #endif
 
-  JSSymbol(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
-      : PrimitiveBox(runtime, &vt.base, *parent, *clazz) {}
+  JSSymbol(
+      Runtime *runtime,
+      SymbolID value,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz)
+      : JSObject(runtime, &vt.base, *parent, *clazz), primitiveValue_(value) {}
+
+ private:
+  const GCSymbolID primitiveValue_;
 };
 
 } // namespace vm

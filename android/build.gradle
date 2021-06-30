@@ -7,7 +7,7 @@
 
 // This must be consistent with the release_version in npm/package.json
 // and the HERMES_RELEASE_VERSION in CMakeLists.txt
-def release_version = "0.7.0"
+def release_version = "0.8.0"
 
 buildscript {
   ext {
@@ -47,7 +47,7 @@ buildscript {
     jcenter()
   }
   dependencies {
-    classpath 'com.android.tools.build:gradle:4.0.0'
+    classpath 'com.android.tools.build:gradle:4.1.0'
     classpath("de.undercouch:gradle-download-task:4.0.2")
   }
 }

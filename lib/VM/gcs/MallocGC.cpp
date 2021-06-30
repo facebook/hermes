@@ -15,6 +15,7 @@
 #include "hermes/VM/HiddenClass.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/RootAndSlotAcceptorDefault.h"
+#include "hermes/VM/SmallHermesValue-inline.h"
 
 #include "llvh/Support/Debug.h"
 
@@ -28,7 +29,7 @@ namespace vm {
 static const char *kGCName = "malloc";
 
 struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
-                                         public WeakRootAcceptorDefault {
+                                         public WeakAcceptorDefault {
   MallocGC &gc;
   std::vector<CellHeader *> worklist_;
 
@@ -43,7 +44,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
 
   MarkingAcceptor(MallocGC &gc)
       : RootAndSlotAcceptorDefault(gc.getPointerBase()),
-        WeakRootAcceptorDefault(gc.getPointerBase()),
+        WeakAcceptorDefault(gc.getPointerBase()),
         gc(gc),
         markedSymbols_(gc.gcCallbacks_->getSymbolsEnd()) {}
 
@@ -81,7 +82,6 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
         auto *newVarCell =
             reinterpret_cast<VariableSizeRuntimeCell *>(newLocation->data());
         newVarCell->setSizeFromGC(trimmedSize);
-        newVarCell->getVT()->trim(newVarCell);
       }
       // Make sure to put an element on the worklist that is at the updated
       // location. Don't update the stale address that is about to be free'd.
@@ -106,8 +106,9 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       // Trim the cell. This is fine to do with malloc'ed memory because the
       // original size is retained by malloc.
       gcheapsize_t origSize = cell->getAllocatedSize();
-      if (cell->getVT()->getTrimmedSize(cell, origSize) != origSize) {
-        cell->getVT()->trim(cell);
+      gcheapsize_t newSize = cell->getVT()->getTrimmedSize(cell, origSize);
+      if (newSize != origSize) {
+        static_cast<VariableSizeRuntimeCell *>(cell)->setSizeFromGC(newSize);
       }
       if (cell->getKind() == CellKind::WeakMapKind) {
         reachableWeakMaps_.push_back(vmcast<JSWeakMap>(cell));
@@ -147,6 +148,16 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
     }
   }
 
+  void acceptSHV(SmallHermesValue &hv) override {
+    if (hv.isPointer()) {
+      GCCell *ptr = static_cast<GCCell *>(hv.getPointer(pointerBase_));
+      accept(ptr);
+      hv.setInGC(hv.updatePointer(ptr, pointerBase_), &gc);
+    } else if (hv.isSymbol()) {
+      acceptSym(hv.getSymbol());
+    }
+  }
+
   void acceptSym(SymbolID sym) override {
     if (sym.isInvalid()) {
       return;
@@ -173,7 +184,6 @@ gcheapsize_t MallocGC::Size::minStorageFootprint() const {
 }
 
 MallocGC::MallocGC(
-    MetadataTable metaTable,
     GCCallbacks *gcCallbacks,
     PointerBase *pointerBase,
     const GCConfig &gcConfig,
@@ -181,7 +191,6 @@ MallocGC::MallocGC(
     std::shared_ptr<StorageProvider> provider,
     experiments::VMExperimentFlags vmExperimentFlags)
     : GCBase(
-          metaTable,
           gcCallbacks,
           pointerBase,
           gcConfig,
@@ -242,7 +251,7 @@ void MallocGC::checkWellFormed() {
   CheckHeapWellFormedAcceptor acceptor(*this);
   DroppingAcceptor<CheckHeapWellFormedAcceptor> nameAcceptor{acceptor};
   markRoots(nameAcceptor, true);
-  markWeakRoots(acceptor);
+  markWeakRoots(acceptor, /*markLongLived*/ true);
   for (CellHeader *header : pointers_) {
     GCCell *cell = header->data();
     assert(cell->isValid() && "Invalid cell encountered in heap");
@@ -287,7 +296,7 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
     completeWeakMapMarking(acceptor);
 
     // Update weak roots references.
-    markWeakRoots(acceptor);
+    markWeakRoots(acceptor, /*markLongLived*/ true);
 
     // Update and remove weak references.
     updateWeakReferences();
@@ -477,7 +486,9 @@ void MallocGC::getHeapInfo(HeapInfo &info) {
 }
 void MallocGC::getHeapInfoWithMallocSize(HeapInfo &info) {
   getHeapInfo(info);
-  info.mallocSizeEstimate = 0;
+  GCBase::getHeapInfoWithMallocSize(info);
+  // Note that info.mallocSizeEstimate is initialized by the call to
+  // GCBase::getHeapInfoWithMallocSize.
   for (CellHeader *header : pointers_) {
     GCCell *cell = header->data();
     info.mallocSizeEstimate += cell->getVT()->getMallocSize(cell);
@@ -618,3 +629,4 @@ template void *MallocGC::alloc</*FixedSize*/ false, HasFinalizer::No>(
 
 } // namespace vm
 } // namespace hermes
+#undef DEBUG_TYPE

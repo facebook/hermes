@@ -742,10 +742,13 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
   ESTree::PropertyNode *protoProperty = nullptr;
 
   uint32_t numComputed = 0;
+  bool hasSpread = false;
 
   for (auto &P : Expr->_properties) {
-    if (llvh::isa<ESTree::SpreadElementNode>(&P))
+    if (llvh::isa<ESTree::SpreadElementNode>(&P)) {
+      hasSpread = true;
       continue;
+    }
 
     // We are reusing the storage, so make sure it is cleared at every
     // iteration.
@@ -768,10 +771,94 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       propValue->setSetter(cast<ESTree::FunctionExpressionNode>(prop->_value));
     } else {
       assert(prop->_kind->str() == "init" && "invalid PropertyNode kind");
-      propValue->setValue(prop->_value);
-      if (!protoProperty && propName == "__proto__")
-        protoProperty = prop;
+      // protoProperty should only be recorded if the property is not a method
+      // nor a shorthand value.
+      if (propName == "__proto__" && !prop->_method && !prop->_shorthand) {
+        if (!protoProperty) {
+          protoProperty = prop;
+        }
+      } else {
+        // We record the propValue if this is a regular property
+        propValue->setValue(prop->_value);
+      }
     }
+  }
+
+  bool useAllocObjectLiteral = false;
+
+  // Heuristically determine if we emit AllocObjectLiteral.
+  // We do so if there is no computed key, no __proto__, no spread element
+  // node, and object literal is not empty.
+  if (!protoProperty && numComputed == 0 && !hasSpread && propMap.size()) {
+    useAllocObjectLiteral = true;
+    // Iterate over propMap to check if there is an accessor we need
+    // to store. If so, we cannot use AllocObjectLiteral.
+    for (const auto &propValue : propMap) {
+      if (propValue.second.isAccessor) {
+        useAllocObjectLiteral = false;
+        break;
+      }
+    }
+  }
+
+  // Special case in which AllocObjectLiteral is used.
+  if (useAllocObjectLiteral) {
+    AllocObjectLiteralInst::ObjectPropertyMap objPropMap;
+    // It is safe to assume that there is no computed keys, and
+    // no __proto__.
+    for (auto &P : Expr->_properties) {
+      auto *prop = cast<ESTree::PropertyNode>(&P);
+      assert(
+          !prop->_computed &&
+          "Cannot handle computed key in AllocObjectLiteral");
+
+      // We are reusing the storage, so make sure it is cleared at every
+      // iteration.
+      stringStorage.clear();
+
+      StringRef keyStr = propertyKeyAsString(stringStorage, prop->_key);
+      PropertyValue *propValue = &propMap[keyStr];
+      auto *Key = Builder.getLiteralString(keyStr);
+
+      if (propValue->isIRGenerated)
+        continue;
+
+      if (prop->_kind->str() == "get" || prop->_kind->str() == "set") {
+        // We can handle the case where a property is redefined as
+        // non-accessor at the end, in which we store the actual
+        // property here.
+        assert(
+            !propValue->isAccessor &&
+            "Cannot handle accessors in AllocObjectLiteral");
+        // No need to generate values for discarded accessors, since they
+        // will not have any side effect.
+        auto value = genExpression(
+            propValue->valueNode, Builder.createIdentifier(keyStr));
+        objPropMap.push_back(std::pair<LiteralString *, Value *>(Key, value));
+        propValue->isIRGenerated = true;
+        continue;
+      }
+
+      // Always generate the values.
+      auto value =
+          genExpression(prop->_value, Builder.createIdentifier(keyStr));
+
+      // Only store the value if it won't be overwritten.
+      if (propValue->valueNode == prop->_value) {
+        objPropMap.push_back(std::pair<LiteralString *, Value *>(Key, value));
+        propValue->isIRGenerated = true;
+      } else {
+        Builder.getModule()->getContext().getSourceErrorManager().warning(
+            propValue->getSourceRange(),
+            Twine("the property \"") + keyStr +
+                "\" was set multiple times in the object definition.");
+
+        Builder.getModule()->getContext().getSourceErrorManager().note(
+            prop->getSourceRange(), "The first definition was here.");
+      }
+    }
+
+    return Builder.createAllocObjectLiteralInst(objPropMap);
   }
 
   /// Attempt to determine whether we can directly use the value of the
@@ -899,8 +986,9 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
 
       propValue->isIRGenerated = true;
     } else {
-      // The __proto__ property requires special handling.
-      if (keyStr == "__proto__") {
+      // A __proto__ that needs special handling is a __proto__ that is not
+      // a method nor a shorthand value
+      if (keyStr == "__proto__" && !prop->_method && !prop->_shorthand) {
         if (prop == protoProperty) {
           // This is the first definition of __proto__. If we already used it
           // as an object parent we just skip it, but otherwise we must
@@ -917,7 +1005,9 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
                 {Obj, parent});
           }
         } else {
-          // __proto__ was defined more than once, which is an error.
+          // If this prop is not a method and not a shorthand value, and
+          // it is not the first protoProperty, then __proto__ was defined
+          // more than once, which is an error.
           Builder.getModule()->getContext().getSourceErrorManager().error(
               prop->getSourceRange(),
               "__proto__ was set multiple times in the object definition.");
@@ -950,7 +1040,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
             Twine("the property \"") + keyStr +
                 "\" was set multiple times in the object definition.");
 
-        Builder.getModule()->getContext().getSourceErrorManager().warning(
+        Builder.getModule()->getContext().getSourceErrorManager().note(
             prop->getSourceRange(), "The first definition was here.");
       }
     }

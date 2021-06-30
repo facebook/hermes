@@ -12,6 +12,8 @@
 namespace hermes {
 namespace vm {
 
+std::array<const VTable *, kNumCellKinds> VTable::vtableArray;
+
 std::string VTable::HeapSnapshotMetadata::nameForNode(GCCell *cell, GC *gc)
     const {
   std::string name;

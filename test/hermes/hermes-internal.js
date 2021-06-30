@@ -14,9 +14,12 @@
 // hasPromise
 // setPromiseRejectionTrackingHook
 // enablePromiseRejectionTracker
-var SAFE_FIELDS_COUNT = 4;
+// enqueueJob
+// useEngineQueue
+var SAFE_FIELDS_COUNT = 6;
 
 // Check that we can disable unsafe fields of HermesInternal.
+print(Object.getOwnPropertyNames(HermesInternal).length)
 print(Object.getOwnPropertyNames(HermesInternal).length !== SAFE_FIELDS_COUNT);
 //CHKHIE: true
 //CHKHID: false

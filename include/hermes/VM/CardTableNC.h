@@ -102,19 +102,16 @@ class CardTable {
   CardTable &operator=(const CardTable &) = delete;
   CardTable &operator=(CardTable &&) = delete;
 
-  /// Returns the card table index corresponding to the given address.  \pre \p
-  /// addr must be within the bounds of the segment owning this card table, that
-  /// is to say
+  /// Returns the card table index corresponding to a byte at the given address.
+  /// \pre \p addr must be within the bounds of the segment owning this card
+  /// table or at most 1 card after it, that is to say
   ///
-  ///    segment.lowLim() <= addr <= segment.hiLim()
+  ///    segment.lowLim() <= addr < segment.hiLim() + kCardSize
   ///
-  /// Notice that the interval is closed on both sides, even though
-  /// segment.hiLim() is the open endpoint of the memory region's interval.
-  /// This is in order to satisfy the equation
-  ///
-  ///     addressToIndex(segment.hiLim()) <= kValidIndices
-  ///
-  /// no matter where in the segment the card table is initialised.
+  /// Note that we allow the extra card after the segment in order to simplify
+  /// the logic for callers that are using this function to generate an open
+  /// interval of card indices. See \c dirtyCardsForAddressRange for an example
+  /// of how this is used.
   inline size_t addressToIndex(const void *addr) const LLVM_NO_SANITIZE("null");
 
   /// Returns the address corresponding to the given card table
@@ -248,7 +245,7 @@ class CardTable {
       size_t endIndex) const;
 
   /// Clean, or dirty, the indicated index ranges in the card table.
-  /// Ranges are inclusive: [from, to].
+  /// Ranges are half-open: [from, to).
   void cleanRange(size_t from, size_t to);
   void dirtyRange(size_t from, size_t to);
 
@@ -297,7 +294,9 @@ inline CardTable::Boundary::Boundary(size_t index, const char *address)
 inline size_t CardTable::addressToIndex(const void *addr) const {
   auto addrPtr = reinterpret_cast<const char *>(addr);
   assert(
-      base() <= addrPtr && addrPtr <= AlignedStorage::end(base()) &&
+      base() <= addrPtr &&
+      addrPtr < (static_cast<const char *>(AlignedStorage::end(base())) +
+                 kCardSize) &&
       "address is required to be within range.");
   return (addrPtr - base()) >> kLogCardSize;
 }

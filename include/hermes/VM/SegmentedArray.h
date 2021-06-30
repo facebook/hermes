@@ -81,18 +81,6 @@ class SegmentedArray final
     /// the segment with empty values.
     void setLength(Runtime *runtime, uint32_t newLength);
 
-    /// Same as above, except it doesn't fill with empty values.
-    /// It is the caller's responsibility to ensure that the newly used portion
-    /// will contain valid values before they are accessed (including accesses
-    /// by the GC).
-    /// \pre This cannot be called if kConcurrentGC is true, since the GC might
-    ///   read uninitialized memory even if the mutator wouldn't.
-    void setLengthWithoutFilling(uint32_t newLength) {
-      assert(!kConcurrentGC && "Cannot avoid filling for a concurrent GC");
-      assert(newLength <= kMaxLength && "Cannot set length to more than size");
-      length_.store(newLength, std::memory_order_release);
-    }
-
 #ifdef HERMESVM_SERIALIZE
     explicit Segment(Deserializer &d);
 
@@ -144,11 +132,19 @@ class SegmentedArray final
   /// is at most \c Segment::kMaxLength - 1.
   using InteriorIndex = uint32_t;
 
+  /// The number of slots a SegmentedArray with allocation size \p allocSize can
+  /// hold.
+  static constexpr size_type slotCapacityForAllocationSize(uint32_t allocSize) {
+    return (allocSize - allocationSizeForSlots(0)) / sizeof(GCHermesValue);
+  }
+
   /// The number of slots for either inline storage or segments that this
-  /// SegmentedArray can hold. This is decided at creation time. In order to
-  /// have more slots, a new SegmentedArray must be allocated.
+  /// SegmentedArray can hold. This is a function of the allocated size.
   /// NOTE: This can be changed during compaction.
-  size_type slotCapacity_;
+  size_type slotCapacity() const {
+    return slotCapacityForAllocationSize(getAllocatedSize());
+  }
+
   /// The number of slots that are currently valid. The \c size() is a derived
   /// field from this value.
   AtomicIfConcurrentGC<size_type> numSlotsUsed_;
@@ -376,28 +372,15 @@ class SegmentedArray final
       Metadata::Builder &mb);
 
  public:
-  SegmentedArray(Runtime *runtime, size_type capacity)
-      : VariableSizeRuntimeCell(
-            &runtime->getHeap(),
-            &vt,
-            allocationSizeForCapacity(capacity)),
-        slotCapacity_(numSlotsForCapacity(capacity)),
+  SegmentedArray(Runtime *runtime, uint32_t allocSize)
+      : VariableSizeRuntimeCell(&runtime->getHeap(), &vt, allocSize),
         numSlotsUsed_(0) {}
 
 #ifdef HERMESVM_SERIALIZE
-  /// Constructor used during deserialization. Takes argument \p slotCapacity
-  /// instead of \p capacity like in common constructor.
-  /// \param slotCapacity The number of slots for either inline storage or
-  /// segments that this SegmentedArray can hold.
-  SegmentedArray(
-      Runtime *runtime,
-      size_type slotCapacity,
-      size_type numSlotsUsed)
-      : VariableSizeRuntimeCell(
-            &runtime->getHeap(),
-            &vt,
-            allocationSizeForSlots(slotCapacity)),
-        slotCapacity_(slotCapacity),
+  /// Constructor used during deserialization. Allows number of used slots to be
+  /// initialized to a non-zero value.
+  SegmentedArray(Runtime *runtime, uint32_t allocSize, size_type numSlotsUsed)
+      : VariableSizeRuntimeCell(&runtime->getHeap(), &vt, allocSize),
         numSlotsUsed_(numSlotsUsed) {}
 #endif
  private:
@@ -434,17 +417,15 @@ class SegmentedArray final
   /// \return the number of slots that are needed to hold at least the requested
   /// capacity.
   static constexpr SegmentNumber numSlotsForCapacity(size_type capacity) {
-    // TODO(T31421960): Use if statements and local variables to clean this up.
-    return capacity <= kValueToSegmentThreshold
-        ? capacity
-        :
-        // Enough segments to hold the capacity without inline storage.
-        (llvh::alignTo<Segment::kMaxLength>(
-             capacity - kValueToSegmentThreshold) /
-         Segment::kMaxLength) +
-            // The slots for inline storage plus the slots need to hold the
-            // number of segments that can hold the capacity.
-            kValueToSegmentThreshold;
+    if (capacity <= kValueToSegmentThreshold)
+      return capacity;
+    // Enough segments to hold the capacity excluding inline storage.
+    const size_t numSegments = llvh::alignTo<Segment::kMaxLength>(
+                                   capacity - kValueToSegmentThreshold) /
+        Segment::kMaxLength;
+    // The slots for inline storage plus the slots need to hold the
+    // number of segments that can hold the capacity.
+    return kValueToSegmentThreshold + numSegments;
   }
 
   /// Given a TotalIndex \p index, \returns the index of the segment within the
@@ -498,7 +479,7 @@ class SegmentedArray final
   }
 
   /// Same as \c segmentAt, except for any segment, including ones between
-  /// numSlotsUsed_ and slotCapacity_.
+  /// numSlotsUsed_ and slotCapacity().
   GCHermesValue *segmentAtPossiblyUnallocated(SegmentNumber segment) {
     return const_cast<GCHermesValue *>(
         static_cast<const SegmentedArray *>(this)->segmentAtPossiblyUnallocated(
@@ -537,9 +518,10 @@ class SegmentedArray final
   /// This number does not represent the number of allocated segments, only the
   /// total number of segments that could exist.
   SegmentNumber numSegments() const {
-    return slotCapacity_ <= kValueToSegmentThreshold
+    const auto slotCap = slotCapacity();
+    return slotCap <= kValueToSegmentThreshold
         ? 0
-        : slotCapacity_ - kValueToSegmentThreshold;
+        : slotCap - kValueToSegmentThreshold;
   }
 
   /// \return the number of segments in active use by this SegmentedArray.
@@ -586,14 +568,11 @@ class SegmentedArray final
   void shrinkLeft(Runtime *runtime, size_type amount);
 
   /// Increases the size by \p amount, without doing any allocation.
-  /// \param fill If true, fill the newly usable space with empty HermesValues.
-  void
-  increaseSizeWithinCapacity(Runtime *runtime, size_type amount, bool fill);
+  void increaseSizeWithinCapacity(Runtime *runtime, size_type amount);
 
   /// Increases the size by \p amount, and adjusts segment sizes
   /// accordingly.
   /// NOTE: increasing size can potentially allocate new segments.
-  template <bool Fill>
   static PseudoHandle<SegmentedArray> increaseSize(
       Runtime *runtime,
       PseudoHandle<SegmentedArray> self,
@@ -613,23 +592,18 @@ class SegmentedArray final
   static constexpr SegmentNumber maxNumSegmentsWithoutOverflow();
 
   static gcheapsize_t _trimSizeCallback(const GCCell *self);
-  static void _trimCallback(GCCell *self);
 };
 
 constexpr SegmentedArray::size_type SegmentedArray::maxElements() {
-  // TODO(T31421960): Use local variables and std::min to clean this up.
-  return (maxNumSegments() <= maxNumSegmentsWithoutOverflow()
-              ? maxNumSegments()
-              : maxNumSegmentsWithoutOverflow()) *
-      Segment::kMaxLength +
-      kValueToSegmentThreshold;
+  return maxNumSegments() * Segment::kMaxLength + kValueToSegmentThreshold;
 }
 
 constexpr SegmentedArray::SegmentNumber SegmentedArray::maxNumSegments() {
-  return (
-      ((GC::maxAllocationSize() - allocationSizeForCapacity(0)) /
-       sizeof(GCHermesValue)) -
-      kValueToSegmentThreshold);
+  const SegmentedArray::SegmentNumber maxAllocSlots =
+      slotCapacityForAllocationSize(GC::maxAllocationSize());
+  const SegmentedArray::SegmentNumber maxAllocSegments =
+      maxAllocSlots - kValueToSegmentThreshold;
+  return min(maxAllocSegments, maxNumSegmentsWithoutOverflow());
 }
 
 constexpr SegmentedArray::SegmentNumber

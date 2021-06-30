@@ -33,13 +33,20 @@ const ObjectVTable JSDate::vt{
 void DateBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSDate>());
   ObjectBuildMeta(cell, mb);
+  mb.setVTable(&JSDate::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
-JSDate::JSDate(Deserializer &d) : JSObject(d, &vt.base) {}
+JSDate::JSDate(Deserializer &d) : JSObject(d, &vt.base) {
+  HermesValue hv;
+  d.readHermesValue(&hv);
+  primitiveValue_ = hv.getNumber();
+}
 
 void DateSerialize(Serializer &s, const GCCell *cell) {
   JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSDate>());
+  const auto *self = static_cast<const JSDate *>(cell);
+  s.writeHermesValue(HermesValue::encodeNumberValue(self->primitiveValue_));
   s.endObject(cell);
 }
 
@@ -54,11 +61,14 @@ PseudoHandle<JSDate>
 JSDate::create(Runtime *runtime, double value, Handle<JSObject> parentHandle) {
   auto *cell = runtime->makeAFixed<JSDate>(
       runtime,
+      value,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSDate>() + ANONYMOUS_PROPERTY_SLOTS));
+          *parentHandle, numOverlapSlots<JSDate>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

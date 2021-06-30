@@ -1,11 +1,6 @@
 # Zip Library
 https://github.com/kuba--/zip
-Version: 635ef1d1452d187e027ecdcd164fa0fafa0fd2dd
-
-Delete the line in `zip.c`:
-```
-int symlink(const char *target, const char *linkpath); // needed on Linux
-```
+Version: f72dce22bd25d10f8575ec54cf51bf5a5fdcb5ba
 
 Change this line in `miniz.h`:
 ```

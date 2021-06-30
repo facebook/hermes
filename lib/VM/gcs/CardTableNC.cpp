@@ -21,6 +21,8 @@ namespace hermes {
 namespace vm {
 
 void CardTable::dirtyCardsForAddressRange(const void *low, const void *high) {
+  // If high is in the middle of some card, ensure that we dirty that card.
+  high = reinterpret_cast<const char *>(high) + kCardSize - 1;
   dirtyRange(addressToIndex(low), addressToIndex(high));
 }
 
@@ -36,27 +38,19 @@ OptValue<size_t> CardTable::findNextCardWithStatus(
 }
 
 void CardTable::clear() {
-  cleanRange(kFirstUsedIndex, kValidIndices - 1);
+  cleanRange(kFirstUsedIndex, kValidIndices);
 }
 
 void CardTable::updateAfterCompaction(const void *newLevel) {
-  static_assert(sizeof(CardTable) > 0, "CardTable cannot be of non-zero size");
-  assert(
-      newLevel >= base() + sizeof(CardTable) &&
-      "New level must be strictly after the card table");
-
   const char *newLevelPtr = static_cast<const char *>(newLevel);
-
-  // By assuming (see assertions above) that the card table is of non-zero size,
-  // we can guarantee that it is always possible to subtract one from
-  // newLevelPtr (which must be in the allocation region, and so after the card
-  // table) and find an address that can be projected onto the card table.
-  size_t lastDirtyCardIndex = addressToIndex(newLevelPtr - 1);
-
+  size_t firstCleanCardIndex = addressToIndex(newLevelPtr + kCardSize - 1);
+  assert(
+      firstCleanCardIndex <= kValidIndices &&
+      firstCleanCardIndex >= kFirstUsedIndex && "Invalid index.");
   // Dirty the occupied cards (below the level), and clean the cards above the
   // level.
-  dirtyRange(kFirstUsedIndex, lastDirtyCardIndex);
-  cleanRange(lastDirtyCardIndex + 1, kValidIndices - 1);
+  dirtyRange(kFirstUsedIndex, firstCleanCardIndex);
+  cleanRange(firstCleanCardIndex, kValidIndices);
 }
 
 void CardTable::cleanRange(size_t from, size_t to) {
@@ -71,7 +65,7 @@ void CardTable::cleanOrDirtyRange(
     size_t from,
     size_t to,
     CardStatus cleanOrDirty) {
-  for (size_t index = from; index <= to; index++) {
+  for (size_t index = from; index < to; index++) {
     cards_[index].store(cleanOrDirty, std::memory_order_relaxed);
   }
 }
@@ -182,3 +176,4 @@ void CardTable::verifyBoundaries(char *start, char *level) const {
 
 } // namespace vm
 } // namespace hermes
+#undef DEBUG_TYPE

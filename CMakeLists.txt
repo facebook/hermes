@@ -3,14 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-if(NOT HERMES_IS_ANDROID)
-  # We need FindICU from 3.7
-  cmake_minimum_required(VERSION 3.7.0)
-else()
-  # We'll be using ICU through Java, so we don't need FindICU.
-  # 3.6.0 is the minimum version shipped with the Android SDK.
-  cmake_minimum_required(VERSION 3.6.0)
-endif()
+cmake_minimum_required(VERSION 3.7.0)
 
 # Set the VERSION variables based on the project command
 if (POLICY CMP0048)
@@ -78,7 +71,7 @@ endif()
 # - npm/package.json
 # - hermes-engine.podspec
 project(Hermes
-        VERSION 0.7.0
+        VERSION 0.8.0
         LANGUAGES C CXX)
 # Optional suffix like "-rc3"
 set(VERSION_SUFFIX "")
@@ -106,7 +99,7 @@ set(HERMES_IS_ANDROID OFF CACHE BOOL
 set(HERMES_IS_MOBILE_BUILD ${HERMES_IS_ANDROID} CACHE BOOL
   "Building for a mobile device")
 
-set(HERMESVM_GCKIND NONCONTIG_GENERATIONAL
+set(HERMESVM_GCKIND HADES
   CACHE STRING
   "HermesVM GC type: either NONCONTIG_GENERATIONAL, MALLOC, or HADES")
 
@@ -128,6 +121,15 @@ set(HERMESVM_PROFILER_NATIVECALL OFF CACHE BOOL
 
 set(HERMESVM_SERIALIZE OFF CACHE BOOL
   "Enable heap serialization and deserialization")
+
+CHECK_CXX_SOURCE_COMPILES(
+        "int main() { void *p = &&label; goto *p; label: return 0; }"
+        HAVE_COMPUTED_GOTO)
+if(HAVE_COMPUTED_GOTO)
+    set(DEFAULT_INTERPRETER_THREADING ON)
+else()
+    set(DEFAULT_INTERPRETER_THREADING OFF)
+endif()
 
 set(HERMESVM_INDIRECT_THREADING ${DEFAULT_INTERPRETER_THREADING} CACHE BOOL
   "Enable the indirect threaded interpreter")
@@ -225,12 +227,6 @@ set(HERMESVM_EXCEPTION_ON_OOM OFF CACHE BOOL
 set(HERMESVM_PLATFORM_LOGGING OFF CACHE BOOL
     "hermesLog(...) is enabled, using the platform's logging mechanism")
 
-set(HERMESVM_JIT OFF CACHE BOOL
-  "Enable the JIT")
-
-set(HERMESVM_JIT_DISASSEMBLER OFF CACHE BOOL
-  "Enable the JIT disassembler")
-
 set(HERMES_USE_FLOWPARSER OFF CACHE BOOL
   "Use libflowparser for parsing es6")
 
@@ -299,16 +295,6 @@ if (HERMES_STATIC_LINK)
   set(CMAKE_EXE_LINKER_FLAGS "-static")
   set(HERMES_USE_STATIC_ICU ON)
   set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_STATIC_LIBRARY_SUFFIX}")
-endif()
-
-CHECK_CXX_SOURCE_COMPILES(
-  "int main() { void *p = &&label; goto *p; label: return 0; }"
-  HAVE_COMPUTED_GOTO)
-
-if(HAVE_COMPUTED_GOTO)
-  set(DEFAULT_INTERPRETER_THREADING ON)
-else()
-  set(DEFAULT_INTERPRETER_THREADING OFF)
 endif()
 
 # Check if the linker supports --gc-sections
@@ -409,12 +395,6 @@ endif()
 if(HERMESVM_PLATFORM_LOGGING)
     add_definitions(-DHERMESVM_PLATFORM_LOGGING)
 endif()
-if(HERMESVM_JIT)
-  add_definitions(-DHERMESVM_JIT)
-endif()
-if(HERMESVM_JIT_DISASSEMBLER)
-  add_definitions(-DHERMESVM_JIT_DISASSEMBLER)
-endif()
 if (NOT (ANDROID_LINUX_PERF_PATH STREQUAL ""))
   add_definitions(-DANDROID_LINUX_PERF_PATH="${ANDROID_LINUX_PERF_PATH}")
 endif()
@@ -454,16 +434,6 @@ if (NOT (GENERATOR_IS_MULTI_CONFIG OR CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_C
     # and not GCC
     # GCC currently fails to link Hermes with LTO (see t16557748)
     option(HERMES_ENABLE_LTO "Build Hermes with LTO" ON)
-endif()
-
-if (CMAKE_COMPILER_IS_GNUCXX)
-  # Suppress uninteresting warnings about initializing ArrayRef from initializer lists.
-  check_cxx_compiler_flag("-Winit-list-lifetime" INIT_LIST_LIFETIME_FLAG)
-  append_if(INIT_LIST_LIFETIME_FLAG "-Wno-init-list-lifetime" CMAKE_CXX_FLAGS)
-  # Suppress the redundant move warnings in GCC 9, because it leads to suboptimal
-  # recommendations for older compilers that do not implement C++ Core Issue 1579.
-  check_cxx_compiler_flag("-Wredundant-move" REDUNDANT_MOVE_FLAG)
-  append_if(REDUNDANT_MOVE_FLAG "-Wno-redundant-move" CMAKE_CXX_FLAGS)
 endif()
 
 if (GCC_COMPATIBLE)
@@ -628,20 +598,7 @@ include_directories(BEFORE
   )
 
 if(HERMES_IS_ANDROID)
-  if(EXISTS ${HERMES_SOURCE_DIR}/first-party/fbjni/cxx)
-    set(FBJNI_PATH ${HERMES_SOURCE_DIR}/first-party/fbjni)
-  elseif(EXISTS ${FBSOURCE_DIR}/fbandroid/libraries/fbjni/cxx)
-    set(FBJNI_PATH ${FBSOURCE_DIR}/fbandroid/libraries/fbjni)
-  elseif(EXISTS ${HERMES_SOURCE_DIR}/../../fbandroid/libraries/fbjni/cxx)
-    set(FBJNI_PATH ${HERMES_SOURCE_DIR}/../../fbandroid/libraries/fbjni)
-  else()
-    message(FATAL_ERROR "Unable to find fbjni.")
-  endif()
-  include_directories("${FBJNI_PATH}/cxx/")
-  add_subdirectory(first-party/fbjni)
-
-  # JNI requires that JNI_OnLoad is (re-)exported for initialization.
-  set(OPTIONAL_JNI_ONLOAD "-Wl,--undefined=JNI_OnLoad")
+  find_package(fbjni REQUIRED CONFIG)
 endif()
 
 set(CMAKE_CXX_STANDARD 14)
@@ -692,6 +649,7 @@ if(HERMES_ENABLE_TEST_SUITE)
     hbc-deltaprep
     hbc-diff
     dependency-extractor
+    node-hermes
     )
 
   set(coverage_directory "")
@@ -704,8 +662,6 @@ if(HERMES_ENABLE_TEST_SUITE)
     unittests_dir=${HERMES_BINARY_DIR}/unittests
     debugger_enabled=${HERMES_ENABLE_DEBUGGER}
     use_flowparser=${HERMES_USE_FLOWPARSER}
-    jit_enabled=${HERMESVM_JIT}
-    jit_disassembler_enabled=${HERMESVM_JIT_DISASSEMBLER}
     hbc_deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
     dependency_extractor=${HERMES_TOOLS_OUTPUT_DIR}/dependency-extractor
     FileCheck=${HERMES_TOOLS_OUTPUT_DIR}//FileCheck
@@ -715,6 +671,7 @@ if(HERMES_ENABLE_TEST_SUITE)
     hbcdump=${HERMES_TOOLS_OUTPUT_DIR}/hbcdump
     hbc-deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
     hbc_diff=${HERMES_TOOLS_OUTPUT_DIR}/hbc-diff
+    node-hermes=${HERMES_TOOLS_OUTPUT_DIR}/node-hermes
     build_mode=${HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST}
     exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
     serialize_enabled=${HERMESVM_SERIALIZE}

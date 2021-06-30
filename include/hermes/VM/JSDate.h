@@ -16,13 +16,10 @@ namespace vm {
 /// Date object.
 class JSDate final : public JSObject {
   using Super = JSObject;
+  friend void DateBuildMeta(const GCCell *, Metadata::Builder &);
 
  public:
   static const ObjectVTable vt;
-
-  /// Need one anonymous slot for the [[PrimitiveValue]] internal property.
-  static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS =
-      Super::ANONYMOUS_PROPERTY_SLOTS + 1;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::DateKind;
@@ -38,32 +35,31 @@ class JSDate final : public JSObject {
   }
 
   /// \return the [[PrimitiveValue]] internal property.
-  static HermesValue getPrimitiveValue(JSObject *self, Runtime *runtime) {
-    return JSObject::getInternalProperty(
-        self, runtime, JSDate::primitiveValuePropIndex());
+  double getPrimitiveValue() {
+    return primitiveValue_;
   }
 
   /// Set the [[PrimitiveValue]] internal property.
-  static void
-  setPrimitiveValue(JSObject *self, Runtime *runtime, HermesValue value) {
-    return JSObject::setInternalProperty(
-        self, runtime, JSDate::primitiveValuePropIndex(), value);
+  void setPrimitiveValue(double value) {
+    primitiveValue_ = value;
   }
 
- public:
 #ifdef HERMESVM_SERIALIZE
   explicit JSDate(Deserializer &d);
 
+  friend void DateSerialize(Serializer &s, const GCCell *cell);
   friend void DateDeserialize(Deserializer &d, CellKind kind);
 #endif
 
-  JSDate(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
-      : JSObject(runtime, &vt.base, *parent, *clazz) {}
+  JSDate(
+      Runtime *runtime,
+      double value,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz)
+      : JSObject(runtime, &vt.base, *parent, *clazz), primitiveValue_{value} {}
 
- protected:
-  static constexpr SlotIndex primitiveValuePropIndex() {
-    return numOverlapSlots<JSDate>() + ANONYMOUS_PROPERTY_SLOTS - 1;
-  }
+ private:
+  double primitiveValue_;
 };
 
 } // namespace vm

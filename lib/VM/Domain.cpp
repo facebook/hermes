@@ -26,7 +26,6 @@ const VTable Domain::vt{
     _mallocSizeImpl,
     nullptr,
     nullptr,
-    nullptr,
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::Code,
         nullptr,
@@ -36,6 +35,7 @@ const VTable Domain::vt{
 
 void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const Domain *>(cell);
+  mb.setVTable(&Domain::vt);
   mb.addField("cjsModules", &self->cjsModules_);
   mb.addField("throwingRequire", &self->throwingRequire_);
 }
@@ -108,16 +108,20 @@ void DomainDeserialize(Deserializer &d, CellKind kind) {
 }
 
 void Domain::serializeArrayStorage(Serializer &s, const ArrayStorage *cell) {
-  assert(
-      cell->size() % runtimeModuleOffset == 0 && "Invalid ArrayStorage size");
+  assert(cell->size() % CJSModuleSize == 0 && "Invalid ArrayStorage size");
   s.writeInt<ArrayStorage::size_type>(cell->capacity());
   s.writeInt<ArrayStorage::size_type>(cell->size());
   for (ArrayStorage::size_type i = 0; i < cell->size(); i += CJSModuleSize) {
     s.writeHermesValue(cell->data()[i + CachedExportsOffset]);
     s.writeHermesValue(cell->data()[i + ModuleOffset]);
     s.writeHermesValue(cell->data()[i + FunctionIndexOffset]);
+    HermesValue rm = cell->data()[i + runtimeModuleOffset];
+    assert(
+        (rm.isEmpty() || rm.isNativeValue()) &&
+        "RuntimeModule must be empty or a native pointer.");
     s.writeHermesValue(
-        cell->data()[i + runtimeModuleOffset], /* nativePointer */ true);
+        rm.isEmpty() ? HermesValue::encodeNativePointer(nullptr) : rm,
+        /* nativePointer */ true);
   }
   s.endObject(cell);
 }
@@ -125,7 +129,7 @@ void Domain::serializeArrayStorage(Serializer &s, const ArrayStorage *cell) {
 ArrayStorage *Domain::deserializeArrayStorage(Deserializer &d) {
   ArrayStorage::size_type capacity = d.readInt<ArrayStorage::size_type>();
   ArrayStorage::size_type size = d.readInt<ArrayStorage::size_type>();
-  assert(size % runtimeModuleOffset == 0 && "Invalid ArrayStorage size");
+  assert(size % CJSModuleSize == 0 && "Invalid ArrayStorage size");
   auto cjsModulesRes = ArrayStorage::create(d.getRuntime(), capacity, size);
   if (LLVM_UNLIKELY(cjsModulesRes == ExecutionStatus::EXCEPTION)) {
     hermes_fatal("fail to allocate memory for CJSModules");
@@ -434,14 +438,24 @@ const ObjectVTable RequireContext::vt{
 void RequireContextBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<RequireContext>());
   ObjectBuildMeta(cell, mb);
+  const auto *self = static_cast<const RequireContext *>(cell);
+  mb.setVTable(&RequireContext::vt.base);
+  mb.addField(&self->domain_);
+  mb.addField(&self->dirname_);
 }
 
 #ifdef HERMESVM_SERIALIZE
-RequireContext::RequireContext(Deserializer &d) : JSObject(d, &vt.base) {}
+RequireContext::RequireContext(Deserializer &d) : JSObject(d, &vt.base) {
+  d.readRelocation(&domain_, RelocationKind::GCPointer);
+  d.readRelocation(&dirname_, RelocationKind::GCPointer);
+}
 
 void RequireContextSerialize(Serializer &s, const GCCell *cell) {
   JSObject::serializeObjectImpl(
       s, cell, JSObject::numOverlapSlots<RequireContext>());
+  const auto *self = static_cast<const RequireContext *>(cell);
+  s.writeRelocation(self->domain_.get(s.getRuntime()));
+  s.writeRelocation(self->dirname_.get(s.getRuntime()));
   s.endObject(cell);
 }
 
@@ -458,18 +472,14 @@ Handle<RequireContext> RequireContext::create(
     Handle<StringPrimitive> dirname) {
   auto objProto = Handle<JSObject>::vmcast(&runtime->objectPrototype);
   auto *cell = runtime->makeAFixed<RequireContext>(
-      runtime,
-      objProto,
-      runtime->getHiddenClassForPrototype(*objProto, ANONYMOUS_PROPERTY_SLOTS));
+      runtime, objProto, runtime->getHiddenClassForPrototype(*objProto, 0));
   auto self = JSObjectInit::initToHandle(runtime, cell);
-
-  JSObject::setInternalProperty(
-      *self, runtime, domainPropIndex(), domain.getHermesValue());
-  JSObject::setInternalProperty(
-      *self, runtime, dirnamePropIndex(), dirname.getHermesValue());
-
+  self->domain_.set(runtime, *domain, &runtime->getHeap());
+  self->dirname_.set(runtime, *dirname, &runtime->getHeap());
   return self;
 }
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

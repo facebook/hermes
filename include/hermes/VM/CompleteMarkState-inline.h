@@ -13,6 +13,7 @@
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/RootAndSlotAcceptorDefault.h"
+#include "hermes/VM/SmallHermesValue-inline.h"
 
 namespace hermes {
 namespace vm {
@@ -42,6 +43,14 @@ struct CompleteMarkState::FullMSCMarkTransitiveAcceptor final
       acceptSym(hv.getSymbol());
     }
   }
+  void acceptSHV(SmallHermesValue &hv) override {
+    if (hv.isPointer()) {
+      GCCell *cell = static_cast<GCCell *>(hv.getPointer(pointerBase_));
+      accept(cell);
+    } else if (hv.isSymbol()) {
+      acceptSym(hv.getSymbol());
+    }
+  }
   void acceptSym(SymbolID sym) override {
     gc.markSymbol(sym);
   }
@@ -50,20 +59,20 @@ struct CompleteMarkState::FullMSCMarkTransitiveAcceptor final
 /// This acceptor is used for updating pointers via forwarding pointers
 /// in mark/sweep/compact.
 struct FullMSCUpdateAcceptor final : public RootAndSlotAcceptorDefault,
-                                     public WeakRootAcceptorDefault {
+                                     public WeakAcceptorDefault {
   GenGC &gc;
   using RootAndSlotAcceptorDefault::accept;
-  using WeakRootAcceptorDefault::acceptWeak;
+  using WeakAcceptorDefault::acceptWeak;
 
   FullMSCUpdateAcceptor(GenGC &gc)
       : RootAndSlotAcceptorDefault(gc.getPointerBase()),
-        WeakRootAcceptorDefault(gc.getPointerBase()),
+        WeakAcceptorDefault(gc.getPointerBase()),
         gc(gc) {}
 
   void accept(GCCell *&ptr) override {
     if (ptr) {
       assert(gc.dbgContains(ptr) && "ptr not in heap");
-      ptr = ptr->getForwardingPointer();
+      ptr = ptr->getForwardingPointer().getNonNull(pointerBase_);
     }
   }
 
@@ -73,13 +82,27 @@ struct FullMSCUpdateAcceptor final : public RootAndSlotAcceptorDefault,
     }
     assert(gc.dbgContains(ptr) && "ptr not in heap");
     // Reset weak root if target GCCell is dead.
-    ptr = AlignedHeapSegment::getCellMarkBit(ptr) ? ptr->getForwardingPointer()
-                                                  : nullptr;
+    ptr = AlignedHeapSegment::getCellMarkBit(ptr)
+        ? ptr->getForwardingPointer().getNonNull(pointerBase_)
+        : nullptr;
   }
 
   void acceptHV(HermesValue &hv) override {
     if (hv.isPointer()) {
       auto *ptr = static_cast<GCCell *>(hv.getPointer());
+      if (ptr) {
+        assert(gc.dbgContains(ptr) && "ptr not in heap");
+        hv.setInGC(
+            hv.updatePointer(
+                ptr->getForwardingPointer().getNonNull(pointerBase_)),
+            &gc);
+      }
+    }
+  }
+
+  void acceptSHV(SmallHermesValue &hv) override {
+    if (hv.isPointer()) {
+      auto *ptr = static_cast<GCCell *>(hv.getPointer(pointerBase_));
       if (ptr) {
         assert(gc.dbgContains(ptr) && "ptr not in heap");
         hv.setInGC(hv.updatePointer(ptr->getForwardingPointer()), &gc);

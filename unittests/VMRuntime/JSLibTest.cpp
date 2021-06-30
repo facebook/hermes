@@ -152,7 +152,7 @@ TEST_F(JSLibTest, ObjectSealTest) {
 
   // Make sure it is configurable.
   NamedPropertyDescriptor desc;
-  ASSERT_TRUE(JSObject::getNamedDescriptor(obj, runtime, *prop1ID, desc));
+  ASSERT_TRUE(JSObject::getNamedDescriptorUnsafe(obj, runtime, *prop1ID, desc));
   ASSERT_TRUE(desc.flags.configurable);
 
   // Make sure it's not sealed.
@@ -175,7 +175,7 @@ TEST_F(JSLibTest, ObjectSealTest) {
           .getStatus());
 
   // Make sure it is no longer configurable.
-  ASSERT_TRUE(JSObject::getNamedDescriptor(obj, runtime, *prop1ID, desc));
+  ASSERT_TRUE(JSObject::getNamedDescriptorUnsafe(obj, runtime, *prop1ID, desc));
   ASSERT_FALSE(desc.flags.configurable);
 
   // Try to delete it.
@@ -225,7 +225,7 @@ TEST_F(JSLibTest, ObjectFreezeTest) {
 
   // Make sure it is configurable.
   NamedPropertyDescriptor desc;
-  ASSERT_TRUE(JSObject::getNamedDescriptor(obj, runtime, *prop1ID, desc));
+  ASSERT_TRUE(JSObject::getNamedDescriptorUnsafe(obj, runtime, *prop1ID, desc));
   ASSERT_TRUE(desc.flags.configurable);
   ASSERT_TRUE(desc.flags.writable);
 
@@ -249,7 +249,7 @@ TEST_F(JSLibTest, ObjectFreezeTest) {
           .getStatus());
 
   // Make sure it is no longer configurable or writable.
-  ASSERT_TRUE(JSObject::getNamedDescriptor(obj, runtime, *prop1ID, desc));
+  ASSERT_TRUE(JSObject::getNamedDescriptorUnsafe(obj, runtime, *prop1ID, desc));
   ASSERT_FALSE(desc.flags.configurable);
   ASSERT_FALSE(desc.flags.writable);
 
@@ -574,7 +574,7 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
     // Now fetch the property/value and verify it matches the setup.
     NamedPropertyDescriptor desc;
     auto propID = valueToSymbolID(runtime, propHandle).getValue();
-    JSObject::getNamedDescriptor(objectCons, runtime, *propID, desc);
+    JSObject::getNamedDescriptorUnsafe(objectCons, runtime, *propID, desc);
     EXPECT_TRUE(desc.flags.enumerable);
     EXPECT_TRUE(desc.flags.configurable);
     EXPECT_FALSE(desc.flags.writable);
@@ -630,17 +630,19 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
     // Now fetch the property/value and verify it matches the setup.
     NamedPropertyDescriptor desc;
     auto propID = valueToSymbolID(runtime, prop).getValue();
-    JSObject::getNamedDescriptor(objectCons, runtime, *propID, desc);
+    JSObject::getNamedDescriptorUnsafe(objectCons, runtime, *propID, desc);
     EXPECT_TRUE(desc.flags.accessor);
     EXPECT_FALSE(desc.flags.writable);
 
     // Get the accessor and verify it has the correct setter and getter.
-    auto accessor =
-        JSObject::getNamedSlotValue(objectCons.get(), runtime, desc);
-    ASSERT_TRUE(accessor.isPointer());
+    PseudoHandle<> accessor = std::move(
+        JSObject::getNamedSlotValue(objectCons, runtime, desc).getValue());
+    ASSERT_TRUE(accessor->isPointer());
+    ASSERT_NE(accessor->getPointer(), nullptr);
 
-    auto accessorPtr = dyn_vmcast_or_null<PropertyAccessor>(accessor);
-    ASSERT_NE(accessorPtr, nullptr);
+    auto accessorPtr =
+        PseudoHandle<PropertyAccessor>::dyn_vmcast(std::move(accessor));
+    ASSERT_NE(accessorPtr.get(), nullptr);
     EXPECT_EQ(
         accessorPtr->getter.get(runtime),
         vmcast<Callable>(toStringFn.getHermesValue()));
@@ -765,22 +767,24 @@ TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
   // Verify the first property.
   {
     NamedPropertyDescriptor desc;
-    JSObject::getNamedDescriptor(obj, runtime, *id1, desc);
+    JSObject::getNamedDescriptorUnsafe(obj, runtime, *id1, desc);
     EXPECT_TRUE(desc.flags.enumerable);
     EXPECT_TRUE(desc.flags.configurable);
     EXPECT_FALSE(desc.flags.writable);
     EXPECT_EQ(
-        JSObject::getNamedSlotValue(obj.get(), runtime, desc).getDouble(), 123);
+        JSObject::getNamedSlotValue(obj, runtime, desc).getValue()->getDouble(),
+        123);
   }
 
   // Verify the second property.
   {
     NamedPropertyDescriptor desc;
-    JSObject::getNamedDescriptor(obj, runtime, *id2, desc);
+    JSObject::getNamedDescriptorUnsafe(obj, runtime, *id2, desc);
     EXPECT_TRUE(desc.flags.writable);
     EXPECT_FALSE(desc.flags.enumerable);
     EXPECT_FALSE(desc.flags.configurable);
-    EXPECT_TRUE(JSObject::getNamedSlotValue(obj.get(), runtime, desc).isNull());
+    EXPECT_TRUE(
+        JSObject::getNamedSlotValue(obj, runtime, desc).getValue()->isNull());
   }
 }
 
@@ -892,22 +896,24 @@ TEST_F(JSLibTest, ObjectCreateTest) {
   // Verify the first property.
   {
     NamedPropertyDescriptor desc;
-    JSObject::getNamedDescriptor(obj, runtime, *id1, desc);
+    JSObject::getNamedDescriptorUnsafe(obj, runtime, *id1, desc);
     EXPECT_TRUE(desc.flags.enumerable);
     EXPECT_TRUE(desc.flags.configurable);
     EXPECT_FALSE(desc.flags.writable);
     EXPECT_EQ(
-        JSObject::getNamedSlotValue(obj.get(), runtime, desc).getDouble(), 123);
+        JSObject::getNamedSlotValue(obj, runtime, desc).getValue()->getDouble(),
+        123);
   }
 
   // Verify the second property.
   {
     NamedPropertyDescriptor desc;
-    JSObject::getNamedDescriptor(obj, runtime, *id2, desc);
+    JSObject::getNamedDescriptorUnsafe(obj, runtime, *id2, desc);
     EXPECT_TRUE(desc.flags.writable);
     EXPECT_FALSE(desc.flags.enumerable);
     EXPECT_FALSE(desc.flags.configurable);
-    EXPECT_TRUE(JSObject::getNamedSlotValue(obj.get(), runtime, desc).isNull());
+    EXPECT_TRUE(
+        JSObject::getNamedSlotValue(obj, runtime, desc).getValue()->isNull());
   }
 }
 
@@ -1045,7 +1051,8 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
         << "Exception executing the call on new Date()";
     PseudoHandle<JSDate> valAsObj =
         PseudoHandle<JSDate>::vmcast(std::move(*val));
-    HermesValue hv = JSDate::getPrimitiveValue(valAsObj.get(), runtime);
+    HermesValue hv =
+        HermesValue::encodeNumberValue(valAsObj->getPrimitiveValue());
     // This pointer can become invalid, don't be tempted to use it incorrectly.
     valAsObj.invalidate();
     EXPECT_EQ(hv.getNumberAs<uint64_t>(), newDate);

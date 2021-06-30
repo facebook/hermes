@@ -24,7 +24,9 @@ namespace {
 // properties is not a great pattern, and may change.
 enum ProxySlotIndexes { revocableProxy, COUNT };
 
-HermesValue getRevocableProxySlot(NativeFunction *revoker, Runtime *runtime) {
+SmallHermesValue getRevocableProxySlot(
+    NativeFunction *revoker,
+    Runtime *runtime) {
   return NativeFunction::getAdditionalSlotValue(
       revoker, runtime, ProxySlotIndexes::revocableProxy);
 }
@@ -32,7 +34,7 @@ HermesValue getRevocableProxySlot(NativeFunction *revoker, Runtime *runtime) {
 void setRevocableProxySlot(
     NativeFunction *revoker,
     Runtime *runtime,
-    HermesValue value) {
+    SmallHermesValue value) {
   NativeFunction::setAdditionalSlotValue(
       revoker, runtime, ProxySlotIndexes::revocableProxy, value);
 }
@@ -103,13 +105,14 @@ proxyRevocationSteps(void *, Runtime *runtime, NativeArgs args) {
   // 1. Let p be F.[[RevocableProxy]].
   auto cc = runtime->getCurrentFrame()->getCalleeClosure();
   auto revoker = vmcast<NativeFunction>(cc);
-  HermesValue proxyVal = getRevocableProxySlot(revoker, runtime);
+  HermesValue proxyVal =
+      getRevocableProxySlot(revoker, runtime).unboxToHV(runtime);
   // 2. If p is null, return undefined.
   if (proxyVal.isNull()) {
     return HermesValue::encodeUndefinedValue();
   }
   // 3. Set F.[[RevocableProxy]] to null.
-  setRevocableProxySlot(revoker, runtime, HermesValue::encodeNullValue());
+  setRevocableProxySlot(revoker, runtime, SmallHermesValue::encodeNullValue());
   // 4. Assert: p is a Proxy object.
   JSObject *proxy = dyn_vmcast<JSObject>(proxyVal);
   assert(
@@ -146,7 +149,9 @@ proxyRevocable(void *, Runtime *runtime, NativeArgs args) {
       0,
       ProxySlotIndexes::COUNT);
   // 4. Set revoker.[[RevocableProxy]] to p.
-  setRevocableProxySlot(*revoker, runtime, proxyRes->getHermesValue());
+  auto shv =
+      SmallHermesValue::encodeHermesValue(proxyRes->getHermesValue(), runtime);
+  setRevocableProxySlot(*revoker, runtime, shv);
   // 5. Let result be ObjectCreate(%ObjectPrototype%).
   Handle<JSObject> result = runtime->makeHandle(JSObject::create(runtime));
   // 6. Perform CreateDataProperty(result, "proxy", p).

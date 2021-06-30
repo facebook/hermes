@@ -19,11 +19,6 @@ namespace {
 
 const GCConfig kGCConfig = TestGCConfigFixedSize(16 << 20);
 
-const MetadataTableForTests getMetadataTable() {
-  static const Metadata table[] = {Metadata()};
-  return MetadataTableForTests(table);
-}
-
 TEST(GCGuardPageNCTest, ObjectUnderflow) {
   // Guard page is currently only protected when page size is as expected.
   if (hermes::oscompat::page_size() != pagesize::kExpectedPageSize)
@@ -31,8 +26,7 @@ TEST(GCGuardPageNCTest, ObjectUnderflow) {
 
   // Use an mmap-based storage for this test.
   std::unique_ptr<StorageProvider> provider = StorageProvider::mmapProvider();
-  auto runtime =
-      DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
+  auto runtime = DummyRuntime::create(kGCConfig, std::move(provider));
   DummyRuntime &rt = *runtime;
 
   // Allocate the first cell in the segment and try to write directly before it.

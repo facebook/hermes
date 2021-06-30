@@ -25,14 +25,6 @@ using namespace hermes;
 using namespace hermes::vm;
 
 namespace {
-
-const MetadataTableForTests getMetadataTable() {
-  static const Metadata storage[] = {
-      Metadata() // Uninitialized
-  };
-  return MetadataTableForTests(storage);
-}
-
 struct GCLazySegmentNCTest : public ::testing::Test {
   ~GCLazySegmentNCTest() {
     oscompat::unset_test_vm_allocate_limit();
@@ -55,15 +47,13 @@ using SegmentCell = EmptyCell<GenGCHeapSegment::maxSize()>;
 
 /// We are able to materialize every segment.
 TEST_F(GCLazySegmentNCTest, MaterializeAll) {
-  auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
+  auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
-
-  std::deque<GCCell *> roots;
+  GCScope scope{&rt};
 
   auto N = kHeapSizeHint / SegmentCell::size();
   for (size_t i = 0; i < N; ++i) {
-    roots.push_back(SegmentCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(SegmentCell::create(rt));
   }
 }
 
@@ -72,16 +62,13 @@ TEST_F(GCLazySegmentNCTest, MaterializeAll) {
 TEST_F(GCLazySegmentNCTest, MaterializeEnough) {
   auto provider = std::make_unique<LimitedStorageProvider>(
       DummyRuntime::defaultProvider(), kHeapVALimited);
-  auto runtime =
-      DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
+  auto runtime = DummyRuntime::create(kGCConfig, std::move(provider));
   DummyRuntime &rt = *runtime;
-
-  std::deque<GCCell *> roots;
+  GCScope scope{&rt};
 
   auto N = kHeapSizeHint / SegmentCell::size() / 4;
   for (size_t i = 0; i < N; ++i) {
-    roots.push_back(SegmentCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(SegmentCell::create(rt));
   }
 }
 
@@ -91,22 +78,21 @@ TEST_F(GCLazySegmentNCTest, MaterializeEnough) {
 TEST_F(GCLazySegmentNCTest, YoungGenNoMaterialize) {
   auto provider = std::make_unique<LimitedStorageProvider>(
       DummyRuntime::defaultProvider(), kHeapVALimited);
-  auto runtime =
-      DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
+  auto runtime = DummyRuntime::create(kGCConfig, std::move(provider));
   DummyRuntime &rt = *runtime;
+  GCScope scope{&rt};
   GenGC &gc = rt.getHeap();
 
-  std::deque<GCCell *> roots;
-
   auto N = kHeapSizeHint / SegmentCell::size() / 2;
-  for (size_t i = 0; i < N; ++i) {
-    roots.push_back(SegmentCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+  MutableHandle<SegmentCell> oldGenHandle =
+      rt.makeMutableHandle(SegmentCell::create(rt));
+  for (size_t i = 1; i < N; ++i) {
+    rt.makeHandle(SegmentCell::create(rt));
   }
 
   // Unroot the first segment, which is now in the old generation, thus freeing
   // up space.
-  rt.pointerRoots.erase(rt.pointerRoots.begin());
+  oldGenHandle.clear();
 
   auto fullGCBefore = gc.numFullGCs();
   auto youngGCBefore = gc.numYoungGCs();
@@ -134,27 +120,23 @@ TEST_F(GCLazySegmentNCTest, OldGenAllocMaterialize) {
                               .build();
   auto provider = DummyRuntime::defaultProvider();
   auto &counter = *provider;
-  auto runtime =
-      DummyRuntime::create(getMetadataTable(), config, std::move(provider));
+  auto runtime = DummyRuntime::create(config, std::move(provider));
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
-
-  std::deque<GCCell *> roots;
+  GCScope scope{&rt};
 
   auto N = kHeapSizeHint / SegmentCell::size() - 1;
 
   // Fill the Old Generation up with segments.
   for (size_t i = 0; i < N; ++i) {
-    roots.push_back(SegmentCell::createLongLived(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(SegmentCell::createLongLived(rt));
   }
 
   ASSERT_EQ(N + 1, counter.numSucceededAllocs());
   ASSERT_EQ(0, gc.numFullGCs());
 
   // Trigger a full collection, resize and one new segment to be materialised.
-  roots.push_back(SegmentCell::createLongLived(rt));
-  rt.pointerRoots.push_back(&roots.back());
+  rt.makeHandle(SegmentCell::createLongLived(rt));
 
   EXPECT_EQ(1, gc.numFullGCs());
   EXPECT_EQ(N + 2, counter.numSucceededAllocs());
@@ -164,16 +146,13 @@ TEST_F(GCLazySegmentNCTest, OldGenAllocMaterialize) {
 TEST_F(GCLazySegmentNCDeathTest, FailToMaterialize) {
   auto provider = std::make_unique<LimitedStorageProvider>(
       DummyRuntime::defaultProvider(), kHeapVALimited);
-  auto runtime =
-      DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
+  auto runtime = DummyRuntime::create(kGCConfig, std::move(provider));
   DummyRuntime &rt = *runtime;
-
-  std::deque<GCCell *> roots;
+  GCScope scope{&rt};
 
   auto N = kHeapSizeHint / SegmentCell::size() / 2;
   for (size_t i = 0; i < N; ++i) {
-    roots.push_back(SegmentCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(SegmentCell::create(rt));
   }
 
   EXPECT_OOM(SegmentCell::create(rt));
@@ -182,22 +161,17 @@ TEST_F(GCLazySegmentNCDeathTest, FailToMaterialize) {
 TEST_F(GCLazySegmentNCDeathTest, FailToMaterializeContinue) {
   auto provider = std::make_unique<LimitedStorageProvider>(
       DummyRuntime::defaultProvider(), kHeapVALimited);
-  auto runtime =
-      DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
+  auto runtime = DummyRuntime::create(kGCConfig, std::move(provider));
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
-
-  std::deque<GCCell *> roots;
+  GCScope scope{&rt};
 
   auto N = kHeapSizeHint / SegmentCell::size() / 2;
-  for (size_t i = 0; i < N; ++i) {
-    roots.push_back(SegmentCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+  for (size_t i = 0; i < N - 1; ++i) {
+    rt.makeHandle(SegmentCell::create(rt));
   }
-
-  // Discard one allocated cell.
-  rt.pointerRoots.pop_back();
-  roots.pop_back();
+  // Allocate and discard one cell.
+  SegmentCell::create(rt);
 
   ASSERT_EQ(0, gc.numFailedSegmentMaterializations());
   ASSERT_EQ(0, gc.numFullGCs());

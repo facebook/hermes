@@ -34,16 +34,20 @@ const ObjectVTable JSString::vt{
 void StringObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSString>());
   ObjectBuildMeta(cell, mb);
+  const auto *self = static_cast<const JSString *>(cell);
+  mb.setVTable(&JSString::vt.base);
+  mb.addField(&self->primitiveValue_);
 }
 
 #ifdef HERMESVM_SERIALIZE
-PrimitiveBox::PrimitiveBox(Deserializer &d, const VTable *vt)
-    : JSObject(d, vt) {}
-
-JSString::JSString(Deserializer &d, const VTable *vt) : PrimitiveBox(d, vt) {}
+JSString::JSString(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
+  d.readRelocation(&primitiveValue_, RelocationKind::GCPointer);
+}
 
 void StringObjectSerialize(Serializer &s, const GCCell *cell) {
   JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSString>());
+  const auto *self = static_cast<const JSString *>(cell);
+  s.writeRelocation(JSString::getPrimitiveString(self, s.getRuntime()));
   s.endObject(cell);
 }
 
@@ -59,16 +63,11 @@ CallResult<Handle<JSString>> JSString::create(
     Handle<StringPrimitive> value,
     Handle<JSObject> parentHandle) {
   auto clazzHandle = runtime->getHiddenClassForPrototype(
-      *parentHandle, numOverlapSlots<JSString>() + ANONYMOUS_PROPERTY_SLOTS);
-  auto obj = runtime->makeAFixed<JSString>(runtime, parentHandle, clazzHandle);
+      *parentHandle, numOverlapSlots<JSString>());
+  auto obj =
+      runtime->makeAFixed<JSString>(runtime, value, parentHandle, clazzHandle);
 
   auto selfHandle = JSObjectInit::initToHandle(runtime, obj);
-
-  JSObject::setInternalProperty(
-      *selfHandle,
-      runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
-      value.getHermesValue());
 
   PropertyFlags pf;
   pf.writable = 0;
@@ -99,16 +98,11 @@ void JSString::setPrimitiveString(
   assert(res && "cannot find 'length' property");
   (void)res;
 
-  JSObject::setNamedSlotValue(
-      *selfHandle,
-      runtime,
-      desc,
-      HermesValue::encodeDoubleValue(string->getStringLength()));
-  return JSObject::setInternalProperty(
-      *selfHandle,
-      runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
-      string.getHermesValue());
+  // This is definitely not a proxy because we know strings have lengths.
+  auto shv =
+      SmallHermesValue::encodeNumberValue(string->getStringLength(), runtime);
+  JSObject::setNamedSlotValueUnsafe(*selfHandle, runtime, desc, shv);
+  selfHandle->primitiveValue_.set(runtime, *string, &runtime->getHeap());
 }
 
 bool JSString::_haveOwnIndexedImpl(
@@ -209,6 +203,7 @@ void StringIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSStringIterator>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSStringIterator *>(cell);
+  mb.setVTable(&JSStringIterator::vt.base);
   mb.addField("iteratedString", &self->iteratedString_);
 }
 
@@ -240,7 +235,7 @@ PseudoHandle<JSStringIterator> JSStringIterator::create(
     Handle<StringPrimitive> string) {
   auto proto = Handle<JSObject>::vmcast(&runtime->stringIteratorPrototype);
   auto clazzHandle = runtime->getHiddenClassForPrototype(
-      *proto, numOverlapSlots<JSStringIterator>() + ANONYMOUS_PROPERTY_SLOTS);
+      *proto, numOverlapSlots<JSStringIterator>());
   auto obj = runtime->makeAFixed<JSStringIterator>(
       runtime, proto, clazzHandle, string);
   return JSObjectInit::initToPseudoHandle(runtime, obj);
@@ -325,13 +320,21 @@ const ObjectVTable JSNumber::vt{
 void NumberObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSNumber>());
   ObjectBuildMeta(cell, mb);
+  mb.setVTable(&JSNumber::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
-JSNumber::JSNumber(Deserializer &d, const VTable *vt) : PrimitiveBox(d, vt) {}
+JSNumber::JSNumber(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
+  HermesValue hv;
+  d.readHermesValue(&hv);
+  setPrimitiveNumber(hv.getNumber());
+}
 
 void NumberObjectSerialize(Serializer &s, const GCCell *cell) {
   JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSNumber>());
+  const auto *self = static_cast<const JSNumber *>(cell);
+  s.writeHermesValue(
+      HermesValue::encodeNumberValue(self->getPrimitiveNumber()));
   s.endObject(cell);
 }
 
@@ -347,17 +350,10 @@ PseudoHandle<JSNumber> JSNumber::create(
     double value,
     Handle<JSObject> parentHandle) {
   auto clazzHandle = runtime->getHiddenClassForPrototype(
-      *parentHandle, numOverlapSlots<JSNumber>() + ANONYMOUS_PROPERTY_SLOTS);
-  auto obj = runtime->makeAFixed<JSNumber>(runtime, parentHandle, clazzHandle);
-  auto self = JSObjectInit::initToPseudoHandle(runtime, obj);
-
-  JSObject::setInternalProperty(
-      self.get(),
-      runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
-      HermesValue::encodeDoubleValue(value));
-
-  return self;
+      *parentHandle, numOverlapSlots<JSNumber>());
+  auto obj =
+      runtime->makeAFixed<JSNumber>(runtime, value, parentHandle, clazzHandle);
+  return JSObjectInit::initToPseudoHandle(runtime, obj);
 }
 
 //===----------------------------------------------------------------------===//
@@ -377,14 +373,19 @@ const ObjectVTable JSBoolean::vt{
 void BooleanObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSBoolean>());
   ObjectBuildMeta(cell, mb);
+  mb.setVTable(&JSBoolean::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
-JSBoolean::JSBoolean(Deserializer &d, const VTable *vt) : PrimitiveBox(d, vt) {}
+JSBoolean::JSBoolean(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
+  setPrimitiveBoolean(d.readInt<bool>());
+}
 
 void BooleanObjectSerialize(Serializer &s, const GCCell *cell) {
   JSObject::serializeObjectImpl(
       s, cell, JSObject::numOverlapSlots<JSBoolean>());
+  const auto *self = static_cast<const JSBoolean *>(cell);
+  s.writeInt(self->getPrimitiveBoolean());
   s.endObject(cell);
 }
 
@@ -398,16 +399,10 @@ void BooleanObjectDeserialize(Deserializer &d, CellKind kind) {
 PseudoHandle<JSBoolean>
 JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
   auto clazzHandle = runtime->getHiddenClassForPrototype(
-      *parentHandle, numOverlapSlots<JSBoolean>() + ANONYMOUS_PROPERTY_SLOTS);
-  auto obj = runtime->makeAFixed<JSBoolean>(runtime, parentHandle, clazzHandle);
-  auto self = JSObjectInit::initToPseudoHandle(runtime, obj);
-
-  JSObject::setInternalProperty(
-      self.get(),
-      runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
-      *Runtime::getBoolValue(value));
-  return self;
+      *parentHandle, numOverlapSlots<JSBoolean>());
+  auto obj =
+      runtime->makeAFixed<JSBoolean>(runtime, value, parentHandle, clazzHandle);
+  return JSObjectInit::initToPseudoHandle(runtime, obj);
 }
 
 //===----------------------------------------------------------------------===//
@@ -427,13 +422,20 @@ const ObjectVTable JSSymbol::vt{
 void SymbolObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSSymbol>());
   ObjectBuildMeta(cell, mb);
+  const auto *self = static_cast<const JSSymbol *>(cell);
+  mb.setVTable(&JSSymbol::vt.base);
+  mb.addField(&self->primitiveValue_);
 }
 
 #ifdef HERMESVM_SERIALIZE
-JSSymbol::JSSymbol(Deserializer &d) : PrimitiveBox(d, &vt.base) {}
+JSSymbol::JSSymbol(Deserializer &d)
+    : JSObject(d, &vt.base),
+      primitiveValue_(SymbolID::unsafeCreate(d.readInt<SymbolID::RawType>())) {}
 
 void SymbolObjectSerialize(Serializer &s, const GCCell *cell) {
   JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSSymbol>());
+  const auto *self = static_cast<const JSSymbol *>(cell);
+  s.writeInt<uint32_t>(self->getPrimitiveSymbol().get().unsafeGetRaw());
   s.endObject(cell);
 }
 
@@ -449,18 +451,13 @@ PseudoHandle<JSSymbol> JSSymbol::create(
     SymbolID value,
     Handle<JSObject> parentHandle) {
   auto clazzHandle = runtime->getHiddenClassForPrototype(
-      *parentHandle, numOverlapSlots<JSSymbol>() + ANONYMOUS_PROPERTY_SLOTS);
-  auto *obj = runtime->makeAFixed<JSSymbol>(runtime, parentHandle, clazzHandle);
-  auto self = JSObjectInit::initToPseudoHandle(runtime, obj);
-
-  JSObject::setInternalProperty(
-      self.get(),
-      runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
-      HermesValue::encodeSymbolValue(value));
-
-  return self;
+      *parentHandle, numOverlapSlots<JSSymbol>());
+  auto *obj =
+      runtime->makeAFixed<JSSymbol>(runtime, value, parentHandle, clazzHandle);
+  return JSObjectInit::initToPseudoHandle(runtime, obj);
 }
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

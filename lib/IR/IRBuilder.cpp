@@ -899,6 +899,13 @@ HBCAllocObjectFromBufferInst *IRBuilder::createHBCAllocObjectFromBufferInst(
   return inst;
 }
 
+AllocObjectLiteralInst *IRBuilder::createAllocObjectLiteralInst(
+    const AllocObjectLiteralInst::ObjectPropertyMap &propMap) {
+  auto *inst = new AllocObjectLiteralInst(propMap);
+  insert(inst);
+  return inst;
+}
+
 CompareBranchInst *IRBuilder::createCompareBranchInst(
     Value *left,
     Value *right,

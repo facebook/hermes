@@ -192,3 +192,5 @@ bool FuncSigOpts::runOnModule(Module *M) {
 Pass *hermes::createFuncSigOpts() {
   return new FuncSigOpts();
 }
+
+#undef DEBUG_TYPE

@@ -488,3 +488,4 @@ TEST(HBCBytecodeGen, BytecodeOptionHasAsync) {
 }
 
 } // end anonymous namespace
+#undef DEBUG_TYPE

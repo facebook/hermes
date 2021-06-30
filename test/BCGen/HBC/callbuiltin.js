@@ -37,15 +37,15 @@ function shadows() {
 //CHKRA-LABEL:function shadows() : undefined
 //CHKRA-NEXT:frame = []
 //CHKRA-NEXT:%BB0:
-//CHKRA-NEXT:  %0 = AllocObjectInst 1 : number, empty
-//CHKRA-NEXT:  %1 = HBCGetGlobalObjectInst
-//CHKRA-NEXT:  %2 = TryLoadGlobalPropertyInst %1 : object, "print" : string
-//CHKRA-NEXT:  %3 = StoreNewOwnPropertyInst %2, %0 : object, "keys" : string, true : boolean
-//CHKRA-NEXT:  %4 = LoadPropertyInst %0 : object, "keys" : string
+//CHKRA-NEXT:  %0 = HBCGetGlobalObjectInst
+//CHKRA-NEXT:  %1 = TryLoadGlobalPropertyInst %0 : object, "print" : string
+//CHKRA-NEXT:  %2 = AllocObjectInst 1 : number, empty
+//CHKRA-NEXT:  %3 = StoreNewOwnPropertyInst %1, %2 : object, "keys" : string, true : boolean
+//CHKRA-NEXT:  %4 = LoadPropertyInst %2 : object, "keys" : string
 //CHKRA-NEXT:  %5 = HBCLoadConstInst "evil" : string
-//CHKRA-NEXT:  %6 = ImplicitMovInst %0 : object
+//CHKRA-NEXT:  %6 = ImplicitMovInst %2 : object
 //CHKRA-NEXT:  %7 = ImplicitMovInst %5 : string
-//CHKRA-NEXT:  %8 = HBCCallNInst %4, %0 : object, %5 : string
+//CHKRA-NEXT:  %8 = HBCCallNInst %4, %2 : object, %5 : string
 //CHKRA-NEXT:  %9 = HBCLoadConstInst undefined : undefined
 //CHKRA-NEXT:  %10 = ReturnInst %9 : undefined
 //CHKRA-NEXT:function_end

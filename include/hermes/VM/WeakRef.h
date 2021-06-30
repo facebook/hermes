@@ -72,6 +72,18 @@ class WeakRef : public WeakRefBase {
     return Traits::decode(value);
   }
 
+  /// Same as \c unsafeGetOptional, but without a read barrier to the GC.
+  /// Do not use this unless it is within a signal handler or on a
+  /// non-mutator thread. If you call this in normal VM operations, the pointer
+  /// might be garbage collected from underneath you at some time in the future,
+  /// even if it's placed in a handle.
+  OptValue<typename Traits::value_type> unsafeGetOptionalNoReadBarrier() const {
+    if (!isValid()) {
+      return OptValue<typename Traits::value_type>(llvh::None);
+    }
+    return Traits::decode(slot_->value());
+  }
+
   /// This function returns the stored HermesValue and wraps it into a new
   /// handle, ensuring that it cannot be freed while the handle is alive.
   /// If the weak reference is not live, returns None.
@@ -99,57 +111,49 @@ getNoHandle(const WeakRef<T> &wr, GC *gc) {
   return nullptr;
 }
 
-class WeakRootBase {
+/// WeakRoot is used for weak pointers that are stored in roots, and therefore
+/// do not need to take up a WeakRefSlot (since we always know where to update
+/// them). Use protected inheritance to avoid callers casting this to its base
+/// class and accidentally missing the read barrier.
+class WeakRootBase : protected CompressedPointer {
  protected:
-  explicit WeakRootBase() : ptr_() {}
-  explicit WeakRootBase(std::nullptr_t) : ptr_() {}
-  explicit WeakRootBase(GCPointerBase::StorageType ptr) : ptr_(ptr) {}
-  explicit WeakRootBase(const WeakRootBase &that) : ptr_(that.ptr_) {}
+  explicit WeakRootBase() : CompressedPointer(nullptr) {}
+  explicit WeakRootBase(std::nullptr_t) : CompressedPointer(nullptr) {}
+  explicit WeakRootBase(CompressedPointer::StorageType ptr)
+      : CompressedPointer(ptr) {}
 
   void *get(PointerBase *base, GC *gc) const {
-    GCCell *ptr = GCPointerBase::storageTypeToPointer(ptr_, base);
+    GCCell *ptr = CompressedPointer::get(base);
     gc->weakRefReadBarrier(ptr);
     return ptr;
   }
 
  public:
+  using CompressedPointer::StorageType;
+  using CompressedPointer::operator bool;
+  using CompressedPointer::operator!=;
+  using CompressedPointer::operator==;
+
   /// This function should only be used in cases where it is known that no read
   /// barrier is necessary.
-  GCPointerBase::StorageType &getNoBarrierUnsafe() {
-    return ptr_;
+  GCCell *getNoBarrierUnsafe(PointerBase *base) {
+    return CompressedPointer::get(base);
+  }
+  StorageType &getLocNoBarrierUnsafe() {
+    return getLoc();
   }
 
-  WeakRootBase &operator=(GCPointerBase::StorageType ptr) {
+  WeakRootBase &operator=(CompressedPointer ptr) {
     // No need for a write barrier on weak roots currently.
-    ptr_ = ptr;
+    setNoBarrier(ptr);
     return *this;
   }
 
-  bool operator==(GCPointerBase::StorageType that) const {
-    // Checking for equality to another pointer does not change the possible
-    // lifetime of the weak root, so there's no need for a read barrier
-    // here.
-    return ptr_ == that;
+  WeakRootBase &operator=(std::nullptr_t) {
+    // No need for a write barrier on weak roots currently.
+    setNoBarrier(CompressedPointer{nullptr});
+    return *this;
   }
-
-  bool operator!=(GCPointerBase::StorageType that) const {
-    // Checking for equality to another pointer does not change the possible
-    // lifetime of the weak root, so there's no need for a read barrier
-    // here.
-    return !(*this == that);
-  }
-
-  explicit operator bool() const {
-    // Checking for null doesn't change the lifetime of the weak root, so
-    // there's no need for a read barrier here.
-    // NOTE: There can be a race condition between calling this function and
-    // calling get() normally, but the only time ptr_ is changed is during a
-    // STW pause, so there's no way the mutator could observe it.
-    return static_cast<bool>(ptr_);
-  }
-
- private:
-  GCPointerBase::StorageType ptr_;
 };
 
 /// A wrapper around a pointer meant to be used as a weak root. It adds a read
@@ -159,16 +163,18 @@ class WeakRoot final : public WeakRootBase {
  public:
   explicit WeakRoot() : WeakRootBase() {}
   explicit WeakRoot(std::nullptr_t) : WeakRootBase(nullptr) {}
+  explicit WeakRoot(T *ptr, PointerBase *base)
+      : WeakRootBase(pointerToStorageType(ptr, base)) {}
 
   T *get(PointerBase *base, GC *gc) const {
     return static_cast<T *>(WeakRootBase::get(base, gc));
   }
 
   void set(PointerBase *base, T *ptr) {
-    WeakRootBase::operator=(GCPointerBase::pointerToStorageType(ptr, base));
+    WeakRootBase::operator=(CompressedPointer(base, ptr));
   }
 
-  WeakRoot &operator=(GCPointerBase::StorageType ptr) {
+  WeakRoot &operator=(CompressedPointer ptr) {
     WeakRootBase::operator=(ptr);
     return *this;
   }

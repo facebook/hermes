@@ -117,13 +117,13 @@ void YoungGen::sweepAndInstallForwardingPointers(
 
 void YoungGen::updateReferences(
     GenGC *gc,
-    SweepResult::VTablesRemaining &vTables) {
+    SweepResult::KindAndSizesRemaining &kindAndSizes) {
   auto acceptor = getFullMSCUpdateAcceptor(*gc);
 
   // Update reachable cells with finalizers to their after-compaction location.
   updateFinalizableCellListReferences();
 
-  activeSegment().updateReferences(gc, acceptor.get(), vTables);
+  activeSegment().updateReferences(gc, acceptor.get(), kindAndSizes);
 }
 
 void YoungGen::compactFinalizableObjectList() {
@@ -390,6 +390,7 @@ void YoungGen::collect() {
   {
     PerfSection ygUpdateWeakRefsSystraceRegion("ygUpdateWeakRefs");
     gc_->updateWeakReferences(/*fullGC*/ false);
+    gc_->markWeakRoots(acceptor, /*markLongLived*/ false);
   }
 
   // Call the finalizers of unreachable objects. Assumes all cells that survived
@@ -531,6 +532,15 @@ void YoungGen::ensureReferentCopied(HermesValue *hv) {
   }
 }
 
+void YoungGen::ensureReferentCopied(SmallHermesValue *hv) {
+  assert(hv->isPointer() && "Should only call on pointer HermesValues");
+  GCCell *cell = static_cast<GCCell *>(hv->getPointer(gc_->getPointerBase()));
+  if (contains(cell)) {
+    hv->setInGC(
+        hv->updatePointer(forwardPointer(cell), gc_->getPointerBase()), gc_);
+  }
+}
+
 void YoungGen::ensureReferentCopied(GCCell **ptrLoc) {
   GCCell *ptr = *ptrLoc;
   if (contains(ptr)) {
@@ -553,7 +563,7 @@ GCCell *YoungGen::forwardPointer(GCCell *ptr) {
 
   // If the object has already been forwarded, we return the new location.
   if (cell->hasMarkedForwardingPointer()) {
-    return cell->getMarkedForwardingPointer();
+    return cell->getMarkedForwardingPointer().getNonNull(gc_->getPointerBase());
   }
 
   uint32_t size = cell->getAllocatedSize();
@@ -578,7 +588,8 @@ GCCell *YoungGen::forwardPointer(GCCell *ptr) {
 #endif
 
   // Store the forwarding pointer in the original object.
-  cell->setMarkedForwardingPointer(newCell);
+  cell->setMarkedForwardingPointer(
+      CompressedPointer(gc_->getPointerBase(), newCell));
 
   // Update the source pointer.
   return newCell;
@@ -590,7 +601,8 @@ void YoungGen::updateIDTracker() {
   while (ptr < lvl) {
     GCCell *cell = reinterpret_cast<GCCell *>(ptr);
     if (cell->hasMarkedForwardingPointer()) {
-      auto *fptr = cell->getMarkedForwardingPointer();
+      auto *fptr =
+          cell->getMarkedForwardingPointer().getNonNull(gc_->getPointerBase());
       const auto sz = reinterpret_cast<GCCell *>(fptr)->getAllocatedSize();
       // YG promotions never change size.
       gc_->moveObject(cell, sz, fptr, sz);
@@ -607,7 +619,8 @@ void YoungGen::finalizeUnreachableAndTransferReachableObjects() {
   numFinalizedObjects_ = 0;
   for (const auto &cell : cellsWithFinalizers()) {
     if (cell->hasMarkedForwardingPointer()) {
-      nextGen_->addToFinalizerList(cell->getMarkedForwardingPointer());
+      nextGen_->addToFinalizerList(
+          cell->getMarkedForwardingPointer().getNonNull(gc_->getPointerBase()));
       continue;
     }
     cell->getVT()->finalize(cell, gc_);
@@ -675,3 +688,4 @@ void YoungGen::moveHeap(GenGC *gc, ptrdiff_t moveHeapDelta) {
 
 } // namespace vm
 } // namespace hermes
+#undef DEBUG_TYPE

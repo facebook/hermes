@@ -19,7 +19,7 @@ buildDir = "${rootProject.ext.hermes_ws}/build_android/intltest"
 buildDir.mkdirs()
 
 def test262DownloadsDirPath = "${rootProject.ext.hermes_ws}/build_android/intltest/downloads/test262"
-def test262Destination = "${rootProject.ext.hermes_ws}/hermes/android/intltest/java/com/facebook/hermes/test/assets"
+def test262Destination = "java/com/facebook/hermes/test/assets"
 task createDownloadsDir {
   new File(test262DownloadsDirPath).mkdirs()
 }
@@ -77,11 +77,18 @@ android {
 
   externalNativeBuild {
     cmake {
-      version "3.6.0"
+      version "3.10.2"
       path "../../CMakeLists.txt"
       buildStagingDirectory = "${rootProject.ext.hermes_ws}/staging/intl"
       buildStagingDirectory.mkdirs()
     }
+  }
+
+  useLibrary 'android.test.base'
+
+  // Allow using prefab so that we can import libfbjni.so.
+  buildFeatures {
+    prefab true
   }
 
   dependencies {
@@ -89,14 +96,21 @@ android {
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
     androidTestImplementation 'org.easytesting:fest-assert-core:2.0M10'
-    androidTestImplementation 'com.facebook.fbjni:fbjni:0.0.2'
     androidTestImplementation 'com.facebook.soloader:soloader:0.9.0'
     androidTestImplementation 'com.facebook.yoga:proguard-annotations:1.14.1'
   }
 
   dependencies {
+    implementation 'com.facebook.fbjni:fbjni:0.2.2'
     implementation "androidx.annotation:annotation:1.1.0"
     implementation "androidx.annotation:annotation-experimental:1.0.0"
+  }
+
+  // TODO: Revisit this if there is a better solution for deduplicating native
+  // libraries.
+  packagingOptions {
+    pickFirst "**/libfbjni.so"
+    pickFirst "**/libc++_shared.so"
   }
 
   sourceSets {
@@ -110,8 +124,8 @@ android {
         srcDirs = [
           "java",
           // Include AndroidUnicodeUtils, which would normally come from RN
-          "${rootProject.ext.hermes_ws}/hermes/lib/Platform/Unicode/java",
-          "${rootProject.ext.hermes_ws}/hermes/lib/Platform/Intl/java",
+          "../../lib/Platform/Unicode/java",
+          "../../lib/Platform/Intl/java",
         ]
       }
       resources {

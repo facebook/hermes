@@ -163,9 +163,15 @@ inline const GCConfig TestGCConfigFixedSize(
 #define ASSERT_RETURNED(x) ASSERT_EQ(ExecutionStatus::RETURNED, x)
 
 /// Expect that 'x' is a string primitive with value 'str'
-#define EXPECT_STRINGPRIM(str, x) \
-  EXPECT_TRUE(isSameValue(        \
-      StringPrimitive::createNoThrow(runtime, str).getHermesValue(), x));
+#define EXPECT_STRINGPRIM(str, x)                                           \
+  do {                                                                      \
+    GCScopeMarkerRAII marker{runtime};                                      \
+    Handle<> xHandle{runtime, x};                                           \
+    Handle<StringPrimitive> strHandle =                                     \
+        StringPrimitive::createNoThrow(runtime, str);                       \
+    EXPECT_TRUE(                                                            \
+        isSameValue(strHandle.getHermesValue(), xHandle.getHermesValue())); \
+  } while (0)
 
 /// Assert that execution of 'x' didn't throw and returned the expected bool.
 #define EXPECT_CALLRESULT_BOOL_RAW(B, x) \
@@ -251,16 +257,7 @@ inline HermesValue operator"" _hd(long double d) {
   return HermesValue::encodeDoubleValue(d);
 }
 
-/// A MetadataTable that has a public constructor for tests to use.
-class MetadataTableForTests final : public MetadataTable {
- public:
-  // The constructor is explicit to avoid incompatibilities between compilers.
-  template <int length>
-  explicit constexpr MetadataTableForTests(const Metadata (&table)[length])
-      : MetadataTable(table) {}
-};
-
-/// A Runtime that can take a custom VTableMap and Metadata table.
+/// A minimal Runtime for GC tests.
 class DummyRuntime final : public HandleRootOwner,
                            public PointerBase,
                            private GCBase::GCCallbacks {
@@ -270,20 +267,17 @@ class DummyRuntime final : public HandleRootOwner,
  public:
   std::vector<GCCell **> pointerRoots{};
   std::vector<PinnedHermesValue *> valueRoots{};
-  std::vector<WeakRoot<void> *> weakRoots{};
-  std::function<void(WeakRefAcceptor &)> markExtraWeak{};
+  std::vector<WeakRoot<GCCell> *> weakRoots{};
+  std::function<void(WeakRootAcceptor &)> markExtraWeak{};
 
   /// Create a DummyRuntime with the default parameters.
-  static std::shared_ptr<DummyRuntime> create(
-      MetadataTableForTests metaTable,
-      const GCConfig &gcConfig);
+  static std::shared_ptr<DummyRuntime> create(const GCConfig &gcConfig);
 
   /// Use a custom storage provider and/or a custom crash manager.
   /// \param provider A pointer to a StorageProvider. It *must* use
   ///   StorageProvider::defaultProvider eventually or the test will fail.
   /// \param crashMgr
   static std::shared_ptr<DummyRuntime> create(
-      MetadataTableForTests metaTable,
       const GCConfig &gcConfig,
       std::shared_ptr<StorageProvider> provider,
       std::shared_ptr<CrashManager> crashMgr =
@@ -324,7 +318,10 @@ class DummyRuntime final : public HandleRootOwner,
 
   void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool) override;
 
-  void markWeakRoots(WeakRootAcceptor &weakAcceptor) override;
+  void markWeakRoots(WeakRootAcceptor &weakAcceptor, bool) override;
+
+  void markRootsForCompleteMarking(
+      RootAndSlotAcceptorWithNames &acceptor) override;
 
   unsigned int getSymbolsEnd() const override {
     return 0;
@@ -377,23 +374,14 @@ class DummyRuntime final : public HandleRootOwner,
   }
 
  private:
-  static std::unique_ptr<GC> makeHeap(
-      DummyRuntime *runtime,
-      MetadataTableForTests metaTable,
-      const GCConfig &gcConfig,
-      std::shared_ptr<CrashManager> crashMgr,
-      std::shared_ptr<StorageProvider> provider,
-      experiments::VMExperimentFlags experiments);
-
   DummyRuntime(
-      MetadataTableForTests metaTable,
       const GCConfig &gcConfig,
       std::shared_ptr<StorageProvider> storageProvider,
       std::shared_ptr<CrashManager> crashMgr);
 };
 
 /// A DummyRuntimeTestFixtureBase should be used by any test that requires a
-/// DummyRuntime. It takes a metadata table and a GCConfig, the latter can be
+/// DummyRuntime. It takes a GCConfig, which can be
 /// used to specify heap size using the constants i.e kInitHeapSize.
 class DummyRuntimeTestFixtureBase : public ::testing::Test {
   std::shared_ptr<DummyRuntime> rt;
@@ -404,10 +392,8 @@ class DummyRuntimeTestFixtureBase : public ::testing::Test {
 
   GCScope gcScope;
 
-  DummyRuntimeTestFixtureBase(
-      MetadataTableForTests metaTable,
-      const GCConfig &gcConfig)
-      : rt(DummyRuntime::create(metaTable, gcConfig)),
+  DummyRuntimeTestFixtureBase(const GCConfig &gcConfig)
+      : rt(DummyRuntime::create(gcConfig)),
         runtime(rt.get()),
         gcScope(runtime) {}
 

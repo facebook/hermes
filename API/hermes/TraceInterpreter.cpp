@@ -690,6 +690,12 @@ TraceInterpreter::getSourceHashToBundleMap(
   // as well.
   rtConfigBuilder.withTraceEnabled(options.traceEnabled);
 
+  if (options.action == ExecuteOptions::MarkerAction::SAMPLE_TIME) {
+    // If time sampling is requested, the RuntimeConfig has to have the sampling
+    // profiler enabled.
+    rtConfigBuilder.withEnableSampleProfiling(true);
+  }
+
   // If aggregating multiple reps, randomize the placement of some data
   // structures in each rep, for a more robust time metric.
   if (options.reps > 1) {
@@ -937,9 +943,14 @@ std::string TraceInterpreter::execEntryFunction(
             nullptr);
       }
       break;
-    case ExecuteOptions::MarkerAction::SAMPLE:
+    case ExecuteOptions::MarkerAction::SAMPLE_MEMORY:
       if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
         hermesRuntime->instrumentation().startHeapSampling(1 << 15);
+      }
+      break;
+    case ExecuteOptions::MarkerAction::SAMPLE_TIME:
+      if (dynamic_cast<HermesRuntime *>(&rt_)) {
+        HermesRuntime::enableSamplingProfiler();
       }
       break;
     default:
@@ -1362,7 +1373,7 @@ Value TraceInterpreter::execFunction(
                 static_cast<const SynthTrace::CallFromNativeRecord &>(*rec);
             auto func = getObjForUse(cfnr.functionID_).asFunction(rt_);
             std::vector<Value> args;
-            for (const auto arg : cfnr.args_) {
+            for (const auto &arg : cfnr.args_) {
               args.emplace_back(
                   traceValueToJSIValue(rt_, trace_, getJSIValueForUse, arg));
             }
@@ -1391,7 +1402,7 @@ Value TraceInterpreter::execFunction(
             // calls the construct path.
             auto func = getObjForUse(cfnr.functionID_).asFunction(rt_);
             std::vector<Value> args;
-            for (const auto arg : cfnr.args_) {
+            for (const auto &arg : cfnr.args_) {
               args.emplace_back(
                   traceValueToJSIValue(rt_, trace_, getJSIValueForUse, arg));
             }
@@ -1647,12 +1658,20 @@ void TraceInterpreter::checkMarker(const std::string &marker) {
         llvh::errs() << "Heap timeline requested from non-Hermes runtime\n";
       }
       break;
-    case ExecuteOptions::MarkerAction::SAMPLE:
+    case ExecuteOptions::MarkerAction::SAMPLE_MEMORY:
       if (HermesRuntime *hermesRT = dynamic_cast<HermesRuntime *>(&rt_)) {
         std::ofstream stream(options_.profileFileName);
         hermesRT->instrumentation().stopHeapSampling(stream);
       } else {
         llvh::errs() << "Heap sampling requested from non-Hermes runtime\n";
+      }
+      break;
+    case ExecuteOptions::MarkerAction::SAMPLE_TIME:
+      if (dynamic_cast<HermesRuntime *>(&rt_)) {
+        HermesRuntime::dumpSampledTraceToFile(options_.profileFileName);
+        HermesRuntime::disableSamplingProfiler();
+      } else {
+        llvh::errs() << "CPU sampling requested from non-Hermes runtime\n";
       }
       break;
     case ExecuteOptions::MarkerAction::NONE:

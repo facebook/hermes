@@ -38,7 +38,7 @@ void GCGeneration::finalizeUnreachableObjects() {
 
 void GCGeneration::updateFinalizableCellListReferences() {
   for (auto &cell : cellsWithFinalizers()) {
-    cell = cell->getForwardingPointer();
+    cell = cell->getForwardingPointer().getNonNull(gc_->getPointerBase());
   }
 }
 

@@ -8,7 +8,10 @@
 #include "hermes/VM/StackTracesTree.h"
 #include "hermes/VM/Runtime.h"
 
-#if defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES)
+// Enabling Handle-SAN can create additional allocations, which will invalidate
+// the expected outputs in this test.
+#if defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && \
+    !defined(HERMESVM_SANITIZE_HANDLES)
 
 #include "TestHelpers.h"
 #include "TestHelpers1.h"
@@ -30,7 +33,7 @@ struct StackTracesTreeTest : public RuntimeTestFixtureBase {
             RuntimeConfig::Builder(kTestRTConfigBuilder)
                 .withES6Promise(true)
                 .withES6Proxy(true)
-                .withES6Intl(true)
+                .withIntl(true)
                 .withGCConfig(GCConfig::Builder(kTestGCConfigBuilder).build())
                 .build()) {
     runtime->enableAllocationLocationTracker();
@@ -152,7 +155,7 @@ struct StackTracesTreeParameterizedTest
       : StackTracesTreeTest(
             RuntimeConfig::Builder(kTestRTConfigBuilder)
                 .withES6Proxy(true)
-                .withES6Intl(true)
+                .withIntl(true)
                 .withGCConfig(GCConfig::Builder(kTestGCConfigBuilder).build())
                 .build()) {
     if (trackerOnByDefault()) {

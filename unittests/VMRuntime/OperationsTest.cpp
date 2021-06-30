@@ -814,8 +814,8 @@ TEST_F(OperationsTest, ToObjectTest) {
     auto res = toObject(runtime, scopedVal);
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());
     EXPECT_TRUE(res->isObject());
-    auto obj = static_cast<PrimitiveBox *>(res->getPointer());
-    EXPECT_TRUE(PrimitiveBox::getPrimitiveValue(obj, runtime).getBool());
+    auto obj = vmcast<JSBoolean>(static_cast<GCCell *>(res->getObject()));
+    EXPECT_TRUE(obj->getPrimitiveBoolean());
   }
 
   {
@@ -824,8 +824,8 @@ TEST_F(OperationsTest, ToObjectTest) {
     auto res = toObject(runtime, scopedVal);
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());
     EXPECT_TRUE(res->isObject());
-    auto obj = static_cast<PrimitiveBox *>(res->getPointer());
-    EXPECT_EQ(m, PrimitiveBox::getPrimitiveValue(obj, runtime).getNumber());
+    auto obj = vmcast<JSNumber>(static_cast<GCCell *>(res->getObject()));
+    EXPECT_EQ(m, obj->getPrimitiveNumber());
   }
 
   {
@@ -836,9 +836,9 @@ TEST_F(OperationsTest, ToObjectTest) {
     auto res = toObject(runtime, scopedVal);
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());
     EXPECT_TRUE(res->isObject());
-    auto obj = static_cast<PrimitiveBox *>(res->getPointer());
-    auto objStrHandle = runtime->makeHandle(
-        PrimitiveBox::getPrimitiveValue(obj, runtime).getString());
+    auto obj = vmcast<JSString>(static_cast<GCCell *>(res->getObject()));
+    auto objStrHandle =
+        runtime->makeHandle(JSString::getPrimitiveString(obj, runtime));
     EXPECT_TRUE(StringPrimitive::createStringView(runtime, objStrHandle)
                     .equals(strRef));
   }

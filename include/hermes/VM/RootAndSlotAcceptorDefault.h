@@ -40,11 +40,17 @@ class RootAndSlotAcceptorDefault : public RootAndSlotAcceptor {
 
   virtual void acceptHV(HermesValue &hv) = 0;
 
-  void accept(GCSymbolID sym) final {
+  void accept(GCSmallHermesValue &shv) final {
+    acceptSHV(shv);
+  }
+
+  virtual void acceptSHV(SmallHermesValue &hv) = 0;
+
+  void accept(const GCSymbolID &sym) final {
     acceptSym(sym);
   }
 
-  void accept(RootSymbolID sym) final {
+  void accept(const RootSymbolID &sym) final {
     acceptSym(sym);
   }
 
@@ -95,11 +101,17 @@ class RootAndSlotAcceptorWithNamesDefault
 
   virtual void acceptHV(HermesValue &hv, const char *name) = 0;
 
-  void accept(RootSymbolID sym, const char *name) final {
+  void accept(GCSmallHermesValue &shv, const char *name) final {
+    acceptSHV(shv, name);
+  }
+
+  virtual void acceptSHV(SmallHermesValue &hv, const char *name) = 0;
+
+  void accept(const RootSymbolID &sym, const char *name) final {
     acceptSym(sym, name);
   }
 
-  void accept(GCSymbolID sym, const char *name) final {
+  void accept(const GCSymbolID &sym, const char *name) final {
     acceptSym(sym, name);
   }
 
@@ -113,9 +125,9 @@ class RootAndSlotAcceptorWithNamesDefault
   PointerBase *pointerBase_;
 };
 
-class WeakRootAcceptorDefault : public WeakRootAcceptor {
+class WeakAcceptorDefault : public WeakRefAcceptor, public WeakRootAcceptor {
  public:
-  explicit WeakRootAcceptorDefault(PointerBase *base)
+  explicit WeakAcceptorDefault(PointerBase *base)
       : pointerBaseForWeakRoot_(base) {}
 
   void acceptWeak(WeakRootBase &ptr) final;
@@ -149,14 +161,11 @@ inline void RootAndSlotAcceptorDefault::accept(BasedPointer &ptr) {
   ptr = pointerBase_->pointerToBased(actualizedPointer);
 }
 
-inline void WeakRootAcceptorDefault::acceptWeak(WeakRootBase &ptr) {
-  GCPointerBase::StorageType weakRootStorage = ptr.getNoBarrierUnsafe();
-  acceptWeak(weakRootStorage);
-  // Assign back to the input pointer location.
-  ptr = weakRootStorage;
+inline void WeakAcceptorDefault::acceptWeak(WeakRootBase &ptr) {
+  acceptWeak(ptr.getLocNoBarrierUnsafe());
 }
 
-inline void WeakRootAcceptorDefault::acceptWeak(BasedPointer &ptr) {
+inline void WeakAcceptorDefault::acceptWeak(BasedPointer &ptr) {
   if (!ptr) {
     return;
   }

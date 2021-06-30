@@ -12,5 +12,6 @@ fields Getting and setting fields
 jobject_jclass Working with JObject and JClass
 simple_exceptions Catching and throwing exceptions
 boxed Working with boxed primitives
-iterables Working with Collections
+iterables Working with Iterables
+collections Building Collections
 byte_buffer Transferring data with direct ByteBuffer

@@ -128,9 +128,10 @@ class PointerBase {
   /// segmentMap_[0], which is used for the null pointer
   /// representation.
   using SegmentPtr = void *;
-  static constexpr unsigned kMaxSegments = 1 << (32 - AlignedStorage::kLogSize);
-  /// We add one entry so that segmentMap_[0] can contain the null pointer.
-  static constexpr unsigned kSegmentMapSize = kMaxSegments + 1;
+  static constexpr unsigned kSegmentMapSize = 1
+      << (32 - AlignedStorage::kLogSize);
+  /// We subtract one entry so that segmentMap_[0] can contain the null pointer.
+  static constexpr unsigned kMaxSegments = kSegmentMapSize - 1;
   SegmentPtr segmentMap_[kSegmentMapSize];
 #endif // HERMESVM_COMPRESSED_POINTERS
 };

@@ -21,16 +21,7 @@ namespace vm {
 GenGCHeapSegment::GenGCHeapSegment(
     AlignedStorage &&storage,
     GCGeneration *owner)
-    : AlignedHeapSegment(std::move(storage)), generation_(owner) {
-  // Storage end must be page-aligned so that markUnused below stays in segment.
-  assert(
-      reinterpret_cast<uintptr_t>(hiLim()) % oscompat::page_size() == 0 &&
-      "storage end must be page-aligned");
-  if (*this) {
-    new (contents()) Contents();
-    contents()->protectGuardPage(oscompat::ProtectMode::None);
-  }
-}
+    : AlignedHeapSegment(std::move(storage)), generation_(owner) {}
 
 void GenGCHeapSegment::creditExternalMemory(uint32_t size) {
   // Decrease effectiveEnd_ by size, but not below level_.  Be careful of
@@ -113,19 +104,19 @@ void GenGCHeapSegment::deleteDeadObjectIDs(GenGC *gc) {
 void GenGCHeapSegment::updateReferences(
     GenGC *gc,
     FullMSCUpdateAcceptor *acceptor,
-    SweepResult::VTablesRemaining &vTables) {
+    SweepResult::KindAndSizesRemaining &kindAndSizes) {
   MarkBitArrayNC &markBits = markBitArray();
   char *ptr = start();
   size_t ind = markBits.addressToIndex(ptr);
   while (ptr < level()) {
     if (markBits.at(ind)) {
       GCCell *cell = reinterpret_cast<GCCell *>(ptr);
-      // Get the VTable.
-      assert(vTables.hasNext() && "Need a displaced vtable pointer");
-      const VTable *vtp = vTables.next();
+      // Get the KindAndSize.
+      assert(kindAndSizes.hasNext() && "Need a displaced KindAndSize");
+      const auto kindAndSize = kindAndSizes.next();
       // Scan the pointer fields, updating via forwarding pointers.
-      gc->markCell(cell, vtp, *acceptor);
-      uint32_t cellSize = cell->getAllocatedSize(vtp);
+      gc->markCell(cell, kindAndSize.getKind(), *acceptor);
+      uint32_t cellSize = kindAndSize.getSize();
       ptr += cellSize;
       ind += (cellSize >> LogHeapAlign);
     } else {
@@ -136,7 +127,9 @@ void GenGCHeapSegment::updateReferences(
   }
 }
 
-void GenGCHeapSegment::compact(SweepResult::VTablesRemaining &vTables) {
+void GenGCHeapSegment::compact(
+    SweepResult::KindAndSizesRemaining &kindAndSizes,
+    PointerBase *base) {
   // If we're using ASAN, we've poisoned the unallocated portion of the space;
   // unpoison that now, since we may copy into it.
   __asan_unpoison_memory_region(level(), end() - level());
@@ -147,11 +140,11 @@ void GenGCHeapSegment::compact(SweepResult::VTablesRemaining &vTables) {
     if (markBits.at(ind)) {
       GCCell *cell = reinterpret_cast<GCCell *>(ptr);
       // Read the new address from the forwarding pointer.
-      char *newAddr = reinterpret_cast<char *>(cell->getForwardingPointer());
+      char *newAddr = reinterpret_cast<char *>(
+          cell->getForwardingPointer().getNonNull(base));
       // Put back the vtable.
-      assert(vTables.hasNext() && "Need a displaced vtable pointer");
-      cell->setForwardingPointer(
-          reinterpret_cast<const GCCell *>(vTables.next()));
+      assert(kindAndSizes.hasNext() && "Need a displaced vtable pointer");
+      cell->setKindAndSize(kindAndSizes.next());
       assert(
           cell->isValid() &&
           "Cell was invalid after placing the vtable back in");
@@ -165,7 +158,6 @@ void GenGCHeapSegment::compact(SweepResult::VTablesRemaining &vTables) {
         // Set the new cell size.
         auto *newCell = reinterpret_cast<VariableSizeRuntimeCell *>(newAddr);
         newCell->setSizeFromGC(trimmedSize);
-        newCell->getVT()->trim(newCell);
       }
 
       ptr += cellSize;
@@ -239,11 +231,15 @@ void GenGCHeapSegment::sweepAndInstallForwardingPointers(
         new (adjacentPtr) DeadRegion(ptr - adjacentPtr);
       }
 
-      sweepResult->displacedVtablePtrs.push_back(cell->getVT());
-      cell->setForwardingPointer(reinterpret_cast<GCCell *>(res.ptr));
+      sweepResult->displacedKinds.push_back(cell->getKindAndSize());
+      cell->setForwardingPointer(CompressedPointer(
+          gc->getPointerBase(), static_cast<GCCell *>(res.ptr)));
       if (gc->isTrackingIDs()) {
         gc->moveObject(
-            cell, cellSize, cell->getForwardingPointer(), trimmedSize);
+            cell,
+            cellSize,
+            cell->getForwardingPointer().getNonNull(gc->getPointerBase()),
+            trimmedSize);
       }
       adjacentPtr = ptr += cellSize;
     }

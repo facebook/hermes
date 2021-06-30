@@ -49,7 +49,7 @@ def _evaluate_expression(frame, expression):
 
 
 def _get_raw_ptr_from_shared_ptr(shared_ptr):
-    """ Decode raw pointer from shared_ptr"""
+    """Decode raw pointer from shared_ptr"""
     return shared_ptr.GetChildAtIndex(0)
 
 

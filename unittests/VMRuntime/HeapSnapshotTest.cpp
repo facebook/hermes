@@ -13,6 +13,7 @@
 #include "hermes/Support/Allocator.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/VM/CellKind.h"
+#include "hermes/VM/DummyObject.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HermesValue.h"
@@ -33,72 +34,7 @@ namespace hermes {
 namespace unittest {
 namespace heapsnapshottest {
 
-// Forward declaration to allow IsGCObject.
-struct DummyObject;
-
-} // namespace heapsnapshottest
-} // namespace unittest
-
-namespace vm {
-template <>
-struct IsGCObject<unittest::heapsnapshottest::DummyObject>
-    : public std::true_type {};
-} // namespace vm
-
-namespace unittest {
-namespace heapsnapshottest {
-
-struct DummyObject final : public GCCell {
-  static const VTable vt;
-  GCPointer<DummyObject> other;
-  const uint32_t x;
-  const uint32_t y;
-  GCHermesValue hvBool;
-  GCHermesValue hvDouble;
-  GCHermesValue hvUndefined;
-  GCHermesValue hvEmpty;
-  GCHermesValue hvNative;
-  GCHermesValue hvNull;
-
-  DummyObject(GC *gc) : GCCell(gc, &vt), other(), x(1), y(2) {
-    hvBool.setNonPtr(HermesValue::encodeBoolValue(true), gc);
-    hvDouble.setNonPtr(HermesValue::encodeNumberValue(3.14), gc);
-    hvNative.setNonPtr(HermesValue::encodeNativeUInt32(0xE), gc);
-    hvUndefined.setNonPtr(HermesValue::encodeUndefinedValue(), gc);
-    hvEmpty.setNonPtr(HermesValue::encodeEmptyValue(), gc);
-    hvNull.setNonPtr(HermesValue::encodeNullValue(), gc);
-  }
-
-  void setPointer(DummyRuntime &rt, DummyObject *obj) {
-    other.set(&rt, obj, &rt.getHeap());
-  }
-
-  static DummyObject *create(DummyRuntime &runtime) {
-    return runtime.makeAFixed<DummyObject>(&runtime.getHeap());
-  }
-
-  static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::UninitializedKind;
-  }
-};
-const VTable DummyObject::vt{CellKind::UninitializedKind, sizeof(DummyObject)};
-
-static void DummyObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  const auto *self = static_cast<const DummyObject *>(cell);
-  mb.addField("HermesBool", &self->hvBool);
-  mb.addField("HermesDouble", &self->hvDouble);
-  mb.addField("HermesUndefined", &self->hvUndefined);
-  mb.addField("HermesEmpty", &self->hvEmpty);
-  mb.addField("HermesNative", &self->hvNative);
-  mb.addField("HermesNull", &self->hvNull);
-  mb.addField("other", &self->other);
-}
-
-static MetadataTableForTests getMetadataTable() {
-  static const Metadata storage[] = {
-      buildMetadata(CellKind::UninitializedKind, DummyObjectBuildMeta)};
-  return MetadataTableForTests(storage);
-}
+using vm::testhelpers::DummyObject;
 
 struct Node {
   HeapSnapshot::NodeType type;
@@ -483,15 +419,35 @@ takeSnapshot(GC &gc, JSONFactory &factory, const char *file, int line) {
 #define PARSE_SNAPSHOT(...) parseSnapshot(__VA_ARGS__, __FILE__, __LINE__)
 #define TAKE_SNAPSHOT(...) takeSnapshot(__VA_ARGS__, __FILE__, __LINE__)
 
+TEST(HeapSnapshotTest, IDReversibleTest) {
+  // Make sure an ID <-> Object mapping is preserved across collections.
+  auto runtime = DummyRuntime::create(GCConfig::Builder()
+                                          .withInitHeapSize(1024)
+                                          .withMaxHeapSize(1024 * 100)
+                                          .build());
+  DummyRuntime &rt = *runtime;
+  auto &gc = rt.getHeap();
+  GCScope gcScope(&rt);
+
+  // Make a dummy object.
+  auto obj = rt.makeHandle(DummyObject::create(&gc));
+  const auto objID = gc.getObjectID(obj.get());
+  // Make sure the ID can be translated back to the object pointer.
+  EXPECT_EQ(obj.get(), gc.getObjectForID(objID));
+  // Run a collection to move things around.
+  gc.collect("test");
+  // Test that the ID is the same and it can be reversed.
+  EXPECT_EQ(objID, gc.getObjectID(obj.get()));
+  EXPECT_EQ(obj.get(), gc.getObjectForID(objID));
+}
+
 TEST(HeapSnapshotTest, HeaderTest) {
   JSONFactory::Allocator alloc;
   JSONFactory jsonFactory{alloc};
-  auto runtime = DummyRuntime::create(
-      getMetadataTable(),
-      GCConfig::Builder()
-          .withInitHeapSize(1024)
-          .withMaxHeapSize(1024 * 100)
-          .build());
+  auto runtime = DummyRuntime::create(GCConfig::Builder()
+                                          .withInitHeapSize(1024)
+                                          .withMaxHeapSize(1024 * 100)
+                                          .build());
   DummyRuntime &rt = *runtime;
   auto &gc = rt.getHeap();
 
@@ -617,19 +573,17 @@ TEST(HeapSnapshotTest, HeaderTest) {
 TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
   JSONFactory::Allocator alloc;
   JSONFactory jsonFactory{alloc};
-  auto runtime = DummyRuntime::create(
-      getMetadataTable(),
-      GCConfig::Builder()
-          .withInitHeapSize(1024)
-          .withMaxHeapSize(1024 * 100)
-          .build());
+  auto runtime = DummyRuntime::create(GCConfig::Builder()
+                                          .withInitHeapSize(1024)
+                                          .withMaxHeapSize(1024 * 100)
+                                          .build());
   DummyRuntime &rt = *runtime;
   auto &gc = rt.getHeap();
   GCScope gcScope(&rt);
 
-  auto dummy = rt.makeHandle(DummyObject::create(rt));
-  auto *dummy2 = DummyObject::create(rt);
-  dummy->setPointer(rt, dummy2);
+  auto dummy = rt.makeHandle(DummyObject::create(&gc));
+  auto *dummy2 = DummyObject::create(&gc);
+  dummy->setPointer(&gc, dummy2);
   const auto blockSize = dummy->getAllocatedSize();
 
   JSONObject *root = TAKE_SNAPSHOT(gc, jsonFactory);
@@ -650,8 +604,9 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
       cellKindStr(dummy->getKind()),
       gc.getObjectID(dummy.get()),
       blockSize,
-      // One edge to the second dummy, 4 for primitive singletons.
-      5};
+      // One edge to the second dummy, 4 for primitive singletons, and a WeakRef
+      // to self.
+      6};
   Node undefinedNode{
       HeapSnapshot::NodeType::Object,
       "undefined",
@@ -687,8 +642,8 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
       cellKindStr(dummy->getKind()),
       gc.getObjectID(dummy->other),
       blockSize,
-      // No edges except for the primitive singletons.
-      4};
+      // No edges except for the primitive singletons and the WeakRef to self.
+      5};
 
   // Common edges.
   Edge trueEdge =
@@ -710,20 +665,25 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
               trueEdge,
               numberEdge,
               undefinedEdge,
-              nullEdge}));
+              nullEdge,
+              Edge{HeapSnapshot::EdgeType::Weak, "0", firstDummy.id}}));
 
   EXPECT_EQ(
       FIND_NODE_AND_EDGES_FOR_ID(secondDummy.id, nodes, edges, strings),
       std::make_pair(
           secondDummy,
-          std::vector<Edge>{trueEdge, numberEdge, undefinedEdge, nullEdge}));
+          std::vector<Edge>{
+              trueEdge,
+              numberEdge,
+              undefinedEdge,
+              nullEdge,
+              Edge{HeapSnapshot::EdgeType::Weak, "0", secondDummy.id}}));
 }
 
 TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
   bool triggeredTripwire = false;
   std::ostringstream stream;
   auto runtime = DummyRuntime::create(
-      getMetadataTable(),
       kTestGCConfigSmall.rebuild()
           .withTripwireConfig(GCTripwireConfig::Builder()
                                   .withLimit(32)
@@ -736,7 +696,7 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
           .build());
   DummyRuntime &rt = *runtime;
   GCScope scope{&rt};
-  auto dummy = rt.makeHandle(DummyObject::create(rt));
+  auto dummy = rt.makeHandle(DummyObject::create(&runtime->getHeap()));
   const auto dummyID = runtime->getHeap().getObjectID(dummy.get());
   rt.collect();
   ASSERT_TRUE(triggeredTripwire);
@@ -753,14 +713,20 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
   auto dummyNode = FIND_NODE_FOR_ID(dummyID, nodes, strings);
   Node expected{
       HeapSnapshot::NodeType::Object,
-      "Uninitialized",
+      "DummyObject",
       dummyID,
       dummy->getAllocatedSize(),
-      4};
+      5};
   EXPECT_EQ(dummyNode, expected);
 }
 
 using HeapSnapshotRuntimeTest = RuntimeTestFixture;
+
+template <typename T>
+size_t firstNamedPropertyEdge() {
+  // parent, __proto__, class, directProp$i
+  return JSObject::DIRECT_PROPERTY_SLOTS - JSObject::numOverlapSlots<T>() + 3;
+}
 
 TEST_F(HeapSnapshotRuntimeTest, FunctionLocationForLazyCode) {
   // Similar test to the above, but for lazy-compiled source.
@@ -795,7 +761,7 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationForLazyCode) {
       "myGlobal",
       funcID,
       func->getAllocatedSize(),
-      7};
+      firstNamedPropertyEdge<JSFunction>() + 3};
   EXPECT_EQ(node, expected);
   // Edges aren't tested in this test.
 
@@ -838,7 +804,7 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationAndNameTest) {
       "foo",
       funcID,
       func->getAllocatedSize(),
-      7};
+      firstNamedPropertyEdge<JSFunction>() + 3};
   EXPECT_EQ(node, expected);
   // Edges aren't tested in this test.
 
@@ -882,7 +848,7 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionDisplayNameTest) {
       "bar",
       funcID,
       func->getAllocatedSize(),
-      12};
+      firstNamedPropertyEdge<JSFunction>() + 8};
   EXPECT_EQ(node, expected);
 }
 
@@ -906,6 +872,7 @@ TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
 
   const auto mapID = runtime->getHeap().getObjectID(map.get());
   auto nodesAndEdges = FIND_NODE_AND_EDGES_FOR_ID(mapID, nodes, edges, strings);
+  auto firstNamed = firstNamedPropertyEdge<JSWeakMap>();
   EXPECT_EQ(
       nodesAndEdges.first,
       Node(
@@ -913,12 +880,12 @@ TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
           "WeakMap",
           mapID,
           map->getAllocatedSize(),
-          6));
-  EXPECT_EQ(nodesAndEdges.second.size(), 6);
+          firstNamed + 3));
+  EXPECT_EQ(nodesAndEdges.second.size(), firstNamed + 3);
 
   // Test the weak edge.
   EXPECT_EQ(
-      nodesAndEdges.second[3],
+      nodesAndEdges.second[firstNamed],
       Edge(
           HeapSnapshot::EdgeType::Weak,
           "0",
@@ -926,7 +893,7 @@ TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
   // Test the native edge.
   const auto nativeMapID = map->getMapID(&runtime->getHeap());
   EXPECT_EQ(
-      nodesAndEdges.second[5],
+      nodesAndEdges.second[firstNamed + 2],
       Edge(HeapSnapshot::EdgeType::Internal, "map", nativeMapID));
   EXPECT_EQ(
       FIND_NODE_FOR_ID(nativeMapID, nodes, strings),
@@ -995,9 +962,7 @@ TEST_F(HeapSnapshotRuntimeTest, PropertyUpdatesTest) {
   const auto objID = runtime->getHeap().getObjectID(obj.get());
   auto nodesAndEdges = FIND_NODE_AND_EDGES_FOR_ID(objID, nodes, edges, strings);
 
-  const auto FIRST_NAMED_PROPERTY_EDGE =
-      // parent, __proto__, class, directProp$i
-      JSObject::DIRECT_PROPERTY_SLOTS + 3;
+  const auto FIRST_NAMED_PROPERTY_EDGE = firstNamedPropertyEdge<JSObject>();
 
   EXPECT_EQ(
       nodesAndEdges.first,
@@ -1053,6 +1018,7 @@ TEST_F(HeapSnapshotRuntimeTest, ArrayElements) {
   const JSONArray &edges = *llvh::cast<JSONArray>(root->at("edges"));
   const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
 
+  const auto FIRST_NAMED_PROPERTY_EDGE = firstNamedPropertyEdge<JSArray>();
   auto nodeAndEdges =
       FIND_NODE_AND_EDGES_FOR_ID(arrayID, nodes, edges, strings);
   EXPECT_EQ(
@@ -1062,22 +1028,22 @@ TEST_F(HeapSnapshotRuntimeTest, ArrayElements) {
           "Array",
           arrayID,
           array->getAllocatedSize(),
-          10));
+          FIRST_NAMED_PROPERTY_EDGE + 6));
   // The last edges are the element edges.
   EXPECT_EQ(
-      nodeAndEdges.second[7],
+      nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 2],
       Edge(
           HeapSnapshot::EdgeType::Element,
           (1 << 20) + 1000,
           runtime->getHeap().getObjectID(thirdElement.get())));
   EXPECT_EQ(
-      nodeAndEdges.second[8],
+      nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 4],
       Edge(
           HeapSnapshot::EdgeType::Element,
           10,
           runtime->getHeap().getObjectID(firstElement.get())));
   EXPECT_EQ(
-      nodeAndEdges.second[9],
+      nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 5],
       Edge(
           HeapSnapshot::EdgeType::Element,
           15,
@@ -1256,8 +1222,8 @@ foo(8) @ test.js(2):3:20)#");
 (root)(0) @ (0):0:0
 global(1) @ test.js(2):2:1
 global(2) @ test.js(2):11:4
-baz(3) @ test.js(2):9:31
-bar(4) @ test.js(2):6:20)#");
+baz(4) @ test.js(2):9:31
+bar(5) @ test.js(2):6:20)#");
 
   const JSONArray &samples = *llvh::cast<JSONArray>(root->at("samples"));
   // Must have at least one sample

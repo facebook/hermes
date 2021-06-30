@@ -425,14 +425,17 @@ int repl(const vm::RuntimeConfig &config) {
       resHandle = std::move(*callRes);
     }
 
-    if (!ctx.jobsEmpty()) {
-      // Run the jobs until there are no more.
-      vm::MutableHandle<vm::Callable> job{runtime.get()};
-      while (auto optJob = ctx.dequeueJob()) {
-        job = std::move(*optJob);
-        auto jobCallRes = vm::Callable::executeCall0(
-            job, runtime.get(), vm::Runtime::getUndefinedValue(), false);
-        if (LLVM_UNLIKELY(jobCallRes == vm::ExecutionStatus::EXCEPTION)) {
+    // Perform a microtask checkpoint after running script.
+    microtask::performCheckpoint(runtime.get());
+
+    if (!ctx.tasksEmpty()) {
+      // Run the tasks until there are no more.
+      vm::MutableHandle<vm::Callable> task{runtime.get()};
+      while (auto optTask = ctx.dequeueTask()) {
+        task = std::move(*optTask);
+        auto taskCallRes = vm::Callable::executeCall0(
+            task, runtime.get(), vm::Runtime::getUndefinedValue(), false);
+        if (LLVM_UNLIKELY(taskCallRes == vm::ExecutionStatus::EXCEPTION)) {
           threwException = true;
           runtime->printException(
               hasColors
@@ -442,6 +445,9 @@ int repl(const vm::RuntimeConfig &config) {
           llvh::outs().resetColor();
           code.clear();
         }
+
+        // Perform a microtask checkpoint at the end of every task tick.
+        microtask::performCheckpoint(runtime.get());
       }
     }
 

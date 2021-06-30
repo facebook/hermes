@@ -108,7 +108,11 @@ SKIP_LIST = [
     "test262/test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-strict-delete-3.js",
     "test262/test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-strict-delete-4.js",
     "test262/test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-3.js",
+    "test262/test/language/arguments-object/mapped/nonconfigurable-descriptors-define-failure.js",
+    "test262/test/language/arguments-object/mapped/writable-enumerable-configurable-descriptor.js",
     "test262/test/language/expressions/generators/arguments-with-arguments-lex.js",
+    # TODO(T90539269) ident `arguments` referenced on global
+    "test262/test/language/expressions/assignmenttargettype/simple-basic-identifierreference-arguments.js",
     "test262/test/built-ins/Object/defineProperty/15.2.3.6-4-293-2.js",
     "test262/test/built-ins/Object/defineProperty/15.2.3.6-4-294-1.js",
     "test262/test/built-ins/Object/defineProperty/15.2.3.6-4-293-3.js",
@@ -149,6 +153,30 @@ SKIP_LIST = [
     "test262/test/language/literals/regexp/early-err-pattern.js",
     "test262/test/annexB/language/statements/for-in/strict-initializer.js",
     "test262/test/language/statements/try/early-catch-var.js",
+    # skipped due to use of unsupported async arrow and async generators
+    "test262/test/built-ins/GeneratorFunction/is-a-constructor.js",
+    "test262/test/built-ins/Object/seal/seal-asyncarrowfunction.js",
+    "test262/test/built-ins/Object/seal/seal-asyncgeneratorfunction.js",
+    "test262/test/built-ins/AsyncFunction/is-a-constructor.js",
+    "test262/test/built-ins/AsyncArrowFunction/is-a-constructor.js",
+    "test262/test/language/statements/for/head-init-async-of.js",
+    "test262/test/language/statements/switch/scope-lex-async-generator.js",
+    "test262/test/language/expressions/object/__proto__-permitted-dup.js",
+    # TODO(T90539602) switch default create its own scope
+    "test262/test/language/statements/switch/scope-lex-class.js",
+    "test262/test/language/statements/switch/scope-lex-generator.js",
+    "test262/test/language/statements/switch/scope-lex-async-function.js",
+    # TODO(T90540113) reassignment to function name in function body
+    "test262/test/language/expressions/function/named-strict-error-reassign-fn-name-in-body.js",
+    "test262/test/language/expressions/function/named-strict-error-reassign-fn-name-in-body-in-arrow.js",
+    "test262/test/language/expressions/generators/named-strict-error-reassign-fn-name-in-body.js",
+    "test262/test/language/expressions/generators/named-strict-error-reassign-fn-name-in-body-in-arrow.js",
+    "test262/test/language/expressions/function/named-no-strict-reassign-fn-name-in-body.js",
+    "test262/test/language/expressions/function/named-no-strict-reassign-fn-name-in-body-in-arrow.js",
+    "test262/test/language/expressions/generators/named-no-strict-reassign-fn-name-in-body.js",
+    "test262/test/language/expressions/generators/named-no-strict-reassign-fn-name-in-body-in-arrow.js",
+    # global undefined
+    "test262/test/language/identifier-resolution/assign-to-global-undefined.js",
     # Unsupported test262 features
     "test262/test/language/statements/do-while/let-array-with-newline.js",
     "test262/test/language/statements/for-await-of/let-array-with-newline.js",
@@ -402,6 +430,14 @@ SKIP_LIST = [
     "test262/test/built-ins/Array/prototype/splice/create-ctor-non-object.js",
     "test262/test/built-ins/Array/prototype/flat/non-object-ctor-throws.js",
     "test262/test/built-ins/Array/prototype/flatMap/this-value-ctor-non-object.js",
+    # TODO(T76109235) proposal-relative-indexing-method
+    "test262/test/built-ins/Array/prototype/at/",
+    "test262/test/built-ins/TypedArray/prototype/at/",
+    "test262/test/built-ins/String/prototype/at/",
+    # TODO(T90541287) array length coercion order
+    "test262/test/built-ins/Array/length/define-own-prop-length-coercion-order-set.js",
+    "test262/test/built-ins/Array/length/define-own-prop-length-coercion-order.js",
+    "test262/test/built-ins/Array/length/define-own-prop-length-overflow-order.js",
     # Enumerable attributes shadowing in the prototype chain.
     # T23621872
     "test262/test/language/statements/for-in/12.6.4-2.js",
@@ -447,6 +483,13 @@ SKIP_LIST = [
     # function name is configurable
     "test262/test/language/expressions/function/name.js",
     "test262/test/language/expressions/generators/name.js",
+    # TODO(T90541883) arguments and caller should not be created for strict-mode function and class
+    "test262/test/language/expressions/function/forbidden-ext/b1/cls-expr-meth-forbidden-ext-direct-access-prop-arguments.js",
+    "test262/test/language/expressions/function/forbidden-ext/b1/cls-expr-meth-forbidden-ext-direct-access-prop-caller.js",
+    "test262/test/language/expressions/function/forbidden-ext/b1/func-expr-strict-forbidden-ext-direct-access-prop-caller.js",
+    "test262/test/language/expressions/function/forbidden-ext/b1/func-expr-strict-forbidden-ext-direct-access-prop-arguments.js",
+    "test262/test/language/statements/function/forbidden-ext/b1/cls-expr-meth-forbidden-ext-direct-access-prop-caller.js",
+    "test262/test/language/statements/function/forbidden-ext/b1/cls-expr-meth-forbidden-ext-direct-access-prop-arguments.js",
     # accessors in JSLib
     # Escaped identifiers
     "test262/test/language/expressions/assignment/dstr/syntax-error-ident-ref-",
@@ -626,9 +669,10 @@ SKIP_LIST = [
     "test262/test/language/expressions/object/scope-setter-paramsbody-var-close.js",
     "test262/test/language/expressions/object/scope-setter-paramsbody-var-open.js",
     "test262/test/language/expressions/typeof/get-value.js",
-    "test262/test/language/expressions/object/__proto__-permitted-dup.js",
     "test262/test/language/expressions/object/getter-super-prop.js",
     "test262/test/language/expressions/object/setter-super-prop.js",
+    # TODO(T90542236)
+    "test262/test/language/expressions/object/identifier-shorthand-let-invalid-strict-mode.js",
     "test262/test/language/global-code/decl-lex-configurable-global.js",
     "test262/test/language/arguments-object/cls-decl-",
     "test262/test/language/arguments-object/cls-expr-",
@@ -778,6 +822,8 @@ SKIP_LIST = [
     # JSON changes
     # prototype changes
     "test262/test/built-ins/Error/prototype/S15.11.4_A2.js",
+    # TODO(T90542711) Error prorotype toString
+    "test262/test/built-ins/Error/prototype/no-error-data.js",
     # Array changes
     "test262/test/built-ins/Array/prototype/toLocaleString/primitive_this_value_getter.js",
     "test262/test/built-ins/Array/prototype/toLocaleString/primitive_this_value.js",
@@ -840,10 +886,16 @@ SKIP_LIST = [
     "test262/test/built-ins/DataView/custom-proto-access-detaches-buffer.js",
     "test262/test/built-ins/DataView/detached-buffer.js",
     "test262/test/built-ins/DataView/prototype/byteLength/detached-buffer.js",
+    "test262/test/built-ins/DataView/prototype/byteLength/instance-has-detached-buffer.js",
     "test262/test/built-ins/DataView/prototype/byteOffset/detached-buffer.js",
     "test262/test/built-ins/TypedArray/prototype/find/predicate-may-detach-buffer.js",
     "test262/test/built-ins/TypedArray/prototype/findIndex/predicate-may-detach-buffer.js",
     "test262/test/built-ins/TypedArray/prototype/some/callbackfn-detachbuffer.js",
+    "test262/test/built-ins/TypedArray/prototype/reduce/callbackfn-detachbuffer.js",
+    "test262/test/built-ins/TypedArray/prototype/reduceRight/callbackfn-detachbuffer.js",
+    "test262/test/built-ins/TypedArray/prototype/map/callbackfn-detachbuffer.js",
+    "test262/test/built-ins/TypedArray/prototype/forEach/callbackfn-detachbuffer.js",
+    "test262/test/built-ins/TypedArray/prototype/filter/callbackfn-detachbuffer.js",
     "test262/test/built-ins/TypedArrayConstructors/ctors/buffer-arg/byteoffset-to-number-detachbuffer.js",
     "test262/test/built-ins/TypedArrayConstructors/ctors/buffer-arg/detachedbuffer.js",
     "test262/test/built-ins/TypedArrayConstructors/ctors/buffer-arg/length-to-number-detachbuffer.js",
@@ -855,6 +907,7 @@ SKIP_LIST = [
     "test262/test/built-ins/TypedArrayConstructors/internals/GetOwnProperty/enumerate-detached-buffer.js",
     "test262/test/built-ins/TypedArrayConstructors/internals/HasProperty/detached-buffer.js",
     "test262/test/built-ins/TypedArrayConstructors/internals/Set/detached-buffer.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/Delete/detached-buffer.js",
     "test262/test/built-ins/TypedArrayConstructors/internals/Set/tonumber-value-detached-buffer.js",
     "test262/test/built-ins/TypedArrays/buffer-arg-byteoffset-to-number-detachbuffer.js",
     "test262/test/built-ins/TypedArrays/buffer-arg-detachedbuffer.js",
@@ -862,6 +915,8 @@ SKIP_LIST = [
     "test262/test/built-ins/TypedArrays/internals/GetOwnProperty/detached-buffer.js",
     "test262/test/built-ins/TypedArrays/internals/HasProperty/detached-buffer.js",
     "test262/test/built-ins/TypedArrays/internals/Set/tonumber-value-detached-buffer.js",
+    # BigUint64Array
+    "test262/test/built-ins/TypedArrayConstructors/BigUint64Array/is-a-constructor.js",
     # Float32 TypedArray failure
     "test262/test/built-ins/TypedArrays/internals/DefineOwnProperty/conversion-operation-consistent-nan.js",
     # TypedArray accessors
@@ -926,12 +981,19 @@ SKIP_LIST = [
     "test262/test/language/expressions/object/fn-name-gen.js",
     # T56360814 Symbol primitives in iteration order
     "test262/test/built-ins/Object/defineProperties/proxy-no-ownkeys-returned-keys-order.js",
+    # TODO(T90543562) Object.freeze/seal/etc. on proxy
     "test262/test/built-ins/Object/freeze/proxy-no-ownkeys-returned-keys-order.js",
+    "test262/test/built-ins/Object/freeze/proxy-with-defineProperty-handler.js",
     "test262/test/built-ins/Object/getOwnPropertyDescriptors/proxy-no-ownkeys-returned-keys-order.js",
     "test262/test/built-ins/Object/isFrozen/proxy-no-ownkeys-returned-keys-order.js",
     "test262/test/built-ins/Object/isSealed/proxy-no-ownkeys-returned-keys-order.js",
     "test262/test/built-ins/Object/prototype/toString/proxy-revoked-during-get-call.js",
     "test262/test/built-ins/Object/seal/proxy-no-ownkeys-returned-keys-order.js",
+    "test262/test/built-ins/Object/seal/proxy-with-defineProperty-handler.js",
+    # The below 3 tests are not properly marked their use of feature to be excluded
+    "test262/test/built-ins/Object/seal/seal-aggregateerror.js",
+    "test262/test/built-ins/Object/seal/seal-bigint64array.js",
+    "test262/test/built-ins/Object/seal/seal-biguint64array.js",
     "test262/test/built-ins/Object/assign/strings-and-symbol-order.js",
     "test262/test/built-ins/Array/prototype/concat/is-concat-spreadable-get-order.js",
     "test262/test/language/expressions/array/spread-obj-spread-order.js",
@@ -1612,6 +1674,8 @@ SKIP_LIST = [
     # Potentially invalid JSX that is inconsistent across implementations.
     "flow/JSX/invalid_unpaired_gt.js",
     "flow/JSX/invalid_unpaired_rcurly.js",
+    # Import attributes
+    "flow/dynamic_import/migrated_0005.js",
     ### Failing Flow tests end ###
 ]
 
@@ -1690,6 +1754,17 @@ PERMANENT_SKIP_LIST = [
     "test262/test/annexB/language/comments/single-line-html-close.js",
     "test262/test/annexB/language/comments/single-line-html-open.js",
     "test262/test/annexB/language/expressions/template-literal/legacy-octal-escape-sequence-non-strict.js",
+    "test262/test/language/literals/string/legacy-non-octal-escape-sequence-1-strict-explicit-pragma.js",
+    "test262/test/language/literals/string/legacy-non-octal-escape-sequence-2-strict-explicit-pragma.js",
+    "test262/test/language/literals/string/legacy-non-octal-escape-sequence-3-strict-explicit-pragma.js",
+    "test262/test/language/literals/string/legacy-non-octal-escape-sequence-4-strict-explicit-pragma.js",
+    "test262/test/language/literals/string/legacy-non-octal-escape-sequence-5-strict-explicit-pragma.js",
+    "test262/test/language/literals/string/legacy-non-octal-escape-sequence-6-strict-explicit-pragma.js",
+    "test262/test/language/literals/string/legacy-non-octal-escape-sequence-7-strict-explicit-pragma.js",
+    "test262/test/language/literals/string/legacy-non-octal-escape-sequence-8-strict-explicit-pragma.js",
+    "test262/test/language/literals/string/legacy-non-octal-escape-sequence-9-strict-explicit-pragma.js",
+    "test262/test/language/literals/string/legacy-non-octal-escape-sequence-8-strict.js",
+    "test262/test/language/literals/string/legacy-non-octal-escape-sequence-9-strict.js",
     "test262/test/language/literals/string/legacy-non-octal-escape-sequence-strict.js",
     "test262/test/language/literals/string/legacy-octal-escape-sequence-prologue-strict.js",
     "test262/test/annexB/language/expressions/object/__proto__-duplicate-computed.js",
@@ -1706,14 +1781,17 @@ PERMANENT_SKIP_LIST = [
     "test262/test/annexB/built-ins/Function/createdynfn-html-close-comment-params.js",
     "test262/test/annexB/built-ins/Function/createdynfn-html-open-comment-body.js",
     "test262/test/annexB/built-ins/Function/createdynfn-html-open-comment-params.js",
+    "test262/test/annexB/built-ins/Function/createdynfn-no-line-terminator-html-close-comment-body.js",
     "test262/test/annexB/built-ins/RegExp/prototype/Symbol.split/toint32-limit-recompiles-source.js",
     "test262/test/annexB/built-ins/RegExp/prototype/Symbol.split/Symbol.match-getter-recompiles-source.js",
     "test262/test/annexB/built-ins/RegExp/RegExp-control-escape-russian-letter.js",
     "test262/test/annexB/built-ins/RegExp/RegExp-invalid-control-escape-character-class.js",
+    "test262/test/annexB/built-ins/RegExp/legacy-accessors/input/prop-desc.js",
     "test262/test/annexB/language/comments/single-line-html-close-unicode-separators.js",
     "esprima/test_fixtures/es2017/async/regular-identifier/label-async.js",
     # Testing whole feature sets that Hermes doesn't support.
     "test262/test/built-ins/Atomics/",
+    "test262/test/built-ins/AsyncGeneratorFunction/",
     "test262/test/built-ins/SharedArrayBuffer/",
     "test262/test/built-ins/intl402/",
     "test262/test/intl402/Collator/",
@@ -1787,7 +1865,13 @@ UNSUPPORTED_FEATURES = [
     "async-iteration",
     "caller",
     "class",
-    "class-fields",
+    "class-fields-public",
+    "class-fields-private",
+    "class-fields-private-in",
+    "class-static-fields-public",
+    "class-static-fields-private",
+    "class-static-methods-private",
+    "class-methods-private",
     "computed-property-names",
     "const",
     "destructuring-binding",

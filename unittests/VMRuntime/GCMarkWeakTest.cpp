@@ -8,6 +8,7 @@
 #include "TestHelpers.h"
 #include "gtest/gtest.h"
 #include "hermes/VM/AllocResult.h"
+#include "hermes/VM/DummyObject.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCPointer-inline.h"
 
@@ -20,52 +21,20 @@ using namespace hermes::vm;
 ///
 /// Test uses GC::countUsedWeakRefs which doesn't exist in opt mode
 #ifndef NDEBUG
-
-namespace hermes {
-namespace vm {
-
-class TestCell final : public GCCell {
- public:
-  static const VTable vt;
-  int *numMarkWeakCalls;
-  WeakRef<TestCell> weak;
-
-  static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::FillerCellKind;
-  }
-
-  static TestCell *create(DummyRuntime &runtime, int *numMarkWeakCalls) {
-    return runtime.makeAFixed<TestCell>(&runtime.getHeap(), numMarkWeakCalls);
-  }
-
-  static void _markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
-    auto *self = reinterpret_cast<TestCell *>(cell);
-    acceptor.accept(self->weak);
-    ++*self->numMarkWeakCalls;
-  }
-
-  // Creates a cell that weakly references itself.
-  TestCell(GC *gc, int *numMarkWeakCalls)
-      : GCCell(gc, &vt), numMarkWeakCalls(numMarkWeakCalls), weak(gc, this) {}
-};
-
-const VTable TestCell::vt{
-    CellKind::FillerCellKind,
-    sizeof(TestCell),
-    nullptr,
-    TestCell::_markWeakImpl};
-
-} // namespace vm
-} // namespace hermes
-
 namespace {
 
 // Hades doesn't call markWeak the same number of times as other GCs.
 #if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
-MetadataTableForTests getMetadataTable() {
-  // Nothing to mark for either of them, leave a blank metadata.
-  static const Metadata storage[] = {Metadata(), Metadata()};
-  return MetadataTableForTests(storage);
+
+using testhelpers::DummyObject;
+
+static DummyObject *createWithMarkWeakCount(GC *gc, int *numMarkWeakCalls) {
+  auto *obj = DummyObject::create(gc);
+  obj->markWeakCallback = std::make_unique<DummyObject::MarkWeakCallback>(
+      [numMarkWeakCalls](GCCell *, WeakRefAcceptor &) mutable {
+        (*numMarkWeakCalls)++;
+      });
+  return obj;
 }
 
 TEST(GCMarkWeakTest, MarkWeak) {
@@ -79,27 +48,24 @@ TEST(GCMarkWeakTest, MarkWeak) {
 #endif
       ;
   int numMarkWeakCalls = 0;
-  auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);
+  auto runtime = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
   auto &gc = rt.getHeap();
   // Probably zero, but we only care about the increase/decrease.
   const int initUsedWeak = gc.countUsedWeakRefs();
-
-  GCCell *g = TestCell::create(rt, &numMarkWeakCalls);
-  rt.pointerRoots.push_back(&g);
-  rt.collect();
-
   {
+    GCScope scope{&rt};
+    auto t = rt.makeHandle(createWithMarkWeakCount(&gc, &numMarkWeakCalls));
+    rt.collect();
+
     WeakRefLock lk{gc.weakRefMutex()};
-    TestCell *t = vmcast<TestCell>(g);
     ASSERT_TRUE(t->weak.isValid());
-    EXPECT_EQ(t, getNoHandle(t->weak, &gc));
+    EXPECT_EQ(*t, getNoHandle(t->weak, &gc));
     // Exactly one call to _markWeakImpl
     EXPECT_EQ(1 + 2 * checkHeapOn, numMarkWeakCalls);
     EXPECT_EQ(initUsedWeak + 1, gc.countUsedWeakRefs());
   }
 
-  rt.pointerRoots.pop_back();
   rt.collect();
   // The weak ref is live at the beginning of the collection, but not by the
   // end, so the call in updateReferences isn't run, nor the second

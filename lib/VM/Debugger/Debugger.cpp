@@ -569,18 +569,20 @@ auto Debugger::getStackTrace(InterpreterState state) const -> StackTrace {
     if (auto callableHandle = Handle<Callable>::dyn_vmcast(
             Handle<>(&cf.getCalleeClosureOrCBRef()))) {
       NamedPropertyDescriptor desc;
-      propObj = JSObject::getNamedDescriptor(
-          callableHandle,
-          runtime_,
-          Predefined::getSymbolID(Predefined::displayName),
-          desc);
+      propObj = JSObject::getNamedDescriptorPredefined(
+          callableHandle, runtime_, Predefined::displayName, desc);
       if (propObj) {
-        displayName =
-            JSObject::getNamedSlotValue(propObj.get(), runtime_, desc);
-        if (displayName->isString()) {
-          llvh::SmallVector<char16_t, 64> storage;
-          displayName->getString()->appendUTF16String(storage);
-          convertUTF16ToUTF8WithReplacements(frameInfo.functionName, storage);
+        auto displayNameRes = JSObject::getNamedSlotValue(
+            createPseudoHandle(*propObj), runtime_, desc);
+        if (LLVM_UNLIKELY(displayNameRes == ExecutionStatus::EXCEPTION)) {
+          displayName = HermesValue::encodeUndefinedValue();
+        } else {
+          displayName = std::move(*displayNameRes);
+          if (displayName->isString()) {
+            llvh::SmallVector<char16_t, 64> storage;
+            displayName->getString()->appendUTF16String(storage);
+            convertUTF16ToUTF8WithReplacements(frameInfo.functionName, storage);
+          }
         }
       }
     }

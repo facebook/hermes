@@ -1347,11 +1347,11 @@ CallResult<Handle<Callable>> speciesConstructor(
   return defaultConstructor;
 }
 
-bool isConstructor(Runtime *runtime, HermesValue value) {
+CallResult<bool> isConstructor(Runtime *runtime, HermesValue value) {
   return isConstructor(runtime, dyn_vmcast<Callable>(value));
 }
 
-bool isConstructor(Runtime *runtime, Callable *callable) {
+CallResult<bool> isConstructor(Runtime *runtime, Callable *callable) {
   // This is not a complete definition, since ES6 and later define member
   // functions of objects to not be constructors; however, Hermes does not have
   // ES6 classes implemented yet, so we cannot check for that case.
@@ -1631,11 +1631,8 @@ ExecutionStatus toPropertyDescriptor(
   NamedPropertyDescriptor desc;
 
   // Get enumerable property of the attributes.
-  if (JSObject::getNamedDescriptor(
-          attributes,
-          runtime,
-          Predefined::getSymbolID(Predefined::enumerable),
-          desc)) {
+  if (JSObject::getNamedDescriptorPredefined(
+          attributes, runtime, Predefined::enumerable, desc)) {
     auto propRes = JSObject::getNamed_RJS(
         attributes,
         runtime,
@@ -1649,11 +1646,8 @@ ExecutionStatus toPropertyDescriptor(
   }
 
   // Get configurable property of the attributes.
-  if (JSObject::getNamedDescriptor(
-          attributes,
-          runtime,
-          Predefined::getSymbolID(Predefined::configurable),
-          desc)) {
+  if (JSObject::getNamedDescriptorPredefined(
+          attributes, runtime, Predefined::configurable, desc)) {
     auto propRes = JSObject::getNamed_RJS(
         attributes,
         runtime,
@@ -1667,11 +1661,8 @@ ExecutionStatus toPropertyDescriptor(
   }
 
   // Get value property of the attributes.
-  if (JSObject::getNamedDescriptor(
-          attributes,
-          runtime,
-          Predefined::getSymbolID(Predefined::value),
-          desc)) {
+  if (JSObject::getNamedDescriptorPredefined(
+          attributes, runtime, Predefined::value, desc)) {
     auto propRes = JSObject::getNamed_RJS(
         attributes,
         runtime,
@@ -1685,11 +1676,8 @@ ExecutionStatus toPropertyDescriptor(
   }
 
   // Get writable property of the attributes.
-  if (JSObject::getNamedDescriptor(
-          attributes,
-          runtime,
-          Predefined::getSymbolID(Predefined::writable),
-          desc)) {
+  if (JSObject::getNamedDescriptorPredefined(
+          attributes, runtime, Predefined::writable, desc)) {
     auto propRes = JSObject::getNamed_RJS(
         attributes,
         runtime,
@@ -1704,11 +1692,8 @@ ExecutionStatus toPropertyDescriptor(
 
   // Get getter property of the attributes.
   MutableHandle<Callable> getterPtr{runtime};
-  if (JSObject::getNamedDescriptor(
-          attributes,
-          runtime,
-          Predefined::getSymbolID(Predefined::get),
-          desc)) {
+  if (JSObject::getNamedDescriptorPredefined(
+          attributes, runtime, Predefined::get, desc)) {
     auto propRes = JSObject::getNamed_RJS(
         attributes,
         runtime,
@@ -1730,11 +1715,8 @@ ExecutionStatus toPropertyDescriptor(
 
   // Get setter property of the attributes.
   MutableHandle<Callable> setterPtr{runtime};
-  if (JSObject::getNamedDescriptor(
-          attributes,
-          runtime,
-          Predefined::getSymbolID(Predefined::set),
-          desc)) {
+  if (JSObject::getNamedDescriptorPredefined(
+          attributes, runtime, Predefined::set, desc)) {
     auto propRes = JSObject::getNamed_RJS(
         attributes,
         runtime,

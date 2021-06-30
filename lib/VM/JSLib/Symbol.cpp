@@ -242,7 +242,7 @@ symbolPrototypeDescriptionGetter(void *, Runtime *runtime, NativeArgs args) {
   if (args.getThisArg().isSymbol()) {
     sym = args.vmcastThis<SymbolID>().get();
   } else if (auto symHandle = args.dyncastThis<JSSymbol>()) {
-    sym = JSSymbol::getPrimitiveSymbol(*symHandle, runtime).get();
+    sym = symHandle->getPrimitiveSymbol();
   } else {
     return runtime->raiseTypeError(
         "Symbol.prototype.description can only be called on Symbol");
@@ -261,7 +261,7 @@ symbolPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   if (args.getThisArg().isSymbol()) {
     sym = args.vmcastThis<SymbolID>().get();
   } else if (auto symHandle = args.dyncastThis<JSSymbol>()) {
-    sym = JSSymbol::getPrimitiveSymbol(*symHandle, runtime).get();
+    sym = symHandle->getPrimitiveSymbol();
   } else {
     return runtime->raiseTypeError(
         "Symbol.prototype.toString can only be called on Symbol");
@@ -283,7 +283,7 @@ symbolPrototypeValueOf(void *, Runtime *runtime, NativeArgs args) {
     return args.getThisArg();
   }
   if (auto jsSymbol = args.dyncastThis<JSSymbol>()) {
-    return JSSymbol::getPrimitiveSymbol(*jsSymbol, runtime).getHermesValue();
+    return jsSymbol->getPrimitiveSymbol().getHermesValue();
   }
   return runtime->raiseTypeError(
       "Symbol.prototype.valueOf can only be called on Symbol");

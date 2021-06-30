@@ -38,8 +38,7 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
     },
     "maxNumRegisters": 100,
     "ES6Proxy": false,
-    "ES6Symbol": false,
-    "ES6Intl": false,
+    "Intl": false,
     "enableSampledStats": true,
     "vmExperimentFlags": 123
   },
@@ -73,8 +72,7 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
 
   EXPECT_EQ(rtconf.getMaxNumRegisters(), 100);
   EXPECT_FALSE(rtconf.getES6Proxy());
-  EXPECT_FALSE(rtconf.getES6Symbol());
-  EXPECT_FALSE(rtconf.getES6Intl());
+  EXPECT_FALSE(rtconf.getIntl());
   EXPECT_TRUE(rtconf.getEnableSampledStats());
   EXPECT_EQ(rtconf.getVMExperimentFlags(), 123);
 

@@ -17,94 +17,100 @@
 
 using namespace hermes;
 
-using llvh::isa;
-
 /// Construct the list of basic blocks covered by each catch instruction.
 /// Use recursion to handle nested catches.
-bool hermes::constructCatchMap(
+llvh::Optional<llvh::SmallPtrSet<BasicBlock *, 4>> hermes::constructCatchMap(
     Function *F,
     CatchInfoMap &catchInfoMap,
     llvh::SmallVectorImpl<CatchInst *> &aliveCatches,
     llvh::SmallPtrSetImpl<BasicBlock *> &visited,
-    BasicBlock *currentBlock,
+    BasicBlock *startBlock,
     uint32_t maxRecursionDepth) {
+  assert(
+      !llvh::isa<CatchInst>(startBlock->front()) &&
+      "Functions and try bodies should never start with a catch instruction.");
   if (maxRecursionDepth == 0) {
     F->getContext().getSourceErrorManager().error(
         F->getSourceRange(), "Too deeply nested try/catch");
-    return false;
+    return llvh::None;
   }
 
-  if (!visited.insert(currentBlock).second)
-    return true;
-  // TryEndInst can only show up at the beginning of a block;
-  // TryStartInst can only show up at the end of a block.
-  // Hence we process the block with the order:
-  // TryEndInst => block body => TryStartInst => successors.
-  bool isTryStartBlock = llvh::isa<TryStartInst>(currentBlock->getTerminator());
-  bool isTryEndBlock = llvh::isa<TryEndInst>(&currentBlock->front());
-  CatchInst *currentCatch = nullptr;
+  // Stack to DFS through the CFG.
+  llvh::SmallVector<BasicBlock *, 4> stack;
+  // Track each of the basic blocks that start with a TryEndInst corresponding
+  // to the current try.
+  llvh::SmallPtrSet<BasicBlock *, 4> tryEndBlocks;
 
-  if (isTryEndBlock) {
-    // Hit a TryEndInst, marking the end of a try region, save the current
-    // catch.
-    currentCatch = aliveCatches.pop_back_val();
-  }
+  visited.insert(startBlock);
+  stack.push_back(startBlock);
+  while (!stack.empty()) {
+    BasicBlock *currentBlock = stack.pop_back_val();
+    assert(
+        visited.count(currentBlock) &&
+        "All blocks on the stack must be marked as visited.");
 
-  // For every nested try that's alive, we add the basic block into it.
-  for (auto &aliveCatche : aliveCatches) {
-    catchInfoMap[aliveCatche].coveredBlockList.push_back(currentBlock);
-  }
+    // For every nested try that's alive, we add the basic block into it.
+    for (const auto &aliveCatch : aliveCatches)
+      catchInfoMap[aliveCatch].coveredBlockList.push_back(currentBlock);
 
-  if (isTryStartBlock) {
+    auto *tryStartInst =
+        llvh::dyn_cast<TryStartInst>(currentBlock->getTerminator());
+
+    if (!tryStartInst) {
+      // Common case: no TryStartInst, we add successors to the stack.
+      for (BasicBlock *successor : successors(currentBlock)) {
+        // If this block marks the end of the try, then add it to tryEndBlocks,
+        // but not to the stack. It will be visited by the caller.
+        // Otherwise, add unvisited blocks to the stack.
+        if (llvh::isa<TryEndInst>(&successor->front()))
+          tryEndBlocks.insert(successor);
+        else if (visited.insert(successor).second)
+          stack.push_back(successor);
+      }
+      continue;
+    }
+
     // Hit a TryStartInst, marking the start of a new try region.
     // The first instruction of the catch target block must be CatchInst.
-    auto tryStartInst = cast<TryStartInst>(currentBlock->getTerminator());
     auto catchInst = cast<CatchInst>(&tryStartInst->getCatchTarget()->front());
     catchInfoMap[catchInst].depth = aliveCatches.size();
 
     // Pushing the CatchInst to the try stack, and continue scan the try body.
     aliveCatches.push_back(catchInst);
-    if (!constructCatchMap(
-            F,
-            catchInfoMap,
-            aliveCatches,
-            visited,
-            tryStartInst->getTryBody(),
-            maxRecursionDepth - 1))
-      return false;
+    auto endBlocks = constructCatchMap(
+        F,
+        catchInfoMap,
+        aliveCatches,
+        visited,
+        tryStartInst->getTryBody(),
+        maxRecursionDepth - 1);
+    if (!endBlocks)
+      return llvh::None;
     aliveCatches.pop_back();
 
-    // We also want to continue scan into the catch blocks.
-    if (!constructCatchMap(
-            F,
-            catchInfoMap,
-            aliveCatches,
-            visited,
-            tryStartInst->getCatchTarget(),
-            maxRecursionDepth - 1))
-      return false;
-  } else {
-    // No TryStartInst, we iterate successors normally.
-    for (auto itr = succ_begin(currentBlock), e = succ_end(currentBlock);
-         itr != e;
-         ++itr) {
-      if (!constructCatchMap(
-              F,
-              catchInfoMap,
-              aliveCatches,
-              visited,
-              *itr,
-              maxRecursionDepth - 1))
-        return false;
+    for (BasicBlock *endBlock : *endBlocks) {
+      assert(
+          visited.count(endBlock) == 0 &&
+          "End blocks must be dominated by the try start.");
+      assert(
+          llvh::isa<TryEndInst>(&endBlock->front()) &&
+          "End blocks must start with TryEndInst.");
+      visited.insert(endBlock);
+      stack.push_back(endBlock);
     }
-  }
 
-  if (isTryEndBlock) {
-    // After coming back from the recursion, we recover the stack.
-    assert(currentCatch && "currentCatch is null when there is TryEndInst");
-    aliveCatches.push_back(currentCatch);
+    // We also want to continue scan into the catch blocks.
+    BasicBlock *catchTarget = tryStartInst->getCatchTarget();
+    assert(
+        visited.count(catchTarget) == 0 &&
+        "Catch block must be dominated by the try start.");
+    visited.insert(catchTarget);
+    stack.push_back(catchTarget);
   }
-  return true;
+  assert(
+      (aliveCatches.size() || !tryEndBlocks.size()) &&
+      "Block without live catches cannot have TryEndInst.");
+  return tryEndBlocks;
 }
 
 ExceptionEntryList hermes::generateExceptionHandlers(
@@ -174,3 +180,5 @@ ExceptionEntryList hermes::generateExceptionHandlers(
   std::sort(exception_entries.begin(), exception_entries.end());
   return exception_entries;
 }
+
+#undef DEBUG_TYPE

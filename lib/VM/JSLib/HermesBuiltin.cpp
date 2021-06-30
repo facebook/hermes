@@ -95,12 +95,12 @@ hermesBuiltinGetTemplateObject(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto rawObj = runtime->makeHandle<JSObject>(arrRes->getHermesValue());
+  auto rawObj = Handle<JSObject>::vmcast(*arrRes);
   auto arrRes2 = JSArray::create(runtime, count, 0);
   if (LLVM_UNLIKELY(arrRes2 == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto templateObj = runtime->makeHandle<JSObject>(arrRes2->getHermesValue());
+  auto templateObj = Handle<JSObject>::vmcast(*arrRes2);
 
   // Set cooked and raw strings as elements in template object and raw object,
   // respectively.
@@ -268,6 +268,7 @@ CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
 
   MutableHandle<> nextKeyHandle{runtime};
   MutableHandle<> propValueHandle{runtime};
+  MutableHandle<SymbolID> tmpSymbolStorage{runtime};
   GCScopeMarkerRAII marker{runtime};
   // 6. For each element nextKey of keys in List order, do
   for (uint32_t nextKeyIdx = 0, endIdx = keys->getEndIndex();
@@ -297,6 +298,7 @@ CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
           runtime,
           nextKeyHandle,
           JSObject::IgnoreProxy::Yes,
+          tmpSymbolStorage,
           desc);
       if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
         return ExecutionStatus::EXCEPTION;
@@ -383,13 +385,19 @@ hermesBuiltinCopyDataProperties(void *, Runtime *runtime, NativeArgs args) {
 
   MutableHandle<> nameHandle{runtime};
   MutableHandle<> valueHandle{runtime};
+  MutableHandle<SymbolID> tmpSymbolStorage{runtime};
 
   // Process all named properties/symbols.
   bool success = JSObject::forEachOwnPropertyWhile(
       source,
       runtime,
       // indexedCB.
-      [&source, &target, &excludedItems, &nameHandle, &valueHandle](
+      [&source,
+       &target,
+       &excludedItems,
+       &nameHandle,
+       &valueHandle,
+       &tmpSymbolStorage](
           Runtime *runtime, uint32_t index, ComputedPropertyDescriptor desc) {
         if (!desc.flags.enumerable)
           return true;
@@ -406,6 +414,7 @@ hermesBuiltinCopyDataProperties(void *, Runtime *runtime, NativeArgs args) {
               runtime,
               nameHandle,
               JSObject::IgnoreProxy::Yes,
+              tmpSymbolStorage,
               xdesc);
           if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
             return false;
@@ -502,12 +511,14 @@ hermesBuiltinCopyRestArgs(void *, Runtime *runtime, NativeArgs args) {
   auto cr = JSArray::create(runtime, length, length);
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
-  auto array = runtime->makeHandle(std::move(*cr));
+  auto array = *cr;
   JSArray::setStorageEndIndex(array, runtime, length);
 
+  NoAllocScope noAlloc{runtime};
+  JSArray *arrPtr = array.get();
   for (uint32_t i = 0; i != length; ++i) {
-    array->unsafeSetExistingElementAt(
-        array.get(), runtime, i, it->getArgRef(from));
+    JSArray::unsafeSetExistingElementAt(
+        arrPtr, runtime, i, it->getArgRef(from));
     ++from;
   }
 
@@ -539,14 +550,12 @@ hermesBuiltinArraySpread(void *, Runtime *runtime, NativeArgs args) {
     // `arr[Symbol.iterator]` hasn't been changed by the user.
     NamedPropertyDescriptor desc;
     PseudoHandle<JSObject> propObj =
-        createPseudoHandle(JSObject::getNamedDescriptor(
-            arr,
-            runtime,
-            Predefined::getSymbolID(Predefined::SymbolIterator),
-            desc));
+        createPseudoHandle(JSObject::getNamedDescriptorPredefined(
+            arr, runtime, Predefined::SymbolIterator, desc));
     if (LLVM_LIKELY(propObj) && LLVM_LIKELY(!desc.flags.proxyObject)) {
       PseudoHandle<> slotValue = createPseudoHandle(
-          JSObject::getNamedSlotValue(propObj.get(), runtime, desc));
+          JSObject::getNamedSlotValueUnsafe(propObj.get(), runtime, desc)
+              .unboxToHV(runtime));
       propObj.invalidate();
       if (LLVM_LIKELY(
               slotValue->getRaw() == runtime->arrayPrototypeValues.getRaw())) {
@@ -554,7 +563,8 @@ hermesBuiltinArraySpread(void *, Runtime *runtime, NativeArgs args) {
         auto nextIndex = args.getArg(2).getNumberAs<JSArray::size_type>();
         MutableHandle<> idxHandle{runtime};
         GCScopeMarkerRAII marker{runtime};
-        for (JSArray::size_type i = 0; i < JSArray::getLength(*arr); ++i) {
+        for (JSArray::size_type i = 0; i < JSArray::getLength(*arr, runtime);
+             ++i) {
           marker.flush();
           // Fast path: look up the property in indexed storage.
           nextValue = arr->at(runtime, i);
@@ -665,7 +675,7 @@ hermesBuiltinApply(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError("args must be an array");
   }
 
-  uint32_t len = JSArray::getLength(*argArray);
+  uint32_t len = JSArray::getLength(*argArray, runtime);
 
   bool isConstructor = args.getArgCount() == 2;
 
@@ -720,9 +730,9 @@ hermesBuiltinExportAll(void *, Runtime *runtime, NativeArgs args) {
   }
 
   Handle<JSObject> source = args.dyncastArg<JSObject>(1);
-  if (LLVM_UNLIKELY(!source)) {
+  if (LLVM_UNLIKELY(!source) || LLVM_UNLIKELY(source->isProxyObject())) {
     return runtime->raiseTypeError(
-        "exportAll() source argument must be object");
+        "exportAll() source argument must be non-Proxy object");
   }
 
   MutableHandle<> propertyHandle{runtime};
@@ -745,7 +755,9 @@ hermesBuiltinExportAll(void *, Runtime *runtime, NativeArgs args) {
           return true;
         }
 
-        propertyHandle = JSObject::getNamedSlotValue(*source, runtime, desc);
+        propertyHandle =
+            JSObject::getNamedSlotValueUnsafe(*source, runtime, desc)
+                .unboxToHV(runtime);
         defineRes = JSObject::defineOwnProperty(
             exports, runtime, id, dpf, propertyHandle);
         if (LLVM_UNLIKELY(defineRes == ExecutionStatus::EXCEPTION)) {

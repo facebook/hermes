@@ -96,6 +96,11 @@ struct JCollection : JavaClass<JCollection<E>, JIterable<E>> {
    * Returns the number of elements in the collection.
    */
   size_t size() const;
+
+  /**
+   * Adds and element to the collection.  Returns true if the collection was changed.
+   */
+  bool add(alias_ref<E> elem);
 };
 
 template <typename E = jobject>
@@ -145,6 +150,27 @@ struct JMap : JavaClass<JMap<K,V>> {
    */
   Iterator begin() const;
   Iterator end() const;
+
+  /**
+   * Inserts an entry to the map.  Returns the old value if there was one, else null.
+   * We return JObject to avoid a dynamic_ref_cast when the return value is not needed.
+   */
+  local_ref<JObject> put(alias_ref<K> key, alias_ref<V> val);
+};
+
+template <typename E = jobject>
+struct JArrayList : JavaClass<JArrayList<E>, JList<E>> {
+  constexpr static auto kJavaDescriptor = "Ljava/util/ArrayList;";
+
+  static local_ref<JArrayList<E>> create();
+  static local_ref<JArrayList<E>> create(int initialCapacity);
+};
+
+template <typename K = jobject, typename V = jobject>
+struct JHashMap : JavaClass<JHashMap<K, V>, JMap<K, V>> {
+  constexpr static auto kJavaDescriptor = "Ljava/util/HashMap;";
+
+  static local_ref<JHashMap<K, V>> create();
 };
 
 }

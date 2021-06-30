@@ -8,6 +8,7 @@
 #include "TestHelpers.h"
 #include "gtest/gtest.h"
 #include "hermes/VM/AllocResult.h"
+#include "hermes/VM/DummyObject.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/Handle.h"
@@ -22,66 +23,23 @@ using namespace hermes::vm;
 
 namespace {
 
-struct FinalizerCell final : public GCCell {
-  static const VTable vt;
-  int *numFinalized;
-  // Some padding to meet the minimum cell size.
-  uint64_t padding1_{0};
-  uint64_t padding2_{0};
+using testhelpers::DummyObject;
 
-  static void finalize(GCCell *cell, GC *) {
-    auto *self = static_cast<FinalizerCell *>(cell);
-    ++(*self->numFinalized);
-  }
-
-  static FinalizerCell *create(DummyRuntime &runtime, int *numFinalized) {
-    return runtime.makeAFixed<FinalizerCell, HasFinalizer::Yes>(
-        &runtime.getHeap(), numFinalized);
-  }
-
-  static FinalizerCell *create(Runtime &runtime, int *numFinalized) {
-    return runtime.makeAFixed<FinalizerCell, HasFinalizer::Yes>(
-        &runtime.getHeap(), numFinalized);
-  }
-
-  FinalizerCell(GC *gc, int *numFinalized)
-      : GCCell(gc, &vt), numFinalized(numFinalized) {}
-};
-
-struct DummyCell final : public GCCell {
-  static const VTable vt;
-  // Some padding to meet the minimum cell size.
-  uint64_t padding1_{0};
-  uint64_t padding2_{0};
-
-  static DummyCell *create(DummyRuntime &runtime) {
-    return runtime.makeAFixed<DummyCell>(&runtime.getHeap());
-  }
-
-  DummyCell(GC *gc) : GCCell(gc, &vt) {}
-};
-
-const VTable FinalizerCell::vt{
-    CellKind::FillerCellKind,
-    sizeof(FinalizerCell),
-    FinalizerCell::finalize};
-
-const VTable DummyCell::vt{CellKind::UninitializedKind, sizeof(DummyCell)};
-
-MetadataTableForTests getMetadataTable() {
-  // Nothing to mark for either of them, leave a blank metadata.
-  static const Metadata storage[] = {Metadata(), Metadata()};
-  return MetadataTableForTests(storage);
+static DummyObject *createWithFinalizeCount(GC *gc, int *numFinalized) {
+  auto *obj = DummyObject::create(gc);
+  obj->finalizerCallback = std::make_unique<DummyObject::Callback>(
+      [numFinalized]() mutable { (*numFinalized)++; });
+  return obj;
 }
 
 TEST(GCFinalizerTest, NoDeadFinalizables) {
   int finalized = 0;
-  auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);
+  auto runtime = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
 
-  DummyCell::create(rt);
-  GCCell *r = FinalizerCell::create(rt, &finalized);
-  rt.pointerRoots.push_back(&r);
+  GCScope scope{&rt};
+  DummyObject::create(&rt.getHeap());
+  rt.makeHandle(createWithFinalizeCount(&rt.getHeap(), &finalized));
   rt.collect();
 
   ASSERT_EQ(0, finalized);
@@ -89,12 +47,12 @@ TEST(GCFinalizerTest, NoDeadFinalizables) {
 
 TEST(GCFinalizerTest, FinalizablesOnly) {
   int finalized = 0;
-  auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);
+  auto runtime = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
 
-  FinalizerCell::create(rt, &finalized);
-  GCCell *r = FinalizerCell::create(rt, &finalized);
-  rt.pointerRoots.push_back(&r);
+  GCScope scope{&rt};
+  createWithFinalizeCount(&rt.getHeap(), &finalized);
+  rt.makeHandle(createWithFinalizeCount(&rt.getHeap(), &finalized));
   rt.collect();
 
   ASSERT_EQ(1, finalized);
@@ -102,21 +60,21 @@ TEST(GCFinalizerTest, FinalizablesOnly) {
 
 TEST(GCFinalizerTest, MultipleCollect) {
   int finalized = 0;
-  auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);
+  auto runtime = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
 
-  FinalizerCell::create(rt, &finalized);
-  DummyCell::create(rt);
-  FinalizerCell::create(rt, &finalized);
-  GCCell *r1 = FinalizerCell::create(rt, &finalized);
-  GCCell *r2 = DummyCell::create(rt);
-  rt.pointerRoots.push_back(&r1);
-  rt.pointerRoots.push_back(&r2);
-  rt.collect();
+  {
+    GCScope scope{&rt};
+    createWithFinalizeCount(&rt.getHeap(), &finalized);
+    DummyObject::create(&rt.getHeap());
+    createWithFinalizeCount(&rt.getHeap(), &finalized);
+    rt.makeHandle(createWithFinalizeCount(&rt.getHeap(), &finalized));
+    rt.makeHandle(DummyObject::create(&rt.getHeap()));
+    rt.collect();
 
-  ASSERT_EQ(2, finalized);
+    ASSERT_EQ(2, finalized);
+  }
 
-  rt.pointerRoots.clear();
   rt.collect();
 
   ASSERT_EQ(3, finalized);
@@ -125,12 +83,11 @@ TEST(GCFinalizerTest, MultipleCollect) {
 TEST(GCFinalizerTest, FinalizeAllOnRuntimeDestructDummyRuntime) {
   int finalized = 0;
   {
-    auto rt = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);
+    auto rt = DummyRuntime::create(kTestGCConfigSmall);
 
-    GCCell *r1 = FinalizerCell::create(*rt, &finalized);
-    GCCell *r2 = FinalizerCell::create(*rt, &finalized);
-    rt->pointerRoots.push_back(&r1);
-    rt->pointerRoots.push_back(&r2);
+    GCScope scope{rt.get()};
+    rt->makeHandle(createWithFinalizeCount(&rt->getHeap(), &finalized));
+    rt->makeHandle(createWithFinalizeCount(&rt->getHeap(), &finalized));
 
     // Collect once to get the objects into the old gen, then a second time
     // to get their mark bits set in their stable locations.
@@ -150,10 +107,10 @@ TEST(GCFinalizerTest, FinalizeAllOnRuntimeDestructRealRuntime) {
   {
     GCScope gcScope(rt.get());
 
-    auto r1 = rt->makeHandle(
-        HermesValue::encodeObjectValue(FinalizerCell::create(*rt, &finalized)));
-    auto r2 = rt->makeHandle(
-        HermesValue::encodeObjectValue(FinalizerCell::create(*rt, &finalized)));
+    auto r1 = rt->makeHandle(HermesValue::encodeObjectValue(
+        createWithFinalizeCount(&rt->getHeap(), &finalized)));
+    auto r2 = rt->makeHandle(HermesValue::encodeObjectValue(
+        createWithFinalizeCount(&rt->getHeap(), &finalized)));
 
     // Collect once to get the objects into the old gen, then a second time
     // to get their mark bits set in their stable locations.

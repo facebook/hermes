@@ -35,7 +35,7 @@ android {
 
   externalNativeBuild {
     cmake {
-      version "3.6.0"
+      version "3.10.2"
       path "../../CMakeLists.txt"
       buildStagingDirectory = "${rootProject.ext.hermes_ws}/staging/hermes"
       buildStagingDirectory.mkdirs()
@@ -77,14 +77,19 @@ android {
     intl {
       java {
         srcDirs = [
-                "${rootProject.ext.hermes_ws}/hermes/lib/Platform/Intl/java",
+                "../../lib/Platform/Intl/java",
         ]
       }
     }
   }
 
+  // Allow using prefab so that we can import libfbjni.so.
+  buildFeatures {
+    prefab true
+  }
+
   dependencies {
-    intlImplementation 'com.facebook.fbjni:fbjni:0.0.2'
+    implementation 'com.facebook.fbjni:fbjni:0.2.2'
     intlImplementation 'com.facebook.soloader:soloader:0.9.0'
     intlImplementation 'com.facebook.yoga:proguard-annotations:1.14.1'
     intlImplementation "androidx.annotation:annotation:1.1.0"
@@ -92,6 +97,7 @@ android {
 
   packagingOptions {
     exclude "**/libc++_shared.so"
+    exclude "**/libfbjni.so"
   }
 
   afterEvaluate {

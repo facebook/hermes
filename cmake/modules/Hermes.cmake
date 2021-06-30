@@ -372,6 +372,19 @@ if (GCC_COMPATIBLE)
       check_cxx_compiler_flag("-Wuninitialized" UNINITIALIZED_FLAG)
       append_if(UNINITIALIZED_FLAG "-Wno-uninitialized" CMAKE_CXX_FLAGS)
     endif ()
+
+    # Suppress uninteresting warnings about initializing ArrayRef from initializer lists.
+    check_cxx_compiler_flag("-Winit-list-lifetime" INIT_LIST_LIFETIME_FLAG)
+    append_if(INIT_LIST_LIFETIME_FLAG "-Wno-init-list-lifetime" CMAKE_CXX_FLAGS)
+
+    # Suppress the redundant move warnings in GCC 9, because it leads to suboptimal
+    # recommendations for older compilers that do not implement C++ Core Issue 1579.
+    check_cxx_compiler_flag("-Wredundant-move" REDUNDANT_MOVE_FLAG)
+    append_if(REDUNDANT_MOVE_FLAG "-Wno-redundant-move" CMAKE_CXX_FLAGS)
+
+    # This warning generates a lot of noise in gtest.
+    check_cxx_compiler_flag("-Wdeprecated-copy" DEPRECATED_COPY_FLAG)
+    append_if(DEPRECATED_COPY_FLAG "-Wno-deprecated-copy" CMAKE_CXX_FLAGS)
   endif ()
 
   # Disable -Wclass-memaccess, a C++-only warning from GCC 8 that fires on
@@ -405,4 +418,8 @@ if (GCC_COMPATIBLE)
 
   # Enable -Wdelete-non-virtual-dtor if available.
   add_flag_if_supported("-Wdelete-non-virtual-dtor" DELETE_NON_VIRTUAL_DTOR_FLAG)
+
+  # Disable range loop analysis warnings.
+  check_cxx_compiler_flag("-Wrange-loop-analysis" RANGE_ANALYSIS_FLAG)
+  append_if(RANGE_ANALYSIS_FLAG "-Wno-range-loop-analysis" CMAKE_CXX_FLAGS)
 endif (GCC_COMPATIBLE)

@@ -654,14 +654,12 @@ class NativeFunction : public Callable {
   /// \return the value in an additional slot.
   /// \param index must be less than the \c additionalSlotCount passed to
   /// the create method.
-  static HermesValue getAdditionalSlotValue(
+  static SmallHermesValue getAdditionalSlotValue(
       NativeFunction *self,
       Runtime *runtime,
       unsigned index) {
     return JSObject::getInternalProperty(
-        self,
-        runtime,
-        numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS + index);
+        self, runtime, numOverlapSlots<NativeFunction>() + index);
   }
 
   /// Set the value in an additional slot.
@@ -671,12 +669,9 @@ class NativeFunction : public Callable {
       NativeFunction *self,
       Runtime *runtime,
       unsigned index,
-      HermesValue value) {
-    return JSObject::setInternalProperty(
-        self,
-        runtime,
-        numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS + index,
-        value);
+      SmallHermesValue value) {
+    JSObject::setInternalProperty(
+        self, runtime, numOverlapSlots<NativeFunction>() + index, value);
   }
 
  public:
@@ -783,13 +778,12 @@ class NativeConstructor final : public NativeFunction {
         runtime,
         parentHandle,
         runtime->getHiddenClassForPrototype(
-            *parentHandle,
-            numOverlapSlots<NativeConstructor>() + ANONYMOUS_PROPERTY_SLOTS),
+            *parentHandle, numOverlapSlots<NativeConstructor>()),
         context,
         functionPtr,
         creator,
         targetKind);
-    return createPseudoHandle(cell);
+    return JSObjectInit::initToPseudoHandle(runtime, cell);
   }
 
   /// Create an instance of NativeConstructor.
@@ -809,14 +803,13 @@ class NativeConstructor final : public NativeFunction {
         runtime,
         parentHandle,
         runtime->getHiddenClassForPrototype(
-            *parentHandle,
-            numOverlapSlots<NativeConstructor>() + ANONYMOUS_PROPERTY_SLOTS),
+            *parentHandle, numOverlapSlots<NativeConstructor>()),
         parentEnvHandle,
         context,
         functionPtr,
         creator,
         targetKind);
-    return createPseudoHandle(cell);
+    return JSObjectInit::initToPseudoHandle(runtime, cell);
   }
 
  private:
@@ -1293,10 +1286,11 @@ class GeneratorInnerFunction final : public JSFunction {
   /// Clear the stored result_ field to prevent memory leaks.
   /// Should be called after getResult() by the ResumeGenerator instruction.
   void clearResult(Runtime *runtime) {
-    result_.setNonPtr(HermesValue::encodeEmptyValue(), &runtime->getHeap());
+    result_.setNonPtr(
+        SmallHermesValue::encodeEmptyValue(), &runtime->getHeap());
   }
 
-  HermesValue getResult() const {
+  SmallHermesValue getResult() const {
     return result_;
   }
 
@@ -1372,7 +1366,7 @@ class GeneratorInnerFunction final : public JSFunction {
 
   /// The result passed to `next()`, `throw()`, or `return()` by the user.
   /// Placed in the result register of `ResumeGenerator`.
-  GCHermesValue result_{};
+  GCSmallHermesValue result_{};
 
   /// The next instruction to jump to upon resuming from SuspendedYield,
   /// invalid if the generator is in any other state.

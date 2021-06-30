@@ -31,6 +31,7 @@ const VTable Environment::vt{CellKind::EnvironmentKind, 0};
 
 void EnvironmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const Environment *>(cell);
+  mb.setVTable(&Environment::vt);
   mb.addField("parentEnvironment", &self->parentEnvironment_);
   mb.addArray(self->getSlots(), &self->size_, sizeof(GCHermesValue));
 }
@@ -69,6 +70,7 @@ void CallableBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<Callable>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const Callable *>(cell);
+  mb.setVTable(&Callable::vt.base);
   mb.addField("environment", &self->environment_);
 }
 
@@ -497,7 +499,6 @@ const CallableVTable BoundFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr,
             nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
@@ -520,6 +521,7 @@ void BoundFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<BoundFunction>());
   CallableBuildMeta(cell, mb);
   const auto *self = static_cast<const BoundFunction *>(cell);
+  mb.setVTable(&BoundFunction::vt.base.base);
   mb.addField("target", &self->target_);
   mb.addField("argStorage", &self->argStorage_);
 }
@@ -574,8 +576,7 @@ CallResult<HermesValue> BoundFunction::create(
       runtime,
       Handle<JSObject>::vmcast(&runtime->functionPrototype),
       runtime->getHiddenClassForPrototype(
-          runtime->functionPrototypeRawPtr,
-          numOverlapSlots<BoundFunction>() + ANONYMOUS_PROPERTY_SLOTS),
+          runtime->functionPrototypeRawPtr, numOverlapSlots<BoundFunction>()),
       target,
       argStorageHandle);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
@@ -848,7 +849,7 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
     // Initialize "thisArg". When constructing we must use the original 'this',
     // not the bound one.
     newCalleeFrame.getThisArgRef() = !originalNewTarget.isUndefined()
-        ? callerFrame.getScratchRef()
+        ? static_cast<HermesValue>(callerFrame.getScratchRef())
         : self->getArgsWithThis(runtime)[0];
 
     res =
@@ -902,7 +903,6 @@ const CallableVTable NativeFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr,
             nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
@@ -924,6 +924,7 @@ const CallableVTable NativeFunction::vt{
 void NativeFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<NativeFunction>());
   CallableBuildMeta(cell, mb);
+  mb.setVTable(&NativeFunction::vt.base.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -996,17 +997,20 @@ Handle<NativeFunction> NativeFunction::create(
     unsigned paramCount,
     Handle<JSObject> prototypeObjectHandle,
     unsigned additionalSlotCount) {
+  size_t reservedSlots =
+      numOverlapSlots<NativeFunction>() + additionalSlotCount;
   auto *cell = runtime->makeAFixed<NativeFunction>(
       runtime,
       &vt.base.base,
       parentHandle,
-      runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS +
-              additionalSlotCount),
+      runtime->getHiddenClassForPrototype(*parentHandle, reservedSlots),
       context,
       functionPtr);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
+
+  // Allocate a propStorage if the number of additional slots requires it.
+  runtime->ignoreAllocationFailure(
+      JSObject::allocatePropStorage(selfHandle, runtime, reservedSlots));
 
   auto st = defineNameLengthAndPrototype(
       selfHandle,
@@ -1039,8 +1043,7 @@ Handle<NativeFunction> NativeFunction::create(
       parentHandle,
       runtime->getHiddenClassForPrototype(
           *parentHandle,
-          numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS +
-              additionalSlotCount),
+          numOverlapSlots<NativeFunction>() + additionalSlotCount),
       parentEnvHandle,
       context,
       functionPtr);
@@ -1087,7 +1090,6 @@ const CallableVTable NativeConstructor::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr,
             nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
@@ -1109,6 +1111,7 @@ const CallableVTable NativeConstructor::vt{
 void NativeConstructorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<NativeConstructor>());
   NativeFunctionBuildMeta(cell, mb);
+  mb.setVTable(&NativeConstructor::vt.base.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -1199,7 +1202,6 @@ const CallableVTable JSFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr,
             nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
@@ -1223,6 +1225,7 @@ void FunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   CallableBuildMeta(cell, mb);
   const auto *self = static_cast<const JSFunction *>(cell);
   mb.addField("domain", &self->domain_);
+  mb.setVTable(&JSFunction::vt.base.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -1265,8 +1268,7 @@ PseudoHandle<JSFunction> JSFunction::create(
       domain,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<JSFunction>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, numOverlapSlots<JSFunction>()),
       envHandle,
       codeBlock);
   auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
@@ -1291,11 +1293,7 @@ CallResult<PseudoHandle<>> JSFunction::_callImpl(
     Runtime *runtime) {
   auto *self = vmcast<JSFunction>(selfHandle.get());
   CallResult<HermesValue> result{ExecutionStatus::EXCEPTION};
-  if (auto *jitPtr = self->getCodeBlock()->getJITCompiled()) {
-    result = (*jitPtr)(runtime);
-  } else {
-    result = runtime->interpretFunction(self->getCodeBlock());
-  }
+  result = runtime->interpretFunction(self->getCodeBlock());
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1346,7 +1344,6 @@ const CallableVTable JSAsyncFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr,
             nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
@@ -1368,6 +1365,7 @@ const CallableVTable JSAsyncFunction::vt{
 void AsyncFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSAsyncFunction>());
   FunctionBuildMeta(cell, mb);
+  mb.setVTable(&JSAsyncFunction::vt.base.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -1399,8 +1397,7 @@ PseudoHandle<JSAsyncFunction> JSAsyncFunction::create(
       domain,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<JSAsyncFunction>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, numOverlapSlots<JSAsyncFunction>()),
       envHandle,
       codeBlock);
   auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
@@ -1416,7 +1413,6 @@ const CallableVTable JSGeneratorFunction::vt{
         VTable(
             CellKind::GeneratorFunctionKind,
             cellSize<JSGeneratorFunction>(),
-            nullptr,
             nullptr,
             nullptr,
             nullptr,
@@ -1442,6 +1438,7 @@ const CallableVTable JSGeneratorFunction::vt{
 void GeneratorFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSGeneratorFunction>());
   FunctionBuildMeta(cell, mb);
+  mb.setVTable(&JSGeneratorFunction::vt.base.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -1475,8 +1472,7 @@ PseudoHandle<JSGeneratorFunction> JSGeneratorFunction::create(
       domain,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<JSGeneratorFunction>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, numOverlapSlots<JSGeneratorFunction>()),
       envHandle,
       codeBlock);
   auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
@@ -1492,7 +1488,6 @@ const CallableVTable GeneratorInnerFunction::vt{
         VTable(
             CellKind::GeneratorInnerFunctionKind,
             cellSize<GeneratorInnerFunction>(),
-            nullptr,
             nullptr,
             nullptr,
             nullptr,
@@ -1522,6 +1517,7 @@ void GeneratorInnerFunctionBuildMeta(
       JSObject::numOverlapSlots<GeneratorInnerFunction>());
   FunctionBuildMeta(cell, mb);
   const auto *self = static_cast<const GeneratorInnerFunction *>(cell);
+  mb.setVTable(&GeneratorInnerFunction::vt.base.base);
   mb.addField("savedContext", &self->savedContext_);
   mb.addField("result", &self->result_);
 }
@@ -1537,7 +1533,7 @@ GeneratorInnerFunction::GeneratorInnerFunction(Deserializer &d)
         ArrayStorage::deserializeArrayStorage(d),
         &d.getRuntime()->getHeap());
   }
-  d.readHermesValue(&result_);
+  d.readSmallHermesValue(&result_);
   nextIPOffset_ = d.readInt<uint32_t>();
   action_ = (Action)d.readInt<uint8_t>();
 }
@@ -1554,7 +1550,7 @@ void GeneratorInnerFunctionSerialize(Serializer &s, const GCCell *cell) {
     ArrayStorage::serializeArrayStorage(
         s, self->savedContext_.get(s.getRuntime()));
   }
-  s.writeHermesValue(self->result_);
+  s.writeSmallHermesValue(self->result_);
   s.writeInt<uint32_t>(self->nextIPOffset_);
   s.writeInt<uint8_t>((uint8_t)self->action_);
   s.endObject(cell);
@@ -1581,8 +1577,7 @@ CallResult<Handle<GeneratorInnerFunction>> GeneratorInnerFunction::create(
       domain,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<GeneratorInnerFunction>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, numOverlapSlots<GeneratorInnerFunction>()),
       envHandle,
       codeBlock,
       args.getArgCount());
@@ -1618,7 +1613,9 @@ CallResult<PseudoHandle<>> GeneratorInnerFunction::callInnerFunction(
     Action action) {
   auto self = Handle<GeneratorInnerFunction>::vmcast(selfHandle);
 
-  self->result_.set(arg.getHermesValue(), &runtime->getHeap());
+  SmallHermesValue shv =
+      SmallHermesValue::encodeHermesValue(arg.getHermesValue(), runtime);
+  self->result_.set(shv, &runtime->getHeap());
   self->action_ = action;
 
   auto ctx = runtime->makeMutableHandle(selfHandle->savedContext_);
@@ -1674,7 +1671,7 @@ void GeneratorInnerFunction::restoreStack(Runtime *runtime) {
         dst >= runtime->getStackPointer())) &&
       "reading off the end of the stack");
   const GCHermesValue *src = savedContext_.get(runtime)->data() + frameOffset;
-  GCHermesValue::copyToPinned(src, src + frameSize, dst);
+  GCHermesValueUtil::copyToPinned(src, src + frameSize, dst);
 }
 
 void GeneratorInnerFunction::saveStack(Runtime *runtime) {
@@ -1700,3 +1697,5 @@ void GeneratorInnerFunction::saveStack(Runtime *runtime) {
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

@@ -6,6 +6,7 @@
 set(source_files
   ArrayStorage.cpp
   BasicBlockExecutionInfo.cpp
+  BoxedDouble.cpp
   BuildMetadata.cpp
   Callable.cpp
   CellKind.cpp
@@ -14,6 +15,7 @@ set(source_files
   Deserializer.cpp
   DictPropertyMap.cpp
   Domain.cpp
+  DummyObject.cpp
   GCBase.cpp
   GCCell.cpp
   OrderedHashMap.cpp
@@ -116,17 +118,6 @@ set(source_files
   JSLib/require.cpp
 )
 
-set(jit_files
-  JIT/PoolHeap.cpp
-  JIT/ExecHeap.cpp
-  JIT/LLVMDisassembler.cpp
-  JIT/NativeDisassembler.cpp
-  JIT/DiscoverBB.cpp
-  JIT/x86-64/JIT.cpp
-  JIT/x86-64/FastJIT.cpp JIT/x86-64/FastJIT.h
-  JIT/ExternalCalls.cpp JIT/ExternalCalls.h
-  )
-
 if (${HERMESVM_GCKIND} STREQUAL "NONCONTIG_GENERATIONAL")
   list(APPEND source_files gcs/AlignedHeapSegment.cpp gcs/AlignedStorage.cpp
                            gcs/CardTableNC.cpp gcs/FillerCell.cpp
@@ -188,20 +179,6 @@ set(link_libs
   dtoa
   ${CORE_FOUNDATION}
 )
-
-if(HERMESVM_JIT)
-  list(APPEND source_files ${jit_files})
-
-  set(LLVM_LINK_COMPONENTS
-    AllTargetsAsmPrinters
-    AllTargetsAsmParsers
-    AllTargetsDescs
-    AllTargetsDisassemblers
-    AllTargetsInfos
-    MC
-    MCParser
-  )
-endif()
 
 add_hermes_library(hermesVMRuntime STATIC ${source_files}
     LINK_LIBS

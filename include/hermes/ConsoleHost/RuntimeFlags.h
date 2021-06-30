@@ -157,16 +157,10 @@ static opt<bool> ES6Proxy(
     init(RuntimeConfig::getDefaultES6Proxy()),
     cat(RuntimeCategory));
 
-static opt<bool> ES6Symbol(
-    "Xes6-symbol",
-    desc("Enable support for ES6 Symbol"),
-    init(RuntimeConfig::getDefaultES6Symbol()),
-    cat(RuntimeCategory));
-
-static opt<bool> ES6Intl(
-    "Xes6-intl",
-    desc("Enable support for ES6 Intl APIs"),
-    init(RuntimeConfig::getDefaultES6Intl()),
+static opt<bool> Intl(
+    "Xintl",
+    desc("Enable support for ECMA-402 Intl APIs"),
+    init(RuntimeConfig::getDefaultIntl()),
     cat(RuntimeCategory));
 
 static llvh::cl::opt<bool> StopAfterInit(

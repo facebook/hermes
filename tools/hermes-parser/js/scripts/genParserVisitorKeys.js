@@ -25,7 +25,7 @@ const TEMPLATE_FILE = path.resolve(
 
 // Create visitor keys file
 const visitorKeys = execSync(
-  `cpp -P -I "${process.argv[2]}" "${TEMPLATE_FILE}"`,
+  `c++ -E -P -I"${process.argv[2]}" -x c "${TEMPLATE_FILE}"`,
 );
 const visitorKeysFileContents = `/**
  * Copyright (c) Facebook, Inc. and its affiliates.
@@ -52,7 +52,7 @@ module.exports = {
 `;
 
 // Format then sign file and write to disk
-const formattedContents = execSync('prettier', {
+const formattedContents = execSync('prettier --parser=flow', {
   input: visitorKeysFileContents,
 }).toString();
 fs.writeFileSync(OUTPUT_FILE, formattedContents);

@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "Array.h"
 #include "TestHelpers.h"
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 #include "hermes/VM/AlignedHeapSegment.h"
@@ -16,26 +15,6 @@
 #include "gtest/gtest.h"
 
 using namespace hermes::vm;
-using namespace hermes::unittest;
-
-namespace {
-
-const MetadataTableForTests getMetadataTable() {
-  static const Metadata storage[] = {
-      Metadata(),
-      buildMetadata(
-          CellKind::FillerCellKind, hermes::unittest::ArrayBuildMeta)};
-  return MetadataTableForTests(storage);
-}
-
-} // namespace
-
-namespace hermes {
-namespace vm {
-template <>
-struct IsGCObject<Array> : public std::true_type {};
-} // namespace vm
-} // namespace hermes
 
 namespace {
 
@@ -43,12 +22,10 @@ struct GCSizingTest : public ::testing::Test {
   std::shared_ptr<DummyRuntime> runtime;
   DummyRuntime &rt;
   GCSizingTest()
-      : runtime(DummyRuntime::create(
-            getMetadataTable(),
-            GCConfig::Builder()
-                .withInitHeapSize(256)
-                .withMaxHeapSize(100000000)
-                .build())),
+      : runtime(DummyRuntime::create(GCConfig::Builder()
+                                         .withInitHeapSize(256)
+                                         .withMaxHeapSize(100000000)
+                                         .build())),
         rt(*runtime) {}
 };
 
@@ -71,14 +48,14 @@ TEST_F(GCSizingTest, TestOccupancyTarget) {
 
   // This will be the head of a linked list of arrays, each of whom
   // contains pointers to other objects, and a next property.
-  auto head = rt.makeMutableHandle<Array>(nullptr);
+  auto head = rt.makeMutableHandle<ArrayStorage>(nullptr);
 
   // This will be a previous value of head, remaining kF list elements
   // behind (once the number of elements exceeds kN);
-  auto headFollower = rt.makeMutableHandle<Array>(nullptr);
+  auto headFollower = rt.makeMutableHandle<ArrayStorage>(nullptr);
 
   // Used temporarily in allocating a new head.
-  auto newHead = rt.makeMutableHandle<Array>(nullptr);
+  auto newHead = rt.makeMutableHandle<ArrayStorage>(nullptr);
 
   const unsigned kF = 100;
   // The number of top-level elements we will allocate.
@@ -96,22 +73,21 @@ TEST_F(GCSizingTest, TestOccupancyTarget) {
   const unsigned kGCFrequency = 200;
 
   for (unsigned i = 0; i < kN; i++) {
-    newHead = Array::create(rt, kP + kNumFieldPtrIndices);
+    newHead = ArrayStorage::createForTest(&gc, kP + kNumFieldPtrIndices);
     // Link in the new head.
     if (*head) {
-      newHead->values()[kNextFieldIndex].set(
-          HermesValue::encodeObjectValue(*head), &gc);
-      head->values()[kPrevFieldIndex].set(
-          HermesValue::encodeObjectValue(*newHead), &gc);
+      newHead->set(kNextFieldIndex, HermesValue::encodeObjectValue(*head), &gc);
+      head->set(kPrevFieldIndex, HermesValue::encodeObjectValue(*newHead), &gc);
     } else {
-      newHead->values()[kNextFieldIndex].set(
-          HermesValue::encodeNullValue(), &gc);
+      newHead->set(kNextFieldIndex, HermesValue::encodeNullValue(), &gc);
     }
     head = *newHead;
     for (unsigned j = 0; j < kP; j++) {
-      Array *newLeaf = Array::create(rt, kLeafSize);
-      head->values()[j + kNumFieldPtrIndices].set(
-          HermesValue::encodeObjectValue(newLeaf), &gc);
+      auto *newLeaf = ArrayStorage::createForTest(&gc, kLeafSize);
+      head->set(
+          j + kNumFieldPtrIndices,
+          HermesValue::encodeObjectValue(newLeaf),
+          &gc);
     }
     if (i == 0) {
       headFollower = *head;
@@ -121,11 +97,10 @@ TEST_F(GCSizingTest, TestOccupancyTarget) {
       unsigned numToClear =
           static_cast<unsigned>(static_cast<double>(kP) * 0.3);
       for (unsigned k = 0; k < numToClear; k++) {
-        headFollower->values()[k + kNumFieldPtrIndices].set(
-            HermesValue::encodeNullValue(), &gc);
+        headFollower->set(
+            k + kNumFieldPtrIndices, HermesValue::encodeNullValue(), &gc);
       }
-      headFollower = reinterpret_cast<Array *>(
-          headFollower->values()[kPrevFieldIndex].getObject());
+      headFollower = vmcast<ArrayStorage>(headFollower->at(kPrevFieldIndex));
     }
     if ((i % kGCFrequency) == 0) {
       rt.collect();
@@ -166,22 +141,22 @@ TEST_F(GCSizingTest, TestHeapShrinks) {
   GCScope topScope(&rt);
 
   // An array containing pointers to other arrays, 32KB each.
-  auto spineArr = rt.makeMutableHandle<Array>(nullptr);
+  auto spineArr = rt.makeMutableHandle<ArrayStorage>(nullptr);
 
   const size_t kArraysPerMB = 1024 * 1024 / (32 * 1024);
   // We can hold up to 100MB worth of arrays.
-  spineArr = Array::create(rt, 100 * kArraysPerMB);
+  spineArr = ArrayStorage::createForTest(&gc, 100 * kArraysPerMB);
 
   // A holder for intermediate values.
-  auto tmpArr = rt.makeMutableHandle<Array>(nullptr);
+  auto tmpArr = rt.makeMutableHandle<ArrayStorage>(nullptr);
 
   // How many elements in an array to get to 32KB?  This assumes 8-byte
   // HermesValues in the arrays.
   const size_t kElemsPer32KB = 32 * 1024 / 8;
   // We want to reach 50 MB live, so we should get near the max heap size.
   for (unsigned i = 0; i < 50 * kArraysPerMB; i++) {
-    tmpArr = Array::create(rt, kElemsPer32KB);
-    spineArr->values()[i].set(HermesValue::encodeObjectValue(*tmpArr), &gc);
+    tmpArr = ArrayStorage::createForTest(&gc, kElemsPer32KB);
+    spineArr->set(i, HermesValue::encodeObjectValue(*tmpArr), &gc);
   }
   tmpArr = nullptr;
 
@@ -197,7 +172,7 @@ TEST_F(GCSizingTest, TestHeapShrinks) {
 
   // Now decrease the live data down to 10MB.
   for (unsigned i = 10 * kArraysPerMB; i < 50 * kArraysPerMB; i++) {
-    spineArr->values()[i].set(HermesValue::encodeNullValue(), &gc);
+    spineArr->set(i, HermesValue::encodeNullValue(), &gc);
   }
 
   // Now do 5 full GCs; the heap size should start to approach 2X the live data;
@@ -220,13 +195,11 @@ TEST(GCSizingMinHeapTest, TestHeapDoesNotShrinkPastMinSize) {
   // do several with a low occupancy, the heap size shrinks again.
   const gcheapsize_t kMinHeap = 40 * 1000000;
   const gcheapsize_t kMaxHeap = 100 * 1000000;
-  auto runtime = DummyRuntime::create(
-      getMetadataTable(),
-      GCConfig::Builder()
-          .withMinHeapSize(kMinHeap)
-          .withInitHeapSize(kMinHeap)
-          .withMaxHeapSize(kMaxHeap)
-          .build());
+  auto runtime = DummyRuntime::create(GCConfig::Builder()
+                                          .withMinHeapSize(kMinHeap)
+                                          .withInitHeapSize(kMinHeap)
+                                          .withMaxHeapSize(kMaxHeap)
+                                          .build());
   DummyRuntime &rt = *runtime;
 
   GenGC &gc = rt.getHeap();
@@ -234,13 +207,13 @@ TEST(GCSizingMinHeapTest, TestHeapDoesNotShrinkPastMinSize) {
   GCScope topScope(&rt);
 
   // An array containing pointers to other arrays, 32KB each.
-  auto spineArr = rt.makeMutableHandle<Array>(nullptr);
+  auto spineArr = rt.makeMutableHandle<ArrayStorage>(nullptr);
   const size_t kArraysPerMB = 1024 * 1024 / (32 * 1024);
   // We can hold up to 100MB worth of arrays.
-  spineArr = Array::create(rt, 100 * kArraysPerMB);
+  spineArr = ArrayStorage::createForTest(&gc, 100 * kArraysPerMB);
 
   // A holder for intermediate values.
-  auto tmpArr = rt.makeMutableHandle<Array>(nullptr);
+  auto tmpArr = rt.makeMutableHandle<ArrayStorage>(nullptr);
 
   // How many elements in an array to get to 32KB?  This assumes 8-byte
   // HermesValues in the arrays.
@@ -248,8 +221,8 @@ TEST(GCSizingMinHeapTest, TestHeapDoesNotShrinkPastMinSize) {
 
   // We want to reach 50 MB live, so we should get near the max heap size.
   for (unsigned i = 0; i < 50 * kArraysPerMB; i++) {
-    tmpArr = Array::create(rt, kElemsPer32KB);
-    spineArr->values()[i].set(HermesValue::encodeObjectValue(*tmpArr), &gc);
+    tmpArr = ArrayStorage::createForTest(&gc, kElemsPer32KB);
+    spineArr->set(i, HermesValue::encodeObjectValue(*tmpArr), &gc);
   }
   tmpArr = nullptr;
 
@@ -265,7 +238,7 @@ TEST(GCSizingMinHeapTest, TestHeapDoesNotShrinkPastMinSize) {
 
   // Now decrease the live data down to 10MB.
   for (unsigned i = 10 * kArraysPerMB; i < 50 * kArraysPerMB; i++) {
-    spineArr->values()[i].set(HermesValue::encodeNullValue(), &gc);
+    spineArr->set(i, HermesValue::encodeNullValue(), &gc);
   }
 
   // Now do 10 full GCs; the heap size should start to approach 2X the

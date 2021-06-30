@@ -452,6 +452,14 @@ static opt<bool> ParseFlow(
     cat(CompilerCategory));
 #endif
 
+#if HERMES_PARSE_TS
+static opt<bool> ParseTS(
+    "parse-ts",
+    desc("Parse TypeScript"),
+    init(false),
+    cat(CompilerCategory));
+#endif
+
 static CLFlag StaticRequire(
     'f',
     "static-require",
@@ -613,9 +621,10 @@ memoryBufferFromZipFile(zip_t *zip, const char *path, bool silent = false) {
   int result = 0;
 
   result = zip_entry_open(zip, path);
-  if (result == -1) {
+  if (result < 0) {
     if (!silent) {
-      llvh::errs() << "Zip error reading " << path << ": File does not exist\n";
+      llvh::errs() << "Zip error: reading " << path << ": "
+                   << zip_strerror(result) << "\n";
     }
     return nullptr;
   }
@@ -1109,6 +1118,12 @@ std::shared_ptr<Context> createContext(
 #if HERMES_PARSE_FLOW
   if (cl::ParseFlow) {
     context->setParseFlow(ParseFlowSetting::ALL);
+  }
+#endif
+
+#if HERMES_PARSE_TS
+  if (cl::ParseTS) {
+    context->setParseTS(true);
   }
 #endif
 
@@ -2170,3 +2185,5 @@ CompileResult compileFromCommandLineOptions() {
 }
 } // namespace driver
 } // namespace hermes
+
+#undef DEBUG_TYPE

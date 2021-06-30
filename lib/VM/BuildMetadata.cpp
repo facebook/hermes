@@ -17,33 +17,6 @@
 namespace hermes {
 namespace vm {
 
-static size_t getNumCellKinds() {
-  // This embeds the same value as the CellKind enum, but adds one more at the
-  // end to know how many values it contains.
-  enum CellKinds {
-#define CELL_KIND(name) name,
-#include "hermes/VM/CellKinds.def"
-#undef CELL_KIND
-    numKinds,
-  };
-  return numKinds;
-}
-
-/// Creates and populates the storage for the metadata of the classes.
-/// The caller takes ownership of the memory.
-static const Metadata *buildStorage() {
-  // For each class of object, initialize its metadata
-  // Only run this once per class, not once per Runtime instantiation.
-  Metadata *storage = new Metadata[getNumCellKinds()];
-  size_t i = 0;
-#define CELL_KIND(name) \
-  storage[i++] = buildMetadata(CellKind::name##Kind, name##BuildMeta);
-#include "hermes/VM/CellKinds.def"
-#undef CELL_KIND
-  assert(i == getNumCellKinds() && "Incorrect number of metadata populated");
-  return storage;
-}
-
 Metadata buildMetadata(CellKind kind, BuildMetadataCallback *builder) {
   const GCCell *base;
 #ifdef HERMES_UBSAN
@@ -66,11 +39,35 @@ Metadata buildMetadata(CellKind kind, BuildMetadataCallback *builder) {
 }
 
 MetadataTable getMetadataTable() {
+  // For each class of object, initialize its metadata
+  // Only run this once per class, not once per Runtime instantiation.
   // We intentionally leak memory here in order to avoid any static destructors
   // running at exit time.
-  static const Metadata *storage = buildStorage();
-  return MetadataTable(storage, getNumCellKinds());
+  static const auto *storage = new std::array<Metadata, kNumCellKinds>{
+#define CELL_KIND(name) buildMetadata(CellKind::name##Kind, name##BuildMeta),
+#include "hermes/VM/CellKinds.def"
+#undef CELL_KIND
+  };
+
+  // Once the storage is initialized, also initialize the global array of VTable
+  // pointers using the new metadata.
+  static std::once_flag flag;
+  std::call_once(flag, [] {
+    assert(
+        !VTable::vtableArray[0] &&
+        "VTable array should not be initialized before this point.");
+    VTable::vtableArray = {
+#define CELL_KIND(name) \
+  (*storage)[static_cast<uint8_t>(CellKind::name##Kind)].vtp_,
+#include "hermes/VM/CellKinds.def"
+#undef CELL_KIND
+    };
+  });
+
+  return *storage;
 }
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

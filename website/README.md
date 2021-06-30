@@ -8,6 +8,8 @@ This project uses [Docusaurus v2](https://v2.docusaurus.io/).
 
 To develop locally run `yarn` to install dependencies and then `yarn start` to start the website and begin development. Docusaurus will watch the files and automatically compile changes and update the browser preview.
 
+To develop the playground, see [the playground Hermes](#the-playground-hermes) section below.
+
 For more information see the [Docusaurus website](https://v2.docusaurus.io/).
 
 ## Deploying
@@ -18,19 +20,25 @@ We deploy the website to the [gh-pages](https://github.com/facebook/hermes/tree/
 
 The full steps are:
 - `git checkout master`
-- `cd website && USE_SIMPLE_CSS_MINIFIER=true yarn build`
-- Run `npm run serve`
+- `cd website`
+- Restore or update [the playground Hermes](#the-playground-hermes)
+- Run `yarn build` to build the site
+- Run `npm run serve` to preview the site
 - Verify the site is correct
 - Verify all file changes are correct
-- Copy the `website/build` directory to somewhere temporary
-- `git checkout gh-pages`
-- Delete everything except `hermes.js` and `hermes.mem`*
-- Paste the `website/build` directory built above
-- `git commit -m "Deploy website version based on <commit>"`
-- `git push`
+- Run `USE_SSH=true GIT_USER=<GITHUB_USERNAME> yarn deploy` to deploy
 
 GitHub will automatically update the site within minutes.
 
-### Updating Playground Hermes
+### The Playground Hermes
 
-In the above steps to deploy, we assume that you will not be compiling a new verison of Hermes for the playground with your deploy. If you would like to deploy a new version, then after building the site, you can run `./website/build-hermes` (Emscripten required). Then, continue with the remaining steps and replace both the `hermes.js` and `hermes.mem` files on the `gh-pages` branch with the files you built.
+The playground uses a Hermes WASM module [built with emscripten](https://hermesengine.dev/docs/emscripten).
+The built artifacts (`hermes.js` and `hermes.wasm`) are intentionally not checked-in, but are required to
+be present for developing the playground and deploying.
+
+If you will not be compiling a new verison of Hermes for the playground with your deploy, simply download
+the `hermes.js` and `hermes.wasm` from the [gh-pages branch](https://github.com/facebook/hermes/tree/gh-pages)
+and copy them under the `static/`.
+
+If you would like to deploy a new version, you can run `./website/build-hermes` with the required arguments
+(see [building with emscripten](https://hermesengine.dev/docs/emscripten) for prerequisites) to compile from source. The script should automatically copy the built `hermes.js` and `hermes.wasm` to `static/`.

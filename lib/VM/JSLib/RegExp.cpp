@@ -398,7 +398,7 @@ static CallResult<Handle<JSRegExp>> regExpConstructorFastCopy(
     Handle<> pattern,
     Handle<StringPrimitive> flags) {
   if (auto R = Handle<JSRegExp>::dyn_vmcast(pattern)) {
-    auto newRegexp = JSRegExp::create(runtime);
+    auto newRegexp = runtime->makeHandle(JSRegExp::create(runtime));
     if (LLVM_UNLIKELY(
             JSRegExp::initialize(newRegexp, runtime, R, flags) ==
             ExecutionStatus::EXCEPTION)) {
@@ -880,7 +880,7 @@ CallResult<HermesValue> getSubstitution(
     Handle<StringPrimitive> matched,
     Handle<StringPrimitive> str,
     uint32_t position,
-    Handle<ArrayStorage> captures,
+    Handle<ArrayStorageSmall> captures,
     Handle<StringPrimitive> replacement) {
   // 1. Assert: Type(matched) is String.
   // 2. Let matchLength be the number of code units in matched.
@@ -960,7 +960,8 @@ CallResult<HermesValue> getSubstitution(
         }
         return StringPrimitive::createStringView(
             runtime,
-            Handle<StringPrimitive>::vmcast(runtime, captures->at(idx)));
+            runtime->makeHandle<StringPrimitive>(
+                captures->at(idx).getString(runtime)));
       };
 
       uint32_t n = c1 - u'0';
@@ -1191,7 +1192,7 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = runtime->makeHandle(std::move(*arrRes));
+  auto A = *arrRes;
   // e. Let n be 0.
   uint32_t n = 0;
 
@@ -1395,12 +1396,12 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
     }
   }
   // 11. Let results be a new empty List.
-  auto arrRes = ArrayStorage::create(runtime, 16 /* capacity */);
+  auto arrRes = ArrayStorageSmall::create(runtime, 16 /* capacity */);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  MutableHandle<ArrayStorage> resultsHandle{
-      runtime, vmcast<ArrayStorage>(arrRes.getValue())};
+  MutableHandle<ArrayStorageSmall> resultsHandle{
+      runtime, vmcast<ArrayStorageSmall>(arrRes.getValue())};
 
   // 12. Let done be false.
   bool done = false;
@@ -1428,11 +1429,12 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
     // If result is not null, it must be an object.
     result = vmcast<JSObject>(execRes.getValue());
     // i. Append result to the end of results.
-    if (LLVM_UNLIKELY(resultsHandle->size() == ArrayStorage::maxElements())) {
+    if (LLVM_UNLIKELY(
+            resultsHandle->size() == ArrayStorageSmall::maxElements())) {
       return runtime->raiseRangeError("Out of memory for regexp results.");
     }
     if (LLVM_UNLIKELY(
-            ArrayStorage::push_back(resultsHandle, runtime, result) ==
+            ArrayStorageSmall::push_back(resultsHandle, runtime, result) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1488,7 +1490,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<> nHandle{runtime};
   for (uint32_t i = 0, size = resultsHandle->size(); i < size; ++i) {
     GCScopeMarkerRAII marker1{runtime};
-    result = vmcast<JSObject>(resultsHandle->at(i));
+    result = vmcast<JSObject>(resultsHandle->at(i).getObject(runtime));
     // a. Let nCaptures be ToLength(Get(result, "length")).
     // b. ReturnIfAbrupt(nCaptures).
     propRes = JSObject::getNamed_RJS(
@@ -1539,15 +1541,15 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
     // Match the type of nCaptures.
     uint64_t n = 1;
     // k. Let captures be an empty List.
-    if (LLVM_UNLIKELY(nCaptures > ArrayStorage::maxElements())) {
+    if (LLVM_UNLIKELY(nCaptures > ArrayStorageSmall::maxElements())) {
       return runtime->raiseRangeError("Out of memory for capture groups.");
     }
-    arrRes = ArrayStorage::create(runtime, nCaptures);
+    arrRes = ArrayStorageSmall::create(runtime, nCaptures);
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    MutableHandle<ArrayStorage> capturesHandle{
-        runtime, vmcast<ArrayStorage>(arrRes.getValue())};
+    MutableHandle<ArrayStorageSmall> capturesHandle{
+        runtime, vmcast<ArrayStorageSmall>(arrRes.getValue())};
     MutableHandle<> capN{runtime};
     // l. Repeat while n ≤ nCaptures
     while (n <= nCaptures) {
@@ -1572,7 +1574,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
       }
       // iv. Append capN as the last element of captures.
       if (LLVM_UNLIKELY(
-              ArrayStorage::push_back(capturesHandle, runtime, capN) ==
+              ArrayStorageSmall::push_back(capturesHandle, runtime, capN) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1605,7 +1607,8 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
         // ii. Append in list order the elements of captures to the end of the
         // List replacerArgs.
         for (; argIdx <= capturesHandle->size(); ++argIdx) {
-          newFrame->getArgRef(argIdx) = capturesHandle->at(argIdx - 1);
+          newFrame->getArgRef(argIdx) =
+              capturesHandle->at(argIdx - 1).unboxToHV(runtime);
         }
         // iii. Append position and S as the last two elements of replacerArgs.
         newFrame->getArgRef(argIdx++) =
@@ -1729,7 +1732,7 @@ regExpPrototypeSymbolSplit(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = runtime->makeHandle(std::move(*arrRes));
+  auto A = *arrRes;
   // 12. Let lengthA be 0.
   uint32_t lengthA = 0;
 
@@ -1876,6 +1879,7 @@ regExpPrototypeSymbolSplit(void *, Runtime *runtime, NativeArgs args) {
       // 9. Repeat, while i <= numberOfCaptures.
       // Add all the capture groups to A. Start at i=1 to skip the full match.
       for (uint32_t i = 1, m = match.size(); i < m; ++i) {
+        GCScopeMarkerRAII captureMarker{runtime};
         // a. Let nextCapture be ? Get(z, ! ToString(i)).
         const auto &range = match[i];
         // b. Perform ! CreateDataPropertyOrThrow(A, ! ToString(lengthA),

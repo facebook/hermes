@@ -115,6 +115,7 @@ import {foo, bar as baz} from 'other';
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         },
+// CHECK-NEXT:         "attributes": [],
 // CHECK-NEXT:         "importKind": "value",
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {

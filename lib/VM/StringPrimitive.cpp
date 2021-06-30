@@ -19,13 +19,16 @@
 namespace hermes {
 namespace vm {
 
-// Has nothing to do, just here to stop linker errors.
 void DynamicASCIIStringPrimitiveBuildMeta(
     const GCCell *cell,
-    Metadata::Builder &mb) {}
+    Metadata::Builder &mb) {
+  mb.setVTable(&DynamicASCIIStringPrimitive::vt);
+}
 void DynamicUTF16StringPrimitiveBuildMeta(
     const GCCell *cell,
-    Metadata::Builder &mb) {}
+    Metadata::Builder &mb) {
+  mb.setVTable(&DynamicUTF16StringPrimitive::vt);
+}
 
 #ifdef HERMESVM_SERIALIZE
 template <typename T, bool Uniqued>
@@ -123,19 +126,27 @@ void DynamicUniquedUTF16StringPrimitiveDeserialize(
 
 void DynamicUniquedASCIIStringPrimitiveBuildMeta(
     const GCCell *cell,
-    Metadata::Builder &mb) {}
+    Metadata::Builder &mb) {
+  mb.setVTable(&DynamicUniquedASCIIStringPrimitive::vt);
+}
 
 void DynamicUniquedUTF16StringPrimitiveBuildMeta(
     const GCCell *cell,
-    Metadata::Builder &mb) {}
+    Metadata::Builder &mb) {
+  mb.setVTable(&DynamicUniquedUTF16StringPrimitive::vt);
+}
 
 void ExternalASCIIStringPrimitiveBuildMeta(
     const GCCell *cell,
-    Metadata::Builder &mb) {}
+    Metadata::Builder &mb) {
+  mb.setVTable(&ExternalASCIIStringPrimitive::vt);
+}
 
 void ExternalUTF16StringPrimitiveBuildMeta(
     const GCCell *cell,
-    Metadata::Builder &mb) {}
+    Metadata::Builder &mb) {
+  mb.setVTable(&ExternalUTF16StringPrimitive::vt);
+}
 
 #ifdef HERMESVM_SERIALIZE
 template <typename T>
@@ -680,12 +691,14 @@ void BufferedASCIIStringPrimitiveBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {
   const auto *self = static_cast<const BufferedASCIIStringPrimitive *>(cell);
+  mb.setVTable(&BufferedASCIIStringPrimitive::vt);
   mb.addField("storage", &self->concatBufferHV_);
 }
 void BufferedUTF16StringPrimitiveBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {
   const auto *self = static_cast<const BufferedUTF16StringPrimitive *>(cell);
+  mb.setVTable(&BufferedUTF16StringPrimitive::vt);
   mb.addField("storage", &self->concatBufferHV_);
 }
 

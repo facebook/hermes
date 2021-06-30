@@ -12,6 +12,7 @@ version: 2.1
 
 orbs:
   win: circleci/windows@2.4.0
+  android: circleci/android@1.0.3
 
 workflows:
   version: 2
@@ -56,8 +57,10 @@ apple_defaults: &apple_defaults
 
 jobs:
   android:
-    docker:
-      - image: circleci/android:api-28-ndk
+    executor:
+      name: android/android
+      sdk-version: '28'
+      variant: ndk
     environment:
       - HERMES_WS_DIR: /tmp/hermes
       - TERM: dumb
@@ -67,8 +70,7 @@ jobs:
       - run:
           name: Set up workspace and install dependencies
           command: |
-            yes | sdkmanager "ndk-bundle"  &
-            yes | sdkmanager "cmake;3.6.4111459" &
+            yes | sdkmanager "cmake;3.10.2.4988404" &
             mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
             ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
             sudo apt-get update
@@ -77,7 +79,7 @@ jobs:
             sudo cp /usr/bin/ninja /usr/bin/ninja.real
             # See top comment
             printf '%s\n' '#!/bin/sh' 'ninja.real -j4 "$@" || ninja.real -j1 "$@"' | sudo tee /usr/bin/ninja
-            ln -sf /usr/bin/ninja /opt/android/sdk/cmake/3.6.4111459/bin/ninja
+            ln -sf /usr/bin/ninja /opt/android/sdk/cmake/3.10.2.4988404/bin/ninja
       - run:
           name: Build Hermes Compiler
           command: |
@@ -584,11 +586,9 @@ jobs:
             nvm use 14
             # Reinstall the latest version of Yarn.
             npm install --global yarn
-            brew install gnu-sed
-            brew install md5sha1sum
             brew tap homebrew/cask
-            brew cask install android-sdk
-            brew cask install android-ndk
+            brew install --cask android-sdk
+            brew install --cask android-ndk
             echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:$PATH"' >> $BASH_ENV
             # At some point, adb ended up in platform-tools/platform-tools. Work around that.
             echo 'export PATH="/usr/local/share/android-sdk/platform-tools/platform-tools:$PATH"' >> $BASH_ENV
@@ -645,7 +645,7 @@ jobs:
           name: Setup dependencies
           command: |
             brew tap homebrew/cask
-            brew cask install android-sdk
+            brew install --cask android-sdk
             (yes | sdkmanager "platform-tools" "platforms;android-26" --verbose) || true
             echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:$PATH"' >>  ~/.bash_profile
       - run:
@@ -662,7 +662,6 @@ jobs:
       - run:
           name: Set up build dependencies
           command: |
-            brew install python3
             (yes | sdkmanager "ndk;21.0.6113669" "cmake;3.10.2.4988404" --verbose) || true
             echo 'export PATH="/usr/local/share/android-sdk/cmake/3.10.2.4988404/bin:$PATH"' >>  ~/.bash_profile
       - run:

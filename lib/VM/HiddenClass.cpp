@@ -99,7 +99,6 @@ const VTable HiddenClass::vt{
     _mallocSizeImpl,
     nullptr,
     nullptr,
-    nullptr,
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::Object,
         HiddenClass::_snapshotNameImpl,
@@ -109,6 +108,7 @@ const VTable HiddenClass::vt{
 
 void HiddenClassBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const HiddenClass *>(cell);
+  mb.setVTable(&HiddenClass::vt);
   mb.addField("symbol", &self->symbolID_);
   mb.addField("parent", &self->parent_);
   mb.addField("propertyMap", &self->propertyMap_);
@@ -1051,3 +1051,5 @@ void HiddenClass::stealPropertyMapFromParent(
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

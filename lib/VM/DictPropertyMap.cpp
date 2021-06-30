@@ -54,6 +54,7 @@ const VTable DictPropertyMap::vt{CellKind::DictPropertyMapKind, 0};
 
 void DictPropertyMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const DictPropertyMap *>(cell);
+  mb.setVTable(&DictPropertyMap::vt);
   mb.addArray(
       &self->getDescriptorPairs()->first,
       &self->numDescriptors_,
@@ -396,3 +397,5 @@ void DictPropertyMap::dump() {
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

@@ -15,14 +15,14 @@
 namespace hermes {
 namespace vm {
 
-const VTable ArrayStorage::vt(
-    CellKind::ArrayStorageKind,
+template <typename HVType>
+const VTable ArrayStorageBase<HVType>::vt(
+    ArrayStorageBase<HVType>::getCellKind(),
     0,
     nullptr,
     nullptr,
     nullptr,
     _trimSizeCallback,
-    _trimCallback,
     nullptr,
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::Array,
@@ -33,7 +33,15 @@ const VTable ArrayStorage::vt(
 
 void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const ArrayStorage *>(cell);
+  mb.setVTable(&ArrayStorage::vt);
   mb.addArray("storage", self->data(), &self->size_, sizeof(GCHermesValue));
+}
+
+void ArrayStorageSmallBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  const auto *self = static_cast<const ArrayStorageSmall *>(cell);
+  mb.setVTable(&ArrayStorageSmall::vt);
+  mb.addArray(
+      "storage", self->data(), &self->size_, sizeof(GCSmallHermesValue));
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -45,10 +53,40 @@ void ArrayStorageDeserialize(Deserializer &d, CellKind kind) {
   hermes_fatal("ArrayStorage should be deserialized with its owner");
 }
 
-void ArrayStorage::serializeArrayStorage(
+void ArrayStorageSmallSerialize(Serializer &s, const GCCell *cell) {
+  auto self = vmcast<const ArrayStorageSmall>(cell);
+  s.writeInt<ArrayStorageSmall::size_type>(self->capacity());
+  s.writeInt<ArrayStorageSmall::size_type>(self->size());
+
+  for (ArrayStorageSmall::size_type i = 0; i < self->size(); i++)
+    s.writeSmallHermesValue(self->at(i));
+
+  s.endObject(cell);
+}
+
+void ArrayStorageSmallDeserialize(Deserializer &d, CellKind kind) {
+  assert(
+      kind == CellKind::ArrayStorageSmallKind && "Expected ArrayStorageSmall");
+  const uint32_t capacity = d.readInt<ArrayStorageSmall::size_type>();
+  assert(capacity <= ArrayStorageSmall::maxElements() && "invalid capacity");
+  const auto allocSize = ArrayStorageSmall::allocationSize(capacity);
+  auto *cell = d.getRuntime()->makeAVariable<ArrayStorageSmall>(
+      allocSize, &d.getRuntime()->getHeap(), allocSize);
+  assert(cell->size() <= capacity && "size cannot be greater than capacity");
+  cell->size_.store(
+      d.readInt<ArrayStorageSmall::size_type>(), std::memory_order_release);
+
+  for (ArrayStorageSmall::size_type i = 0; i < cell->size(); i++)
+    d.readSmallHermesValue(&cell->data()[i]);
+
+  d.endObject(cell);
+}
+
+template <>
+void ArrayStorageBase<HermesValue>::serializeArrayStorage(
     Serializer &s,
-    const ArrayStorage *cell) {
-  s.writeInt<size_type>(cell->capacity_);
+    const ArrayStorageBase<HermesValue> *cell) {
+  s.writeInt<size_type>(cell->capacity());
   s.writeInt<size_type>(cell->size());
 
   // Serialize HermesValue in storage. There is no native pointer.
@@ -59,11 +97,17 @@ void ArrayStorage::serializeArrayStorage(
   s.endObject(cell);
 }
 
-ArrayStorage *ArrayStorage::deserializeArrayStorage(Deserializer &d) {
+template <>
+ArrayStorageBase<HermesValue>
+    *ArrayStorageBase<HermesValue>::deserializeArrayStorage(Deserializer &d) {
   uint32_t capacity = d.readInt<size_type>();
-  assert(capacity <= ArrayStorage::maxElements() && "invalid capacity");
-  auto *cell = d.getRuntime()->makeAVariable<ArrayStorage>(
-      ArrayStorage::allocationSize(capacity), d.getRuntime(), capacity);
+  assert(
+      capacity <= ArrayStorageBase<HermesValue>::maxElements() &&
+      "invalid capacity");
+  const auto allocSize =
+      ArrayStorageBase<HermesValue>::allocationSize(capacity);
+  auto *cell = d.getRuntime()->makeAVariable<ArrayStorageBase<HermesValue>>(
+      allocSize, &d.getRuntime()->getHeap(), allocSize);
   assert(cell->size() <= capacity && "size cannot be greater than capacity");
   cell->size_.store(d.readInt<size_type>(), std::memory_order_release);
 
@@ -77,21 +121,27 @@ ArrayStorage *ArrayStorage::deserializeArrayStorage(Deserializer &d) {
 }
 #endif
 
-ExecutionStatus ArrayStorage::ensureCapacity(
-    MutableHandle<ArrayStorage> &selfHandle,
+template <typename HVType>
+ArrayStorageBase<HVType>::ArrayStorageBase(GC *gc, uint32_t allocSize)
+    : VariableSizeRuntimeCell(gc, &vt, allocSize) {}
+
+template <typename HVType>
+ExecutionStatus ArrayStorageBase<HVType>::ensureCapacity(
+    MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
     Runtime *runtime,
     size_type capacity) {
   assert(capacity <= maxElements() && "capacity overflows 32-bit storage");
 
-  if (capacity <= selfHandle->capacity_)
+  if (capacity <= selfHandle->capacity())
     return ExecutionStatus::RETURNED;
 
   return reallocateToLarger(
       selfHandle, runtime, capacity, 0, 0, selfHandle->size());
 }
 
-ExecutionStatus ArrayStorage::reallocateToLarger(
-    MutableHandle<ArrayStorage> &selfHandle,
+template <typename HVType>
+ExecutionStatus ArrayStorageBase<HVType>::reallocateToLarger(
+    MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
     Runtime *runtime,
     size_type capacity,
     size_type fromFirst,
@@ -100,14 +150,14 @@ ExecutionStatus ArrayStorage::reallocateToLarger(
   assert(capacity <= maxElements() && "capacity overflows 32-bit storage");
 
   assert(
-      capacity > selfHandle->capacity_ &&
+      capacity > selfHandle->capacity() &&
       "reallocateToLarger must be called with a larger capacity");
 
-  auto arrRes = ArrayStorage::create(runtime, capacity);
+  auto arrRes = create(runtime, capacity);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto newSelfHandle = runtime->makeHandle<ArrayStorage>(*arrRes);
+  auto newSelfHandle = runtime->makeHandle<ArrayStorageBase<HVType>>(*arrRes);
 
   auto *newSelf = newSelfHandle.get();
 
@@ -116,25 +166,25 @@ ExecutionStatus ArrayStorage::reallocateToLarger(
   size_type copySize = std::min(self->size() - fromFirst, toLast - toFirst);
 
   {
-    GCHermesValue *from = self->data() + fromFirst;
-    GCHermesValue *to = newSelf->data() + toFirst;
-    GCHermesValue::uninitialized_copy(
+    GCHVType *from = self->data() + fromFirst;
+    GCHVType *to = newSelf->data() + toFirst;
+    GCHVType::uninitialized_copy(
         from, from + copySize, to, &runtime->getHeap());
   }
 
   // Initialize the elements before the first copied element.
-  GCHermesValue::uninitialized_fill(
+  GCHVType::uninitialized_fill(
       newSelf->data(),
       newSelf->data() + toFirst,
-      HermesValue::encodeEmptyValue(),
+      HVType::encodeEmptyValue(),
       &runtime->getHeap());
 
   // Initialize the elements after the last copied element and toLast.
   if (toFirst + copySize < toLast) {
-    GCHermesValue::uninitialized_fill(
+    GCHVType::uninitialized_fill(
         newSelf->data() + toFirst + copySize,
         newSelf->data() + toLast,
-        HermesValue::encodeEmptyValue(),
+        HVType::encodeEmptyValue(),
         &runtime->getHeap());
   }
 
@@ -146,12 +196,13 @@ ExecutionStatus ArrayStorage::reallocateToLarger(
   return ExecutionStatus::RETURNED;
 }
 
-void ArrayStorage::resizeWithinCapacity(
-    ArrayStorage *self,
-    Runtime *runtime,
+template <typename HVType>
+void ArrayStorageBase<HVType>::resizeWithinCapacity(
+    ArrayStorageBase<HVType> *self,
+    GC *gc,
     size_type newSize) {
   assert(
-      newSize <= self->capacity_ &&
+      newSize <= self->capacity() &&
       "newSize must be <= capacity in resizeWithinCapacity()");
   // If enlarging, clear the new elements.
   const auto sz = self->size();
@@ -162,24 +213,25 @@ void ArrayStorage::resizeWithinCapacity(
     // barrier to mark all of the values between the new length and the old
     // length as unreachable. Since the GC will then be aware of those values,
     // it doesn't matter if we overwrite them here again.
-    GCHermesValue::uninitialized_fill(
+    GCHVType::uninitialized_fill(
         self->data() + sz,
         self->data() + newSize,
-        HermesValue::encodeEmptyValue(),
-        &runtime->getHeap());
+        HVType::encodeEmptyValue(),
+        gc);
   } else if (newSize < sz) {
     // Execute write barriers on elements about to be conceptually changed to
     // null.
     // This also means if an array is refilled, it can treat the memory here
     // as uninitialized safely.
-    GCHermesValue::rangeUnreachableWriteBarrier(
-        self->data() + newSize, self->data() + sz, &runtime->getHeap());
+    GCHVType::rangeUnreachableWriteBarrier(
+        self->data() + newSize, self->data() + sz, gc);
   }
   self->size_.store(newSize, std::memory_order_release);
 }
 
-ExecutionStatus ArrayStorage::shift(
-    MutableHandle<ArrayStorage> &selfHandle,
+template <typename HVType>
+ExecutionStatus ArrayStorageBase<HVType>::shift(
+    MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
     Runtime *runtime,
     size_type fromFirst,
     size_type toFirst,
@@ -189,13 +241,13 @@ ExecutionStatus ArrayStorage::shift(
   assert(fromFirst <= selfHandle->size() && "fromFirst must be before size");
 
   // If we don't need to expand the capacity.
-  if (toLast <= selfHandle->capacity_) {
+  if (toLast <= selfHandle->capacity()) {
     auto *self = selfHandle.get();
     size_type copySize = std::min(self->size() - fromFirst, toLast - toFirst);
 
     // Copy the values to their final destination.
     if (fromFirst > toFirst) {
-      GCHermesValue::copy(
+      GCHVType::copy(
           self->data() + fromFirst,
           self->data() + fromFirst + copySize,
           self->data() + toFirst,
@@ -203,7 +255,7 @@ ExecutionStatus ArrayStorage::shift(
     } else if (fromFirst < toFirst) {
       // Copying to the right, need to copy backwards to avoid overwriting what
       // is being copied.
-      GCHermesValue::copy_backward(
+      GCHVType::copy_backward(
           self->data() + fromFirst,
           self->data() + fromFirst + copySize,
           self->data() + toFirst + copySize,
@@ -211,23 +263,23 @@ ExecutionStatus ArrayStorage::shift(
     }
 
     // Initialize the elements which were emptied in front.
-    GCHermesValue::fill(
+    GCHVType::fill(
         self->data(),
         self->data() + toFirst,
-        HermesValue::encodeEmptyValue(),
+        HVType::encodeEmptyValue(),
         &runtime->getHeap());
 
     // Initialize the elements between the last copied element and toLast.
     if (toFirst + copySize < toLast) {
-      GCHermesValue::uninitialized_fill(
+      GCHVType::uninitialized_fill(
           self->data() + toFirst + copySize,
           self->data() + toLast,
-          HermesValue::encodeEmptyValue(),
+          HVType::encodeEmptyValue(),
           &runtime->getHeap());
     }
     if (toLast < self->size()) {
       // Some elements are becoming unreachable, let the GC know.
-      GCHermesValue::rangeUnreachableWriteBarrier(
+      GCHVType::rangeUnreachableWriteBarrier(
           self->data() + toLast,
           self->data() + self->size(),
           &runtime->getHeap());
@@ -237,7 +289,7 @@ ExecutionStatus ArrayStorage::shift(
   }
 
   // Calculate the new capacity.
-  size_type capacity = selfHandle->capacity_;
+  size_type capacity = selfHandle->capacity();
   if (capacity < maxElements() / 2)
     capacity = std::max(capacity * 2, toLast);
   else
@@ -247,7 +299,8 @@ ExecutionStatus ArrayStorage::shift(
       selfHandle, runtime, capacity, fromFirst, toFirst, toLast);
 }
 
-ExecutionStatus ArrayStorage::throwExcessiveCapacityError(
+template <typename HVType>
+ExecutionStatus ArrayStorageBase<HVType>::throwExcessiveCapacityError(
     Runtime *runtime,
     size_type capacity) {
   assert(
@@ -262,28 +315,28 @@ ExecutionStatus ArrayStorage::throwExcessiveCapacityError(
       capacity + ", max elements = " + maxElements());
 }
 
-ExecutionStatus ArrayStorage::pushBackSlowPath(
-    MutableHandle<ArrayStorage> &selfHandle,
+template <typename HVType>
+ExecutionStatus ArrayStorageBase<HVType>::pushBackSlowPath(
+    MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
     Runtime *runtime,
     Handle<> value) {
   const auto size = selfHandle->size();
   if (resize(selfHandle, runtime, size + 1) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  selfHandle->set(size, value.get(), &runtime->getHeap());
+  auto hv = HVType::encodeHermesValue(*value, runtime);
+  selfHandle->set(size, hv, &runtime->getHeap());
   return ExecutionStatus::RETURNED;
 }
 
-gcheapsize_t ArrayStorage::_trimSizeCallback(const GCCell *cell) {
-  const auto *self = reinterpret_cast<const ArrayStorage *>(cell);
+template <typename HVType>
+gcheapsize_t ArrayStorageBase<HVType>::_trimSizeCallback(const GCCell *cell) {
+  const auto *self = reinterpret_cast<const ArrayStorageBase<HVType> *>(cell);
   return allocationSize(self->size());
 }
 
-void ArrayStorage::_trimCallback(GCCell *cell) {
-  auto *self = reinterpret_cast<ArrayStorage *>(cell);
-  // Shrink the capacity to the current size.
-  self->capacity_ = self->size();
-}
+template class ArrayStorageBase<HermesValue>;
+template class ArrayStorageBase<SmallHermesValue>;
 
 } // namespace vm
 } // namespace hermes

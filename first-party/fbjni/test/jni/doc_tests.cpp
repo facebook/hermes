@@ -386,6 +386,18 @@ struct DocTests : JavaClass<DocTests> {
   }
   // END
 
+  // SECTION collections
+  static local_ref<JMap<JString, JList<JInteger>>> buildCollections(
+      alias_ref<JClass> clazz) {
+    auto primes = JArrayList<JInteger>::create();
+    primes->add(autobox(2));
+    primes->add(autobox(3));
+    auto wrapper = JHashMap<JString, JList<JInteger>>::create();
+    wrapper->put(make_jstring("primes"), primes);
+    return wrapper;
+  }
+  // END
+
   // SECTION byte_buffer
   static local_ref<JByteBuffer> transformBuffer(
       alias_ref<JClass> clazz,
@@ -433,6 +445,7 @@ struct DocTests : JavaClass<DocTests> {
       makeNativeMethod("catchAndThrow", DocTests::catchAndThrow),
       makeNativeMethod("scaleUp", DocTests::scaleUp),
       makeNativeMethod("concatMatches", DocTests::concatMatches),
+      makeNativeMethod("buildCollections", DocTests::buildCollections),
       makeNativeMethod("transformBuffer", DocTests::transformBuffer),
     });
   }

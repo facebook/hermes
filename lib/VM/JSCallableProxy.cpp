@@ -34,6 +34,7 @@ void CallableProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSCallableProxy>());
   NativeFunctionBuildMeta(cell, mb);
   const auto *self = static_cast<const JSCallableProxy *>(cell);
+  mb.setVTable(&JSCallableProxy::vt.base.base);
   mb.addField("@target", &self->slots_.target);
   mb.addField("@handler", &self->slots_.handler);
 }
@@ -71,8 +72,7 @@ PseudoHandle<JSCallableProxy> JSCallableProxy::create(Runtime *runtime) {
       Handle<JSObject>::vmcast(&runtime->objectPrototype),
       runtime->getHiddenClassForPrototype(
           runtime->objectPrototypeRawPtr,
-          JSObject::numOverlapSlots<JSCallableProxy>() +
-              ANONYMOUS_PROPERTY_SLOTS));
+          JSObject::numOverlapSlots<JSCallableProxy>()));
 
   cproxy->flags_.proxyObject = true;
 
@@ -94,6 +94,15 @@ void JSCallableProxy::setTargetAndHandler(
     Handle<JSObject> handler) {
   slots_.target.set(runtime, target.get(), &runtime->getHeap());
   slots_.handler.set(runtime, handler.get(), &runtime->getHeap());
+}
+
+CallResult<bool> JSCallableProxy::isConstructor(Runtime *runtime) {
+  ScopedNativeDepthTracker depthTracker(runtime);
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
+  return vm::isConstructor(
+      runtime, vmcast_or_null<Callable>(slots_.target.get(runtime)));
 }
 
 CallResult<HermesValue>
@@ -149,12 +158,12 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
     return res->get();
   }
   // 7. Let argArray be CreateArrayFromList(argumentsList).
-  CallResult<PseudoHandle<JSArray>> argArrayRes = JSArray::create(
+  CallResult<Handle<JSArray>> argArrayRes = JSArray::create(
       runtime, callerFrame->getArgCount(), callerFrame->getArgCount());
   if (LLVM_UNLIKELY(argArrayRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> argArray = runtime->makeHandle(std::move(*argArrayRes));
+  Handle<JSArray> argArray = *argArrayRes;
   JSArray::setStorageEndIndex(argArray, runtime, callerFrame->getArgCount());
   for (uint32_t i = 0; i < callerFrame->getArgCount(); ++i) {
     JSArray::unsafeSetExistingElementAt(
@@ -199,7 +208,12 @@ CallResult<PseudoHandle<JSObject>> JSCallableProxy::_newObjectImpl(
     Handle<Callable> callable,
     Runtime *runtime,
     Handle<JSObject> protoHandle) {
-  if (!vmcast<JSCallableProxy>(*callable)->isConstructor(runtime)) {
+  CallResult<bool> isConstructorRes =
+      vmcast<JSCallableProxy>(*callable)->isConstructor(runtime);
+  if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (!*isConstructorRes) {
     return runtime->raiseTypeError("Function is not a constructor");
   }
   return vm::Callable::newObject(

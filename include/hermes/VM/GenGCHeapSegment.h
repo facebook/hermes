@@ -51,22 +51,24 @@ class GenGCHeapSegment final : public AlignedHeapSegment {
   /// Assumes sweeping is complete.  Traverses the live objects, scanning their
   /// pointers.  For each pointer to another heap object, update the pointer by
   /// following the referent's forwarding pointer.  Marked cells are considered
-  /// live, and it is assumed that the first N pointers in the range
-  /// vTables are the VTables of the N remaining live cells in the segment.
-  /// This function is expected to consume N elements from this range,
+  /// live, and it is assumed that the first N values in the range
+  /// kindAndSizes are the KindAndSizes of the N remaining live cells in the
+  /// segment. This function is expected to consume N elements from this range,
   /// denote that those pointers have been used and accounted for.
   void updateReferences(
       GenGC *gc,
       FullMSCUpdateAcceptor *acceptor,
-      SweepResult::VTablesRemaining &vTables);
+      SweepResult::KindAndSizesRemaining &kindAndSizes);
 
   /// Assumes updateReferences is complete, there are N live cells in this
   /// segment, and that the first N pointers in [*vTableBegin, vTableEnd) are
   /// the VTable pointers of the N remaining live cells.  Moves each live cell
   /// to the post-compaction address indicated by its forwarding pointer and
-  /// restores its displaced VTable pointer, consuming it in the process
-  /// (indicated by incrementing *vTableBegin).
-  void compact(SweepResult::VTablesRemaining &vTables);
+  /// restores its displaced KindAndSize, consuming it in the process
+  /// (indicated by incrementing *kindAndSizeBegin).
+  void compact(
+      SweepResult::KindAndSizesRemaining &kindAndSizes,
+      PointerBase *base);
 
   /// Assumes marking is complete.  Scans the heap, determining, for each live
   /// object, the address to which it will later be compacted.  Objects are
@@ -137,7 +139,9 @@ class GenGCHeapSegment final : public AlignedHeapSegment {
 
  private:
   void deleteDeadObjectIDs(GenGC *gc);
-  void updateObjectIDs(GenGC *gc, SweepResult::VTablesRemaining &vTables);
+  void updateObjectIDs(
+      GenGC *gc,
+      SweepResult::KindAndSizesRemaining &kindAndSizes);
 
   /// Pointer to the generation that owns this segment.
   GCGeneration *generation_{nullptr};

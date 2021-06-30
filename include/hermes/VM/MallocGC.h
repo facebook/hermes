@@ -146,7 +146,6 @@ class MallocGC final : public GCBase {
   };
 
   MallocGC(
-      MetadataTable metaTable,
       GCCallbacks *gcCallbacks,
       PointerBase *pointerBase,
       const GCConfig &gcConfig,
@@ -184,12 +183,12 @@ class MallocGC final : public GCBase {
   /// weak pointers that point to dead objects.
   void collect(std::string cause, bool canEffectiveOOM = false) override;
 
-  static constexpr uint32_t minAllocationSize() {
+  static constexpr uint32_t minAllocationSizeImpl() {
     // MallocGC imposes no limit on individual allocations.
     return 0;
   }
 
-  static constexpr uint32_t maxAllocationSize() {
+  static constexpr uint32_t maxAllocationSizeImpl() {
     // MallocGC imposes no limit on individual allocations.
     return std::numeric_limits<uint32_t>::max();
   }

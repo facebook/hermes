@@ -266,20 +266,9 @@ class RequireContext final : public JSObject {
   friend void RequireContextBuildMeta(
       const GCCell *cell,
       Metadata::Builder &mb);
+  friend void RequireContextSerialize(Serializer &, const GCCell *);
 
  public:
-  // We need two anonymous slots for the domain and dirname.
-  static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS =
-      Super::ANONYMOUS_PROPERTY_SLOTS + 2;
-
-  static constexpr SlotIndex domainPropIndex() {
-    return numOverlapSlots<RequireContext>() + ANONYMOUS_PROPERTY_SLOTS - 2;
-  }
-
-  static constexpr SlotIndex dirnamePropIndex() {
-    return numOverlapSlots<RequireContext>() + ANONYMOUS_PROPERTY_SLOTS - 1;
-  }
-
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::RequireContextKind;
   }
@@ -292,14 +281,12 @@ class RequireContext final : public JSObject {
 
   /// \return the domain for this require context.
   static Domain *getDomain(Runtime *runtime, RequireContext *self) {
-    return vmcast<Domain>(
-        JSObject::getInternalProperty(self, runtime, domainPropIndex()));
+    return self->domain_.get(runtime);
   }
 
   /// \return the current dirname for this require context.
   static StringPrimitive *getDirname(Runtime *runtime, RequireContext *self) {
-    return vmcast<StringPrimitive>(
-        JSObject::getInternalProperty(self, runtime, dirnamePropIndex()));
+    return self->dirname_.get(runtime);
   }
 
 #ifdef HERMESVM_SERIALIZE
@@ -313,6 +300,10 @@ class RequireContext final : public JSObject {
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
       : JSObject(runtime, &vt.base, *parent, *clazz) {}
+
+ private:
+  GCPointer<Domain> domain_;
+  GCPointer<StringPrimitive> dirname_;
 };
 
 } // namespace vm

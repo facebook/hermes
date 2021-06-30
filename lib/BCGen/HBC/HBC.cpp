@@ -65,6 +65,9 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
   // It is important to run LowerNumericProperties before LoadConstants
   // as LowerNumericProperties could generate new constants.
   PM.addPass(new LowerNumericProperties());
+  // Lower AllocObjectLiteral into a mixture of HBCAllocObjectFromBufferInst,
+  // AllocObjectInst, StoreNewOwnPropertyInst and StorePropertyInst.
+  PM.addPass(new LowerAllocObjectLiteral());
   PM.addPass(new LowerConstruction());
   PM.addPass(new LowerArgumentsArray());
   PM.addPass(new LimitAllocArray(UINT16_MAX));
@@ -336,3 +339,5 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecode(
     BM->populateSourceMap(sourceMapGen);
   return BM;
 }
+
+#undef DEBUG_TYPE

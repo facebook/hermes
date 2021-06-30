@@ -38,11 +38,17 @@ void ArrayImpl::_snapshotAddEdgesImpl(
   auto *const self = vmcast<ArrayImpl>(cell);
   // Add the super type's edges too.
   JSObject::_snapshotAddEdgesImpl(self, gc, snap);
-  if (!self->indexedStorage_) {
+  if (!self->getIndexedStorage(gc->getPointerBase())) {
     return;
   }
-  auto *const indexedStorage =
-      self->indexedStorage_.getNonNull(gc->getPointerBase());
+
+  // This edge has to be called "elements" in order for Chrome to attribute
+  // the size of the indexed storage as part of total usage of "JS Arrays".
+  snap.addNamedEdge(
+      HeapSnapshot::EdgeType::Internal,
+      "elements",
+      gc->getObjectID(self->getIndexedStorage(gc->getPointerBase())));
+  auto *const indexedStorage = self->getIndexedStorage(gc->getPointerBase());
   const auto beginIndex = self->beginIndex_;
   const auto endIndex = self->endIndex_;
   for (uint32_t i = beginIndex; i < endIndex; i++) {
@@ -82,7 +88,7 @@ bool ArrayImpl::_haveOwnIndexedImpl(
 
   // Check whether the index is within the storage.
   if (index >= self->beginIndex_ && index < self->endIndex_)
-    return !self->indexedStorage_.getNonNull(runtime)
+    return !self->getIndexedStorage(runtime)
                 ->at(index - self->beginIndex_)
                 .isEmpty();
 
@@ -97,7 +103,7 @@ OptValue<PropertyFlags> ArrayImpl::_getOwnIndexedPropertyFlagsImpl(
 
   // Check whether the index is within the storage.
   if (index >= self->beginIndex_ && index < self->endIndex_ &&
-      !self->indexedStorage_.getNonNull(runtime)
+      !self->getIndexedStorage(runtime)
            ->at(index - self->beginIndex_)
            .isEmpty()) {
     PropertyFlags indexedElementFlags{};
@@ -144,7 +150,7 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
   }
 
   // If indexedStorage hasn't even been allocated.
-  if (LLVM_UNLIKELY(!self->indexedStorage_)) {
+  if (LLVM_UNLIKELY(!self->getIndexedStorage(runtime))) {
     if (newLength == 0) {
       return ExecutionStatus::RETURNED;
     }
@@ -153,7 +159,7 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
       return ExecutionStatus::EXCEPTION;
     }
     auto newStorage = runtime->makeHandle<StorageType>(std::move(*arrRes));
-    selfHandle->indexedStorage_.set(
+    selfHandle->setIndexedStorage(
         runtime, newStorage.get(), &runtime->getHeap());
     selfHandle->beginIndex_ = 0;
     selfHandle->endIndex_ = newLength;
@@ -164,13 +170,13 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
 
   {
     NoAllocScope scope{runtime};
-    auto *const indexedStorage = self->indexedStorage_.getNonNull(runtime);
+    auto *const indexedStorage = self->getIndexedStorage(runtime);
 
     if (newLength <= beginIndex) {
       // the new length is prior to beginIndex, clearing the storage.
       selfHandle->endIndex_ = beginIndex;
       // Remove the storage. If this array grows again it can be re-allocated.
-      self->indexedStorage_.setNull(&runtime->getHeap());
+      self->setIndexedStorage(runtime, nullptr, &runtime->getHeap());
       return ExecutionStatus::RETURNED;
     } else if (newLength - beginIndex <= indexedStorage->capacity()) {
       selfHandle->endIndex_ = newLength;
@@ -180,14 +186,15 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
     }
   }
 
-  auto indexedStorage = runtime->makeMutableHandle(selfHandle->indexedStorage_);
+  auto indexedStorage =
+      runtime->makeMutableHandle(selfHandle->getIndexedStorage(runtime));
 
   if (StorageType::resize(indexedStorage, runtime, newLength - beginIndex) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   selfHandle->endIndex_ = newLength;
-  selfHandle->indexedStorage_.set(
+  selfHandle->setIndexedStorage(
       runtime, indexedStorage.get(), &runtime->getHeap());
   return ExecutionStatus::RETURNED;
 }
@@ -206,13 +213,13 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
 
   // Check whether the index is within the storage.
   if (LLVM_LIKELY(index >= beginIndex && index < endIndex)) {
-    self->indexedStorage_.getNonNull(runtime)->set(
+    self->getIndexedStorage(runtime)->set(
         index - beginIndex, value.get(), &runtime->getHeap());
     return true;
   }
 
   // If indexedStorage hasn't even been allocated.
-  if (LLVM_UNLIKELY(!self->indexedStorage_)) {
+  if (LLVM_UNLIKELY(!self->getIndexedStorage(runtime))) {
     // Allocate storage with capacity for 4 elements and length 1.
     auto arrRes = StorageType::create(runtime, 4, 1);
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
@@ -222,7 +229,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
 
     self = vmcast<ArrayImpl>(selfHandle.get());
 
-    self->indexedStorage_.set(runtime, newStorage.get(), &runtime->getHeap());
+    self->setIndexedStorage(runtime, newStorage.get(), &runtime->getHeap());
     self->beginIndex_ = index;
     self->endIndex_ = index + 1;
     newStorage->set(0, value.get(), &runtime->getHeap());
@@ -231,7 +238,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
 
   {
     NoAllocScope scope{runtime};
-    auto *const indexedStorage = self->indexedStorage_.getNonNull(runtime);
+    auto *const indexedStorage = self->getIndexedStorage(runtime);
 
     // Can we do it without reallocation for sure?
     if (index >= endIndex && index - beginIndex < indexedStorage->capacity()) {
@@ -244,7 +251,8 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     }
   }
 
-  auto indexedStorageHandle = runtime->makeMutableHandle(self->indexedStorage_);
+  auto indexedStorageHandle =
+      runtime->makeMutableHandle(self->getIndexedStorage(runtime));
   // We only shift an array if the shift amount is within the limit.
   constexpr uint32_t shiftLimit = (1 << 20);
 
@@ -311,7 +319,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
   }
 
   // Update the potentially changed pointer.
-  self->indexedStorage_.set(
+  self->setIndexedStorage(
       runtime, indexedStorageHandle.get(), &runtime->getHeap());
   return true;
 }
@@ -323,7 +331,7 @@ bool ArrayImpl::_deleteOwnIndexedImpl(
   auto *self = vmcast<ArrayImpl>(selfHandle.get());
   NoAllocScope noAlloc{runtime};
   if (index >= self->beginIndex_ && index < self->endIndex_) {
-    auto *indexedStorage = self->indexedStorage_.getNonNull(runtime);
+    auto *indexedStorage = self->getIndexedStorage(runtime);
     // Cannot delete indexed elements if we are sealed.
     if (LLVM_UNLIKELY(self->flags_.sealed)) {
       HermesValue elem = indexedStorage->at(index - self->beginIndex_);
@@ -350,7 +358,7 @@ bool ArrayImpl::_checkAllOwnIndexedImpl(
   // If we have any indexed properties at all, they don't satisfy the
   // requirements.
   for (uint32_t i = 0, e = self->endIndex_ - self->beginIndex_; i != e; ++i) {
-    if (!self->indexedStorage_.getNonNull(runtime)->at(i).isEmpty())
+    if (!self->getIndexedStorage(runtime)->at(i).isEmpty())
       return false;
   }
   return true;
@@ -363,7 +371,6 @@ const ObjectVTable Arguments::vt{
     VTable(
         CellKind::ArgumentsKind,
         cellSize<Arguments>(),
-        nullptr,
         nullptr,
         nullptr,
         nullptr,
@@ -387,6 +394,7 @@ const ObjectVTable Arguments::vt{
 void ArgumentsBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<Arguments>());
   ArrayImplBuildMeta(cell, mb);
+  mb.setVTable(&Arguments::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -409,22 +417,18 @@ CallResult<Handle<Arguments>> Arguments::create(
     size_type length,
     Handle<Callable> curFunction,
     bool strictMode) {
-  auto arrRes = StorageType::create(runtime, length);
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto indexedStorage = runtime->makeHandle<StorageType>(std::move(*arrRes));
-
   auto clazz = runtime->getHiddenClassForPrototype(
-      runtime->objectPrototypeRawPtr,
-      numOverlapSlots<Arguments>() + ANONYMOUS_PROPERTY_SLOTS);
+      runtime->objectPrototypeRawPtr, numOverlapSlots<Arguments>());
   auto obj = runtime->makeAFixed<Arguments>(
-      runtime,
-      Handle<JSObject>::vmcast(&runtime->objectPrototype),
-      clazz,
-      indexedStorage);
+      runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype), clazz);
   auto selfHandle = JSObjectInit::initToHandle(runtime, obj);
 
+  {
+    auto arrRes = StorageType::create(runtime, length);
+    if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    selfHandle->setIndexedStorage(runtime, arrRes->get(), &runtime->getHeap());
+  }
   Arguments::setStorageEndIndex(selfHandle, runtime, length);
 
   PropertyFlags pf{};
@@ -500,7 +504,6 @@ const ObjectVTable JSArray::vt{
         nullptr,
         nullptr,
         nullptr,
-        nullptr,
         nullptr, // externalMemorySize
         VTable::HeapSnapshotMetadata{
             HeapSnapshot::NodeType::Object,
@@ -520,6 +523,7 @@ const ObjectVTable JSArray::vt{
 void ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSArray>());
   ArrayImplBuildMeta(cell, mb);
+  mb.setVTable(&JSArray::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -541,7 +545,7 @@ Handle<HiddenClass> JSArray::createClass(
     Runtime *runtime,
     Handle<JSObject> prototypeHandle) {
   Handle<HiddenClass> classHandle = runtime->getHiddenClassForPrototype(
-      *prototypeHandle, numOverlapSlots<JSArray>() + ANONYMOUS_PROPERTY_SLOTS);
+      *prototypeHandle, numOverlapSlots<JSArray>());
 
   PropertyFlags pf{};
   pf.enumerable = 0;
@@ -565,7 +569,7 @@ Handle<HiddenClass> JSArray::createClass(
   return classHandle;
 }
 
-CallResult<PseudoHandle<JSArray>> JSArray::create(
+CallResult<Handle<JSArray>> JSArray::create(
     Runtime *runtime,
     Handle<JSObject> prototypeHandle,
     Handle<HiddenClass> classHandle,
@@ -579,8 +583,12 @@ CallResult<PseudoHandle<JSArray>> JSArray::create(
       classHandle->getNumProperties() == jsArrayPropertyCount() &&
       "invalid number of properties in JSArray hidden class");
 
+  auto self = JSObjectInit::initToHandle(
+      runtime,
+      runtime->makeAFixed<JSArray>(
+          runtime, prototypeHandle, classHandle, GCPointerBase::NoBarriers()));
+
   // Only allocate the storage if capacity is not zero.
-  MutableHandle<StorageType> indexedStorage{runtime, nullptr};
   if (capacity) {
     if (LLVM_UNLIKELY(capacity > StorageType::maxElements()))
       return runtime->raiseRangeError("Out of memory for array elements");
@@ -588,23 +596,15 @@ CallResult<PseudoHandle<JSArray>> JSArray::create(
     if (arrRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    indexedStorage = std::move(*arrRes);
+    self->setIndexedStorage(runtime, arrRes->get(), &runtime->getHeap());
   }
-
-  auto self = JSObjectInit::initToPseudoHandle(
-      runtime,
-      runtime->makeAFixed<JSArray>(
-          runtime,
-          prototypeHandle,
-          classHandle,
-          indexedStorage,
-          GCPointerBase::NoBarriers()));
-  putLength(self.get(), runtime, length);
+  auto shv = SmallHermesValue::encodeNumberValue(length, runtime);
+  putLength(self.get(), runtime, shv);
 
   return self;
 }
 
-CallResult<PseudoHandle<JSArray>>
+CallResult<Handle<JSArray>>
 JSArray::create(Runtime *runtime, size_type capacity, size_type length) {
   return JSArray::create(
       runtime,
@@ -650,9 +650,10 @@ CallResult<bool> JSArray::setLength(
     uint32_t newLength,
     PropOpFlags opFlags) {
   // Fast-path: if we are enlarging, do nothing.
-  const auto currentLength = getLength(*selfHandle);
+  const auto currentLength = getLength(*selfHandle, runtime);
   if (LLVM_LIKELY(newLength >= currentLength)) {
-    putLength(*selfHandle, runtime, newLength);
+    auto shv = SmallHermesValue::encodeNumberValue(newLength, runtime);
+    putLength(*selfHandle, runtime, shv);
     return true;
   }
 
@@ -746,7 +747,8 @@ CallResult<bool> JSArray::setLength(
       return ExecutionStatus::EXCEPTION;
     }
   }
-  putLength(*selfHandle, runtime, adjustedLength);
+  auto shv = SmallHermesValue::encodeNumberValue(adjustedLength, runtime);
+  putLength(*selfHandle, runtime, shv);
 
   if (adjustedLength != newLength) {
     if (opFlags.getThrowOnError()) {
@@ -777,6 +779,7 @@ void ArrayIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSArrayIterator>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSArrayIterator *>(cell);
+  mb.setVTable(&JSArrayIterator::vt.base);
   mb.addField("iteratedObject", &self->iteratedObject_);
 }
 
@@ -810,7 +813,7 @@ PseudoHandle<JSArrayIterator> JSArrayIterator::create(
     IterationKind iterationKind) {
   auto proto = Handle<JSObject>::vmcast(&runtime->arrayIteratorPrototype);
   auto clazz = runtime->getHiddenClassForPrototype(
-      *proto, numOverlapSlots<JSArrayIterator>() + ANONYMOUS_PROPERTY_SLOTS);
+      *proto, numOverlapSlots<JSArrayIterator>());
   auto *obj = runtime->makeAFixed<JSArrayIterator>(
       runtime, proto, clazz, array, iterationKind);
   return JSObjectInit::initToPseudoHandle(runtime, obj);
@@ -901,7 +904,7 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
       if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      Handle<JSArray> result = runtime->makeHandle(std::move(*resultRes));
+      Handle<JSArray> result = *resultRes;
       JSArray::setElementAt(result, runtime, 0, indexHandle);
       JSArray::setElementAt(result, runtime, 1, valueHandle);
       // 18. Return CreateIterResultObject(result, false).
@@ -918,3 +921,5 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

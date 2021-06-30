@@ -19,12 +19,14 @@ using namespace hermes::vm;
 struct DummyCell final {
  public:
   static void buildMeta(const GCCell *cell, Metadata::Builder &mb);
-
+  static const VTable vt;
   GCPointerBase x_;
   GCPointerBase y_;
   GCPointerBase z_;
   GCSymbolID sym_;
 };
+
+const VTable DummyCell::vt{CellKind::DummyObjectKind, sizeof(DummyCell)};
 
 static_assert(
     std::is_standard_layout<DummyCell>::value,
@@ -32,6 +34,7 @@ static_assert(
 
 void DummyCell::buildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = reinterpret_cast<const DummyCell *>(cell);
+  mb.setVTable(&DummyCell::vt);
   mb.addField("x", &self->x_);
   mb.addField("y", &self->y_);
   mb.addField("z", &self->z_);
@@ -40,11 +43,16 @@ void DummyCell::buildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 struct DummyArrayCell {
  public:
+  static const VTable vt;
   AtomicIfConcurrentGC<std::uint32_t> length_{3};
   GCPointerBase data_[3];
 
   static void buildMeta(const GCCell *cell, Metadata::Builder &mb);
 };
+
+const VTable DummyArrayCell::vt{
+    CellKind::DummyObjectKind,
+    sizeof(DummyArrayCell)};
 
 static_assert(
     std::is_standard_layout<DummyArrayCell>::value,
@@ -52,7 +60,9 @@ static_assert(
 
 void DummyArrayCell::buildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = reinterpret_cast<const DummyArrayCell *>(cell);
-  mb.addArray("dummystorage", self->data_, &self->length_, sizeof(DummyCell));
+  mb.setVTable(&DummyArrayCell::vt);
+  mb.addArray(
+      "dummystorage", self->data_, &self->length_, sizeof(DummyArrayCell));
 }
 
 TEST(MetadataTest, TestNormalFields) {

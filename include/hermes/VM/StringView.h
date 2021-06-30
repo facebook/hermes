@@ -98,6 +98,7 @@ class StringView {
 
     /// Allows for copying.
     const_iterator(const const_iterator &other) = default;
+    const_iterator &operator=(const const_iterator &other) = default;
 
     const_iterator &operator++() {
       if (charPtr_) {

@@ -10,8 +10,8 @@
 #include "gtest/gtest.h"
 
 #include "EmptyCell.h"
-#include "ExtStringForTest.h"
 #include "TestHelpers.h"
+#include "hermes/VM/DummyObject.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/GenGCHeapSegment.h"
@@ -22,40 +22,11 @@ using namespace hermes::vm;
 
 namespace {
 
-MetadataTableForTests getMetadataTable() {
-  static_assert(
-      cellKindsContiguousAscending(
-          CellKind::UninitializedKind,
-          CellKind::FillerCellKind,
-          CellKind::FreelistKind,
-          CellKind::DynamicUTF16StringPrimitiveKind,
-          CellKind::DynamicASCIIStringPrimitiveKind,
-          CellKind::BufferedUTF16StringPrimitiveKind,
-          CellKind::BufferedASCIIStringPrimitiveKind,
-          CellKind::DynamicUniquedUTF16StringPrimitiveKind,
-          CellKind::DynamicUniquedASCIIStringPrimitiveKind,
-          CellKind::ExternalUTF16StringPrimitiveKind,
-          CellKind::ExternalASCIIStringPrimitiveKind),
-      "Cell kinds in unexpected order");
-  static const Metadata storage[] = {
-      Metadata(), // Uninitialized
-      Metadata(), // FillerCell
-      Metadata(), // Freelist
-      Metadata(), // DynamicUTF16StringPrimitive
-      Metadata(), // DynamicASCIIStringPrimitive
-      Metadata(), // BufferedUTF16StringPrimitive
-      Metadata(), // BufferedASCIIStringPrimitive
-      Metadata(), // DynamicUniquedUTF16StringPrimitive
-      Metadata(), // DynamicUniquedASCIIStringPrimitive
-      Metadata(), // ExternalUTF16StringPrimitive
-      Metadata(), // ExternalASCIIStringPrimitive
-  };
-  return MetadataTableForTests(storage);
-}
-
 namespace {
 const size_t kMaxYoungGenSize = GenGCHeapSegment::maxSize();
 } // namespace
+
+using testhelpers::DummyObject;
 
 /// A parameterized test class, for a set of tests that allocate
 /// external memory, and then may optionally, controlled by the bool
@@ -72,34 +43,31 @@ TEST_P(ExtMemTests, ExtMemInYoungTest) {
   static const GCConfig kGCConfig =
       TestGCConfigFixedSize(kMaxYoungGenSize * GenGC::kYoungGenFractionDenom);
 
-  auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
+  auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
+  GCScope scope{&rt};
 
   // A cell a quarter of the young-gen size
   using QuarterYoungGenCell = EmptyCell<kMaxYoungGenSize / 4>;
 
-  std::deque<GCCell *> roots;
+  rt.makeHandle(QuarterYoungGenCell::create(rt));
 
-  roots.push_back(QuarterYoungGenCell::create(rt));
-  rt.pointerRoots.push_back(&roots.back());
-
-  // The 1/4 + 1/2 + 1/4 = 1, but the size of the ExtStringForTest object itself
+  auto extObj = rt.makeHandle(DummyObject::create(&gc));
+  // The 1/4 + 1/2 + 1/4 = 1, but the size of the DummyObject object itself
   // will cause the sum to exceed the YG size.
   // (If the length created is zero, the subsequent allocation does *not* cause
   // a collection, and the test fails.)
-  roots.push_back(ExtStringForTest::create(rt, kMaxYoungGenSize / 2));
-  rt.pointerRoots.push_back(&roots.back());
+  extObj->acquireExtMem(&gc, kMaxYoungGenSize / 2);
 
   EXPECT_EQ(0, gc.numYoungGCs());
   EXPECT_EQ(0, gc.numFullGCs());
 
   if (GetParam()) {
-    vmcast<ExtStringForTest>(roots.back())->releaseMem(&gc);
+    extObj->releaseExtMem(&gc);
   }
 
-  roots.push_back(QuarterYoungGenCell::create(rt));
-  rt.pointerRoots.push_back(&roots.back());
+  rt.makeHandle(QuarterYoungGenCell::create(rt));
 
   EXPECT_EQ(GetParam() ? 0 : 1, gc.numYoungGCs());
   EXPECT_EQ(0, gc.numFullGCs());
@@ -112,9 +80,10 @@ TEST_P(ExtMemTests, ExtMemInOldByAllocTest) {
   static const GCConfig kGCConfig =
       TestGCConfigFixedSize(kMaxYoungGenSize * GenGC::kYoungGenFractionDenom);
 
-  auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
+  auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
+  GCScope scope{&rt};
 
   // Allocate GenGC::kYoungGenFractionDenom - 3 young-gen-sized objects, and do
   // a full collection to get them into the old gen, so that the old gen has 2
@@ -122,11 +91,8 @@ TEST_P(ExtMemTests, ExtMemInOldByAllocTest) {
   using YoungGenCell = EmptyCell<kMaxYoungGenSize>;
   using HalfYoungGenCell = EmptyCell<kMaxYoungGenSize / 2>;
 
-  std::deque<GCCell *> roots;
-
   for (size_t i = 0; i < GenGC::kYoungGenFractionDenom - 3; i++) {
-    roots.push_back(YoungGenCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(YoungGenCell::create(rt));
   }
   rt.collect();
   size_t ygs0 = gc.numYoungGCs();
@@ -148,8 +114,8 @@ TEST_P(ExtMemTests, ExtMemInOldByAllocTest) {
   // Now allocate an object with 1.5 young-gen-sizes of external memory.
   // (If the length is zero, instead, this test fails: the creates at the end
   // cause a YG collection rather than a full GC.)
-  roots.push_back(ExtStringForTest::create(rt, 3 * kMaxYoungGenSize / 2));
-  rt.pointerRoots.push_back(&roots.back());
+  auto extObj = rt.makeHandle(DummyObject::create(&gc));
+  extObj->acquireExtMem(&gc, 3 * kMaxYoungGenSize / 2);
 
   // Get it in the old generation.
   rt.collect();
@@ -157,7 +123,7 @@ TEST_P(ExtMemTests, ExtMemInOldByAllocTest) {
   EXPECT_EQ(2, gc.numFullGCs());
 
   if (GetParam()) {
-    vmcast<ExtStringForTest>(roots.back())->releaseMem(&gc);
+    extObj->releaseExtMem(&gc);
   }
 
   // Now we do allocations that would cause a YG collection.  If we haven't
@@ -182,20 +148,18 @@ TEST_P(ExtMemTests, ExtMemInOldDirectTest) {
   static const GCConfig kGCConfig =
       TestGCConfigFixedSize(kMaxYoungGenSize * GenGC::kYoungGenFractionDenom);
 
-  auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
+  auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
+  GCScope scope{&rt};
 
   // Allocate GenGC::kYoungGenFractionDenom - 3 young-gen-sized objects, and do
   // a full collection to get them into the old gen, so that the old gen has 2
   // young-gen's worth of free space.
   using YoungGenCell = EmptyCell<kMaxYoungGenSize>;
 
-  std::deque<GCCell *> roots;
-
   for (size_t i = 0; i < GenGC::kYoungGenFractionDenom - 3; i++) {
-    roots.push_back(YoungGenCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(YoungGenCell::create(rt));
   }
   rt.collect();
   size_t ygs0 = gc.numYoungGCs();
@@ -206,11 +170,11 @@ TEST_P(ExtMemTests, ExtMemInOldDirectTest) {
   // in the old generation.
   // (If the length is zero, instead, this test fails: the creates at the end
   // cause a YG collection rather than a full GC.)
-  ExtStringForTest *extString =
-      ExtStringForTest::createLongLived(rt, 3 * kMaxYoungGenSize / 2);
+  auto *extObj = DummyObject::createLongLived(&gc);
+  extObj->acquireExtMem(&gc, 3 * kMaxYoungGenSize / 2);
 
   if (GetParam()) {
-    extString->releaseMem(&gc);
+    extObj->releaseExtMem(&gc);
   }
 
   // Now we do allocations that would cause a collection.  If we did
@@ -243,31 +207,27 @@ TEST(ExtMemNonParamTests, ExtMemDoesNotBreakFullGC) {
                           .withMaxHeapSize(kInitSize * 4)
                           .build();
 
-  auto runtime = DummyRuntime::create(getMetadataTable(), gcConfig);
+  auto runtime = DummyRuntime::create(gcConfig);
   DummyRuntime &rt = *runtime;
+  GCScope scope{&rt};
 
   using SegmentSizeCell = EmptyCell<GenGCHeapSegment::maxSize()>;
-
-  std::deque<GCCell *> roots;
 
   // Allocate GenGC::kYoungGenFractionDenom - 3 segment-sized objects in
   // the old gen, so that the old gen has 2 segments worth of free
   // space.
   for (size_t i = 0; i < GenGC::kYoungGenFractionDenom - 3; i++) {
-    roots.push_back(SegmentSizeCell::createLongLived(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(SegmentSizeCell::createLongLived(rt));
   }
 
   // Now allocate an object with 2.5 segment-sizes of external memory.
   // After this, the effective size of the old gen should now be
   // greater than its current size.
-  roots.push_back(ExtStringForTest::createLongLived(
-      rt, 5 * GenGCHeapSegment::maxSize() / 2));
-  rt.pointerRoots.push_back(&roots.back());
+  auto extObj = rt.makeHandle(DummyObject::createLongLived(&rt.getHeap()));
+  extObj->acquireExtMem(&rt.getHeap(), 5 * GenGCHeapSegment::maxSize() / 2);
 
   // Now allocate a YG object, filling the YG.
-  roots.push_back(SegmentSizeCell::create(rt));
-  rt.pointerRoots.push_back(&roots.back());
+  rt.makeHandle(SegmentSizeCell::create(rt));
 
   // This GC should succeed: the total live memory, including the
   // external memory, is much less than the max heap size.  We don't
@@ -292,27 +252,25 @@ TEST(ExtMemNonParamDeathTest, SaturateYoungGen) {
 
   // An external allocation size that will certainly saturate the young
   // generation.
-  const auto kExtAllocSize = kOGSize - sizeof(ExtStringForTest);
+  const auto kExtAllocSize = kOGSize - sizeof(DummyObject);
   ASSERT_GT(kExtAllocSize, kYGSize);
 
   const auto gcConfig = TestGCConfigFixedSize(kTotalSize);
-  auto runtime = DummyRuntime::create(getMetadataTable(), gcConfig);
+  auto runtime = DummyRuntime::create(gcConfig);
   DummyRuntime &rt = *runtime;
-
-  std::deque<GCCell *> roots;
+  GCScope scope{&rt};
 
   // Fill up the old generation.
   for (size_t i = 0; i < GenGC::kYoungGenFractionDenom - 1; ++i) {
-    roots.push_back(SegmentCell::createLongLived(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(SegmentCell::createLongLived(rt));
   }
 
   // Saturate the young generation.
-  roots.push_back(ExtStringForTest::create(rt, kExtAllocSize));
-  rt.pointerRoots.push_back(&roots.back());
+  auto extObj = rt.makeHandle(DummyObject::create(&rt.getHeap()));
+  extObj->acquireExtMem(&rt.getHeap(), kExtAllocSize);
 
   // Expect that a subsequent allocation should fail, with an OOM.
-  EXPECT_OOM(ExtStringForTest::create(rt, kExtAllocSize));
+  EXPECT_OOM(DummyObject::create(&rt.getHeap()));
 }
 
 } // namespace

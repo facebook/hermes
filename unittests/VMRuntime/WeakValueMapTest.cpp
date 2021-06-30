@@ -7,6 +7,7 @@
 
 #include "hermes/VM/WeakValueMap.h"
 
+#include "hermes/VM/DummyObject.h"
 #include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/Runtime.h"
 
@@ -22,14 +23,18 @@ using namespace hermes::vm;
 namespace {
 
 using WeakValueMapTest = LargeHeapRuntimeTestFixture;
+using testhelpers::DummyObject;
 
 TEST_F(WeakValueMapTest, SmokeTest) {
   runtime->collect("test");
 
   WeakValueMap<int, JSNumber> wvp{};
 
-  runtime->addCustomWeakRootsFunction(
-      [&](GC *, WeakRefAcceptor &acceptor) { wvp.markWeakRefs(acceptor); });
+  auto dummyObj = runtime->makeHandle(DummyObject::create(&runtime->getHeap()));
+  dummyObj->markWeakCallback = std::make_unique<DummyObject::MarkWeakCallback>(
+      [&wvp](GCCell *, WeakRefAcceptor &acceptor) {
+        wvp.markWeakRefs(acceptor);
+      });
 
   auto makeNumber = [&](int n) -> JSNumber * {
     return JSNumber::create(

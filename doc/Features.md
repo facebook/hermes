@@ -20,6 +20,8 @@ Hermes plans to target ECMAScript 2015 (ES6), with some carefully considered exc
 - Arrow functions
 - Optional chaining and nullish coalescing (`?.` and `??`)
 - Reflection (`Reflect` and `Proxy`) starting from [v0.7.0](https://github.com/facebook/hermes/releases/tag/v0.7.0)
+- [`Intl`, or Internationalization APIs](IntlAPIs.md)
+  - currently Android only
 - ES6 Promise (with incompatibilities documented below)
 - All ES6 JS library functions
   - Set/Map
@@ -32,7 +34,7 @@ Hermes plans to target ECMAScript 2015 (ES6), with some carefully considered exc
 - `let` and `const` (block scoped variables, with support for the temporal dead zone)
 - Classes and method definitions
 - ES modules (`import` and `export`)
-- `Intl` API glue for Android has been added, in order to enable community contribution of a complete, spec-compliant implementation.
+- `Intl` API glue has been added to enable community contribution of a complete, spec-compliant implementation on multiple platforms
 - Async function (`async` and `await`).
 - `Symbol.prototype.description` (it's not fully spec-conformant yet. `Symbol().description` should be `undefined` but it's currently `''`).
 

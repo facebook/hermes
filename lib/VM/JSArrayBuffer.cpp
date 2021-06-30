@@ -27,7 +27,6 @@ const ObjectVTable JSArrayBuffer::vt{
         nullptr,
         _mallocSizeImpl,
         nullptr,
-        nullptr,
         _externalMemorySizeImpl, // externalMemorySize
         VTable::HeapSnapshotMetadata{
             HeapSnapshot::NodeType::Object,
@@ -47,6 +46,7 @@ const ObjectVTable JSArrayBuffer::vt{
 void ArrayBufferBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSArrayBuffer>());
   ObjectBuildMeta(cell, mb);
+  mb.setVTable(&JSArrayBuffer::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -102,8 +102,7 @@ PseudoHandle<JSArrayBuffer> JSArrayBuffer::create(
       runtime,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<JSArrayBuffer>() + ANONYMOUS_PROPERTY_SLOTS));
+          *parentHandle, numOverlapSlots<JSArrayBuffer>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
@@ -268,3 +267,5 @@ JSArrayBuffer::createDataBlock(Runtime *runtime, size_type size, bool zero) {
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

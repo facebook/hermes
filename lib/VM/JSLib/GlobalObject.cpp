@@ -273,6 +273,12 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
   DefinePropertyFlags normalDPF =
       DefinePropertyFlags::getNewNonEnumerableFlags();
 
+  // Not enumerable, not writable but configurable.
+  DefinePropertyFlags configurableOnlyPDF =
+      DefinePropertyFlags::getDefaultNewPropertyFlags();
+  configurableOnlyPDF.enumerable = 0;
+  configurableOnlyPDF.writable = 0;
+
   /// Clear the configurable flag.
   DefinePropertyFlags clearConfigurableDPF{};
   clearConfigurableDPF.setConfigurable = 1;
@@ -356,8 +362,8 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
       Handle<JSObject>::vmcast(&runtime->functionPrototype),
       runtime,
       Predefined::getSymbolID(Predefined::length),
-      clearConfigurableDPF,
-      Runtime::getUndefinedValue()));
+      configurableOnlyPDF,
+      Runtime::getZeroValue()));
 
   // [[ThrowTypeError]].
   auto throwTypeErrorFunction = NativeFunction::create(
@@ -614,9 +620,7 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
   createWeakSetConstructor(runtime);
 
   // Symbol constructor.
-  if (LLVM_UNLIKELY(runtime->hasES6Symbol())) {
-    createSymbolConstructor(runtime);
-  }
+  createSymbolConstructor(runtime);
 
   /// %IteratorPrototype%.
   populateIteratorPrototype(runtime);
@@ -767,7 +771,7 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
   // Define the global Intl object
   // TODO T65916424: Consider how we can move this somewhere more modular.
 
-  if (LLVM_UNLIKELY(runtime->hasES6Intl())) {
+  if (LLVM_UNLIKELY(runtime->hasIntl())) {
     runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
         runtime->getGlobal(),
         runtime,

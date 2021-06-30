@@ -52,12 +52,12 @@ CallResult<HermesValue> localesToJS(
     return ExecutionStatus::EXCEPTION;
   }
 
-  CallResult<PseudoHandle<JSArray>> arrayRes =
+  CallResult<Handle<JSArray>> arrayRes =
       JSArray::create(runtime, result->size(), result->size());
   if (LLVM_UNLIKELY(arrayRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> array = runtime->makeHandle(std::move(*arrayRes));
+  Handle<JSArray> array = *arrayRes;
   MutableHandle<> name{runtime};
   uint64_t index = 0;
   for (auto &locale : *result) {
@@ -161,12 +161,12 @@ CallResult<HermesValue> partsToJS(
     return ExecutionStatus::EXCEPTION;
   }
 
-  CallResult<PseudoHandle<JSArray>> arrayRes =
+  CallResult<Handle<JSArray>> arrayRes =
       JSArray::create(runtime, result->size(), result->size());
   if (LLVM_UNLIKELY(arrayRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> array = runtime->makeHandle(std::move(*arrayRes));
+  Handle<JSArray> array = *arrayRes;
   uint64_t index = 0;
   for (auto &part : *result) {
     CallResult<Handle<JSObject>> partRes = partToJS(runtime, std::move(part));
@@ -520,11 +520,12 @@ enum class CollatorSlotIndexes { boundCompare, COUNT };
 PseudoHandle<NativeFunction> getBoundCompare(
     DecoratedObject *collator,
     Runtime *runtime) {
-  return createPseudoHandle(
-      dyn_vmcast<NativeFunction>(DecoratedObject::getAdditionalSlotValue(
+  return createPseudoHandle(dyn_vmcast<NativeFunction>(
+      DecoratedObject::getAdditionalSlotValue(
           collator,
           runtime,
-          static_cast<unsigned int>(CollatorSlotIndexes::boundCompare))));
+          static_cast<unsigned int>(CollatorSlotIndexes::boundCompare))
+          .unboxToHV(runtime)));
 }
 
 void setBoundCompare(
@@ -535,7 +536,7 @@ void setBoundCompare(
       collator,
       runtime,
       static_cast<unsigned int>(CollatorSlotIndexes::boundCompare),
-      value.getHermesValue());
+      SmallHermesValue::encodeObjectValue(value.get(), runtime));
 }
 
 // Collator compare internal slots
@@ -544,11 +545,12 @@ enum class CollatorCompareSlotIndexes { collator, COUNT };
 PseudoHandle<DecoratedObject> getCollator(
     PseudoHandle<NativeFunction> compare,
     Runtime *runtime) {
-  return createPseudoHandle(
-      vmcast<DecoratedObject>(NativeFunction::getAdditionalSlotValue(
+  return createPseudoHandle(vmcast<DecoratedObject>(
+      NativeFunction::getAdditionalSlotValue(
           compare.get(),
           runtime,
-          static_cast<unsigned int>(CollatorCompareSlotIndexes::collator))));
+          static_cast<unsigned int>(CollatorCompareSlotIndexes::collator))
+          .getObject(runtime)));
 }
 
 void setCollator(
@@ -559,7 +561,7 @@ void setCollator(
       compare.get(),
       runtime,
       static_cast<unsigned int>(CollatorCompareSlotIndexes::collator),
-      value.getHermesValue());
+      SmallHermesValue::encodeObjectValue(value.get(), runtime));
 }
 
 CallResult<PseudoHandle<JSObject>>
@@ -756,11 +758,12 @@ enum class DTFSlotIndexes { boundFormat, COUNT };
 PseudoHandle<NativeFunction> getDTFBoundFormat(
     PseudoHandle<DecoratedObject> dtf,
     Runtime *runtime) {
-  return createPseudoHandle(
-      dyn_vmcast<NativeFunction>(DecoratedObject::getAdditionalSlotValue(
+  return createPseudoHandle(dyn_vmcast<NativeFunction>(
+      DecoratedObject::getAdditionalSlotValue(
           dtf.get(),
           runtime,
-          static_cast<unsigned int>(DTFSlotIndexes::boundFormat))));
+          static_cast<unsigned int>(DTFSlotIndexes::boundFormat))
+          .unboxToHV(runtime)));
 }
 
 void setDTFBoundFormat(
@@ -771,7 +774,7 @@ void setDTFBoundFormat(
       dtf.get(),
       runtime,
       static_cast<unsigned int>(DTFSlotIndexes::boundFormat),
-      value.getHermesValue());
+      SmallHermesValue::encodeObjectValue(value.get(), runtime));
 }
 
 // DateTimeFormat format internal slots
@@ -780,11 +783,12 @@ enum class DTFFormatSlotIndexes { dateTimeFormat, COUNT };
 PseudoHandle<DecoratedObject> getDateTimeFormat(
     PseudoHandle<NativeFunction> format,
     Runtime *runtime) {
-  return createPseudoHandle(
-      vmcast<DecoratedObject>(NativeFunction::getAdditionalSlotValue(
+  return createPseudoHandle(vmcast<DecoratedObject>(
+      NativeFunction::getAdditionalSlotValue(
           format.get(),
           runtime,
-          static_cast<unsigned int>(DTFFormatSlotIndexes::dateTimeFormat))));
+          static_cast<unsigned int>(DTFFormatSlotIndexes::dateTimeFormat))
+          .getObject(runtime)));
 }
 
 void setDateTimeFormat(
@@ -795,7 +799,7 @@ void setDateTimeFormat(
       format.get(),
       runtime,
       static_cast<unsigned int>(DTFFormatSlotIndexes::dateTimeFormat),
-      value.getHermesValue());
+      SmallHermesValue::encodeObjectValue(value.get(), runtime));
 }
 
 CallResult<PseudoHandle<JSObject>> intlDateTimeFormatCreator(
@@ -1073,11 +1077,12 @@ enum class NFSlotIndexes { boundFormat, COUNT };
 PseudoHandle<NativeFunction> getNFBoundFormat(
     PseudoHandle<DecoratedObject> nf,
     Runtime *runtime) {
-  return createPseudoHandle(
-      dyn_vmcast<NativeFunction>(DecoratedObject::getAdditionalSlotValue(
+  return createPseudoHandle(dyn_vmcast<NativeFunction>(
+      DecoratedObject::getAdditionalSlotValue(
           nf.get(),
           runtime,
-          static_cast<unsigned int>(NFSlotIndexes::boundFormat))));
+          static_cast<unsigned int>(NFSlotIndexes::boundFormat))
+          .unboxToHV(runtime)));
 }
 
 void setNFBoundFormat(
@@ -1088,7 +1093,7 @@ void setNFBoundFormat(
       nf.get(),
       runtime,
       static_cast<unsigned int>(NFSlotIndexes::boundFormat),
-      value.getHermesValue());
+      SmallHermesValue::encodeObjectValue(value.get(), runtime));
 }
 
 // NumberFormat format internal slots
@@ -1097,11 +1102,12 @@ enum class NFFormatSlotIndexes { numberFormat, COUNT };
 PseudoHandle<DecoratedObject> getNumberFormat(
     PseudoHandle<NativeFunction> format,
     Runtime *runtime) {
-  return createPseudoHandle(
-      vmcast<DecoratedObject>(NativeFunction::getAdditionalSlotValue(
+  return createPseudoHandle(vmcast<DecoratedObject>(
+      NativeFunction::getAdditionalSlotValue(
           format.get(),
           runtime,
-          static_cast<unsigned int>(NFFormatSlotIndexes::numberFormat))));
+          static_cast<unsigned int>(NFFormatSlotIndexes::numberFormat))
+          .getObject(runtime)));
 }
 
 void setNumberFormat(
@@ -1112,7 +1118,7 @@ void setNumberFormat(
       format.get(),
       runtime,
       static_cast<unsigned int>(NFFormatSlotIndexes::numberFormat),
-      value.getHermesValue());
+      SmallHermesValue::encodeObjectValue(value.get(), runtime));
 }
 
 CallResult<PseudoHandle<JSObject>> intlNumberFormatCreator(
@@ -1391,7 +1397,7 @@ CallResult<HermesValue> intlDatePrototypeToSomeLocaleString(
     const NativeArgs &args,
     JSDate *date,
     int dtoFlags) {
-  double x = JSDate::getPrimitiveValue(date, runtime).getNumber();
+  double x = date->getPrimitiveValue();
   std::u16string str;
   if (isnan(x)) {
     str = u"Invalid Date";
@@ -1474,7 +1480,7 @@ intlNumberPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
       return runtime->raiseTypeError(
           "Number.prototype.toLocaleString() can only be used on numbers");
     }
-    x = JSNumber::getPrimitiveValue(*numPtr, runtime).getNumber();
+    x = numPtr->getPrimitiveNumber();
   }
 
   CallResult<std::vector<std::u16string>> localesRes =

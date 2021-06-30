@@ -1,9 +1,11 @@
 ---
 id: vm
-title: Hermes VM
+title: VM Overview
 ---
 
 ## Value Representation
+
+### HermesValue
 
 The VM uses a class called `HermesValue` to encapsulate JS values efficiently,
 preserving their type while still allowing them to fit in a register.
@@ -11,6 +13,52 @@ NaN-tagging is used to store different types of values;
 we store values in the lower bits of a `uint64_t`.
 Thus, when the `uint64_t` is interpreted as a `double`,
 tagged `NaN` values can hold non-`double` types.
+
+After we reserve the canonical quiet NaN to be used as the NaN representation
+in the VM, we have 51 remaining bits we can set. Even on 64-bit systems, we are
+able to accommodate a full pointer and type tag, since pointers are never more
+than 48 bits in practice.
+
+A `HermesValue` can take on any of the following types of values, which are
+distinguished by their type tag:
+1. Empty
+2. Undefined
+3. Null
+4. Boolean
+5. Symbol
+6. Native value (used to store an int or pointer for bookkeeping)
+7. String pointer
+8. Object pointer
+
+`HermesValue` is used across the VM to store and pass JS values.
+`PinnedHermesValue` is used in non-moveable memory, primarily for the register
+stack and other GC roots in known locations in memory. `GCHermesValue`s are
+used on the GC managed heap.
+
+### HermesValue32
+
+When compressed pointers are enabled, we also encode some values in a compact
+32-bit representation called `HermesValue32`. Because compressing pointers to
+store in this format requires additional work, we also avoid using
+`HermesValue32` for frequently accessed values (like the register stack).
+Instead we selectively use `HermesValue32` for objects that are known to
+consume a large percentage of heap memory, but that are unlikely to affect
+performance.
+
+`HermesValue32` supports storing all of the types that `HermesValue` does,
+except for native values, which were dropped because they are relatively rare
+and because we do not have a mechanism for compressing native pointers outside
+the GC managed heap.
+
+Instead of using NaN boxing, it takes advantage of the 8-byte alignment of the
+Hermes heap to store tags, since the lowest 3 bits of a pointer are always
+guaranteed to be zero (even after compression).
+
+`HermesValue32` also requires special handling for doubles. It is able to store
+small integers up to 29 bits inline, but anything that cannot be represented in
+that form must be stored as a separate double object on the heap. Based on the
+workloads we have looked at, actual doubles are very rarely used, so the
+overhead of this approach is small.
 
 ### Strings
 
@@ -54,13 +102,10 @@ which can be seen in `PredefinedStrings.def`.
 
 ### Garbage Collection
 
-Currently, the VM uses `GenGCNC` (generational non-contiguous GC).
-The collector allows non-contiguous heap allocation.
-This avoids preallocating too much memory, as well as returning memory to the OS.
-The garbage collector is precise
-(it knows what `HermesValue`s are valid pointers to objects in the JS heap).
+Currently, the VM uses `HadesGC` by default, a concurrent garbage collector aimed at dramatically lowering pause times over our previous collector [GenGC](./GenGC.md). The heap in Hermes is non-contiguous, which allows us to avoid reserving large regions of address space upfront, and allows us to return memory to the OS at a finer granularity. Garbage collection in Hermes is precise, which means that the GC always knows which values contain valid pointers.
 
-TODO: Elaborate on the garbage collector requirements and future plans.
+See the documentation for [Hades](./Hades.md) for details
+on how it works.
 
 The garbage collector moves objects to different place on the heap,
 invalidating `HermesValue`s,
@@ -136,9 +181,9 @@ This allows them to call `executeCall*` to run functions using the internal API.
 
 ### Boxed Primitives
 
-The `PrimitiveBox` class is used to contain Booleans, Strings, and Numbers,
+The VM has classes used to contain Booleans, Strings, and Numbers,
 when they are constructed using their respective JS constructors.
-`JSString` is a `PrimitiveBox` that is used for `String` objects, etc.
+`JSString` is a boxed `String` object, etc.
 
 ## REPL
 

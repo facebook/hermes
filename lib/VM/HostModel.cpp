@@ -41,6 +41,7 @@ void FinalizableNativeFunctionBuildMeta(
   mb.addJSObjectOverlapSlots(
       JSObject::numOverlapSlots<FinalizableNativeFunction>());
   NativeFunctionBuildMeta(cell, mb);
+  mb.setVTable(&FinalizableNativeFunction::vt.base.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -69,9 +70,7 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
           runtime,
           parentHandle,
           runtime->getHiddenClassForPrototype(
-              *parentHandle,
-              numOverlapSlots<FinalizableNativeFunction>() +
-                  ANONYMOUS_PROPERTY_SLOTS),
+              *parentHandle, numOverlapSlots<FinalizableNativeFunction>()),
           context,
           functionPtr,
           finalizePtr);
@@ -113,6 +112,7 @@ const ObjectVTable HostObject::vt{
 void HostObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<HostObject>());
   ObjectBuildMeta(cell, mb);
+  mb.setVTable(&HostObject::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -136,8 +136,7 @@ CallResult<HermesValue> HostObject::createWithoutPrototype(
       runtime,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<HostObject>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, numOverlapSlots<HostObject>()),
       std::move(proxy));
 
   hostObj->flags_.hostObject = true;
@@ -147,3 +146,5 @@ CallResult<HermesValue> HostObject::createWithoutPrototype(
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

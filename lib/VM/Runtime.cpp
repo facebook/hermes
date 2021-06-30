@@ -85,12 +85,14 @@ std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
 CallResult<PseudoHandle<>> Runtime::getNamed(
     Handle<JSObject> obj,
     PropCacheID id) {
-  auto clazzGCPtr = obj->getClassGCPtr();
+  CompressedPointer clazzPtr{obj->getClassGCPtr()};
   auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
-  if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
+  if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
+    // The slot is cached, so it is safe to use the Internal function.
     return createPseudoHandle(
-        JSObject::getNamedSlotValue<PropStorage::Inline::Yes>(
-            *obj, this, cacheEntry->slot));
+        JSObject::getNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
+            *obj, this, cacheEntry->slot)
+            .unboxToHV(this));
   }
   auto sym = Predefined::getSymbolID(fixedPropCacheNames[static_cast<int>(id)]);
   NamedPropertyDescriptor desc;
@@ -100,13 +102,13 @@ CallResult<PseudoHandle<>> Runtime::getNamed(
           JSObject::tryGetOwnNamedDescriptorFast(*obj, this, sym, desc)) &&
       !desc.flags.accessor && desc.flags.writable &&
       !desc.flags.internalSetter) {
-    auto *clazz = clazzGCPtr.getNonNull(this);
+    HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(this));
     if (LLVM_LIKELY(!clazz->isDictionary())) {
       // Cache the class, id and property slot.
-      cacheEntry->clazz = clazzGCPtr.getStorageType();
+      cacheEntry->clazz = clazzPtr;
       cacheEntry->slot = desc.slot;
     }
-    return createPseudoHandle(JSObject::getNamedSlotValue(*obj, this, desc));
+    return JSObject::getNamedSlotValue(createPseudoHandle(*obj), this, desc);
   }
   return JSObject::getNamed_RJS(obj, this, sym);
 }
@@ -115,11 +117,12 @@ ExecutionStatus Runtime::putNamedThrowOnError(
     Handle<JSObject> obj,
     PropCacheID id,
     HermesValue hv) {
-  auto clazzGCPtr = obj->getClassGCPtr();
+  CompressedPointer clazzPtr{obj->getClassGCPtr()};
   auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
-  if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
-    JSObject::setNamedSlotValue<PropStorage::Inline::Yes>(
-        *obj, this, cacheEntry->slot, hv);
+  if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
+    auto shv = SmallHermesValue::encodeHermesValue(hv, this);
+    JSObject::setNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
+        *obj, this, cacheEntry->slot, shv);
     return ExecutionStatus::RETURNED;
   }
   auto sym = Predefined::getSymbolID(fixedPropCacheNames[static_cast<int>(id)]);
@@ -128,13 +131,14 @@ ExecutionStatus Runtime::putNamedThrowOnError(
           JSObject::tryGetOwnNamedDescriptorFast(*obj, this, sym, desc)) &&
       !desc.flags.accessor && desc.flags.writable &&
       !desc.flags.internalSetter) {
-    auto *clazz = clazzGCPtr.getNonNull(this);
+    HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(this));
     if (LLVM_LIKELY(!clazz->isDictionary())) {
       // Cache the class and property slot.
-      cacheEntry->clazz = clazzGCPtr.getStorageType();
+      cacheEntry->clazz = clazzPtr;
       cacheEntry->slot = desc.slot;
     }
-    JSObject::setNamedSlotValue(*obj, this, desc.slot, hv);
+    auto shv = SmallHermesValue::encodeHermesValue(hv, this);
+    JSObject::setNamedSlotValueUnsafe(*obj, this, desc.slot, shv);
     return ExecutionStatus::RETURNED;
   }
   return JSObject::putNamed_RJS(
@@ -151,18 +155,15 @@ Runtime::Runtime(
       optimizedEval(runtimeConfig.getOptimizedEval()),
       asyncBreakCheckInEval(runtimeConfig.getAsyncBreakCheckInEval()),
       heapStorage_(
-          getMetadataTable(),
           this,
           this,
           runtimeConfig.getGCConfig(),
           runtimeConfig.getCrashMgr(),
           std::move(provider),
           runtimeConfig.getVMExperimentFlags()),
-      jitContext_(runtimeConfig.getEnableJIT(), (1 << 20) * 16, (1 << 20) * 32),
       hasES6Promise_(runtimeConfig.getES6Promise()),
       hasES6Proxy_(runtimeConfig.getES6Proxy()),
-      hasES6Symbol_(runtimeConfig.getES6Symbol()),
-      hasES6Intl_(runtimeConfig.getES6Intl()),
+      hasIntl_(runtimeConfig.getIntl()),
       shouldRandomizeMemoryLayout_(runtimeConfig.getRandomizeMemoryLayout()),
       bytecodeWarmupPercent_(runtimeConfig.getBytecodeWarmupPercent()),
       trackIO_(runtimeConfig.getTrackIO()),
@@ -238,7 +239,7 @@ Runtime::Runtime(
     LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
 
     if (runtimeConfig.getEnableSampleProfiling())
-      samplingProfiler_ = std::make_unique<SamplingProfiler>(this);
+      samplingProfiler = std::make_unique<SamplingProfiler>(this);
 
     return;
   }
@@ -346,13 +347,13 @@ Runtime::Runtime(
   initJSBuiltins(builtins_, jsBuiltinsObj);
 
   if (runtimeConfig.getEnableSampleProfiling())
-    samplingProfiler_ = std::make_unique<SamplingProfiler>(this);
+    samplingProfiler = std::make_unique<SamplingProfiler>(this);
 
   LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
 }
 
 Runtime::~Runtime() {
-  samplingProfiler_.reset();
+  samplingProfiler.reset();
   getHeap().finalizeAll();
   // Now that all objects are finalized, there shouldn't be any native memory
   // keys left in the ID tracker for memory profiling. Assert that the only IDs
@@ -466,6 +467,14 @@ void Runtime::markRoots(
     acceptor.endRootSection();
   }
 
+  {
+    MarkRootsPhaseTimer timer(this, RootAcceptor::Section::Jobs);
+    acceptor.beginRootSection(RootAcceptor::Section::Jobs);
+    for (Callable *&f : jobQueue_)
+      acceptor.acceptPtr(f);
+    acceptor.endRootSection();
+  }
+
 #ifdef MARK
 #error "Shouldn't have defined mark already"
 #endif
@@ -514,20 +523,8 @@ void Runtime::markRoots(
     acceptor.endRootSection();
   }
 
-  {
-    MarkRootsPhaseTimer timer(this, RootAcceptor::Section::SamplingProfiler);
-    acceptor.beginRootSection(RootAcceptor::Section::SamplingProfiler);
-    if (samplingProfiler_) {
-      samplingProfiler_->markRoots(acceptor);
-    }
-#ifdef HERMESVM_PROFILER_BB
-    auto *&hiddenClassArray = inlineCacheProfiler_.getHiddenClassArray();
-    if (hiddenClassArray) {
-      acceptor.acceptPtr(hiddenClassArray);
-    }
-#endif
-    acceptor.endRootSection();
-  }
+  // Mark the alternative roots during the normal mark roots call.
+  markRootsForCompleteMarking(acceptor);
 
   {
     MarkRootsPhaseTimer timer(
@@ -536,6 +533,12 @@ void Runtime::markRoots(
     if (codeCoverageProfiler_) {
       codeCoverageProfiler_->markRoots(acceptor);
     }
+#ifdef HERMESVM_PROFILER_BB
+    auto *&hiddenClassArray = inlineCacheProfiler_.getHiddenClassArray();
+    if (hiddenClassArray) {
+      acceptor.acceptPtr(hiddenClassArray);
+    }
+#endif
     acceptor.endRootSection();
   }
 
@@ -556,16 +559,28 @@ void Runtime::markRoots(
   }
 }
 
-void Runtime::markWeakRoots(WeakRootAcceptor &acceptor) {
+void Runtime::markWeakRoots(WeakRootAcceptor &acceptor, bool markLongLived) {
   MarkRootsPhaseTimer timer(this, RootAcceptor::Section::WeakRefs);
   acceptor.beginRootSection(RootAcceptor::Section::WeakRefs);
-  for (auto &entry : fixedPropCache_) {
-    acceptor.acceptWeak(entry.clazz);
+  if (markLongLived) {
+    for (auto &entry : fixedPropCache_) {
+      acceptor.acceptWeak(entry.clazz);
+    }
+    for (auto &rm : runtimeModuleList_)
+      rm.markWeakRoots(acceptor);
   }
-  for (auto &rm : runtimeModuleList_)
-    rm.markWeakRoots(acceptor);
   for (auto &fn : customMarkWeakRootFuncs_)
     fn(&getHeap(), acceptor);
+  acceptor.endRootSection();
+}
+
+void Runtime::markRootsForCompleteMarking(
+    RootAndSlotAcceptorWithNames &acceptor) {
+  MarkRootsPhaseTimer timer(this, RootAcceptor::Section::SamplingProfiler);
+  acceptor.beginRootSection(RootAcceptor::Section::SamplingProfiler);
+  if (samplingProfiler) {
+    samplingProfiler->markRoots(acceptor);
+  }
   acceptor.endRootSection();
 }
 
@@ -742,8 +757,7 @@ void Runtime::printArrayCensus(llvh::raw_ostream &os) {
   getHeap().forAllObjs([&arraySizeToCountAndWastedSlots, this](GCCell *cell) {
     if (cell->getKind() == CellKind::ArrayKind) {
       JSArray *arr = vmcast<JSArray>(cell);
-      JSArray::StorageType *storage =
-          arr->getIndexedStorage().get(getHeap().getPointerBase());
+      JSArray::StorageType *storage = arr->getIndexedStorage(this);
       const auto capacity = storage ? storage->totalCapacityOfSpine() : 0;
       const auto sz = storage ? storage->size() : 0;
       const auto key = std::make_pair(capacity, arr->getAllocatedSize());
@@ -795,9 +809,8 @@ void Runtime::potentiallyMoveHeap() {
   // is on.
   FillerCell::create(
       this,
-      std::max(
-          sizeof(FillerCell),
-          static_cast<size_t>(toRValue(GC::minAllocationSize()))));
+      std::max<size_t>(
+          heapAlignSize(sizeof(FillerCell)), GC::minAllocationSize()));
 }
 #endif
 
@@ -1664,6 +1677,29 @@ void Runtime::freezeBuiltins() {
   builtinsFrozen_ = true;
 }
 
+ExecutionStatus Runtime::drainJobs() {
+  GCScope gcScope{this};
+  MutableHandle<Callable> job{this};
+  // Note that new jobs can be enqueued during the draining.
+  while (!jobQueue_.empty()) {
+    GCScopeMarkerRAII marker{gcScope};
+
+    job = jobQueue_.front();
+    jobQueue_.pop_front();
+
+    // Jobs are guaranteed to behave as thunks.
+    auto callRes =
+        Callable::executeCall0(job, this, Runtime::getUndefinedValue());
+
+    // Early return to signal the caller. Note that the exceptional job has been
+    // popped, so re-invocation would pick up from the next available job.
+    if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  }
+  return ExecutionStatus::RETURNED;
+}
+
 uint64_t Runtime::gcStableHashHermesValue(Handle<HermesValue> value) {
   switch (value->getTag()) {
     case ObjectTag: {
@@ -1874,8 +1910,8 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
 }
 
 void Runtime::onGCEvent(GCEventKind kind, const std::string &extraInfo) {
-  if (samplingProfiler_ != nullptr) {
-    samplingProfiler_->onGCEvent(kind, extraInfo);
+  if (samplingProfiler != nullptr) {
+    samplingProfiler->onGCEvent(kind, extraInfo);
   }
   if (gcEventCallback_) {
     gcEventCallback_(kind, extraInfo.c_str());
@@ -2065,7 +2101,7 @@ void Runtime::serializeRuntimeFields(Serializer &s) {
   // TODO: Come back later. serialize/deserialize this to be able to
   // serialize/deserialize after user code.
   // Field const CrashManager::CallbackKey crashCallbackKey_;
-  // Field std::shared_ptr<SamplingProfiler> samplingProfiler_;
+  // Field std::shared_ptr<SamplingProfiler> samplingProfiler;
 
 #ifdef HERMES_ENABLE_DEBUGGER
   // TODO: serialize/deserialize this to be able to serialize/deserialize after
@@ -2151,7 +2187,7 @@ void Runtime::deserializeRuntimeFields(Deserializer &d) {
   // TODO: Come back later. Serialize/deserialize this to be able to
   // serialize/deserialize after user code.
   // Field const CrashManager::CallbackKey crashCallbackKey_;
-  // Field std::shared_ptr<SamplingProfiler> samplingProfiler_;
+  // Field std::shared_ptr<SamplingProfiler> samplingProfiler;
 
 #ifdef HERMES_ENABLE_DEBUGGER
   // TODO: serialize/deserialize this to be able to serialize/deserialize after
@@ -2221,8 +2257,7 @@ void Runtime::populateHeaderRuntimeConfig(SerializeHeader &header) {
   header.enableEval = enableEval;
   header.hasES6Promise = hasES6Promise_;
   header.hasES6Proxy = hasES6Proxy_;
-  header.hasES6Symbol = hasES6Symbol_;
-  header.hasES6Intl = hasES6Intl_;
+  header.hasIntl = hasIntl_;
   header.bytecodeWarmupPercent = bytecodeWarmupPercent_;
   header.trackIO = trackIO_;
 }
@@ -2240,12 +2275,8 @@ void Runtime::checkHeaderRuntimeConfig(SerializeHeader &header) const {
     hermes_fatal(
         "serialize/deserialize Runtime Configs don't match (es6Proxy)");
   }
-  if (header.hasES6Symbol != hasES6Symbol_) {
-    hermes_fatal(
-        "serialize/deserialize Runtime Configs don't match (es6Symbol)");
-  }
-  if (header.hasES6Intl != hasES6Intl_) {
-    hermes_fatal("serialize/deserialize Runtime Configs don't match (es6Intl)");
+  if (header.hasIntl != hasIntl_) {
+    hermes_fatal("serialize/deserialize Runtime Configs don't match (intl)");
   }
 
   if (header.bytecodeWarmupPercent != bytecodeWarmupPercent_) {
@@ -2377,3 +2408,5 @@ void Runtime::pushCallStackImpl(const CodeBlock *, const inst::Inst *) {}
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

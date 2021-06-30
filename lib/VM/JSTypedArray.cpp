@@ -315,6 +315,8 @@ void deserializeTypedArray(Deserializer &d, CellKind kind) {
 #define TYPED_ARRAY(name, type)                                          \
   void name##ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) { \
     TypedArrayBaseBuildMeta(cell, mb);                                   \
+    mb.setVTable(                                                        \
+        &JSTypedArray<type, CellKind::name##ArrayKind>::vt.base.base);   \
   }                                                                      \
   void name##ArraySerialize(Serializer &s, const GCCell *cell) {         \
     serializeTypedArrayBase(s, cell);                                    \
@@ -327,6 +329,8 @@ void deserializeTypedArray(Deserializer &d, CellKind kind) {
 #define TYPED_ARRAY(name, type)                                          \
   void name##ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) { \
     TypedArrayBaseBuildMeta(cell, mb);                                   \
+    mb.setVTable(                                                        \
+        &JSTypedArray<type, CellKind::name##ArrayKind>::vt.base.base);   \
   }
 #endif // HERMESVM_SERIALIZE
 #include "hermes/VM/TypedArrays.def"
@@ -379,8 +383,7 @@ PseudoHandle<JSTypedArray<T, C>> JSTypedArray<T, C>::create(
       runtime,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<JSTypedArray>() + ANONYMOUS_PROPERTY_SLOTS));
+          *parentHandle, numOverlapSlots<JSTypedArray>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
   // NOTE: If any fields are ever added beyond the base class, then the
   // *BuildMeta functions must be updated to call addJSObjectOverlapSlots.
@@ -480,3 +483,5 @@ CallResult<bool> JSTypedArray<T, C>::_setOwnIndexedImpl(
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

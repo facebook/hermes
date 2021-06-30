@@ -26,6 +26,7 @@ const VTable HashMapEntry::vt{
 
 void HashMapEntryBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const HashMapEntry *>(cell);
+  mb.setVTable(&HashMapEntry::vt);
   mb.addField("key", &self->key);
   mb.addField("value", &self->value);
   mb.addField("prevIterationEntry", &self->prevIterationEntry);
@@ -73,6 +74,7 @@ const VTable OrderedHashMap::vt{
 
 void OrderedHashMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const OrderedHashMap *>(cell);
+  mb.setVTable(&OrderedHashMap::vt);
   mb.addField("hashTable", &self->hashTable_);
   mb.addField("firstIterationEntry", &self->firstIterationEntry_);
   mb.addField("lastIterationEntry", &self->lastIterationEntry_);
@@ -81,13 +83,7 @@ void OrderedHashMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 #ifdef HERMESVM_SERIALIZE
 OrderedHashMap::OrderedHashMap(Deserializer &d)
     : GCCell(&d.getRuntime()->getHeap(), &vt) {
-  if (d.readInt<uint8_t>()) {
-    hashTable_.set(
-        d.getRuntime(),
-        ArrayStorage::deserializeArrayStorage(d),
-        &d.getRuntime()->getHeap());
-  }
-
+  d.readRelocation(&hashTable_, RelocationKind::GCPointer);
   d.readRelocation(&firstIterationEntry_, RelocationKind::GCPointer);
   d.readRelocation(&lastIterationEntry_, RelocationKind::GCPointer);
   capacity_ = d.readInt<uint32_t>();
@@ -96,15 +92,8 @@ OrderedHashMap::OrderedHashMap(Deserializer &d)
 
 void OrderedHashMapSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const OrderedHashMap>(cell);
-  // If we have an ArrayStorage, it doesn't store any native pointers. Serialize
-  // it here.
-  bool hasArray = (bool)self->hashTable_;
-  s.writeInt<uint8_t>(hasArray);
-  if (hasArray) {
-    ArrayStorage::serializeArrayStorage(
-        s, self->hashTable_.get(s.getRuntime()));
-  }
 
+  s.writeRelocation(self->hashTable_.get(s.getRuntime()));
   s.writeRelocation(self->firstIterationEntry_.get(s.getRuntime()));
   s.writeRelocation(self->lastIterationEntry_.get(s.getRuntime()));
   s.writeInt<uint32_t>(self->capacity_);
@@ -123,18 +112,18 @@ void OrderedHashMapDeserialize(Deserializer &d, CellKind kind) {
 
 OrderedHashMap::OrderedHashMap(
     Runtime *runtime,
-    Handle<ArrayStorage> hashTableStorage)
+    Handle<ArrayStorageSmall> hashTableStorage)
     : GCCell(&runtime->getHeap(), &vt),
       hashTable_(runtime, hashTableStorage.get(), &runtime->getHeap()) {}
 
 CallResult<PseudoHandle<OrderedHashMap>> OrderedHashMap::create(
     Runtime *runtime) {
   auto arrRes =
-      ArrayStorage::create(runtime, INITIAL_CAPACITY, INITIAL_CAPACITY);
+      ArrayStorageSmall::create(runtime, INITIAL_CAPACITY, INITIAL_CAPACITY);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto hashTableStorage = runtime->makeHandle<ArrayStorage>(*arrRes);
+  auto hashTableStorage = runtime->makeHandle<ArrayStorageSmall>(*arrRes);
 
   return createPseudoHandle(
       runtime->makeAFixed<OrderedHashMap>(runtime, hashTableStorage));
@@ -161,13 +150,19 @@ void OrderedHashMap::removeLinkedListNode(
   entry->prevIterationEntry.setNull(&runtime->getHeap());
 }
 
+static HashMapEntry *castToMapEntry(SmallHermesValue shv, PointerBase *base) {
+  if (shv.isEmpty())
+    return nullptr;
+  return vmcast<HashMapEntry>(shv.getObject(base));
+}
+
 HashMapEntry *OrderedHashMap::lookupInBucket(
     Runtime *runtime,
     uint32_t bucket,
     HermesValue key) {
   assert(
       hashTable_.get(runtime)->size() == capacity_ && "Inconsistent capacity");
-  auto *entry = dyn_vmcast<HashMapEntry>(hashTable_.get(runtime)->at(bucket));
+  auto *entry = castToMapEntry(hashTable_.get(runtime)->at(bucket), runtime);
   while (entry && !isSameValueZero(entry->key, key)) {
     entry = entry->nextEntryInBucket.get(runtime);
   }
@@ -213,11 +208,11 @@ ExecutionStatus OrderedHashMap::rehashIfNecessary(
   self->capacity_ = newCapacity;
 
   // Create a new hash table.
-  auto arrRes = ArrayStorage::create(runtime, newCapacity, newCapacity);
+  auto arrRes = ArrayStorageSmall::create(runtime, newCapacity, newCapacity);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto newHashTable = runtime->makeHandle<ArrayStorage>(*arrRes);
+  auto newHashTable = runtime->makeHandle<ArrayStorageSmall>(*arrRes);
 
   // Now re-add all entries to the hash table.
   MutableHandle<HashMapEntry> entry{runtime};
@@ -226,7 +221,7 @@ ExecutionStatus OrderedHashMap::rehashIfNecessary(
   GCScopeMarkerRAII marker{runtime};
   for (unsigned i = 0, len = self->hashTable_.get(runtime)->size(); i < len;
        ++i) {
-    entry = dyn_vmcast<HashMapEntry>(self->hashTable_.get(runtime)->at(i));
+    entry = castToMapEntry(self->hashTable_.get(runtime)->at(i), runtime);
     while (entry) {
       marker.flush();
       keyHandle = entry->key;
@@ -239,11 +234,14 @@ ExecutionStatus OrderedHashMap::rehashIfNecessary(
         // There are already a bucket head.
         entry->nextEntryInBucket.set(
             runtime,
-            vmcast<HashMapEntry>(newHashTable->at(bucket)),
+            vmcast<HashMapEntry>(newHashTable->at(bucket).getObject(runtime)),
             &runtime->getHeap());
       }
       // Update bucket head to the new entry.
-      newHashTable->set(bucket, entry.getHermesValue(), &runtime->getHeap());
+      newHashTable->set(
+          bucket,
+          SmallHermesValue::encodeObjectValue(*entry, runtime),
+          &runtime->getHeap());
 
       entry = *oldNextInBucket;
     }
@@ -304,7 +302,7 @@ ExecutionStatus OrderedHashMap::insert(
   newMapEntry->key.set(key.get(), &runtime->getHeap());
   newMapEntry->value.set(value.get(), &runtime->getHeap());
   auto *curBucketFront =
-      dyn_vmcast<HashMapEntry>(self->hashTable_.get(runtime)->at(bucket));
+      castToMapEntry(self->hashTable_.get(runtime)->at(bucket), runtime);
   if (curBucketFront) {
     // If the bucket we are inserting to is not empty, we maintain the
     // linked list properly.
@@ -313,7 +311,9 @@ ExecutionStatus OrderedHashMap::insert(
   }
   // Set the newly inserted entry as the front of this bucket chain.
   self->hashTable_.get(runtime)->set(
-      bucket, newMapEntry.getHermesValue(), &runtime->getHeap());
+      bucket,
+      SmallHermesValue::encodeObjectValue(*newMapEntry, runtime),
+      &runtime->getHeap());
 
   if (!self->firstIterationEntry_) {
     // If we are inserting the first ever element, update
@@ -351,7 +351,7 @@ bool OrderedHashMap::erase(
   uint32_t bucket = hashToBucket(self, runtime, key);
   HashMapEntry *prevEntry = nullptr;
   auto *entry =
-      dyn_vmcast<HashMapEntry>(self->hashTable_.get(runtime)->at(bucket));
+      castToMapEntry(self->hashTable_.get(runtime)->at(bucket), runtime);
   while (entry && !isSameValueZero(entry->key, key.getHermesValue())) {
     prevEntry = entry;
     entry = entry->nextEntryInBucket.get(runtime);
@@ -371,9 +371,10 @@ bool OrderedHashMap::erase(
     // any, set to empty value.
     self->hashTable_.get(runtime)->set(
         bucket,
-        entry->nextEntryInBucket ? HermesValue::encodeObjectValue(
-                                       entry->nextEntryInBucket.get(runtime))
-                                 : HermesValue::encodeEmptyValue(),
+        entry->nextEntryInBucket
+            ? SmallHermesValue::encodeObjectValue(
+                  entry->nextEntryInBucket.get(runtime), runtime)
+            : SmallHermesValue::encodeEmptyValue(),
         &runtime->getHeap());
   }
 
@@ -420,7 +421,7 @@ void OrderedHashMap::clear(Runtime *runtime) {
 
   // Clear the hash table.
   for (unsigned i = 0; i < capacity_; ++i) {
-    auto entry = dyn_vmcast<HashMapEntry>(hashTable_.get(runtime)->at(i));
+    auto entry = castToMapEntry(hashTable_.get(runtime)->at(i), runtime);
     // Delete every element reachable from the hash table.
     while (entry) {
       entry->markDeleted(runtime);
@@ -428,10 +429,10 @@ void OrderedHashMap::clear(Runtime *runtime) {
     }
     // Clear every element in the hash table.
     hashTable_.get(runtime)->setNonPtr(
-        i, HermesValue::encodeEmptyValue(), &runtime->getHeap());
+        i, SmallHermesValue::encodeEmptyValue(), &runtime->getHeap());
   }
   // Resize the hash table to the initial size.
-  ArrayStorage::resizeWithinCapacity(
+  ArrayStorageSmall::resizeWithinCapacity(
       hashTable_.getNonNull(runtime), runtime, INITIAL_CAPACITY);
   capacity_ = INITIAL_CAPACITY;
 
@@ -447,3 +448,5 @@ void OrderedHashMap::clear(Runtime *runtime) {
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

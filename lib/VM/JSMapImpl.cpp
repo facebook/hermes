@@ -31,10 +31,12 @@ void JSMapImpl<C>::MapOrSetBuildMeta(
 
 void MapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSMapImpl<CellKind::MapKind>::MapOrSetBuildMeta(cell, mb);
+  mb.setVTable(&JSMap::vt.base);
 }
 
 void SetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSMapImpl<CellKind::SetKind>::MapOrSetBuildMeta(cell, mb);
+  mb.setVTable(&JSSet::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -94,8 +96,7 @@ PseudoHandle<JSMapImpl<C>> JSMapImpl<C>::create(
       runtime,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<JSMapImpl>() + ANONYMOUS_PROPERTY_SLOTS));
+          *parentHandle, numOverlapSlots<JSMapImpl>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
@@ -119,11 +120,13 @@ void JSMapIteratorImpl<C>::MapOrSetIteratorBuildMeta(
 void MapIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSMapIteratorImpl<CellKind::MapIteratorKind>::MapOrSetIteratorBuildMeta(
       cell, mb);
+  mb.setVTable(&JSMapIterator::vt.base);
 }
 
 void SetIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSMapIteratorImpl<CellKind::SetIteratorKind>::MapOrSetIteratorBuildMeta(
       cell, mb);
+  mb.setVTable(&JSSetIterator::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -188,8 +191,7 @@ PseudoHandle<JSMapIteratorImpl<C>> JSMapIteratorImpl<C>::create(
       runtime,
       prototype,
       runtime->getHiddenClassForPrototype(
-          *prototype,
-          numOverlapSlots<JSMapIteratorImpl>() + ANONYMOUS_PROPERTY_SLOTS));
+          *prototype, numOverlapSlots<JSMapIteratorImpl>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
@@ -198,3 +200,5 @@ template class JSMapIteratorImpl<CellKind::SetIteratorKind>;
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

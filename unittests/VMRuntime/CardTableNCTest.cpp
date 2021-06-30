@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
+#ifndef HERMESVM_GC_MALLOC
 
 #include "gtest/gtest.h"
 
@@ -132,6 +132,13 @@ TEST_F(CardTableNCTest, DirtyAddress) {
   }
 }
 
+/// Dirty an emtpy range.
+TEST_F(CardTableNCTest, DirtyAddressRangeEmpty) {
+  char *addr = addrs.at(0);
+  table->dirtyCardsForAddressRange(addr, addr);
+  EXPECT_FALSE(table->findNextDirtyCard(0, CardTable::kValidIndices));
+}
+
 /// Dirty an address range smaller than a single card.
 TEST_F(CardTableNCTest, DirtyAddressRangeSmall) {
   char *addr = addrs.at(0);
@@ -148,7 +155,7 @@ TEST_F(CardTableNCTest, DirtyAddressRangeCard) {
   dirtyRangeTest(
       /* expectedStart */ addr,
       /* dirtyStart */ addr,
-      /* dirtyEnd */ addr + CardTable::kCardSize - 1,
+      /* dirtyEnd */ addr + CardTable::kCardSize,
       /* expectedEnd */ addr + CardTable::kCardSize);
 }
 
@@ -160,7 +167,7 @@ TEST_F(CardTableNCTest, DirtyAddressRangeCardOverlapping) {
   dirtyRangeTest(
       /* expectedStart */ addr,
       /* dirtyStart */ start,
-      /* dirtyEnd */ start + CardTable::kCardSize - 1,
+      /* dirtyEnd */ start + CardTable::kCardSize,
       /* expectedEnd */ addr + 2 * CardTable::kCardSize);
 }
 
@@ -172,7 +179,7 @@ TEST_F(CardTableNCTest, DirtyAddressRangeLarge) {
   dirtyRangeTest(
       /* expectedStart */ addr,
       /* dirtyStart */ start,
-      /* dirtyEnd */ start + 3 * CardTable::kCardSize - 1,
+      /* dirtyEnd */ start + 3 * CardTable::kCardSize,
       /* expectedEnd */ addr + 4 * CardTable::kCardSize);
 }
 
@@ -237,4 +244,4 @@ TEST_F(CardTableNCTest, NextDirtyCard) {
 
 } // namespace
 
-#endif // HERMESVM_GC_NONCONTIG_GENERATIONAL
+#endif // HERMESVM_GC_MALLOC

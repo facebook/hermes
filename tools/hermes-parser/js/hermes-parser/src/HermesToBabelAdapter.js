@@ -37,6 +37,8 @@ class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapNodeWithDirectives(node);
       case 'Empty':
         return this.mapEmpty(node);
+      case 'Identifier':
+        return this.mapIdentifier(node);
       case 'TemplateElement':
         return this.mapTemplateElement(node);
       case 'GenericTypeAnnotation':
@@ -142,6 +144,11 @@ class HermesToBabelAdapter extends HermesASTAdapter {
     }
 
     return node;
+  }
+
+  mapIdentifier(node) {
+    node.loc.identifierName = node.name;
+    return this.mapNodeDefault(node);
   }
 
   mapTemplateElement(node) {

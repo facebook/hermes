@@ -27,7 +27,6 @@
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/InterpreterState.h"
-#include "hermes/VM/JIT/JIT.h"
 #include "hermes/VM/PointerBase.h"
 #include "hermes/VM/Predefined.h"
 #include "hermes/VM/Profiler.h"
@@ -75,7 +74,6 @@ namespace vm {
 
 // External forward declarations.
 class CodeBlock;
-class ArrayStorage;
 class Environment;
 class Interpreter;
 class JSObject;
@@ -216,7 +214,7 @@ class Runtime : public HandleRootOwner,
   /// collection to mark additional weak GC roots that may not be known to the
   /// Runtime.
   void addCustomWeakRootsFunction(
-      std::function<void(GC *, WeakRefAcceptor &)> markRootsFn);
+      std::function<void(GC *, WeakRootAcceptor &)> markRootsFn);
 
   /// Add a custom function that will be executed when a heap snapshot is taken,
   /// to add any extra nodes.
@@ -394,6 +392,25 @@ class Runtime : public HandleRootOwner,
   /// the builtins header header.
   inline Callable *getBuiltinCallable(unsigned builtinMethodID);
 
+  /// ES6-ES11 8.4.1 EnqueueJob ( queueName, job, arguments )
+  /// See \c jobQueue_ for how the Jobs and Job Queues are set up in Hermes.
+  inline void enqueueJob(Callable *job);
+
+  /// ES6-ES11 8.6 RunJobs ( )
+  /// Draining the job queue by invoking the queued jobs in FIFO order.
+  ///
+  /// \return ExecutionStatus::RETURNED if the job queue is emptied and no
+  /// exception was thrown from any job. Otherwise, ExecutionStatus::EXCEPTION
+  /// if an exception was thrown and the draining is stopped.
+  /// It's the caller's responsibility to check the status and re-invoke this
+  /// function to resume the draining to fulfill the microtask requirements.
+  ///
+  /// Note that ECMA-262 Promise Jobs always handle internal abruptCompletion
+  /// by returning a rejected Promise. However, the capability of propagating
+  /// exception per job is required by `queueMicrotask` to properly "report the
+  /// exception" (https://html.spec.whatwg.org/C#microtask-queuing).
+  ExecutionStatus drainJobs();
+
   IdentifierTable &getIdentifierTable() {
     return identifierTable_;
   }
@@ -544,10 +561,6 @@ class Runtime : public HandleRootOwner,
   /// Return the global object.
   Handle<JSObject> getGlobal();
 
-  /// Return the JIT context.
-  JITContext &getJITContext() {
-    return jitContext_;
-  }
   /// Returns trailing data for all runtime modules.
   std::vector<llvh::ArrayRef<uint8_t>> getEpilogues();
 
@@ -807,6 +820,10 @@ class Runtime : public HandleRootOwner,
     return *codeCoverageProfiler_;
   }
 
+  /// Sampling profiler data for this runtime. The ctor/dtor of SamplingProfiler
+  /// will automatically register/unregister this runtime from profiling.
+  std::unique_ptr<SamplingProfiler> samplingProfiler;
+
 #ifdef HERMESVM_PROFILER_NATIVECALL
   /// Dump statistics about native calls.
   void dumpNativeCallStats(llvh::raw_ostream &OS);
@@ -830,12 +847,12 @@ class Runtime : public HandleRootOwner,
     return hasES6Proxy_;
   }
 
-  bool hasES6Symbol() const {
-    return hasES6Symbol_;
+  bool hasIntl() const {
+    return hasIntl_;
   }
 
-  bool hasES6Intl() const {
-    return hasES6Intl_;
+  bool useJobQueue() const {
+    return getVMExperimentFlags() & experiments::JobQueue;
   }
 
   bool builtinsAreFrozen() const {
@@ -863,6 +880,30 @@ class Runtime : public HandleRootOwner,
   std::string getCallStackNoAlloc() override {
     return getCallStackNoAlloc(nullptr);
   }
+
+  /// A stack overflow exception is thrown when \c nativeCallFrameDepth_ exceeds
+  /// this threshold.
+  static constexpr unsigned MAX_NATIVE_CALL_FRAME_DEPTH =
+#ifdef HERMES_LIMIT_STACK_DEPTH
+      // UBSAN builds will hit a native stack overflow much earlier, so make
+      // this limit dramatically lower.
+      30
+#elif defined(_MSC_VER) && defined(__clang__) && defined(HERMES_SLOW_DEBUG)
+      30
+#elif defined(_MSC_VER) && defined(HERMES_SLOW_DEBUG)
+      // On windows in dbg mode builds, stack frames are bigger, and a depth
+      // limit of 384 results in a C++ stack overflow in testing.
+      128
+#elif defined(_MSC_VER) && !NDEBUG
+      192
+#else
+      /// This depth limit was originally 256, and we
+      /// increased when an app violated it.  The new depth is 128
+      /// larger.  See T46966147 for measurements/calculations indicating
+      /// that this limit should still insulate us from native stack overflow.)
+      384
+#endif
+      ;
 
   /// Called when various GC events(e.g. collection start/end) happen.
   void onGCEvent(GCEventKind kind, const std::string &extraInfo) override;
@@ -923,7 +964,6 @@ class Runtime : public HandleRootOwner,
       std::shared_ptr<StorageProvider> provider,
       const RuntimeConfig &runtimeConfig);
 
-/// @}
 #if defined(HERMESVM_PROFILER_EXTERN)
  public:
 #else
@@ -943,7 +983,12 @@ class Runtime : public HandleRootOwner,
 
   /// Called by the GC during collections that may reset weak references. This
   /// method informs the GC of all runtime weak roots.
-  void markWeakRoots(WeakRootAcceptor &weakAcceptor) override;
+  void markWeakRoots(WeakRootAcceptor &weakAcceptor, bool markLongLived)
+      override;
+
+  /// See documentation on \c GCBase::GCCallbacks.
+  void markRootsForCompleteMarking(
+      RootAndSlotAcceptorWithNames &acceptor) override;
 
   /// Visits every entry in the identifier table and calls acceptor with
   /// the entry and its id as arguments. This is intended to be used only for
@@ -959,7 +1004,6 @@ class Runtime : public HandleRootOwner,
   /// Convert the given symbol into its UTF-8 string representation.
   std::string convertSymbolToUTF8(SymbolID id) override;
 
- private:
   /// Prints any statistics maintained in the Runtime about GC to \p
   /// os.  At present, this means the breakdown of markRoots time by
   /// "phase" within markRoots.
@@ -1085,13 +1129,10 @@ class Runtime : public HandleRootOwner,
   GCStorage heapStorage_;
 
   std::vector<std::function<void(GC *, RootAcceptor &)>> customMarkRootFuncs_;
-  std::vector<std::function<void(GC *, WeakRefAcceptor &)>>
+  std::vector<std::function<void(GC *, WeakRootAcceptor &)>>
       customMarkWeakRootFuncs_;
   std::vector<std::function<void(HeapSnapshot &)>> customSnapshotNodeFuncs_;
   std::vector<std::function<void(HeapSnapshot &)>> customSnapshotEdgeFuncs_;
-
-  /// All state related to JIT compilation.
-  JITContext jitContext_;
 
   /// Set to true if we should enable ES6 Promise.
   const bool hasES6Promise_;
@@ -1099,11 +1140,8 @@ class Runtime : public HandleRootOwner,
   /// Set to true if we should enable ES6 Proxy.
   const bool hasES6Proxy_;
 
-  /// Set to true if we should enable ES6 Symbol.
-  const bool hasES6Symbol_;
-
-  /// Set to true if we should enable ES6 Intl APIs.
-  const bool hasES6Intl_;
+  /// Set to true if we should enable ECMA-402 Intl APIs.
+  const bool hasIntl_;
 
   /// Set to true if we should randomize stack placement etc.
   const bool shouldRandomizeMemoryLayout_;
@@ -1128,7 +1166,6 @@ class Runtime : public HandleRootOwner,
   friend class RuntimeModule;
   friend class MarkRootsPhaseTimer;
   friend struct RuntimeOffsets;
-  friend class JITContext;
   friend class ScopedNativeDepthReducer;
   friend class ScopedNativeDepthTracker;
   friend class ScopedNativeCallFrame;
@@ -1200,31 +1237,6 @@ class Runtime : public HandleRootOwner,
   /// calls.
   unsigned nativeCallFrameDepth_{0};
 
- public:
-  /// A stack overflow exception is thrown when \c nativeCallFrameDepth_ exceeds
-  /// this threshold.
-  static constexpr unsigned MAX_NATIVE_CALL_FRAME_DEPTH =
-#ifdef HERMES_LIMIT_STACK_DEPTH
-      // UBSAN builds will hit a native stack overflow much earlier, so make
-      // this limit dramatically lower.
-      30
-#elif defined(_MSC_VER) && defined(__clang__) && defined(HERMES_SLOW_DEBUG)
-      30
-#elif defined(_MSC_VER) && defined(HERMES_SLOW_DEBUG)
-      // On windows in dbg mode builds, stack frames are bigger, and a depth
-      // limit of 384 results in a C++ stack overflow in testing.
-      128
-#elif defined(_MSC_VER) && !NDEBUG
-      192
-#else
-      /// This depth limit was originally 256, and we
-      /// increased when an app violated it.  The new depth is 128
-      /// larger.  See T46966147 for measurements/calculations indicating
-      /// that this limit should still insulate us from native stack overflow.)
-      384
-#endif
-      ;
-
   /// rootClazzes_[i] is a PinnedHermesValue pointing to a hidden class with
   /// its i first slots pre-reserved.
   std::array<PinnedHermesValue, InternalProperty::NumInternalProperties + 1>
@@ -1244,6 +1256,28 @@ class Runtime : public HandleRootOwner,
   /// True if the builtins are all frozen (non-writable, non-configurable).
   bool builtinsFrozen_{false};
 
+  /// ES6-ES11 8.4 Jobs and Job Queues.
+  /// A queue of pointers to callables that represent Jobs.
+  ///
+  /// Job: Since the ScriptJob is removed from ES12, the only type of Job from
+  /// ECMA-262 are Promise Jobs (https://tc39.es/ecma262/#sec-promise-jobs).
+  /// But it is also possible to implement the HTML defined `queueMicrotask`,
+  /// which is polyfill-able via Promise, by directly enqueuing into this job.
+  ///
+  /// Job are represented as callables with no parameters and would be invoked
+  /// via \c executeCall0 in Hermes. It's safe to do so because:
+  /// - Promise Jobs enqueued from Promise internal bytecode are thunks (or, in
+  /// the ES12 wording, Promise Jobs are Abstract Closure with no parameters).
+  /// - `queueMicrotask` take a JSFunction but only invoke it with 0 arguments.
+  ///
+  /// Although ES12 (9.4 Jobs and Host Operations to Enqueue Jobs) changed the
+  /// meta-language to ask hosts to schedule Promise Job to integrate with the
+  /// HTML spec, Hermes chose to adapt the ES6-11 suggested internal queue
+  /// approach, similar to other engines, e.g. V8/JSC, which is more efficient
+  /// (being able to batch the job invocations) and sufficient to express the
+  /// HTML spec specified "perform a microtask checkpoint" algorithm.
+  std::deque<Callable *> jobQueue_{};
+
 #ifdef HERMESVM_PROFILER_BB
   BasicBlockExecutionInfo basicBlockExecInfo_;
 
@@ -1257,10 +1291,6 @@ class Runtime : public HandleRootOwner,
   /// Store a key for the function that is executed if a crash occurs.
   /// This key will be unregistered in the destructor.
   const CrashManager::CallbackKey crashCallbackKey_;
-
-  /// Sampling profiler data for this runtime. The ctor/dtor of SamplingProfiler
-  /// will automatically register/unregister this runtime from profiling.
-  std::unique_ptr<SamplingProfiler> samplingProfiler_;
 
   /// Pointer to the code coverage profiler.
   const std::unique_ptr<CodeCoverageProfiler> codeCoverageProfiler_;
@@ -1293,6 +1323,19 @@ class Runtime : public HandleRootOwner,
 
   Debugger debugger_{this};
 #endif
+
+  /// Holds references to persistent BC providers for the lifetime of the
+  /// Runtime. This is needed because the identifier table may contain pointers
+  /// into bytecode, and so memory backing these must be preserved.
+  std::vector<std::shared_ptr<hbc::BCProvider>> persistentBCProviders_;
+
+  /// Config-provided callback for GC events.
+  std::function<void(GCEventKind, const char *)> gcEventCallback_;
+
+  /// Set from RuntimeConfig.
+  bool allowFunctionToStringWithRuntimeSource_;
+
+  /// @}
 
   /// \return whether any async break is requested or not.
   bool hasAsyncBreak() const {
@@ -1332,17 +1375,6 @@ class Runtime : public HandleRootOwner,
 
   /// Notify runtime execution has timeout.
   ExecutionStatus notifyTimeout();
-
-  /// Holds references to persistent BC providers for the lifetime of the
-  /// Runtime. This is needed because the identifier table may contain pointers
-  /// into bytecode, and so memory backing these must be preserved.
-  std::vector<std::shared_ptr<hbc::BCProvider>> persistentBCProviders_;
-
-  /// Config-provided callback for GC events.
-  std::function<void(GCEventKind, const char *)> gcEventCallback_;
-
-  /// Set from RuntimeConfig.
-  bool allowFunctionToStringWithRuntimeSource_;
 
  private:
 #ifdef NDEBUG
@@ -1732,7 +1764,7 @@ inline void Runtime::addCustomRootsFunction(
 }
 
 inline void Runtime::addCustomWeakRootsFunction(
-    std::function<void(GC *, WeakRefAcceptor &)> markRootsFn) {
+    std::function<void(GC *, WeakRootAcceptor &)> markRootsFn) {
   customMarkWeakRootFuncs_.emplace_back(std::move(markRootsFn));
 }
 

@@ -3,6 +3,8 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
+ *
+ * @format
  */
 
 import React from 'react';
@@ -46,14 +48,30 @@ const features = [
   },
 ];
 
+function ELIVideo() {
+  return (
+    <div className={styles.videoContainer}>
+      <div className={styles.videoWrapper}>
+        <iframe
+          width="560"
+          height="315"
+          src="https://www.youtube.com/embed/JsppO1HUYx4"
+          title="Explained Like I'm 5: Hermes"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen="true"></iframe>
+      </div>
+    </div>
+  );
+}
+
 function Home() {
   const context = useDocusaurusContext();
-  const { siteConfig = {} } = context;
+  const {siteConfig = {}} = context;
   return (
     <Layout
       title="Hermes"
-      description="JavaScript engine optimized for React Native"
-    >
+      description="JavaScript engine optimized for React Native">
       <header className={classnames('hero hero--primary', styles.heroBanner)}>
         <div className="container">
           <h1 className="hero__title">{siteConfig.title}</h1>
@@ -64,8 +82,7 @@ function Home() {
                 'button button--secondary button--lg',
                 styles.getStarted,
               )}
-              to={'https://reactnative.dev/docs/hermes'}
-            >
+              to={'https://reactnative.dev/docs/hermes'}>
               Start Using Hermes
             </Link>
           </div>
@@ -76,11 +93,10 @@ function Home() {
           <section className={styles.features}>
             <div className="container">
               <div className="row">
-                {features.map(({ imageUrl, title, description }, idx) => (
+                {features.map(({imageUrl, title, description}, idx) => (
                   <div
                     key={idx}
-                    className={classnames('col col--4', styles.feature)}
-                  >
+                    className={classnames('col col--4', styles.feature)}>
                     {imageUrl && (
                       <div className="text--center margin-bottom--lg">
                         <img
@@ -98,6 +114,11 @@ function Home() {
             </div>
           </section>
         )}
+        <div className={classnames(styles.videoSection)}>
+          <div className="container">
+            <ELIVideo />
+          </div>
+        </div>
       </main>
     </Layout>
   );

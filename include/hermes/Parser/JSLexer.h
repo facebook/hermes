@@ -522,8 +522,8 @@ class JSLexer {
   /// - AllowDiv: "/" can follow
   /// - AllowJSXIdentifier: "/" can follow, "-" is part of identifiers,
   ///     ">" is scanned as its own token.
-  /// - Flow: "/" can follow and ">>" scans as two separate ">" tokens.
-  enum GrammarContext { AllowRegExp, AllowDiv, AllowJSXIdentifier, Flow };
+  /// - Type: "/" can follow and ">>" scans as two separate ">" tokens.
+  enum GrammarContext { AllowRegExp, AllowDiv, AllowJSXIdentifier, Type };
 
   /// Consume the current token and scan the next one, which becomes the new
   /// current token. All whitespace is skipped befire the new token and if
@@ -846,7 +846,7 @@ class JSLexer {
       scanIdentifierFastPath<IdentifierMode::JSX>(start);
     } else if (
         HERMES_PARSE_FLOW &&
-        LLVM_UNLIKELY(grammarContext == GrammarContext::Flow)) {
+        LLVM_UNLIKELY(grammarContext == GrammarContext::Type)) {
       scanIdentifierFastPath<IdentifierMode::Flow>(start);
     } else {
       scanIdentifierFastPath<IdentifierMode::JS>(start);
@@ -861,7 +861,7 @@ class JSLexer {
       scanIdentifierParts<IdentifierMode::JSX>();
     } else if (
         HERMES_PARSE_FLOW &&
-        LLVM_UNLIKELY(grammarContext == GrammarContext::Flow)) {
+        LLVM_UNLIKELY(grammarContext == GrammarContext::Type)) {
       scanIdentifierParts<IdentifierMode::Flow>();
     } else {
       scanIdentifierParts<IdentifierMode::JS>();

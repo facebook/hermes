@@ -31,15 +31,8 @@ using ::testing::MatchesRegex;
 
 namespace {
 
-const MetadataTableForTests getMetadataTable() {
-  static const Metadata storage[] = {
-      Metadata() // Uninitialized
-  };
-  return MetadataTableForTests(storage);
-}
-
 // We make this not FixedSize, to allow direct allocation in the old generation.
-using SegmentCell = VarSizedEmptyCell<AlignedHeapSegment::maxSize()>;
+using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
 
 class TestCrashManager : public CrashManager {
  public:
@@ -101,20 +94,21 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
                           .build();
   auto testCrashMgr = std::make_shared<TestCrashManager>();
   auto runtime = DummyRuntime::create(
-      getMetadataTable(),
-      gcConfig,
-      DummyRuntime::defaultProvider(),
-      testCrashMgr);
+      gcConfig, DummyRuntime::defaultProvider(), testCrashMgr);
   DummyRuntime &rt = *runtime;
 
-  std::deque<GCCell *> roots;
+  GCScope scope{&rt};
 
   // Allocate 25 segments.  By the time we're done, this should fill
   // the YG (which will have grown to a full segment size), and 24 OG
   // segments.
-  for (size_t i = 0; i < 25; ++i) {
-    roots.push_back(SegmentCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+  for (size_t i = 0; i < 8; ++i) {
+    rt.makeHandle(SegmentCell::create(rt));
+  }
+  auto marker = scope.createMarker();
+  (void)marker;
+  for (size_t i = 0; i < 17; ++i) {
+    rt.makeHandle(SegmentCell::create(rt));
   }
   // This function isn't used in all paths.
   (void)validJSON;
@@ -178,8 +172,7 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
       MatchesRegex(fourExtents + "$"));
 
   // Now allocate one more, make sure we now have 5 in the 20 key.
-  roots.push_back(SegmentCell::create(rt));
-  rt.pointerRoots.push_back(&roots.back());
+  rt.makeHandle(SegmentCell::create(rt));
 
   EXPECT_THAT(
       testCrashMgr->customData().at(expectedOgKeyStr0),
@@ -191,14 +184,10 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
       testCrashMgr->customData().at(expectedOgKeyStr20),
       MatchesRegex(fiveExtents + "$"));
 
-  /// Now erase enough roots so that we only have 7 OG segments remaining
-  /// (to pick a fairly random number).  Then do a GC.  The old gen
-  /// will have those 7 filled segments, plus an empty allocation
-  /// segment.  Make sure only those are registered with the crash manager.
-  for (size_t i = 0; i < (25 - 7); i++) {
-    roots.pop_back();
-    rt.pointerRoots.pop_back();
-  }
+  /// Now erase enough roots so that we only have 8 OG segments remaining
+  /// (to pick a fairly random number).  Then do a GC.
+  /// Make sure only those are registered with the crash manager.
+  scope.flushToMarker(marker);
   rt.collect();
 
   EXPECT_EQ(3, testCrashMgr->customData().size());
@@ -248,18 +237,14 @@ TEST(CrashManagerTest, PromotedYGHasCorrectName) {
                           .build();
   auto testCrashMgr = std::make_shared<TestCrashManager>();
   auto runtime = DummyRuntime::create(
-      getMetadataTable(),
-      gcConfig,
-      DummyRuntime::defaultProvider(),
-      testCrashMgr);
+      gcConfig, DummyRuntime::defaultProvider(), testCrashMgr);
   DummyRuntime &rt = *runtime;
 
-  std::deque<GCCell *> roots;
+  GCScope scope{&rt};
 
   // Fill up YG at least once, to make sure promotion keeps the right name.
   for (size_t i = 0; i < 3; ++i) {
-    roots.push_back(SegmentCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(SegmentCell::create(rt));
   }
 
   const auto &contextualCustomData = testCrashMgr->contextualCustomData();
@@ -283,10 +268,7 @@ TEST(CrashManagerTest, GCNameIncluded) {
       GCConfig::Builder(kTestGCConfigBuilder).withName("XYZ").build();
   auto testCrashMgr = std::make_shared<TestCrashManager>();
   auto runtime = DummyRuntime::create(
-      getMetadataTable(),
-      gcConfig,
-      DummyRuntime::defaultProvider(),
-      testCrashMgr);
+      gcConfig, DummyRuntime::defaultProvider(), testCrashMgr);
 
   const auto &crashData = testCrashMgr->customData();
   auto gcName = crashData.find("HermesGC");

@@ -17,10 +17,13 @@ namespace vm {
 
 const VTable FillerCell::vt{CellKind::FillerCellKind, 0};
 
-// Empty to prevent linker errors, doesn't need to do anything.
-void UninitializedBuildMeta(const GCCell *, Metadata::Builder &) {}
-void FillerCellBuildMeta(const GCCell *, Metadata::Builder &) {}
-void FreelistBuildMeta(const GCCell *, Metadata::Builder &) {}
+void UninitializedBuildMeta(const GCCell *, Metadata::Builder &mb) {
+  const static VTable vt{CellKind::UninitializedKind, 0};
+  mb.setVTable(&vt);
+}
+void FillerCellBuildMeta(const GCCell *, Metadata::Builder &mb) {
+  mb.setVTable(&FillerCell::vt);
+}
 
 #ifdef HERMESVM_SERIALIZE
 void UninitializedSerialize(Serializer &s, const GCCell *cell) {
@@ -46,18 +49,8 @@ void FillerCellDeserialize(Deserializer &d, CellKind kind) {
   FillerCell *cell = FillerCell::create(d.getRuntime(), size);
   d.endObject((void *)cell);
 }
-
-void FreelistSerialize(Serializer &, const GCCell *) {
-  LLVM_DEBUG(
-      llvh::dbgs() << "Serialize function not implemented for FreelistCell\n");
-}
-
-void FreelistDeserialize(Deserializer &, CellKind) {
-  LLVM_DEBUG(
-      llvh::dbgs()
-      << "Deserialize function not implemented for FreelistCell\n");
-}
 #endif
 
 } // namespace vm
 } // namespace hermes
+#undef DEBUG_TYPE

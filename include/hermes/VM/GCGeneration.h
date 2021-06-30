@@ -184,7 +184,8 @@ class GenGC;
 /// Assumes sweeping is complete.  Traverses the live objects in the
 /// generation, scanning their pointers.  For each pointer to a heap object,
 /// update the pointer by following the referent's forwarding pointer.
-///   void updateReferences(GC *gc, SweepResult::VTablesRemaining &vTables);
+///   void updateReferences(GC *gc, SweepResult::KindAndSizesRemaining
+///   &kindAndSizes);
 /// @}
 ///
 /// @name Debug

@@ -244,51 +244,54 @@ print(Date.parse('Mon Jul 16 2019 13:1525 GMT-0700'));
 // CHECK-NEXT: NaN
 print(Date.parse('Mon Jul 16 2019 13:1525 GMT'));
 // CHECK-NEXT: NaN
+print(Date.parse('2021-04-10T01:00:00.000-01:30'));
+// CHECK-NEXT: 1618021800000
 
 // Fault tolerance on garbages (marked as "G"s).
-// TODO(T66628172) adapt to local timezone.
+print('Fault tolerance');
+// CHECK-LABEL: Fault tolerance
 print(Date.parse('TueG 05 May 2020 00:00:00'));
-// CHECK-NEXT: 1588636800000
+// CHECK-NEXT: 1588662000000
 print(Date.parse('Tue G G 05 May 2020 00:00:00'));
-// CHECK-NEXT: 1588636800000
+// CHECK-NEXT: 1588662000000
 print(Date.parse('Tue ,, G ,, 05 May 2020 00:00:00'));
-// CHECK-NEXT: 1588636800000
+// CHECK-NEXT: 1588662000000
 print(Date.parse('Tue 05 MayG 2020 00:00:00'));
-// CHECK-NEXT: 1588636800000
+// CHECK-NEXT: 1588662000000
 print(Date.parse('Tue 05 May G 2020 00:00:00'));
 // CHECK-NEXT: NaN
 print(Date.parse('TueG May 05 2020 00:00:00'));
-// CHECK-NEXT: 1588636800000
+// CHECK-NEXT: 1588662000000
 print(Date.parse('Tue G May 05 2020 00:00:00'));
-// CHECK-NEXT: 1588636800000
+// CHECK-NEXT: 1588662000000
 print(Date.parse('Tue ,, G ,, May 05 2020 00:00:00'));
-// CHECK-NEXT: 1588636800000
+// CHECK-NEXT: 1588662000000
 print(Date.parse('Tue MayG 05 2020 00:00:00'));
-// CHECK-NEXT: 1588636800000
+// CHECK-NEXT: 1588662000000
 print(Date.parse('Tue May G 05 2020 00:00:00'));
 // CHECK-NEXT: NaN
 
 // Fault tolerance on spaces.
 print(Date.parse('Tue  05 May 2020 00:00:00'));
-// CHECK-NEXT: 1588636800000
+// CHECK-NEXT: 1588662000000
 print(Date.parse('Tue 05  May 2020 00:00:00'));
-// CHECK-NEXT: 1588636800000
+// CHECK-NEXT: 1588662000000
 print(Date.parse('Tue 05 May  2020 00:00:00'));
-// CHECK-NEXT: 1588636800000
+// CHECK-NEXT: 1588662000000
 print(Date.parse('Tue 05 May 2020  00:00:00'));
-// CHECK-NEXT: 1588636800000
+// CHECK-NEXT: 1588662000000
 print(Date.parse('Tue  May 05 2020 00:00:00'));
-// CHECK-NEXT: 1588636800000
+// CHECK-NEXT: 1588662000000
 print(Date.parse('Tue May  05 2020 00:00:00'));
-// CHECK-NEXT: 1588636800000
+// CHECK-NEXT: 1588662000000
 print(Date.parse('Tue May 05  2020 00:00:00'));
-// CHECK-NEXT: 1588636800000
+// CHECK-NEXT: 1588662000000
 print(Date.parse('Tue May 05 2020  00:00:00'));
-// CHECK-NEXT: 1588636800000
+// CHECK-NEXT: 1588662000000
 print(Date.parse('Tue May 05 2020 00:00:00  PDT'));
 // CHECK-NEXT: 1588662000000
 print(Date.parse('Tue May 05 2020 00:00:00'.padEnd(60)));  // trailing spaces.
-// CHECK-NEXT: 1588636800000
+// CHECK-NEXT: 1588662000000
 
 // Quick check that getters work; internal functions are unit tested instead.
 print('getters');

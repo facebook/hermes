@@ -28,14 +28,29 @@ namespace vm {
 ///
 /// This is a very lightweight class - with optimizations on, it is equivalent
 /// to "uint32_t". It is supposed to be passed by value.
+/// The top bits are reserved for the tag in a SmallHermesValue and only the
+/// bottom NUM_BITS should be used.
 class SymbolID {
  public:
   using RawType = uint32_t;
 
+ private:
+  /// The number of bits that we can actually use for a SymbolID, so that it
+  /// still fits in a SmallHermesValue.
+  static constexpr size_t NUM_BITS = 29;
+  /// Extract only the bottom NUM_BITS bits from a given RawType.
+  static constexpr RawType VALUE_MASK = (1 << NUM_BITS) - 1;
+
+ public:
+  /// Mask with the not uniqued bit (i.e. the top bit) set.
+  static constexpr RawType NOT_UNIQUED_MASK = 1 << (NUM_BITS - 1);
+  /// The largest symbol index allowed. That is, the largest possible SymbolID
+  /// value if we ignore the not uniqued bit.
+  static constexpr RawType LAST_INDEX = NOT_UNIQUED_MASK - 1;
   /// All values in the range [FIRST_INVALID_ID..LAST_INVALID_ID] are considered
-  /// invalid. LAST_INVALID_ID is deliberately the largest unsigned integer, so
+  /// invalid. LAST_INVALID_ID is deliberately the largest possible integer, so
   /// we don't actually need to use it for range comparisons.
-  static constexpr RawType LAST_INVALID_ID = (~(RawType)0);
+  static constexpr RawType LAST_INVALID_ID = VALUE_MASK;
   /// All values greater or equal than this one are considered invalid.
   static constexpr RawType FIRST_INVALID_ID = LAST_INVALID_ID - 1;
 
@@ -57,7 +72,7 @@ class SymbolID {
   /// Top bit will be cleared, so this doesn't distinguish between uniqued
   /// and not uniqued Symbols.
   constexpr uint32_t unsafeGetIndex() const {
-    return id_ & ~0x80000000;
+    return id_ & (VALUE_MASK >> 1);
   }
 
   /// \return the raw 32-int number backing this SymbolID.
@@ -77,8 +92,7 @@ class SymbolID {
   /// \return true if this SymbolID has not been uniqued through interning in
   /// IdentifierTable's hash table.
   constexpr bool isNotUniqued() const {
-    static_assert(sizeof(RawType) == 4, "IdentifierID must be 32-bit");
-    return id_ & 0x80000000;
+    return id_ & NOT_UNIQUED_MASK;
   }
   /// \return true if this SymbolID has been uniqued through interning in
   /// IdentifierTable's hash table.
@@ -99,6 +113,7 @@ class SymbolID {
   /// used when we have ensured by other means that the identifier cannot be
   /// collected: e.g. it could be stored in a Handle<SymbolID> or in a GC root.
   static constexpr SymbolID unsafeCreate(RawType id) {
+    assert(id <= LAST_INVALID_ID && "ID outside valid range");
     return SymbolID{id};
   }
 
@@ -124,7 +139,8 @@ class SymbolID {
   /// \param index the index of the given Symbol in the lookup vector.
   /// This will create a non-uniqued symbol (the top bit will be set).
   static constexpr SymbolID unsafeCreateNotUniqued(uint32_t index) {
-    return SymbolID{index | 0x80000000};
+    assert(index <= LAST_INDEX && "Index outside valid range");
+    return SymbolID{index | NOT_UNIQUED_MASK};
   }
 
  protected:

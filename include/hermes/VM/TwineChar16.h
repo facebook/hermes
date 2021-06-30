@@ -116,6 +116,8 @@ class TwineChar16 {
     assert(isValid());
   }
 
+  TwineChar16(const TwineChar16 &other) = default;
+
   TwineChar16(const char *str) : TwineChar16(llvh::StringRef(str)) {}
 
   /// Make a twine out of the null-terminated \p str.

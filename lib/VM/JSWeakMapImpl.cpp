@@ -322,10 +322,12 @@ void JSWeakMapImpl<C>::WeakMapOrSetBuildMeta(
 
 void WeakMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSWeakMapImpl<CellKind::WeakMapKind>::WeakMapOrSetBuildMeta(cell, mb);
+  mb.setVTable(&JSWeakMap::vt.base);
 }
 
 void WeakSetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSWeakMapImpl<CellKind::WeakSetKind>::WeakMapOrSetBuildMeta(cell, mb);
+  mb.setVTable(&JSWeakSet::vt.base);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -417,7 +419,6 @@ const ObjectVTable JSWeakMapImpl<C>::vt{
         JSWeakMapImpl::_mallocSizeImpl,
         nullptr,
         nullptr,
-        nullptr,
         VTable::HeapSnapshotMetadata{
             HeapSnapshot::NodeType::Object,
             nullptr,
@@ -447,8 +448,7 @@ CallResult<PseudoHandle<JSWeakMapImpl<C>>> JSWeakMapImpl<C>::create(
       runtime,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<JSWeakMapImpl>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, numOverlapSlots<JSWeakMapImpl>()),
       valueStorage);
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
@@ -458,3 +458,5 @@ template class JSWeakMapImpl<CellKind::WeakSetKind>;
 
 } // namespace vm
 } // namespace hermes
+
+#undef DEBUG_TYPE

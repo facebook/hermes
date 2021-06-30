@@ -13,7 +13,8 @@
 - [Working with JObject and JClass](#working-with-jobject-and-jclass)
 - [Catching and throwing exceptions](#catching-and-throwing-exceptions)
 - [Working with boxed primitives](#working-with-boxed-primitives)
-- [Working with Collections](#working-with-collections)
+- [Working with Iterables](#working-with-iterables)
+- [Building Collections](#building-collections)
 - [Transferring data with direct ByteBuffer](#transferring-data-with-direct-bytebuffer)
 ## JavaClass definition and method registration
 ```cpp
@@ -402,7 +403,7 @@ When no base class is given, JObject will be used as the base.
 ```
 
 
-## Working with Collections
+## Working with Iterables
 ```java
   static native String concatMatches(List<Integer> values, Map<String, Integer> names);
 ```
@@ -428,6 +429,23 @@ When no base class is given, JObject will be used as the base.
     // This works if you build with C++17.
     // for (const auto& [key, value] : *names) {
     return ret;
+  }
+```
+
+
+## Building Collections
+```java
+  static native Map<String, List<Integer>> buildCollections();
+```
+```cpp
+  static local_ref<JMap<JString, JList<JInteger>>> buildCollections(
+      alias_ref<JClass> clazz) {
+    auto primes = JArrayList<JInteger>::create();
+    primes->add(autobox(2));
+    primes->add(autobox(3));
+    auto wrapper = JHashMap<JString, JList<JInteger>>::create();
+    wrapper->put(make_jstring("primes"), primes);
+    return wrapper;
   }
 ```
 

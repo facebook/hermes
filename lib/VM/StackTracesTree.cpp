@@ -111,10 +111,9 @@ void StackTracesTree::syncWithRuntimeStack(Runtime *runtime) {
     if (prev != framesEnd) {
       if (CodeBlock *parentCB = prev.getCalleeCodeBlock()) {
         assert(
-            !savedCodeBlock ||
-            savedCodeBlock == parentCB &&
-                "If savedCodeBlock is non-null, it should match the parent's "
-                "callee code block");
+            (!savedCodeBlock || savedCodeBlock == parentCB) &&
+            "If savedCodeBlock is non-null, it should match the parent's "
+            "callee code block");
         savedCodeBlock = parentCB;
       }
     } else {
