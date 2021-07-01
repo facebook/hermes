@@ -3562,6 +3562,7 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrOptionalExpression(
         isConstructorCall, newRange.Start, expr);
   }
 
+  CHECK_RECURSION;
   auto optExpr = parseNewExpressionOrOptionalExpression(IsConstructorCall::Yes);
   if (!optExpr)
     return None;
