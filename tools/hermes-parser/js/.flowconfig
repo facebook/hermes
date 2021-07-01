@@ -6,3 +6,6 @@
 ; Yarn workspaces hoist packages to the top level node_modules, causing module resolution errors if
 ; we do not specify where each package's type definitions can be found.
 module.name_mapper='^hermes-parser$' -> '<PROJECT_ROOT>/hermes-parser/src/index.js'
+
+[version]
+0.154.0

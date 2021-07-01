@@ -13,7 +13,8 @@ print('Node Requires');
 // CHECK-LABEL: Node Requires
 
 try {
-  var test1 = require('fs');
+  var fs = require('fs');
+  var fileContents = fs.readFileSync('testRead.txt', 'utf8');
 } catch (e) {
   print('caught:', e.name, e.message);
 }

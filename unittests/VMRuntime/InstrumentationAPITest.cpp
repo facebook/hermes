@@ -87,8 +87,8 @@ TEST(InstrumentationAPITest, RunCallbackAfterAllocatingMemoryOverLimit) {
   DummyRuntime &runtime = *rt;
   runtime.collect();
   EXPECT_FALSE(triggeredTripwire);
-  GCCell *cell = DummyObject::create(&runtime.getHeap());
-  runtime.pointerRoots.push_back(&cell);
+  GCScope scope{&runtime};
+  runtime.makeHandle(DummyObject::create(&runtime.getHeap()));
   runtime.collect();
   EXPECT_TRUE(triggeredTripwire);
 }
@@ -108,8 +108,8 @@ TEST(InstrumentationAPITest, DontRunCallbackAfterAllocatingMemoryUnderLimit) {
   DummyRuntime &runtime = *rt;
   runtime.collect();
   EXPECT_FALSE(triggeredTripwire);
-  GCCell *cell = DummyObject::create(&runtime.getHeap());
-  runtime.pointerRoots.push_back(&cell);
+  GCScope scope{&runtime};
+  runtime.makeHandle(DummyObject::create(&runtime.getHeap()));
   runtime.collect();
   EXPECT_FALSE(triggeredTripwire);
 }

@@ -171,6 +171,7 @@ struct JHashMap : JavaClass<JHashMap<K, V>, JMap<K, V>> {
   constexpr static auto kJavaDescriptor = "Ljava/util/HashMap;";
 
   static local_ref<JHashMap<K, V>> create();
+  static local_ref<JHashMap<K, V>> create(int initialCapacity);
 };
 
 }
