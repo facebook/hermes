@@ -35,11 +35,6 @@ struct Environment {
   // you.
   static JNIEnv* ensureCurrentThreadIsAttached();
 
-
-  // This runs the closure in a scope with fbjni's classloader. The thread would be attached and
-  // detached within the scope.
-  static void ensureCurrentThreadAttachDetachInScope(std::function<void()>&& runnable);
-
   // To check if a Java VM is available at all in this environment.
   // Note that this doesn't check if it is attached to this thread,
   // it checks whether one is available at all.
