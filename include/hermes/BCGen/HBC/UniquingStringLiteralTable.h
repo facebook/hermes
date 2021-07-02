@@ -9,7 +9,7 @@
 #define HERMES_BCGEN_HBC_UNIQUINGSTRINGLITERALTABLE_H
 
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
-#include "hermes/Support/StringKind.h"
+#include "hermes/BCGen/HBC/StringKind.h"
 
 namespace hermes {
 namespace hbc {
