@@ -47,6 +47,13 @@ Metadata::Metadata(Builder &&mb)
 Metadata::Builder::Builder(const void *base)
     : base_(reinterpret_cast<const char *>(base)) {}
 
+Metadata::offset_t Metadata::Builder::getOffset(const void *fieldLocation) {
+  const size_t offset = reinterpret_cast<const char *>(fieldLocation) - base_;
+  const offset_t ret = offset;
+  assert(ret == offset && "Offset overflowed.");
+  return ret;
+}
+
 void Metadata::Builder::addField(const GCPointerBase *fieldLocation) {
   addField(nullptr, fieldLocation);
 }
@@ -54,7 +61,7 @@ void Metadata::Builder::addField(const GCPointerBase *fieldLocation) {
 void Metadata::Builder::addField(
     const char *name,
     const GCPointerBase *fieldLocation) {
-  offset_t offset = reinterpret_cast<const char *>(fieldLocation) - base_;
+  offset_t offset = getOffset(fieldLocation);
   assert(
       !fieldConflicts(offset, sizeof(GCPointerBase)) &&
       "fields should not overlap");
@@ -68,7 +75,7 @@ void Metadata::Builder::addField(const GCHermesValue *fieldLocation) {
 void Metadata::Builder::addField(
     const char *name,
     const GCHermesValue *fieldLocation) {
-  offset_t offset = reinterpret_cast<const char *>(fieldLocation) - base_;
+  offset_t offset = getOffset(fieldLocation);
   assert(
       !fieldConflicts(offset, sizeof(GCHermesValue)) &&
       "fields should not overlap");
@@ -82,7 +89,7 @@ void Metadata::Builder::addField(const GCSmallHermesValue *fieldLocation) {
 void Metadata::Builder::addField(
     const char *name,
     const GCSmallHermesValue *fieldLocation) {
-  offset_t offset = reinterpret_cast<const char *>(fieldLocation) - base_;
+  offset_t offset = getOffset(fieldLocation);
   assert(
       !fieldConflicts(offset, sizeof(GCSmallHermesValue)) &&
       "fields should not overlap");
@@ -96,7 +103,7 @@ void Metadata::Builder::addField(const GCSymbolID *fieldLocation) {
 void Metadata::Builder::addField(
     const char *name,
     const GCSymbolID *fieldLocation) {
-  offset_t offset = reinterpret_cast<const char *>(fieldLocation) - base_;
+  offset_t offset = getOffset(fieldLocation);
   assert(
       !fieldConflicts(offset, sizeof(GCSymbolID)) &&
       "fields should not overlap");
@@ -110,10 +117,7 @@ void Metadata::Builder::addArray(
     const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
     std::size_t stride) {
   array_ = ArrayData(
-      type,
-      reinterpret_cast<const char *>(startLocation) - base_,
-      reinterpret_cast<const char *>(lengthLocation) - base_,
-      stride);
+      type, getOffset(startLocation), getOffset(lengthLocation), stride);
 }
 
 Metadata Metadata::Builder::build() {
