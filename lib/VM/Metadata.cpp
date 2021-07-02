@@ -25,20 +25,19 @@ Metadata::Metadata(Builder &&mb)
       array_(std::move(mb.array_)),
       vtp_(mb.vtp_) {
   assert(vtp_->isValid() && "Must initialize VTable pointer for metadata.");
-  auto copier =
-      [](const std::map<offset_t, std::pair<const char *, size_t>> &map,
-         Fields &insertionPoint) {
-        std::transform(
-            map.cbegin(),
-            map.cend(),
-            std::begin(insertionPoint.offsets),
-            [](const OffsetAndNameAndSize &p) { return p.first; });
-        std::transform(
-            map.cbegin(),
-            map.cend(),
-            std::begin(insertionPoint.names),
-            [](const OffsetAndNameAndSize &p) { return p.second.first; });
-      };
+  auto copier = [](const std::map<offset_t, const char *> &map,
+                   Fields &insertionPoint) {
+    std::transform(
+        map.cbegin(),
+        map.cend(),
+        std::begin(insertionPoint.offsets),
+        [](const std::pair<offset_t, const char *> &p) { return p.first; });
+    std::transform(
+        map.cbegin(),
+        map.cend(),
+        std::begin(insertionPoint.names),
+        [](const std::pair<offset_t, const char *> &p) { return p.second; });
+  };
   copier(mb.pointers_, pointers_);
   copier(mb.values_, values_);
   copier(mb.smallValues_, smallValues_);
@@ -56,9 +55,10 @@ void Metadata::Builder::addField(
     const char *name,
     const GCPointerBase *fieldLocation) {
   offset_t offset = reinterpret_cast<const char *>(fieldLocation) - base_;
-  size_t size = sizeof(GCPointerBase);
-  assert(!fieldConflicts(offset, size) && "fields should not overlap");
-  pointers_[offset] = std::make_pair(name, size);
+  assert(
+      !fieldConflicts(offset, sizeof(GCPointerBase)) &&
+      "fields should not overlap");
+  pointers_[offset] = name;
 }
 
 void Metadata::Builder::addField(const GCHermesValue *fieldLocation) {
@@ -69,9 +69,10 @@ void Metadata::Builder::addField(
     const char *name,
     const GCHermesValue *fieldLocation) {
   offset_t offset = reinterpret_cast<const char *>(fieldLocation) - base_;
-  size_t size = sizeof(GCHermesValue);
-  assert(!fieldConflicts(offset, size) && "fields should not overlap");
-  values_[offset] = std::make_pair(name, size);
+  assert(
+      !fieldConflicts(offset, sizeof(GCHermesValue)) &&
+      "fields should not overlap");
+  values_[offset] = name;
 }
 
 void Metadata::Builder::addField(const GCSmallHermesValue *fieldLocation) {
@@ -82,9 +83,10 @@ void Metadata::Builder::addField(
     const char *name,
     const GCSmallHermesValue *fieldLocation) {
   offset_t offset = reinterpret_cast<const char *>(fieldLocation) - base_;
-  size_t size = sizeof(GCSmallHermesValue);
-  assert(!fieldConflicts(offset, size) && "fields should not overlap");
-  smallValues_[offset] = std::make_pair(name, size);
+  assert(
+      !fieldConflicts(offset, sizeof(GCSmallHermesValue)) &&
+      "fields should not overlap");
+  smallValues_[offset] = name;
 }
 
 void Metadata::Builder::addField(const GCSymbolID *fieldLocation) {
@@ -95,9 +97,10 @@ void Metadata::Builder::addField(
     const char *name,
     const GCSymbolID *fieldLocation) {
   offset_t offset = reinterpret_cast<const char *>(fieldLocation) - base_;
-  size_t size = sizeof(GCSymbolID);
-  assert(!fieldConflicts(offset, size) && "fields should not overlap");
-  symbols_[offset] = std::make_pair(name, size);
+  assert(
+      !fieldConflicts(offset, sizeof(GCSymbolID)) &&
+      "fields should not overlap");
+  symbols_[offset] = name;
 }
 
 void Metadata::Builder::addArray(
