@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/Support/StringKind.h"
+#include "hermes/BCGen/HBC/StringKind.h"
 
 namespace hermes {
 

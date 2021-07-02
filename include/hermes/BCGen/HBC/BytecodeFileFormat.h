@@ -8,10 +8,10 @@
 #ifndef HERMES_BCGEN_HBC_BYTECODEFILEFORMAT_H
 #define HERMES_BCGEN_HBC_BYTECODEFILEFORMAT_H
 
+#include "hermes/BCGen/HBC/StringKind.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/RegExpSerialization.h"
 #include "hermes/Support/SHA1.h"
-#include "hermes/Support/StringKind.h"
 #include "hermes/Support/StringTableEntry.h"
 
 #include <cassert>

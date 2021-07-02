@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-#include "hermes/Support/StringKind.h"
+#include "hermes/BCGen/HBC/StringKind.h"
 
 namespace {
 

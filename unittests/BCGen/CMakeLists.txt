@@ -10,6 +10,7 @@ set(BCSources
   BytecodeFormConverterTest.cpp
   RATest.cpp
   SupportTest.cpp
+  StringKindTest.cpp
   TestHelpers.cpp
   HBC.cpp
   DebugInfo.cpp
