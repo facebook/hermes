@@ -32,7 +32,7 @@
 #endif
 
 #if defined(HERMESVM_PROFILER_EXTERN)
-#include "hermes/Utils/Macro10k.h"
+#include "hermes/Support/Macro10k.h"
 
 // Symbols have the form "JS_[0-9][0-9][0-9][0-9]_xxx...xxx" and the suffix is
 // later replaced with the name of the JS function having that ProfilerID.
