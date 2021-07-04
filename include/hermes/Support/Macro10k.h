@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_UTILS_MACRO10K_H
-#define HERMES_UTILS_MACRO10K_H
+#ifndef HERMES_SUPPORT_MACRO10K_H
+#define HERMES_SUPPORT_MACRO10K_H
 
 #define MACRO_10K(V, pre, suf) \
   V(pre##_0000_##suf)          \
