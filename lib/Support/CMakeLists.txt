@@ -31,7 +31,6 @@ add_hermes_library(hermesSupport
         SNPrintfBuf.cpp
         SourceErrorManager.cpp
         SimpleDiagHandler.cpp
-        StringKind.cpp
         StringTable.cpp
         UTF8.cpp
         UTF16Stream.cpp

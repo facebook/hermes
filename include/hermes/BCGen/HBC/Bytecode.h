@@ -16,10 +16,10 @@
 #include "hermes/BCGen/HBC/BytecodeInstructionGenerator.h"
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/DebugInfo.h"
+#include "hermes/BCGen/HBC/StringKind.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Support/RegExpSerialization.h"
-#include "hermes/Support/StringKind.h"
 #include "hermes/Support/StringTableEntry.h"
 #include "hermes/Utils/Options.h"
 

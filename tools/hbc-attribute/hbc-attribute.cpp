@@ -17,11 +17,11 @@
 
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
+#include "hermes/BCGen/HBC/StringKind.h"
 #include "hermes/Public/Buffer.h"
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/LEB128.h"
 #include "hermes/Support/MemoryBuffer.h"
-#include "hermes/Support/StringKind.h"
 
 #include <algorithm>
 #include <iostream>
