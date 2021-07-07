@@ -148,11 +148,6 @@ class Context {
   /// bytes.
   unsigned preemptiveFileCompilationThreshold_{0};
 
-  /// Allows Function.toString() to return original source code. As with lazy
-  /// compilation this requires source buffers, and hence this Context instance
-  /// to be retained after compilation.
-  bool allowFunctionToStringWithRuntimeSource_{false};
-
   /// If true, do not error on return statements that are not within functions.
   bool allowReturnOutsideFunction_{false};
 
@@ -348,14 +343,6 @@ class Context {
   void setPreemptiveFileCompilationThreshold(unsigned byteCount) {
     preemptiveFileCompilationThreshold_ = byteCount;
   };
-
-  bool allowFunctionToStringWithRuntimeSource() const {
-    return allowFunctionToStringWithRuntimeSource_;
-  }
-
-  void setAllowFunctionToStringWithRuntimeSource(bool v) {
-    allowFunctionToStringWithRuntimeSource_ = v;
-  }
 
   bool allowReturnOutsideFunction() const {
     return allowReturnOutsideFunction_;

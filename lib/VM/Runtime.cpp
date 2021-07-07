@@ -176,9 +176,7 @@ Runtime::Runtime(
       crashCallbackKey_(
           crashMgr_->registerCallback([this](int fd) { crashCallback(fd); })),
       codeCoverageProfiler_(std::make_unique<CodeCoverageProfiler>(this)),
-      gcEventCallback_(runtimeConfig.getGCConfig().getCallback()),
-      allowFunctionToStringWithRuntimeSource_(
-          runtimeConfig.getAllowFunctionToStringWithRuntimeSource()) {
+      gcEventCallback_(runtimeConfig.getGCConfig().getCallback()) {
   assert(
       (void *)this == (void *)(HandleRootOwner *)this &&
       "cast to HandleRootOwner should be no-op");
@@ -838,15 +836,12 @@ static CallResult<HermesValue> interpretFunctionWithRandomStack(
 CallResult<HermesValue> Runtime::run(
     llvh::StringRef code,
     llvh::StringRef sourceURL,
-    hbc::CompileFlags compileFlags) {
+    const hbc::CompileFlags &compileFlags) {
 #ifdef HERMESVM_LEAN
   return raiseEvalUnsupported(code);
 #else
-  compileFlags.allowFunctionToStringWithRuntimeSource |=
-      getAllowFunctionToStringWithRuntimeSource();
   std::unique_ptr<hermes::Buffer> buffer;
-  if (compileFlags.lazy ||
-      compileFlags.allowFunctionToStringWithRuntimeSource) {
+  if (compileFlags.lazy) {
     buffer.reset(new hermes::OwnedMemoryBuffer(
         llvh::MemoryBuffer::getMemBufferCopy(code)));
   } else {
@@ -860,14 +855,12 @@ CallResult<HermesValue> Runtime::run(
 CallResult<HermesValue> Runtime::run(
     std::unique_ptr<hermes::Buffer> code,
     llvh::StringRef sourceURL,
-    hbc::CompileFlags compileFlags) {
+    const hbc::CompileFlags &compileFlags) {
 #ifdef HERMESVM_LEAN
   auto buffer = code.get();
   return raiseEvalUnsupported(llvh::StringRef(
       reinterpret_cast<const char *>(buffer->data()), buffer->size()));
 #else
-  compileFlags.allowFunctionToStringWithRuntimeSource |=
-      getAllowFunctionToStringWithRuntimeSource();
   std::unique_ptr<hbc::BCProviderFromSrc> bytecode;
   {
     PerfSection loading("Loading new JavaScript code");

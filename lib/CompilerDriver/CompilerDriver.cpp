@@ -307,11 +307,6 @@ opt<bool> EmitAsyncBreakCheck(
     init(false),
     cat(CompilerCategory));
 
-opt<bool> AllowFunctionToString(
-    "allow-function-to-string",
-    init(false),
-    desc("Enables Function.toString() to return source-code when available"));
-
 opt<bool> OptimizedEval(
     "optimized-eval",
     desc("Turn on compiler optimizations in eval."),
@@ -1818,10 +1813,6 @@ CompileResult processSourceFiles(
       return LoadGlobalsFailed;
     }
   }
-
-  // Allows Function.toString() to return original source code. As with lazy
-  // compilation this requires source buffers to be retained after compilation.
-  context->setAllowFunctionToStringWithRuntimeSource(cl::AllowFunctionToString);
 
   // Create the source map if requested.
   llvh::Optional<SourceMapGenerator> sourceMapGen{};

@@ -238,7 +238,7 @@ class Runtime : public HandleRootOwner,
   CallResult<HermesValue> run(
       llvh::StringRef code,
       llvh::StringRef sourceURL,
-      hbc::CompileFlags compileFlags);
+      const hbc::CompileFlags &compileFlags);
 
   /// Runs the given UTF-8 \p code in a new RuntimeModule as top-level code.
   /// \param sourceURL the location of the source that's being run.
@@ -247,7 +247,7 @@ class Runtime : public HandleRootOwner,
   CallResult<HermesValue> run(
       std::unique_ptr<Buffer> code,
       llvh::StringRef sourceURL,
-      hbc::CompileFlags compileFlags);
+      const hbc::CompileFlags &compileFlags);
 
   /// Runs the given \p bytecode with the given \p runtimeModuleFlags. The \p
   /// sourceURL, if not empty, is reported as the file name in backtraces. If \p
@@ -1332,9 +1332,6 @@ class Runtime : public HandleRootOwner,
   /// Config-provided callback for GC events.
   std::function<void(GCEventKind, const char *)> gcEventCallback_;
 
-  /// Set from RuntimeConfig.
-  bool allowFunctionToStringWithRuntimeSource_;
-
   /// @}
 
   /// \return whether any async break is requested or not.
@@ -1438,14 +1435,6 @@ class Runtime : public HandleRootOwner,
 #endif
     currentFrame_.getSavedIPRef() =
         HermesValue::encodeNativePointer(getCurrentIP());
-  }
-
-  void setAllowFunctionToStringWithRuntimeSource(bool v) {
-    allowFunctionToStringWithRuntimeSource_ = v;
-  }
-
-  bool getAllowFunctionToStringWithRuntimeSource() const {
-    return allowFunctionToStringWithRuntimeSource_;
   }
 
  private:
