@@ -50,8 +50,6 @@ CallResult<HermesValue> evalInEnvironment(
   compileFlags.emitAsyncBreakCheck = runtime->asyncBreakCheckInEval;
   compileFlags.lazy =
       utf8code.size() >= compileFlags.preemptiveFileCompilationThreshold;
-  compileFlags.allowFunctionToStringWithRuntimeSource =
-      runtime->getAllowFunctionToStringWithRuntimeSource();
 #ifdef HERMES_ENABLE_DEBUGGER
   // Required to allow stepping and examining local variables in eval'd code
   compileFlags.debug = true;
@@ -60,8 +58,7 @@ CallResult<HermesValue> evalInEnvironment(
   std::unique_ptr<hbc::BCProviderFromSrc> bytecode;
   {
     std::unique_ptr<hermes::Buffer> buffer;
-    if (compileFlags.lazy ||
-        compileFlags.allowFunctionToStringWithRuntimeSource) {
+    if (compileFlags.lazy) {
       buffer.reset(new hermes::OwnedMemoryBuffer(
           llvh::MemoryBuffer::getMemBufferCopy(utf8code)));
     } else {

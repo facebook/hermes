@@ -31,7 +31,6 @@ struct CompileFlags {
   /// Eagerly compile functions under this number of bytes, even when lazy.
   unsigned preemptiveFunctionCompilationThreshold{160};
 
-  bool allowFunctionToStringWithRuntimeSource{false};
   bool strict{false};
   /// The value is optional; when it is set, the optimization setting is based
   /// on the value; when it is unset, it means the parser needs to automatically

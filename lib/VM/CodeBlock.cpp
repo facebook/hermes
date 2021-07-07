@@ -283,22 +283,6 @@ SourceErrorManager::SourceCoords CodeBlock::getLazyFunctionLoc(
 }
 
 #ifndef HERMESVM_LEAN
-bool CodeBlock::hasFunctionSource() const {
-  return runtimeModule_->getBytecode()
-      ->getFunctionSourceRange(functionID_)
-      .isValid();
-}
-
-llvh::StringRef CodeBlock::getFunctionSource() const {
-  auto sourceRange =
-      runtimeModule_->getBytecode()->getFunctionSourceRange(functionID_);
-  assert(sourceRange.isValid() && "Function does not have source available");
-  const auto sourceStart = sourceRange.Start.getPointer();
-  return {sourceStart, (size_t)(sourceRange.End.getPointer() - sourceStart)};
-}
-#endif
-
-#ifndef HERMESVM_LEAN
 namespace {
 std::unique_ptr<hbc::BytecodeModule> compileLazyFunction(
     std::shared_ptr<Context> context,

@@ -471,45 +471,6 @@ TEST_F(HermesRuntimeTest, GlobalObjectTest) {
   EXPECT_EQ(eval("f(10)").getNumber(), 15);
 }
 
-TEST_F(HermesRuntimeTest, WithoutAllowFunctionToString) {
-  std::string fooFuncDef = "function foo() { 'bar'; }";
-  eval(fooFuncDef.c_str());
-  EXPECT_EQ(
-      eval("foo.toString()").getString(*rt).utf8(*rt),
-      "function foo() { [bytecode] }");
-
-  std::string fooLazyFuncDef =
-      "function fooLazy() { '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'; }";
-  eval(fooLazyFuncDef.c_str());
-  EXPECT_EQ(
-      eval("fooLazy.toString()").getString(*rt).utf8(*rt),
-      "function fooLazy() { [bytecode] }");
-}
-
-class HermesRuntimeTestWithAllowFunctionToString
-    : public HermesRuntimeTestBase {
- public:
-  HermesRuntimeTestWithAllowFunctionToString()
-      : HermesRuntimeTestBase(
-            ::hermes::vm::RuntimeConfig::Builder()
-                .withES6Proxy(true)
-                .withES6Promise(true)
-                .withAllowFunctionToStringWithRuntimeSource(true)
-                .build()) {}
-};
-
-TEST_F(HermesRuntimeTestWithAllowFunctionToString, WithAllowFunctionToString) {
-  std::string fooFuncDef = "function foo() { 'bar'; }";
-  eval(fooFuncDef.c_str());
-  EXPECT_EQ(eval("foo.toString()").getString(*rt).utf8(*rt), fooFuncDef);
-
-  std::string fooLazyFuncDef =
-      "function fooLazy() { '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'; }";
-  eval(fooLazyFuncDef.c_str());
-  EXPECT_EQ(
-      eval("fooLazy.toString()").getString(*rt).utf8(*rt), fooLazyFuncDef);
-}
-
 class HermesRuntimeTestWithDisableGenerator : public HermesRuntimeTestBase {
  public:
   HermesRuntimeTestWithDisableGenerator()

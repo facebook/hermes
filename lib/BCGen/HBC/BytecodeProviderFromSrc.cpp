@@ -166,8 +166,6 @@ BCProviderFromSrc::createBCProviderFromSrc(
     context->setLazyCompilation(true);
   }
 
-  context->setAllowFunctionToStringWithRuntimeSource(
-      compileFlags.allowFunctionToStringWithRuntimeSource);
   context->setGeneratorEnabled(compileFlags.enableGenerator);
   context->setDebugInfoSetting(
       compileFlags.debug ? DebugInfoSetting::ALL : DebugInfoSetting::THROWING);
