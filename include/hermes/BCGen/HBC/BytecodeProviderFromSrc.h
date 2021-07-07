@@ -203,26 +203,16 @@ class BCProviderFromSrc final : public BCProviderBase {
   /// Serialize this BCProviderFromSrc.
   void serialize(vm::Serializer &s) const override;
 #endif
-
-#ifndef HERMESVM_LEAN
-  llvh::SMRange getFunctionSourceRange(uint32_t functionID) const override {
-    return module_->getFunctionSourceRange(functionID);
-  }
-#endif
 };
 
 /// BCProviderLazy is used during lazy compilation. When a function is created
 /// to be lazily compiled later, we create a BCProviderLazy object with
 /// a pointer to such BytecodeFunction.
 class BCProviderLazy final : public BCProviderBase {
-  hbc::BytecodeModule *bytecodeModule_;
-
   /// Pointer to the BytecodeFunction.
   hbc::BytecodeFunction *bytecodeFunction_;
 
-  explicit BCProviderLazy(
-      hbc::BytecodeModule *bytecodeModule,
-      hbc::BytecodeFunction *bytecodeFunction);
+  explicit BCProviderLazy(hbc::BytecodeFunction *bytecodeFunction);
 
   /// No debug information will be available without compiling it.
   void createDebugInfo() override {
@@ -231,10 +221,9 @@ class BCProviderLazy final : public BCProviderBase {
 
  public:
   static std::unique_ptr<BCProviderBase> createBCProviderLazy(
-      hbc::BytecodeModule *bytecodeModule,
       hbc::BytecodeFunction *bytecodeFunction) {
     return std::unique_ptr<BCProviderBase>(
-        new BCProviderLazy(bytecodeModule, bytecodeFunction));
+        new BCProviderLazy(bytecodeFunction));
   }
 
   RuntimeFunctionHeader getFunctionHeader(uint32_t) const override {
@@ -271,18 +260,10 @@ class BCProviderLazy final : public BCProviderBase {
     return bytecodeFunction_;
   }
 
-  hbc::BytecodeModule *getBytecodeModule() {
-    return bytecodeModule_;
-  }
-
 #ifdef HERMESVM_SERIALIZE
   /// Serialize this BCProviderLazy.
   void serialize(vm::Serializer &s) const override;
 #endif
-
-  llvh::SMRange getFunctionSourceRange(uint32_t functionID) const override {
-    return bytecodeModule_->getFunctionSourceRange(functionID);
-  }
 };
 #endif // HERMESVM_LEAN
 } // namespace hbc

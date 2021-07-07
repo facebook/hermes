@@ -306,16 +306,6 @@ class BCProviderBase {
   /// Serialize this BCProvider.
   virtual void serialize(vm::Serializer &s) const = 0;
 #endif
-
-#ifndef HERMESVM_LEAN
-  /// Return a reference to the source code for a function. In general this will
-  /// NOT be available, however it may be when compiling from source at
-  /// run-time, and lazy compilation or Function.toString() returning soruce is
-  /// enabled.
-  virtual llvh::SMRange getFunctionSourceRange(uint32_t functionID) const {
-    return {};
-  }
-#endif
 };
 
 /// BCProviderFromBuffer will be used when we are loading bytecode from
