@@ -2606,13 +2606,18 @@ void HadesGC::youngGenCollection(
   // Check that the card tables are well-formed after the collection.
   verifyCardTable();
 #endif
-  // Give an existing background thread a chance to complete.
+  // Perform any pending work for an ongoing OG collection.
   // Do this before starting a new collection in case we need collections
   // back-to-back. Also, don't check this after starting a collection to avoid
   // waiting for something that is both unlikely, and will increase the pause
   // time if it does happen.
   yieldToOldGen();
-  if (concurrentPhase_ == Phase::None) {
+  // We can only consider starting a new OG collection if any previous OG
+  // collection is fully completed and has not left a pending compaction. This
+  // handles the rare case where an OG collection was completed during this YG
+  // collection, and the compaction will therefore only be completed in the next
+  // collection.
+  if (concurrentPhase_ == Phase::None && !compactee_.evacActive()) {
     // There is no OG collection running, check the tripwire in case this is the
     // first YG after an OG completed.
     checkTripwireAndResetStats();
