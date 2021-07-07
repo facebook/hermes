@@ -239,10 +239,8 @@ BCProviderFromSrc::createBCProviderFromSrc(
   return {std::move(bytecode), std::string{}};
 }
 
-BCProviderLazy::BCProviderLazy(
-    hbc::BytecodeModule *bytecodeModule,
-    hbc::BytecodeFunction *bytecodeFunction)
-    : bytecodeModule_(bytecodeModule), bytecodeFunction_(bytecodeFunction) {
+BCProviderLazy::BCProviderLazy(hbc::BytecodeFunction *bytecodeFunction)
+    : bytecodeFunction_(bytecodeFunction) {
   // Lazy module should always contain one function to begin with.
   functionCount_ = 1;
 }

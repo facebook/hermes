@@ -9,9 +9,7 @@
 #define HERMES_BCGEN_HBC_BYTECODE_H
 
 #include "llvh/ADT/ArrayRef.h"
-#include "llvh/Support/SMLoc.h"
 
-#include "hermes/AST/Context.h"
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/BCGen/HBC/BytecodeInstructionGenerator.h"
 #include "hermes/BCGen/HBC/BytecodeStream.h"
@@ -241,17 +239,6 @@ class BytecodeModule {
   /// runtime.
   BytecodeOptions options_{};
 
-#ifndef HERMESVM_LEAN
-  /// Stores references to source code strings for functions. These are only
-  /// available when compiling from source at run-time, and when lazily compiled
-  /// functions or Function.toString() returning source are enabled.
-  llvh::DenseMap<uint32_t, llvh::SMRange> functionSourceRangeMap_;
-
-  /// If there are any entries in functionSourceRangeMap_ we need to keep
-  /// Context alive so the source buffers don't dissapear from under us.
-  std::shared_ptr<Context> context_;
-#endif
-
  public:
   /// Used during serialization.
   explicit BytecodeModule(
@@ -412,32 +399,6 @@ class BytecodeModule {
   BytecodeOptions getBytecodeOptions() const {
     return options_;
   }
-
-#ifndef HERMESVM_LEAN
-  /// Called during BytecodeModule generation.
-  void setFunctionSourceRange(uint32_t functionID, llvh::SMRange range) {
-    functionSourceRangeMap_.try_emplace(functionID, range);
-  }
-
-  /// If we retain source code for any functions we also need to preserve
-  /// \c Context. Called during BytecodeModule generation.
-  void setContext(std::shared_ptr<Context> context) {
-    context_ = context;
-  }
-
-  /// Returns source code for a given function if available. Use \c isValid() on
-  /// the result to confirm source is actually available.
-  llvh::SMRange getFunctionSourceRange(uint32_t functionID) {
-    auto it = functionSourceRangeMap_.find(functionID);
-    return it == functionSourceRangeMap_.end() ? llvh::SMRange() : it->second;
-  }
-
-  /// This will only be available if we're retaining source code for at least
-  /// one function in this module.
-  std::shared_ptr<Context> getContext() const {
-    return context_;
-  }
-#endif
 };
 
 } // namespace hbc

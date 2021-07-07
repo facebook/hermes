@@ -274,7 +274,6 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
   const uint32_t strippedFunctionNameId =
       options_.stripFunctionNames ? getStringID(kStrippedFunctionName) : 0;
   auto functions = functionIDMap_.getElements();
-  std::shared_ptr<Context> contextIfNeeded;
   for (unsigned i = 0, e = functions.size(); i < e; ++i) {
     auto *F = functions[i];
     auto &BFG = *functionGenerators_[F];
@@ -291,23 +290,14 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
         F->getFunctionScope()->getVariables().size(),
         functionNameId);
 
-#ifndef HERMESVM_LEAN
-    if (F->isLazy()) {
-      auto context = F->getParent()->shareContext();
-      assert(
-          (!contextIfNeeded || contextIfNeeded.get() == context.get()) &&
-          "Different instances of Context seen");
-      contextIfNeeded = context;
-      BM->setFunctionSourceRange(i, F->getSourceRange());
-    }
-#endif
-
     if (F->isLazy()) {
 #ifdef HERMESVM_LEAN
       llvm_unreachable("Lazy support compiled out");
 #else
       auto lazyData = std::make_unique<LazyCompilationData>();
+      lazyData->context = F->getParent()->shareContext();
       lazyData->parentScope = F->getLazyScope();
+      lazyData->span = F->getLazySource().functionRange;
       lazyData->nodeKind = F->getLazySource().nodeKind;
       lazyData->paramYield = F->getLazySource().paramYield;
       lazyData->paramAwait = F->getLazySource().paramAwait;
@@ -330,8 +320,6 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
     }
     BM->setFunction(i, std::move(func));
   }
-
-  BM->setContext(contextIfNeeded);
 
   BM->setDebugInfo(debugInfoGen.serializeWithMove());
   return BM;
