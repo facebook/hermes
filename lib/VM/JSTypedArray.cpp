@@ -27,7 +27,6 @@ JSTypedArrayBase::JSTypedArrayBase(
     : JSObject(runtime, vt, *parent, *clazz),
       buffer_(nullptr),
       length_(0),
-      byteWidth_(0),
       offset_(0) {
   flags_.indexedStorage = true;
   flags_.fastIndexProperties = true;
@@ -52,7 +51,6 @@ JSTypedArrayBase::JSTypedArrayBase(Deserializer &d, const VTable *vt)
     : JSObject(d, vt) {
   d.readRelocation(&buffer_, RelocationKind::GCPointer);
   length_ = d.readInt<JSTypedArrayBase::size_type>();
-  byteWidth_ = d.readInt<uint8_t>();
   offset_ = d.readInt<size_type>();
 }
 
@@ -62,7 +60,6 @@ void serializeTypedArrayBase(Serializer &s, const GCCell *cell) {
       s, cell, JSObject::numOverlapSlots<JSTypedArrayBase>());
   s.writeRelocation(self->buffer_.get(s.getRuntime()));
   s.writeInt<JSTypedArrayBase::size_type>(self->length_);
-  s.writeInt<uint8_t>(self->byteWidth_);
   s.writeInt<JSTypedArrayBase::size_type>(self->offset_);
 }
 #endif
@@ -136,6 +133,17 @@ ExecutionStatus JSTypedArrayBase::validateTypedArray(
         "A TypedArray function was called on a detached TypedArray");
   }
   return ExecutionStatus::RETURNED;
+}
+
+uint8_t JSTypedArrayBase::getByteWidth() const {
+  static constexpr uint8_t widths[] = {
+#define TYPED_ARRAY(name, type) sizeof(type),
+#include "hermes/VM/TypedArrays.def"
+#undef TYPED_ARRAY
+  };
+  static constexpr size_t firstKind =
+      static_cast<size_t>(CellKind::TypedArrayBaseKind_first);
+  return widths[static_cast<size_t>(getKind()) - firstKind];
 }
 
 CallResult<Handle<JSTypedArrayBase>> JSTypedArrayBase::allocateToSameBuffer(
@@ -428,9 +436,7 @@ JSTypedArray<T, C>::JSTypedArray(
     Runtime *runtime,
     Handle<JSObject> parent,
     Handle<HiddenClass> clazz)
-    : JSTypedArrayBase(runtime, &vt.base.base, parent, clazz) {
-  byteWidth_ = sizeof(T);
-}
+    : JSTypedArrayBase(runtime, &vt.base.base, parent, clazz) {}
 
 template <typename T, CellKind C>
 HermesValue JSTypedArray<T, C>::_getOwnIndexedImpl(

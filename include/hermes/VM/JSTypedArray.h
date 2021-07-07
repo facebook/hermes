@@ -97,15 +97,12 @@ class JSTypedArrayBase : public JSObject {
   /// Get the byte length of this array. This corresponds to the property
   /// visible as `.byteLength` in JS.
   JSArrayBuffer::size_type getByteLength() const {
-    return length_ * byteWidth_;
+    return length_ * getByteWidth();
   }
 
   /// Get the width of the type in number of bytes. This is sizeof(T) for the
   /// T used to instantiate a TypedArray.
-  uint8_t getByteWidth() const {
-    assert(byteWidth_ != 0 && "Cannot have a byte width of 0");
-    return byteWidth_;
-  }
+  uint8_t getByteWidth() const;
 
   /// \return The underlying array buffer that this TypedArray uses for its
   /// storage.
@@ -193,9 +190,6 @@ class JSTypedArrayBase : public JSObject {
   GCPointer<JSArrayBuffer> buffer_;
   /// length_ is the length of the buffer in terms of the type it is viewed by.
   size_type length_;
-  /// byteWidth_ is the number of bytes a specific type needs to be stored.
-  /// It is sizeof(Typename).
-  uint8_t byteWidth_;
   /// offset_ is the offset to start reading from in the underlying ArrayBuffer.
   size_type offset_;
 
