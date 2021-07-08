@@ -85,7 +85,7 @@ CallResult<HermesValue> typedArrayConstructorFromLength(
     return ExecutionStatus::EXCEPTION;
   }
   if (JSTypedArray<T, C>::createBuffer(
-          runtime, self, resIndex.getValue().getNumberAs<std::size_t>()) ==
+          runtime, self, resIndex.getValue().getNumberAs<uint64_t>()) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }

@@ -135,7 +135,7 @@ class JSTypedArrayBase : public JSObject {
   static ExecutionStatus createBuffer(
       Runtime *runtime,
       Handle<JSTypedArrayBase> selfObj,
-      size_type length);
+      uint64_t length);
 
   /// Sets the current buffer to a copy of \p src starting from
   /// \p byteOffset and going for \p srcSize bytes total.

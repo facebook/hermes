@@ -176,13 +176,20 @@ CallResult<Handle<JSTypedArrayBase>> JSTypedArrayBase::allocateToSameBuffer(
 ExecutionStatus JSTypedArrayBase::createBuffer(
     Runtime *runtime,
     Handle<JSTypedArrayBase> selfObj,
-    size_type length) {
+    uint64_t length) {
   assert(runtime && selfObj);
 
   auto tmpbuf = runtime->makeHandle(JSArrayBuffer::create(
       runtime, Handle<JSObject>::vmcast(&runtime->arrayBufferPrototype)));
 
-  auto bufferSize = length * selfObj->getByteWidth();
+  // Ensure that the buffer size in bytes will not overflow
+  // JSArrayBuffer::size_type (maybe not same as JSTypedArrayBase::size_type).
+  if (length > (std::numeric_limits<JSArrayBuffer::size_type>::max() /
+                selfObj->getByteWidth())) {
+    return runtime->raiseRangeError(
+        "Cannot allocate a data block for the ArrayBuffer");
+  }
+  JSArrayBuffer::size_type bufferSize = length * selfObj->getByteWidth();
   if (tmpbuf->createDataBlock(runtime, bufferSize) ==
       ExecutionStatus::EXCEPTION) {
     // Failed to allocate, don't modify what it currently points to.

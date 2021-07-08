@@ -557,7 +557,7 @@ cons.forEach(function(c, i) {
       }
     });
     return c.from(ta);
-  }, TypeError);
+  }, RangeError);
 });
 
 /// @}
