@@ -174,7 +174,10 @@ void ESTreeIRGen::doIt() {
 
   if (!lexicalScopeChain) {
     topLevelFunction = Builder.createTopLevelFunction(
-        ESTree::isStrict(Program->strictness), Program->getSourceRange());
+        ESTree::isStrict(Program->strictness),
+        Program->sourceVisibility,
+        Program->getSourceRange());
+
   } else {
     // If compiling in an existing lexical context, we need to install the
     // scopes in a wrapper function, which represents the "global" code.
@@ -183,6 +186,7 @@ void ESTreeIRGen::doIt() {
         "",
         Function::DefinitionKind::ES5Function,
         ESTree::isStrict(Program->strictness),
+        Program->sourceVisibility,
         Program->getSourceRange(),
         true);
 
@@ -200,6 +204,7 @@ void ESTreeIRGen::doIt() {
         "eval",
         Function::DefinitionKind::ES5Function,
         ESTree::isStrict(Program->strictness),
+        Program->sourceVisibility,
         Program->getSourceRange(),
         false);
   }
@@ -296,7 +301,7 @@ std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
   // Create a top level function that will never be executed, because:
   // 1. IRGen assumes the first function always has global scope
   // 2. It serves as the root for dummy functions for lexical data
-  Function *topLevel = Builder.createTopLevelFunction(lazyData->strictMode, {});
+  Function *topLevel = Builder.createTopLevelFunction(lazyData->strictMode);
 
   FunctionContext topLevelFunctionContext{this, topLevel, nullptr};
 
@@ -1256,6 +1261,7 @@ void ESTreeIRGen::addLexicalDebugInfo(
       scope->originalName,
       Function::DefinitionKind::ES5Function,
       false,
+      SourceVisibility::Sensitive,
       {},
       false);
 

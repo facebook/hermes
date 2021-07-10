@@ -163,6 +163,7 @@ Function::Function(
     Identifier originalName,
     DefinitionKind definitionKind,
     bool strictMode,
+    SourceVisibility sourceVisibility,
     bool isGlobal,
     SMRange sourceRange,
     Function *insertBefore)
@@ -175,6 +176,7 @@ Function::Function(
       definitionKind_(definitionKind),
       strictMode_(strictMode),
       SourceRange(sourceRange),
+      sourceVisibility_(sourceVisibility),
       internalName_(parent->deriveUniqueInternalName(originalName)) {
   if (insertBefore) {
     assert(insertBefore != this && "Cannot insert a function before itself!");

@@ -29,6 +29,7 @@ Function *IRBuilder::createFunction(
     Identifier OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
+    SourceVisibility sourceVisibility,
     SMRange sourceRange,
     bool isGlobal,
     Function *insertBefore) {
@@ -43,6 +44,7 @@ Function *IRBuilder::createFunction(
       OriginalName,
       definitionKind,
       strictMode,
+      sourceVisibility,
       isGlobal,
       sourceRange,
       insertBefore);
@@ -52,6 +54,7 @@ GeneratorFunction *IRBuilder::createGeneratorFunction(
     Identifier OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
+    SourceVisibility sourceVisibility,
     SMRange sourceRange,
     Function *insertBefore) {
   if (!OriginalName.isValid()) {
@@ -64,6 +67,7 @@ GeneratorFunction *IRBuilder::createGeneratorFunction(
       OriginalName,
       definitionKind,
       strictMode,
+      sourceVisibility,
       /* isGlobal */ false,
       sourceRange,
       insertBefore);
@@ -98,6 +102,7 @@ ExternalScope *IRBuilder::createExternalScope(
 
 Function *IRBuilder::createTopLevelFunction(
     bool strictMode,
+    SourceVisibility sourceVisibility,
     SMRange sourceRange) {
   // Notice that this synthesized name is not a legal javascript name and
   // can't collide with functions in the processed program.
@@ -105,6 +110,7 @@ Function *IRBuilder::createTopLevelFunction(
       "global",
       Function::DefinitionKind::ES5Function,
       strictMode,
+      sourceVisibility,
       sourceRange,
       true);
 }
@@ -113,6 +119,7 @@ Function *IRBuilder::createFunction(
     StringRef OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
+    SourceVisibility sourceVisibility,
     SMRange sourceRange,
     bool isGlobal,
     Function *insertBefore) {
@@ -122,6 +129,7 @@ Function *IRBuilder::createFunction(
       OrigIden,
       definitionKind,
       strictMode,
+      sourceVisibility,
       sourceRange,
       isGlobal,
       insertBefore);
@@ -131,6 +139,7 @@ AsyncFunction *IRBuilder::createAsyncFunction(
     Identifier OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
+    SourceVisibility sourceVisibility,
     SMRange sourceRange,
     Function *insertBefore) {
   if (!OriginalName.isValid()) {
@@ -143,6 +152,7 @@ AsyncFunction *IRBuilder::createAsyncFunction(
       OriginalName,
       definitionKind,
       strictMode,
+      sourceVisibility,
       /* isGlobal */ false,
       sourceRange,
       insertBefore);
