@@ -241,6 +241,13 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
         BMGen.addCJSModule(index, BMGen.getStringID(cjsModule->filename.str()));
       }
     }
+
+    // Add entries to function source table for non-default source.
+    if (!F.isGlobalScope()) {
+      if (auto source = F.getSourceRepresentationStr()) {
+        BMGen.addFunctionSource(index, BMGen.getStringID(*source));
+      }
+    }
   }
   assert(BMGen.getEntryPointIndex() != -1 && "Entry point not added");
 
@@ -327,6 +334,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecode(
       segment,
       sourceMapGen,
       std::move(baseBCProvider));
+
   if (options.format == OutputFormatKind::EmitBundle) {
     assert(BM != nullptr);
     BytecodeSerializer BS{OS, options};

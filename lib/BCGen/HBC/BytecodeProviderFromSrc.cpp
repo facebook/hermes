@@ -76,6 +76,8 @@ BCProviderFromSrc::BCProviderFromSrc(
   cjsModuleTable_ = module_->getCJSModuleTable();
   cjsModuleTableStatic_ = module_->getCJSModuleTableStatic();
 
+  functionSourceTable_ = module_->getFunctionSourceTable();
+
   debugInfo_ = &module_->getDebugInfo();
 }
 

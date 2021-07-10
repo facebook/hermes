@@ -235,6 +235,12 @@ class BytecodeModule {
   /// Mapping from {global module ID => function index}.
   std::vector<std::pair<uint32_t, uint32_t>> cjsModuleTableStatic_{};
 
+  /// Mapping function ids to the string table offsets that store their
+  /// non-default source code representation that would be used by `toString`.
+  /// These are only available when functions are declared with source
+  /// visibility directives such as 'show source', 'hide source', etc.
+  std::vector<std::pair<uint32_t, uint32_t>> functionSourceTable_{};
+
   /// Storing information about the bytecode, needed when it is loaded by the
   /// runtime.
   BytecodeOptions options_{};
@@ -256,6 +262,7 @@ class BytecodeModule {
       uint32_t segmentID,
       std::vector<std::pair<uint32_t, uint32_t>> &&cjsModuleTable,
       std::vector<std::pair<uint32_t, uint32_t>> &&cjsModuleTableStatic,
+      std::vector<std::pair<uint32_t, uint32_t>> &&functionSourceTable,
       BytecodeOptions options)
       : globalFunctionIndex_(globalFunctionIndex),
         stringKinds_(std::move(stringKinds)),
@@ -270,6 +277,7 @@ class BytecodeModule {
         segmentID_(segmentID),
         cjsModuleTable_(std::move(cjsModuleTable)),
         cjsModuleTableStatic_(std::move(cjsModuleTableStatic)),
+        functionSourceTable_(std::move(functionSourceTable)),
         options_(options) {
     functions_.resize(functionCount);
   }
@@ -347,6 +355,10 @@ class BytecodeModule {
   llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getCJSModuleTableStatic()
       const {
     return cjsModuleTableStatic_;
+  }
+
+  llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getFunctionSourceTable() const {
+    return functionSourceTable_;
   }
 
   DebugInfo &getDebugInfo() {
