@@ -127,6 +127,7 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
       StringPrimitive *source =
           jsFunc->getCodeBlock()
               ->getRuntimeModule()
+              ->getLazyRootModule()
               ->getStringPrimFromStringIDMayAllocate(*sourceID);
       // Empty source marks implementation-hidden function, fabricate a source
       // code string that imitate a NativeFunction.
