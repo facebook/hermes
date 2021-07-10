@@ -99,6 +99,53 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
         "Can't call Function.prototype.toString() on non-callable");
   }
 
+  /// Append the current function name to the \p strBuf.
+  auto appendFunctionName = [&func, &runtime](SmallU16String<64> &strBuf) {
+    // Extract the name.
+    auto propRes = JSObject::getNamed_RJS(
+        func, runtime, Predefined::getSymbolID(Predefined::name));
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    // Convert the name to string, unless it is undefined.
+    if (!(*propRes)->isUndefined()) {
+      auto strRes =
+          toString_RJS(runtime, runtime->makeHandle(std::move(*propRes)));
+      if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      strRes->get()->appendUTF16String(strBuf);
+    }
+    return ExecutionStatus::RETURNED;
+  };
+
+  // Deal with JSFunctions that has a source String ID. That implies this
+  // function need a non-default toString implementation.
+  if (auto jsFunc = dyn_vmcast<JSFunction>(*func)) {
+    if (auto sourceID = jsFunc->getCodeBlock()->getFunctionSourceID()) {
+      StringPrimitive *source =
+          jsFunc->getCodeBlock()
+              ->getRuntimeModule()
+              ->getStringPrimFromStringIDMayAllocate(*sourceID);
+      // Empty source marks implementation-hidden function, fabricate a source
+      // code string that imitate a NativeFunction.
+      if (source->getStringLength() == 0) {
+        SmallU16String<64> strBuf{};
+        strBuf.append("function ");
+        if (LLVM_UNLIKELY(
+                appendFunctionName(strBuf) == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        strBuf.append("() { [native code] }");
+        return StringPrimitive::create(runtime, strBuf);
+      } else {
+        // Otherwise, it's the preserved source code.
+        return HermesValue::encodeStringValue(source);
+      }
+    };
+  }
+
   SmallU16String<64> strBuf{};
   if (vmisa<JSAsyncFunction>(*func)) {
     strBuf.append("async function ");
@@ -108,21 +155,8 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
     strBuf.append("function ");
   }
 
-  // Extract the name.
-  auto propRes = JSObject::getNamed_RJS(
-      func, runtime, Predefined::getSymbolID(Predefined::name));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+  if (LLVM_UNLIKELY(appendFunctionName(strBuf) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
-  }
-
-  // Convert the name to string, unless it is undefined.
-  if (!(*propRes)->isUndefined()) {
-    auto strRes =
-        toString_RJS(runtime, runtime->makeHandle(std::move(*propRes)));
-    if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    strRes->get()->appendUTF16String(strBuf);
   }
 
   // Formal parameters and the rest of the body.
