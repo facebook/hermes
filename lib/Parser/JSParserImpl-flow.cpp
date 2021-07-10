@@ -530,7 +530,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareClassFlow(SMLoc start) {
   advance(JSLexer::GrammarContext::Type);
 
   // NOTE: Class definition is always strict mode code.
-  SaveStrictMode saveStrictMode{this};
+  SaveStrictModeAndSeenDirectives saveStrictMode{this};
   setStrictMode(true);
 
   if (!need(

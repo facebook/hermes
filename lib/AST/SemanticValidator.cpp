@@ -70,9 +70,6 @@ bool SemanticValidator::doFunction(Node *function, bool strict) {
 }
 
 void SemanticValidator::visit(ProgramNode *node) {
-#ifndef NDEBUG
-  strictnessIsPreset_ = node->strictness != Strictness::NotSet;
-#endif
   FunctionContext newFuncCtx{this, astContext_.isStrictMode(), node};
 
   scanDirectivePrologue(node->_body);
@@ -637,10 +634,9 @@ void SemanticValidator::visitFunction(
   // arrow functions).
   if (auto *bodyNode = dyn_cast<ESTree::BlockStatementNode>(body)) {
     if (bodyNode->isLazyFunctionBody) {
-      // If it is a lazy function body, then scanning the directive prologue
-      // won't accomplish anything. Set the strictness directly via the
-      // stored strictness (which was populated based on preparsing data).
-      curFunction()->strictMode = ESTree::isStrict(node->strictness);
+      // If it is a lazy function body, then the directive nodes in the body are
+      // fabricated without location, so don't set useStrictNode.
+      scanDirectivePrologue(bodyNode->_body);
     } else {
       useStrictNode = scanDirectivePrologue(bodyNode->_body);
     }
@@ -900,12 +896,6 @@ void SemanticValidator::validateAssignmentTarget(const Node *node) {
 
 void SemanticValidator::updateNodeStrictness(FunctionLikeNode *node) {
   auto strictness = ESTree::makeStrictness(curFunction()->strictMode);
-  // Only verify the strictness if there are no errors. Otherwise it is not
-  // possible to ensure that it is correct.
-  assert(
-      (sm_.getErrorCount() || !strictnessIsPreset_ ||
-       node->strictness == strictness) &&
-      "Preset strictness is different from detected strictness");
   node->strictness = strictness;
 }
 

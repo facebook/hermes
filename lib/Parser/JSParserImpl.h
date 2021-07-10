@@ -110,6 +110,14 @@ class JSParserImpl {
     lexer_.setStrictMode(mode);
   }
 
+  llvh::SmallVector<UniqueString *, 1> &getSeenDirectives() {
+    return seenDirectives_;
+  }
+
+  /// Copy the seen directives from a vector of \c UniqueString* into a vector
+  /// of \c SmallString to be stored in \c PreParseFunctionInfo safely.
+  llvh::SmallVector<llvh::SmallString<24>, 1> copySeenDirectives() const;
+
   llvh::ArrayRef<StoredComment> getStoredComments() const {
     return lexer_.getStoredComments();
   }
@@ -212,6 +220,13 @@ class JSParserImpl {
   /// Set when the parser is inside an async function.
   /// This is used when checking if `await` is a valid Identifier name.
   bool paramAwait_{false};
+
+  /// Appended when the parser has seen an directive being visited in the
+  /// current function scope (It's intended to be used with
+  /// `SaveStrictModeAndSeenDirectives`).
+  /// This is used to store directives for lazy functions in the preParse pass,
+  /// so we can recover directive nodes back in the lazyParse pass.
+  llvh::SmallVector<UniqueString *, 1> seenDirectives_{};
 
 #if HERMES_PARSE_JSX
   /// Incremented when inside a JSX tag and decremented when leaving it.
@@ -633,7 +648,6 @@ class JSParserImpl {
 
   bool parseStatementListItem(
       Param param,
-      bool parseDirectives,
       AllowImportExport allowImportExport,
       ESTree::NodeList &stmtList);
 
@@ -1260,16 +1274,21 @@ class JSParserImpl {
       ESTree::IdentifierNode *ident);
 #endif
 
-  /// RAII to save and restore the current setting of "strict mode".
-  class SaveStrictMode {
+  /// RAII to save and restore the current setting of "strict mode" and
+  /// "seen directives".
+  class SaveStrictModeAndSeenDirectives {
     JSParserImpl *const parser_;
-    const bool oldValue_;
+    const bool oldStrictMode_;
+    const unsigned oldSeenDirectiveSize_;
 
    public:
-    SaveStrictMode(JSParserImpl *parser)
-        : parser_(parser), oldValue_(parser->isStrictMode()) {}
-    ~SaveStrictMode() {
-      parser_->setStrictMode(oldValue_);
+    explicit SaveStrictModeAndSeenDirectives(JSParserImpl *parser)
+        : parser_(parser),
+          oldStrictMode_(parser->isStrictMode()),
+          oldSeenDirectiveSize_(parser->getSeenDirectives().size()) {}
+    ~SaveStrictModeAndSeenDirectives() {
+      parser_->setStrictMode(oldStrictMode_);
+      parser_->getSeenDirectives().resize(oldSeenDirectiveSize_);
     }
   };
 
