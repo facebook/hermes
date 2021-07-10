@@ -46,13 +46,26 @@ bool isIdOperand(Instruction *I, unsigned idx) {
 namespace hermes {
 namespace hbc {
 
-void traverseFunctionNames(
+void traverseFunctions(
     Module *M,
     std::function<bool(Function *)> shouldVisitFunction,
-    std::function<void(llvh::StringRef)> traversal) {
+    std::function<void(llvh::StringRef)> traversal,
+    bool stripFunctionNames) {
   for (auto &F : *M) {
-    if (shouldVisitFunction(&F)) {
+    if (!shouldVisitFunction(&F)) {
+      continue;
+    }
+    if (!stripFunctionNames) {
       traversal(F.getOriginalOrInferredName().str());
+    }
+    // The source visibility of the global function indicate the presence of
+    // top-level source visibility directives, but we should not preserve the
+    // source code of the global function.
+    if (!F.isGlobalScope()) {
+      // Only add non-default source representation to the string table.
+      if (auto source = F.getSourceRepresentationStr()) {
+        traversal(*source);
+      }
     }
   }
 }

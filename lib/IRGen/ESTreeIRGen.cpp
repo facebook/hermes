@@ -55,7 +55,7 @@ emitStore(IRBuilder &builder, Value *storedValue, Value *ptr, bool declInit) {
 
 /// \returns true if \p node is a constant expression.
 bool isConstantExpr(ESTree::Node *node) {
-  // TODO: a little more agressive constant folding.
+  // TODO: a little more aggressive constant folding.
   switch (node->getKind()) {
     case ESTree::NodeKind::StringLiteral:
     case ESTree::NodeKind::NumericLiteral:

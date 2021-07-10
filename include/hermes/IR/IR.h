@@ -1439,6 +1439,13 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// when it's needed, e.g. "anonymous function" instead of "function".
   std::string getDescriptiveDefinitionKindStr() const;
 
+  /// \return the source code representation string of the function if its
+  /// source visibility is non-default, or llvh::None if it's the default.
+  /// Specifically, it returns the real source code for function declared with
+  /// 'show source' and an empty string for function declared with 'hide source'
+  /// or 'sensitive'. See comments in the implementation for details.
+  llvh::Optional<llvh::StringRef> getSourceRepresentationStr() const;
+
   /// \returns the internal name of the function.
   const Identifier getInternalName() const {
     return internalName_;

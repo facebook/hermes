@@ -223,6 +223,40 @@ std::string Function::getDescriptiveDefinitionKindStr() const {
   return (isAnonymous() ? "anonymous " : "") + getDefinitionKindStr(true);
 }
 
+llvh::Optional<llvh::StringRef> Function::getSourceRepresentationStr() const {
+  switch (getSourceVisibility()) {
+    case SourceVisibility::ShowSource: {
+      // Return the actual source code string.
+      auto sourceRange = getSourceRange();
+      assert(
+          sourceRange.isValid() && "Function does not have source available");
+      const auto sourceStart = sourceRange.Start.getPointer();
+      llvh::StringRef strBuf{
+          sourceStart, (size_t)(sourceRange.End.getPointer() - sourceStart)};
+      return strBuf;
+    }
+    case SourceVisibility::HideSource:
+    case SourceVisibility::Sensitive: {
+      // For implementation-hiding functions, the spec requires the source code
+      // representation of them "must have the syntax of a NativeFunction".
+      //
+      // Naively adding 'function <name>() { [ native code ] }' to string table
+      // for each function would be a huge waste of space in the generated hbc.
+      // Instead, we associate all such functions with an empty string to
+      // effectively "mark" them. (the assumption is that an real function
+      // source can't be empty). This reduced the constant factor of the space
+      // cost to only 8 bytes (one FunctionSourceTable entry) per function.
+      return llvh::StringRef("");
+    }
+    case SourceVisibility::Default:
+    default: {
+      // No need of special source representation for these cases, their
+      // 'toString' will return `{ [ bytecode ] }` as the default.
+      return llvh::None;
+    }
+  }
+}
+
 BasicBlock::BasicBlock(Function *parent)
     : Value(ValueKind::BasicBlockKind), Parent(parent) {
   assert(Parent && "Invalid parent function");
