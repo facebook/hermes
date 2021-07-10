@@ -247,9 +247,11 @@ class FunctionLikeDecoration {
 
  public:
   Strictness strictness{Strictness::NotSet};
-  /// Whether this function was a method definiton rather than using 'function'.
-  /// Note that getters and setters are also considered method definitions,
-  /// as they do not use the keyword 'function'.
+  SourceVisibility sourceVisibility{SourceVisibility::Default};
+
+  /// Whether this function was a method definition rather than using
+  /// 'function'. Note that getters and setters are also considered method
+  /// definitions, as they do not use the keyword 'function'.
   bool isMethodDefinition{false};
 
   void setSemInfo(sem::FunctionInfo *semInfo) {

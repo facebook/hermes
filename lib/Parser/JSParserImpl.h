@@ -244,9 +244,12 @@ class JSParserImpl {
   UniqueString *setIdent_;
   UniqueString *initIdent_;
   UniqueString *useStrictIdent_;
+  UniqueString *showSourceIdent_;
+  UniqueString *hideSourceIdent_;
+  UniqueString *sensitiveIdent_;
+  UniqueString *useStaticBuiltinIdent_;
   UniqueString *letIdent_;
   UniqueString *ofIdent_;
-  UniqueString *useStaticBuiltinIdent_;
   UniqueString *fromIdent_;
   UniqueString *asIdent_;
   UniqueString *implementsIdent_;

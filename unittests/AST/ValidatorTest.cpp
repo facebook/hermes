@@ -147,4 +147,140 @@ TEST(ValidatorTest, NamedBreakLabelTest) {
   ASSERT_FALSE(validateAST(ctx, semCtx, *parsed));
   ASSERT_EQ(2, diag.getErrCountClear());
 }
+
+void assertFunctionLikeSourceVisibility(
+    llvh::Optional<ESTree::FunctionLikeNode *> funcLikeNode,
+    SourceVisibility sourceVisibility) {
+  ASSERT_TRUE(funcLikeNode.hasValue());
+  ASSERT_EQ((*funcLikeNode)->sourceVisibility, sourceVisibility);
+}
+
+void assertFirstNodeAsFunctionLikeWithSourceVisibility(
+    llvh::Optional<ESTree::ProgramNode *> parsed,
+    SourceVisibility sourceVisibility) {
+  ASSERT_TRUE(parsed.hasValue());
+  auto *programNode = llvh::cast<ESTree::ProgramNode>(parsed.getValue());
+  ASSERT_TRUE(llvh::isa<ESTree::FunctionLikeNode>(programNode->_body.front()));
+  auto *funcLikeNode =
+      llvh::cast<ESTree::FunctionLikeNode>(&programNode->_body.front());
+
+  ASSERT_EQ(funcLikeNode->sourceVisibility, sourceVisibility);
+}
+
+void assertSecondNodeAsFunctionLikeWithSourceVisibility(
+    llvh::Optional<ESTree::ProgramNode *> parsed,
+    SourceVisibility sourceVisibility) {
+  ASSERT_TRUE(parsed.hasValue());
+  auto *programNode = llvh::cast<ESTree::ProgramNode>(parsed.getValue());
+  auto it = programNode->_body.begin();
+  // Step to the 2nd node.
+  it++;
+  ASSERT_TRUE(llvh::isa<ESTree::FunctionLikeNode>(*it));
+  auto *funcLikeNode = llvh::cast<ESTree::FunctionLikeNode>(it);
+
+  ASSERT_EQ(funcLikeNode->sourceVisibility, sourceVisibility);
+}
+
+TEST(ValidatorTest, SourceVisibilityTest) {
+  Context context;
+  sem::SemContext semCtx{};
+  // Top-level program node.
+  {
+    JSParser parser(context, "");
+    auto parsed = parser.parse();
+    validateAST(context, semCtx, *parsed);
+    assertFunctionLikeSourceVisibility(*parsed, SourceVisibility::Default);
+  }
+  {
+    JSParser parser(context, "'show source'");
+    auto parsed = parser.parse();
+    // source visibility is set to default before semantic validation.
+    assertFunctionLikeSourceVisibility(*parsed, SourceVisibility::Default);
+    validateAST(context, semCtx, *parsed);
+    // source visibility is correctly updated after semantic validation.
+    assertFunctionLikeSourceVisibility(*parsed, SourceVisibility::ShowSource);
+  }
+  // Singleton function node.
+  {
+    JSParser parser(context, "function func (a, b) { return 10 }");
+    auto parsed = parser.parse();
+    validateAST(context, semCtx, *parsed);
+    assertFirstNodeAsFunctionLikeWithSourceVisibility(
+        parsed, SourceVisibility::Default);
+  }
+  {
+    JSParser parser(context, "function func (a, b) { 'sensitive'; return 10 }");
+    auto parsed = parser.parse();
+    validateAST(context, semCtx, *parsed);
+    assertFirstNodeAsFunctionLikeWithSourceVisibility(
+        parsed, SourceVisibility::Sensitive);
+  }
+  {
+    JSParser parser(
+        context, "function func (a, b) { 'hide source'; return 10 }");
+    auto parsed = parser.parse();
+    validateAST(context, semCtx, *parsed);
+    assertFirstNodeAsFunctionLikeWithSourceVisibility(
+        parsed, SourceVisibility::HideSource);
+  }
+  {
+    JSParser parser(
+        context, "function func (a, b) { 'show source'; return 10 }");
+    auto parsed = parser.parse();
+    validateAST(context, semCtx, *parsed);
+    assertFirstNodeAsFunctionLikeWithSourceVisibility(
+        parsed, SourceVisibility::ShowSource);
+  }
+  // Visibility is correctly restored.
+  {
+    JSParser parser(context, "function foo(x) { 'sensitive' }function bar(){}");
+    auto parsed = parser.parse();
+    validateAST(context, semCtx, *parsed);
+    assertFirstNodeAsFunctionLikeWithSourceVisibility(
+        parsed, SourceVisibility::Sensitive);
+    assertSecondNodeAsFunctionLikeWithSourceVisibility(
+        parsed, SourceVisibility::Default);
+  }
+  // Overriding.
+  {
+    // ShowSource > Default
+    JSParser parser(
+        context, "'show source'; function func (a, b) { return 10 }");
+    auto parsed = parser.parse();
+    validateAST(context, semCtx, *parsed);
+    assertSecondNodeAsFunctionLikeWithSourceVisibility(
+        parsed, SourceVisibility::ShowSource);
+  }
+  {
+    // HideSource > ShowSource
+    JSParser parser(
+        context,
+        "'show source'; function func (a, b) { 'hide source'; return 10 }");
+    auto parsed = parser.parse();
+    validateAST(context, semCtx, *parsed);
+    assertSecondNodeAsFunctionLikeWithSourceVisibility(
+        parsed, SourceVisibility::HideSource);
+  }
+  {
+    // ShowSource < HideSource
+    JSParser parser(
+        context,
+        "'hide source'; function func (a, b) { 'show source'; return 10 }");
+    auto parsed = parser.parse();
+    validateAST(context, semCtx, *parsed);
+    assertSecondNodeAsFunctionLikeWithSourceVisibility(
+        parsed, SourceVisibility::HideSource);
+  }
+  {
+    // Sensitive > HideSource
+    JSParser parser(
+        context,
+        "'hide source'; function func (a, b) { 'sensitive'; return 10 }");
+    auto parsed = parser.parse();
+    validateAST(context, semCtx, *parsed);
+    assertSecondNodeAsFunctionLikeWithSourceVisibility(
+        parsed, SourceVisibility::Sensitive);
+  }
+}
+
 } // anonymous namespace

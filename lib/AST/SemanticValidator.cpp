@@ -36,6 +36,12 @@ Keywords::Keywords(Context &astContext)
       identThis(astContext.getIdentifier("this").getUnderlyingPointer()),
       identUseStrict(
           astContext.getIdentifier("use strict").getUnderlyingPointer()),
+      identShowSource(
+          astContext.getIdentifier("show source").getUnderlyingPointer()),
+      identHideSource(
+          astContext.getIdentifier("hide source").getUnderlyingPointer()),
+      identSensitive(
+          astContext.getIdentifier("sensitive").getUnderlyingPointer()),
       identVar(astContext.getIdentifier("var").getUnderlyingPointer()),
       identLet(astContext.getIdentifier("let").getUnderlyingPointer()),
       identConst(astContext.getIdentifier("const").getUnderlyingPointer()) {}
@@ -73,7 +79,7 @@ void SemanticValidator::visit(ProgramNode *node) {
   FunctionContext newFuncCtx{this, astContext_.isStrictMode(), node};
 
   scanDirectivePrologue(node->_body);
-  updateNodeStrictness(node);
+  setDirectiveDerivedInfo(node);
 
   visitESTreeChildren(*this, node);
 }
@@ -619,7 +625,11 @@ void SemanticValidator::visitFunction(
     NodeList &params,
     Node *body) {
   FunctionContext newFuncCtx{
-      this, haveActiveContext() && curFunction()->strictMode, node};
+      this,
+      haveActiveContext() && curFunction()->strictMode,
+      node,
+      haveActiveContext() ? curFunction()->sourceVisibility
+                          : SourceVisibility::Default};
 
   // It is a Syntax Error if UniqueFormalParameters Contains YieldExpression
   // is true.
@@ -640,7 +650,7 @@ void SemanticValidator::visitFunction(
     } else {
       useStrictNode = scanDirectivePrologue(bodyNode->_body);
     }
-    updateNodeStrictness(node);
+    setDirectiveDerivedInfo(node);
   }
 
   if (id)
@@ -737,6 +747,13 @@ void SemanticValidator::visitParamsAndBody(FunctionLikeNode *node) {
   }
 }
 
+void SemanticValidator::tryOverrideSourceVisibility(
+    SourceVisibility newSourceVisibility) {
+  if (newSourceVisibility > curFunction()->sourceVisibility) {
+    curFunction()->sourceVisibility = newSourceVisibility;
+  }
+}
+
 Node *SemanticValidator::scanDirectivePrologue(NodeList &body) {
   Node *result = nullptr;
   for (auto &nodeRef : body) {
@@ -750,6 +767,15 @@ Node *SemanticValidator::scanDirectivePrologue(NodeList &body) {
       curFunction()->strictMode = true;
       if (!result)
         result = &nodeRef;
+    }
+    if (directive == kw_.identShowSource) {
+      tryOverrideSourceVisibility(SourceVisibility::ShowSource);
+    }
+    if (directive == kw_.identHideSource) {
+      tryOverrideSourceVisibility(SourceVisibility::HideSource);
+    }
+    if (directive == kw_.identSensitive) {
+      tryOverrideSourceVisibility(SourceVisibility::Sensitive);
     }
   }
 
@@ -894,9 +920,9 @@ void SemanticValidator::validateAssignmentTarget(const Node *node) {
   sm_.error(node->getSourceRange(), "invalid assignment left-hand side");
 }
 
-void SemanticValidator::updateNodeStrictness(FunctionLikeNode *node) {
-  auto strictness = ESTree::makeStrictness(curFunction()->strictMode);
-  node->strictness = strictness;
+void SemanticValidator::setDirectiveDerivedInfo(FunctionLikeNode *node) {
+  node->strictness = ESTree::makeStrictness(curFunction()->strictMode);
+  node->sourceVisibility = curFunction()->sourceVisibility;
 }
 
 LabelDecorationBase *SemanticValidator::getLabelDecorationBase(
@@ -926,11 +952,13 @@ void SemanticValidator::recursionDepthExceeded(Node *n) {
 FunctionContext::FunctionContext(
     SemanticValidator *validator,
     bool strictMode,
-    FunctionLikeNode *node)
+    FunctionLikeNode *node,
+    SourceVisibility sourceVisibility)
     : validator_(validator),
       oldContextValue_(validator->funcCtx_),
       semInfo(validator->semCtx_.createFunction()),
-      strictMode(strictMode) {
+      strictMode(strictMode),
+      sourceVisibility(sourceVisibility) {
   validator->funcCtx_ = this;
 
   if (node)

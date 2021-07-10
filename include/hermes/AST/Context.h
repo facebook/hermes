@@ -93,6 +93,30 @@ enum class ParseFlowSetting {
   UNAMBIGUOUS,
 };
 
+/// An enum to track the "source visibility" of functions. This notion is coined
+/// to implement "directives" such as 'hide source' and 'sensitive' defined by
+/// https://github.com/tc39/proposal-function-implementation-hiding, as well as
+/// 'show source' Hermes proposed to explicitly preserve source for `toString`.
+///
+/// Members are ordered in an increasingly stronger manner, where only later
+/// source visibility can override the earlier but not vice versa.
+enum class SourceVisibility {
+  /// The implementation-default behavior, e.g. `toString` prints
+  /// `{ [bytecode] }` in Hermes.
+  Default,
+
+  /// Enforce the source code text to be available for the `toString` use.
+  ShowSource,
+
+  /// Enforce to have the syntax of NativeFunction, e.g. `toString` prints
+  /// `{ [native code] }`.
+  HideSource,
+
+  /// Considered security-sensitive, e.g. `toString` printed as NativeFunction;
+  /// hidden from error stack trace to protect from leaking its existence.
+  Sensitive,
+};
+
 /// Holds shared dependencies and state.
 class Context {
  public:
