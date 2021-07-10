@@ -7,8 +7,10 @@
 
 // RUN: %hermes %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -lazy %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -target=HBC -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
+// UNSUPPORTED: serializer
 
 print('Function.prototype.toString');
 // CHECK-LABEL: Function.prototype.toString
@@ -42,10 +44,13 @@ print((function now() { 'hide source' }).toString());
 // CHECK-NEXT: function now() { [native code] }
 
 
-/// --- Function Expression / Arrow / Anonymous ---
+/// --- Function Expression ---
 
 print((function fe() { 'show source' }).toString());
 // CHECK-NEXT: function fe() { 'show source' }
+
+
+/// --- Arrow Function Expression ---
 
 print((() => { 'show source' }).toString());
 // CHECK-NEXT: () => { 'show source' }

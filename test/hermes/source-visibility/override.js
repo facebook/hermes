@@ -6,6 +6,8 @@
  */
 
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -lazy %s | %FileCheck --match-full-lines %s
+// UNSUPPORTED: serializer
 
 // Inner HideSource can override outer ShowSource
 function showSource1() {

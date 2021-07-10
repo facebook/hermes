@@ -255,8 +255,13 @@ OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocation(
 }
 
 OptValue<uint32_t> CodeBlock::getFunctionSourceID() const {
+  // Note that for the case of lazy compilation, the function sources had been
+  // reserved into the function source table of the root bytecode module.
+  // For non-lazy module, the lazy root module is itself.
   llvh::ArrayRef<std::pair<uint32_t, uint32_t>> table =
-      runtimeModule_->getBytecode()->getFunctionSourceTable();
+      runtimeModule_->getLazyRootModule()
+          ->getBytecode()
+          ->getFunctionSourceTable();
 
   // Performs a binary search since the function source table is sorted by the
   // 1st value. We could further optimize the lookup by loading it as a map in
