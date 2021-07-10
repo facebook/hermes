@@ -254,6 +254,27 @@ OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocation(
       ->getLocationForAddress(*debugLocsOffset, offset);
 }
 
+OptValue<uint32_t> CodeBlock::getFunctionSourceID() const {
+  llvh::ArrayRef<std::pair<uint32_t, uint32_t>> table =
+      runtimeModule_->getBytecode()->getFunctionSourceTable();
+
+  // Performs a binary search since the function source table is sorted by the
+  // 1st value. We could further optimize the lookup by loading it as a map in
+  // the RuntimeModule, but the table is expected to be small.
+  auto it = std::lower_bound(
+      table.begin(),
+      table.end(),
+      functionID_,
+      [](std::pair<uint32_t, uint32_t> entry, uint32_t id) {
+        return entry.first < id;
+      });
+  if (it == table.end() || it->first != functionID_) {
+    return llvh::None;
+  } else {
+    return it->second;
+  }
+}
+
 OptValue<uint32_t> CodeBlock::getDebugLexicalDataOffset() const {
   auto *debugOffsets =
       runtimeModule_->getBytecode()->getDebugOffsets(functionID_);

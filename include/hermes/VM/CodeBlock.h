@@ -203,6 +203,10 @@ class CodeBlock final
   OptValue<hbc::DebugSourceLocation> getSourceLocation(
       uint32_t offset = 0) const;
 
+  /// Look up the function source table and \return the String ID associated
+  /// with the current function if an entry is found, or llvh::None if not.
+  OptValue<uint32_t> getFunctionSourceID() const;
+
   OptValue<uint32_t> getDebugLexicalDataOffset() const;
 
   const inst::Inst *getOffsetPtr(uint32_t offset) const {
