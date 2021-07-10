@@ -23,7 +23,7 @@ namespace hermes {
 /// The IRBuilder is used for creating IR. The builder APIs is split into two
 /// parts. First, APIs for creating blocks and functions. These APIs are
 /// stateless and do not affect the second kind of APIs which are used for
-/// creating new instructions. The Instruction creation APIS are statefull and
+/// creating new instructions. The Instruction creation APIS are stateful and
 /// follow an insertion point that can be saved, restored and manipulated.
 class IRBuilder {
   IRBuilder(const IRBuilder &) = delete;
@@ -31,7 +31,7 @@ class IRBuilder {
 
   /// The module is the root of the program that we are building.
   Module *M;
-  /// This is where the next insruction will be inserted.
+  /// This is where the next instruction will be inserted.
   BasicBlock::iterator InsertionPoint{};
   // The iterator must point into this block:
   BasicBlock *Block{};
@@ -64,6 +64,7 @@ class IRBuilder {
       Identifier OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
+      SourceVisibility sourceVisibility = SourceVisibility::Default,
       SMRange sourceRange = SMRange{},
       bool isGlobal = false,
       Function *insertBefore = nullptr);
@@ -73,6 +74,7 @@ class IRBuilder {
       StringRef OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
+      SourceVisibility sourceVisibility = SourceVisibility::Default,
       SMRange sourceRange = SMRange{},
       bool isGlobal = false,
       Function *insertBefore = nullptr);
@@ -85,6 +87,7 @@ class IRBuilder {
       Identifier OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
+      SourceVisibility sourceVisibility,
       SMRange sourceRange = SMRange{},
       Function *insertBefore = nullptr);
 
@@ -96,6 +99,7 @@ class IRBuilder {
       Identifier OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
+      SourceVisibility sourceVisibility,
       SMRange sourceRange = SMRange{},
       Function *insertBefore = nullptr);
 
@@ -113,6 +117,7 @@ class IRBuilder {
   /// Create the top level function representing the global scope.
   Function *createTopLevelFunction(
       bool strictMode,
+      SourceVisibility sourceVisibility = SourceVisibility::Default,
       SMRange sourceRange = SMRange{});
 
   /// Create a new ExternalScope with the given depth, which must be negative.

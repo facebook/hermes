@@ -1323,6 +1323,8 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   const bool strictMode_{};
   /// The source location of the function.
   SMRange SourceRange{};
+  /// The source visibility of the function.
+  SourceVisibility sourceVisibility_;
 
   /// A name derived from \c originalOrInferredName_, but unique in the Module.
   /// Used only for printing and diagnostic.
@@ -1378,6 +1380,7 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
       Identifier originalName,
       DefinitionKind definitionKind,
       bool strictMode,
+      SourceVisibility sourceVisibility,
       bool isGlobal,
       SMRange sourceRange,
       Function *insertBefore = nullptr);
@@ -1395,6 +1398,7 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
       Identifier originalName,
       DefinitionKind definitionKind,
       bool strictMode,
+      SourceVisibility sourceVisibility,
       bool isGlobal,
       SMRange sourceRange,
       Function *insertBefore = nullptr)
@@ -1404,6 +1408,7 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
             originalName,
             definitionKind,
             strictMode,
+            sourceVisibility,
             isGlobal,
             sourceRange,
             insertBefore) {}
@@ -1494,6 +1499,11 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// Return the source range covered by the function.
   SMRange getSourceRange() const {
     return SourceRange;
+  }
+
+  /// Return the source visibility of the function.
+  SourceVisibility getSourceVisibility() const {
+    return sourceVisibility_;
   }
 
   OptValue<uint32_t> getStatementCount() const {
@@ -1637,6 +1647,7 @@ class GeneratorFunction final : public Function {
       Identifier originalName,
       DefinitionKind definitionKind,
       bool strictMode,
+      SourceVisibility sourceVisibility,
       bool isGlobal,
       SMRange sourceRange,
       Function *insertBefore)
@@ -1646,6 +1657,7 @@ class GeneratorFunction final : public Function {
             originalName,
             definitionKind,
             strictMode,
+            sourceVisibility,
             isGlobal,
             sourceRange,
             insertBefore) {}
@@ -1671,6 +1683,9 @@ class GeneratorInnerFunction final : public Function {
             originalName,
             definitionKind,
             strictMode,
+            // TODO(T84292546): change to 'Sensitive' once the outer gen fn name
+            //  is used in the err stack trace instead of the inner gen fn name.
+            SourceVisibility::HideSource,
             isGlobal,
             sourceRange,
             insertBefore) {
@@ -1689,6 +1704,7 @@ class AsyncFunction final : public Function {
       Identifier originalName,
       DefinitionKind definitionKind,
       bool strictMode,
+      SourceVisibility sourceVisibility,
       bool isGlobal,
       SMRange sourceRange,
       Function *insertBefore)
@@ -1698,6 +1714,7 @@ class AsyncFunction final : public Function {
             originalName,
             definitionKind,
             strictMode,
+            sourceVisibility,
             isGlobal,
             sourceRange,
             insertBefore) {}
