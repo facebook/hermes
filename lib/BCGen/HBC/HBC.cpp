@@ -211,9 +211,8 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
 
     if (options.stripFunctionNames) {
       addString(kStrippedFunctionName);
-    } else {
-      traverseFunctionNames(M, shouldGenerate, addString);
     }
+    traverseFunctions(M, shouldGenerate, addString, options.stripFunctionNames);
 
     if (!M->getCJSModulesResolved()) {
       traverseCJSModuleNames(M, shouldGenerate, addString);
