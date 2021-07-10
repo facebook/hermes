@@ -36,6 +36,12 @@ class Keywords {
   const UniqueString *const identThis;
   /// Identifier for "use strict".
   const UniqueString *const identUseStrict;
+  /// Identifier for "show source ".
+  const UniqueString *const identShowSource;
+  /// Identifier for "hide source ".
+  const UniqueString *const identHideSource;
+  /// Identifier for "sensitive".
+  const UniqueString *const identSensitive;
   /// Identifier for "var".
   const UniqueString *const identVar;
   /// Identifier for "let".
@@ -228,8 +234,7 @@ class SemanticValidator {
   /// Scan a list of directives in the beginning of a program or function
   /// (see ES5.1 4.1 - a directive is a statement consisting of a single
   /// string literal).
-  /// Update the flags in the function context to reflect the directives. (We
-  /// currently only recognize "use strict".)
+  /// Update the flags in the function context to reflect the directives.
   /// \return the node containing "use strict" or nullptr.
   Node *scanDirectivePrologue(NodeList &body);
 
@@ -255,8 +260,15 @@ class SemanticValidator {
   /// (used by elision).
   void validateAssignmentTarget(const Node *node);
 
-  /// Set the strictness of a function-like node to the current strictness.
-  void updateNodeStrictness(FunctionLikeNode *node);
+  /// Set directives derived information (e.g. strictness, source visibility)
+  /// to a function-like node.
+  /// Data is retrieved from \c curFunction().
+  void setDirectiveDerivedInfo(FunctionLikeNode *node);
+
+  /// Called when the any of the source visibility directives are seen.
+  /// Only a stronger source visibility from inner function scope can override
+  /// the current source visibility set by outer function scope.
+  void tryOverrideSourceVisibility(SourceVisibility newSourceVisibility);
 
   /// Get the LabelDecorationBase depending on the node type.
   static LabelDecorationBase *getLabelDecorationBase(StatementNode *node);
@@ -297,6 +309,8 @@ class FunctionContext {
   StatementNode *activeSwitchOrLoop = nullptr;
   /// Is this function in strict mode.
   bool strictMode = false;
+  /// Source visibility of this function.
+  SourceVisibility sourceVisibility{SourceVisibility::Default};
 
   /// The currently active labels in the function.
   llvh::DenseMap<NodeLabel, Label> labelMap;
@@ -304,7 +318,8 @@ class FunctionContext {
   explicit FunctionContext(
       SemanticValidator *validator,
       bool strictMode,
-      FunctionLikeNode *node);
+      FunctionLikeNode *node,
+      SourceVisibility sourceVisibility = SourceVisibility::Default);
 
   ~FunctionContext();
 

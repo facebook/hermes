@@ -54,9 +54,12 @@ void JSParserImpl::initializeIdentifiers() {
   setIdent_ = lexer_.getIdentifier("set");
   initIdent_ = lexer_.getIdentifier("init");
   useStrictIdent_ = lexer_.getIdentifier("use strict");
+  showSourceIdent_ = lexer_.getIdentifier("show source");
+  hideSourceIdent_ = lexer_.getIdentifier("hide source");
+  sensitiveIdent_ = lexer_.getIdentifier("sensitive");
+  useStaticBuiltinIdent_ = lexer_.getIdentifier("use static builtin");
   letIdent_ = lexer_.getIdentifier("let");
   ofIdent_ = lexer_.getIdentifier("of");
-  useStaticBuiltinIdent_ = lexer_.getIdentifier("use static builtin");
   fromIdent_ = lexer_.getIdentifier("from");
   asIdent_ = lexer_.getIdentifier("as");
   implementsIdent_ = lexer_.getIdentifier("implements");
