@@ -40,6 +40,8 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
                 // timeZone, weekday, era, year, month, day, hour,
                 // minute, second, timeZoneName, formatMatcher] to
                 // have the same contents.
+                "constructor-options-style-conflict.js", // We do not currently perform this
+                // validation and throw a TypeError.
                 "timezone-canonicalized.js", // Time zone name PRC was accepted, but incorrectly
                 // canonicalized. Expected SameValue(«China Standard
                 // Time», «Asia/Shanghai») to be true
