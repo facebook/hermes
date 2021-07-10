@@ -85,12 +85,13 @@ struct BytecodeFileHeader {
   uint32_t objValueBufferSize;
   uint32_t segmentID; // The ID of this segment.
   uint32_t cjsModuleCount; // Number of modules.
+  uint32_t functionSourceCount; // Number of function sources preserved.
   uint32_t debugInfoOffset;
   BytecodeOptions options;
 
   // Insert any padding to make function headers that follow this file header
   // less likely to cross cache lines.
-  uint8_t padding[31];
+  uint8_t padding[27];
 
   BytecodeFileHeader(
       uint64_t magic,
@@ -111,6 +112,7 @@ struct BytecodeFileHeader {
       uint32_t objValueBufferSize,
       uint32_t segmentID,
       uint32_t cjsModuleCount,
+      uint32_t functionSourceCount,
       uint32_t debugInfoOffset,
       BytecodeOptions options)
       : magic(magic),
@@ -131,6 +133,7 @@ struct BytecodeFileHeader {
         objValueBufferSize(objValueBufferSize),
         segmentID(segmentID),
         cjsModuleCount(cjsModuleCount),
+        functionSourceCount(functionSourceCount),
         debugInfoOffset(debugInfoOffset),
         options(options) {
     std::copy(sourceHash.begin(), sourceHash.end(), this->sourceHash);
@@ -403,6 +406,7 @@ void visitBytecodeSegmentsInOrder(Visitor &visitor) {
   visitor.visitRegExpTable();
   visitor.visitRegExpStorage();
   visitor.visitCJSModuleTable();
+  visitor.visitFunctionSourceTable();
 }
 
 /// BytecodeFileFields represents direct byte-level access to the structured
@@ -462,6 +466,9 @@ struct BytecodeFileFields {
 
   /// List of resolved CJS modules.
   Array<std::pair<uint32_t, uint32_t>> cjsModuleTableStatic;
+
+  /// List of function source table entries.
+  Array<std::pair<uint32_t, uint32_t>> functionSourceTable;
 
   /// Populate bytecode file fields from a buffer. The fields will point
   /// directly into the buffer and it is the caller's responsibility to ensure

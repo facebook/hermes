@@ -35,6 +35,7 @@ void BytecodeSerializer::serialize(BytecodeModule &BM, const SHA1 &sourceHash) {
       BM.getObjectValueBufferSize(),
       BM.getSegmentID(),
       cjsModuleCount,
+      static_cast<uint32_t>(BM.getFunctionSourceTable().size()),
       debugInfoOffset_,
       BM.getBytecodeOptions()};
   writeBinary(header);
@@ -128,6 +129,13 @@ void BytecodeSerializer::serializeCJSModuleTable(BytecodeModule &BM) {
   }
 
   writeBinaryArray(BM.getCJSModuleTableStatic());
+}
+
+// ===================== Function Source Table ======================
+void BytecodeSerializer::serializeFunctionSourceTable(BytecodeModule &BM) {
+  pad(BYTECODE_ALIGNMENT);
+
+  writeBinaryArray(BM.getFunctionSourceTable());
 }
 
 // ==================== Exception Handler Table =====================
@@ -309,4 +317,9 @@ void BytecodeSerializer::visitRegExpStorage() {
 void BytecodeSerializer::visitCJSModuleTable() {
   pad(BYTECODE_ALIGNMENT);
   serializeCJSModuleTable(*bytecodeModule_);
+}
+
+void BytecodeSerializer::visitFunctionSourceTable() {
+  pad(BYTECODE_ALIGNMENT);
+  serializeFunctionSourceTable(*bytecodeModule_);
 }

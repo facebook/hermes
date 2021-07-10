@@ -235,6 +235,12 @@ void BytecodeModuleGenerator::addCJSModuleStatic(
   cjsModulesStatic_.push_back({moduleID, functionID});
 }
 
+void BytecodeModuleGenerator::addFunctionSource(
+    uint32_t functionID,
+    uint32_t stringID) {
+  functionSourceTable_.push_back({functionID, stringID});
+}
+
 std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
   assert(
       valid_ &&
@@ -267,6 +273,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
       segmentID_,
       std::move(cjsModules_),
       std::move(cjsModulesStatic_),
+      std::move(functionSourceTable_),
       bytecodeOptions)};
 
   DebugInfoGenerator debugInfoGen{std::move(filenameTable_)};

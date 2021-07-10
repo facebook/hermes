@@ -292,6 +292,10 @@ class BytecodeModuleGenerator {
   /// List of pairs: (module ID, function index).
   std::vector<std::pair<uint32_t, uint32_t>> cjsModulesStatic_;
 
+  /// A record of all the function with non-default source representation,
+  /// List of pairs: (function ID, string ID).
+  std::vector<std::pair<uint32_t, uint32_t>> functionSourceTable_;
+
   /// Table of constants used to initialize constant arrays.
   /// They are stored as chars in order to shorten bytecode size.
   std::vector<unsigned char> arrayBuffer_{};
@@ -384,6 +388,11 @@ class BytecodeModuleGenerator {
   /// \param moduleID the index of the CJS module (incremented each call).
   void addCJSModuleStatic(uint32_t moduleID, uint32_t functionID);
 
+  /// Adds a function source entry to the table.
+  /// \param functionID the index of the function.
+  /// \param stringID the index of the corresponding source in the string table.
+  void addFunctionSource(uint32_t functionID, uint32_t stringID);
+
   /// Returns the starting offset of the elements.
   uint32_t addArrayBuffer(ArrayRef<Literal *> elements);
 
@@ -405,7 +414,7 @@ class BytecodeModuleGenerator {
   /// NOTE: Since it simply does a byte by byte search, it can return indices
   /// that don't correspond to any previously inserted literals.
   ///   e.g. When serialized, [int 24833]'s last two bytes are equivalent to
-  ///   [String 1], and if they are added seperately, serializeBuffer would
+  ///   [String 1], and if they are added separately, serializeBuffer would
   ///   return the offset of the last two bytes instead of appending
   ///   [String 1] to the buffer.
   uint32_t serializeBuffer(

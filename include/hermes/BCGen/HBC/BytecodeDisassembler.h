@@ -302,6 +302,10 @@ class BytecodeDisassembler {
   /// if it contains any entries.
   void disassembleCJSModuleTable(raw_ostream &OS);
 
+  /// Print the contents of the function source table to \p OS,
+  /// if it contains any entries.
+  void disassembleFunctionSourceTable(raw_ostream &OS);
+
   /// Print the content of the exception handler table into \p OS.
   void disassembleExceptionHandlers(unsigned funcId, raw_ostream &OS);
 

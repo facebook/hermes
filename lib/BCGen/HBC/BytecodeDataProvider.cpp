@@ -306,6 +306,11 @@ bool BytecodeFileFields<Mutable>::populateFromBuffer(
             buf, h->cjsModuleCount, end);
       }
     }
+    void visitFunctionSourceTable() {
+      align(buf);
+      f.functionSourceTable = castArrayRef<std::pair<uint32_t, uint32_t>>(
+          buf, h->functionSourceCount, end);
+    }
   };
 
   BytecodeFileFieldsPopulator populator{*this, buffer.data(), buffer.end()};
@@ -572,6 +577,7 @@ BCProviderFromBuffer::BCProviderFromBuffer(
   segmentID_ = fileHeader->segmentID;
   cjsModuleTable_ = fields.cjsModuleTable;
   cjsModuleTableStatic_ = fields.cjsModuleTableStatic;
+  functionSourceTable_ = fields.functionSourceTable;
 }
 
 llvh::ArrayRef<uint8_t> BCProviderFromBuffer::getEpilogue() const {
