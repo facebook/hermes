@@ -261,8 +261,13 @@ set(HERMES_BUILD_APPLE_FRAMEWORK ON CACHE BOOL
 set(HERMES_BUILD_APPLE_DSYM OFF CACHE BOOL
   "Whether to build a DWARF debugging symbols bundle")
 
-set(HERMES_BUILD_NODE_HERMES ON CACHE BOOL
-  "Whether to build node-hermes")
+if(EMSCRIPTEN)
+  set(DEFAULT_HERMES_BUILD_NODE_HERMES OFF)
+else()
+  set(DEFAULT_HERMES_BUILD_NODE_HERMES ON)
+endif()
+
+set(HERMES_BUILD_NODE_HERMES ${DEFAULT_HERMES_BUILD_NODE_HERMES} CACHE BOOL "Whether to build node-hermes")
 
 if (HERMES_IS_ANDROID)
   set(HERMES_IS_MOBILE_BUILD TRUE)
@@ -652,8 +657,11 @@ if(HERMES_ENABLE_TEST_SUITE)
     hbc-deltaprep
     hbc-diff
     dependency-extractor
-    node-hermes
     )
+
+  if(HERMES_BUILD_NODE_HERMES)
+    list(APPEND HERMES_TEST_DEPS node-hermes)
+  endif()
 
   set(coverage_directory "")
   if (HERMES_ENABLE_CODE_COVERAGE)
