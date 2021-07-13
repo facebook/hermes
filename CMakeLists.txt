@@ -261,6 +261,9 @@ set(HERMES_BUILD_APPLE_FRAMEWORK ON CACHE BOOL
 set(HERMES_BUILD_APPLE_DSYM OFF CACHE BOOL
   "Whether to build a DWARF debugging symbols bundle")
 
+set(HERMES_BUILD_NODE_HERMES ON CACHE BOOL
+  "Whether to build node-hermes")
+
 if (HERMES_IS_ANDROID)
   set(HERMES_IS_MOBILE_BUILD TRUE)
 
@@ -671,9 +674,10 @@ if(HERMES_ENABLE_TEST_SUITE)
     hbcdump=${HERMES_TOOLS_OUTPUT_DIR}/hbcdump
     hbc-deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
     hbc_diff=${HERMES_TOOLS_OUTPUT_DIR}/hbc-diff
-    node-hermes=${HERMES_TOOLS_OUTPUT_DIR}/node-hermes
     build_mode=${HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST}
     exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
+    node_hermes_enabled_flag=${HERMES_BUILD_NODE_HERMES}
+    node-hermes=${HERMES_TOOLS_OUTPUT_DIR}/node-hermes
     serialize_enabled=${HERMESVM_SERIALIZE}
     profiler=${HERMES_PROFILER_MODE_IN_LIT_TEST}
     gc=${HERMESVM_GCKIND}

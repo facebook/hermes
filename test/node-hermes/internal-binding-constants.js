@@ -8,6 +8,7 @@
  */
 
 // RUN: %node-hermes %s | %FileCheck --match-full-lines %s
+// REQUIRES: node-hermes
 
 print('Internal Binding');
 // CHECK-LABEL: Internal Binding
