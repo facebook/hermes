@@ -10,9 +10,12 @@ set(HERMES_ENABLE_EH ON)
 set(CXX_STANDARD 14)
 set(CXX_STANDARD_REQUIRED ON)
 
+
+add_subdirectory(third-party/libuv)
 add_subdirectory(nodelib)
 add_hermes_tool(node-hermes
   node-hermes.cpp
   ${ALL_HEADER_FILES}
-  LINK_LIBS hermesapi hermesNodeBytecode
+  LINK_LIBS hermesapi hermesNodeBytecode uv_a
   )
+target_include_directories(node-hermes PRIVATE third-party/libuv/include/)

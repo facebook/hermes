@@ -85,7 +85,7 @@ static unsigned long read_cpufreq(unsigned int cpunum);
 int uv__platform_loop_init(uv_loop_t* loop) {
   int fd;
 
-  fd = epoll_create1(EPOLL_CLOEXEC);
+  fd = epoll_create1(O_CLOEXEC);
 
   /* epoll_create1() can fail either because it's not implemented (old kernel)
    * or because it doesn't understand the EPOLL_CLOEXEC flag.
