@@ -3,19 +3,20 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-include_directories(${HERMES_SOURCE_DIR}/API)
-include_directories(${HERMES_JSI_DIR})
+if(HERMES_BUILD_NODE_HERMES)
+  include_directories(${HERMES_SOURCE_DIR}/API)
+  include_directories(${HERMES_JSI_DIR})
 
-set(HERMES_ENABLE_EH ON)
-set(CXX_STANDARD 14)
-set(CXX_STANDARD_REQUIRED ON)
+  set(HERMES_ENABLE_EH ON)
+  set(CXX_STANDARD 14)
+  set(CXX_STANDARD_REQUIRED ON)
 
-
-add_subdirectory(third-party/libuv)
-add_subdirectory(nodelib)
-add_hermes_tool(node-hermes
-  node-hermes.cpp
-  ${ALL_HEADER_FILES}
-  LINK_LIBS hermesapi hermesNodeBytecode uv_a
-  )
-target_include_directories(node-hermes PRIVATE third-party/libuv/include/)
+  add_subdirectory(third-party/libuv)
+  add_subdirectory(nodelib)
+  add_hermes_tool(node-hermes
+    node-hermes.cpp InternalBindings/buffer.cpp InternalBindings/constants.cpp
+    ${ALL_HEADER_FILES}
+    LINK_LIBS hermesapi hermesNodeBytecode uv_a
+    )
+  target_include_directories(node-hermes PRIVATE third-party/libuv/include/)
+endif()

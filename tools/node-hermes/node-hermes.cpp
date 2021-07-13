@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "InternalBindings/InternalBindings.h"
 #include "RuntimeState.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/hermes.h"
@@ -76,42 +77,6 @@ class ArrayRefBuffer : public jsi::Buffer {
   llvh::ArrayRef<uint8_t> array_;
 };
 
-// Defines the constants needed by fs.js.
-static void defineConstants(jsi::Runtime &runtime, jsi::Object &target) {
-#define DEFINE_CONSTANT(runtime, name)        \
-  do {                                        \
-    target.setProperty(runtime, #name, name); \
-  } while (0)
-#ifdef S_IFIFO
-  DEFINE_CONSTANT(runtime, S_IFIFO);
-#endif
-#ifdef S_IFLNK
-  DEFINE_CONSTANT(runtime, S_IFLNK);
-#endif
-#ifdef S_IFSOCK
-  DEFINE_CONSTANT(runtime, S_IFSOCK);
-#endif
-#ifdef F_OK
-  DEFINE_CONSTANT(runtime, F_OK);
-#endif
-#ifdef R_OK
-  DEFINE_CONSTANT(runtime, R_OK);
-#endif
-#ifdef W_OK
-  DEFINE_CONSTANT(runtime, W_OK);
-#endif
-#ifdef X_OK
-  DEFINE_CONSTANT(runtime, X_OK);
-#endif
-#ifdef O_SYMLINK
-  DEFINE_CONSTANT(runtime, O_SYMLINK);
-#endif
-  DEFINE_CONSTANT(runtime, S_IFMT);
-  DEFINE_CONSTANT(runtime, S_IFREG);
-  DEFINE_CONSTANT(runtime, O_WRONLY);
-#undef DEFINE_CONSTANT
-}
-
 /// Given the directory that the original JS file runs from and the
 /// relative path of the target, forms the absolute path
 /// for the target.
@@ -141,18 +106,6 @@ static const std::shared_ptr<jsi::Buffer> addjsWrapper(
   return std::make_unique<jsi::StringBuffer>(std::move(wrappedBuffer));
 }
 
-// Adds the 'constants' object as a property of internalBinding. Currently
-// this object only has the fs property defined on it.
-static jsi::Value constantsBinding(jsi::Runtime &rt, RuntimeState &rs) {
-  jsi::Object fsProp{rt};
-  defineConstants(rt, fsProp);
-  jsi::Object constants{rt};
-  constants.setProperty(rt, jsi::String::createFromAscii(rt, "fs"), fsProp);
-  jsi::String constantsLabel = jsi::String::createFromAscii(rt, "constants");
-  rs.setInternalBindingProp(constantsLabel, std::move(constants));
-  return rs.getInternalBindingProp(constantsLabel);
-}
-
 // Implements the internal binding JS functionality. Currently only includes
 // constants that are relevant to the execution of fs.js.
 static jsi::Value internalBinding(
@@ -166,6 +119,10 @@ static jsi::Value internalBinding(
   if (propNameUTF8 == "constants") {
     return constantsBinding(rt, rs);
   } else if (propNameUTF8 == "fs") { // Next to be implemented.
+    return jsi::Value::undefined();
+  } else if (propNameUTF8 == "buffer") {
+    return bufferBinding(rt, rs);
+  } else if (propNameUTF8 == "util") {
     return jsi::Value::undefined();
   }
   // Will not go into this case but keeping it in case some other internal
