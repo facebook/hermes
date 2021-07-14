@@ -58,10 +58,10 @@ var _primordials = primordials,
 var _require = require('internal/util/inspect'),
     inspect = _require.inspect;
 
-var _require2 = require('internal/querystring'),
-    encodeStr = _require2.encodeStr,
-    hexTable = _require2.hexTable,
-    isHexTable = _require2.isHexTable;
+// var _require2 = require('internal/querystring'),
+//     encodeStr = _require2.encodeStr,
+//     hexTable = _require2.hexTable,
+//     isHexTable = _require2.isHexTable;
 
 var _require3 = require('internal/util'),
     getConstructorOf = _require3.getConstructorOf,
@@ -95,35 +95,35 @@ var _require5 = require('internal/validators'),
     validateCallback = _require5.validateCallback,
     validateObject = _require5.validateObject;
 
-var querystring = require('querystring');
+// var querystring = require('querystring');
 
-var _process = process,
-    platform = _process.platform;
-var isWindows = platform === 'win32';
+// var _process = process,
+//     platform = _process.platform;
+// var isWindows = platform === 'win32';
 
-var _internalBinding = internalBinding('url'),
-    _domainToASCII = _internalBinding.domainToASCII,
-    _domainToUnicode = _internalBinding.domainToUnicode,
-    encodeAuth = _internalBinding.encodeAuth,
-    _toUSVString = _internalBinding.toUSVString,
-    parse = _internalBinding.parse,
-    setURLConstructor = _internalBinding.setURLConstructor,
-    URL_FLAGS_CANNOT_BE_BASE = _internalBinding.URL_FLAGS_CANNOT_BE_BASE,
-    URL_FLAGS_HAS_FRAGMENT = _internalBinding.URL_FLAGS_HAS_FRAGMENT,
-    URL_FLAGS_HAS_HOST = _internalBinding.URL_FLAGS_HAS_HOST,
-    URL_FLAGS_HAS_PASSWORD = _internalBinding.URL_FLAGS_HAS_PASSWORD,
-    URL_FLAGS_HAS_PATH = _internalBinding.URL_FLAGS_HAS_PATH,
-    URL_FLAGS_HAS_QUERY = _internalBinding.URL_FLAGS_HAS_QUERY,
-    URL_FLAGS_HAS_USERNAME = _internalBinding.URL_FLAGS_HAS_USERNAME,
-    URL_FLAGS_IS_DEFAULT_SCHEME_PORT = _internalBinding.URL_FLAGS_IS_DEFAULT_SCHEME_PORT,
-    URL_FLAGS_SPECIAL = _internalBinding.URL_FLAGS_SPECIAL,
-    kFragment = _internalBinding.kFragment,
-    kHost = _internalBinding.kHost,
-    kHostname = _internalBinding.kHostname,
-    kPathStart = _internalBinding.kPathStart,
-    kPort = _internalBinding.kPort,
-    kQuery = _internalBinding.kQuery,
-    kSchemeStart = _internalBinding.kSchemeStart;
+// var _internalBinding = internalBinding('url'),
+//     _domainToASCII = _internalBinding.domainToASCII,
+//     _domainToUnicode = _internalBinding.domainToUnicode,
+//     encodeAuth = _internalBinding.encodeAuth,
+//     _toUSVString = _internalBinding.toUSVString,
+//     parse = _internalBinding.parse,
+//     setURLConstructor = _internalBinding.setURLConstructor,
+//     URL_FLAGS_CANNOT_BE_BASE = _internalBinding.URL_FLAGS_CANNOT_BE_BASE,
+//     URL_FLAGS_HAS_FRAGMENT = _internalBinding.URL_FLAGS_HAS_FRAGMENT,
+//     URL_FLAGS_HAS_HOST = _internalBinding.URL_FLAGS_HAS_HOST,
+//     URL_FLAGS_HAS_PASSWORD = _internalBinding.URL_FLAGS_HAS_PASSWORD,
+//     URL_FLAGS_HAS_PATH = _internalBinding.URL_FLAGS_HAS_PATH,
+//     URL_FLAGS_HAS_QUERY = _internalBinding.URL_FLAGS_HAS_QUERY,
+//     URL_FLAGS_HAS_USERNAME = _internalBinding.URL_FLAGS_HAS_USERNAME,
+//     URL_FLAGS_IS_DEFAULT_SCHEME_PORT = _internalBinding.URL_FLAGS_IS_DEFAULT_SCHEME_PORT,
+//     URL_FLAGS_SPECIAL = _internalBinding.URL_FLAGS_SPECIAL,
+//     kFragment = _internalBinding.kFragment,
+//     kHost = _internalBinding.kHost,
+//     kHostname = _internalBinding.kHostname,
+//     kPathStart = _internalBinding.kPathStart,
+//     kPort = _internalBinding.kPort,
+//     kQuery = _internalBinding.kQuery,
+//     kSchemeStart = _internalBinding.kSchemeStart;
 
 var context = _Symbol('context');
 
@@ -1238,8 +1238,8 @@ var noEscape = new Int8Array([
 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0 // 0x70 - 0x7F
 ]); // Special version of hexTable that uses `+` for U+0020 SPACE.
 
-var paramHexTable = hexTable.slice();
-paramHexTable[0x20] = '+'; // application/x-www-form-urlencoded serializer
+// var paramHexTable = hexTable.slice();
+// paramHexTable[0x20] = '+'; // application/x-www-form-urlencoded serializer
 // Ref: https://url.spec.whatwg.org/#concept-urlencoded-serializer
 
 function serializeParams(array) {
@@ -1629,7 +1629,7 @@ function constructUrl(flags, protocol, username, password, host, port, path, que
   return url;
 }
 
-setURLConstructor(constructUrl);
+// setURLConstructor(constructUrl);
 module.exports = {
   toUSVString: toUSVString,
   fileURLToPath: fileURLToPath,
@@ -1642,6 +1642,6 @@ module.exports = {
   domainToUnicode: domainToUnicode,
   urlToHttpOptions: urlToHttpOptions,
   formatSymbol: kFormat,
-  searchParamsSymbol: searchParams,
-  encodeStr: encodeStr
+  searchParamsSymbol: searchParams
+  // encodeStr: encodeStr
 };

@@ -93,34 +93,34 @@ var _require2 = require('buffer'),
 // var _require4 = require('internal/url'),
 //     toPathIfFileURL = _require4.toPathIfFileURL;
 
-// var internalUtil = require('internal/util');
+var internalUtil = require('internal/util');
 
-// var _require5 = require('internal/fs/utils'),
-//     _require5$constants = _require5.constants,
-//     kIoMaxLength = _require5$constants.kIoMaxLength,
-//     kMaxUserId = _require5$constants.kMaxUserId,
-//     copyObject = _require5.copyObject,
+var _require5 = require('internal/fs/utils'),
+    _require5$constants = _require5.constants,
+    kIoMaxLength = _require5$constants.kIoMaxLength,
+    kMaxUserId = _require5$constants.kMaxUserId,
+    copyObject = _require5.copyObject,
 //     Dirent = _require5.Dirent,
 //     emitRecursiveRmdirWarning = _require5.emitRecursiveRmdirWarning,
 //     getDirents = _require5.getDirents,
-//     getOptions = _require5.getOptions,
-//     getValidatedFd = _require5.getValidatedFd,
-//     getValidatedPath = _require5.getValidatedPath,
+    getOptions = _require5.getOptions,
+    getValidatedFd = _require5.getValidatedFd,
+    getValidatedPath = _require5.getValidatedPath,
 //     getValidMode = _require5.getValidMode,
-//     handleErrorFromBinding = _require5.handleErrorFromBinding,
+    handleErrorFromBinding = _require5.handleErrorFromBinding,
 //     nullCheck = _require5.nullCheck,
 //     preprocessSymlinkDestination = _require5.preprocessSymlinkDestination,
 //     Stats = _require5.Stats,
 //     getStatsFromBinding = _require5.getStatsFromBinding,
 //     realpathCacheKey = _require5.realpathCacheKey,
-//     stringToFlags = _require5.stringToFlags,
+    stringToFlags = _require5.stringToFlags,
 //     stringToSymlinkType = _require5.stringToSymlinkType,
 //     toUnixTimestamp = _require5.toUnixTimestamp,
 //     validateBufferArray = _require5.validateBufferArray,
-//     validateOffsetLengthRead = _require5.validateOffsetLengthRead,
+    validateOffsetLengthRead = _require5.validateOffsetLengthRead,
 //     validateOffsetLengthWrite = _require5.validateOffsetLengthWrite,
 //     validatePath = _require5.validatePath,
-//     validatePosition = _require5.validatePosition,
+    validatePosition = _require5.validatePosition;
 //     validateRmOptions = _require5.validateRmOptions,
 //     validateRmOptionsSync = _require5.validateRmOptionsSync,
 //     validateRmdirOptions = _require5.validateRmdirOptions,
@@ -136,15 +136,15 @@ var _require2 = require('buffer'),
 //     CHAR_FORWARD_SLASH = _require7.CHAR_FORWARD_SLASH,
 //     CHAR_BACKWARD_SLASH = _require7.CHAR_BACKWARD_SLASH;
 
-// var _require8 = require('internal/validators'),
-//     isUint32 = _require8.isUint32,
-//     parseFileMode = _require8.parseFileMode,
+var _require8 = require('internal/validators'),
+    isUint32 = _require8.isUint32,
+    parseFileMode = _require8.parseFileMode,
 //     validateBoolean = _require8.validateBoolean,
-//     validateBuffer = _require8.validateBuffer,
+    validateBuffer = _require8.validateBuffer,
 //     validateCallback = _require8.validateCallback,
 //     validateEncoding = _require8.validateEncoding,
 //     validateFunction = _require8.validateFunction,
-//     validateInteger = _require8.validateInteger;
+    validateInteger = _require8.validateInteger;
 
 // var watchers = require('internal/fs/watchers');
 
@@ -210,6 +210,7 @@ function isFileType(stats, fileType) {
   // Use stats array directly to avoid creating an fs.Stats instance just for
   // our internal use.
   var mode = stats[1];
+  if(mode == undefined) mode = stats.mode; // New
   if (typeof mode === 'bigint') mode = Number(mode);
   return (mode & S_IFMT) === fileType;
 }
@@ -412,7 +413,6 @@ function readFile(path, options, callback) {
 function tryStatSync(fd, isUserFd) {
   var ctx = {};
   var stats = binding.fstat(fd, false, undefined, ctx);
-
   if (ctx.errno !== undefined && !isUserFd) {
     fs.closeSync(fd);
     throw uvException(ctx);
@@ -424,18 +424,15 @@ function tryStatSync(fd, isUserFd) {
 function tryCreateBuffer(size, fd, isUserFd) {
   var threw = true;
   var buffer;
-
   try {
     if (size > kIoMaxLength) {
       throw new ERR_FS_FILE_TOO_LARGE(size);
     }
-
-    buffer = Buffer.allocUnsafe(size);
+    buffer = Buffer.allocUnsafeSlow(size); //Changed from allocUnsafe
     threw = false;
   } finally {
     if (threw && !isUserFd) fs.closeSync(fd);
   }
-
   return buffer;
 }
 
@@ -468,10 +465,9 @@ function readFileSync(path, options) {
     flag: 'r'
   });
   var isUserFd = isFd(path); // File descriptor ownership
-
   var fd = isUserFd ? path : fs.openSync(path, options.flag, 438);
   var stats = tryStatSync(fd, isUserFd);
-  var size = isFileType(stats, S_IFREG) ? stats[8] : 0;
+  var size = isFileType(stats, S_IFREG) ? stats.size : 0; // Change from stats[8]
   var pos = 0;
   var buffer; // Single buffer with file data
 
@@ -482,7 +478,6 @@ function readFileSync(path, options) {
   } else {
     buffer = tryCreateBuffer(size, fd, isUserFd);
   }
-
   var bytesRead;
 
   if (size !== 0) {
@@ -494,7 +489,7 @@ function readFileSync(path, options) {
     do {
       // The kernel lies about many files.
       // Go ahead and try to read some bytes.
-      buffer = Buffer.allocUnsafe(8192);
+      buffer = Buffer.allocUnsafeSlow(8192);
       bytesRead = tryReadSync(fd, isUserFd, buffer, 0, 8192);
 
       if (bytesRead !== 0) {
@@ -719,7 +714,6 @@ function readSync(fd, buffer, offset, length, position) {
   } else {
     validateInteger(offset, 'offset', 0);
   }
-
   length |= 0;
 
   if (length === 0) {
@@ -729,7 +723,6 @@ function readSync(fd, buffer, offset, length, position) {
   if (buffer.byteLength === 0) {
     throw new ERR_INVALID_ARG_VALUE('buffer', buffer, 'is empty and cannot be written');
   }
-
   validateOffsetLengthRead(offset, length, buffer.byteLength);
   if (position == null) position = -1;
   validatePosition(position, 'position');
@@ -2453,23 +2446,23 @@ function unwatchFile(filename, listener) {
 
 var splitRoot;
 
-if (isWindows) {
-  // Regex to find the device root on Windows (e.g. 'c:\\'), including trailing
-  // slash.
-  var splitRootRe = /^(?:[a-zA-Z]:|[\\/]{2}[^\\/]+[\\/][^\\/]+)?[\\/]*/;
+// if (isWindows) {
+//   // Regex to find the device root on Windows (e.g. 'c:\\'), including trailing
+//   // slash.
+//   var splitRootRe = /^(?:[a-zA-Z]:|[\\/]{2}[^\\/]+[\\/][^\\/]+)?[\\/]*/;
 
-  splitRoot = function splitRoot(str) {
-    return RegExpPrototypeExec(splitRootRe, str)[0];
-  };
-} else {
-  splitRoot = function splitRoot(str) {
-    for (var i = 0; i < str.length; ++i) {
-      if (StringPrototypeCharCodeAt(str, i) !== CHAR_FORWARD_SLASH) return StringPrototypeSlice(str, 0, i);
-    }
+//   splitRoot = function splitRoot(str) {
+//     return RegExpPrototypeExec(splitRootRe, str)[0];
+//   };
+// } else {
+//   splitRoot = function splitRoot(str) {
+//     for (var i = 0; i < str.length; ++i) {
+//       if (StringPrototypeCharCodeAt(str, i) !== CHAR_FORWARD_SLASH) return StringPrototypeSlice(str, 0, i);
+//     }
 
-    return str;
-  };
-}
+//     return str;
+//   };
+// }
 
 function encodeRealpathResult(result, options) {
   if (!options || !options.encoding || options.encoding === 'utf8') return result;
@@ -2485,21 +2478,21 @@ function encodeRealpathResult(result, options) {
 
 var nextPart;
 
-if (isWindows) {
-  nextPart = function nextPart(p, i) {
-    for (; i < p.length; ++i) {
-      var ch = StringPrototypeCharCodeAt(p, i); // Check for a separator character
+// if (isWindows) {
+//   nextPart = function nextPart(p, i) {
+//     for (; i < p.length; ++i) {
+//       var ch = StringPrototypeCharCodeAt(p, i); // Check for a separator character
 
-      if (ch === CHAR_BACKWARD_SLASH || ch === CHAR_FORWARD_SLASH) return i;
-    }
+//       if (ch === CHAR_BACKWARD_SLASH || ch === CHAR_FORWARD_SLASH) return i;
+//     }
 
-    return -1;
-  };
-} else {
-  nextPart = function nextPart(p, i) {
-    return StringPrototypeIndexOf(p, '/', i);
-  };
-}
+//     return -1;
+//   };
+// } else {
+//   nextPart = function nextPart(p, i) {
+//     return StringPrototypeIndexOf(p, '/', i);
+//   };
+// }
 
 var emptyObj = ObjectCreate(null);
 /**
@@ -3031,8 +3024,8 @@ module.exports = fs = {
   mkdtempSync: mkdtempSync,
   open: open,
   openSync: openSync,
-  opendir: opendir,
-  opendirSync: opendirSync,
+  // opendir: opendir,
+  // opendirSync: opendirSync,
   readdir: readdir,
   readdirSync: readdirSync,
   read: read,
@@ -3070,9 +3063,9 @@ module.exports = fs = {
   writeSync: writeSync,
   writev: writev,
   writevSync: writevSync,
-  Dir: Dir,
-  Dirent: Dirent,
-  Stats: Stats,
+  // Dir: Dir,
+  // Dirent: Dirent,
+  // Stats: Stats,
 
   get ReadStream() {
     lazyLoadStreams();
@@ -3113,7 +3106,7 @@ module.exports = fs = {
   },
 
   // For tests
-  _toUnixTimestamp: toUnixTimestamp
+  // _toUnixTimestamp: toUnixTimestamp
 };
 ObjectDefineProperties(fs, {
   F_OK: {
