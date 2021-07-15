@@ -89,6 +89,45 @@ close(RuntimeState &rs, const jsi::Value *args, size_t count) {
   return jsi::Value::undefined();
 }
 
+/// Returns information about the already opened file descriptor.
+/// Called by js the following way:
+/// fd = binding.fstat(fd, use_bigint, undefined, ctx)
+static jsi::Value
+fstat(RuntimeState &rs, const jsi::Value *args, size_t count) {
+  jsi::Runtime &rt = rs.getRuntime();
+  if (count < 4) {
+    throw jsi::JSError(
+        rt, "Not enough arguments being passed into synchronous fstat call.");
+  }
+  uv_fs_t fstat_req;
+  int fd = args[0].asNumber();
+  int fstatRes = uv_fs_fstat(rs.getLoop(), &fstat_req, fd, nullptr);
+
+  if (fstatRes < 0)
+    throw jsi::JSError(
+        rt,
+        "Fstat failed on fd " + std::to_string(fd) + " with errno " +
+            std::to_string(errno) + ": " + std::strerror(errno));
+
+  uv_stat_t *statbuf = uv_fs_get_statbuf(&fstat_req);
+  jsi::Object res{rt};
+
+  // Missing properties: atime, mtime, ctime, birthtime because no datetime
+  // support
+  res.setProperty(rt, "dev", (double)statbuf->st_dev);
+  res.setProperty(rt, "mode", (double)statbuf->st_mode);
+  res.setProperty(rt, "nlink", (double)statbuf->st_nlink);
+  res.setProperty(rt, "uid", (double)statbuf->st_uid);
+  res.setProperty(rt, "gid", (double)statbuf->st_gid);
+  res.setProperty(rt, "rdev", (double)statbuf->st_rdev);
+  res.setProperty(rt, "blksize", (double)statbuf->st_blksize);
+  res.setProperty(rt, "ino", (double)statbuf->st_size);
+  res.setProperty(rt, "size", (double)statbuf->st_size);
+  res.setProperty(rt, "blocks", (double)statbuf->st_blocks);
+
+  return res;
+}
+
 /// Initializes a new JS function given a function pointer to the c++ function.
 static void defineJSFunction(
     RuntimeState &rs,
@@ -117,6 +156,7 @@ jsi::Value facebook::fsBinding(RuntimeState &rs) {
 
   defineJSFunction(rs, open, "open", 5, fs);
   defineJSFunction(rs, close, "close", 3, fs);
+  defineJSFunction(rs, fstat, "fstat", 4, fs);
 
   jsi::String fsLabel = jsi::String::createFromAscii(rt, "fs");
   rs.setInternalBindingProp(fsLabel, std::move(fs));
