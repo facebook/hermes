@@ -64,6 +64,31 @@ static jsi::Value open(RuntimeState &rs, const jsi::Value *args, size_t count) {
   return jsi::Value(fd);
 }
 
+/// Closes the file descriptor passed in.
+/// Called by js the following way:
+/// binding.close(fd, undefined, ctx);
+static jsi::Value
+close(RuntimeState &rs, const jsi::Value *args, size_t count) {
+  jsi::Runtime &rt = rs.getRuntime();
+  if (count < 3) {
+    throw jsi::JSError(
+        rt, "Not enough arguments being passed into synchronous close call.");
+  }
+  if (!args[0].isNumber()) {
+    throw jsi::JSError(
+        rt, "Incorrectly typed objects passed into synchronous close call.");
+  }
+  int fd = args[0].getNumber();
+  uv_fs_t close_req;
+  int closeRes = uv_fs_close(rs.getLoop(), &close_req, fd, nullptr);
+  if (closeRes < 0)
+    throw jsi::JSError(
+        rt,
+        "Close failed on fd " + std::to_string(fd) + " with errno " +
+            std::to_string(errno) + ": " + std::strerror(errno));
+  return jsi::Value::undefined();
+}
+
 /// Initializes a new JS function given a function pointer to the c++ function.
 static void defineJSFunction(
     RuntimeState &rs,
@@ -91,6 +116,7 @@ jsi::Value facebook::fsBinding(RuntimeState &rs) {
   jsi::Object fs{rt};
 
   defineJSFunction(rs, open, "open", 5, fs);
+  defineJSFunction(rs, close, "close", 3, fs);
 
   jsi::String fsLabel = jsi::String::createFromAscii(rt, "fs");
   rs.setInternalBindingProp(fsLabel, std::move(fs));
