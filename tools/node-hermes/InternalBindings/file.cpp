@@ -89,6 +89,55 @@ close(RuntimeState &rs, const jsi::Value *args, size_t count) {
   return jsi::Value::undefined();
 }
 
+/// Reads from an open file descriptor and stores the result in the buffer
+/// object passed into the function. Returns the number of bytes read.
+/// Called by js the following way:
+/// bytesRead = fs.read(fd, buffer, offset, length, position, undefined, ctx)
+static jsi::Value read(RuntimeState &rs, const jsi::Value *args, size_t count) {
+  jsi::Runtime &rt = rs.getRuntime();
+  if (count < 7) {
+    throw jsi::JSError(
+        rt, "Not enough arguments being passed into synchronous read call.");
+  }
+  if (!args[0].isNumber() || !args[1].isObject() ||
+      !args[1]
+           .getObject(rt)
+           .getPropertyAsObject(rt, "buffer")
+           .isArrayBuffer(rt) ||
+      !args[2].isNumber() || !args[3].isNumber() || !args[4].isNumber()) {
+    throw jsi::JSError(
+        rt, "Incorrectly typed objects passed into synchronous open call.");
+  }
+
+  uint32_t fd = args[0].asNumber();
+  jsi::ArrayBuffer arrayBuffer = args[1]
+                                     .getObject(rt)
+                                     .getPropertyAsObject(rt, "buffer")
+                                     .getArrayBuffer(rt);
+  char *bufferData = reinterpret_cast<char *>(arrayBuffer.data(rt));
+  uint32_t offset = args[2].asNumber();
+  uint32_t length = args[3].asNumber();
+  int32_t position = args[4].asNumber();
+
+  char *buf = bufferData + (int)offset;
+  uv_buf_t uvBuf = uv_buf_init(buf, length);
+
+  // Checks that the buffer is large enough to store file contents
+  assert((size_t)length >= arrayBuffer.length(rt));
+
+  uv_fs_t readReq;
+  int bytesRead =
+      uv_fs_read(rs.getLoop(), &readReq, (int)fd, &uvBuf, 1, position, nullptr);
+
+  if (bytesRead < 0)
+    throw jsi::JSError(
+        rt,
+        "Read failed on fd " + std::to_string(fd) + " with errno " +
+            std::to_string(errno) + ": " + std::strerror(errno));
+
+  return jsi::Value(bytesRead);
+}
+
 /// Returns information about the already opened file descriptor.
 /// Called by js the following way:
 /// fd = binding.fstat(fd, use_bigint, undefined, ctx)
@@ -157,6 +206,7 @@ jsi::Value facebook::fsBinding(RuntimeState &rs) {
   defineJSFunction(rs, open, "open", 5, fs);
   defineJSFunction(rs, close, "close", 3, fs);
   defineJSFunction(rs, fstat, "fstat", 4, fs);
+  defineJSFunction(rs, read, "read", 7, fs);
 
   jsi::String fsLabel = jsi::String::createFromAscii(rt, "fs");
   rs.setInternalBindingProp(fsLabel, std::move(fs));
