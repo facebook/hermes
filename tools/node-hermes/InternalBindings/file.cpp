@@ -174,7 +174,7 @@ fstat(RuntimeState &rs, const jsi::Value *args, size_t count) {
   res.setProperty(rt, "size", (double)statbuf->st_size);
   res.setProperty(rt, "blocks", (double)statbuf->st_blocks);
 
-  return res;
+  return std::move(res);
 }
 
 /// Initializes a new JS function given a function pointer to the c++ function.
