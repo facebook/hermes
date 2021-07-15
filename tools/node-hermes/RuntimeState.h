@@ -19,6 +19,8 @@
 #include "llvh/Support/Program.h"
 #include "llvh/Support/Signals.h"
 
+#include "uv.h"
+
 namespace facebook {
 
 // Manages the module objects relevant to the 'require' and
@@ -27,11 +29,12 @@ class RuntimeState {
  public:
   // Parametrized constructor, copy constructor, assignment constructor
   // respectively.
-  RuntimeState(llvh::SmallString<32> dirname)
+  RuntimeState(llvh::SmallString<32> dirname, uv_loop_t *loop)
       : rt_(hermes::makeHermesRuntime()),
         internalBindingPropNameID(
             jsi::PropNameID::forAscii(*rt_, "internalBinding")),
-        dirname_(std::move(dirname)){};
+        dirname_(std::move(dirname)),
+        loop_(loop){};
 
   RuntimeState(const RuntimeState &) = delete;
   RuntimeState &operator=(const RuntimeState &) = delete;
@@ -89,6 +92,10 @@ class RuntimeState {
     return dirname_;
   }
 
+  uv_loop_t *getLoop() {
+    return loop_;
+  }
+
  private:
   // Runtime used to access internal binding properties.
   std::unique_ptr<jsi::Runtime> rt_;
@@ -99,6 +106,8 @@ class RuntimeState {
   jsi::PropNameID internalBindingPropNameID;
   // Stores the name of the directory where the file being run lives.
   llvh::SmallString<32> dirname_;
+  // Event loop used for libuv.
+  uv_loop_t *loop_;
 };
 } // namespace facebook
 #endif

@@ -20,8 +20,6 @@
 #include "llvh/Support/Program.h"
 #include "llvh/Support/Signals.h"
 
-#include <fcntl.h>
-
 using namespace facebook;
 
 // -help options.
@@ -288,7 +286,7 @@ int main(int argc, char **argv) {
   llvh::SmallString<32> dirName{InputFilename};
   llvh::sys::path::remove_filename(dirName, llvh::sys::path::Style::posix);
 
-  RuntimeState rs{std::move(dirName)};
+  RuntimeState rs{std::move(dirName), uv_default_loop()};
   jsi::Runtime &rt = rs.getRuntime();
 
   llvh::ArrayRef<uint8_t> moduleObj = getNodeBytecode();
