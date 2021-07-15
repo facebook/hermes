@@ -27,10 +27,12 @@ class RuntimeState {
  public:
   // Parametrized constructor, copy constructor, assignment constructor
   // respectively.
-  RuntimeState(jsi::Runtime &rt)
-      : rt_(rt),
+  RuntimeState(llvh::SmallString<32> dirname)
+      : rt_(hermes::makeHermesRuntime()),
         internalBindingPropNameID(
-            jsi::PropNameID::forAscii(rt, "internalBinding")){};
+            jsi::PropNameID::forAscii(*rt_, "internalBinding")),
+        dirname_(std::move(dirname)){};
+
   RuntimeState(const RuntimeState &) = delete;
   RuntimeState &operator=(const RuntimeState &) = delete;
 
@@ -41,7 +43,7 @@ class RuntimeState {
     if (iter == requireModules_.end()) {
       return llvh::None;
     } else {
-      return iter->second.getProperty(rt_, "exports").asObject(rt_);
+      return iter->second.getProperty(*rt_, "exports").asObject(*rt_);
     }
   }
   // Given the name of the module and the respective jsi::Object,
@@ -57,36 +59,46 @@ class RuntimeState {
   // Checks to see if the internal binding property has already been
   // initialized.
   bool internalBindingPropExists(const jsi::String &propName) {
-    return rt_.global()
-        .getProperty(rt_, internalBindingPropNameID)
-        .asObject(rt_)
-        .hasProperty(rt_, propName);
+    return rt_->global()
+        .getProperty(*rt_, internalBindingPropNameID)
+        .asObject(*rt_)
+        .hasProperty(*rt_, propName);
   }
   // Adds a new property to internal binding, given the name of the property
   // and the respective jsi::Object.
   void setInternalBindingProp(const jsi::String &propName, jsi::Object prop) {
-    rt_.global()
-        .getProperty(rt_, internalBindingPropNameID)
-        .asObject(rt_)
-        .setProperty(rt_, propName, prop);
+    rt_->global()
+        .getProperty(*rt_, internalBindingPropNameID)
+        .asObject(*rt_)
+        .setProperty(*rt_, propName, prop);
   }
   // Returns the jsi::Value corresponding to the internalBinding
   // property asked for.
   jsi::Value getInternalBindingProp(const jsi::String &propName) {
-    return rt_.global()
-        .getProperty(rt_, internalBindingPropNameID)
-        .asObject(rt_)
-        .getProperty(rt_, propName);
+    return rt_->global()
+        .getProperty(*rt_, internalBindingPropNameID)
+        .asObject(*rt_)
+        .getProperty(*rt_, propName);
+  }
+
+  jsi::Runtime &getRuntime() {
+    return *rt_;
+  }
+
+  llvh::StringRef getDirname() const {
+    return dirname_;
   }
 
  private:
+  // Runtime used to access internal binding properties.
+  std::unique_ptr<jsi::Runtime> rt_;
   // Keeps track of all the 'require' modules already initialized.
   std::unordered_map<std::string, jsi::Object> requireModules_;
-  // Runtime used to access internal binding properties.
-  jsi::Runtime &rt_;
   // Cached PropNameID corresponding to "internalBinding" for faster
   // accesses/lookup.
   jsi::PropNameID internalBindingPropNameID;
+  // Stores the name of the directory where the file being run lives.
+  llvh::SmallString<32> dirname_;
 };
 } // namespace facebook
 #endif

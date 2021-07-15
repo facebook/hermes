@@ -9,6 +9,6 @@
 #include "hermes/hermes.h"
 
 namespace facebook {
-jsi::Value bufferBinding(jsi::Runtime &rt, RuntimeState &rs);
-jsi::Value constantsBinding(jsi::Runtime &rt, RuntimeState &rs);
+jsi::Value bufferBinding(RuntimeState &rs);
+jsi::Value constantsBinding(RuntimeState &rs);
 } // namespace facebook

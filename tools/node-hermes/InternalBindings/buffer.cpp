@@ -102,7 +102,8 @@ static void defineJSFunction(
 /// Adds the 'buffer' object as a property of internalBinding.
 /// Initializes the relevant internalBinding('buffer') functions to get
 /// Buffer.alloc, Buffer.concat and Buffer.toString working in buffer.js.
-jsi::Value facebook::bufferBinding(jsi::Runtime &rt, RuntimeState &rs) {
+jsi::Value facebook::bufferBinding(RuntimeState &rs) {
+  jsi::Runtime &rt = rs.getRuntime();
   jsi::Object buffer{rt};
 
   defineJSFunction(rt, byteLengthUtf8, "byteLengthUtf8", 1, buffer);

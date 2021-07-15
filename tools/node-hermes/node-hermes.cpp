@@ -110,18 +110,18 @@ static const std::shared_ptr<jsi::Buffer> addjsWrapper(
 // constants that are relevant to the execution of fs.js.
 static jsi::Value internalBinding(
     const jsi::String &propName,
-    jsi::Runtime &rt,
     RuntimeState &rs) {
+  jsi::Runtime &rt = rs.getRuntime();
   if (rs.internalBindingPropExists(propName)) {
     return rs.getInternalBindingProp(propName);
   }
   std::string propNameUTF8 = propName.utf8(rt);
   if (propNameUTF8 == "constants") {
-    return constantsBinding(rt, rs);
+    return constantsBinding(rs);
   } else if (propNameUTF8 == "fs") { // Next to be implemented.
     return jsi::Value::undefined();
   } else if (propNameUTF8 == "buffer") {
-    return bufferBinding(rt, rs);
+    return bufferBinding(rs);
   } else if (propNameUTF8 == "util") {
     return jsi::Value::undefined();
   }
@@ -139,9 +139,9 @@ static jsi::Value internalBinding(
 /// returns the wrapper function which is called to `require` it.
 static jsi::Function resolveRequireCall(
     const jsi::String &filename,
-    const std::string &dirname,
-    jsi::Runtime &rt,
+    RuntimeState &rs,
     jsi::Object &builtinModules) {
+  jsi::Runtime &rt = rs.getRuntime();
   jsi::Value result;
   if (builtinModules.hasProperty(rt, filename)) {
     result = builtinModules.getProperty(rt, filename);
@@ -155,7 +155,7 @@ static jsi::Function resolveRequireCall(
       throw jsi::JSError(
           rt, "The following module is not supported yet: " + filenameUTF8);
     }
-    llvh::SmallString<32> fullFileName{dirname};
+    llvh::SmallString<32> fullFileName{rs.getDirname()};
     canonicalizePath(fullFileName, filenameUTF8);
 
     auto memBuffer = llvh::MemoryBuffer::getFileOrSTDIN(fullFileName.str());
@@ -174,17 +174,16 @@ static jsi::Function resolveRequireCall(
 /// Reads and exports the values from a given file.
 static jsi::Value require(
     const jsi::String &filename,
-    const std::string &dirname,
-    jsi::Runtime &rt,
     RuntimeState &rs,
     jsi::Object &builtinModules) {
+  jsi::Runtime &rt = rs.getRuntime();
+
   std::string filenameUTF8 = filename.utf8(rt);
   llvh::Optional<jsi::Object> existingMod = rs.findRequiredModule(filenameUTF8);
   if (existingMod.hasValue()) {
     return std::move(*existingMod);
   }
-  jsi::Function result =
-      resolveRequireCall(filename, dirname, rt, builtinModules);
+  jsi::Function result = resolveRequireCall(filename, rs, builtinModules);
   jsi::Object mod{rt};
   jsi::Object exports{rt};
   mod.setProperty(rt, "exports", exports);
@@ -197,24 +196,21 @@ static jsi::Value require(
       rt.global().getProperty(rt, "require"),
       mapModule,
       filename,
-      dirname,
+      std::string{rs.getDirname()},
       5);
   return mapModule.getProperty(rt, "exports");
 }
 
 // Initializes all the builtin modules as well as several of
 // the functions/properties needed to execute the modules.
-static void initialize(
-    facebook::hermes::HermesRuntime &runtime,
-    const std::string &dirname,
-    RuntimeState &rs,
-    jsi::Object &builtinModules) {
+static void initialize(RuntimeState &rs, jsi::Object &builtinModules) {
+  jsi::Runtime &runtime = rs.getRuntime();
   // Creates require JS function and links it to the c++ version.
   jsi::Function req = jsi::Function::createFromHostFunction(
       runtime,
       jsi::PropNameID::forAscii(runtime, "require"),
       1,
-      [&rs, &dirname, &builtinModules](
+      [&rs, &builtinModules](
           jsi::Runtime &rt,
           const jsi::Value &,
           const jsi::Value *args,
@@ -222,7 +218,7 @@ static void initialize(
         if (count == 0) {
           throw jsi::JSError(rt, "Not enough arguments passed in");
         }
-        return require(args[0].toString(rt), dirname, rt, rs, builtinModules);
+        return require(args[0].toString(rt), rs, builtinModules);
       });
   runtime.global().setProperty(runtime, "require", req);
 
@@ -239,7 +235,7 @@ static void initialize(
         if (count == 0) {
           throw jsi::JSError(rt, "Not enough arguments passed in");
         }
-        return internalBinding(args[0].toString(rt), rt, rs);
+        return internalBinding(args[0].toString(rt), rs);
       });
   runtime.global().setProperty(runtime, "internalBinding", intBinding);
 
@@ -253,8 +249,6 @@ static void initialize(
   runtime.global().setProperty(runtime, "primordials", primordials);
   require(
       jsi::String::createFromAscii(runtime, "internal/per_context/primordials"),
-      dirname,
-      runtime,
       rs,
       builtinModules);
 }
@@ -291,12 +285,11 @@ int main(int argc, char **argv) {
       : InputFilename == "-"                ? "<stdin>"
                                             : std::string(InputFilename);
 
-  auto runtime = facebook::hermes::makeHermesRuntime();
-  RuntimeState rs{*runtime};
-
   llvh::SmallString<32> dirName{InputFilename};
   llvh::sys::path::remove_filename(dirName, llvh::sys::path::Style::posix);
-  const std::string strDirname{dirName.data(), dirName.size()};
+
+  RuntimeState rs{std::move(dirName)};
+  jsi::Runtime &rt = rs.getRuntime();
 
   llvh::ArrayRef<uint8_t> moduleObj = getNodeBytecode();
   assert(
@@ -306,11 +299,11 @@ int main(int argc, char **argv) {
   std::shared_ptr<jsi::Buffer> buf =
       std::make_shared<ArrayRefBuffer>(moduleObj);
   jsi::Object builtinModules =
-      runtime->evaluateJavaScript(buf, "NodeBytecode.js").asObject(*runtime);
+      rt.evaluateJavaScript(buf, "NodeBytecode.js").asObject(rt);
 
   try {
-    initialize(*runtime, strDirname, rs, builtinModules);
-    auto result = runtime->evaluateJavaScript(jsiBuffer, srcPath);
+    initialize(rs, builtinModules);
+    auto result = rt.evaluateJavaScript(jsiBuffer, srcPath);
 
   } catch (const jsi::JSIException &e) {
     llvh::errs() << "JavaScript terminated via uncaught exception: " << e.what()

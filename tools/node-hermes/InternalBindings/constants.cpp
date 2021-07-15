@@ -356,24 +356,19 @@ static jsi::Object systemConstants(jsi::Runtime &runtime) {
 
 /// Adds the 'constants' object as a property of internalBinding. Defines the
 /// constants needed by fs.js and related js files.
-jsi::Value facebook::constantsBinding(jsi::Runtime &runtime, RuntimeState &rs) {
-  jsi::Object constants{runtime};
+jsi::Value facebook::constantsBinding(RuntimeState &rs) {
+  jsi::Runtime &rt = rs.getRuntime();
+  jsi::Object constants{rt};
 
   constants.setProperty(
-      runtime,
-      jsi::String::createFromAscii(runtime, "fs"),
-      systemConstants(runtime));
+      rt, jsi::String::createFromAscii(rt, "fs"), systemConstants(rt));
 
-  jsi::Object os{runtime};
+  jsi::Object os{rt};
   os.setProperty(
-      runtime,
-      jsi::String::createFromAscii(runtime, "signals"),
-      signalConstants(runtime));
-  constants.setProperty(
-      runtime, jsi::String::createFromAscii(runtime, "os"), os);
+      rt, jsi::String::createFromAscii(rt, "signals"), signalConstants(rt));
+  constants.setProperty(rt, jsi::String::createFromAscii(rt, "os"), os);
 
-  jsi::String constantsLabel =
-      jsi::String::createFromAscii(runtime, "constants");
+  jsi::String constantsLabel = jsi::String::createFromAscii(rt, "constants");
   rs.setInternalBindingProp(constantsLabel, std::move(constants));
   return rs.getInternalBindingProp(constantsLabel);
 }
