@@ -11,4 +11,5 @@
 namespace facebook {
 jsi::Value bufferBinding(RuntimeState &rs);
 jsi::Value constantsBinding(RuntimeState &rs);
+jsi::Value fsBinding(RuntimeState &rs);
 } // namespace facebook

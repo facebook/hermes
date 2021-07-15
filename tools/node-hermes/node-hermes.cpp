@@ -106,8 +106,8 @@ static const std::shared_ptr<jsi::Buffer> addjsWrapper(
   return std::make_unique<jsi::StringBuffer>(std::move(wrappedBuffer));
 }
 
-// Implements the internal binding JS functionality. Currently only includes
-// constants that are relevant to the execution of fs.js.
+/// Implements the internal binding JS functionality. Currently only includes
+/// constants that are relevant to the execution of fs.js.
 static jsi::Value internalBinding(
     const jsi::String &propName,
     RuntimeState &rs) {
@@ -118,8 +118,8 @@ static jsi::Value internalBinding(
   std::string propNameUTF8 = propName.utf8(rt);
   if (propNameUTF8 == "constants") {
     return constantsBinding(rs);
-  } else if (propNameUTF8 == "fs") { // Next to be implemented.
-    return jsi::Value::undefined();
+  } else if (propNameUTF8 == "fs") {
+    return fsBinding(rs);
   } else if (propNameUTF8 == "buffer") {
     return bufferBinding(rs);
   } else if (propNameUTF8 == "util") {
