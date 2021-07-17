@@ -16,7 +16,7 @@ We actively welcome your pull requests. If you are planning on doing a larger
 chunk of work or want to change an external facing API, make sure to file an
 issue first to get feedback on your idea.
 
-1. Fork the repo and create your branch from `master`.
+1. Fork the repo and create your branch from `main`.
 2. If you've added code that should be tested, add tests.
 3. Ensure the test suite passes and your code lints.
 4. Consider quashing your commits (`git rebase -i`). One intent alongside one

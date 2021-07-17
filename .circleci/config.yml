@@ -612,7 +612,7 @@ jobs:
       - attach_workspace:
           at: /tmp/hermes/input
       - run:
-          name: Run E2E test with master Hermes and Release React Native
+          name: Run E2E test with main Hermes and Release React Native
           command: |
             cd test/circleci-e2e
             ./run.sh --hermes-npm-package /tmp/hermes/input/hermes-engine-v*.tgz

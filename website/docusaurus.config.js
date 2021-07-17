@@ -119,7 +119,7 @@ module.exports = {
         docs: {
           showLastUpdateAuthor: false,
           showLastUpdateTime: true,
-          editUrl: 'https://github.com/facebook/hermes/blob/master/website/',
+          editUrl: 'https://github.com/facebook/hermes/blob/HEAD/website/',
           path: '../doc',
           sidebarPath: require.resolve('./sidebars.json'),
         },
