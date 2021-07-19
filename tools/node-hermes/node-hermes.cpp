@@ -75,25 +75,6 @@ class ArrayRefBuffer : public jsi::Buffer {
   llvh::ArrayRef<uint8_t> array_;
 };
 
-/// Given the directory that the original JS file runs from and the
-/// relative path of the target, forms the absolute path
-/// for the target.
-static void canonicalizePath(
-    llvh::SmallVectorImpl<char> &dirname,
-    llvh::StringRef target) {
-  if (!target.empty() && target[0] == '/') {
-    // If the target is absolute (starts with a '/'), resolve from the module
-    // root (disregard the dirname).
-    dirname.clear();
-    llvh::sys::path::append(dirname, target.drop_front(1));
-    return;
-  }
-  llvh::sys::path::append(dirname, llvh::sys::path::Style::posix, target);
-
-  // Remove all dots. This is done to get rid of ../ or anything like ././.
-  llvh::sys::path::remove_dots(dirname, true, llvh::sys::path::Style::posix);
-}
-
 /// Adds a JS function wrapper around the StringRef buffer passed in.
 static const std::shared_ptr<jsi::Buffer> addjsWrapper(
     llvh::StringRef strBuffer) {
@@ -153,8 +134,7 @@ static jsi::Function resolveRequireCall(
       throw jsi::JSError(
           rt, "The following module is not supported yet: " + filenameUTF8);
     }
-    llvh::SmallString<32> fullFileName{rs.getDirname()};
-    canonicalizePath(fullFileName, filenameUTF8);
+    llvh::SmallString<32> fullFileName = rs.resolvePath(filenameUTF8, "./");
 
     auto memBuffer = llvh::MemoryBuffer::getFileOrSTDIN(fullFileName.str());
     if (!memBuffer) {

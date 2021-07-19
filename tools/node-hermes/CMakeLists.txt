@@ -14,7 +14,8 @@ if(HERMES_BUILD_NODE_HERMES)
   add_subdirectory(third-party/libuv)
   add_subdirectory(nodelib)
   add_hermes_tool(node-hermes
-    node-hermes.cpp InternalBindings/buffer.cpp InternalBindings/constants.cpp InternalBindings/file.cpp
+    node-hermes.cpp RuntimeState.cpp InternalBindings/buffer.cpp
+    InternalBindings/constants.cpp InternalBindings/file.cpp
     ${ALL_HEADER_FILES}
     LINK_LIBS hermesapi hermesNodeBytecode uv_a
     )

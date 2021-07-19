@@ -12,25 +12,6 @@
 
 using namespace facebook;
 
-/// Given the directory that the original file being read is in and the
-/// relative path of the target, forms the absolute path
-/// for the target.
-static void canonicalizePath(
-    llvh::SmallVectorImpl<char> &dirname,
-    llvh::StringRef target) {
-  if (!target.empty() && target[0] == '/') {
-    // If the target is absolute (starts with a '/'), resolve from the file
-    // system root.
-    dirname.clear();
-    llvh::sys::path::append(dirname, llvh::sys::path::Style::posix, target);
-    return;
-  }
-  llvh::sys::path::append(dirname, llvh::sys::path::Style::posix, target);
-
-  // Remove all dots. This is done to get rid of ../ or anything like ././.
-  llvh::sys::path::remove_dots(dirname, true, llvh::sys::path::Style::posix);
-}
-
 /// Takes a file path and returns a file descriptor representing the open file.
 /// Called by js the following way:
 /// fd = binding.open(path, flags, mode, FSReqCallback, ctx)
@@ -48,8 +29,7 @@ static jsi::Value open(RuntimeState &rs, const jsi::Value *args, size_t count) {
   }
   std::string filenameUTF8 = args[0].asString(rt).utf8(rt);
 
-  llvh::SmallString<32> fullFileName{rs.getDirname()};
-  canonicalizePath(fullFileName, filenameUTF8);
+  llvh::SmallString<32> fullFileName = rs.resolvePath(filenameUTF8, "/");
 
   int flags = args[1].asNumber();
   int mode = args[2].asNumber();

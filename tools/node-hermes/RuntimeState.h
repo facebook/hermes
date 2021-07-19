@@ -84,6 +84,13 @@ class RuntimeState {
         .getProperty(*rt_, propName);
   }
 
+  /// Given a path \p target to some file that is either expressed relative to
+  /// dirname_ or an as absolute path from \p rootDir, compute a path to the
+  /// target file from the module root.
+  llvh::SmallString<32> resolvePath(
+      llvh::StringRef target,
+      llvh::StringRef rootDir);
+
   jsi::Runtime &getRuntime() {
     return *rt_;
   }
