@@ -1,0 +1,109 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+plugins {
+    id('com.android.application')
+}
+
+buildDir = "${rootProject.ext.hermes_ws}/build_android/replapp"
+buildDir.mkdirs()
+
+android {
+
+    compileSdkVersion 28
+
+    defaultConfig {
+        applicationId "com.facebook.hermes.replapp"
+        minSdkVersion 16
+
+        externalNativeBuild {
+            cmake {
+                arguments "-DHERMES_IS_ANDROID=True"
+                arguments "-DHERMES_FACEBOOK_BUILD=${rootProject.ext.facebookBuild}"
+                arguments "-DANDROID_STL=c++_shared"
+                arguments "-DANDROID_PIE=True"
+                arguments "-DIMPORT_HERMESC=${rootProject.ext.hermesC}"
+                arguments "-DFBSOURCE_DIR=${rootProject.ext.fbsource}"
+                arguments "-DHERMES_SLOW_DEBUG=False"
+                arguments "-DHERMES_ENABLE_INTL=True"
+                targets "hermesreplapp"
+            }
+        }
+    }
+
+    splits {
+
+        // Configures multiple APKs based on ABI.
+        abi {
+
+            // Enables building multiple APKs per ABI.
+            enable true
+
+            // By default all ABIs are included, so use reset() and include to specify that we only
+            // want APKs for x86 and x86_64.
+
+            // Resets the list of ABIs that Gradle should create APKs for to none.
+            reset()
+
+            // Specifies a list of ABIs that Gradle should create APKs for.
+            include "x86" , "x86_64", "armeabi-v7a", "arm64-v8a"
+
+            // Specifies that we do not want to also generate a universal APK that includes all ABIs.
+            universalApk false
+        }
+    }
+
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
+    buildTypes {
+        debug {
+            debuggable true
+        }
+
+        release {
+            debuggable false
+            signingConfig signingConfigs.debug
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            version "3.6.0"
+            path "../../CMakeLists.txt"
+            buildStagingDirectory = "${rootProject.ext.hermes_ws}/staging/replapp"
+            buildStagingDirectory.mkdirs()
+        }
+    }
+
+    sourceSets {
+        main {
+            java {
+                srcDirs = [
+                        "${rootProject.ext.hermes_ws}/hermes/lib/Platform/Intl/java",
+                        "java",
+                ]
+            }
+        }
+    }
+
+    dependencies {
+        implementation 'com.facebook.soloader:soloader:0.9.0'
+        implementation 'com.facebook.fbjni:fbjni:0.0.2'
+        implementation 'com.facebook.yoga:proguard-annotations:1.14.1'
+        implementation 'com.google.code.gson:gson:2.8.6'
+        implementation "androidx.annotation:annotation:1.1.0"
+    }
+}
