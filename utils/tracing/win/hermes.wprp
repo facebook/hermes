@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WindowsPerformanceRecorder Version="1.0" Author="Microsoft Corporation" Copyright="Microsoft Corporation" Company="Microsoft Corporation">
+  <Profiles>
+    <EventCollector Id="EventCollector_HermesTraceLoggingProvider" Name="HermesTraceLoggingProvider">
+      <BufferSize Value="64" />
+      <Buffers Value="4" />
+    </EventCollector>
+
+    <EventProvider Id="EventProvider_HermesTraceLoggingProvider" Name="5bf36bca-6f36-44a7-836f-4f41ad758632" />
+
+    <Profile Id="HermesTraceLoggingProvider.Verbose.File" Name="HermesTraceLoggingProvider" Description="HermesTraceLoggingProvider" LoggingMode="File" DetailLevel="Verbose">
+      <Collectors>
+        <EventCollectorId Value="EventCollector_HermesTraceLoggingProvider">
+          <EventProviders>
+            <EventProviderId Value="EventProvider_HermesTraceLoggingProvider" />
+          </EventProviders>
+        </EventCollectorId>
+      </Collectors>
+    </Profile>
+
+    <Profile Id="HermesTraceLoggingProvider.Light.File" Name="HermesTraceLoggingProvider" Description="HermesTraceLoggingProvider" Base="HermesTraceLoggingProvider.Verbose.File" LoggingMode="File" DetailLevel="Light" />
+    <Profile Id="HermesTraceLoggingProvider.Verbose.Memory" Name="HermesTraceLoggingProvider" Description="HermesTraceLoggingProvider" Base="HermesTraceLoggingProvider.Verbose.File" LoggingMode="Memory" DetailLevel="Verbose" />
+    <Profile Id="HermesTraceLoggingProvider.Light.Memory" Name="HermesTraceLoggingProvider" Description="HermesTraceLoggingProvider" Base="HermesTraceLoggingProvider.Verbose.File" LoggingMode="Memory" DetailLevel="Light" />
+
+  </Profiles>
+</WindowsPerformanceRecorder>

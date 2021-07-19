@@ -6,6 +6,7 @@
 set(link_libs
     dtoa
     hermesRegex
+    hermesPlatform
     hermesPlatformUnicode)
 
 if (ANDROID)
