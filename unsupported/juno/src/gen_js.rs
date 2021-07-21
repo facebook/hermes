@@ -339,6 +339,9 @@ impl<W: Write> GenJS<W> {
                 self.visit_stmt_or_block(body, ForceBlock::No, node);
             }
 
+            DebuggerStatement => {
+                out!(self, "debugger");
+            }
             EmptyStatement => {}
 
             BlockStatement { body } => {
@@ -380,6 +383,14 @@ impl<W: Write> GenJS<W> {
                     out!(self, " ");
                     argument.visit(self, Some(node));
                 }
+            }
+            WithStatement { object, body } => {
+                out!(self, "with");
+                self.space(ForceSpace::No);
+                out!(self, "(");
+                object.visit(self, Some(node));
+                out!(self, ")");
+                self.visit_stmt_or_block(body, ForceBlock::No, node);
             }
 
             SwitchStatement {
@@ -535,6 +546,11 @@ impl<W: Write> GenJS<W> {
                 out!(self, "]");
             }
 
+            SpreadElement { argument } => {
+                out!(self, "...");
+                argument.visit(self, Some(node));
+            }
+
             NewExpression {
                 callee, arguments, ..
             } => {
@@ -549,11 +565,55 @@ impl<W: Write> GenJS<W> {
                 }
                 out!(self, ")");
             }
+            YieldExpression { argument, delegate } => {
+                out!(self, "yield");
+                if *delegate {
+                    out!(self, "*");
+                    self.space(ForceSpace::No);
+                } else if argument.is_some() {
+                    out!(self, " ");
+                }
+                if let Some(argument) = argument {
+                    argument.visit(self, Some(node));
+                }
+            }
+            AwaitExpression { argument } => {
+                out!(self, "await ");
+                argument.visit(self, Some(node));
+            }
+
+            ImportExpression { source, attributes } => {
+                out!(self, "import(");
+                source.visit(self, Some(node));
+                if let Some(attributes) = attributes {
+                    out!(self, ",");
+                    self.space(ForceSpace::No);
+                    attributes.visit(self, Some(node));
+                }
+                out!(self, ")");
+            }
+
             CallExpression {
                 callee, arguments, ..
             } => {
                 self.print_child(Some(callee), node, ChildPos::Left);
                 out!(self, "(");
+                for (i, arg) in arguments.iter().enumerate() {
+                    if i > 0 {
+                        self.comma();
+                    }
+                    self.print_comma_expression(arg, node);
+                }
+                out!(self, ")");
+            }
+            OptionalCallExpression {
+                callee,
+                arguments,
+                optional,
+                ..
+            } => {
+                self.print_child(Some(callee), node, ChildPos::Left);
+                out!(self, "{}(", if *optional { "?." } else { "" });
                 for (i, arg) in arguments.iter().enumerate() {
                     if i > 0 {
                         self.comma();
@@ -613,6 +673,23 @@ impl<W: Write> GenJS<W> {
                     out!(self, "]");
                 }
             }
+            OptionalMemberExpression {
+                object,
+                property,
+                computed,
+                optional,
+            } => {
+                object.visit(self, Some(node));
+                if *computed {
+                    out!(self, "{}[", if *optional { "?." } else { "" });
+                } else {
+                    out!(self, "{}.", if *optional { "?" } else { "" });
+                }
+                property.visit(self, Some(node));
+                if *computed {
+                    out!(self, "]");
+                }
+            }
 
             BinaryExpression {
                 left,
@@ -635,6 +712,13 @@ impl<W: Write> GenJS<W> {
                 self.print_child(Some(right), node, ChildPos::Right);
             }
 
+            Directive { value } => {
+                value.visit(self, Some(node));
+            }
+            DirectiveLiteral { .. } => {
+                unimplemented!("No escaping for directive literals");
+            }
+
             ConditionalExpression {
                 test,
                 consequent,
@@ -653,6 +737,15 @@ impl<W: Write> GenJS<W> {
 
             Identifier { name, .. } => {
                 out!(self, "{}", &name.str);
+            }
+            PrivateName { id } => {
+                out!(self, "#");
+                id.visit(self, Some(node));
+            }
+            MetaProperty { meta, property } => {
+                meta.visit(self, Some(node));
+                out!(self, ".");
+                property.visit(self, Some(node));
             }
 
             CatchClause { param, body } => {
@@ -712,6 +805,9 @@ impl<W: Write> GenJS<W> {
             TaggedTemplateExpression { tag, quasi } => {
                 self.print_child(Some(tag), node, ChildPos::Left);
                 self.print_child(Some(quasi), node, ChildPos::Right);
+            }
+            TemplateElement { .. } => {
+                unreachable!("TemplateElement is handled in TemplateLiteral case");
             }
 
             Property {
@@ -830,6 +926,192 @@ impl<W: Write> GenJS<W> {
                     self.newline();
                 }
             }
+            ClassProperty {
+                key,
+                value,
+                computed,
+                is_static,
+                ..
+            } => {
+                if *is_static {
+                    out!(self, "static ");
+                }
+                if *computed {
+                    out!(self, "[");
+                }
+                key.visit(self, Some(node));
+                if *computed {
+                    out!(self, "]");
+                }
+                self.space(ForceSpace::No);
+                if let Some(value) = value {
+                    out!(self, "=");
+                    self.space(ForceSpace::No);
+                    value.visit(self, Some(node));
+                }
+                out!(self, ";");
+            }
+            ClassPrivateProperty {
+                key,
+                value,
+                is_static,
+                ..
+            } => {
+                if *is_static {
+                    out!(self, "static ");
+                }
+                out!(self, "#");
+                key.visit(self, Some(node));
+                self.space(ForceSpace::No);
+                if let Some(value) = value {
+                    out!(self, "=");
+                    self.space(ForceSpace::No);
+                    value.visit(self, Some(node));
+                }
+                out!(self, ";");
+            }
+            MethodDefinition {
+                key,
+                value,
+                kind,
+                computed,
+                is_static,
+            } => {
+                let (is_async, generator, params, body) = match &value.kind {
+                    FunctionExpression {
+                        generator,
+                        is_async,
+                        params,
+                        body,
+                        ..
+                    } => (*is_async, *generator, params, body),
+                    _ => {
+                        unreachable!("Invalid method value");
+                    }
+                };
+                if *is_static {
+                    out!(self, "static ");
+                }
+                if is_async {
+                    out!(self, "async ");
+                }
+                if generator {
+                    out!(self, "*");
+                }
+                match kind.str.as_ref() {
+                    "method" => {}
+                    "constructor" => {
+                        // Will be handled by key output.
+                    }
+                    "get" => {
+                        out!(self, "get ");
+                    }
+                    "set" => {
+                        out!(self, "set ");
+                    }
+                    _ => {
+                        unreachable!("Invalid method kind");
+                    }
+                };
+                if *computed {
+                    out!(self, "[");
+                }
+                key.visit(self, Some(node));
+                if *computed {
+                    out!(self, "]");
+                }
+                self.visit_func_params_body(params, body, node);
+            }
+
+            ImportDeclaration {
+                specifiers, source, ..
+            } => {
+                out!(self, "import ");
+                let mut has_named_specs = false;
+                for (i, spec) in specifiers.iter().enumerate() {
+                    if i > 0 {
+                        self.comma();
+                    }
+                    match &spec.kind {
+                        ImportSpecifier { .. } => {
+                            if !has_named_specs {
+                                has_named_specs = true;
+                                out!(self, "{{");
+                            }
+                        }
+                        _ => {}
+                    };
+                    spec.visit(self, Some(node));
+                }
+                if !specifiers.is_empty() {
+                    if has_named_specs {
+                        out!(self, "}}");
+                        self.space(ForceSpace::No);
+                    } else {
+                        out!(self, " ");
+                    }
+                    out!(self, "from ");
+                }
+                source.visit(self, Some(node));
+                out!(self, ";");
+                self.newline();
+            }
+            ImportSpecifier {
+                imported, local, ..
+            } => {
+                imported.visit(self, Some(node));
+                out!(self, " as ");
+                local.visit(self, Some(node));
+            }
+            ImportDefaultSpecifier { local } => {
+                local.visit(self, Some(node));
+            }
+            ImportNamespaceSpecifier { local } => {
+                out!(self, "* as ");
+                local.visit(self, Some(node));
+            }
+
+            ExportNamedDeclaration {
+                declaration,
+                specifiers,
+                source,
+                ..
+            } => {
+                out!(self, "export ");
+                if let Some(declaration) = declaration {
+                    declaration.visit(self, Some(node));
+                } else {
+                    out!(self, "{{");
+                    for (i, spec) in specifiers.iter().enumerate() {
+                        if i > 0 {
+                            self.comma();
+                        }
+                        spec.visit(self, Some(node));
+                    }
+                    out!(self, "}}");
+                    if let Some(source) = source {
+                        out!(self, " from ");
+                        source.visit(self, Some(node));
+                    }
+                }
+                out!(self, ";");
+                self.newline();
+            }
+            ExportSpecifier { exported, local } => {
+                local.visit(self, Some(node));
+                out!(self, " as ");
+                exported.visit(self, Some(node));
+            }
+            ExportNamespaceSpecifier { exported } => {
+                out!(self, "* as ");
+                exported.visit(self, Some(node));
+            }
+            ExportDefaultDeclaration { declaration } => {
+                out!(self, "export default ");
+                declaration.visit(self, Some(node));
+                out!(self, ";");
+                self.newline();
+            }
 
             ObjectPattern { properties, .. } => {
                 self.visit_props(properties, node);
@@ -847,6 +1129,13 @@ impl<W: Write> GenJS<W> {
             RestElement { argument } => {
                 out!(self, "...");
                 argument.visit(self, Some(node));
+            }
+            AssignmentPattern { left, right } => {
+                left.visit(self, Some(node));
+                self.space(ForceSpace::No);
+                out!(self, "=");
+                self.space(ForceSpace::No);
+                right.visit(self, Some(node));
             }
 
             _ => {
