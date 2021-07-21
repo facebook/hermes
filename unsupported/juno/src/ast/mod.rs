@@ -8,8 +8,10 @@
 use std::fmt;
 
 mod kind;
+mod visit;
 
 pub use kind::NodeKind;
+pub use visit::{Visitable, Visitor};
 
 /// A JavaScript AST node.
 #[derive(Debug)]
@@ -19,6 +21,18 @@ pub struct Node {
 
     /// Actual kind of the node.
     pub kind: NodeKind,
+}
+
+impl Node {
+    /// Call the `visitor` on this node with a given `parent`.
+    pub fn visit<V: Visitor>(&self, visitor: &mut V, parent: Option<&Node>) {
+        visitor.call(self, parent);
+    }
+
+    /// Call the `visitor` on only this node's children.
+    pub fn visit_children<V: Visitor>(&self, visitor: &mut V) {
+        self.kind.visit_children(visitor, self);
+    }
 }
 
 /// A source range within a single JS file.

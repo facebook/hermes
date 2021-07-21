@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use super::{NodeLabel, NodeList, NodePtr, StringLiteral};
+use super::{Node, NodeLabel, NodeList, NodePtr, StringLiteral, Visitable, Visitor};
 
 /// Generate boilerplate code for the `NodeKind` enum.
 /// The macro matches structures like this:
@@ -50,6 +50,22 @@ macro_rules! gen_nodekind_enum {
                     $($field : $type),*
                 })?
             ),*
+        }
+
+        impl $name {
+            /// Visit the child fields of this kind.
+            /// `node` is the node for which this is the kind.
+            pub fn visit_children<V: Visitor>(&self, visitor: &mut V, node: &Node) {
+                match self {
+                    $(
+                        Self::$kind $({$($field),*})? => {
+                            $($(
+                                $field.visit(visitor, node);
+                            )*)?
+                        }
+                    ),*
+                }
+            }
         }
     };
 }
