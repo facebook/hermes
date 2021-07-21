@@ -66,6 +66,16 @@ macro_rules! gen_nodekind_enum {
                     ),*
                 }
             }
+
+            pub fn name(&self) -> &'static str {
+                match self {
+                    $(
+                        Self::$kind { .. } => {
+                            stringify!($kind)
+                        }
+                    ),*
+                }
+            }
         }
     };
 }

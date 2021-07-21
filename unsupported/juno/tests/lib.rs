@@ -6,3 +6,4 @@
  */
 
 mod ast;
+mod gen_js;
