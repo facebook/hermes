@@ -28,4 +28,29 @@ fn node(kind: NodeKind) -> Box<Node> {
 fn test_literals() {
     use NodeKind::*;
     assert_eq!(do_gen(&node(NullLiteral)).trim(), "null");
+    assert_eq!(
+        do_gen(&node(StringLiteral {
+            value: juno::ast::StringLiteral {
+                str: vec!['A' as u16, 0x1234u16, '\t' as u16],
+            }
+        },))
+        .trim(),
+        r#""A\u1234\t""#,
+    );
+}
+
+#[test]
+fn test_binop() {
+    use NodeKind::*;
+    assert_eq!(
+        do_gen(&node(BinaryExpression {
+            left: node(NullLiteral),
+            operator: NodeLabel {
+                str: "+".to_string()
+            },
+            right: node(NullLiteral),
+        }))
+        .trim(),
+        "null + null"
+    );
 }

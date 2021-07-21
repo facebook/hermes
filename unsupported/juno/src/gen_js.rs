@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::ast::{Node, NodeKind, Visitor};
+use crate::ast::{Node, NodeKind, StringLiteral, Visitor};
 use std::{
     fmt,
     io::{self, BufWriter, Write},
@@ -117,6 +117,13 @@ enum ForceSpace {
     Yes,
 }
 
+/// Whether to force the statements to be emitted inside a new block `{ }`.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum ForceBlock {
+    No,
+    Yes,
+}
+
 /// Generator for output JS. Walks the AST to output real JS.
 struct GenJS<W: Write> {
     /// Where to write the generated JS.
@@ -180,14 +187,309 @@ impl<W: Write> GenJS<W> {
     fn gen_node(&mut self, node: &Node, _parent: Option<&Node>) {
         use NodeKind::*;
         match &node.kind {
-            Identifier { name, .. } => {
-                out!(self, "{}", &name.str);
+            Empty => {}
+            Metadata => {}
+
+            Program { body } => {
+                self.visit_stmt_list(body, node);
             }
+
+            FunctionExpression {
+                id,
+                params,
+                body,
+                generator,
+                is_async,
+                ..
+            }
+            | FunctionDeclaration {
+                id,
+                params,
+                body,
+                generator,
+                is_async,
+                ..
+            } => {
+                if *is_async {
+                    out!(self, "async ");
+                }
+                out!(self, "function");
+                if *generator {
+                    out!(self, "*");
+                    if id.is_some() {
+                        self.space(ForceSpace::No);
+                    }
+                } else {
+                    if id.is_some() {
+                        self.space(ForceSpace::No);
+                    }
+                }
+                if let Some(id) = id {
+                    id.visit(self, Some(node));
+                }
+                self.visit_func_params_body(params, body, node);
+            }
+
+            ArrowFunctionExpression {
+                params,
+                body,
+                expression,
+                is_async,
+                ..
+            } => {
+                let mut need_sep = false;
+                if *is_async {
+                    out!(self, "async");
+                    need_sep = true;
+                }
+                // Single parameter doesn't need parens. But only in expression mode,
+                // otherwise it is ugly.
+                if params.len() == 1 && (*expression || self.pretty == Pretty::No) {
+                    if need_sep {
+                        out!(self, " ");
+                        params[0].visit(self, Some(node));
+                    }
+                } else {
+                    out!(self, "(");
+                    for (i, param) in params.iter().enumerate() {
+                        if i > 0 {
+                            self.comma();
+                        }
+                        param.visit(self, Some(node));
+                    }
+                    out!(self, ")");
+                }
+                self.space(ForceSpace::No);
+                out!(self, "=>");
+                self.space(ForceSpace::No);
+                match &body.kind {
+                    BlockStatement { .. } => {
+                        body.visit(self, Some(node));
+                    }
+                    _ => {
+                        self.print_child(Some(body), node, ChildPos::Right);
+                    }
+                }
+            }
+
+            WhileStatement { body, test } => {
+                out!(self, "while");
+                self.space(ForceSpace::No);
+                out!(self, "(");
+                test.visit(self, Some(node));
+                out!(self, ")");
+                self.visit_stmt_or_block(body, ForceBlock::No, node);
+            }
+            DoWhileStatement { body, test } => {
+                out!(self, "do");
+                let block = self.visit_stmt_or_block(body, ForceBlock::No, node);
+                if block {
+                    self.space(ForceSpace::No);
+                } else {
+                    out!(self, ";");
+                    self.newline();
+                }
+                out!(self, "while");
+                self.space(ForceSpace::No);
+                out!(self, "(");
+                test.visit(self, Some(node));
+                out!(self, ")");
+            }
+
+            ForInStatement { left, right, body } => {
+                out!(self, "for(");
+                left.visit(self, Some(node));
+                out!(self, " in ");
+                right.visit(self, Some(node));
+                out!(self, ")");
+                self.visit_stmt_or_block(body, ForceBlock::No, node);
+            }
+            ForOfStatement {
+                left,
+                right,
+                body,
+                is_await,
+            } => {
+                out!(self, "for{}(", if *is_await { " await" } else { "" });
+                left.visit(self, Some(node));
+                out!(self, " of ");
+                right.visit(self, Some(node));
+                out!(self, ")");
+                self.visit_stmt_or_block(body, ForceBlock::No, node);
+            }
+            ForStatement {
+                init,
+                test,
+                update,
+                body,
+            } => {
+                out!(self, "for(");
+                self.print_child(init.as_deref(), node, ChildPos::Left);
+                out!(self, ";");
+                if let Some(test) = test {
+                    self.space(ForceSpace::No);
+                    test.visit(self, Some(node));
+                }
+                out!(self, ";");
+                if let Some(update) = update {
+                    self.space(ForceSpace::No);
+                    update.visit(self, Some(node));
+                }
+                out!(self, ")");
+                self.visit_stmt_or_block(body, ForceBlock::No, node);
+            }
+
+            EmptyStatement => {}
+
+            BlockStatement { body } => {
+                if body.is_empty() {
+                    out!(self, "{{}}");
+                } else {
+                    out!(self, "{{");
+                    self.inc_indent();
+                    self.newline();
+                    self.visit_stmt_list(body, node);
+                    self.dec_indent();
+                    self.newline();
+                    out!(self, "}}");
+                }
+            }
+
+            BreakStatement { label } => {
+                out!(self, "break");
+                if let Some(label) = label {
+                    self.space(ForceSpace::Yes);
+                    label.visit(self, Some(node));
+                }
+            }
+            ContinueStatement { label } => {
+                out!(self, "continue");
+                if let Some(label) = label {
+                    self.space(ForceSpace::Yes);
+                    label.visit(self, Some(node));
+                }
+            }
+
+            ThrowStatement { argument } => {
+                out!(self, "throw ");
+                argument.visit(self, Some(node));
+            }
+            ReturnStatement { argument } => {
+                out!(self, "return");
+                if let Some(argument) = argument {
+                    out!(self, " ");
+                    argument.visit(self, Some(node));
+                }
+            }
+
+            SwitchStatement {
+                discriminant,
+                cases,
+            } => {
+                out!(self, "switch");
+                self.space(ForceSpace::No);
+                out!(self, "(");
+                discriminant.visit(self, Some(node));
+                out!(self, ")");
+                self.space(ForceSpace::No);
+                out!(self, "{{");
+                self.newline();
+                for case in cases {
+                    case.visit(self, Some(node));
+                    self.newline();
+                }
+                out!(self, "}}");
+            }
+            SwitchCase { test, consequent } => {
+                match test {
+                    Some(test) => {
+                        out!(self, "case ");
+                        test.visit(self, Some(node));
+                    }
+                    None => {
+                        out!(self, "default");
+                    }
+                };
+                out!(self, ":");
+                if !consequent.is_empty() {
+                    self.inc_indent();
+                    self.newline();
+                    self.visit_stmt_list(consequent, node);
+                    self.dec_indent();
+                }
+            }
+
+            LabeledStatement { label, body } => {
+                label.visit(self, Some(node));
+                out!(self, ":");
+                self.newline();
+                body.visit(self, Some(node));
+            }
+
+            ExpressionStatement { expression, .. } => {
+                self.print_child(Some(expression), node, ChildPos::Anywhere);
+            }
+
+            TryStatement {
+                block,
+                handler,
+                finalizer,
+            } => {
+                out!(self, "try");
+                self.visit_stmt_or_block(block, ForceBlock::Yes, node);
+                if let Some(handler) = handler {
+                    handler.visit(self, Some(node));
+                }
+                if let Some(finalizer) = finalizer {
+                    self.visit_stmt_or_block(finalizer, ForceBlock::Yes, node);
+                }
+            }
+
+            IfStatement {
+                test,
+                consequent,
+                alternate,
+            } => {
+                out!(self, "if");
+                self.space(ForceSpace::No);
+                out!(self, "(");
+                test.visit(self, Some(node));
+                out!(self, ")");
+                let force_block = if alternate.is_some() && is_if_without_else(consequent) {
+                    ForceBlock::Yes
+                } else {
+                    ForceBlock::No
+                };
+                let block = self.visit_stmt_or_block(consequent, force_block, node);
+                if let Some(alternate) = alternate {
+                    if !block {
+                        out!(self, ";");
+                        self.newline();
+                    } else {
+                        self.space(ForceSpace::No);
+                    }
+                    out!(self, "else");
+                    self.visit_stmt_or_block(alternate, ForceBlock::No, node);
+                }
+            }
+
             BooleanLiteral { value, .. } => {
                 out!(self, "{}", if *value { "true" } else { "false" });
             }
             NullLiteral => {
                 out!(self, "null");
+            }
+            StringLiteral { value, .. } => {
+                out!(self, "\"");
+                self.print_escaped_string_literal(value, '"');
+                out!(self, "\"");
+            }
+            NumericLiteral { .. } => {
+                unimplemented!("No implementation of number to string");
+            }
+            RegExpLiteral { pattern, flags } => {
+                // FIXME: Needs to escape '/', might need more escaping as well.
+                out!(self, "/{}/{}", pattern.str, flags.str);
             }
             ThisExpression => {
                 out!(self, "this");
@@ -195,6 +497,358 @@ impl<W: Write> GenJS<W> {
             Super => {
                 out!(self, "super");
             }
+
+            SequenceExpression { expressions } => {
+                for (i, expr) in expressions.iter().enumerate() {
+                    if i > 0 {
+                        self.comma();
+                    }
+                    self.print_child(
+                        Some(expr),
+                        node,
+                        if i == 1 {
+                            ChildPos::Left
+                        } else {
+                            ChildPos::Right
+                        },
+                    );
+                }
+            }
+
+            ObjectExpression { properties, .. } => {
+                self.visit_props(properties, node);
+            }
+            ArrayExpression {
+                elements,
+                trailing_comma,
+            } => {
+                out!(self, "[");
+                for (i, elem) in elements.iter().enumerate() {
+                    if i > 0 {
+                        self.comma();
+                    }
+                    self.print_comma_expression(elem, node);
+                }
+                if *trailing_comma {
+                    self.comma();
+                }
+                out!(self, "]");
+            }
+
+            NewExpression {
+                callee, arguments, ..
+            } => {
+                out!(self, "new ");
+                self.print_child(Some(callee), node, ChildPos::Left);
+                out!(self, "(");
+                for (i, arg) in arguments.iter().enumerate() {
+                    if i > 0 {
+                        self.comma();
+                    }
+                    self.print_comma_expression(arg, node);
+                }
+                out!(self, ")");
+            }
+            CallExpression {
+                callee, arguments, ..
+            } => {
+                self.print_child(Some(callee), node, ChildPos::Left);
+                out!(self, "(");
+                for (i, arg) in arguments.iter().enumerate() {
+                    if i > 0 {
+                        self.comma();
+                    }
+                    self.print_comma_expression(arg, node);
+                }
+                out!(self, ")");
+            }
+
+            AssignmentExpression {
+                operator,
+                left,
+                right,
+            } => {
+                self.print_child(Some(left), node, ChildPos::Left);
+                self.space(ForceSpace::No);
+                out!(self, "{}", operator.str);
+                self.space(ForceSpace::No);
+                self.print_child(Some(right), node, ChildPos::Right);
+            }
+            UnaryExpression {
+                operator, argument, ..
+            } => {
+                let ident = operator.str.chars().next().unwrap().is_alphabetic();
+                out!(self, "{}", operator.str);
+                if ident {
+                    out!(self, " ");
+                }
+                self.print_child(Some(argument), node, ChildPos::Right);
+            }
+            UpdateExpression {
+                operator,
+                argument,
+                prefix,
+            } => {
+                if *prefix {
+                    out!(self, "{}", operator.str);
+                    self.print_child(Some(argument), node, ChildPos::Right);
+                } else {
+                    self.print_child(Some(argument), node, ChildPos::Left);
+                    out!(self, "{}", operator.str);
+                }
+            }
+            MemberExpression {
+                object,
+                property,
+                computed,
+            } => {
+                object.visit(self, Some(node));
+                if *computed {
+                    out!(self, "[");
+                } else {
+                    out!(self, ".");
+                }
+                property.visit(self, Some(node));
+                if *computed {
+                    out!(self, "]");
+                }
+            }
+
+            BinaryExpression {
+                left,
+                right,
+                operator,
+            } => {
+                let ident = operator.str.chars().next().unwrap().is_alphabetic();
+                self.print_child(Some(left), node, ChildPos::Left);
+                self.space(if ident {
+                    ForceSpace::Yes
+                } else {
+                    ForceSpace::No
+                });
+                out!(self, "{}", operator.str);
+                self.space(if ident {
+                    ForceSpace::Yes
+                } else {
+                    ForceSpace::No
+                });
+                self.print_child(Some(right), node, ChildPos::Right);
+            }
+
+            ConditionalExpression {
+                test,
+                consequent,
+                alternate,
+            } => {
+                self.print_child(Some(test), node, ChildPos::Left);
+                self.space(ForceSpace::No);
+                out!(self, "?");
+                self.space(ForceSpace::No);
+                self.print_child(Some(consequent), node, ChildPos::Anywhere);
+                self.space(ForceSpace::No);
+                out!(self, ":");
+                self.space(ForceSpace::No);
+                self.print_child(Some(alternate), node, ChildPos::Right);
+            }
+
+            Identifier { name, .. } => {
+                out!(self, "{}", &name.str);
+            }
+
+            CatchClause { param, body } => {
+                self.space(ForceSpace::No);
+                out!(self, "catch");
+                if let Some(param) = param {
+                    self.space(ForceSpace::No);
+                    out!(self, "(");
+                    param.visit(self, Some(node));
+                    out!(self, ")");
+                }
+                self.visit_stmt_or_block(body, ForceBlock::Yes, node);
+            }
+
+            VariableDeclaration { kind, declarations } => {
+                out!(self, "{}", kind.str);
+                for (i, decl) in declarations.iter().enumerate() {
+                    if i > 0 {
+                        self.comma();
+                    }
+                    decl.visit(self, Some(node));
+                }
+            }
+            VariableDeclarator { init, id } => {
+                id.visit(self, Some(node));
+                if let Some(init) = init {
+                    out!(
+                        self,
+                        "{}",
+                        match self.pretty {
+                            Pretty::Yes => " = ",
+                            Pretty::No => "=",
+                        }
+                    );
+                    init.visit(self, Some(node));
+                }
+            }
+
+            TemplateLiteral {
+                quasis,
+                expressions,
+            } => {
+                out!(self, "`");
+                let mut it_expr = expressions.iter();
+                for quasi in quasis {
+                    if let TemplateElement { raw, .. } = &quasi.kind {
+                        out!(self, "{}", raw.str);
+                        if let Some(expr) = it_expr.next() {
+                            out!(self, "${{");
+                            expr.visit(self, Some(node));
+                            out!(self, "}}");
+                        }
+                    }
+                }
+                out!(self, "`");
+            }
+            TaggedTemplateExpression { tag, quasi } => {
+                self.print_child(Some(tag), node, ChildPos::Left);
+                self.print_child(Some(quasi), node, ChildPos::Right);
+            }
+
+            Property {
+                key,
+                value,
+                kind,
+                computed,
+                method,
+                shorthand,
+            } => {
+                let mut need_sep = false;
+                if kind.str != "init" {
+                    out!(self, "{}", kind.str);
+                    need_sep = true;
+                } else if *method {
+                    match &value.kind {
+                        FunctionExpression {
+                            generator,
+                            is_async,
+                            ..
+                        } => {
+                            if *is_async {
+                                out!(self, "async");
+                                need_sep = true;
+                            }
+                            if *generator {
+                                out!(self, "*");
+                                need_sep = false;
+                                self.space(ForceSpace::No);
+                            }
+                        }
+                        _ => unreachable!(),
+                    };
+                }
+                if *computed {
+                    if need_sep {
+                        self.space(ForceSpace::No);
+                    }
+                    need_sep = false;
+                    out!(self, "[");
+                }
+                if need_sep {
+                    out!(self, " ");
+                }
+                key.visit(self, None);
+                if *computed {
+                    out!(self, "]");
+                }
+                if *shorthand {
+                    return ();
+                }
+                if kind.str != "init" || *method {
+                    match &value.kind {
+                        FunctionExpression { params, body, .. } => {
+                            self.visit_func_params_body(params, body, value);
+                        }
+                        _ => unreachable!(),
+                    };
+                } else {
+                    out!(self, ":");
+                    self.space(ForceSpace::No);
+                    self.print_comma_expression(value, node);
+                }
+            }
+
+            LogicalExpression {
+                left,
+                right,
+                operator,
+            } => {
+                self.print_child(Some(left), node, ChildPos::Left);
+                self.space(ForceSpace::No);
+                out!(self, "{}", operator.str);
+                self.space(ForceSpace::No);
+                self.print_child(Some(right), node, ChildPos::Right);
+            }
+
+            ClassExpression {
+                id,
+                super_class,
+                body,
+                ..
+            }
+            | ClassDeclaration {
+                id,
+                super_class,
+                body,
+                ..
+            } => {
+                out!(self, "class");
+                if let Some(id) = id {
+                    self.space(ForceSpace::Yes);
+                    id.visit(self, Some(node));
+                }
+                if let Some(super_class) = super_class {
+                    out!(self, " extends ");
+                    super_class.visit(self, Some(node));
+                }
+                self.space(ForceSpace::No);
+                body.visit(self, Some(node));
+            }
+
+            ClassBody { body } => {
+                if body.is_empty() {
+                    out!(self, "{{}}");
+                } else {
+                    out!(self, "{{");
+                    self.inc_indent();
+                    self.newline();
+                    for prop in body {
+                        prop.visit(self, Some(node));
+                        self.newline();
+                    }
+                    out!(self, "}}");
+                    self.dec_indent();
+                    self.newline();
+                }
+            }
+
+            ObjectPattern { properties, .. } => {
+                self.visit_props(properties, node);
+            }
+            ArrayPattern { elements, .. } => {
+                out!(self, "[");
+                for (i, elem) in elements.iter().enumerate() {
+                    if i > 0 {
+                        self.comma();
+                    }
+                    elem.visit(self, Some(node));
+                }
+                out!(self, "]");
+            }
+            RestElement { argument } => {
+                out!(self, "...");
+                argument.visit(self, Some(node));
+            }
+
             _ => {
                 unimplemented!("Unsupported AST node kind: {}", node.kind.name());
             }
@@ -244,6 +898,16 @@ impl<W: Write> GenJS<W> {
         }
     }
 
+    /// Print one expression in a sequence separated by comma. It needs parens
+    /// if its precedence is <= comma.
+    fn print_comma_expression(&mut self, child: &Node, parent: &Node) {
+        self.print_parens(
+            child,
+            parent,
+            NeedParens::from(self.get_precedence(child).0 <= precedence::SEQ),
+        )
+    }
+
     fn print_parens(&mut self, child: &Node, parent: &Node, need_parens: NeedParens) {
         if need_parens == NeedParens::Yes {
             out!(self, "(");
@@ -253,6 +917,135 @@ impl<W: Write> GenJS<W> {
         child.visit(self, Some(parent));
         if need_parens == NeedParens::Yes {
             out!(self, " ");
+        }
+    }
+
+    fn print_escaped_string_literal(&mut self, value: &StringLiteral, esc: char) {
+        for &c in &value.str {
+            let c8 = char::from(c as u8);
+            match c8 {
+                '\\' => {
+                    out!(self, "\\\\");
+                    continue;
+                }
+                '\x08' => {
+                    out!(self, "\\b");
+                    continue;
+                }
+                '\x0c' => {
+                    out!(self, "\\f");
+                    continue;
+                }
+                '\n' => {
+                    out!(self, "\\n");
+                    continue;
+                }
+                '\r' => {
+                    out!(self, "\\r");
+                    continue;
+                }
+                '\t' => {
+                    out!(self, "\\t");
+                    continue;
+                }
+                '\x0b' => {
+                    out!(self, "\\v");
+                    continue;
+                }
+                _ => {}
+            };
+            if c == esc as u16 {
+                out!(self, "\\");
+            }
+            if (0x20..=0x7f).contains(&c) {
+                // Printable.
+                out!(self, "{}", c8);
+            } else {
+                out!(self, "\\u{:04x}", c);
+            }
+        }
+    }
+
+    fn visit_props(&mut self, props: &[Node], parent: &Node) {
+        out!(self, "{{");
+        for (i, prop) in props.iter().enumerate() {
+            if i > 0 {
+                self.comma();
+            }
+            prop.visit(self, Some(parent));
+        }
+        out!(self, "}}");
+    }
+
+    fn visit_func_params_body(&mut self, params: &[Node], body: &Node, node: &Node) {
+        out!(self, "(");
+        for (i, param) in params.iter().enumerate() {
+            if i > 0 {
+                self.comma();
+            }
+            param.visit(self, Some(node));
+        }
+        out!(self, ")");
+        body.visit(self, Some(node));
+    }
+
+    /// Visit a statement node which is the body of a loop or a clause in an if.
+    /// It could be a block statement.
+    /// Return true if block
+    fn visit_stmt_or_block(&mut self, node: &Node, force_block: ForceBlock, parent: &Node) -> bool {
+        use NodeKind::*;
+        match &node.kind {
+            BlockStatement { body } => {
+                if body.is_empty() {
+                    self.space(ForceSpace::No);
+                    out!(self, "{{}}");
+                    return true;
+                }
+                self.space(ForceSpace::No);
+                out!(self, "{{");
+                self.inc_indent();
+                self.newline();
+                self.visit_stmt_list(body, node);
+                self.dec_indent();
+                self.newline();
+                out!(self, "}}");
+                return true;
+            }
+            _ => {}
+        };
+        if force_block == ForceBlock::Yes {
+            self.space(ForceSpace::No);
+            out!(self, "{{");
+            self.inc_indent();
+            self.newline();
+            self.visit_stmt_in_block(node, parent);
+            self.dec_indent();
+            self.newline();
+            out!(self, "}}");
+            true
+        } else {
+            self.inc_indent();
+            self.newline();
+            node.visit(self, Some(parent));
+            self.dec_indent();
+            self.newline();
+            false
+        }
+    }
+
+    fn visit_stmt_list(&mut self, list: &[Node], parent: &Node) {
+        for (i, stmt) in list.iter().enumerate() {
+            if i > 0 {
+                self.newline();
+            }
+            self.visit_stmt_in_block(stmt, parent);
+        }
+    }
+
+    fn visit_stmt_in_block(&mut self, stmt: &Node, parent: &Node) {
+        stmt.visit(self, Some(parent));
+        if !ends_with_block(Some(stmt)) {
+            out!(self, ";");
         }
     }
 
@@ -486,4 +1279,31 @@ fn check_plus(node: &Node) -> bool {
 
 fn check_minus(node: &Node) -> bool {
     is_unary_op(node, "-") || is_update_prefix(node, "--")
+}
+
+fn ends_with_block(node: Option<&Node>) -> bool {
+    use NodeKind::*;
+    match node {
+        Some(node) => match &node.kind {
+            BlockStatement { .. } | FunctionDeclaration { .. } => true,
+            WhileStatement { body, .. } => ends_with_block(Some(body)),
+            ForInStatement { body, .. } => ends_with_block(Some(body)),
+            ForOfStatement { body, .. } => ends_with_block(Some(body)),
+            WithStatement { body, .. } => ends_with_block(Some(body)),
+            SwitchStatement { .. } => true,
+            LabeledStatement { body, .. } => ends_with_block(Some(body)),
+            TryStatement {
+                finalizer, handler, ..
+            } => ends_with_block(finalizer.as_deref().or(handler.as_deref())),
+            CatchClause { body, .. } => ends_with_block(Some(body)),
+            IfStatement {
+                alternate,
+                consequent,
+                ..
+            } => ends_with_block(alternate.as_deref().or(Some(consequent))),
+            ClassDeclaration { .. } => true,
+            _ => false,
+        },
+        None => false,
+    }
 }
