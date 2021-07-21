@@ -129,7 +129,7 @@ ESTREE_NODE_4_ARGS(
     true,
     NodePtr,
     body,
-    true)
+    false)
 ESTREE_LAST(LoopStatement)
 
 ESTREE_NODE_0_ARGS(DebuggerStatement, Statement)
@@ -276,10 +276,10 @@ ESTREE_NODE_3_ARGS(
     false,
     NodePtr,
     left,
-    true,
+    false,
     NodePtr,
     right,
-    true)
+    false)
 
 ESTREE_NODE_3_ARGS(
     UnaryExpression,
