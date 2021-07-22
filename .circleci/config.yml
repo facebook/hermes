@@ -46,7 +46,7 @@ workflows:
 # Default settings for Apple jobs (apple-runtime, test-apple-runtime)
 apple_defaults: &apple_defaults
   macos:
-    xcode: 12.2.0
+    xcode: 12.4.0
   working_directory: ~/hermes
   environment:
     - TERM: dumb
@@ -206,7 +206,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: v3-repo-{{ .Environment.CIRCLE_SHA1 }}
+          key: v4-repo-{{ .Environment.CIRCLE_SHA1 }}
       - run:
           name: Install dependencies
           command: |
@@ -242,7 +242,7 @@ jobs:
       # TODO: Use a better cache key to avoid rebuilding whole framework
       # when it is not necessary
       - restore_cache:
-          key: v3-repo-{{ .Environment.CIRCLE_SHA1 }}
+          key: v4-repo-{{ .Environment.CIRCLE_SHA1 }}
       - run:
           name: Set up workspace
           command: mkdir -p /tmp/hermes/output
@@ -258,9 +258,10 @@ jobs:
           name: Build the Mac frameworks
           command: ./utils/build-mac-framework.sh
       - save_cache:
-          key: v3-repo-{{ .Environment.CIRCLE_SHA1 }}
+          key: v4-repo-{{ .Environment.CIRCLE_SHA1 }}
           paths:
             - ~/hermes/build_iphoneos
+            - ~/hermes/build_catalyst
             - ~/hermes/build_iphonesimulator
             - ~/hermes/build_macosx
             - ~/hermes/destroot
@@ -558,7 +559,7 @@ jobs:
     # Windows is another option, but I came across a convenient Mac OS example first:
     # https://gist.github.com/DoguD/58b4b86a5d892130af84074078581b87
     macos:
-      xcode: "10.0.0"
+      xcode: 12.4.0
     environment:
       - TERM: dumb
       # Homebrew currently breaks while updating:
@@ -570,7 +571,7 @@ jobs:
       - ANDROID_SDK_ROOT: /usr/local/share/android-sdk
       - ANDROID_NDK_HOME: /usr/local/share/android-ndk
       - QEMU_AUDIO_DRV: none
-      - JAVA_HOME: /Library/Java/Home
+      - JAVA_HOME: $(/usr/libexec/java_home)
     steps:
       - run:
           name: Setup dependencies
@@ -597,6 +598,7 @@ jobs:
           command: |
             node --version
             yarn --version
+            echo $(/usr/libexec/java_home)
       - run:
           name: Install emulator dependencies
           command: (yes | sdkmanager "platform-tools" "platforms;android-26" "extras;intel;Hardware_Accelerated_Execution_Manager" "build-tools;26.0.0" "system-images;android-26;google_apis;x86" "emulator" --verbose) || true
@@ -624,7 +626,7 @@ jobs:
   test-e2e-intl:
     # This is mostly based on the last test-e2e job, hence the comments there holds.
     macos:
-      xcode: "10.0.0"
+      xcode: 12.4.0
     environment:
       - TERM: dumb
       # Homebrew currently breaks while updating:
@@ -635,7 +637,7 @@ jobs:
       - ANDROID_SDK_HOME: /usr/local/share/android-sdk
       - ANDROID_SDK_ROOT: /usr/local/share/android-sdk
       - QEMU_AUDIO_DRV: none
-      - JAVA_HOME: /Library/Java/Home
+      - JAVA_HOME: $(/usr/libexec/java_home)
       - HERMES_WS_DIR: /tmp/hermes
     steps:
       - checkout
@@ -644,6 +646,7 @@ jobs:
       - run:
           name: Setup dependencies
           command: |
+            echo $(/usr/libexec/java_home)
             brew tap homebrew/cask
             brew install --cask android-sdk
             (yes | sdkmanager "platform-tools" "platforms;android-26" --verbose) || true
