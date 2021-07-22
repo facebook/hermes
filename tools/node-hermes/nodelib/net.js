@@ -61,12 +61,12 @@ var _require = require('internal/net'),
     normalizedArgsSymbol = _require.normalizedArgsSymbol,
     makeSyncWrite = _require.makeSyncWrite;
 
-var assert = require('internal/assert');
+// var assert = require('internal/assert');
 
-var _internalBinding = internalBinding('uv'),
-    UV_EADDRINUSE = _internalBinding.UV_EADDRINUSE,
-    UV_EINVAL = _internalBinding.UV_EINVAL,
-    UV_ENOTCONN = _internalBinding.UV_ENOTCONN;
+// var _internalBinding = internalBinding('uv'),
+//     UV_EADDRINUSE = _internalBinding.UV_EADDRINUSE,
+//     UV_EINVAL = _internalBinding.UV_EINVAL,
+//     UV_ENOTCONN = _internalBinding.UV_ENOTCONN;
 
 var _require2 = require('buffer'),
     Buffer = _require2.Buffer;
@@ -74,25 +74,27 @@ var _require2 = require('buffer'),
 var _internalBinding2 = internalBinding('util'),
     guessHandleType = _internalBinding2.guessHandleType;
 
-var _internalBinding3 = internalBinding('stream_wrap'),
-    ShutdownWrap = _internalBinding3.ShutdownWrap;
+// var _internalBinding3 = internalBinding('stream_wrap'),
+//     ShutdownWrap = _internalBinding3.ShutdownWrap;
 
-var _internalBinding4 = internalBinding('tcp_wrap'),
-    TCP = _internalBinding4.TCP,
-    TCPConnectWrap = _internalBinding4.TCPConnectWrap,
-    TCPConstants = _internalBinding4.constants;
+// var _internalBinding4 = internalBinding('tcp_wrap'),
+//     TCP = _internalBinding4.TCP,
+//     TCPConnectWrap = _internalBinding4.TCPConnectWrap,
+//     TCPConstants = _internalBinding4.constants;
 
-var _internalBinding5 = internalBinding('pipe_wrap'),
-    Pipe = _internalBinding5.Pipe,
-    PipeConnectWrap = _internalBinding5.PipeConnectWrap,
-    PipeConstants = _internalBinding5.constants;
+// var _internalBinding5 = internalBinding('pipe_wrap'),
+//     PipeHostFunction = _internalBinding5.Pipe,
+//     PipeConnectWrap = _internalBinding5.PipeConnectWrap,
+//     PipeConstants = _internalBinding5.constants;
+// function Pipe(type) { return PipeHostFunction.call(this, type); };
+// Pipe.prototype = PipeHostFunction.prototype;
 
-var _require3 = require('internal/async_hooks'),
-    newAsyncId = _require3.newAsyncId,
-    defaultTriggerAsyncIdScope = _require3.defaultTriggerAsyncIdScope,
-    _require3$symbols = _require3.symbols,
-    async_id_symbol = _require3$symbols.async_id_symbol,
-    owner_symbol = _require3$symbols.owner_symbol;
+// var _require3 = require('internal/async_hooks'),
+//     newAsyncId = _require3.newAsyncId,
+//     defaultTriggerAsyncIdScope = _require3.defaultTriggerAsyncIdScope,
+//     _require3$symbols = _require3.symbols,
+    // async_id_symbol = _require3$symbols.async_id_symbol,
+//     owner_symbol = _require3$symbols.owner_symbol;
 
 var _require4 = require('internal/stream_base_commons'),
     writevGeneric = _require4.writevGeneric,
@@ -134,9 +136,9 @@ var _require7 = require('internal/validators'),
 
 var kLastWriteQueueSize = _Symbol('lastWriteQueueSize');
 
-var _require8 = require('internal/dtrace'),
-    DTRACE_NET_SERVER_CONNECTION = _require8.DTRACE_NET_SERVER_CONNECTION,
-    DTRACE_NET_STREAM_END = _require8.DTRACE_NET_STREAM_END; // Lazy loaded to improve startup performance.
+// var _require8 = require('internal/dtrace'),
+//     DTRACE_NET_SERVER_CONNECTION = _require8.DTRACE_NET_SERVER_CONNECTION,
+//     DTRACE_NET_STREAM_END = _require8.DTRACE_NET_STREAM_END; // Lazy loaded to improve startup performance.
 
 
 var cluster;
@@ -144,15 +146,16 @@ var dns;
 var BlockList;
 var SocketAddress;
 
-var _require9 = require('timers'),
-    clearTimeout = _require9.clearTimeout;
+// var _require9 = require('timers'),
+//     clearTimeout = _require9.clearTimeout;
 
 var _require10 = require('internal/timers'),
     kTimeout = _require10.kTimeout;
 
 var DEFAULT_IPV4_ADDR = '0.0.0.0';
 var DEFAULT_IPV6_ADDR = '::';
-var isWindows = process.platform === 'win32';
+// var isWindows = process.platform === 'win32';
+var isWindows = false;
 
 var noop = function noop() {};
 
@@ -275,9 +278,9 @@ function initSocketHandle(self) {
   self._sockname = null; // Handle creation may be deferred to bind() or connect() time.
 
   if (self._handle) {
-    self._handle[owner_symbol] = self;
+    // self._handle[owner_symbol] = self;
     self._handle.onread = onStreamRead;
-    self[async_id_symbol] = getNewAsyncId(self._handle);
+    // self[async_id_symbol] = getNewAsyncId(self._handle);
     var userBuf = self[kBuffer];
 
     if (userBuf) {
@@ -306,7 +309,7 @@ function Socket(options) {
   // have _handle.getAsyncId(). In this case an[async_id_symbol] should
   // probably be supplied by async_hooks.
 
-  this[async_id_symbol] = -1;
+//   this[async_id_symbol] = -1;
   this._hadError = false;
   this[kHandle] = null;
   this._parent = null;
@@ -333,7 +336,7 @@ function Socket(options) {
   if (options.handle) {
     this._handle = options.handle; // private
 
-    this[async_id_symbol] = getNewAsyncId(this._handle);
+    // this[async_id_symbol] = getNewAsyncId(this._handle);
   } else if (options.fd !== undefined) {
     var _options = options,
         fd = _options.fd;
@@ -347,11 +350,11 @@ function Socket(options) {
     // un-openable fds will throw on `createHandle`
 
     if (err) throw errnoException(err, 'open');
-    this[async_id_symbol] = this._handle.getAsyncId();
+    // this[async_id_symbol] = this._handle.getAsyncId();
 
     if ((fd === 1 || fd === 2) && this._handle instanceof Pipe && isWindows) {
       // Make stdout and stderr blocking on Windows
-      err = this._handle.setBlocking(true);
+      // err = this._handle.setBlocking(true);
       if (err) throw errnoException(err, 'setBlocking');
       this._writev = null;
       this._write = makeSyncWrite(fd); // makeSyncWrite adjusts this value like the original handle would, so
@@ -1620,14 +1623,14 @@ Server.prototype[EventEmitter.captureRejectionSymbol] = function (err, event, so
 // want to runtime-deprecate it at some point. There's no hurry, though.
 
 
-ObjectDefineProperty(TCP.prototype, 'owner', {
-  get: function get() {
-    return this[owner_symbol];
-  },
-  set: function set(v) {
-    return this[owner_symbol] = v;
-  }
-});
+// ObjectDefineProperty(TCP.prototype, 'owner', {
+//   get: function get() {
+//     return this[owner_symbol];
+//   },
+//   set: function set(v) {
+//     return this[owner_symbol] = v;
+//   }
+// });
 ObjectDefineProperty(Socket.prototype, '_handle', {
   get: function get() {
     return this[kHandle];
@@ -1720,9 +1723,9 @@ module.exports = {
   connect: connect,
   createConnection: connect,
   createServer: createServer,
-  isIP: isIP,
-  isIPv4: isIPv4,
-  isIPv6: isIPv6,
+//   isIP: isIP,
+//   isIPv4: isIPv4,
+//   isIPv6: isIPv6,
   Server: Server,
   Socket: Socket,
   Stream: Socket // Legacy naming

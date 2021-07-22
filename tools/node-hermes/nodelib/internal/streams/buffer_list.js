@@ -125,37 +125,37 @@ module.exports = /*#__PURE__*/function () {
     value: function first() {
       return this.head.data;
     }
-  }, {
-    key: SymbolIterator,
-    value: /*#__PURE__*/regeneratorRuntime.mark(function value() {
-      var p;
-      return regeneratorRuntime.wrap(function value$(_context) {
-        while (1) {
-          switch (_context.prev = _context.next) {
-            case 0:
-              p = this.head;
+  // }, {
+  //   key: SymbolIterator,
+  //   value: /*#__PURE__*/regeneratorRuntime.mark(function value() {
+  //     var p;
+  //     return regeneratorRuntime.wrap(function value$(_context) {
+  //       while (1) {
+  //         switch (_context.prev = _context.next) {
+  //           case 0:
+  //             p = this.head;
 
-            case 1:
-              if (!p) {
-                _context.next = 7;
-                break;
-              }
+  //           case 1:
+  //             if (!p) {
+  //               _context.next = 7;
+  //               break;
+  //             }
 
-              _context.next = 4;
-              return p.data;
+  //             _context.next = 4;
+  //             return p.data;
 
-            case 4:
-              p = p.next;
-              _context.next = 1;
-              break;
+  //           case 4:
+  //             p = p.next;
+  //             _context.next = 1;
+  //             break;
 
-            case 7:
-            case "end":
-              return _context.stop();
-          }
-        }
-      }, value, this);
-    }) // Consumes a specified amount of characters from the buffered data.
+  //           case 7:
+  //           case "end":
+  //             return _context.stop();
+  //         }
+  //       }
+  //     }, value, this);
+  //   }) // Consumes a specified amount of characters from the buffered data.
 
   }, {
     key: "_getString",

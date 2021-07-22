@@ -2,12 +2,12 @@
 
 var _primordials = primordials,
     ObjectDefineProperty = _primordials.ObjectDefineProperty;
-var rawMethods = internalBinding('process_methods'); // TODO(joyeecheung): deprecate and remove these underscore methods
+// var rawMethods = internalBinding('process_methods'); // TODO(joyeecheung): deprecate and remove these underscore methods
 
-process._debugProcess = rawMethods._debugProcess;
-process._debugEnd = rawMethods._debugEnd; // See the discussion in https://github.com/nodejs/node/issues/19009 and
-// https://github.com/nodejs/node/pull/34010 for why these are no-ops.
-// Five word summary: they were broken beyond repair.
+// process._debugProcess = rawMethods._debugProcess;
+// process._debugEnd = rawMethods._debugEnd; // See the discussion in https://github.com/nodejs/node/issues/19009 and
+// // https://github.com/nodejs/node/pull/34010 for why these are no-ops.
+// // Five word summary: they were broken beyond repair.
 
 process._startProfilerIdleNotifier = function () {};
 
@@ -29,8 +29,8 @@ var _require = require('internal/process/signal'),
     startListeningIfSignal = _require.startListeningIfSignal,
     stopListeningIfSignal = _require.stopListeningIfSignal;
 
-process.on('newListener', startListeningIfSignal);
-process.on('removeListener', stopListeningIfSignal); // ---- keep the attachment of the wrappers above so that it's easier to ----
+// process.on('newListener', startListeningIfSignal);
+// process.on('removeListener', stopListeningIfSignal); // ---- keep the attachment of the wrappers above so that it's easier to ----
 // ----              compare the setups side-by-side                    -----
 
 var _internalBinding = internalBinding('util'),
@@ -126,13 +126,11 @@ function getStdout() {
   stdout.destroySoon = stdout.destroy; // Override _destroy so that the fd is never actually closed.
 
   stdout._destroy = dummyDestroy;
-
-  if (stdout.isTTY) {
-    process.on('SIGWINCH', function () {
-      return stdout._refreshSize();
-    });
-  }
-
+  // if (stdout.isTTY) {
+  //   process.on('SIGWINCH', function () {
+  //     return stdout._refreshSize();
+  //   });
+  // }
   return stdout;
 }
 
@@ -143,11 +141,11 @@ function getStderr() {
 
   stderr._destroy = dummyDestroy;
 
-  if (stderr.isTTY) {
-    process.on('SIGWINCH', function () {
-      return stderr._refreshSize();
-    });
-  }
+  // if (stderr.isTTY) {
+  //   process.on('SIGWINCH', function () {
+  //     return stderr._refreshSize();
+  //   });
+  // }
 
   return stderr;
 }
@@ -245,9 +243,8 @@ function getStdin() {
   return stdin;
 } // Used by internal tests.
 
-
-rawMethods.resetStdioForTesting = function () {
-  stdin = undefined;
-  stdout = undefined;
-  stderr = undefined;
-};
+// rawMethods.resetStdioForTesting = function () {
+//   stdin = undefined;
+//   stdout = undefined;
+//   stderr = undefined;
+// };

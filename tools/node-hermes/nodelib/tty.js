@@ -34,19 +34,22 @@ var _primordials = primordials,
 var net = require('net');
 
 var _internalBinding = internalBinding('tty_wrap'),
-    TTY = _internalBinding.TTY,
+    TTYHostFunction = _internalBinding.TTY,
     isTTY = _internalBinding.isTTY;
 
-var errors = require('internal/errors');
+// var errors = require('internal/errors');
 
-var _errors$codes = errors.codes,
-    ERR_INVALID_FD = _errors$codes.ERR_INVALID_FD,
-    ERR_TTY_INIT_FAILED = _errors$codes.ERR_TTY_INIT_FAILED;
+// var _errors$codes = errors.codes,
+//     ERR_INVALID_FD = _errors$codes.ERR_INVALID_FD,
+//     ERR_TTY_INIT_FAILED = _errors$codes.ERR_TTY_INIT_FAILED;
 
-var _require = require('internal/tty'),
-    getColorDepth = _require.getColorDepth,
-    hasColors = _require.hasColors; // Lazy loaded for startup performance.
+// var _require = require('internal/tty'),
+//     getColorDepth = _require.getColorDepth,
+//     hasColors = _require.hasColors; // Lazy loaded for startup performance.
 
+// New code added in because jsi does not support 'new' as of now
+function TTY(fd, context) { return TTYHostFunction.call(this, fd, context); };
+TTY.prototype = TTYHostFunction.prototype;
 
 var readline;
 
@@ -110,7 +113,7 @@ function WriteStream(fd) {
   // even though it was originally intended to change in v1.0.2 (Libuv 1.2.1).
   // Ref: https://github.com/nodejs/node/pull/1771#issuecomment-119351671
 
-  this._handle.setBlocking(true);
+//   this._handle.setBlocking(true);
 
   var winSize = new Array(2);
 
@@ -125,8 +128,8 @@ function WriteStream(fd) {
 ObjectSetPrototypeOf(WriteStream.prototype, net.Socket.prototype);
 ObjectSetPrototypeOf(WriteStream, net.Socket);
 WriteStream.prototype.isTTY = true;
-WriteStream.prototype.getColorDepth = getColorDepth;
-WriteStream.prototype.hasColors = hasColors;
+// WriteStream.prototype.getColorDepth = getColorDepth;
+// WriteStream.prototype.hasColors = hasColors;
 
 WriteStream.prototype._refreshSize = function () {
   var oldCols = this.columns;

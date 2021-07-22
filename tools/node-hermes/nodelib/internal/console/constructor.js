@@ -58,8 +58,8 @@ var _primordials = primordials,
     SymbolHasInstance = _primordials.SymbolHasInstance,
     SymbolToStringTag = _primordials.SymbolToStringTag;
 
-var _internalBinding = internalBinding('trace_events'),
-    trace = _internalBinding.trace;
+// var _internalBinding = internalBinding('trace_events'),
+//     trace = _internalBinding.trace;
 
 var _require = require('internal/errors'),
     isStackOverflowError = _require.isStackOverflowError,
@@ -72,8 +72,8 @@ var _require = require('internal/errors'),
 var _require2 = require('internal/validators'),
     validateInteger = _require2.validateInteger;
 
-var _internalBinding2 = internalBinding('util'),
-    previewEntries = _internalBinding2.previewEntries;
+// var _internalBinding2 = internalBinding('util'),
+//     previewEntries = _internalBinding2.previewEntries;
 
 var _require3 = require('buffer'),
     isBuffer = _require3.Buffer.isBuffer;
@@ -337,9 +337,9 @@ ObjectDefineProperties(Console.prototype, (_ObjectDefineProperti2 = {}, _defineP
   value: function value(stream) {
     var color = this[kColorMode];
 
-    if (color === 'auto') {
-      color = stream.isTTY && (typeof stream.getColorDepth === 'function' ? stream.getColorDepth() > 2 : true);
-    }
+    // if (color === 'auto') {
+    //   color = stream.isTTY && (typeof stream.getColorDepth === 'function' ? stream.getColorDepth() > 2 : true);
+    // }
 
     var options = optionsMap.get(this);
 

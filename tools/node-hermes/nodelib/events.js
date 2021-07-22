@@ -927,17 +927,17 @@ function _once() {
   return _once.apply(this, arguments);
 }
 
-var AsyncIteratorPrototype = ObjectGetPrototypeOf(ObjectGetPrototypeOf( /*#__PURE__*/_wrapAsyncGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
-  return regeneratorRuntime.wrap(function _callee$(_context) {
-    while (1) {
-      switch (_context.prev = _context.next) {
-        case 0:
-        case "end":
-          return _context.stop();
-      }
-    }
-  }, _callee);
-}))).prototype);
+// var AsyncIteratorPrototype = ObjectGetPrototypeOf(ObjectGetPrototypeOf( /*#__PURE__*/_wrapAsyncGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
+//   return regeneratorRuntime.wrap(function _callee$(_context) {
+//     while (1) {
+//       switch (_context.prev = _context.next) {
+//         case 0:
+//         case "end":
+//           return _context.stop();
+//       }
+//     }
+//   }, _callee);
+// }))).prototype);
 
 function createIterResult(value, done) {
   return {

@@ -9,32 +9,32 @@ var _require = require('buffer'),
 var _require2 = require('internal/buffer'),
     FastBuffer = _require2.FastBuffer;
 
-var _internalBinding = internalBinding('stream_wrap'),
-    WriteWrap = _internalBinding.WriteWrap;
-    kReadBytesOrError = _internalBinding.kReadBytesOrError,
-    kArrayBufferOffset = _internalBinding.kArrayBufferOffset,
-    kBytesWritten = _internalBinding.kBytesWritten,
-    kLastWriteWasAsync = _internalBinding.kLastWriteWasAsync,
-    streamBaseState = _internalBinding.streamBaseState;
+// var _internalBinding = internalBinding('stream_wrap'),
+//     WriteWrap = _internalBinding.WriteWrap;
+//     kReadBytesOrError = _internalBinding.kReadBytesOrError,
+//     kArrayBufferOffset = _internalBinding.kArrayBufferOffset,
+//     kBytesWritten = _internalBinding.kBytesWritten,
+//     kLastWriteWasAsync = _internalBinding.kLastWriteWasAsync,
+    // streamBaseState = _internalBinding.streamBaseState;
 
-var _internalBinding2 = internalBinding('uv'),
-    UV_EOF = _internalBinding2.UV_EOF;
+// var _internalBinding2 = internalBinding('uv'),
+//     UV_EOF = _internalBinding2.UV_EOF;
 
 var _require3 = require('internal/errors'),
     errnoException = _require3.errnoException;
 
-var owner_symbol = require('internal/async_hooks').symbols.owner_symbol;
+// var owner_symbol = require('internal/async_hooks').symbols.owner_symbol;
 
-var _require4 = require('internal/timers'),
-    kTimeout = _require4.kTimeout,
-    setUnrefTimeout = _require4.setUnrefTimeout,
-    getTimerDuration = _require4.getTimerDuration;
+// var _require4 = require('internal/timers'),
+//     kTimeout = _require4.kTimeout,
+//     setUnrefTimeout = _require4.setUnrefTimeout,
+//     getTimerDuration = _require4.getTimerDuration;
 
 var _require5 = require('internal/util/types'),
     isUint8Array = _require5.isUint8Array;
 
-var _require6 = require('timers'),
-    clearTimeout = _require6.clearTimeout;
+// var _require6 = require('timers'),
+//     clearTimeout = _require6.clearTimeout;
 
 var _require7 = require('internal/validators'),
     validateCallback = _require7.validateCallback;
