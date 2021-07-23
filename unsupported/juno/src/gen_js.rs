@@ -1138,6 +1138,107 @@ impl<W: Write> GenJS<W> {
                 right.visit(self, Some(node));
             }
 
+            JSXIdentifier { name } => {
+                out!(self, "{}", name.str);
+            }
+            JSXMemberExpression { object, property } => {
+                object.visit(self, Some(node));
+                out!(self, ".");
+                property.visit(self, Some(node));
+            }
+            JSXNamespacedName { namespace, name } => {
+                namespace.visit(self, Some(node));
+                out!(self, ":");
+                name.visit(self, Some(node));
+            }
+            JSXEmptyExpression => {}
+            JSXExpressionContainer { expression } => {
+                out!(self, "{{");
+                expression.visit(self, Some(node));
+                out!(self, "}}");
+            }
+            JSXSpreadChild { expression } => {
+                out!(self, "{{...");
+                expression.visit(self, Some(node));
+                out!(self, "}}");
+            }
+            JSXOpeningElement {
+                name,
+                attributes,
+                self_closing,
+            } => {
+                out!(self, "<");
+                name.visit(self, Some(node));
+                for attr in attributes {
+                    self.space(ForceSpace::Yes);
+                    attr.visit(self, Some(node));
+                }
+                if *self_closing {
+                    out!(self, " />");
+                } else {
+                    out!(self, ">");
+                }
+            }
+            JSXClosingElement { name } => {
+                out!(self, "</");
+                name.visit(self, Some(node));
+                out!(self, ">");
+            }
+            JSXAttribute { name, value } => {
+                name.visit(self, Some(node));
+                if let Some(value) = value {
+                    out!(self, "=");
+                    value.visit(self, Some(node));
+                }
+            }
+            JSXSpreadAttribute { argument } => {
+                out!(self, "{{...");
+                argument.visit(self, Some(node));
+                out!(self, "}}");
+            }
+            JSXText { value, .. } => {
+                // FIXME: Ensure escaping here works properly.
+                out!(self, "{}", value.str);
+            }
+            JSXElement {
+                opening_element,
+                children,
+                closing_element,
+            } => {
+                opening_element.visit(self, Some(node));
+                if let Some(closing_element) = closing_element {
+                    self.inc_indent();
+                    self.newline();
+                    for child in children {
+                        child.visit(self, Some(node));
+                        self.newline();
+                    }
+                    self.dec_indent();
+                    closing_element.visit(self, Some(node));
+                }
+            }
+            JSXFragment {
+                opening_fragment,
+                children,
+                closing_fragment,
+            } => {
+                opening_fragment.visit(self, Some(node));
+                self.inc_indent();
+                self.newline();
+                for child in children {
+                    child.visit(self, Some(node));
+                    self.newline();
+                }
+                self.dec_indent();
+                closing_fragment.visit(self, Some(node));
+            }
+            JSXOpeningFragment => {
+                out!(self, "<>");
+            }
+            JSXClosingFragment => {
+                out!(self, "</>");
+            }
+
             _ => {
                 unimplemented!("Unsupported AST node kind: {}", node.kind.name());
             }
