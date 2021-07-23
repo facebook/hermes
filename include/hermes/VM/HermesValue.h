@@ -394,13 +394,6 @@ class HermesValue {
     return safeTypeCast<uint64_t, double>(raw_);
   }
 
-  inline int64_t getNativeValue() const {
-    assert(isNativeValue());
-    // Sign-extend the value.
-    return (static_cast<int64_t>(raw_ & kDataMask) << (64 - kNumDataBits)) >>
-        (64 - kNumDataBits);
-  }
-
   inline uint32_t getNativeUInt32() const {
     assert(isNativeValue());
     return (uint32_t)raw_;
