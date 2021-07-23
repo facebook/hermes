@@ -232,8 +232,14 @@ void Deserializer::updateAddress(
       ((GCPointerBase *)address)
           ->set(runtime_, static_cast<GCCell *>(ptrVal), &runtime_->getHeap());
       return;
-    case RelocationKind::HermesValue:
-      ((HermesValue *)address)->unsafeUpdatePointer(ptrVal);
+    case RelocationKind::HermesValue: {
+      auto *hv = static_cast<HermesValue *>(address);
+      // The relocation is either a pointer to the JS heap or a native pointer.
+      if (hv->isPointer())
+        hv->unsafeUpdatePointer(ptrVal);
+      else
+        new (hv) HermesValue(HermesValue::encodeNativePointer(ptrVal));
+    }
       return;
     case RelocationKind::SmallHermesValue:
       ((SmallHermesValue *)address)

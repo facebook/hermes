@@ -123,13 +123,13 @@ class Serializer {
       void *pointer = hv.getPointer();
       uint32_t id = lookupObject(pointer);
       // Replace the pointer with the ID.
-      HermesValue updated_hv = updateRelocationID(hv, id);
+      HermesValue updated_hv = hv.updatePointer(reinterpret_cast<void *>(id));
       writeData(&updated_hv, sizeof(updated_hv));
     } else if (nativePointer) {
-      assert(hv.isNativeValue() && "must be a native value");
       void *pointer = hv.getNativePointer<void>();
       uint32_t id = lookupObject(pointer);
-      HermesValue updated_hv = updateRelocationID(hv, id);
+      HermesValue updated_hv =
+          HermesValue::encodeNativePointer(reinterpret_cast<void *>(id));
       writeData(&updated_hv, sizeof(updated_hv));
     } else {
       writeData(&hv, sizeof(hv));
@@ -210,13 +210,6 @@ class Serializer {
 
     relocationMap_[object] = currentId_;
     return currentId_++;
-  }
-
-  /// Replace pointer in \p hv with the relocation id.
-  HermesValue updateRelocationID(HermesValue hv, uint32_t id) {
-    hv.unsafeUpdatePointer(
-        reinterpret_cast<void *>(static_cast<uintptr_t>(id)));
-    return hv;
   }
 
   SmallHermesValue updateRelocationID(SmallHermesValue shv, uint32_t id) {
