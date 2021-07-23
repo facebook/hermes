@@ -56,7 +56,7 @@
 /// 48-bit data, and to extend the first 4 tags with one bit to the right.
 /// We call the resulting 4-bit tag an "extended tag".
 ///
-/// Pointer Encoding
+/// Heap Pointer Encoding
 /// ================
 /// On 32-bit platforms clearly we have enough bits to encode any pointer in
 /// the low word.
@@ -77,6 +77,25 @@
 /// Should the OS requirements change in the distant future, we can "squeeze" 3
 /// more bits by relying on the 8-byte alignment of all our allocations and
 /// shifting the values to the right. That is still not needed however.
+///
+/// Native Pointer Encoding
+/// ================
+/// We also have limited support for storing a native pointer in a HermesValue.
+/// When doing so, we do not associate a tag with the native pointer and instead
+/// require that the pointer is a valid non-NaN double bit-for-bit. It is the
+/// caller's responsibility to keep track of where these native pointers are
+/// stored.
+///
+/// Native pointers cannot be NaN-boxed because on platforms where the ARM
+/// memory tagging extension is enabled, the top byte may also have bits set
+/// in it. On Android, these tags are added in the 56th to 59th bits of pointers
+/// allocated in the native heap. However, as long as it is only the top byte
+/// and the bottom 48 bits that have non-zero values, we are guaranteed that the
+/// value will not be a NaN.
+///
+/// Fortunately, since the native pointers will appear as doubles to anything
+/// other than the code that created them, anything that scans HermesValues
+/// (e.g. the GC or heap snapshots), will simply ignore them.
 
 #ifndef HERMES_VM_HERMESVALUE_H
 #define HERMES_VM_HERMESVALUE_H
@@ -238,13 +257,10 @@ class HermesValue {
   }
 
   inline static HermesValue encodeNativePointer(const void *p) {
+    HermesValue RV(reinterpret_cast<uintptr_t>(p));
     assert(
-        (reinterpret_cast<uintptr_t>(p) & ~kDataMask) == 0 &&
-        "Native pointer must contain zeroes in the high bits");
-    HermesValue RV(reinterpret_cast<uintptr_t>(p), NativeValueTag);
-    assert(
-        RV.isNativeValue() && RV.getNativePointer<void>() == p &&
-        "Native pointer doesn't fit");
+        RV.isDouble() && RV.getNativePointer<void>() == p &&
+        "Native pointer cannot be represented as a double");
     return RV;
   }
 
@@ -392,10 +408,8 @@ class HermesValue {
 
   template <class T>
   inline T *getNativePointer() const {
-    assert(isNativeValue());
-    // Zero-extend the value because we know that bit 47 must be 0 (or otherwise
-    // it would be a kernel address).
-    return reinterpret_cast<T *>(raw_ & kDataMask);
+    assert(isDouble() && "Native pointers must look like doubles.");
+    return reinterpret_cast<T *>(raw_);
   }
 
   inline SymbolID getSymbol() const {

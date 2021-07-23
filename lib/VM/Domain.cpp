@@ -116,9 +116,6 @@ void Domain::serializeArrayStorage(Serializer &s, const ArrayStorage *cell) {
     s.writeHermesValue(cell->data()[i + ModuleOffset]);
     s.writeHermesValue(cell->data()[i + FunctionIndexOffset]);
     HermesValue rm = cell->data()[i + runtimeModuleOffset];
-    assert(
-        (rm.isEmpty() || rm.isNativeValue()) &&
-        "RuntimeModule must be empty or a native pointer.");
     s.writeHermesValue(
         rm.isEmpty() ? HermesValue::encodeNativePointer(nullptr) : rm,
         /* nativePointer */ true);
