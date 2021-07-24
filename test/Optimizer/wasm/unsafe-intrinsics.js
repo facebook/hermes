@@ -6,12 +6,13 @@
  */
 
 // RUN: %hermesc -funsafe-intrinsics -target=HBC -dump-postra %s | %FileCheck --match-full-lines --check-prefix=CHKRA %s
+// RUN: %hermesc -funsafe-intrinsics -target=HBC -dump-bytecode %s | %FileCheck --match-full-lines --check-prefix=CHKBC %s
 
 // Instrinsics that are defined should not cause any error. The call sequence is
 // lowered to a CallIntrinsicInst.
 function unsafeIntrinsics(func) {
   t0 = __uasm.add32(1, 2);
-  t1 = __uasm.modi32(42, 7);
+  t1 = __uasm.mul32(42, 7);
   return t0 + t1;
 }
 //CHKRA-LABEL:function unsafeIntrinsics(func) : string|number
@@ -26,7 +27,7 @@ function unsafeIntrinsics(func) {
 //CHKRA-NEXT:  %6 = HBCLoadConstInst 42 : number
 //CHKRA-NEXT:  %7 = HBCLoadConstInst 7 : number
 //CHKRA-NEXT:  %8 = ImplicitMovInst undefined : undefined
-//CHKRA-NEXT:  %9 = CallIntrinsicInst [__uasm.modi32_2] : number, undefined : undefined, %6 : number, %7 : number
+//CHKRA-NEXT:  %9 = CallIntrinsicInst [__uasm.mul32_2] : number, undefined : undefined, %6 : number, %7 : number
 //CHKRA-NEXT:  %10 = StorePropertyInst %9, %4 : object, "t1" : string
 //CHKRA-NEXT:  %11 = TryLoadGlobalPropertyInst %4 : object, "t0" : string
 //CHKRA-NEXT:  %12 = TryLoadGlobalPropertyInst %4 : object, "t1" : string
@@ -34,6 +35,21 @@ function unsafeIntrinsics(func) {
 //CHKRA-NEXT:  %14 = ReturnInst %13 : string|number
 //CHKRA-NEXT:function_end
 
+//CHKBC-LABEL:Function<unsafeIntrinsics>(2 params, 12 registers, 0 symbols):
+//CHKBC-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
+//CHKBC-NEXT:    LoadConstUInt8    r4, 1
+//CHKBC-NEXT:    LoadConstUInt8    r3, 2
+//CHKBC-NEXT:    Add32             r1, r4, r3
+//CHKBC-NEXT:    GetGlobalObject   r0
+//CHKBC-NEXT:    PutById           r0, r1, 1, "t0"
+//CHKBC-NEXT:    LoadConstUInt8    r4, 42
+//CHKBC-NEXT:    LoadConstUInt8    r3, 7
+//CHKBC-NEXT:    Mul32             r1, r4, r3
+//CHKBC-NEXT:    PutById           r0, r1, 2, "t1"
+//CHKBC-NEXT:    TryGetById        r1, r0, 1, "t0"
+//CHKBC-NEXT:    TryGetById        r0, r0, 2, "t1"
+//CHKBC-NEXT:    Add               r0, r1, r0
+//CHKBC-NEXT:    Ret               r0
 
 // If namespace is not "__uasm", CallIntrinsicInst should not be emitted.
 function incorrectNamespace(func) {

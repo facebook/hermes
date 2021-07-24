@@ -1211,8 +1211,68 @@ void HBCISel::generateGetBuiltinClosureInst(
 }
 
 #ifdef HERMES_RUN_WASM
-void HBCISel::generateCallIntrinsicInst(CallIntrinsicInst *, BasicBlock *) {
-  // TODO: emit CallIntrinsic Bytecode. For now this is a nop.
+void HBCISel::generateCallIntrinsicInst(
+    CallIntrinsicInst *Inst,
+    BasicBlock *next) {
+  verifyCall(Inst);
+  // Currently all intrinsics takes 3 registers. However, store
+  // intrinsics need special handling.
+  auto res = encodeValue(Inst);
+  auto arg1 = encodeValue(Inst->getArgument(1));
+  auto arg2 = encodeValue(Inst->getArgument(2));
+
+  switch (Inst->getIntrinsicsIndex()) {
+    // Arithmetic
+    case WasmIntrinsics::__uasm_add32:
+      BCFGen_->emitAdd32(res, arg1, arg2);
+      break;
+    case WasmIntrinsics::__uasm_sub32:
+      BCFGen_->emitSub32(res, arg1, arg2);
+      break;
+    case WasmIntrinsics::__uasm_mul32:
+      BCFGen_->emitMul32(res, arg1, arg2);
+      break;
+    case WasmIntrinsics::__uasm_divi32:
+      BCFGen_->emitDivi32(res, arg1, arg2);
+      break;
+    case WasmIntrinsics::__uasm_divu32:
+      BCFGen_->emitDivu32(res, arg1, arg2);
+      break;
+
+    // Load
+    case WasmIntrinsics::__uasm_loadi8:
+      BCFGen_->emitLoadi8(res, arg1, arg2);
+      break;
+    case WasmIntrinsics::__uasm_loadu8:
+      BCFGen_->emitLoadu8(res, arg1, arg2);
+      break;
+    case WasmIntrinsics::__uasm_loadi16:
+      BCFGen_->emitLoadi16(res, arg1, arg2);
+      break;
+    case WasmIntrinsics::__uasm_loadu16:
+      BCFGen_->emitLoadu16(res, arg1, arg2);
+      break;
+    case WasmIntrinsics::__uasm_loadi32:
+      BCFGen_->emitLoadi32(res, arg1, arg2);
+      break;
+    case WasmIntrinsics::__uasm_loadu32:
+      BCFGen_->emitLoadu32(res, arg1, arg2);
+      break;
+
+    // Store
+    case WasmIntrinsics::__uasm_store8:
+      BCFGen_->emitStore8(arg1, arg2, encodeValue(Inst->getArgument(3)));
+      break;
+    case WasmIntrinsics::__uasm_store16:
+      BCFGen_->emitStore16(arg1, arg2, encodeValue(Inst->getArgument(3)));
+      break;
+    case WasmIntrinsics::__uasm_store32:
+      BCFGen_->emitStore32(arg1, arg2, encodeValue(Inst->getArgument(3)));
+      break;
+
+    default:
+      break;
+  }
 }
 #endif
 

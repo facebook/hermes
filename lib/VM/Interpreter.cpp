@@ -3468,6 +3468,83 @@ tailCall:
         DISPATCH;
       }
 
+#ifdef HERMES_RUN_WASM
+      // Asm.js/Wasm Intrinsics
+      CASE(Add32) {
+        O1REG(Add32) = HermesValue::encodeDoubleValue(
+            (int32_t)(int64_t)(O2REG(Add32).getNumber() + O3REG(Add32).getNumber()));
+        ip = NEXTINST(Add32);
+        DISPATCH;
+      }
+      CASE(Sub32) {
+        // A nop for now.
+        ip = NEXTINST(Sub32);
+        DISPATCH;
+      }
+      CASE(Mul32) {
+        // A nop for now.
+        ip = NEXTINST(Mul32);
+        DISPATCH;
+      }
+      CASE(Divi32) {
+        // A nop for now.
+        ip = NEXTINST(Divi32);
+        DISPATCH;
+      }
+      CASE(Divu32) {
+        // A nop for now.
+        ip = NEXTINST(Divu32);
+        DISPATCH;
+      }
+
+      CASE(Loadi8) {
+        // A nop for now.
+        ip = NEXTINST(Loadi8);
+        DISPATCH;
+      }
+      CASE(Loadu8) {
+        // A nop for now.
+        ip = NEXTINST(Loadu8);
+        DISPATCH;
+      }
+      CASE(Loadi16) {
+        // A nop for now.
+        ip = NEXTINST(Loadi16);
+        DISPATCH;
+      }
+      CASE(Loadu16) {
+        // A nop for now.
+        ip = NEXTINST(Loadu16);
+        DISPATCH;
+      }
+      CASE(Loadi32) {
+        // A nop for now.
+        ip = NEXTINST(Loadi32);
+        DISPATCH;
+      }
+      CASE(Loadu32) {
+        // A nop for now.
+        ip = NEXTINST(Loadu32);
+        DISPATCH;
+      }
+
+      CASE(Store8) {
+        // A nop for now.
+        ip = NEXTINST(Store8);
+        DISPATCH;
+      }
+      CASE(Store16) {
+        // A nop for now.
+        ip = NEXTINST(Store16);
+        DISPATCH;
+      }
+      CASE(Store32) {
+        // A nop for now.
+        ip = NEXTINST(Store32);
+        DISPATCH;
+      }
+#endif
+
       CASE(_last) {
         hermes_fatal("Invalid opcode _last");
       }
