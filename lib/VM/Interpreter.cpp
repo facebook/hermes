@@ -21,6 +21,7 @@
 #include "hermes/VM/JSGenerator.h"
 #include "hermes/VM/JSProxy.h"
 #include "hermes/VM/JSRegExp.h"
+#include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/Profiler.h"
 #include "hermes/VM/Profiler/CodeCoverageProfiler.h"
@@ -3477,68 +3478,106 @@ tailCall:
         DISPATCH;
       }
       CASE(Sub32) {
-        // A nop for now.
+        O1REG(Sub32) = HermesValue::encodeDoubleValue(
+            (int32_t)(int64_t)(O2REG(Sub32).getNumber() - O3REG(Sub32).getNumber()));
         ip = NEXTINST(Sub32);
         DISPATCH;
       }
       CASE(Mul32) {
-        // A nop for now.
+        // Signedness matters for multiplication, but low 32 bits are the same
+        // regardless of signedness.
+        const uint32_t arg0 = (uint32_t)(int32_t)(O2REG(Mul32).getNumber());
+        const uint32_t arg1 = (uint32_t)(int32_t)(O3REG(Mul32).getNumber());
+        O1REG(Mul32) = HermesValue::encodeDoubleValue((int32_t)(arg0 * arg1));
         ip = NEXTINST(Mul32);
         DISPATCH;
       }
       CASE(Divi32) {
-        // A nop for now.
+        const int32_t arg0 = (int32_t)(O2REG(Divi32).getNumber());
+        const int32_t arg1 = (int32_t)(O3REG(Divi32).getNumber());
+        O1REG(Divi32) = HermesValue::encodeDoubleValue(arg0 / arg1);
         ip = NEXTINST(Divi32);
         DISPATCH;
       }
       CASE(Divu32) {
-        // A nop for now.
+        const uint32_t arg0 = (uint32_t)(int32_t)(O2REG(Divu32).getNumber());
+        const uint32_t arg1 = (uint32_t)(int32_t)(O3REG(Divu32).getNumber());
+        O1REG(Divu32) = HermesValue::encodeDoubleValue((int32_t)(arg0 / arg1));
         ip = NEXTINST(Divu32);
         DISPATCH;
       }
 
       CASE(Loadi8) {
-        // A nop for now.
+        auto *mem = vmcast<JSTypedArrayBase>(O2REG(Loadi8));
+        int8_t *basePtr = reinterpret_cast<int8_t *>(mem->begin(runtime));
+        const uint32_t addr = (uint32_t)(int32_t)(O3REG(Loadi8).getNumber());
+        O1REG(Loadi8) = HermesValue::encodeNumberValue(basePtr[addr]);
         ip = NEXTINST(Loadi8);
         DISPATCH;
       }
       CASE(Loadu8) {
-        // A nop for now.
+        auto *mem = vmcast<JSTypedArrayBase>(O2REG(Loadu8));
+        uint8_t *basePtr = reinterpret_cast<uint8_t *>(mem->begin(runtime));
+        const uint32_t addr = (uint32_t)(int32_t)(O3REG(Loadu8).getNumber());
+        O1REG(Loadu8) = HermesValue::encodeNumberValue(basePtr[addr]);
         ip = NEXTINST(Loadu8);
         DISPATCH;
       }
       CASE(Loadi16) {
-        // A nop for now.
+        auto *mem = vmcast<JSTypedArrayBase>(O2REG(Loadi16));
+        int16_t *basePtr = reinterpret_cast<int16_t *>(mem->begin(runtime));
+        const uint32_t addr = (uint32_t)(int32_t)(O3REG(Loadi16).getNumber());
+        O1REG(Loadi16) = HermesValue::encodeNumberValue(basePtr[addr >> 1]);
         ip = NEXTINST(Loadi16);
         DISPATCH;
       }
       CASE(Loadu16) {
-        // A nop for now.
+        auto *mem = vmcast<JSTypedArrayBase>(O2REG(Loadu16));
+        uint16_t *basePtr = reinterpret_cast<uint16_t *>(mem->begin(runtime));
+        const uint32_t addr = (uint32_t)(int32_t)(O3REG(Loadu16).getNumber());
+        O1REG(Loadu16) = HermesValue::encodeNumberValue(basePtr[addr >> 1]);
         ip = NEXTINST(Loadu16);
         DISPATCH;
       }
       CASE(Loadi32) {
-        // A nop for now.
+        auto *mem = vmcast<JSTypedArrayBase>(O2REG(Loadi32));
+        int32_t *basePtr = reinterpret_cast<int32_t *>(mem->begin(runtime));
+        const uint32_t addr = (uint32_t)(int32_t)(O3REG(Loadi32).getNumber());
+        O1REG(Loadi32) = HermesValue::encodeNumberValue(basePtr[addr >> 2]);
         ip = NEXTINST(Loadi32);
         DISPATCH;
       }
       CASE(Loadu32) {
-        // A nop for now.
+        auto *mem = vmcast<JSTypedArrayBase>(O2REG(Loadu32));
+        uint32_t *basePtr = reinterpret_cast<uint32_t *>(mem->begin(runtime));
+        const uint32_t addr = (uint32_t)(int32_t)(O3REG(Loadu32).getNumber());
+        O1REG(Loadu32) =
+            HermesValue::encodeNumberValue((int32_t)(basePtr[addr >> 2]));
         ip = NEXTINST(Loadu32);
         DISPATCH;
       }
 
       CASE(Store8) {
-        // A nop for now.
+        auto *mem = vmcast<JSTypedArrayBase>(O1REG(Store8));
+        int8_t *basePtr = reinterpret_cast<int8_t *>(mem->begin(runtime));
+        const uint32_t addr = (uint32_t)(int32_t)(O2REG(Store8).getNumber());
+        basePtr[addr] = (int8_t)(int32_t)(O3REG(Store8).getNumber());
         ip = NEXTINST(Store8);
         DISPATCH;
       }
       CASE(Store16) {
-        // A nop for now.
+        auto *mem = vmcast<JSTypedArrayBase>(O1REG(Store16));
+        int16_t *basePtr = reinterpret_cast<int16_t *>(mem->begin(runtime));
+        const uint32_t addr = (uint32_t)(int32_t)(O2REG(Store16).getNumber());
+        basePtr[addr >> 1] = (int16_t)(int32_t)(O3REG(Store16).getNumber());
         ip = NEXTINST(Store16);
         DISPATCH;
       }
       CASE(Store32) {
+        auto *mem = vmcast<JSTypedArrayBase>(O1REG(Store32));
+        int32_t *basePtr = reinterpret_cast<int32_t *>(mem->begin(runtime));
+        const uint32_t addr = (uint32_t)(int32_t)(O2REG(Store32).getNumber());
+        basePtr[addr >> 2] = (int32_t)(O3REG(Store32).getNumber());
         // A nop for now.
         ip = NEXTINST(Store32);
         DISPATCH;
