@@ -114,6 +114,9 @@ MARK_FIRST(CallInst)
 DEF_VALUE(CallInst, Instruction)
 DEF_VALUE(ConstructInst, CallInst)
 DEF_VALUE(CallBuiltinInst, CallInst)
+#ifdef HERMES_RUN_WASM
+DEF_VALUE(CallIntrinsicInst, CallInst)
+#endif
 #ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCConstructInst, CallInst)
 DEF_VALUE(HBCCallDirectInst, CallInst)

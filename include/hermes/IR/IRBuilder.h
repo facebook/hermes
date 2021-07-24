@@ -17,6 +17,7 @@
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/Instrs.h"
+#include "hermes/Optimizer/Wasm/WasmIntrinsics.h"
 
 namespace hermes {
 
@@ -510,6 +511,12 @@ class IRBuilder {
 
   GetBuiltinClosureInst *createGetBuiltinClosureInst(
       BuiltinMethod::Enum builtinIndex);
+
+#ifdef HERMES_RUN_WASM
+  CallIntrinsicInst *createCallIntrinsicInst(
+      WasmIntrinsics::Enum intrinsicsIndex,
+      ArrayRef<Value *> arguments);
+#endif
 
   HBCCallDirectInst *createHBCCallDirectInst(
       Function *callee,

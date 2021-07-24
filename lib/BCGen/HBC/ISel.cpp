@@ -352,11 +352,17 @@ void HBCISel::verifyCall(CallInst *Inst) {
 
   const bool isBuiltin = llvh::isa<CallBuiltinInst>(Inst);
   const bool isCallN = llvh::isa<HBCCallNInst>(Inst);
+#ifdef HERMES_RUN_WASM
+  const bool isIntrinsic = llvh::isa<CallIntrinsicInst>(Inst);
+#else
+  const bool isIntrinsic = false;
+#endif
 
   for (unsigned i = 0, max = Inst->getNumArguments(); i < max; i++) {
     Value *argument = Inst->getArgument(i);
-    // The first argument (thisArg) of CallBuiltin must be LiteralUndefined.
-    if (isBuiltin && i == 0) {
+    // The first argument (thisArg) of CallBuiltin / CallIntrinsic must be
+    // LiteralUndefined.
+    if ((isBuiltin || isIntrinsic) && i == 0) {
       assert(
           llvh::isa<LiteralUndefined>(argument) && !RA_.isAllocated(argument) &&
           "Register for 'this' argument is misallocated");
@@ -1203,6 +1209,12 @@ void HBCISel::generateGetBuiltinClosureInst(
   auto output = encodeValue(Inst);
   BCFGen_->emitGetBuiltinClosure(output, Inst->getBuiltinIndex());
 }
+
+#ifdef HERMES_RUN_WASM
+void HBCISel::generateCallIntrinsicInst(CallIntrinsicInst *, BasicBlock *) {
+  // TODO: emit CallIntrinsic Bytecode. For now this is a nop.
+}
+#endif
 
 void HBCISel::generateHBCCallDirectInst(
     HBCCallDirectInst *Inst,

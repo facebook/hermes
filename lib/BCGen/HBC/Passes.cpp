@@ -194,6 +194,14 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
       opIndex == GetBuiltinClosureInst::BuiltinIndexIdx)
     return true;
 
+#ifdef HERMES_RUN_WASM
+  /// CallIntrinsic's callee and "this" should always be literals.
+  if (llvh::isa<CallIntrinsicInst>(Inst) &&
+      (opIndex == CallIntrinsicInst::CalleeIdx ||
+       opIndex == CallIntrinsicInst::ThisIdx))
+    return true;
+#endif
+
   if (llvh::isa<IteratorCloseInst>(Inst) &&
       opIndex == IteratorCloseInst::IgnoreInnerExceptionIdx) {
     return true;
@@ -600,11 +608,16 @@ bool LowerCalls::runOnFunction(Function *F) {
         // registers. If this is a CallN instruction, emit ImplicitMovs
         // instead, to express that these registers get written to by the CallN,
         // even though they are not the destination.
-        // Lastly, if this is argument 0 of CallBuiltinInst, emit ImplicitMov
-        // to encode that the "this" register is implicitly set to undefined.
+        // Lastly, if this is argument 0 of CallBuiltinInst /
+        // CallIntrinsicInst, emit ImplicitMov to encode that the "this"
+        // register is implicitly set to undefined.
         Value *arg = call->getArgument(i);
         if (llvh::isa<HBCCallNInst>(call) ||
-            (i == 0 && llvh::isa<CallBuiltinInst>(call))) {
+            (i == 0 && llvh::isa<CallBuiltinInst>(call))
+#ifdef HERMES_RUN_WASM
+            || (i == 0 && llvh::isa<CallIntrinsicInst>(call)))
+#endif
+        {
           auto *imov = builder.createImplicitMovInst(arg);
           RA_.updateRegister(imov, Register(reg));
         } else {
@@ -763,6 +776,9 @@ bool SpillRegisters::requiresShortOperand(Instruction *I, int op) {
     case ValueKind::CallInstKind:
     case ValueKind::ConstructInstKind:
     case ValueKind::CallBuiltinInstKind:
+#ifdef HERMES_RUN_WASM
+    case ValueKind::CallIntrinsicInstKind:
+#endif
     case ValueKind::HBCConstructInstKind:
     case ValueKind::HBCCallDirectInstKind:
       return op == 0;

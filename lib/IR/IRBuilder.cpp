@@ -869,6 +869,17 @@ GetBuiltinClosureInst *IRBuilder::createGetBuiltinClosureInst(
   return inst;
 }
 
+#ifdef HERMES_RUN_WASM
+CallIntrinsicInst *IRBuilder::createCallIntrinsicInst(
+    WasmIntrinsics::Enum intrinsicsIndex,
+    ArrayRef<Value *> arguments) {
+  auto *inst = new CallIntrinsicInst(
+      getLiteralNumber(intrinsicsIndex), getLiteralUndefined(), arguments);
+  insert(inst);
+  return inst;
+}
+#endif
+
 HBCCallDirectInst *IRBuilder::createHBCCallDirectInst(
     Function *callee,
     Value *thisValue,

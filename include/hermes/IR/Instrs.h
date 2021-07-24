@@ -13,6 +13,7 @@
 
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/IR/IR.h"
+#include "hermes/Optimizer/Wasm/WasmIntrinsics.h"
 
 #include "llvh/ADT/SmallVector.h"
 #include "llvh/ADT/ilist_node.h"
@@ -709,6 +710,38 @@ class GetBuiltinClosureInst : public Instruction {
     return kindIsA(V->getKind(), ValueKind::GetBuiltinClosureInstKind);
   }
 };
+
+#ifdef HERMES_RUN_WASM
+/// Call an unsafe compiler intrinsic.
+class CallIntrinsicInst : public CallInst {
+  CallIntrinsicInst(const CallIntrinsicInst &) = delete;
+  void operator=(const CallIntrinsicInst &) = delete;
+
+ public:
+  explicit CallIntrinsicInst(
+      LiteralNumber *callee,
+      LiteralUndefined *thisValue,
+      ArrayRef<Value *> args)
+      : CallInst(ValueKind::CallIntrinsicInstKind, callee, thisValue, args) {
+    assert(
+        callee->isInt32Representible() &&
+        callee->getValue() < WasmIntrinsics::_count &&
+        "invalid intrinsics call");
+  }
+  explicit CallIntrinsicInst(
+      const CallIntrinsicInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : CallInst(src, operands) {}
+
+  WasmIntrinsics::Enum getIntrinsicsIndex() const {
+    return (WasmIntrinsics::Enum)cast<LiteralNumber>(getCallee())->asUInt32();
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::CallIntrinsicInstKind);
+  }
+};
+#endif
 
 class HBCCallNInst : public CallInst {
  public:

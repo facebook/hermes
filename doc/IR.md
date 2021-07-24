@@ -359,6 +359,16 @@ Arguments | %builtinNumber is the builtin to execute. Arguments %arg0 ... %argN 
 Semantics | The instruction passes the control to the builtin in a VM-specific way. The arguments are mapped to the parameters. Unmapped parameters are initialized to 'undefined'.
 Effects | May read and write memory.
 
+### CallIntrinsicInst
+
+CallIntrinsicInst | _
+--- | --- |
+Description | Calls an unsafe compiler intrinsic, passing "undefined" for this
+Example | %0 = CallIntrinsicInst %intrinsicsIndex, %undefined, %arg0, %arg1, %arg2, ...
+Arguments | %intrinsicsIndex is the intrinsic to execute. Arguments %arg0 ... %argN are the arguments passed to the function.
+Semantics | The instruction passes the control to the intrinsics in a VM-specific way. The arguments are mapped to the parameters.
+Effects | May read and write memory.
+
 ### GetBuiltinClosureInst
 
 GetBuiltinClosureInst | _

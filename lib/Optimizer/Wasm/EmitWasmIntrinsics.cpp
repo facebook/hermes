@@ -149,6 +149,27 @@ bool EmitWasmIntrinsics::runOnFunction(Function *F) {
         continue;
       }
 
+      changed = true;
+      builder.setInsertionPoint(callInst);
+      builder.setLocation(callInst->getLocation());
+
+      llvh::SmallVector<Value *, 2> args{};
+      args.reserve(numArgsExcludingThis);
+      for (unsigned i = 0; i < numArgsExcludingThis; i++) {
+        args.push_back(callInst->getArgument(i + 1));
+      }
+
+      auto *callIntrinsic =
+          builder.createCallIntrinsicInst(*wasmIntrinsicsIndex, args);
+      callInst->replaceAllUsesWith(callIntrinsic);
+      callInst->eraseFromParent();
+
+      // Remove property access intructions.
+      if (!loadProp->hasUsers())
+        loadProp->eraseFromParent();
+      if (!loadGlobalProp->hasUsers())
+        loadGlobalProp->eraseFromParent();
+
       NumWasmIntrinsics++;
     }
   }

@@ -26,8 +26,6 @@ add_hermes_library(hermesOptimizer
   Optimizer/Scalar/HoistStartGenerator.cpp
   Optimizer/Scalar/InstructionEscapeAnalysis.cpp
   Optimizer/Scalar/TDZDedup.cpp
-  Optimizer/Wasm/WasmIntrinsics.cpp
-  Optimizer/Wasm/EmitWasmIntrinsics.cpp
   IR/Analysis.cpp
   IR/IREval.cpp
 )
@@ -47,6 +45,8 @@ add_hermes_library(hermesFrontend
   IR/IRVerifier.cpp
   IR/Instrs.cpp
   Utils/Dumper.cpp
+  Optimizer/Wasm/WasmIntrinsics.cpp
+  Optimizer/Wasm/EmitWasmIntrinsics.cpp
   LINK_LIBS hermesSupport hermesFrontEndDefs hermesAST hermesParser
 )
 

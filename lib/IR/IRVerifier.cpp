@@ -456,6 +456,15 @@ void Verifier::visitGetBuiltinClosureInst(GetBuiltinClosureInst const &Inst) {
       "Out of bound BuiltinMethod index.");
 }
 
+#ifdef HERMES_RUN_WASM
+void Verifier::visitCallIntrinsicInst(CallIntrinsicInst const &Inst) {
+  assert(
+      Inst.getIntrinsicsIndex() < WasmIntrinsics::_count &&
+      "Out of bound Unsafe Compiler Intrinsics Index.");
+  visitCallInst(Inst);
+}
+#endif
+
 void Verifier::visitHBCCallDirectInst(HBCCallDirectInst const &Inst) {
   Assert(
       llvh::isa<Function>(Inst.getCallee()),
