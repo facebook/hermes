@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermesc -dump-lir %s | %FileCheck --match-full-lines %s
+// REQUIRES: run_wasm
 
 // LowerIntrinsics pass is only enabled if -funsafe-intrinsics is set.
 function undefinedIntrinsic(func) {

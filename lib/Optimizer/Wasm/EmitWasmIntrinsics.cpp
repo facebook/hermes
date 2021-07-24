@@ -79,8 +79,6 @@ EmitWasmIntrinsicsContext::findWasmIntrinsics(Identifier intrinsicsName) {
 }
 
 bool EmitWasmIntrinsics::runOnFunction(Function *F) {
-  NumWasmIntrinsics = 0;
-
   IRBuilder builder{F};
   bool changed = false;
 

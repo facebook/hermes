@@ -7,6 +7,7 @@
 
 // RUN: %hermesc -funsafe-intrinsics -target=HBC -dump-postra %s | %FileCheck --match-full-lines --check-prefix=CHKRA %s
 // RUN: %hermesc -funsafe-intrinsics -target=HBC -dump-bytecode %s | %FileCheck --match-full-lines --check-prefix=CHKBC %s
+// REQUIRES: run_wasm
 
 // Instrinsics that are defined should not cause any error. The call sequence is
 // lowered to a CallIntrinsicInst.

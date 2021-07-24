@@ -612,10 +612,13 @@ bool LowerCalls::runOnFunction(Function *F) {
         // CallIntrinsicInst, emit ImplicitMov to encode that the "this"
         // register is implicitly set to undefined.
         Value *arg = call->getArgument(i);
-        if (llvh::isa<HBCCallNInst>(call) ||
-            (i == 0 && llvh::isa<CallBuiltinInst>(call))
 #ifdef HERMES_RUN_WASM
-            || (i == 0 && llvh::isa<CallIntrinsicInst>(call)))
+        if (llvh::isa<HBCCallNInst>(call) ||
+            (i == 0 && llvh::isa<CallBuiltinInst>(call)) ||
+            (i == 0 && llvh::isa<CallIntrinsicInst>(call)))
+#else
+        if (llvh::isa<HBCCallNInst>(call) ||
+            (i == 0 && llvh::isa<CallBuiltinInst>(call)))
 #endif
         {
           auto *imov = builder.createImplicitMovInst(arg);

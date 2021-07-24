@@ -7,6 +7,7 @@
 
 // RUN: %hermesc -funsafe-intrinsics -target=HBC -dump-postra %s | %FileCheck --match-full-lines --check-prefix=CHKRA %s
 // RUN: %hermesc -funsafe-intrinsics -target=HBC -dump-bytecode %s | %FileCheck --match-full-lines --check-prefix=CHKBC %s
+// REQUIRES: run_wasm
 
 // Setup Asm.js/Wasm memory
 var buffer = new ArrayBuffer(131072);

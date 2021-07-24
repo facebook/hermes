@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -funsafe-intrinsics -O %s | %FileCheck --match-full-lines %s
+// REQUIRES: run_wasm
 
 // Setup Asm.js/Wasm memory
 var Math_imul = Math.imul;

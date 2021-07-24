@@ -227,7 +227,7 @@ set(HERMESVM_EXCEPTION_ON_OOM OFF CACHE BOOL
 set(HERMESVM_PLATFORM_LOGGING OFF CACHE BOOL
     "hermesLog(...) is enabled, using the platform's logging mechanism")
 
-set(HERMES_RUN_WASM ON CACHE BOOL
+set(HERMES_RUN_WASM OFF CACHE BOOL
     "Emit Asm.js/Wasm unsafe compiler intrinsics")
 
 set(HERMES_USE_FLOWPARSER OFF CACHE BOOL

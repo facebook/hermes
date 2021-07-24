@@ -8,6 +8,7 @@
 // RUN: %hermes -funsafe-intrinsics -O %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -funsafe-intrinsics -O -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
 // RUN: %hermes -funsafe-intrinsics -O -dump-bytecode %s | %FileCheck --check-prefix=CHKBC %s
+// REQUIRES: run_wasm
 
 // Setup Asm.js/Wasm memory
 var buffer = new ArrayBuffer(131072);
