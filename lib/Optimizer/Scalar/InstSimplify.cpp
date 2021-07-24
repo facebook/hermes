@@ -73,8 +73,9 @@ Value *reduceAsInt32(AsInt32Inst *asInt32) {
     }
   }
 
-  // TODO: Add int32 to the type system and detect if the operand is already an
-  // int32 here.
+  if (op->getType().isInt32Type()) {
+    return op;
+  }
 
   // Nothing can be done to simplify, return it as-is.
   return asInt32;

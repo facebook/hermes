@@ -41,7 +41,7 @@ function hoist_branch(x, y) {
 //CHECK-NEXT:  {{.*}}  %5 = CondBranchInst %4, %BB1, %BB2
 //CHECK-NEXT:%BB1:
 //CHECK-NEXT:  {{.*}}  %6 = LoadPropertyInst %3, "r" : string
-//CHECK-NEXT:  {{.*}}  %7 = BinaryOperatorInst '+', %1 : number, %1 : number
+//CHECK-NEXT:  {{.*}}  %7 = BinaryOperatorInst '+', %1 : int32, %1 : int32
 //CHECK-NEXT:  {{.*}}  %8 = BinaryOperatorInst '+', %6, %7 : number
 //CHECK-NEXT:  {{.*}}  %9 = ReturnInst %8 : string|number
 //CHECK-NEXT:%BB2:
@@ -214,7 +214,7 @@ function hoist_with_dependencies_in_loop(x, y) {
 //CHECK-NEXT:  {{.*}}  %0 = HBCLoadParamInst 2 : number
 //CHECK-NEXT:  {{.*}}  %1 = AsInt32Inst %0
 //CHECK-NEXT:  {{.*}}  %2 = HBCLoadConstInst 2 : number
-//CHECK-NEXT:  {{.*}}  %3 = BinaryOperatorInst '+', %1 : number, %2 : number
+//CHECK-NEXT:  {{.*}}  %3 = BinaryOperatorInst '+', %1 : int32, %2 : number
 //CHECK-NEXT:  {{.*}}  %4 = HBCLoadParamInst 1 : number
 //CHECK-NEXT:  {{.*}}  %5 = CondBranchInst %4, %BB1, %BB2
 //CHECK-NEXT:%BB1:

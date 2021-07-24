@@ -43,8 +43,8 @@ function foo_with_cf(dim) {
 //CHECK-NEXT:  %BB0:
 //CHECK-NEXT:    %0 = AsInt32Inst %i
 //CHECK-NEXT:    %1 = AsInt32Inst %i
-//CHECK-NEXT:    %2 = BinaryOperatorInst '-', %0 : number, %1 : number
-//CHECK-NEXT:    %3 = BinaryOperatorInst '+', %0 : number, %1 : number
+//CHECK-NEXT:    %2 = BinaryOperatorInst '-', %0 : int32, %1 : int32
+//CHECK-NEXT:    %3 = BinaryOperatorInst '+', %0 : int32, %1 : int32
 //CHECK-NEXT:    %4 = BinaryOperatorInst '*', %2 : number, %3 : number
 //CHECK-NEXT:    %5 = ReturnInst %4 : number
 //CHECK-NEXT:function_end

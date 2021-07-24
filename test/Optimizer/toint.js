@@ -16,3 +16,15 @@ function foo (x) {
 //CHECK-NEXT: %BB0:
 //CHECK-NEXT:   %0 = ReturnInst 1661992960 : number
 //CHECK-NEXT: function_end
+
+// Only one copy of AsInt32Inst should be shown.
+function test_redundant(x) {
+  x = (((x | 0) | 0) | 0) | 0;
+}
+
+//CHECK-LABEL:function test_redundant(x) : undefined
+//CHECK-NEXT:frame = []
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = AsInt32Inst %x
+//CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+//CHECK-NEXT:function_end

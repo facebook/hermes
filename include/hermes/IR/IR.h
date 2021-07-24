@@ -55,6 +55,8 @@ class Type {
     Boolean,
     String,
     Number,
+    Int32, // Subtype of Number, signed 32-bit integer.
+    Uint32, // Subtype of Number, unsigned 32-bit integer.
     Object,
     Closure, // Subtype of Object.
     RegExp, // Subtype of Object.
@@ -72,6 +74,8 @@ class Type {
         "boolean",
         "string",
         "number",
+        "int32",
+        "uint32",
         "object",
         "closure",
         "regexp"};
@@ -86,13 +90,19 @@ class Type {
 
   static constexpr unsigned PRIMITIVE_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(String) | BIT_TO_VAL(Null) | BIT_TO_VAL(Undefined) |
-      BIT_TO_VAL(Boolean);
+      BIT_TO_VAL(Boolean) | BIT_TO_VAL(Int32) | BIT_TO_VAL(Uint32);
 
   static constexpr unsigned OBJECT_BITS =
       BIT_TO_VAL(Object) | BIT_TO_VAL(Closure) | BIT_TO_VAL(RegExp);
 
   static constexpr unsigned NONPTR_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(Boolean) | BIT_TO_VAL(Null) | BIT_TO_VAL(Undefined);
+
+  static constexpr unsigned NUMBER_BITS =
+      BIT_TO_VAL(Number) | BIT_TO_VAL(Int32) | BIT_TO_VAL(Uint32);
+
+  static constexpr unsigned INTEGER_BITS =
+      BIT_TO_VAL(Int32) | BIT_TO_VAL(Uint32);
 
   /// Each bit represent the possibility of the type being the type that's
   /// represented in the enum entry.
@@ -109,6 +119,11 @@ class Type {
   }
 
   static constexpr Type intersectTy(Type A, Type B) {
+    // Handle the case where one oprand is signed and another is unsigned, or
+    // simply Number. The intersection is Number.
+    if (A.isNumberType() && B.isNumberType()) {
+      return Type(BIT_TO_VAL(Number));
+    }
     return Type(A.bitmask_ & B.bitmask_);
   }
 
@@ -148,6 +163,12 @@ class Type {
   static constexpr Type createNumber() {
     return Type(BIT_TO_VAL(Number));
   }
+  static constexpr Type createInt32() {
+    return Type(BIT_TO_VAL(Int32));
+  }
+  static constexpr Type createUint32() {
+    return Type(BIT_TO_VAL(Uint32));
+  }
   static constexpr Type createClosure() {
     return Type(BIT_TO_VAL(Closure));
   }
@@ -178,7 +199,16 @@ class Type {
   }
 
   constexpr bool isNumberType() const {
-    return IS_VAL(Number);
+    return bitmask_ && !(bitmask_ & ~NUMBER_BITS);
+  }
+  constexpr bool isInt32Type() const {
+    return IS_VAL(Int32);
+  }
+  constexpr bool isUint32Type() const {
+    return IS_VAL(Uint32);
+  }
+  constexpr bool isIntegerType() const {
+    return bitmask_ && !(bitmask_ & ~INTEGER_BITS);
   }
   constexpr bool isClosureType() const {
     return IS_VAL(Closure);
