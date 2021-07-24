@@ -19,6 +19,10 @@ namespace hbc {
 class BackendContext;
 }
 
+#ifdef HERMES_RUN_WASM
+class EmitWasmIntrinsicsContext;
+#endif // HERMES_RUN_WASM
+
 struct CodeGenerationSettings {
   /// Whether we should emit TDZ checks.
   bool enableTDZ{true};
@@ -60,6 +64,9 @@ struct OptimizationSettings {
 
   /// Attempt to resolve CommonJS require() calls at compile time.
   bool staticRequire{false};
+
+  /// Recognize and emit Asm.js/Wasm unsafe compiler intrinsics.
+  bool useUnsafeIntrinsics{false};
 };
 
 enum class DebugInfoSetting {
@@ -212,6 +219,10 @@ class Context {
   /// The HBC backend context. We use a shared pointer to avoid any dependencies
   /// on its destructor.
   std::shared_ptr<hbc::BackendContext> hbcBackendContext_{};
+
+#ifdef HERMES_RUN_WASM
+  std::shared_ptr<EmitWasmIntrinsicsContext> wasmIntrinsicsContext_{};
+#endif // HERMES_RUN_WASM
 
  public:
   explicit Context(
@@ -392,6 +403,10 @@ class Context {
     return optimizationSettings_.staticBuiltins;
   }
 
+  bool getUseUnsafeIntrinsics() const {
+    return optimizationSettings_.useUnsafeIntrinsics;
+  }
+
   const CodeGenerationSettings &getCodeGenerationSettings() const {
     return codeGenerationSettings_;
   }
@@ -418,6 +433,17 @@ class Context {
       std::shared_ptr<hbc::BackendContext> hbcBackendContext) {
     hbcBackendContext_ = std::move(hbcBackendContext);
   }
+
+#ifdef HERMES_RUN_WASM
+  EmitWasmIntrinsicsContext *getWasmIntrinsicsContext() {
+    return wasmIntrinsicsContext_.get();
+  }
+
+  void setWasmIntrinsicsContext(
+      std::shared_ptr<EmitWasmIntrinsicsContext> wasmIntrinsicsContext) {
+    wasmIntrinsicsContext_ = std::move(wasmIntrinsicsContext);
+  }
+#endif // HERMES_RUN_WASM
 };
 
 } // namespace hermes

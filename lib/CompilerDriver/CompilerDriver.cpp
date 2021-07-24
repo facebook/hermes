@@ -553,6 +553,13 @@ static opt<bool> InstrumentIR(
     init(false),
     Hidden,
     cat(CompilerCategory));
+
+static CLFlag UseUnsafeIntrinsics(
+    'f',
+    "unsafe-intrinsics",
+    false,
+    "Recognize and lower Asm.js/Wasm unsafe compiler intrinsics.",
+    CompilerCategory);
 } // namespace cl
 
 namespace {
@@ -1053,6 +1060,8 @@ std::shared_ptr<Context> createContext(
   optimizationOpts.staticBuiltins =
       cl::StaticBuiltins == cl::StaticBuiltinSetting::ForceOn;
   optimizationOpts.staticRequire = cl::StaticRequire;
+
+  optimizationOpts.useUnsafeIntrinsics = cl::UseUnsafeIntrinsics;
 
   auto context = std::make_shared<Context>(
       codeGenOpts,
