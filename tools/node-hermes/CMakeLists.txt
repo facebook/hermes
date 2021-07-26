@@ -11,6 +11,8 @@ if(HERMES_BUILD_NODE_HERMES)
   set(CXX_STANDARD 14)
   set(CXX_STANDARD_REQUIRED ON)
 
+  set_source_files_properties(InternalBindings/tty_wrap.cpp PROPERTIES COMPILE_FLAGS -frtti)
+
   add_subdirectory(third-party/libuv)
   add_subdirectory(nodelib)
   add_hermes_tool(node-hermes

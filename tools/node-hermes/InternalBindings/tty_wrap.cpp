@@ -12,10 +12,52 @@
 
 using namespace facebook;
 
+//// A HostObject subclass to be used as a TTY wrapper object.
+class TTYStreamWrap : public jsi::HostObject {
+ public:
+  uv_tty_t *getTTYStreamHandle() {
+    return &ttyStreamHandle_;
+  }
+
+ private:
+  // Handle used for tty libuv stream operations.
+  uv_tty_t ttyStreamHandle_;
+};
+
+/// Creates a tty stream instance. Sets the error property in the second
+/// argument if an error occurred. Sets the jsi::HostObject that is a wrapper
+/// for the uv_tty_t stream handle on the returned jsi::Value.
+static jsi::Value TTY(
+    RuntimeState &rs,
+    const jsi::Value &thisValue,
+    const jsi::Value *args,
+    size_t count) {
+  jsi::Runtime &rt = rs.getRuntime();
+  if (count < 2) {
+    throw jsi::JSError(
+        rt, "Not enough arguments being passed into TTY initialization call.");
+  }
+  auto ttyStreamObject = std::make_shared<TTYStreamWrap>();
+  uv_file fd = args[0].asNumber();
+  int err = uv_tty_init(
+      rs.getLoop(), ttyStreamObject.get()->getTTYStreamHandle(), fd, 0);
+  if (err != 0)
+    args[1].asObject(rt).setProperty(rt, "code", err);
+  else
+    thisValue.asObject(rt).setProperty(
+        rt,
+        rs.getTTYStreamPropId(),
+        jsi::Object::createFromHostObject(rt, ttyStreamObject));
+
+  return jsi::Value(rt, thisValue);
+}
+
 /// Adds the 'tty_wrap' object as a property of internalBinding.
 jsi::Value facebook::ttyBinding(RuntimeState &rs) {
   jsi::Runtime &rt = rs.getRuntime();
   jsi::Object tty_wrap{rt};
+
+  rs.defineJSFunction(TTY, "TTY", 2, tty_wrap);
 
   rs.setInternalBindingProp("tty_wrap", std::move(tty_wrap));
   return rs.getInternalBindingProp("tty_wrap");

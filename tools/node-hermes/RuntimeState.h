@@ -10,6 +10,7 @@
 
 #include "hermes/hermes.h"
 
+#include "jsi/jsi.h"
 #include "llvh/Support/CommandLine.h"
 #include "llvh/Support/FileSystem.h"
 #include "llvh/Support/InitLLVM.h"
@@ -32,7 +33,9 @@ class RuntimeState {
   RuntimeState(llvh::SmallString<32> dirname, uv_loop_t *loop)
       : rt_(hermes::makeHermesRuntime()),
         dirname_(std::move(dirname)),
-        loop_(loop){};
+        loop_(loop),
+        ttyStreamPropId_(
+            jsi::PropNameID::forAscii(*rt_, "%ttyStreamObject%")){};
 
   RuntimeState(const RuntimeState &) = delete;
   RuntimeState &operator=(const RuntimeState &) = delete;
@@ -106,6 +109,10 @@ class RuntimeState {
     return loop_;
   }
 
+  jsi::PropNameID &getTTYStreamPropId() {
+    return ttyStreamPropId_;
+  }
+
  private:
   // Runtime used to access internal binding properties.
   std::unique_ptr<jsi::Runtime> rt_;
@@ -117,6 +124,8 @@ class RuntimeState {
   llvh::SmallString<32> dirname_;
   // Event loop used for libuv.
   uv_loop_t *loop_;
+  // Cached PropNameID corresponding to the tty_wrap stream object.
+  jsi::PropNameID ttyStreamPropId_;
 };
 } // namespace facebook
 #endif
