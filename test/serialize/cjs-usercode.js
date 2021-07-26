@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -commonjs %s %S/cjs-usercode-module-1.js %S/cjs-usercode-module-2.js -serializevm-path=%t
+// RUN: %hermes -O -commonjs %s %S/cjs-usercode-module-1.js %S/cjs-usercode-module-2.js %S/cjs-usercode-module-3.js -serializevm-path=%t
 // RUN: %hermes -O -deserialize-file=%t %s | %FileCheck --match-full-lines %s
 // REQUIRES: serializer
 
@@ -18,4 +18,7 @@ serializeVM(function() {
   // CHECK-NEXT: asdf
   print(m.z);
   // CHECK-NEXT: foo
+  var m3 = require('./cjs-usercode-module-3.js')
+  print(JSON.stringify(m3.baz));
+  // CHECK-NEXT: {"a":3,"b":"hello","c":null}
 })
