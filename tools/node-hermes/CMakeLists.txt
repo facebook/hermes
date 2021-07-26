@@ -16,7 +16,7 @@ if(HERMES_BUILD_NODE_HERMES)
   add_hermes_tool(node-hermes
     node-hermes.cpp RuntimeState.cpp InternalBindings/buffer.cpp
     InternalBindings/constants.cpp InternalBindings/file.cpp
-    InternalBindings/util.cpp
+    InternalBindings/util.cpp InternalBindings/tty_wrap.cpp
     ${ALL_HEADER_FILES}
     LINK_LIBS hermesapi hermesNodeBytecode uv_a
     )
