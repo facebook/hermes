@@ -101,7 +101,7 @@ static jsi::Value internalBinding(
   } else if (propNameUTF8 == "buffer") {
     return bufferBinding(rs);
   } else if (propNameUTF8 == "util") {
-    return jsi::Value::undefined();
+    return utilBinding(rs);
   }
   // Will not go into this case but keeping it in case some other internal
   // binding functionality is going to be added in the future.
