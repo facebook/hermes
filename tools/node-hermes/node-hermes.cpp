@@ -218,9 +218,6 @@ static void initialize(RuntimeState &rs, jsi::Object &builtinModules) {
   runtime.global().setProperty(runtime, "internalBinding", intBinding);
 
   // Will add more properties as they are required.
-  jsi::Object process{runtime};
-  runtime.global().setProperty(runtime, "process", process);
-
   runtime.global().setProperty(runtime, "global", runtime.global());
 
   jsi::Object primordials{runtime};
@@ -229,6 +226,20 @@ static void initialize(RuntimeState &rs, jsi::Object &builtinModules) {
       jsi::String::createFromAscii(runtime, "internal/per_context/primordials"),
       rs,
       builtinModules);
+
+  jsi::Object process{runtime};
+  runtime.global().setProperty(runtime, "process", process);
+  require(
+      jsi::String::createFromAscii(
+          runtime, "internal/bootstrap/switches/is_main_thread"),
+      rs,
+      builtinModules);
+
+  jsi::Object console =
+      require(
+          jsi::String::createFromAscii(runtime, "console"), rs, builtinModules)
+          .asObject(runtime);
+  runtime.global().setProperty(runtime, "console", console);
 }
 
 int main(int argc, char **argv) {
