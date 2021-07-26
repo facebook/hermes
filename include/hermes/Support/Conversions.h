@@ -312,4 +312,8 @@ OptValue<double> parseIntWithRadix(Iterable str, int radix) {
 
 } // namespace hermes
 
+extern "C" {
+size_t hermes_numberToString(double m, char *dest, size_t destSize);
+}
+
 #endif // HERMES_SUPPORT_CONVERSIONS_H
