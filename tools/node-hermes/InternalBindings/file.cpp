@@ -188,7 +188,6 @@ jsi::Value facebook::fsBinding(RuntimeState &rs) {
   defineJSFunction(rs, fstat, "fstat", 4, fs);
   defineJSFunction(rs, read, "read", 7, fs);
 
-  jsi::String fsLabel = jsi::String::createFromAscii(rt, "fs");
-  rs.setInternalBindingProp(fsLabel, std::move(fs));
-  return rs.getInternalBindingProp(fsLabel);
+  rs.setInternalBindingProp("fs", std::move(fs));
+  return rs.getInternalBindingProp("fs");
 }

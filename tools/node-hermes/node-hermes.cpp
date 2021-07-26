@@ -88,13 +88,12 @@ static const std::shared_ptr<jsi::Buffer> addjsWrapper(
 /// Implements the internal binding JS functionality. Currently only includes
 /// constants that are relevant to the execution of fs.js.
 static jsi::Value internalBinding(
-    const jsi::String &propName,
+    const std::string &propNameUTF8,
     RuntimeState &rs) {
   jsi::Runtime &rt = rs.getRuntime();
-  if (rs.internalBindingPropExists(propName)) {
-    return rs.getInternalBindingProp(propName);
+  if (rs.internalBindingPropExists(propNameUTF8)) {
+    return rs.getInternalBindingProp(propNameUTF8);
   }
-  std::string propNameUTF8 = propName.utf8(rt);
   if (propNameUTF8 == "constants") {
     return constantsBinding(rs);
   } else if (propNameUTF8 == "fs") {
@@ -153,7 +152,8 @@ static jsi::Function resolveRequireCall(
 static jsi::Value require(
     const jsi::String &filename,
     RuntimeState &rs,
-    jsi::Object &builtinModules) {
+    jsi::Object &builtinModules,
+    jsi::Function &intBinding) {
   jsi::Runtime &rt = rs.getRuntime();
 
   std::string filenameUTF8 = filename.utf8(rt);
@@ -168,27 +168,44 @@ static jsi::Value require(
 
   jsi::Object &mapModule = rs.addRequiredModule(filenameUTF8, std::move(mod));
 
-  jsi::Value out = result.call(
-      rt,
-      exports,
-      rt.global().getProperty(rt, "require"),
-      mapModule,
-      filename,
-      std::string{rs.getDirname()},
-      5);
+  if (builtinModules.hasProperty(rt, filename)) {
+    result.call(
+        rt,
+        exports,
+        rt.global().getProperty(rt, "require"),
+        mapModule,
+        intBinding,
+        filename,
+        std::string{rs.getDirname()},
+        6);
+  } else {
+    result.call(
+        rt,
+        exports,
+        rt.global().getProperty(rt, "require"),
+        mapModule,
+        filename,
+        std::string{rs.getDirname()},
+        5);
+  }
+
   return mapModule.getProperty(rt, "exports");
 }
 
 // Initializes all the builtin modules as well as several of
 // the functions/properties needed to execute the modules.
-static void initialize(RuntimeState &rs, jsi::Object &builtinModules) {
+static void initialize(
+    RuntimeState &rs,
+    jsi::Object &builtinModules,
+    jsi::Function &intBinding) {
   jsi::Runtime &runtime = rs.getRuntime();
+
   // Creates require JS function and links it to the c++ version.
   jsi::Function req = jsi::Function::createFromHostFunction(
       runtime,
       jsi::PropNameID::forAscii(runtime, "require"),
       1,
-      [&rs, &builtinModules](
+      [&rs, &builtinModules, &intBinding](
           jsi::Runtime &rt,
           const jsi::Value &,
           const jsi::Value *args,
@@ -196,26 +213,9 @@ static void initialize(RuntimeState &rs, jsi::Object &builtinModules) {
         if (count == 0) {
           throw jsi::JSError(rt, "Not enough arguments passed in");
         }
-        return require(args[0].toString(rt), rs, builtinModules);
+        return require(args[0].toString(rt), rs, builtinModules, intBinding);
       });
   runtime.global().setProperty(runtime, "require", req);
-
-  // Creates internalBinding JS function and links it to the c++ version.
-  jsi::Function intBinding = jsi::Function::createFromHostFunction(
-      runtime,
-      jsi::PropNameID::forAscii(runtime, "internalBinding"),
-      1,
-      [&rs](
-          jsi::Runtime &rt,
-          const jsi::Value &,
-          const jsi::Value *args,
-          size_t count) -> jsi::Value {
-        if (count == 0) {
-          throw jsi::JSError(rt, "Not enough arguments passed in");
-        }
-        return internalBinding(args[0].toString(rt), rs);
-      });
-  runtime.global().setProperty(runtime, "internalBinding", intBinding);
 
   // Will add more properties as they are required.
   runtime.global().setProperty(runtime, "global", runtime.global());
@@ -225,7 +225,8 @@ static void initialize(RuntimeState &rs, jsi::Object &builtinModules) {
   require(
       jsi::String::createFromAscii(runtime, "internal/per_context/primordials"),
       rs,
-      builtinModules);
+      builtinModules,
+      intBinding);
 
   jsi::Object process{runtime};
   runtime.global().setProperty(runtime, "process", process);
@@ -233,12 +234,15 @@ static void initialize(RuntimeState &rs, jsi::Object &builtinModules) {
       jsi::String::createFromAscii(
           runtime, "internal/bootstrap/switches/is_main_thread"),
       rs,
-      builtinModules);
+      builtinModules,
+      intBinding);
 
-  jsi::Object console =
-      require(
-          jsi::String::createFromAscii(runtime, "console"), rs, builtinModules)
-          .asObject(runtime);
+  jsi::Object console = require(
+                            jsi::String::createFromAscii(runtime, "console"),
+                            rs,
+                            builtinModules,
+                            intBinding)
+                            .asObject(runtime);
   runtime.global().setProperty(runtime, "console", console);
 }
 
@@ -290,8 +294,25 @@ int main(int argc, char **argv) {
   jsi::Object builtinModules =
       rt.evaluateJavaScript(buf, "NodeBytecode.js").asObject(rt);
 
+  // Creates internalBinding JS function. Will be passed as a param to
+  // builtinModules.
+  jsi::Function intBinding = jsi::Function::createFromHostFunction(
+      rt,
+      jsi::PropNameID::forAscii(rt, "internalBinding"),
+      1,
+      [&rs](
+          jsi::Runtime &rt,
+          const jsi::Value &,
+          const jsi::Value *args,
+          size_t count) -> jsi::Value {
+        if (count == 0) {
+          throw jsi::JSError(rt, "Not enough arguments passed in");
+        }
+        return internalBinding(args[0].toString(rt).utf8(rt), rs);
+      });
+
   try {
-    initialize(rs, builtinModules);
+    initialize(rs, builtinModules, intBinding);
     auto result = rt.evaluateJavaScript(jsiBuffer, srcPath);
 
   } catch (const jsi::JSIException &e) {

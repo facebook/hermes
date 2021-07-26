@@ -32,7 +32,7 @@ def main():
 
             # Extracts the filename out of the full path and excludes the ".js" extension
             o.write(
-                '"{filename}" : (function(exports, require, module, __filename, __dirname) {{'.format(
+                '"{filename}" : (function(exports, require, module, internalBinding, __filename, __dirname) {{'.format(
                     filename=arg[
                         arg.index("nodelib") + len("nodelib") + 1 : -len(".js")
                     ].replace("\\", "/")

@@ -368,7 +368,6 @@ jsi::Value facebook::constantsBinding(RuntimeState &rs) {
       rt, jsi::String::createFromAscii(rt, "signals"), signalConstants(rt));
   constants.setProperty(rt, jsi::String::createFromAscii(rt, "os"), os);
 
-  jsi::String constantsLabel = jsi::String::createFromAscii(rt, "constants");
-  rs.setInternalBindingProp(constantsLabel, std::move(constants));
-  return rs.getInternalBindingProp(constantsLabel);
+  rs.setInternalBindingProp("constants", std::move(constants));
+  return rs.getInternalBindingProp("constants");
 }

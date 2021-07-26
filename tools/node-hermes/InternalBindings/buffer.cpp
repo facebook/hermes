@@ -113,7 +113,6 @@ jsi::Value facebook::bufferBinding(RuntimeState &rs) {
   jsi::Value kMaxLength{(double)(uint64_t{2} << 32)};
   buffer.setProperty(rt, "kMaxLength", kMaxLength);
 
-  jsi::String bufferLabel = jsi::String::createFromAscii(rt, "Buffer");
-  rs.setInternalBindingProp(bufferLabel, std::move(buffer));
-  return rs.getInternalBindingProp(bufferLabel);
+  rs.setInternalBindingProp("Buffer", std::move(buffer));
+  return rs.getInternalBindingProp("Buffer");
 }

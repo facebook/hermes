@@ -31,8 +31,6 @@ class RuntimeState {
   // respectively.
   RuntimeState(llvh::SmallString<32> dirname, uv_loop_t *loop)
       : rt_(hermes::makeHermesRuntime()),
-        internalBindingPropNameID(
-            jsi::PropNameID::forAscii(*rt_, "internalBinding")),
         dirname_(std::move(dirname)),
         loop_(loop){};
 
@@ -61,27 +59,19 @@ class RuntimeState {
 
   // Checks to see if the internal binding property has already been
   // initialized.
-  bool internalBindingPropExists(const jsi::String &propName) {
-    return rt_->global()
-        .getProperty(*rt_, internalBindingPropNameID)
-        .asObject(*rt_)
-        .hasProperty(*rt_, propName);
+  bool internalBindingPropExists(const std::string &propName) const {
+    return internalBindingProps_.find(propName) != internalBindingProps_.end();
   }
   // Adds a new property to internal binding, given the name of the property
   // and the respective jsi::Object.
-  void setInternalBindingProp(const jsi::String &propName, jsi::Object prop) {
-    rt_->global()
-        .getProperty(*rt_, internalBindingPropNameID)
-        .asObject(*rt_)
-        .setProperty(*rt_, propName, prop);
+  void setInternalBindingProp(std::string propName, jsi::Object prop) {
+    internalBindingProps_.emplace(std::move(propName), std::move(prop));
   }
-  // Returns the jsi::Value corresponding to the internalBinding
+  // Returns the jsi::Object corresponding to the internalBinding
   // property asked for.
-  jsi::Value getInternalBindingProp(const jsi::String &propName) {
-    return rt_->global()
-        .getProperty(*rt_, internalBindingPropNameID)
-        .asObject(*rt_)
-        .getProperty(*rt_, propName);
+  jsi::Value getInternalBindingProp(const std::string &propName) const {
+    auto iter = internalBindingProps_.find(propName);
+    return jsi::Value(*rt_, iter->second).getObject(*rt_);
   }
 
   /// Given a path \p target to some file that is either expressed relative to
@@ -108,9 +98,8 @@ class RuntimeState {
   std::unique_ptr<jsi::Runtime> rt_;
   // Keeps track of all the 'require' modules already initialized.
   std::unordered_map<std::string, jsi::Object> requireModules_;
-  // Cached PropNameID corresponding to "internalBinding" for faster
-  // accesses/lookup.
-  jsi::PropNameID internalBindingPropNameID;
+  // Stores all of the internal binding properties seen so far.
+  std::unordered_map<std::string, jsi::Object> internalBindingProps_;
   // Stores the name of the directory where the file being run lives.
   llvh::SmallString<32> dirname_;
   // Event loop used for libuv.
