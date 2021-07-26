@@ -27,10 +27,11 @@ static jsi::ArrayBuffer newArrayBuffer(jsi::Runtime &rt, size_t size) {
 /// jsi::Value. Note: this function is currently not needed by fs.js and
 /// was primarily used for initial testing purposes.
 static jsi::Value byteLengthUtf8(
-    jsi::Runtime &rt,
+    RuntimeState &rs,
     const jsi::Value &thisValue,
     const jsi::Value *args,
     size_t count) {
+  jsi::Runtime &rt = rs.getRuntime();
   if (count < 1) {
     throw jsi::JSError(rt, "Not enough arguments passed in to byteLengthUtf8.");
   }
@@ -44,10 +45,11 @@ static jsi::Value byteLengthUtf8(
 /// Given the caller jsi::Value, which should translate to a Buffer object,
 /// returns a jsi::String representing the sliced version of the array.
 static jsi::Value utf8Slice(
-    jsi::Runtime &rt,
+    RuntimeState &rs,
     const jsi::Value &thisValue,
     const jsi::Value *args,
     size_t count) {
+  jsi::Runtime &rt = rs.getRuntime();
   jsi::Object thisBuffer =
       thisValue.asObject(rt).getPropertyAsObject(rt, "buffer");
   if (!thisBuffer.isArrayBuffer(rt)) {
@@ -72,31 +74,12 @@ static jsi::Value utf8Slice(
 /// Creates an ArrayBuffer the size of an uint32_t and returns it. Used for
 /// internal buffer purposes. This is implemented in v8 with a private object.
 static jsi::Value getZeroFillToggle(
-    jsi::Runtime &rt,
+    RuntimeState &rs,
     const jsi::Value &thisValue,
     const jsi::Value *args,
     size_t count) {
+  jsi::Runtime &rt = rs.getRuntime();
   return newArrayBuffer(rt, sizeof(uint32_t));
-}
-
-/// Initializes a new JS function given a function pointer to the c++ function.
-static void defineJSFunction(
-    jsi::Runtime &rt,
-    jsi::Value (*functionPtr)(
-        jsi::Runtime &,
-        const jsi::Value &,
-        const jsi::Value *,
-        size_t),
-    llvh::StringRef functionName,
-    size_t numArgs,
-    jsi::Object &buffer) {
-  jsi::String jsiFunctionName = jsi::String::createFromAscii(rt, functionName);
-  jsi::Object JSFunction = jsi::Function::createFromHostFunction(
-      rt,
-      jsi::PropNameID::forString(rt, jsiFunctionName),
-      numArgs,
-      functionPtr);
-  buffer.setProperty(rt, jsiFunctionName, JSFunction);
 }
 
 /// Adds the 'buffer' object as a property of internalBinding.
@@ -106,9 +89,9 @@ jsi::Value facebook::bufferBinding(RuntimeState &rs) {
   jsi::Runtime &rt = rs.getRuntime();
   jsi::Object buffer{rt};
 
-  defineJSFunction(rt, byteLengthUtf8, "byteLengthUtf8", 1, buffer);
-  defineJSFunction(rt, getZeroFillToggle, "getZeroFillToggle", 0, buffer);
-  defineJSFunction(rt, utf8Slice, "utf8Slice", 2, buffer);
+  rs.defineJSFunction(byteLengthUtf8, "byteLengthUtf8", 1, buffer);
+  rs.defineJSFunction(getZeroFillToggle, "getZeroFillToggle", 0, buffer);
+  rs.defineJSFunction(utf8Slice, "utf8Slice", 2, buffer);
 
   jsi::Value kMaxLength{(double)(uint64_t{2} << 32)};
   buffer.setProperty(rt, "kMaxLength", kMaxLength);

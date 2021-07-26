@@ -81,6 +81,19 @@ class RuntimeState {
       llvh::StringRef target,
       llvh::StringRef rootDir);
 
+  using InternalFunction = jsi::Value(
+      RuntimeState &,
+      const jsi::Value &,
+      const jsi::Value *,
+      size_t);
+  /// Initializes a new JS function given a function pointer to the c++
+  /// function.
+  void defineJSFunction(
+      InternalFunction *functionPtr,
+      llvh::StringRef functionName,
+      size_t numArgs,
+      jsi::Object &bindingProp);
+
   jsi::Runtime &getRuntime() {
     return *rt_;
   }

@@ -17,7 +17,11 @@ using namespace facebook;
 /// fd = binding.open(path, flags, mode, FSReqCallback, ctx)
 /// In the synchronous version, FSReqCallback will always be undefined.
 /// Currently only the synchronous version is supported.
-static jsi::Value open(RuntimeState &rs, const jsi::Value *args, size_t count) {
+static jsi::Value open(
+    RuntimeState &rs,
+    const jsi::Value &,
+    const jsi::Value *args,
+    size_t count) {
   jsi::Runtime &rt = rs.getRuntime();
   if (count < 5) {
     throw jsi::JSError(
@@ -47,8 +51,11 @@ static jsi::Value open(RuntimeState &rs, const jsi::Value *args, size_t count) {
 /// Closes the file descriptor passed in.
 /// Called by js the following way:
 /// binding.close(fd, undefined, ctx);
-static jsi::Value
-close(RuntimeState &rs, const jsi::Value *args, size_t count) {
+static jsi::Value close(
+    RuntimeState &rs,
+    const jsi::Value &,
+    const jsi::Value *args,
+    size_t count) {
   jsi::Runtime &rt = rs.getRuntime();
   if (count < 3) {
     throw jsi::JSError(
@@ -73,7 +80,11 @@ close(RuntimeState &rs, const jsi::Value *args, size_t count) {
 /// object passed into the function. Returns the number of bytes read.
 /// Called by js the following way:
 /// bytesRead = fs.read(fd, buffer, offset, length, position, undefined, ctx)
-static jsi::Value read(RuntimeState &rs, const jsi::Value *args, size_t count) {
+static jsi::Value read(
+    RuntimeState &rs,
+    const jsi::Value &,
+    const jsi::Value *args,
+    size_t count) {
   jsi::Runtime &rt = rs.getRuntime();
   if (count < 7) {
     throw jsi::JSError(
@@ -121,8 +132,11 @@ static jsi::Value read(RuntimeState &rs, const jsi::Value *args, size_t count) {
 /// Returns information about the already opened file descriptor.
 /// Called by js the following way:
 /// fd = binding.fstat(fd, use_bigint, undefined, ctx)
-static jsi::Value
-fstat(RuntimeState &rs, const jsi::Value *args, size_t count) {
+static jsi::Value fstat(
+    RuntimeState &rs,
+    const jsi::Value &,
+    const jsi::Value *args,
+    size_t count) {
   jsi::Runtime &rt = rs.getRuntime();
   if (count < 4) {
     throw jsi::JSError(
@@ -157,36 +171,15 @@ fstat(RuntimeState &rs, const jsi::Value *args, size_t count) {
   return std::move(res);
 }
 
-/// Initializes a new JS function given a function pointer to the c++ function.
-static void defineJSFunction(
-    RuntimeState &rs,
-    jsi::Value (*functionPtr)(RuntimeState &, const jsi::Value *, size_t),
-    const std::string &functionName,
-    size_t numArgs,
-    jsi::Object &fs) {
-  jsi::Runtime &rt = rs.getRuntime();
-  jsi::String jsiFunctionName = jsi::String::createFromAscii(rt, functionName);
-  jsi::Object JSFunction = jsi::Function::createFromHostFunction(
-      rt,
-      jsi::PropNameID::forString(rt, jsiFunctionName),
-      numArgs,
-      [&rs, functionPtr](
-          jsi::Runtime &rt,
-          const jsi::Value &,
-          const jsi::Value *args,
-          size_t count) -> jsi::Value { return functionPtr(rs, args, count); });
-  fs.setProperty(rt, jsiFunctionName, JSFunction);
-}
-
 /// Adds the 'fs' object as a property of internalBinding.
 jsi::Value facebook::fsBinding(RuntimeState &rs) {
   jsi::Runtime &rt = rs.getRuntime();
   jsi::Object fs{rt};
 
-  defineJSFunction(rs, open, "open", 5, fs);
-  defineJSFunction(rs, close, "close", 3, fs);
-  defineJSFunction(rs, fstat, "fstat", 4, fs);
-  defineJSFunction(rs, read, "read", 7, fs);
+  rs.defineJSFunction(open, "open", 5, fs);
+  rs.defineJSFunction(close, "close", 3, fs);
+  rs.defineJSFunction(fstat, "fstat", 4, fs);
+  rs.defineJSFunction(read, "read", 7, fs);
 
   rs.setInternalBindingProp("fs", std::move(fs));
   return rs.getInternalBindingProp("fs");

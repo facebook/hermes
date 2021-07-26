@@ -27,4 +27,25 @@ llvh::SmallString<32> RuntimeState::resolvePath(
   return result;
 }
 
+void RuntimeState::defineJSFunction(
+    InternalFunction *functionPtr,
+    llvh::StringRef functionName,
+    size_t numArgs,
+    jsi::Object &bindingProp) {
+  jsi::Runtime &rt = getRuntime();
+  jsi::String jsiFunctionName = jsi::String::createFromAscii(rt, functionName);
+  jsi::Object jsFunction = jsi::Function::createFromHostFunction(
+      rt,
+      jsi::PropNameID::forString(rt, jsiFunctionName),
+      numArgs,
+      [this, functionPtr](
+          jsi::Runtime &rt,
+          const jsi::Value &thisValue,
+          const jsi::Value *args,
+          size_t count) -> jsi::Value {
+        return functionPtr(*this, thisValue, args, count);
+      });
+  bindingProp.setProperty(rt, jsiFunctionName, jsFunction);
+}
+
 } // namespace facebook
