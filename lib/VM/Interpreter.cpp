@@ -3472,14 +3472,14 @@ tailCall:
 #ifdef HERMES_RUN_WASM
       // Asm.js/Wasm Intrinsics
       CASE(Add32) {
-        O1REG(Add32) = HermesValue::encodeDoubleValue(
-            (int32_t)(int64_t)(O2REG(Add32).getNumber() + O3REG(Add32).getNumber()));
+        O1REG(Add32) = HermesValue::encodeDoubleValue((
+            int32_t)(int64_t)(O2REG(Add32).getNumber() + O3REG(Add32).getNumber()));
         ip = NEXTINST(Add32);
         DISPATCH;
       }
       CASE(Sub32) {
-        O1REG(Sub32) = HermesValue::encodeDoubleValue(
-            (int32_t)(int64_t)(O2REG(Sub32).getNumber() - O3REG(Sub32).getNumber()));
+        O1REG(Sub32) = HermesValue::encodeDoubleValue((
+            int32_t)(int64_t)(O2REG(Sub32).getNumber() - O3REG(Sub32).getNumber()));
         ip = NEXTINST(Sub32);
         DISPATCH;
       }
