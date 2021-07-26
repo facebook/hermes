@@ -33,8 +33,8 @@ var _require = require('internal/process/signal'),
 // process.on('removeListener', stopListeningIfSignal); // ---- keep the attachment of the wrappers above so that it's easier to ----
 // ----              compare the setups side-by-side                    -----
 
-// var _internalBinding = internalBinding('util'),
-//     guessHandleType = _internalBinding.guessHandleType;
+var _internalBinding = internalBinding('util'),
+    guessHandleType = _internalBinding.guessHandleType;
 
 function createWritableStdioStream(fd) {
   var stream; // Note stream._type is used for test-module-load-list.js
