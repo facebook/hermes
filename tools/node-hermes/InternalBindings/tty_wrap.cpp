@@ -111,6 +111,29 @@ static jsi::Value getWindowSize(
   return err;
 }
 
+/// Given a utf8 string to write, calls uv_buf_init and uv_write to write the
+/// string to the stream stored in RuntimeState.
+static jsi::Value writeUtf8String(
+    RuntimeState &rs,
+    const jsi::Value &thisValue,
+    const jsi::Value *args,
+    size_t count) {
+  jsi::Runtime &rt = rs.getRuntime();
+  std::string data = args[1].toString(rt).utf8(rt);
+  int length = data.size();
+
+  uv_buf_t buf = uv_buf_init(&data[0], length);
+  uv_tty_t *ttyStreamHandle = getTTYStreamHandle(rs, thisValue, rt);
+  uv_write_t writeReq;
+  int err = uv_write(
+      &writeReq,
+      reinterpret_cast<uv_stream_t *>(ttyStreamHandle),
+      &buf,
+      1,
+      nullptr);
+  return err;
+}
+
 /// Adds the 'tty_wrap' object as a property of internalBinding.
 jsi::Value facebook::ttyBinding(RuntimeState &rs) {
   jsi::Runtime &rt = rs.getRuntime();
@@ -121,6 +144,7 @@ jsi::Value facebook::ttyBinding(RuntimeState &rs) {
 
   jsi::Object prototypeProp{rt};
   rs.defineJSFunction(getWindowSize, "getWindowSize", 1, prototypeProp);
+  rs.defineJSFunction(writeUtf8String, "writeUtf8String", 1, prototypeProp);
   tty_wrap.getProperty(rt, "TTY").asObject(rt).setProperty(
       rt, "prototype", prototypeProp);
 
