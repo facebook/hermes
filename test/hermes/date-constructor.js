@@ -69,7 +69,7 @@ print(new Date(-1, 2, 15, 15, 1, 37, 243).toString());
 print(new Date(NaN, 2, 15, 15, 1, 37, 243).toString());
 // CHECK-NEXT: Invalid Date
 print(new Date('2016T12:30').toString());
-// CHECK-NEXT: Fri Jan 01 2016 05:30:00 GMT-0700
+// CHECK-NEXT: Fri Jan 01 2016 12:30:00 GMT-0700
 
 print('@@toPrimitive');
 // CHECK-LABEL: @@toPrimitive
@@ -109,7 +109,7 @@ print(new Date(-1, 0, 0, 0, 0, 0).toUTCString());
 print('toJSON');
 // CHECK-LABEL: toJSON
 print(new Date('2016T12:30').toJSON());
-// CHECK-NEXT: 2016-01-01T12:30:00.000Z
+// CHECK-NEXT: 2016-01-01T19:30:00.000Z
 print(Date.prototype.toJSON.call({valueOf: function() {return Infinity;}}));
 // CHECK-NEXT: null
 try {
@@ -191,7 +191,7 @@ print(Date.parse('2016T12:30:00.000Z'));
 print(Date.parse('2016'));
 // CHECK-NEXT: 1451606400000
 print(Date.parse('2016T12:30'));
-// CHECK-NEXT: 1451651400000
+// CHECK-NEXT: 1451676600000
 print(Date.parse('2016T12:30:00.000-07:00'));
 // CHECK-NEXT: 1451676600000
 print(Date.parse('2016T12:30:47.1-07:00'));

@@ -816,11 +816,20 @@ static double parseISODate(StringView u16str) {
       }
     }
 
+    if (it == end) {
+      // ES12 21.4.3.2: When the UTC offset representation is absent, date-only
+      // forms are interpreted as a UTC time and date-time forms are interpreted
+      // as a local time.
+      double t = makeDate(makeDay(y, m - 1, d), makeTime(h, min, s, ms));
+      t = utcTime(t);
+      return t;
+    }
+
     // Try to parse a timezone.
     if (consume(u'Z')) {
       tzh = 0;
       tzm = 0;
-    } else if (it != end) {
+    } else {
       // Try to parse the fully specified timezone: [+/-]HH:mm.
       if (consume(u'+')) {
         sign = 1;
