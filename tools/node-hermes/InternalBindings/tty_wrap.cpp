@@ -68,6 +68,49 @@ static jsi::Value isTTY(
   return rc;
 }
 
+/// Returns a pointer to the uv_tty_t stream object associated with the
+/// instance of the tty object. Obtains the host object associated
+/// with the stream to do this.
+static uv_tty_t *getTTYStreamHandle(
+    RuntimeState &rs,
+    const jsi::Value &ttyObj,
+    jsi::Runtime &rt) {
+  auto ttyObject =
+      ttyObj.asObject(rt).getProperty(rt, rs.getTTYStreamPropId()).asObject(rt);
+
+  if (ttyObject.isHostObject(rt)) {
+    auto ttyHostObject = ttyObject.getHostObject(rt);
+    if (auto ttyStream = dynamic_cast<TTYStreamWrap *>(ttyHostObject.get()))
+      return ttyStream->getTTYStreamHandle();
+  }
+
+  throw jsi::JSError(rt, "An invalid tty handle was provided.");
+}
+
+/// Returns the width and height of the terminal. Is a wrapper for
+/// uv_tty_get_winsize.
+static jsi::Value getWindowSize(
+    RuntimeState &rs,
+    const jsi::Value &thisValue,
+    const jsi::Value *args,
+    size_t count) {
+  jsi::Runtime &rt = rs.getRuntime();
+  if (count < 1) {
+    throw jsi::JSError(
+        rt, "Not enough arguments being passed into getWindowSize call.");
+  }
+
+  uv_tty_t *ttyStreamHandle = getTTYStreamHandle(rs, thisValue, rt);
+  int width, height;
+  int err = uv_tty_get_winsize(ttyStreamHandle, &width, &height);
+  if (err == 0) {
+    jsi::Array retArray = args[0].asObject(rt).asArray(rt);
+    retArray.setValueAtIndex(rt, 0, width);
+    retArray.setValueAtIndex(rt, 1, height);
+  }
+  return err;
+}
+
 /// Adds the 'tty_wrap' object as a property of internalBinding.
 jsi::Value facebook::ttyBinding(RuntimeState &rs) {
   jsi::Runtime &rt = rs.getRuntime();
@@ -75,6 +118,11 @@ jsi::Value facebook::ttyBinding(RuntimeState &rs) {
 
   rs.defineJSFunction(TTY, "TTY", 2, tty_wrap);
   rs.defineJSFunction(isTTY, "isTTY", 1, tty_wrap);
+
+  jsi::Object prototypeProp{rt};
+  rs.defineJSFunction(getWindowSize, "getWindowSize", 1, prototypeProp);
+  tty_wrap.getProperty(rt, "TTY").asObject(rt).setProperty(
+      rt, "prototype", prototypeProp);
 
   rs.setInternalBindingProp("tty_wrap", std::move(tty_wrap));
   return rs.getInternalBindingProp("tty_wrap");
