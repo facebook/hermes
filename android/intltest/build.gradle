@@ -52,10 +52,10 @@ task preparetest262(dependsOn: downloadTest262) {
       }
       into(test262Staging)
     }
-    // Rename the unzipped dir as `test262-main` so the path is known to Java.
+    // Rename the unzipped dir as just `test262` so the path is known to Java.
     copy {
       from("${test262Staging}/test262-${test262CommitHash}")
-      into("${test262Destination}/test262-main")
+      into("${test262Destination}/test262")
     }
     delete "${test262Staging}"
   }
