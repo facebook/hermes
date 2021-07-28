@@ -2018,8 +2018,7 @@ void HadesGC::snapshotWriteBarrier(const GCPointerBase *loc) {
     return;
   }
   if (ogMarkingBarriers_) {
-    snapshotWriteBarrierInternal(GCPointerBase::storageTypeToPointer(
-        loc->getStorageType(), getPointerBase()));
+    snapshotWriteBarrierInternal(loc->get(getPointerBase()));
   }
 }
 

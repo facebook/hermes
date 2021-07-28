@@ -1206,9 +1206,7 @@ void GCBase::IDTracker::deserialize(Deserializer &d) {
     GCPointer<GCCell> ptr{nullptr};
     d.readRelocation(&ptr, RelocationKind::GCPointer);
     auto res = objectIDMap_
-                   .try_emplace(
-                       GCPointerBase::storageTypeToRaw(ptr.getStorageType()),
-                       d.readInt<HeapSnapshot::NodeID>())
+                   .try_emplace(ptr.getRaw(), d.readInt<HeapSnapshot::NodeID>())
                    .second;
     (void)res;
     assert(res && "Shouldn't fail to insert during deserialization");
