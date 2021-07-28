@@ -18,32 +18,47 @@ import de.undercouch.gradle.tasks.download.Download
 buildDir = "${rootProject.ext.hermes_ws}/build_android/intltest"
 buildDir.mkdirs()
 
+// Download the test262 snapshot at c27f6a (June 30 2021).
+def test262CommitHash = "c27f6a5b9a30c219b3b95769d52dc587a9af61ab"
 def test262DownloadsDirPath = "${rootProject.ext.hermes_ws}/build_android/intltest/downloads/test262"
+def test262Staging = "${rootProject.ext.hermes_ws}/build_android/intltest/downloads/test262-staging"
 def test262Destination = "java/com/facebook/hermes/test/assets"
 task createDownloadsDir {
   new File(test262DownloadsDirPath).mkdirs()
 }
 
 task downloadTest262(dependsOn: createDownloadsDir, type: Download) {
-  src("https://github.com/tc39/test262/archive/main.zip")
+  src("https://github.com/tc39/test262/archive/${test262CommitHash}.zip")
   onlyIfNewer(true)
   overwrite(true)
   dest(new File(test262DownloadsDirPath, "test262.zip"))
 }
 
-task preparetest262(dependsOn: downloadTest262, type: Copy) {
-  from(zipTree(downloadTest262.dest))
-  include("test262-main/test/intl402/Collator/**/*.js")
-  include("test262-main/test/intl402/DateTimeFormat/**/*.js")
-  include("test262-main/test/intl402/NumberFormat/**/*.js")
-  include("test262-main/test/intl402/String/**/*.js")
-  include("test262-main/test/intl402/Number/**/*.js")
-  include("test262-main/test/intl402/Array/**/*.js")
-  include("test262-main/test/intl402/Date/**/*.js")
-  include("test262-main/test/intl402/Intl/**/*.js")
-  include("test262-main/harness/*.js")
-  includeEmptyDirs = true
-  into(test262Destination)
+task preparetest262(dependsOn: downloadTest262) {
+  doLast {
+    // Only include the Intl402 test from the downloaded test262.
+    copy{
+      from(zipTree(downloadTest262.dest)) {
+        include("test262-${test262CommitHash}/test/intl402/Collator/**/*.js")
+        include("test262-${test262CommitHash}/test/intl402/DateTimeFormat/**/*.js")
+        include("test262-${test262CommitHash}/test/intl402/NumberFormat/**/*.js")
+        include("test262-${test262CommitHash}/test/intl402/String/**/*.js")
+        include("test262-${test262CommitHash}/test/intl402/Number/**/*.js")
+        include("test262-${test262CommitHash}/test/intl402/Array/**/*.js")
+        include("test262-${test262CommitHash}/test/intl402/Date/**/*.js")
+        include("test262-${test262CommitHash}/test/intl402/Intl/**/*.js")
+        include("test262-${test262CommitHash}/harness/*.js")
+        includeEmptyDirs = false
+      }
+      into(test262Staging)
+    }
+    // Rename the unzipped dir as `test262-main` so the path is known to Java.
+    copy {
+      from("${test262Staging}/test262-${test262CommitHash}")
+      into("${test262Destination}/test262-main")
+    }
+    delete "${test262Staging}"
+  }
 }
 
 // TODO: Figure out how to deduplicate this file and intl/build.gradle
