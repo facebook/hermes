@@ -31,6 +31,10 @@ class CompressedPointer {
   CompressedPointer(PointerBase *base, GCCell *ptr)
       : ptr_(pointerToStorageType(ptr, base)) {}
 
+  static CompressedPointer fromRaw(RawType r) {
+    return CompressedPointer(r);
+  }
+
   GCCell *get(PointerBase *base) const {
     return storageTypeToPointer(getStorageType(), base);
   }
@@ -125,6 +129,8 @@ class CompressedPointer {
   }
 
  private:
+  explicit CompressedPointer(RawType r) : ptr_(rawToStorageType(r)) {}
+
   StorageType ptr_;
 };
 
