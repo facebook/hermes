@@ -690,5 +690,7 @@ jobs:
             adb logcat -c || true
             ./gradlew :intltest:preparetest262 && ./gradlew :intltest:connectedAndroidTest
             adb logcat -d > /tmp/hermes/output/adblog.txt
+            # Move report to output dir
+            mv /tmp/hermes/build_android /tmp/hermes/output/build_android
       - store_artifacts:
           path: /tmp/hermes/output/
