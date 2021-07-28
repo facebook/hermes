@@ -19,7 +19,7 @@ public class HermesIntlDatePrototypeTest extends HermesIntlTest262Base {
   @Test
   public void testIntlDatePrototype() throws IOException {
 
-    String basePath = "test262-main/test/intl402/Date/prototype";
+    String basePath = "test262/test/intl402/Date/prototype";
     Set<String> whilteList = new HashSet<>();
     Set<String> blackList = new HashSet<>();
 
@@ -29,7 +29,7 @@ public class HermesIntlDatePrototypeTest extends HermesIntlTest262Base {
   @Test
   public void testIntlDatePrototypeToLocaleString() throws IOException {
 
-    String basePath = "test262-main/test/intl402/Date/prototype/toLocaleString";
+    String basePath = "test262/test/intl402/Date/prototype/toLocaleString";
     Set<String> whilteList = new HashSet<>();
     Set<String> blackList = new HashSet<>();
 
@@ -39,7 +39,7 @@ public class HermesIntlDatePrototypeTest extends HermesIntlTest262Base {
   @Test
   public void testIntlDatePrototypeToLocaleDateString() throws IOException {
 
-    String basePath = "test262-main/test/intl402/Date/prototype/toLocaleDateString";
+    String basePath = "test262/test/intl402/Date/prototype/toLocaleDateString";
     Set<String> whilteList = new HashSet<>();
     Set<String> blackList = new HashSet<>();
 
@@ -49,7 +49,7 @@ public class HermesIntlDatePrototypeTest extends HermesIntlTest262Base {
   @Test
   public void testIntlDatePrototypeToLocaleTimeString() throws IOException {
 
-    String basePath = "test262-main/test/intl402/Date/prototype/toLocaleTimeString";
+    String basePath = "test262/test/intl402/Date/prototype/toLocaleTimeString";
     Set<String> whilteList = new HashSet<>();
     Set<String> blackList = new HashSet<>();
 
