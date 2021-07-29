@@ -304,9 +304,6 @@ Runtime::Runtime(
   // the builtins table.
   initNativeBuiltins();
 
-  stringCycleCheckVisited_ =
-      ignoreAllocationFailure(ArrayStorage::create(this, 8));
-
   // Set the prototype of the global object to the standard object prototype,
   // which has now been defined.
   ignoreAllocationFailure(JSObject::setParent(
@@ -454,6 +451,15 @@ void Runtime::markRoots(
       for (auto &hv : charStrings_)
         acceptor.accept(hv);
     }
+    acceptor.endRootSection();
+  }
+
+  {
+    MarkRootsPhaseTimer timer(
+        this, RootAcceptor::Section::StringCycleCheckVisited);
+    acceptor.beginRootSection(RootAcceptor::Section::StringCycleCheckVisited);
+    for (auto *&ptr : stringCycleCheckVisited_)
+      acceptor.acceptPtr(ptr);
     acceptor.endRootSection();
   }
 
@@ -1324,31 +1330,18 @@ ExecutionStatus Runtime::raiseEvalUnsupported(llvh::StringRef code) {
       TwineChar16("Parsing source code unsupported: ") + code.substr(0, 32));
 }
 
-CallResult<bool> Runtime::insertVisitedObject(Handle<JSObject> obj) {
-  bool foundCycle = false;
-  MutableHandle<ArrayStorage> stack{
-      this, vmcast<ArrayStorage>(stringCycleCheckVisited_)};
-  for (uint32_t i = 0, len = stack->size(); i < len; ++i) {
-    if (stack->at(i).getObject() == obj.get()) {
-      foundCycle = true;
-      break;
-    }
-  }
-  if (ArrayStorage::push_back(stack, this, obj) == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  stringCycleCheckVisited_ = stack.getHermesValue();
+bool Runtime::insertVisitedObject(JSObject *obj) {
+  const bool foundCycle = llvh::find(stringCycleCheckVisited_, obj) !=
+      stringCycleCheckVisited_.end();
+  stringCycleCheckVisited_.push_back(obj);
   return foundCycle;
 }
 
-void Runtime::removeVisitedObject(Handle<JSObject> obj) {
+void Runtime::removeVisitedObject(JSObject *obj) {
   (void)obj;
-  auto stack = Handle<ArrayStorage>::vmcast(&stringCycleCheckVisited_);
-  auto elem = stack->pop_back(this);
-  (void)elem;
   assert(
-      elem.isObject() && elem.getObject() == obj.get() &&
-      "string cycle check: stack corrupted");
+      stringCycleCheckVisited_.back() == obj && "string cycle stack corrupted");
+  stringCycleCheckVisited_.pop_back();
 }
 
 std::unique_ptr<Buffer> Runtime::generateSpecialRuntimeBytecode() {
@@ -2037,15 +2030,6 @@ void Runtime::serializeRuntimeFields(Serializer &s) {
 #define RUNTIME_HV_FIELD_RUNTIMEMODULE(name) RUNTIME_HV_FIELD(name)
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #undef RUNTIME_HV_FIELD
-  // stringCycleCheckVisited_ owns an ArrayStorage. This is managed via a RAII
-  // so it will never be cleared when deserialized if we serialize it. We will
-  // not serialize the contents of this storage but only do relocation for the
-  // ArrayStorage *.
-  bool hasArray = (bool)vmcast<ArrayStorage>(stringCycleCheckVisited_);
-  s.writeInt<uint8_t>(hasArray);
-  if (hasArray) {
-    s.endObject(vmcast<ArrayStorage>(stringCycleCheckVisited_));
-  }
 
   // Do not Serialize any raw pointers of HermesValue fields. Get those pointers
   // after relocation finishes.
@@ -2082,6 +2066,11 @@ void Runtime::serializeRuntimeFields(Serializer &s) {
   for (auto &str : charStrings_) {
     s.writeHermesValue(str);
   }
+
+  // Field std::vector<JSObject *> stringCycleCheckVisited_{};
+  // This should not be serialized, since it is populated/cleared by a set of
+  // RAII guards in the current call stack. As a result, items in the
+  // deserialized vector would never be cleared.
 
   // Field std::vector<NativeFunction *> builtins_{};
   s.writeInt<uint32_t>(builtins_.size());
@@ -2122,13 +2111,6 @@ void Runtime::deserializeRuntimeFields(Deserializer &d) {
 #define RUNTIME_HV_FIELD_RUNTIMEMODULE(name) RUNTIME_HV_FIELD(name)
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #undef RUNTIME_HV_FIELD
-  // stringCycleCheckVisited_ owns an ArrayStorage. It is managed via a RAII so
-  // we don't serialize the contents of the storage. Create an empty
-  // ArrayStorage here if needed to handle relocation.
-  if (d.readInt<uint8_t>()) {
-    auto arrRes = this->ignoreAllocationFailure(ArrayStorage::create(this, 0));
-    d.endObject(vmcast<ArrayStorage>(arrRes));
-  }
 
   // Do not Deserialize any raw pointers of HermesValue fields. Get those
   // pointers after relocation finishes.

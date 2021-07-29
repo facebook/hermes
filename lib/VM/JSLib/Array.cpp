@@ -370,10 +370,10 @@ class StringCycleChecker {
   StringCycleChecker(Runtime *runtime, Handle<JSObject> obj)
       : runtime_(runtime),
         obj_(obj),
-        foundCycle_(*runtime->insertVisitedObject(obj)) {}
+        foundCycle_(runtime->insertVisitedObject(*obj)) {}
 
   ~StringCycleChecker() {
-    runtime_->removeVisitedObject(obj_);
+    runtime_->removeVisitedObject(*obj_);
   }
 
   bool foundCycle() const {

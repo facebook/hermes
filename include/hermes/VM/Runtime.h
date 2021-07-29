@@ -730,12 +730,12 @@ class Runtime : public HandleRootOwner,
 
   /// Inserts an object into the string cycle checking stack.
   /// \return true if a cycle was found
-  CallResult<bool> insertVisitedObject(Handle<JSObject> obj);
+  bool insertVisitedObject(JSObject *obj);
 
   /// Removes the last element (which must be obj) from the cycle check stack.
   /// \param obj the last element, which will be removed. Used for checking
   /// that invariants aren't violated in debug mode.
-  void removeVisitedObject(Handle<JSObject> obj);
+  void removeVisitedObject(JSObject *obj);
 
   /// Like calling JSObject::getNamed, but uses this runtime's property cache.
   CallResult<PseudoHandle<>> getNamed(Handle<JSObject> obj, PropCacheID id);
@@ -1249,6 +1249,10 @@ class Runtime : public HandleRootOwner,
   /// These are allocated as "long-lived" objects, so they don't need
   /// to be scanned as roots in young-gen collections.
   std::vector<PinnedHermesValue> charStrings_{};
+
+  /// Keeps track of objects that have already been visited in order to detect
+  /// cycles while doing string conversions.
+  std::vector<JSObject *> stringCycleCheckVisited_{};
 
   /// Pointers to callable implementations of builtins.
   std::vector<Callable *> builtins_{};
