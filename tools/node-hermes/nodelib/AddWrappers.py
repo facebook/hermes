@@ -14,6 +14,7 @@ This script is intended to be compliant with both py2 and py3.
 """
 
 import argparse
+import io
 from os import path
 
 
@@ -22,7 +23,7 @@ def main():
     parser.add_argument("files", nargs="*")
     args = parser.parse_args()
 
-    with open(args.files[0], "w", encoding="utf-8") as o:
+    with io.open(args.files[0], "w", encoding="utf-8") as o:
 
         o.write("({")
         for arg in args.files[1:]:
@@ -38,7 +39,7 @@ def main():
                     ].replace("\\", "/")
                 )
             )
-            with open(arg, "r", encoding="utf-8") as f:
+            with io.open(arg, "r", encoding="utf-8") as f:
                 o.write(f.read())
             o.write("}),")
 
