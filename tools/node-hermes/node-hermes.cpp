@@ -104,6 +104,8 @@ static jsi::Value internalBinding(
     return utilBinding(rs);
   } else if (propNameUTF8 == "tty_wrap") {
     return ttyBinding(rs);
+  } else if (propNameUTF8 == "pipe_wrap") {
+    return pipeBinding(rs);
   }
   // Will not go into this case but keeping it in case some other internal
   // binding functionality is going to be added in the future.

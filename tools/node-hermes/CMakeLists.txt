@@ -11,7 +11,7 @@ if(HERMES_BUILD_NODE_HERMES)
   set(CXX_STANDARD 14)
   set(CXX_STANDARD_REQUIRED ON)
 
-  set_source_files_properties(InternalBindings/tty_wrap.cpp PROPERTIES COMPILE_FLAGS -frtti)
+  set_source_files_properties(InternalBindings/tty_wrap.cpp InternalBindings/pipe_wrap.cpp PROPERTIES COMPILE_FLAGS -frtti)
 
   add_subdirectory(third-party/libuv)
   add_subdirectory(nodelib)
@@ -19,6 +19,7 @@ if(HERMES_BUILD_NODE_HERMES)
     node-hermes.cpp RuntimeState.cpp InternalBindings/buffer.cpp
     InternalBindings/constants.cpp InternalBindings/file.cpp
     InternalBindings/util.cpp InternalBindings/tty_wrap.cpp
+    InternalBindings/pipe_wrap.cpp
     ${ALL_HEADER_FILES}
     LINK_LIBS hermesapi hermesNodeBytecode uv_a
     )
