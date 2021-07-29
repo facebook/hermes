@@ -60,6 +60,10 @@ class CompressedPointer {
     return ptr_;
   }
 
+  void setInGC(CompressedPointer cp) {
+    setNoBarrier(cp);
+  }
+
   explicit operator bool() const {
     return static_cast<bool>(ptr_);
   }

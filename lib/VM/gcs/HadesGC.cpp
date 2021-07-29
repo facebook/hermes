@@ -505,7 +505,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
   }
 
   void accept(GCPointerBase &ptr) override {
-    ptr.getLoc() = acceptHeap(ptr, &ptr).getStorageType();
+    ptr.setInGC(acceptHeap(ptr, &ptr));
   }
 
   void accept(PinnedHermesValue &hv) override {

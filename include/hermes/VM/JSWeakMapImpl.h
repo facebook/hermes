@@ -206,7 +206,7 @@ class JSWeakMapImplBase : public JSObject {
   /// interior of an object; must not be used in contexts where the object might
   /// move.
   /// \param GC Used to verify that the call is during GC.
-  GCPointerBase::StorageType &getValueStorageRef(GC *GC);
+  GCPointerBase &getValueStorageRef(GC *GC);
 
   /// If the given \p key is in the map, clears the entry
   /// corresponding to \p key -- clears the slot of the WeakRef in
