@@ -82,10 +82,10 @@ var _internalBinding2 = internalBinding('util'),
 //     TCPConnectWrap = _internalBinding4.TCPConnectWrap,
 //     TCPConstants = _internalBinding4.constants;
 
-var _internalBinding5 = internalBinding('pipe_wrap');
+var _internalBinding5 = internalBinding('pipe_wrap'),
 //     PipeHostFunction = _internalBinding5.Pipe,
 //     PipeConnectWrap = _internalBinding5.PipeConnectWrap,
-//     PipeConstants = _internalBinding5.constants;
+    PipeConstants = _internalBinding5.constants;
 // function Pipe(type) { return PipeHostFunction.call(this, type); };
 // Pipe.prototype = PipeHostFunction.prototype;
 

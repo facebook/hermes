@@ -113,6 +113,9 @@ class RuntimeState {
     return ttyStreamPropId_;
   }
 
+  /// Pipe Socket types (for use in pipe_wrap.cpp)
+  enum PipeSocketType { SOCKET, SERVER, IPC };
+
  private:
   // Runtime used to access internal binding properties.
   std::unique_ptr<jsi::Runtime> rt_;

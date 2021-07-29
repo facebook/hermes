@@ -17,6 +17,15 @@ jsi::Value facebook::pipeBinding(RuntimeState &rs) {
   jsi::Runtime &rt = rs.getRuntime();
   jsi::Object pipe_wrap{rt};
 
+  jsi::Object constants{rt};
+  constants.setProperty(rt, "SOCKET", (int)rs.SOCKET);
+  constants.setProperty(rt, "SERVER", (int)rs.SERVER);
+  constants.setProperty(rt, "IPC", (int)rs.IPC);
+  constants.setProperty(rt, "UV_READABLE", (int)UV_READABLE);
+  constants.setProperty(rt, "UV_WRITABLE", (int)UV_WRITABLE);
+  pipe_wrap.setProperty(
+      rt, jsi::String::createFromAscii(rt, "constants"), std::move(constants));
+
   rs.setInternalBindingProp("pipe_wrap", std::move(pipe_wrap));
   return rs.getInternalBindingProp("pipe_wrap");
 }
