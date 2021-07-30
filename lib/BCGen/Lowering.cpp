@@ -715,7 +715,6 @@ bool LimitAllocArray::runOnFunction(Function *F) {
   bool changed = false;
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
-      int totalElems = 0;
       auto *inst = llvh::dyn_cast<AllocArrayInst>(&I);
       if (!inst || inst->getElementCount() == 0)
         continue;
@@ -766,7 +765,6 @@ bool LimitAllocArray::runOnFunction(Function *F) {
             IRBuilder::PropEnumerable::Yes);
         inst->removeOperand(operandOffset);
       }
-      totalElems += inst->getElementCount();
       changed = true;
     }
   }
