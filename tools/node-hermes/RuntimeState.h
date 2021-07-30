@@ -34,8 +34,9 @@ class RuntimeState {
       : rt_(hermes::makeHermesRuntime()),
         dirname_(std::move(dirname)),
         loop_(loop),
-        ttyStreamPropId_(
-            jsi::PropNameID::forAscii(*rt_, "%ttyStreamObject%")){};
+        ttyStreamPropId_(jsi::PropNameID::forAscii(*rt_, "%ttyStreamObject%")),
+        pipeStreamPropId_(
+            jsi::PropNameID::forAscii(*rt_, "%pipeStreamObject%")){};
 
   RuntimeState(const RuntimeState &) = delete;
   RuntimeState &operator=(const RuntimeState &) = delete;
@@ -113,6 +114,10 @@ class RuntimeState {
     return ttyStreamPropId_;
   }
 
+  jsi::PropNameID &getPipeStreamPropId() {
+    return pipeStreamPropId_;
+  }
+
   /// Pipe Socket types (for use in pipe_wrap.cpp)
   enum PipeSocketType { SOCKET, SERVER, IPC };
 
@@ -129,6 +134,8 @@ class RuntimeState {
   uv_loop_t *loop_;
   // Cached PropNameID corresponding to the tty_wrap stream object.
   jsi::PropNameID ttyStreamPropId_;
+  // Cached PropNameID corresponding to the pipe_wrap stream object.
+  jsi::PropNameID pipeStreamPropId_;
 };
 } // namespace facebook
 #endif

@@ -12,10 +12,50 @@
 
 using namespace facebook;
 
+/// A HostObject subclass to be used as a Pipe wrapper object.
+class PipeStreamWrap : public jsi::HostObject {
+ public:
+  uv_pipe_t *getPipeStreamHandle() {
+    return &pipeStreamHandle_;
+  }
+
+ private:
+  // Handle used for pipe libuv stream operations.
+  uv_pipe_t pipeStreamHandle_;
+};
+
+/// Pipe constructor, is basically just a wrapper for uv_pipe_init.
+static jsi::Value Pipe(
+    RuntimeState &rs,
+    const jsi::Value &thisValue,
+    const jsi::Value *args,
+    size_t count) {
+  jsi::Runtime &rt = rs.getRuntime();
+  if (count < 1) {
+    throw jsi::JSError(
+        rt, "Not enough arguments being passed into Pipe initialization call.");
+  }
+  auto pipeStreamObject = std::make_unique<PipeStreamWrap>();
+  int type = args[0].asNumber();
+  bool ipc = type == RuntimeState::IPC;
+
+  int err =
+      uv_pipe_init(rs.getLoop(), pipeStreamObject->getPipeStreamHandle(), ipc);
+  if (err != 0)
+    throw jsi::JSError(rt, "uv_pipe_init call failed.");
+  thisValue.asObject(rt).setProperty(
+      rt,
+      rs.getPipeStreamPropId(),
+      jsi::Object::createFromHostObject(rt, std::move(pipeStreamObject)));
+  return jsi::Value(rt, thisValue);
+}
+
 /// Adds the 'pipe_wrap' object as a property of internalBinding.
 jsi::Value facebook::pipeBinding(RuntimeState &rs) {
   jsi::Runtime &rt = rs.getRuntime();
   jsi::Object pipe_wrap{rt};
+
+  rs.defineJSFunction(Pipe, "Pipe", 1, pipe_wrap);
 
   jsi::Object constants{rt};
   constants.setProperty(rt, "SOCKET", (int)rs.SOCKET);
