@@ -7,6 +7,7 @@
 
 #include "InternalBindings.h"
 #include "hermes/hermes.h"
+#include "stream_base.h"
 
 #include "uv.h"
 

@@ -318,6 +318,7 @@ int main(int argc, char **argv) {
   try {
     initialize(rs, builtinModules, intBinding);
     auto result = rt.evaluateJavaScript(jsiBuffer, srcPath);
+    uv_run(rs.getLoop(), UV_RUN_DEFAULT);
 
   } catch (const jsi::JSIException &e) {
     llvh::errs() << "JavaScript terminated via uncaught exception: " << e.what()
