@@ -88,6 +88,24 @@ static jsi::Value open(
   return err;
 }
 
+/// Given a utf8 string to write, calls uv_buf_init and uv_write to write the
+/// string to the stream stored in RuntimeState.
+static jsi::Value writeUtf8String(
+    RuntimeState &rs,
+    const jsi::Value &thisValue,
+    const jsi::Value *args,
+    size_t count) {
+  if (count < 2)
+    throw jsi::JSError(
+        rs.getRuntime(),
+        "Not enough arguments being passed into pipe writeUtf8String call.");
+  uv_pipe_t *pipeStreamHandle =
+      getPipeStreamHandle(rs, thisValue, rs.getRuntime());
+
+  return streamBaseWriteUtf8String(
+      rs, args[1], reinterpret_cast<uv_stream_t *>(pipeStreamHandle));
+}
+
 /// Adds the 'pipe_wrap' object as a property of internalBinding.
 jsi::Value facebook::pipeBinding(RuntimeState &rs) {
   jsi::Runtime &rt = rs.getRuntime();
@@ -106,6 +124,7 @@ jsi::Value facebook::pipeBinding(RuntimeState &rs) {
 
   jsi::Object prototypeProp{rt};
   rs.defineJSFunction(open, "open", 1, prototypeProp);
+  rs.defineJSFunction(writeUtf8String, "writeUtf8String", 1, prototypeProp);
   pipe_wrap.getProperty(rt, "Pipe")
       .asObject(rt)
       .setProperty(rt, "prototype", prototypeProp);
