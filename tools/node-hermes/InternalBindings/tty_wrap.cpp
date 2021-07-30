@@ -119,20 +119,16 @@ static jsi::Value writeUtf8String(
     const jsi::Value &thisValue,
     const jsi::Value *args,
     size_t count) {
-  jsi::Runtime &rt = rs.getRuntime();
-  std::string data = args[1].toString(rt).utf8(rt);
-  int length = data.size();
+  if (count < 2)
+    throw jsi::JSError(
+        rs.getRuntime(),
+        "Not enough arguments being passed into tty writeUtf8String call.");
 
-  uv_buf_t buf = uv_buf_init(&data[0], length);
-  uv_tty_t *ttyStreamHandle = getTTYStreamHandle(rs, thisValue, rt);
-  uv_write_t writeReq;
-  int err = uv_write(
-      &writeReq,
-      reinterpret_cast<uv_stream_t *>(ttyStreamHandle),
-      &buf,
-      1,
-      nullptr);
-  return err;
+  uv_tty_t *ttyStreamHandle =
+      getTTYStreamHandle(rs, thisValue, rs.getRuntime());
+
+  return streamBaseWriteUtf8String(
+      rs, args[1], reinterpret_cast<uv_stream_t *>(ttyStreamHandle));
 }
 
 /// Adds the 'tty_wrap' object as a property of internalBinding.
