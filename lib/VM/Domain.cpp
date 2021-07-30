@@ -42,12 +42,8 @@ void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 #ifdef HERMESVM_SERIALIZE
 Domain::Domain(Deserializer &d) : GCCell(&d.getRuntime()->getHeap(), &vt) {
-  if (d.readInt<uint8_t>()) {
-    cjsModules_.set(
-        d.getRuntime(),
-        Domain::deserializeArrayStorage(d),
-        &d.getRuntime()->getHeap());
-  }
+  d.readRelocation(&cjsModules_, RelocationKind::GCPointer);
+
   // Field CopyableVector<RuntimeModule *> cjsRuntimeModules_{};
   size_t size = d.readInt<size_t>();
   cjsRuntimeModules_.reserve(size);
@@ -81,12 +77,9 @@ Domain::Domain(Deserializer &d) : GCCell(&d.getRuntime()->getHeap(), &vt) {
 
 void DomainSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const Domain>(cell);
-  // If we have an ArrayStorage serialize it here.
-  bool hasArray = (bool)self->cjsModules_;
-  s.writeInt<uint8_t>(hasArray);
-  if (hasArray) {
-    Domain::serializeArrayStorage(s, self->cjsModules_.get(s.getRuntime()));
-  }
+
+  s.writeRelocation(self->cjsModules_.get(s.getRuntime()));
+
   // Field CopyableVector<RuntimeModule *> cjsRuntimeModules_{};
   size_t size = self->cjsRuntimeModules_.size();
   s.writeInt<size_t>(size);
@@ -120,36 +113,6 @@ void DomainDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::DomainKind && "Expected Domain");
   auto *cell = d.getRuntime()->makeAFixed<Domain, HasFinalizer::Yes>(d);
   d.endObject(cell);
-}
-
-void Domain::serializeArrayStorage(Serializer &s, const ArrayStorage *cell) {
-  assert(cell->size() % CJSModuleSize == 0 && "Invalid ArrayStorage size");
-  s.writeInt<ArrayStorage::size_type>(cell->capacity());
-  s.writeInt<ArrayStorage::size_type>(cell->size());
-  for (ArrayStorage::size_type i = 0; i < cell->size(); i += CJSModuleSize) {
-    s.writeHermesValue(cell->data()[i + CachedExportsOffset]);
-    s.writeHermesValue(cell->data()[i + ModuleOffset]);
-    s.writeHermesValue(cell->data()[i + FunctionIndexOffset]);
-  }
-  s.endObject(cell);
-}
-
-ArrayStorage *Domain::deserializeArrayStorage(Deserializer &d) {
-  ArrayStorage::size_type capacity = d.readInt<ArrayStorage::size_type>();
-  ArrayStorage::size_type size = d.readInt<ArrayStorage::size_type>();
-  assert(size % CJSModuleSize == 0 && "Invalid ArrayStorage size");
-  auto cjsModulesRes = ArrayStorage::create(d.getRuntime(), capacity, size);
-  if (LLVM_UNLIKELY(cjsModulesRes == ExecutionStatus::EXCEPTION)) {
-    hermes_fatal("fail to allocate memory for CJSModules");
-  }
-  auto *cell = vmcast<ArrayStorage>(*cjsModulesRes);
-  for (ArrayStorage::size_type i = 0; i < cell->size(); i += CJSModuleSize) {
-    d.readHermesValue(&cell->data()[i + CachedExportsOffset]);
-    d.readHermesValue(&cell->data()[i + ModuleOffset]);
-    d.readHermesValue(&cell->data()[i + FunctionIndexOffset]);
-  }
-  d.endObject(cell);
-  return cell;
 }
 #endif
 

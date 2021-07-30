@@ -529,25 +529,14 @@ void BoundFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 #ifdef HERMESVM_SERIALIZE
 BoundFunction::BoundFunction(Deserializer &d) : Callable(d, &vt.base.base) {
   d.readRelocation(&target_, RelocationKind::GCPointer);
-  if (d.readInt<uint8_t>()) {
-    argStorage_.set(
-        d.getRuntime(),
-        ArrayStorage::deserializeArrayStorage(d),
-        &d.getRuntime()->getHeap());
-  }
+  d.readRelocation(&argStorage_, RelocationKind::GCPointer);
 }
 
 void BoundFunctionSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<BoundFunction>(cell);
   serializeCallableImpl(s, cell, JSObject::numOverlapSlots<BoundFunction>());
   s.writeRelocation(self->target_.get(s.getRuntime()));
-  bool hasArray = (bool)self->argStorage_;
-  s.writeInt<uint8_t>(hasArray);
-  if (hasArray) {
-    ArrayStorage::serializeArrayStorage(
-        s, self->argStorage_.get(s.getRuntime()));
-  }
-
+  s.writeRelocation(self->argStorage_.get(s.getRuntime()));
   s.endObject(cell);
 }
 
@@ -1527,12 +1516,7 @@ GeneratorInnerFunction::GeneratorInnerFunction(Deserializer &d)
     : JSFunction(d, &vt.base.base) {
   state_ = (State)d.readInt<uint8_t>();
   argCount_ = d.readInt<uint32_t>();
-  if (d.readInt<uint8_t>()) {
-    savedContext_.set(
-        d.getRuntime(),
-        ArrayStorage::deserializeArrayStorage(d),
-        &d.getRuntime()->getHeap());
-  }
+  d.readRelocation(&savedContext_, RelocationKind::GCPointer);
   d.readSmallHermesValue(&result_);
   nextIPOffset_ = d.readInt<uint32_t>();
   action_ = (Action)d.readInt<uint8_t>();
@@ -1544,12 +1528,7 @@ void GeneratorInnerFunctionSerialize(Serializer &s, const GCCell *cell) {
       s, cell, JSObject::numOverlapSlots<GeneratorInnerFunction>());
   s.writeInt<uint8_t>((uint8_t)self->state_);
   s.writeInt<uint32_t>(self->argCount_);
-  bool hasArray = (bool)self->savedContext_;
-  s.writeInt<uint8_t>(hasArray);
-  if (hasArray) {
-    ArrayStorage::serializeArrayStorage(
-        s, self->savedContext_.get(s.getRuntime()));
-  }
+  s.writeRelocation(self->savedContext_.get(s.getRuntime()));
   s.writeSmallHermesValue(self->result_);
   s.writeInt<uint32_t>(self->nextIPOffset_);
   s.writeInt<uint8_t>((uint8_t)self->action_);

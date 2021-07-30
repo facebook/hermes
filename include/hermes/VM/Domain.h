@@ -110,12 +110,6 @@ class Domain final : public GCCell {
   Domain(Deserializer &d);
 
   friend void DomainSerialize(Serializer &s, const GCCell *cell);
-
-  /// Serialize the ArrayStorage owned by a Domain.
-  static void serializeArrayStorage(Serializer &s, const ArrayStorage *cell);
-
-  /// Deserialize the ArrayStorage owned by a Domain.
-  static ArrayStorage *deserializeArrayStorage(Deserializer &d);
 #endif
 
   static bool classof(const GCCell *cell) {

@@ -46,11 +46,31 @@ void ArrayStorageSmallBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 #ifdef HERMESVM_SERIALIZE
 void ArrayStorageSerialize(Serializer &s, const GCCell *cell) {
-  hermes_fatal("ArrayStorage should be serialized with its owner");
+  auto self = vmcast<const ArrayStorage>(cell);
+  s.writeInt<ArrayStorage::size_type>(self->capacity());
+  s.writeInt<ArrayStorage::size_type>(self->size());
+
+  for (ArrayStorage::size_type i = 0; i < self->size(); i++) {
+    s.writeHermesValue(self->at(i));
+  }
+  s.endObject(cell);
 }
 
 void ArrayStorageDeserialize(Deserializer &d, CellKind kind) {
-  hermes_fatal("ArrayStorage should be deserialized with its owner");
+  assert(kind == CellKind::ArrayStorageKind && "Expected ArrayStorage");
+  const uint32_t capacity = d.readInt<ArrayStorage::size_type>();
+  assert(capacity <= ArrayStorage::maxElements() && "invalid capacity");
+  const auto allocSize = ArrayStorage::allocationSize(capacity);
+  auto *cell = d.getRuntime()->makeAVariable<ArrayStorage>(
+      allocSize, &d.getRuntime()->getHeap(), allocSize);
+  assert(cell->size() <= capacity && "size cannot be greater than capacity");
+  cell->size_.store(
+      d.readInt<ArrayStorage::size_type>(), std::memory_order_release);
+
+  for (ArrayStorage::size_type i = 0; i < cell->size(); i++)
+    d.readHermesValue(&cell->data()[i]);
+
+  d.endObject(cell);
 }
 
 void ArrayStorageSmallSerialize(Serializer &s, const GCCell *cell) {
@@ -80,44 +100,6 @@ void ArrayStorageSmallDeserialize(Deserializer &d, CellKind kind) {
     d.readSmallHermesValue(&cell->data()[i]);
 
   d.endObject(cell);
-}
-
-template <>
-void ArrayStorageBase<HermesValue>::serializeArrayStorage(
-    Serializer &s,
-    const ArrayStorageBase<HermesValue> *cell) {
-  s.writeInt<size_type>(cell->capacity());
-  s.writeInt<size_type>(cell->size());
-
-  // Serialize HermesValue in storage. There is no native pointer.
-  for (size_type i = 0; i < cell->size(); i++) {
-    s.writeHermesValue(cell->at(i));
-  }
-
-  s.endObject(cell);
-}
-
-template <>
-ArrayStorageBase<HermesValue>
-    *ArrayStorageBase<HermesValue>::deserializeArrayStorage(Deserializer &d) {
-  uint32_t capacity = d.readInt<size_type>();
-  assert(
-      capacity <= ArrayStorageBase<HermesValue>::maxElements() &&
-      "invalid capacity");
-  const auto allocSize =
-      ArrayStorageBase<HermesValue>::allocationSize(capacity);
-  auto *cell = d.getRuntime()->makeAVariable<ArrayStorageBase<HermesValue>>(
-      allocSize, &d.getRuntime()->getHeap(), allocSize);
-  assert(cell->size() <= capacity && "size cannot be greater than capacity");
-  cell->size_.store(d.readInt<size_type>(), std::memory_order_release);
-
-  // Deserialize HermesValue in storage. There are no native pointers.
-  for (size_type i = 0; i < cell->size(); i++) {
-    d.readHermesValue(&cell->data()[i]);
-  }
-
-  d.endObject(cell);
-  return cell;
 }
 #endif
 

@@ -37,9 +37,6 @@ static DeserializeCallBack *deserializeImpl[] = {
 };
 
 void Deserializer::deserializeCell(uint8_t kind) {
-  assert(
-      (CellKind)kind != CellKind::ArrayStorageKind &&
-      "ArrayStorage should be serialized/deserialized with its owner.");
   deserializeImpl[kind](*this, (CellKind)kind);
 }
 

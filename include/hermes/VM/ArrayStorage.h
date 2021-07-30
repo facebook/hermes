@@ -22,10 +22,6 @@ namespace vm {
 /// values in objects and also indexed property values in arrays. It supports
 /// resizing on both ends which is necessary for the simplest implementation of
 /// JavaScript arrays (using a base offset and length).
-/// Note: ArrayStorage does not support direct serialization as a heap object.
-/// However a convenience method is provided to serialize an ArrayStorage, as
-/// part of the record of its owning object. In this case the ArrayStorage must
-/// not contain any native pointers.
 template <typename HVType>
 class ArrayStorageBase final
     : public VariableSizeRuntimeCell,
@@ -38,6 +34,8 @@ class ArrayStorageBase final
       const GCCell *cell,
       Metadata::Builder &mb);
 
+  friend void ArrayStorageSerialize(Serializer &s, const GCCell *cell);
+  friend void ArrayStorageDeserialize(Deserializer &d, CellKind kind);
   friend void ArrayStorageSmallSerialize(Serializer &s, const GCCell *cell);
   friend void ArrayStorageSmallDeserialize(Deserializer &d, CellKind kind);
 
@@ -46,23 +44,6 @@ class ArrayStorageBase final
   using iterator = GCHVType *;
 
   static const VTable vt;
-
-#ifdef HERMESVM_SERIALIZE
-  /// There is intentionally no implementation of SmallHermesValue
-  /// specializations of serialize/deserializeArrayStorage, because
-  /// SmallHermesValue cannot contain native pointers, so there is no need for
-  /// these helper functions.
-
-  /// A convenience method to serialize an ArrayStorage which does not contain
-  /// any native pointers.
-  static void serializeArrayStorage(
-      Serializer &s,
-      const ArrayStorageBase<HVType> *cell);
-
-  /// A convenience method to deserialize an ArrayStorage which does not contain
-  /// any native pointers.
-  static ArrayStorageBase<HVType> *deserializeArrayStorage(Deserializer &d);
-#endif
 
   /// Gets the amount of memory used by this object for a given \p capacity.
   static constexpr uint32_t allocationSize(size_type capacity) {
