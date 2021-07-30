@@ -63,11 +63,6 @@ class Domain final : public GCCell {
     /// Encoded as a HermesValue NativeUInt32.
     FunctionIndexOffset,
 
-    /// NativePointer to the RuntimeModule in which this CJS module lives.
-    /// Note: This must be kept alive by the Domain which allocated this
-    /// CJSModule.
-    runtimeModuleOffset,
-
     /// Number of fields used by a CJS module in the ArrayStorage.
     CJSModuleSize,
   };
@@ -83,6 +78,11 @@ class Domain final : public GCCell {
   /// this vector.
   /// Lazily allocated: field is nullptr until importCJSModuleTable() is called.
   GCPointer<ArrayStorage> cjsModules_;
+
+  /// Contains the RuntimeModule corresponding to each of the CJS modules above.
+  /// The n-th element in this array corresponds to the CJS module with offset
+  /// (n * CJSModuleSize).
+  CopyableVector<RuntimeModule *> cjsRuntimeModules_{};
 
   /// Map of { StringID => CJS module index }.
   /// Used when doing a slow require() call that needs to resolve a filename.
@@ -198,9 +198,8 @@ class Domain final : public GCCell {
   /// \return the runtime module for the given cjsModuleOffset.
   RuntimeModule *getRuntimeModule(Runtime *runtime, uint32_t cjsModuleOffset)
       const {
-    return cjsModules_.get(runtime)
-        ->at(cjsModuleOffset + runtimeModuleOffset)
-        .getNativePointer<RuntimeModule>();
+    assert(cjsModuleOffset % CJSModuleSize == 0 && "Invalid cjsModuleOffset");
+    return cjsRuntimeModules_[cjsModuleOffset / CJSModuleSize];
   }
 
   /// Set the module object for the given cjsModuleOffset.
