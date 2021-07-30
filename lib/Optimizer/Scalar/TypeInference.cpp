@@ -78,10 +78,8 @@ static bool inferUnaryInst(UnaryOperatorInst *UOI) {
       return true;
     case OpKind::PlusKind: // +
     case OpKind::MinusKind: // -
-      UOI->setType(Type::createNumber());
-      return true;
     case OpKind::TildeKind: // ~
-      UOI->setType(Type::createInt32());
+      UOI->setType(Type::createNumber());
       return true;
     case OpKind::BangKind: // !
       UOI->setType(Type::createBoolean());
@@ -267,17 +265,13 @@ static bool inferBinaryInst(BinaryOperatorInst *BOI) {
     case BinaryOperatorInst::OpKind::ModuloKind:
     // https://es5.github.io/#x11.6.2
     case BinaryOperatorInst::OpKind::SubtractKind:
-      BOI->setType(Type::createNumber());
-      return true;
     // https://es5.github.io/#x11.7.1
     case BinaryOperatorInst::OpKind::LeftShiftKind:
     // https://es5.github.io/#x11.7.2
     case BinaryOperatorInst::OpKind::RightShiftKind:
-      BOI->setType(Type::createInt32());
-      return true;
     // https://es5.github.io/#x11.7.3
     case BinaryOperatorInst::OpKind::UnsignedRightShiftKind:
-      BOI->setType(Type::createUint32());
+      BOI->setType(Type::createNumber());
       return true;
 
     // The Add operator is special:
@@ -316,7 +310,7 @@ static bool inferBinaryInst(BinaryOperatorInst *BOI) {
     case BinaryOperatorInst::OpKind::OrKind:
     case BinaryOperatorInst::OpKind::XorKind:
     case BinaryOperatorInst::OpKind::AndKind:
-      BOI->setType(Type::createInt32());
+      BOI->setType(Type::createNumber());
       return true;
 
     default:

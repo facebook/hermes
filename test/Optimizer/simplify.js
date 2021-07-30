@@ -646,7 +646,7 @@ function foo(y) {
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = AsInt32Inst %y
-//CHECK-NEXT:  %1 = CondBranchInst %0 : int32, %BB1, %BB2
+//CHECK-NEXT:  %1 = CondBranchInst %0 : number, %BB1, %BB2
 //CHECK-NEXT:%BB2:
 //CHECK-NEXT:  %2 = ReturnInst 1 : number
 //CHECK-NEXT:%BB1:
@@ -684,7 +684,7 @@ function turn_unary_plus_on_literal_into_result() {
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = AsInt32Inst %y
-//CHECK-NEXT:  %1 = ReturnInst %0 : int32
+//CHECK-NEXT:  %1 = ReturnInst %0 : number
 //CHECK-NEXT:function_end
 function turn_bitor_into_as_int32(y) {
   return y | 0;

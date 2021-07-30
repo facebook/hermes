@@ -234,7 +234,7 @@ class AsInt32Inst : public SingleOperandInst {
  public:
   explicit AsInt32Inst(Value *value)
       : SingleOperandInst(ValueKind::AsInt32InstKind, value) {
-    setType(Type::createInt32());
+    setType(Type::createNumber());
   }
   explicit AsInt32Inst(const AsInt32Inst *src, llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}

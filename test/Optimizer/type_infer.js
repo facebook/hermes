@@ -33,7 +33,7 @@ function test_one(x,y) {
 
 //CHECK-NEXT:  %7 = AsInt32Inst %x
 //CHECK-NEXT:  %8 = AsInt32Inst %x
-//CHECK-NEXT:  %9 = BinaryOperatorInst '+', %7 : int32, %8 : int32
+//CHECK-NEXT:  %9 = BinaryOperatorInst '+', %7 : number, %8 : number
 //CHECK-NEXT:  %10 = CallInst %x, undefined : undefined, %9 : number
   sink((x|0) + (x|0));
 
@@ -87,60 +87,3 @@ function test_unary(x) {
 
 }
 
-//CHECK-LABEL:function test_unsigned(x, y) : undefined
-//CHECK-NEXT:frame = []
-//CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = BinaryOperatorInst '>>>', %x, 0 : number
-//CHECK-NEXT:  %1 = BinaryOperatorInst '>>>', %y, 0 : number
-//CHECK-NEXT:  %2 = BinaryOperatorInst '+', %0 : uint32, %1 : uint32
-//CHECK-NEXT:  %3 = StorePropertyInst %2 : number, globalObject : object, "z" : string
-//CHECK-NEXT:  %4 = ReturnInst undefined : undefined
-//CHECK-NEXT:function_end
-function test_unsigned(x, y) {
-  x = x >>> 0; // Unsigned
-  y = y >>> 0; // Unsigned
-  z = x + y; // Number
-}
-
-//CHECK-LABEL:function test_bitwise_not(x) : undefined
-//CHECK-NEXT:frame = []
-//CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = UnaryOperatorInst '~', %x
-//CHECK-NEXT:  %1 = BinaryOperatorInst '*', %0 : int32, 2 : number
-//CHECK-NEXT:  %2 = StorePropertyInst %1 : number, globalObject : object, "y" : string
-//CHECK-NEXT:  %3 = ReturnInst undefined : undefined
-//CHECK-NEXT:function_end
-function test_bitwise_not(x) {
-  x = ~x; // Signed
-  y = x * 2; // Number
-}
-
-//CHECK-LABEL:function test_shift(x, y) : undefined
-//CHECK-NEXT:frame = []
-//CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = BinaryOperatorInst '<<', %x, 1 : number
-//CHECK-NEXT:  %1 = BinaryOperatorInst '>>', %y, 3 : number
-//CHECK-NEXT:  %2 = BinaryOperatorInst '/', %0 : int32, %1 : int32
-//CHECK-NEXT:  %3 = StorePropertyInst %2 : number, globalObject : object, "z" : string
-//CHECK-NEXT:  %4 = ReturnInst undefined : undefined
-//CHECK-NEXT:function_end
-function test_shift(x, y) {
-  x = x << 1; // Signed
-  y = y >> 3; // Signed
-  z = x / y; // Number
-}
-
-//CHECK-LABEL:function test_and_xor(x, y) : undefined
-//CHECK-NEXT:frame = []
-//CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = BinaryOperatorInst '&', %x, 10678 : number
-//CHECK-NEXT:  %1 = BinaryOperatorInst '^', %y, 10086 : number
-//CHECK-NEXT:  %2 = BinaryOperatorInst '-', %0 : int32, %1 : int32
-//CHECK-NEXT:  %3 = StorePropertyInst %2 : number, globalObject : object, "z" : string
-//CHECK-NEXT:  %4 = ReturnInst undefined : undefined
-//CHECK-NEXT:function_end
-function test_and_xor(x, y) {
-  x = x & 10678; // Signed
-  y = y ^ 10086; // Signed
-  z = x - y; // Number
-}
