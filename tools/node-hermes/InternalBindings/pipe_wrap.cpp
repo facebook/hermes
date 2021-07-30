@@ -50,6 +50,43 @@ static jsi::Value Pipe(
   return jsi::Value(rt, thisValue);
 }
 
+/// Returns a pointer to the uv_tty_t stream object associated with the
+/// instance of the tty object. Obtains the host object associated
+/// with the stream to do this.
+static uv_pipe_t *getPipeStreamHandle(
+    RuntimeState &rs,
+    const jsi::Value &pipeObj,
+    jsi::Runtime &rt) {
+  auto pipeObject = pipeObj.asObject(rt)
+                        .getProperty(rt, rs.getPipeStreamPropId())
+                        .asObject(rt);
+
+  if (pipeObject.isHostObject(rt)) {
+    auto pipeHostObject = pipeObject.getHostObject(rt);
+    if (auto pipeStream = dynamic_cast<PipeStreamWrap *>(pipeHostObject.get()))
+      return pipeStream->getPipeStreamHandle();
+  }
+
+  throw jsi::JSError(rt, "An invalid pipe handle was provided.");
+}
+
+/// Opens the pipe stream associated with the object (thisValue).
+static jsi::Value open(
+    RuntimeState &rs,
+    const jsi::Value &thisValue,
+    const jsi::Value *args,
+    size_t count) {
+  jsi::Runtime &rt = rs.getRuntime();
+  if (count < 1) {
+    throw jsi::JSError(
+        rt, "Not enough arguments being passed into TTY initialization call.");
+  }
+  uv_pipe_t *pipeStreamHandle = getPipeStreamHandle(rs, thisValue, rt);
+  int fd = args[0].asNumber();
+  int err = uv_pipe_open(pipeStreamHandle, fd);
+  return err;
+}
+
 /// Adds the 'pipe_wrap' object as a property of internalBinding.
 jsi::Value facebook::pipeBinding(RuntimeState &rs) {
   jsi::Runtime &rt = rs.getRuntime();
@@ -65,6 +102,12 @@ jsi::Value facebook::pipeBinding(RuntimeState &rs) {
   constants.setProperty(rt, "UV_WRITABLE", (int)UV_WRITABLE);
   pipe_wrap.setProperty(
       rt, jsi::String::createFromAscii(rt, "constants"), std::move(constants));
+
+  jsi::Object prototypeProp{rt};
+  rs.defineJSFunction(open, "open", 1, prototypeProp);
+  pipe_wrap.getProperty(rt, "Pipe")
+      .asObject(rt)
+      .setProperty(rt, "prototype", prototypeProp);
 
   rs.setInternalBindingProp("pipe_wrap", std::move(pipe_wrap));
   return rs.getInternalBindingProp("pipe_wrap");
