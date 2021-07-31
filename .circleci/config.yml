@@ -571,22 +571,35 @@ jobs:
       - ANDROID_SDK_ROOT: /usr/local/share/android-sdk
       - ANDROID_NDK_HOME: /usr/local/share/android-ndk
       - QEMU_AUDIO_DRV: none
-      - JAVA_HOME: $(/usr/libexec/java_home)
     steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/hermes/input
       - run:
-          name: Setup dependencies
+          name: Set up JDK
+          command: |
+            echo $JAVA_HOME
+            # print all Java installed
+            /usr/libexec/java_home -v
+            $(/usr/libexec/java_home)/bin/java -version
+            export JAVA_HOME="$(/usr/libexec/java_home -v)"
+            echo $JAVA_HOME
+
+            # https://www.dev2qa.com/how-to-fix-java-lang-noclassdeffounderror-javax-xml-bind-annotation-xmlschema-when-install-android-sdk/
+
+            export JAVA_OPTS='-XX:+IgnoreUnrecognizedVMOptions --add-modules java.se.ee'
+      - run:
+          name: Set up Node and Yarn
+          command: |
+            node --version
+            yarn --version
+            # Reinstall the latest version of Yarn.
+            npm install --global --force yarn
+            yarn --version
+      - run:
+          name: Set up Android dependencies
           command: |
             mkdir -p /tmp/hermes/output
-            # Node some version greater than 11 is needed by one of the app dependencies
-            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.1/install.sh | bash
-            NVM_DIR="$HOME/.nvm"
-            . "$NVM_DIR/nvm.sh"
-            echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
-            echo '. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
-            nvm install 14
-            nvm use 14
-            # Reinstall the latest version of Yarn.
-            npm install --global yarn
             brew tap homebrew/cask
             brew install --cask android-sdk
             brew install --cask android-ndk
@@ -594,25 +607,16 @@ jobs:
             # At some point, adb ended up in platform-tools/platform-tools. Work around that.
             echo 'export PATH="/usr/local/share/android-sdk/platform-tools/platform-tools:$PATH"' >> $BASH_ENV
       - run:
-          name: Print versions
-          command: |
-            node --version
-            yarn --version
-            echo $(/usr/libexec/java_home)
-      - run:
           name: Install emulator dependencies
-          command: (yes | sdkmanager "platform-tools" "platforms;android-26" "extras;intel;Hardware_Accelerated_Execution_Manager" "build-tools;26.0.0" "system-images;android-26;google_apis;x86" "emulator" --verbose) || true
+          command: (yes | sdkmanager "platform-tools" "platforms;android-29" "extras;intel;Hardware_Accelerated_Execution_Manager" "build-tools;29.0.0" "system-images;android-29;google_apis;x86" "emulator" --verbose) || true
       - run:
           name: Create emulator definition
           command: |
-            avdmanager create avd -n Pixel_2_API_26 -k "system-images;android-26;google_apis;x86" -g google_apis -d "Nexus 5"
+            avdmanager create avd -n Pixel_2_API_29 -k "system-images;android-29;google_apis;x86" -g google_apis -d "Nexus 5"
       - run:
           name: Run emulator in background
-          command: /usr/local/share/android-sdk/emulator/emulator @Pixel_2_API_26 -memory 2048 -noaudio
+          command: /usr/local/share/android-sdk/emulator/emulator @Pixel_2_API_29 -memory 2048 -noaudio
           background: true
-      - checkout
-      - attach_workspace:
-          at: /tmp/hermes/input
       - run:
           name: Run E2E test with main Hermes and Release React Native
           command: |
@@ -637,33 +641,54 @@ jobs:
       - ANDROID_SDK_HOME: /usr/local/share/android-sdk
       - ANDROID_SDK_ROOT: /usr/local/share/android-sdk
       - QEMU_AUDIO_DRV: none
-      - JAVA_HOME: $(/usr/libexec/java_home)
       - HERMES_WS_DIR: /tmp/hermes
     steps:
       - checkout
       - attach_workspace:
           at: /tmp/hermes/input
       - run:
-          name: Setup dependencies
+          name: Set up JDK8 for Android SDK 
           command: |
-            echo $(/usr/libexec/java_home)
+            # downgrading JDK doesnlt work w/o uninstallation?
+            brew tap homebrew/cask
+
+            # uninstall JDK 11 first
+            brew uninstall --cask java
+
+            # print all Java installed
+            /usr/libexec/java_home -V
+
+            # reinstall JDK 8
+            brew install --cask homebrew/cask-versions/adoptopenjdk8
+
+            $(/usr/libexec/java_home -v 1.8)/bin/java -version
+            export JAVA_HOME="$(/usr/libexec/java_home -v 1.8)"
+
+            # echo $JAVA_HOME
+            # # print all Java installed
+            # /usr/libexec/java_home -V
+            # $(/usr/libexec/java_home)/bin/java -version
+            # echo $JAVA_HOME
+      - run:
+          name: Set up Android SDK
+          command: |
             brew tap homebrew/cask
             brew install --cask android-sdk
-            (yes | sdkmanager "platform-tools" "platforms;android-26" --verbose) || true
+            (yes | sdkmanager "platform-tools" "platforms;android-29" --verbose) || true
             echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:$PATH"' >>  ~/.bash_profile
       - run:
           name: Install emulator dependencies
-          command: (yes | sdkmanager "extras;intel;Hardware_Accelerated_Execution_Manager" "system-images;android-26;google_apis;x86" "emulator" --verbose) || true
+          command: (yes | sdkmanager "extras;intel;Hardware_Accelerated_Execution_Manager" "system-images;android-29;google_apis;x86" "emulator" --verbose) || true
       - run:
           name: Create emulator definition
           command: |
-            avdmanager create avd -n Pixel_2_API_26 -k "system-images;android-26;google_apis;x86" -g google_apis -d "Nexus 5"
+            avdmanager create avd -n Pixel_2_API_29 -k "system-images;android-29;google_apis;x86" -g google_apis -d "Nexus 5"
       - run:
           name: Run emulator in background
-          command: /usr/local/share/android-sdk/emulator/emulator @Pixel_2_API_26 -memory 2048 -noaudio
+          command: /usr/local/share/android-sdk/emulator/emulator @Pixel_2_API_29 -memory 2048 -noaudio
           background: true
       - run:
-          name: Set up build dependencies
+          name: Set up NDK and CMake dependencies
           command: |
             (yes | sdkmanager "ndk;21.0.6113669" "cmake;3.10.2.4988404" --verbose) || true
             echo 'export PATH="/usr/local/share/android-sdk/cmake/3.10.2.4988404/bin:$PATH"' >>  ~/.bash_profile
