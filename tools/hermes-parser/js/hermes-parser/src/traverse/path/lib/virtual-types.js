@@ -8,8 +8,8 @@
  */
 
 import type NodePath from '../index';
-import {react} from '@babel/types';
-import * as t from '@babel/types';
+import {react} from '../../../types';
+import * as t from '../../../types';
 
 export const ReferencedIdentifier = {
   types: ['Identifier', 'JSXIdentifier'],

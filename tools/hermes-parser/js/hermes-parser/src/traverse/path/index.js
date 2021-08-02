@@ -13,7 +13,7 @@ import * as virtualTypes from './lib/virtual-types';
 import buildDebug from 'debug';
 import traverse from '../index';
 import Scope from '../scope';
-import * as t from '@babel/types';
+import * as t from '../../types';
 import {path as pathCache} from '../cache';
 import generator from '@babel/generator';
 

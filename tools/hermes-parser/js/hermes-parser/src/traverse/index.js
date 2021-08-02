@@ -9,7 +9,7 @@
 
 import TraversalContext from './context';
 import * as visitors from './visitors';
-import * as t from '@babel/types';
+import * as t from '../types';
 import * as cache from './cache';
 
 export {default as NodePath} from './path';

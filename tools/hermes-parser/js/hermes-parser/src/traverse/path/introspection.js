@@ -10,7 +10,7 @@
 // This file contains methods responsible for introspecting the current path for certain values.
 
 import type NodePath from './index';
-import * as t from '@babel/types';
+import * as t from '../../types';
 
 /**
  * Match the current node if it matches the provided `pattern`.

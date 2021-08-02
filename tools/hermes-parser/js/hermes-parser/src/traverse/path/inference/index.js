@@ -9,7 +9,7 @@
 
 import type NodePath from './index';
 import * as inferers from './inferers';
-import * as t from '@babel/types';
+import * as t from '../../../types';
 
 /**
  * Infer the type of the current `NodePath`.

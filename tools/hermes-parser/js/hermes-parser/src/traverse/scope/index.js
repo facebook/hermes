@@ -12,7 +12,7 @@ import type NodePath from '../path';
 import traverse from '../index';
 import Binding from './binding';
 import globals from 'globals';
-import * as t from '@babel/types';
+import * as t from '../../types';
 import {scope as scopeCache} from '../cache';
 
 // Recursively gathers the identifying names of a node.

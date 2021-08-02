@@ -8,7 +8,7 @@
  */
 
 import type NodePath from '../index';
-import * as t from '@babel/types';
+import * as t from '../../../types';
 
 export default function (node: Object) {
   if (!this.isReferenced()) return;

@@ -8,7 +8,7 @@
  */
 
 import NodePath from './path';
-import * as t from '@babel/types';
+import * as t from '../types';
 
 const testing = process.env.NODE_ENV === 'test';
 

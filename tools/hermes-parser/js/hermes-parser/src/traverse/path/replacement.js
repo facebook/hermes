@@ -13,8 +13,8 @@ import {codeFrameColumns} from '@babel/code-frame';
 import traverse from '../index';
 import NodePath from './index';
 import {path as pathCache} from '../cache';
-import {parse} from '@babel/parser';
-import * as t from '@babel/types';
+import {parse} from '../../HermesParser';
+import * as t from '../../types';
 
 const hoistVariablesVisitor = {
   Function(path) {
