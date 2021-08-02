@@ -2477,10 +2477,6 @@ void HadesGC::youngGenCollection(
   } heapBytes, externalBytes;
   heapBytes.before = youngGen().used();
   externalBytes.before = getYoungGenExternalBytes();
-  // scannedSize tracks the total number of bytes that were involved in this
-  // collection. In a normal YG collection, this is just the YG size, during a
-  // compaction, also add in the size of the compactee.
-  uint64_t scannedSize = youngGen().size();
   // YG is about to be emptied, add all of the allocations.
   totalAllocatedBytes_ += youngGen().used();
   const bool doCompaction = compactee_.evacActive();
@@ -2545,7 +2541,6 @@ void HadesGC::youngGenCollection(
       ygCollectionStats_->addCollectionType("compact");
       heapBytes.before += compactee_.allocatedBytes;
       uint64_t ogExternalBefore = oldGen_.externalBytes();
-      scannedSize += compactee_.segment->size();
       // Run finalisers on compacted objects.
       compactee_.segment->forCompactedObjs(
           [this](GCCell *cell) { cell->getVT()->finalizeIfExists(cell, this); },
