@@ -21,6 +21,15 @@ declare type Options = {
 
 declare type Program = Object;
 
+declare type Plugin = {
+  visitor: Function,
+};
+
 declare module.exports: {
   parse(code: string, opts: Options): Program,
+  transformFromAstSync(
+    sourceAst: Program,
+    source: string,
+    plugins: Plugin[],
+  ): {ast: Program},
 };
