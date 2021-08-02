@@ -45,6 +45,7 @@ done
 # Generate code, written into package dist directories
 node "$THIS_DIR/genWasmParser.js" "$WASM_PARSER"
 node "$THIS_DIR/genParserVisitorKeys.js" "$INCLUDE_PATH"
+node "$THIS_DIR/genParserNodeTypes.js" "$INCLUDE_PATH"
 node "$THIS_DIR/genESLintVisitorKeys.js" "$INCLUDE_PATH"
 node "$THIS_DIR/genNodeDeserializers.js" "$INCLUDE_PATH"
 

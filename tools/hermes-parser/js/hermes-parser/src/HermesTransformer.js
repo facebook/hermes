@@ -10,10 +10,13 @@
 'use strict';
 
 import traverse from './traverse';
+import * as t from './types';
 
 /// Extract the visitor object from the given plugin.
 function getPluginVisitor(plugin) {
-  // TODO: Provide a way to handle plugins which are functions and need 'types'.
+  if (typeof plugin === 'function') {
+    return plugin({types: t}).visitor;
+  }
   return plugin.visitor;
 }
 

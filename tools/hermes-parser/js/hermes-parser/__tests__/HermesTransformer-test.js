@@ -15,13 +15,15 @@ describe('Traversal', () => {
   test('Replacement', () => {
     const source = '(foo());';
     let called = false;
-    const plugin = {
-      visitor: {
-        CallExpression(path, state) {
-          expect(path.get('callee').node.name).toEqual('foo');
-          path.get('callee').node.name = 'bar';
+    const plugin = ({types: t}) => {
+      return {
+        visitor: {
+          CallExpression(path, state) {
+            expect(path.get('callee').node.name).toEqual('foo');
+            path.get('callee').replaceWith(t.Identifier('bar'));
+          },
         },
-      },
+      };
     };
     const {ast} = transformFromAstSync(parse(source), source, {
       plugins: [plugin],
