@@ -9,7 +9,7 @@
 if [ ! -d destroot/Library/Frameworks/universal/hermes.xcframework ]; then
     ios_deployment_target=$(get_ios_deployment_target)
 
-    build_apple_framework "iphoneos" "armv7;armv7s;arm64" "$ios_deployment_target"
+    build_apple_framework "iphoneos" "arm64" "$ios_deployment_target"
     build_apple_framework "iphonesimulator" "x86_64;arm64" "$ios_deployment_target"
     build_apple_framework "catalyst" "x86_64;arm64" "$ios_deployment_target"
 

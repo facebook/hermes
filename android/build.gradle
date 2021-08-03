@@ -5,8 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// This must be consistent with the release_version in npm/package.json
-// and the HERMES_RELEASE_VERSION in CMakeLists.txt
+// This must be consistent with the release_version in:
+// - CMakeLists.txt
+// - npm/package.json
+// - hermes-engine.podspec
 def release_version = "0.8.0"
 
 buildscript {

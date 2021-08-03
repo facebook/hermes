@@ -271,7 +271,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: v3-repo-{{ .Environment.CIRCLE_SHA1 }}
+          key: v4-repo-{{ .Environment.CIRCLE_SHA1 }}
       - run:
           name: Set up workspace
           command: mkdir -p /tmp/hermes/output
