@@ -12,6 +12,7 @@ version: 2.1
 
 orbs:
   win: circleci/windows@2.4.0
+  # https://circleci.com/developer/orbs/orb/circleci/android
   android: circleci/android@1.0.3
 
 workflows:
@@ -59,7 +60,7 @@ jobs:
   android:
     executor:
       name: android/android
-      sdk-version: '28'
+      sdk-version: "28"
       variant: ndk
     environment:
       - HERMES_WS_DIR: /tmp/hermes
@@ -553,66 +554,34 @@ jobs:
             cmake --build ./embuild --target emhermesc
             EMHERMESC="$PWD/embuild/bin/emhermesc.js" node ./hermes/tools/emhermesc/test.js
   test-e2e:
-    # For now we run E2E tests on MacOS as running an Android emulator on Linux is
-    # not supported with Circle CI:
-    # https://support.circleci.com/hc/en-us/articles/360000028928-Testing-with-Android-emulator-on-CircleCI-2-0
-    # Windows is another option, but I came across a convenient Mac OS example first:
-    # https://gist.github.com/DoguD/58b4b86a5d892130af84074078581b87
-    macos:
-      xcode: 12.4.0
-    environment:
-      - TERM: dumb
-      # Homebrew currently breaks while updating:
-      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
-      - HOMEBREW_NO_AUTO_UPDATE: 1
-      - JVM_OPTS: -Xmx3200m
-      - ANDROID_HOME: /usr/local/share/android-sdk
-      - ANDROID_SDK_HOME: /usr/local/share/android-sdk
-      - ANDROID_SDK_ROOT: /usr/local/share/android-sdk
-      - ANDROID_NDK_HOME: /usr/local/share/android-ndk
-      - QEMU_AUDIO_DRV: none
-      - JAVA_HOME: $(/usr/libexec/java_home)
+    executor:
+      name: android/android
+      sdk-version: "29"
+      variant: node
     steps:
+      - android/install-ndk
+      - android/create-avd:
+          avd-name: ARM_API_31
+          install: true
+          # Use armeabi-v7a because x86 images can't be run without KVM and hardware
+          # acceleration, which docker jobs can't provide on CircleCI.
+          # system-image: system-images;android-25;google_apis;armeabi-v7a
+          system-image: system-images;android-31;google_apis_playstore;arm64-v8a
+      - android/start-emulator:
+          avd-name: ARM_API_31
+          memory: 2048
+          # This argument's default tries to invoke ./gradlew assembleDebugAndroidTest which doesn't exist.
+          post-emulator-launch-assemble-command: ""
+          restore-gradle-cache-post-emulator-launch: false
+          wait-for-emulator: false
       - run:
-          name: Setup dependencies
+          name: Set up workspace and dependencies
           command: |
             mkdir -p /tmp/hermes/output
-            # Node some version greater than 11 is needed by one of the app dependencies
-            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.1/install.sh | bash
-            NVM_DIR="$HOME/.nvm"
-            . "$NVM_DIR/nvm.sh"
-            echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
-            echo '. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
-            nvm install 14
-            nvm use 14
-            # Reinstall the latest version of Yarn.
-            npm install --global yarn
-            brew tap homebrew/cask
-            brew install --cask android-sdk
-            brew install --cask android-ndk
-            echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:$PATH"' >> $BASH_ENV
-            # At some point, adb ended up in platform-tools/platform-tools. Work around that.
-            echo 'export PATH="/usr/local/share/android-sdk/platform-tools/platform-tools:$PATH"' >> $BASH_ENV
-      - run:
-          name: Print versions
-          command: |
-            node --version
-            yarn --version
-            echo $(/usr/libexec/java_home)
-      - run:
-          name: Install emulator dependencies
-          command: (yes | sdkmanager "platform-tools" "platforms;android-26" "extras;intel;Hardware_Accelerated_Execution_Manager" "build-tools;26.0.0" "system-images;android-26;google_apis;x86" "emulator" --verbose) || true
-      - run:
-          name: Create emulator definition
-          command: |
-            avdmanager create avd -n Pixel_2_API_26 -k "system-images;android-26;google_apis;x86" -g google_apis -d "Nexus 5"
-      - run:
-          name: Run emulator in background
-          command: /usr/local/share/android-sdk/emulator/emulator @Pixel_2_API_26 -memory 2048 -noaudio
-          background: true
       - checkout
       - attach_workspace:
           at: /tmp/hermes/input
+      - android/wait-for-emulator
       - run:
           name: Run E2E test with main Hermes and Release React Native
           command: |
@@ -624,54 +593,59 @@ jobs:
           path: /tmp/hermes/output/
 
   test-e2e-intl:
-    # This is mostly based on the last test-e2e job, hence the comments there holds.
-    macos:
-      xcode: 12.4.0
+    executor:
+      name: android/android
+      sdk-version: "29"
+      variant: node
     environment:
-      - TERM: dumb
-      # Homebrew currently breaks while updating:
-      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
-      - HOMEBREW_NO_AUTO_UPDATE: 1
-      - JVM_OPTS: -Xmx3200m
-      - ANDROID_HOME: /usr/local/share/android-sdk
-      - ANDROID_SDK_HOME: /usr/local/share/android-sdk
-      - ANDROID_SDK_ROOT: /usr/local/share/android-sdk
-      - QEMU_AUDIO_DRV: none
-      - JAVA_HOME: $(/usr/libexec/java_home)
       - HERMES_WS_DIR: /tmp/hermes
     steps:
+      - android/install-ndk
+      - android/create-avd:
+          avd-name: ARM_API_31
+          install: true
+          # Use ARMv8 because x86 images can't be run without KVM and hardware
+          # acceleration, which docker jobs can't provide on CircleCI; and
+          # ARMv7 image (android-25) is out of date.
+          system-image: system-images;android-31;google_apis_playstore;arm64-v8a
+      - android/start-emulator:
+          avd-name: ARM_API_31
+          no-window: true
+          # This argument's default tries to invoke ./gradlew assembleDebugAndroidTest which doesn't exist.
+          post-emulator-launch-assemble-command: ""
+          restore-gradle-cache-post-emulator-launch: false
+      - run:
+          name: Wait emulator
+          command: |
+            # wait for it to have booted
+            circle-android wait-for-boot
+            # unlock the emulator screen
+            sleep 30
+            adb shell input keyevent 82
       - checkout
       - attach_workspace:
           at: /tmp/hermes/input
       - run:
-          name: Setup dependencies
+          name: Set up workspace and install dependencies
           command: |
-            echo $(/usr/libexec/java_home)
-            brew tap homebrew/cask
-            brew install --cask android-sdk
-            (yes | sdkmanager "platform-tools" "platforms;android-26" --verbose) || true
-            echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:$PATH"' >>  ~/.bash_profile
-      - run:
-          name: Install emulator dependencies
-          command: (yes | sdkmanager "extras;intel;Hardware_Accelerated_Execution_Manager" "system-images;android-26;google_apis;x86" "emulator" --verbose) || true
-      - run:
-          name: Create emulator definition
-          command: |
-            avdmanager create avd -n Pixel_2_API_26 -k "system-images;android-26;google_apis;x86" -g google_apis -d "Nexus 5"
-      - run:
-          name: Run emulator in background
-          command: /usr/local/share/android-sdk/emulator/emulator @Pixel_2_API_26 -memory 2048 -noaudio
-          background: true
-      - run:
-          name: Set up build dependencies
-          command: |
-            (yes | sdkmanager "ndk;21.0.6113669" "cmake;3.10.2.4988404" --verbose) || true
-            echo 'export PATH="/usr/local/share/android-sdk/cmake/3.10.2.4988404/bin:$PATH"' >>  ~/.bash_profile
-      - run:
-          name: Set up workspace
-          command: |
+            mkdir -p /tmp/hermes/output
+
+            # Install CMake
+            yes | sdkmanager "cmake;3.10.2.4988404" &
             mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
             ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+
+            sudo apt-get update
+            sudo apt-get install -y cmake ninja-build libicu-dev
+            wait
+            sudo cp /usr/bin/ninja /usr/bin/ninja.real
+
+            # ls /opt/android/sdk/
+            # ls /opt/android/sdk/cmake
+
+            # See top comment
+            printf '%s\n' '#!/bin/sh' 'ninja.real -j4 "$@" || ninja.real -j1 "$@"' | sudo tee /usr/bin/ninja
+            ln -sf /usr/bin/ninja /opt/android/sdk/cmake/3.10.2.4988404/bin/ninja
       - run:
           name: Build Hermes Compiler
           command: |
@@ -680,20 +654,41 @@ jobs:
             # Build the Hermes compiler so that the cross compiler build can
             # access it to build the VM
             cmake --build ./build --target hermesc
+      # - android/wait-for-emulator
       - run:
           name: Build Hermes for Android and Run tests
           command: |
-            # Ensure the emulator is ready.
-            adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done; input keyevent 82'
+            # try screencap
+            adb shell screencap -p | perl -pe 's/\x0D\x0A/\x0A/g' > $CIRCLE_ARTIFACTS/screen-$(date +"%T").png
+
+            # We already ensured that the emulator is ready from the last step.
+            # Note that from <https://github.com/circleci/circleci-docs/blob/master/jekyll/_cci1/android.md>:
+            # `circle-android wait-for-boot` is a tool on our build containers that waits for the emulator to have finished booting. 
+            # `adb wait-for-device` is not sufficient here; it only waits for the device's shell to be available, not for the boot 
+            # process to finish.
+            # Unlock screen: https://android.stackexchange.com/questions/83726/how-to-adb-wait-for-device-until-the-home-screen-shows-up
+            # adb shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done; input keyevent 82'
+
+            # try screencap
+            adb shell screencap -p | perl -pe 's/\x0D\x0A/\x0A/g' > $CIRCLE_ARTIFACTS/screen-$(date +"%T").png
+
             export ANDROID_SDK="$ANDROID_HOME"
-            export ANDROID_NDK="$ANDROID_HOME/ndk/21.0.6113669"
+            export ANDROID_NDK="$ANDROID_HOME/ndk-bundle"
+
+            # export ANDROID_SDK="$ANDROID_HOME"
+            # export ANDROID_NDK="$ANDROID_HOME/ndk/21.0.6113669"
+
             cd "$HERMES_WS_DIR/hermes/android"
-            # We need to build only x86 for running the tests. This saves a lot of computing resources.
-            echo 'abis=x86' >> gradle.properties
+
+            # We need to build only ARM64-v8a for running the tests. This saves a lot of computing resources.
+            echo 'abis=arm64-v8a' >> gradle.properties
+
             adb logcat -c || true
             ./gradlew :intltest:preparetest262 && ./gradlew :intltest:connectedAndroidTest
             adb logcat -d > /tmp/hermes/output/adblog.txt
+
             # Move report to output dir
-            mv /tmp/hermes/build_android /tmp/hermes/output/build_android
+            mv /tmp/hermes/build_android /tmp/hermes/output/
+          no_output_timeout: 45m
       - store_artifacts:
           path: /tmp/hermes/output/
