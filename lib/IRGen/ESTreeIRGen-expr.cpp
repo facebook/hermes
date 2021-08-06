@@ -737,6 +737,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
   // Note that computed properties are not stored in the propMap as we do not
   // know the keys at compilation time.
   llvh::StringMap<PropertyValue> propMap;
+  // The first location where a given property name is encountered.
+  llvh::StringMap<SMRange> firstLocMap;
   llvh::SmallVector<char, 32> stringStorage;
   /// The optional __proto__ property.
   ESTree::PropertyNode *protoProperty = nullptr;
@@ -765,22 +767,42 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     auto propName = propertyKeyAsString(stringStorage, prop->_key);
     PropertyValue *propValue = &propMap[propName];
 
+    // protoProperty should only be recorded if the property is not a method
+    // nor a shorthand value.
+    if (prop->_kind->str() == "init" && propName == "__proto__" &&
+        !prop->_method && !prop->_shorthand) {
+      if (!protoProperty) {
+        protoProperty = prop;
+      } else {
+        Builder.getModule()->getContext().getSourceErrorManager().error(
+            prop->getSourceRange(),
+            "__proto__ was set multiple times in the object definition.");
+        Builder.getModule()->getContext().getSourceErrorManager().note(
+            protoProperty->getSourceRange(), "The first definition was here.");
+      }
+      continue;
+    }
+
     if (prop->_kind->str() == "get") {
       propValue->setGetter(cast<ESTree::FunctionExpressionNode>(prop->_value));
     } else if (prop->_kind->str() == "set") {
       propValue->setSetter(cast<ESTree::FunctionExpressionNode>(prop->_value));
     } else {
       assert(prop->_kind->str() == "init" && "invalid PropertyNode kind");
-      // protoProperty should only be recorded if the property is not a method
-      // nor a shorthand value.
-      if (propName == "__proto__" && !prop->_method && !prop->_shorthand) {
-        if (!protoProperty) {
-          protoProperty = prop;
-        }
-      } else {
-        // We record the propValue if this is a regular property
-        propValue->setValue(prop->_value);
-      }
+      // We record the propValue if this is a regular property
+      propValue->setValue(prop->_value);
+    }
+
+    std::string key = (prop->_kind->str() + propName).str();
+    auto iterAndSuccess = firstLocMap.try_emplace(key, prop->getSourceRange());
+    if (!iterAndSuccess.second) {
+      Builder.getModule()->getContext().getSourceErrorManager().warning(
+          prop->getSourceRange(),
+          Twine("the property \"") + propName +
+              "\" was set multiple times in the object definition.");
+
+      Builder.getModule()->getContext().getSourceErrorManager().note(
+          iterAndSuccess.first->second, "The first definition was here.");
     }
   }
 
@@ -847,14 +869,6 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       if (propValue->valueNode == prop->_value) {
         objPropMap.push_back(std::pair<LiteralString *, Value *>(Key, value));
         propValue->isIRGenerated = true;
-      } else {
-        Builder.getModule()->getContext().getSourceErrorManager().warning(
-            propValue->getSourceRange(),
-            Twine("the property \"") + keyStr +
-                "\" was set multiple times in the object definition.");
-
-        Builder.getModule()->getContext().getSourceErrorManager().note(
-            prop->getSourceRange(), "The first definition was here.");
       }
     }
 
@@ -1004,16 +1018,6 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
                 BuiltinMethod::HermesBuiltin_silentSetPrototypeOf,
                 {Obj, parent});
           }
-        } else {
-          // If this prop is not a method and not a shorthand value, and
-          // it is not the first protoProperty, then __proto__ was defined
-          // more than once, which is an error.
-          Builder.getModule()->getContext().getSourceErrorManager().error(
-              prop->getSourceRange(),
-              "__proto__ was set multiple times in the object definition.");
-          Builder.getModule()->getContext().getSourceErrorManager().note(
-              protoProperty->getSourceRange(),
-              "The first definition was here.");
         }
 
         continue;
@@ -1034,14 +1038,6 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
               value, Obj, Key, IRBuilder::PropEnumerable::Yes);
         }
         propValue->isIRGenerated = true;
-      } else {
-        Builder.getModule()->getContext().getSourceErrorManager().warning(
-            propMap[keyStr].getSourceRange(),
-            Twine("the property \"") + keyStr +
-                "\" was set multiple times in the object definition.");
-
-        Builder.getModule()->getContext().getSourceErrorManager().note(
-            prop->getSourceRange(), "The first definition was here.");
       }
     }
   }

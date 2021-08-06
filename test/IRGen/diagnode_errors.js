@@ -43,16 +43,22 @@ var inferredName = () => { return i }; inferredName();
 //CHECK-NEXT:                                   ^
 
 //CHECK:{{.*}}warning: the property "color" was set multiple times in the object definition.
-//CHECK-NEXT:var x = { color: 10, color: 20 };
-//CHECK-NEXT:                            ^~
+//CHECK-NEXT:var x = { color: 10, color: 20, color: 30 };
+//CHECK-NEXT:                     ^~~~~~~~~
 //CHECK-NEXT:{{.*}}note: The first definition was here.
-//CHECK-NEXT:var x = { color: 10, color: 20 };
+//CHECK-NEXT:var x = { color: 10, color: 20, color: 30 };
 //CHECK-NEXT:          ^~~~~~~~~
-var x = { color: 10, color: 20 };
+//CHECK-NEXT:{{.*}}warning: the property "color" was set multiple times in the object definition.
+//CHECK-NEXT:var x = { color: 10, color: 20, color: 30 };
+//CHECK-NEXT:                                ^~~~~~~~~
+//CHECK-NEXT:{{.*}}note: The first definition was here.
+//CHECK-NEXT:var x = { color: 10, color: 20, color: 30 };
+//CHECK-NEXT:          ^~~~~~~~~
+var x = { color: 10, color: 20, color: 30 };
 
 //CHECK:{{.*}}warning: the property "color" was set multiple times in the object definition.
 //CHECK-NEXT:var y = { color: 10, color: 20, __proto__: {}};
-//CHECK-NEXT:                            ^~
+//CHECK-NEXT:                     ^~~~~~~~~
 //CHECK-NEXT:{{.*}}note: The first definition was here.
 //CHECK-NEXT:var y = { color: 10, color: 20, __proto__: {}};
 //CHECK-NEXT:          ^~~~~~~~~
