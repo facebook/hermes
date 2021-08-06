@@ -34,55 +34,49 @@ function loads(func) {
 //CHKRA-NEXT:%BB0:
 //CHKRA-NEXT:  %0 = HBCGetGlobalObjectInst
 //CHKRA-NEXT:  %1 = LoadPropertyInst %0 : object, "HEAP8" : string
-//CHKRA-NEXT:  %2 = ImplicitMovInst undefined : undefined
-//CHKRA-NEXT:  %3 = HBCLoadConstInst 0 : number
-//CHKRA-NEXT:  %4 = CallIntrinsicInst [__uasm.loadi8_2] : number, undefined : undefined, %1, %3 : number
-//CHKRA-NEXT:  %5 = StorePropertyInst %4, %0 : object, "t0" : string
-//CHKRA-NEXT:  %6 = LoadPropertyInst %0 : object, "HEAPU8" : string
-//CHKRA-NEXT:  %7 = ImplicitMovInst undefined : undefined
-//CHKRA-NEXT:  %8 = CallIntrinsicInst [__uasm.loadu8_2] : number, undefined : undefined, %6, %3 : number
-//CHKRA-NEXT:  %9 = StorePropertyInst %8, %0 : object, "t1" : string
-//CHKRA-NEXT:  %10 = LoadPropertyInst %0 : object, "HEAP16" : string
-//CHKRA-NEXT:  %11 = ImplicitMovInst undefined : undefined
-//CHKRA-NEXT:  %12 = CallIntrinsicInst [__uasm.loadi16_2] : number, undefined : undefined, %10, %3 : number
-//CHKRA-NEXT:  %13 = StorePropertyInst %12, %0 : object, "t2" : string
-//CHKRA-NEXT:  %14 = LoadPropertyInst %0 : object, "HEAPU16" : string
-//CHKRA-NEXT:  %15 = ImplicitMovInst undefined : undefined
-//CHKRA-NEXT:  %16 = CallIntrinsicInst [__uasm.loadu16_2] : number, undefined : undefined, %14, %3 : number
-//CHKRA-NEXT:  %17 = StorePropertyInst %16, %0 : object, "t3" : string
-//CHKRA-NEXT:  %18 = LoadPropertyInst %0 : object, "HEAP32" : string
-//CHKRA-NEXT:  %19 = ImplicitMovInst undefined : undefined
-//CHKRA-NEXT:  %20 = CallIntrinsicInst [__uasm.loadi32_2] : number, undefined : undefined, %18, %3 : number
-//CHKRA-NEXT:  %21 = StorePropertyInst %20, %0 : object, "t4" : string
-//CHKRA-NEXT:  %22 = LoadPropertyInst %0 : object, "HEAPU32" : string
-//CHKRA-NEXT:  %23 = ImplicitMovInst undefined : undefined
-//CHKRA-NEXT:  %24 = CallIntrinsicInst [__uasm.loadu32_2] : number, undefined : undefined, %22, %3 : number
-//CHKRA-NEXT:  %25 = StorePropertyInst %24, %0 : object, "t5" : string
-//CHKRA-NEXT:  %26 = HBCLoadConstInst undefined : undefined
-//CHKRA-NEXT:  %27 = ReturnInst %26 : undefined
+//CHKRA-NEXT:  %2 = HBCLoadConstInst 0 : number
+//CHKRA-NEXT:  %3 = CallIntrinsicInst [__uasm.loadi8_2] : number, %1, %2 : number
+//CHKRA-NEXT:  %4 = StorePropertyInst %3, %0 : object, "t0" : string
+//CHKRA-NEXT:  %5 = LoadPropertyInst %0 : object, "HEAPU8" : string
+//CHKRA-NEXT:  %6 = CallIntrinsicInst [__uasm.loadu8_2] : number, %5, %2 : number
+//CHKRA-NEXT:  %7 = StorePropertyInst %6, %0 : object, "t1" : string
+//CHKRA-NEXT:  %8 = LoadPropertyInst %0 : object, "HEAP16" : string
+//CHKRA-NEXT:  %9 = CallIntrinsicInst [__uasm.loadi16_2] : number, %8, %2 : number
+//CHKRA-NEXT:  %10 = StorePropertyInst %9, %0 : object, "t2" : string
+//CHKRA-NEXT:  %11 = LoadPropertyInst %0 : object, "HEAPU16" : string
+//CHKRA-NEXT:  %12 = CallIntrinsicInst [__uasm.loadu16_2] : number, %11, %2 : number
+//CHKRA-NEXT:  %13 = StorePropertyInst %12, %0 : object, "t3" : string
+//CHKRA-NEXT:  %14 = LoadPropertyInst %0 : object, "HEAP32" : string
+//CHKRA-NEXT:  %15 = CallIntrinsicInst [__uasm.loadi32_2] : number, %14, %2 : number
+//CHKRA-NEXT:  %16 = StorePropertyInst %15, %0 : object, "t4" : string
+//CHKRA-NEXT:  %17 = LoadPropertyInst %0 : object, "HEAPU32" : string
+//CHKRA-NEXT:  %18 = CallIntrinsicInst [__uasm.loadu32_2] : number, %17, %2 : number
+//CHKRA-NEXT:  %19 = StorePropertyInst %18, %0 : object, "t5" : string
+//CHKRA-NEXT:  %20 = HBCLoadConstInst undefined : undefined
+//CHKRA-NEXT:  %21 = ReturnInst %20 : undefined
 //CHKRA-NEXT:function_end
 
-//CHKBC-LABEL:Function<loads>(2 params, 12 registers, 0 symbols):
+//CHKBC-LABEL:Function<loads>(2 params, 3 registers, 0 symbols):
 //CHKBC-NEXT:Offset in debug table: source 0x00aa, lexical 0x0000
 //CHKBC-NEXT:    GetGlobalObject   r1
-//CHKBC-NEXT:    GetByIdShort      r4, r1, 1, "HEAP8"
-//CHKBC-NEXT:    LoadConstZero     r3
-//CHKBC-NEXT:    Loadi8            r0, r4, r3
+//CHKBC-NEXT:    GetByIdShort      r0, r1, 1, "HEAP8"
+//CHKBC-NEXT:    LoadConstZero     r2
+//CHKBC-NEXT:    Loadi8            r0, r0, r2
 //CHKBC-NEXT:    PutById           r1, r0, 1, "t0"
-//CHKBC-NEXT:    GetByIdShort      r4, r1, 2, "HEAPU8"
-//CHKBC-NEXT:    Loadu8            r0, r4, r3
+//CHKBC-NEXT:    GetByIdShort      r0, r1, 2, "HEAPU8"
+//CHKBC-NEXT:    Loadu8            r0, r0, r2
 //CHKBC-NEXT:    PutById           r1, r0, 2, "t1"
-//CHKBC-NEXT:    GetByIdShort      r4, r1, 3, "HEAP16"
-//CHKBC-NEXT:    Loadi16           r0, r4, r3
+//CHKBC-NEXT:    GetByIdShort      r0, r1, 3, "HEAP16"
+//CHKBC-NEXT:    Loadi16           r0, r0, r2
 //CHKBC-NEXT:    PutById           r1, r0, 3, "t2"
-//CHKBC-NEXT:    GetByIdShort      r4, r1, 4, "HEAPU16"
-//CHKBC-NEXT:    Loadu16           r0, r4, r3
+//CHKBC-NEXT:    GetByIdShort      r0, r1, 4, "HEAPU16"
+//CHKBC-NEXT:    Loadu16           r0, r0, r2
 //CHKBC-NEXT:    PutById           r1, r0, 4, "t3"
-//CHKBC-NEXT:    GetByIdShort      r4, r1, 5, "HEAP32"
-//CHKBC-NEXT:    Loadi32           r0, r4, r3
+//CHKBC-NEXT:    GetByIdShort      r0, r1, 5, "HEAP32"
+//CHKBC-NEXT:    Loadi32           r0, r0, r2
 //CHKBC-NEXT:    PutById           r1, r0, 5, "t4"
-//CHKBC-NEXT:    GetByIdShort      r4, r1, 6, "HEAPU32"
-//CHKBC-NEXT:    Loadu32           r0, r4, r3
+//CHKBC-NEXT:    GetByIdShort      r0, r1, 6, "HEAPU32"
+//CHKBC-NEXT:    Loadu32           r0, r0, r2
 //CHKBC-NEXT:    PutById           r1, r0, 6, "t5"
 //CHKBC-NEXT:    LoadConstUndefined r0
 //CHKBC-NEXT:    Ret               r0
@@ -99,35 +93,26 @@ function stores(func, x) {
 //CHKRA-NEXT:  %0 = HBCLoadParamInst 2 : number
 //CHKRA-NEXT:  %1 = HBCGetGlobalObjectInst
 //CHKRA-NEXT:  %2 = LoadPropertyInst %1 : object, "HEAP8" : string
-//CHKRA-NEXT:  %3 = ImplicitMovInst undefined : undefined
-//CHKRA-NEXT:  %4 = HBCLoadConstInst 0 : number
-//CHKRA-NEXT:  %5 = MovInst %0
-//CHKRA-NEXT:  %6 = CallIntrinsicInst [__uasm.store8_3] : number, undefined : undefined, %2, %4 : number, %5
-//CHKRA-NEXT:  %7 = LoadPropertyInst %1 : object, "HEAP16" : string
-//CHKRA-NEXT:  %8 = ImplicitMovInst undefined : undefined
-//CHKRA-NEXT:  %9 = MovInst %0
-//CHKRA-NEXT:  %10 = CallIntrinsicInst [__uasm.store16_3] : number, undefined : undefined, %7, %4 : number, %9
-//CHKRA-NEXT:  %11 = LoadPropertyInst %1 : object, "HEAP32" : string
-//CHKRA-NEXT:  %12 = ImplicitMovInst undefined : undefined
-//CHKRA-NEXT:  %13 = MovInst %0
-//CHKRA-NEXT:  %14 = CallIntrinsicInst [__uasm.store32_3] : number, undefined : undefined, %11, %4 : number, %13
-//CHKRA-NEXT:  %15 = HBCLoadConstInst undefined : undefined
-//CHKRA-NEXT:  %16 = ReturnInst %15 : undefined
+//CHKRA-NEXT:  %3 = HBCLoadConstInst 0 : number
+//CHKRA-NEXT:  %4 = CallIntrinsicInst [__uasm.store8_3] : number, %2, %3 : number, %0
+//CHKRA-NEXT:  %5 = LoadPropertyInst %1 : object, "HEAP16" : string
+//CHKRA-NEXT:  %6 = CallIntrinsicInst [__uasm.store16_3] : number, %5, %3 : number, %0
+//CHKRA-NEXT:  %7 = LoadPropertyInst %1 : object, "HEAP32" : string
+//CHKRA-NEXT:  %8 = CallIntrinsicInst [__uasm.store32_3] : number, %7, %3 : number, %0
+//CHKRA-NEXT:  %9 = HBCLoadConstInst undefined : undefined
+//CHKRA-NEXT:  %10 = ReturnInst %9 : undefined
 //CHKRA-NEXT:function_end
 
-//CHKBC-LABEL:Function<stores>(3 params, 14 registers, 0 symbols):
-//CHKBC-NEXT:Offset in debug table: source 0x00e4, lexical 0x0000
+//CHKBC-LABEL:Function<stores>(3 params, 4 registers, 0 symbols):
+//CHKBC-NEXT:Offset in debug table: source 0x00d2, lexical 0x0000
 //CHKBC-NEXT:    LoadParam         r2, 2
 //CHKBC-NEXT:    GetGlobalObject   r0
-//CHKBC-NEXT:    GetByIdShort      r6, r0, 1, "HEAP8"
-//CHKBC-NEXT:    LoadConstZero     r5
-//CHKBC-NEXT:    Mov               r4, r2
-//CHKBC-NEXT:    Store8            r6, r5, r4
-//CHKBC-NEXT:    GetByIdShort      r6, r0, 2, "HEAP16"
-//CHKBC-NEXT:    Mov               r4, r2
-//CHKBC-NEXT:    Store16           r6, r5, r4
-//CHKBC-NEXT:    GetByIdShort      r6, r0, 3, "HEAP32"
-//CHKBC-NEXT:    Mov               r4, r2
-//CHKBC-NEXT:    Store32           r6, r5, r4
+//CHKBC-NEXT:    GetByIdShort      r3, r0, 1, "HEAP8"
+//CHKBC-NEXT:    LoadConstZero     r1
+//CHKBC-NEXT:    Store8            r3, r1, r2
+//CHKBC-NEXT:    GetByIdShort      r3, r0, 2, "HEAP16"
+//CHKBC-NEXT:    Store16           r3, r1, r2
+//CHKBC-NEXT:    GetByIdShort      r0, r0, 3, "HEAP32"
+//CHKBC-NEXT:    Store32           r0, r1, r2
 //CHKBC-NEXT:    LoadConstUndefined r0
 //CHKBC-NEXT:    Ret               r0

@@ -21,31 +21,29 @@ function unsafeIntrinsics(func) {
 //CHKRA-NEXT:%BB0:
 //CHKRA-NEXT:  %0 = HBCLoadConstInst 1 : number
 //CHKRA-NEXT:  %1 = HBCLoadConstInst 2 : number
-//CHKRA-NEXT:  %2 = ImplicitMovInst undefined : undefined
-//CHKRA-NEXT:  %3 = CallIntrinsicInst [__uasm.add32_2] : number, undefined : undefined, %0 : number, %1 : number
-//CHKRA-NEXT:  %4 = HBCGetGlobalObjectInst
-//CHKRA-NEXT:  %5 = StorePropertyInst %3, %4 : object, "t0" : string
-//CHKRA-NEXT:  %6 = HBCLoadConstInst 42 : number
-//CHKRA-NEXT:  %7 = HBCLoadConstInst 7 : number
-//CHKRA-NEXT:  %8 = ImplicitMovInst undefined : undefined
-//CHKRA-NEXT:  %9 = CallIntrinsicInst [__uasm.mul32_2] : number, undefined : undefined, %6 : number, %7 : number
-//CHKRA-NEXT:  %10 = StorePropertyInst %9, %4 : object, "t1" : string
-//CHKRA-NEXT:  %11 = TryLoadGlobalPropertyInst %4 : object, "t0" : string
-//CHKRA-NEXT:  %12 = TryLoadGlobalPropertyInst %4 : object, "t1" : string
-//CHKRA-NEXT:  %13 = BinaryOperatorInst '+', %11, %12
-//CHKRA-NEXT:  %14 = ReturnInst %13 : string|number
+//CHKRA-NEXT:  %2 = CallIntrinsicInst [__uasm.add32_2] : number, %0 : number, %1 : number
+//CHKRA-NEXT:  %3 = HBCGetGlobalObjectInst
+//CHKRA-NEXT:  %4 = StorePropertyInst %2, %3 : object, "t0" : string
+//CHKRA-NEXT:  %5 = HBCLoadConstInst 42 : number
+//CHKRA-NEXT:  %6 = HBCLoadConstInst 7 : number
+//CHKRA-NEXT:  %7 = CallIntrinsicInst [__uasm.mul32_2] : number, %5 : number, %6 : number
+//CHKRA-NEXT:  %8 = StorePropertyInst %7, %3 : object, "t1" : string
+//CHKRA-NEXT:  %9 = TryLoadGlobalPropertyInst %3 : object, "t0" : string
+//CHKRA-NEXT:  %10 = TryLoadGlobalPropertyInst %3 : object, "t1" : string
+//CHKRA-NEXT:  %11 = BinaryOperatorInst '+', %9, %10
+//CHKRA-NEXT:  %12 = ReturnInst %11 : string|number
 //CHKRA-NEXT:function_end
 
-//CHKBC-LABEL:Function<unsafeIntrinsics>(2 params, 12 registers, 0 symbols):
+//CHKBC-LABEL:Function<unsafeIntrinsics>(2 params, 3 registers, 0 symbols):
 //CHKBC-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
-//CHKBC-NEXT:    LoadConstUInt8    r4, 1
-//CHKBC-NEXT:    LoadConstUInt8    r3, 2
-//CHKBC-NEXT:    Add32             r1, r4, r3
+//CHKBC-NEXT:    LoadConstUInt8    r1, 1
+//CHKBC-NEXT:    LoadConstUInt8    r0, 2
+//CHKBC-NEXT:    Add32             r1, r1, r0
 //CHKBC-NEXT:    GetGlobalObject   r0
 //CHKBC-NEXT:    PutById           r0, r1, 1, "t0"
-//CHKBC-NEXT:    LoadConstUInt8    r4, 42
-//CHKBC-NEXT:    LoadConstUInt8    r3, 7
-//CHKBC-NEXT:    Mul32             r1, r4, r3
+//CHKBC-NEXT:    LoadConstUInt8    r2, 42
+//CHKBC-NEXT:    LoadConstUInt8    r1, 7
+//CHKBC-NEXT:    Mul32             r1, r2, r1
 //CHKBC-NEXT:    PutById           r0, r1, 2, "t1"
 //CHKBC-NEXT:    TryGetById        r1, r0, 1, "t0"
 //CHKBC-NEXT:    TryGetById        r0, r0, 2, "t1"

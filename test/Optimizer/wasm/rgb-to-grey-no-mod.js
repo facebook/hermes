@@ -108,29 +108,27 @@ function asmFunc(env) {
 //CHECK-NEXT: %BB2:
 //CHECK-NEXT:   %4 = ReturnInst undefined : undefined
 //CHECK-NEXT: %BB1:
-//CHECK-NEXT:   %5 = PhiInst %24 : number, %BB1, %0 : number, %BB0
-//CHECK-NEXT:   %6 = PhiInst %25 : number, %BB1, %1 : number, %BB0
-//CHECK-NEXT:   %7 = PhiInst %26 : number, %BB1, %2 : number, %BB0
+//CHECK-NEXT:   %5 = PhiInst %22 : number, %BB1, %0 : number, %BB0
+//CHECK-NEXT:   %6 = PhiInst %23 : number, %BB1, %1 : number, %BB0
+//CHECK-NEXT:   %7 = PhiInst %24 : number, %BB1, %2 : number, %BB0
 //CHECK-NEXT:   %8 = LoadFrameInst [HEAP8@asmFunc] : undefined|object
 //CHECK-NEXT:   %9 = LoadFrameInst [HEAPU8@asmFunc] : undefined|object
-//CHECK-NEXT:   %10 = CallIntrinsicInst [__uasm.add32_2] : number, undefined : undefined, %5 : number, 1 : number
-//CHECK-NEXT:   %11 = CallIntrinsicInst [__uasm.loadu8_2] : number, undefined : undefined, %9 : undefined|object, %10 : number
-//CHECK-NEXT:   %12 = CallIntrinsicInst [__uasm.mul32_2] : number, undefined : undefined, %11 : number, 587 : number
-//CHECK-NEXT:   %13 = LoadFrameInst [HEAPU8@asmFunc] : undefined|object
-//CHECK-NEXT:   %14 = CallIntrinsicInst [__uasm.loadu8_2] : number, undefined : undefined, %13 : undefined|object, %5 : number
-//CHECK-NEXT:   %15 = CallIntrinsicInst [__uasm.mul32_2] : number, undefined : undefined, %14 : number, 299 : number
-//CHECK-NEXT:   %16 = CallIntrinsicInst [__uasm.add32_2] : number, undefined : undefined, %12 : number, %15 : number
-//CHECK-NEXT:   %17 = LoadFrameInst [HEAPU8@asmFunc] : undefined|object
-//CHECK-NEXT:   %18 = CallIntrinsicInst [__uasm.add32_2] : number, undefined : undefined, %5 : number, 2 : number
-//CHECK-NEXT:   %19 = CallIntrinsicInst [__uasm.loadu8_2] : number, undefined : undefined, %17 : undefined|object, %18 : number
-//CHECK-NEXT:   %20 = CallIntrinsicInst [__uasm.mul32_2] : number, undefined : undefined, %19 : number, 114 : number
-//CHECK-NEXT:   %21 = CallIntrinsicInst [__uasm.add32_2] : number, undefined : undefined, %16 : number, %20 : number
-//CHECK-NEXT:   %22 = CallIntrinsicInst [__uasm.divu32_2] : number, undefined : undefined, %21 : number, 1000 : number
-//CHECK-NEXT:   %23 = CallIntrinsicInst [__uasm.store8_3] : number, undefined : undefined, %8 : undefined|object, %6 : number, %22 : number
-//CHECK-NEXT:   %24 = CallIntrinsicInst [__uasm.add32_2] : number, undefined : undefined, %5 : number, 3 : number
-//CHECK-NEXT:   %25 = CallIntrinsicInst [__uasm.add32_2] : number, undefined : undefined, %6 : number, 1 : number
-//CHECK-NEXT:   %26 = CallIntrinsicInst [__uasm.sub32_2] : number, undefined : undefined, %7 : number, 1 : number
-//CHECK-NEXT:   %27 = CondBranchInst %26 : number, %BB1, %BB2
+//CHECK-NEXT:   %10 = CallIntrinsicInst [__uasm.add32_2] : number, %5 : number, 1 : number
+//CHECK-NEXT:   %11 = CallIntrinsicInst [__uasm.loadu8_2] : number, %9 : undefined|object, %10 : number
+//CHECK-NEXT:   %12 = CallIntrinsicInst [__uasm.mul32_2] : number, %11 : number, 587 : number
+//CHECK-NEXT:   %13 = CallIntrinsicInst [__uasm.loadu8_2] : number, %9 : undefined|object, %5 : number
+//CHECK-NEXT:   %14 = CallIntrinsicInst [__uasm.mul32_2] : number, %13 : number, 299 : number
+//CHECK-NEXT:   %15 = CallIntrinsicInst [__uasm.add32_2] : number, %12 : number, %14 : number
+//CHECK-NEXT:   %16 = CallIntrinsicInst [__uasm.add32_2] : number, %5 : number, 2 : number
+//CHECK-NEXT:   %17 = CallIntrinsicInst [__uasm.loadu8_2] : number, %9 : undefined|object, %16 : number
+//CHECK-NEXT:   %18 = CallIntrinsicInst [__uasm.mul32_2] : number, %17 : number, 114 : number
+//CHECK-NEXT:   %19 = CallIntrinsicInst [__uasm.add32_2] : number, %15 : number, %18 : number
+//CHECK-NEXT:   %20 = CallIntrinsicInst [__uasm.divu32_2] : number, %19 : number, 1000 : number
+//CHECK-NEXT:   %21 = CallIntrinsicInst [__uasm.store8_3] : number, %8 : undefined|object, %6 : number, %20 : number
+//CHECK-NEXT:   %22 = CallIntrinsicInst [__uasm.add32_2] : number, %5 : number, 3 : number
+//CHECK-NEXT:   %23 = CallIntrinsicInst [__uasm.add32_2] : number, %6 : number, 1 : number
+//CHECK-NEXT:   %24 = CallIntrinsicInst [__uasm.sub32_2] : number, %7 : number, 1 : number
+//CHECK-NEXT:   %25 = CondBranchInst %24 : number, %BB1, %BB2
 //CHECK-NEXT: function_end
 
  function $2() {

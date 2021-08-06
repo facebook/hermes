@@ -873,8 +873,8 @@ GetBuiltinClosureInst *IRBuilder::createGetBuiltinClosureInst(
 CallIntrinsicInst *IRBuilder::createCallIntrinsicInst(
     WasmIntrinsics::Enum intrinsicsIndex,
     ArrayRef<Value *> arguments) {
-  auto *inst = new CallIntrinsicInst(
-      getLiteralNumber(intrinsicsIndex), getLiteralUndefined(), arguments);
+  auto *inst =
+      new CallIntrinsicInst(getLiteralNumber(intrinsicsIndex), arguments);
   insert(inst);
   return inst;
 }

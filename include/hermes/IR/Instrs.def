@@ -93,6 +93,9 @@ DEF_VALUE(HBCCreateFunctionInst, CreateFunctionInst)
 DEF_VALUE(HBCCreateGeneratorInst, Instruction)
 #endif
 MARK_LAST(CreateFunctionInst)
+#ifdef HERMES_RUN_WASM
+DEF_VALUE(CallIntrinsicInst, Instruction)
+#endif
 
 MARK_FIRST(TerminatorInst)
 DEF_VALUE(TerminatorInst, Instruction)
@@ -114,9 +117,6 @@ MARK_FIRST(CallInst)
 DEF_VALUE(CallInst, Instruction)
 DEF_VALUE(ConstructInst, CallInst)
 DEF_VALUE(CallBuiltinInst, CallInst)
-#ifdef HERMES_RUN_WASM
-DEF_VALUE(CallIntrinsicInst, CallInst)
-#endif
 #ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCConstructInst, CallInst)
 DEF_VALUE(HBCCallDirectInst, CallInst)

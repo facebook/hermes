@@ -713,28 +713,53 @@ class GetBuiltinClosureInst : public Instruction {
 
 #ifdef HERMES_RUN_WASM
 /// Call an unsafe compiler intrinsic.
-class CallIntrinsicInst : public CallInst {
+class CallIntrinsicInst : public Instruction {
   CallIntrinsicInst(const CallIntrinsicInst &) = delete;
   void operator=(const CallIntrinsicInst &) = delete;
 
  public:
+  enum { IntrinsicIndexIdx, ArgIdx };
   explicit CallIntrinsicInst(
-      LiteralNumber *callee,
-      LiteralUndefined *thisValue,
+      LiteralNumber *intrinsicIndex,
       ArrayRef<Value *> args)
-      : CallInst(ValueKind::CallIntrinsicInstKind, callee, thisValue, args) {
+      : Instruction(ValueKind::CallIntrinsicInstKind) {
     assert(
-        callee->isInt32Representible() &&
-        callee->getValue() < WasmIntrinsics::_count &&
+        intrinsicIndex->getValue() < WasmIntrinsics::_count &&
         "invalid intrinsics call");
+    pushOperand(intrinsicIndex);
+    for (const auto &arg : args) {
+      pushOperand(arg);
+    }
   }
   explicit CallIntrinsicInst(
       const CallIntrinsicInst *src,
       llvh::ArrayRef<Value *> operands)
-      : CallInst(src, operands) {}
+      : Instruction(src, operands) {}
+
+  Value *getArgument(unsigned idx) {
+    return getOperand(ArgIdx + idx);
+  }
+
+  unsigned getNumArguments() const {
+    return getNumOperands() - 1;
+  }
 
   WasmIntrinsics::Enum getIntrinsicsIndex() const {
-    return (WasmIntrinsics::Enum)cast<LiteralNumber>(getCallee())->asUInt32();
+    return (WasmIntrinsics::Enum)cast<LiteralNumber>(
+               getOperand(IntrinsicIndexIdx))
+        ->asUInt32();
+  }
+
+  SideEffectKind getSideEffect() {
+    if (getIntrinsicsIndex() >= WasmIntrinsics::__uasm_store8)
+      return SideEffectKind::MayWrite;
+    if (getIntrinsicsIndex() >= WasmIntrinsics::__uasm_loadi8)
+      return SideEffectKind::MayRead;
+    return SideEffectKind::None;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   static bool classof(const Value *V) {

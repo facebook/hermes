@@ -32,13 +32,9 @@ function asmFunc(env) {
   //CHKRA-NEXT:   %1 = AsInt32Inst %0
   //CHKRA-NEXT:   %2 = HBCLoadParamInst 2 : number
   //CHKRA-NEXT:   %3 = AsInt32Inst %2
-  //CHKRA-NEXT:   %4 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %5 = MovInst %1 : number
-  //CHKRA-NEXT:   %6 = CallIntrinsicInst [__uasm.add32_2] : number, undefined : undefined, %5 : number, %3 : number
-  //CHKRA-NEXT:   %7 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %8 = MovInst %1 : number
-  //CHKRA-NEXT:   %9 = CallIntrinsicInst [__uasm.add32_2] : number, undefined : undefined, %6 : number, %8 : number
-  //CHKRA-NEXT:   %10 = ReturnInst %9 : number
+  //CHKRA-NEXT:   %4 = CallIntrinsicInst [__uasm.add32_2] : number, %1 : number, %3 : number
+  //CHKRA-NEXT:   %5 = CallIntrinsicInst [__uasm.add32_2] : number, %4 : number, %1 : number
+  //CHKRA-NEXT:   %6 = ReturnInst %5 : number
   //CHKRA-NEXT: function_end
 
   // uint32
@@ -56,13 +52,9 @@ function asmFunc(env) {
   //CHKRA-NEXT:   %2 = BinaryOperatorInst '>>>', %0, %1 : number
   //CHKRA-NEXT:   %3 = HBCLoadParamInst 2 : number
   //CHKRA-NEXT:   %4 = BinaryOperatorInst '>>>', %3, %1 : number
-  //CHKRA-NEXT:   %5 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %6 = MovInst %2 : number
-  //CHKRA-NEXT:   %7 = CallIntrinsicInst [__uasm.add32_2] : number, undefined : undefined, %6 : number, %4 : number
-  //CHKRA-NEXT:   %8 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %9 = MovInst %2 : number
-  //CHKRA-NEXT:   %10 = CallIntrinsicInst [__uasm.add32_2] : number, undefined : undefined, %7 : number, %9 : number
-  //CHKRA-NEXT:   %11 = ReturnInst %10 : number
+  //CHKRA-NEXT:   %5 = CallIntrinsicInst [__uasm.add32_2] : number, %2 : number, %4 : number
+  //CHKRA-NEXT:   %6 = CallIntrinsicInst [__uasm.add32_2] : number, %5 : number, %2 : number
+  //CHKRA-NEXT:   %7 = ReturnInst %6 : number
   //CHKRA-NEXT: function_end
 
   // int32 adding a literal number in Wasm mode should be treated as int32
@@ -79,15 +71,12 @@ function asmFunc(env) {
   //CHKRA-NEXT:   %1 = AsInt32Inst %0
   //CHKRA-NEXT:   %2 = HBCLoadParamInst 2 : number
   //CHKRA-NEXT:   %3 = AsInt32Inst %2
-  //CHKRA-NEXT:   %4 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %5 = CallIntrinsicInst [__uasm.add32_2] : number, undefined : undefined, %1 : number, %3 : number
+  //CHKRA-NEXT:   %4 = HBCLoadConstInst 10086 : number
+  //CHKRA-NEXT:   %5 = CallIntrinsicInst [__uasm.add32_2] : number, %1 : number, %3 : number
   //CHKRA-NEXT:   %6 = HBCLoadConstInst 42 : number
-  //CHKRA-NEXT:   %7 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %8 = CallIntrinsicInst [__uasm.add32_2] : number, undefined : undefined, %5 : number, %6 : number
-  //CHKRA-NEXT:   %9 = HBCLoadConstInst 10086 : number
-  //CHKRA-NEXT:   %10 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %11 = CallIntrinsicInst [__uasm.add32_2] : number, undefined : undefined, %9 : number, %8 : number
-  //CHKRA-NEXT:   %12 = ReturnInst %11 : number
+  //CHKRA-NEXT:   %7 = CallIntrinsicInst [__uasm.add32_2] : number, %5 : number, %6 : number
+  //CHKRA-NEXT:   %8 = CallIntrinsicInst [__uasm.add32_2] : number, %4 : number, %7 : number
+  //CHKRA-NEXT:   %9 = ReturnInst %8 : number
   //CHKRA-NEXT: function_end
 
   function add32lf(x, y) {
@@ -102,12 +91,11 @@ function asmFunc(env) {
   //CHKRA-NEXT:   %1 = AsInt32Inst %0
   //CHKRA-NEXT:   %2 = HBCLoadParamInst 2 : number
   //CHKRA-NEXT:   %3 = AsInt32Inst %2
-  //CHKRA-NEXT:   %4 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %5 = CallIntrinsicInst [__uasm.add32_2] : number, undefined : undefined, %1 : number, %3 : number
-  //CHKRA-NEXT:   %6 = HBCLoadConstInst 4.2 : number
-  //CHKRA-NEXT:   %7 = BinaryOperatorInst '+', %5 : number, %6 : number
-  //CHKRA-NEXT:   %8 = AsInt32Inst %7 : number
-  //CHKRA-NEXT:   %9 = ReturnInst %8 : number
+  //CHKRA-NEXT:   %4 = CallIntrinsicInst [__uasm.add32_2] : number, %1 : number, %3 : number
+  //CHKRA-NEXT:   %5 = HBCLoadConstInst 4.2 : number
+  //CHKRA-NEXT:   %6 = BinaryOperatorInst '+', %4 : number, %5 : number
+  //CHKRA-NEXT:   %7 = AsInt32Inst %6 : number
+  //CHKRA-NEXT:   %8 = ReturnInst %7 : number
   //CHKRA-NEXT: function_end
 
   // Regular add
@@ -140,13 +128,9 @@ function asmFunc(env) {
   //CHKRA-NEXT:   %1 = AsInt32Inst %0
   //CHKRA-NEXT:   %2 = HBCLoadParamInst 2 : number
   //CHKRA-NEXT:   %3 = AsInt32Inst %2
-  //CHKRA-NEXT:   %4 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %5 = MovInst %1 : number
-  //CHKRA-NEXT:   %6 = CallIntrinsicInst [__uasm.sub32_2] : number, undefined : undefined, %5 : number, %3 : number
-  //CHKRA-NEXT:   %7 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %8 = MovInst %1 : number
-  //CHKRA-NEXT:   %9 = CallIntrinsicInst [__uasm.sub32_2] : number, undefined : undefined, %6 : number, %8 : number
-  //CHKRA-NEXT:   %10 = ReturnInst %9 : number
+  //CHKRA-NEXT:   %4 = CallIntrinsicInst [__uasm.sub32_2] : number, %1 : number, %3 : number
+  //CHKRA-NEXT:   %5 = CallIntrinsicInst [__uasm.sub32_2] : number, %4 : number, %1 : number
+  //CHKRA-NEXT:   %6 = ReturnInst %5 : number
   //CHKRA-NEXT: function_end
 
   // divi
@@ -163,13 +147,9 @@ function asmFunc(env) {
   //CHKRA-NEXT:   %1 = AsInt32Inst %0
   //CHKRA-NEXT:   %2 = HBCLoadParamInst 2 : number
   //CHKRA-NEXT:   %3 = AsInt32Inst %2
-  //CHKRA-NEXT:   %4 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %5 = MovInst %1 : number
-  //CHKRA-NEXT:   %6 = CallIntrinsicInst [__uasm.divi32_2] : number, undefined : undefined, %5 : number, %3 : number
-  //CHKRA-NEXT:   %7 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %8 = MovInst %1 : number
-  //CHKRA-NEXT:   %9 = CallIntrinsicInst [__uasm.divi32_2] : number, undefined : undefined, %6 : number, %8 : number
-  //CHKRA-NEXT:   %10 = ReturnInst %9 : number
+  //CHKRA-NEXT:   %4 = CallIntrinsicInst [__uasm.divi32_2] : number, %1 : number, %3 : number
+  //CHKRA-NEXT:   %5 = CallIntrinsicInst [__uasm.divi32_2] : number, %4 : number, %1 : number
+  //CHKRA-NEXT:   %6 = ReturnInst %5 : number
   //CHKRA-NEXT: function_end
 
   // divu
@@ -185,9 +165,8 @@ function asmFunc(env) {
   //CHKRA-NEXT:   %1 = AsInt32Inst %0
   //CHKRA-NEXT:   %2 = HBCLoadParamInst 2 : number
   //CHKRA-NEXT:   %3 = AsInt32Inst %2
-  //CHKRA-NEXT:   %4 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %5 = CallIntrinsicInst [__uasm.divu32_2] : number, undefined : undefined, %1 : number, %3 : number
-  //CHKRA-NEXT:   %6 = ReturnInst %5 : number
+  //CHKRA-NEXT:   %4 = CallIntrinsicInst [__uasm.divu32_2] : number, %1 : number, %3 : number
+  //CHKRA-NEXT:   %5 = ReturnInst %4 : number
   //CHKRA-NEXT: function_end
 
   // Math_imul
@@ -203,9 +182,8 @@ function asmFunc(env) {
   //CHKRA-NEXT:   %1 = AsInt32Inst %0
   //CHKRA-NEXT:   %2 = HBCLoadParamInst 2 : number
   //CHKRA-NEXT:   %3 = AsInt32Inst %2
-  //CHKRA-NEXT:   %4 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %5 = CallIntrinsicInst [__uasm.mul32_2] : number, undefined : undefined, %1 : number, %3 : number
-  //CHKRA-NEXT:   %6 = ReturnInst %5 : number
+  //CHKRA-NEXT:   %4 = CallIntrinsicInst [__uasm.mul32_2] : number, %1 : number, %3 : number
+  //CHKRA-NEXT:   %5 = ReturnInst %4 : number
   //CHKRA-NEXT: function_end
 
   // Should not be replaced.
@@ -238,9 +216,8 @@ function asmFunc(env) {
   //CHKRA-NEXT:   %1 = AsInt32Inst %0
   //CHKRA-NEXT:   %2 = HBCResolveEnvironment %asmFunc()
   //CHKRA-NEXT:   %3 = HBCLoadFromEnvironmentInst %2, [HEAP8@asmFunc] : undefined|object
-  //CHKRA-NEXT:   %4 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %5 = CallIntrinsicInst [__uasm.loadi8_2] : number, undefined : undefined, %3, %1 : number
-  //CHKRA-NEXT:   %6 = ReturnInst %5 : number
+  //CHKRA-NEXT:   %4 = CallIntrinsicInst [__uasm.loadi8_2] : number, %3, %1 : number
+  //CHKRA-NEXT:   %5 = ReturnInst %4 : number
   //CHKRA-NEXT: function_end
 
   function loadu8(addr) {
@@ -254,9 +231,8 @@ function asmFunc(env) {
   //CHKRA-NEXT:   %1 = AsInt32Inst %0
   //CHKRA-NEXT:   %2 = HBCResolveEnvironment %asmFunc()
   //CHKRA-NEXT:   %3 = HBCLoadFromEnvironmentInst %2, [HEAPU8@asmFunc] : undefined|object
-  //CHKRA-NEXT:   %4 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %5 = CallIntrinsicInst [__uasm.loadu8_2] : number, undefined : undefined, %3, %1 : number
-  //CHKRA-NEXT:   %6 = ReturnInst %5 : number
+  //CHKRA-NEXT:   %4 = CallIntrinsicInst [__uasm.loadu8_2] : number, %3, %1 : number
+  //CHKRA-NEXT:   %5 = ReturnInst %4 : number
   //CHKRA-NEXT: function_end
 
   function loadi16(addr) {
@@ -270,9 +246,8 @@ function asmFunc(env) {
   //CHKRA-NEXT:   %1 = AsInt32Inst %0
   //CHKRA-NEXT:   %2 = HBCResolveEnvironment %asmFunc()
   //CHKRA-NEXT:   %3 = HBCLoadFromEnvironmentInst %2, [HEAP16@asmFunc] : undefined|object
-  //CHKRA-NEXT:   %4 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %5 = CallIntrinsicInst [__uasm.loadi16_2] : number, undefined : undefined, %3, %1 : number
-  //CHKRA-NEXT:   %6 = ReturnInst %5 : number
+  //CHKRA-NEXT:   %4 = CallIntrinsicInst [__uasm.loadi16_2] : number, %3, %1 : number
+  //CHKRA-NEXT:   %5 = ReturnInst %4 : number
   //CHKRA-NEXT: function_end
 
   function loadu16(addr) {
@@ -286,9 +261,8 @@ function asmFunc(env) {
   //CHKRA-NEXT:   %1 = AsInt32Inst %0
   //CHKRA-NEXT:   %2 = HBCResolveEnvironment %asmFunc()
   //CHKRA-NEXT:   %3 = HBCLoadFromEnvironmentInst %2, [HEAPU16@asmFunc] : undefined|object
-  //CHKRA-NEXT:   %4 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %5 = CallIntrinsicInst [__uasm.loadu16_2] : number, undefined : undefined, %3, %1 : number
-  //CHKRA-NEXT:   %6 = ReturnInst %5 : number
+  //CHKRA-NEXT:   %4 = CallIntrinsicInst [__uasm.loadu16_2] : number, %3, %1 : number
+  //CHKRA-NEXT:   %5 = ReturnInst %4 : number
   //CHKRA-NEXT: function_end
 
   function loadi32(addr) {
@@ -302,9 +276,8 @@ function asmFunc(env) {
   //CHKRA-NEXT:   %1 = AsInt32Inst %0
   //CHKRA-NEXT:   %2 = HBCResolveEnvironment %asmFunc()
   //CHKRA-NEXT:   %3 = HBCLoadFromEnvironmentInst %2, [HEAP32@asmFunc] : undefined|object
-  //CHKRA-NEXT:   %4 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %5 = CallIntrinsicInst [__uasm.loadi32_2] : number, undefined : undefined, %3, %1 : number
-  //CHKRA-NEXT:   %6 = ReturnInst %5 : number
+  //CHKRA-NEXT:   %4 = CallIntrinsicInst [__uasm.loadi32_2] : number, %3, %1 : number
+  //CHKRA-NEXT:   %5 = ReturnInst %4 : number
   //CHKRA-NEXT: function_end
 
   function loadu32(addr) {
@@ -318,9 +291,8 @@ function asmFunc(env) {
   //CHKRA-NEXT:   %1 = AsInt32Inst %0
   //CHKRA-NEXT:   %2 = HBCResolveEnvironment %asmFunc()
   //CHKRA-NEXT:   %3 = HBCLoadFromEnvironmentInst %2, [HEAPU32@asmFunc] : undefined|object
-  //CHKRA-NEXT:   %4 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %5 = CallIntrinsicInst [__uasm.loadu32_2] : number, undefined : undefined, %3, %1 : number
-  //CHKRA-NEXT:   %6 = ReturnInst %5 : number
+  //CHKRA-NEXT:   %4 = CallIntrinsicInst [__uasm.loadu32_2] : number, %3, %1 : number
+  //CHKRA-NEXT:   %5 = ReturnInst %4 : number
   //CHKRA-NEXT: function_end
 
   function store8(addr, data) {
@@ -336,17 +308,11 @@ function asmFunc(env) {
   //CHKRA-NEXT:   %2 = AsInt32Inst %1
   //CHKRA-NEXT:   %3 = HBCResolveEnvironment %asmFunc()
   //CHKRA-NEXT:   %4 = HBCLoadFromEnvironmentInst %3, [HEAP8@asmFunc] : undefined|object
-  //CHKRA-NEXT:   %5 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %6 = MovInst %2 : number
-  //CHKRA-NEXT:   %7 = MovInst %0
-  //CHKRA-NEXT:   %8 = CallIntrinsicInst [__uasm.store8_3] : number, undefined : undefined, %4, %6 : number, %7
-  //CHKRA-NEXT:   %9 = HBCLoadFromEnvironmentInst %3, [HEAPU8@asmFunc] : undefined|object
-  //CHKRA-NEXT:   %10 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %11 = MovInst %2 : number
-  //CHKRA-NEXT:   %12 = MovInst %0
-  //CHKRA-NEXT:   %13 = CallIntrinsicInst [__uasm.store8_3] : number, undefined : undefined, %9, %11 : number, %12
-  //CHKRA-NEXT:   %14 = HBCLoadConstInst undefined : undefined
-  //CHKRA-NEXT:   %15 = ReturnInst %14 : undefined
+  //CHKRA-NEXT:   %5 = CallIntrinsicInst [__uasm.store8_3] : number, %4, %2 : number, %0
+  //CHKRA-NEXT:   %6 = HBCLoadFromEnvironmentInst %3, [HEAPU8@asmFunc] : undefined|object
+  //CHKRA-NEXT:   %7 = CallIntrinsicInst [__uasm.store8_3] : number, %6, %2 : number, %0
+  //CHKRA-NEXT:   %8 = HBCLoadConstInst undefined : undefined
+  //CHKRA-NEXT:   %9 = ReturnInst %8 : undefined
   //CHKRA-NEXT: function_end
 
   function store16(addr, data) {
@@ -362,17 +328,11 @@ function asmFunc(env) {
   //CHKRA-NEXT:   %2 = AsInt32Inst %1
   //CHKRA-NEXT:   %3 = HBCResolveEnvironment %asmFunc()
   //CHKRA-NEXT:   %4 = HBCLoadFromEnvironmentInst %3, [HEAP16@asmFunc] : undefined|object
-  //CHKRA-NEXT:   %5 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %6 = MovInst %2 : number
-  //CHKRA-NEXT:   %7 = MovInst %0
-  //CHKRA-NEXT:   %8 = CallIntrinsicInst [__uasm.store16_3] : number, undefined : undefined, %4, %6 : number, %7
-  //CHKRA-NEXT:   %9 = HBCLoadFromEnvironmentInst %3, [HEAPU16@asmFunc] : undefined|object
-  //CHKRA-NEXT:   %10 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %11 = MovInst %2 : number
-  //CHKRA-NEXT:   %12 = MovInst %0
-  //CHKRA-NEXT:   %13 = CallIntrinsicInst [__uasm.store16_3] : number, undefined : undefined, %9, %11 : number, %12
-  //CHKRA-NEXT:   %14 = HBCLoadConstInst undefined : undefined
-  //CHKRA-NEXT:   %15 = ReturnInst %14 : undefined
+  //CHKRA-NEXT:   %5 = CallIntrinsicInst [__uasm.store16_3] : number, %4, %2 : number, %0
+  //CHKRA-NEXT:   %6 = HBCLoadFromEnvironmentInst %3, [HEAPU16@asmFunc] : undefined|object
+  //CHKRA-NEXT:   %7 = CallIntrinsicInst [__uasm.store16_3] : number, %6, %2 : number, %0
+  //CHKRA-NEXT:   %8 = HBCLoadConstInst undefined : undefined
+  //CHKRA-NEXT:   %9 = ReturnInst %8 : undefined
   //CHKRA-NEXT: function_end
 
   function store32(addr, data) {
@@ -388,17 +348,11 @@ function asmFunc(env) {
   //CHKRA-NEXT:   %2 = AsInt32Inst %1
   //CHKRA-NEXT:   %3 = HBCResolveEnvironment %asmFunc()
   //CHKRA-NEXT:   %4 = HBCLoadFromEnvironmentInst %3, [HEAP32@asmFunc] : undefined|object
-  //CHKRA-NEXT:   %5 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %6 = MovInst %2 : number
-  //CHKRA-NEXT:   %7 = MovInst %0
-  //CHKRA-NEXT:   %8 = CallIntrinsicInst [__uasm.store32_3] : number, undefined : undefined, %4, %6 : number, %7
-  //CHKRA-NEXT:   %9 = HBCLoadFromEnvironmentInst %3, [HEAPU32@asmFunc] : undefined|object
-  //CHKRA-NEXT:   %10 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %11 = MovInst %2 : number
-  //CHKRA-NEXT:   %12 = MovInst %0
-  //CHKRA-NEXT:   %13 = CallIntrinsicInst [__uasm.store32_3] : number, undefined : undefined, %9, %11 : number, %12
-  //CHKRA-NEXT:   %14 = HBCLoadConstInst undefined : undefined
-  //CHKRA-NEXT:   %15 = ReturnInst %14 : undefined
+  //CHKRA-NEXT:   %5 = CallIntrinsicInst [__uasm.store32_3] : number, %4, %2 : number, %0
+  //CHKRA-NEXT:   %6 = HBCLoadFromEnvironmentInst %3, [HEAPU32@asmFunc] : undefined|object
+  //CHKRA-NEXT:   %7 = CallIntrinsicInst [__uasm.store32_3] : number, %6, %2 : number, %0
+  //CHKRA-NEXT:   %8 = HBCLoadConstInst undefined : undefined
+  //CHKRA-NEXT:   %9 = ReturnInst %8 : undefined
   //CHKRA-NEXT: function_end
 
   function store32cse(addr, data) {
@@ -415,18 +369,12 @@ function asmFunc(env) {
   //CHKRA-NEXT:   %2 = AsInt32Inst %1
   //CHKRA-NEXT:   %3 = HBCResolveEnvironment %asmFunc()
   //CHKRA-NEXT:   %4 = HBCLoadFromEnvironmentInst %3, [HEAP32@asmFunc] : undefined|object
-  //CHKRA-NEXT:   %5 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %6 = MovInst %2 : number
-  //CHKRA-NEXT:   %7 = MovInst %0
-  //CHKRA-NEXT:   %8 = CallIntrinsicInst [__uasm.store32_3] : number, undefined : undefined, %4, %6 : number, %7
-  //CHKRA-NEXT:   %9 = HBCLoadFromEnvironmentInst %3, [HEAPU32@asmFunc] : undefined|object
-  //CHKRA-NEXT:   %10 = ImplicitMovInst undefined : undefined
-  //CHKRA-NEXT:   %11 = MovInst %2 : number
-  //CHKRA-NEXT:   %12 = MovInst %0
-  //CHKRA-NEXT:   %13 = CallIntrinsicInst [__uasm.store32_3] : number, undefined : undefined, %9, %11 : number, %12
-  //CHKRA-NEXT:   %14 = HBCLoadConstInst 2 : number
-  //CHKRA-NEXT:   %15 = BinaryOperatorInst '>>', %2 : number, %14 : number
-  //CHKRA-NEXT:   %16 = ReturnInst %15 : number
+  //CHKRA-NEXT:   %5 = CallIntrinsicInst [__uasm.store32_3] : number, %4, %2 : number, %0
+  //CHKRA-NEXT:   %6 = HBCLoadFromEnvironmentInst %3, [HEAPU32@asmFunc] : undefined|object
+  //CHKRA-NEXT:   %7 = CallIntrinsicInst [__uasm.store32_3] : number, %6, %2 : number, %0
+  //CHKRA-NEXT:   %8 = HBCLoadConstInst 2 : number
+  //CHKRA-NEXT:   %9 = BinaryOperatorInst '>>', %2 : number, %8 : number
+  //CHKRA-NEXT:   %10 = ReturnInst %9 : number
   //CHKRA-NEXT: function_end
 
   // The case where >> 2 is missing or have a different amount.

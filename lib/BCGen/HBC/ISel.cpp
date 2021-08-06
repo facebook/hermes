@@ -352,17 +352,11 @@ void HBCISel::verifyCall(CallInst *Inst) {
 
   const bool isBuiltin = llvh::isa<CallBuiltinInst>(Inst);
   const bool isCallN = llvh::isa<HBCCallNInst>(Inst);
-#ifdef HERMES_RUN_WASM
-  const bool isIntrinsic = llvh::isa<CallIntrinsicInst>(Inst);
-#else
-  const bool isIntrinsic = false;
-#endif
 
   for (unsigned i = 0, max = Inst->getNumArguments(); i < max; i++) {
     Value *argument = Inst->getArgument(i);
-    // The first argument (thisArg) of CallBuiltin / CallIntrinsic must be
-    // LiteralUndefined.
-    if ((isBuiltin || isIntrinsic) && i == 0) {
+    // The first argument (thisArg) of CallBuiltin LiteralUndefined.
+    if (isBuiltin && i == 0) {
       assert(
           llvh::isa<LiteralUndefined>(argument) && !RA_.isAllocated(argument) &&
           "Register for 'this' argument is misallocated");
@@ -1214,15 +1208,18 @@ void HBCISel::generateGetBuiltinClosureInst(
 void HBCISel::generateCallIntrinsicInst(
     CallIntrinsicInst *Inst,
     BasicBlock *next) {
-  verifyCall(Inst);
-  // Currently all intrinsics takes 3 registers. However, store
-  // intrinsics need special handling.
-  auto res = encodeValue(Inst);
-  auto arg1 = encodeValue(Inst->getArgument(1));
-  auto arg2 = encodeValue(Inst->getArgument(2));
+  // Store instrinsics use 3 input registers. Binary Arithmetic and Load
+  // intrinsics use 2 input registers and 1 result register.
+  auto arg1 = encodeValue(Inst->getArgument(0));
+  auto arg2 = encodeValue(Inst->getArgument(1));
+  unsigned res = -1;
+
+  // Result register is not used in store instrinsics, but is still allocated.
+  if (Inst->getIntrinsicsIndex() < WasmIntrinsics::__uasm_store8)
+    res = encodeValue(Inst);
 
   switch (Inst->getIntrinsicsIndex()) {
-    // Arithmetic
+    // Binary Arithmetic
     case WasmIntrinsics::__uasm_add32:
       BCFGen_->emitAdd32(res, arg1, arg2);
       break;
@@ -1261,13 +1258,13 @@ void HBCISel::generateCallIntrinsicInst(
 
     // Store
     case WasmIntrinsics::__uasm_store8:
-      BCFGen_->emitStore8(arg1, arg2, encodeValue(Inst->getArgument(3)));
+      BCFGen_->emitStore8(arg1, arg2, encodeValue(Inst->getArgument(2)));
       break;
     case WasmIntrinsics::__uasm_store16:
-      BCFGen_->emitStore16(arg1, arg2, encodeValue(Inst->getArgument(3)));
+      BCFGen_->emitStore16(arg1, arg2, encodeValue(Inst->getArgument(2)));
       break;
     case WasmIntrinsics::__uasm_store32:
-      BCFGen_->emitStore32(arg1, arg2, encodeValue(Inst->getArgument(3)));
+      BCFGen_->emitStore32(arg1, arg2, encodeValue(Inst->getArgument(2)));
       break;
 
     default:
