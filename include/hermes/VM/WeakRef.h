@@ -139,9 +139,6 @@ class WeakRootBase : protected CompressedPointer {
   GCCell *getNoBarrierUnsafe(PointerBase *base) {
     return CompressedPointer::get(base);
   }
-  StorageType &getLocNoBarrierUnsafe() {
-    return getLoc();
-  }
 
   WeakRootBase &operator=(CompressedPointer ptr) {
     // No need for a write barrier on weak roots currently.
