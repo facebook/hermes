@@ -988,14 +988,10 @@ class StoreNewOwnPropertyInst : public StoreOwnPropertyInst {
   void operator=(const StoreNewOwnPropertyInst &) = delete;
 
  public:
-  LiteralString *getPropertyName() const {
-    return cast<LiteralString>(getOperand(PropertyIdx));
-  }
-
   explicit StoreNewOwnPropertyInst(
       Value *storedValue,
       Value *object,
-      LiteralString *property,
+      Literal *property,
       LiteralBool *isEnumerable)
       : StoreOwnPropertyInst(
             ValueKind::StoreNewOwnPropertyInstKind,
@@ -1003,6 +999,10 @@ class StoreNewOwnPropertyInst : public StoreOwnPropertyInst {
             object,
             property,
             isEnumerable) {
+    assert(
+        (llvh::isa<LiteralString>(property) ||
+         llvh::isa<LiteralNumber>(property)) &&
+        "Invalid property literal.");
     assert(
         object->getType().isObjectType() &&
         "object operand must be known to be an object");

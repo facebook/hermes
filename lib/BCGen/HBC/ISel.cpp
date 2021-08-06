@@ -614,15 +614,25 @@ void HBCISel::generateStoreOwnPropertyInst(
 void HBCISel::generateStoreNewOwnPropertyInst(
     StoreNewOwnPropertyInst *Inst,
     BasicBlock *next) {
-  assert(
-      !toArrayIndex(Inst->getPropertyName()->getValue().str()).hasValue() &&
-      "Property name must not be a valid array index");
-
   auto valueReg = encodeValue(Inst->getStoredValue());
   auto objReg = encodeValue(Inst->getObject());
-  auto strProp = Inst->getPropertyName();
+  auto prop = Inst->getProperty();
   bool isEnumerable = Inst->getIsEnumerable();
 
+  if (auto *numProp = llvh::dyn_cast<LiteralNumber>(prop)) {
+    assert(
+        isEnumerable &&
+        "No way to generate non-enumerable indexed StoreNewOwnPropertyInst.");
+    uint32_t index = *numProp->convertToArrayIndex();
+    if (index <= UINT8_MAX) {
+      BCFGen_->emitPutOwnByIndex(objReg, valueReg, index);
+    } else {
+      BCFGen_->emitPutOwnByIndexL(objReg, valueReg, index);
+    }
+    return;
+  }
+
+  auto strProp = cast<LiteralString>(prop);
   auto id = BCFGen_->getIdentifierID(strProp);
 
   if (isEnumerable) {

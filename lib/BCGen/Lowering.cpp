@@ -472,15 +472,8 @@ bool LowerAllocObjectLiteral::lowerAlloc(AllocObjectLiteralInst *allocInst) {
   for (unsigned i = 0; i < allocInst->getKeyValuePairCount(); i++) {
     Literal *key = allocInst->getKey(i);
     Value *value = allocInst->getValue(i);
-    // If key is numeric, use StoreOwnPropertyInst, otherwise,
-    // StoreNewOwnPropertyInst.
-    if (auto *LS = llvh::dyn_cast<LiteralString>(key)) {
-      builder.createStoreNewOwnPropertyInst(
-          value, allocInst, LS, IRBuilder::PropEnumerable::Yes);
-    } else {
-      builder.createStoreOwnPropertyInst(
-          value, allocInst, key, IRBuilder::PropEnumerable::Yes);
-    }
+    builder.createStoreNewOwnPropertyInst(
+        value, allocInst, key, IRBuilder::PropEnumerable::Yes);
   }
   allocInst->replaceAllUsesWith(Obj);
   allocInst->eraseFromParent();
@@ -588,13 +581,8 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
   for (; i < allocInst->getKeyValuePairCount(); i++) {
     Literal *key = allocInst->getKey(i);
     Value *value = allocInst->getValue(i);
-    if (auto *LS = llvh::dyn_cast<LiteralString>(key)) {
-      builder.createStoreNewOwnPropertyInst(
-          value, allocInst, LS, IRBuilder::PropEnumerable::Yes);
-    } else {
-      builder.createStoreOwnPropertyInst(
-          value, allocInst, key, IRBuilder::PropEnumerable::Yes);
-    }
+    builder.createStoreNewOwnPropertyInst(
+        value, allocInst, key, IRBuilder::PropEnumerable::Yes);
   }
 
   // Emit HBCAllocObjectFromBufferInst.
@@ -662,29 +650,6 @@ bool LowerNumericProperties::runOnFunction(Function *F) {
   bool changed = false;
   for (BasicBlock &BB : *F) {
     for (Instruction &Inst : BB) {
-      // If StoreNewOwnPropertyInst's property name is a valid array index, we
-      // must convert the instruction to StoreOwnPropertyInst.
-      if (auto *SNOP = llvh::dyn_cast<StoreNewOwnPropertyInst>(&Inst)) {
-        auto *strLit = SNOP->getPropertyName();
-
-        // Check if the string looks exactly like an array index.
-        if (auto num = toArrayIndex(strLit->getValue().str())) {
-          builder.setInsertionPoint(&Inst);
-          builder.setLocation(SNOP->getLocation());
-          auto *inst = builder.createStoreOwnPropertyInst(
-              SNOP->getStoredValue(),
-              SNOP->getObject(),
-              builder.getLiteralNumber(*num),
-              SNOP->getIsEnumerable() ? IRBuilder::PropEnumerable::Yes
-                                      : IRBuilder::PropEnumerable::No);
-
-          Inst.replaceAllUsesWith(inst);
-          destroyer.add(&Inst);
-          changed = true;
-          continue;
-        }
-      }
-
       if (llvh::isa<LoadPropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
             builder, Inst, LoadPropertyInst::PropertyIdx);

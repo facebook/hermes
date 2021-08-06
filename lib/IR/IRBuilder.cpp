@@ -457,7 +457,7 @@ StoreOwnPropertyInst *IRBuilder::createStoreOwnPropertyInst(
 StoreNewOwnPropertyInst *IRBuilder::createStoreNewOwnPropertyInst(
     Value *storedValue,
     Value *object,
-    LiteralString *property,
+    Literal *property,
     PropEnumerable isEnumerable) {
   auto *inst = new StoreNewOwnPropertyInst(
       storedValue,

@@ -337,7 +337,7 @@ class IRBuilder {
   StoreNewOwnPropertyInst *createStoreNewOwnPropertyInst(
       Value *storedValue,
       Value *object,
-      LiteralString *property,
+      Literal *property,
       PropEnumerable isEnumerable);
 
   StoreGetterSetterInst *createStoreGetterSetterInst(

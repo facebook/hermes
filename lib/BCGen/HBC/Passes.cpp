@@ -125,8 +125,7 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
   if (auto *SOP = llvh::dyn_cast<StoreOwnPropertyInst>(Inst)) {
     if (opIndex == StoreOwnPropertyInst::PropertyIdx) {
       if (llvh::isa<StoreNewOwnPropertyInst>(Inst)) {
-        // In StoreNewOwnPropertyInst the property name must be a literal
-        // string.
+        // In StoreNewOwnPropertyInst the property name must be a literal.
         return true;
       }
 

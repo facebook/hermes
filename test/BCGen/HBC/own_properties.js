@@ -27,8 +27,8 @@ function foo() {
 //CHECK-NEXT:  %6 = HBCLoadConstInst undefined : undefined
 //CHECK-NEXT:  %7 = AllocObjectInst 5 : number, empty
 //CHECK-NEXT:  %8 = StoreNewOwnPropertyInst %1 : number, %7 : object, "a" : string, true : boolean
-//CHECK-NEXT:  %9 = StoreOwnPropertyInst %2 : number, %7 : object, 10 : number, true : boolean
-//CHECK-NEXT:  %10 = StoreOwnPropertyInst %3 : number, %7 : object, 11 : number, true : boolean
+//CHECK-NEXT:  %9 = StoreNewOwnPropertyInst %2 : number, %7 : object, 10 : number, true : boolean
+//CHECK-NEXT:  %10 = StoreNewOwnPropertyInst %3 : number, %7 : object, 11 : number, true : boolean
 //CHECK-NEXT:  %11 = StoreNewOwnPropertyInst %4 : number, %7 : object, "999999999999999999999999" : string, true : boolean
 //CHECK-NEXT:  %12 = StoreOwnPropertyInst %5 : number, %7 : object, 42 : number, true : boolean
 //CHECK-NEXT:  %13 = ReturnInst %7 : object
