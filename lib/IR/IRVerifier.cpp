@@ -343,9 +343,7 @@ void Verifier::visitAsInt32Inst(const AsInt32Inst &Inst) {
   Assert(
       !isTerminator(&Inst),
       "Non-terminator cannot be the last instruction of a basic block");
-  Assert(
-      Inst.getType() == Type::createNumber(),
-      "AsInt32Inst must return a number type");
+  Assert(Inst.getType().isInt32Type(), "AsInt32Inst must return an Int32 type");
 }
 
 void Verifier::visitAddEmptyStringInst(const AddEmptyStringInst &Inst) {

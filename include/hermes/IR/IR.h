@@ -62,6 +62,14 @@ class Type {
     LAST_TYPE
   };
 
+  enum NumTypeKind {
+    Double,
+    Int32,
+    Uint32,
+
+    LAST_NUM_TYPE
+  };
+
   /// Return the string representation of the type at index \p idx.
   StringRef getKindStr(TypeKind idx) const {
     // The strings below match the values in TypeKind.
@@ -81,6 +89,9 @@ class Type {
 #define BIT_TO_VAL(XX) (1 << TypeKind::XX)
 #define IS_VAL(XX) (bitmask_ == (1 << TypeKind::XX))
 
+#define NUM_BIT_TO_VAL(XX) (1 << NumTypeKind::XX)
+#define NUM_IS_VAL(XX) (numBitmask_ == (1 << NumTypeKind::XX))
+
   // The 'Any' type means all possible types.
   static constexpr unsigned TYPE_ANY_MASK = (1u << TypeKind::LAST_TYPE) - 1;
 
@@ -94,26 +105,39 @@ class Type {
   static constexpr unsigned NONPTR_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(Boolean) | BIT_TO_VAL(Null) | BIT_TO_VAL(Undefined);
 
+  static constexpr unsigned ANY_NUM_BITS =
+      NUM_BIT_TO_VAL(Double) | NUM_BIT_TO_VAL(Int32) | NUM_BIT_TO_VAL(Uint32);
+
+  static constexpr unsigned INTEGER_BITS =
+      NUM_BIT_TO_VAL(Int32) | NUM_BIT_TO_VAL(Uint32);
+
   /// Each bit represent the possibility of the type being the type that's
   /// represented in the enum entry.
   unsigned bitmask_{TYPE_ANY_MASK};
+  /// Each bit represent the possibility of the type being the subtype of number
+  /// that's represented in the number type enum entry. If the number bit is not
+  /// set, this bitmask is meaningless.
+  unsigned numBitmask_{ANY_NUM_BITS};
 
   /// The constructor is only accessible by static builder methods.
-  constexpr explicit Type(unsigned mask) : bitmask_(mask) {}
+  constexpr explicit Type(unsigned mask, unsigned numMask = ANY_NUM_BITS)
+      : bitmask_(mask), numBitmask_(numMask) {}
 
  public:
   constexpr Type() = default;
 
   static constexpr Type unionTy(Type A, Type B) {
-    return Type(A.bitmask_ | B.bitmask_);
+    return Type(A.bitmask_ | B.bitmask_, A.numBitmask_ | B.numBitmask_);
   }
 
   static constexpr Type intersectTy(Type A, Type B) {
+    // This is sound but not complete, but this is only used for disjointness
+    // check.
     return Type(A.bitmask_ & B.bitmask_);
   }
 
   static constexpr Type subtractTy(Type A, Type B) {
-    return Type(A.bitmask_ & ~B.bitmask_);
+    return Type(A.bitmask_ & ~B.bitmask_, A.numBitmask_ & ~B.numBitmask_);
   }
 
   constexpr bool isNoType() const {
@@ -154,6 +178,12 @@ class Type {
   static constexpr Type createRegExp() {
     return Type(BIT_TO_VAL(RegExp));
   }
+  static constexpr Type createInt32() {
+    return Type(BIT_TO_VAL(Number), NUM_BIT_TO_VAL(Int32));
+  }
+  static constexpr Type createUint32() {
+    return Type(BIT_TO_VAL(Number), NUM_BIT_TO_VAL(Uint32));
+  }
 
   constexpr bool isAnyType() const {
     return bitmask_ == TYPE_ANY_MASK;
@@ -186,6 +216,15 @@ class Type {
   constexpr bool isRegExpType() const {
     return IS_VAL(RegExp);
   }
+  constexpr bool isInt32Type() const {
+    return IS_VAL(Number) && NUM_IS_VAL(Int32);
+  }
+  constexpr bool isUint32Type() const {
+    return IS_VAL(Number) && NUM_IS_VAL(Uint32);
+  }
+  constexpr bool isIntegerType() const {
+    return IS_VAL(Number) && (numBitmask_ && !(numBitmask_ & ~INTEGER_BITS));
+  }
 
   /// \return true if the type is one of the known javascript primitive types:
   /// Number, Null, Boolean, String, Undefined.
@@ -205,6 +244,8 @@ class Type {
   }
 #undef BIT_TO_VAL
 #undef IS_VAL
+#undef NUM_BIT_TO_VAL
+#undef NUM_IS_VAL
 
   /// \returns true if this type is a subset of \p t.
   constexpr bool isSubsetOf(Type t) const {
