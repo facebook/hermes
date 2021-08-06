@@ -61,11 +61,12 @@ function duplicatedObjectLiteral(func) {
 //CHECK-NEXT:  %1 = AllocObjectInst 4 : number, empty
 //CHECK-NEXT:  %2 = StoreNewOwnPropertyInst 1 : number, %1 : object, "a" : string, true : boolean
 //CHECK-NEXT:  %3 = StoreNewOwnPropertyInst 2 : number, %1 : object, "b" : string, true : boolean
-//CHECK-NEXT:  %4 = StoreNewOwnPropertyInst 3 : number, %1 : object, "c" : string, true : boolean
-//CHECK-NEXT:  %5 = StoreNewOwnPropertyInst 4 : number, %1 : object, "d" : string, true : boolean
-//CHECK-NEXT:  %6 = ReturnInst %1 : object
+//CHECK-NEXT:  %4 = StoreNewOwnPropertyInst undefined : undefined, %1 : object, "d" : string, true : boolean
+//CHECK-NEXT:  %5 = StoreNewOwnPropertyInst 3 : number, %1 : object, "c" : string, true : boolean
+//CHECK-NEXT:  %6 = StoreOwnPropertyInst 4 : number, %1 : object, "d" : string, true : boolean
+//CHECK-NEXT:  %7 = ReturnInst %1 : object
 //CHECK-NEXT:%BB1:
-//CHECK-NEXT:  %7 = ReturnInst undefined : undefined
+//CHECK-NEXT:  %8 = ReturnInst undefined : undefined
 //CHECK-NEXT:function_end
 
 // Do not emit AllocObjectLiteral if object is empty.

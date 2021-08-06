@@ -46,3 +46,26 @@ print(obj.a)
 obj = {get 10 (){ return 42 }, 10 : 1, 11: 3}
 print(obj[10])
 //CHECK-NEXT: 1
+
+print('value redefinition')
+//CHECK-LABEL: value redefinition
+
+function make(n){
+  print("Making ", n);
+  return n;
+}
+
+obj = {
+  a: make(1),
+  b: make(2),
+  a: make(3),
+};
+//CHECK-NEXT: Making 1
+//CHECK-NEXT: Making 2
+//CHECK-NEXT: Making 3
+
+for (var p in obj) {
+  print(p, obj[p]);
+}
+//CHECK-NEXT: a 3
+//CHECK-NEXT: b 2

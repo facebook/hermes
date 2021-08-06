@@ -24,15 +24,17 @@ var x = {
 //CHECK-NEXT:  %0 = AllocStackInst $?anon_0_ret
 //CHECK-NEXT:  %1 = StoreStackInst undefined : undefined, %0
 //CHECK-NEXT:  %2 = AllocObjectInst 3 : number, empty
-//CHECK-NEXT:  %3 = CreateFunctionInst %"get a"()
-//CHECK-NEXT:  %4 = StoreGetterSetterInst %3 : closure, undefined : undefined, %2 : object, "a" : string, true : boolean
-//CHECK-NEXT:  %5 = CreateFunctionInst %"get 1"()
-//CHECK-NEXT:  %6 = CreateFunctionInst %"set 1"()
-//CHECK-NEXT:  %7 = StoreGetterSetterInst %5 : closure, %6 : closure, %2 : object, "1" : string, true : boolean
-//CHECK-NEXT:  %8 = StoreNewOwnPropertyInst 12 : number, %2 : object, "b" : string, true : boolean
-//CHECK-NEXT:  %9 = StorePropertyInst %2 : object, globalObject : object, "x" : string
-//CHECK-NEXT:  %10 = LoadStackInst %0
-//CHECK-NEXT:  %11 = ReturnInst %10
+//CHECK-NEXT:  %3 = StoreNewOwnPropertyInst undefined : undefined, %2 : object, "1" : string, true : boolean
+//CHECK-NEXT:  %4 = CreateFunctionInst %"get a"()
+//CHECK-NEXT:  %5 = StoreGetterSetterInst %4 : closure, undefined : undefined, %2 : object, "a" : string, true : boolean
+//CHECK-NEXT:  %6 = CreateFunctionInst %"get 1"()
+//CHECK-NEXT:  %7 = CreateFunctionInst %"set 1"()
+//CHECK-NEXT:  %8 = StoreGetterSetterInst %6 : closure, %7 : closure, %2 : object, "1" : string, true : boolean
+//CHECK-NEXT:  %9 = StoreNewOwnPropertyInst undefined : undefined, %2 : object, "b" : string, true : boolean
+//CHECK-NEXT:  %10 = StoreOwnPropertyInst 12 : number, %2 : object, "b" : string, true : boolean
+//CHECK-NEXT:  %11 = StorePropertyInst %2 : object, globalObject : object, "x" : string
+//CHECK-NEXT:  %12 = LoadStackInst %0
+//CHECK-NEXT:  %13 = ReturnInst %12
 //CHECK-NEXT:function_end
 
 //CHECK-LABEL:function "get a"()

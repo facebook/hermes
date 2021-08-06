@@ -921,32 +921,34 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     PropertyValue *propValue = &propMap[keyStr];
     auto *Key = Builder.getLiteralString(keyStr);
 
+    auto maybeInsertPlaceholder = [&] {
+      if (propValue->state == PropertyValue::None) {
+        // This value is going to be overwritten, but insert a placeholder in
+        // order to maintain insertion order.
+        if (haveSeenComputedProp) {
+          Builder.createStoreOwnPropertyInst(
+              Builder.getLiteralUndefined(),
+              Obj,
+              Key,
+              IRBuilder::PropEnumerable::Yes);
+        } else {
+          Builder.createStoreNewOwnPropertyInst(
+              Builder.getLiteralUndefined(),
+              Obj,
+              Key,
+              IRBuilder::PropEnumerable::Yes);
+        }
+        propValue->state = PropertyValue::Placeholder;
+      }
+    };
+
     if (prop->_kind->str() == "get" || prop->_kind->str() == "set") {
       // If  we already generated it, skip.
       if (propValue->state == PropertyValue::IRGenerated)
         continue;
 
       if (!propValue->isAccessor) {
-        if (propValue->state == PropertyValue::None) {
-          // This property will be redefined in the end as non-accessor.
-          // We need to store this property now otherwise we would break
-          // the order of the properties. The only choice we have is to
-          // store a placeholder first here.
-          if (haveSeenComputedProp) {
-            Builder.createStoreOwnPropertyInst(
-                Builder.getLiteralUndefined(),
-                Obj,
-                Key,
-                IRBuilder::PropEnumerable::Yes);
-          } else {
-            Builder.createStoreNewOwnPropertyInst(
-                Builder.getLiteralUndefined(),
-                Obj,
-                Key,
-                IRBuilder::PropEnumerable::Yes);
-          }
-          propValue->state = PropertyValue::Placeholder;
-        }
+        maybeInsertPlaceholder();
         continue;
       }
 
@@ -1012,6 +1014,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
               value, Obj, Key, IRBuilder::PropEnumerable::Yes);
         }
         propValue->state = PropertyValue::IRGenerated;
+      } else {
+        maybeInsertPlaceholder();
       }
     }
   }
