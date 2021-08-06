@@ -155,7 +155,7 @@ class LowerAllocObjectFuncContext
     }
   }
 
-  llvh::SmallVector<StoreOwnPropertyInst *, 4> run() {
+  llvh::SmallVector<StoreNewOwnPropertyInst *, 4> run() {
     // First of all, get a list of basic blocks that contain users of
     // allocInst_, sorted by dominance relationship.
     DFS(DT_.getNode(allocInst_->getParent()));
@@ -183,8 +183,8 @@ class LowerAllocObjectFuncContext
   /// collectInstructions walks through sortedBasicBlocks_, extract instructions
   /// that are users of allocInst_, ordered by dominance relationship.
   /// We also look into the type of each user and decide when to stop the
-  /// lowering process. Specifically, we only process StoreOwnPropertyInst.
-  llvh::SmallVector<StoreOwnPropertyInst *, 4> collectInstructions() const;
+  /// lowering process. Specifically, we only process StoreNewOwnPropertyInst.
+  llvh::SmallVector<StoreNewOwnPropertyInst *, 4> collectInstructions() const;
 
   /// The instruction that allocates the object.
   AllocObjectInst *allocInst_;
@@ -238,9 +238,9 @@ bool LowerAllocObjectFuncContext::processNode(
   return false;
 }
 
-llvh::SmallVector<StoreOwnPropertyInst *, 4>
+llvh::SmallVector<StoreNewOwnPropertyInst *, 4>
 LowerAllocObjectFuncContext::collectInstructions() const {
-  llvh::SmallVector<StoreOwnPropertyInst *, 4> instrs;
+  llvh::SmallVector<StoreNewOwnPropertyInst *, 4> instrs;
 
   for (BasicBlock *BB : sortedBasicBlocks_) {
     bool terminate = false;
@@ -249,9 +249,9 @@ LowerAllocObjectFuncContext::collectInstructions() const {
         // I is not a user of allocInst_, ignore it.
         continue;
       }
-      auto *SI = llvh::dyn_cast<StoreOwnPropertyInst>(&I);
+      auto *SI = llvh::dyn_cast<StoreNewOwnPropertyInst>(&I);
       if (!SI || SI->getObject() != allocInst_) {
-        // A user that's not a StoreOwnPropertyInst storing into the object
+        // A user that's not a StoreNewOwnPropertyInst storing into the object
         // created by allocInst_. We have to stop processing here.
         terminate = true;
         break;
@@ -287,7 +287,7 @@ bool LowerAllocObject::lowerAlloc(AllocObjectInst *allocInst) {
   Function *F = allocInst->getParent()->getParent();
   DominanceInfo DI(F);
   LowerAllocObjectFuncContext ctx(DI, allocInst);
-  llvh::SmallVector<StoreOwnPropertyInst *, 4> users = ctx.run();
+  llvh::SmallVector<StoreNewOwnPropertyInst *, 4> users = ctx.run();
   if (users.empty()) {
     return false;
   }
@@ -324,7 +324,7 @@ static bool canSerialize(Value *V) {
 };
 
 uint32_t LowerAllocObject::estimateBestNumElemsToSerialize(
-    llvh::SmallVectorImpl<StoreOwnPropertyInst *> &users) {
+    llvh::SmallVectorImpl<StoreNewOwnPropertyInst *> &users) {
   // We want to track curSaving to avoid serializing too many place holders
   // which ends up causing a big size regression.
   // We set curSaving to be the delta of the size of two instructions to avoid
@@ -337,13 +337,12 @@ uint32_t LowerAllocObject::estimateBestNumElemsToSerialize(
   uint32_t nonLiteralPlaceholderCount = 0;
 
   uint32_t curSize = 0;
-  for (StoreOwnPropertyInst *I : users) {
+  for (StoreNewOwnPropertyInst *I : users) {
     ++curSize;
-    auto *prop = I->getProperty();
-    if (!llvh::isa<LiteralString>(prop) && !llvh::isa<LiteralNumber>(prop)) {
-      // Computed property, stop here.
-      break;
-    }
+    assert(
+        (llvh::isa<LiteralString>(I->getProperty()) ||
+         llvh::isa<LiteralNumber>(I->getProperty())) &&
+        "StoreNewOwnPropertyInst property must be literal.");
     if (canSerialize(I->getStoredValue())) {
       // Property Value is a literal that's not undefined.
       curSaving += kLiteralSavedBytes;
@@ -377,7 +376,7 @@ uint32_t LowerAllocObject::estimateBestNumElemsToSerialize(
 
 bool LowerAllocObject::lowerAllocObjectBuffer(
     AllocObjectInst *allocInst,
-    llvh::SmallVectorImpl<StoreOwnPropertyInst *> &users,
+    llvh::SmallVectorImpl<StoreNewOwnPropertyInst *> &users,
     uint32_t maxSize) {
   auto size = estimateBestNumElemsToSerialize(users);
   if (size == 0) {
@@ -389,7 +388,7 @@ bool LowerAllocObject::lowerAllocObjectBuffer(
   IRBuilder builder(F);
   HBCAllocObjectFromBufferInst::ObjectPropertyMap prop_map;
   for (uint32_t i = 0; i < size; ++i) {
-    StoreOwnPropertyInst *I = users[i];
+    StoreNewOwnPropertyInst *I = users[i];
     Literal *propLiteral = nullptr;
     // Property name can be either a LiteralNumber or a LiteralString.
     if (auto *LN = llvh::dyn_cast<LiteralNumber>(I->getProperty())) {
@@ -416,11 +415,8 @@ bool LowerAllocObject::lowerAllocObjectBuffer(
       prop_map.push_back(std::pair<Literal *, Literal *>(
           propLiteral, builder.getLiteralNull()));
 
-      assert(
-          llvh::isa<StoreOwnPropertyInst>(I) &&
-          "Expecting a StoreOwnPropertyInst when storing a literal property.");
       // Since we will be defining this property twice, once in the buffer
-      // once setting the correct value latter, we can no longer use
+      // once setting the correct value later, we can no longer use
       // StoreNewOwnPropertyInst. Replace this instruction with
       // StorePropertyInst.
       builder.setLocation(I->getLocation());

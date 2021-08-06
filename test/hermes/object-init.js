@@ -42,3 +42,7 @@ obj = {
 
 print(obj.a)
 //CHECK-NEXT: 6
+
+obj = {get 10 (){ return 42 }, 10 : 1, 11: 3}
+print(obj[10])
+//CHECK-NEXT: 1
