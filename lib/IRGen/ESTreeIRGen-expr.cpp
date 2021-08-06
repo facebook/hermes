@@ -683,8 +683,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
    public:
     /// Is this a getter/setter value.
     bool isAccessor = false;
-    /// Did we already generate IR to set this property.
-    bool isIRGenerated = false;
+    /// Tracks the state of generating IR for this value.
+    enum { None, Placeholder, IRGenerated } state{None};
     /// The value, if this is a regular property
     ESTree::Node *valueNode{};
     /// Getter accessor, if this is an accessor property.
@@ -923,28 +923,30 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
 
     if (prop->_kind->str() == "get" || prop->_kind->str() == "set") {
       // If  we already generated it, skip.
-      if (propValue->isIRGenerated)
+      if (propValue->state == PropertyValue::IRGenerated)
         continue;
 
       if (!propValue->isAccessor) {
-        // This property will be redefined in the end as non-accessor.
-        // We need to store this property now otherwise we would break
-        // the order of the properties. The only choice we have is to
-        // store a placeholder first here.
-        if (haveSeenComputedProp) {
-          Builder.createStoreOwnPropertyInst(
-              Builder.getLiteralUndefined(),
-              Obj,
-              Key,
-              IRBuilder::PropEnumerable::Yes);
-        } else {
-          Builder.createStoreNewOwnPropertyInst(
-              Builder.getLiteralUndefined(),
-              Obj,
-              Key,
-              IRBuilder::PropEnumerable::Yes);
+        if (propValue->state == PropertyValue::None) {
+          // This property will be redefined in the end as non-accessor.
+          // We need to store this property now otherwise we would break
+          // the order of the properties. The only choice we have is to
+          // store a placeholder first here.
+          if (haveSeenComputedProp) {
+            Builder.createStoreOwnPropertyInst(
+                Builder.getLiteralUndefined(),
+                Obj,
+                Key,
+                IRBuilder::PropEnumerable::Yes);
+          } else {
+            Builder.createStoreNewOwnPropertyInst(
+                Builder.getLiteralUndefined(),
+                Obj,
+                Key,
+                IRBuilder::PropEnumerable::Yes);
+          }
+          propValue->state = PropertyValue::Placeholder;
         }
-        propValue->isIRGenerated = true;
         continue;
       }
 
@@ -966,7 +968,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       Builder.createStoreGetterSetterInst(
           getter, setter, Obj, Key, IRBuilder::PropEnumerable::Yes);
 
-      propValue->isIRGenerated = true;
+      propValue->state = PropertyValue::IRGenerated;
     } else {
       // A __proto__ that needs special handling is a __proto__ that is not
       // a method nor a shorthand value
@@ -998,14 +1000,18 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
 
       // Only store the value if it won't be overwritten.
       if (propMap[keyStr].valueNode == prop->_value) {
-        if (haveSeenComputedProp || propValue->isIRGenerated) {
+        assert(
+            propValue->state != PropertyValue::IRGenerated &&
+            "IR can only be generated once");
+        if (haveSeenComputedProp ||
+            propValue->state == PropertyValue::Placeholder) {
           Builder.createStoreOwnPropertyInst(
               value, Obj, Key, IRBuilder::PropEnumerable::Yes);
         } else {
           Builder.createStoreNewOwnPropertyInst(
               value, Obj, Key, IRBuilder::PropEnumerable::Yes);
         }
-        propValue->isIRGenerated = true;
+        propValue->state = PropertyValue::IRGenerated;
       }
     }
   }
