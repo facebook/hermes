@@ -14,6 +14,7 @@
 #include "hermes/Optimizer/Scalar/StackPromotion.h"
 #include "hermes/Optimizer/Scalar/TypeInference.h"
 #include "hermes/Optimizer/Wasm/EmitWasmIntrinsics.h"
+#include "hermes/Optimizer/Wasm/WasmSimplify.h"
 
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/raw_ostream.h"
@@ -63,6 +64,13 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addStackPromotion();
   PM.addInstSimplify();
   PM.addDCE();
+
+#ifdef HERMES_RUN_WASM
+  if (M.getContext().getUseUnsafeIntrinsics()) {
+    PM.addTypeInference();
+    PM.addPass(new WasmSimplify());
+  }
+#endif // HERMES_RUN_WASM
 
   // Run type inference before CSE so that we can better reason about binopt.
   PM.addTypeInference();

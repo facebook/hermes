@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -funsafe-intrinsics -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -funsafe-intrinsics -O0 %s | %FileCheck --match-full-lines %s
 // REQUIRES: run_wasm
 
 // Setup Asm.js/Wasm memory

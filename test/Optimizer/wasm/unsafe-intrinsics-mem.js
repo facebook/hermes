@@ -20,10 +20,6 @@ var HEAPU32 = new Uint32Array(buffer);
 var HEAPF32 = new Float32Array(buffer);
 var HEAPF64 = new Float64Array(buffer);
 
-for (let i = 0; i < 256; i++) {
-  HEAPU8[i] = i;
-}
-
 function loads(func) {
   t0 = __uasm.loadi8(HEAP8, 0);
   t1 = __uasm.loadu8(HEAPU8, 0);
@@ -67,7 +63,7 @@ function loads(func) {
 //CHKRA-NEXT:function_end
 
 //CHKBC-LABEL:Function<loads>(2 params, 12 registers, 0 symbols):
-//CHKBC-NEXT:Offset in debug table: source 0x00b0, lexical 0x0000
+//CHKBC-NEXT:Offset in debug table: source 0x00aa, lexical 0x0000
 //CHKBC-NEXT:    GetGlobalObject   r1
 //CHKBC-NEXT:    GetByIdShort      r4, r1, 1, "HEAP8"
 //CHKBC-NEXT:    LoadConstZero     r3
@@ -120,7 +116,7 @@ function stores(func, x) {
 //CHKRA-NEXT:function_end
 
 //CHKBC-LABEL:Function<stores>(3 params, 14 registers, 0 symbols):
-//CHKBC-NEXT:Offset in debug table: source 0x00ea, lexical 0x0000
+//CHKBC-NEXT:Offset in debug table: source 0x00e4, lexical 0x0000
 //CHKBC-NEXT:    LoadParam         r2, 2
 //CHKBC-NEXT:    GetGlobalObject   r0
 //CHKBC-NEXT:    GetByIdShort      r6, r0, 1, "HEAP8"

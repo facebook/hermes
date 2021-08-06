@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -funsafe-intrinsics -O %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -funsafe-intrinsics -O -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
-// RUN: %hermes -funsafe-intrinsics -O -dump-bytecode %s | %FileCheck --check-prefix=CHKBC %s
+// RUN: %hermes -funsafe-intrinsics -O0 %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -funsafe-intrinsics -O0 -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %hermes -funsafe-intrinsics -O0 -dump-bytecode %s | %FileCheck --check-prefix=CHKBC %s
 // REQUIRES: run_wasm
 
 // Check regular case
