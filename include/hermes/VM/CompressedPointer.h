@@ -54,12 +54,6 @@ class CompressedPointer {
     return ptr_;
   }
 
-  /// Get the location of the pointer. Should only be used within the
-  /// implementation of garbage collection.
-  StorageType &getLoc() {
-    return ptr_;
-  }
-
   void setInGC(CompressedPointer cp) {
     setNoBarrier(cp);
   }

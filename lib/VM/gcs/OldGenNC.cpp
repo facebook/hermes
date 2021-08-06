@@ -360,9 +360,6 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
 
     using RootAndSlotAcceptorDefault::accept;
 
-    void accept(BasedPointer &ptr) {
-      gc.youngGen_.ensureReferentCopied(&ptr);
-    }
     void accept(GCCell *&ptr) {
       gc.youngGen_.ensureReferentCopied(&ptr);
     }
