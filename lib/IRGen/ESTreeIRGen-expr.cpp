@@ -7,6 +7,8 @@
 
 #include "ESTreeIRGen.h"
 
+#include "llvh/ADT/ScopeExit.h"
+
 namespace hermes {
 namespace irgen {
 
@@ -893,22 +895,20 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       // are values for computed property keys.
       auto *key = genExpression(prop->_key);
       auto *value = genExpression(prop->_value);
-      if (prop->_kind->str() == "get" || prop->_kind->str() == "set") {
-        if (prop->_kind->str() == "get") {
-          Builder.createStoreGetterSetterInst(
-              value,
-              Builder.getLiteralUndefined(),
-              Obj,
-              key,
-              IRBuilder::PropEnumerable::Yes);
-        } else {
-          Builder.createStoreGetterSetterInst(
-              Builder.getLiteralUndefined(),
-              value,
-              Obj,
-              key,
-              IRBuilder::PropEnumerable::Yes);
-        }
+      if (prop->_kind->str() == "get") {
+        Builder.createStoreGetterSetterInst(
+            value,
+            Builder.getLiteralUndefined(),
+            Obj,
+            key,
+            IRBuilder::PropEnumerable::Yes);
+      } else if (prop->_kind->str() == "set") {
+        Builder.createStoreGetterSetterInst(
+            Builder.getLiteralUndefined(),
+            value,
+            Obj,
+            key,
+            IRBuilder::PropEnumerable::Yes);
       } else {
         Builder.createStoreOwnPropertyInst(
             value, Obj, key, IRBuilder::PropEnumerable::Yes);
@@ -918,7 +918,33 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     }
 
     StringRef keyStr = propertyKeyAsString(stringStorage, prop->_key);
+
+    if (prop == protoProperty) {
+      // This is the first definition of __proto__. If we already used it
+      // as an object parent we just skip it, but otherwise we must
+      // explicitly set the parent now by calling \c
+      // HermesInternal.silentSetPrototypeOf().
+      if (!objectParent) {
+        auto *parent = genExpression(prop->_value);
+
+        IRBuilder::SaveRestore saveState{Builder};
+        Builder.setLocation(prop->_key->getDebugLoc());
+
+        genBuiltinCall(
+            BuiltinMethod::HermesBuiltin_silentSetPrototypeOf, {Obj, parent});
+      }
+
+      continue;
+    }
+
     PropertyValue *propValue = &propMap[keyStr];
+
+    // For any node that has a corresponding propValue, we need to ensure that
+    // the we insert either a placeholder or the final IR before the end of this
+    // iteration.
+    auto checkState = llvh::make_scope_exit(
+        [&] { assert(propValue->state != PropertyValue::None); });
+
     auto *Key = Builder.getLiteralString(keyStr);
 
     auto maybeInsertPlaceholder = [&] {
@@ -971,52 +997,30 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
           getter, setter, Obj, Key, IRBuilder::PropEnumerable::Yes);
 
       propValue->state = PropertyValue::IRGenerated;
-    } else {
-      // A __proto__ that needs special handling is a __proto__ that is not
-      // a method nor a shorthand value
-      if (keyStr == "__proto__" && !prop->_method && !prop->_shorthand) {
-        if (prop == protoProperty) {
-          // This is the first definition of __proto__. If we already used it
-          // as an object parent we just skip it, but otherwise we must
-          // explicitly set the parent now by calling \c
-          // HermesInternal.silentSetPrototypeOf().
-          if (!objectParent) {
-            auto *parent = genExpression(prop->_value);
 
-            IRBuilder::SaveRestore saveState{Builder};
-            Builder.setLocation(prop->_key->getDebugLoc());
+      continue;
+    }
 
-            genBuiltinCall(
-                BuiltinMethod::HermesBuiltin_silentSetPrototypeOf,
-                {Obj, parent});
-          }
-        }
+    // Always generate the values, even if we don't need it, for the side
+    // effects.
+    auto value = genExpression(prop->_value, Builder.createIdentifier(keyStr));
 
-        continue;
-      }
-
-      // Always generate the values, even if we don't need it, for the side
-      // effects.
-      auto value =
-          genExpression(prop->_value, Builder.createIdentifier(keyStr));
-
-      // Only store the value if it won't be overwritten.
-      if (propMap[keyStr].valueNode == prop->_value) {
-        assert(
-            propValue->state != PropertyValue::IRGenerated &&
-            "IR can only be generated once");
-        if (haveSeenComputedProp ||
-            propValue->state == PropertyValue::Placeholder) {
-          Builder.createStoreOwnPropertyInst(
-              value, Obj, Key, IRBuilder::PropEnumerable::Yes);
-        } else {
-          Builder.createStoreNewOwnPropertyInst(
-              value, Obj, Key, IRBuilder::PropEnumerable::Yes);
-        }
-        propValue->state = PropertyValue::IRGenerated;
+    // Only store the value if it won't be overwritten.
+    if (propMap[keyStr].valueNode == prop->_value) {
+      assert(
+          propValue->state != PropertyValue::IRGenerated &&
+          "IR can only be generated once");
+      if (haveSeenComputedProp ||
+          propValue->state == PropertyValue::Placeholder) {
+        Builder.createStoreOwnPropertyInst(
+            value, Obj, Key, IRBuilder::PropEnumerable::Yes);
       } else {
-        maybeInsertPlaceholder();
+        Builder.createStoreNewOwnPropertyInst(
+            value, Obj, Key, IRBuilder::PropEnumerable::Yes);
       }
+      propValue->state = PropertyValue::IRGenerated;
+    } else {
+      maybeInsertPlaceholder();
     }
   }
 
