@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
+#ifndef HERMESVM_GC_MALLOC
 
 #include "gtest/gtest.h"
 
-#include "hermes/VM/GenGCHeapSegment.h"
+#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/StorageProvider.h"
 
 using namespace hermes::vm;
@@ -33,7 +33,7 @@ struct CardObjectBoundaryNCTest : public ::testing::Test {
   }
 
   std::unique_ptr<StorageProvider> provider;
-  GenGCHeapSegment segment;
+  AlignedHeapSegment segment;
   CardTable::Boundary boundary;
 
   size_t segStartIndex;
@@ -99,4 +99,4 @@ TEST_F(CardObjectBoundaryNCTest, CrossingLargeAlloc) {
 
 } // namespace
 
-#endif // HERMESVM_GC_NONCONTIG_GENERATIONAL
+#endif // HERMESVM_GC_MALLOC
