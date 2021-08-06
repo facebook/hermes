@@ -32,3 +32,13 @@ for (var p in obj) {
 obj.a = 0;
 print(obj.a);
 //CHECK-NEXT: a
+
+obj = {
+  get a(){ print("get"); },
+  a : print("side effect"),
+  a : 6,
+}
+//CHECK-NEXT: side effect
+
+print(obj.a)
+//CHECK-NEXT: 6

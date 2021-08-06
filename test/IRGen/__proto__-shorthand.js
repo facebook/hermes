@@ -37,10 +37,11 @@ function protoShorthandDup(func) {
 //CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [__proto__]
 //CHECK-NEXT:  %1 = StoreFrameInst %func, [func]
 //CHECK-NEXT:  %2 = StoreFrameInst 42 : number, [__proto__]
-//CHECK-NEXT:  %3 = LoadFrameInst [__proto__]
+//CHECK-NEXT:  %3 = AllocObjectInst 1 : number, empty
 //CHECK-NEXT:  %4 = LoadFrameInst [__proto__]
-//CHECK-NEXT:  %5 = AllocObjectLiteralInst "__proto__" : string, %4
-//CHECK-NEXT:  %6 = ReturnInst %5 : object
+//CHECK-NEXT:  %5 = LoadFrameInst [__proto__]
+//CHECK-NEXT:  %6 = StoreNewOwnPropertyInst %5, %3 : object, "__proto__" : string, true : boolean
+//CHECK-NEXT:  %7 = ReturnInst %3 : object
 
 // __proto__: AssignmentExpression syntax mixed with shorthand syntax.
 function protoShorthandMix1(func) {

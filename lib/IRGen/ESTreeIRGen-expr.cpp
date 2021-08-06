@@ -745,6 +745,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
 
   uint32_t numComputed = 0;
   bool hasSpread = false;
+  bool hasAccessor = false;
+  bool hasDuplicateProperty = false;
 
   for (auto &P : Expr->_properties) {
     if (llvh::isa<ESTree::SpreadElementNode>(&P)) {
@@ -785,8 +787,10 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
 
     if (prop->_kind->str() == "get") {
       propValue->setGetter(cast<ESTree::FunctionExpressionNode>(prop->_value));
+      hasAccessor = true;
     } else if (prop->_kind->str() == "set") {
       propValue->setSetter(cast<ESTree::FunctionExpressionNode>(prop->_value));
+      hasAccessor = true;
     } else {
       assert(prop->_kind->str() == "init" && "invalid PropertyNode kind");
       // We record the propValue if this is a regular property
@@ -796,6 +800,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     std::string key = (prop->_kind->str() + propName).str();
     auto iterAndSuccess = firstLocMap.try_emplace(key, prop->getSourceRange());
     if (!iterAndSuccess.second) {
+      hasDuplicateProperty = true;
       Builder.getModule()->getContext().getSourceErrorManager().warning(
           prop->getSourceRange(),
           Twine("the property \"") + propName +
@@ -806,25 +811,12 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     }
   }
 
-  bool useAllocObjectLiteral = false;
-
   // Heuristically determine if we emit AllocObjectLiteral.
   // We do so if there is no computed key, no __proto__, no spread element
-  // node, and object literal is not empty.
-  if (!protoProperty && numComputed == 0 && !hasSpread && propMap.size()) {
-    useAllocObjectLiteral = true;
-    // Iterate over propMap to check if there is an accessor we need
-    // to store. If so, we cannot use AllocObjectLiteral.
-    for (const auto &propValue : propMap) {
-      if (propValue.second.isAccessor) {
-        useAllocObjectLiteral = false;
-        break;
-      }
-    }
-  }
-
-  // Special case in which AllocObjectLiteral is used.
-  if (useAllocObjectLiteral) {
+  // node, no duplicate properties, no accessors, and object literal is not
+  // empty.
+  if (numComputed == 0 && !protoProperty && !hasSpread &&
+      !hasDuplicateProperty && !hasAccessor && propMap.size()) {
     AllocObjectLiteralInst::ObjectPropertyMap objPropMap;
     // It is safe to assume that there is no computed keys, and
     // no __proto__.
@@ -839,37 +831,13 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       stringStorage.clear();
 
       StringRef keyStr = propertyKeyAsString(stringStorage, prop->_key);
-      PropertyValue *propValue = &propMap[keyStr];
       auto *Key = Builder.getLiteralString(keyStr);
-
-      if (propValue->isIRGenerated)
-        continue;
-
-      if (prop->_kind->str() == "get" || prop->_kind->str() == "set") {
-        // We can handle the case where a property is redefined as
-        // non-accessor at the end, in which we store the actual
-        // property here.
-        assert(
-            !propValue->isAccessor &&
-            "Cannot handle accessors in AllocObjectLiteral");
-        // No need to generate values for discarded accessors, since they
-        // will not have any side effect.
-        auto value = genExpression(
-            propValue->valueNode, Builder.createIdentifier(keyStr));
-        objPropMap.push_back(std::pair<LiteralString *, Value *>(Key, value));
-        propValue->isIRGenerated = true;
-        continue;
-      }
-
-      // Always generate the values.
+      assert(
+          propMap[keyStr].valueNode == prop->_value &&
+          "Should only have one value for each property.");
       auto value =
           genExpression(prop->_value, Builder.createIdentifier(keyStr));
-
-      // Only store the value if it won't be overwritten.
-      if (propValue->valueNode == prop->_value) {
-        objPropMap.push_back(std::pair<LiteralString *, Value *>(Key, value));
-        propValue->isIRGenerated = true;
-      }
+      objPropMap.push_back(std::pair<LiteralString *, Value *>(Key, value));
     }
 
     return Builder.createAllocObjectLiteralInst(objPropMap);

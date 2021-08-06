@@ -50,7 +50,7 @@ function nestedAllocObjectLiteral(func) {
 //CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 //CHECK-NEXT:function_end
 
-// Only the value to be stored is in AllocObjectLiteral if duplicated.
+// Do not emit AllocObjectLiteral for duplicated properties.
 function duplicatedObjectLiteral(func) {
   return {a: 1, b: 2, d: 42, c: 3, d: 4};
 }
@@ -58,10 +58,14 @@ function duplicatedObjectLiteral(func) {
 //CHECK-NEXT:frame = [func]
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StoreFrameInst %func, [func]
-//CHECK-NEXT:  %1 = AllocObjectLiteralInst "a" : string, 1 : number, "b" : string, 2 : number, "c" : string, 3 : number, "d" : string, 4 : number
-//CHECK-NEXT:  %2 = ReturnInst %1 : object
+//CHECK-NEXT:  %1 = AllocObjectInst 4 : number, empty
+//CHECK-NEXT:  %2 = StoreNewOwnPropertyInst 1 : number, %1 : object, "a" : string, true : boolean
+//CHECK-NEXT:  %3 = StoreNewOwnPropertyInst 2 : number, %1 : object, "b" : string, true : boolean
+//CHECK-NEXT:  %4 = StoreNewOwnPropertyInst 3 : number, %1 : object, "c" : string, true : boolean
+//CHECK-NEXT:  %5 = StoreNewOwnPropertyInst 4 : number, %1 : object, "d" : string, true : boolean
+//CHECK-NEXT:  %6 = ReturnInst %1 : object
 //CHECK-NEXT:%BB1:
-//CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+//CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 //CHECK-NEXT:function_end
 
 // Do not emit AllocObjectLiteral if object is empty.
@@ -161,10 +165,15 @@ function accessorObjectLiteral1(func) {
 //CHECK-NEXT:frame = [func]
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StoreFrameInst %func, [func]
-//CHECK-NEXT:  %1 = AllocObjectLiteralInst "a" : string, 10 : number, "b" : string, "test-str" : string, "c" : string, 10086 : number, "d" : string, null : null
-//CHECK-NEXT:  %2 = ReturnInst %1 : object
+//CHECK-NEXT:  %1 = AllocObjectInst 4 : number, empty
+//CHECK-NEXT:  %2 = StoreNewOwnPropertyInst 10 : number, %1 : object, "a" : string, true : boolean
+//CHECK-NEXT:  %3 = StoreNewOwnPropertyInst "test-str" : string, %1 : object, "b" : string, true : boolean
+//CHECK-NEXT:  %4 = StoreNewOwnPropertyInst undefined : undefined, %1 : object, "c" : string, true : boolean
+//CHECK-NEXT:  %5 = StoreNewOwnPropertyInst null : null, %1 : object, "d" : string, true : boolean
+//CHECK-NEXT:  %6 = StoreOwnPropertyInst 10086 : number, %1 : object, "c" : string, true : boolean
+//CHECK-NEXT:  %7 = ReturnInst %1 : object
 //CHECK-NEXT:%BB1:
-//CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+//CHECK-NEXT:  %8 = ReturnInst undefined : undefined
 //CHECK-NEXT:function_end
 
 // Do not emit AllocObjectLiteral if there is an accessor.
