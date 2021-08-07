@@ -20,7 +20,7 @@ function protoDupComputed(func) {
 //CHECK-NEXT:  %0 = StoreFrameInst %func, [func]
 //CHECK-NEXT:  %1 = LoadFrameInst [func]
 //CHECK-NEXT:  %2 = CallInst %1, undefined : undefined
-//CHECK-NEXT:  %3 = AllocObjectInst 3 : number, %2
+//CHECK-NEXT:  %3 = AllocObjectInst 2 : number, %2
 //CHECK-NEXT:  %4 = StoreOwnPropertyInst null : null, %3 : object, "__proto__" : string, true : boolean
 //CHECK-NEXT:  %5 = StoreOwnPropertyInst 42 : number, %3 : object, "a" : string, true : boolean
 //CHECK-NEXT:  %6 = ReturnInst %3 : object

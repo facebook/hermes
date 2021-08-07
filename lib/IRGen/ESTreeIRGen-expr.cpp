@@ -769,7 +769,6 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     }
 
     auto propName = propertyKeyAsString(stringStorage, prop->_key);
-    PropertyValue *propValue = &propMap[propName];
 
     // protoProperty should only be recorded if the property is not a method
     // nor a shorthand value.
@@ -787,6 +786,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       continue;
     }
 
+    PropertyValue *propValue = &propMap[propName];
     if (prop->_kind->str() == "get") {
       propValue->setGetter(cast<ESTree::FunctionExpressionNode>(prop->_value));
       hasAccessor = true;

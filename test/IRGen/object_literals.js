@@ -91,7 +91,7 @@ function protoObjectLiteral1(func) {
 //CHECK-NEXT:frame = [func]
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StoreFrameInst %func, [func]
-//CHECK-NEXT:  %1 = AllocObjectInst 4 : number, empty
+//CHECK-NEXT:  %1 = AllocObjectInst 3 : number, empty
 //CHECK-NEXT:  %2 = StoreNewOwnPropertyInst 1 : number, %1 : object, "a" : string, true : boolean
 //CHECK-NEXT:  %3 = StoreNewOwnPropertyInst 2 : number, %1 : object, "b" : string, true : boolean
 //CHECK-NEXT:  %4 = StoreNewOwnPropertyInst 3 : number, %1 : object, "c" : string, true : boolean
@@ -110,7 +110,7 @@ function protoObjectLiteral2(func) {
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StoreFrameInst %func, [func]
 //CHECK-NEXT:  %1 = AllocObjectInst 0 : number, empty
-//CHECK-NEXT:  %2 = AllocObjectInst 4 : number, %1 : object
+//CHECK-NEXT:  %2 = AllocObjectInst 3 : number, %1 : object
 //CHECK-NEXT:  %3 = StoreNewOwnPropertyInst 1 : number, %2 : object, "a" : string, true : boolean
 //CHECK-NEXT:  %4 = StoreNewOwnPropertyInst 2 : number, %2 : object, "b" : string, true : boolean
 //CHECK-NEXT:  %5 = StoreNewOwnPropertyInst 3 : number, %2 : object, "c" : string, true : boolean
