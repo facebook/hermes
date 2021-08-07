@@ -41,7 +41,7 @@ function protoShorthandDup(func) {
 //CHECK-NEXT:  %2 = StoreFrameInst 42 : number, [__proto__]
 //CHECK-NEXT:  %3 = AllocObjectInst 1 : number, empty
 //CHECK-NEXT:  %4 = LoadFrameInst [__proto__]
-//CHECK-NEXT:  %5 = StoreNewOwnPropertyInst undefined : undefined, %3 : object, "__proto__" : string, true : boolean
+//CHECK-NEXT:  %5 = StoreNewOwnPropertyInst null : null, %3 : object, "__proto__" : string, true : boolean
 //CHECK-NEXT:  %6 = LoadFrameInst [__proto__]
 //CHECK-NEXT:  %7 = StoreOwnPropertyInst %6, %3 : object, "__proto__" : string, true : boolean
 //CHECK-NEXT:  %8 = ReturnInst %3 : object

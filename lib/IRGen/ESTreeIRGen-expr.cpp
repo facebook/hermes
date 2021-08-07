@@ -953,13 +953,13 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
         // order to maintain insertion order.
         if (haveSeenComputedProp) {
           Builder.createStoreOwnPropertyInst(
-              Builder.getLiteralUndefined(),
+              Builder.getLiteralNull(),
               Obj,
               Key,
               IRBuilder::PropEnumerable::Yes);
         } else {
           Builder.createStoreNewOwnPropertyInst(
-              Builder.getLiteralUndefined(),
+              Builder.getLiteralNull(),
               Obj,
               Key,
               IRBuilder::PropEnumerable::Yes);
