@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use juno::ast::{Node, NodeKind, SourceLoc, SourceRange, Visitor};
+use juno::ast::{Node, NodeKind, NodePtr, SourceLoc, SourceRange, Visitor};
 
 #[test]
 fn test_visit() {
@@ -20,7 +20,7 @@ fn test_visit() {
         range,
         kind: BlockStatement {
             body: vec![
-                Node {
+                NodePtr::new(Node {
                     range,
                     kind: ExpressionStatement {
                         expression: Box::new(Node {
@@ -29,8 +29,8 @@ fn test_visit() {
                         }),
                         directive: None,
                     },
-                },
-                Node {
+                }),
+                NodePtr::new(Node {
                     range,
                     kind: ExpressionStatement {
                         expression: Box::new(Node {
@@ -39,7 +39,7 @@ fn test_visit() {
                         }),
                         directive: None,
                     },
-                },
+                }),
             ],
         },
     });

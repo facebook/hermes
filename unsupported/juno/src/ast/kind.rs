@@ -173,7 +173,7 @@ NodeKind {
     },
     ExpressionStatement {
         expression: NodePtr,
-        directive: Option<NodeLabel>,
+        directive: Option<StringLiteral>,
     },
     TryStatement {
         block: NodePtr,
@@ -286,7 +286,7 @@ NodeKind {
         value: NodePtr,
     },
     DirectiveLiteral {
-        value: NodeLabel,
+        value: StringLiteral,
     },
     Identifier {
         name: NodeLabel,
@@ -327,7 +327,7 @@ NodeKind {
     TemplateElement {
         tail: bool,
         cooked: Option<StringLiteral>,
-        raw: NodeLabel,
+        raw: StringLiteral,
     },
     Property {
         key: NodePtr,
@@ -475,8 +475,8 @@ NodeKind {
         argument: NodePtr,
     },
     JSXText {
-        value: NodeLabel,
-        raw: NodeLabel,
+        value: StringLiteral,
+        raw: StringLiteral,
     },
     JSXElement {
         opening_element: NodePtr,

@@ -36,7 +36,7 @@ impl Node {
 }
 
 /// A source range within a single JS file.
-/// Represented as a half-open interval: [start, end).
+/// Represented as a closed interval: [start, end].
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct SourceRange {
     /// Index of the file this range is in.
@@ -45,7 +45,7 @@ pub struct SourceRange {
     /// Start of the source range, inclusive.
     pub start: SourceLoc,
 
-    /// End of the source range, exclusive.
+    /// End of the source range, inclusive.
     pub end: SourceLoc,
 }
 
@@ -69,7 +69,7 @@ pub struct NodeLabel {
 pub type NodePtr = Box<Node>;
 
 /// A list of nodes owned by a parent.
-pub type NodeList = Vec<Node>;
+pub type NodeList = Vec<NodePtr>;
 
 /// JS string literals don't have to contain valid UTF-8,
 /// so we wrap a `Vec<u16>`, which allows us to represent UTF-16 characters

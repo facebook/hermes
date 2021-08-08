@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::ast::{Node, NodeKind, StringLiteral, Visitor};
+use crate::ast::{Node, NodeKind, NodePtr, StringLiteral, Visitor};
 use std::{
     fmt,
     io::{self, BufWriter, Write},
@@ -37,6 +37,7 @@ enum Assoc {
 
 mod precedence {
     pub type Precedence = u32;
+
     pub const ALWAYS_PAREN: Precedence = 0;
     pub const SEQ: Precedence = 1;
     pub const ARROW: Precedence = 2;
@@ -106,7 +107,11 @@ enum NeedParens {
 
 impl From<bool> for NeedParens {
     fn from(x: bool) -> NeedParens {
-        if x { NeedParens::Yes } else { NeedParens::No }
+        if x {
+            NeedParens::Yes
+        } else {
+            NeedParens::No
+        }
     }
 }
 
@@ -785,22 +790,23 @@ impl<W: Write> GenJS<W> {
             }
 
             TemplateLiteral {
-                quasis,
-                expressions,
+                quasis: _,
+                expressions: _,
             } => {
-                out!(self, "`");
-                let mut it_expr = expressions.iter();
-                for quasi in quasis {
-                    if let TemplateElement { raw, .. } = &quasi.kind {
-                        out!(self, "{}", raw.str);
-                        if let Some(expr) = it_expr.next() {
-                            out!(self, "${{");
-                            expr.visit(self, Some(node));
-                            out!(self, "}}");
-                        }
-                    }
-                }
-                out!(self, "`");
+                unimplemented!("TemplateLiteral");
+                // out!(self, "`");
+                // let mut it_expr = expressions.iter();
+                // for quasi in quasis {
+                //     if let TemplateElement { raw, .. } = &quasi.kind {
+                //         out!(self, "{}", raw.str);
+                //         if let Some(expr) = it_expr.next() {
+                //             out!(self, "${{");
+                //             expr.visit(self, Some(node));
+                //             out!(self, "}}");
+                //         }
+                //     }
+                // }
+                // out!(self, "`");
             }
             TaggedTemplateExpression { tag, quasi } => {
                 self.print_child(Some(tag), node, ChildPos::Left);
@@ -1196,9 +1202,10 @@ impl<W: Write> GenJS<W> {
                 argument.visit(self, Some(node));
                 out!(self, "}}");
             }
-            JSXText { value, .. } => {
+            JSXText { value: _, .. } => {
+                unimplemented!("JSXText");
                 // FIXME: Ensure escaping here works properly.
-                out!(self, "{}", value.str);
+                // out!(self, "{}", value.str);
             }
             JSXElement {
                 opening_element,
@@ -1356,7 +1363,7 @@ impl<W: Write> GenJS<W> {
         }
     }
 
-    fn visit_props(&mut self, props: &[Node], parent: &Node) {
+    fn visit_props(&mut self, props: &[NodePtr], parent: &Node) {
         out!(self, "{{");
         for (i, prop) in props.iter().enumerate() {
             if i > 0 {
@@ -1367,7 +1374,7 @@ impl<W: Write> GenJS<W> {
         out!(self, "}}");
     }
 
-    fn visit_func_params_body(&mut self, params: &[Node], body: &Node, node: &Node) {
+    fn visit_func_params_body(&mut self, params: &[NodePtr], body: &Node, node: &Node) {
         out!(self, "(");
         for (i, param) in params.iter().enumerate() {
             if i > 0 {
@@ -1423,7 +1430,7 @@ impl<W: Write> GenJS<W> {
         }
     }
 
-    fn visit_stmt_list(&mut self, list: &[Node], parent: &Node) {
+    fn visit_stmt_list(&mut self, list: &[NodePtr], parent: &Node) {
         for (i, stmt) in list.iter().enumerate() {
             if i > 0 {
                 self.newline();
