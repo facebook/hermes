@@ -241,6 +241,26 @@ static void initialize(
       builtinModules,
       intBinding);
 
+  // This is a partial implementation of emitWarning, implemented
+  // just for the sake of printing error messages from the console
+  // constructor to stderr.
+  jsi::Function warning = jsi::Function::createFromHostFunction(
+      runtime,
+      jsi::PropNameID::forAscii(runtime, "emitWarning"),
+      1,
+      [](jsi::Runtime &rt,
+         const jsi::Value &,
+         const jsi::Value *args,
+         size_t count) -> jsi::Value {
+        if (count == 0) {
+          throw jsi::JSError(
+              rt, "Not enough arguments passed in to process.emitWarning");
+        }
+        llvh::errs() << args[0].toString(rt).utf8(rt) << '\n';
+        return jsi::Value::undefined();
+      });
+  process.setProperty(runtime, "emitWarning", warning);
+
   jsi::Object console = require(
                             jsi::String::createFromAscii(runtime, "console"),
                             rs,
