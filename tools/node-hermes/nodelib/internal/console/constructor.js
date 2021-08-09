@@ -337,9 +337,9 @@ ObjectDefineProperties(Console.prototype, (_ObjectDefineProperti2 = {}, _defineP
   value: function value(stream) {
     var color = this[kColorMode];
 
-    // if (color === 'auto') {
-    //   color = stream.isTTY && (typeof stream.getColorDepth === 'function' ? stream.getColorDepth() > 2 : true);
-    // }
+    if (color === 'auto') {
+      color = stream.isTTY && (typeof stream.getColorDepth === 'function' ? stream.getColorDepth() > 2 : true);
+    }
 
     var options = optionsMap.get(this);
 
@@ -558,69 +558,74 @@ var consoleMethods = {
     var i = 0;
 
     if (mapIter) {
-      var res = previewEntries(tabularData, true);
-      tabularData = res[0];
-      isKeyValue = res[1];
+      process.emitWarning("This data type is currently not supported for the console table functionality of node-hermes");
+      return;
+      // var res = previewEntries(tabularData, true);
+      // tabularData = res[0];
+      // isKeyValue = res[1];
     }
 
     if (isKeyValue || isMap(tabularData)) {
-      var _keys = [];
-      var _values = [];
-      var length = 0;
+      process.emitWarning("This data type is currently not supported for the console table functionality of node-hermes");
+      return;
+      // var _keys = [];
+      // var _values = [];
+      // var length = 0;
 
-      if (mapIter) {
-        for (; i < tabularData.length / 2; ++i) {
-          ArrayPrototypePush(_keys, _inspect(tabularData[i * 2]));
-          ArrayPrototypePush(_values, _inspect(tabularData[i * 2 + 1]));
-          length++;
-        }
-      } else {
-        var _iterator = _createForOfIteratorHelper(tabularData),
-            _step;
+      // if (mapIter) {
+      //   for (; i < tabularData.length / 2; ++i) {
+      //     ArrayPrototypePush(_keys, _inspect(tabularData[i * 2]));
+      //     ArrayPrototypePush(_values, _inspect(tabularData[i * 2 + 1]));
+      //     length++;
+      //   }
+      // } else {
+      //   var _iterator = _createForOfIteratorHelper(tabularData),
+      //       _step;
 
-        try {
-          for (_iterator.s(); !(_step = _iterator.n()).done;) {
-            var _step$value = _step.value,
-                k = _step$value[0],
-                v = _step$value[1];
-            ArrayPrototypePush(_keys, _inspect(k));
-            ArrayPrototypePush(_values, _inspect(v));
-            length++;
-          }
-        } catch (err) {
-          _iterator.e(err);
-        } finally {
-          _iterator.f();
-        }
-      }
-
-      return _final([iterKey, keyKey, valuesKey], [getIndexArray(length), _keys, _values]);
+      //   try {
+      //     for (_iterator.s(); !(_step = _iterator.n()).done;) {
+      //       var _step$value = _step.value,
+      //           k = _step$value[0],
+      //           v = _step$value[1];
+      //       ArrayPrototypePush(_keys, _inspect(k));
+      //       ArrayPrototypePush(_values, _inspect(v));
+      //       length++;
+      //     }
+      //   } catch (err) {
+      //     _iterator.e(err);
+      //   } finally {
+      //     _iterator.f();
+      //   }
+      // }
+      // return _final([iterKey, keyKey, valuesKey], [getIndexArray(length), _keys, _values]);
     }
 
     var setIter = isSetIterator(tabularData);
-    if (setIter) tabularData = previewEntries(tabularData);
+    // if (setIter) tabularData = previewEntries(tabularData);
     var setlike = setIter || mapIter || isSet(tabularData);
 
     if (setlike) {
-      var _values2 = [];
-      var _length = 0;
+      process.emitWarning("This data type is currently not supported for the console table functionality of node-hermes");
+      return;
+    //   var _values2 = [];
+    //   var _length = 0;
 
-      var _iterator2 = _createForOfIteratorHelper(tabularData),
-          _step2;
+    //   var _iterator2 = _createForOfIteratorHelper(tabularData),
+    //       _step2;
 
-      try {
-        for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
-          var _v = _step2.value;
-          ArrayPrototypePush(_values2, _inspect(_v));
-          _length++;
-        }
-      } catch (err) {
-        _iterator2.e(err);
-      } finally {
-        _iterator2.f();
-      }
+    //   try {
+    //     for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+    //       var _v = _step2.value;
+    //       ArrayPrototypePush(_values2, _inspect(_v));
+    //       _length++;
+    //     }
+    //   } catch (err) {
+    //     _iterator2.e(err);
+    //   } finally {
+    //     _iterator2.f();
+    //   }
 
-      return _final([iterKey, valuesKey], [getIndexArray(_length), _values2]);
+    //   return _final([iterKey, valuesKey], [getIndexArray(_length), _values2]);
     }
 
     var map = {};
