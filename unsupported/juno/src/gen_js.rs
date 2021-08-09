@@ -107,11 +107,7 @@ enum NeedParens {
 
 impl From<bool> for NeedParens {
     fn from(x: bool) -> NeedParens {
-        if x {
-            NeedParens::Yes
-        } else {
-            NeedParens::No
-        }
+        if x { NeedParens::Yes } else { NeedParens::No }
     }
 }
 
