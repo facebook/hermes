@@ -757,7 +757,11 @@ class LiteralNumber : public Literal, public llvh::FoldingSetNode {
 
   explicit LiteralNumber(double val)
       : Literal(ValueKind::LiteralNumberKind), value(val) {
-    setType(Type::createNumber());
+    if (isInt32Representible()) {
+      setType(Type::createInt32());
+    } else {
+      setType(Type::createNumber());
+    }
   }
 
   static void Profile(llvh::FoldingSetNodeID &ID, double value) {

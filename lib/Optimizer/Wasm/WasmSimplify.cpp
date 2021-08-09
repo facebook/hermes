@@ -43,21 +43,6 @@ Value *simplifyAsUint32(Value *operand) {
   return lhs;
 }
 
-// Check if the operand can be safely handled by BinOp intrinsics.
-bool checkBinaryOperand(Value *operand) {
-  // Int typed operand is ok.
-  if (operand->getType().isIntegerType())
-    return true;
-  auto *litNum = llvh::dyn_cast<LiteralNumber>(operand);
-  if (!litNum)
-    return false;
-  // Int32 representible literal number is ok.
-  if (litNum->isInt32Representible())
-    return true;
-
-  return false;
-}
-
 OptValue<Value *> simplifyBinOp(BinaryOperatorInst *binary) {
   auto kind = binary->getOperatorKind();
 
@@ -66,7 +51,7 @@ OptValue<Value *> simplifyBinOp(BinaryOperatorInst *binary) {
 
   Type leftTy = lhs->getType();
 
-  if (!(checkBinaryOperand(lhs) && checkBinaryOperand(rhs)))
+  if (!(lhs->getType().isIntegerType() && rhs->getType().isIntegerType()))
     return llvh::None;
 
   IRBuilder builder(binary->getParent()->getParent());
@@ -250,8 +235,8 @@ OptValue<Value *> simplifyCall(CallInst *call) {
       return llvh::None;
     Value *lhs = call->getArgument(1);
     Value *rhs = call->getArgument(2);
-    // lhs and rhs must be integers, or int32 representable literal numbers.
-    if (!(checkBinaryOperand(lhs) && checkBinaryOperand(rhs)))
+    // lhs and rhs must be integers.
+    if (!(lhs->getType().isIntegerType() && rhs->getType().isIntegerType()))
       return llvh::None;
     args.push_back(lhs);
     args.push_back(rhs);

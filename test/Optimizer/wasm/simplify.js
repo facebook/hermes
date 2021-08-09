@@ -114,6 +114,40 @@ function asmFunc(env) {
   //CHKRA-NEXT:   %5 = ReturnInst %4 : number
   //CHKRA-NEXT: function_end
 
+  // Phi node and local variable
+  function local() {
+    var x = 0;
+    var i = 0;
+    label$1: while (1) {
+      x = x + i | 0;
+      i = i + 1 | 0;
+      if ((i | 0) != (10 | 0)) {
+        continue label$1;
+      }
+      break label$1;
+    }
+    return x;
+  }
+  //CHKRA-LABEL: function local() : number
+  //CHKRA-NEXT: frame = []
+  //CHKRA-NEXT: %BB0:
+  //CHKRA-NEXT:   %0 = HBCLoadConstInst 0 : number
+  //CHKRA-NEXT:   %1 = HBCLoadConstInst 1 : number
+  //CHKRA-NEXT:   %2 = HBCLoadConstInst 10 : number
+  //CHKRA-NEXT:   %3 = HBCLoadConstInst 0 : number
+  //CHKRA-NEXT:   %4 = BranchInst %BB1
+  //CHKRA-NEXT: %BB2:
+  //CHKRA-NEXT:   %5 = ReturnInst %8 : number
+  //CHKRA-NEXT: %BB1:
+  //CHKRA-NEXT:   %6 = PhiInst %0 : number, %BB0, %10 : number, %BB1
+  //CHKRA-NEXT:   %7 = PhiInst %3 : number, %BB0, %11 : number, %BB1
+  //CHKRA-NEXT:   %8 = CallIntrinsicInst [__uasm.add32_2] : number, %6 : number, %7 : number
+  //CHKRA-NEXT:   %9 = CallIntrinsicInst [__uasm.add32_2] : number, %7 : number, %1 : number
+  //CHKRA-NEXT:   %10 = MovInst %8 : number
+  //CHKRA-NEXT:   %11 = MovInst %9 : number
+  //CHKRA-NEXT:   %12 = CompareBranchInst '!==', %11 : number, %2 : number, %BB1, %BB2
+  //CHKRA-NEXT: function_end
+
   // int32 sub
   function sub32(x, y) {
     x = x | 0;
@@ -406,6 +440,7 @@ function asmFunc(env) {
     "add32l" : add32l,
     "add32lf" : add32lf,
     "add32n" : add32n,
+    "local" : local,
     "sub32" : sub32,
     "divi32" : divi32,
     "divu32" : divu32,
