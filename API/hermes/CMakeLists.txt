@@ -64,15 +64,13 @@ target_include_directories(libhermes PUBLIC ..)
 
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
     "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-  # Export all API symbols
-  set(compile_flags "-fvisibility=default")
   # The linker doesn't support -flto -Os, so make sure it's linked with -O3.
   # This only affects linking, not compilation, so without -flto it's a no-op.
   # In other words, if the compiler flags are -O0 -fno-lto, then the resulting
   # library will be -O0 in spite of setting -O3 here.
   set(link_flags "-O3 ${OPTIONAL_GC_SECTIONS} ${OPTIONAL_JNI_ONLOAD}")
 elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
-  # Same as above, but for windows. Note that there is no equivalent of -fvisibility=default.
+  # Same as above, but for windows.
   set(compile_flags "")
   set(link_flags "/O2 ${OPTIONAL_GC_SECTIONS} ${OPTIONAL_JNI_ONLOAD}")
 endif()
