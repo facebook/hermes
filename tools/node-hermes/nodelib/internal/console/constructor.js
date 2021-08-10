@@ -491,7 +491,7 @@ var consoleMethods = {
     var count = counts.get(label);
     if (count === undefined) count = 1;else count++;
     counts.set(label, count);
-    trace(kTraceCount, kTraceConsoleCategory, "count::".concat(label), 0, count);
+    // trace(kTraceCount, kTraceConsoleCategory, "count::".concat(label), 0, count);
     this.log("".concat(label, ": ").concat(count));
   },
   // Defined by: https://console.spec.whatwg.org/#countreset
@@ -504,7 +504,7 @@ var consoleMethods = {
       return;
     }
 
-    trace(kTraceCount, kTraceConsoleCategory, "count::".concat(label), 0, 0);
+    // trace(kTraceCount, kTraceConsoleCategory, "count::".concat(label), 0, 0);
     counts["delete"]("".concat(label));
   },
   group: function group() {
