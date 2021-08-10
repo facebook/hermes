@@ -19,6 +19,9 @@
 #include "llvh/Support/PrettyStackTrace.h"
 #include "llvh/Support/Program.h"
 #include "llvh/Support/Signals.h"
+#include "uv.h"
+
+#include <math.h> /* floor */
 
 using namespace facebook;
 
@@ -196,6 +199,30 @@ static jsi::Value require(
   return mapModule.getProperty(rt, "exports");
 }
 
+/// Sets up the hrtime function that will be defined on the process
+/// object. If there was an argument passed in, then it calculates
+/// the difference between the old time and the current time. Otherwise
+/// it just converts the ns representation that uv_hrtime outputs to
+/// an array with the seconds as the first element and the leftover
+/// nanoseconds as the second element.
+static jsi::Value
+hrtime(jsi::Runtime &rt, const jsi::Value *args, size_t count) {
+  double outputInNs = (double)uv_hrtime();
+  if (count == 1) {
+    jsi::Array argArray = args[0].asObject(rt).asArray(rt);
+    double oldTimeSeconds = argArray.getValueAtIndex(rt, 0).asNumber();
+    double oldTimeNs = argArray.getValueAtIndex(rt, 1).asNumber();
+    double diffInNs = outputInNs - (oldTimeSeconds * 1e9 + oldTimeNs);
+
+    return jsi::Array::createWithElements(
+        rt, floor(diffInNs / 1e9), (diffInNs - (floor(diffInNs / 1e9) * 1e9)));
+  } else
+    return jsi::Array::createWithElements(
+        rt,
+        floor(outputInNs / 1e9),
+        (outputInNs - (floor(outputInNs / 1e9) * 1e9)));
+}
+
 // Initializes all the builtin modules as well as several of
 // the functions/properties needed to execute the modules.
 static void initialize(
@@ -260,6 +287,16 @@ static void initialize(
         return jsi::Value::undefined();
       });
   process.setProperty(runtime, "emitWarning", warning);
+
+  jsi::Function hrt = jsi::Function::createFromHostFunction(
+      runtime,
+      jsi::PropNameID::forAscii(runtime, "hrtime"),
+      1,
+      [](jsi::Runtime &rt,
+         const jsi::Value &,
+         const jsi::Value *args,
+         size_t count) -> jsi::Value { return hrtime(rt, args, count); });
+  process.setProperty(runtime, "hrtime", hrt);
 
   jsi::Object console = require(
                             jsi::String::createFromAscii(runtime, "console"),

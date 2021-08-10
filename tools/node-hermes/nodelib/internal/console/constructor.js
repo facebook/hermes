@@ -416,7 +416,7 @@ var consoleMethods = {
       return;
     }
 
-    trace(kTraceBegin, kTraceConsoleCategory, "time::".concat(label), 0);
+    // trace(kTraceBegin, kTraceConsoleCategory, "time::".concat(label), 0);
 
     this._times.set(label, process.hrtime());
   },
@@ -425,7 +425,7 @@ var consoleMethods = {
     // Coerces everything other than Symbol to a string
     label = "".concat(label);
     var found = timeLogImpl(this, 'timeEnd', label);
-    trace(kTraceEnd, kTraceConsoleCategory, "time::".concat(label), 0);
+    // trace(kTraceEnd, kTraceConsoleCategory, "time::".concat(label), 0);
 
     if (found) {
       this._times["delete"](label);
@@ -441,7 +441,7 @@ var consoleMethods = {
     }
 
     timeLogImpl(this, 'timeLog', label, data);
-    trace(kTraceInstant, kTraceConsoleCategory, "time::".concat(label), 0);
+    // trace(kTraceInstant, kTraceConsoleCategory, "time::".concat(label), 0);
   },
   trace: function trace() {
     for (var _len4 = arguments.length, args = new Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
@@ -681,7 +681,6 @@ function timeLogImpl(self, name, label, data) {
     process.emitWarning("No such label '".concat(label, "' for console.").concat(name, "()"));
     return false;
   }
-
   var duration = process.hrtime(time);
   var ms = duration[0] * 1000 + duration[1] / 1e6;
   var formatted = formatTime(ms);
