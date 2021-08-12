@@ -5,7 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::ast::{Node, NodeKind, NodePtr, StringLiteral, Visitor};
+use crate::{
+    ast::{Node, NodeKind, NodePtr, StringLiteral, Visitor},
+    convert,
+};
 use std::{
     fmt,
     io::{self, BufWriter, Write},
@@ -496,8 +499,8 @@ impl<W: Write> GenJS<W> {
                 self.print_escaped_string_literal(value, '"');
                 out!(self, "\"");
             }
-            NumericLiteral { .. } => {
-                unimplemented!("No implementation of number to string");
+            NumericLiteral { value } => {
+                out!(self, "{}", convert::number_to_string(*value));
             }
             RegExpLiteral { pattern, flags } => {
                 // FIXME: Needs to escape '/', might need more escaping as well.

@@ -37,6 +37,7 @@ fn test_literals() {
         .trim(),
         r#""A\u1234\t""#,
     );
+    assert_eq!(do_gen(&node(NumericLiteral { value: 1.0 },)).trim(), "1");
 }
 
 #[test]
