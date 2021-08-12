@@ -639,14 +639,24 @@ impl<W: Write> GenJS<W> {
                 self.print_child(Some(right), node, ChildPos::Right);
             }
             UnaryExpression {
-                operator, argument, ..
+                operator,
+                argument,
+                prefix,
             } => {
                 let ident = operator.str.chars().next().unwrap().is_alphabetic();
-                out!(self, "{}", operator.str);
-                if ident {
-                    out!(self, " ");
+                if *prefix {
+                    out!(self, "{}", operator.str);
+                    if ident {
+                        out!(self, " ");
+                    }
+                    self.print_child(Some(argument), node, ChildPos::Right);
+                } else {
+                    self.print_child(Some(argument), node, ChildPos::Left);
+                    if ident {
+                        out!(self, " ");
+                    }
+                    out!(self, "{}", operator.str);
                 }
-                self.print_child(Some(argument), node, ChildPos::Right);
             }
             UpdateExpression {
                 operator,
