@@ -8,10 +8,8 @@
 use std::fmt;
 
 mod kind;
-mod visit;
 
 pub use kind::NodeKind;
-pub use visit::{Visitable, Visitor};
 
 /// A JavaScript AST node.
 #[derive(Debug)]
@@ -33,6 +31,12 @@ impl Node {
     pub fn visit_children<V: Visitor>(&self, visitor: &mut V) {
         self.kind.visit_children(visitor, self);
     }
+}
+
+/// Trait implemented by those who call the visit functionality.
+pub trait Visitor {
+    /// Visit the Node `node` with the given `parent`.
+    fn call(&mut self, node: &Node, parent: Option<&Node>);
 }
 
 /// A source range within a single JS file.
@@ -83,6 +87,52 @@ impl fmt::Debug for StringLiteral {
     /// when debugging.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "u{:?}", String::from_utf16_lossy(&self.str))
+    }
+}
+
+/// Trait implemented by possible child types of `NodeKind`.
+trait NodeChild {
+    /// Visit this child of the given `node`.
+    /// Should be no-op for any type that doesn't contain pointers to other
+    /// `Node`s.
+    fn visit<V: Visitor>(&self, visitor: &mut V, node: &Node);
+}
+
+impl NodeChild for f64 {
+    fn visit<V: Visitor>(&self, _visitor: &mut V, _node: &Node) {}
+}
+
+impl NodeChild for bool {
+    fn visit<V: Visitor>(&self, _visitor: &mut V, _node: &Node) {}
+}
+
+impl NodeChild for NodeLabel {
+    fn visit<V: Visitor>(&self, _visitor: &mut V, _node: &Node) {}
+}
+
+impl NodeChild for StringLiteral {
+    fn visit<V: Visitor>(&self, _visitor: &mut V, _node: &Node) {}
+}
+
+impl<T: NodeChild> NodeChild for Option<T> {
+    fn visit<V: Visitor>(&self, visitor: &mut V, node: &Node) {
+        if let Some(t) = self {
+            t.visit(visitor, node);
+        }
+    }
+}
+
+impl NodeChild for NodePtr {
+    fn visit<V: Visitor>(&self, visitor: &mut V, node: &Node) {
+        visitor.call(self, Some(node));
+    }
+}
+
+impl NodeChild for NodeList {
+    fn visit<V: Visitor>(&self, visitor: &mut V, node: &Node) {
+        for child in self {
+            visitor.call(child, Some(node));
+        }
     }
 }
 
