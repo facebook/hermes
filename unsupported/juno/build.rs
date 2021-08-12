@@ -11,10 +11,22 @@ fn main() {
     let hermes_build = env::var("HERMES_BUILD")
         .expect("HERMES_BUILD must point to a Hermes CMake build directory");
 
+    println!("cargo:rustc-link-search={}/lib/Parser", hermes_build);
+    println!(
+        "cargo:rustc-link-search={}/lib/Platform/Unicode",
+        hermes_build
+    );
     println!("cargo:rustc-link-search={}/lib/Support", hermes_build);
     println!("cargo:rustc-link-search={}/external/dtoa", hermes_build);
+    println!(
+        "cargo:rustc-link-search={}/external/llvh/lib/Support",
+        hermes_build
+    );
 
+    println!("cargo:rustc-link-lib=hermesParser");
+    println!("cargo:rustc-link-lib=hermesPlatformUnicode");
     println!("cargo:rustc-link-lib=hermesSupport");
+    println!("cargo:rustc-link-lib=LLVHSupport");
     println!("cargo:rustc-link-lib=dtoa");
     println!("cargo:rustc-link-lib=c++");
 }

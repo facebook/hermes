@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use super::generated_ffi::NodeKind;
 use std::marker::PhantomData;
 
 #[repr(C)]
@@ -192,10 +193,6 @@ impl<'a> std::iter::Iterator for NodeIterator<'a> {
         }
     }
 }
-
-/// Just a temporary placeholder.
-#[repr(transparent)]
-pub struct NodeKind(u32);
 
 #[repr(C)]
 pub struct Node {
