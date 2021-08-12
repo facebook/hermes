@@ -5,18 +5,28 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#[derive(Debug)]
+use thiserror::Error;
+
+#[derive(Error, Debug)]
 pub enum UTFError {
     // General.
+    #[error("invalid Unicode character")]
     InvalidUnicodeCharacter,
     // UTF8.
+    #[error("incomplete UTF-8 continuation")]
     UTF8IncompleteCont,
+    #[error("invalid UTF-8 continuation byte")]
     UTF8InvalidContByte,
+    #[error("non-canonical UTF-8 encoding")]
     UTF8NonCanonicalEncoding,
+    #[error("invalid UTF-8 leading byte")]
     UTF8InvalidLeadByte,
     // UTF16.
+    #[error("invalid UTF-16 character")]
     UTF16InvalidCharacter,
+    #[error("unmatched UTF-16 low surrogate")]
     UTF16UnmatchedLowSurrogate,
+    #[error("incomplete UTF-16 surrogate pair")]
     UTF16IncompleteSurrogatePair,
 }
 
