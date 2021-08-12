@@ -14,14 +14,14 @@ fn do_gen(node: &Node) -> String {
     String::from_utf8(out).expect("Invalid UTF-8 output in test")
 }
 
-fn node(kind: NodeKind) -> Box<Node> {
+fn node(kind: NodeKind) -> NodePtr {
     let range = SourceRange {
         file: 0,
         start: SourceLoc { line: 0, col: 0 },
         end: SourceLoc { line: 0, col: 0 },
     };
 
-    Box::new(Node { range, kind })
+    NodePtr::new(Node { range, kind })
 }
 
 #[test]
@@ -53,5 +53,22 @@ fn test_binop() {
         }))
         .trim(),
         "null + null"
+    );
+}
+
+#[test]
+fn test_types() {
+    use NodeKind::*;
+    assert_eq!(
+        do_gen(&node(UnionTypeAnnotation {
+            types: vec![
+                node(NumberTypeAnnotation),
+                node(IntersectionTypeAnnotation {
+                    types: vec![node(BooleanTypeAnnotation), node(StringTypeAnnotation),]
+                })
+            ]
+        }))
+        .trim(),
+        "number | boolean & string"
     );
 }

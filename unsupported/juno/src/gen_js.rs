@@ -56,6 +56,9 @@ mod precedence {
     pub const PRIMARY: Precedence = 31;
     pub const TOP: Precedence = 32;
 
+    pub const UNION_TYPE: Precedence = 1;
+    pub const INTERSECTION_TYPE: Precedence = 2;
+
     pub fn get_binary_precedence(op: &str) -> Precedence {
         match op {
             "**" => 12,
@@ -188,7 +191,7 @@ impl<W: Write> GenJS<W> {
     }
 
     /// Generate the JS for each node kind.
-    fn gen_node(&mut self, node: &Node, _parent: Option<&Node>) {
+    fn gen_node(&mut self, node: &Node, parent: Option<&Node>) {
         use NodeKind::*;
         match &node.kind {
             Empty => {}
@@ -1255,6 +1258,823 @@ impl<W: Write> GenJS<W> {
                 out!(self, "</>");
             }
 
+            ExistsTypeAnnotation => {
+                out!(self, "*");
+            }
+            EmptyTypeAnnotation => {
+                out!(self, "empty");
+            }
+            StringTypeAnnotation => {
+                out!(self, "string");
+            }
+            NumberTypeAnnotation => {
+                out!(self, "number");
+            }
+            StringLiteralTypeAnnotation { value } => {
+                out!(self, "\"");
+                self.print_escaped_string_literal(value, '"');
+                out!(self, "\"");
+            }
+            NumberLiteralTypeAnnotation { value, .. } => {
+                out!(self, "{}", convert::number_to_string(*value));
+            }
+            BooleanTypeAnnotation => {
+                out!(self, "boolean");
+            }
+            BooleanLiteralTypeAnnotation { value, .. } => {
+                out!(self, "{}", if *value { "true" } else { "false" });
+            }
+            NullLiteralTypeAnnotation => {
+                out!(self, "null");
+            }
+            SymbolTypeAnnotation => {
+                out!(self, "symbol");
+            }
+            AnyTypeAnnotation => {
+                out!(self, "any");
+            }
+            MixedTypeAnnotation => {
+                out!(self, "mixed");
+            }
+            VoidTypeAnnotation => {
+                out!(self, "void");
+            }
+            FunctionTypeAnnotation {
+                params,
+                this,
+                return_type,
+                rest,
+                type_parameters,
+            } => {
+                if let Some(type_parameters) = type_parameters {
+                    type_parameters.visit(self, Some(node));
+                }
+                let need_parens = type_parameters.is_some() || rest.is_some() || params.len() != 1;
+                if need_parens {
+                    out!(self, "(");
+                }
+                let mut need_comma = false;
+                if let Some(this) = this {
+                    match &this.kind {
+                        FunctionTypeParam {
+                            type_annotation, ..
+                        } => {
+                            out!(self, "this:");
+                            self.space(ForceSpace::No);
+                            type_annotation.visit(self, Some(node));
+                        }
+                        _ => {
+                            unimplemented!("Malformed AST: Need to handle error");
+                        }
+                    }
+                    this.visit(self, Some(node));
+                    need_comma = true;
+                }
+                for param in params.iter() {
+                    if need_comma {
+                        self.comma();
+                    }
+                    param.visit(self, Some(node));
+                    need_comma = true;
+                }
+                if let Some(rest) = rest {
+                    if need_comma {
+                        self.comma();
+                    }
+                    out!(self, "...");
+                    rest.visit(self, Some(node));
+                }
+                if need_parens {
+                    out!(self, ")");
+                }
+                if self.pretty == Pretty::Yes {
+                    out!(self, " => ");
+                } else {
+                    out!(self, "=>");
+                }
+                return_type.visit(self, Some(node));
+            }
+            FunctionTypeParam {
+                name,
+                type_annotation,
+                optional,
+            } => {
+                if let Some(name) = name {
+                    name.visit(self, Some(node));
+                    if *optional {
+                        out!(self, "?");
+                    }
+                    out!(self, ":");
+                    self.space(ForceSpace::No);
+                }
+                type_annotation.visit(self, Some(node));
+            }
+            NullableTypeAnnotation { type_annotation } => {
+                out!(self, "?");
+                type_annotation.visit(self, Some(node));
+            }
+            QualifiedTypeIdentifier { qualification, id } => {
+                qualification.visit(self, Some(node));
+                out!(self, ".");
+                id.visit(self, Some(node));
+            }
+            TypeofTypeAnnotation { argument } => {
+                out!(self, "typeof ");
+                argument.visit(self, Some(node));
+            }
+            TupleTypeAnnotation { types } => {
+                out!(self, "[");
+                for (i, ty) in types.iter().enumerate() {
+                    if i > 0 {
+                        self.comma();
+                    }
+                    ty.visit(self, Some(node));
+                }
+                out!(self, "]");
+            }
+            ArrayTypeAnnotation { element_type } => {
+                element_type.visit(self, Some(node));
+                out!(self, "[]");
+            }
+            UnionTypeAnnotation { types } => {
+                for (i, ty) in types.iter().enumerate() {
+                    if i > 0 {
+                        self.space(ForceSpace::No);
+                        out!(self, "|");
+                        self.space(ForceSpace::No);
+                    }
+                    self.print_child(Some(ty), node, ChildPos::Anywhere);
+                }
+            }
+            IntersectionTypeAnnotation { types } => {
+                for (i, ty) in types.iter().enumerate() {
+                    if i > 0 {
+                        self.space(ForceSpace::No);
+                        out!(self, "&");
+                        self.space(ForceSpace::No);
+                    }
+                    self.print_child(Some(ty), node, ChildPos::Anywhere);
+                }
+            }
+            GenericTypeAnnotation {
+                id,
+                type_parameters,
+            } => {
+                id.visit(self, Some(node));
+                if let Some(type_parameters) = type_parameters {
+                    type_parameters.visit(self, Some(node));
+                }
+            }
+            IndexedAccessType {
+                object_type,
+                index_type,
+            } => {
+                object_type.visit(self, Some(node));
+                out!(self, "[");
+                index_type.visit(self, Some(node));
+                out!(self, "]");
+            }
+            OptionalIndexedAccessType {
+                object_type,
+                index_type,
+                optional,
+            } => {
+                object_type.visit(self, Some(node));
+                out!(self, "{}[", if *optional { "?." } else { "" });
+                index_type.visit(self, Some(node));
+                out!(self, "]");
+            }
+            InterfaceTypeAnnotation { extends, body } => {
+                out!(self, "interface");
+                if !extends.is_empty() {
+                    out!(self, " extends ");
+                    for (i, extend) in extends.iter().enumerate() {
+                        if i > 0 {
+                            self.comma();
+                        }
+                        extend.visit(self, Some(node));
+                    }
+                } else {
+                    self.space(ForceSpace::No);
+                }
+                if let Some(body) = body {
+                    body.visit(self, Some(node));
+                }
+            }
+
+            TypeAlias {
+                id,
+                type_parameters,
+                right,
+            }
+            | DeclareTypeAlias {
+                id,
+                type_parameters,
+                right,
+            } => {
+                if matches!(&node.kind, DeclareTypeAlias { .. }) {
+                    out!(self, "declare ");
+                }
+                out!(self, "type ");
+                id.visit(self, Some(node));
+                if let Some(type_parameters) = type_parameters {
+                    type_parameters.visit(self, Some(node));
+                }
+                if self.pretty == Pretty::Yes {
+                    out!(self, " = ");
+                } else {
+                    out!(self, "=");
+                }
+                right.visit(self, Some(node));
+            }
+            OpaqueType {
+                id,
+                type_parameters,
+                impltype,
+                supertype,
+            } => {
+                out!(self, "opaque type ");
+                id.visit(self, Some(node));
+                if let Some(type_parameters) = type_parameters {
+                    type_parameters.visit(self, Some(node));
+                }
+                if let Some(supertype) = supertype {
+                    out!(self, ":");
+                    self.space(ForceSpace::No);
+                    supertype.visit(self, Some(node));
+                }
+                if self.pretty == Pretty::Yes {
+                    out!(self, " = ");
+                } else {
+                    out!(self, "=");
+                }
+                impltype.visit(self, Some(node));
+            }
+            InterfaceDeclaration {
+                id,
+                type_parameters,
+                extends,
+                body,
+            }
+            | DeclareInterface {
+                id,
+                type_parameters,
+                extends,
+                body,
+            } => {
+                self.visit_interface(
+                    if matches!(node.kind, InterfaceDeclaration { .. }) {
+                        "interface"
+                    } else {
+                        "declare interface"
+                    },
+                    id,
+                    type_parameters.as_deref(),
+                    extends,
+                    body,
+                    node,
+                );
+            }
+            DeclareOpaqueType {
+                id,
+                type_parameters,
+                impltype,
+                supertype,
+            } => {
+                out!(self, "opaque type ");
+                id.visit(self, Some(node));
+                if let Some(type_parameters) = type_parameters {
+                    type_parameters.visit(self, Some(node));
+                }
+                if let Some(supertype) = supertype {
+                    out!(self, ":");
+                    self.space(ForceSpace::No);
+                    supertype.visit(self, Some(node));
+                }
+                if self.pretty == Pretty::Yes {
+                    out!(self, " = ");
+                } else {
+                    out!(self, "=");
+                }
+                if let Some(impltype) = impltype {
+                    impltype.visit(self, Some(node));
+                }
+            }
+            DeclareClass {
+                id,
+                type_parameters,
+                extends,
+                implements,
+                mixins,
+                body,
+            } => {
+                out!(self, "declare class ");
+                id.visit(self, Some(node));
+                if let Some(type_parameters) = type_parameters {
+                    type_parameters.visit(self, Some(node));
+                }
+                if !extends.is_empty() {
+                    out!(self, " extends ");
+                    for (i, extend) in extends.iter().enumerate() {
+                        if i > 0 {
+                            self.comma();
+                        }
+                        extend.visit(self, Some(node));
+                    }
+                }
+                if !mixins.is_empty() {
+                    out!(self, " mixins ");
+                    for (i, mixin) in mixins.iter().enumerate() {
+                        if i > 0 {
+                            self.comma();
+                        }
+                        mixin.visit(self, Some(node));
+                    }
+                }
+                if !implements.is_empty() {
+                    out!(self, " implements ");
+                    for (i, implement) in implements.iter().enumerate() {
+                        if i > 0 {
+                            self.comma();
+                        }
+                        implement.visit(self, Some(node));
+                    }
+                }
+                self.space(ForceSpace::No);
+                body.visit(self, Some(node));
+            }
+            DeclareFunction { id, predicate } => {
+                // This AST type uses the Identifier/TypeAnnotation
+                // pairing to put a name on a function header-looking construct,
+                // so we have to do some deep matching to get it to come out right.
+                out!(self, "declare function ");
+                match &id.kind {
+                    Identifier {
+                        name,
+                        type_annotation,
+                        ..
+                    } => {
+                        out!(self, "{}", &name.str);
+                        match type_annotation {
+                            None => {
+                                unimplemented!("Malformed AST: Need to handle error");
+                            }
+                            Some(type_annotation) => match &type_annotation.kind {
+                                TypeAnnotation { type_annotation } => match &type_annotation.kind {
+                                    FunctionTypeAnnotation {
+                                        params,
+                                        this,
+                                        return_type,
+                                        rest,
+                                        type_parameters,
+                                    } => {
+                                        self.visit_func_type_params(
+                                            params,
+                                            this.as_deref(),
+                                            rest.as_deref(),
+                                            type_parameters.as_deref(),
+                                            node,
+                                        );
+                                        out!(self, ":");
+                                        self.space(ForceSpace::No);
+                                        return_type.visit(self, Some(node));
+                                    }
+                                    _ => {
+                                        unimplemented!("Malformed AST: Need to handle error");
+                                    }
+                                },
+                                _ => {
+                                    unimplemented!("Malformed AST: Need to handle error");
+                                }
+                            },
+                        }
+                        if let Some(predicate) = predicate {
+                            self.space(ForceSpace::No);
+                            predicate.visit(self, Some(node));
+                        }
+                    }
+                    _ => {
+                        unimplemented!("Malformed AST: Need to handle error");
+                    }
+                }
+            }
+            DeclareVariable { id } => {
+                if !matches!(
+                    &parent,
+                    Some(Node {
+                        kind: DeclareExportDeclaration { .. },
+                        ..
+                    })
+                ) {
+                    out!(self, "declare ");
+                }
+                id.visit(self, Some(node));
+            }
+            DeclareExportDeclaration {
+                declaration,
+                specifiers,
+                source,
+                default,
+            } => {
+                out!(self, "declare export ");
+                if *default {
+                    out!(self, "default ");
+                }
+                if let Some(declaration) = declaration {
+                    declaration.visit(self, Some(node));
+                } else {
+                    out!(self, "{{");
+                    for (i, spec) in specifiers.iter().enumerate() {
+                        if i > 0 {
+                            self.comma();
+                        }
+                        spec.visit(self, Some(node));
+                    }
+                    out!(self, "}}");
+                    if let Some(source) = source {
+                        out!(self, " from ");
+                        source.visit(self, Some(node));
+                    }
+                }
+            }
+            DeclareExportAllDeclaration { source } => {
+                out!(self, "declare export * from ");
+                source.visit(self, Some(node));
+            }
+            DeclareModule { id, body, .. } => {
+                out!(self, "declare module ");
+                id.visit(self, Some(node));
+                self.space(ForceSpace::No);
+                body.visit(self, Some(node));
+            }
+            DeclareModuleExports { type_annotation } => {
+                out!(self, "declare module.exports:");
+                self.space(ForceSpace::No);
+                type_annotation.visit(self, Some(node));
+            }
+
+            InterfaceExtends {
+                id,
+                type_parameters,
+            }
+            | ClassImplements {
+                id,
+                type_parameters,
+            } => {
+                id.visit(self, Some(node));
+                if let Some(type_parameters) = type_parameters {
+                    type_parameters.visit(self, Some(node));
+                }
+            }
+
+            TypeAnnotation { type_annotation } => {
+                type_annotation.visit(self, Some(node));
+            }
+            ObjectTypeAnnotation {
+                properties,
+                indexers,
+                call_properties,
+                internal_slots,
+                inexact,
+                exact,
+            } => {
+                out!(self, "{}", if *exact { "{|" } else { "{" });
+                self.inc_indent();
+                self.newline();
+
+                let mut need_comma = false;
+
+                for prop in properties {
+                    if need_comma {
+                        self.comma();
+                    }
+                    prop.visit(self, Some(node));
+                    self.newline();
+                    need_comma = true;
+                }
+                for prop in indexers {
+                    if need_comma {
+                        self.comma();
+                    }
+                    prop.visit(self, Some(node));
+                    self.newline();
+                    need_comma = true;
+                }
+                for prop in call_properties {
+                    if need_comma {
+                        self.comma();
+                    }
+                    prop.visit(self, Some(node));
+                    self.newline();
+                    need_comma = true;
+                }
+                for prop in internal_slots {
+                    if need_comma {
+                        self.comma();
+                    }
+                    prop.visit(self, Some(node));
+                    self.newline();
+                    need_comma = true;
+                }
+
+                if *inexact {
+                    if need_comma {
+                        self.comma();
+                    }
+                    out!(self, "...");
+                }
+
+                self.dec_indent();
+                self.newline();
+                out!(self, "{}", if *exact { "|}" } else { "}" });
+            }
+            ObjectTypeProperty {
+                key,
+                value,
+                method,
+                optional,
+                is_static,
+                proto,
+                variance,
+                ..
+            } => {
+                if let Some(variance) = variance {
+                    variance.visit(self, Some(node));
+                }
+                if *is_static {
+                    out!(self, "static ");
+                }
+                if *proto {
+                    out!(self, "proto ");
+                }
+                key.visit(self, Some(node));
+                if *optional {
+                    out!(self, "?");
+                }
+                if *method {
+                    match &value.kind {
+                        FunctionTypeAnnotation {
+                            params,
+                            this,
+                            return_type,
+                            rest,
+                            type_parameters,
+                        } => {
+                            self.visit_func_type_params(
+                                params,
+                                this.as_deref(),
+                                rest.as_deref(),
+                                type_parameters.as_deref(),
+                                node,
+                            );
+                            out!(self, ":");
+                            self.space(ForceSpace::No);
+                            return_type.visit(self, Some(node));
+                        }
+                        _ => {
+                            unimplemented!("Malformed AST: Need to handle error");
+                        }
+                    }
+                } else {
+                    out!(self, ":");
+                    self.space(ForceSpace::No);
+                    value.visit(self, Some(node));
+                }
+            }
+            ObjectTypeSpreadProperty { argument } => {
+                out!(self, "...");
+                argument.visit(self, Some(node));
+            }
+            ObjectTypeInternalSlot {
+                id,
+                value,
+                optional,
+                is_static,
+                method,
+            } => {
+                if *is_static {
+                    out!(self, "static ");
+                }
+                out!(self, "[[");
+                id.visit(self, Some(node));
+                if *optional {
+                    out!(self, "?");
+                }
+                out!(self, "]]");
+                if *method {
+                    match &value.kind {
+                        FunctionTypeAnnotation {
+                            params,
+                            this,
+                            return_type,
+                            rest,
+                            type_parameters,
+                        } => {
+                            self.visit_func_type_params(
+                                params,
+                                this.as_deref(),
+                                rest.as_deref(),
+                                type_parameters.as_deref(),
+                                node,
+                            );
+                            out!(self, ":");
+                            self.space(ForceSpace::No);
+                            return_type.visit(self, Some(node));
+                        }
+                        _ => {
+                            unimplemented!("Malformed AST: Need to handle error");
+                        }
+                    }
+                } else {
+                    out!(self, ":");
+                    self.space(ForceSpace::No);
+                    value.visit(self, Some(node));
+                }
+            }
+            ObjectTypeCallProperty { value, is_static } => {
+                if *is_static {
+                    out!(self, "static ");
+                }
+                match &value.kind {
+                    FunctionTypeAnnotation {
+                        params,
+                        this,
+                        return_type,
+                        rest,
+                        type_parameters,
+                    } => {
+                        self.visit_func_type_params(
+                            params,
+                            this.as_deref(),
+                            rest.as_deref(),
+                            type_parameters.as_deref(),
+                            node,
+                        );
+                        out!(self, ":");
+                        self.space(ForceSpace::No);
+                        return_type.visit(self, Some(node));
+                    }
+                    _ => {
+                        unimplemented!("Malformed AST: Need to handle error");
+                    }
+                }
+            }
+            ObjectTypeIndexer {
+                id,
+                key,
+                value,
+                is_static,
+                variance,
+            } => {
+                if *is_static {
+                    out!(self, "static ");
+                }
+                if let Some(variance) = variance {
+                    variance.visit(self, Some(node));
+                }
+                out!(self, "[");
+                if let Some(id) = id {
+                    id.visit(self, Some(node));
+                    out!(self, ":");
+                    self.space(ForceSpace::No);
+                }
+                key.visit(self, Some(node));
+                out!(self, "]");
+                out!(self, ":");
+                self.space(ForceSpace::No);
+                value.visit(self, Some(node));
+            }
+            Variance { kind } => {
+                out!(
+                    self,
+                    "{}",
+                    match kind.str.as_str() {
+                        "plus" => "+",
+                        "minus" => "-",
+                        _ => unimplemented!("Malformed variance"),
+                    }
+                )
+            }
+
+            TypeParameterDeclaration { params } | TypeParameterInstantiation { params } => {
+                out!(self, "<");
+                for (i, param) in params.iter().enumerate() {
+                    if i > 0 {
+                        self.comma();
+                    }
+                    param.visit(self, Some(node));
+                }
+                out!(self, ">");
+            }
+            TypeParameter {
+                name,
+                bound,
+                variance,
+                default,
+            } => {
+                if let Some(variance) = variance {
+                    variance.visit(self, Some(node));
+                }
+                out!(self, "{}", &name.str);
+                if let Some(bound) = bound {
+                    out!(self, ":");
+                    self.space(ForceSpace::No);
+                    bound.visit(self, Some(node));
+                }
+                if let Some(default) = default {
+                    out!(self, "=");
+                    self.space(ForceSpace::No);
+                    default.visit(self, Some(node));
+                }
+            }
+            TypeCastExpression {
+                expression,
+                type_annotation,
+            } => {
+                // Type casts are required to have parentheses.
+                out!(self, "(");
+                self.print_child(Some(expression), node, ChildPos::Left);
+                out!(self, ":");
+                self.space(ForceSpace::No);
+                self.print_child(Some(type_annotation), node, ChildPos::Right);
+            }
+            InferredPredicate => {
+                out!(self, "%checks");
+            }
+            DeclaredPredicate { value } => {
+                out!(self, "%checks(");
+                value.visit(self, Some(node));
+                out!(self, ")");
+            }
+
+            EnumDeclaration { id, body } => {
+                out!(self, "enum ");
+                id.visit(self, Some(node));
+                body.visit(self, Some(node));
+            }
+            EnumStringBody {
+                members,
+                explicit_type,
+                has_unknown_members,
+            } => {
+                self.visit_enum_body(
+                    "string",
+                    members,
+                    *explicit_type,
+                    *has_unknown_members,
+                    node,
+                );
+            }
+            EnumNumberBody {
+                members,
+                explicit_type,
+                has_unknown_members,
+            } => {
+                self.visit_enum_body(
+                    "number",
+                    members,
+                    *explicit_type,
+                    *has_unknown_members,
+                    node,
+                );
+            }
+            EnumBooleanBody {
+                members,
+                explicit_type,
+                has_unknown_members,
+            } => {
+                self.visit_enum_body(
+                    "boolean",
+                    members,
+                    *explicit_type,
+                    *has_unknown_members,
+                    node,
+                );
+            }
+            EnumSymbolBody {
+                members,
+                has_unknown_members,
+            } => {
+                self.visit_enum_body("symbol", members, true, *has_unknown_members, node);
+            }
+            EnumDefaultedMember { id } => {
+                id.visit(self, Some(node));
+            }
+            EnumStringMember { id, init }
+            | EnumNumberMember { id, init }
+            | EnumBooleanMember { id, init } => {
+                id.visit(self, Some(node));
+                out!(
+                    self,
+                    "{}",
+                    match self.pretty {
+                        Pretty::Yes => " = ",
+                        Pretty::No => "=",
+                    }
+                );
+                init.visit(self, Some(node));
+            }
+
             _ => {
                 unimplemented!("Unsupported AST node kind: {}", node.kind.name());
             }
@@ -1395,6 +2215,120 @@ impl<W: Write> GenJS<W> {
         body.visit(self, Some(node));
     }
 
+    fn visit_func_type_params(
+        &mut self,
+        params: &[NodePtr],
+        this: Option<&Node>,
+        rest: Option<&Node>,
+        type_parameters: Option<&Node>,
+        node: &Node,
+    ) {
+        use NodeKind::*;
+        if let Some(type_parameters) = type_parameters {
+            type_parameters.visit(self, Some(node));
+        }
+        out!(self, "(");
+        let mut need_comma = false;
+        if let Some(this) = this {
+            match &this.kind {
+                FunctionTypeParam {
+                    type_annotation, ..
+                } => {
+                    out!(self, "this:");
+                    self.space(ForceSpace::No);
+                    type_annotation.visit(self, Some(node));
+                }
+                _ => {
+                    unimplemented!("Malformed AST: Need to handle error");
+                }
+            }
+            this.visit(self, Some(node));
+            need_comma = true;
+        }
+        for param in params.iter() {
+            if need_comma {
+                self.comma();
+            }
+            param.visit(self, Some(node));
+            need_comma = true;
+        }
+        if let Some(rest) = rest {
+            if need_comma {
+                self.comma();
+            }
+            out!(self, "...");
+            rest.visit(self, Some(node));
+        }
+        out!(self, ")");
+    }
+
+    fn visit_interface(
+        &mut self,
+        decl: &str,
+        id: &Node,
+        type_parameters: Option<&Node>,
+        extends: &[NodePtr],
+        body: &Node,
+        node: &Node,
+    ) {
+        out!(self, "{} ", decl);
+        id.visit(self, Some(node));
+        if let Some(type_parameters) = type_parameters {
+            type_parameters.visit(self, Some(node));
+        }
+        self.space(ForceSpace::No);
+        if !extends.is_empty() {
+            out!(self, "extends ");
+            for (i, extend) in extends.iter().enumerate() {
+                if i > 0 {
+                    self.comma();
+                }
+                extend.visit(self, Some(node));
+            }
+            self.space(ForceSpace::No);
+        }
+        body.visit(self, Some(node));
+    }
+
+    /// Generate the body of a Flow enum with type `kind`.
+    fn visit_enum_body(
+        &mut self,
+        kind: &str,
+        members: &[NodePtr],
+        explicit_type: bool,
+        has_unknown_members: bool,
+        node: &Node,
+    ) {
+        if explicit_type {
+            out!(self, ":");
+            self.space(ForceSpace::No);
+            out!(self, "{}", kind);
+        }
+        out!(self, "{{");
+        self.inc_indent();
+        self.newline();
+
+        for (i, member) in members.iter().enumerate() {
+            if i > 0 {
+                self.comma();
+                self.newline();
+            }
+            member.visit(self, Some(node));
+        }
+
+        if has_unknown_members {
+            if !members.is_empty() {
+                self.comma();
+                self.newline();
+            }
+            out!(self, "...");
+        }
+
+        self.dec_indent();
+        self.newline();
+        out!(self, "}}");
+    }
+
     /// Visit a statement node which is the body of a loop or a clause in an if.
     /// It could be a block statement.
     /// Return true if block
@@ -1507,6 +2441,23 @@ impl<W: Write> GenJS<W> {
             AssignmentExpression { .. } => (ASSIGN, Assoc::Rtl),
             YieldExpression { .. } | ArrowFunctionExpression { .. } => (YIELD, Assoc::Ltr),
             SequenceExpression { .. } => (SEQ, Assoc::Rtl),
+
+            ExistsTypeAnnotation
+            | EmptyTypeAnnotation
+            | StringTypeAnnotation
+            | NumberTypeAnnotation
+            | StringLiteralTypeAnnotation { .. }
+            | NumberLiteralTypeAnnotation { .. }
+            | BooleanTypeAnnotation
+            | BooleanLiteralTypeAnnotation { .. }
+            | NullLiteralTypeAnnotation
+            | SymbolTypeAnnotation
+            | AnyTypeAnnotation
+            | MixedTypeAnnotation
+            | VoidTypeAnnotation => (PRIMARY, Assoc::Ltr),
+            UnionTypeAnnotation { .. } => (UNION_TYPE, Assoc::Ltr),
+            IntersectionTypeAnnotation { .. } => (INTERSECTION_TYPE, Assoc::Ltr),
+
             _ => (ALWAYS_PAREN, Assoc::Ltr),
         }
     }
