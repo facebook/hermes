@@ -5,14 +5,4 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#[allow(dead_code)]
-pub mod ast;
-
-#[allow(dead_code)]
-pub mod gen_js;
-
-#[allow(dead_code)]
-mod convert;
-
-#[allow(dead_code)]
-pub mod hparser;
+mod utf;
