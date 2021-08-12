@@ -175,7 +175,7 @@ ESTREE_NODE_2_ARGS(
     NodePtr,
     expression,
     false,
-    NodeLabel,
+    NodeString,
     directive,
     true)
 
@@ -209,7 +209,7 @@ ESTREE_LAST(Statement)
 
 ESTREE_NODE_0_ARGS(NullLiteral, Base)
 ESTREE_NODE_1_ARGS(BooleanLiteral, Base, NodeBoolean, value, false)
-ESTREE_NODE_1_ARGS(StringLiteral, Base, NodeLabel, value, false)
+ESTREE_NODE_1_ARGS(StringLiteral, Base, NodeString, value, false)
 ESTREE_NODE_1_ARGS(NumericLiteral, Base, NodeNumber, value, false)
 ESTREE_NODE_2_ARGS(
     RegExpLiteral,
@@ -362,7 +362,7 @@ ESTREE_NODE_3_ARGS(
     false)
 
 ESTREE_NODE_1_ARGS(Directive, Base, NodePtr, value, false)
-ESTREE_NODE_1_ARGS(DirectiveLiteral, Base, NodeLabel, value, false)
+ESTREE_NODE_1_ARGS(DirectiveLiteral, Base, NodeString, value, false)
 
 ESTREE_NODE_3_ARGS(
     Identifier, Base,
@@ -441,8 +441,8 @@ ESTREE_NODE_2_ARGS(TaggedTemplateExpression, Base,
 // cooked will be null.
 ESTREE_NODE_3_ARGS(TemplateElement, Base,
                    NodeBoolean, tail, false,
-                   NodeLabel, cooked, true,
-                   NodeLabel, raw, false)
+                   NodeString, cooked, true,
+                   NodeString, raw, false)
 
 ESTREE_NODE_6_ARGS(
     Property, Base,
@@ -645,8 +645,8 @@ ESTREE_NODE_1_ARGS(
 
 ESTREE_NODE_2_ARGS(
     JSXText, Base,
-    NodeLabel, value, false,
-    NodeLabel, raw, false)
+    NodeString, value, false,
+    NodeString, raw, false)
 
 ESTREE_NODE_3_ARGS(
     JSXElement, Base,
@@ -678,7 +678,7 @@ ESTREE_NODE_0_ARGS(StringTypeAnnotation, Base)
 ESTREE_NODE_0_ARGS(NumberTypeAnnotation, Base)
 ESTREE_NODE_1_ARGS(
     StringLiteralTypeAnnotation, Base,
-    NodeLabel, value, false)
+    NodeString, value, false)
 ESTREE_NODE_2_ARGS(
     NumberLiteralTypeAnnotation, Base,
     NodeNumber, value, false,

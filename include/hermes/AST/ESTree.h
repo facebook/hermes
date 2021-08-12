@@ -35,13 +35,24 @@ using llvh::SMLoc;
 using llvh::SMRange;
 
 class Node;
+/// This is a string which is guaranteed to contain only valid Unicode
+/// characters when decoded. In particular no mismatched surrogate pairs.
+/// It is encoded with our "modified" utf-8 encoding, where parts of surrogate
+/// pairs are encoded as separate characters. So, it does NOT represent valid
+/// utf-8. To turn it into valid utf-8 it must be reencoded.
 using NodeLabel = UniqueString *;
+/// This is a JS string, which is a sequence of arbitrary 16-bit values, which
+/// may or may not represent a valid utf-16 string.
+/// It is encoded with our "modified" utf-8 encoding, where each separate 16-bit
+/// value is encoded as a separate character. There are no guarantees about the
+/// validity.
+using NodeString = UniqueString *;
 using NodeBoolean = bool;
 using NodeNumber = double;
 using NodePtr = Node *;
 using NodeList = llvh::simple_ilist<Node>;
 
-enum class NodeKind {
+enum class NodeKind : uint32_t {
 #define ESTREE_FIRST(NAME, ...) _##NAME##_First,
 #define ESTREE_LAST(NAME) _##NAME##_Last,
 #define ESTREE_NODE_0_ARGS(NAME, ...) NAME,
@@ -252,6 +263,7 @@ class FunctionLikeDecoration {
   /// Whether this function was a method definition rather than using
   /// 'function'. Note that getters and setters are also considered method
   /// definitions, as they do not use the keyword 'function'.
+  /// This is used for lazy reparsing of the function.
   bool isMethodDefinition{false};
 
   void setSemInfo(sem::FunctionInfo *semInfo) {

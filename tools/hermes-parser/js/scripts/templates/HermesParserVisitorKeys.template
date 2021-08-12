@@ -7,6 +7,7 @@
 
 // String, boolean, and number children are leaf nodes in AST and do not need to be visited
 #define NodeLabel(ARG)
+#define NodeString(ARG)
 #define NodeBoolean(ARG)
 #define NodeNumber(ARG)
 
