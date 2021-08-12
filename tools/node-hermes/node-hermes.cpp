@@ -250,6 +250,11 @@ static void initialize(
 
   // Will add more properties as they are required.
   runtime.global().setProperty(runtime, "global", runtime.global());
+  require(
+      jsi::String::createFromAscii(runtime, "node-hermes-helpers"),
+      rs,
+      builtinModules,
+      intBinding);
 
   jsi::Object primordials{runtime};
   runtime.global().setProperty(runtime, "primordials", primordials);
