@@ -1312,7 +1312,7 @@ impl<W: Write> GenJS<W> {
         }
         child.visit(self, Some(parent));
         if need_parens == NeedParens::Yes {
-            out!(self, " ");
+            out!(self, ")");
         }
     }
 
