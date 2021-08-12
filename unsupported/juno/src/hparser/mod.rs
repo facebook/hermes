@@ -5,4 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+mod hermes_parser;
+mod node;
 mod utf;
