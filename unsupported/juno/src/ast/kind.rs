@@ -527,7 +527,7 @@ NodeKind {
     },
     JSXOpeningElement {
         name: NodePtr,
-        attributes: NodeList,
+        attributes: NodeList[JSXAttribute, JSXSpreadAttribute],
         self_closing: bool,
     },
     JSXClosingElement {
@@ -544,15 +544,15 @@ NodeKind {
         value: StringLiteral,
         raw: StringLiteral,
     },
-    JSXElement {
-        opening_element: NodePtr,
+    JSXElement[Expression] {
+        opening_element: NodePtr[JSXOpeningElement],
         children: NodeList,
-        closing_element: Option<NodePtr>,
+        closing_element: Option<NodePtr>[JSXClosingElement],
     },
-    JSXFragment {
-        opening_fragment: NodePtr,
+    JSXFragment[Expression] {
+        opening_fragment: NodePtr[JSXOpeningFragment],
         children: NodeList,
-        closing_fragment: NodePtr,
+        closing_fragment: NodePtr[JSXClosingFragment],
     },
     JSXOpeningFragment,
     JSXClosingFragment,
