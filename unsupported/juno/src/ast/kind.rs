@@ -12,8 +12,8 @@ use super::{Node, NodeChild, NodeLabel, NodeList, NodePtr, StringLiteral, Visito
 /// ```
 /// gen_nodekind_enum! {
 /// NodeKind {
-///     Node1 {
-///       field1: type1,
+///     Node1[parent] {
+///       field1: type1[constraint_a, constraint_b],
 ///       field2: type2,
 ///     },
 ///     Node2,
@@ -22,11 +22,19 @@ use super::{Node, NodeChild, NodeLabel, NodeList, NodePtr, StringLiteral, Visito
 /// ```
 /// and creates the necessary enum and supporting function implementations
 /// to go along with it in order to avoid excessive copy/paste boilerplate.
+/// Parents and constraints can be any member of `NodeVariant`,
+/// which includes any constructible `NodeKind`s` as well as interfaces like
+/// `Statement`, `Expression`, etc.
+/// If multiple constraints are provided, at least one must be satisfied.
+/// The `null` constraint is encoded via `Option`, it need not be listed explicitly.
 macro_rules! gen_nodekind_enum {
     ($name:ident {
         $(
-            $kind:ident $({
-                $($field:ident : $type:ty),*
+            $kind:ident $([ $parent:ident ])? $({
+                $(
+                    $field:ident : $type:ty
+                    $( [ $( $constraint:ident ),* ] )?
+                ),*
                 $(,)?
             })?
         ),*
@@ -67,11 +75,63 @@ macro_rules! gen_nodekind_enum {
                 }
             }
 
+            pub fn variant(&self) -> NodeVariant {
+                match self {
+                    $(
+                        Self::$kind { .. } => NodeVariant::$kind
+                    ),*
+                }
+            }
+
+            /// Check whether this is a valid kind for `node`.
+            pub fn validate<'n>(&self, node: &'n Node) -> bool {
+                match self {
+                    $(
+                        Self::$kind $({$($field),*})? => {
+                            // Run the validation for each child.
+                            // Use `true &&` to make it work when there's no children.
+                            true $(&& $(
+                                $field.validate(node, &[$($(NodeVariant::$constraint),*)?])
+                            )&&*)?
+                        }
+                    ),*
+                }
+            }
+
             pub fn name(&self) -> &'static str {
                 match self {
                     $(
                         Self::$kind { .. } => {
                             stringify!($kind)
+                        }
+                    ),*
+                }
+            }
+        }
+
+        /// Just type information on the node without any of the children.
+        /// Used for performing tasks based only on the type of the AST node
+        /// without having to know more about it.
+        /// Includes "abstract" nodes which cannot be truly constructed.
+        #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+        pub enum NodeVariant {
+            Expression,
+            Statement,
+            Literal,
+            $($kind),*
+        }
+
+        impl NodeVariant {
+            /// The `parent` of the variant in ESTree, used for validation.
+            /// Return `None` if there is no parent.
+            pub fn parent(&self) -> Option<NodeVariant> {
+                match self {
+                    Self::Expression => None,
+                    Self::Statement => None,
+                    Self::Literal => Some(Self::Expression),
+                    $(
+                        Self::$kind => {
+                            None$(.or(Some(Self::$parent)))?
                         }
                     ),*
                 }
@@ -156,8 +216,8 @@ NodeKind {
     ThrowStatement {
         argument: NodePtr,
     },
-    ReturnStatement {
-        argument: Option<NodePtr>,
+    ReturnStatement[Statement] {
+        argument: Option<NodePtr>[Expression],
     },
     WithStatement {
         object: NodePtr,
@@ -185,21 +245,21 @@ NodeKind {
         consequent: NodePtr,
         alternate: Option<NodePtr>,
     },
-    NullLiteral,
-    BooleanLiteral {
+    NullLiteral[Literal],
+    BooleanLiteral[Literal] {
         value: bool,
     },
-    StringLiteral {
+    StringLiteral[Literal] {
         value: StringLiteral,
     },
-    NumericLiteral {
+    NumericLiteral[Literal] {
         value: f64,
     },
-    RegExpLiteral {
+    RegExpLiteral[Literal] {
         pattern: NodeLabel,
         flags: NodeLabel,
     },
-    ThisExpression,
+    ThisExpression[Expression],
     Super,
     SequenceExpression {
         expressions: NodeList,
