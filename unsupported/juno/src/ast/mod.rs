@@ -10,6 +10,7 @@ use std::fmt;
 mod kind;
 
 pub use kind::NodeKind;
+use kind::NodeVariant;
 
 /// A JavaScript AST node.
 #[derive(Debug)]
@@ -25,6 +26,11 @@ impl Node {
     /// Call the `visitor` on this node with a given `parent`.
     pub fn visit<V: Visitor>(&self, visitor: &mut V, parent: Option<&Node>) {
         visitor.call(self, parent);
+    }
+
+    /// Check whether the node is valid.
+    pub fn validate(&self) -> bool {
+        self.kind.validate(self)
     }
 
     /// Call the `visitor` on only this node's children.
@@ -96,22 +102,41 @@ trait NodeChild {
     /// Should be no-op for any type that doesn't contain pointers to other
     /// `Node`s.
     fn visit<V: Visitor>(&self, visitor: &mut V, node: &Node);
+
+    /// Check whether this is a valid child of `node` given the constraints.
+    fn validate(&self, node: &Node, constraints: &[NodeVariant]) -> bool;
 }
 
 impl NodeChild for f64 {
     fn visit<V: Visitor>(&self, _visitor: &mut V, _node: &Node) {}
+
+    fn validate(&self, _node: &Node, _constraints: &[NodeVariant]) -> bool {
+        true
+    }
 }
 
 impl NodeChild for bool {
     fn visit<V: Visitor>(&self, _visitor: &mut V, _node: &Node) {}
+
+    fn validate(&self, _node: &Node, _constraints: &[NodeVariant]) -> bool {
+        true
+    }
 }
 
 impl NodeChild for NodeLabel {
     fn visit<V: Visitor>(&self, _visitor: &mut V, _node: &Node) {}
+
+    fn validate(&self, _node: &Node, _constraints: &[NodeVariant]) -> bool {
+        true
+    }
 }
 
 impl NodeChild for StringLiteral {
     fn visit<V: Visitor>(&self, _visitor: &mut V, _node: &Node) {}
+
+    fn validate(&self, _node: &Node, _constraints: &[NodeVariant]) -> bool {
+        true
+    }
 }
 
 impl<T: NodeChild> NodeChild for Option<T> {
@@ -120,11 +145,27 @@ impl<T: NodeChild> NodeChild for Option<T> {
             t.visit(visitor, node);
         }
     }
+
+    fn validate(&self, node: &Node, constraints: &[NodeVariant]) -> bool {
+        match self {
+            None => true,
+            Some(t) => t.validate(node, constraints),
+        }
+    }
 }
 
 impl NodeChild for NodePtr {
     fn visit<V: Visitor>(&self, visitor: &mut V, node: &Node) {
         visitor.call(self, Some(node));
+    }
+
+    fn validate(&self, _node: &Node, constraints: &[NodeVariant]) -> bool {
+        for &constraint in constraints {
+            if instanceof(self.kind.variant(), constraint) {
+                return true;
+            }
+        }
+        false
     }
 }
 
@@ -132,6 +173,37 @@ impl NodeChild for NodeList {
     fn visit<V: Visitor>(&self, visitor: &mut V, node: &Node) {
         for child in self {
             visitor.call(child, Some(node));
+        }
+    }
+
+    fn validate(&self, _node: &Node, constraints: &[NodeVariant]) -> bool {
+        'elems: for elem in self {
+            for &constraint in constraints {
+                if instanceof(elem.kind.variant(), constraint) {
+                    // Found a valid constraint for this element,
+                    // move on to the next element.
+                    continue 'elems;
+                }
+            }
+            // Failed to find a constraint that matched, early return.
+            return false;
+        }
+        true
+    }
+}
+
+/// Return whether `subtype` contains `supertype` in its parent chain.
+fn instanceof(subtype: NodeVariant, supertype: NodeVariant) -> bool {
+    let mut cur = subtype;
+    loop {
+        if cur == supertype {
+            return true;
+        }
+        match cur.parent() {
+            None => return false,
+            Some(next) => {
+                cur = next;
+            }
         }
     }
 }

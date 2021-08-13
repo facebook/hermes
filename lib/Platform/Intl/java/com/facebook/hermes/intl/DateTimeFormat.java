@@ -379,21 +379,63 @@ public class DateTimeFormat {
     }
   }
 
-  private String normalizeTimeZoneName(String timeZoneName) {
-    // https://tc39.es/ecma402/#sec-case-sensitivity-and-case-mapping
-    // Note that we should convert only upper case translation in ASCII range.
-    StringBuilder normalized = new StringBuilder(timeZoneName.length());
+  private String capitalizeTimeZoneName(String timeZoneName) {
+    StringBuilder capitalized = new StringBuilder(timeZoneName.length());
+    Boolean shouldTransformToUpperCase = true;
+
+    int offset = 'a' - 'A';
+    for (int idx = 0; idx < timeZoneName.length(); idx++) {
+
+      char c = timeZoneName.charAt(idx);
+      if (c >= 'a' && c <= 'z') {
+        if (shouldTransformToUpperCase) {
+          capitalized.append((char) (c - offset));
+        } else {
+          capitalized.append(c);
+        }
+        shouldTransformToUpperCase = false;
+      } else if (c >= 'A' && c <= 'Z') {
+        if (!shouldTransformToUpperCase) {
+          capitalized.append((char) (c + offset));
+        } else {
+          capitalized.append(c);
+        }
+        shouldTransformToUpperCase = false;
+      } else {
+        capitalized.append(c);
+        shouldTransformToUpperCase = true;
+      }
+    }
+
+    return capitalized.toString();
+  }
+
+  private String transformTimeZoneNameToUpperCase(String timeZoneName) {
+    StringBuilder transformedToUpperCase = new StringBuilder(timeZoneName.length());
     int offset = 'a' - 'A';
     for (int idx = 0; idx < timeZoneName.length(); idx++) {
       char c = timeZoneName.charAt(idx);
       if (c >= 'a' && c <= 'z') {
-        normalized.append((char) (c - offset));
+        transformedToUpperCase.append((char) (c - offset));
       } else {
-        normalized.append(c);
+        transformedToUpperCase.append(c);
       }
     }
 
-    return normalized.toString();
+    return transformedToUpperCase.toString();
+  }
+
+  private String normalizeTimeZoneName(String timeZoneName) {
+    // https://tc39.es/ecma402/#sec-case-sensitivity-and-case-mapping
+    // Note that we should convert only upper case translation in ASCII range.
+    Boolean isIANAtimeZone = timeZoneName.contains("/"); // E.g. "America/New_York"
+
+    if(isIANAtimeZone) {
+      return capitalizeTimeZoneName(timeZoneName);
+    } else {
+      // all others timeZones like "GMT+05:00" should be transformed into uppercase
+      return transformTimeZoneNameToUpperCase(timeZoneName);
+    }
   }
 
   private boolean isValidTimeZoneName(String timeZone) {
