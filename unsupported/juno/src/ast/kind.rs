@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use super::{Node, NodeChild, NodeLabel, NodeList, NodePtr, StringLiteral, Visitor};
+use super::{instanceof, Node, NodeChild, NodeLabel, NodeList, NodePtr, StringLiteral, Visitor};
 
 /// Generate boilerplate code for the `NodeKind` enum.
 /// The macro matches structures like this:
@@ -85,7 +85,7 @@ macro_rules! gen_nodekind_enum {
 
             /// Check whether this is a valid kind for `node`.
             pub fn validate<'n>(&self, node: &'n Node) -> bool {
-                match self {
+                (match self {
                     $(
                         Self::$kind $({$($field),*})? => {
                             // Run the validation for each child.
@@ -95,7 +95,7 @@ macro_rules! gen_nodekind_enum {
                             )&&*)?
                         }
                     ),*
-                }
+                }) && validate_custom(node)
             }
 
             pub fn name(&self) -> &'static str {
@@ -958,4 +958,54 @@ NodeKind {
         return_type: Option<NodePtr>,
     }
 }
+}
+
+fn validate_custom(node: &Node) -> bool {
+    use NodeKind::*;
+    match &node.kind {
+        MemberExpression {
+            property,
+            object: _,
+            computed,
+        }
+        | OptionalMemberExpression {
+            property,
+            object: _,
+            computed,
+            optional: _,
+        } => {
+            if *computed {
+                instanceof(property.kind.variant(), NodeVariant::Expression)
+            } else {
+                instanceof(property.kind.variant(), NodeVariant::Identifier)
+            }
+        }
+
+        Property {
+            key,
+            value,
+            kind,
+            computed,
+            method,
+            shorthand,
+        } => {
+            if *computed && *shorthand {
+                return false;
+            }
+            if !*computed && !key.validate(node, &[NodeVariant::Identifier, NodeVariant::Literal]) {
+                return false;
+            }
+            if *method && !value.validate(node, &[NodeVariant::FunctionExpression]) {
+                return false;
+            }
+            if (kind.str == "get" || kind.str == "set")
+                && !value.validate(node, &[NodeVariant::FunctionExpression])
+            {
+                return false;
+            }
+            true
+        }
+
+        _ => true,
+    }
 }
