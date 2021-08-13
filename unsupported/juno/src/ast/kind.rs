@@ -117,7 +117,10 @@ macro_rules! gen_nodekind_enum {
         pub enum NodeVariant {
             Expression,
             Statement,
+            Declaration,
             Literal,
+            Pattern,
+            LVal,
             $($kind),*
         }
 
@@ -128,7 +131,10 @@ macro_rules! gen_nodekind_enum {
                 match self {
                     Self::Expression => None,
                     Self::Statement => None,
+                    Self::Declaration => Some(Self::Statement),
                     Self::Literal => Some(Self::Expression),
+                    Self::Pattern => Some(Self::LVal),
+                    Self::LVal => Some(Self::Expression),
                     $(
                         Self::$kind => {
                             None$(.or(Some(Self::$parent)))?
@@ -145,105 +151,105 @@ NodeKind {
     Empty,
     Metadata,
     Program {
-        body: NodeList,
+        body: NodeList[Directive, Statement],
     },
-    FunctionExpression {
-        id: Option<NodePtr>,
-        params: NodeList,
-        body: NodePtr,
-        type_parameters: Option<NodePtr>,
-        return_type: Option<NodePtr>,
-        predicate: Option<NodePtr>,
+    FunctionExpression[Expression] {
+        id: Option<NodePtr>[Identifier],
+        params: NodeList[Pattern],
+        body: NodePtr[BlockStatement],
+        type_parameters: Option<NodePtr>[TypeParameterDeclaration],
+        return_type: Option<NodePtr>[TypeAnnotation],
+        predicate: Option<NodePtr>[InferredPredicate, DeclaredPredicate],
         generator: bool,
         is_async: bool,
     },
-    ArrowFunctionExpression {
-        id: Option<NodePtr>,
-        params: NodeList,
-        body: NodePtr,
-        type_parameters: Option<NodePtr>,
-        return_type: Option<NodePtr>,
-        predicate: Option<NodePtr>,
+    ArrowFunctionExpression[Expression] {
+        id: Option<NodePtr>[Identifier],
+        params: NodeList[Pattern],
+        body: NodePtr[BlockStatement],
+        type_parameters: Option<NodePtr>[TypeParameterDeclaration],
+        return_type: Option<NodePtr>[TypeAnnotation],
+        predicate: Option<NodePtr>[InferredPredicate, DeclaredPredicate],
         expression: bool,
         is_async: bool,
     },
-    FunctionDeclaration {
-        id: Option<NodePtr>,
-        params: NodeList,
-        body: NodePtr,
-        type_parameters: Option<NodePtr>,
-        return_type: Option<NodePtr>,
-        predicate: Option<NodePtr>,
+    FunctionDeclaration[Declaration] {
+        id: Option<NodePtr>[Identifier],
+        params: NodeList[Pattern],
+        body: NodePtr[BlockStatement],
+        type_parameters: Option<NodePtr>[TypeParameterDeclaration],
+        return_type: Option<NodePtr>[TypeAnnotation],
+        predicate: Option<NodePtr>[InferredPredicate, DeclaredPredicate],
         generator: bool,
         is_async: bool,
     },
-    WhileStatement {
-        body: NodePtr,
-        test: NodePtr,
+    WhileStatement[Statement] {
+        body: NodePtr[Statement],
+        test: NodePtr[Expression],
     },
-    DoWhileStatement {
-        body: NodePtr,
-        test: NodePtr,
+    DoWhileStatement[Statement] {
+        body: NodePtr[Statement],
+        test: NodePtr[Expression],
     },
-    ForInStatement {
-        left: NodePtr,
-        right: NodePtr,
-        body: NodePtr,
+    ForInStatement[Statement] {
+        left: NodePtr[VariableDeclaration, Pattern],
+        right: NodePtr[Expression],
+        body: NodePtr[Statement],
     },
-    ForOfStatement {
-        left: NodePtr,
-        right: NodePtr,
-        body: NodePtr,
+    ForOfStatement[ForInStatement] {
+        left: NodePtr[VariableDeclaration, Pattern],
+        right: NodePtr[Expression],
+        body: NodePtr[Statement],
         is_await: bool,
     },
-    ForStatement {
-        init: Option<NodePtr>,
-        test: Option<NodePtr>,
-        update: Option<NodePtr>,
-        body: NodePtr,
+    ForStatement[Statement] {
+        init: Option<NodePtr>[VariableDeclaration, Expression],
+        test: Option<NodePtr>[Expression],
+        update: Option<NodePtr>[Expression],
+        body: NodePtr[Statement],
     },
-    DebuggerStatement,
-    EmptyStatement,
-    BlockStatement {
-        body: NodeList,
+    DebuggerStatement[Statement],
+    EmptyStatement[Statement],
+    BlockStatement[Statement] {
+        body: NodeList[Statement],
     },
-    BreakStatement {
-        label: Option<NodePtr>,
+    BreakStatement[Statement] {
+        label: Option<NodePtr>[Identifier],
     },
-    ContinueStatement {
-        label: Option<NodePtr>,
+    ContinueStatement[Statement] {
+        label: Option<NodePtr>[Identifier],
     },
-    ThrowStatement {
-        argument: NodePtr,
+    ThrowStatement[Statement] {
+        argument: NodePtr[Expression],
     },
     ReturnStatement[Statement] {
         argument: Option<NodePtr>[Expression],
     },
-    WithStatement {
-        object: NodePtr,
-        body: NodePtr,
+    WithStatement[Statement] {
+        object: NodePtr[Expression],
+        body: NodePtr[Statement],
     },
-    SwitchStatement {
-        discriminant: NodePtr,
-        cases: NodeList,
+    SwitchStatement[Statement] {
+        discriminant: NodePtr[Expression],
+        cases: NodeList[SwitchCase],
     },
-    LabeledStatement {
-        label: NodePtr,
-        body: NodePtr,
+    LabeledStatement[Statement] {
+        label: NodePtr[Identifier],
+        body: NodePtr[Statement],
     },
-    ExpressionStatement {
-        expression: NodePtr,
+    ExpressionStatement[Statement] {
+        expression: NodePtr[Expression],
         directive: Option<StringLiteral>,
     },
-    TryStatement {
-        block: NodePtr,
-        handler: Option<NodePtr>,
-        finalizer: Option<NodePtr>,
+    TryStatement[Statement] {
+        block: NodePtr[BlockStatement],
+        handler: Option<NodePtr>[CatchClause],
+        finalizer: Option<NodePtr>[BlockStatement],
     },
-    IfStatement {
-        test: NodePtr,
-        consequent: NodePtr,
-        alternate: Option<NodePtr>,
+    IfStatement[Statement] {
+        test: NodePtr[Expression],
+        consequent: NodePtr[Statement],
+        alternate: Option<NodePtr>[Statement],
     },
     NullLiteral[Literal],
     BooleanLiteral[Literal] {
@@ -261,128 +267,128 @@ NodeKind {
     },
     ThisExpression[Expression],
     Super,
-    SequenceExpression {
-        expressions: NodeList,
+    SequenceExpression[Expression] {
+        expressions: NodeList[Expression],
     },
-    ObjectExpression {
-        properties: NodeList,
+    ObjectExpression[Expression] {
+        properties: NodeList[Property],
     },
-    ArrayExpression {
-        elements: NodeList,
+    ArrayExpression[Expression] {
+        elements: NodeList[Expression, SpreadElement],
         trailing_comma: bool,
     },
     SpreadElement {
-        argument: NodePtr,
+        argument: NodePtr[Expression],
     },
-    NewExpression {
-        callee: NodePtr,
-        type_arguments: Option<NodePtr>,
-        arguments: NodeList,
+    NewExpression[Expression] {
+        callee: NodePtr[Expression],
+        type_arguments: Option<NodePtr>[TypeParameterInstantiation],
+        arguments: NodeList[Expression, SpreadElement],
     },
-    YieldExpression {
-        argument: Option<NodePtr>,
+    YieldExpression[Expression] {
+        argument: Option<NodePtr>[Expression],
         delegate: bool,
     },
-    AwaitExpression {
-        argument: NodePtr,
+    AwaitExpression[Expression] {
+        argument: NodePtr[Expression],
     },
-    ImportExpression {
-        source: NodePtr,
-        attributes: Option<NodePtr>,
+    ImportExpression[Expression] {
+        source: NodePtr[Expression],
+        attributes: Option<NodePtr>[Expression],
     },
-    CallExpression {
-        callee: NodePtr,
-        type_arguments: Option<NodePtr>,
-        arguments: NodeList,
+    CallExpression[Expression] {
+        callee: NodePtr[Expression, Super],
+        type_arguments: Option<NodePtr>[TypeParameterInstantiation],
+        arguments: NodeList[Expression],
     },
-    OptionalCallExpression {
-        callee: NodePtr,
-        type_arguments: Option<NodePtr>,
-        arguments: NodeList,
+    OptionalCallExpression[Expression] {
+        callee: NodePtr[Expression, Super],
+        type_arguments: Option<NodePtr>[TypeParameterInstantiation],
+        arguments: NodeList[Expression],
         optional: bool,
     },
-    AssignmentExpression {
+    AssignmentExpression[Expression] {
         operator: NodeLabel,
-        left: NodePtr,
-        right: NodePtr,
+        left: NodePtr[LVal],
+        right: NodePtr[Expression],
     },
-    UnaryExpression {
+    UnaryExpression[Expression] {
         operator: NodeLabel,
-        argument: NodePtr,
+        argument: NodePtr[Expression],
         prefix: bool,
     },
-    UpdateExpression {
+    UpdateExpression[Expression] {
         operator: NodeLabel,
-        argument: NodePtr,
+        argument: NodePtr[Expression],
         prefix: bool,
     },
-    MemberExpression {
-        object: NodePtr,
-        property: NodePtr,
+    MemberExpression[LVal] {
+        object: NodePtr[Expression],
+        property: NodePtr[Expression],
         computed: bool,
     },
-    OptionalMemberExpression {
-        object: NodePtr,
-        property: NodePtr,
+    OptionalMemberExpression[Expression] {
+        object: NodePtr[Expression],
+        property: NodePtr[Expression],
         computed: bool,
         optional: bool,
     },
-    LogicalExpression {
-        left: NodePtr,
-        right: NodePtr,
+    LogicalExpression[Expression] {
+        left: NodePtr[Expression],
+        right: NodePtr[Expression],
         operator: NodeLabel,
     },
-    ConditionalExpression {
-        test: NodePtr,
-        alternate: NodePtr,
-        consequent: NodePtr,
+    ConditionalExpression[Expression] {
+        test: NodePtr[Expression],
+        alternate: NodePtr[Expression],
+        consequent: NodePtr[Expression],
     },
-    BinaryExpression {
-        left: NodePtr,
-        right: NodePtr,
+    BinaryExpression[Expression] {
+        left: NodePtr[Expression],
+        right: NodePtr[Expression],
         operator: NodeLabel,
     },
-    Directive {
+    Directive[Statement] {
         value: NodePtr,
     },
-    DirectiveLiteral {
+    DirectiveLiteral[Literal] {
         value: StringLiteral,
     },
-    Identifier {
+    Identifier[Pattern] {
         name: NodeLabel,
-        type_annotation: Option<NodePtr>,
+        type_annotation: Option<NodePtr>[TypeAnnotation],
         optional: bool,
     },
-    PrivateName {
-        id: NodePtr,
+    PrivateName[LVal] {
+        id: NodePtr[Identifier],
     },
-    MetaProperty {
-        meta: NodePtr,
-        property: NodePtr,
+    MetaProperty[LVal] {
+        meta: NodePtr[Identifier],
+        property: NodePtr[Identifier],
     },
     SwitchCase {
-        test: Option<NodePtr>,
-        consequent: NodeList,
+        test: Option<NodePtr>[Expression],
+        consequent: NodeList[Statement],
     },
     CatchClause {
-        param: Option<NodePtr>,
-        body: NodePtr,
+        param: Option<NodePtr>[Pattern],
+        body: NodePtr[BlockStatement],
     },
-    VariableDeclarator {
-        init: Option<NodePtr>,
-        id: NodePtr,
+    VariableDeclarator[Declaration] {
+        init: Option<NodePtr>[Expression],
+        id: NodePtr[Pattern],
     },
-    VariableDeclaration {
+    VariableDeclaration[Declaration] {
         kind: NodeLabel,
-        declarations: NodeList,
+        declarations: NodeList[VariableDeclarator],
     },
-    TemplateLiteral {
-        quasis: NodeList,
-        expressions: NodeList,
+    TemplateLiteral[Expression] {
+        quasis: NodeList[TemplateElement],
+        expressions: NodeList[Expression],
     },
-    TaggedTemplateExpression {
-        tag: NodePtr,
-        quasi: NodePtr,
+    TaggedTemplateExpression[Expression] {
+        tag: NodePtr[Expression],
+        quasi: NodePtr[TemplateLiteral],
     },
     TemplateElement {
         tail: bool,
@@ -390,115 +396,115 @@ NodeKind {
         raw: StringLiteral,
     },
     Property {
-        key: NodePtr,
-        value: NodePtr,
+        key: NodePtr[Literal, Identifier, Expression],
+        value: NodePtr[Expression],
         kind: NodeLabel,
         computed: bool,
         method: bool,
         shorthand: bool,
     },
-    ClassDeclaration {
-        id: Option<NodePtr>,
-        type_parameters: Option<NodePtr>,
-        super_class: Option<NodePtr>,
-        super_type_parameters: Option<NodePtr>,
-        implements: NodeList,
+    ClassDeclaration[Declaration] {
+        id: Option<NodePtr>[Identifier],
+        type_parameters: Option<NodePtr>[TypeParameterDeclaration],
+        super_class: Option<NodePtr>[Expression],
+        super_type_parameters: Option<NodePtr>[TypeParameterDeclaration],
+        implements: NodeList[ClassImplements],
         decorators: NodeList,
-        body: NodePtr,
+        body: NodePtr[ClassBody],
     },
-    ClassExpression {
-        id: Option<NodePtr>,
-        type_parameters: Option<NodePtr>,
-        super_class: Option<NodePtr>,
-        super_type_parameters: Option<NodePtr>,
-        implements: NodeList,
+    ClassExpression[Expression] {
+        id: Option<NodePtr>[Identifier],
+        type_parameters: Option<NodePtr>[TypeParameterDeclaration],
+        super_class: Option<NodePtr>[Expression],
+        super_type_parameters: Option<NodePtr>[TypeParameterDeclaration],
+        implements: NodeList[ClassImplements],
         decorators: NodeList,
-        body: NodePtr,
+        body: NodePtr[ClassBody],
     },
     ClassBody {
-        body: NodeList,
+        body: NodeList[ClassProperty, ClassPrivateProperty, MethodDefinition],
     },
     ClassProperty {
-        key: NodePtr,
-        value: Option<NodePtr>,
+        key: NodePtr[Expression],
+        value: Option<NodePtr>[Expression],
         computed: bool,
         is_static: bool,
         declare: bool,
         optional: bool,
-        variance: Option<NodePtr>,
-        type_annotation: Option<NodePtr>,
+        variance: Option<NodePtr>[Variance],
+        type_annotation: Option<NodePtr>[TypeAnnotation],
     },
     ClassPrivateProperty {
-        key: NodePtr,
-        value: Option<NodePtr>,
+        key: NodePtr[PrivateName],
+        value: Option<NodePtr>[Expression],
         is_static: bool,
         declare: bool,
         optional: bool,
-        variance: Option<NodePtr>,
-        type_annotation: Option<NodePtr>,
+        variance: Option<NodePtr>[Variance],
+        type_annotation: Option<NodePtr>[TypeAnnotation],
     },
     MethodDefinition {
-        key: NodePtr,
-        value: NodePtr,
+        key: NodePtr[Expression],
+        value: NodePtr[FunctionExpression],
         kind: NodeLabel,
         computed: bool,
         is_static: bool,
     },
-    ImportDeclaration {
-        specifiers: NodeList,
-        source: NodePtr,
-        attributes: Option<NodeList>,
+    ImportDeclaration[Declaration] {
+        specifiers: NodeList[ImportSpecifier],
+        source: NodePtr[StringLiteral],
+        attributes: Option<NodeList>[ImportAttribute],
         import_kind: NodeLabel,
     },
     ImportSpecifier {
-        imported: NodePtr,
-        local: NodePtr,
+        imported: NodePtr[Identifier],
+        local: NodePtr[Identifier],
         import_kind: NodeLabel,
     },
     ImportDefaultSpecifier {
-        local: NodePtr,
+        local: NodePtr[Identifier],
     },
     ImportNamespaceSpecifier {
-        local: NodePtr,
+        local: NodePtr[Identifier],
     },
     ImportAttribute {
-        key: NodePtr,
-        value: NodePtr,
+        key: NodePtr[StringLiteral],
+        value: NodePtr[Expression],
     },
-    ExportNamedDeclaration {
-        declaration: Option<NodePtr>,
-        specifiers: NodeList,
-        source: Option<NodePtr>,
+    ExportNamedDeclaration[Declaration] {
+        declaration: Option<NodePtr>[Declaration],
+        specifiers: NodeList[ExportSpecifier],
+        source: Option<NodePtr>[StringLiteral],
         export_kind: NodeLabel,
     },
     ExportSpecifier {
-        exported: NodePtr,
-        local: NodePtr,
+        exported: NodePtr[Identifier],
+        local: NodePtr[Identifier],
     },
     ExportNamespaceSpecifier {
-        exported: NodePtr,
+        exported: NodePtr[Identifier],
     },
-    ExportDefaultDeclaration {
-        declaration: NodePtr,
+    ExportDefaultDeclaration[Declaration] {
+        declaration: NodePtr[Declaration],
     },
-    ExportAllDeclaration {
-        source: NodePtr,
+    ExportAllDeclaration[Declaration] {
+        source: NodePtr[StringLiteral],
         export_kind: NodeLabel,
     },
-    ObjectPattern {
-        properties: NodeList,
-        type_annotation: Option<NodePtr>,
+    ObjectPattern[Pattern] {
+        properties: NodeList[Property],
+        type_annotation: Option<NodePtr>[TypeAnnotation],
     },
-    ArrayPattern {
-        elements: NodeList,
-        type_annotation: Option<NodePtr>,
+    ArrayPattern[Pattern] {
+        elements: NodeList[Pattern],
+        type_annotation: Option<NodePtr>[TypeAnnotation],
     },
-    RestElement {
-        argument: NodePtr,
+    RestElement[Pattern] {
+        argument: NodePtr[Pattern],
     },
-    AssignmentPattern {
-        left: NodePtr,
-        right: NodePtr,
+    AssignmentPattern[Pattern] {
+        left: NodePtr[Pattern],
+        right: NodePtr[Expression],
     },
 
     JSXIdentifier {
