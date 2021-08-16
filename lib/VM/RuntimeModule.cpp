@@ -177,8 +177,6 @@ RuntimeModule *RuntimeModule::createLazyModule(
 
   RM->bcProvider_ = hbc::BCProviderLazy::createBCProviderLazy(bcFunction);
 
-  RM->bcProvider_ = hbc::BCProviderLazy::createBCProviderLazy(bcFunction);
-
   // We don't know which function index this block will eventually represent,
   // so just add it as 0 to ensure ownership. We'll move it later in
   // `initializeLazy`.
