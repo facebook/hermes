@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use super::{instanceof, Node, NodeChild, NodeLabel, NodeList, NodePtr, StringLiteral, Visitor};
+use super::{Node, NodeChild, NodeLabel, NodeList, NodePtr, StringLiteral, Visitor};
 
 /// Generate boilerplate code for the `NodeKind` enum.
 macro_rules! gen_nodekind_enum {
@@ -64,21 +64,6 @@ macro_rules! gen_nodekind_enum {
                 }
             }
 
-            /// Check whether this is a valid kind for `node`.
-            pub fn validate<'n>(&self, node: &'n Node) -> bool {
-                (match self {
-                    $(
-                        Self::$kind $({$($field),*})? => {
-                            // Run the validation for each child.
-                            // Use `true &&` to make it work when there's no children.
-                            true $(&& $(
-                                $field.validate(node, &[$($(NodeVariant::$constraint),*)?])
-                            )&&*)?
-                        }
-                    ),*
-                }) && validate_custom(node)
-            }
-
             pub fn name(&self) -> &'static str {
                 match self {
                     $(
@@ -128,53 +113,3 @@ macro_rules! gen_nodekind_enum {
 }
 
 nodekind_defs! { gen_nodekind_enum }
-
-fn validate_custom(node: &Node) -> bool {
-    use NodeKind::*;
-    match &node.kind {
-        MemberExpression {
-            property,
-            object: _,
-            computed,
-        }
-        | OptionalMemberExpression {
-            property,
-            object: _,
-            computed,
-            optional: _,
-        } => {
-            if *computed {
-                instanceof(property.kind.variant(), NodeVariant::Expression)
-            } else {
-                instanceof(property.kind.variant(), NodeVariant::Identifier)
-            }
-        }
-
-        Property {
-            key,
-            value,
-            kind,
-            computed,
-            method,
-            shorthand,
-        } => {
-            if *computed && *shorthand {
-                return false;
-            }
-            if !*computed && !key.validate(node, &[NodeVariant::Identifier, NodeVariant::Literal]) {
-                return false;
-            }
-            if *method && !value.validate(node, &[NodeVariant::FunctionExpression]) {
-                return false;
-            }
-            if (kind.str == "get" || kind.str == "set")
-                && !value.validate(node, &[NodeVariant::FunctionExpression])
-            {
-                return false;
-            }
-            true
-        }
-
-        _ => true,
-    }
-}
