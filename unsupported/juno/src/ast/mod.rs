@@ -17,6 +17,7 @@ pub use kind::NodeKind;
 use kind::NodeVariant;
 
 pub use dump::{dump_json, Pretty};
+pub use validate::{validate_tree, ValidationError};
 
 /// A JavaScript AST node.
 #[derive(Debug)]
@@ -32,11 +33,6 @@ impl Node {
     /// Call the `visitor` on this node with a given `parent`.
     pub fn visit<'a, V: Visitor<'a>>(&'a self, visitor: &mut V, parent: Option<&'a Node>) {
         visitor.call(self, parent);
-    }
-
-    /// Check whether the node is valid.
-    pub fn validate(&self) -> bool {
-        validate::validate_node(self)
     }
 
     /// Call the `visitor` on only this node's children.
