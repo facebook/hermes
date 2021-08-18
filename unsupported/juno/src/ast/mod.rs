@@ -9,11 +9,14 @@ use std::fmt;
 
 #[macro_use]
 mod def;
+mod dump;
 mod kind;
 mod validate;
 
 pub use kind::NodeKind;
 use kind::NodeVariant;
+
+pub use dump::{dump_json, Pretty};
 
 /// A JavaScript AST node.
 #[derive(Debug)]

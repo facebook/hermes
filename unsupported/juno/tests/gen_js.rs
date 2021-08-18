@@ -6,11 +6,12 @@
  */
 
 use juno::ast::*;
+use juno::gen_js;
 use juno::gen_js::*;
 
 fn do_gen(node: &Node) -> String {
     let mut out: Vec<u8> = vec![];
-    generate(&mut out, node, Pretty::Yes).unwrap();
+    generate(&mut out, node, gen_js::Pretty::Yes).unwrap();
     String::from_utf8(out).expect("Invalid UTF-8 output in test")
 }
 

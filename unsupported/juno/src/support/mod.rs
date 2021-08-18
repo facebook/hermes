@@ -5,4 +5,5 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+pub mod case;
 pub mod json;
