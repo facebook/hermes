@@ -277,8 +277,8 @@ impl<W: Write> GenJS<W> {
                 {
                     if need_sep {
                         out!(self, " ");
-                        params[0].visit(self, Some(node));
                     }
+                    params[0].visit(self, Some(node));
                 } else {
                     out!(self, "(");
                     for (i, param) in params.iter().enumerate() {
@@ -494,6 +494,8 @@ impl<W: Write> GenJS<W> {
                     handler.visit(self, Some(node));
                 }
                 if let Some(finalizer) = finalizer {
+                    out!(self, "finally");
+                    self.space(ForceSpace::No);
                     self.visit_stmt_or_block(finalizer, ForceBlock::Yes, node);
                 }
             }
@@ -522,6 +524,11 @@ impl<W: Write> GenJS<W> {
                         self.space(ForceSpace::No);
                     }
                     out!(self, "else");
+                    self.space(if matches!(&alternate.kind, BlockStatement { .. }) {
+                        ForceSpace::No
+                    } else {
+                        ForceSpace::Yes
+                    });
                     self.visit_stmt_or_block(alternate, ForceBlock::No, node);
                 }
             }
@@ -552,6 +559,7 @@ impl<W: Write> GenJS<W> {
             }
 
             SequenceExpression { expressions } => {
+                out!(self, "(");
                 for (i, expr) in expressions.iter().enumerate() {
                     if i > 0 {
                         self.comma();
@@ -566,6 +574,7 @@ impl<W: Write> GenJS<W> {
                         },
                     );
                 }
+                out!(self, ")");
             }
 
             ObjectExpression { properties } => {
@@ -580,7 +589,11 @@ impl<W: Write> GenJS<W> {
                     if i > 0 {
                         self.comma();
                     }
-                    self.print_comma_expression(elem, node);
+                    if let SpreadElement { .. } = &elem.kind {
+                        elem.visit(self, Some(node));
+                    } else {
+                        self.print_comma_expression(elem, node);
+                    }
                 }
                 if *trailing_comma {
                     self.comma();
@@ -838,7 +851,7 @@ impl<W: Write> GenJS<W> {
             }
 
             VariableDeclaration { kind, declarations } => {
-                out!(self, "{}", kind.str);
+                out!(self, "{} ", kind.str);
                 for (i, decl) in declarations.iter().enumerate() {
                     if i > 0 {
                         self.comma();
@@ -2263,7 +2276,7 @@ impl<W: Write> GenJS<W> {
     /// Print a newline and indent if pretty.
     fn newline(&mut self) {
         if self.pretty == Pretty::Yes {
-            out!(self, "\n{:indent$}", indent = self.indent as usize);
+            out!(self, "\n{:indent$}", "", indent = self.indent as usize);
         }
     }
 
@@ -2573,9 +2586,11 @@ impl<W: Write> GenJS<W> {
             | FunctionExpression { .. }
             | ClassExpression { .. }
             | TemplateLiteral { .. } => (PRIMARY, Assoc::Ltr),
-            MemberExpression { .. } | MetaProperty { .. } | CallExpression { .. } => {
-                (MEMBER, Assoc::Ltr)
-            }
+            MemberExpression { .. }
+            | OptionalMemberExpression { .. }
+            | MetaProperty { .. }
+            | CallExpression { .. }
+            | OptionalCallExpression { .. } => (MEMBER, Assoc::Ltr),
             NewExpression { arguments, .. } => {
                 // `new foo()` has higher precedence than `new foo`. In pretty mode we
                 // always append the `()`, but otherwise we must check the number of args.
@@ -2807,6 +2822,7 @@ fn ends_with_block(node: Option<&Node>) -> bool {
         Some(node) => match &node.kind {
             BlockStatement { .. } | FunctionDeclaration { .. } => true,
             WhileStatement { body, .. } => ends_with_block(Some(body)),
+            ForStatement { body, .. } => ends_with_block(Some(body)),
             ForInStatement { body, .. } => ends_with_block(Some(body)),
             ForOfStatement { body, .. } => ends_with_block(Some(body)),
             WithStatement { body, .. } => ends_with_block(Some(body)),
