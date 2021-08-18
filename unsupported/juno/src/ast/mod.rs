@@ -7,6 +7,8 @@
 
 use std::fmt;
 
+#[macro_use]
+mod def;
 mod kind;
 
 pub use kind::NodeKind;
