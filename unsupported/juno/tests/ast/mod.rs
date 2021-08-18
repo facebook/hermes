@@ -59,8 +59,8 @@ fn test_visit() {
         acc: Vec<f64>,
     }
 
-    impl Visitor for NumberFinder {
-        fn call(&mut self, node: &Node, parent: Option<&Node>) {
+    impl<'a> Visitor<'a> for NumberFinder {
+        fn call(&mut self, node: &'a Node, parent: Option<&'a Node>) {
             if let NumericLiteral { value } = &node.kind {
                 assert!(matches!(parent.unwrap().kind, ExpressionStatement { .. }));
                 self.acc.push(*value);

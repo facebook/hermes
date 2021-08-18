@@ -2765,8 +2765,8 @@ impl<W: Write> GenJS<W> {
     }
 }
 
-impl<W: Write> Visitor for GenJS<W> {
-    fn call(&mut self, node: &Node, parent: Option<&Node>) {
+impl<'a, W: Write> Visitor<'a> for GenJS<W> {
+    fn call(&mut self, node: &'a Node, parent: Option<&'a Node>) {
         self.gen_node(node, parent);
     }
 }

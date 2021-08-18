@@ -30,7 +30,7 @@ pub struct Node {
 
 impl Node {
     /// Call the `visitor` on this node with a given `parent`.
-    pub fn visit<V: Visitor>(&self, visitor: &mut V, parent: Option<&Node>) {
+    pub fn visit<'a, V: Visitor<'a>>(&'a self, visitor: &mut V, parent: Option<&'a Node>) {
         visitor.call(self, parent);
     }
 
@@ -40,15 +40,15 @@ impl Node {
     }
 
     /// Call the `visitor` on only this node's children.
-    pub fn visit_children<V: Visitor>(&self, visitor: &mut V) {
+    pub fn visit_children<'a, V: Visitor<'a>>(&'a self, visitor: &mut V) {
         self.kind.visit_children(visitor, self);
     }
 }
 
 /// Trait implemented by those who call the visit functionality.
-pub trait Visitor {
+pub trait Visitor<'a> {
     /// Visit the Node `node` with the given `parent`.
-    fn call(&mut self, node: &Node, parent: Option<&Node>);
+    fn call(&mut self, node: &'a Node, parent: Option<&'a Node>);
 }
 
 /// A source range within a single JS file.
@@ -107,27 +107,27 @@ trait NodeChild {
     /// Visit this child of the given `node`.
     /// Should be no-op for any type that doesn't contain pointers to other
     /// `Node`s.
-    fn visit<V: Visitor>(&self, visitor: &mut V, node: &Node);
+    fn visit<'a, V: Visitor<'a>>(&'a self, visitor: &mut V, node: &'a Node);
 }
 
 impl NodeChild for f64 {
-    fn visit<V: Visitor>(&self, _visitor: &mut V, _node: &Node) {}
+    fn visit<'a, V: Visitor<'a>>(&self, _visitor: &mut V, _node: &Node) {}
 }
 
 impl NodeChild for bool {
-    fn visit<V: Visitor>(&self, _visitor: &mut V, _node: &Node) {}
+    fn visit<'a, V: Visitor<'a>>(&self, _visitor: &mut V, _node: &Node) {}
 }
 
 impl NodeChild for NodeLabel {
-    fn visit<V: Visitor>(&self, _visitor: &mut V, _node: &Node) {}
+    fn visit<'a, V: Visitor<'a>>(&self, _visitor: &mut V, _node: &Node) {}
 }
 
 impl NodeChild for StringLiteral {
-    fn visit<V: Visitor>(&self, _visitor: &mut V, _node: &Node) {}
+    fn visit<'a, V: Visitor<'a>>(&self, _visitor: &mut V, _node: &Node) {}
 }
 
 impl<T: NodeChild> NodeChild for Option<T> {
-    fn visit<V: Visitor>(&self, visitor: &mut V, node: &Node) {
+    fn visit<'a, V: Visitor<'a>>(&'a self, visitor: &mut V, node: &'a Node) {
         if let Some(t) = self {
             t.visit(visitor, node);
         }
@@ -135,13 +135,13 @@ impl<T: NodeChild> NodeChild for Option<T> {
 }
 
 impl NodeChild for NodePtr {
-    fn visit<V: Visitor>(&self, visitor: &mut V, node: &Node) {
+    fn visit<'a, V: Visitor<'a>>(&'a self, visitor: &mut V, node: &'a Node) {
         visitor.call(self, Some(node));
     }
 }
 
 impl NodeChild for NodeList {
-    fn visit<V: Visitor>(&self, visitor: &mut V, node: &Node) {
+    fn visit<'a, V: Visitor<'a>>(&'a self, visitor: &mut V, node: &'a Node) {
         for child in self {
             visitor.call(child, Some(node));
         }
