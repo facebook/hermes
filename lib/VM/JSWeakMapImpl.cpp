@@ -119,9 +119,9 @@ GCHermesValue *JSWeakMapImplBase::getValueDirect(
   return &valueStorage_.get(gc->getPointerBase())->atRef(it->second);
 }
 
-GCPointerBase::StorageType &JSWeakMapImplBase::getValueStorageRef(GC *gc) {
+GCPointerBase &JSWeakMapImplBase::getValueStorageRef(GC *gc) {
   assert(gc->calledByGC() && "Should only be used by the GC implementation.");
-  return valueStorage_.getLoc();
+  return valueStorage_;
 }
 
 /// \return true if the \p key exists in the map.
@@ -419,7 +419,6 @@ const ObjectVTable JSWeakMapImpl<C>::vt{
         JSWeakMapImpl::_mallocSizeImpl,
         nullptr,
         nullptr,
-        nullptr,
         VTable::HeapSnapshotMetadata{
             HeapSnapshot::NodeType::Object,
             nullptr,
@@ -449,8 +448,7 @@ CallResult<PseudoHandle<JSWeakMapImpl<C>>> JSWeakMapImpl<C>::create(
       runtime,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<JSWeakMapImpl>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, numOverlapSlots<JSWeakMapImpl>()),
       valueStorage);
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }

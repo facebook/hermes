@@ -70,9 +70,7 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
           runtime,
           parentHandle,
           runtime->getHiddenClassForPrototype(
-              *parentHandle,
-              numOverlapSlots<FinalizableNativeFunction>() +
-                  ANONYMOUS_PROPERTY_SLOTS),
+              *parentHandle, numOverlapSlots<FinalizableNativeFunction>()),
           context,
           functionPtr,
           finalizePtr);
@@ -138,8 +136,7 @@ CallResult<HermesValue> HostObject::createWithoutPrototype(
       runtime,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<HostObject>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, numOverlapSlots<HostObject>()),
       std::move(proxy));
 
   hostObj->flags_.hostObject = true;

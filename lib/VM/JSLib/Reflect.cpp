@@ -43,7 +43,11 @@ reflectConstruct(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(!target)) {
     return runtime->raiseTypeError("target is not constructible");
   }
-  if (LLVM_UNLIKELY(!isConstructor(runtime, *target))) {
+  CallResult<bool> isConstructorRes = isConstructor(runtime, *target);
+  if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (LLVM_UNLIKELY(!*isConstructorRes)) {
     return runtime->raiseTypeError("target is not constructible");
   }
   Handle<Callable> newTarget = args.dyncastArg<Callable>(2);
@@ -51,7 +55,11 @@ reflectConstruct(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(!newTarget)) {
       return runtime->raiseTypeError("newTarget is not constructible");
     }
-    if (LLVM_UNLIKELY(!isConstructor(runtime, *newTarget))) {
+    CallResult<bool> isConstructorRes = isConstructor(runtime, *newTarget);
+    if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (LLVM_UNLIKELY(!*isConstructorRes)) {
       return runtime->raiseTypeError("newTarget is not constructible");
     }
   }

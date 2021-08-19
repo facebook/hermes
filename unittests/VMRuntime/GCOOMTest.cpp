@@ -120,23 +120,24 @@ TEST(GCOOMDeathTest, EffectiveIntegration) {
                                .build());
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
-
-  std::deque<GCCell *> roots;
+  GCScope scope{&rt};
 
   // Fill up the heap.
   unsigned numCells = GenGC::kYoungGenFractionDenom;
-  for (unsigned i = 0; i < numCells; ++i) {
-    roots.push_back(SegmentCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+  for (unsigned i = 0; i < numCells - 1; ++i) {
+    rt.makeHandle(SegmentCell::create(rt));
   }
+
+  // Create one element that can be removed later
+  auto marker = scope.createMarker();
+  rt.makeHandle(SegmentCell::create(rt));
+
   ASSERT_EQ(0, gc.numFullGCs());
 
-  const auto oneForOne = [&rt, &gc, &roots]() {
+  const auto oneForOne = [&scope, &marker, &rt, &gc]() {
     auto fullGCsBefore = gc.numFullGCs();
-    rt.pointerRoots.erase(rt.pointerRoots.begin());
-
-    roots.push_back(SegmentCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    scope.flushToMarker(marker);
+    rt.makeHandle(SegmentCell::create(rt));
 
     EXPECT_EQ(fullGCsBefore + 1, gc.numFullGCs());
   };
@@ -172,13 +173,9 @@ TEST(GCOOMTest, VALimitFullGC) {
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
 
-  std::deque<GCCell *> roots;
-
-  roots.push_back(FullCell::createLongLived(rt));
-  rt.pointerRoots.push_back(&roots.back());
-
-  roots.push_back(HalfCell::create(rt));
-  rt.pointerRoots.push_back(&roots.back());
+  GCScope scope{&rt};
+  runtime->makeHandle(FullCell::createLongLived(rt));
+  runtime->makeHandle(HalfCell::create(rt));
 
   HalfCell::create(rt);
 

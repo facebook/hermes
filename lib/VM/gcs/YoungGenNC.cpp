@@ -548,15 +548,6 @@ void YoungGen::ensureReferentCopied(GCCell **ptrLoc) {
   }
 }
 
-void YoungGen::ensureReferentCopied(BasedPointer *basedPtrLoc) {
-  PointerBase *const base = gc_->getPointerBase();
-  void *ptr = base->basedToPointer(*basedPtrLoc);
-  if (contains(ptr)) {
-    ptr = forwardPointer(reinterpret_cast<GCCell *>(ptr));
-    *basedPtrLoc = base->pointerToBasedNonNull(ptr);
-  }
-}
-
 GCCell *YoungGen::forwardPointer(GCCell *ptr) {
   assert(contains(ptr));
   GCCell *cell = ptr;

@@ -819,7 +819,6 @@ const VTable DynamicStringPrimitive<T, Uniqued>::vt = VTable(
     nullptr,
     nullptr,
     nullptr,
-    nullptr,
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::String,
         DynamicStringPrimitive<T, Uniqued>::_snapshotNameImpl,
@@ -844,7 +843,6 @@ const VTable ExternalStringPrimitive<T>::vt = VTable(
     nullptr, // markWeak.
     ExternalStringPrimitive<T>::_mallocSizeImpl,
     nullptr,
-    nullptr,
     ExternalStringPrimitive<T>::_externalMemorySizeImpl,
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::String,
@@ -863,7 +861,6 @@ const VTable BufferedStringPrimitive<T>::vt = VTable(
     nullptr, // finalize.
     nullptr, // markWeak.
     nullptr, // mallocSize
-    nullptr,
     nullptr,
     nullptr, // externalMemorySize
     VTable::HeapSnapshotMetadata{

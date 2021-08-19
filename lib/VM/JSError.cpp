@@ -170,7 +170,7 @@ PseudoHandle<JSError> JSError::create(
       runtime,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSError>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, numOverlapSlots<JSError>()),
       catchable);
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
@@ -306,7 +306,9 @@ static Handle<PropStorage> getCallStackFunctionNames(
         name = HermesValue::encodeStringValue(
             runtime->getPredefinedString(Predefined::proxyTrap));
       }
-    } else if (cf.getCalleeClosureOrCBRef().isNativeValue()) {
+    } else if (!cf.getCalleeClosureOrCBRef().isObject()) {
+      // If CalleeClosureOrCB is not an object pointer, then it must be a native
+      // pointer to a CodeBlock.
       auto *cb =
           cf.getCalleeClosureOrCBRef().getNativePointer<const CodeBlock>();
       if (cb->getNameMayAllocate().isValid())

@@ -125,8 +125,7 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
   if (auto *SOP = llvh::dyn_cast<StoreOwnPropertyInst>(Inst)) {
     if (opIndex == StoreOwnPropertyInst::PropertyIdx) {
       if (llvh::isa<StoreNewOwnPropertyInst>(Inst)) {
-        // In StoreNewOwnPropertyInst the property name must be a literal
-        // string.
+        // In StoreNewOwnPropertyInst the property name must be a literal.
         return true;
       }
 
@@ -193,6 +192,13 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
   if (llvh::isa<GetBuiltinClosureInst>(Inst) &&
       opIndex == GetBuiltinClosureInst::BuiltinIndexIdx)
     return true;
+
+#ifdef HERMES_RUN_WASM
+  /// CallIntrinsic's IntrinsicIndexIdx should always be literals.
+  if (llvh::isa<CallIntrinsicInst>(Inst) &&
+      (opIndex == CallIntrinsicInst::IntrinsicIndexIdx))
+    return true;
+#endif
 
   if (llvh::isa<IteratorCloseInst>(Inst) &&
       opIndex == IteratorCloseInst::IgnoreInnerExceptionIdx) {
@@ -600,8 +606,8 @@ bool LowerCalls::runOnFunction(Function *F) {
         // registers. If this is a CallN instruction, emit ImplicitMovs
         // instead, to express that these registers get written to by the CallN,
         // even though they are not the destination.
-        // Lastly, if this is argument 0 of CallBuiltinInst, emit ImplicitMov
-        // to encode that the "this" register is implicitly set to undefined.
+        // Lastly, if this is argument 0 of CallBuiltinInst emit ImplicitMov to
+        // encode that the "this" register is implicitly set to undefined.
         Value *arg = call->getArgument(i);
         if (llvh::isa<HBCCallNInst>(call) ||
             (i == 0 && llvh::isa<CallBuiltinInst>(call))) {

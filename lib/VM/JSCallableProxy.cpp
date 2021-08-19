@@ -72,8 +72,7 @@ PseudoHandle<JSCallableProxy> JSCallableProxy::create(Runtime *runtime) {
       Handle<JSObject>::vmcast(&runtime->objectPrototype),
       runtime->getHiddenClassForPrototype(
           runtime->objectPrototypeRawPtr,
-          JSObject::numOverlapSlots<JSCallableProxy>() +
-              ANONYMOUS_PROPERTY_SLOTS));
+          JSObject::numOverlapSlots<JSCallableProxy>()));
 
   cproxy->flags_.proxyObject = true;
 
@@ -95,6 +94,15 @@ void JSCallableProxy::setTargetAndHandler(
     Handle<JSObject> handler) {
   slots_.target.set(runtime, target.get(), &runtime->getHeap());
   slots_.handler.set(runtime, handler.get(), &runtime->getHeap());
+}
+
+CallResult<bool> JSCallableProxy::isConstructor(Runtime *runtime) {
+  ScopedNativeDepthTracker depthTracker(runtime);
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
+  return vm::isConstructor(
+      runtime, vmcast_or_null<Callable>(slots_.target.get(runtime)));
 }
 
 CallResult<HermesValue>
@@ -200,7 +208,12 @@ CallResult<PseudoHandle<JSObject>> JSCallableProxy::_newObjectImpl(
     Handle<Callable> callable,
     Runtime *runtime,
     Handle<JSObject> protoHandle) {
-  if (!vmcast<JSCallableProxy>(*callable)->isConstructor(runtime)) {
+  CallResult<bool> isConstructorRes =
+      vmcast<JSCallableProxy>(*callable)->isConstructor(runtime);
+  if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (!*isConstructorRes) {
     return runtime->raiseTypeError("Function is not a constructor");
   }
   return vm::Callable::newObject(

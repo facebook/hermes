@@ -25,6 +25,10 @@ namespace vm {
 void ArrayImplBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<ArrayImpl>());
   ObjectBuildMeta(cell, mb);
+  const auto *self = static_cast<const ArrayImpl *>(cell);
+  // This edge has to be called "elements" in order for Chrome to attribute
+  // the size of the indexed storage as part of total usage of "JS Arrays".
+  mb.addField("elements", &self->indexedStorage_);
 }
 
 void ArrayImpl::_snapshotAddEdgesImpl(
@@ -61,6 +65,7 @@ void ArrayImpl::_snapshotAddEdgesImpl(
 ArrayImpl::ArrayImpl(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
   beginIndex_ = d.readInt<uint32_t>();
   endIndex_ = d.readInt<uint32_t>();
+  d.readRelocation(&indexedStorage_, RelocationKind::GCPointer);
 }
 
 void serializeArrayImpl(
@@ -71,6 +76,7 @@ void serializeArrayImpl(
   JSObject::serializeObjectImpl(s, cell, overlapSlots);
   s.writeInt<uint32_t>(self->beginIndex_);
   s.writeInt<uint32_t>(self->endIndex_);
+  s.writeRelocation(self->indexedStorage_.get(s.getRuntime()));
 }
 #endif
 
@@ -369,7 +375,6 @@ const ObjectVTable Arguments::vt{
         nullptr,
         nullptr,
         nullptr,
-        nullptr,
         nullptr, // externalMemorySize
         VTable::HeapSnapshotMetadata{
             HeapSnapshot::NodeType::Object,
@@ -413,8 +418,7 @@ CallResult<Handle<Arguments>> Arguments::create(
     Handle<Callable> curFunction,
     bool strictMode) {
   auto clazz = runtime->getHiddenClassForPrototype(
-      runtime->objectPrototypeRawPtr,
-      numOverlapSlots<Arguments>() + ANONYMOUS_PROPERTY_SLOTS);
+      runtime->objectPrototypeRawPtr, numOverlapSlots<Arguments>());
   auto obj = runtime->makeAFixed<Arguments>(
       runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype), clazz);
   auto selfHandle = JSObjectInit::initToHandle(runtime, obj);
@@ -500,7 +504,6 @@ const ObjectVTable JSArray::vt{
         nullptr,
         nullptr,
         nullptr,
-        nullptr,
         nullptr, // externalMemorySize
         VTable::HeapSnapshotMetadata{
             HeapSnapshot::NodeType::Object,
@@ -542,7 +545,7 @@ Handle<HiddenClass> JSArray::createClass(
     Runtime *runtime,
     Handle<JSObject> prototypeHandle) {
   Handle<HiddenClass> classHandle = runtime->getHiddenClassForPrototype(
-      *prototypeHandle, numOverlapSlots<JSArray>() + ANONYMOUS_PROPERTY_SLOTS);
+      *prototypeHandle, numOverlapSlots<JSArray>());
 
   PropertyFlags pf{};
   pf.enumerable = 0;
@@ -586,7 +589,6 @@ CallResult<Handle<JSArray>> JSArray::create(
           runtime, prototypeHandle, classHandle, GCPointerBase::NoBarriers()));
 
   // Only allocate the storage if capacity is not zero.
-  StorageType *indexedStorage = nullptr;
   if (capacity) {
     if (LLVM_UNLIKELY(capacity > StorageType::maxElements()))
       return runtime->raiseRangeError("Out of memory for array elements");
@@ -594,11 +596,8 @@ CallResult<Handle<JSArray>> JSArray::create(
     if (arrRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    indexedStorage = arrRes->get();
+    self->setIndexedStorage(runtime, arrRes->get(), &runtime->getHeap());
   }
-  // Note that if there is no indexed storage, we still need to explicitly set
-  // this to null, because JSObjectInit defaults it to undefined.
-  self->setIndexedStorage(runtime, indexedStorage, &runtime->getHeap());
   auto shv = SmallHermesValue::encodeNumberValue(length, runtime);
   putLength(self.get(), runtime, shv);
 
@@ -814,7 +813,7 @@ PseudoHandle<JSArrayIterator> JSArrayIterator::create(
     IterationKind iterationKind) {
   auto proto = Handle<JSObject>::vmcast(&runtime->arrayIteratorPrototype);
   auto clazz = runtime->getHiddenClassForPrototype(
-      *proto, numOverlapSlots<JSArrayIterator>() + ANONYMOUS_PROPERTY_SLOTS);
+      *proto, numOverlapSlots<JSArrayIterator>());
   auto *obj = runtime->makeAFixed<JSArrayIterator>(
       runtime, proto, clazz, array, iterationKind);
   return JSObjectInit::initToPseudoHandle(runtime, obj);

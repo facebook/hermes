@@ -37,7 +37,7 @@ class DecoratedObject : public JSObject {
   /// \param additionalSlotCount internal slots to reserve within the
   /// object.  Only a small number of slots are available; this value
   /// cannot be greater than InternalProperty::NumInternalProperties -
-  /// (numOverlaps + ANONYMOUS_PROPERTY_SLOTS), which is currently 3.
+  /// numOverlaps, which is currently 3.
   /// If allocation fails, the GC declares an OOM.
   static PseudoHandle<DecoratedObject> create(
       Runtime *runtime,
@@ -68,9 +68,7 @@ class DecoratedObject : public JSObject {
       Runtime *runtime,
       unsigned index) {
     return JSObject::getInternalProperty(
-        self,
-        runtime,
-        numOverlapSlots<DecoratedObject>() + ANONYMOUS_PROPERTY_SLOTS + index);
+        self, runtime, numOverlapSlots<DecoratedObject>() + index);
   }
 
   /// Set the value in an additional slot.
@@ -82,10 +80,7 @@ class DecoratedObject : public JSObject {
       unsigned index,
       SmallHermesValue value) {
     JSObject::setInternalProperty(
-        self,
-        runtime,
-        numOverlapSlots<DecoratedObject>() + ANONYMOUS_PROPERTY_SLOTS + index,
-        value);
+        self, runtime, numOverlapSlots<DecoratedObject>() + index, value);
   }
 
   using Super = JSObject;

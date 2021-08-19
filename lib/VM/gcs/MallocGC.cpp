@@ -82,7 +82,6 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
         auto *newVarCell =
             reinterpret_cast<VariableSizeRuntimeCell *>(newLocation->data());
         newVarCell->setSizeFromGC(trimmedSize);
-        newVarCell->getVT()->trim(newVarCell);
       }
       // Make sure to put an element on the worklist that is at the updated
       // location. Don't update the stale address that is about to be free'd.
@@ -107,8 +106,9 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       // Trim the cell. This is fine to do with malloc'ed memory because the
       // original size is retained by malloc.
       gcheapsize_t origSize = cell->getAllocatedSize();
-      if (cell->getVT()->getTrimmedSize(cell, origSize) != origSize) {
-        cell->getVT()->trim(cell);
+      gcheapsize_t newSize = cell->getVT()->getTrimmedSize(cell, origSize);
+      if (newSize != origSize) {
+        static_cast<VariableSizeRuntimeCell *>(cell)->setSizeFromGC(newSize);
       }
       if (cell->getKind() == CellKind::WeakMapKind) {
         reachableWeakMaps_.push_back(vmcast<JSWeakMap>(cell));

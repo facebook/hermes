@@ -349,6 +349,11 @@ TEST(HermesValueTest, NativePointerTest) {
   void *scaryPointer = reinterpret_cast<void *>((uint64_t)1 << 46);
   auto hv = HermesValue::encodeNativePointer(scaryPointer);
   ASSERT_EQ(scaryPointer, hv.getNativePointer<void>());
+
+  // Ensure that MTE bits set in the top byte of a native pointer are not lost.
+  void *mtePointer = reinterpret_cast<void *>((7ULL << 56) | 0xFACEB00C);
+  auto mteHV = HermesValue::encodeNativePointer(mtePointer);
+  ASSERT_EQ(mtePointer, mteHV.getNativePointer<void>());
 #endif
 }
 } // anonymous namespace.

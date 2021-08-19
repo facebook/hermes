@@ -197,8 +197,7 @@ class GCCell {
   /// well-formedness to be restored.
   /// NOTE: this should only be used by the GC.
   void setMarkedForwardingPointer(CompressedPointer cell) {
-    forwardingPointer_ = CompressedPointer(
-        CompressedPointer::rawToStorageType(cell.getRaw() | 0x1));
+    forwardingPointer_ = CompressedPointer::fromRaw(cell.getRaw() | 0x1);
   }
 
   /// Assumes (and asserts) that a forwarding pointer has been set in
@@ -207,8 +206,7 @@ class GCCell {
   /// NOTE: this should only be used by the GC.
   CompressedPointer getMarkedForwardingPointer() const {
     assert(isMarked());
-    return CompressedPointer(
-        CompressedPointer::rawToStorageType(forwardingPointer_.getRaw() - 0x1));
+    return CompressedPointer::fromRaw(forwardingPointer_.getRaw() - 0x1);
   }
 
   /// \return whether a forwarding pointer has been set in this cell via

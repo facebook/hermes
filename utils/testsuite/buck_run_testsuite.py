@@ -21,6 +21,7 @@ def main():
         # Copy binaries from pkg_resources into the temporary directory.
         resources = [
             ("hermes", "hermes"),
+            ("hermesc", "hermesc"),
             (args.hvm_filename, args.hvm_filename),
             ("icudt/stubdata/icudt55l.dat", "icudt55l.dat"),
         ]

@@ -1028,22 +1028,22 @@ TEST_F(HeapSnapshotRuntimeTest, ArrayElements) {
           "Array",
           arrayID,
           array->getAllocatedSize(),
-          FIRST_NAMED_PROPERTY_EDGE + 5));
+          FIRST_NAMED_PROPERTY_EDGE + 6));
   // The last edges are the element edges.
   EXPECT_EQ(
-      nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 1],
+      nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 2],
       Edge(
           HeapSnapshot::EdgeType::Element,
           (1 << 20) + 1000,
           runtime->getHeap().getObjectID(thirdElement.get())));
   EXPECT_EQ(
-      nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 3],
+      nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 4],
       Edge(
           HeapSnapshot::EdgeType::Element,
           10,
           runtime->getHeap().getObjectID(firstElement.get())));
   EXPECT_EQ(
-      nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 4],
+      nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 5],
       Edge(
           HeapSnapshot::EdgeType::Element,
           15,
@@ -1222,8 +1222,8 @@ foo(8) @ test.js(2):3:20)#");
 (root)(0) @ (0):0:0
 global(1) @ test.js(2):2:1
 global(2) @ test.js(2):11:4
-baz(3) @ test.js(2):9:31
-bar(4) @ test.js(2):6:20)#");
+baz(4) @ test.js(2):9:31
+bar(5) @ test.js(2):6:20)#");
 
   const JSONArray &samples = *llvh::cast<JSONArray>(root->at("samples"));
   // Must have at least one sample

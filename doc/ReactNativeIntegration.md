@@ -18,7 +18,7 @@ A Hermes npm package combines:
 * Pre-compiled release and debug versions of the native Hermes library for Android targets.
 
 The interface between Hermes and React Native changes over time, so if you are
-not using the master branch of both, you may want to consider matching the
+not using the main branch of both, you may want to consider matching the
 Hermes version with your app's React Native version. E.g. `git checkout v0.5.0`
 to build for `react-native@0.63`.
 

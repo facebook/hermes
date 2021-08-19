@@ -13,7 +13,7 @@ function foo() {}
 print("foo.length/configurable:", Object.getOwnPropertyDescriptor(foo, "length").configurable);
 //CHECK: foo.length/configurable: true
 print("foo.__proto__.length/configurable:", Object.getOwnPropertyDescriptor(foo.__proto__, "length").configurable);
-//CHECK: foo.__proto__.length/configurable: false
+//CHECK: foo.__proto__.length/configurable: true
 print("Function.length/configurable:", Object.getOwnPropertyDescriptor(Function, "length").configurable);
 //CHECK: Function.length/configurable: true
 

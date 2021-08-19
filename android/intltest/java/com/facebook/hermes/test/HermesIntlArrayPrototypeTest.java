@@ -20,7 +20,7 @@ public class HermesIntlArrayPrototypeTest extends HermesIntlTest262Base {
   @Test
   public void testIntlArrayToLocaleString() throws IOException {
 
-    String basePath = "test262-main/test/intl402/Array/prototype/toLocaleString";
+    String basePath = "test262/test/intl402/Array/prototype/toLocaleString";
     Set<String> whilteList = new HashSet<>();
     Set<String> blackList =
         new HashSet<>(

@@ -36,8 +36,7 @@ namespace vm {
 /// String.
 
 Handle<JSObject> createStringConstructor(Runtime *runtime) {
-  auto stringPrototype =
-      Handle<PrimitiveBox>::vmcast(&runtime->stringPrototype);
+  auto stringPrototype = Handle<JSString>::vmcast(&runtime->stringPrototype);
 
   auto cons = defineSystemConstructor<JSString>(
       runtime,
@@ -575,7 +574,8 @@ stringPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   auto *strPtr = dyn_vmcast<JSString>(args.getThisArg());
   if (strPtr) {
     // Only return the string if called on a String object.
-    return JSString::getPrimitiveValue(strPtr).unboxToHV(runtime);
+    return HermesValue::encodeStringValue(
+        JSString::getPrimitiveString(strPtr, runtime));
   }
   return runtime->raiseTypeError(
       "String.prototype.toString() called on non-string object");

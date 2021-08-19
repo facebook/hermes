@@ -181,9 +181,9 @@ This allows them to call `executeCall*` to run functions using the internal API.
 
 ### Boxed Primitives
 
-The `PrimitiveBox` class is used to contain Booleans, Strings, and Numbers,
+The VM has classes used to contain Booleans, Strings, and Numbers,
 when they are constructed using their respective JS constructors.
-`JSString` is a `PrimitiveBox` that is used for `String` objects, etc.
+`JSString` is a boxed `String` object, etc.
 
 ## REPL
 

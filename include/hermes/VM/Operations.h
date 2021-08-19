@@ -356,12 +356,12 @@ CallResult<Handle<Callable>> speciesConstructor(
 /// ES7 7.2.4
 /// Returns true if the \c value is a constructor.  The value can be
 /// Anything.
-bool isConstructor(Runtime *runtime, HermesValue value);
+CallResult<bool> isConstructor(Runtime *runtime, HermesValue value);
 
 /// ES7 7.2.4
 /// Returns true if \c callable is a constructor.  Passing \c nullptr
 /// is allowed, and returns false.
-bool isConstructor(Runtime *runtime, Callable *callable);
+CallResult<bool> isConstructor(Runtime *runtime, Callable *callable);
 
 /// ES6.0 7.2.8
 /// Returns true if the object is a JSRegExp or has a Symbol.match property that

@@ -62,8 +62,8 @@ PseudoHandle<DecoratedObject> DecoratedObject::create(
     Handle<JSObject> parentHandle,
     std::unique_ptr<Decoration> decoration,
     unsigned int additionalSlotCount) {
-  const size_t reservedSlots = numOverlapSlots<DecoratedObject>() +
-      ANONYMOUS_PROPERTY_SLOTS + additionalSlotCount;
+  const size_t reservedSlots =
+      numOverlapSlots<DecoratedObject>() + additionalSlotCount;
   auto *cell = runtime->makeAFixed<DecoratedObject, HasFinalizer::Yes>(
       runtime,
       &vt,

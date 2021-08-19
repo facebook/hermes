@@ -229,7 +229,7 @@ def main():
         and platform.machine().endswith("64")
         and "Visual Studio" in args.build_system
     ):
-        cmake_flags += ["-Ax64"]
+        cmake_flags += ["-AWin32"] if args.is_32_bit else ["-Ax64"]
     if args.opcode_stats:
         cmake_flags += ["-DHERMESVM_PROFILER_OPCODE=ON"]
     if args.basic_block_profiler:

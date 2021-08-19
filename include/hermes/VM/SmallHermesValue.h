@@ -74,7 +74,7 @@ class SmallHermesValueAdaptor : protected HermesValue {
         sizeof(uintptr_t) == sizeof(CompressedPointer::RawType) &&
         "Adaptor should not be used when compressed pointers are enabled.");
     uintptr_t rawPtr = reinterpret_cast<uintptr_t>(HermesValue::getPointer());
-    return CompressedPointer(CompressedPointer::rawToStorageType(rawPtr));
+    return CompressedPointer::fromRaw(rawPtr);
   }
   GCCell *getObject(PointerBase *) const {
     return static_cast<GCCell *>(HermesValue::getObject());
@@ -350,8 +350,7 @@ class HermesValue32 {
     static_assert(
         static_cast<uint8_t>(Tag::Object) == 0,
         "Object tag must be zero for fast path.");
-    return CompressedPointer::storageTypeToPointer(
-        CompressedPointer::rawToStorageType(raw_), pb);
+    return CompressedPointer::fromRaw(raw_).get(pb);
   }
 
   inline StringPrimitive *getString(PointerBase *pb) const;
@@ -360,7 +359,7 @@ class HermesValue32 {
   CompressedPointer getPointer() const {
     assert(isPointer());
     RawType rawPtr = raw_ & llvh::maskLeadingOnes<RawType>(kNumValueBits);
-    return CompressedPointer(CompressedPointer::rawToStorageType(rawPtr));
+    return CompressedPointer::fromRaw(rawPtr);
   }
 
   SymbolID getSymbol() const {

@@ -379,11 +379,6 @@ class JSObject : public GCCell {
   /// Default capacity of indirect property storage.
   static const PropStorage::size_type DEFAULT_PROPERTY_CAPACITY = 4;
 
-  /// Number of property slots used by the implementation that are unnamed,
-  /// meaning they are invisible to user code. Child classes should override
-  /// this value by adding to it and defining a constant with the same name.
-  static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS = 0;
-
   /// Number of property slots used by the implementation that are named,
   /// meaning they are also visible to user code. Child classes should override
   /// this value by adding to it and defining a constant with the same name.
@@ -1672,8 +1667,7 @@ inline CallResult<PseudoHandle<JSObject>> JSObject::allocatePropStorage(
 
 template <typename T>
 inline T *JSObject::initDirectPropStorage(Runtime *runtime, T *self) {
-  constexpr auto count = numOverlapSlots<T>() + T::ANONYMOUS_PROPERTY_SLOTS +
-      T::NAMED_PROPERTY_SLOTS;
+  constexpr auto count = numOverlapSlots<T>() + T::NAMED_PROPERTY_SLOTS;
   static_assert(
       count <= DIRECT_PROPERTY_SLOTS,
       "smallPropStorage size must fit in direct properties");

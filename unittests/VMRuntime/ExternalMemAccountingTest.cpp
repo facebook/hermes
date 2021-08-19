@@ -46,33 +46,28 @@ TEST_P(ExtMemTests, ExtMemInYoungTest) {
   auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
+  GCScope scope{&rt};
 
   // A cell a quarter of the young-gen size
   using QuarterYoungGenCell = EmptyCell<kMaxYoungGenSize / 4>;
 
-  std::deque<GCCell *> roots;
+  rt.makeHandle(QuarterYoungGenCell::create(rt));
 
-  roots.push_back(QuarterYoungGenCell::create(rt));
-  rt.pointerRoots.push_back(&roots.back());
-
-  auto *extObj = DummyObject::create(&gc);
+  auto extObj = rt.makeHandle(DummyObject::create(&gc));
   // The 1/4 + 1/2 + 1/4 = 1, but the size of the DummyObject object itself
   // will cause the sum to exceed the YG size.
   // (If the length created is zero, the subsequent allocation does *not* cause
   // a collection, and the test fails.)
   extObj->acquireExtMem(&gc, kMaxYoungGenSize / 2);
-  roots.push_back(extObj);
-  rt.pointerRoots.push_back(&roots.back());
 
   EXPECT_EQ(0, gc.numYoungGCs());
   EXPECT_EQ(0, gc.numFullGCs());
 
   if (GetParam()) {
-    vmcast<DummyObject>(roots.back())->releaseExtMem(&gc);
+    extObj->releaseExtMem(&gc);
   }
 
-  roots.push_back(QuarterYoungGenCell::create(rt));
-  rt.pointerRoots.push_back(&roots.back());
+  rt.makeHandle(QuarterYoungGenCell::create(rt));
 
   EXPECT_EQ(GetParam() ? 0 : 1, gc.numYoungGCs());
   EXPECT_EQ(0, gc.numFullGCs());
@@ -88,6 +83,7 @@ TEST_P(ExtMemTests, ExtMemInOldByAllocTest) {
   auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
+  GCScope scope{&rt};
 
   // Allocate GenGC::kYoungGenFractionDenom - 3 young-gen-sized objects, and do
   // a full collection to get them into the old gen, so that the old gen has 2
@@ -95,11 +91,8 @@ TEST_P(ExtMemTests, ExtMemInOldByAllocTest) {
   using YoungGenCell = EmptyCell<kMaxYoungGenSize>;
   using HalfYoungGenCell = EmptyCell<kMaxYoungGenSize / 2>;
 
-  std::deque<GCCell *> roots;
-
   for (size_t i = 0; i < GenGC::kYoungGenFractionDenom - 3; i++) {
-    roots.push_back(YoungGenCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(YoungGenCell::create(rt));
   }
   rt.collect();
   size_t ygs0 = gc.numYoungGCs();
@@ -121,10 +114,8 @@ TEST_P(ExtMemTests, ExtMemInOldByAllocTest) {
   // Now allocate an object with 1.5 young-gen-sizes of external memory.
   // (If the length is zero, instead, this test fails: the creates at the end
   // cause a YG collection rather than a full GC.)
-  auto *extObj = DummyObject::create(&gc);
+  auto extObj = rt.makeHandle(DummyObject::create(&gc));
   extObj->acquireExtMem(&gc, 3 * kMaxYoungGenSize / 2);
-  roots.push_back(extObj);
-  rt.pointerRoots.push_back(&roots.back());
 
   // Get it in the old generation.
   rt.collect();
@@ -132,7 +123,7 @@ TEST_P(ExtMemTests, ExtMemInOldByAllocTest) {
   EXPECT_EQ(2, gc.numFullGCs());
 
   if (GetParam()) {
-    vmcast<DummyObject>(roots.back())->releaseExtMem(&gc);
+    extObj->releaseExtMem(&gc);
   }
 
   // Now we do allocations that would cause a YG collection.  If we haven't
@@ -160,17 +151,15 @@ TEST_P(ExtMemTests, ExtMemInOldDirectTest) {
   auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
   GenGC &gc = rt.getHeap();
+  GCScope scope{&rt};
 
   // Allocate GenGC::kYoungGenFractionDenom - 3 young-gen-sized objects, and do
   // a full collection to get them into the old gen, so that the old gen has 2
   // young-gen's worth of free space.
   using YoungGenCell = EmptyCell<kMaxYoungGenSize>;
 
-  std::deque<GCCell *> roots;
-
   for (size_t i = 0; i < GenGC::kYoungGenFractionDenom - 3; i++) {
-    roots.push_back(YoungGenCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(YoungGenCell::create(rt));
   }
   rt.collect();
   size_t ygs0 = gc.numYoungGCs();
@@ -220,30 +209,25 @@ TEST(ExtMemNonParamTests, ExtMemDoesNotBreakFullGC) {
 
   auto runtime = DummyRuntime::create(gcConfig);
   DummyRuntime &rt = *runtime;
+  GCScope scope{&rt};
 
   using SegmentSizeCell = EmptyCell<GenGCHeapSegment::maxSize()>;
-
-  std::deque<GCCell *> roots;
 
   // Allocate GenGC::kYoungGenFractionDenom - 3 segment-sized objects in
   // the old gen, so that the old gen has 2 segments worth of free
   // space.
   for (size_t i = 0; i < GenGC::kYoungGenFractionDenom - 3; i++) {
-    roots.push_back(SegmentSizeCell::createLongLived(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(SegmentSizeCell::createLongLived(rt));
   }
 
   // Now allocate an object with 2.5 segment-sizes of external memory.
   // After this, the effective size of the old gen should now be
   // greater than its current size.
-  auto *extObj = DummyObject::createLongLived(&rt.getHeap());
+  auto extObj = rt.makeHandle(DummyObject::createLongLived(&rt.getHeap()));
   extObj->acquireExtMem(&rt.getHeap(), 5 * GenGCHeapSegment::maxSize() / 2);
-  roots.push_back(extObj);
-  rt.pointerRoots.push_back(&roots.back());
 
   // Now allocate a YG object, filling the YG.
-  roots.push_back(SegmentSizeCell::create(rt));
-  rt.pointerRoots.push_back(&roots.back());
+  rt.makeHandle(SegmentSizeCell::create(rt));
 
   // This GC should succeed: the total live memory, including the
   // external memory, is much less than the max heap size.  We don't
@@ -274,20 +258,16 @@ TEST(ExtMemNonParamDeathTest, SaturateYoungGen) {
   const auto gcConfig = TestGCConfigFixedSize(kTotalSize);
   auto runtime = DummyRuntime::create(gcConfig);
   DummyRuntime &rt = *runtime;
-
-  std::deque<GCCell *> roots;
+  GCScope scope{&rt};
 
   // Fill up the old generation.
   for (size_t i = 0; i < GenGC::kYoungGenFractionDenom - 1; ++i) {
-    roots.push_back(SegmentCell::createLongLived(rt));
-    rt.pointerRoots.push_back(&roots.back());
+    rt.makeHandle(SegmentCell::createLongLived(rt));
   }
 
   // Saturate the young generation.
-  auto *extObj = DummyObject::create(&rt.getHeap());
+  auto extObj = rt.makeHandle(DummyObject::create(&rt.getHeap()));
   extObj->acquireExtMem(&rt.getHeap(), kExtAllocSize);
-  roots.push_back(extObj);
-  rt.pointerRoots.push_back(&roots.back());
 
   // Expect that a subsequent allocation should fail, with an OOM.
   EXPECT_OOM(DummyObject::create(&rt.getHeap()));

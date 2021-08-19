@@ -54,9 +54,12 @@ void JSParserImpl::initializeIdentifiers() {
   setIdent_ = lexer_.getIdentifier("set");
   initIdent_ = lexer_.getIdentifier("init");
   useStrictIdent_ = lexer_.getIdentifier("use strict");
+  showSourceIdent_ = lexer_.getIdentifier("show source");
+  hideSourceIdent_ = lexer_.getIdentifier("hide source");
+  sensitiveIdent_ = lexer_.getIdentifier("sensitive");
+  useStaticBuiltinIdent_ = lexer_.getIdentifier("use static builtin");
   letIdent_ = lexer_.getIdentifier("let");
   ofIdent_ = lexer_.getIdentifier("of");
-  useStaticBuiltinIdent_ = lexer_.getIdentifier("use static builtin");
   fromIdent_ = lexer_.getIdentifier("from");
   asIdent_ = lexer_.getIdentifier("as");
   implementsIdent_ = lexer_.getIdentifier("implements");
@@ -295,6 +298,7 @@ bool JSParserImpl::eatSemi(bool optional) {
 }
 
 void JSParserImpl::processDirective(UniqueString *directive) {
+  seenDirectives_.push_back(directive);
   if (directive == useStrictIdent_)
     setStrictMode(true);
   if (directive == useStaticBuiltinIdent_)
@@ -313,7 +317,7 @@ bool JSParserImpl::recursionDepthExceeded() {
 
 Optional<ESTree::ProgramNode *> JSParserImpl::parseProgram() {
   SMLoc startLoc = tok_->getStartLoc();
-  SaveStrictMode saveStrict{this};
+  SaveStrictModeAndSeenDirectives saveStrictModeAndSeenDirectives{this};
   ESTree::NodeList stmtList;
 
   if (!parseStatementList(
@@ -328,7 +332,6 @@ Optional<ESTree::ProgramNode *> JSParserImpl::parseProgram() {
       startLoc,
       endLoc,
       new (context_) ESTree::ProgramNode(std::move(stmtList)));
-  program->strictness = ESTree::makeStrictness(isStrictMode());
   return program;
 }
 
@@ -467,7 +470,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
     return None;
   }
 
-  SaveStrictMode saveStrictMode{this};
+  SaveStrictModeAndSeenDirectives saveStrictModeAndSeenDirectives{this};
 
   // Grammar context to be used when lexing the closing brace.
   auto grammarContext =
@@ -510,7 +513,6 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
     if (!body)
       return None;
 
-    node->strictness = ESTree::makeStrictness(isStrictMode());
     return setLocation(startLoc, body.getValue(), node);
   }
 
@@ -531,7 +533,6 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
         predicate,
         isGenerator,
         isAsync);
-    decl->strictness = ESTree::makeStrictness(isStrictMode());
     node = decl;
   } else {
     auto *expr = new (context_) ESTree::FunctionExpressionNode(
@@ -543,7 +544,6 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
         predicate,
         isGenerator,
         isAsync);
-    expr->strictness = ESTree::makeStrictness(isStrictMode());
     node = expr;
   }
   return setLocation(startLoc, body, node);
@@ -666,6 +666,15 @@ Optional<ESTree::Node *> JSParserImpl::parseStatement(Param param) {
 #undef _RET
 }
 
+llvh::SmallVector<llvh::SmallString<24>, 1> JSParserImpl::copySeenDirectives()
+    const {
+  llvh::SmallVector<llvh::SmallString<24>, 1> copies;
+  for (UniqueString *directive : seenDirectives_) {
+    copies.emplace_back(directive->str());
+  }
+  return copies;
+}
+
 Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
     Param param,
     bool eagerly,
@@ -686,7 +695,20 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
       // Emulate parsing the "use strict" directive in parseBlock.
       setStrictMode(functionInfo.strictMode);
 
-      auto *body = new (context_) ESTree::BlockStatementNode({});
+      // PreParse collected directives idents into \c PreParsedFunctionInfo,
+      // iterate on them and fabricate directive nodes into the body node so
+      // the semantic validator can scan them back.
+      ESTree::NodeList stmtList;
+      for (const llvh::SmallString<24> &directive : functionInfo.directives) {
+        auto *strLit = new (context_)
+            ESTree::StringLiteralNode(lexer_.getIdentifier(directive));
+        auto *dirStmt = new (context_)
+            ESTree::ExpressionStatementNode(strLit, strLit->_value);
+        stmtList.push_back(*dirStmt);
+      }
+
+      auto *body =
+          new (context_) ESTree::BlockStatementNode(std::move(stmtList));
       body->isLazyFunctionBody = true;
       body->paramYield = paramYield_;
       body->paramAwait = paramAwait_;
@@ -700,8 +722,8 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
     return None;
 
   if (pass_ == PreParse) {
-    preParsed_->functionInfo[(*body)->getStartLoc()] =
-        PreParsedFunctionInfo{(*body)->getEndLoc(), isStrictMode()};
+    preParsed_->functionInfo[(*body)->getStartLoc()] = PreParsedFunctionInfo{
+        (*body)->getEndLoc(), isStrictMode(), copySeenDirectives()};
   }
 
   return body;
@@ -760,7 +782,6 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclaration(Param param) {
 
 bool JSParserImpl::parseStatementListItem(
     Param param,
-    bool parseDirectives,
     AllowImportExport allowImportExport,
     ESTree::NodeList &stmtList) {
   if (checkDeclaration()) {
@@ -843,8 +864,7 @@ Optional<bool> JSParserImpl::parseStatementList(
   }
 
   while (!check(TokenKind::eof) && !checkN(until, otherUntil...)) {
-    if (!parseStatementListItem(
-            param, parseDirectives, allowImportExport, stmtList)) {
+    if (!parseStatementListItem(param, allowImportExport, stmtList)) {
       return None;
     }
   }
@@ -2518,7 +2538,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
   SMLoc startLoc = tok_->getStartLoc();
   ESTree::NodePtr key = nullptr;
 
-  SaveStrictMode saveStrictMode{this};
+  SaveStrictModeAndSeenDirectives saveStrictModeAndSeenDirectives{this};
 
   bool computed = false;
   bool generator = false;
@@ -2615,7 +2635,6 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           /* predicate */ nullptr,
           false,
           false);
-      funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
       funcExpr->isMethodDefinition = true;
       setLocation(startLoc, block.getValue(), funcExpr);
 
@@ -2719,7 +2738,6 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           /* predicate */ nullptr,
           false,
           false);
-      funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
       funcExpr->isMethodDefinition = true;
       setLocation(startLoc, block.getValue(), funcExpr);
 
@@ -2900,7 +2918,6 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
         /* predicate */ nullptr,
         generator,
         async);
-    funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
     funcExpr->isMethodDefinition = true;
     setLocation(startLoc, optBody.getValue(), funcExpr);
 
@@ -3562,6 +3579,7 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrOptionalExpression(
         isConstructorCall, newRange.Start, expr);
   }
 
+  CHECK_RECURSION;
   auto optExpr = parseNewExpressionOrOptionalExpression(IsConstructorCall::Yes);
   if (!optExpr)
     return None;
@@ -4201,7 +4219,7 @@ Optional<ESTree::ClassDeclarationNode *> JSParserImpl::parseClassDeclaration(
     Param param) {
   assert(check(TokenKind::rw_class) && "class must start with 'class'");
   // NOTE: Class definition is always strict mode code.
-  SaveStrictMode saveStrictMode{this};
+  SaveStrictModeAndSeenDirectives saveStrictModeAndSeenDirectives{this};
   setStrictMode(true);
 
   SMLoc startLoc = advance().Start;
@@ -4257,7 +4275,7 @@ Optional<ESTree::ClassDeclarationNode *> JSParserImpl::parseClassDeclaration(
 Optional<ESTree::ClassExpressionNode *> JSParserImpl::parseClassExpression() {
   assert(check(TokenKind::rw_class) && "class must start with 'class'");
   // NOTE: A class definition is always strict mode code.
-  SaveStrictMode saveStrictMode{this};
+  SaveStrictModeAndSeenDirectives saveStrictModeAndSeenDirectives{this};
   setStrictMode(true);
 
   SMLoc start = advance().Start;
@@ -4797,7 +4815,6 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
           special == SpecialKind::Async ||
               special == SpecialKind::AsyncGenerator));
   assert(isStrictMode() && "parseClassElement should only be used for classes");
-  funcExpr->strictness = ESTree::makeStrictness(true);
   funcExpr->isMethodDefinition = true;
 
   if (special == SpecialKind::Get && funcExpr->_params.size() != 0) {
@@ -5029,7 +5046,7 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
   if (!reparseArrowParameters(leftExpr, paramList, isAsync))
     return None;
 
-  SaveStrictMode saveStrictMode{this};
+  SaveStrictModeAndSeenDirectives saveStrictModeAndSeenDirectives{this};
   ESTree::Node *body;
   bool expression;
 
@@ -5063,7 +5080,6 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
       expression,
       isAsync);
 
-  arrow->strictness = ESTree::makeStrictness(isStrictMode());
   return setLocation(startLoc, getPrevTokenEndLoc(), arrow);
 }
 

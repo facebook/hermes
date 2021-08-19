@@ -27,9 +27,12 @@ class CompressedPointer {
 
   explicit CompressedPointer() = default;
   constexpr explicit CompressedPointer(std::nullptr_t) : ptr_() {}
-  constexpr explicit CompressedPointer(StorageType ptr) : ptr_(ptr) {}
   CompressedPointer(PointerBase *base, GCCell *ptr)
       : ptr_(pointerToStorageType(ptr, base)) {}
+
+  static CompressedPointer fromRaw(RawType r) {
+    return CompressedPointer(r);
+  }
 
   GCCell *get(PointerBase *base) const {
     return storageTypeToPointer(getStorageType(), base);
@@ -45,15 +48,14 @@ class CompressedPointer {
 #endif
   }
 
-  /// Get the underlying StorageType representation.
+  /// Get the underlying StorageType representation. Should only be used by the
+  /// garbage collector.
   StorageType getStorageType() const {
     return ptr_;
   }
 
-  /// Get the location of the pointer. Should only be used within the
-  /// implementation of garbage collection.
-  StorageType &getLoc() {
-    return ptr_;
+  void setInGC(CompressedPointer cp) {
+    setNoBarrier(cp);
   }
 
   explicit operator bool() const {
@@ -68,43 +70,9 @@ class CompressedPointer {
     return !(*this == other);
   }
 
-  static GCCell *storageTypeToPointer(StorageType st, PointerBase *base) {
-#ifdef HERMESVM_COMPRESSED_POINTERS
-    return reinterpret_cast<GCCell *>(base->basedToPointer(st));
-#else
-    return st;
-#endif
-  }
-
-  static StorageType pointerToStorageType(GCCell *ptr, PointerBase *base) {
-#ifdef HERMESVM_COMPRESSED_POINTERS
-    return base->pointerToBased(ptr);
-#else
-    return ptr;
-#endif
-  }
-
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  static BasedPointer::StorageType storageTypeToRaw(StorageType st) {
-    return st.getRawValue();
-  }
-  static StorageType rawToStorageType(BasedPointer::StorageType raw) {
-    return BasedPointer{raw};
-  }
-  BasedPointer::StorageType getRaw() const {
+  RawType getRaw() const {
     return storageTypeToRaw(ptr_);
   }
-#else
-  static uintptr_t storageTypeToRaw(StorageType st) {
-    return reinterpret_cast<uintptr_t>(st);
-  }
-  static StorageType rawToStorageType(uintptr_t st) {
-    return reinterpret_cast<StorageType>(st);
-  }
-  uintptr_t getRaw() const {
-    return storageTypeToRaw(ptr_);
-  }
-#endif
 
   CompressedPointer(const CompressedPointer &) = default;
 
@@ -125,6 +93,36 @@ class CompressedPointer {
   }
 
  private:
+  explicit CompressedPointer(RawType r) : ptr_(rawToStorageType(r)) {}
+
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  static BasedPointer::StorageType storageTypeToRaw(StorageType st) {
+    return st.getRawValue();
+  }
+  static StorageType rawToStorageType(BasedPointer::StorageType raw) {
+    return BasedPointer{raw};
+  }
+  static StorageType pointerToStorageType(GCCell *ptr, PointerBase *base) {
+    return base->pointerToBased(ptr);
+  }
+  static GCCell *storageTypeToPointer(StorageType st, PointerBase *base) {
+    return reinterpret_cast<GCCell *>(base->basedToPointer(st));
+  }
+#else
+  static uintptr_t storageTypeToRaw(StorageType st) {
+    return reinterpret_cast<uintptr_t>(st);
+  }
+  static StorageType rawToStorageType(uintptr_t st) {
+    return reinterpret_cast<StorageType>(st);
+  }
+  static StorageType pointerToStorageType(GCCell *ptr, PointerBase *) {
+    return ptr;
+  }
+  static GCCell *storageTypeToPointer(StorageType st, PointerBase *) {
+    return st;
+  }
+#endif
+
   StorageType ptr_;
 };
 

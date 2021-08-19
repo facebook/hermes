@@ -67,8 +67,7 @@ PseudoHandle<JSDataView> JSDataView::create(
       runtime,
       prototype,
       runtime->getHiddenClassForPrototype(
-          *prototype,
-          numOverlapSlots<JSDataView>() + ANONYMOUS_PROPERTY_SLOTS));
+          *prototype, numOverlapSlots<JSDataView>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 

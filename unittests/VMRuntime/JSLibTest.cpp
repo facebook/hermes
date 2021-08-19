@@ -1052,7 +1052,7 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
     PseudoHandle<JSDate> valAsObj =
         PseudoHandle<JSDate>::vmcast(std::move(*val));
     HermesValue hv =
-        JSDate::getPrimitiveValue(valAsObj.get()).unboxToHV(runtime);
+        HermesValue::encodeNumberValue(valAsObj->getPrimitiveValue());
     // This pointer can become invalid, don't be tempted to use it incorrectly.
     valAsObj.invalidate();
     EXPECT_EQ(hv.getNumberAs<uint64_t>(), newDate);

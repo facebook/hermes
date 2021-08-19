@@ -141,11 +141,11 @@ gcheapsize_t GCBase::completeWeakMapMarking(
         // normally, and thus mark *all* objects reachable from it.
         // So we temporarily null out the field, and restore it after.
         auto &valueStorageRef = weakMap->getValueStorageRef(gc);
-        GCPointerBase::StorageType valueStorage = valueStorageRef;
-        valueStorageRef = GCPointer<BigStorage>(nullptr).getStorageType();
+        CompressedPointer valueStorage = valueStorageRef;
+        valueStorageRef.setInGC(CompressedPointer{nullptr});
         gc->markCell(weakMap, skipWeakAcceptor);
         drainMarkStack(acceptor);
-        valueStorageRef = valueStorage;
+        valueStorageRef.setInGC(valueStorage);
         scannedWeakMaps.insert(weakMap);
         // This handles an obscure potential bug: if we've already
         // determined reachable keys for weak map 0, the scanning

@@ -37,9 +37,9 @@ TEST(GCFinalizerTest, NoDeadFinalizables) {
   auto runtime = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
 
+  GCScope scope{&rt};
   DummyObject::create(&rt.getHeap());
-  GCCell *r = createWithFinalizeCount(&rt.getHeap(), &finalized);
-  rt.pointerRoots.push_back(&r);
+  rt.makeHandle(createWithFinalizeCount(&rt.getHeap(), &finalized));
   rt.collect();
 
   ASSERT_EQ(0, finalized);
@@ -50,9 +50,9 @@ TEST(GCFinalizerTest, FinalizablesOnly) {
   auto runtime = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
 
+  GCScope scope{&rt};
   createWithFinalizeCount(&rt.getHeap(), &finalized);
-  GCCell *r = createWithFinalizeCount(&rt.getHeap(), &finalized);
-  rt.pointerRoots.push_back(&r);
+  rt.makeHandle(createWithFinalizeCount(&rt.getHeap(), &finalized));
   rt.collect();
 
   ASSERT_EQ(1, finalized);
@@ -63,18 +63,18 @@ TEST(GCFinalizerTest, MultipleCollect) {
   auto runtime = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
 
-  createWithFinalizeCount(&rt.getHeap(), &finalized);
-  DummyObject::create(&rt.getHeap());
-  createWithFinalizeCount(&rt.getHeap(), &finalized);
-  GCCell *r1 = createWithFinalizeCount(&rt.getHeap(), &finalized);
-  rt.pointerRoots.push_back(&r1);
-  GCCell *r2 = DummyObject::create(&rt.getHeap());
-  rt.pointerRoots.push_back(&r2);
-  rt.collect();
+  {
+    GCScope scope{&rt};
+    createWithFinalizeCount(&rt.getHeap(), &finalized);
+    DummyObject::create(&rt.getHeap());
+    createWithFinalizeCount(&rt.getHeap(), &finalized);
+    rt.makeHandle(createWithFinalizeCount(&rt.getHeap(), &finalized));
+    rt.makeHandle(DummyObject::create(&rt.getHeap()));
+    rt.collect();
 
-  ASSERT_EQ(2, finalized);
+    ASSERT_EQ(2, finalized);
+  }
 
-  rt.pointerRoots.clear();
   rt.collect();
 
   ASSERT_EQ(3, finalized);
@@ -85,10 +85,9 @@ TEST(GCFinalizerTest, FinalizeAllOnRuntimeDestructDummyRuntime) {
   {
     auto rt = DummyRuntime::create(kTestGCConfigSmall);
 
-    GCCell *r1 = createWithFinalizeCount(&rt->getHeap(), &finalized);
-    GCCell *r2 = createWithFinalizeCount(&rt->getHeap(), &finalized);
-    rt->pointerRoots.push_back(&r1);
-    rt->pointerRoots.push_back(&r2);
+    GCScope scope{rt.get()};
+    rt->makeHandle(createWithFinalizeCount(&rt->getHeap(), &finalized));
+    rt->makeHandle(createWithFinalizeCount(&rt->getHeap(), &finalized));
 
     // Collect once to get the objects into the old gen, then a second time
     // to get their mark bits set in their stable locations.

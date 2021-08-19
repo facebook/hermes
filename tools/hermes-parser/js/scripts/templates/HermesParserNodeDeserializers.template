@@ -6,6 +6,7 @@
  */
 
 #define NodeLabel this.deserializeString()
+#define NodeString this.deserializeString()
 #define NodeBoolean this.deserializeBoolean()
 #define NodeNumber this.deserializeNumber()
 #define NodePtr this.deserializeNode()

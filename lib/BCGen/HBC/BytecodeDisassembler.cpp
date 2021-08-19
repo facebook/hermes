@@ -129,6 +129,8 @@ void BytecodeDisassembler::disassembleBytecodeFileHeader(raw_ostream &OS) {
      << "\n";
   OS << "  CommonJS module count (static): "
      << bcProvider_->getCJSModuleTableStatic().size() << "\n";
+  OS << "  Function source count: "
+     << bcProvider_->getFunctionSourceTable().size() << "\n";
   OS << "  Bytecode options:\n";
   OS << "    staticBuiltins: " << bcopts.staticBuiltins << "\n";
   OS << "    cjsModulesStaticallyResolved: "
@@ -270,6 +272,17 @@ void BytecodeDisassembler::disassembleCJSModuleTable(raw_ostream &OS) {
       uint32_t functionID = cjsModulesStatic[i].second;
       OS << "Module ID " << moduleID << " -> function ID " << functionID
          << '\n';
+    }
+    OS << '\n';
+  }
+}
+
+void BytecodeDisassembler::disassembleFunctionSourceTable(raw_ostream &OS) {
+  auto functionSources = bcProvider_->getFunctionSourceTable();
+  if (!functionSources.empty()) {
+    OS << "Function Source Table:\n";
+    for (const auto &pair : functionSources) {
+      OS << "  Function ID " << pair.first << " -> s" << pair.second << '\n';
     }
     OS << '\n';
   }
@@ -1095,6 +1108,7 @@ void BytecodeDisassembler::disassemble(raw_ostream &OS) {
   disassembleArrayBuffer(OS);
   disassembleObjectBuffer(OS);
   disassembleCJSModuleTable(OS);
+  disassembleFunctionSourceTable(OS);
 
   for (unsigned funcId = 0; funcId < bcProvider_->getFunctionCount();
        ++funcId) {

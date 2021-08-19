@@ -19,7 +19,7 @@ public class HermesIntlStringPrototypeTest extends HermesIntlTest262Base {
   @Test
   public void testIntlStringToLocaleLowerCase() throws IOException {
 
-    String basePath = "test262-main/test/intl402/String/prototype/toLocaleLowerCase";
+    String basePath = "test262/test/intl402/String/prototype/toLocaleLowerCase";
     Set<String> whilteList = new HashSet<>();
     Set<String> blackList = new HashSet<>();
 
@@ -29,7 +29,7 @@ public class HermesIntlStringPrototypeTest extends HermesIntlTest262Base {
   @Test
   public void testIntlStringToLocaleUpperCase() throws IOException {
 
-    String basePath = "test262-main/test/intl402/String/prototype/toLocaleUpperCase";
+    String basePath = "test262/test/intl402/String/prototype/toLocaleUpperCase";
     Set<String> whilteList = new HashSet<>();
     Set<String> blackList = new HashSet<>();
 
@@ -39,7 +39,7 @@ public class HermesIntlStringPrototypeTest extends HermesIntlTest262Base {
   @Test
   public void testIntlStringLocaleCompare() throws IOException {
 
-    String basePath = "test262-main/test/intl402/String/prototype/localeCompare";
+    String basePath = "test262/test/intl402/String/prototype/localeCompare";
     Set<String> whilteList = new HashSet<>();
     Set<String> blackList = new HashSet<>();
 

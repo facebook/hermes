@@ -24,10 +24,10 @@ class RootAndSlotAcceptorDefault : public RootAndSlotAcceptor {
 
   using RootAndSlotAcceptor::accept;
 
-  virtual void accept(BasedPointer &ptr);
-
   void accept(GCPointerBase &ptr) final {
-    accept(ptr.getLoc());
+    auto *p = ptr.get(pointerBase_);
+    accept(p);
+    ptr.setInGC(CompressedPointer{pointerBase_, p});
   }
 
   void accept(PinnedHermesValue &hv) final {
@@ -75,20 +75,10 @@ class RootAndSlotAcceptorWithNamesDefault
 
   using RootAndSlotAcceptorWithNames::accept;
 
-  void accept(BasedPointer &ptr, const char *name) {
-    // See comments in RootAndSlotAcceptorDefault::accept(BasedPointer &) for
-    // explanation.
-    if (!ptr) {
-      return;
-    }
-    GCCell *actualizedPointer =
-        static_cast<GCCell *>(pointerBase_->basedToPointerNonNull(ptr));
-    accept(actualizedPointer, name);
-    ptr = pointerBase_->pointerToBasedNonNull(actualizedPointer);
-  }
-
   void accept(GCPointerBase &ptr, const char *name) final {
-    accept(ptr.getLoc(), name);
+    auto *p = ptr.get(pointerBase_);
+    accept(p, name);
+    ptr.setInGC(CompressedPointer{pointerBase_, p});
   }
 
   void accept(PinnedHermesValue &hv, const char *name) final {
@@ -135,10 +125,6 @@ class WeakAcceptorDefault : public WeakRefAcceptor, public WeakRootAcceptor {
   /// Subclasses override this implementation instead of accept(WeakRootBase &).
   virtual void acceptWeak(GCCell *&ptr) = 0;
 
-  /// This gets a default implementation: extract the real pointer to a local,
-  /// call acceptWeak on that, write the result back as a BasedPointer.
-  inline virtual void acceptWeak(BasedPointer &ptr);
-
  protected:
   // Named differently to avoid collisions with
   // RootAndSlotAcceptorDefault::pointerBase_.
@@ -148,34 +134,10 @@ class WeakAcceptorDefault : public WeakRefAcceptor, public WeakRootAcceptor {
 /// @name Inline implementations.
 /// @{
 
-inline void RootAndSlotAcceptorDefault::accept(BasedPointer &ptr) {
-  if (!ptr) {
-    return;
-  }
-  // accept takes an l-value reference and potentially writes to it.
-  // Write the value back out to the BasedPointer.
-  GCCell *actualizedPointer =
-      static_cast<GCCell *>(pointerBase_->basedToPointerNonNull(ptr));
-  accept(actualizedPointer);
-  // Assign back to the based pointer.
-  ptr = pointerBase_->pointerToBased(actualizedPointer);
-}
-
 inline void WeakAcceptorDefault::acceptWeak(WeakRootBase &ptr) {
-  acceptWeak(ptr.getLocNoBarrierUnsafe());
-}
-
-inline void WeakAcceptorDefault::acceptWeak(BasedPointer &ptr) {
-  if (!ptr) {
-    return;
-  }
-  // accept takes an l-value reference and potentially writes to it.
-  // Write the value back out to the BasedPointer.
-  GCCell *actualizedPointer = static_cast<GCCell *>(
-      pointerBaseForWeakRoot_->basedToPointerNonNull(ptr));
-  acceptWeak(actualizedPointer);
-  // Assign back to the based pointer.
-  ptr = pointerBaseForWeakRoot_->pointerToBased(actualizedPointer);
+  GCCell *p = ptr.getNoBarrierUnsafe(pointerBaseForWeakRoot_);
+  acceptWeak(p);
+  ptr = CompressedPointer(pointerBaseForWeakRoot_, p);
 }
 
 /// @}

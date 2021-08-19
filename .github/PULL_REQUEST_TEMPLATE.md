@@ -4,9 +4,9 @@
 
   Before submitting a pull request, please make sure the following is done:
 
-  1. Fork [the repository](https://github.com/facebook/hermes) and create your branch from `master`.
+  1. Fork [the repository](https://github.com/facebook/hermes) and create your branch from `main`.
   2. If you've fixed a bug or added code that should be tested, add tests!
-  3. Ensure it builds and the test suite passes. [tips](https://github.com/facebook/hermes/blob/master/doc/BuildingAndRunning.md)
+  3. Ensure it builds and the test suite passes. [tips](https://github.com/facebook/hermes/blob/HEAD/doc/BuildingAndRunning.md)
   4. Format your code with `.../hermes/utils/format.sh`
   5. If you haven't already, complete the CLA.
 -->

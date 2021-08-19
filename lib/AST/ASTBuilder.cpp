@@ -62,6 +62,12 @@ class ASTBuilder {
       const parser::JSONObject *jsObj,
       StringRef name,
       UniqueString *&result);
+  bool extractNodeString(
+      const parser::JSONObject *jsObj,
+      StringRef name,
+      UniqueString *&result) {
+    return extractNodeLabel(jsObj, name, result);
+  }
   bool extractNodeBoolean(
       const parser::JSONObject *jsObj,
       StringRef name,

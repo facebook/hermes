@@ -27,7 +27,6 @@ JSTypedArrayBase::JSTypedArrayBase(
     : JSObject(runtime, vt, *parent, *clazz),
       buffer_(nullptr),
       length_(0),
-      byteWidth_(0),
       offset_(0) {
   flags_.indexedStorage = true;
   flags_.fastIndexProperties = true;
@@ -52,7 +51,6 @@ JSTypedArrayBase::JSTypedArrayBase(Deserializer &d, const VTable *vt)
     : JSObject(d, vt) {
   d.readRelocation(&buffer_, RelocationKind::GCPointer);
   length_ = d.readInt<JSTypedArrayBase::size_type>();
-  byteWidth_ = d.readInt<uint8_t>();
   offset_ = d.readInt<size_type>();
 }
 
@@ -62,7 +60,6 @@ void serializeTypedArrayBase(Serializer &s, const GCCell *cell) {
       s, cell, JSObject::numOverlapSlots<JSTypedArrayBase>());
   s.writeRelocation(self->buffer_.get(s.getRuntime()));
   s.writeInt<JSTypedArrayBase::size_type>(self->length_);
-  s.writeInt<uint8_t>(self->byteWidth_);
   s.writeInt<JSTypedArrayBase::size_type>(self->offset_);
 }
 #endif
@@ -138,6 +135,17 @@ ExecutionStatus JSTypedArrayBase::validateTypedArray(
   return ExecutionStatus::RETURNED;
 }
 
+uint8_t JSTypedArrayBase::getByteWidth() const {
+  static constexpr uint8_t widths[] = {
+#define TYPED_ARRAY(name, type) sizeof(type),
+#include "hermes/VM/TypedArrays.def"
+#undef TYPED_ARRAY
+  };
+  static constexpr size_t firstKind =
+      static_cast<size_t>(CellKind::TypedArrayBaseKind_first);
+  return widths[static_cast<size_t>(getKind()) - firstKind];
+}
+
 CallResult<Handle<JSTypedArrayBase>> JSTypedArrayBase::allocateToSameBuffer(
     Runtime *runtime,
     Handle<JSTypedArrayBase> src,
@@ -168,13 +176,20 @@ CallResult<Handle<JSTypedArrayBase>> JSTypedArrayBase::allocateToSameBuffer(
 ExecutionStatus JSTypedArrayBase::createBuffer(
     Runtime *runtime,
     Handle<JSTypedArrayBase> selfObj,
-    size_type length) {
+    uint64_t length) {
   assert(runtime && selfObj);
 
   auto tmpbuf = runtime->makeHandle(JSArrayBuffer::create(
       runtime, Handle<JSObject>::vmcast(&runtime->arrayBufferPrototype)));
 
-  auto bufferSize = length * selfObj->getByteWidth();
+  // Ensure that the buffer size in bytes will not overflow
+  // JSArrayBuffer::size_type (maybe not same as JSTypedArrayBase::size_type).
+  if (length > (std::numeric_limits<JSArrayBuffer::size_type>::max() /
+                selfObj->getByteWidth())) {
+    return runtime->raiseRangeError(
+        "Cannot allocate a data block for the ArrayBuffer");
+  }
+  JSArrayBuffer::size_type bufferSize = length * selfObj->getByteWidth();
   if (tmpbuf->createDataBlock(runtime, bufferSize) ==
       ExecutionStatus::EXCEPTION) {
     // Failed to allocate, don't modify what it currently points to.
@@ -383,8 +398,7 @@ PseudoHandle<JSTypedArray<T, C>> JSTypedArray<T, C>::create(
       runtime,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<JSTypedArray>() + ANONYMOUS_PROPERTY_SLOTS));
+          *parentHandle, numOverlapSlots<JSTypedArray>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
   // NOTE: If any fields are ever added beyond the base class, then the
   // *BuildMeta functions must be updated to call addJSObjectOverlapSlots.
@@ -429,9 +443,7 @@ JSTypedArray<T, C>::JSTypedArray(
     Runtime *runtime,
     Handle<JSObject> parent,
     Handle<HiddenClass> clazz)
-    : JSTypedArrayBase(runtime, &vt.base.base, parent, clazz) {
-  byteWidth_ = sizeof(T);
-}
+    : JSTypedArrayBase(runtime, &vt.base.base, parent, clazz) {}
 
 template <typename T, CellKind C>
 HermesValue JSTypedArray<T, C>::_getOwnIndexedImpl(

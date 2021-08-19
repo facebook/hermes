@@ -222,11 +222,12 @@ OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocation(
     assert(offset == 0 && "Function is lazy, but debug offset >0 specified");
 
     auto *provider = (hbc::BCProviderLazy *)getRuntimeModule()->getBytecode();
-    auto bcModule = provider->getBytecodeModule();
-    auto sourceLoc = bcModule->getFunctionSourceRange(functionID_).Start;
+    auto *func = provider->getBytecodeFunction();
+    auto *lazyData = func->getLazyCompilationData();
+    auto sourceLoc = lazyData->span.Start;
 
     SourceErrorManager::SourceCoords coords;
-    if (!bcModule->getContext()->getSourceErrorManager().findBufferLineAndLoc(
+    if (!lazyData->context->getSourceErrorManager().findBufferLineAndLoc(
             sourceLoc, coords)) {
       return llvh::None;
     }
@@ -253,6 +254,32 @@ OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocation(
       ->getLocationForAddress(*debugLocsOffset, offset);
 }
 
+OptValue<uint32_t> CodeBlock::getFunctionSourceID() const {
+  // Note that for the case of lazy compilation, the function sources had been
+  // reserved into the function source table of the root bytecode module.
+  // For non-lazy module, the lazy root module is itself.
+  llvh::ArrayRef<std::pair<uint32_t, uint32_t>> table =
+      runtimeModule_->getLazyRootModule()
+          ->getBytecode()
+          ->getFunctionSourceTable();
+
+  // Performs a binary search since the function source table is sorted by the
+  // 1st value. We could further optimize the lookup by loading it as a map in
+  // the RuntimeModule, but the table is expected to be small.
+  auto it = std::lower_bound(
+      table.begin(),
+      table.end(),
+      functionID_,
+      [](std::pair<uint32_t, uint32_t> entry, uint32_t id) {
+        return entry.first < id;
+      });
+  if (it == table.end() || it->first != functionID_) {
+    return llvh::None;
+  } else {
+    return it->second;
+  }
+}
+
 OptValue<uint32_t> CodeBlock::getDebugLexicalDataOffset() const {
   auto *debugOffsets =
       runtimeModule_->getBytecode()->getDebugOffsets(functionID_);
@@ -269,48 +296,26 @@ SourceErrorManager::SourceCoords CodeBlock::getLazyFunctionLoc(
   assert(isLazy() && "Function must be lazy");
   SourceErrorManager::SourceCoords coords;
 #ifndef HERMESVM_LEAN
-  auto provider = (hbc::BCProviderLazy *)runtimeModule_->getBytecode();
-  auto sourceRange =
-      provider->getBytecodeModule()->getFunctionSourceRange(functionID_);
-  assert(sourceRange.isValid() && "Source not available for function");
-  provider->getBytecodeModule()
-      ->getContext()
-      ->getSourceErrorManager()
-      .findBufferLineAndLoc(
-          start ? sourceRange.Start : sourceRange.End, coords);
+  auto *provider = (hbc::BCProviderLazy *)getRuntimeModule()->getBytecode();
+  auto *func = provider->getBytecodeFunction();
+  auto *lazyData = func->getLazyCompilationData();
+  lazyData->context->getSourceErrorManager().findBufferLineAndLoc(
+      start ? lazyData->span.Start : lazyData->span.End, coords);
 #endif
   return coords;
 }
 
 #ifndef HERMESVM_LEAN
-bool CodeBlock::hasFunctionSource() const {
-  return runtimeModule_->getBytecode()
-      ->getFunctionSourceRange(functionID_)
-      .isValid();
-}
-
-llvh::StringRef CodeBlock::getFunctionSource() const {
-  auto sourceRange =
-      runtimeModule_->getBytecode()->getFunctionSourceRange(functionID_);
-  assert(sourceRange.isValid() && "Function does not have source available");
-  const auto sourceStart = sourceRange.Start.getPointer();
-  return {sourceStart, (size_t)(sourceRange.End.getPointer() - sourceStart)};
-}
-#endif
-
-#ifndef HERMESVM_LEAN
 namespace {
 std::unique_ptr<hbc::BytecodeModule> compileLazyFunction(
-    std::shared_ptr<Context> context,
-    hbc::BytecodeFunction *func,
-    llvh::SMRange sourceRange) {
-  assert(func);
+    hbc::LazyCompilationData *lazyData) {
+  assert(lazyData);
   LLVM_DEBUG(
-      llvh::dbgs() << "Compiling lazy function "
-                   << func->getLazyCompilationData()->originalName << "\n");
+      llvh::dbgs() << "Compiling lazy function " << lazyData->originalName
+                   << "\n");
 
-  Module M{context};
-  auto pair = hermes::generateLazyFunctionIR(func, &M, sourceRange);
+  Module M{lazyData->context};
+  auto pair = hermes::generateLazyFunctionIR(lazyData, &M);
   Function *entryPoint = pair.first;
   Function *lexicalRoot = pair.second;
 
@@ -331,15 +336,14 @@ std::unique_ptr<hbc::BytecodeModule> compileLazyFunction(
 void CodeBlock::lazyCompileImpl(Runtime *runtime) {
   assert(isLazy() && "Laziness has not been checked");
   PerfSection perf("Lazy function compilation");
-  auto provider = (hbc::BCProviderLazy *)runtimeModule_->getBytecode();
-  auto func = provider->getBytecodeFunction();
-  auto sourceRange =
-      provider->getBytecodeModule()->getFunctionSourceRange(functionID_);
-  auto bcMod = compileLazyFunction(
-      provider->getBytecodeModule()->getContext(), func, sourceRange);
+  auto *provider = (hbc::BCProviderLazy *)runtimeModule_->getBytecode();
+  auto *func = provider->getBytecodeFunction();
+  auto *lazyData = func->getLazyCompilationData();
+  auto bcModule = compileLazyFunction(lazyData);
+
   runtimeModule_->initializeLazyMayAllocate(
-      hbc::BCProviderFromSrc::createBCProviderFromSrc(std::move(bcMod)));
-  // Reset all meta data of the CodeBlock to point to the newly
+      hbc::BCProviderFromSrc::createBCProviderFromSrc(std::move(bcModule)));
+  // Reset all meta lazyData of the CodeBlock to point to the newly
   // generated bytecode module.
   functionID_ = runtimeModule_->getBytecode()->getGlobalFunctionIndex();
   functionHeader_ =

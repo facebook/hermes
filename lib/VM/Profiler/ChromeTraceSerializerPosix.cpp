@@ -90,7 +90,7 @@ void ChromeTraceSerializer::serializeProcessName(JSONEmitter &json) const {
         "ph",
         ChromeEventTypeNames[static_cast<uint32_t>(ChromeEventType::Metadata)]);
     json.emitKeyValue("cat", "__metadata");
-    json.emitKeyValue("pid", static_cast<double>(pid));
+    json.emitKeyValue("pid", pid);
     // Use first event time for process_name time.
     json.emitKeyValue("ts", getSerializedTimeStamp(firstEventTimeStamp_));
     // process_name event has no real tid.
@@ -168,7 +168,7 @@ void ChromeTraceSerializer::serializeSampledEvents(JSONEmitter &json) const {
 
     double stackId = sample.getLeafNode()->getId();
     assert(stackId > 0 && "Invalid stack id");
-    json.emitKeyValue("sf", static_cast<double>(stackId));
+    json.emitKeyValue("sf", stackId);
     json.closeDict();
   }
 }

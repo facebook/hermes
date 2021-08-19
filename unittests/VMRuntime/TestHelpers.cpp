@@ -69,10 +69,6 @@ void DummyRuntime::markRoots(RootAndSlotAcceptorWithNames &acceptor, bool) {
   // snapshot tests.
   acceptor.beginRootSection(RootAcceptor::Section::Custom);
   markGCScopes(acceptor);
-  for (GCCell **pp : pointerRoots)
-    acceptor.acceptPtr(*pp);
-  for (PinnedHermesValue *pp : valueRoots)
-    acceptor.accept(*pp);
   acceptor.endRootSection();
 }
 
@@ -80,8 +76,6 @@ void DummyRuntime::markWeakRoots(WeakRootAcceptor &acceptor, bool) {
   for (WeakRoot<GCCell> *ptr : weakRoots) {
     acceptor.acceptWeak(*ptr);
   }
-  if (markExtraWeak)
-    markExtraWeak(acceptor);
 }
 
 // Dummy runtime doesn't need to mark anything during complete marking.

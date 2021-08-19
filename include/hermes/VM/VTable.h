@@ -121,9 +121,6 @@ struct VTable {
   /// This should not modify the cell.
   using TrimSizeCallback = gcheapsize_t(const GCCell *);
   TrimSizeCallback *const trimSize_;
-  /// Trim the cell, decreasing any size-related fields inside the cell.
-  using TrimCallback = void(GCCell *);
-  TrimCallback *const trim_;
   /// Calculate the external memory size.
   using ExternalMemorySize = gcheapsize_t(const GCCell *);
   ExternalMemorySize *const externalMemorySize_;
@@ -142,7 +139,6 @@ struct VTable {
       MarkWeakCallback *markWeak = nullptr,
       MallocSizeCallback *mallocSize = nullptr,
       TrimSizeCallback *trimSize = nullptr,
-      TrimCallback *trim = nullptr,
       ExternalMemorySize *externalMemorySize = nullptr,
       HeapSnapshotMetadata snapshotMetaData =
           HeapSnapshotMetadata{
@@ -157,7 +153,6 @@ struct VTable {
         markWeak_(markWeak),
         mallocSize_(mallocSize),
         trimSize_(trimSize),
-        trim_(trim),
         externalMemorySize_(externalMemorySize),
         snapshotMetaData(snapshotMetaData) {}
 
@@ -196,18 +191,11 @@ struct VTable {
   /// trimming. Otherwise, return \p origSize.
   gcheapsize_t getTrimmedSize(GCCell *cell, size_t origSize) const {
     const size_t trimmedSize =
-        trim_ ? heapAlignSize(trimSize_(cell)) : origSize;
+        trimSize_ ? heapAlignSize(trimSize_(cell)) : origSize;
     assert(
         isValid() && trimmedSize <= origSize &&
         "Growing objects is not supported.");
     return trimmedSize;
-  }
-
-  void trim(GCCell *cell) const {
-    assert(
-        isValid() && isVariableSize() &&
-        "A trimmable cell must be variable sized");
-    trim_(cell);
   }
 
   /// If the cell has any associated external memory, return the size (in bytes)

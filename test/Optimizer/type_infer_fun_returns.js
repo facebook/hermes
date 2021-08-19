@@ -21,12 +21,12 @@
 //CHECK-NEXT:  %7 = CallInst %6 : closure, undefined : undefined
 //CHECK-NEXT:  %8 = BinaryOperatorInst '+', %7 : boolean|number, 1 : number
 //CHECK-NEXT:  %9 = CallInst %5, undefined : undefined, %8 : number
-//CHECK-NEXT:  %10 = AllocObjectInst 1 : number, empty
-//CHECK-NEXT:  %11 = CreateFunctionInst %m() : undefined
-//CHECK-NEXT:  %12 = StoreNewOwnPropertyInst %11 : closure, %10 : object, "m" : string, true : boolean
-//CHECK-NEXT:  %13 = ReturnInst %10 : object
+//CHECK-NEXT:  %10 = CreateFunctionInst %m() : undefined
+
+//CHECK-NEXT:  %11 = AllocObjectLiteralInst "m" : string, %10 : closure
+//CHECK-NEXT:  %12 = ReturnInst %11 : object
 //CHECK-NEXT:%BB2:
-//CHECK-NEXT:  %14 = ReturnInst undefined : undefined
+//CHECK-NEXT:  %13 = ReturnInst undefined : undefined
 //CHECK-NEXT:function_end
 
 function g14(z) {

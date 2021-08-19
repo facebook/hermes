@@ -505,7 +505,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
   }
 
   void accept(GCPointerBase &ptr) override {
-    ptr.getLoc() = acceptHeap(ptr, &ptr).getStorageType();
+    ptr.setInGC(acceptHeap(ptr, &ptr));
   }
 
   void accept(PinnedHermesValue &hv) override {
@@ -1149,7 +1149,6 @@ bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
       if (LLVM_UNLIKELY(trimmableBytes >= minAllocationSize())) {
         static_cast<VariableSizeRuntimeCell *>(cell)->setSizeFromGC(
             trimmedSize);
-        cell->getVT()->trim(cell);
         GCCell *newCell = cell->nextCell();
         // Just create a FillerCell, the next iteration will free it.
         new (newCell) FillerCell{gc_, trimmableBytes};
@@ -2019,8 +2018,7 @@ void HadesGC::snapshotWriteBarrier(const GCPointerBase *loc) {
     return;
   }
   if (ogMarkingBarriers_) {
-    snapshotWriteBarrierInternal(GCPointerBase::storageTypeToPointer(
-        loc->getStorageType(), getPointerBase()));
+    snapshotWriteBarrierInternal(loc->get(getPointerBase()));
   }
 }
 
@@ -2479,10 +2477,6 @@ void HadesGC::youngGenCollection(
   } heapBytes, externalBytes;
   heapBytes.before = youngGen().used();
   externalBytes.before = getYoungGenExternalBytes();
-  // scannedSize tracks the total number of bytes that were involved in this
-  // collection. In a normal YG collection, this is just the YG size, during a
-  // compaction, also add in the size of the compactee.
-  uint64_t scannedSize = youngGen().size();
   // YG is about to be emptied, add all of the allocations.
   totalAllocatedBytes_ += youngGen().used();
   const bool doCompaction = compactee_.evacActive();
@@ -2547,7 +2541,6 @@ void HadesGC::youngGenCollection(
       ygCollectionStats_->addCollectionType("compact");
       heapBytes.before += compactee_.allocatedBytes;
       uint64_t ogExternalBefore = oldGen_.externalBytes();
-      scannedSize += compactee_.segment->size();
       // Run finalisers on compacted objects.
       compactee_.segment->forCompactedObjs(
           [this](GCCell *cell) { cell->getVT()->finalizeIfExists(cell, this); },
@@ -2607,13 +2600,18 @@ void HadesGC::youngGenCollection(
   // Check that the card tables are well-formed after the collection.
   verifyCardTable();
 #endif
-  // Give an existing background thread a chance to complete.
+  // Perform any pending work for an ongoing OG collection.
   // Do this before starting a new collection in case we need collections
   // back-to-back. Also, don't check this after starting a collection to avoid
   // waiting for something that is both unlikely, and will increase the pause
   // time if it does happen.
   yieldToOldGen();
-  if (concurrentPhase_ == Phase::None) {
+  // We can only consider starting a new OG collection if any previous OG
+  // collection is fully completed and has not left a pending compaction. This
+  // handles the rare case where an OG collection was completed during this YG
+  // collection, and the compaction will therefore only be completed in the next
+  // collection.
+  if (concurrentPhase_ == Phase::None && !compactee_.evacActive()) {
     // There is no OG collection running, check the tripwire in case this is the
     // first YG after an OG completed.
     checkTripwireAndResetStats();

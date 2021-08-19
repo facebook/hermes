@@ -370,10 +370,10 @@ class StringCycleChecker {
   StringCycleChecker(Runtime *runtime, Handle<JSObject> obj)
       : runtime_(runtime),
         obj_(obj),
-        foundCycle_(*runtime->insertVisitedObject(obj)) {}
+        foundCycle_(runtime->insertVisitedObject(*obj)) {}
 
   ~StringCycleChecker() {
-    runtime_->removeVisitedObject(obj_);
+    runtime_->removeVisitedObject(*obj_);
   }
 
   bool foundCycle() const {
@@ -2473,6 +2473,13 @@ indexOfHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
   }
   double len = *lenRes;
 
+  // Early return before running into any coercions on args.
+  // 2. Let len be ? LengthOfArrayLike(O).
+  // 3. If len is 0, return -1.
+  if (len == 0) {
+    return HermesValue::encodeDoubleValue(-1);
+  }
+
   // Relative index to start the search at.
   auto intRes = toInteger(runtime, args.getArgHandle(1));
   double n;
@@ -3413,8 +3420,12 @@ CallResult<HermesValue> arrayOf(void *, Runtime *runtime, NativeArgs args) {
   auto C = args.getThisHandle();
 
   MutableHandle<JSObject> A{runtime};
+  CallResult<bool> isConstructorRes = isConstructor(runtime, *C);
+  if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
   // 4. If IsConstructor(C) is true, then
-  if (isConstructor(runtime, *C)) {
+  if (*isConstructorRes) {
     // a. Let A be Construct(C, «len»).
     auto aRes = Callable::executeConstruct1(
         Handle<Callable>::vmcast(C),
@@ -3512,8 +3523,12 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<JSObject> A{runtime};
   // 6. If usingIterator is not undefined, then
   if (!usingIterator->isUndefined()) {
+    CallResult<bool> isConstructorRes = isConstructor(runtime, *C);
+    if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
     // a. If IsConstructor(C) is true, then
-    if (isConstructor(runtime, *C)) {
+    if (*isConstructorRes) {
       GCScopeMarkerRAII markerConstruct{gcScope};
       // i. Let A be Construct(C).
       auto callRes =
@@ -3633,8 +3648,12 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   uint64_t len = lengthRes->getNumberAs<uint64_t>();
+  CallResult<bool> isConstructorRes = isConstructor(runtime, *C);
+  if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
   // 12. If IsConstructor(C) is true, then
-  if (isConstructor(runtime, *C)) {
+  if (*isConstructorRes) {
     // a. Let A be Construct(C, «len»).
     auto callRes = Callable::executeConstruct1(
         Handle<Callable>::vmcast(C),

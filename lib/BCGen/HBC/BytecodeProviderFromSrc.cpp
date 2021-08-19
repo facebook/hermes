@@ -76,6 +76,8 @@ BCProviderFromSrc::BCProviderFromSrc(
   cjsModuleTable_ = module_->getCJSModuleTable();
   cjsModuleTableStatic_ = module_->getCJSModuleTableStatic();
 
+  functionSourceTable_ = module_->getFunctionSourceTable();
+
   debugInfo_ = &module_->getDebugInfo();
 }
 
@@ -166,8 +168,6 @@ BCProviderFromSrc::createBCProviderFromSrc(
     context->setLazyCompilation(true);
   }
 
-  context->setAllowFunctionToStringWithRuntimeSource(
-      compileFlags.allowFunctionToStringWithRuntimeSource);
   context->setGeneratorEnabled(compileFlags.enableGenerator);
   context->setDebugInfoSetting(
       compileFlags.debug ? DebugInfoSetting::ALL : DebugInfoSetting::THROWING);
@@ -241,10 +241,8 @@ BCProviderFromSrc::createBCProviderFromSrc(
   return {std::move(bytecode), std::string{}};
 }
 
-BCProviderLazy::BCProviderLazy(
-    hbc::BytecodeModule *bytecodeModule,
-    hbc::BytecodeFunction *bytecodeFunction)
-    : bytecodeModule_(bytecodeModule), bytecodeFunction_(bytecodeFunction) {
+BCProviderLazy::BCProviderLazy(hbc::BytecodeFunction *bytecodeFunction)
+    : bytecodeFunction_(bytecodeFunction) {
   // Lazy module should always contain one function to begin with.
   functionCount_ = 1;
 }

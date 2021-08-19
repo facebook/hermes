@@ -141,13 +141,9 @@ class Deserializer {
   /// Reads a HermesValue from MemoryBuffer. If it encodes a pointer, update the
   /// relocation id to the correct pointer value (if known) or record in the
   /// relocationQueue_.
-  /// \p nativePointer whether this HermesValue encodes a native pointer
-  /// points to entities on the C heap. We need to provide this hint here
-  /// otherwise we wouldn't be able to distinguish between a native pointer and
-  /// other native values.
-  void readHermesValue(HermesValue *hv, bool nativePointer = false) {
+  void readHermesValue(HermesValue *hv) {
     readData(hv, sizeof(HermesValue));
-    if (!hv->isPointer() && !nativePointer) {
+    if (!hv->isPointer()) {
       return;
     }
     // Extract relocation id from HermesValue and see if we can do relocation

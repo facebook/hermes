@@ -29,7 +29,6 @@ const ObjectVTable JSObject::vt{
         nullptr,
         nullptr,
         nullptr,
-        nullptr,
         nullptr, // externalMemorySize
         VTable::HeapSnapshotMetadata{
             HeapSnapshot::NodeType::Object,
@@ -122,8 +121,7 @@ PseudoHandle<JSObject> JSObject::create(
       &vt.base,
       parentHandle,
       runtime->getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, numOverlapSlots<JSObject>()),
       GCPointerBase::NoBarriers());
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }

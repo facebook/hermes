@@ -46,14 +46,14 @@ public class HermesIntlTest262Base extends InstrumentationTestCase {
   }
 
   protected void evaluateCommonScriptsFromAsset(JSRuntime rt) throws IOException {
-    evalScriptFromAsset(rt, "test262-main/harness/sta.js");
-    evalScriptFromAsset(rt, "test262-main/harness/assert.js");
-    evalScriptFromAsset(rt, "test262-main/harness/testIntl.js");
-    evalScriptFromAsset(rt, "test262-main/harness/propertyHelper.js");
-    evalScriptFromAsset(rt, "test262-main/harness/compareArray.js");
-    evalScriptFromAsset(rt, "test262-main/harness/dateConstants.js");
-    evalScriptFromAsset(rt, "test262-main/harness/isConstructor.js");
-    evalScriptFromAsset(rt, "test262-main/harness/arrayContains.js");
+    evalScriptFromAsset(rt, "test262/harness/sta.js");
+    evalScriptFromAsset(rt, "test262/harness/assert.js");
+    evalScriptFromAsset(rt, "test262/harness/testIntl.js");
+    evalScriptFromAsset(rt, "test262/harness/propertyHelper.js");
+    evalScriptFromAsset(rt, "test262/harness/compareArray.js");
+    evalScriptFromAsset(rt, "test262/harness/dateConstants.js");
+    evalScriptFromAsset(rt, "test262/harness/isConstructor.js");
+    evalScriptFromAsset(rt, "test262/harness/arrayContains.js");
   }
 
   protected void runTests(String basePath, Set<String> blackList, Set<String> whiteList)

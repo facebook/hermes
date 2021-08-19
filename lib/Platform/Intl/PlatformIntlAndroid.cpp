@@ -315,7 +315,9 @@ struct Collator::Impl {
 
 Collator::Collator() : impl_(std::make_unique<Impl>()) {}
 
-Collator::~Collator() {}
+Collator::~Collator() {
+  jni::ThreadScope::WithClassLoader([&] { impl_.reset(); });
+}
 
 vm::CallResult<std::vector<std::u16string>> Collator::supportedLocalesOf(
     vm::Runtime *runtime,
@@ -408,7 +410,9 @@ struct DateTimeFormat::Impl {
 
 DateTimeFormat::DateTimeFormat() : impl_(std::make_unique<Impl>()) {}
 
-DateTimeFormat::~DateTimeFormat() {}
+DateTimeFormat::~DateTimeFormat() {
+  jni::ThreadScope::WithClassLoader([&] { impl_.reset(); });
+}
 
 vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
     vm::Runtime *runtime,
@@ -508,7 +512,9 @@ struct NumberFormat::Impl {
 
 NumberFormat::NumberFormat() : impl_(std::make_unique<Impl>()) {}
 
-NumberFormat::~NumberFormat() {}
+NumberFormat::~NumberFormat() {
+  jni::ThreadScope::WithClassLoader([&] { impl_.reset(); });
+}
 
 vm::CallResult<std::vector<std::u16string>> NumberFormat::supportedLocalesOf(
     vm::Runtime *runtime,

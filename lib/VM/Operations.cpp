@@ -1347,11 +1347,11 @@ CallResult<Handle<Callable>> speciesConstructor(
   return defaultConstructor;
 }
 
-bool isConstructor(Runtime *runtime, HermesValue value) {
+CallResult<bool> isConstructor(Runtime *runtime, HermesValue value) {
   return isConstructor(runtime, dyn_vmcast<Callable>(value));
 }
 
-bool isConstructor(Runtime *runtime, Callable *callable) {
+CallResult<bool> isConstructor(Runtime *runtime, Callable *callable) {
   // This is not a complete definition, since ES6 and later define member
   // functions of objects to not be constructors; however, Hermes does not have
   // ES6 classes implemented yet, so we cannot check for that case.

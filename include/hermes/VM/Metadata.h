@@ -29,9 +29,8 @@ class GCSymbolID;
 /// This is used by the Garbage collector to know where potential pointers
 /// to other objects are.
 struct Metadata final {
-  using offset_t = std::uint16_t;
-  using OffsetAndNameAndSize =
-      std::pair<offset_t, std::pair<const char *, size_t>>;
+  using offset_t = std::uint8_t;
+
   /// Fields is a group of both offsets and names that describe a field within
   /// an object.
   struct Fields {
@@ -251,13 +250,16 @@ struct Metadata final {
     Metadata build();
 
    private:
+    /// Calculate the offset of a field at \p fieldLocation relative to base_.
+    offset_t getOffset(const void *fieldLocation);
+
     /// The base of the object, used to calculate offsets.
     const char *base_;
     /// A list of offsets and within the object to its field type and name.
-    std::map<offset_t, std::pair<const char *, size_t>> pointers_;
-    std::map<offset_t, std::pair<const char *, size_t>> values_;
-    std::map<offset_t, std::pair<const char *, size_t>> smallValues_;
-    std::map<offset_t, std::pair<const char *, size_t>> symbols_;
+    std::map<offset_t, const char *> pointers_;
+    std::map<offset_t, const char *> values_;
+    std::map<offset_t, const char *> smallValues_;
+    std::map<offset_t, const char *> symbols_;
 #ifndef NDEBUG
     /// True if [offset, offset + size) overlaps any previously added field.
     bool fieldConflicts(offset_t offset, size_t size);

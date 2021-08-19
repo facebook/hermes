@@ -7,6 +7,8 @@
 
 #include "ESTreeIRGen.h"
 
+#include "llvh/ADT/ScopeExit.h"
+
 namespace hermes {
 namespace irgen {
 
@@ -683,8 +685,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
    public:
     /// Is this a getter/setter value.
     bool isAccessor = false;
-    /// Did we already generate IR to set this property.
-    bool isIRGenerated = false;
+    /// Tracks the state of generating IR for this value.
+    enum { None, Placeholder, IRGenerated } state{None};
     /// The value, if this is a regular property
     ESTree::Node *valueNode{};
     /// Getter accessor, if this is an accessor property.
@@ -737,15 +739,22 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
   // Note that computed properties are not stored in the propMap as we do not
   // know the keys at compilation time.
   llvh::StringMap<PropertyValue> propMap;
+  // The first location where a given property name is encountered.
+  llvh::StringMap<SMRange> firstLocMap;
   llvh::SmallVector<char, 32> stringStorage;
   /// The optional __proto__ property.
   ESTree::PropertyNode *protoProperty = nullptr;
 
   uint32_t numComputed = 0;
+  bool hasSpread = false;
+  bool hasAccessor = false;
+  bool hasDuplicateProperty = false;
 
   for (auto &P : Expr->_properties) {
-    if (llvh::isa<ESTree::SpreadElementNode>(&P))
+    if (llvh::isa<ESTree::SpreadElementNode>(&P)) {
+      hasSpread = true;
       continue;
+    }
 
     // We are reusing the storage, so make sure it is cleared at every
     // iteration.
@@ -760,18 +769,80 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     }
 
     auto propName = propertyKeyAsString(stringStorage, prop->_key);
-    PropertyValue *propValue = &propMap[propName];
 
+    // protoProperty should only be recorded if the property is not a method
+    // nor a shorthand value.
+    if (prop->_kind->str() == "init" && propName == "__proto__" &&
+        !prop->_method && !prop->_shorthand) {
+      if (!protoProperty) {
+        protoProperty = prop;
+      } else {
+        Builder.getModule()->getContext().getSourceErrorManager().error(
+            prop->getSourceRange(),
+            "__proto__ was set multiple times in the object definition.");
+        Builder.getModule()->getContext().getSourceErrorManager().note(
+            protoProperty->getSourceRange(), "The first definition was here.");
+      }
+      continue;
+    }
+
+    PropertyValue *propValue = &propMap[propName];
     if (prop->_kind->str() == "get") {
       propValue->setGetter(cast<ESTree::FunctionExpressionNode>(prop->_value));
+      hasAccessor = true;
     } else if (prop->_kind->str() == "set") {
       propValue->setSetter(cast<ESTree::FunctionExpressionNode>(prop->_value));
+      hasAccessor = true;
     } else {
       assert(prop->_kind->str() == "init" && "invalid PropertyNode kind");
+      // We record the propValue if this is a regular property
       propValue->setValue(prop->_value);
-      if (!protoProperty && propName == "__proto__")
-        protoProperty = prop;
     }
+
+    std::string key = (prop->_kind->str() + propName).str();
+    auto iterAndSuccess = firstLocMap.try_emplace(key, prop->getSourceRange());
+    if (!iterAndSuccess.second) {
+      hasDuplicateProperty = true;
+      Builder.getModule()->getContext().getSourceErrorManager().warning(
+          prop->getSourceRange(),
+          Twine("the property \"") + propName +
+              "\" was set multiple times in the object definition.");
+
+      Builder.getModule()->getContext().getSourceErrorManager().note(
+          iterAndSuccess.first->second, "The first definition was here.");
+    }
+  }
+
+  // Heuristically determine if we emit AllocObjectLiteral.
+  // We do so if there is no computed key, no __proto__, no spread element
+  // node, no duplicate properties, no accessors, and object literal is not
+  // empty.
+  if (numComputed == 0 && !protoProperty && !hasSpread &&
+      !hasDuplicateProperty && !hasAccessor && propMap.size()) {
+    AllocObjectLiteralInst::ObjectPropertyMap objPropMap;
+    // It is safe to assume that there is no computed keys, and
+    // no __proto__.
+    for (auto &P : Expr->_properties) {
+      auto *prop = cast<ESTree::PropertyNode>(&P);
+      assert(
+          !prop->_computed &&
+          "Cannot handle computed key in AllocObjectLiteral");
+
+      // We are reusing the storage, so make sure it is cleared at every
+      // iteration.
+      stringStorage.clear();
+
+      StringRef keyStr = propertyKeyAsString(stringStorage, prop->_key);
+      auto *Key = Builder.getLiteralString(keyStr);
+      assert(
+          propMap[keyStr].valueNode == prop->_value &&
+          "Should only have one value for each property.");
+      auto value =
+          genExpression(prop->_value, Builder.createIdentifier(keyStr));
+      objPropMap.push_back(std::pair<LiteralString *, Value *>(Key, value));
+    }
+
+    return Builder.createAllocObjectLiteralInst(objPropMap);
   }
 
   /// Attempt to determine whether we can directly use the value of the
@@ -824,22 +895,20 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       // are values for computed property keys.
       auto *key = genExpression(prop->_key);
       auto *value = genExpression(prop->_value);
-      if (prop->_kind->str() == "get" || prop->_kind->str() == "set") {
-        if (prop->_kind->str() == "get") {
-          Builder.createStoreGetterSetterInst(
-              value,
-              Builder.getLiteralUndefined(),
-              Obj,
-              key,
-              IRBuilder::PropEnumerable::Yes);
-        } else {
-          Builder.createStoreGetterSetterInst(
-              Builder.getLiteralUndefined(),
-              value,
-              Obj,
-              key,
-              IRBuilder::PropEnumerable::Yes);
-        }
+      if (prop->_kind->str() == "get") {
+        Builder.createStoreGetterSetterInst(
+            value,
+            Builder.getLiteralUndefined(),
+            Obj,
+            key,
+            IRBuilder::PropEnumerable::Yes);
+      } else if (prop->_kind->str() == "set") {
+        Builder.createStoreGetterSetterInst(
+            Builder.getLiteralUndefined(),
+            value,
+            Obj,
+            key,
+            IRBuilder::PropEnumerable::Yes);
       } else {
         Builder.createStoreOwnPropertyInst(
             value, Obj, key, IRBuilder::PropEnumerable::Yes);
@@ -849,33 +918,63 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     }
 
     StringRef keyStr = propertyKeyAsString(stringStorage, prop->_key);
+
+    if (prop == protoProperty) {
+      // This is the first definition of __proto__. If we already used it
+      // as an object parent we just skip it, but otherwise we must
+      // explicitly set the parent now by calling \c
+      // HermesInternal.silentSetPrototypeOf().
+      if (!objectParent) {
+        auto *parent = genExpression(prop->_value);
+
+        IRBuilder::SaveRestore saveState{Builder};
+        Builder.setLocation(prop->_key->getDebugLoc());
+
+        genBuiltinCall(
+            BuiltinMethod::HermesBuiltin_silentSetPrototypeOf, {Obj, parent});
+      }
+
+      continue;
+    }
+
     PropertyValue *propValue = &propMap[keyStr];
+
+    // For any node that has a corresponding propValue, we need to ensure that
+    // the we insert either a placeholder or the final IR before the end of this
+    // iteration.
+    auto checkState = llvh::make_scope_exit(
+        [&] { assert(propValue->state != PropertyValue::None); });
+
     auto *Key = Builder.getLiteralString(keyStr);
 
-    if (prop->_kind->str() == "get" || prop->_kind->str() == "set") {
-      // If  we already generated it, skip.
-      if (propValue->isIRGenerated)
-        continue;
-
-      if (!propValue->isAccessor) {
-        // This property will be redefined in the end as non-accessor.
-        // We need to store this property now otherwise we would break
-        // the order of the properties. The only choice we have is to
-        // store a placeholder first here.
+    auto maybeInsertPlaceholder = [&] {
+      if (propValue->state == PropertyValue::None) {
+        // This value is going to be overwritten, but insert a placeholder in
+        // order to maintain insertion order.
         if (haveSeenComputedProp) {
           Builder.createStoreOwnPropertyInst(
-              Builder.getLiteralUndefined(),
+              Builder.getLiteralNull(),
               Obj,
               Key,
               IRBuilder::PropEnumerable::Yes);
         } else {
           Builder.createStoreNewOwnPropertyInst(
-              Builder.getLiteralUndefined(),
+              Builder.getLiteralNull(),
               Obj,
               Key,
               IRBuilder::PropEnumerable::Yes);
         }
-        propValue->isIRGenerated = true;
+        propValue->state = PropertyValue::Placeholder;
+      }
+    };
+
+    if (prop->_kind->str() == "get" || prop->_kind->str() == "set") {
+      // If  we already generated it, skip.
+      if (propValue->state == PropertyValue::IRGenerated)
+        continue;
+
+      if (!propValue->isAccessor) {
+        maybeInsertPlaceholder();
         continue;
       }
 
@@ -897,62 +996,31 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       Builder.createStoreGetterSetterInst(
           getter, setter, Obj, Key, IRBuilder::PropEnumerable::Yes);
 
-      propValue->isIRGenerated = true;
-    } else {
-      // The __proto__ property requires special handling.
-      if (keyStr == "__proto__") {
-        if (prop == protoProperty) {
-          // This is the first definition of __proto__. If we already used it
-          // as an object parent we just skip it, but otherwise we must
-          // explicitly set the parent now by calling \c
-          // HermesInternal.silentSetPrototypeOf().
-          if (!objectParent) {
-            auto *parent = genExpression(prop->_value);
+      propValue->state = PropertyValue::IRGenerated;
 
-            IRBuilder::SaveRestore saveState{Builder};
-            Builder.setLocation(prop->_key->getDebugLoc());
+      continue;
+    }
 
-            genBuiltinCall(
-                BuiltinMethod::HermesBuiltin_silentSetPrototypeOf,
-                {Obj, parent});
-          }
-        } else {
-          // __proto__ was defined more than once, which is an error.
-          Builder.getModule()->getContext().getSourceErrorManager().error(
-              prop->getSourceRange(),
-              "__proto__ was set multiple times in the object definition.");
-          Builder.getModule()->getContext().getSourceErrorManager().note(
-              protoProperty->getSourceRange(),
-              "The first definition was here.");
-        }
+    // Always generate the values, even if we don't need it, for the side
+    // effects.
+    auto value = genExpression(prop->_value, Builder.createIdentifier(keyStr));
 
-        continue;
-      }
-
-      // Always generate the values, even if we don't need it, for the side
-      // effects.
-      auto value =
-          genExpression(prop->_value, Builder.createIdentifier(keyStr));
-
-      // Only store the value if it won't be overwritten.
-      if (propMap[keyStr].valueNode == prop->_value) {
-        if (haveSeenComputedProp || propValue->isIRGenerated) {
-          Builder.createStoreOwnPropertyInst(
-              value, Obj, Key, IRBuilder::PropEnumerable::Yes);
-        } else {
-          Builder.createStoreNewOwnPropertyInst(
-              value, Obj, Key, IRBuilder::PropEnumerable::Yes);
-        }
-        propValue->isIRGenerated = true;
+    // Only store the value if it won't be overwritten.
+    if (propMap[keyStr].valueNode == prop->_value) {
+      assert(
+          propValue->state != PropertyValue::IRGenerated &&
+          "IR can only be generated once");
+      if (haveSeenComputedProp ||
+          propValue->state == PropertyValue::Placeholder) {
+        Builder.createStoreOwnPropertyInst(
+            value, Obj, Key, IRBuilder::PropEnumerable::Yes);
       } else {
-        Builder.getModule()->getContext().getSourceErrorManager().warning(
-            propMap[keyStr].getSourceRange(),
-            Twine("the property \"") + keyStr +
-                "\" was set multiple times in the object definition.");
-
-        Builder.getModule()->getContext().getSourceErrorManager().warning(
-            prop->getSourceRange(), "The first definition was here.");
+        Builder.createStoreNewOwnPropertyInst(
+            value, Obj, Key, IRBuilder::PropEnumerable::Yes);
       }
+      propValue->state = PropertyValue::IRGenerated;
+    } else {
+      maybeInsertPlaceholder();
     }
   }
 

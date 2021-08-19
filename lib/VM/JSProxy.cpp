@@ -114,7 +114,7 @@ PseudoHandle<JSProxy> JSProxy::create(Runtime *runtime) {
       Handle<JSObject>::vmcast(&runtime->objectPrototype),
       runtime->getHiddenClassForPrototype(
           runtime->objectPrototypeRawPtr,
-          JSObject::numOverlapSlots<JSProxy>() + ANONYMOUS_PROPERTY_SLOTS));
+          JSObject::numOverlapSlots<JSProxy>()));
 
   proxy->flags_.proxyObject = true;
 

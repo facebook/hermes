@@ -21,6 +21,7 @@ add_hermes_library(hermesHBCBackend
   SerializedLiteralGenerator.cpp
   SerializedLiteralParserBase.cpp
   SimpleBytecodeBuilder.cpp
+  StringKind.cpp
   TraverseLiteralStrings.cpp
   UniquingFilenameTable.cpp
   UniquingStringLiteralTable.cpp

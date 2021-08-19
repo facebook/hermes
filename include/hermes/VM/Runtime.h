@@ -238,7 +238,7 @@ class Runtime : public HandleRootOwner,
   CallResult<HermesValue> run(
       llvh::StringRef code,
       llvh::StringRef sourceURL,
-      hbc::CompileFlags compileFlags);
+      const hbc::CompileFlags &compileFlags);
 
   /// Runs the given UTF-8 \p code in a new RuntimeModule as top-level code.
   /// \param sourceURL the location of the source that's being run.
@@ -247,7 +247,7 @@ class Runtime : public HandleRootOwner,
   CallResult<HermesValue> run(
       std::unique_ptr<Buffer> code,
       llvh::StringRef sourceURL,
-      hbc::CompileFlags compileFlags);
+      const hbc::CompileFlags &compileFlags);
 
   /// Runs the given \p bytecode with the given \p runtimeModuleFlags. The \p
   /// sourceURL, if not empty, is reported as the file name in backtraces. If \p
@@ -730,12 +730,12 @@ class Runtime : public HandleRootOwner,
 
   /// Inserts an object into the string cycle checking stack.
   /// \return true if a cycle was found
-  CallResult<bool> insertVisitedObject(Handle<JSObject> obj);
+  bool insertVisitedObject(JSObject *obj);
 
   /// Removes the last element (which must be obj) from the cycle check stack.
   /// \param obj the last element, which will be removed. Used for checking
   /// that invariants aren't violated in debug mode.
-  void removeVisitedObject(Handle<JSObject> obj);
+  void removeVisitedObject(JSObject *obj);
 
   /// Like calling JSObject::getNamed, but uses this runtime's property cache.
   CallResult<PseudoHandle<>> getNamed(Handle<JSObject> obj, PropCacheID id);
@@ -1250,6 +1250,10 @@ class Runtime : public HandleRootOwner,
   /// to be scanned as roots in young-gen collections.
   std::vector<PinnedHermesValue> charStrings_{};
 
+  /// Keeps track of objects that have already been visited in order to detect
+  /// cycles while doing string conversions.
+  std::vector<JSObject *> stringCycleCheckVisited_{};
+
   /// Pointers to callable implementations of builtins.
   std::vector<Callable *> builtins_{};
 
@@ -1331,9 +1335,6 @@ class Runtime : public HandleRootOwner,
 
   /// Config-provided callback for GC events.
   std::function<void(GCEventKind, const char *)> gcEventCallback_;
-
-  /// Set from RuntimeConfig.
-  bool allowFunctionToStringWithRuntimeSource_;
 
   /// @}
 
@@ -1438,14 +1439,6 @@ class Runtime : public HandleRootOwner,
 #endif
     currentFrame_.getSavedIPRef() =
         HermesValue::encodeNativePointer(getCurrentIP());
-  }
-
-  void setAllowFunctionToStringWithRuntimeSource(bool v) {
-    allowFunctionToStringWithRuntimeSource_ = v;
-  }
-
-  bool getAllowFunctionToStringWithRuntimeSource() const {
-    return allowFunctionToStringWithRuntimeSource_;
   }
 
  private:

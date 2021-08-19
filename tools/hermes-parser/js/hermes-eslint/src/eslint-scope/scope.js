@@ -343,18 +343,18 @@ class Scope {
     let closeRef;
 
     if (this.__shouldStaticallyClose(scopeManager)) {
-      closeRef = this.__staticCloseRef;
+      closeRef = ref => this.__staticCloseRef(ref);
     } else if (this.type !== ScopeType.Global) {
-      closeRef = this.__dynamicCloseRef;
+      closeRef = ref => this.__dynamicCloseRef(ref);
     } else {
-      closeRef = this.__globalCloseRef;
+      closeRef = ref => this.__globalCloseRef(ref);
     }
 
     // Try Resolving all references in this scope.
     for (let i = 0, iz = this.__referencesLeftToResolve.length; i < iz; ++i) {
       const ref = this.__referencesLeftToResolve[i];
 
-      closeRef.call(this, ref);
+      closeRef(ref);
     }
     this.__referencesLeftToResolve = [];
     this.__isClosed = true;

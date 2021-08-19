@@ -265,10 +265,7 @@ class DummyRuntime final : public HandleRootOwner,
   GCStorage gcStorage_;
 
  public:
-  std::vector<GCCell **> pointerRoots{};
-  std::vector<PinnedHermesValue *> valueRoots{};
   std::vector<WeakRoot<GCCell> *> weakRoots{};
-  std::function<void(WeakRootAcceptor &)> markExtraWeak{};
 
   /// Create a DummyRuntime with the default parameters.
   static std::shared_ptr<DummyRuntime> create(const GCConfig &gcConfig);

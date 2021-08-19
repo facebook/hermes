@@ -359,6 +359,16 @@ Arguments | %builtinNumber is the builtin to execute. Arguments %arg0 ... %argN 
 Semantics | The instruction passes the control to the builtin in a VM-specific way. The arguments are mapped to the parameters. Unmapped parameters are initialized to 'undefined'.
 Effects | May read and write memory.
 
+### CallIntrinsicInst
+
+CallIntrinsicInst | _
+--- | --- |
+Description | Calls an unsafe compiler intrinsic, passing "undefined" for this
+Example | %0 = CallIntrinsicInst %intrinsicsIndex, %undefined, %arg0, %arg1, %arg2, ...
+Arguments | %intrinsicsIndex is the intrinsic to execute. Arguments %arg0 ... %argN are the arguments passed to the function.
+Semantics | The instruction passes the control to the intrinsics in a VM-specific way. The arguments are mapped to the parameters.
+Effects | May read and write memory.
+
 ### GetBuiltinClosureInst
 
 GetBuiltinClosureInst | _
@@ -455,6 +465,16 @@ Description | Allocates a new JavaScript object on the heap.
 Example |  `%0 = AllocObjectInst %sizeHint : LiteralNumber, %parent : EmptySentinel or null or Value`
 Arguments | *%sizeHint% indicates that the object will need at least that many property slots. *%parent* is the optional parent to create the object with: *EmptySentinel* means use *Object.prototype*, *null* means no parent, or otherwise use the specified value.
 Semantics | The instruction creates a new JavaScript object on the heap. If the parent is invalid (not EmptySenyinel, null or object), it is silently ignored.
+Effects | Does not read or write to memory.
+
+### AllocObjectLiteralInst
+
+AllocObjectLiteralInst | _
+--- | --- |
+Description | Allocates a new JavaScript object on the heap. During lowering pass it will be lowered to either an AllocObjectInst or a HBCAllocObjectFromBufferInst.
+Example |  %0 = AllocObjectLiteralInst "prop1" : string, 10 : number
+Arguments | %prop_map is a vector of (Literal*, value*) pairs which represents the properties and their keys in the object literal.
+Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties.
 Effects | Does not read or write to memory.
 
 ### AllocArrayInst

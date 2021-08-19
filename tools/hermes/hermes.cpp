@@ -113,7 +113,6 @@ static int executeHBCBytecodeFromCL(
           .withEnableHermesInternal(cl::EnableHermesInternal)
           .withEnableHermesInternalTestMethods(
               cl::EnableHermesInternalTestMethods)
-          .withAllowFunctionToStringWithRuntimeSource(cl::AllowFunctionToString)
           .build();
 
   options.basicBlockProfiling = cl::BasicBlockProfiling;
@@ -173,7 +172,6 @@ static vm::RuntimeConfig getReplRuntimeConfig() {
       .withIntl(cl::Intl)
       .withEnableHermesInternal(cl::EnableHermesInternal)
       .withEnableHermesInternalTestMethods(cl::EnableHermesInternalTestMethods)
-      .withAllowFunctionToStringWithRuntimeSource(cl::AllowFunctionToString)
       .build();
 }
 

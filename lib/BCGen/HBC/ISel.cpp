@@ -355,7 +355,7 @@ void HBCISel::verifyCall(CallInst *Inst) {
 
   for (unsigned i = 0, max = Inst->getNumArguments(); i < max; i++) {
     Value *argument = Inst->getArgument(i);
-    // The first argument (thisArg) of CallBuiltin must be LiteralUndefined.
+    // The first argument (thisArg) of CallBuiltin LiteralUndefined.
     if (isBuiltin && i == 0) {
       assert(
           llvh::isa<LiteralUndefined>(argument) && !RA_.isAllocated(argument) &&
@@ -614,15 +614,25 @@ void HBCISel::generateStoreOwnPropertyInst(
 void HBCISel::generateStoreNewOwnPropertyInst(
     StoreNewOwnPropertyInst *Inst,
     BasicBlock *next) {
-  assert(
-      !toArrayIndex(Inst->getPropertyName()->getValue().str()).hasValue() &&
-      "Property name must not be a valid array index");
-
   auto valueReg = encodeValue(Inst->getStoredValue());
   auto objReg = encodeValue(Inst->getObject());
-  auto strProp = Inst->getPropertyName();
+  auto prop = Inst->getProperty();
   bool isEnumerable = Inst->getIsEnumerable();
 
+  if (auto *numProp = llvh::dyn_cast<LiteralNumber>(prop)) {
+    assert(
+        isEnumerable &&
+        "No way to generate non-enumerable indexed StoreNewOwnPropertyInst.");
+    uint32_t index = *numProp->convertToArrayIndex();
+    if (index <= UINT8_MAX) {
+      BCFGen_->emitPutOwnByIndex(objReg, valueReg, index);
+    } else {
+      BCFGen_->emitPutOwnByIndexL(objReg, valueReg, index);
+    }
+    return;
+  }
+
+  auto strProp = cast<LiteralString>(prop);
   auto id = BCFGen_->getIdentifierID(strProp);
 
   if (isEnumerable) {
@@ -736,6 +746,12 @@ void HBCISel::generateAllocObjectInst(AllocObjectInst *Inst, BasicBlock *next) {
     auto parentReg = encodeValue(Inst->getParentObject());
     BCFGen_->emitNewObjectWithParent(result, parentReg);
   }
+}
+void HBCISel::generateAllocObjectLiteralInst(
+    AllocObjectLiteralInst *,
+    BasicBlock *) {
+  // This instruction should not have reached this far.
+  llvm_unreachable("AllocObjectLiteralInst should have been lowered.");
 }
 void HBCISel::generateAllocArrayInst(AllocArrayInst *Inst, BasicBlock *next) {
   auto dstReg = encodeValue(Inst);
@@ -1197,6 +1213,75 @@ void HBCISel::generateGetBuiltinClosureInst(
   auto output = encodeValue(Inst);
   BCFGen_->emitGetBuiltinClosure(output, Inst->getBuiltinIndex());
 }
+
+#ifdef HERMES_RUN_WASM
+void HBCISel::generateCallIntrinsicInst(
+    CallIntrinsicInst *Inst,
+    BasicBlock *next) {
+  // Store instrinsics use 3 input registers. Binary Arithmetic and Load
+  // intrinsics use 2 input registers and 1 result register.
+  auto arg1 = encodeValue(Inst->getArgument(0));
+  auto arg2 = encodeValue(Inst->getArgument(1));
+  unsigned res = -1;
+
+  // Result register is not used in store instrinsics, but is still allocated.
+  if (Inst->getIntrinsicsIndex() < WasmIntrinsics::__uasm_store8)
+    res = encodeValue(Inst);
+
+  switch (Inst->getIntrinsicsIndex()) {
+    // Binary Arithmetic
+    case WasmIntrinsics::__uasm_add32:
+      BCFGen_->emitAdd32(res, arg1, arg2);
+      break;
+    case WasmIntrinsics::__uasm_sub32:
+      BCFGen_->emitSub32(res, arg1, arg2);
+      break;
+    case WasmIntrinsics::__uasm_mul32:
+      BCFGen_->emitMul32(res, arg1, arg2);
+      break;
+    case WasmIntrinsics::__uasm_divi32:
+      BCFGen_->emitDivi32(res, arg1, arg2);
+      break;
+    case WasmIntrinsics::__uasm_divu32:
+      BCFGen_->emitDivu32(res, arg1, arg2);
+      break;
+
+    // Load
+    case WasmIntrinsics::__uasm_loadi8:
+      BCFGen_->emitLoadi8(res, arg1, arg2);
+      break;
+    case WasmIntrinsics::__uasm_loadu8:
+      BCFGen_->emitLoadu8(res, arg1, arg2);
+      break;
+    case WasmIntrinsics::__uasm_loadi16:
+      BCFGen_->emitLoadi16(res, arg1, arg2);
+      break;
+    case WasmIntrinsics::__uasm_loadu16:
+      BCFGen_->emitLoadu16(res, arg1, arg2);
+      break;
+    case WasmIntrinsics::__uasm_loadi32:
+      BCFGen_->emitLoadi32(res, arg1, arg2);
+      break;
+    case WasmIntrinsics::__uasm_loadu32:
+      BCFGen_->emitLoadu32(res, arg1, arg2);
+      break;
+
+    // Store
+    case WasmIntrinsics::__uasm_store8:
+      BCFGen_->emitStore8(arg1, arg2, encodeValue(Inst->getArgument(2)));
+      break;
+    case WasmIntrinsics::__uasm_store16:
+      BCFGen_->emitStore16(arg1, arg2, encodeValue(Inst->getArgument(2)));
+      break;
+    case WasmIntrinsics::__uasm_store32:
+      BCFGen_->emitStore32(arg1, arg2, encodeValue(Inst->getArgument(2)));
+      break;
+
+    default:
+      break;
+  }
+}
+#endif
 
 void HBCISel::generateHBCCallDirectInst(
     HBCCallDirectInst *Inst,

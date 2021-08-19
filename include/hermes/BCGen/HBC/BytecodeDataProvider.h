@@ -137,6 +137,10 @@ class BCProviderBase {
   /// List of unsorted pairs from {global module ID => function index}.
   llvh::ArrayRef<std::pair<uint32_t, uint32_t>> cjsModuleTableStatic_{};
 
+  /// Table which indicates where to find the source string of functions.
+  /// List of unsorted pairs from {function ID => string offset}.
+  llvh::ArrayRef<std::pair<uint32_t, uint32_t>> functionSourceTable_{};
+
   /// Pointer to the global debug info. This will not be eagerly initialized
   /// when loading bytecode from a buffer. Instead it will be constructed
   /// when first needed. Most likely we should never need to use it.
@@ -196,6 +200,9 @@ class BCProviderBase {
   llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getCJSModuleTableStatic()
       const {
     return cjsModuleTableStatic_;
+  }
+  llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getFunctionSourceTable() const {
+    return functionSourceTable_;
   }
   const std::string getErrorStr() const {
     return errstr_;
@@ -305,16 +312,6 @@ class BCProviderBase {
 #ifdef HERMESVM_SERIALIZE
   /// Serialize this BCProvider.
   virtual void serialize(vm::Serializer &s) const = 0;
-#endif
-
-#ifndef HERMESVM_LEAN
-  /// Return a reference to the source code for a function. In general this will
-  /// NOT be available, however it may be when compiling from source at
-  /// run-time, and lazy compilation or Function.toString() returning soruce is
-  /// enabled.
-  virtual llvh::SMRange getFunctionSourceRange(uint32_t functionID) const {
-    return {};
-  }
 #endif
 };
 

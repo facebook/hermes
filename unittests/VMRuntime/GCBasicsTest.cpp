@@ -42,6 +42,7 @@ TEST_F(GCBasicsTest, SmokeTest) {
   auto &gc = rt.getHeap();
   GCBase::HeapInfo info;
   GCBase::DebugHeapInfo debugInfo;
+  GCScope scope{&rt};
 
   // Verify the initial state.
   gc.getHeapInfo(info);
@@ -86,9 +87,9 @@ TEST_F(GCBasicsTest, SmokeTest) {
   ASSERT_EQ(2u, info.numCollections);
   ASSERT_EQ(0u, info.allocatedBytes);
 
-  // Allocate two objects.
+  // Allocate two objects, the second with a GC handle.
   DummyObject::create(&rt.getHeap());
-  GCCell *o2 = DummyObject::create(&rt.getHeap());
+  rt.makeHandle(DummyObject::create(&rt.getHeap()));
   gc.getHeapInfo(info);
   gc.getDebugHeapInfo(debugInfo);
   ASSERT_EQ(2u, debugInfo.numAllocatedObjects);
@@ -98,8 +99,7 @@ TEST_F(GCBasicsTest, SmokeTest) {
   ASSERT_EQ(2u, info.numCollections);
   ASSERT_EQ(2 * sizeof(DummyObject), info.allocatedBytes);
 
-  // Make only the second object reachable and collect.
-  rt.pointerRoots.push_back(&o2);
+  // Collect the first but not second object.
   rt.collect();
   gc.getHeapInfo(info);
   gc.getDebugHeapInfo(debugInfo);
@@ -115,14 +115,16 @@ TEST_F(GCBasicsTest, MovedObjectTest) {
   auto &gc = rt.getHeap();
   GCBase::HeapInfo info;
   GCBase::DebugHeapInfo debugInfo;
+  GCScope scope{&rt};
 
+  // Initialize three arrays, one with a GC handle.
   gcheapsize_t totalAlloc = 0;
 
   ArrayStorage::createForTest(&gc, 0);
   totalAlloc += heapAlignSize(ArrayStorage::allocationSize(0));
   auto *a1 = ArrayStorage::createForTest(&gc, 3);
   totalAlloc += heapAlignSize(ArrayStorage::allocationSize(3));
-  auto *a2 = ArrayStorage::createForTest(&gc, 3);
+  auto a2 = rt.makeHandle(ArrayStorage::createForTest(&gc, 3));
   totalAlloc += heapAlignSize(ArrayStorage::allocationSize(3));
   // Verify the initial state.
   gc.getHeapInfo(info);
@@ -135,11 +137,10 @@ TEST_F(GCBasicsTest, MovedObjectTest) {
   EXPECT_EQ(totalAlloc, info.allocatedBytes);
 
   // Initialize a reachable graph.
-  rt.pointerRoots.push_back(reinterpret_cast<GCCell **>(&a2));
   a2->set(0, HermesValue::encodeObjectValue(a1), &gc);
-  a2->set(2, HermesValue::encodeObjectValue(a2), &gc);
+  a2->set(2, HermesValue::encodeObjectValue(*a2), &gc);
   a1->set(0, HermesValue::encodeObjectValue(a1), &gc);
-  a1->set(1, HermesValue::encodeObjectValue(a2), &gc);
+  a1->set(1, HermesValue::encodeObjectValue(*a2), &gc);
 
   rt.collect();
   totalAlloc -= heapAlignSize(ArrayStorage::allocationSize(0));
@@ -158,9 +159,9 @@ TEST_F(GCBasicsTest, MovedObjectTest) {
   // Ensure the contents of the objects changed.
   EXPECT_EQ(a1, a2->at(0).getPointer());
   EXPECT_EQ(HermesValue::encodeEmptyValue(), a2->at(1));
-  EXPECT_EQ(a2, a2->at(2).getPointer());
+  EXPECT_EQ(*a2, a2->at(2).getPointer());
   EXPECT_EQ(a1, a1->at(0).getPointer());
-  EXPECT_EQ(a2, a1->at(1).getPointer());
+  EXPECT_EQ(*a2, a1->at(1).getPointer());
   EXPECT_EQ(HermesValue::encodeEmptyValue(), a1->at(2));
 }
 
@@ -288,11 +289,14 @@ TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
   };
   GenGC &gc = rt.getHeap();
   GCBase::DebugHeapInfo debugInfo;
+  GCScope scope{&rt};
 
   gc.getDebugHeapInfo(debugInfo);
   EXPECT_EQ(0u, debugInfo.numAllocatedObjects);
 
-  auto *d0 = DummyObject::create(&rt.getHeap());
+  // Create a handle for d0.  We'll only be doing young-gen collections, so
+  // we don't have one for dOld.
+  auto d0 = rt.makeHandle(DummyObject::create(&rt.getHeap()));
   auto *d1 = DummyObject::create(&rt.getHeap());
   auto *dOld = DummyObject::createLongLived(&rt.getHeap());
 
@@ -301,7 +305,7 @@ TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
 
   WeakRefMutex &mtx = gc.weakRefMutex();
   WeakRefLock lk{mtx};
-  WeakRef<DummyObject> wr0{&gc, d0};
+  WeakRef<DummyObject> wr0{&gc, *d0};
   WeakRef<DummyObject> wr1{&gc, d1};
   WeakRef<DummyObject> wrOld{&gc, dOld};
 
@@ -309,13 +313,12 @@ TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
   ASSERT_TRUE(wr1.isValid());
   ASSERT_TRUE(wrOld.isValid());
 
-  ASSERT_EQ(d0, getNoHandle(wr0, &gc));
+  ASSERT_EQ(*d0, getNoHandle(wr0, &gc));
   ASSERT_EQ(d1, getNoHandle(wr1, &gc));
   ASSERT_EQ(dOld, getNoHandle(wrOld, &gc));
 
-  // Create a root for d0.  We'll only be doing young-gen collections, so
-  // we don't have to root dOld.
-  rt.pointerRoots.push_back(reinterpret_cast<GCCell **>(&d0));
+  /// Use the MarkWeakCallback of DummyObject as a hack to update these
+  /// WeakRefs.
   d0->markWeakCallback = std::make_unique<DummyObject::MarkWeakCallback>(
       [&](GCCell *, WeakRefAcceptor &acceptor) {
         acceptor.accept(wr0);
@@ -333,12 +336,13 @@ TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
   ASSERT_TRUE(wr0.isValid());
   ASSERT_FALSE(wr1.isValid());
   ASSERT_TRUE(wrOld.isValid());
-  ASSERT_EQ(d0, getNoHandle(wr0, &gc));
+  ASSERT_EQ(*d0, getNoHandle(wr0, &gc));
   ASSERT_EQ(dOld, getNoHandle(wrOld, &gc));
 }
 
 TEST_F(GCBasicsTest, TestYoungGenStats) {
   GenGC &gc = rt.getHeap();
+  GCScope scope{&rt};
 
   GCBase::DebugHeapInfo debugInfo;
 
@@ -348,8 +352,7 @@ TEST_F(GCBasicsTest, TestYoungGenStats) {
   ASSERT_EQ(0u, debugInfo.numReachableObjects);
   ASSERT_EQ(0u, debugInfo.numCollectedObjects);
 
-  GCCell *cell = DummyObject::create(&rt.getHeap());
-  rt.pointerRoots.push_back(&cell);
+  rt.makeHandle(DummyObject::create(&rt.getHeap()));
 
   DummyObject::create(&rt.getHeap());
 
@@ -499,15 +502,12 @@ TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
       originalHeapInfo.youngGenStats.numCollections + 1);
   // Fill the old gen to force a collection.
   auto N = rt.getHeap().maxSize() / SegmentCell::size() - 1;
-  std::deque<GCCell *> roots;
-  for (size_t i = 0; i < N - 1; ++i) {
-    roots.push_back(SegmentCell::create(rt));
-    rt.pointerRoots.push_back(&roots.back());
+  {
+    GCScopeMarkerRAII marker{&rt};
+    for (size_t i = 0; i < N - 1; ++i) {
+      rt.makeHandle(SegmentCell::create(rt));
+    }
   }
-  // Remove all the roots for the final allocation so that an old gen GC can
-  // occur.
-  rt.pointerRoots.clear();
-  roots.clear();
   SegmentCell::create(rt);
   idAfter = rt.getHeap().getObjectID(*handle);
   rt.getHeap().getHeapInfo(afterHeapInfo);
