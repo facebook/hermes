@@ -8,12 +8,13 @@
 #ifndef HERMES_BCGEN_HBC_SERIALIZEDLITERALGENERATOR_H
 #define HERMES_BCGEN_HBC_SERIALIZEDLITERALGENERATOR_H
 
-#include "hermes/IR/IR.h"
 #include "llvh/ADT/ArrayRef.h"
 
 #include <cstdint>
 
 namespace hermes {
+class Literal;
+
 namespace hbc {
 
 class BytecodeModuleGenerator;

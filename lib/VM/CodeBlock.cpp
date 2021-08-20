@@ -10,13 +10,10 @@
 #include "hermes/VM/CodeBlock.h"
 
 #include "hermes/BCGen/HBC/Bytecode.h"
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Support/Conversions.h"
-#include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
-#include "hermes/VM/Debugger/Debugger.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule.h"
@@ -24,7 +21,6 @@
 
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/ErrorHandling.h"
-#include "llvh/Support/MathExtras.h"
 
 namespace hermes {
 namespace vm {

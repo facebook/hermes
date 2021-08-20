@@ -18,7 +18,6 @@
 
 #include "llvh/ADT/ArrayRef.h"
 
-#include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
 
 namespace hermes {

@@ -12,7 +12,6 @@
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 
-#include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
 
 namespace hermes {

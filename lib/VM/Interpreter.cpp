@@ -31,7 +31,6 @@
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvh/ADT/SmallSet.h"
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/Format.h"
 #include "llvh/Support/raw_ostream.h"

@@ -17,11 +17,10 @@
 #include "hermes/SourceMap/SourceMapTranslator.h"
 #include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/SimpleDiagHandler.h"
-#include "hermes/VM/Deserializer.h"
-#include "hermes/VM/Serializer.h"
 
 #ifdef HERMESVM_SERIALIZE
-using hermes::vm::Deserializer;
+#include "hermes/VM/Serializer.h"
+
 using hermes::vm::Serializer;
 #endif
 

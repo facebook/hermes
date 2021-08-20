@@ -6,7 +6,6 @@
  */
 
 #include "hermes/BCGen/RegAlloc.h"
-#include "hermes/IR/Analysis.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
@@ -14,8 +13,6 @@
 #include "hermes/Support/PerfSection.h"
 #include "hermes/Utils/Dumper.h"
 
-#include "llvh/ADT/PostOrderIterator.h"
-#include "llvh/ADT/SmallPtrSet.h"
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/raw_ostream.h"
 

@@ -8,8 +8,6 @@
 #include "hermes/VM/SymbolRegistry.h"
 
 #include "hermes/VM/Deserializer.h"
-#include "hermes/VM/GC.h"
-#include "hermes/VM/GCPointer.h"
 #include "hermes/VM/Handle-inline.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/OrderedHashMap.h"
