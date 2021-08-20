@@ -190,17 +190,17 @@ macro_rules! nodekind_defs {
                 optional: bool,
             },
             AssignmentExpression[Expression] {
-                operator: NodeLabel,
+                operator: AssignmentExpressionOperator,
                 left: NodePtr[LVal],
                 right: NodePtr[Expression],
             },
             UnaryExpression[Expression] {
-                operator: NodeLabel,
+                operator: UnaryExpressionOperator,
                 argument: NodePtr[Expression],
                 prefix: bool,
             },
             UpdateExpression[Expression] {
-                operator: NodeLabel,
+                operator: UpdateExpressionOperator,
                 argument: NodePtr[Expression],
                 prefix: bool,
             },
@@ -218,7 +218,7 @@ macro_rules! nodekind_defs {
             LogicalExpression[Expression] {
                 left: NodePtr[Expression],
                 right: NodePtr[Expression],
-                operator: NodeLabel,
+                operator: LogicalExpressionOperator,
             },
             ConditionalExpression[Expression] {
                 test: NodePtr[Expression],
@@ -228,7 +228,7 @@ macro_rules! nodekind_defs {
             BinaryExpression[Expression] {
                 left: NodePtr[Expression],
                 right: NodePtr[Expression],
-                operator: NodeLabel,
+                operator: BinaryExpressionOperator,
             },
             Directive[Statement] {
                 value: NodePtr,
@@ -261,7 +261,7 @@ macro_rules! nodekind_defs {
                 id: NodePtr[Pattern],
             },
             VariableDeclaration[Declaration] {
-                kind: NodeLabel,
+                kind: VariableDeclarationKind,
                 declarations: NodeList[VariableDeclarator],
             },
             TemplateLiteral[Expression] {
@@ -280,7 +280,7 @@ macro_rules! nodekind_defs {
             Property {
                 key: NodePtr[Literal, Identifier, Expression],
                 value: NodePtr[Expression],
-                kind: NodeLabel,
+                kind: PropertyKind,
                 computed: bool,
                 method: bool,
                 shorthand: bool,
@@ -328,7 +328,7 @@ macro_rules! nodekind_defs {
             MethodDefinition {
                 key: NodePtr[Expression],
                 value: NodePtr[FunctionExpression],
-                kind: NodeLabel,
+                kind: MethodDefinitionKind,
                 computed: bool,
                 is_static: bool,
             },
@@ -336,12 +336,12 @@ macro_rules! nodekind_defs {
                 specifiers: NodeList[ImportSpecifier],
                 source: NodePtr[StringLiteral],
                 attributes: Option<NodeList>[ImportAttribute],
-                import_kind: NodeLabel,
+                import_kind: ImportKind,
             },
             ImportSpecifier {
                 imported: NodePtr[Identifier],
                 local: NodePtr[Identifier],
-                import_kind: NodeLabel,
+                import_kind: ImportKind,
             },
             ImportDefaultSpecifier {
                 local: NodePtr[Identifier],
@@ -357,7 +357,7 @@ macro_rules! nodekind_defs {
                 declaration: Option<NodePtr>[Declaration],
                 specifiers: NodeList[ExportSpecifier],
                 source: Option<NodePtr>[StringLiteral],
-                export_kind: NodeLabel,
+                export_kind: ExportKind,
             },
             ExportSpecifier {
                 exported: NodePtr[Identifier],
@@ -371,7 +371,7 @@ macro_rules! nodekind_defs {
             },
             ExportAllDeclaration[Declaration] {
                 source: NodePtr[StringLiteral],
-                export_kind: NodeLabel,
+                export_kind: ExportKind,
             },
             ObjectPattern[Pattern] {
                 properties: NodeList[Property],

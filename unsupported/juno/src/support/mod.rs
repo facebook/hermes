@@ -5,5 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#[macro_use]
+pub mod str_enum;
+
 pub mod case;
 pub mod json;

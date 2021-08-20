@@ -94,9 +94,7 @@ fn test_binop() {
         do_gen(
             &node(BinaryExpression {
                 left: node(NullLiteral),
-                operator: NodeLabel {
-                    str: "+".to_string()
-                },
+                operator: BinaryExpressionOperator::Plus,
                 right: node(NullLiteral),
             }),
             gen_js::Pretty::Yes

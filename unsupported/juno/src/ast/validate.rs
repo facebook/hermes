@@ -5,7 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use super::{Node, NodeKind, NodeLabel, NodeList, NodePtr, NodeVariant, StringLiteral, Visitor};
+use super::{
+    AssignmentExpressionOperator, BinaryExpressionOperator, ExportKind, ImportKind,
+    LogicalExpressionOperator, MethodDefinitionKind, Node, NodeKind, NodeLabel, NodeList, NodePtr,
+    NodeVariant, PropertyKind, StringLiteral, UnaryExpressionOperator, UpdateExpressionOperator,
+    VariableDeclarationKind, Visitor,
+};
 
 macro_rules! gen_validate_fn {
     ($name:ident {
@@ -57,6 +62,16 @@ impl ValidChild for f64 {}
 impl ValidChild for bool {}
 
 impl ValidChild for NodeLabel {}
+impl ValidChild for UnaryExpressionOperator {}
+impl ValidChild for BinaryExpressionOperator {}
+impl ValidChild for LogicalExpressionOperator {}
+impl ValidChild for UpdateExpressionOperator {}
+impl ValidChild for AssignmentExpressionOperator {}
+impl ValidChild for VariableDeclarationKind {}
+impl ValidChild for PropertyKind {}
+impl ValidChild for MethodDefinitionKind {}
+impl ValidChild for ImportKind {}
+impl ValidChild for ExportKind {}
 
 impl ValidChild for StringLiteral {}
 
@@ -174,7 +189,7 @@ fn validate_custom(node: &Node) -> Result<(), ValidationError> {
             if *method {
                 value.validate_child(node, &[NodeVariant::FunctionExpression])?;
             }
-            if kind.str == "get" || kind.str == "set" {
+            if *kind == PropertyKind::Get || *kind == PropertyKind::Set {
                 value.validate_child(node, &[NodeVariant::FunctionExpression])?;
             }
         }

@@ -6,6 +6,7 @@
  */
 
 use std::fmt;
+use thiserror::Error;
 
 #[macro_use]
 mod def;
@@ -98,6 +99,125 @@ impl fmt::Debug for StringLiteral {
     }
 }
 
+#[derive(Debug, Copy, Clone, Error)]
+#[error("Invalid string property for AST node")]
+pub struct TryFromStringError;
+
+define_str_enum!(
+    UnaryExpressionOperator,
+    TryFromStringError,
+    (Delete, "delete"),
+    (Void, "void"),
+    (Typeof, "typeof"),
+    (Plus, "+"),
+    (Minus, "-"),
+    (BitNot, "~"),
+    (Not, "!"),
+);
+
+define_str_enum!(
+    BinaryExpressionOperator,
+    TryFromStringError,
+    (LooseEquals, "=="),
+    (LooseNotEquals, "!="),
+    (StrictEquals, "==="),
+    (StrictNotEquals, "!=="),
+    (Less, "<"),
+    (LessEquals, "<="),
+    (Greater, ">"),
+    (GreaterEquals, ">="),
+    (LShift, "<<"),
+    (RShift, ">>"),
+    (RShift3, ">>>"),
+    (Plus, "+"),
+    (Minus, "-"),
+    (Mult, "*"),
+    (Div, "/"),
+    (Mod, "%"),
+    (BitOr, "|"),
+    (BitXor, "^"),
+    (BitAnd, "&"),
+    (Exp, "**"),
+    (In, "in"),
+    (Instanceof, "instanceof"),
+);
+
+define_str_enum!(
+    LogicalExpressionOperator,
+    TryFromStringError,
+    (And, "&&"),
+    (Or, "||"),
+    (NullishCoalesce, "??"),
+);
+
+define_str_enum!(
+    UpdateExpressionOperator,
+    TryFromStringError,
+    (Increment, "++"),
+    (Decrement, "--"),
+);
+
+define_str_enum!(
+    AssignmentExpressionOperator,
+    TryFromStringError,
+    (Assign, "="),
+    (LShiftAssign, "<<="),
+    (RShiftAssign, ">>="),
+    (RShift3Assign, ">>>="),
+    (PlusAssign, "+="),
+    (MinusAssign, "-="),
+    (MultAssign, "*="),
+    (DivAssign, "/="),
+    (ModAssign, "%="),
+    (BitOrAssign, "|="),
+    (BitXorAssign, "^="),
+    (BitAndAssign, "&="),
+    (ExpAssign, "**="),
+    (LogicalOrAssign, "||="),
+    (LogicalAndAssign, "&&="),
+    (NullishCoalesceAssign, "??="),
+);
+
+define_str_enum!(
+    VariableDeclarationKind,
+    TryFromStringError,
+    (Var, "var"),
+    (Let, "let"),
+    (Const, "const"),
+);
+
+define_str_enum!(
+    PropertyKind,
+    TryFromStringError,
+    (Init, "init"),
+    (Get, "get"),
+    (Set, "set"),
+);
+
+define_str_enum!(
+    MethodDefinitionKind,
+    TryFromStringError,
+    (Method, "method"),
+    (Constructor, "constructor"),
+    (Get, "get"),
+    (Set, "set"),
+);
+
+define_str_enum!(
+    ImportKind,
+    TryFromStringError,
+    (Value, "value"),
+    (Type, "type"),
+    (Typeof, "typeof"),
+);
+
+define_str_enum!(
+    ExportKind,
+    TryFromStringError,
+    (Value, "value"),
+    (Type, "type"),
+);
+
 /// Trait implemented by possible child types of `NodeKind`.
 trait NodeChild {
     /// Visit this child of the given `node`.
@@ -111,6 +231,16 @@ impl NodeChild for f64 {}
 impl NodeChild for bool {}
 
 impl NodeChild for NodeLabel {}
+impl NodeChild for UnaryExpressionOperator {}
+impl NodeChild for BinaryExpressionOperator {}
+impl NodeChild for LogicalExpressionOperator {}
+impl NodeChild for UpdateExpressionOperator {}
+impl NodeChild for AssignmentExpressionOperator {}
+impl NodeChild for VariableDeclarationKind {}
+impl NodeChild for PropertyKind {}
+impl NodeChild for MethodDefinitionKind {}
+impl NodeChild for ImportKind {}
+impl NodeChild for ExportKind {}
 
 impl NodeChild for StringLiteral {}
 

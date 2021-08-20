@@ -1150,7 +1150,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
         NodeKind::AssignmentExpression => ast::NodePtr::new(ast::Node {
             range,
             kind: ast::NodeKind::AssignmentExpression {
-                operator: cvt_label(hermes_get_AssignmentExpression_operator(n)),
+                operator: cvt_enum(hermes_get_AssignmentExpression_operator(n)),
                 left: cvt_node_ptr(hermes_get_AssignmentExpression_left(n)),
                 right: cvt_node_ptr(hermes_get_AssignmentExpression_right(n)),
             },
@@ -1158,7 +1158,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
         NodeKind::UnaryExpression => ast::NodePtr::new(ast::Node {
             range,
             kind: ast::NodeKind::UnaryExpression {
-                operator: cvt_label(hermes_get_UnaryExpression_operator(n)),
+                operator: cvt_enum(hermes_get_UnaryExpression_operator(n)),
                 argument: cvt_node_ptr(hermes_get_UnaryExpression_argument(n)),
                 prefix: hermes_get_UnaryExpression_prefix(n),
             },
@@ -1166,7 +1166,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
         NodeKind::UpdateExpression => ast::NodePtr::new(ast::Node {
             range,
             kind: ast::NodeKind::UpdateExpression {
-                operator: cvt_label(hermes_get_UpdateExpression_operator(n)),
+                operator: cvt_enum(hermes_get_UpdateExpression_operator(n)),
                 argument: cvt_node_ptr(hermes_get_UpdateExpression_argument(n)),
                 prefix: hermes_get_UpdateExpression_prefix(n),
             },
@@ -1193,7 +1193,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             kind: ast::NodeKind::LogicalExpression {
                 left: cvt_node_ptr(hermes_get_LogicalExpression_left(n)),
                 right: cvt_node_ptr(hermes_get_LogicalExpression_right(n)),
-                operator: cvt_label(hermes_get_LogicalExpression_operator(n)),
+                operator: cvt_enum(hermes_get_LogicalExpression_operator(n)),
             },
         }),
         NodeKind::ConditionalExpression => ast::NodePtr::new(ast::Node {
@@ -1209,7 +1209,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             kind: ast::NodeKind::BinaryExpression {
                 left: cvt_node_ptr(hermes_get_BinaryExpression_left(n)),
                 right: cvt_node_ptr(hermes_get_BinaryExpression_right(n)),
-                operator: cvt_label(hermes_get_BinaryExpression_operator(n)),
+                operator: cvt_enum(hermes_get_BinaryExpression_operator(n)),
             },
         }),
         NodeKind::Directive => ast::NodePtr::new(ast::Node {
@@ -1269,7 +1269,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
         NodeKind::VariableDeclaration => ast::NodePtr::new(ast::Node {
             range,
             kind: ast::NodeKind::VariableDeclaration {
-                kind: cvt_label(hermes_get_VariableDeclaration_kind(n)),
+                kind: cvt_enum(hermes_get_VariableDeclaration_kind(n)),
                 declarations: cvt_node_list(hermes_get_VariableDeclaration_declarations(n)),
             },
         }),
@@ -1300,7 +1300,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             kind: ast::NodeKind::Property {
                 key: cvt_node_ptr(hermes_get_Property_key(n)),
                 value: cvt_node_ptr(hermes_get_Property_value(n)),
-                kind: cvt_label(hermes_get_Property_kind(n)),
+                kind: cvt_enum(hermes_get_Property_kind(n)),
                 computed: hermes_get_Property_computed(n),
                 method: hermes_get_Property_method(n),
                 shorthand: hermes_get_Property_shorthand(n),
@@ -1372,7 +1372,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             kind: ast::NodeKind::MethodDefinition {
                 key: cvt_node_ptr(hermes_get_MethodDefinition_key(n)),
                 value: cvt_node_ptr(hermes_get_MethodDefinition_value(n)),
-                kind: cvt_label(hermes_get_MethodDefinition_kind(n)),
+                kind: cvt_enum(hermes_get_MethodDefinition_kind(n)),
                 computed: hermes_get_MethodDefinition_computed(n),
                 is_static: hermes_get_MethodDefinition_static(n),
             },
@@ -1383,7 +1383,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
                 specifiers: cvt_node_list(hermes_get_ImportDeclaration_specifiers(n)),
                 source: cvt_node_ptr(hermes_get_ImportDeclaration_source(n)),
                 attributes: cvt_node_list_opt(hermes_get_ImportDeclaration_attributes(n)),
-                import_kind: cvt_label(hermes_get_ImportDeclaration_importKind(n)),
+                import_kind: cvt_enum(hermes_get_ImportDeclaration_importKind(n)),
             },
         }),
         NodeKind::ImportSpecifier => ast::NodePtr::new(ast::Node {
@@ -1391,7 +1391,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             kind: ast::NodeKind::ImportSpecifier {
                 imported: cvt_node_ptr(hermes_get_ImportSpecifier_imported(n)),
                 local: cvt_node_ptr(hermes_get_ImportSpecifier_local(n)),
-                import_kind: cvt_label(hermes_get_ImportSpecifier_importKind(n)),
+                import_kind: cvt_enum(hermes_get_ImportSpecifier_importKind(n)),
             },
         }),
         NodeKind::ImportDefaultSpecifier => ast::NodePtr::new(ast::Node {
@@ -1419,7 +1419,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
                 declaration: cvt_node_ptr_opt(hermes_get_ExportNamedDeclaration_declaration(n)),
                 specifiers: cvt_node_list(hermes_get_ExportNamedDeclaration_specifiers(n)),
                 source: cvt_node_ptr_opt(hermes_get_ExportNamedDeclaration_source(n)),
-                export_kind: cvt_label(hermes_get_ExportNamedDeclaration_exportKind(n)),
+                export_kind: cvt_enum(hermes_get_ExportNamedDeclaration_exportKind(n)),
             },
         }),
         NodeKind::ExportSpecifier => ast::NodePtr::new(ast::Node {
@@ -1445,7 +1445,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             range,
             kind: ast::NodeKind::ExportAllDeclaration {
                 source: cvt_node_ptr(hermes_get_ExportAllDeclaration_source(n)),
-                export_kind: cvt_label(hermes_get_ExportAllDeclaration_exportKind(n)),
+                export_kind: cvt_enum(hermes_get_ExportAllDeclaration_exportKind(n)),
             },
         }),
         NodeKind::ObjectPattern => ast::NodePtr::new(ast::Node {

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use super::{Node, NodeChild, NodeLabel, NodeList, NodePtr, StringLiteral, Visitor};
+use super::*;
 
 /// Generate boilerplate code for the `NodeKind` enum.
 macro_rules! gen_nodekind_enum {

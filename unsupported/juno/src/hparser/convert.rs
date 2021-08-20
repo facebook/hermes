@@ -9,6 +9,7 @@ use super::generated_ffi::cvt_node_ptr;
 use super::node::*;
 use super::utf::*;
 use crate::ast;
+use std::str::FromStr;
 
 /// # Safety
 /// `n` must be valid.
@@ -46,4 +47,17 @@ pub fn cvt_label(u: NodeLabel) -> ast::NodeLabel {
 
 pub fn cvt_label_opt(u: NodeLabelOpt) -> Option<ast::NodeLabel> {
     u.as_node_label().map(cvt_label)
+}
+
+/// Convert any of the enum `NodeLabel`s into their respective Rust enum types.
+/// Use `unwrap` because the Hermes parser won't produce invalid strings in
+/// those property positions.
+/// Restrict the `Err` type on `T` to allow use of `unwrap` after `parse`.
+pub fn cvt_enum<T: FromStr>(u: NodeLabel) -> T
+where
+    <T as FromStr>::Err: std::fmt::Debug,
+{
+    unsafe { std::str::from_utf8_unchecked(u.as_slice()) }
+        .parse()
+        .unwrap()
 }

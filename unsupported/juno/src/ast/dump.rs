@@ -5,7 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use super::{Node, NodeKind, NodeLabel, NodeList, NodePtr, StringLiteral};
+use super::{
+    AssignmentExpressionOperator, BinaryExpressionOperator, ExportKind, ImportKind,
+    LogicalExpressionOperator, MethodDefinitionKind, Node, NodeKind, NodeLabel, NodeList, NodePtr,
+    PropertyKind, StringLiteral, UnaryExpressionOperator, UpdateExpressionOperator,
+    VariableDeclarationKind,
+};
 use crate::support::{case::ascii_snake_to_camel, json::*};
 use std::io::{self, Write};
 
@@ -65,6 +70,66 @@ impl DumpChild for bool {
 impl DumpChild for NodeLabel {
     fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(&self.str);
+    }
+}
+
+impl DumpChild for UnaryExpressionOperator {
+    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+        emitter.emit_string(self.as_str());
+    }
+}
+
+impl DumpChild for BinaryExpressionOperator {
+    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+        emitter.emit_string(self.as_str());
+    }
+}
+
+impl DumpChild for LogicalExpressionOperator {
+    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+        emitter.emit_string(self.as_str());
+    }
+}
+
+impl DumpChild for UpdateExpressionOperator {
+    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+        emitter.emit_string(self.as_str());
+    }
+}
+
+impl DumpChild for AssignmentExpressionOperator {
+    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+        emitter.emit_string(self.as_str());
+    }
+}
+
+impl DumpChild for VariableDeclarationKind {
+    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+        emitter.emit_string(self.as_str());
+    }
+}
+
+impl DumpChild for PropertyKind {
+    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+        emitter.emit_string(self.as_str());
+    }
+}
+
+impl DumpChild for MethodDefinitionKind {
+    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+        emitter.emit_string(self.as_str());
+    }
+}
+
+impl DumpChild for ImportKind {
+    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+        emitter.emit_string(self.as_str());
+    }
+}
+
+impl DumpChild for ExportKind {
+    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+        emitter.emit_string(self.as_str());
     }
 }
 

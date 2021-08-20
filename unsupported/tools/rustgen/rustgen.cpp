@@ -401,7 +401,23 @@ static void genConvert() {
           llvh::outs() << "cvt_string" << (fld.optional ? "_opt" : "") << "(";
           break;
         case FieldType::NodeLabel:
-          llvh::outs() << "cvt_label" << (fld.optional ? "_opt" : "") << "(";
+          if ((cls.name == "UnaryExpression" && fld.name == "operator") ||
+              (cls.name == "BinaryExpression" && fld.name == "operator") ||
+              (cls.name == "LogicalExpression" && fld.name == "operator") ||
+              (cls.name == "UpdateExpression" && fld.name == "operator") ||
+              (cls.name == "VariableDeclaration" && fld.name == "kind") ||
+              (cls.name == "Property" && fld.name == "kind") ||
+              (cls.name == "MethodDefinition" && fld.name == "kind") ||
+              (cls.name == "ImportDeclaration" && fld.name == "importKind") ||
+              (cls.name == "ImportSpecifier" && fld.name == "importKind") ||
+              (cls.name == "ExportNamedDeclaration" &&
+               fld.name == "exportKind") ||
+              (cls.name == "ExportAllDeclaration" &&
+               fld.name == "exportKind") ||
+              (cls.name == "AssignmentExpression" && fld.name == "operator"))
+            llvh::outs() << "cvt_enum(";
+          else
+            llvh::outs() << "cvt_label" << (fld.optional ? "_opt" : "") << "(";
           break;
         case FieldType::Boolean:
         case FieldType::Number:
