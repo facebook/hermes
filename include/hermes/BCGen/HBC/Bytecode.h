@@ -15,7 +15,6 @@
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/DebugInfo.h"
 #include "hermes/BCGen/HBC/StringKind.h"
-#include "hermes/IR/IR.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Support/RegExpSerialization.h"
 #include "hermes/Support/StringTableEntry.h"
@@ -58,43 +57,11 @@ class BytecodeFunction {
   /// Used during serialization. \p opcodes will be swapped after this call.
   explicit BytecodeFunction(
       std::vector<opcode_atom_t> &&opcodesAndJumpTables,
-      Function::DefinitionKind definitionKind,
-      ValueKind valueKind,
-      bool strictMode,
       FunctionHeader &&header,
       std::vector<HBCExceptionHandlerInfo> &&exceptionHandlers)
       : opcodesAndJumpTables_(std::move(opcodesAndJumpTables)),
         header_(std::move(header)),
-        exceptions_(std::move(exceptionHandlers)) {
-    switch (definitionKind) {
-      case Function::DefinitionKind::ES6Arrow:
-      case Function::DefinitionKind::ES6Method:
-        header_.flags.prohibitInvoke = FunctionHeaderFlag::ProhibitConstruct;
-        break;
-      case Function::DefinitionKind::ES6Constructor:
-        header_.flags.prohibitInvoke = FunctionHeaderFlag::ProhibitCall;
-        break;
-      default:
-        // ES9.0 9.2.3 step 4 states that generator functions and async
-        // functions cannot be constructed.
-        // We place this check outside the `DefinitionKind` because generator
-        // functions may also be ES6 methods, for example, and are not included
-        // in the DefinitionKind enum.
-        // Note that we only have to check for GeneratorFunctionKind in this
-        // case, because ES6 methods are already checked above, and ES6
-        // constructors are prohibited from being generator functions.
-        // As such, this is the only case in which we must change the
-        // prohibitInvoke flag based on valueKind.
-        header_.flags.prohibitInvoke =
-            (valueKind == ValueKind::GeneratorFunctionKind ||
-             valueKind == ValueKind::AsyncFunctionKind)
-            ? FunctionHeaderFlag::ProhibitConstruct
-            : FunctionHeaderFlag::ProhibitNone;
-        break;
-    }
-    header_.flags.strictMode = strictMode;
-    header_.flags.hasExceptionHandler = exceptions_.size();
-  }
+        exceptions_(std::move(exceptionHandlers)) {}
 
   const FunctionHeader &getHeader() const {
     return header_;
