@@ -28,7 +28,6 @@ using hermes::vm::Serializer;
 namespace hermes {
 namespace hbc {
 
-#ifndef HERMESVM_LEAN
 namespace {
 bool isSingleFunctionExpression(ESTree::NodePtr ast) {
   auto *prog = llvh::dyn_cast<ESTree::ProgramNode>(ast);
@@ -277,7 +276,6 @@ void BCProviderLazy::serialize(Serializer &s) const {
   hermes_fatal("Cannot serialize lazy BCProvider");
 }
 #endif // HERMESVM_SERIALIZE
-#endif // HERMESVM_LEAN
 
 } // namespace hbc
 } // namespace hermes

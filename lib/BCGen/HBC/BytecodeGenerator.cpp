@@ -298,9 +298,6 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
         functionNameId);
 
     if (F->isLazy()) {
-#ifdef HERMESVM_LEAN
-      llvm_unreachable("Lazy support compiled out");
-#else
       auto lazyData = std::make_unique<LazyCompilationData>();
       lazyData->context = F->getParent()->shareContext();
       lazyData->parentScope = F->getLazyScope();
@@ -315,7 +312,6 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
           : Identifier();
       lazyData->strictMode = F->isStrictMode();
       func->setLazyCompilationData(std::move(lazyData));
-#endif
     }
 
     if (BFG.hasDebugInfo()) {
