@@ -35,3 +35,17 @@ add_hermes_library(hermesHBCBackend
   hermesSourceMap
   hermesAST
 )
+
+add_hermes_library(hermesHBCBackendLean
+  STATIC
+  BytecodeDataProvider.cpp
+  ConsecutiveStringStorage.cpp
+  DebugInfo.cpp
+  SerializedLiteralParserBase.cpp
+  SimpleBytecodeBuilder.cpp
+  UniquingFilenameTable.cpp
+  LINK_LIBS
+  hermesSupport
+)
+
+target_compile_definitions(hermesHBCBackendLean PUBLIC HERMESVM_LEAN)

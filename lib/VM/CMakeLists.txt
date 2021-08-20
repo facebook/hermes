@@ -171,10 +171,8 @@ set(link_libs
   hermesADT
   hermesInst
   hermesSupport
-  hermesParser
   hermesPlatform
   hermesPlatformIntl
-  hermesHBCBackend
   hermesInternalBytecode
   dtoa
   ${CORE_FOUNDATION}
@@ -183,8 +181,19 @@ set(link_libs
 add_hermes_library(hermesVMRuntime STATIC ${source_files}
     LINK_LIBS
     ${link_libs}
+    hermesHBCBackend
+    hermesParser
 )
 
 hermes_link_icu(hermesVMRuntime)
+
+add_hermes_library(hermesVMRuntimeLean STATIC ${source_files}
+    LINK_LIBS
+    ${link_libs}
+    hermesHBCBackendLean
+)
+target_compile_definitions(hermesVMRuntimeLean PUBLIC HERMESVM_LEAN)
+
+hermes_link_icu(hermesVMRuntimeLean)
 
 add_subdirectory(Instrumentation)

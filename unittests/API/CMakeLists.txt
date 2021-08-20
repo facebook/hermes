@@ -9,7 +9,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(APITestsSources
   APITest.cpp
   APITestFactory.cpp
-  APILeanTest.cpp
   DebuggerTest.cpp
   SegmentTest.cpp
   )
@@ -34,3 +33,6 @@ add_hermes_unittest(APITests ${APITestsSources})
 # TODO: The synth trace and heap snapshot tests are currently disabled
 # because of build issues. We should find a way to re-enable them.
 target_link_libraries(APITests hermesapi compileJS SegmentTestCompile)
+
+add_hermes_unittest(APILeanTests APILeanTest.cpp)
+target_link_libraries(APILeanTests hermesapiLean)

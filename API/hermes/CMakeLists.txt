@@ -16,6 +16,11 @@ add_hermes_library(hermesapi
         LINK_LIBS jsi hermesVMRuntime)
 target_include_directories(hermesapi PUBLIC ..)
 
+add_hermes_library(hermesapiLean
+        ${api_sources}
+        LINK_LIBS jsi hermesVMRuntimeLean)
+target_include_directories(hermesapiLean PUBLIC ..)
+
 add_hermes_library(synthTrace hermes_tracing.cpp SynthTrace.cpp TracingRuntime.cpp
   LINK_LIBS hermesapi)
 
@@ -40,9 +45,17 @@ set(HERMES_ENABLE_EH ON)
 set(HERMES_ENABLE_RTTI ON)
 
 add_library(libhermes SHARED ${api_sources})
+
+# This is configured using a cmake flag instead of a separate target, because
+# we need the output to be named "libhermes.so".
+set(LIBHERMES_VM_DEP hermesVMRuntime)
+if(HERMES_BUILD_LEAN_LIBHERMES)
+  set(LIBHERMES_VM_DEP hermesVMRuntimeLean)
+endif()
+
 target_link_libraries(libhermes
   jsi
-  hermesVMRuntime
+  ${LIBHERMES_VM_DEP}
   ${CORE_FOUNDATION}
   # Linker flags
   ${OPTIONAL_GC_SECTIONS}
