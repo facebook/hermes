@@ -11,9 +11,11 @@ using namespace hermes;
 
 namespace hermes {
 
-llvh::Optional<SourceMapTextLocation> SourceMap::getLocationForAddress(
-    uint32_t line,
-    uint32_t column) const {
+/// Query source map text location for \p line and \p column.
+/// In both the input and output of this function, line and column numbers
+/// are 1-based.
+llvh::Optional<SourceMapTextLocationFIndex>
+SourceMap::getLocationForAddressFIndex(uint32_t line, uint32_t column) const {
   auto seg = this->getSegmentForAddress(line, column);
   // Unmapped location
   if (!seg.hasValue() || !seg->representedLocation.hasValue()) {
@@ -23,12 +25,21 @@ llvh::Optional<SourceMapTextLocation> SourceMap::getLocationForAddress(
   assert(
       (size_t)seg->representedLocation->sourceIndex < sources_.size() &&
       "SourceIndex is out-of-range.");
-  std::string fileName =
-      getSourceFullPath(seg->representedLocation->sourceIndex);
-  return SourceMapTextLocation{
-      std::move(fileName),
+  return SourceMapTextLocationFIndex{
+      (uint32_t)seg->representedLocation->sourceIndex,
       (uint32_t)seg->representedLocation->lineIndex + 1,
       (uint32_t)seg->representedLocation->columnIndex + 1};
+}
+
+llvh::Optional<SourceMapTextLocation> SourceMap::getLocationForAddress(
+    uint32_t line,
+    uint32_t column) const {
+  auto loc = getLocationForAddressFIndex(line, column);
+  if (!loc)
+    return llvh::None;
+
+  return SourceMapTextLocation{
+      getSourceFullPath(loc->fileIndex), loc->line, loc->column};
 }
 
 llvh::Optional<SourceMap::Segment> SourceMap::getSegmentForAddress(
