@@ -103,24 +103,16 @@ trait NodeChild {
     /// Visit this child of the given `node`.
     /// Should be no-op for any type that doesn't contain pointers to other
     /// `Node`s.
-    fn visit<'a, V: Visitor<'a>>(&'a self, visitor: &mut V, node: &'a Node);
+    fn visit<'a, V: Visitor<'a>>(&'a self, _visitor: &mut V, _node: &'a Node) {}
 }
 
-impl NodeChild for f64 {
-    fn visit<'a, V: Visitor<'a>>(&self, _visitor: &mut V, _node: &Node) {}
-}
+impl NodeChild for f64 {}
 
-impl NodeChild for bool {
-    fn visit<'a, V: Visitor<'a>>(&self, _visitor: &mut V, _node: &Node) {}
-}
+impl NodeChild for bool {}
 
-impl NodeChild for NodeLabel {
-    fn visit<'a, V: Visitor<'a>>(&self, _visitor: &mut V, _node: &Node) {}
-}
+impl NodeChild for NodeLabel {}
 
-impl NodeChild for StringLiteral {
-    fn visit<'a, V: Visitor<'a>>(&self, _visitor: &mut V, _node: &Node) {}
-}
+impl NodeChild for StringLiteral {}
 
 impl<T: NodeChild> NodeChild for Option<T> {
     fn visit<'a, V: Visitor<'a>>(&'a self, visitor: &mut V, node: &'a Node) {
