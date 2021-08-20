@@ -15,19 +15,6 @@ add_hermes_library(hermesapi
         ${api_sources}
         LINK_LIBS jsi hermesVMRuntime)
 
-set(hermesapi_compile_flags "")
-if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
-    "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-  string(APPEND hermesapi_compile_flags " -Wno-non-virtual-dtor")
-endif()
-
-set_property(TARGET hermesapi PROPERTY
-  CXX_STANDARD 14)
-set_property(TARGET hermesapi APPEND_STRING PROPERTY
-  COMPILE_FLAGS ${hermesapi_compile_flags})
-set_property(TARGET hermesapi APPEND_STRING PROPERTY
-  COMPILE_DEFINITIONS "CREATE_SHARED_LIBRARY")
-
 add_hermes_library(synthTrace hermes_tracing.cpp SynthTrace.cpp TracingRuntime.cpp
   LINK_LIBS hermesapi)
 
