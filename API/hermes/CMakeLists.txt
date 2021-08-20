@@ -38,36 +38,20 @@ add_hermes_library(compileJS STATIC CompileJS.cpp)
 set(HERMES_ENABLE_EH ON)
 set(HERMES_ENABLE_RTTI ON)
 
-add_library(libhermes SHARED ${api_sources} ${api_headers} ${api_public_headers})
+add_library(libhermes SHARED ${api_sources})
 target_link_libraries(libhermes
   jsi
   hermesVMRuntime
   ${CORE_FOUNDATION}
+  # Linker flags
+  ${OPTIONAL_GC_SECTIONS}
 )
 hermes_link_icu(libhermes)
 
 # Export the required header directory
 target_include_directories(libhermes PUBLIC ..)
 
-if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
-    "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-  # The linker doesn't support -flto -Os, so make sure it's linked with -O3.
-  # This only affects linking, not compilation, so without -flto it's a no-op.
-  # In other words, if the compiler flags are -O0 -fno-lto, then the resulting
-  # library will be -O0 in spite of setting -O3 here.
-  set(link_flags "-O3 ${OPTIONAL_GC_SECTIONS} ${OPTIONAL_JNI_ONLOAD}")
-elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
-  # Same as above, but for windows.
-  set(compile_flags "")
-  set(link_flags "/O2 ${OPTIONAL_GC_SECTIONS} ${OPTIONAL_JNI_ONLOAD}")
-endif()
-
 set_target_properties(libhermes PROPERTIES
-  COMPILE_FLAGS "${compile_flags}"
-  LINK_FLAGS "${link_flags}"
-  # Declare our dependency on std::make_unique
-  CXX_STANDARD 14
-  CXX_STANDARD_REQUIRED 14
   # Avoid becoming liblibhermes (and there's already a target called 'hermes')
   OUTPUT_NAME hermes
 )
