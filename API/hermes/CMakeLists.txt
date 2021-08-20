@@ -14,6 +14,7 @@ file(GLOB api_public_headers ${PROJECT_SOURCE_DIR}/public/hermes/Public/*.h)
 add_hermes_library(hermesapi
         ${api_sources}
         LINK_LIBS jsi hermesVMRuntime)
+target_include_directories(hermesapi PUBLIC ..)
 
 add_hermes_library(synthTrace hermes_tracing.cpp SynthTrace.cpp TracingRuntime.cpp
   LINK_LIBS hermesapi)
