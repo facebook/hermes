@@ -402,17 +402,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
 
       case '/':
         if (curCharPtr_[1] == '/') { // Line comment?
-          if (LLVM_UNLIKELY(curCharPtr_[2] == '#')) {
-            if (auto sourceMappingUrl =
-                    tryReadMagicComment("sourceMappingURL", curCharPtr_)) {
-              sm_.setSourceMappingUrl(bufId_, sourceMappingUrl.getValue());
-            } else if (
-                auto sourceUrl =
-                    tryReadMagicComment("sourceURL", curCharPtr_)) {
-              sm_.setSourceUrl(bufId_, sourceUrl.getValue());
-            }
-          }
-          curCharPtr_ = skipLineComment(curCharPtr_);
+          scanLineComment(curCharPtr_);
           continue;
         } else if (curCharPtr_[1] == '*') { // Block comment?
           curCharPtr_ = skipBlockComment(curCharPtr_);
@@ -435,7 +425,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
         if (LLVM_UNLIKELY(
                 curCharPtr_ == bufferStart_ && curCharPtr_[1] == '!')) {
           // #! (hashbang) at the very start of the buffer.
-          curCharPtr_ = skipLineComment(curCharPtr_);
+          scanLineComment(curCharPtr_);
           continue;
         }
         if (!scanPrivateIdentifier()) {
@@ -1211,19 +1201,18 @@ llvh::Optional<uint32_t> JSLexer::consumeBracedCodePoint(bool errorOnFail) {
   return failed ? llvh::None : llvh::Optional<uint32_t>{cp};
 }
 
-const char *JSLexer::skipLineComment(const char *start) {
+llvh::StringRef JSLexer::lineCommentHelper(const char *start) {
   assert(
       (start[0] == '/' && start[1] == '/') ||
       (start[0] == '#' && start[1] == '!'));
-  SMLoc lineCommentStart = SMLoc::getFromPointer(start);
-  SMLoc lineCommentEnd;
+  const char *lineCommentEnd;
   const char *cur = start + 2;
 
   for (;;) {
     switch ((unsigned char)*cur) {
       case 0:
         if (cur == bufferEnd_) {
-          lineCommentEnd = SMLoc::getFromPointer(cur);
+          lineCommentEnd = cur;
           goto endLoop;
         } else {
           ++cur;
@@ -1232,16 +1221,16 @@ const char *JSLexer::skipLineComment(const char *start) {
 
       case '\r':
       case '\n':
-        lineCommentEnd = SMLoc::getFromPointer(cur);
+        lineCommentEnd = cur;
         ++cur;
         newLineBeforeCurrentToken_ = true;
         goto endLoop;
 
-      // Line separator \u2028 UTF8 encoded is      : e2 80 a8
-      // Paragraph separator \u2029 UTF8 encoded is: e2 80 a9
+        // Line separator \u2028 UTF8 encoded is      : e2 80 a8
+        // Paragraph separator \u2029 UTF8 encoded is: e2 80 a9
       case UTF8_LINE_TERMINATOR_CHAR0:
         if (matchUnicodeLineTerminatorOffset1(cur)) {
-          lineCommentEnd = SMLoc::getFromPointer(cur);
+          lineCommentEnd = cur;
           cur += 3;
           newLineBeforeCurrentToken_ = true;
           goto endLoop;
@@ -1260,14 +1249,31 @@ const char *JSLexer::skipLineComment(const char *start) {
   }
 endLoop:
 
+  curCharPtr_ = cur;
+  return llvh::StringRef(start, lineCommentEnd - start);
+}
+
+void JSLexer::scanLineComment(const char *start) {
+  llvh::StringRef comment = lineCommentHelper(start);
+
   if (storeComments_) {
     commentStorage_.emplace_back(
         start[0] == '/' ? StoredComment::Kind::Line
                         : StoredComment::Kind::Hashbang,
-        SMRange{lineCommentStart, lineCommentEnd});
+        SMRange{
+            SMLoc::getFromPointer(comment.begin()),
+            SMLoc::getFromPointer(comment.end())});
   }
 
-  return cur;
+  // Check for magic comments, which excludes #!.
+  // Syntax is //# name=value
+  if (!comment.consume_front(llvh::StringLiteral("//# ")))
+    return;
+
+  if (comment.consume_front(llvh::StringLiteral("sourceURL=")))
+    sm_.setSourceUrl(bufId_, comment);
+  else if (comment.consume_front(llvh::StringLiteral("sourceMappingURL=")))
+    sm_.setSourceMappingUrl(bufId_, comment);
 }
 
 const char *JSLexer::skipBlockComment(const char *start) {
@@ -1329,28 +1335,6 @@ endLoop:
   }
 
   return cur;
-}
-
-llvh::Optional<StringRef> JSLexer::tryReadMagicComment(
-    llvh::StringRef name,
-    const char *ptr) {
-  assert(
-      ptr[0] == '/' && ptr[1] == '/' && ptr[2] == '#' &&
-      "Invalid start of magic comment");
-
-  llvh::StringRef str{ptr, static_cast<size_t>(bufferEnd_ - ptr)};
-
-  // Syntax is //# name=value
-  auto isMatch = str.consume_front("//# ") && str.consume_front(name) &&
-      str.consume_front("=");
-  if (!isMatch) {
-    return llvh::None;
-  }
-
-  // Read until the next newline.
-  llvh::StringRef value =
-      str.take_while([](char c) -> bool { return c != '\n' && c != '\r'; });
-  return value;
 }
 
 void JSLexer::scanNumber(GrammarContext grammarContext) {
@@ -1492,8 +1476,8 @@ end:
   } else if (
       !real && radix == 10 && curCharPtr_ - start <= 9 &&
       LLVM_LIKELY(!seenSeparator)) {
-    // If this is a decimal integer of at most 9 digits (log10(2**31-1), it can
-    // fit in a 32-bit integer. Use a faster conversion.
+    // If this is a decimal integer of at most 9 digits (log10(2**31-1), it
+    // can fit in a 32-bit integer. Use a faster conversion.
     int32_t ival = *start - '0';
     while (++start != curCharPtr_)
       ival = ival * 10 + (*start - '0');
@@ -1573,8 +1557,8 @@ end:
       }
     }
 
-    // Handle the zero-radix case. This could only happen with radix 16 because
-    // otherwise start wouldn't have been changed.
+    // Handle the zero-radix case. This could only happen with radix 16
+    // because otherwise start wouldn't have been changed.
     if (curCharPtr_ == start) {
       errorRange(
           token_.getStartLoc(),
@@ -2005,8 +1989,8 @@ void JSLexer::scanTemplateLiteral() {
         }
 
         case 'u': {
-          // Pointer to the first character after the 'u', which is where we can
-          // continue scanning from if we fail to decode an escape.
+          // Pointer to the first character after the 'u', which is where we
+          // can continue scanning from if we fail to decode an escape.
           const char *start = curCharPtr_ + 1;
           // Reset the pointer to the '\' to scan the unicode escape.
           --curCharPtr_;
@@ -2071,9 +2055,10 @@ void JSLexer::scanTemplateLiteral() {
       sm_.note(token_.getStartLoc(), "template literal started here");
       break;
     } else if (*curCharPtr_ == '\r') {
-      // The TV of LineTerminatorSequence is the TRV of LineTerminatorSequence.
-      // The only time this differs from the same characters as the bytes in the
-      // file is when the sequence begins with a <CR>.
+      // The TV of LineTerminatorSequence is the TRV of
+      // LineTerminatorSequence. The only time this differs from the same
+      // characters as the bytes in the file is when the sequence begins with
+      // a <CR>.
       tmpStorage_.push_back(trv(*curCharPtr_));
       rawStorage_.push_back(trv(*curCharPtr_));
       curCharPtr_++;
@@ -2095,11 +2080,10 @@ void JSLexer::scanTemplateLiteral() {
     }
   }
 breakLoop:
-  // If the template literal is tagged and contains invalid escapes, then cooked
-  // should be null because there is no way to cook it, per the ESTree 2018
-  // spec.
-  // The parser will error when encountering an untagged literal with invalid
-  // escapes, so we place nullptr here.
+  // If the template literal is tagged and contains invalid escapes, then
+  // cooked should be null because there is no way to cook it, per the ESTree
+  // 2018 spec. The parser will error when encountering an untagged literal
+  // with invalid escapes, so we place nullptr here.
   UniqueString *cookedStr =
       foundNotEscapeSequence ? nullptr : getStringLiteral(tmpStorage_.str());
   UniqueString *rawStr = getStringLiteral(rawStorage_.str());
@@ -2207,8 +2191,8 @@ exitLoop:
     } else if (*curCharPtr_ == '\\') {
       tmpStorage_.push_back(*curCharPtr_++);
 
-      // ES6 11.8.5.1: It is a Syntax Error if IdentifierPart contains a Unicode
-      // escape sequence.
+      // ES6 11.8.5.1: It is a Syntax Error if IdentifierPart contains a
+      // Unicode escape sequence.
       escapingBackslash = !escapingBackslash;
       if (escapingBackslash && *curCharPtr_ == 'u') {
         error(
