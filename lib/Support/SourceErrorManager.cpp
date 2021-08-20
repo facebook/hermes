@@ -28,9 +28,8 @@ void SourceErrorManager::BufferedMessage::addNote(
     DiagKind dk,
     SMLoc loc,
     SMRange sm,
-    std::string &&msg,
-    const SourceCoords &coords) {
-  bufferedNotes.emplace_back(dk, loc, sm, std::move(msg), coords);
+    std::string &&msg) {
+  bufferedNotes.emplace_back(dk, loc, sm, std::move(msg));
 
   if (!noteCount_)
     firstNote_ = bufferedNotes.size() - 1;
@@ -64,11 +63,11 @@ void SourceErrorManager::disableBuffering() {
       bufferedMessages_.end(),
       [](const BufferedMessage &a, const BufferedMessage &b) {
         // Make sure the "too many errors" message is always last.
-        if (a.dk == DK_Error && !a.coords.isValid() && a.msg == sTooManyErrors)
+        if (a.dk == DK_Error && !a.loc.isValid() && a.msg == sTooManyErrors)
           return false;
-        if (b.dk == DK_Error && !b.coords.isValid() && b.msg == sTooManyErrors)
+        if (b.dk == DK_Error && !b.loc.isValid() && b.msg == sTooManyErrors)
           return true;
-        return a.coords.less(b.coords);
+        return a.loc.getPointer() < b.loc.getPointer();
       });
 
   // Print them.
@@ -142,17 +141,13 @@ void SourceErrorManager::doGenMessage(
     llvh::SMRange sm,
     llvh::Twine const &msg) {
   if (bufferingEnabled_) {
-    SourceCoords coords;
-    findBufferLineAndLoc(loc, coords);
-
     // If this message is a note, try to associate it with the last message.
     // Note that theoretically the first buffered message could be a note, so
     // we play it safe here (even though it should never happen).
     if (dk == DK_Note && !bufferedMessages_.empty()) {
-      bufferedMessages_.back().addNote(
-          bufferedNotes_, dk, loc, sm, msg.str(), coords);
+      bufferedMessages_.back().addNote(bufferedNotes_, dk, loc, sm, msg.str());
     } else {
-      bufferedMessages_.emplace_back(dk, loc, sm, msg.str(), coords);
+      bufferedMessages_.emplace_back(dk, loc, sm, msg.str());
     }
   } else {
     doPrintMessage(dk, loc, sm, msg);
