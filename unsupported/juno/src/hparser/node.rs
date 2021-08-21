@@ -15,11 +15,23 @@ pub struct SMLoc {
     ptr: *const u8,
 }
 
+impl SMLoc {
+    pub fn is_valid(self) -> bool {
+        !self.ptr.is_null()
+    }
+
+    pub fn pred(self) -> SMLoc {
+        SMLoc {
+            ptr: self.ptr.wrapping_sub(1),
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct SMRange {
-    start: SMLoc,
-    end: SMLoc,
+    pub start: SMLoc,
+    pub end: SMLoc,
 }
 
 #[repr(C)]

@@ -10,7 +10,6 @@
 
 use super::{node::*, convert::*};
 use crate::ast;
-use crate::ast::{SourceRange, SourceLoc};
 
 #[repr(u32)]
 #[derive(Debug, PartialEq)]
@@ -853,9 +852,9 @@ extern "C" {
     pub fn hermes_get_CoverTypedIdentifier_optional(node: NodePtr) -> bool;
 }
 
-pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
+pub unsafe fn cvt_node_ptr(cvt: &Converter, n: NodePtr) -> ast::NodePtr {
     let nr = n.as_ref();
-    let range = SourceRange { file: 0, start: SourceLoc { line: 0, col: 0 }, end: SourceLoc { line: 0, col: 0 } };
+    let range = cvt.smrange(nr.source_range);
 
     match nr.kind {
         NodeKind::Empty => ast::NodePtr::new(
@@ -876,7 +875,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::Program {
-                    body: cvt_node_list(hermes_get_Program_body(n)),
+                    body: cvt_node_list(cvt, hermes_get_Program_body(n)),
                 },
             }
         ),
@@ -884,12 +883,12 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::FunctionExpression {
-                    id: cvt_node_ptr_opt(hermes_get_FunctionExpression_id(n)),
-                    params: cvt_node_list(hermes_get_FunctionExpression_params(n)),
-                    body: cvt_node_ptr(hermes_get_FunctionExpression_body(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_FunctionExpression_typeParameters(n)),
-                    return_type: cvt_node_ptr_opt(hermes_get_FunctionExpression_returnType(n)),
-                    predicate: cvt_node_ptr_opt(hermes_get_FunctionExpression_predicate(n)),
+                    id: cvt_node_ptr_opt(cvt, hermes_get_FunctionExpression_id(n)),
+                    params: cvt_node_list(cvt, hermes_get_FunctionExpression_params(n)),
+                    body: cvt_node_ptr(cvt, hermes_get_FunctionExpression_body(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_FunctionExpression_typeParameters(n)),
+                    return_type: cvt_node_ptr_opt(cvt, hermes_get_FunctionExpression_returnType(n)),
+                    predicate: cvt_node_ptr_opt(cvt, hermes_get_FunctionExpression_predicate(n)),
                     generator: hermes_get_FunctionExpression_generator(n),
                     is_async: hermes_get_FunctionExpression_async(n),
                 },
@@ -899,12 +898,12 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ArrowFunctionExpression {
-                    id: cvt_node_ptr_opt(hermes_get_ArrowFunctionExpression_id(n)),
-                    params: cvt_node_list(hermes_get_ArrowFunctionExpression_params(n)),
-                    body: cvt_node_ptr(hermes_get_ArrowFunctionExpression_body(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_ArrowFunctionExpression_typeParameters(n)),
-                    return_type: cvt_node_ptr_opt(hermes_get_ArrowFunctionExpression_returnType(n)),
-                    predicate: cvt_node_ptr_opt(hermes_get_ArrowFunctionExpression_predicate(n)),
+                    id: cvt_node_ptr_opt(cvt, hermes_get_ArrowFunctionExpression_id(n)),
+                    params: cvt_node_list(cvt, hermes_get_ArrowFunctionExpression_params(n)),
+                    body: cvt_node_ptr(cvt, hermes_get_ArrowFunctionExpression_body(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_ArrowFunctionExpression_typeParameters(n)),
+                    return_type: cvt_node_ptr_opt(cvt, hermes_get_ArrowFunctionExpression_returnType(n)),
+                    predicate: cvt_node_ptr_opt(cvt, hermes_get_ArrowFunctionExpression_predicate(n)),
                     expression: hermes_get_ArrowFunctionExpression_expression(n),
                     is_async: hermes_get_ArrowFunctionExpression_async(n),
                 },
@@ -914,12 +913,12 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::FunctionDeclaration {
-                    id: cvt_node_ptr_opt(hermes_get_FunctionDeclaration_id(n)),
-                    params: cvt_node_list(hermes_get_FunctionDeclaration_params(n)),
-                    body: cvt_node_ptr(hermes_get_FunctionDeclaration_body(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_FunctionDeclaration_typeParameters(n)),
-                    return_type: cvt_node_ptr_opt(hermes_get_FunctionDeclaration_returnType(n)),
-                    predicate: cvt_node_ptr_opt(hermes_get_FunctionDeclaration_predicate(n)),
+                    id: cvt_node_ptr_opt(cvt, hermes_get_FunctionDeclaration_id(n)),
+                    params: cvt_node_list(cvt, hermes_get_FunctionDeclaration_params(n)),
+                    body: cvt_node_ptr(cvt, hermes_get_FunctionDeclaration_body(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_FunctionDeclaration_typeParameters(n)),
+                    return_type: cvt_node_ptr_opt(cvt, hermes_get_FunctionDeclaration_returnType(n)),
+                    predicate: cvt_node_ptr_opt(cvt, hermes_get_FunctionDeclaration_predicate(n)),
                     generator: hermes_get_FunctionDeclaration_generator(n),
                     is_async: hermes_get_FunctionDeclaration_async(n),
                 },
@@ -929,8 +928,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::WhileStatement {
-                    body: cvt_node_ptr(hermes_get_WhileStatement_body(n)),
-                    test: cvt_node_ptr(hermes_get_WhileStatement_test(n)),
+                    body: cvt_node_ptr(cvt, hermes_get_WhileStatement_body(n)),
+                    test: cvt_node_ptr(cvt, hermes_get_WhileStatement_test(n)),
                 },
             }
         ),
@@ -938,8 +937,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::DoWhileStatement {
-                    body: cvt_node_ptr(hermes_get_DoWhileStatement_body(n)),
-                    test: cvt_node_ptr(hermes_get_DoWhileStatement_test(n)),
+                    body: cvt_node_ptr(cvt, hermes_get_DoWhileStatement_body(n)),
+                    test: cvt_node_ptr(cvt, hermes_get_DoWhileStatement_test(n)),
                 },
             }
         ),
@@ -947,9 +946,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ForInStatement {
-                    left: cvt_node_ptr(hermes_get_ForInStatement_left(n)),
-                    right: cvt_node_ptr(hermes_get_ForInStatement_right(n)),
-                    body: cvt_node_ptr(hermes_get_ForInStatement_body(n)),
+                    left: cvt_node_ptr(cvt, hermes_get_ForInStatement_left(n)),
+                    right: cvt_node_ptr(cvt, hermes_get_ForInStatement_right(n)),
+                    body: cvt_node_ptr(cvt, hermes_get_ForInStatement_body(n)),
                 },
             }
         ),
@@ -957,9 +956,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ForOfStatement {
-                    left: cvt_node_ptr(hermes_get_ForOfStatement_left(n)),
-                    right: cvt_node_ptr(hermes_get_ForOfStatement_right(n)),
-                    body: cvt_node_ptr(hermes_get_ForOfStatement_body(n)),
+                    left: cvt_node_ptr(cvt, hermes_get_ForOfStatement_left(n)),
+                    right: cvt_node_ptr(cvt, hermes_get_ForOfStatement_right(n)),
+                    body: cvt_node_ptr(cvt, hermes_get_ForOfStatement_body(n)),
                     is_await: hermes_get_ForOfStatement_await(n),
                 },
             }
@@ -968,10 +967,10 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ForStatement {
-                    init: cvt_node_ptr_opt(hermes_get_ForStatement_init(n)),
-                    test: cvt_node_ptr_opt(hermes_get_ForStatement_test(n)),
-                    update: cvt_node_ptr_opt(hermes_get_ForStatement_update(n)),
-                    body: cvt_node_ptr(hermes_get_ForStatement_body(n)),
+                    init: cvt_node_ptr_opt(cvt, hermes_get_ForStatement_init(n)),
+                    test: cvt_node_ptr_opt(cvt, hermes_get_ForStatement_test(n)),
+                    update: cvt_node_ptr_opt(cvt, hermes_get_ForStatement_update(n)),
+                    body: cvt_node_ptr(cvt, hermes_get_ForStatement_body(n)),
                 },
             }
         ),
@@ -993,7 +992,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::BlockStatement {
-                    body: cvt_node_list(hermes_get_BlockStatement_body(n)),
+                    body: cvt_node_list(cvt, hermes_get_BlockStatement_body(n)),
                 },
             }
         ),
@@ -1001,7 +1000,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::BreakStatement {
-                    label: cvt_node_ptr_opt(hermes_get_BreakStatement_label(n)),
+                    label: cvt_node_ptr_opt(cvt, hermes_get_BreakStatement_label(n)),
                 },
             }
         ),
@@ -1009,7 +1008,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ContinueStatement {
-                    label: cvt_node_ptr_opt(hermes_get_ContinueStatement_label(n)),
+                    label: cvt_node_ptr_opt(cvt, hermes_get_ContinueStatement_label(n)),
                 },
             }
         ),
@@ -1017,7 +1016,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ThrowStatement {
-                    argument: cvt_node_ptr(hermes_get_ThrowStatement_argument(n)),
+                    argument: cvt_node_ptr(cvt, hermes_get_ThrowStatement_argument(n)),
                 },
             }
         ),
@@ -1025,7 +1024,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ReturnStatement {
-                    argument: cvt_node_ptr_opt(hermes_get_ReturnStatement_argument(n)),
+                    argument: cvt_node_ptr_opt(cvt, hermes_get_ReturnStatement_argument(n)),
                 },
             }
         ),
@@ -1033,8 +1032,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::WithStatement {
-                    object: cvt_node_ptr(hermes_get_WithStatement_object(n)),
-                    body: cvt_node_ptr(hermes_get_WithStatement_body(n)),
+                    object: cvt_node_ptr(cvt, hermes_get_WithStatement_object(n)),
+                    body: cvt_node_ptr(cvt, hermes_get_WithStatement_body(n)),
                 },
             }
         ),
@@ -1042,8 +1041,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::SwitchStatement {
-                    discriminant: cvt_node_ptr(hermes_get_SwitchStatement_discriminant(n)),
-                    cases: cvt_node_list(hermes_get_SwitchStatement_cases(n)),
+                    discriminant: cvt_node_ptr(cvt, hermes_get_SwitchStatement_discriminant(n)),
+                    cases: cvt_node_list(cvt, hermes_get_SwitchStatement_cases(n)),
                 },
             }
         ),
@@ -1051,8 +1050,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::LabeledStatement {
-                    label: cvt_node_ptr(hermes_get_LabeledStatement_label(n)),
-                    body: cvt_node_ptr(hermes_get_LabeledStatement_body(n)),
+                    label: cvt_node_ptr(cvt, hermes_get_LabeledStatement_label(n)),
+                    body: cvt_node_ptr(cvt, hermes_get_LabeledStatement_body(n)),
                 },
             }
         ),
@@ -1060,7 +1059,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ExpressionStatement {
-                    expression: cvt_node_ptr(hermes_get_ExpressionStatement_expression(n)),
+                    expression: cvt_node_ptr(cvt, hermes_get_ExpressionStatement_expression(n)),
                     directive: cvt_string_opt(hermes_get_ExpressionStatement_directive(n)),
                 },
             }
@@ -1069,9 +1068,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TryStatement {
-                    block: cvt_node_ptr(hermes_get_TryStatement_block(n)),
-                    handler: cvt_node_ptr_opt(hermes_get_TryStatement_handler(n)),
-                    finalizer: cvt_node_ptr_opt(hermes_get_TryStatement_finalizer(n)),
+                    block: cvt_node_ptr(cvt, hermes_get_TryStatement_block(n)),
+                    handler: cvt_node_ptr_opt(cvt, hermes_get_TryStatement_handler(n)),
+                    finalizer: cvt_node_ptr_opt(cvt, hermes_get_TryStatement_finalizer(n)),
                 },
             }
         ),
@@ -1079,9 +1078,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::IfStatement {
-                    test: cvt_node_ptr(hermes_get_IfStatement_test(n)),
-                    consequent: cvt_node_ptr(hermes_get_IfStatement_consequent(n)),
-                    alternate: cvt_node_ptr_opt(hermes_get_IfStatement_alternate(n)),
+                    test: cvt_node_ptr(cvt, hermes_get_IfStatement_test(n)),
+                    consequent: cvt_node_ptr(cvt, hermes_get_IfStatement_consequent(n)),
+                    alternate: cvt_node_ptr_opt(cvt, hermes_get_IfStatement_alternate(n)),
                 },
             }
         ),
@@ -1143,7 +1142,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::SequenceExpression {
-                    expressions: cvt_node_list(hermes_get_SequenceExpression_expressions(n)),
+                    expressions: cvt_node_list(cvt, hermes_get_SequenceExpression_expressions(n)),
                 },
             }
         ),
@@ -1151,7 +1150,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ObjectExpression {
-                    properties: cvt_node_list(hermes_get_ObjectExpression_properties(n)),
+                    properties: cvt_node_list(cvt, hermes_get_ObjectExpression_properties(n)),
                 },
             }
         ),
@@ -1159,7 +1158,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ArrayExpression {
-                    elements: cvt_node_list(hermes_get_ArrayExpression_elements(n)),
+                    elements: cvt_node_list(cvt, hermes_get_ArrayExpression_elements(n)),
                     trailing_comma: hermes_get_ArrayExpression_trailingComma(n),
                 },
             }
@@ -1168,7 +1167,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::SpreadElement {
-                    argument: cvt_node_ptr(hermes_get_SpreadElement_argument(n)),
+                    argument: cvt_node_ptr(cvt, hermes_get_SpreadElement_argument(n)),
                 },
             }
         ),
@@ -1176,9 +1175,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::NewExpression {
-                    callee: cvt_node_ptr(hermes_get_NewExpression_callee(n)),
-                    type_arguments: cvt_node_ptr_opt(hermes_get_NewExpression_typeArguments(n)),
-                    arguments: cvt_node_list(hermes_get_NewExpression_arguments(n)),
+                    callee: cvt_node_ptr(cvt, hermes_get_NewExpression_callee(n)),
+                    type_arguments: cvt_node_ptr_opt(cvt, hermes_get_NewExpression_typeArguments(n)),
+                    arguments: cvt_node_list(cvt, hermes_get_NewExpression_arguments(n)),
                 },
             }
         ),
@@ -1186,7 +1185,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::YieldExpression {
-                    argument: cvt_node_ptr_opt(hermes_get_YieldExpression_argument(n)),
+                    argument: cvt_node_ptr_opt(cvt, hermes_get_YieldExpression_argument(n)),
                     delegate: hermes_get_YieldExpression_delegate(n),
                 },
             }
@@ -1195,7 +1194,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::AwaitExpression {
-                    argument: cvt_node_ptr(hermes_get_AwaitExpression_argument(n)),
+                    argument: cvt_node_ptr(cvt, hermes_get_AwaitExpression_argument(n)),
                 },
             }
         ),
@@ -1203,8 +1202,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ImportExpression {
-                    source: cvt_node_ptr(hermes_get_ImportExpression_source(n)),
-                    attributes: cvt_node_ptr_opt(hermes_get_ImportExpression_attributes(n)),
+                    source: cvt_node_ptr(cvt, hermes_get_ImportExpression_source(n)),
+                    attributes: cvt_node_ptr_opt(cvt, hermes_get_ImportExpression_attributes(n)),
                 },
             }
         ),
@@ -1212,9 +1211,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::CallExpression {
-                    callee: cvt_node_ptr(hermes_get_CallExpression_callee(n)),
-                    type_arguments: cvt_node_ptr_opt(hermes_get_CallExpression_typeArguments(n)),
-                    arguments: cvt_node_list(hermes_get_CallExpression_arguments(n)),
+                    callee: cvt_node_ptr(cvt, hermes_get_CallExpression_callee(n)),
+                    type_arguments: cvt_node_ptr_opt(cvt, hermes_get_CallExpression_typeArguments(n)),
+                    arguments: cvt_node_list(cvt, hermes_get_CallExpression_arguments(n)),
                 },
             }
         ),
@@ -1222,9 +1221,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::OptionalCallExpression {
-                    callee: cvt_node_ptr(hermes_get_OptionalCallExpression_callee(n)),
-                    type_arguments: cvt_node_ptr_opt(hermes_get_OptionalCallExpression_typeArguments(n)),
-                    arguments: cvt_node_list(hermes_get_OptionalCallExpression_arguments(n)),
+                    callee: cvt_node_ptr(cvt, hermes_get_OptionalCallExpression_callee(n)),
+                    type_arguments: cvt_node_ptr_opt(cvt, hermes_get_OptionalCallExpression_typeArguments(n)),
+                    arguments: cvt_node_list(cvt, hermes_get_OptionalCallExpression_arguments(n)),
                     optional: hermes_get_OptionalCallExpression_optional(n),
                 },
             }
@@ -1234,8 +1233,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
                 range,
                 kind: ast::NodeKind::AssignmentExpression {
                     operator: cvt_enum(hermes_get_AssignmentExpression_operator(n)),
-                    left: cvt_node_ptr(hermes_get_AssignmentExpression_left(n)),
-                    right: cvt_node_ptr(hermes_get_AssignmentExpression_right(n)),
+                    left: cvt_node_ptr(cvt, hermes_get_AssignmentExpression_left(n)),
+                    right: cvt_node_ptr(cvt, hermes_get_AssignmentExpression_right(n)),
                 },
             }
         ),
@@ -1244,7 +1243,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
                 range,
                 kind: ast::NodeKind::UnaryExpression {
                     operator: cvt_enum(hermes_get_UnaryExpression_operator(n)),
-                    argument: cvt_node_ptr(hermes_get_UnaryExpression_argument(n)),
+                    argument: cvt_node_ptr(cvt, hermes_get_UnaryExpression_argument(n)),
                     prefix: hermes_get_UnaryExpression_prefix(n),
                 },
             }
@@ -1254,7 +1253,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
                 range,
                 kind: ast::NodeKind::UpdateExpression {
                     operator: cvt_enum(hermes_get_UpdateExpression_operator(n)),
-                    argument: cvt_node_ptr(hermes_get_UpdateExpression_argument(n)),
+                    argument: cvt_node_ptr(cvt, hermes_get_UpdateExpression_argument(n)),
                     prefix: hermes_get_UpdateExpression_prefix(n),
                 },
             }
@@ -1263,8 +1262,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::MemberExpression {
-                    object: cvt_node_ptr(hermes_get_MemberExpression_object(n)),
-                    property: cvt_node_ptr(hermes_get_MemberExpression_property(n)),
+                    object: cvt_node_ptr(cvt, hermes_get_MemberExpression_object(n)),
+                    property: cvt_node_ptr(cvt, hermes_get_MemberExpression_property(n)),
                     computed: hermes_get_MemberExpression_computed(n),
                 },
             }
@@ -1273,8 +1272,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::OptionalMemberExpression {
-                    object: cvt_node_ptr(hermes_get_OptionalMemberExpression_object(n)),
-                    property: cvt_node_ptr(hermes_get_OptionalMemberExpression_property(n)),
+                    object: cvt_node_ptr(cvt, hermes_get_OptionalMemberExpression_object(n)),
+                    property: cvt_node_ptr(cvt, hermes_get_OptionalMemberExpression_property(n)),
                     computed: hermes_get_OptionalMemberExpression_computed(n),
                     optional: hermes_get_OptionalMemberExpression_optional(n),
                 },
@@ -1284,8 +1283,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::LogicalExpression {
-                    left: cvt_node_ptr(hermes_get_LogicalExpression_left(n)),
-                    right: cvt_node_ptr(hermes_get_LogicalExpression_right(n)),
+                    left: cvt_node_ptr(cvt, hermes_get_LogicalExpression_left(n)),
+                    right: cvt_node_ptr(cvt, hermes_get_LogicalExpression_right(n)),
                     operator: cvt_enum(hermes_get_LogicalExpression_operator(n)),
                 },
             }
@@ -1294,9 +1293,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ConditionalExpression {
-                    test: cvt_node_ptr(hermes_get_ConditionalExpression_test(n)),
-                    alternate: cvt_node_ptr(hermes_get_ConditionalExpression_alternate(n)),
-                    consequent: cvt_node_ptr(hermes_get_ConditionalExpression_consequent(n)),
+                    test: cvt_node_ptr(cvt, hermes_get_ConditionalExpression_test(n)),
+                    alternate: cvt_node_ptr(cvt, hermes_get_ConditionalExpression_alternate(n)),
+                    consequent: cvt_node_ptr(cvt, hermes_get_ConditionalExpression_consequent(n)),
                 },
             }
         ),
@@ -1304,8 +1303,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::BinaryExpression {
-                    left: cvt_node_ptr(hermes_get_BinaryExpression_left(n)),
-                    right: cvt_node_ptr(hermes_get_BinaryExpression_right(n)),
+                    left: cvt_node_ptr(cvt, hermes_get_BinaryExpression_left(n)),
+                    right: cvt_node_ptr(cvt, hermes_get_BinaryExpression_right(n)),
                     operator: cvt_enum(hermes_get_BinaryExpression_operator(n)),
                 },
             }
@@ -1314,7 +1313,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::Directive {
-                    value: cvt_node_ptr(hermes_get_Directive_value(n)),
+                    value: cvt_node_ptr(cvt, hermes_get_Directive_value(n)),
                 },
             }
         ),
@@ -1331,7 +1330,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
                 range,
                 kind: ast::NodeKind::Identifier {
                     name: cvt_label(hermes_get_Identifier_name(n)),
-                    type_annotation: cvt_node_ptr_opt(hermes_get_Identifier_typeAnnotation(n)),
+                    type_annotation: cvt_node_ptr_opt(cvt, hermes_get_Identifier_typeAnnotation(n)),
                     optional: hermes_get_Identifier_optional(n),
                 },
             }
@@ -1340,7 +1339,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::PrivateName {
-                    id: cvt_node_ptr(hermes_get_PrivateName_id(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_PrivateName_id(n)),
                 },
             }
         ),
@@ -1348,8 +1347,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::MetaProperty {
-                    meta: cvt_node_ptr(hermes_get_MetaProperty_meta(n)),
-                    property: cvt_node_ptr(hermes_get_MetaProperty_property(n)),
+                    meta: cvt_node_ptr(cvt, hermes_get_MetaProperty_meta(n)),
+                    property: cvt_node_ptr(cvt, hermes_get_MetaProperty_property(n)),
                 },
             }
         ),
@@ -1357,8 +1356,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::SwitchCase {
-                    test: cvt_node_ptr_opt(hermes_get_SwitchCase_test(n)),
-                    consequent: cvt_node_list(hermes_get_SwitchCase_consequent(n)),
+                    test: cvt_node_ptr_opt(cvt, hermes_get_SwitchCase_test(n)),
+                    consequent: cvt_node_list(cvt, hermes_get_SwitchCase_consequent(n)),
                 },
             }
         ),
@@ -1366,8 +1365,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::CatchClause {
-                    param: cvt_node_ptr_opt(hermes_get_CatchClause_param(n)),
-                    body: cvt_node_ptr(hermes_get_CatchClause_body(n)),
+                    param: cvt_node_ptr_opt(cvt, hermes_get_CatchClause_param(n)),
+                    body: cvt_node_ptr(cvt, hermes_get_CatchClause_body(n)),
                 },
             }
         ),
@@ -1375,8 +1374,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::VariableDeclarator {
-                    init: cvt_node_ptr_opt(hermes_get_VariableDeclarator_init(n)),
-                    id: cvt_node_ptr(hermes_get_VariableDeclarator_id(n)),
+                    init: cvt_node_ptr_opt(cvt, hermes_get_VariableDeclarator_init(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_VariableDeclarator_id(n)),
                 },
             }
         ),
@@ -1385,7 +1384,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
                 range,
                 kind: ast::NodeKind::VariableDeclaration {
                     kind: cvt_enum(hermes_get_VariableDeclaration_kind(n)),
-                    declarations: cvt_node_list(hermes_get_VariableDeclaration_declarations(n)),
+                    declarations: cvt_node_list(cvt, hermes_get_VariableDeclaration_declarations(n)),
                 },
             }
         ),
@@ -1393,8 +1392,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TemplateLiteral {
-                    quasis: cvt_node_list(hermes_get_TemplateLiteral_quasis(n)),
-                    expressions: cvt_node_list(hermes_get_TemplateLiteral_expressions(n)),
+                    quasis: cvt_node_list(cvt, hermes_get_TemplateLiteral_quasis(n)),
+                    expressions: cvt_node_list(cvt, hermes_get_TemplateLiteral_expressions(n)),
                 },
             }
         ),
@@ -1402,8 +1401,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TaggedTemplateExpression {
-                    tag: cvt_node_ptr(hermes_get_TaggedTemplateExpression_tag(n)),
-                    quasi: cvt_node_ptr(hermes_get_TaggedTemplateExpression_quasi(n)),
+                    tag: cvt_node_ptr(cvt, hermes_get_TaggedTemplateExpression_tag(n)),
+                    quasi: cvt_node_ptr(cvt, hermes_get_TaggedTemplateExpression_quasi(n)),
                 },
             }
         ),
@@ -1421,8 +1420,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::Property {
-                    key: cvt_node_ptr(hermes_get_Property_key(n)),
-                    value: cvt_node_ptr(hermes_get_Property_value(n)),
+                    key: cvt_node_ptr(cvt, hermes_get_Property_key(n)),
+                    value: cvt_node_ptr(cvt, hermes_get_Property_value(n)),
                     kind: cvt_enum(hermes_get_Property_kind(n)),
                     computed: hermes_get_Property_computed(n),
                     method: hermes_get_Property_method(n),
@@ -1434,13 +1433,13 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ClassDeclaration {
-                    id: cvt_node_ptr_opt(hermes_get_ClassDeclaration_id(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_ClassDeclaration_typeParameters(n)),
-                    super_class: cvt_node_ptr_opt(hermes_get_ClassDeclaration_superClass(n)),
-                    super_type_parameters: cvt_node_ptr_opt(hermes_get_ClassDeclaration_superTypeParameters(n)),
-                    implements: cvt_node_list(hermes_get_ClassDeclaration_implements(n)),
-                    decorators: cvt_node_list(hermes_get_ClassDeclaration_decorators(n)),
-                    body: cvt_node_ptr(hermes_get_ClassDeclaration_body(n)),
+                    id: cvt_node_ptr_opt(cvt, hermes_get_ClassDeclaration_id(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_ClassDeclaration_typeParameters(n)),
+                    super_class: cvt_node_ptr_opt(cvt, hermes_get_ClassDeclaration_superClass(n)),
+                    super_type_parameters: cvt_node_ptr_opt(cvt, hermes_get_ClassDeclaration_superTypeParameters(n)),
+                    implements: cvt_node_list(cvt, hermes_get_ClassDeclaration_implements(n)),
+                    decorators: cvt_node_list(cvt, hermes_get_ClassDeclaration_decorators(n)),
+                    body: cvt_node_ptr(cvt, hermes_get_ClassDeclaration_body(n)),
                 },
             }
         ),
@@ -1448,13 +1447,13 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ClassExpression {
-                    id: cvt_node_ptr_opt(hermes_get_ClassExpression_id(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_ClassExpression_typeParameters(n)),
-                    super_class: cvt_node_ptr_opt(hermes_get_ClassExpression_superClass(n)),
-                    super_type_parameters: cvt_node_ptr_opt(hermes_get_ClassExpression_superTypeParameters(n)),
-                    implements: cvt_node_list(hermes_get_ClassExpression_implements(n)),
-                    decorators: cvt_node_list(hermes_get_ClassExpression_decorators(n)),
-                    body: cvt_node_ptr(hermes_get_ClassExpression_body(n)),
+                    id: cvt_node_ptr_opt(cvt, hermes_get_ClassExpression_id(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_ClassExpression_typeParameters(n)),
+                    super_class: cvt_node_ptr_opt(cvt, hermes_get_ClassExpression_superClass(n)),
+                    super_type_parameters: cvt_node_ptr_opt(cvt, hermes_get_ClassExpression_superTypeParameters(n)),
+                    implements: cvt_node_list(cvt, hermes_get_ClassExpression_implements(n)),
+                    decorators: cvt_node_list(cvt, hermes_get_ClassExpression_decorators(n)),
+                    body: cvt_node_ptr(cvt, hermes_get_ClassExpression_body(n)),
                 },
             }
         ),
@@ -1462,7 +1461,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ClassBody {
-                    body: cvt_node_list(hermes_get_ClassBody_body(n)),
+                    body: cvt_node_list(cvt, hermes_get_ClassBody_body(n)),
                 },
             }
         ),
@@ -1470,14 +1469,14 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ClassProperty {
-                    key: cvt_node_ptr(hermes_get_ClassProperty_key(n)),
-                    value: cvt_node_ptr_opt(hermes_get_ClassProperty_value(n)),
+                    key: cvt_node_ptr(cvt, hermes_get_ClassProperty_key(n)),
+                    value: cvt_node_ptr_opt(cvt, hermes_get_ClassProperty_value(n)),
                     computed: hermes_get_ClassProperty_computed(n),
                     is_static: hermes_get_ClassProperty_static(n),
                     declare: hermes_get_ClassProperty_declare(n),
                     optional: hermes_get_ClassProperty_optional(n),
-                    variance: cvt_node_ptr_opt(hermes_get_ClassProperty_variance(n)),
-                    type_annotation: cvt_node_ptr_opt(hermes_get_ClassProperty_typeAnnotation(n)),
+                    variance: cvt_node_ptr_opt(cvt, hermes_get_ClassProperty_variance(n)),
+                    type_annotation: cvt_node_ptr_opt(cvt, hermes_get_ClassProperty_typeAnnotation(n)),
                 },
             }
         ),
@@ -1485,13 +1484,13 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ClassPrivateProperty {
-                    key: cvt_node_ptr(hermes_get_ClassPrivateProperty_key(n)),
-                    value: cvt_node_ptr_opt(hermes_get_ClassPrivateProperty_value(n)),
+                    key: cvt_node_ptr(cvt, hermes_get_ClassPrivateProperty_key(n)),
+                    value: cvt_node_ptr_opt(cvt, hermes_get_ClassPrivateProperty_value(n)),
                     is_static: hermes_get_ClassPrivateProperty_static(n),
                     declare: hermes_get_ClassPrivateProperty_declare(n),
                     optional: hermes_get_ClassPrivateProperty_optional(n),
-                    variance: cvt_node_ptr_opt(hermes_get_ClassPrivateProperty_variance(n)),
-                    type_annotation: cvt_node_ptr_opt(hermes_get_ClassPrivateProperty_typeAnnotation(n)),
+                    variance: cvt_node_ptr_opt(cvt, hermes_get_ClassPrivateProperty_variance(n)),
+                    type_annotation: cvt_node_ptr_opt(cvt, hermes_get_ClassPrivateProperty_typeAnnotation(n)),
                 },
             }
         ),
@@ -1499,8 +1498,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::MethodDefinition {
-                    key: cvt_node_ptr(hermes_get_MethodDefinition_key(n)),
-                    value: cvt_node_ptr(hermes_get_MethodDefinition_value(n)),
+                    key: cvt_node_ptr(cvt, hermes_get_MethodDefinition_key(n)),
+                    value: cvt_node_ptr(cvt, hermes_get_MethodDefinition_value(n)),
                     kind: cvt_enum(hermes_get_MethodDefinition_kind(n)),
                     computed: hermes_get_MethodDefinition_computed(n),
                     is_static: hermes_get_MethodDefinition_static(n),
@@ -1511,9 +1510,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ImportDeclaration {
-                    specifiers: cvt_node_list(hermes_get_ImportDeclaration_specifiers(n)),
-                    source: cvt_node_ptr(hermes_get_ImportDeclaration_source(n)),
-                    attributes: cvt_node_list_opt(hermes_get_ImportDeclaration_attributes(n)),
+                    specifiers: cvt_node_list(cvt, hermes_get_ImportDeclaration_specifiers(n)),
+                    source: cvt_node_ptr(cvt, hermes_get_ImportDeclaration_source(n)),
+                    attributes: cvt_node_list_opt(cvt, hermes_get_ImportDeclaration_attributes(n)),
                     import_kind: cvt_enum(hermes_get_ImportDeclaration_importKind(n)),
                 },
             }
@@ -1522,8 +1521,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ImportSpecifier {
-                    imported: cvt_node_ptr(hermes_get_ImportSpecifier_imported(n)),
-                    local: cvt_node_ptr(hermes_get_ImportSpecifier_local(n)),
+                    imported: cvt_node_ptr(cvt, hermes_get_ImportSpecifier_imported(n)),
+                    local: cvt_node_ptr(cvt, hermes_get_ImportSpecifier_local(n)),
                     import_kind: cvt_enum(hermes_get_ImportSpecifier_importKind(n)),
                 },
             }
@@ -1532,7 +1531,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ImportDefaultSpecifier {
-                    local: cvt_node_ptr(hermes_get_ImportDefaultSpecifier_local(n)),
+                    local: cvt_node_ptr(cvt, hermes_get_ImportDefaultSpecifier_local(n)),
                 },
             }
         ),
@@ -1540,7 +1539,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ImportNamespaceSpecifier {
-                    local: cvt_node_ptr(hermes_get_ImportNamespaceSpecifier_local(n)),
+                    local: cvt_node_ptr(cvt, hermes_get_ImportNamespaceSpecifier_local(n)),
                 },
             }
         ),
@@ -1548,8 +1547,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ImportAttribute {
-                    key: cvt_node_ptr(hermes_get_ImportAttribute_key(n)),
-                    value: cvt_node_ptr(hermes_get_ImportAttribute_value(n)),
+                    key: cvt_node_ptr(cvt, hermes_get_ImportAttribute_key(n)),
+                    value: cvt_node_ptr(cvt, hermes_get_ImportAttribute_value(n)),
                 },
             }
         ),
@@ -1557,9 +1556,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ExportNamedDeclaration {
-                    declaration: cvt_node_ptr_opt(hermes_get_ExportNamedDeclaration_declaration(n)),
-                    specifiers: cvt_node_list(hermes_get_ExportNamedDeclaration_specifiers(n)),
-                    source: cvt_node_ptr_opt(hermes_get_ExportNamedDeclaration_source(n)),
+                    declaration: cvt_node_ptr_opt(cvt, hermes_get_ExportNamedDeclaration_declaration(n)),
+                    specifiers: cvt_node_list(cvt, hermes_get_ExportNamedDeclaration_specifiers(n)),
+                    source: cvt_node_ptr_opt(cvt, hermes_get_ExportNamedDeclaration_source(n)),
                     export_kind: cvt_enum(hermes_get_ExportNamedDeclaration_exportKind(n)),
                 },
             }
@@ -1568,8 +1567,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ExportSpecifier {
-                    exported: cvt_node_ptr(hermes_get_ExportSpecifier_exported(n)),
-                    local: cvt_node_ptr(hermes_get_ExportSpecifier_local(n)),
+                    exported: cvt_node_ptr(cvt, hermes_get_ExportSpecifier_exported(n)),
+                    local: cvt_node_ptr(cvt, hermes_get_ExportSpecifier_local(n)),
                 },
             }
         ),
@@ -1577,7 +1576,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ExportNamespaceSpecifier {
-                    exported: cvt_node_ptr(hermes_get_ExportNamespaceSpecifier_exported(n)),
+                    exported: cvt_node_ptr(cvt, hermes_get_ExportNamespaceSpecifier_exported(n)),
                 },
             }
         ),
@@ -1585,7 +1584,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ExportDefaultDeclaration {
-                    declaration: cvt_node_ptr(hermes_get_ExportDefaultDeclaration_declaration(n)),
+                    declaration: cvt_node_ptr(cvt, hermes_get_ExportDefaultDeclaration_declaration(n)),
                 },
             }
         ),
@@ -1593,7 +1592,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ExportAllDeclaration {
-                    source: cvt_node_ptr(hermes_get_ExportAllDeclaration_source(n)),
+                    source: cvt_node_ptr(cvt, hermes_get_ExportAllDeclaration_source(n)),
                     export_kind: cvt_enum(hermes_get_ExportAllDeclaration_exportKind(n)),
                 },
             }
@@ -1602,8 +1601,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ObjectPattern {
-                    properties: cvt_node_list(hermes_get_ObjectPattern_properties(n)),
-                    type_annotation: cvt_node_ptr_opt(hermes_get_ObjectPattern_typeAnnotation(n)),
+                    properties: cvt_node_list(cvt, hermes_get_ObjectPattern_properties(n)),
+                    type_annotation: cvt_node_ptr_opt(cvt, hermes_get_ObjectPattern_typeAnnotation(n)),
                 },
             }
         ),
@@ -1611,8 +1610,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ArrayPattern {
-                    elements: cvt_node_list(hermes_get_ArrayPattern_elements(n)),
-                    type_annotation: cvt_node_ptr_opt(hermes_get_ArrayPattern_typeAnnotation(n)),
+                    elements: cvt_node_list(cvt, hermes_get_ArrayPattern_elements(n)),
+                    type_annotation: cvt_node_ptr_opt(cvt, hermes_get_ArrayPattern_typeAnnotation(n)),
                 },
             }
         ),
@@ -1620,7 +1619,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::RestElement {
-                    argument: cvt_node_ptr(hermes_get_RestElement_argument(n)),
+                    argument: cvt_node_ptr(cvt, hermes_get_RestElement_argument(n)),
                 },
             }
         ),
@@ -1628,8 +1627,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::AssignmentPattern {
-                    left: cvt_node_ptr(hermes_get_AssignmentPattern_left(n)),
-                    right: cvt_node_ptr(hermes_get_AssignmentPattern_right(n)),
+                    left: cvt_node_ptr(cvt, hermes_get_AssignmentPattern_left(n)),
+                    right: cvt_node_ptr(cvt, hermes_get_AssignmentPattern_right(n)),
                 },
             }
         ),
@@ -1645,8 +1644,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::JSXMemberExpression {
-                    object: cvt_node_ptr(hermes_get_JSXMemberExpression_object(n)),
-                    property: cvt_node_ptr(hermes_get_JSXMemberExpression_property(n)),
+                    object: cvt_node_ptr(cvt, hermes_get_JSXMemberExpression_object(n)),
+                    property: cvt_node_ptr(cvt, hermes_get_JSXMemberExpression_property(n)),
                 },
             }
         ),
@@ -1654,8 +1653,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::JSXNamespacedName {
-                    namespace: cvt_node_ptr(hermes_get_JSXNamespacedName_namespace(n)),
-                    name: cvt_node_ptr(hermes_get_JSXNamespacedName_name(n)),
+                    namespace: cvt_node_ptr(cvt, hermes_get_JSXNamespacedName_namespace(n)),
+                    name: cvt_node_ptr(cvt, hermes_get_JSXNamespacedName_name(n)),
                 },
             }
         ),
@@ -1670,7 +1669,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::JSXExpressionContainer {
-                    expression: cvt_node_ptr(hermes_get_JSXExpressionContainer_expression(n)),
+                    expression: cvt_node_ptr(cvt, hermes_get_JSXExpressionContainer_expression(n)),
                 },
             }
         ),
@@ -1678,7 +1677,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::JSXSpreadChild {
-                    expression: cvt_node_ptr(hermes_get_JSXSpreadChild_expression(n)),
+                    expression: cvt_node_ptr(cvt, hermes_get_JSXSpreadChild_expression(n)),
                 },
             }
         ),
@@ -1686,8 +1685,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::JSXOpeningElement {
-                    name: cvt_node_ptr(hermes_get_JSXOpeningElement_name(n)),
-                    attributes: cvt_node_list(hermes_get_JSXOpeningElement_attributes(n)),
+                    name: cvt_node_ptr(cvt, hermes_get_JSXOpeningElement_name(n)),
+                    attributes: cvt_node_list(cvt, hermes_get_JSXOpeningElement_attributes(n)),
                     self_closing: hermes_get_JSXOpeningElement_selfClosing(n),
                 },
             }
@@ -1696,7 +1695,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::JSXClosingElement {
-                    name: cvt_node_ptr(hermes_get_JSXClosingElement_name(n)),
+                    name: cvt_node_ptr(cvt, hermes_get_JSXClosingElement_name(n)),
                 },
             }
         ),
@@ -1704,8 +1703,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::JSXAttribute {
-                    name: cvt_node_ptr(hermes_get_JSXAttribute_name(n)),
-                    value: cvt_node_ptr_opt(hermes_get_JSXAttribute_value(n)),
+                    name: cvt_node_ptr(cvt, hermes_get_JSXAttribute_name(n)),
+                    value: cvt_node_ptr_opt(cvt, hermes_get_JSXAttribute_value(n)),
                 },
             }
         ),
@@ -1713,7 +1712,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::JSXSpreadAttribute {
-                    argument: cvt_node_ptr(hermes_get_JSXSpreadAttribute_argument(n)),
+                    argument: cvt_node_ptr(cvt, hermes_get_JSXSpreadAttribute_argument(n)),
                 },
             }
         ),
@@ -1730,9 +1729,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::JSXElement {
-                    opening_element: cvt_node_ptr(hermes_get_JSXElement_openingElement(n)),
-                    children: cvt_node_list(hermes_get_JSXElement_children(n)),
-                    closing_element: cvt_node_ptr_opt(hermes_get_JSXElement_closingElement(n)),
+                    opening_element: cvt_node_ptr(cvt, hermes_get_JSXElement_openingElement(n)),
+                    children: cvt_node_list(cvt, hermes_get_JSXElement_children(n)),
+                    closing_element: cvt_node_ptr_opt(cvt, hermes_get_JSXElement_closingElement(n)),
                 },
             }
         ),
@@ -1740,9 +1739,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::JSXFragment {
-                    opening_fragment: cvt_node_ptr(hermes_get_JSXFragment_openingFragment(n)),
-                    children: cvt_node_list(hermes_get_JSXFragment_children(n)),
-                    closing_fragment: cvt_node_ptr(hermes_get_JSXFragment_closingFragment(n)),
+                    opening_fragment: cvt_node_ptr(cvt, hermes_get_JSXFragment_openingFragment(n)),
+                    children: cvt_node_list(cvt, hermes_get_JSXFragment_children(n)),
+                    closing_fragment: cvt_node_ptr(cvt, hermes_get_JSXFragment_closingFragment(n)),
                 },
             }
         ),
@@ -1860,11 +1859,11 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::FunctionTypeAnnotation {
-                    params: cvt_node_list(hermes_get_FunctionTypeAnnotation_params(n)),
-                    this: cvt_node_ptr_opt(hermes_get_FunctionTypeAnnotation_this(n)),
-                    return_type: cvt_node_ptr(hermes_get_FunctionTypeAnnotation_returnType(n)),
-                    rest: cvt_node_ptr_opt(hermes_get_FunctionTypeAnnotation_rest(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_FunctionTypeAnnotation_typeParameters(n)),
+                    params: cvt_node_list(cvt, hermes_get_FunctionTypeAnnotation_params(n)),
+                    this: cvt_node_ptr_opt(cvt, hermes_get_FunctionTypeAnnotation_this(n)),
+                    return_type: cvt_node_ptr(cvt, hermes_get_FunctionTypeAnnotation_returnType(n)),
+                    rest: cvt_node_ptr_opt(cvt, hermes_get_FunctionTypeAnnotation_rest(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_FunctionTypeAnnotation_typeParameters(n)),
                 },
             }
         ),
@@ -1872,8 +1871,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::FunctionTypeParam {
-                    name: cvt_node_ptr_opt(hermes_get_FunctionTypeParam_name(n)),
-                    type_annotation: cvt_node_ptr(hermes_get_FunctionTypeParam_typeAnnotation(n)),
+                    name: cvt_node_ptr_opt(cvt, hermes_get_FunctionTypeParam_name(n)),
+                    type_annotation: cvt_node_ptr(cvt, hermes_get_FunctionTypeParam_typeAnnotation(n)),
                     optional: hermes_get_FunctionTypeParam_optional(n),
                 },
             }
@@ -1882,7 +1881,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::NullableTypeAnnotation {
-                    type_annotation: cvt_node_ptr(hermes_get_NullableTypeAnnotation_typeAnnotation(n)),
+                    type_annotation: cvt_node_ptr(cvt, hermes_get_NullableTypeAnnotation_typeAnnotation(n)),
                 },
             }
         ),
@@ -1890,8 +1889,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::QualifiedTypeIdentifier {
-                    qualification: cvt_node_ptr(hermes_get_QualifiedTypeIdentifier_qualification(n)),
-                    id: cvt_node_ptr(hermes_get_QualifiedTypeIdentifier_id(n)),
+                    qualification: cvt_node_ptr(cvt, hermes_get_QualifiedTypeIdentifier_qualification(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_QualifiedTypeIdentifier_id(n)),
                 },
             }
         ),
@@ -1899,7 +1898,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TypeofTypeAnnotation {
-                    argument: cvt_node_ptr(hermes_get_TypeofTypeAnnotation_argument(n)),
+                    argument: cvt_node_ptr(cvt, hermes_get_TypeofTypeAnnotation_argument(n)),
                 },
             }
         ),
@@ -1907,7 +1906,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TupleTypeAnnotation {
-                    types: cvt_node_list(hermes_get_TupleTypeAnnotation_types(n)),
+                    types: cvt_node_list(cvt, hermes_get_TupleTypeAnnotation_types(n)),
                 },
             }
         ),
@@ -1915,7 +1914,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ArrayTypeAnnotation {
-                    element_type: cvt_node_ptr(hermes_get_ArrayTypeAnnotation_elementType(n)),
+                    element_type: cvt_node_ptr(cvt, hermes_get_ArrayTypeAnnotation_elementType(n)),
                 },
             }
         ),
@@ -1923,7 +1922,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::UnionTypeAnnotation {
-                    types: cvt_node_list(hermes_get_UnionTypeAnnotation_types(n)),
+                    types: cvt_node_list(cvt, hermes_get_UnionTypeAnnotation_types(n)),
                 },
             }
         ),
@@ -1931,7 +1930,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::IntersectionTypeAnnotation {
-                    types: cvt_node_list(hermes_get_IntersectionTypeAnnotation_types(n)),
+                    types: cvt_node_list(cvt, hermes_get_IntersectionTypeAnnotation_types(n)),
                 },
             }
         ),
@@ -1939,8 +1938,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::GenericTypeAnnotation {
-                    id: cvt_node_ptr(hermes_get_GenericTypeAnnotation_id(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_GenericTypeAnnotation_typeParameters(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_GenericTypeAnnotation_id(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_GenericTypeAnnotation_typeParameters(n)),
                 },
             }
         ),
@@ -1948,8 +1947,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::IndexedAccessType {
-                    object_type: cvt_node_ptr(hermes_get_IndexedAccessType_objectType(n)),
-                    index_type: cvt_node_ptr(hermes_get_IndexedAccessType_indexType(n)),
+                    object_type: cvt_node_ptr(cvt, hermes_get_IndexedAccessType_objectType(n)),
+                    index_type: cvt_node_ptr(cvt, hermes_get_IndexedAccessType_indexType(n)),
                 },
             }
         ),
@@ -1957,8 +1956,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::OptionalIndexedAccessType {
-                    object_type: cvt_node_ptr(hermes_get_OptionalIndexedAccessType_objectType(n)),
-                    index_type: cvt_node_ptr(hermes_get_OptionalIndexedAccessType_indexType(n)),
+                    object_type: cvt_node_ptr(cvt, hermes_get_OptionalIndexedAccessType_objectType(n)),
+                    index_type: cvt_node_ptr(cvt, hermes_get_OptionalIndexedAccessType_indexType(n)),
                     optional: hermes_get_OptionalIndexedAccessType_optional(n),
                 },
             }
@@ -1967,8 +1966,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::InterfaceTypeAnnotation {
-                    extends: cvt_node_list(hermes_get_InterfaceTypeAnnotation_extends(n)),
-                    body: cvt_node_ptr_opt(hermes_get_InterfaceTypeAnnotation_body(n)),
+                    extends: cvt_node_list(cvt, hermes_get_InterfaceTypeAnnotation_extends(n)),
+                    body: cvt_node_ptr_opt(cvt, hermes_get_InterfaceTypeAnnotation_body(n)),
                 },
             }
         ),
@@ -1976,9 +1975,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TypeAlias {
-                    id: cvt_node_ptr(hermes_get_TypeAlias_id(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_TypeAlias_typeParameters(n)),
-                    right: cvt_node_ptr(hermes_get_TypeAlias_right(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_TypeAlias_id(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_TypeAlias_typeParameters(n)),
+                    right: cvt_node_ptr(cvt, hermes_get_TypeAlias_right(n)),
                 },
             }
         ),
@@ -1986,10 +1985,10 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::OpaqueType {
-                    id: cvt_node_ptr(hermes_get_OpaqueType_id(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_OpaqueType_typeParameters(n)),
-                    impltype: cvt_node_ptr(hermes_get_OpaqueType_impltype(n)),
-                    supertype: cvt_node_ptr_opt(hermes_get_OpaqueType_supertype(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_OpaqueType_id(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_OpaqueType_typeParameters(n)),
+                    impltype: cvt_node_ptr(cvt, hermes_get_OpaqueType_impltype(n)),
+                    supertype: cvt_node_ptr_opt(cvt, hermes_get_OpaqueType_supertype(n)),
                 },
             }
         ),
@@ -1997,10 +1996,10 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::InterfaceDeclaration {
-                    id: cvt_node_ptr(hermes_get_InterfaceDeclaration_id(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_InterfaceDeclaration_typeParameters(n)),
-                    extends: cvt_node_list(hermes_get_InterfaceDeclaration_extends(n)),
-                    body: cvt_node_ptr(hermes_get_InterfaceDeclaration_body(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_InterfaceDeclaration_id(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_InterfaceDeclaration_typeParameters(n)),
+                    extends: cvt_node_list(cvt, hermes_get_InterfaceDeclaration_extends(n)),
+                    body: cvt_node_ptr(cvt, hermes_get_InterfaceDeclaration_body(n)),
                 },
             }
         ),
@@ -2008,9 +2007,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::DeclareTypeAlias {
-                    id: cvt_node_ptr(hermes_get_DeclareTypeAlias_id(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_DeclareTypeAlias_typeParameters(n)),
-                    right: cvt_node_ptr(hermes_get_DeclareTypeAlias_right(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_DeclareTypeAlias_id(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_DeclareTypeAlias_typeParameters(n)),
+                    right: cvt_node_ptr(cvt, hermes_get_DeclareTypeAlias_right(n)),
                 },
             }
         ),
@@ -2018,10 +2017,10 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::DeclareOpaqueType {
-                    id: cvt_node_ptr(hermes_get_DeclareOpaqueType_id(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_DeclareOpaqueType_typeParameters(n)),
-                    impltype: cvt_node_ptr_opt(hermes_get_DeclareOpaqueType_impltype(n)),
-                    supertype: cvt_node_ptr_opt(hermes_get_DeclareOpaqueType_supertype(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_DeclareOpaqueType_id(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_DeclareOpaqueType_typeParameters(n)),
+                    impltype: cvt_node_ptr_opt(cvt, hermes_get_DeclareOpaqueType_impltype(n)),
+                    supertype: cvt_node_ptr_opt(cvt, hermes_get_DeclareOpaqueType_supertype(n)),
                 },
             }
         ),
@@ -2029,10 +2028,10 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::DeclareInterface {
-                    id: cvt_node_ptr(hermes_get_DeclareInterface_id(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_DeclareInterface_typeParameters(n)),
-                    extends: cvt_node_list(hermes_get_DeclareInterface_extends(n)),
-                    body: cvt_node_ptr(hermes_get_DeclareInterface_body(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_DeclareInterface_id(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_DeclareInterface_typeParameters(n)),
+                    extends: cvt_node_list(cvt, hermes_get_DeclareInterface_extends(n)),
+                    body: cvt_node_ptr(cvt, hermes_get_DeclareInterface_body(n)),
                 },
             }
         ),
@@ -2040,12 +2039,12 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::DeclareClass {
-                    id: cvt_node_ptr(hermes_get_DeclareClass_id(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_DeclareClass_typeParameters(n)),
-                    extends: cvt_node_list(hermes_get_DeclareClass_extends(n)),
-                    implements: cvt_node_list(hermes_get_DeclareClass_implements(n)),
-                    mixins: cvt_node_list(hermes_get_DeclareClass_mixins(n)),
-                    body: cvt_node_ptr(hermes_get_DeclareClass_body(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_DeclareClass_id(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_DeclareClass_typeParameters(n)),
+                    extends: cvt_node_list(cvt, hermes_get_DeclareClass_extends(n)),
+                    implements: cvt_node_list(cvt, hermes_get_DeclareClass_implements(n)),
+                    mixins: cvt_node_list(cvt, hermes_get_DeclareClass_mixins(n)),
+                    body: cvt_node_ptr(cvt, hermes_get_DeclareClass_body(n)),
                 },
             }
         ),
@@ -2053,8 +2052,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::DeclareFunction {
-                    id: cvt_node_ptr(hermes_get_DeclareFunction_id(n)),
-                    predicate: cvt_node_ptr_opt(hermes_get_DeclareFunction_predicate(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_DeclareFunction_id(n)),
+                    predicate: cvt_node_ptr_opt(cvt, hermes_get_DeclareFunction_predicate(n)),
                 },
             }
         ),
@@ -2062,7 +2061,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::DeclareVariable {
-                    id: cvt_node_ptr(hermes_get_DeclareVariable_id(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_DeclareVariable_id(n)),
                 },
             }
         ),
@@ -2070,9 +2069,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::DeclareExportDeclaration {
-                    declaration: cvt_node_ptr_opt(hermes_get_DeclareExportDeclaration_declaration(n)),
-                    specifiers: cvt_node_list(hermes_get_DeclareExportDeclaration_specifiers(n)),
-                    source: cvt_node_ptr_opt(hermes_get_DeclareExportDeclaration_source(n)),
+                    declaration: cvt_node_ptr_opt(cvt, hermes_get_DeclareExportDeclaration_declaration(n)),
+                    specifiers: cvt_node_list(cvt, hermes_get_DeclareExportDeclaration_specifiers(n)),
+                    source: cvt_node_ptr_opt(cvt, hermes_get_DeclareExportDeclaration_source(n)),
                     default: hermes_get_DeclareExportDeclaration_default(n),
                 },
             }
@@ -2081,7 +2080,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::DeclareExportAllDeclaration {
-                    source: cvt_node_ptr(hermes_get_DeclareExportAllDeclaration_source(n)),
+                    source: cvt_node_ptr(cvt, hermes_get_DeclareExportAllDeclaration_source(n)),
                 },
             }
         ),
@@ -2089,8 +2088,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::DeclareModule {
-                    id: cvt_node_ptr(hermes_get_DeclareModule_id(n)),
-                    body: cvt_node_ptr(hermes_get_DeclareModule_body(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_DeclareModule_id(n)),
+                    body: cvt_node_ptr(cvt, hermes_get_DeclareModule_body(n)),
                     kind: cvt_label(hermes_get_DeclareModule_kind(n)),
                 },
             }
@@ -2099,7 +2098,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::DeclareModuleExports {
-                    type_annotation: cvt_node_ptr(hermes_get_DeclareModuleExports_typeAnnotation(n)),
+                    type_annotation: cvt_node_ptr(cvt, hermes_get_DeclareModuleExports_typeAnnotation(n)),
                 },
             }
         ),
@@ -2107,8 +2106,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::InterfaceExtends {
-                    id: cvt_node_ptr(hermes_get_InterfaceExtends_id(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_InterfaceExtends_typeParameters(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_InterfaceExtends_id(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_InterfaceExtends_typeParameters(n)),
                 },
             }
         ),
@@ -2116,8 +2115,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ClassImplements {
-                    id: cvt_node_ptr(hermes_get_ClassImplements_id(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_ClassImplements_typeParameters(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_ClassImplements_id(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_ClassImplements_typeParameters(n)),
                 },
             }
         ),
@@ -2125,7 +2124,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TypeAnnotation {
-                    type_annotation: cvt_node_ptr(hermes_get_TypeAnnotation_typeAnnotation(n)),
+                    type_annotation: cvt_node_ptr(cvt, hermes_get_TypeAnnotation_typeAnnotation(n)),
                 },
             }
         ),
@@ -2133,10 +2132,10 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ObjectTypeAnnotation {
-                    properties: cvt_node_list(hermes_get_ObjectTypeAnnotation_properties(n)),
-                    indexers: cvt_node_list(hermes_get_ObjectTypeAnnotation_indexers(n)),
-                    call_properties: cvt_node_list(hermes_get_ObjectTypeAnnotation_callProperties(n)),
-                    internal_slots: cvt_node_list(hermes_get_ObjectTypeAnnotation_internalSlots(n)),
+                    properties: cvt_node_list(cvt, hermes_get_ObjectTypeAnnotation_properties(n)),
+                    indexers: cvt_node_list(cvt, hermes_get_ObjectTypeAnnotation_indexers(n)),
+                    call_properties: cvt_node_list(cvt, hermes_get_ObjectTypeAnnotation_callProperties(n)),
+                    internal_slots: cvt_node_list(cvt, hermes_get_ObjectTypeAnnotation_internalSlots(n)),
                     inexact: hermes_get_ObjectTypeAnnotation_inexact(n),
                     exact: hermes_get_ObjectTypeAnnotation_exact(n),
                 },
@@ -2146,13 +2145,13 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ObjectTypeProperty {
-                    key: cvt_node_ptr(hermes_get_ObjectTypeProperty_key(n)),
-                    value: cvt_node_ptr(hermes_get_ObjectTypeProperty_value(n)),
+                    key: cvt_node_ptr(cvt, hermes_get_ObjectTypeProperty_key(n)),
+                    value: cvt_node_ptr(cvt, hermes_get_ObjectTypeProperty_value(n)),
                     method: hermes_get_ObjectTypeProperty_method(n),
                     optional: hermes_get_ObjectTypeProperty_optional(n),
                     is_static: hermes_get_ObjectTypeProperty_static(n),
                     proto: hermes_get_ObjectTypeProperty_proto(n),
-                    variance: cvt_node_ptr_opt(hermes_get_ObjectTypeProperty_variance(n)),
+                    variance: cvt_node_ptr_opt(cvt, hermes_get_ObjectTypeProperty_variance(n)),
                     kind: cvt_label(hermes_get_ObjectTypeProperty_kind(n)),
                 },
             }
@@ -2161,7 +2160,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ObjectTypeSpreadProperty {
-                    argument: cvt_node_ptr(hermes_get_ObjectTypeSpreadProperty_argument(n)),
+                    argument: cvt_node_ptr(cvt, hermes_get_ObjectTypeSpreadProperty_argument(n)),
                 },
             }
         ),
@@ -2169,8 +2168,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ObjectTypeInternalSlot {
-                    id: cvt_node_ptr(hermes_get_ObjectTypeInternalSlot_id(n)),
-                    value: cvt_node_ptr(hermes_get_ObjectTypeInternalSlot_value(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_ObjectTypeInternalSlot_id(n)),
+                    value: cvt_node_ptr(cvt, hermes_get_ObjectTypeInternalSlot_value(n)),
                     optional: hermes_get_ObjectTypeInternalSlot_optional(n),
                     is_static: hermes_get_ObjectTypeInternalSlot_static(n),
                     method: hermes_get_ObjectTypeInternalSlot_method(n),
@@ -2181,7 +2180,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ObjectTypeCallProperty {
-                    value: cvt_node_ptr(hermes_get_ObjectTypeCallProperty_value(n)),
+                    value: cvt_node_ptr(cvt, hermes_get_ObjectTypeCallProperty_value(n)),
                     is_static: hermes_get_ObjectTypeCallProperty_static(n),
                 },
             }
@@ -2190,11 +2189,11 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::ObjectTypeIndexer {
-                    id: cvt_node_ptr_opt(hermes_get_ObjectTypeIndexer_id(n)),
-                    key: cvt_node_ptr(hermes_get_ObjectTypeIndexer_key(n)),
-                    value: cvt_node_ptr(hermes_get_ObjectTypeIndexer_value(n)),
+                    id: cvt_node_ptr_opt(cvt, hermes_get_ObjectTypeIndexer_id(n)),
+                    key: cvt_node_ptr(cvt, hermes_get_ObjectTypeIndexer_key(n)),
+                    value: cvt_node_ptr(cvt, hermes_get_ObjectTypeIndexer_value(n)),
                     is_static: hermes_get_ObjectTypeIndexer_static(n),
-                    variance: cvt_node_ptr_opt(hermes_get_ObjectTypeIndexer_variance(n)),
+                    variance: cvt_node_ptr_opt(cvt, hermes_get_ObjectTypeIndexer_variance(n)),
                 },
             }
         ),
@@ -2210,7 +2209,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TypeParameterDeclaration {
-                    params: cvt_node_list(hermes_get_TypeParameterDeclaration_params(n)),
+                    params: cvt_node_list(cvt, hermes_get_TypeParameterDeclaration_params(n)),
                 },
             }
         ),
@@ -2219,9 +2218,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
                 range,
                 kind: ast::NodeKind::TypeParameter {
                     name: cvt_label(hermes_get_TypeParameter_name(n)),
-                    bound: cvt_node_ptr_opt(hermes_get_TypeParameter_bound(n)),
-                    variance: cvt_node_ptr_opt(hermes_get_TypeParameter_variance(n)),
-                    default: cvt_node_ptr_opt(hermes_get_TypeParameter_default(n)),
+                    bound: cvt_node_ptr_opt(cvt, hermes_get_TypeParameter_bound(n)),
+                    variance: cvt_node_ptr_opt(cvt, hermes_get_TypeParameter_variance(n)),
+                    default: cvt_node_ptr_opt(cvt, hermes_get_TypeParameter_default(n)),
                 },
             }
         ),
@@ -2229,7 +2228,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TypeParameterInstantiation {
-                    params: cvt_node_list(hermes_get_TypeParameterInstantiation_params(n)),
+                    params: cvt_node_list(cvt, hermes_get_TypeParameterInstantiation_params(n)),
                 },
             }
         ),
@@ -2237,8 +2236,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TypeCastExpression {
-                    expression: cvt_node_ptr(hermes_get_TypeCastExpression_expression(n)),
-                    type_annotation: cvt_node_ptr(hermes_get_TypeCastExpression_typeAnnotation(n)),
+                    expression: cvt_node_ptr(cvt, hermes_get_TypeCastExpression_expression(n)),
+                    type_annotation: cvt_node_ptr(cvt, hermes_get_TypeCastExpression_typeAnnotation(n)),
                 },
             }
         ),
@@ -2253,7 +2252,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::DeclaredPredicate {
-                    value: cvt_node_ptr(hermes_get_DeclaredPredicate_value(n)),
+                    value: cvt_node_ptr(cvt, hermes_get_DeclaredPredicate_value(n)),
                 },
             }
         ),
@@ -2261,8 +2260,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::EnumDeclaration {
-                    id: cvt_node_ptr(hermes_get_EnumDeclaration_id(n)),
-                    body: cvt_node_ptr(hermes_get_EnumDeclaration_body(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_EnumDeclaration_id(n)),
+                    body: cvt_node_ptr(cvt, hermes_get_EnumDeclaration_body(n)),
                 },
             }
         ),
@@ -2270,7 +2269,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::EnumStringBody {
-                    members: cvt_node_list(hermes_get_EnumStringBody_members(n)),
+                    members: cvt_node_list(cvt, hermes_get_EnumStringBody_members(n)),
                     explicit_type: hermes_get_EnumStringBody_explicitType(n),
                     has_unknown_members: hermes_get_EnumStringBody_hasUnknownMembers(n),
                 },
@@ -2280,7 +2279,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::EnumNumberBody {
-                    members: cvt_node_list(hermes_get_EnumNumberBody_members(n)),
+                    members: cvt_node_list(cvt, hermes_get_EnumNumberBody_members(n)),
                     explicit_type: hermes_get_EnumNumberBody_explicitType(n),
                     has_unknown_members: hermes_get_EnumNumberBody_hasUnknownMembers(n),
                 },
@@ -2290,7 +2289,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::EnumBooleanBody {
-                    members: cvt_node_list(hermes_get_EnumBooleanBody_members(n)),
+                    members: cvt_node_list(cvt, hermes_get_EnumBooleanBody_members(n)),
                     explicit_type: hermes_get_EnumBooleanBody_explicitType(n),
                     has_unknown_members: hermes_get_EnumBooleanBody_hasUnknownMembers(n),
                 },
@@ -2300,7 +2299,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::EnumSymbolBody {
-                    members: cvt_node_list(hermes_get_EnumSymbolBody_members(n)),
+                    members: cvt_node_list(cvt, hermes_get_EnumSymbolBody_members(n)),
                     has_unknown_members: hermes_get_EnumSymbolBody_hasUnknownMembers(n),
                 },
             }
@@ -2309,7 +2308,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::EnumDefaultedMember {
-                    id: cvt_node_ptr(hermes_get_EnumDefaultedMember_id(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_EnumDefaultedMember_id(n)),
                 },
             }
         ),
@@ -2317,8 +2316,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::EnumStringMember {
-                    id: cvt_node_ptr(hermes_get_EnumStringMember_id(n)),
-                    init: cvt_node_ptr(hermes_get_EnumStringMember_init(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_EnumStringMember_id(n)),
+                    init: cvt_node_ptr(cvt, hermes_get_EnumStringMember_init(n)),
                 },
             }
         ),
@@ -2326,8 +2325,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::EnumNumberMember {
-                    id: cvt_node_ptr(hermes_get_EnumNumberMember_id(n)),
-                    init: cvt_node_ptr(hermes_get_EnumNumberMember_init(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_EnumNumberMember_id(n)),
+                    init: cvt_node_ptr(cvt, hermes_get_EnumNumberMember_init(n)),
                 },
             }
         ),
@@ -2335,8 +2334,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::EnumBooleanMember {
-                    id: cvt_node_ptr(hermes_get_EnumBooleanMember_id(n)),
-                    init: cvt_node_ptr(hermes_get_EnumBooleanMember_init(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_EnumBooleanMember_id(n)),
+                    init: cvt_node_ptr(cvt, hermes_get_EnumBooleanMember_init(n)),
                 },
             }
         ),
@@ -2344,7 +2343,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSTypeAnnotation {
-                    type_annotation: cvt_node_ptr(hermes_get_TSTypeAnnotation_typeAnnotation(n)),
+                    type_annotation: cvt_node_ptr(cvt, hermes_get_TSTypeAnnotation_typeAnnotation(n)),
                 },
             }
         ),
@@ -2401,7 +2400,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSLiteralType {
-                    literal: cvt_node_ptr(hermes_get_TSLiteralType_literal(n)),
+                    literal: cvt_node_ptr(cvt, hermes_get_TSLiteralType_literal(n)),
                 },
             }
         ),
@@ -2409,8 +2408,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSIndexedAccessType {
-                    object_type: cvt_node_ptr(hermes_get_TSIndexedAccessType_objectType(n)),
-                    index_type: cvt_node_ptr(hermes_get_TSIndexedAccessType_indexType(n)),
+                    object_type: cvt_node_ptr(cvt, hermes_get_TSIndexedAccessType_objectType(n)),
+                    index_type: cvt_node_ptr(cvt, hermes_get_TSIndexedAccessType_indexType(n)),
                 },
             }
         ),
@@ -2418,7 +2417,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSArrayType {
-                    element_type: cvt_node_ptr(hermes_get_TSArrayType_elementType(n)),
+                    element_type: cvt_node_ptr(cvt, hermes_get_TSArrayType_elementType(n)),
                 },
             }
         ),
@@ -2426,8 +2425,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSTypeReference {
-                    type_name: cvt_node_ptr(hermes_get_TSTypeReference_typeName(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_TSTypeReference_typeParameters(n)),
+                    type_name: cvt_node_ptr(cvt, hermes_get_TSTypeReference_typeName(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_TSTypeReference_typeParameters(n)),
                 },
             }
         ),
@@ -2435,8 +2434,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSQualifiedName {
-                    left: cvt_node_ptr(hermes_get_TSQualifiedName_left(n)),
-                    right: cvt_node_ptr_opt(hermes_get_TSQualifiedName_right(n)),
+                    left: cvt_node_ptr(cvt, hermes_get_TSQualifiedName_left(n)),
+                    right: cvt_node_ptr_opt(cvt, hermes_get_TSQualifiedName_right(n)),
                 },
             }
         ),
@@ -2444,9 +2443,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSFunctionType {
-                    params: cvt_node_list(hermes_get_TSFunctionType_params(n)),
-                    return_type: cvt_node_ptr(hermes_get_TSFunctionType_returnType(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_TSFunctionType_typeParameters(n)),
+                    params: cvt_node_list(cvt, hermes_get_TSFunctionType_params(n)),
+                    return_type: cvt_node_ptr(cvt, hermes_get_TSFunctionType_returnType(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_TSFunctionType_typeParameters(n)),
                 },
             }
         ),
@@ -2454,9 +2453,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSConstructorType {
-                    params: cvt_node_list(hermes_get_TSConstructorType_params(n)),
-                    return_type: cvt_node_ptr(hermes_get_TSConstructorType_returnType(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_TSConstructorType_typeParameters(n)),
+                    params: cvt_node_list(cvt, hermes_get_TSConstructorType_params(n)),
+                    return_type: cvt_node_ptr(cvt, hermes_get_TSConstructorType_returnType(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_TSConstructorType_typeParameters(n)),
                 },
             }
         ),
@@ -2464,8 +2463,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSTypePredicate {
-                    parameter_name: cvt_node_ptr(hermes_get_TSTypePredicate_parameterName(n)),
-                    type_annotation: cvt_node_ptr(hermes_get_TSTypePredicate_typeAnnotation(n)),
+                    parameter_name: cvt_node_ptr(cvt, hermes_get_TSTypePredicate_parameterName(n)),
+                    type_annotation: cvt_node_ptr(cvt, hermes_get_TSTypePredicate_typeAnnotation(n)),
                 },
             }
         ),
@@ -2473,7 +2472,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSTupleType {
-                    element_types: cvt_node_list(hermes_get_TSTupleType_elementTypes(n)),
+                    element_types: cvt_node_list(cvt, hermes_get_TSTupleType_elementTypes(n)),
                 },
             }
         ),
@@ -2481,8 +2480,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSTypeAssertion {
-                    type_annotation: cvt_node_ptr(hermes_get_TSTypeAssertion_typeAnnotation(n)),
-                    expression: cvt_node_ptr(hermes_get_TSTypeAssertion_expression(n)),
+                    type_annotation: cvt_node_ptr(cvt, hermes_get_TSTypeAssertion_typeAnnotation(n)),
+                    expression: cvt_node_ptr(cvt, hermes_get_TSTypeAssertion_expression(n)),
                 },
             }
         ),
@@ -2490,8 +2489,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSAsExpression {
-                    expression: cvt_node_ptr(hermes_get_TSAsExpression_expression(n)),
-                    type_annotation: cvt_node_ptr(hermes_get_TSAsExpression_typeAnnotation(n)),
+                    expression: cvt_node_ptr(cvt, hermes_get_TSAsExpression_expression(n)),
+                    type_annotation: cvt_node_ptr(cvt, hermes_get_TSAsExpression_typeAnnotation(n)),
                 },
             }
         ),
@@ -2499,7 +2498,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSParameterProperty {
-                    parameter: cvt_node_ptr(hermes_get_TSParameterProperty_parameter(n)),
+                    parameter: cvt_node_ptr(cvt, hermes_get_TSParameterProperty_parameter(n)),
                     accessibility: cvt_label_opt(hermes_get_TSParameterProperty_accessibility(n)),
                     readonly: hermes_get_TSParameterProperty_readonly(n),
                     is_static: hermes_get_TSParameterProperty_static(n),
@@ -2511,9 +2510,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSTypeAliasDeclaration {
-                    id: cvt_node_ptr(hermes_get_TSTypeAliasDeclaration_id(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_TSTypeAliasDeclaration_typeParameters(n)),
-                    type_annotation: cvt_node_ptr(hermes_get_TSTypeAliasDeclaration_typeAnnotation(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_TSTypeAliasDeclaration_id(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_TSTypeAliasDeclaration_typeParameters(n)),
+                    type_annotation: cvt_node_ptr(cvt, hermes_get_TSTypeAliasDeclaration_typeAnnotation(n)),
                 },
             }
         ),
@@ -2521,10 +2520,10 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSInterfaceDeclaration {
-                    id: cvt_node_ptr(hermes_get_TSInterfaceDeclaration_id(n)),
-                    body: cvt_node_ptr(hermes_get_TSInterfaceDeclaration_body(n)),
-                    extends: cvt_node_list(hermes_get_TSInterfaceDeclaration_extends(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_TSInterfaceDeclaration_typeParameters(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_TSInterfaceDeclaration_id(n)),
+                    body: cvt_node_ptr(cvt, hermes_get_TSInterfaceDeclaration_body(n)),
+                    extends: cvt_node_list(cvt, hermes_get_TSInterfaceDeclaration_extends(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_TSInterfaceDeclaration_typeParameters(n)),
                 },
             }
         ),
@@ -2532,8 +2531,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSInterfaceHeritage {
-                    expression: cvt_node_ptr(hermes_get_TSInterfaceHeritage_expression(n)),
-                    type_parameters: cvt_node_ptr_opt(hermes_get_TSInterfaceHeritage_typeParameters(n)),
+                    expression: cvt_node_ptr(cvt, hermes_get_TSInterfaceHeritage_expression(n)),
+                    type_parameters: cvt_node_ptr_opt(cvt, hermes_get_TSInterfaceHeritage_typeParameters(n)),
                 },
             }
         ),
@@ -2541,7 +2540,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSInterfaceBody {
-                    body: cvt_node_list(hermes_get_TSInterfaceBody_body(n)),
+                    body: cvt_node_list(cvt, hermes_get_TSInterfaceBody_body(n)),
                 },
             }
         ),
@@ -2549,8 +2548,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSEnumDeclaration {
-                    id: cvt_node_ptr(hermes_get_TSEnumDeclaration_id(n)),
-                    members: cvt_node_list(hermes_get_TSEnumDeclaration_members(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_TSEnumDeclaration_id(n)),
+                    members: cvt_node_list(cvt, hermes_get_TSEnumDeclaration_members(n)),
                 },
             }
         ),
@@ -2558,8 +2557,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSEnumMember {
-                    id: cvt_node_ptr(hermes_get_TSEnumMember_id(n)),
-                    initializer: cvt_node_ptr_opt(hermes_get_TSEnumMember_initializer(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_TSEnumMember_id(n)),
+                    initializer: cvt_node_ptr_opt(cvt, hermes_get_TSEnumMember_initializer(n)),
                 },
             }
         ),
@@ -2567,8 +2566,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSModuleDeclaration {
-                    id: cvt_node_ptr(hermes_get_TSModuleDeclaration_id(n)),
-                    body: cvt_node_ptr(hermes_get_TSModuleDeclaration_body(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_TSModuleDeclaration_id(n)),
+                    body: cvt_node_ptr(cvt, hermes_get_TSModuleDeclaration_body(n)),
                 },
             }
         ),
@@ -2576,7 +2575,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSModuleBlock {
-                    body: cvt_node_list(hermes_get_TSModuleBlock_body(n)),
+                    body: cvt_node_list(cvt, hermes_get_TSModuleBlock_body(n)),
                 },
             }
         ),
@@ -2584,8 +2583,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSModuleMember {
-                    id: cvt_node_ptr(hermes_get_TSModuleMember_id(n)),
-                    initializer: cvt_node_ptr_opt(hermes_get_TSModuleMember_initializer(n)),
+                    id: cvt_node_ptr(cvt, hermes_get_TSModuleMember_id(n)),
+                    initializer: cvt_node_ptr_opt(cvt, hermes_get_TSModuleMember_initializer(n)),
                 },
             }
         ),
@@ -2593,7 +2592,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSTypeParameterDeclaration {
-                    params: cvt_node_list(hermes_get_TSTypeParameterDeclaration_params(n)),
+                    params: cvt_node_list(cvt, hermes_get_TSTypeParameterDeclaration_params(n)),
                 },
             }
         ),
@@ -2601,9 +2600,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSTypeParameter {
-                    name: cvt_node_ptr(hermes_get_TSTypeParameter_name(n)),
-                    constraint: cvt_node_ptr_opt(hermes_get_TSTypeParameter_constraint(n)),
-                    default: cvt_node_ptr_opt(hermes_get_TSTypeParameter_default(n)),
+                    name: cvt_node_ptr(cvt, hermes_get_TSTypeParameter_name(n)),
+                    constraint: cvt_node_ptr_opt(cvt, hermes_get_TSTypeParameter_constraint(n)),
+                    default: cvt_node_ptr_opt(cvt, hermes_get_TSTypeParameter_default(n)),
                 },
             }
         ),
@@ -2611,7 +2610,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSTypeParameterInstantiation {
-                    params: cvt_node_list(hermes_get_TSTypeParameterInstantiation_params(n)),
+                    params: cvt_node_list(cvt, hermes_get_TSTypeParameterInstantiation_params(n)),
                 },
             }
         ),
@@ -2619,7 +2618,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSUnionType {
-                    types: cvt_node_list(hermes_get_TSUnionType_types(n)),
+                    types: cvt_node_list(cvt, hermes_get_TSUnionType_types(n)),
                 },
             }
         ),
@@ -2627,7 +2626,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSIntersectionType {
-                    types: cvt_node_list(hermes_get_TSIntersectionType_types(n)),
+                    types: cvt_node_list(cvt, hermes_get_TSIntersectionType_types(n)),
                 },
             }
         ),
@@ -2635,7 +2634,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSTypeQuery {
-                    expr_name: cvt_node_ptr(hermes_get_TSTypeQuery_exprName(n)),
+                    expr_name: cvt_node_ptr(cvt, hermes_get_TSTypeQuery_exprName(n)),
                 },
             }
         ),
@@ -2643,10 +2642,10 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSConditionalType {
-                    extends_type: cvt_node_ptr(hermes_get_TSConditionalType_extendsType(n)),
-                    check_type: cvt_node_ptr(hermes_get_TSConditionalType_checkType(n)),
-                    true_type: cvt_node_ptr(hermes_get_TSConditionalType_trueType(n)),
-                    false_t_ype: cvt_node_ptr(hermes_get_TSConditionalType_falseTYpe(n)),
+                    extends_type: cvt_node_ptr(cvt, hermes_get_TSConditionalType_extendsType(n)),
+                    check_type: cvt_node_ptr(cvt, hermes_get_TSConditionalType_checkType(n)),
+                    true_type: cvt_node_ptr(cvt, hermes_get_TSConditionalType_trueType(n)),
+                    false_t_ype: cvt_node_ptr(cvt, hermes_get_TSConditionalType_falseTYpe(n)),
                 },
             }
         ),
@@ -2654,7 +2653,7 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSTypeLiteral {
-                    members: cvt_node_list(hermes_get_TSTypeLiteral_members(n)),
+                    members: cvt_node_list(cvt, hermes_get_TSTypeLiteral_members(n)),
                 },
             }
         ),
@@ -2662,9 +2661,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSPropertySignature {
-                    key: cvt_node_ptr(hermes_get_TSPropertySignature_key(n)),
-                    type_annotation: cvt_node_ptr_opt(hermes_get_TSPropertySignature_typeAnnotation(n)),
-                    initializer: cvt_node_ptr_opt(hermes_get_TSPropertySignature_initializer(n)),
+                    key: cvt_node_ptr(cvt, hermes_get_TSPropertySignature_key(n)),
+                    type_annotation: cvt_node_ptr_opt(cvt, hermes_get_TSPropertySignature_typeAnnotation(n)),
+                    initializer: cvt_node_ptr_opt(cvt, hermes_get_TSPropertySignature_initializer(n)),
                     optional: hermes_get_TSPropertySignature_optional(n),
                     computed: hermes_get_TSPropertySignature_computed(n),
                     readonly: hermes_get_TSPropertySignature_readonly(n),
@@ -2677,9 +2676,9 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSMethodSignature {
-                    key: cvt_node_ptr(hermes_get_TSMethodSignature_key(n)),
-                    params: cvt_node_list(hermes_get_TSMethodSignature_params(n)),
-                    return_type: cvt_node_ptr_opt(hermes_get_TSMethodSignature_returnType(n)),
+                    key: cvt_node_ptr(cvt, hermes_get_TSMethodSignature_key(n)),
+                    params: cvt_node_list(cvt, hermes_get_TSMethodSignature_params(n)),
+                    return_type: cvt_node_ptr_opt(cvt, hermes_get_TSMethodSignature_returnType(n)),
                     computed: hermes_get_TSMethodSignature_computed(n),
                 },
             }
@@ -2688,8 +2687,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSIndexSignature {
-                    parameters: cvt_node_list(hermes_get_TSIndexSignature_parameters(n)),
-                    type_annotation: cvt_node_ptr_opt(hermes_get_TSIndexSignature_typeAnnotation(n)),
+                    parameters: cvt_node_list(cvt, hermes_get_TSIndexSignature_parameters(n)),
+                    type_annotation: cvt_node_ptr_opt(cvt, hermes_get_TSIndexSignature_typeAnnotation(n)),
                 },
             }
         ),
@@ -2697,8 +2696,8 @@ pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {
             ast::Node {
                 range,
                 kind: ast::NodeKind::TSCallSignatureDeclaration {
-                    params: cvt_node_list(hermes_get_TSCallSignatureDeclaration_params(n)),
-                    return_type: cvt_node_ptr_opt(hermes_get_TSCallSignatureDeclaration_returnType(n)),
+                    params: cvt_node_list(cvt, hermes_get_TSCallSignatureDeclaration_params(n)),
+                    return_type: cvt_node_ptr_opt(cvt, hermes_get_TSCallSignatureDeclaration_returnType(n)),
                 },
             }
         ),

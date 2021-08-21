@@ -372,11 +372,11 @@ static void genGetters() {
 }
 
 static void genConvert() {
-  llvh::outs() << "pub unsafe fn cvt_node_ptr(n: NodePtr) -> ast::NodePtr {\n";
   llvh::outs()
-      << "    let nr = n.as_ref();\n"
-         "    let range = SourceRange { file: 0, start: SourceLoc { line: 0, col: 0 }, end: SourceLoc { line: 0, col: 0 } };\n"
-         "\n";
+      << "pub unsafe fn cvt_node_ptr(cvt: &Converter, n: NodePtr) -> ast::NodePtr {\n";
+  llvh::outs() << "    let nr = n.as_ref();\n"
+                  "    let range = cvt.smrange(nr.source_range);\n"
+                  "\n";
 
   llvh::outs() << "    match nr.kind {\n";
 
@@ -425,11 +425,12 @@ static void genConvert() {
           close = false;
           break;
         case FieldType::NodePtr:
-          llvh::outs() << "cvt_node_ptr" << (fld.optional ? "_opt" : "") << "(";
+          llvh::outs() << "cvt_node_ptr" << (fld.optional ? "_opt" : "")
+                       << "(cvt, ";
           break;
         case FieldType::NodeList:
           llvh::outs() << "cvt_node_list" << (fld.optional ? "_opt" : "")
-                       << "(";
+                       << "(cvt, ";
           break;
       }
       llvh::outs() << "hermes_get_" << cls.name << "_" << fld.name << "(n)";
@@ -480,8 +481,7 @@ int main(int argc, char **argv) {
   llvh::outs() << "// DO NOT EDIT\n\n";
 
   llvh::outs() << "use super::{node::*, convert::*};\n"
-                  "use crate::ast;\n"
-                  "use crate::ast::{SourceRange, SourceLoc};\n\n";
+                  "use crate::ast;\n\n";
 
   genEnum();
   llvh::outs() << "\n";

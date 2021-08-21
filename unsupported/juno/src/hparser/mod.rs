@@ -14,14 +14,15 @@ mod utf;
 use crate::ast;
 use thiserror::Error;
 
+use convert::Converter;
 use generated_ffi::cvt_node_ptr;
 use hermes_parser::HermesParser;
 use node::NodePtr;
 use std::fmt::Formatter;
 use utf::utf8_with_surrogates_to_string;
 
-fn convert_ast(n: NodePtr) -> ast::NodePtr {
-    unsafe { cvt_node_ptr(n) }
+fn convert_ast(cvt: &Converter, n: NodePtr) -> ast::NodePtr {
+    unsafe { cvt_node_ptr(cvt, n) }
 }
 
 /// The first error encountered when parsing.
@@ -43,7 +44,11 @@ pub fn parse(source: &str) -> Result<ast::NodePtr, ParseError> {
     let parser = HermesParser::parse(source);
 
     if let Some(root) = parser.root() {
-        return Ok(convert_ast(root));
+        let cvt = Converter {
+            hparser: &parser,
+            file_id: 0,
+        };
+        return Ok(convert_ast(&cvt, root));
     }
 
     let msg = &parser.messages()[parser

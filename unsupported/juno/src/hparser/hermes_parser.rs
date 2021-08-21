@@ -124,6 +124,7 @@ impl Drop for HermesParser {
 }
 
 impl HermesParser {
+    /// `file_id` is an opaque value used for encoding source coordinates.
     /// To avoid copying `source` can optionally be NUL-terminated.
     pub fn parse(source: &str) -> HermesParser {
         let bytes = source.as_bytes();
