@@ -7,7 +7,7 @@
 
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Clone, Copy, Error, Debug, Eq, PartialEq)]
 pub enum UTFError {
     // General.
     #[error("invalid Unicode character")]
@@ -91,6 +91,7 @@ fn decode_utf8_slow_path<const ALLOW_SURROGATES: bool>(
     let len = src.len();
     if (ch & 0xE0) == 0xC0 {
         if *from + 1 >= len {
+            *from = len;
             return Err(UTFError::UTF8IncompleteCont);
         }
         let ch1 = unsafe { *src.get_unchecked(*from + 1) } as u32;
@@ -192,10 +193,12 @@ pub fn utf8_with_surrogates_to_utf16(src: &[u8]) -> Result<Vec<u16>, UTFError> {
     Ok(v)
 }
 
-pub fn utf8_with_surrogates_to_string(src: &[u8]) -> Result<String, UTFError> {
+/// Returns a string with replacement and an optional error.
+fn utf8_with_surrogates_to_string_helper(src: &[u8]) -> (String, Option<UTFError>) {
     let mut from: usize = 0;
     let mut str = String::new();
     let len = src.len();
+    let mut err: Option<UTFError> = None;
 
     str.reserve(len);
     while from < len {
@@ -207,27 +210,56 @@ pub fn utf8_with_surrogates_to_string(src: &[u8]) -> Result<String, UTFError> {
             continue;
         }
 
-        let mut cp = decode_utf8_slow_path::<true>(src, &mut from, b as u32)?;
-        if is_low_surrogate(cp) {
-            return Err(UTFError::UTF16UnmatchedLowSurrogate);
+        let mut cp: u32;
+        match decode_utf8_slow_path::<true>(src, &mut from, b as u32) {
+            Ok(x) => cp = x,
+            Err(e) => {
+                err = err.or(Some(e));
+                cp = UNICODE_REPLACEMENT_CHARACTER;
+            }
         }
-        if is_high_surrogate(cp) {
+        if is_low_surrogate(cp) {
+            err = err.or(Some(UTFError::UTF16UnmatchedLowSurrogate));
+            cp = UNICODE_REPLACEMENT_CHARACTER;
+        } else if is_high_surrogate(cp) {
             if from >= len {
-                return Err(UTFError::UTF16IncompleteSurrogatePair);
+                err = err.or(Some(UTFError::UTF16IncompleteSurrogatePair));
+                cp = UNICODE_REPLACEMENT_CHARACTER;
+            } else {
+                // We checked `from` already.
+                let b1 = unsafe { *src.get_unchecked(from) };
+                match decode_utf8::<true>(src, &mut from, b1) {
+                    Ok(cp_low) => {
+                        if !is_low_surrogate(cp_low) {
+                            err = err.or(Some(UTFError::UTF16IncompleteSurrogatePair));
+                            cp = UNICODE_REPLACEMENT_CHARACTER;
+                        } else {
+                            cp = decode_surrogate_pair(cp, cp_low);
+                        }
+                    }
+                    Err(e) => {
+                        err = err.or(Some(e));
+                        cp = UNICODE_REPLACEMENT_CHARACTER;
+                    }
+                }
             }
-            // We checked `from` already.
-            let b1 = unsafe { *src.get_unchecked(from) };
-            let cp_low = decode_utf8::<true>(src, &mut from, b1)?;
-            if !is_low_surrogate(cp_low) {
-                return Err(UTFError::UTF16IncompleteSurrogatePair);
-            }
-            cp = decode_surrogate_pair(cp, cp_low);
         }
         str.push(unsafe { char::from_u32_unchecked(cp) });
     }
 
     str.shrink_to_fit();
-    Ok(str)
+    (str, err)
+}
+
+pub fn utf8_with_surrogates_to_string(src: &[u8]) -> Result<String, UTFError> {
+    match utf8_with_surrogates_to_string_helper(src) {
+        (_, Some(e)) => Err(e),
+        (s, None) => Ok(s),
+    }
+}
+
+pub fn utf8_with_surrogates_to_string_lossy(src: &[u8]) -> String {
+    utf8_with_surrogates_to_string_helper(src).0
 }
 
 #[cfg(test)]
@@ -255,6 +287,13 @@ mod tests {
         assert_eq!(
             utf8_with_surrogates_to_string(&[0xED, 0xA0, 0xBD, 0xED, 0xB8, 0xB9]).unwrap(),
             "😹"
+        );
+    }
+    #[test]
+    fn test_lossy() {
+        assert_eq!(
+            utf8_with_surrogates_to_string_lossy(&[0xED, 0xA0, 0x30, 0xED, 0xB8, 0xB9]),
+            "�0�"
         );
     }
 }
