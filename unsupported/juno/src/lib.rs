@@ -25,4 +25,7 @@ pub mod hermes_utf;
 pub mod hparser;
 
 #[allow(dead_code)]
+pub mod hsource_map;
+
+#[allow(dead_code)]
 pub mod nullbuf;

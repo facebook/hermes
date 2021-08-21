@@ -16,6 +16,7 @@ fn main() {
         "cargo:rustc-link-search={}/lib/Platform/Unicode",
         hermes_build
     );
+    println!("cargo:rustc-link-search={}/lib/SourceMap", hermes_build);
     println!("cargo:rustc-link-search={}/lib/Support", hermes_build);
     println!("cargo:rustc-link-search={}/external/dtoa", hermes_build);
     println!(
@@ -23,6 +24,7 @@ fn main() {
         hermes_build
     );
 
+    println!("cargo:rustc-link-lib=hermesSourceMap");
     println!("cargo:rustc-link-lib=hermesParser");
     println!("cargo:rustc-link-lib=hermesPlatformUnicode");
     println!("cargo:rustc-link-lib=hermesSupport");
