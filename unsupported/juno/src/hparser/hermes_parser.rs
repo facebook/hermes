@@ -6,13 +6,12 @@
  */
 
 use super::node::{Node, NodePtr, NodePtrOpt, SMLoc, StringRef};
-use crate::hermes_utf::utf8_with_surrogates_to_string;
+use crate::hermes_utf::utf8_with_surrogates_to_string_lossy;
 use crate::nullbuf::NullTerminatedBuf;
-use libc::c_int;
 use std::fmt::Formatter;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
-use std::os::raw::c_char;
+use std::os::raw::{c_char, c_int};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -52,7 +51,7 @@ impl std::fmt::Display for DiagMessage {
             "{}:{}:{}",
             self.coord.line,
             self.coord.column,
-            utf8_with_surrogates_to_string(self.message.as_slice()).unwrap()
+            utf8_with_surrogates_to_string_lossy(self.message.as_slice())
         )
     }
 }

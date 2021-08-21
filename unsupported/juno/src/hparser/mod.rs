@@ -14,7 +14,7 @@ use crate::ast;
 use crate::nullbuf::NullTerminatedBuf;
 use thiserror::Error;
 
-use crate::hermes_utf::utf8_with_surrogates_to_string;
+use crate::hermes_utf::utf8_with_surrogates_to_string_lossy;
 use convert::Converter;
 use generated_ffi::cvt_node_ptr;
 use hermes_parser::HermesParser;
@@ -22,6 +22,7 @@ use node::NodePtr;
 
 use std::fmt::Formatter;
 
+pub use convert::CvtLoc;
 pub use hermes_parser::MagicCommentKind;
 
 pub struct ParsedJS<'a> {
@@ -59,26 +60,25 @@ impl ParsedJS<'_> {
                     line: msg.coord.line as u32,
                     col: msg.coord.column as u32,
                 },
-                utf8_with_surrogates_to_string(msg.message.as_slice()).unwrap(),
+                utf8_with_surrogates_to_string_lossy(msg.message.as_slice()),
             )
         })
     }
 
     /// Create and return an external representation of the AST, or None if there were parse errors.
-    pub fn to_ast(&self) -> Option<ast::NodePtr> {
-        fn convert_ast(cvt: &Converter, n: NodePtr) -> ast::NodePtr {
-            unsafe { cvt_node_ptr(cvt, n) }
-        }
-        self.parser.root().map(|root| {
-            convert_ast(
-                &Converter {
-                    hparser: &self.parser,
-                    file_id: 0,
-                },
-                root,
-            )
-        })
+    pub fn to_ast(&self, file_id: u32, cvt_loc: Option<&dyn CvtLoc>) -> Option<ast::NodePtr> {
+        let cvt = Converter {
+            hparser: &self.parser,
+            file_id,
+            cvt_loc,
+        };
+
+        self.parser.root().map(|root| convert_ast(&cvt, root))
     }
+}
+
+fn convert_ast(cvt: &Converter, n: NodePtr) -> ast::NodePtr {
+    unsafe { cvt_node_ptr(cvt, n) }
 }
 
 /// The first error encountered when parsing.
@@ -94,20 +94,41 @@ impl std::fmt::Display for ParseError {
     }
 }
 
+fn parse_helper(
+    source: &str,
+    file_id: u32,
+    cvt_loc: Option<&dyn CvtLoc>,
+) -> Result<ast::NodePtr, ParseError> {
+    let buf = NullTerminatedBuf::from_str_check(source);
+    let parsed = ParsedJS::parse(&buf);
+    if let Some(ast) = parsed.to_ast(file_id, cvt_loc) {
+        Ok(ast)
+    } else {
+        let (loc, msg) = parsed.first_error().unwrap();
+        Err(ParseError { loc, msg })
+    }
+}
+
+/// This is a simple function that is intended to be used mostly for testing.
+/// When there ar errors, it returns only the first error.
+/// It checks if the input is already null-terminated and avoids making the copy in that case.
+/// Note that if the null terminator is truly present in the input, it would parse successfully
+/// what ought to be an error.
+pub fn parse_with_cvt(
+    source: &str,
+    file_id: u32,
+    cvt_loc: &dyn CvtLoc,
+) -> Result<ast::NodePtr, ParseError> {
+    parse_helper(source, file_id, Some(cvt_loc))
+}
+
 /// This is a simple function that is intended to be used mostly for testing.
 /// When there ar errors, it returns only the first error.
 /// It checks if the input is already null-terminated and avoids making the copy in that case.
 /// Note that if the null terminator is truly present in the input, it would parse successfully
 /// what ought to be an error.
 pub fn parse(source: &str) -> Result<ast::NodePtr, ParseError> {
-    let buf = NullTerminatedBuf::from_str_check(source);
-    let parsed = ParsedJS::parse(&buf);
-    if let Some(ast) = parsed.to_ast() {
-        Ok(ast)
-    } else {
-        let (loc, msg) = parsed.first_error().unwrap();
-        Err(ParseError { loc, msg })
-    }
+    parse_helper(source, 0, None)
 }
 
 #[cfg(test)]
