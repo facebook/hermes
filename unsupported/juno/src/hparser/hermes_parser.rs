@@ -6,7 +6,7 @@
  */
 
 use super::node::{Node, NodePtr, NodePtrOpt, SMLoc, StringRef};
-use super::utf::utf8_with_surrogates_to_string;
+use crate::hermes_utf::utf8_with_surrogates_to_string;
 use libc::c_int;
 use std::fmt::Formatter;
 use std::marker::PhantomData;

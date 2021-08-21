@@ -8,8 +8,8 @@
 use super::generated_ffi::cvt_node_ptr;
 use super::hermes_parser::HermesParser;
 use super::node::*;
-use super::utf::*;
 use crate::ast;
+use crate::hermes_utf::{utf8_with_surrogates_to_string, utf8_with_surrogates_to_utf16};
 use std::str::FromStr;
 
 /// Converts from Hermes AST to Juno AST

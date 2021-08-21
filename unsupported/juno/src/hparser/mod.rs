@@ -9,17 +9,17 @@ mod convert;
 mod generated_ffi;
 mod hermes_parser;
 mod node;
-mod utf;
 
 use crate::ast;
 use thiserror::Error;
 
+use crate::hermes_utf::utf8_with_surrogates_to_string;
 use convert::Converter;
 use generated_ffi::cvt_node_ptr;
 use hermes_parser::HermesParser;
 use node::NodePtr;
+
 use std::fmt::Formatter;
-use utf::utf8_with_surrogates_to_string;
 
 pub use hermes_parser::MagicCommentKind;
 

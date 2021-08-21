@@ -19,4 +19,7 @@ pub mod gen_js;
 mod convert;
 
 #[allow(dead_code)]
+pub mod hermes_utf;
+
+#[allow(dead_code)]
 pub mod hparser;
