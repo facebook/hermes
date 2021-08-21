@@ -456,6 +456,7 @@ static void genConvert() {
 
 static void genEnum() {
   llvh::outs() << "#[repr(u32)]\n";
+  llvh::outs() << "#[derive(Debug, PartialEq)]\n";
   llvh::outs() << "pub enum NodeKind {\n";
   for (const auto &cls : treeClasses_) {
     llvh::outs() << "    " << cls.enumName();

@@ -7,31 +7,41 @@
 
 use super::generated_ffi::NodeKind;
 use std::marker::PhantomData;
+use std::ptr::NonNull;
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct SMLoc {
     ptr: *const u8,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct SMRange {
     start: SMLoc,
     end: SMLoc,
 }
 
 #[repr(C)]
-struct StringRef {
+#[derive(Copy, Clone)]
+pub struct StringRef {
     data: *const u8,
     length: usize,
 }
 
 impl StringRef {
-    fn as_slice(&self) -> &[u8] {
-        unsafe { std::slice::from_raw_parts(self.data, self.length) }
+    pub fn as_slice(&self) -> &[u8] {
+        // Rust doesn't allow null pointer in a slice.
+        if self.data.is_null() {
+            &[]
+        } else {
+            unsafe { std::slice::from_raw_parts(self.data, self.length) }
+        }
     }
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct UniqueString {
     str: StringRef,
 }
@@ -62,9 +72,7 @@ pub struct NodeStringOpt {
 
 impl NodeLabel {
     pub fn as_slice(&self) -> &[u8] {
-        if self.ptr.is_null() {
-            panic!("null NodeLabel");
-        }
+        debug_assert!(!self.ptr.is_null(), "null NodeLabel");
         unsafe { (*self.ptr).str.as_slice() }
     }
 }
@@ -81,9 +89,7 @@ impl NodeLabelOpt {
 
 impl NodeString {
     pub fn as_slice(&self) -> &[u8] {
-        if self.ptr.is_null() {
-            panic!("null NodeLabel");
-        }
+        debug_assert!(!self.ptr.is_null(), "null NodeLabel");
         unsafe { (*self.ptr).str.as_slice() }
     }
 }
@@ -101,7 +107,7 @@ impl NodeStringOpt {
 #[repr(transparent)]
 #[derive(Copy, Clone)]
 pub struct NodePtr {
-    ptr: *const Node,
+    ptr: NonNull<Node>,
 }
 
 #[repr(transparent)]
@@ -112,14 +118,14 @@ pub struct NodePtrOpt {
 
 impl NodePtr {
     pub fn new(n: &Node) -> NodePtr {
-        NodePtr { ptr: n }
+        NodePtr {
+            ptr: NonNull::from(n),
+        }
     }
 
     pub fn as_ref(&self) -> &Node {
-        if self.ptr.is_null() {
-            panic!("null NodePtr");
-        }
-        unsafe { &*self.ptr }
+        debug_assert!(!self.ptr.as_ptr().is_null(), "null NodePtr");
+        unsafe { self.ptr.as_ref() }
     }
 }
 
@@ -128,7 +134,9 @@ impl NodePtrOpt {
         if self.ptr.is_null() {
             None
         } else {
-            Some(NodePtr { ptr: self.ptr })
+            Some(NodePtr {
+                ptr: unsafe { NonNull::new_unchecked(self.ptr as *mut Node) },
+            })
         }
     }
 }
@@ -151,9 +159,7 @@ pub struct NodeListOptRef {
 
 impl NodeListRef {
     pub fn as_ref(&self) -> &NodeList {
-        if self.ptr.is_null() {
-            panic!("NodeListRef is null")
-        }
+        debug_assert!(!self.ptr.is_null(), "null NodeListRef");
         unsafe { &*self.ptr }
     }
     pub fn iter(&self) -> NodeIterator {
