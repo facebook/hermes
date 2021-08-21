@@ -20,6 +20,7 @@ pub fn node(kind: NodeKind) -> Box<Node> {
 }
 
 #[test]
+#[allow(clippy::float_cmp)]
 fn test_visit() {
     use NodeKind::*;
     // Dummy range, we don't care about ranges in this test.

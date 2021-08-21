@@ -36,10 +36,12 @@ fn test_roundtrip(src1: &str) {
         let ast1_json = String::from_utf8(dump).expect("Invalid UTF-8 output in test");
 
         let src2 = do_gen(&ast1, *pretty);
-        let ast2 = hparser::parse(&src2).expect(&format!(
-            "Invalid JS generated: Pretty={:?}\nOriginal Source:\n{}\nGenerated Source:\n{}",
-            pretty, &src1, &src2,
-        ));
+        let ast2 = hparser::parse(&src2).unwrap_or_else(|_| {
+            panic!(
+                "Invalid JS generated: Pretty={:?}\nOriginal Source:\n{}\nGenerated Source:\n{}",
+                pretty, &src1, &src2,
+            )
+        });
         let mut dump: Vec<u8> = vec![];
         dump_json(&mut dump, &ast2, juno::ast::Pretty::Yes).unwrap();
         let ast2_json = String::from_utf8(dump).expect("Invalid UTF-8 output in test");

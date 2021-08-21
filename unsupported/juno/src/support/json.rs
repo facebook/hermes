@@ -328,7 +328,7 @@ mod tests {
     fn test_string() {
         let mut out = vec![];
         let mut emitter = JSONEmitter::new(&mut out, Pretty::No);
-        emitter.emit_string_literal(&vec![0xd00a, 0x0a]);
+        emitter.emit_string_literal(&[0xd00a, 0x0a]);
         emitter.end().unwrap();
         assert_eq!(String::from_utf8(out).unwrap(), "\"\\ud00a\\n\"\n");
     }
