@@ -246,11 +246,11 @@ mod tests {
                 let x: Vec<u16> = "😹".encode_utf16().collect();
                 x
             },
-            [0xD83D, 0xDe39]
+            [0xD83D, 0xDE39]
         );
         assert_eq!(
             utf8_with_surrogates_to_utf16(&[0xED, 0xA0, 0xBD, 0xED, 0xB8, 0xB9]).unwrap(),
-            [0xD83D, 0xDe39]
+            [0xD83D, 0xDE39]
         );
         assert_eq!(
             utf8_with_surrogates_to_string(&[0xED, 0xA0, 0xBD, 0xED, 0xB8, 0xB9]).unwrap(),
