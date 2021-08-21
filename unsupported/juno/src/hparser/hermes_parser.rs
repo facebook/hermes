@@ -7,6 +7,7 @@
 
 use super::node::{Node, NodePtr, NodePtrOpt, SMLoc, StringRef};
 use crate::hermes_utf::utf8_with_surrogates_to_string;
+use crate::nullbuf::NullTerminatedBuf;
 use libc::c_int;
 use std::fmt::Formatter;
 use std::marker::PhantomData;
@@ -109,42 +110,27 @@ extern "C" {
     fn hermes_get_node_name(node: NodePtr) -> DataRef<'static, u8>;
 }
 
-pub struct HermesParser {
+pub struct HermesParser<'a> {
     /// A pointer to the opaque C++ parser object. It should never be null.
     parser_ctx: *mut ParserContext,
     /// If the input is not zero-terminated, we create a zero-terminated copy
     /// here.
-    tmpbuf: Vec<u8>,
+    source: &'a NullTerminatedBuf<'a>,
 }
 
-impl Drop for HermesParser {
+impl Drop for HermesParser<'_> {
     fn drop(&mut self) {
         unsafe { hermes_parser_free(self.parser_ctx) }
     }
 }
 
-impl HermesParser {
+impl HermesParser<'_> {
     /// `file_id` is an opaque value used for encoding source coordinates.
-    /// To avoid copying `source` can optionally be NUL-terminated.
-    pub fn parse(source: &str) -> HermesParser {
-        let bytes = source.as_bytes();
-
-        // Optional temporary copy for zero termination.
-        let mut tmpbuf = Vec::new();
-        // Zero terminated source reference.
-        let source_z = if let [.., 0] = bytes {
-            bytes
-        } else {
-            tmpbuf.reserve_exact(bytes.len() + 1);
-            tmpbuf.extend_from_slice(bytes);
-            tmpbuf.push(0u8);
-            tmpbuf.as_slice()
-        };
-
-        let parser_ctx =
-            unsafe { hermes_parser_parse(source_z.as_ptr() as *const i8, source_z.len()) };
-
-        HermesParser { parser_ctx, tmpbuf }
+    pub fn parse<'a>(source: &'a NullTerminatedBuf) -> HermesParser<'a> {
+        HermesParser {
+            parser_ctx: unsafe { hermes_parser_parse(source.as_c_char_ptr(), source.len()) },
+            source,
+        }
     }
 
     /// Return the index of the first parser error (there could be warnings before it).
@@ -206,14 +192,16 @@ mod tests {
 
     #[test]
     fn good_parse() {
-        let p = HermesParser::parse("var x = 10;\0");
+        let buf = NullTerminatedBuf::from_str_check("var x = 10;\0");
+        let p = HermesParser::parse(&buf);
         assert!(!p.has_errors());
         assert_eq!(p.root().unwrap().as_ref().kind, NodeKind::Program);
     }
 
     #[test]
     fn parse_error() {
-        let p = HermesParser::parse("var x+ = 10;");
+        let buf = NullTerminatedBuf::from_str_check("var x+ = 10;");
+        let p = HermesParser::parse(&buf);
         assert!(p.has_errors());
         assert!(p.root().is_none());
 
@@ -227,13 +215,14 @@ mod tests {
 
     #[test]
     fn magic_comments() {
-        let p = HermesParser::parse(
+        let buf = NullTerminatedBuf::from_str_check(
             "var p = 0;
             //# sourceURL=1
             //# sourceMappingURL=my map URL
             //# sourceURL=my source URL
             ",
         );
+        let p = HermesParser::parse(&buf);
         assert!(!p.has_errors());
         assert_eq!(
             p.magic_comment(MagicCommentKind::SourceUrl).unwrap(),

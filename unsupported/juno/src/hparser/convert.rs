@@ -14,7 +14,7 @@ use std::str::FromStr;
 
 /// Converts from Hermes AST to Juno AST
 pub struct Converter<'a> {
-    pub hparser: &'a HermesParser,
+    pub hparser: &'a HermesParser<'a>,
     /// The file id to use for the converted coordinates.
     pub file_id: u32,
 }

@@ -23,3 +23,6 @@ pub mod hermes_utf;
 
 #[allow(dead_code)]
 pub mod hparser;
+
+#[allow(dead_code)]
+pub mod nullbuf;

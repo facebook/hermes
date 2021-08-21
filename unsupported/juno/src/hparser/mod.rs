@@ -11,6 +11,7 @@ mod hermes_parser;
 mod node;
 
 use crate::ast;
+use crate::nullbuf::NullTerminatedBuf;
 use thiserror::Error;
 
 use crate::hermes_utf::utf8_with_surrogates_to_string;
@@ -23,15 +24,15 @@ use std::fmt::Formatter;
 
 pub use hermes_parser::MagicCommentKind;
 
-pub struct ParsedJS {
-    parser: HermesParser,
+pub struct ParsedJS<'a> {
+    parser: HermesParser<'a>,
 }
 
-impl ParsedJS {
+impl ParsedJS<'_> {
     /// Parse the source and store an internal representation of the AST and/or a list of diagnostic
     /// messages. If at least one of the messages is an error, there is no AST.
     /// To avoid copying `source` can optionally be NUL-terminated.
-    pub fn parse(source: &str) -> ParsedJS {
+    pub fn parse<'a>(source: &'a NullTerminatedBuf) -> ParsedJS<'a> {
         ParsedJS {
             parser: HermesParser::parse(source),
         }
@@ -95,8 +96,12 @@ impl std::fmt::Display for ParseError {
 
 /// This is a simple function that is intended to be used mostly for testing.
 /// When there ar errors, it returns only the first error.
+/// It checks if the input is already null-terminated and avoids making the copy in that case.
+/// Note that if the null terminator is truly present in the input, it would parse successfully
+/// what ought to be an error.
 pub fn parse(source: &str) -> Result<ast::NodePtr, ParseError> {
-    let parsed = ParsedJS::parse(source);
+    let buf = NullTerminatedBuf::from_str_check(source);
+    let parsed = ParsedJS::parse(&buf);
     if let Some(ast) = parsed.to_ast() {
         Ok(ast)
     } else {
