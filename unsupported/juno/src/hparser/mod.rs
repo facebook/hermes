@@ -21,8 +21,63 @@ use node::NodePtr;
 use std::fmt::Formatter;
 use utf::utf8_with_surrogates_to_string;
 
-fn convert_ast(cvt: &Converter, n: NodePtr) -> ast::NodePtr {
-    unsafe { cvt_node_ptr(cvt, n) }
+pub use hermes_parser::MagicCommentKind;
+
+pub struct ParsedJS {
+    parser: HermesParser,
+}
+
+impl ParsedJS {
+    /// Parse the source and store an internal representation of the AST and/or a list of diagnostic
+    /// messages. If at least one of the messages is an error, there is no AST.
+    /// To avoid copying `source` can optionally be NUL-terminated.
+    pub fn parse(source: &str) -> ParsedJS {
+        ParsedJS {
+            parser: HermesParser::parse(source),
+        }
+    }
+
+    /// Return true if there is at least one parser error (implying there is no AST).
+    pub fn has_errors(&self) -> bool {
+        self.parser.has_errors()
+    }
+
+    /// Return the last magic comment of the specified type (each comment overrides the previous
+    /// one, so only the last is recorded).
+    pub fn magic_comment(&self, kind: MagicCommentKind) -> Option<&str> {
+        self.parser.magic_comment(kind)
+    }
+
+    /// This function is a temporary hack returning the first error.
+    /// It returns (line, column, error_message) of the first error.
+    pub fn first_error(&self) -> Option<(ast::SourceLoc, String)> {
+        self.parser.first_error_index().map(|index| {
+            let msg = &self.parser.messages()[index];
+            (
+                ast::SourceLoc {
+                    line: msg.coord.line as u32,
+                    col: msg.coord.column as u32,
+                },
+                utf8_with_surrogates_to_string(msg.message.as_slice()).unwrap(),
+            )
+        })
+    }
+
+    /// Create and return an external representation of the AST, or None if there were parse errors.
+    pub fn to_ast(&self) -> Option<ast::NodePtr> {
+        fn convert_ast(cvt: &Converter, n: NodePtr) -> ast::NodePtr {
+            unsafe { cvt_node_ptr(cvt, n) }
+        }
+        self.parser.root().map(|root| {
+            convert_ast(
+                &Converter {
+                    hparser: &self.parser,
+                    file_id: 0,
+                },
+                root,
+            )
+        })
+    }
 }
 
 /// The first error encountered when parsing.
@@ -41,27 +96,13 @@ impl std::fmt::Display for ParseError {
 /// This is a simple function that is intended to be used mostly for testing.
 /// When there ar errors, it returns only the first error.
 pub fn parse(source: &str) -> Result<ast::NodePtr, ParseError> {
-    let parser = HermesParser::parse(source);
-
-    if let Some(root) = parser.root() {
-        let cvt = Converter {
-            hparser: &parser,
-            file_id: 0,
-        };
-        return Ok(convert_ast(&cvt, root));
+    let parsed = ParsedJS::parse(source);
+    if let Some(ast) = parsed.to_ast() {
+        Ok(ast)
+    } else {
+        let (loc, msg) = parsed.first_error().unwrap();
+        Err(ParseError { loc, msg })
     }
-
-    let msg = &parser.messages()[parser
-        .first_error_index()
-        .expect("at least one error expected when no root")];
-
-    Err(ParseError {
-        loc: ast::SourceLoc {
-            line: msg.coord.line as u32,
-            col: msg.coord.column as u32,
-        },
-        msg: utf8_with_surrogates_to_string(msg.message.as_slice()).unwrap(),
-    })
 }
 
 #[cfg(test)]
