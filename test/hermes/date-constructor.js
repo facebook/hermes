@@ -244,6 +244,10 @@ print(Date.parse('Mon Jul 16 2019 13:1525 GMT-0700'));
 // CHECK-NEXT: NaN
 print(Date.parse('Mon Jul 16 2019 13:1525 GMT'));
 // CHECK-NEXT: NaN
+print(Date.parse('Mon Jul 16 2019 00:00:00'));
+// CHECK-NEXT: 1563260400000
+print(Date.parse('Mon Jul 16 2019'));
+// CHECK-NEXT: 1563260400000
 print(Date.parse('2021-04-10T01:00:00.000-01:30'));
 // CHECK-NEXT: 1618021800000
 
@@ -291,6 +295,8 @@ print(Date.parse('Tue May 05 2020  00:00:00'));
 print(Date.parse('Tue May 05 2020 00:00:00  PDT'));
 // CHECK-NEXT: 1588662000000
 print(Date.parse('Tue May 05 2020 00:00:00'.padEnd(60)));  // trailing spaces.
+// CHECK-NEXT: 1588662000000
+print(Date.parse('Tue May 05 2020'.padEnd(60)));
 // CHECK-NEXT: 1588662000000
 
 // Quick check that getters work; internal functions are unit tested instead.

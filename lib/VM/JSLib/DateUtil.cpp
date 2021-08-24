@@ -991,16 +991,19 @@ static double parseESDate(StringView str) {
 
   // Hour:minute:second.
   consumeSpaces();
-  if (!scanInt(it, end, h))
-    return nan;
-  if (!consume(':'))
-    return nan;
-  if (!scanInt(it, end, min))
-    return nan;
-  if (!consume(':'))
-    return nan;
-  if (!scanInt(it, end, s))
-    return nan;
+
+  if (it != end) {
+    if (!scanInt(it, end, h))
+      return nan;
+    if (!consume(':'))
+      return nan;
+    if (!scanInt(it, end, min))
+      return nan;
+    if (!consume(':'))
+      return nan;
+    if (!scanInt(it, end, s))
+      return nan;
+  }
 
   // Space and time zone.
   consumeSpaces();
