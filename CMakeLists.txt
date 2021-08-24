@@ -269,20 +269,7 @@ set(HERMES_BUILD_NODE_HERMES OFF CACHE BOOL "Whether to build node-hermes")
 set(HERMES_BUILD_LEAN_LIBHERMES OFF CACHE BOOL "Exclude the Hermes compiler from libhermes.")
 
 if (HERMES_IS_ANDROID)
-  set(HERMES_IS_MOBILE_BUILD TRUE)
-
   add_definitions(-DHERMES_PLATFORM_UNICODE=HERMES_PLATFORM_UNICODE_JAVA)
-
-  # The toolchain passes -Wa,--noexecstack which is valid for compiling
-  # but not for linking. Just ignore it.
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-command-line-argument")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-command-line-argument")
-
-  # JS developers aren't VM developers. Give them a faster build.
-  set(CMAKE_CXX_FLAGS_DEBUG "-O3 -g -DNDEBUG")
-
-  # The release build can focus on size.
-  set(CMAKE_CXX_FLAGS_RELEASE "-Os -DNDEBUG")
 endif()
 
 if(HERMES_BUILD_APPLE_DSYM)
