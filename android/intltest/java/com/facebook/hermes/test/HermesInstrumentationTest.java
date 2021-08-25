@@ -90,6 +90,25 @@ public class HermesInstrumentationTest extends InstrumentationTestCase {
   }
 
   @Test
+  public void testDateTimeFormat() {
+    try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
+      rt.evaluateJavaScript(
+          new StringBuilder()
+              .append("let date = new Date('2021-08-13T14:00:00Z');\n")
+              .append("let formattedDate = Intl.DateTimeFormat('en-US', {\n")
+              .append("timeZone: 'America/New_York',\n")
+              .append("month: 'numeric',\n")
+              .append("hour: 'numeric',\n")
+              .append("minute: 'numeric'\n")
+              .append("});\n")
+              .toString());
+
+      String result = rt.getGlobalStringProperty("formattedDate");
+      assertThat(result).isEqualTo("8/13, 10:00 AM");
+    }
+  }
+
+  @Test
   public void testCaseConversion() {
     Locale defaultLocale = Locale.getDefault();
     Locale.setDefault(new Locale("en-US"));
