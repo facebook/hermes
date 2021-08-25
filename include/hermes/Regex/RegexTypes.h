@@ -198,7 +198,7 @@ class SyntaxFlags {
     ICASE = 1 << 0,
     GLOBAL = 1 << 1,
     MULTILINE = 1 << 2,
-    UNICODE = 1 << 3,
+    UCODE = 1 << 3,
     DOTALL = 1 << 4,
     STICKY = 1 << 5
   };
@@ -225,7 +225,7 @@ class SyntaxFlags {
     if (multiline)
       ret |= MULTILINE;
     if (unicode)
-      ret |= UNICODE;
+      ret |= UCODE;
     if (sticky)
       ret |= STICKY;
     if (dotAll)
@@ -244,7 +244,7 @@ class SyntaxFlags {
       ret.ignoreCase = 1;
     if (byte & MULTILINE)
       ret.multiline = 1;
-    if (byte & UNICODE)
+    if (byte & UCODE)
       ret.unicode = 1;
     if (byte & STICKY)
       ret.sticky = 1;

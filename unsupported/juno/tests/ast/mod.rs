@@ -7,6 +7,8 @@
 
 use juno::ast::{Node, NodeKind, NodePtr, SourceLoc, SourceRange, Visitor};
 
+mod validate;
+
 pub fn node(kind: NodeKind) -> Box<Node> {
     let range = SourceRange {
         file: 0,
@@ -18,6 +20,7 @@ pub fn node(kind: NodeKind) -> Box<Node> {
 }
 
 #[test]
+#[allow(clippy::float_cmp)]
 fn test_visit() {
     use NodeKind::*;
     // Dummy range, we don't care about ranges in this test.
@@ -59,8 +62,8 @@ fn test_visit() {
         acc: Vec<f64>,
     }
 
-    impl Visitor for NumberFinder {
-        fn call(&mut self, node: &Node, parent: Option<&Node>) {
+    impl<'a> Visitor<'a> for NumberFinder {
+        fn call(&mut self, node: &'a Node, parent: Option<&'a Node>) {
             if let NumericLiteral { value } = &node.kind {
                 assert!(matches!(parent.unwrap().kind, ExpressionStatement { .. }));
                 self.acc.push(*value);
@@ -72,24 +75,4 @@ fn test_visit() {
     let mut visitor = NumberFinder { acc: vec![] };
     ast.visit(&mut visitor, None);
     assert_eq!(visitor.acc, [1.0, 2.0]);
-}
-
-#[test]
-fn test_valid() {
-    use NodeKind::*;
-    assert!(node(ReturnStatement { argument: None }).validate());
-
-    assert!(
-        node(ReturnStatement {
-            argument: Some(node(NumericLiteral { value: 1.0 }))
-        })
-        .validate()
-    );
-
-    assert!(
-        !node(ReturnStatement {
-            argument: Some(node(ReturnStatement { argument: None })),
-        })
-        .validate()
-    );
 }

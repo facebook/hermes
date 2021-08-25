@@ -10,7 +10,7 @@
 
 #ifdef HERMES_ENABLE_DEBUGGER
 
-#include "hermes/BCGen/HBC/Bytecode.h"
+#include "hermes/BCGen/HBC/BytecodeInstructionGenerator.h"
 #include "hermes/BCGen/HBC/DebugInfo.h"
 #include "hermes/Inst/Inst.h"
 #include "hermes/Public/DebuggerTypes.h"

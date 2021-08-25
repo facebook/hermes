@@ -168,15 +168,9 @@ class SourceErrorManager {
     SMLoc loc;
     SMRange sm;
     std::string msg;
-    SourceCoords coords;
 
-    MessageData(
-        DiagKind dk,
-        SMLoc loc,
-        SMRange sm,
-        std::string &&msg,
-        const SourceCoords &coords)
-        : dk(dk), loc(loc), sm(sm), msg(std::move(msg)), coords(coords) {}
+    MessageData(DiagKind dk, SMLoc loc, SMRange sm, std::string &&msg)
+        : dk(dk), loc(loc), sm(sm), msg(std::move(msg)) {}
   };
 
   /// An instance of a buffered message, which will be printed later.
@@ -190,8 +184,7 @@ class SourceErrorManager {
         DiagKind dk,
         SMLoc loc,
         SMRange sm,
-        std::string &&msg,
-        const SourceCoords &coords);
+        std::string &&msg);
 
     llvh::iterator_range<const MessageData *> notes(
         const std::vector<MessageData> &bufferedNotes) const;

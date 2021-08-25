@@ -43,7 +43,7 @@ Value *simplifyAsUint32(Value *operand) {
   return lhs;
 }
 
-OptValue<Value *> simplifyBinOp(BinaryOperatorInst *binary) {
+OptValue<Value *> simplifyBinOpWasm(BinaryOperatorInst *binary) {
   auto kind = binary->getOperatorKind();
 
   Value *lhs = binary->getLeftHandSide();
@@ -259,7 +259,7 @@ OptValue<Value *> wasmSimplifyInstruction(Instruction *I) {
   // Dispatch the different simplification kinds:
   switch (I->getKind()) {
     case ValueKind::BinaryOperatorInstKind:
-      return simplifyBinOp(cast<BinaryOperatorInst>(I));
+      return simplifyBinOpWasm(cast<BinaryOperatorInst>(I));
     case ValueKind::LoadPropertyInstKind:
       return simplifyLoad(cast<LoadPropertyInst>(I));
     case ValueKind::StorePropertyInstKind:
@@ -310,4 +310,5 @@ bool WasmSimplify::runOnFunction(Function *F) {
   return changed;
 }
 
+#undef DEBUG_TYPE
 #endif

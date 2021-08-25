@@ -103,20 +103,48 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
   if (!complete_) {
     bytecodeGenerationComplete();
   }
-  return std::unique_ptr<BytecodeFunction>(new BytecodeFunction(
-      std::move(opcodes_),
-      definitionKind,
-      valueKind,
-      strictMode,
-      FunctionHeader(
-          bytecodeSize_,
-          paramCount,
-          frameSize_,
-          environmentSize,
-          nameID,
-          highestReadCacheIndex_,
-          highestWriteCacheIndex_),
-      std::move(exceptionHandlers_)));
+
+  FunctionHeader header{
+      bytecodeSize_,
+      paramCount,
+      frameSize_,
+      environmentSize,
+      nameID,
+      highestReadCacheIndex_,
+      highestWriteCacheIndex_};
+
+  switch (definitionKind) {
+    case Function::DefinitionKind::ES6Arrow:
+    case Function::DefinitionKind::ES6Method:
+      header.flags.prohibitInvoke = FunctionHeaderFlag::ProhibitConstruct;
+      break;
+    case Function::DefinitionKind::ES6Constructor:
+      header.flags.prohibitInvoke = FunctionHeaderFlag::ProhibitCall;
+      break;
+    default:
+      // ES9.0 9.2.3 step 4 states that generator functions and async
+      // functions cannot be constructed.
+      // We place this check outside the `DefinitionKind` because generator
+      // functions may also be ES6 methods, for example, and are not included
+      // in the DefinitionKind enum.
+      // Note that we only have to check for GeneratorFunctionKind in this
+      // case, because ES6 methods are already checked above, and ES6
+      // constructors are prohibited from being generator functions.
+      // As such, this is the only case in which we must change the
+      // prohibitInvoke flag based on valueKind.
+      header.flags.prohibitInvoke =
+          (valueKind == ValueKind::GeneratorFunctionKind ||
+           valueKind == ValueKind::AsyncFunctionKind)
+          ? FunctionHeaderFlag::ProhibitConstruct
+          : FunctionHeaderFlag::ProhibitNone;
+      break;
+  }
+
+  header.flags.strictMode = strictMode;
+  header.flags.hasExceptionHandler = exceptionHandlers_.size();
+
+  return std::make_unique<BytecodeFunction>(
+      std::move(opcodes_), std::move(header), std::move(exceptionHandlers_));
 }
 
 unsigned BytecodeFunctionGenerator::getFunctionID(Function *F) {
@@ -298,9 +326,6 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
         functionNameId);
 
     if (F->isLazy()) {
-#ifdef HERMESVM_LEAN
-      llvm_unreachable("Lazy support compiled out");
-#else
       auto lazyData = std::make_unique<LazyCompilationData>();
       lazyData->context = F->getParent()->shareContext();
       lazyData->parentScope = F->getLazyScope();
@@ -315,7 +340,6 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
           : Identifier();
       lazyData->strictMode = F->isStrictMode();
       func->setLazyCompilationData(std::move(lazyData));
-#endif
     }
 
     if (BFG.hasDebugInfo()) {

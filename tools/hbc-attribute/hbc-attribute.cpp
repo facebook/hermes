@@ -78,7 +78,7 @@ static llvh::cl::opt<std::string>
 
 namespace {
 template <typename T>
-unsigned byteSize(ArrayRef<T> ref) {
+unsigned byteSize(llvh::ArrayRef<T> ref) {
   return ref.size() * sizeof(T);
 }
 
@@ -363,7 +363,7 @@ class UsageCounter : public BytecodeVisitor {
   }
 
   void countSerializedLiterals(
-      ArrayRef<unsigned char> array,
+      llvh::ArrayRef<unsigned char> array,
       unsigned offset,
       unsigned count) {
     const unsigned char *ptr = array.data();

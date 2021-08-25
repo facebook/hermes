@@ -4,6 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 add_hermes_library(hermesSourceMap
+    c-api.cpp
     SourceMap.cpp
     SourceMapGenerator.cpp
     SourceMapParser.cpp

@@ -12,8 +12,6 @@
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/CellKind.h"
-#include "hermes/VM/GCBase-inline.h"
-#include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/RootAndSlotAcceptorDefault.h"
 #include "hermes/VM/Runtime.h"
@@ -23,7 +21,6 @@
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/FileSystem.h"
 #include "llvh/Support/Format.h"
-#include "llvh/Support/NativeFormatting.h"
 #include "llvh/Support/raw_os_ostream.h"
 #include "llvh/Support/raw_ostream.h"
 

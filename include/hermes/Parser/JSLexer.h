@@ -810,19 +810,20 @@ class JSLexer {
   llvh::Optional<uint32_t> consumeHTMLEntityOptional();
 #endif
 
-  /// Skip until after the end of the line terminating the line or hashbang
-  /// comment.
-  /// \return the updated source pointer.
-  const char *skipLineComment(const char *start);
+  /// Consume a line comment starting with from \p start and \return the comment
+  /// excluding the line terminator. Update curCharPtr_ to point after the line
+  /// terminator.
+  llvh::StringRef lineCommentHelper(const char *start);
+
+  /// Consume a line comment starting with from \p start. Optionally store the
+  /// comment in comment storage. Update curCharPtr_ to point after the line
+  /// terminator.
+  /// Process magic comments.
+  void scanLineComment(const char *start);
+
   /// Skip until after the end of the block comment.
   /// \return the updated source pointer.
   const char *skipBlockComment(const char *start);
-
-  /// Try to read a "magic comment" of the form `//# name=value` at \p ptr.
-  /// \return the value encoded in the comment if found, None otherwise.
-  llvh::Optional<StringRef> tryReadMagicComment(
-      llvh::StringRef name,
-      const char *ptr);
 
   void scanNumber(GrammarContext grammarContext);
 

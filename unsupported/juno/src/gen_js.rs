@@ -5,10 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::{
-    ast::{Node, NodeKind, NodePtr, StringLiteral, Visitor},
-    convert,
-};
+use crate::{ast::*, convert};
 use std::{
     fmt,
     io::{self, BufWriter, Write},
@@ -39,6 +36,8 @@ enum Assoc {
 }
 
 mod precedence {
+    use crate::ast::{BinaryExpressionOperator, LogicalExpressionOperator};
+
     pub type Precedence = u32;
 
     pub const ALWAYS_PAREN: Precedence = 0;
@@ -59,34 +58,40 @@ mod precedence {
     pub const UNION_TYPE: Precedence = 1;
     pub const INTERSECTION_TYPE: Precedence = 2;
 
-    pub fn get_binary_precedence(op: &str) -> Precedence {
+    pub fn get_binary_precedence(op: BinaryExpressionOperator) -> Precedence {
+        use BinaryExpressionOperator::*;
         match op {
-            "**" => 12,
-            "*" => 11,
-            "%" => 11,
-            "/" => 11,
-            "+" => 10,
-            "-" => 10,
-            "<<" => 9,
-            ">>" => 9,
-            ">>>" => 9,
-            "<" => 8,
-            ">" => 8,
-            "<=" => 8,
-            ">=" => 8,
-            "==" => 7,
-            "!=" => 7,
-            "===" => 7,
-            "!==" => 7,
-            "&" => 6,
-            "^" => 5,
-            "|" => 4,
-            "&&" => 3,
-            "||" => 2,
-            "??" => 1,
-            "in" => 8 + BIN_START,
-            "instanceof" => 8 + BIN_START,
-            _ => ALWAYS_PAREN,
+            Exp => 12,
+            Mult => 11,
+            Mod => 11,
+            Div => 11,
+            Plus => 10,
+            Minus => 10,
+            LShift => 9,
+            RShift => 9,
+            RShift3 => 9,
+            Less => 8,
+            Greater => 8,
+            LessEquals => 8,
+            GreaterEquals => 8,
+            LooseEquals => 7,
+            LooseNotEquals => 7,
+            StrictEquals => 7,
+            StrictNotEquals => 7,
+            BitAnd => 6,
+            BitXor => 5,
+            BitOr => 4,
+            In => 8 + BIN_START,
+            Instanceof => 8 + BIN_START,
+        }
+    }
+
+    pub fn get_logical_precedence(op: LogicalExpressionOperator) -> Precedence {
+        use LogicalExpressionOperator::*;
+        match op {
+            And => 3,
+            Or => 2,
+            NullishCoalesce => 1,
         }
     }
 }
@@ -277,8 +282,8 @@ impl<W: Write> GenJS<W> {
                 {
                     if need_sep {
                         out!(self, " ");
-                        params[0].visit(self, Some(node));
                     }
+                    params[0].visit(self, Some(node));
                 } else {
                     out!(self, "(");
                     for (i, param) in params.iter().enumerate() {
@@ -494,6 +499,8 @@ impl<W: Write> GenJS<W> {
                     handler.visit(self, Some(node));
                 }
                 if let Some(finalizer) = finalizer {
+                    out!(self, "finally");
+                    self.space(ForceSpace::No);
                     self.visit_stmt_or_block(finalizer, ForceBlock::Yes, node);
                 }
             }
@@ -522,6 +529,11 @@ impl<W: Write> GenJS<W> {
                         self.space(ForceSpace::No);
                     }
                     out!(self, "else");
+                    self.space(if matches!(&alternate.kind, BlockStatement { .. }) {
+                        ForceSpace::No
+                    } else {
+                        ForceSpace::Yes
+                    });
                     self.visit_stmt_or_block(alternate, ForceBlock::No, node);
                 }
             }
@@ -552,6 +564,7 @@ impl<W: Write> GenJS<W> {
             }
 
             SequenceExpression { expressions } => {
+                out!(self, "(");
                 for (i, expr) in expressions.iter().enumerate() {
                     if i > 0 {
                         self.comma();
@@ -566,6 +579,7 @@ impl<W: Write> GenJS<W> {
                         },
                     );
                 }
+                out!(self, ")");
             }
 
             ObjectExpression { properties } => {
@@ -580,7 +594,11 @@ impl<W: Write> GenJS<W> {
                     if i > 0 {
                         self.comma();
                     }
-                    self.print_comma_expression(elem, node);
+                    if let SpreadElement { .. } = &elem.kind {
+                        elem.visit(self, Some(node));
+                    } else {
+                        self.print_comma_expression(elem, node);
+                    }
                 }
                 if *trailing_comma {
                     self.comma();
@@ -685,7 +703,7 @@ impl<W: Write> GenJS<W> {
             } => {
                 self.print_child(Some(left), node, ChildPos::Left);
                 self.space(ForceSpace::No);
-                out!(self, "{}", operator.str);
+                out!(self, "{}", operator.as_str());
                 self.space(ForceSpace::No);
                 self.print_child(Some(right), node, ChildPos::Right);
             }
@@ -694,9 +712,9 @@ impl<W: Write> GenJS<W> {
                 argument,
                 prefix,
             } => {
-                let ident = operator.str.chars().next().unwrap().is_alphabetic();
+                let ident = operator.as_str().chars().next().unwrap().is_alphabetic();
                 if *prefix {
-                    out!(self, "{}", operator.str);
+                    out!(self, "{}", operator.as_str());
                     if ident {
                         out!(self, " ");
                     }
@@ -706,7 +724,7 @@ impl<W: Write> GenJS<W> {
                     if ident {
                         out!(self, " ");
                     }
-                    out!(self, "{}", operator.str);
+                    out!(self, "{}", operator.as_str());
                 }
             }
             UpdateExpression {
@@ -715,11 +733,11 @@ impl<W: Write> GenJS<W> {
                 prefix,
             } => {
                 if *prefix {
-                    out!(self, "{}", operator.str);
+                    out!(self, "{}", operator.as_str());
                     self.print_child(Some(argument), node, ChildPos::Right);
                 } else {
                     self.print_child(Some(argument), node, ChildPos::Left);
-                    out!(self, "{}", operator.str);
+                    out!(self, "{}", operator.as_str());
                 }
             }
             MemberExpression {
@@ -761,14 +779,14 @@ impl<W: Write> GenJS<W> {
                 right,
                 operator,
             } => {
-                let ident = operator.str.chars().next().unwrap().is_alphabetic();
+                let ident = operator.as_str().chars().next().unwrap().is_alphabetic();
                 self.print_child(Some(left), node, ChildPos::Left);
                 self.space(if ident {
                     ForceSpace::Yes
                 } else {
                     ForceSpace::No
                 });
-                out!(self, "{}", operator.str);
+                out!(self, "{}", operator.as_str());
                 self.space(if ident {
                     ForceSpace::Yes
                 } else {
@@ -838,7 +856,7 @@ impl<W: Write> GenJS<W> {
             }
 
             VariableDeclaration { kind, declarations } => {
-                out!(self, "{}", kind.str);
+                out!(self, "{} ", kind.as_str());
                 for (i, decl) in declarations.iter().enumerate() {
                     if i > 0 {
                         self.comma();
@@ -897,8 +915,8 @@ impl<W: Write> GenJS<W> {
                 shorthand,
             } => {
                 let mut need_sep = false;
-                if kind.str != "init" {
-                    out!(self, "{}", kind.str);
+                if *kind != PropertyKind::Init {
+                    out!(self, "{}", kind.as_str());
                     need_sep = true;
                 } else if *method {
                     match &value.kind {
@@ -937,7 +955,7 @@ impl<W: Write> GenJS<W> {
                 if *shorthand {
                     return;
                 }
-                if kind.str != "init" || *method {
+                if *kind != PropertyKind::Init || *method {
                     match &value.kind {
                         FunctionExpression {
                             params,
@@ -970,7 +988,7 @@ impl<W: Write> GenJS<W> {
             } => {
                 self.print_child(Some(left), node, ChildPos::Left);
                 self.space(ForceSpace::No);
-                out!(self, "{}", operator.str);
+                out!(self, "{}", operator.as_str());
                 self.space(ForceSpace::No);
                 self.print_child(Some(right), node, ChildPos::Right);
             }
@@ -1123,19 +1141,16 @@ impl<W: Write> GenJS<W> {
                 if generator {
                     out!(self, "*");
                 }
-                match kind.str.as_ref() {
-                    "method" => {}
-                    "constructor" => {
+                match *kind {
+                    MethodDefinitionKind::Method => {}
+                    MethodDefinitionKind::Constructor => {
                         // Will be handled by key output.
                     }
-                    "get" => {
+                    MethodDefinitionKind::Get => {
                         out!(self, "get ");
                     }
-                    "set" => {
+                    MethodDefinitionKind::Set => {
                         out!(self, "set ");
-                    }
-                    _ => {
-                        unreachable!("Invalid method kind");
                     }
                 };
                 if *computed {
@@ -1161,8 +1176,8 @@ impl<W: Write> GenJS<W> {
                 import_kind,
             } => {
                 out!(self, "import ");
-                if &import_kind.str != "value" {
-                    out!(self, "{} ", &import_kind.str);
+                if *import_kind != ImportKind::Value {
+                    out!(self, "{} ", import_kind.as_str());
                 }
                 let mut has_named_specs = false;
                 for (i, spec) in specifiers.iter().enumerate() {
@@ -1205,8 +1220,8 @@ impl<W: Write> GenJS<W> {
                 local,
                 import_kind,
             } => {
-                if &import_kind.str != "value" {
-                    out!(self, "{} ", &import_kind.str);
+                if *import_kind != ImportKind::Value {
+                    out!(self, "{} ", import_kind.as_str());
                 }
                 imported.visit(self, Some(node));
                 out!(self, " as ");
@@ -1227,8 +1242,8 @@ impl<W: Write> GenJS<W> {
                 export_kind,
             } => {
                 out!(self, "export ");
-                if &export_kind.str != "value" {
-                    out!(self, "{} ", &export_kind.str);
+                if *export_kind != ExportKind::Value {
+                    out!(self, "{} ", export_kind.as_str());
                 }
                 if let Some(declaration) = declaration {
                     declaration.visit(self, Some(node));
@@ -2263,7 +2278,7 @@ impl<W: Write> GenJS<W> {
     /// Print a newline and indent if pretty.
     fn newline(&mut self) {
         if self.pretty == Pretty::Yes {
-            out!(self, "\n{:indent$}", indent = self.indent as usize);
+            out!(self, "\n{:indent$}", "", indent = self.indent as usize);
         }
     }
 
@@ -2573,9 +2588,11 @@ impl<W: Write> GenJS<W> {
             | FunctionExpression { .. }
             | ClassExpression { .. }
             | TemplateLiteral { .. } => (PRIMARY, Assoc::Ltr),
-            MemberExpression { .. } | MetaProperty { .. } | CallExpression { .. } => {
-                (MEMBER, Assoc::Ltr)
-            }
+            MemberExpression { .. }
+            | OptionalMemberExpression { .. }
+            | MetaProperty { .. }
+            | CallExpression { .. }
+            | OptionalCallExpression { .. } => (MEMBER, Assoc::Ltr),
             NewExpression { arguments, .. } => {
                 // `new foo()` has higher precedence than `new foo`. In pretty mode we
                 // always append the `()`, but otherwise we must check the number of args.
@@ -2596,10 +2613,8 @@ impl<W: Write> GenJS<W> {
                 }
             }
             UnaryExpression { .. } => (UNARY, Assoc::Rtl),
-            BinaryExpression { operator, .. } => (get_binary_precedence(&operator.str), Assoc::Ltr),
-            LogicalExpression { operator, .. } => {
-                (get_binary_precedence(&operator.str), Assoc::Ltr)
-            }
+            BinaryExpression { operator, .. } => (get_binary_precedence(*operator), Assoc::Ltr),
+            LogicalExpression { operator, .. } => (get_logical_precedence(*operator), Assoc::Ltr),
             ConditionalExpression { .. } => (COND, Assoc::Rtl),
             AssignmentExpression { .. } => (ASSIGN, Assoc::Rtl),
             YieldExpression { .. } | ArrowFunctionExpression { .. } => (YIELD, Assoc::Ltr),
@@ -2638,7 +2653,7 @@ impl<W: Write> GenJS<W> {
         } else if matches!(parent.kind, ForStatement { .. }) {
             // for((a in b);..;..) needs parens to avoid confusing it with for(a in b).
             return NeedParens::from(match &child.kind {
-                BinaryExpression { operator, .. } => &operator.str == "in",
+                BinaryExpression { operator, .. } => *operator == BinaryExpressionOperator::In,
                 _ => false,
             });
         } else if matches!(parent.kind, ExpressionStatement { .. }) {
@@ -2652,8 +2667,10 @@ impl<W: Write> GenJS<W> {
                         | ObjectPattern { .. }
                 )
             }));
-        } else if (is_unary_op(parent, "-") && self.root_starts_with(child, check_minus))
-            || (is_unary_op(parent, "+") && self.root_starts_with(child, check_plus))
+        } else if (is_unary_op(parent, UnaryExpressionOperator::Minus)
+            && self.root_starts_with(child, check_minus))
+            || (is_unary_op(parent, UnaryExpressionOperator::Plus)
+                && self.root_starts_with(child, check_plus))
             || (child_pos == ChildPos::Right
                 && is_binary_op(parent, "-")
                 && self.root_starts_with(child, check_minus))
@@ -2750,24 +2767,24 @@ impl<W: Write> GenJS<W> {
     }
 }
 
-impl<W: Write> Visitor for GenJS<W> {
-    fn call(&mut self, node: &Node, parent: Option<&Node>) {
+impl<'a, W: Write> Visitor<'a> for GenJS<W> {
+    fn call(&mut self, node: &'a Node, parent: Option<&'a Node>) {
         self.gen_node(node, parent);
     }
 }
 
-fn is_unary_op(node: &Node, op: &str) -> bool {
+fn is_unary_op(node: &Node, op: UnaryExpressionOperator) -> bool {
     match &node.kind {
-        NodeKind::UnaryExpression { operator, .. } => operator.str == op,
+        NodeKind::UnaryExpression { operator, .. } => *operator == op,
         _ => false,
     }
 }
 
-fn is_update_prefix(node: &Node, op: &str) -> bool {
+fn is_update_prefix(node: &Node, op: UpdateExpressionOperator) -> bool {
     match &node.kind {
         NodeKind::UpdateExpression {
             prefix, operator, ..
-        } => *prefix && operator.str == op,
+        } => *prefix && *operator == op,
         _ => false,
     }
 }
@@ -2781,7 +2798,7 @@ fn is_negative_number(node: &Node) -> bool {
 
 fn is_binary_op(node: &Node, op: &str) -> bool {
     match &node.kind {
-        NodeKind::BinaryExpression { operator, .. } => operator.str == op,
+        NodeKind::BinaryExpression { operator, .. } => operator.as_str() == op,
         _ => false,
     }
 }
@@ -2794,11 +2811,13 @@ fn is_if_without_else(node: &Node) -> bool {
 }
 
 fn check_plus(node: &Node) -> bool {
-    is_unary_op(node, "+") || is_update_prefix(node, "++")
+    is_unary_op(node, UnaryExpressionOperator::Plus)
+        || is_update_prefix(node, UpdateExpressionOperator::Increment)
 }
 
 fn check_minus(node: &Node) -> bool {
-    is_unary_op(node, "-") || is_update_prefix(node, "--")
+    is_unary_op(node, UnaryExpressionOperator::Minus)
+        || is_update_prefix(node, UpdateExpressionOperator::Decrement)
 }
 
 fn ends_with_block(node: Option<&Node>) -> bool {
@@ -2807,6 +2826,7 @@ fn ends_with_block(node: Option<&Node>) -> bool {
         Some(node) => match &node.kind {
             BlockStatement { .. } | FunctionDeclaration { .. } => true,
             WhileStatement { body, .. } => ends_with_block(Some(body)),
+            ForStatement { body, .. } => ends_with_block(Some(body)),
             ForInStatement { body, .. } => ends_with_block(Some(body)),
             ForOfStatement { body, .. } => ends_with_block(Some(body)),
             WithStatement { body, .. } => ends_with_block(Some(body)),

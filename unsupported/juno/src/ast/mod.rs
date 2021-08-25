@@ -6,11 +6,19 @@
  */
 
 use std::fmt;
+use thiserror::Error;
 
+#[macro_use]
+mod def;
+mod dump;
 mod kind;
+mod validate;
 
 pub use kind::NodeKind;
 use kind::NodeVariant;
+
+pub use dump::{dump_json, Pretty};
+pub use validate::{validate_tree, ValidationError};
 
 /// A JavaScript AST node.
 #[derive(Debug)]
@@ -24,25 +32,20 @@ pub struct Node {
 
 impl Node {
     /// Call the `visitor` on this node with a given `parent`.
-    pub fn visit<V: Visitor>(&self, visitor: &mut V, parent: Option<&Node>) {
+    pub fn visit<'a, V: Visitor<'a>>(&'a self, visitor: &mut V, parent: Option<&'a Node>) {
         visitor.call(self, parent);
     }
 
-    /// Check whether the node is valid.
-    pub fn validate(&self) -> bool {
-        self.kind.validate(self)
-    }
-
     /// Call the `visitor` on only this node's children.
-    pub fn visit_children<V: Visitor>(&self, visitor: &mut V) {
+    pub fn visit_children<'a, V: Visitor<'a>>(&'a self, visitor: &mut V) {
         self.kind.visit_children(visitor, self);
     }
 }
 
 /// Trait implemented by those who call the visit functionality.
-pub trait Visitor {
+pub trait Visitor<'a> {
     /// Visit the Node `node` with the given `parent`.
-    fn call(&mut self, node: &Node, parent: Option<&Node>);
+    fn call(&mut self, node: &'a Node, parent: Option<&'a Node>);
 }
 
 /// A source range within a single JS file.
@@ -96,114 +99,169 @@ impl fmt::Debug for StringLiteral {
     }
 }
 
+#[derive(Debug, Copy, Clone, Error)]
+#[error("Invalid string property for AST node")]
+pub struct TryFromStringError;
+
+define_str_enum!(
+    UnaryExpressionOperator,
+    TryFromStringError,
+    (Delete, "delete"),
+    (Void, "void"),
+    (Typeof, "typeof"),
+    (Plus, "+"),
+    (Minus, "-"),
+    (BitNot, "~"),
+    (Not, "!"),
+);
+
+define_str_enum!(
+    BinaryExpressionOperator,
+    TryFromStringError,
+    (LooseEquals, "=="),
+    (LooseNotEquals, "!="),
+    (StrictEquals, "==="),
+    (StrictNotEquals, "!=="),
+    (Less, "<"),
+    (LessEquals, "<="),
+    (Greater, ">"),
+    (GreaterEquals, ">="),
+    (LShift, "<<"),
+    (RShift, ">>"),
+    (RShift3, ">>>"),
+    (Plus, "+"),
+    (Minus, "-"),
+    (Mult, "*"),
+    (Div, "/"),
+    (Mod, "%"),
+    (BitOr, "|"),
+    (BitXor, "^"),
+    (BitAnd, "&"),
+    (Exp, "**"),
+    (In, "in"),
+    (Instanceof, "instanceof"),
+);
+
+define_str_enum!(
+    LogicalExpressionOperator,
+    TryFromStringError,
+    (And, "&&"),
+    (Or, "||"),
+    (NullishCoalesce, "??"),
+);
+
+define_str_enum!(
+    UpdateExpressionOperator,
+    TryFromStringError,
+    (Increment, "++"),
+    (Decrement, "--"),
+);
+
+define_str_enum!(
+    AssignmentExpressionOperator,
+    TryFromStringError,
+    (Assign, "="),
+    (LShiftAssign, "<<="),
+    (RShiftAssign, ">>="),
+    (RShift3Assign, ">>>="),
+    (PlusAssign, "+="),
+    (MinusAssign, "-="),
+    (MultAssign, "*="),
+    (DivAssign, "/="),
+    (ModAssign, "%="),
+    (BitOrAssign, "|="),
+    (BitXorAssign, "^="),
+    (BitAndAssign, "&="),
+    (ExpAssign, "**="),
+    (LogicalOrAssign, "||="),
+    (LogicalAndAssign, "&&="),
+    (NullishCoalesceAssign, "??="),
+);
+
+define_str_enum!(
+    VariableDeclarationKind,
+    TryFromStringError,
+    (Var, "var"),
+    (Let, "let"),
+    (Const, "const"),
+);
+
+define_str_enum!(
+    PropertyKind,
+    TryFromStringError,
+    (Init, "init"),
+    (Get, "get"),
+    (Set, "set"),
+);
+
+define_str_enum!(
+    MethodDefinitionKind,
+    TryFromStringError,
+    (Method, "method"),
+    (Constructor, "constructor"),
+    (Get, "get"),
+    (Set, "set"),
+);
+
+define_str_enum!(
+    ImportKind,
+    TryFromStringError,
+    (Value, "value"),
+    (Type, "type"),
+    (Typeof, "typeof"),
+);
+
+define_str_enum!(
+    ExportKind,
+    TryFromStringError,
+    (Value, "value"),
+    (Type, "type"),
+);
+
 /// Trait implemented by possible child types of `NodeKind`.
 trait NodeChild {
     /// Visit this child of the given `node`.
     /// Should be no-op for any type that doesn't contain pointers to other
     /// `Node`s.
-    fn visit<V: Visitor>(&self, visitor: &mut V, node: &Node);
-
-    /// Check whether this is a valid child of `node` given the constraints.
-    fn validate(&self, node: &Node, constraints: &[NodeVariant]) -> bool;
+    fn visit<'a, V: Visitor<'a>>(&'a self, _visitor: &mut V, _node: &'a Node) {}
 }
 
-impl NodeChild for f64 {
-    fn visit<V: Visitor>(&self, _visitor: &mut V, _node: &Node) {}
+impl NodeChild for f64 {}
 
-    fn validate(&self, _node: &Node, _constraints: &[NodeVariant]) -> bool {
-        true
-    }
-}
+impl NodeChild for bool {}
 
-impl NodeChild for bool {
-    fn visit<V: Visitor>(&self, _visitor: &mut V, _node: &Node) {}
+impl NodeChild for NodeLabel {}
+impl NodeChild for UnaryExpressionOperator {}
+impl NodeChild for BinaryExpressionOperator {}
+impl NodeChild for LogicalExpressionOperator {}
+impl NodeChild for UpdateExpressionOperator {}
+impl NodeChild for AssignmentExpressionOperator {}
+impl NodeChild for VariableDeclarationKind {}
+impl NodeChild for PropertyKind {}
+impl NodeChild for MethodDefinitionKind {}
+impl NodeChild for ImportKind {}
+impl NodeChild for ExportKind {}
 
-    fn validate(&self, _node: &Node, _constraints: &[NodeVariant]) -> bool {
-        true
-    }
-}
-
-impl NodeChild for NodeLabel {
-    fn visit<V: Visitor>(&self, _visitor: &mut V, _node: &Node) {}
-
-    fn validate(&self, _node: &Node, _constraints: &[NodeVariant]) -> bool {
-        true
-    }
-}
-
-impl NodeChild for StringLiteral {
-    fn visit<V: Visitor>(&self, _visitor: &mut V, _node: &Node) {}
-
-    fn validate(&self, _node: &Node, _constraints: &[NodeVariant]) -> bool {
-        true
-    }
-}
+impl NodeChild for StringLiteral {}
 
 impl<T: NodeChild> NodeChild for Option<T> {
-    fn visit<V: Visitor>(&self, visitor: &mut V, node: &Node) {
+    fn visit<'a, V: Visitor<'a>>(&'a self, visitor: &mut V, node: &'a Node) {
         if let Some(t) = self {
             t.visit(visitor, node);
-        }
-    }
-
-    fn validate(&self, node: &Node, constraints: &[NodeVariant]) -> bool {
-        match self {
-            None => true,
-            Some(t) => t.validate(node, constraints),
         }
     }
 }
 
 impl NodeChild for NodePtr {
-    fn visit<V: Visitor>(&self, visitor: &mut V, node: &Node) {
+    fn visit<'a, V: Visitor<'a>>(&'a self, visitor: &mut V, node: &'a Node) {
         visitor.call(self, Some(node));
-    }
-
-    fn validate(&self, _node: &Node, constraints: &[NodeVariant]) -> bool {
-        for &constraint in constraints {
-            if instanceof(self.kind.variant(), constraint) {
-                return true;
-            }
-        }
-        false
     }
 }
 
 impl NodeChild for NodeList {
-    fn visit<V: Visitor>(&self, visitor: &mut V, node: &Node) {
+    fn visit<'a, V: Visitor<'a>>(&'a self, visitor: &mut V, node: &'a Node) {
         for child in self {
             visitor.call(child, Some(node));
-        }
-    }
-
-    fn validate(&self, _node: &Node, constraints: &[NodeVariant]) -> bool {
-        'elems: for elem in self {
-            for &constraint in constraints {
-                if instanceof(elem.kind.variant(), constraint) {
-                    // Found a valid constraint for this element,
-                    // move on to the next element.
-                    continue 'elems;
-                }
-            }
-            // Failed to find a constraint that matched, early return.
-            return false;
-        }
-        true
-    }
-}
-
-/// Return whether `subtype` contains `supertype` in its parent chain.
-fn instanceof(subtype: NodeVariant, supertype: NodeVariant) -> bool {
-    let mut cur = subtype;
-    loop {
-        if cur == supertype {
-            return true;
-        }
-        match cur.parent() {
-            None => return false,
-            Some(next) => {
-                cur = next;
-            }
         }
     }
 }

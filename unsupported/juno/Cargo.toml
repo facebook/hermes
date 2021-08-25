@@ -6,4 +6,5 @@ edition = "2018"
 license = "MIT"
 
 [dependencies]
+libc = "0.2"
 thiserror = "1.0"

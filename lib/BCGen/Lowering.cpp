@@ -12,10 +12,6 @@
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/Instrs.h"
 #include "hermes/Inst/Inst.h"
-#include "hermes/Utils/Dumper.h"
-
-#include "llvh/Support/Debug.h"
-#include "llvh/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "lowering"
 

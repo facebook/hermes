@@ -10,8 +10,12 @@ use juno::hparser;
 use std::io::Write;
 
 fn main() {
-    let res = hparser::parse("function foo(p1) { var x = (p1 + p1); }").unwrap();
-    let mut out = Vec::new();
-    gen_js::generate(&mut out, res.as_ref(), gen_js::Pretty::No).unwrap();
-    std::io::stdout().write_all(&out).unwrap();
+    match hparser::parse("function foo(p1) { var x = (p1 + p1); }") {
+        Err(e) => eprintln!("{}", e),
+        Ok(ast) => {
+            let mut out = Vec::new();
+            gen_js::generate(&mut out, ast.as_ref(), gen_js::Pretty::No).unwrap();
+            std::io::stdout().write_all(&out).unwrap();
+        }
+    }
 }

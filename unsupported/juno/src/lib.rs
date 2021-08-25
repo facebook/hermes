@@ -6,6 +6,10 @@
  */
 
 #[allow(dead_code)]
+#[macro_use]
+mod support;
+
+#[allow(dead_code)]
 pub mod ast;
 
 #[allow(dead_code)]
@@ -15,4 +19,13 @@ pub mod gen_js;
 mod convert;
 
 #[allow(dead_code)]
+pub mod hermes_utf;
+
+#[allow(dead_code)]
 pub mod hparser;
+
+#[allow(dead_code)]
+pub mod hsource_map;
+
+#[allow(dead_code)]
+pub mod nullbuf;

@@ -16,7 +16,6 @@
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StringPrimitive.h"
-#include "hermes/VM/StringView.h"
 
 namespace hermes {
 namespace vm {
@@ -174,8 +173,6 @@ RuntimeModule *RuntimeModule::createLazyModule(
   auto *bcFunction = &((hbc::BCProviderFromSrc *)parent->getBytecode())
                           ->getBytecodeModule()
                           ->getFunction(functionID);
-
-  RM->bcProvider_ = hbc::BCProviderLazy::createBCProviderLazy(bcFunction);
 
   RM->bcProvider_ = hbc::BCProviderLazy::createBCProviderLazy(bcFunction);
 

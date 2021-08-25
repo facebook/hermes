@@ -103,7 +103,7 @@ TEST_F(SynthTraceParserTest, RuntimeConfigDefaults) {
 
   EXPECT_EQ(rtconf.getGCConfig().getMinHeapSize(), 0);
   EXPECT_EQ(rtconf.getGCConfig().getInitHeapSize(), 33554432);
-  EXPECT_EQ(rtconf.getGCConfig().getMaxHeapSize(), 536870912);
+  EXPECT_EQ(rtconf.getGCConfig().getMaxHeapSize(), 3221225472);
   EXPECT_FALSE(rtconf.getEnableSampledStats());
 }
 

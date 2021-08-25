@@ -4,9 +4,6 @@
 # LICENSE file in the root directory of this source tree.
 
 if(HERMES_BUILD_NODE_HERMES)
-  include_directories(${HERMES_SOURCE_DIR}/API)
-  include_directories(${HERMES_JSI_DIR})
-
   set(HERMES_ENABLE_EH ON)
   set(CXX_STANDARD 14)
   set(CXX_STANDARD_REQUIRED ON)

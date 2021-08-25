@@ -17,18 +17,16 @@
 #include "hermes/SourceMap/SourceMapTranslator.h"
 #include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/SimpleDiagHandler.h"
-#include "hermes/VM/Deserializer.h"
-#include "hermes/VM/Serializer.h"
 
 #ifdef HERMESVM_SERIALIZE
-using hermes::vm::Deserializer;
+#include "hermes/VM/Serializer.h"
+
 using hermes::vm::Serializer;
 #endif
 
 namespace hermes {
 namespace hbc {
 
-#ifndef HERMESVM_LEAN
 namespace {
 bool isSingleFunctionExpression(ESTree::NodePtr ast) {
   auto *prog = llvh::dyn_cast<ESTree::ProgramNode>(ast);
@@ -277,7 +275,6 @@ void BCProviderLazy::serialize(Serializer &s) const {
   hermes_fatal("Cannot serialize lazy BCProvider");
 }
 #endif // HERMESVM_SERIALIZE
-#endif // HERMESVM_LEAN
 
 } // namespace hbc
 } // namespace hermes
