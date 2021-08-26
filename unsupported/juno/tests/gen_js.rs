@@ -299,6 +299,32 @@ fn test_members() {
 }
 
 #[test]
+fn test_import() {
+    test_roundtrip("import x from 'foo'");
+    test_roundtrip("import x, {y} from 'foo'");
+    test_roundtrip("import * as Foo from 'foo'");
+    test_roundtrip("import x, {y as z, a as b} from 'foo'");
+    test_roundtrip("import {a, b, c} from 'foo'");
+    test_roundtrip("import 'foo';");
+    test_roundtrip("import 'foo' assert {kind: 'json'};");
+    test_roundtrip(
+        "
+        import 'foo';
+        import 'bar';
+        ",
+    );
+}
+
+#[test]
+fn test_export() {
+    test_roundtrip("export var x = 3;");
+    test_roundtrip("export function foo() {}");
+    test_roundtrip("export default function foo() {}");
+    test_roundtrip("export {x as y};");
+    test_roundtrip("export * from 'foo';");
+}
+
+#[test]
 fn test_types() {
     use NodeKind::*;
     assert_eq!(

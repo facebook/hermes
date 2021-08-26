@@ -1203,16 +1203,17 @@ impl<W: Write> GenJS<W> {
                 }
                 source.visit(self, Some(node));
                 if let Some(attributes) = attributes {
-                    out!(self, " assert {{");
-                    for (i, attribute) in attributes.iter().enumerate() {
-                        if i > 0 {
-                            self.comma();
+                    if !attributes.is_empty() {
+                        out!(self, " assert {{");
+                        for (i, attribute) in attributes.iter().enumerate() {
+                            if i > 0 {
+                                self.comma();
+                            }
+                            attribute.visit(self, Some(node));
                         }
-                        attribute.visit(self, Some(node));
+                        out!(self, "}}");
                     }
-                    out!(self, "}}");
                 }
-                out!(self, ";");
                 self.newline();
             }
             ImportSpecifier {
@@ -1233,6 +1234,12 @@ impl<W: Write> GenJS<W> {
             ImportNamespaceSpecifier { local } => {
                 out!(self, "* as ");
                 local.visit(self, Some(node));
+            }
+            ImportAttribute { key, value } => {
+                key.visit(self, Some(node));
+                out!(self, ":");
+                self.space(ForceSpace::No);
+                value.visit(self, Some(node));
             }
 
             ExportNamedDeclaration {
@@ -1261,7 +1268,6 @@ impl<W: Write> GenJS<W> {
                         source.visit(self, Some(node));
                     }
                 }
-                out!(self, ";");
                 self.newline();
             }
             ExportSpecifier { exported, local } => {
@@ -1276,8 +1282,18 @@ impl<W: Write> GenJS<W> {
             ExportDefaultDeclaration { declaration } => {
                 out!(self, "export default ");
                 declaration.visit(self, Some(node));
-                out!(self, ";");
                 self.newline();
+            }
+            ExportAllDeclaration {
+                source,
+                export_kind,
+            } => {
+                out!(self, "export ");
+                if *export_kind != ExportKind::Value {
+                    out!(self, "{} ", export_kind.as_str());
+                }
+                out!(self, "* from ");
+                source.visit(self, Some(node));
             }
 
             ObjectPattern {
@@ -2241,7 +2257,7 @@ impl<W: Write> GenJS<W> {
             }
 
             _ => {
-                unimplemented!("Unsupported AST node kind: {}", node.kind.name());
+                unimplemented!("Cannot generate node kind: {}", node.kind.name());
             }
         };
     }
@@ -2855,6 +2871,8 @@ fn ends_with_block(node: Option<&Node>) -> bool {
                 ..
             } => ends_with_block(alternate.as_deref().or(Some(consequent))),
             ClassDeclaration { .. } => true,
+            ExportDefaultDeclaration { declaration } => ends_with_block(Some(declaration)),
+            ExportNamedDeclaration { declaration, .. } => ends_with_block(declaration.as_deref()),
             _ => false,
         },
         None => false,
