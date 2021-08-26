@@ -1301,10 +1301,8 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
                 CapturedRange cr = savedState.getCapturedRange(i);
                 if (!pushBacktrack(
                         backtrackStack,
-                        BacktrackInsn::makeSetCaptureGroup(i, cr))) {
-                  error_ = MatchRuntimeErrorType::MaxStackDepth;
+                        BacktrackInsn::makeSetCaptureGroup(i, cr)))
                   return nullptr;
-                }
               }
             } else {
               // Restore the saved state.
@@ -1397,10 +1395,9 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
               if (!pushBacktrack(
                       backtrackStack,
                       BacktrackInsn::makeSetPosition(
-                          loop->notTakenTarget, c.currentPointer()))) {
-                error_ = MatchRuntimeErrorType::MaxStackDepth;
+                          loop->notTakenTarget, c.currentPointer())))
                 return nullptr;
-              }
+
               if (!prepareToEnterLoopBody(s, loop, backtrackStack))
                 return nullptr;
               s->ip_ = loopTakenIp;
