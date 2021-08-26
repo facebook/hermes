@@ -143,6 +143,7 @@ fn test_calls() {
     test_roundtrip("f();");
     test_roundtrip("f(1);");
     test_roundtrip("f(1, 2);");
+    test_roundtrip("(f?.(1, 2))(3);");
     test_roundtrip("f?.(1, 2)?.(3)(5);");
     test_roundtrip("new f();");
     test_roundtrip("new f(1);");
@@ -238,6 +239,63 @@ fn test_arrays() {
     test_roundtrip("([])");
     test_roundtrip("var x = [1, 2, 3, ...from]");
     test_roundtrip("var x = [1, 2, 3, ...from, 4, 5, 6]");
+}
+
+#[test]
+fn test_assignment() {
+    test_roundtrip("x = 1");
+    test_roundtrip("x = y = 1");
+    test_roundtrip("x += 1");
+    test_roundtrip("x -= 1");
+    test_roundtrip("x *= 1");
+    test_roundtrip("x /= 1");
+    test_roundtrip("x **= 1");
+    test_roundtrip("x |= 1");
+    test_roundtrip("x &= 1");
+    test_roundtrip("x ||= 1");
+    test_roundtrip("x &&= 1");
+    test_roundtrip("x ??= 1");
+    test_roundtrip("foo()[1] = 1");
+}
+
+#[test]
+fn test_unary() {
+    test_roundtrip("+x");
+    test_roundtrip("-x");
+    test_roundtrip("!x");
+    test_roundtrip("~x");
+    test_roundtrip("-(-x)");
+    test_roundtrip("+!-x");
+    test_roundtrip("delete x");
+    test_roundtrip("typeof x");
+}
+
+#[test]
+fn test_update() {
+    test_roundtrip("x++");
+    test_roundtrip("x--");
+    test_roundtrip("++x");
+    test_roundtrip("--x");
+    test_roundtrip("--(-x)");
+    test_roundtrip("+x++");
+}
+
+#[test]
+fn test_members() {
+    test_roundtrip("a.b");
+    test_roundtrip("a.b.c");
+    test_roundtrip("a?.b");
+    test_roundtrip("a?.[b]");
+    test_roundtrip("(a?.b).c");
+    test_roundtrip("a?.b().c");
+    test_roundtrip("(a?.b()).c");
+    test_roundtrip("a?.().b");
+    test_roundtrip("a?.().b");
+    test_roundtrip("a?.b?.c?.()");
+    test_roundtrip("(a?.b?.c?.()).d");
+    test_roundtrip("(a?.b?.c?.())?.d");
+    test_roundtrip("(a?.b?.c?.())(d)");
+    test_roundtrip("(a?.b?.c?.())?.(d)");
 }
 
 #[test]

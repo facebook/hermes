@@ -745,13 +745,13 @@ impl<W: Write> GenJS<W> {
                 property,
                 computed,
             } => {
-                object.visit(self, Some(node));
+                self.print_child(Some(object), node, ChildPos::Left);
                 if *computed {
                     out!(self, "[");
                 } else {
                     out!(self, ".");
                 }
-                property.visit(self, Some(node));
+                self.print_child(Some(property), node, ChildPos::Right);
                 if *computed {
                     out!(self, "]");
                 }
@@ -762,13 +762,13 @@ impl<W: Write> GenJS<W> {
                 computed,
                 optional,
             } => {
-                object.visit(self, Some(node));
+                self.print_child(Some(object), node, ChildPos::Left);
                 if *computed {
                     out!(self, "{}[", if *optional { "?." } else { "" });
                 } else {
                     out!(self, "{}.", if *optional { "?" } else { "" });
                 }
-                property.visit(self, Some(node));
+                self.print_child(Some(property), node, ChildPos::Right);
                 if *computed {
                     out!(self, "]");
                 }
@@ -2687,6 +2687,17 @@ impl<W: Write> GenJS<W> {
             } else {
                 NeedParens::Space
             };
+        } else if matches!(parent.kind, MemberExpression { .. } | CallExpression { .. })
+            && matches!(
+                child.kind,
+                OptionalMemberExpression { .. } | OptionalCallExpression { .. }
+            )
+            && child_pos == ChildPos::Left
+        {
+            // When optional chains are terminated by non-optional member/calls,
+            // we need the left hand side to be parenthesized.
+            // Avoids confusing `(a?.b).c` with `a?.b.c`.
+            return NeedParens::Yes;
         }
 
         let (child_prec, _child_assoc) = self.get_precedence(child);
@@ -2760,7 +2771,9 @@ impl<W: Write> GenJS<W> {
             UnaryExpression {
                 prefix, argument, ..
             } => !*prefix && self.expr_starts_with(argument, Some(expr), pred),
-            MemberExpression { object, .. } => self.expr_starts_with(object, Some(expr), pred),
+            MemberExpression { object, .. } | OptionalMemberExpression { object, .. } => {
+                self.expr_starts_with(object, Some(expr), pred)
+            }
             TaggedTemplateExpression { tag, .. } => self.expr_starts_with(tag, Some(expr), pred),
             _ => false,
         }
