@@ -451,7 +451,10 @@ Handle<RequireContext> RequireContext::create(
     Handle<StringPrimitive> dirname) {
   auto objProto = Handle<JSObject>::vmcast(&runtime->objectPrototype);
   auto *cell = runtime->makeAFixed<RequireContext>(
-      runtime, objProto, runtime->getHiddenClassForPrototype(*objProto, 0));
+      runtime,
+      objProto,
+      runtime->getHiddenClassForPrototype(
+          *objProto, numOverlapSlots<RequireContext>()));
   auto self = JSObjectInit::initToHandle(runtime, cell);
   self->domain_.set(runtime, *domain, &runtime->getHeap());
   self->dirname_.set(runtime, *dirname, &runtime->getHeap());
