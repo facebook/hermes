@@ -168,17 +168,20 @@ SLP CodeBlock::getArrayBufferIter(uint32_t idx, unsigned int numLiterals)
       runtimeModule_};
 }
 
-std::pair<SLP, SLP> CodeBlock::getObjectBufferIter(
-    uint32_t keyIdx,
-    uint32_t valIdx,
-    unsigned int numLiterals) const {
-  return std::pair<SLP, SLP>{
-      SLP{runtimeModule_->getBytecode()->getObjectKeyBuffer().slice(keyIdx),
-          numLiterals,
-          nullptr},
-      SLP{runtimeModule_->getBytecode()->getObjectValueBuffer().slice(valIdx),
-          numLiterals,
-          runtimeModule_}};
+SLP CodeBlock::getObjectBufferKeyIter(uint32_t idx, unsigned int numLiterals)
+    const {
+  return SLP{
+      runtimeModule_->getBytecode()->getObjectKeyBuffer().slice(idx),
+      numLiterals,
+      nullptr};
+}
+
+SLP CodeBlock::getObjectBufferValueIter(uint32_t idx, unsigned int numLiterals)
+    const {
+  return SLP{
+      runtimeModule_->getBytecode()->getObjectValueBuffer().slice(idx),
+      numLiterals,
+      runtimeModule_};
 }
 
 SymbolID CodeBlock::getNameMayAllocate() const {

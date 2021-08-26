@@ -511,129 +511,124 @@ ExecutionStatus Interpreter::putByValTransient_RJS(
   return putByIdTransient_RJS(runtime, base, **idRes, value, strictMode);
 }
 
-CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
+static Handle<HiddenClass> getHiddenClassForBuffer(
     Runtime *runtime,
     CodeBlock *curCodeBlock,
     unsigned numLiterals,
-    unsigned keyBufferIndex,
-    unsigned valBufferIndex) {
-  // Fetch any cached hidden class first.
-  auto *runtimeModule = curCodeBlock->getRuntimeModule();
-  const llvh::Optional<Handle<HiddenClass>> optCachedHiddenClassHandle =
-      runtimeModule->findCachedLiteralHiddenClass(
-          runtime, keyBufferIndex, numLiterals);
-  // Create a new object using the built-in constructor or cached hidden class.
-  // Note that the built-in constructor is empty, so we don't actually need to
-  // call it.
-  auto obj = runtime->makeHandle(
-      optCachedHiddenClassHandle.hasValue()
-          ? JSObject::create(runtime, optCachedHiddenClassHandle.getValue())
-          : JSObject::create(runtime, numLiterals));
+    unsigned keyBufferIndex) {
+  RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
+  if (auto clazzOpt = runtimeModule->findCachedLiteralHiddenClass(
+          runtime, keyBufferIndex, numLiterals))
+    return *clazzOpt;
 
-  MutableHandle<> tmpHandleKey(runtime);
-  MutableHandle<> tmpHandleVal(runtime);
-  auto &gcScope = *runtime->getTopGCScope();
-  auto marker = gcScope.createMarker();
+  MutableHandle<> tmpHandleKey{runtime};
+  MutableHandle<HiddenClass> clazz =
+      runtime->makeMutableHandle(runtime->getHiddenClassForPrototypeRaw(
+          vmcast<JSObject>(runtime->objectPrototype),
+          JSObject::numOverlapSlots<JSObject>()));
 
-  auto genPair = curCodeBlock->getObjectBufferIter(
-      keyBufferIndex, valBufferIndex, numLiterals);
-  auto keyGen = genPair.first;
-  auto valGen = genPair.second;
+  GCScopeMarkerRAII marker{runtime};
+  auto keyGen =
+      curCodeBlock->getObjectBufferKeyIter(keyBufferIndex, numLiterals);
+  while (keyGen.hasNext()) {
+    auto key = keyGen.get(runtime);
+    SymbolID sym = [&] {
+      if (key.isSymbol())
+        return ID(key.getSymbol().unsafeGetIndex());
 
-  if (optCachedHiddenClassHandle.hasValue()) {
-    uint32_t propIndex = 0;
-    // keyGen should always have the same amount of elements as valGen
-    while (valGen.hasNext()) {
-#ifndef NDEBUG
-      {
-        // keyGen points to an element in the key buffer, which means it will
-        // only ever generate a Number or a Symbol. This means it will never
-        // allocate memory, and it is safe to not use a Handle.
-        SymbolID stringIdResult{};
-        auto key = keyGen.get(runtime);
-        if (key.isSymbol()) {
-          stringIdResult = ID(key.getSymbol().unsafeGetIndex());
-        } else {
-          tmpHandleKey = HermesValue::encodeDoubleValue(key.getNumber());
-          auto idRes = valueToSymbolID(runtime, tmpHandleKey);
-          assert(
-              idRes != ExecutionStatus::EXCEPTION &&
-              "valueToIdentifier() failed for uint32_t value");
-          stringIdResult = **idRes;
-        }
-        NamedPropertyDescriptor desc;
-        auto pos = HiddenClass::findProperty(
-            optCachedHiddenClassHandle.getValue(),
-            runtime,
-            stringIdResult,
-            PropertyFlags::defaultNewNamedPropertyFlags(),
-            desc);
-        assert(
-            pos &&
-            "Should find this property in cached hidden class property table.");
-        assert(
-            desc.slot == propIndex &&
-            "propIndex should be the same as recorded in hidden class table.");
-      }
-#endif
-      // Explicitly make sure valGen.get() is called before obj.get() so that
-      // any allocation in valGen.get() won't invalidate the raw pointer
-      // retruned from obj.get().
-      auto val = valGen.get(runtime);
-      auto shv = SmallHermesValue::encodeHermesValue(val, runtime);
-      // We made this object, it's not a Proxy.
-      JSObject::setNamedSlotValueUnsafe(obj.get(), runtime, propIndex, shv);
-      gcScope.flushToMarker(marker);
-      ++propIndex;
-    }
-  } else {
-    // keyGen should always have the same amount of elements as valGen
-    while (keyGen.hasNext()) {
-      // keyGen points to an element in the key buffer, which means it will
-      // only ever generate a Number or a Symbol. This means it will never
-      // allocate memory, and it is safe to not use a Handle.
-      auto key = keyGen.get(runtime);
-      tmpHandleVal = valGen.get(runtime);
-      if (key.isSymbol()) {
-        auto stringIdResult = ID(key.getSymbol().unsafeGetIndex());
-        if (LLVM_UNLIKELY(
-                JSObject::defineNewOwnProperty(
-                    obj,
-                    runtime,
-                    stringIdResult,
-                    PropertyFlags::defaultNewNamedPropertyFlags(),
-                    tmpHandleVal) == ExecutionStatus::EXCEPTION)) {
-          return ExecutionStatus::EXCEPTION;
-        }
-      } else {
-        tmpHandleKey = HermesValue::encodeDoubleValue(key.getNumber());
-        if (LLVM_UNLIKELY(
-                !JSObject::defineOwnComputedPrimitive(
-                     obj,
-                     runtime,
-                     tmpHandleKey,
-                     DefinePropertyFlags::getDefaultNewPropertyFlags(),
-                     tmpHandleVal)
-                     .getValue())) {
-          return ExecutionStatus::EXCEPTION;
-        }
-      }
-      gcScope.flushToMarker(marker);
-    }
+      assert(key.isNumber() && "Key must be symbol or number");
+      tmpHandleKey = key;
+      // Note that since this handle has been created, the associated symbol
+      // will be automatically kept alive until we flush the marker.
+      // valueToSymbolID cannot fail because the key is known to be uint32.
+      Handle<SymbolID> symHandle = *valueToSymbolID(runtime, tmpHandleKey);
+      return *symHandle;
+    }();
+    auto addResult = HiddenClass::addProperty(
+        clazz, runtime, sym, PropertyFlags::defaultNewNamedPropertyFlags());
+    clazz = addResult->first;
+    marker.flush();
   }
-  tmpHandleKey.clear();
-  tmpHandleVal.clear();
 
-  // Hidden class in dictionary mode can't be shared.
-  HiddenClass *const clazz = obj->getClass(runtime);
-  if (!optCachedHiddenClassHandle.hasValue() && !clazz->isDictionary()) {
+  if (LLVM_LIKELY(!clazz->isDictionary())) {
     assert(
         numLiterals == clazz->getNumProperties() &&
         "numLiterals should match hidden class property count.");
     assert(
         clazz->getNumProperties() < 256 &&
         "cached hidden class should have property count less than 256");
-    runtimeModule->tryCacheLiteralHiddenClass(runtime, keyBufferIndex, clazz);
+    runtimeModule->tryCacheLiteralHiddenClass(runtime, keyBufferIndex, *clazz);
+  }
+
+  return {clazz};
+}
+
+CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
+    Runtime *runtime,
+    CodeBlock *curCodeBlock,
+    unsigned numLiterals,
+    unsigned keyBufferIndex,
+    unsigned valBufferIndex) {
+  // Create a new object using the built-in constructor or cached hidden class.
+  // Note that the built-in constructor is empty, so we don't actually need to
+  // call it.
+  auto clazz = getHiddenClassForBuffer(
+      runtime, curCodeBlock, numLiterals, keyBufferIndex);
+  auto obj = runtime->makeHandle(JSObject::create(runtime, clazz));
+
+  auto valGen =
+      curCodeBlock->getObjectBufferValueIter(valBufferIndex, numLiterals);
+
+#ifndef NDEBUG
+  auto keyGen =
+      curCodeBlock->getObjectBufferKeyIter(keyBufferIndex, numLiterals);
+#endif
+
+  uint32_t propIndex = 0;
+  // keyGen should always have the same amount of elements as valGen
+  while (valGen.hasNext()) {
+#ifndef NDEBUG
+    {
+      GCScopeMarkerRAII marker{runtime};
+      // keyGen points to an element in the key buffer, which means it will
+      // only ever generate a Number or a Symbol. This means it will never
+      // allocate memory, and it is safe to not use a Handle.
+      SymbolID stringIdResult{};
+      auto key = keyGen.get(runtime);
+      if (key.isSymbol()) {
+        stringIdResult = ID(key.getSymbol().unsafeGetIndex());
+      } else {
+        auto keyHandle = runtime->makeHandle(
+            HermesValue::encodeDoubleValue(key.getNumber()));
+        auto idRes = valueToSymbolID(runtime, keyHandle);
+        assert(
+            idRes != ExecutionStatus::EXCEPTION &&
+            "valueToIdentifier() failed for uint32_t value");
+        stringIdResult = **idRes;
+      }
+      NamedPropertyDescriptor desc;
+      auto pos = HiddenClass::findProperty(
+          clazz,
+          runtime,
+          stringIdResult,
+          PropertyFlags::defaultNewNamedPropertyFlags(),
+          desc);
+      assert(
+          pos &&
+          "Should find this property in cached hidden class property table.");
+      assert(
+          desc.slot == propIndex &&
+          "propIndex should be the same as recorded in hidden class table.");
+    }
+#endif
+    // Explicitly make sure valGen.get() is called before obj.get() so that
+    // any allocation in valGen.get() won't invalidate the raw pointer
+    // returned from obj.get().
+    auto val = valGen.get(runtime);
+    auto shv = SmallHermesValue::encodeHermesValue(val, runtime);
+    // We made this object, it's not a Proxy.
+    JSObject::setNamedSlotValueUnsafe(obj.get(), runtime, propIndex, shv);
+    ++propIndex;
   }
 
   return createPseudoHandle(HermesValue::encodeObjectValue(*obj));
