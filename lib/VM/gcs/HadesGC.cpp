@@ -71,10 +71,6 @@ HadesGC::OldGen::finishAlloc(GCCell *cell, uint32_t sz, uint16_t segmentIdx) {
   return cell;
 }
 
-AllocResult HadesGC::HeapSegment::bumpAlloc(uint32_t sz) {
-  return AlignedHeapSegment::alloc(sz);
-}
-
 void HadesGC::OldGen::addCellToFreelist(
     void *addr,
     uint32_t sz,
@@ -3012,14 +3008,6 @@ uint64_t HadesGC::OldGen::size() const {
 uint64_t HadesGC::OldGen::targetSizeBytes() const {
   assert(gc_->gcMutex_ && "Must hold gcMutex_ when accessing targetSegments_.");
   return targetSegments_ * HeapSegment::maxSize();
-}
-
-HadesGC::HeapSegment &HadesGC::youngGen() {
-  return youngGen_;
-}
-
-const HadesGC::HeapSegment &HadesGC::youngGen() const {
-  return youngGen_;
 }
 
 bool HadesGC::inYoungGen(const void *p) const {

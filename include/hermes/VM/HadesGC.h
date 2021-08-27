@@ -275,7 +275,9 @@ class HadesGC final : public GCBase {
     HeapSegment() = default;
 
     /// Allocate space by bumping a level.
-    AllocResult bumpAlloc(uint32_t sz);
+    AllocResult bumpAlloc(uint32_t sz) {
+      return AlignedHeapSegment::alloc(sz);
+    }
 
     /// Record the head of this cell so it can be found by the card scanner.
     static void setCellHead(const GCCell *start, const size_t sz);
@@ -906,8 +908,12 @@ class HadesGC final : public GCBase {
   uint64_t heapFootprint() const;
 
   /// Accessor for the YG.
-  HeapSegment &youngGen();
-  const HeapSegment &youngGen() const;
+  HeapSegment &youngGen() {
+    return youngGen_;
+  }
+  const HadesGC::HeapSegment &youngGen() const {
+    return youngGen_;
+  }
 
   /// Create a new segment (to be used by either YG or OG).
   llvh::ErrorOr<HeapSegment> createSegment();
