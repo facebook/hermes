@@ -116,8 +116,10 @@ void Metadata::Builder::addArray(
     const void *startLocation,
     const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
     std::size_t stride) {
+  const uint8_t stride8 = stride;
+  assert(stride8 == stride && "Stride overflowed");
   array_ = ArrayData(
-      type, getOffset(startLocation), getOffset(lengthLocation), stride);
+      type, getOffset(startLocation), getOffset(lengthLocation), stride8);
 }
 
 Metadata Metadata::Builder::build() {

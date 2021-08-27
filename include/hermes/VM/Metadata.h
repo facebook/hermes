@@ -57,7 +57,12 @@ struct Metadata final {
   /// The information about an array for an object.
   struct ArrayData {
     /// Which type of element the array holds.
-    enum class ArrayType { Pointer, HermesValue, SmallHermesValue, Symbol };
+    enum class ArrayType : uint8_t {
+      Pointer,
+      HermesValue,
+      SmallHermesValue,
+      Symbol
+    };
     ArrayType type;
     /// The offset of where the array starts.
     offset_t startOffset;
@@ -65,14 +70,14 @@ struct Metadata final {
     offset_t lengthOffset;
     /// The width of each element. For example, a pointer has a stride of
     /// sizeof(void *).
-    std::uint16_t stride;
+    uint8_t stride;
 
     explicit ArrayData() = default;
     explicit constexpr ArrayData(
         ArrayType type,
         offset_t startOffset,
         offset_t lengthOffset,
-        std::uint16_t stride)
+        uint8_t stride)
         : type(type),
           startOffset(startOffset),
           lengthOffset(lengthOffset),
