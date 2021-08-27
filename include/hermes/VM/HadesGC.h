@@ -215,6 +215,7 @@ class HadesGC final : public GCBase {
 
   /// \return true if the pointer lives in the young generation.
   bool inYoungGen(const void *p) const override;
+  bool inYoungGen(const CompressedPointer p) const;
 
   /// Approximate the dirty memory footprint of the GC's heap. Note that this
   /// does not return the number of dirty pages in the heap, but instead returns
@@ -585,6 +586,7 @@ class HadesGC final : public GCBase {
   /// youngGen is a bump-pointer space, so it can re-use AlignedHeapSegment.
   /// Protected by gcMutex_.
   HeapSegment youngGen_;
+  AssignableCompressedPointer youngGenCP_;
 
   /// List of cells in YG that have finalizers. Iterate through this to clean
   /// them out.
@@ -681,11 +683,17 @@ class HadesGC final : public GCBase {
     bool contains(const void *p) const {
       return start == AlignedStorage::start(p);
     }
+    bool contains(CompressedPointer p) const {
+      return p.getSegmentStart() == startCP;
+    }
 
     /// \return true if the pointer lives in the segment that is currently being
     /// evacuated for compaction.
     bool evacContains(const void *p) const {
       return evacStart == AlignedStorage::start(p);
+    }
+    bool evacContains(CompressedPointer p) const {
+      return p.getSegmentStart() == evacStartCP;
     }
 
     /// \return true if the compactee is ready to be evacuated.
@@ -717,11 +725,15 @@ class HadesGC final : public GCBase {
     /// used during marking and by write barriers to determine whether a pointer
     /// is in the compactee segment.
     void *start{reinterpret_cast<void *>(kInvalidCompacteeStart)};
+    AssignableCompressedPointer startCP{
+        CompressedPointer::fromRaw(kInvalidCompacteeStart)};
 
     /// The start address of the segment that is currently being compacted. When
     /// this is set, the next YG will evacuate objects in this segment. This is
     /// always going to be equal to "start" or nullptr.
     void *evacStart{reinterpret_cast<void *>(kInvalidCompacteeStart)};
+    AssignableCompressedPointer evacStartCP{
+        CompressedPointer::fromRaw(kInvalidCompacteeStart)};
 
     /// The segment being compacted. This should be removed from the OG right
     /// after it is identified, and freed entirely once the compaction is
@@ -852,6 +864,7 @@ class HadesGC final : public GCBase {
 
   /// Common logic for doing the Snapshot At The Beginning (SATB) write barrier.
   void snapshotWriteBarrierInternal(GCCell *oldValue);
+  void snapshotWriteBarrierInternal(CompressedPointer oldValue);
 
   /// Common logic for doing the Snapshot At The Beginning (SATB) write barrier.
   /// Forwards to \c snapshotWriteBarrierInternal(GCCell*) if oldValue is a

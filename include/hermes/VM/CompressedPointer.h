@@ -10,6 +10,8 @@
 
 #include "hermes/VM/PointerBase.h"
 
+#include "llvh/Support/MathExtras.h"
+
 namespace hermes {
 namespace vm {
 
@@ -72,6 +74,11 @@ class CompressedPointer {
 
   RawType getRaw() const {
     return storageTypeToRaw(ptr_);
+  }
+
+  CompressedPointer getSegmentStart() const {
+    return fromRaw(
+        getRaw() & llvh::maskTrailingZeros<RawType>(AlignedStorage::kLogSize));
   }
 
   CompressedPointer(const CompressedPointer &) = default;
@@ -137,6 +144,8 @@ class AssignableCompressedPointer : public CompressedPointer {
 
   constexpr explicit AssignableCompressedPointer(std::nullptr_t)
       : CompressedPointer(nullptr) {}
+  constexpr explicit AssignableCompressedPointer(CompressedPointer cp)
+      : CompressedPointer(cp) {}
 
   AssignableCompressedPointer &operator=(CompressedPointer ptr) {
     setNoBarrier(ptr);

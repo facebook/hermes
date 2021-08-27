@@ -419,6 +419,10 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     return gc.inYoungGen(ptr) ||
         (CompactionEnabled && gc.compactee_.evacContains(ptr));
   }
+  inline bool shouldForward(CompressedPointer ptr) const {
+    return gc.inYoungGen(ptr) ||
+        (CompactionEnabled && gc.compactee_.evacContains(ptr));
+  }
 
   LLVM_NODISCARD GCCell *acceptRoot(GCCell *ptr) {
     if (shouldForward(ptr))
@@ -443,14 +447,14 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
 
   LLVM_NODISCARD CompressedPointer
   acceptHeap(CompressedPointer cptr, void *heapLoc) {
-    GCCell *ptr = cptr.get(pointerBase_);
-    if (shouldForward(ptr)) {
+    if (shouldForward(cptr)) {
+      GCCell *ptr = cptr.get(pointerBase_);
       assert(
           HeapSegment::getCellMarkBit(ptr) &&
           "Should only evacuate marked objects.");
       return forwardCell<CompressedPointer>(ptr);
     }
-    if (CompactionEnabled && gc.compactee_.contains(ptr)) {
+    if (CompactionEnabled && gc.compactee_.contains(cptr)) {
       // If a compaction is about to take place, dirty the card for any newly
       // evacuated cells, since the marker may miss them.
       HeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(heapLoc);
@@ -1742,6 +1746,9 @@ void HadesGC::prepareCompactee(bool forceCompaction) {
     addSegmentExtentToCrashManager(
         *compactee_.segment, kCompacteeNameForCrashMgr);
     compactee_.start = compactee_.segment->lowLim();
+    compactee_.startCP = CompressedPointer(
+        getPointerBase(),
+        reinterpret_cast<GCCell *>(compactee_.segment->lowLim()));
     compacteeHandleForSweep_ = compactee_.segment;
   }
 }
@@ -1770,6 +1777,7 @@ void HadesGC::completeMarking() {
   // Update the compactee tracking pointers so that the next YG collection will
   // do a compaction.
   compactee_.evacStart = compactee_.start;
+  compactee_.evacStartCP = compactee_.startCP;
   assert(
       oldGenMarker_->globalWorklist().empty() &&
       "Marking worklist wasn't drained");
@@ -1899,7 +1907,7 @@ void HadesGC::writeBarrier(const GCPointerBase *loc, const GCCell *value) {
     return;
   }
   if (ogMarkingBarriers_)
-    snapshotWriteBarrierInternal(loc->get(getPointerBase()));
+    snapshotWriteBarrierInternal(*loc);
   // Always do the non-snapshot write barrier in order for YG to be able to
   // scan cards.
   relocationWriteBarrier(loc, value);
@@ -2013,7 +2021,7 @@ void HadesGC::snapshotWriteBarrier(const GCPointerBase *loc) {
     return;
   }
   if (ogMarkingBarriers_) {
-    snapshotWriteBarrierInternal(loc->get(getPointerBase()));
+    snapshotWriteBarrierInternal(*loc);
   }
 }
 
@@ -2059,6 +2067,19 @@ void HadesGC::snapshotWriteBarrierInternal(GCCell *oldValue) {
   }
 }
 
+void HadesGC::snapshotWriteBarrierInternal(CompressedPointer oldValue) {
+  assert(
+      (!oldValue || oldValue.get(getPointerBase())->isValid()) &&
+      "Invalid cell encountered in snapshotWriteBarrier");
+  if (oldValue && !inYoungGen(oldValue)) {
+    GCCell *ptr = oldValue.get(getPointerBase());
+    HERMES_SLOW_ASSERT(
+        dbgContains(ptr) &&
+        "Non-heap pointer encountered in snapshotWriteBarrier");
+    oldGenMarker_->globalWorklist().enqueue(ptr);
+  }
+}
+
 void HadesGC::snapshotWriteBarrierInternal(HermesValue oldValue) {
   if (oldValue.isPointer()) {
     snapshotWriteBarrierInternal(static_cast<GCCell *>(oldValue.getPointer()));
@@ -2070,8 +2091,7 @@ void HadesGC::snapshotWriteBarrierInternal(HermesValue oldValue) {
 
 void HadesGC::snapshotWriteBarrierInternal(SmallHermesValue oldValue) {
   if (oldValue.isPointer()) {
-    snapshotWriteBarrierInternal(
-        static_cast<GCCell *>(oldValue.getPointer(getPointerBase())));
+    snapshotWriteBarrierInternal(oldValue.getPointer());
   } else if (oldValue.isSymbol()) {
     // Symbols need snapshot write barriers.
     snapshotWriteBarrierInternal(oldValue.getSymbol());
@@ -2681,6 +2701,8 @@ HadesGC::HeapSegment HadesGC::setYoungGen(HeapSegment seg) {
   addSegmentExtentToCrashManager(seg, "YG");
   youngGenFinalizables_.clear();
   std::swap(youngGen_, seg);
+  youngGenCP_ = CompressedPointer{
+      getPointerBase(), reinterpret_cast<GCCell *>(youngGen_.lowLim())};
   return seg;
 }
 
@@ -3012,6 +3034,9 @@ uint64_t HadesGC::OldGen::targetSizeBytes() const {
 
 bool HadesGC::inYoungGen(const void *p) const {
   return youngGen_.lowLim() == AlignedStorage::start(p);
+}
+bool HadesGC::inYoungGen(CompressedPointer p) const {
+  return p.getSegmentStart() == youngGenCP_;
 }
 
 size_t HadesGC::getYoungGenExternalBytes() const {
