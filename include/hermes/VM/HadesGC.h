@@ -154,14 +154,39 @@ class HadesGC final : public GCBase {
   /// be in the heap). If value is a pointer, execute a write barrier.
   /// NOTE: The write barrier call must be placed *before* the write to the
   /// pointer, so that the current value can be fetched.
-  void writeBarrier(const GCHermesValue *loc, HermesValue value);
-  void writeBarrier(const GCSmallHermesValue *loc, SmallHermesValue value);
+  void writeBarrier(const GCHermesValue *loc, HermesValue value) {
+    assert(
+        !calledByBackgroundThread() &&
+        "Write barrier invoked by background thread.");
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(loc)))
+      writeBarrierSlow(loc, value);
+  }
+  void writeBarrierSlow(const GCHermesValue *loc, HermesValue value);
+
+  void writeBarrier(const GCSmallHermesValue *loc, SmallHermesValue value) {
+    assert(
+        !calledByBackgroundThread() &&
+        "Write barrier invoked by background thread.");
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(loc)))
+      writeBarrierSlow(loc, value);
+  }
+  void writeBarrierSlow(const GCSmallHermesValue *loc, SmallHermesValue value);
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap). The value may be null. Execute a write barrier.
   /// NOTE: The write barrier call must be placed *before* the write to the
   /// pointer, so that the current value can be fetched.
-  void writeBarrier(const GCPointerBase *loc, const GCCell *value);
+  void writeBarrier(const GCPointerBase *loc, const GCCell *value) {
+    assert(
+        !calledByBackgroundThread() &&
+        "Write barrier invoked by background thread.");
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(loc)))
+      writeBarrierSlow(loc, value);
+  }
+  void writeBarrierSlow(const GCPointerBase *loc, const GCCell *value);
 
   /// The given symbol is being written at the given loc (required to be in the
   /// heap).
@@ -169,23 +194,80 @@ class HadesGC final : public GCBase {
 
   /// Special versions of \p writeBarrier for when there was no previous value
   /// initialized into the space.
-  void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value);
+  void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value) {
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(loc)))
+      constructorWriteBarrierSlow(loc, value);
+  }
+  void constructorWriteBarrierSlow(const GCHermesValue *loc, HermesValue value);
+
   void constructorWriteBarrier(
       const GCSmallHermesValue *loc,
+      SmallHermesValue value) {
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(loc)))
+      constructorWriteBarrierSlow(loc, value);
+  }
+  void constructorWriteBarrierSlow(
+      const GCSmallHermesValue *loc,
       SmallHermesValue value);
-  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
+
+  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value) {
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(loc)))
+      relocationWriteBarrier(loc, value);
+  }
+
   void constructorWriteBarrierRange(
       const GCHermesValue *start,
+      uint32_t numHVs) {
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(start)))
+      constructorWriteBarrierRangeSlow(start, numHVs);
+  }
+  void constructorWriteBarrierRangeSlow(
+      const GCHermesValue *start,
       uint32_t numHVs);
+
   void constructorWriteBarrierRange(
+      const GCSmallHermesValue *start,
+      uint32_t numHVs) {
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(start)))
+      constructorWriteBarrierRangeSlow(start, numHVs);
+  }
+  void constructorWriteBarrierRangeSlow(
       const GCSmallHermesValue *start,
       uint32_t numHVs);
 
-  void snapshotWriteBarrier(const GCHermesValue *loc);
-  void snapshotWriteBarrier(const GCSmallHermesValue *loc);
-  void snapshotWriteBarrier(const GCPointerBase *loc);
-  void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs);
+  void snapshotWriteBarrier(const GCHermesValue *loc) {
+    if (LLVM_UNLIKELY(!inYoungGen(loc) && ogMarkingBarriers_))
+      snapshotWriteBarrierInternal(*loc);
+  }
+  void snapshotWriteBarrier(const GCSmallHermesValue *loc) {
+    if (LLVM_UNLIKELY(!inYoungGen(loc) && ogMarkingBarriers_))
+      snapshotWriteBarrierInternal(*loc);
+  }
+  void snapshotWriteBarrier(const GCPointerBase *loc) {
+    if (LLVM_UNLIKELY(!inYoungGen(loc) && ogMarkingBarriers_))
+      snapshotWriteBarrierInternal(*loc);
+  }
+
+  void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs) {
+    if (LLVM_UNLIKELY(!inYoungGen(start) && ogMarkingBarriers_))
+      snapshotWriteBarrierRangeSlow(start, numHVs);
+  }
+  void snapshotWriteBarrierRangeSlow(
+      const GCHermesValue *start,
+      uint32_t numHVs);
+
   void snapshotWriteBarrierRange(
+      const GCSmallHermesValue *start,
+      uint32_t numHVs) {
+    if (LLVM_UNLIKELY(!inYoungGen(start) && ogMarkingBarriers_))
+      snapshotWriteBarrierRangeSlow(start, numHVs);
+  }
+  void snapshotWriteBarrierRangeSlow(
       const GCSmallHermesValue *start,
       uint32_t numHVs);
 
@@ -214,8 +296,12 @@ class HadesGC final : public GCBase {
   /// \}
 
   /// \return true if the pointer lives in the young generation.
-  bool inYoungGen(const void *p) const override;
-  bool inYoungGen(const CompressedPointer p) const;
+  bool inYoungGen(const void *p) const override {
+    return youngGen_.lowLim() == AlignedStorage::start(p);
+  }
+  bool inYoungGen(CompressedPointer p) const {
+    return p.getSegmentStart() == youngGenCP_;
+  }
 
   /// Approximate the dirty memory footprint of the GC's heap. Note that this
   /// does not return the number of dirty pages in the heap, but instead returns
