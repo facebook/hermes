@@ -428,7 +428,7 @@ CallResult<PseudoHandle<JSObject>> Callable::createThisForConstruct(
     return ExecutionStatus::EXCEPTION;
   }
   Handle<JSObject> prototype = vmisa<JSObject>(prototypeProp->get())
-      ? runtime->makeHandle<JSObject>(std::move(prototypeProp->get()))
+      ? runtime->makeHandle<JSObject>(prototypeProp->get())
       : Handle<JSObject>::vmcast(&runtime->objectPrototype);
   return Callable::newObject(selfHandle, runtime, prototype);
 }
