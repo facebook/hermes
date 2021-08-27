@@ -17,7 +17,7 @@ using std::uintptr_t;
 using ArrayData = Metadata::ArrayData;
 using ArrayType = ArrayData::ArrayType;
 
-Metadata::Metadata(Builder &&mb) : array_(std::move(mb.array_)), vtp_(mb.vtp_) {
+Metadata::Metadata(Builder &&mb) : array(std::move(mb.array_)), vtp(mb.vtp_) {
   size_t i = 0;
   for (const auto &p : mb.pointers_) {
     offsets[i] = p.first;
@@ -48,7 +48,7 @@ Metadata::Metadata(Builder &&mb) : array_(std::move(mb.array_)), vtp_(mb.vtp_) {
   symbolsEnd = i;
 
   assert(i <= kMaxNumFields && "Number of fields exceeds max.");
-  assert(vtp_->isValid() && "Must initialize VTable pointer for metadata.");
+  assert(vtp->isValid() && "Must initialize VTable pointer for metadata.");
 }
 
 Metadata::Builder::Builder(const void *base)
@@ -165,8 +165,8 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const Metadata &meta) {
     os << "\n\t";
   }
   os << "]";
-  if (meta.array_) {
-    os << ",\n\tarray: " << *meta.array_ << ",\n";
+  if (meta.array) {
+    os << ",\n\tarray: " << *meta.array << ",\n";
   } else {
     os << "\n";
   }

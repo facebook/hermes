@@ -58,7 +58,7 @@ MetadataTable getMetadataTable() {
         "VTable array should not be initialized before this point.");
     VTable::vtableArray = {
 #define CELL_KIND(name) \
-  (*storage)[static_cast<uint8_t>(CellKind::name##Kind)].vtp_,
+  (*storage)[static_cast<uint8_t>(CellKind::name##Kind)].vtp,
 #include "hermes/VM/CellKinds.def"
 #undef CELL_KIND
     };

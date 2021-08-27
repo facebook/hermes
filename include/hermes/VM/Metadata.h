@@ -280,14 +280,14 @@ struct Metadata final {
 
   /// The optional array for this object to hold.
   /// NOTE: this format currently does not support multiple arrays.
-  OptValue<ArrayData> array_;
+  OptValue<ArrayData> array;
 
   /// The names of the fields, only used in snapshots. This is placed after the
   /// ArrayData so that all the hot fields above are adjacent in memory.
   std::array<const char *, kMaxNumFields> names;
 
   /// The VTable pointer for the cell that this metadata describes.
-  const VTable *vtp_;
+  const VTable *vtp;
 };
 
 /// @name Formatters

@@ -125,8 +125,8 @@ struct SlotVisitor final : BaseVisitor {
   void visit(GCCell *cell, const Metadata &meta) {
     auto *ptr = reinterpret_cast<char *>(cell);
     visitFields(ptr, meta);
-    if (meta.array_) {
-      visitArray<Acceptor, /*WithNames*/ false>(acceptor_, ptr, *meta.array_);
+    if (meta.array) {
+      visitArray<Acceptor, /*WithNames*/ false>(acceptor_, ptr, *meta.array);
     }
   }
 
@@ -139,8 +139,8 @@ struct SlotVisitor final : BaseVisitor {
       const char *end) {
     auto *ptr = reinterpret_cast<char *>(cell);
     visitFieldsWithinRange(ptr, meta, begin, end);
-    if (meta.array_) {
-      visitArrayWithinRange(ptr, *meta.array_, begin, end);
+    if (meta.array) {
+      visitArrayWithinRange(ptr, *meta.array, begin, end);
     }
   }
 
@@ -284,8 +284,8 @@ struct SlotVisitorWithNames final : BaseVisitor {
   void visit(GCCell *cell, const Metadata &meta) {
     auto *ptr = reinterpret_cast<char *>(cell);
     visitFields(ptr, meta);
-    if (meta.array_) {
-      visitArray<Acceptor, /*WithNames*/ true>(acceptor_, ptr, *meta.array_);
+    if (meta.array) {
+      visitArray<Acceptor, /*WithNames*/ true>(acceptor_, ptr, *meta.array);
     }
   }
 

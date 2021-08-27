@@ -68,7 +68,7 @@ void DummyArrayCell::buildMeta(const GCCell *cell, Metadata::Builder &mb) {
 TEST(MetadataTest, TestNormalFields) {
   const auto meta =
       buildMetadata(CellKind::UninitializedKind, DummyCell::buildMeta);
-  ASSERT_FALSE(meta.array_);
+  ASSERT_FALSE(meta.array);
 
   EXPECT_EQ(meta.pointersEnd, 3u);
   EXPECT_STREQ(meta.names[0], "x");
@@ -89,8 +89,8 @@ TEST(MetadataTest, TestNormalFields) {
 TEST(MetadataTest, TestArray) {
   const auto meta =
       buildMetadata(CellKind::UninitializedKind, DummyArrayCell::buildMeta);
-  ASSERT_TRUE(meta.array_);
-  auto &array = *(meta.array_);
+  ASSERT_TRUE(meta.array);
+  auto &array = *(meta.array);
   EXPECT_EQ(array.type, Metadata::ArrayData::ArrayType::Pointer);
 
   EXPECT_EQ(array.lengthOffset, offsetof(DummyArrayCell, length_));
