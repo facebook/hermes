@@ -5,11 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#[allow(dead_code)]
-pub mod ast;
+mod generated_ffi;
+mod hermes_parser;
+mod node;
 
-#[allow(dead_code)]
-pub mod gen_js;
-
-#[allow(dead_code)]
-pub mod hparser;
+pub use generated_ffi::*;
+pub use hermes_parser::*;
+pub use node::*;

@@ -1,3 +1,7 @@
+[workspace]
+members = ["hermes", "support"]
+default-members = ["hermes", "support"]
+
 [package]
 name = "juno"
 version = "0.1.0"
@@ -6,5 +10,7 @@ edition = "2018"
 license = "MIT"
 
 [dependencies]
+hermes = { path = "./hermes" }
+support = { path = "./support" }
 libc = "0.2"
 thiserror = "1.0"

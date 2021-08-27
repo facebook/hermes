@@ -5,8 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#[macro_use]
-pub mod str_enum;
+//! Hermes Interface
+//!
+//! This library exports selected Hermes interfaces to Rust
 
-pub mod case;
-pub mod json;
+#[allow(dead_code)]
+pub mod parser;
+
+#[allow(dead_code)]
+pub mod utf;

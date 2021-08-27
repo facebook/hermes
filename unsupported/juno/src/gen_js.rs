@@ -5,11 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::{ast::*, convert};
+use crate::ast::*;
 use std::{
     fmt,
     io::{self, BufWriter, Write},
 };
+use support::convert;
 
 /// Whether to pretty-print the generated JS.
 /// Does not do full formatting of the source, but does add indentation and

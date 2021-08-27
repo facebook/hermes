@@ -6,6 +6,7 @@
  */
 
 use std::fmt;
+use support::define_str_enum;
 use thiserror::Error;
 
 #[macro_use]

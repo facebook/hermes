@@ -11,10 +11,10 @@ use super::{
     PropertyKind, StringLiteral, UnaryExpressionOperator, UpdateExpressionOperator,
     VariableDeclarationKind,
 };
-use crate::support::{case::ascii_snake_to_camel, json::*};
 use std::io::{self, Write};
+use support::{case::ascii_snake_to_camel, json::*};
 
-pub use crate::support::json::Pretty;
+pub use support::json::Pretty;
 
 /// Generate boilerplate code for the `NodeKind` enum.
 macro_rules! gen_dumper {

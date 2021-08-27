@@ -5,28 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use super::generated_ffi::cvt_node_ptr;
-use super::hermes_parser::HermesParser;
-use super::node::*;
+use super::generated_cvt::cvt_node_ptr;
 use crate::ast;
-use crate::hermes_utf::{utf8_with_surrogates_to_string, utf8_with_surrogates_to_utf16};
-use std::os::raw::c_int;
+use hermes::parser::{
+    HermesParser, NodeLabel, NodeLabelOpt, NodeListOptRef, NodeListRef, NodePtr, NodePtrOpt,
+    NodeString, NodeStringOpt, SMRange,
+};
+use hermes::utf::{utf8_with_surrogates_to_string, utf8_with_surrogates_to_utf16};
 use std::str::FromStr;
-
-/// A trait converting an AST location, presumably using a source map. The input file_id is
-/// expected to be ignored, but it could be used to indicate something, as it is passed
-/// unmodified.
-pub trait CvtLoc {
-    fn convert_loc(&self, file_id: u32, line: u32, column: u32) -> (u32, u32, u32);
-}
 
 /// Converts from Hermes AST to Juno AST
 pub struct Converter<'a> {
     pub hparser: &'a HermesParser<'a>,
     /// The file id to use for the converted coordinates.
     pub file_id: u32,
-    /// Optional location converter.
-    pub cvt_loc: Option<&'a dyn CvtLoc>,
 }
 
 impl Converter<'_> {
@@ -36,34 +28,17 @@ impl Converter<'_> {
             "All source range from Hermes parser must be valid"
         );
 
-        let mut start = self
+        let start = self
             .hparser
             .find_coord(smr.start)
             .expect("Location from Hermes parser cannot be found");
-        let mut end = self
+        let end = self
             .hparser
             .find_coord(smr.end.pred())
             .expect("Location from Hermes parser cannot be found");
-        let mut file_id = self.file_id;
-
-        if let Some(cvt_loc) = self.cvt_loc {
-            let res_st = cvt_loc.convert_loc(self.file_id, start.line as u32, start.column as u32);
-            file_id = res_st.0;
-            start.line = res_st.1 as c_int;
-            start.column = res_st.2 as c_int;
-
-            let res_end = cvt_loc.convert_loc(self.file_id, end.line as u32, end.column as u32);
-            end.line = res_end.1 as c_int;
-            end.column = res_end.2 as c_int;
-
-            debug_assert!(
-                res_end.0 == res_st.0,
-                "End location has a different file_id"
-            );
-        }
 
         ast::SourceRange {
-            file: file_id,
+            file: self.file_id,
             start: ast::SourceLoc {
                 line: start.line as u32,
                 col: start.column as u32,

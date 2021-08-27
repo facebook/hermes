@@ -6,12 +6,12 @@
  */
 
 use super::node::{Node, NodePtr, NodePtrOpt, SMLoc, StringRef};
-use crate::hermes_utf::utf8_with_surrogates_to_string_lossy;
-use crate::nullbuf::NullTerminatedBuf;
+use crate::utf::utf8_with_surrogates_to_string_lossy;
 use std::fmt::Formatter;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 use std::os::raw::{c_char, c_int};
+use support::NullTerminatedBuf;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]

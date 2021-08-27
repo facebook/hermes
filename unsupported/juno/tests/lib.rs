@@ -7,4 +7,3 @@
 
 mod ast;
 mod gen_js;
-mod hparser_source_map;
