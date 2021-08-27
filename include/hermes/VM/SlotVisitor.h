@@ -33,22 +33,13 @@ class BaseVisitor {
                             ->load(std::memory_order_acquire);
     const auto stride = array.stride;
     switch (array.type) {
-      case ArrayType::Pointer:
-        visitArrayObject<Acceptor, GCPointerBase, WithNames>(
-            acceptor, start, length, stride);
-        break;
-      case ArrayType::HermesValue:
-        visitArrayObject<Acceptor, GCHermesValue, WithNames>(
-            acceptor, start, length, stride);
-        break;
-      case ArrayType::SmallHermesValue:
-        visitArrayObject<Acceptor, GCSmallHermesValue, WithNames>(
-            acceptor, start, length, stride);
-        break;
-      case ArrayType::Symbol:
-        visitArrayObject<Acceptor, GCSymbolID, WithNames>(
-            acceptor, start, length, stride);
-        break;
+#define SLOT_TYPE(type)                          \
+  case ArrayType::type:                          \
+    visitArrayObject<Acceptor, type, WithNames>( \
+        acceptor, start, length, stride);        \
+    break;
+#include "hermes/VM/SlotKinds.def"
+#undef SLOT_TYPE
     }
   }
 
@@ -159,14 +150,11 @@ struct SlotVisitor final : BaseVisitor {
   /// find the fields, and calls \c acceptor_.accept() on them.
   void visitFields(char *base, const Metadata &meta) {
     size_t i = 0;
-    for (; i < meta.pointersEnd; ++i)
-      visitSlot<GCPointerBase>(base + meta.offsets[i]);
-    for (; i < meta.valuesEnd; ++i)
-      visitSlot<GCHermesValue>(base + meta.offsets[i]);
-    for (; i < meta.smallValuesEnd; ++i)
-      visitSlot<GCSmallHermesValue>(base + meta.offsets[i]);
-    for (; i < meta.symbolsEnd; ++i)
-      visitSlot<GCSymbolID>(base + meta.offsets[i]);
+#define SLOT_TYPE(type)           \
+  for (; i < meta.end##type; ++i) \
+    visitSlot<type>(base + meta.offsets[i]);
+#include "hermes/VM/SlotKinds.def"
+#undef SLOT_TYPE
   }
 
   /// Same as \c visitFields, except any pointer field inside \p base that is
@@ -177,47 +165,19 @@ struct SlotVisitor final : BaseVisitor {
       const char *begin,
       const char *end) {
     size_t i = 0;
-    for (; i < meta.pointersEnd; ++i) {
-      char *slot = base + meta.offsets[i];
-      if (slot < begin)
-        continue;
-      if (slot >= end) {
-        i = meta.pointersEnd;
-        break;
-      }
-      visitSlot<GCPointerBase>(slot);
-    }
-
-    for (; i < meta.valuesEnd; ++i) {
-      char *slot = base + meta.offsets[i];
-      if (slot < begin)
-        continue;
-      if (slot >= end) {
-        i = meta.valuesEnd;
-        break;
-      }
-      visitSlot<GCHermesValue>(slot);
-    }
-
-    for (; i < meta.smallValuesEnd; ++i) {
-      char *slot = base + meta.offsets[i];
-      if (slot < begin)
-        continue;
-      if (slot >= end) {
-        i = meta.smallValuesEnd;
-        break;
-      }
-      visitSlot<GCSmallHermesValue>(slot);
-    }
-
-    for (; i < meta.symbolsEnd; ++i) {
-      char *slot = base + meta.offsets[i];
-      if (slot < begin)
-        continue;
-      if (slot >= end)
-        break;
-      visitSlot<GCSymbolID>(slot);
-    }
+#define SLOT_TYPE(type)                  \
+  for (; i < meta.end##type; ++i) {      \
+    char *slot = base + meta.offsets[i]; \
+    if (slot < begin)                    \
+      continue;                          \
+    if (slot >= end) {                   \
+      i = meta.end##type;                \
+      break;                             \
+    }                                    \
+    visitSlot<type>(slot);               \
+  }
+#include "hermes/VM/SlotKinds.def"
+#undef SLOT_TYPE
   }
 
   /// Same as \c visitArrayObject, except it does not accept fields between
@@ -255,22 +215,12 @@ struct SlotVisitor final : BaseVisitor {
         *reinterpret_cast<std::uint32_t *>(base + array.lengthOffset);
     const auto stride = array.stride;
     switch (array.type) {
-      case ArrayType::Pointer:
-        visitArrayObjectWithinRange<GCPointerBase>(
-            start, length, stride, begin, end);
-        break;
-      case ArrayType::HermesValue:
-        visitArrayObjectWithinRange<GCHermesValue>(
-            start, length, stride, begin, end);
-        break;
-      case ArrayType::SmallHermesValue:
-        visitArrayObjectWithinRange<GCSmallHermesValue>(
-            start, length, stride, begin, end);
-        break;
-      case ArrayType::Symbol:
-        visitArrayObjectWithinRange<GCSymbolID>(
-            start, length, stride, begin, end);
-        break;
+#define SLOT_TYPE(type)                                                   \
+  case ArrayType::type:                                                   \
+    visitArrayObjectWithinRange<type>(start, length, stride, begin, end); \
+    break;
+#include "hermes/VM/SlotKinds.def"
+#undef SLOT_TYPE
     }
   }
 };
@@ -296,14 +246,11 @@ struct SlotVisitorWithNames final : BaseVisitor {
     // Ignore sizes for special fields, since these are known types with known
     // sizes.
     size_t i = 0;
-    for (; i < meta.pointersEnd; ++i)
-      visitSlot<GCPointerBase>(base + meta.offsets[i], meta.names[i]);
-    for (; i < meta.valuesEnd; ++i)
-      visitSlot<GCHermesValue>(base + meta.offsets[i], meta.names[i]);
-    for (; i < meta.smallValuesEnd; ++i)
-      visitSlot<GCSmallHermesValue>(base + meta.offsets[i], meta.names[i]);
-    for (; i < meta.symbolsEnd; ++i)
-      visitSlot<GCSymbolID>(base + meta.offsets[i], meta.names[i]);
+#define SLOT_TYPE(type)           \
+  for (; i < meta.end##type; ++i) \
+    visitSlot<type>(base + meta.offsets[i], meta.names[i]);
+#include "hermes/VM/SlotKinds.def"
+#undef SLOT_TYPE
   }
 
   template <typename T>

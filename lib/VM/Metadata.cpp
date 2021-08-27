@@ -21,33 +21,16 @@ std::array<Metadata, kNumCellKinds> Metadata::metadataTable{};
 
 Metadata::Metadata(Builder &&mb) : array(std::move(mb.array_)), vtp(mb.vtp_) {
   size_t i = 0;
-  for (const auto &p : mb.pointers_) {
-    offsets[i] = p.first;
-    names[i] = p.second;
-    i++;
-  }
-  pointersEnd = i;
 
-  for (const auto &p : mb.values_) {
-    offsets[i] = p.first;
-    names[i] = p.second;
-    i++;
-  }
-  valuesEnd = i;
-
-  for (const auto &p : mb.smallValues_) {
-    offsets[i] = p.first;
-    names[i] = p.second;
-    i++;
-  }
-  smallValuesEnd = i;
-
-  for (const auto &p : mb.symbols_) {
-    offsets[i] = p.first;
-    names[i] = p.second;
-    i++;
-  }
-  symbolsEnd = i;
+#define SLOT_TYPE(type)                   \
+  for (const auto &p : mb.map##type##_) { \
+    offsets[i] = p.first;                 \
+    names[i] = p.second;                  \
+    i++;                                  \
+  }                                       \
+  end##type = i;
+#include "hermes/VM/SlotKinds.def"
+#undef SLOT_TYPE
 
   assert(i <= kMaxNumFields && "Number of fields exceeds max.");
   assert(vtp->isValid() && "Must initialize VTable pointer for metadata.");
@@ -63,61 +46,23 @@ Metadata::offset_t Metadata::Builder::getOffset(const void *fieldLocation) {
   return ret;
 }
 
-void Metadata::Builder::addField(const GCPointerBase *fieldLocation) {
-  addField(nullptr, fieldLocation);
-}
+#define SLOT_TYPE(type)                                         \
+  void Metadata::Builder::addField(const type *fieldLocation) { \
+    addField(nullptr, fieldLocation);                           \
+  }
+#include "hermes/VM/SlotKinds.def"
+#undef SLOT_TYPE
 
-void Metadata::Builder::addField(
-    const char *name,
-    const GCPointerBase *fieldLocation) {
-  offset_t offset = getOffset(fieldLocation);
-  assert(
-      !fieldConflicts(offset, sizeof(GCPointerBase)) &&
-      "fields should not overlap");
-  pointers_[offset] = name;
-}
-
-void Metadata::Builder::addField(const GCHermesValue *fieldLocation) {
-  addField(nullptr, fieldLocation);
-}
-
-void Metadata::Builder::addField(
-    const char *name,
-    const GCHermesValue *fieldLocation) {
-  offset_t offset = getOffset(fieldLocation);
-  assert(
-      !fieldConflicts(offset, sizeof(GCHermesValue)) &&
-      "fields should not overlap");
-  values_[offset] = name;
-}
-
-void Metadata::Builder::addField(const GCSmallHermesValue *fieldLocation) {
-  addField(nullptr, fieldLocation);
-}
-
-void Metadata::Builder::addField(
-    const char *name,
-    const GCSmallHermesValue *fieldLocation) {
-  offset_t offset = getOffset(fieldLocation);
-  assert(
-      !fieldConflicts(offset, sizeof(GCSmallHermesValue)) &&
-      "fields should not overlap");
-  smallValues_[offset] = name;
-}
-
-void Metadata::Builder::addField(const GCSymbolID *fieldLocation) {
-  addField(nullptr, fieldLocation);
-}
-
-void Metadata::Builder::addField(
-    const char *name,
-    const GCSymbolID *fieldLocation) {
-  offset_t offset = getOffset(fieldLocation);
-  assert(
-      !fieldConflicts(offset, sizeof(GCSymbolID)) &&
-      "fields should not overlap");
-  symbols_[offset] = name;
-}
+#define SLOT_TYPE(type)                                                        \
+  void Metadata::Builder::addField(                                            \
+      const char *name, const type *fieldLocation) {                           \
+    offset_t offset = getOffset(fieldLocation);                                \
+    assert(                                                                    \
+        !fieldConflicts(offset, sizeof(type)) && "fields should not overlap"); \
+    map##type##_[offset] = name;                                               \
+  }
+#include "hermes/VM/SlotKinds.def"
+#undef SLOT_TYPE
 
 void Metadata::Builder::addArray(
     const char *name,
@@ -154,7 +99,11 @@ bool Metadata::Builder::fieldConflicts(offset_t offset, size_t size) {
 llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const Metadata &meta) {
   os << "Metadata: {\n\tfieldsAndNames: [";
   bool first = true;
-  for (size_t i = 0; i < meta.symbolsEnd; ++i) {
+  size_t last;
+#define SLOT_TYPE(type) last = meta.end##type;
+#include "hermes/VM/SlotKinds.def"
+#undef SLOT_TYPE
+  for (size_t i = 0; i < last; ++i) {
     if (!first) {
       os << ",";
     } else {
@@ -184,18 +133,12 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &os, ArrayData array) {
 llvh::raw_ostream &operator<<(llvh::raw_ostream &os, ArrayType arraytype) {
   os << "ArrayType: {";
   switch (arraytype) {
-    case ArrayType::Pointer:
-      os << "Pointer";
-      break;
-    case ArrayType::HermesValue:
-      os << "HermesValue";
-      break;
-    case ArrayType::SmallHermesValue:
-      os << "SmallHermesValue";
-      break;
-    case ArrayType::Symbol:
-      os << "Symbol";
-      break;
+#define SLOT_TYPE(type) \
+  case ArrayType::type: \
+    os << #type;        \
+    break;
+#include "hermes/VM/SlotKinds.def"
+#undef SLOT_TYPE
   }
   return os << "}";
 }
