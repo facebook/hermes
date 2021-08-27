@@ -70,21 +70,20 @@ TEST(MetadataTest, TestNormalFields) {
       buildMetadata(CellKind::UninitializedKind, DummyCell::buildMeta);
   ASSERT_FALSE(meta.array_);
 
-  auto &fields = meta.pointers_;
-  ASSERT_EQ(fields.size(), 3u);
-  EXPECT_STREQ(fields.names[0], "x");
-  EXPECT_STREQ(fields.names[1], "y");
-  EXPECT_STREQ(fields.names[2], "z");
-  EXPECT_EQ(fields.offsets[0], offsetof(DummyCell, x_));
-  EXPECT_EQ(fields.offsets[1], offsetof(DummyCell, y_));
-  EXPECT_EQ(fields.offsets[2], offsetof(DummyCell, z_));
+  EXPECT_EQ(meta.pointersEnd, 3u);
+  EXPECT_STREQ(meta.names[0], "x");
+  EXPECT_STREQ(meta.names[1], "y");
+  EXPECT_STREQ(meta.names[2], "z");
+  EXPECT_EQ(meta.offsets[0], offsetof(DummyCell, x_));
+  EXPECT_EQ(meta.offsets[1], offsetof(DummyCell, y_));
+  EXPECT_EQ(meta.offsets[2], offsetof(DummyCell, z_));
 
-  EXPECT_EQ(meta.pointers_.size(), 3u);
-  EXPECT_EQ(meta.values_.size(), 0u);
+  EXPECT_EQ(meta.valuesEnd, 3u);
+  EXPECT_EQ(meta.smallValuesEnd, 3u);
 
-  EXPECT_EQ(meta.symbols_.size(), 1u);
-  EXPECT_STREQ(meta.symbols_.names[0], "sym");
-  EXPECT_EQ(meta.symbols_.offsets[0], offsetof(DummyCell, sym_));
+  EXPECT_EQ(meta.symbolsEnd, 4u);
+  EXPECT_STREQ(meta.names[3], "sym");
+  EXPECT_EQ(meta.offsets[3], offsetof(DummyCell, sym_));
 }
 
 TEST(MetadataTest, TestArray) {

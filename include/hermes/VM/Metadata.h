@@ -8,7 +8,6 @@
 #ifndef HERMES_VM_METADATA_H
 #define HERMES_VM_METADATA_H
 
-#include "hermes/ADT/OwningArray.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/HermesValue.h"
@@ -30,29 +29,6 @@ class GCSymbolID;
 /// to other objects are.
 struct Metadata final {
   using offset_t = std::uint8_t;
-
-  /// Fields is a group of both offsets and names that describe a field within
-  /// an object.
-  struct Fields {
-    Fields() = default;
-    explicit Fields(size_t numFields) : offsets(numFields), names(numFields) {}
-
-    size_t size() const {
-      return offsets.size();
-    }
-
-    bool empty() const {
-      return offsets.empty();
-    }
-
-    // Invariant: these arrays are all of the same size N, and the ith elements
-    // describe the ith field.
-
-    /// The offset location of the field within the object.
-    OwningArray<offset_t> offsets;
-    /// The names of the fields, only used in snapshots.
-    OwningArray<const char *> names;
-  };
 
   /// The information about an array for an object.
   struct ArrayData {
@@ -285,15 +261,30 @@ struct Metadata final {
   /// Construct from a builder.
   Metadata(Builder &&mb);
 
-  /// A mapping from an offset to a name for that field
-  Fields pointers_;
-  Fields values_;
-  Fields smallValues_;
-  Fields symbols_;
+  /// The maximum number of offsets we can store for a cell. Bump this if
+  /// asserts start failing and more fields are needed.
+  static constexpr size_t kMaxNumFields = 8;
+
+  /// The offset of each field for a given cell type is stored contiguously in
+  /// offsets. It is grouped by the slot type, and slots for a given type are in
+  /// ascending order.
+
+  /// Record one past the last value in offsets that corresponds to a given slot
+  /// type.
+  uint8_t pointersEnd;
+  uint8_t valuesEnd;
+  uint8_t smallValuesEnd;
+  uint8_t symbolsEnd;
+
+  std::array<offset_t, kMaxNumFields> offsets;
 
   /// The optional array for this object to hold.
   /// NOTE: this format currently does not support multiple arrays.
   OptValue<ArrayData> array_;
+
+  /// The names of the fields, only used in snapshots. This is placed after the
+  /// ArrayData so that all the hot fields above are adjacent in memory.
+  std::array<const char *, kMaxNumFields> names;
 
   /// The VTable pointer for the cell that this metadata describes.
   const VTable *vtp_;

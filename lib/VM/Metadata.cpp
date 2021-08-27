@@ -17,31 +17,38 @@ using std::uintptr_t;
 using ArrayData = Metadata::ArrayData;
 using ArrayType = ArrayData::ArrayType;
 
-Metadata::Metadata(Builder &&mb)
-    : pointers_(mb.pointers_.size()),
-      values_(mb.values_.size()),
-      smallValues_(mb.smallValues_.size()),
-      symbols_(mb.symbols_.size()),
-      array_(std::move(mb.array_)),
-      vtp_(mb.vtp_) {
+Metadata::Metadata(Builder &&mb) : array_(std::move(mb.array_)), vtp_(mb.vtp_) {
+  size_t i = 0;
+  for (const auto &p : mb.pointers_) {
+    offsets[i] = p.first;
+    names[i] = p.second;
+    i++;
+  }
+  pointersEnd = i;
+
+  for (const auto &p : mb.values_) {
+    offsets[i] = p.first;
+    names[i] = p.second;
+    i++;
+  }
+  valuesEnd = i;
+
+  for (const auto &p : mb.smallValues_) {
+    offsets[i] = p.first;
+    names[i] = p.second;
+    i++;
+  }
+  smallValuesEnd = i;
+
+  for (const auto &p : mb.symbols_) {
+    offsets[i] = p.first;
+    names[i] = p.second;
+    i++;
+  }
+  symbolsEnd = i;
+
+  assert(i <= kMaxNumFields && "Number of fields exceeds max.");
   assert(vtp_->isValid() && "Must initialize VTable pointer for metadata.");
-  auto copier = [](const std::map<offset_t, const char *> &map,
-                   Fields &insertionPoint) {
-    std::transform(
-        map.cbegin(),
-        map.cend(),
-        std::begin(insertionPoint.offsets),
-        [](const std::pair<offset_t, const char *> &p) { return p.first; });
-    std::transform(
-        map.cbegin(),
-        map.cend(),
-        std::begin(insertionPoint.names),
-        [](const std::pair<offset_t, const char *> &p) { return p.second; });
-  };
-  copier(mb.pointers_, pointers_);
-  copier(mb.values_, values_);
-  copier(mb.smallValues_, smallValues_);
-  copier(mb.symbols_, symbols_);
 }
 
 Metadata::Builder::Builder(const void *base)
@@ -144,26 +151,19 @@ bool Metadata::Builder::fieldConflicts(offset_t offset, size_t size) {
 
 llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const Metadata &meta) {
   os << "Metadata: {\n\tfieldsAndNames: [";
-  auto printOffsetAndNameAndSizes = [](llvh::raw_ostream &os,
-                                       const Metadata::Fields &vec) {
-    bool first = true;
-    for (size_t i = 0; i < vec.size(); ++i) {
-      if (!first) {
-        os << ",";
-      } else {
-        first = false;
-      }
-      os << "\n\t\t";
-      os << "{ offset: " << vec.offsets[i] << ", name: " << vec.names[i] << "}";
+  bool first = true;
+  for (size_t i = 0; i < meta.symbolsEnd; ++i) {
+    if (!first) {
+      os << ",";
+    } else {
+      first = false;
     }
-    if (!vec.empty()) {
-      os << "\n\t";
-    }
-  };
-  printOffsetAndNameAndSizes(os, meta.pointers_);
-  printOffsetAndNameAndSizes(os, meta.values_);
-  printOffsetAndNameAndSizes(os, meta.smallValues_);
-  printOffsetAndNameAndSizes(os, meta.symbols_);
+    os << "\n\t\t";
+    os << "{ offset: " << meta.offsets[i] << ", name: " << meta.names[i] << "}";
+  }
+  if (!first) {
+    os << "\n\t";
+  }
   os << "]";
   if (meta.array_) {
     os << ",\n\tarray: " << *meta.array_ << ",\n";
