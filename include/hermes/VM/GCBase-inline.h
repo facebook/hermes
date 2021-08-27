@@ -128,7 +128,7 @@ inline void GCBase::markCell(GCCell *cell, CellKind kind, Acceptor &acceptor) {
 template <typename Acceptor>
 inline void
 GCBase::markCell(SlotVisitor<Acceptor> &visitor, GCCell *cell, CellKind kind) {
-  visitor.visit(cell, metaTable_[static_cast<size_t>(kind)]);
+  visitor.visit(cell, Metadata::metadataTable[static_cast<size_t>(kind)]);
   markWeakRefsIfNecessary(cell, kind, visitor.acceptor_);
 }
 
@@ -140,7 +140,7 @@ inline void GCBase::markCellWithinRange(
     const char *begin,
     const char *end) {
   visitor.visitWithinRange(
-      cell, metaTable_[static_cast<size_t>(kind)], begin, end);
+      cell, Metadata::metadataTable[static_cast<size_t>(kind)], begin, end);
   markWeakRefsIfNecessary(cell, kind, visitor.acceptor_);
 }
 
@@ -149,7 +149,7 @@ inline void GCBase::markCellWithNames(
     SlotVisitorWithNames<Acceptor> &visitor,
     GCCell *cell) {
   const CellKind kind = cell->getKind();
-  visitor.visit(cell, metaTable_[static_cast<size_t>(kind)]);
+  visitor.visit(cell, Metadata::metadataTable[static_cast<size_t>(kind)]);
   markWeakRefsIfNecessary(cell, kind, visitor.acceptor_);
 }
 

@@ -66,7 +66,7 @@ void DummyArrayCell::buildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 TEST(MetadataTest, TestNormalFields) {
-  const auto meta =
+  static const auto meta =
       buildMetadata(CellKind::UninitializedKind, DummyCell::buildMeta);
   ASSERT_FALSE(meta.array);
 
@@ -87,7 +87,7 @@ TEST(MetadataTest, TestNormalFields) {
 }
 
 TEST(MetadataTest, TestArray) {
-  const auto meta =
+  static const auto meta =
       buildMetadata(CellKind::UninitializedKind, DummyArrayCell::buildMeta);
   ASSERT_TRUE(meta.array);
   auto &array = *(meta.array);

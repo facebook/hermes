@@ -44,8 +44,7 @@ GCBase::GCBase(
     const GCConfig &gcConfig,
     std::shared_ptr<CrashManager> crashMgr,
     HeapKind kind)
-    : metaTable_(getMetadataTable()),
-      gcCallbacks_(gcCallbacks),
+    : gcCallbacks_(gcCallbacks),
       pointerBase_(pointerBase),
       crashMgr_(crashMgr),
       heapKind_(kind),
@@ -66,6 +65,7 @@ GCBase::GCBase(
       randomizeAllocSpace_(gcConfig.getShouldRandomizeAllocSpace())
 #endif
 {
+  buildMetadataTable();
 #ifdef HERMESVM_PLATFORM_LOGGING
   hermesLog(
       "HermesGC",

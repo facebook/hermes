@@ -17,6 +17,8 @@ using std::uintptr_t;
 using ArrayData = Metadata::ArrayData;
 using ArrayType = ArrayData::ArrayType;
 
+std::array<Metadata, kNumCellKinds> Metadata::metadataTable{};
+
 Metadata::Metadata(Builder &&mb) : array(std::move(mb.array_)), vtp(mb.vtp_) {
   size_t i = 0;
   for (const auto &p : mb.pointers_) {

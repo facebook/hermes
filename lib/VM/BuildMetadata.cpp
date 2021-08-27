@@ -38,33 +38,29 @@ Metadata buildMetadata(CellKind kind, BuildMetadataCallback *builder) {
   return meta;
 }
 
-MetadataTable getMetadataTable() {
-  // For each class of object, initialize its metadata
-  // Only run this once per class, not once per Runtime instantiation.
-  // We intentionally leak memory here in order to avoid any static destructors
-  // running at exit time.
-  static const auto *storage = new std::array<Metadata, kNumCellKinds>{
-#define CELL_KIND(name) buildMetadata(CellKind::name##Kind, name##BuildMeta),
-#include "hermes/VM/CellKinds.def"
-#undef CELL_KIND
-  };
-
+void buildMetadataTable() {
   // Once the storage is initialized, also initialize the global array of VTable
   // pointers using the new metadata.
   static std::once_flag flag;
   std::call_once(flag, [] {
+    // For each class of object, initialize its metadata
+    // Only run this once per class, not once per Runtime instantiation.
+    Metadata::metadataTable = {
+#define CELL_KIND(name) buildMetadata(CellKind::name##Kind, name##BuildMeta),
+#include "hermes/VM/CellKinds.def"
+#undef CELL_KIND
+    };
+
     assert(
         !VTable::vtableArray[0] &&
         "VTable array should not be initialized before this point.");
     VTable::vtableArray = {
 #define CELL_KIND(name) \
-  (*storage)[static_cast<uint8_t>(CellKind::name##Kind)].vtp,
+  Metadata::metadataTable[static_cast<uint8_t>(CellKind::name##Kind)].vtp,
 #include "hermes/VM/CellKinds.def"
 #undef CELL_KIND
     };
   });
-
-  return *storage;
 }
 
 } // namespace vm

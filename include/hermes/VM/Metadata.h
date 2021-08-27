@@ -258,6 +258,7 @@ struct Metadata final {
     friend Metadata;
   };
 
+  constexpr Metadata() = default;
   /// Construct from a builder.
   Metadata(Builder &&mb);
 
@@ -271,24 +272,32 @@ struct Metadata final {
 
   /// Record one past the last value in offsets that corresponds to a given slot
   /// type.
-  uint8_t pointersEnd;
-  uint8_t valuesEnd;
-  uint8_t smallValuesEnd;
-  uint8_t symbolsEnd;
+  uint8_t pointersEnd{};
+  uint8_t valuesEnd{};
+  uint8_t smallValuesEnd{};
+  uint8_t symbolsEnd{};
 
-  std::array<offset_t, kMaxNumFields> offsets;
+  std::array<offset_t, kMaxNumFields> offsets{};
 
   /// The optional array for this object to hold.
   /// NOTE: this format currently does not support multiple arrays.
-  OptValue<ArrayData> array;
+  OptValue<ArrayData> array{};
 
   /// The names of the fields, only used in snapshots. This is placed after the
   /// ArrayData so that all the hot fields above are adjacent in memory.
-  std::array<const char *, kMaxNumFields> names;
+  std::array<const char *, kMaxNumFields> names{};
 
   /// The VTable pointer for the cell that this metadata describes.
-  const VTable *vtp;
+  const VTable *vtp{};
+
+  /// Static array storing the Metadata corresponding to each CellKind. This is
+  /// initialized by buildMetadataTable.
+  static std::array<Metadata, kNumCellKinds> metadataTable;
 };
+
+static_assert(
+    std::is_trivially_destructible<Metadata>::value,
+    "Metadata must not have a destructor.");
 
 /// @name Formatters
 /// @{

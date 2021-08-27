@@ -40,7 +40,7 @@ static_assert(
 
 Metadata buildMetadata(CellKind kind, BuildMetadataCallback *builder);
 
-MetadataTable getMetadataTable();
+void buildMetadataTable();
 
 } // namespace vm
 } // namespace hermes
