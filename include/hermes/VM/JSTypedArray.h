@@ -25,34 +25,9 @@ class JSTypedArrayBase : public JSObject {
   using size_type = uint32_t;
   using Super = JSObject;
 
-  struct JSTypedArrayVTable {
-    ObjectVTable base;
-
-    /// Allocate a new instance of a TypedArray matching the runtime type of
-    /// the current TypedArray.
-    /// \p length the length of the TypedArray to create.
-    CallResult<Handle<JSTypedArrayBase>> (
-        *allocate)(Runtime *runtime, size_type length);
-
-    /// Allocate a new instance of a TypedArray from the species constructor
-    /// of the given \p self, and forward the \p length parameter to that
-    /// constructor.
-    CallResult<Handle<JSTypedArrayBase>> (*allocateSpecies)(
-        Handle<JSTypedArrayBase> self,
-        Runtime *runtime,
-        size_type length);
-  };
-
-  const JSTypedArrayVTable *getVT() const {
-    return reinterpret_cast<const JSTypedArrayVTable *>(GCCell::getVT());
-  }
-
-  static CallResult<Handle<JSTypedArrayBase>> allocate(
-      Handle<JSTypedArrayBase> self,
+  CallResult<Handle<JSTypedArrayBase>> allocate(
       Runtime *runtime,
-      size_type length = 0) {
-    return self->getVT()->allocate(runtime, length);
-  }
+      size_type length = 0);
 
   /// Allocate a new instance of a TypedArray matching the runtime type of
   /// the \p src TypedArray.
@@ -69,9 +44,7 @@ class JSTypedArrayBase : public JSObject {
   static CallResult<Handle<JSTypedArrayBase>> allocateSpecies(
       Runtime *runtime,
       Handle<JSTypedArrayBase> self,
-      size_type length) {
-    return self->getVT()->allocateSpecies(self, runtime, length);
-  }
+      size_type length);
 
   /// ES6 22.2.3.5.1
   /// Validates \p thisArg to be a JSTypedArrayBase.
@@ -251,7 +224,7 @@ class JSTypedArray final : public JSTypedArrayBase {
  public:
   using iterator = T *;
 
-  static JSTypedArrayVTable vt;
+  static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == C;
@@ -282,11 +255,19 @@ class JSTypedArray final : public JSTypedArrayBase {
   static Handle<Callable> getConstructor(const Runtime *runtime);
   static SymbolID getName(Runtime *runtime);
 
-  /// The same as allocate is defined in the VTable, but callable directly from
-  /// the class template rather than dynamically.
+  /// Allocate a new instance of a TypedArray of this type.
+  /// \p length the length of the TypedArray to create.
   static CallResult<Handle<JSTypedArrayBase>> allocate(
       Runtime *runtime,
       size_type length = 0);
+
+  /// Allocate a new instance of a TypedArray from the species constructor
+  /// of the given \p self, and forward the \p length parameter to that
+  /// constructor.
+  static CallResult<Handle<JSTypedArrayBase>> allocateSpecies(
+      Handle<JSTypedArrayBase> self,
+      Runtime *runtime,
+      size_type length);
 
   /// Converts a \p value to the type used by this typed array.
   /// NOTE: this function has specializations for types which don't use a
@@ -297,11 +278,6 @@ class JSTypedArray final : public JSTypedArrayBase {
   }
 
  protected:
-  /// See JSTypedArrayVTable for explanations of these functions.
-  static CallResult<Handle<JSTypedArrayBase>> _allocateSpeciesImpl(
-      Handle<JSTypedArrayBase> self,
-      Runtime *runtime,
-      size_type length);
   /// Retrieve an indexed property.
   static HermesValue
   _getOwnIndexedImpl(JSObject *self, Runtime *runtime, uint32_t index);
