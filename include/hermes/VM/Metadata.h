@@ -188,25 +188,29 @@ struct Metadata final {
   /// asserts start failing and more fields are needed.
   static constexpr size_t kMaxNumFields = 8;
 
-  /// The offset of each field for a given cell type is stored contiguously in
-  /// offsets. It is grouped by the slot type, and slots for a given type are in
-  /// ascending order.
+  struct SlotOffsets {
+    /// The offset of each field for a given cell type is stored contiguously in
+    /// fields. It is grouped by the slot type, and slots for a given type are
+    /// in ascending order.
 
-  /// Record one past the last value in offsets that corresponds to a given slot
-  /// type.
+    /// Record one past the last value in offsets that corresponds to a given
+    /// slot type.
 #define SLOT_TYPE(type) uint8_t end##type{};
 #include "hermes/VM/SlotKinds.def"
 #undef SLOT_TYPE
 
-  std::array<offset_t, kMaxNumFields> offsets{};
+    std::array<offset_t, kMaxNumFields> fields{};
 
-  /// The optional array for this object to hold.
-  /// NOTE: this format currently does not support multiple arrays.
-  OptValue<ArrayData> array{};
+    /// The optional array for this object to hold.
+    /// NOTE: this format currently does not support multiple arrays.
+    OptValue<ArrayData> array{};
+  } offsets;
+
+  using SlotNames = std::array<const char *, kMaxNumFields>;
 
   /// The names of the fields, only used in snapshots. This is placed after the
   /// ArrayData so that all the hot fields above are adjacent in memory.
-  std::array<const char *, kMaxNumFields> names{};
+  SlotNames names{};
 
   /// The VTable pointer for the cell that this metadata describes.
   const VTable *vtp{};

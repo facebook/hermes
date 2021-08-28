@@ -113,11 +113,11 @@ struct SlotVisitor final : BaseVisitor {
   /// It also visits all of the fields in variable sized objects like arrays.
   /// \p cell The cell to be marked, any object in the GC heap.
   /// \p meta The metadata about the cell.
-  void visit(GCCell *cell, const Metadata &meta) {
+  void visit(GCCell *cell, const Metadata::SlotOffsets &offsets) {
     auto *ptr = reinterpret_cast<char *>(cell);
-    visitFields(ptr, meta);
-    if (meta.array) {
-      visitArray<Acceptor, /*WithNames*/ false>(acceptor_, ptr, *meta.array);
+    visitFields(ptr, offsets);
+    if (offsets.array) {
+      visitArray<Acceptor, /*WithNames*/ false>(acceptor_, ptr, *offsets.array);
     }
   }
 
@@ -125,13 +125,13 @@ struct SlotVisitor final : BaseVisitor {
   /// [begin, end)
   void visitWithinRange(
       GCCell *cell,
-      const Metadata &meta,
+      const Metadata::SlotOffsets &offsets,
       const char *begin,
       const char *end) {
     auto *ptr = reinterpret_cast<char *>(cell);
-    visitFieldsWithinRange(ptr, meta, begin, end);
-    if (meta.array) {
-      visitArrayWithinRange(ptr, *meta.array, begin, end);
+    visitFieldsWithinRange(ptr, offsets, begin, end);
+    if (offsets.array) {
+      visitArrayWithinRange(ptr, *offsets.array, begin, end);
     }
   }
 
@@ -148,11 +148,11 @@ struct SlotVisitor final : BaseVisitor {
 
   /// Visits the fields of an object that starts at \p base, using \p meta to
   /// find the fields, and calls \c acceptor_.accept() on them.
-  void visitFields(char *base, const Metadata &meta) {
+  void visitFields(char *base, const Metadata::SlotOffsets &offsets) {
     size_t i = 0;
-#define SLOT_TYPE(type)           \
-  for (; i < meta.end##type; ++i) \
-    visitSlot<type>(base + meta.offsets[i]);
+#define SLOT_TYPE(type)              \
+  for (; i < offsets.end##type; ++i) \
+    visitSlot<type>(base + offsets.fields[i]);
 #include "hermes/VM/SlotKinds.def"
 #undef SLOT_TYPE
   }
@@ -161,20 +161,20 @@ struct SlotVisitor final : BaseVisitor {
   /// not between \p begin and \p end is skipped.
   void visitFieldsWithinRange(
       char *base,
-      const Metadata &meta,
+      const Metadata::SlotOffsets &offsets,
       const char *begin,
       const char *end) {
     size_t i = 0;
-#define SLOT_TYPE(type)                  \
-  for (; i < meta.end##type; ++i) {      \
-    char *slot = base + meta.offsets[i]; \
-    if (slot < begin)                    \
-      continue;                          \
-    if (slot >= end) {                   \
-      i = meta.end##type;                \
-      break;                             \
-    }                                    \
-    visitSlot<type>(slot);               \
+#define SLOT_TYPE(type)                    \
+  for (; i < offsets.end##type; ++i) {     \
+    char *slot = base + offsets.fields[i]; \
+    if (slot < begin)                      \
+      continue;                            \
+    if (slot >= end) {                     \
+      i = offsets.end##type;               \
+      break;                               \
+    }                                      \
+    visitSlot<type>(slot);                 \
   }
 #include "hermes/VM/SlotKinds.def"
 #undef SLOT_TYPE
@@ -231,24 +231,30 @@ struct SlotVisitorWithNames final : BaseVisitor {
 
   SlotVisitorWithNames(Acceptor &acceptor) : acceptor_(acceptor) {}
 
-  void visit(GCCell *cell, const Metadata &meta) {
+  void visit(
+      GCCell *cell,
+      const Metadata::SlotOffsets &offsets,
+      const Metadata::SlotNames &names) {
     auto *ptr = reinterpret_cast<char *>(cell);
-    visitFields(ptr, meta);
-    if (meta.array) {
-      visitArray<Acceptor, /*WithNames*/ true>(acceptor_, ptr, *meta.array);
+    visitFields(ptr, offsets, names);
+    if (offsets.array) {
+      visitArray<Acceptor, /*WithNames*/ true>(acceptor_, ptr, *offsets.array);
     }
   }
 
  private:
   /// Visits the fields of an object that starts at \p base, using \p meta to
   /// find the fields, and calls \c acceptor_.accept() on them.
-  void visitFields(char *base, const Metadata &meta) {
+  void visitFields(
+      char *base,
+      const Metadata::SlotOffsets &offsets,
+      const Metadata::SlotNames &names) {
     // Ignore sizes for special fields, since these are known types with known
     // sizes.
     size_t i = 0;
-#define SLOT_TYPE(type)           \
-  for (; i < meta.end##type; ++i) \
-    visitSlot<type>(base + meta.offsets[i], meta.names[i]);
+#define SLOT_TYPE(type)              \
+  for (; i < offsets.end##type; ++i) \
+    visitSlot<type>(base + offsets.fields[i], names[i]);
 #include "hermes/VM/SlotKinds.def"
 #undef SLOT_TYPE
   }

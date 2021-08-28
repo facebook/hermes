@@ -68,29 +68,29 @@ void DummyArrayCell::buildMeta(const GCCell *cell, Metadata::Builder &mb) {
 TEST(MetadataTest, TestNormalFields) {
   static const auto meta =
       buildMetadata(CellKind::UninitializedKind, DummyCell::buildMeta);
-  ASSERT_FALSE(meta.array);
+  ASSERT_FALSE(meta.offsets.array);
 
-  EXPECT_EQ(meta.endGCPointerBase, 3u);
+  EXPECT_EQ(meta.offsets.endGCPointerBase, 3u);
   EXPECT_STREQ(meta.names[0], "x");
   EXPECT_STREQ(meta.names[1], "y");
   EXPECT_STREQ(meta.names[2], "z");
-  EXPECT_EQ(meta.offsets[0], offsetof(DummyCell, x_));
-  EXPECT_EQ(meta.offsets[1], offsetof(DummyCell, y_));
-  EXPECT_EQ(meta.offsets[2], offsetof(DummyCell, z_));
+  EXPECT_EQ(meta.offsets.fields[0], offsetof(DummyCell, x_));
+  EXPECT_EQ(meta.offsets.fields[1], offsetof(DummyCell, y_));
+  EXPECT_EQ(meta.offsets.fields[2], offsetof(DummyCell, z_));
 
-  EXPECT_EQ(meta.endGCHermesValue, 3u);
-  EXPECT_EQ(meta.endGCSmallHermesValue, 3u);
+  EXPECT_EQ(meta.offsets.endGCHermesValue, 3u);
+  EXPECT_EQ(meta.offsets.endGCSmallHermesValue, 3u);
 
-  EXPECT_EQ(meta.endGCSymbolID, 4u);
+  EXPECT_EQ(meta.offsets.endGCSymbolID, 4u);
   EXPECT_STREQ(meta.names[3], "sym");
-  EXPECT_EQ(meta.offsets[3], offsetof(DummyCell, sym_));
+  EXPECT_EQ(meta.offsets.fields[3], offsetof(DummyCell, sym_));
 }
 
 TEST(MetadataTest, TestArray) {
   static const auto meta =
       buildMetadata(CellKind::UninitializedKind, DummyArrayCell::buildMeta);
-  ASSERT_TRUE(meta.array);
-  auto &array = *(meta.array);
+  ASSERT_TRUE(meta.offsets.array);
+  auto &array = *(meta.offsets.array);
   EXPECT_EQ(array.type, Metadata::ArrayData::ArrayType::GCPointerBase);
 
   EXPECT_EQ(array.lengthOffset, offsetof(DummyArrayCell, length_));

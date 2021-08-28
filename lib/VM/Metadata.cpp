@@ -19,16 +19,17 @@ using ArrayType = ArrayData::ArrayType;
 
 std::array<Metadata, kNumCellKinds> Metadata::metadataTable{};
 
-Metadata::Metadata(Builder &&mb) : array(std::move(mb.array_)), vtp(mb.vtp_) {
+Metadata::Metadata(Builder &&mb) : vtp(mb.vtp_) {
+  offsets.array = mb.array_;
   size_t i = 0;
 
 #define SLOT_TYPE(type)                   \
   for (const auto &p : mb.map##type##_) { \
-    offsets[i] = p.first;                 \
+    offsets.fields[i] = p.first;          \
     names[i] = p.second;                  \
     i++;                                  \
   }                                       \
-  end##type = i;
+  offsets.end##type = i;
 #include "hermes/VM/SlotKinds.def"
 #undef SLOT_TYPE
 
@@ -99,25 +100,26 @@ bool Metadata::Builder::fieldConflicts(offset_t offset, size_t size) {
 llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const Metadata &meta) {
   os << "Metadata: {\n\tfieldsAndNames: [";
   bool first = true;
-  size_t last;
-#define SLOT_TYPE(type) last = meta.end##type;
+  size_t end;
+#define SLOT_TYPE(type) end = meta.offsets.end##type;
 #include "hermes/VM/SlotKinds.def"
 #undef SLOT_TYPE
-  for (size_t i = 0; i < last; ++i) {
+  for (size_t i = 0; i < end; ++i) {
     if (!first) {
       os << ",";
     } else {
       first = false;
     }
     os << "\n\t\t";
-    os << "{ offset: " << meta.offsets[i] << ", name: " << meta.names[i] << "}";
+    os << "{ offset: " << meta.offsets.fields[i] << ", name: " << meta.names[i]
+       << "}";
   }
   if (!first) {
     os << "\n\t";
   }
   os << "]";
-  if (meta.array) {
-    os << ",\n\tarray: " << *meta.array << ",\n";
+  if (meta.offsets.array) {
+    os << ",\n\tarray: " << *meta.offsets.array << ",\n";
   } else {
     os << "\n";
   }
