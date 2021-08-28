@@ -114,11 +114,10 @@ CallResult<PseudoHandle<>> Runtime::getNamed(
 ExecutionStatus Runtime::putNamedThrowOnError(
     Handle<JSObject> obj,
     PropCacheID id,
-    HermesValue hv) {
+    SmallHermesValue shv) {
   CompressedPointer clazzPtr{obj->getClassGCPtr()};
   auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
   if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
-    auto shv = SmallHermesValue::encodeHermesValue(hv, this);
     JSObject::setNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
         *obj, this, cacheEntry->slot, shv);
     return ExecutionStatus::RETURNED;
@@ -135,12 +134,12 @@ ExecutionStatus Runtime::putNamedThrowOnError(
       cacheEntry->clazz = clazzPtr;
       cacheEntry->slot = desc.slot;
     }
-    auto shv = SmallHermesValue::encodeHermesValue(hv, this);
     JSObject::setNamedSlotValueUnsafe(*obj, this, desc.slot, shv);
     return ExecutionStatus::RETURNED;
   }
+  Handle<> value = makeHandle(shv.unboxToHV(this));
   return JSObject::putNamed_RJS(
-             obj, this, sym, makeHandle(hv), PropOpFlags().plusThrowOnError())
+             obj, this, sym, value, PropOpFlags().plusThrowOnError())
       .getStatus();
 }
 

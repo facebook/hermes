@@ -335,17 +335,18 @@ CallResult<HermesValue> splitInternal(
     Handle<> limit,
     Handle<> separator);
 
-/// Set the lastIndex property of \p regexp to \p value.
+/// Set the lastIndex property of \p regexp to \p shv.
 inline ExecutionStatus
-setLastIndex(Handle<JSObject> regexp, Runtime *runtime, HermesValue hv) {
+setLastIndex(Handle<JSObject> regexp, Runtime *runtime, SmallHermesValue shv) {
   return runtime->putNamedThrowOnError(
-      regexp, PropCacheID::RegExpLastIndex, hv);
+      regexp, PropCacheID::RegExpLastIndex, shv);
 }
 
 /// Set the lastIndex property of \p regexp to \p value.
 inline ExecutionStatus
 setLastIndex(Handle<JSObject> regexp, Runtime *runtime, double value) {
-  return setLastIndex(regexp, runtime, HermesValue::encodeNumberValue(value));
+  auto shv = SmallHermesValue::encodeNumberValue(value, runtime);
+  return setLastIndex(regexp, runtime, shv);
 }
 
 /// ES6.0 21.2.5.2.3

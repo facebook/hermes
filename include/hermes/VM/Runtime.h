@@ -742,8 +742,10 @@ class Runtime : public HandleRootOwner,
 
   /// Like calling JSObject::putNamed with the ThrowOnError flag, but uses this
   /// runtime's property cache.
-  ExecutionStatus
-  putNamedThrowOnError(Handle<JSObject> obj, PropCacheID id, HermesValue hv);
+  ExecutionStatus putNamedThrowOnError(
+      Handle<JSObject> obj,
+      PropCacheID id,
+      SmallHermesValue hv);
 
   /// @}
 
