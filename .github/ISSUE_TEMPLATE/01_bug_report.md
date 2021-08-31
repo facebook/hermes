@@ -20,7 +20,7 @@ labels:
   source before and after the line in which the error occurs.
 
   If it's an abort (e.g. app crashes), please see "Reporting crashes" from
-  <https://github.com/facebook/hermes/blob/master/doc/ReactNativeIntegration.md#reporting-native-crashes>
+  <https://github.com/facebook/hermes/blob/HEAD/doc/ReactNativeIntegration.md#reporting-native-crashes>
   for instructions on reporting a native crash, including symbolicating the native
   stack trace.  Note this will only work with some versions of Hermes.
 -->

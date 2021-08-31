@@ -25,6 +25,7 @@ android {
         arguments "-DIMPORT_HERMESC=${rootProject.ext.hermesC}"
         arguments "-DFBSOURCE_DIR=${rootProject.ext.fbsource}"
         arguments "-DHERMES_SLOW_DEBUG=False"
+        arguments "-DHERMES_BUILD_SHARED_JSI=True"
         targets "libhermes"
       }
     }
@@ -47,6 +48,15 @@ android {
       externalNativeBuild {
         cmake {
           arguments "-DHERMES_ENABLE_DEBUGGER=True"
+          // JS developers aren't VM developers. Give them a faster build.
+          arguments "-DCMAKE_BUILD_TYPE=Release"
+        }
+      }
+    }
+    release {
+      externalNativeBuild {
+        cmake {
+          arguments "-DCMAKE_BUILD_TYPE=MinSizeRel"
         }
       }
     }
@@ -97,6 +107,7 @@ android {
 
   packagingOptions {
     exclude "**/libc++_shared.so"
+    exclude "**/libjsi.so"
     exclude "**/libfbjni.so"
   }
 

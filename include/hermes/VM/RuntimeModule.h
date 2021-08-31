@@ -208,8 +208,10 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// file's global function (i.e. the first RM created when we started
   /// interpreting and lazily compiling the source code). For other RMs,
   /// e.g. those loaded from precompiled bytecode, this is just itself.
+  /// We also return this for RM created from serialization/deserialization.
+  /// Note that lazy and serialization are not intended to work together.
   RuntimeModule *getLazyRootModule() {
-#ifdef HERMESVM_LEAN
+#if defined(HERMESVM_LEAN) || defined(HERMESVM_SERIALIZE)
     return this;
 #else
     return lazyRoot_;

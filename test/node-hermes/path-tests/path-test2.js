@@ -8,6 +8,7 @@
  */
 
 // RUN: %node-hermes %s | %FileCheck --match-full-lines %s
+// REQUIRES: node-hermes
 
 print('Path test 2');
 // CHECK-LABEL: Path test 2

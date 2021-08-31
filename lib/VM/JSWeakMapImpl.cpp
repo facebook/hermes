@@ -119,9 +119,9 @@ GCHermesValue *JSWeakMapImplBase::getValueDirect(
   return &valueStorage_.get(gc->getPointerBase())->atRef(it->second);
 }
 
-GCPointerBase::StorageType &JSWeakMapImplBase::getValueStorageRef(GC *gc) {
+GCPointerBase &JSWeakMapImplBase::getValueStorageRef(GC *gc) {
   assert(gc->calledByGC() && "Should only be used by the GC implementation.");
-  return valueStorage_.getLoc();
+  return valueStorage_;
 }
 
 /// \return true if the \p key exists in the map.

@@ -19,7 +19,7 @@ To deploy you must have push access.
 We deploy the website to the [gh-pages](https://github.com/facebook/hermes/tree/gh-pages) branch of this repo. At a high level, the process of deploying is to build the website assets using Docusaurus, copy the built files over to the `gh-pages` branch (replacing everything that's there except `hermes.js` and `hermes.mem`), verify the changes, and push to the `gh-pages` branch.
 
 The full steps are:
-- `git checkout master`
+- `git checkout main`
 - `cd website`
 - Restore or update [the playground Hermes](#the-playground-hermes)
 - Run `yarn build` to build the site

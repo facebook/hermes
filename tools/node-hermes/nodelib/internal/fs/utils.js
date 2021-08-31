@@ -137,8 +137,8 @@ var _internalBinding = internalBinding('constants'),
     UV_DIRENT_FIFO = _internalBinding$fs.UV_DIRENT_FIFO,
     UV_DIRENT_SOCKET = _internalBinding$fs.UV_DIRENT_SOCKET,
     UV_DIRENT_CHAR = _internalBinding$fs.UV_DIRENT_CHAR,
-    UV_DIRENT_BLOCK = _internalBinding$fs.UV_DIRENT_BLOCK,
-    EISDIR = _internalBinding.os.errno.EISDIR; // The access modes can be any of F_OK, R_OK, W_OK or X_OK. Some might not be
+    UV_DIRENT_BLOCK = _internalBinding$fs.UV_DIRENT_BLOCK;
+    // EISDIR = _internalBinding.os.errno.EISDIR; // The access modes can be any of F_OK, R_OK, W_OK or X_OK. Some might not be
 // available on specific systems. They can be used in combination as well
 // (F_OK | R_OK | W_OK | X_OK).
 
@@ -164,7 +164,7 @@ var kReadFileUnknownBufferLength = 64 * 1024;
 var kReadFileBufferLength = 512 * 1024;
 var kWriteFileMaxChunkSize = 512 * 1024;
 var kMaxUserId = Math.pow(2, 32) - 1;
-var isWindows = process.platform === 'win32';
+// var isWindows = process.platform === 'win32';
 var fs;
 
 function lazyLoadFs() {
@@ -182,98 +182,98 @@ function assertEncoding(encoding) {
   }
 }
 
-var Dirent = /*#__PURE__*/function () {
-  function Dirent(name, type) {
-    _classCallCheck(this, Dirent);
+// var Dirent = /*#__PURE__*/function () {
+//   function Dirent(name, type) {
+//     _classCallCheck(this, Dirent);
 
-    this.name = name;
-    this[kType] = type;
-  }
+//     this.name = name;
+//     this[kType] = type;
+//   }
 
-  _createClass(Dirent, [{
-    key: "isDirectory",
-    value: function isDirectory() {
-      return this[kType] === UV_DIRENT_DIR;
-    }
-  }, {
-    key: "isFile",
-    value: function isFile() {
-      return this[kType] === UV_DIRENT_FILE;
-    }
-  }, {
-    key: "isBlockDevice",
-    value: function isBlockDevice() {
-      return this[kType] === UV_DIRENT_BLOCK;
-    }
-  }, {
-    key: "isCharacterDevice",
-    value: function isCharacterDevice() {
-      return this[kType] === UV_DIRENT_CHAR;
-    }
-  }, {
-    key: "isSymbolicLink",
-    value: function isSymbolicLink() {
-      return this[kType] === UV_DIRENT_LINK;
-    }
-  }, {
-    key: "isFIFO",
-    value: function isFIFO() {
-      return this[kType] === UV_DIRENT_FIFO;
-    }
-  }, {
-    key: "isSocket",
-    value: function isSocket() {
-      return this[kType] === UV_DIRENT_SOCKET;
-    }
-  }]);
+//   _createClass(Dirent, [{
+//     key: "isDirectory",
+//     value: function isDirectory() {
+//       return this[kType] === UV_DIRENT_DIR;
+//     }
+//   }, {
+//     key: "isFile",
+//     value: function isFile() {
+//       return this[kType] === UV_DIRENT_FILE;
+//     }
+//   }, {
+//     key: "isBlockDevice",
+//     value: function isBlockDevice() {
+//       return this[kType] === UV_DIRENT_BLOCK;
+//     }
+//   }, {
+//     key: "isCharacterDevice",
+//     value: function isCharacterDevice() {
+//       return this[kType] === UV_DIRENT_CHAR;
+//     }
+//   }, {
+//     key: "isSymbolicLink",
+//     value: function isSymbolicLink() {
+//       return this[kType] === UV_DIRENT_LINK;
+//     }
+//   }, {
+//     key: "isFIFO",
+//     value: function isFIFO() {
+//       return this[kType] === UV_DIRENT_FIFO;
+//     }
+//   }, {
+//     key: "isSocket",
+//     value: function isSocket() {
+//       return this[kType] === UV_DIRENT_SOCKET;
+//     }
+//   }]);
 
-  return Dirent;
-}();
+//   return Dirent;
+// }();
 
-var DirentFromStats = /*#__PURE__*/function (_Dirent) {
-  _inherits(DirentFromStats, _Dirent);
+// var DirentFromStats = /*#__PURE__*/function (_Dirent) {
+//   _inherits(DirentFromStats, _Dirent);
 
-  var _super = _createSuper(DirentFromStats);
+//   var _super = _createSuper(DirentFromStats);
 
-  function DirentFromStats(name, stats) {
-    var _this;
+//   function DirentFromStats(name, stats) {
+//     var _this;
 
-    _classCallCheck(this, DirentFromStats);
+//     _classCallCheck(this, DirentFromStats);
 
-    _this = _super.call(this, name, null);
-    _this[kStats] = stats;
-    return _this;
-  }
+//     _this = _super.call(this, name, null);
+//     _this[kStats] = stats;
+//     return _this;
+//   }
 
-  return DirentFromStats;
-}(Dirent);
+//   return DirentFromStats;
+// }(Dirent);
 
-var _iterator = _createForOfIteratorHelper(ReflectOwnKeys(Dirent.prototype)),
-    _step;
+// var _iterator = _createForOfIteratorHelper(ReflectOwnKeys(Dirent.prototype)),
+//     _step;
 
-try {
-  var _loop = function _loop() {
-    var name = _step.value;
+// try {
+//   var _loop = function _loop() {
+//     var name = _step.value;
 
-    if (name === 'constructor') {
-      return "continue";
-    }
+//     if (name === 'constructor') {
+//       return "continue";
+//     }
 
-    DirentFromStats.prototype[name] = function () {
-      return this[kStats][name]();
-    };
-  };
+//     DirentFromStats.prototype[name] = function () {
+//       return this[kStats][name]();
+//     };
+//   };
 
-  for (_iterator.s(); !(_step = _iterator.n()).done;) {
-    var _ret3 = _loop();
+//   for (_iterator.s(); !(_step = _iterator.n()).done;) {
+//     var _ret3 = _loop();
 
-    if (_ret3 === "continue") continue;
-  }
-} catch (err) {
-  _iterator.e(err);
-} finally {
-  _iterator.f();
-}
+//     if (_ret3 === "continue") continue;
+//   }
+// } catch (err) {
+//   _iterator.e(err);
+// } finally {
+//   _iterator.f();
+// }
 
 function copyObject(source) {
   var target = {};
@@ -285,7 +285,7 @@ function copyObject(source) {
   return target;
 }
 
-var bufferSep = Buffer.from(pathModule.sep);
+// var bufferSep = Buffer.from(pathModule.sep);
 
 function join(path, name) {
   if ((typeof path === 'string' || isUint8Array(path)) && name === undefined) {
@@ -458,13 +458,10 @@ var nullCheck = hideStackFrames(function (path, propName) {
   var throwError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
   var pathIsString = typeof path === 'string';
   var pathIsUint8Array = isUint8Array(path); // We can only perform meaningful checks on strings and Uint8Arrays.
-
   if (!pathIsString && !pathIsUint8Array || pathIsString && !StringPrototypeIncludes(path, "\0") || pathIsUint8Array && !TypedArrayPrototypeIncludes(path, 0)) {
     return;
   }
-
   var err = new ERR_INVALID_ARG_VALUE(propName, path, 'must be a string or Uint8Array without null bytes');
-
   if (throwError) {
     throw err;
   }
@@ -783,13 +780,10 @@ var validateOffsetLengthWrite = hideStackFrames(function (offset, length, byteLe
 });
 var validatePath = hideStackFrames(function (path) {
   var propName = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'path';
-
   if (typeof path !== 'string' && !isUint8Array(path)) {
     throw new ERR_INVALID_ARG_TYPE(propName, ['string', 'Buffer', 'URL'], path);
   }
-
   var err = nullCheck(path, propName, false);
-
   if (err !== undefined) {
     throw err;
   }
@@ -979,7 +973,7 @@ module.exports = {
   BigIntStats: BigIntStats,
   // for testing
   copyObject: copyObject,
-  Dirent: Dirent,
+  // Dirent: Dirent,
   emitRecursiveRmdirWarning: emitRecursiveRmdirWarning,
   getDirent: getDirent,
   getDirents: getDirents,

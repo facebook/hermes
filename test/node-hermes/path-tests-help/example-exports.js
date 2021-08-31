@@ -8,6 +8,7 @@
  */
 
 // RUN: true
+// REQUIRES: node-hermes
 
 exports.x = 5;
 exports.y = 3;

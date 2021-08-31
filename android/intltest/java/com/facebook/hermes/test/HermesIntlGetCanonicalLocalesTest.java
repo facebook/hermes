@@ -19,7 +19,7 @@ public class HermesIntlGetCanonicalLocalesTest extends HermesIntlTest262Base {
 
   @Test
   public void testIntlGetCanonicalLocales() throws IOException {
-    String basePath = "test262-main/test/intl402/Intl/getCanonicalLocales";
+    String basePath = "test262/test/intl402/Intl/getCanonicalLocales";
     Set<String> whiteList = new HashSet<>();
     Set<String> blackList =
         new HashSet<>(

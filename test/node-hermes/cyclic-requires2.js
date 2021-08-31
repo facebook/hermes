@@ -8,6 +8,7 @@
  */
 
 // RUN: true
+// REQUIRES: node-hermes
 
 print('2: init');
 

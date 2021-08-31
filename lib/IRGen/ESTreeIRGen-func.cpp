@@ -27,7 +27,7 @@ FunctionContext::FunctionContext(
       scope(irGen->nameTable_) {
   irGen->functionContext_ = this;
 
-  // Initialize it to LiteraUndefined by default to avoid corner cases.
+  // Initialize it to LiteralUndefined by default to avoid corner cases.
   this->capturedNewTarget = irGen->Builder.getLiteralUndefined();
 
   if (semInfo_) {
@@ -147,6 +147,7 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
       nameHint,
       Function::DefinitionKind::ES6Arrow,
       ESTree::isStrict(AF->strictness),
+      AF->sourceVisibility,
       AF->getSourceRange());
 
   {
@@ -172,7 +173,6 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
   return Builder.createCreateFunctionInst(newFunc);
 }
 
-#ifndef HERMESVM_LEAN
 namespace {
 ESTree::NodeKind getLazyFunctionKind(ESTree::FunctionLikeNode *node) {
   if (node->isMethodDefinition) {
@@ -205,6 +205,7 @@ Function *ESTreeIRGen::genES5Function(
             originalName,
             Function::DefinitionKind::ES5Function,
             ESTree::isStrict(functionNode->strictness),
+            functionNode->sourceVisibility,
             functionNode->getSourceRange(),
             /* isGlobal */ false,
             /* insertBefore */ nullptr);
@@ -283,7 +284,6 @@ Function *ESTreeIRGen::genES5Function(
 
   return curFunction()->function;
 }
-#endif
 
 Function *ESTreeIRGen::genGeneratorFunction(
     Identifier originalName,
@@ -302,6 +302,7 @@ Function *ESTreeIRGen::genGeneratorFunction(
       originalName,
       Function::DefinitionKind::ES5Function,
       ESTree::isStrict(functionNode->strictness),
+      functionNode->sourceVisibility,
       functionNode->getSourceRange(),
       /* insertBefore */ nullptr);
   outerFn->setLazyClosureAlias(lazyClosureAlias);
@@ -384,6 +385,7 @@ Function *ESTreeIRGen::genAsyncFunction(
       originalName,
       Function::DefinitionKind::ES5Function,
       ESTree::isStrict(functionNode->strictness),
+      functionNode->sourceVisibility,
       functionNode->getSourceRange(),
       /* insertBefore */ nullptr);
 
@@ -643,6 +645,7 @@ Function *ESTreeIRGen::genSyntaxErrorFunction(
       originalName,
       Function::DefinitionKind::ES5Function,
       true,
+      SourceVisibility::Sensitive,
       sourceRange,
       false);
 

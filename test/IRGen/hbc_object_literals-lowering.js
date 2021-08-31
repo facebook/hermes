@@ -74,8 +74,8 @@ function estimateBestNumElement(func) {
 //IRGEN-NEXT:  %5 = StoreNewOwnPropertyInst %1 : undefined, %0 : object, "m" : string, true : boolean
 //IRGEN-NEXT:  %6 = StoreNewOwnPropertyInst %1 : undefined, %0 : object, "n" : string, true : boolean
 //IRGEN-NEXT:  %7 = HBCLoadConstInst 42 : number
-//IRGEN-NEXT:  %8 = StoreOwnPropertyInst %7 : number, %0 : object, 1 : number, true : boolean
-//IRGEN-NEXT:  %9 = StoreOwnPropertyInst %7 : number, %0 : object, 2 : number, true : boolean
+//IRGEN-NEXT:  %8 = StoreNewOwnPropertyInst %7 : number, %0 : object, 1 : number, true : boolean
+//IRGEN-NEXT:  %9 = StoreNewOwnPropertyInst %7 : number, %0 : object, 2 : number, true : boolean
 //IRGEN-NEXT:  %10 = ReturnInst %0 : object
 //IRGEN-NEXT:function_end
 

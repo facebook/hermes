@@ -29,6 +29,17 @@ struct SourceMapTextLocation {
   uint32_t column;
 };
 
+/// Represent a source location in original JS source file.
+/// The file name is encoded as an index in the table of paths in the
+/// associated source map.
+struct SourceMapTextLocationFIndex {
+  uint32_t fileIndex;
+  // 1-based
+  uint32_t line;
+  // 1-based
+  uint32_t column;
+};
+
 /// In-memory representation of JavaScript version 3 source map.
 /// See https://sourcemaps.info/spec.html for the spec.
 class SourceMap {
@@ -109,6 +120,13 @@ class SourceMap {
       uint32_t line,
       uint32_t column) const;
 
+  /// Query source map text location for \p line and \p column.
+  /// In both the input and output of this function, line and column numbers
+  /// are 1-based.
+  llvh::Optional<SourceMapTextLocationFIndex> getLocationForAddressFIndex(
+      uint32_t line,
+      uint32_t column) const;
+
   /// Query source map segment for \p line and \p column.
   /// The line and column arguments are 1-based (but note that the return value
   /// has 0-based line and column indices).
@@ -124,6 +142,12 @@ class SourceMap {
       sourceFullPath[i] = getSourceFullPath(i);
     }
     return sourceFullPath;
+  }
+
+  /// \return the number of source paths.
+  uint32_t getNumSourcePaths() const {
+    assert(sources_.size() <= UINT32_MAX);
+    return (uint32_t)sources_.size();
   }
 
   /// \return source file path with root combined for source \p index.

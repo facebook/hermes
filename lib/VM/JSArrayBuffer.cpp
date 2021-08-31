@@ -242,9 +242,7 @@ JSArrayBuffer::createDataBlock(Runtime *runtime, size_type size, bool zero) {
   }
   // If an external allocation of this size would exceed the GC heap size,
   // raise RangeError.
-  if (LLVM_UNLIKELY(
-          size > std::numeric_limits<uint32_t>::max() ||
-          !runtime->getHeap().canAllocExternalMemory(size))) {
+  if (LLVM_UNLIKELY(!runtime->getHeap().canAllocExternalMemory(size))) {
     return runtime->raiseRangeError(
         "Cannot allocate a data block for the ArrayBuffer");
   }

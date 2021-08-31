@@ -15,6 +15,7 @@ var F = function(x) { return x; };
 var f = new F(1);
 var F2 = function(a,b,c,d,e,f,g,h,i,j,k){}
 var foo = function badlength(a, b, c){};
+var bar = function showSource(a, b, c){"show source"};
 Object.defineProperty(foo, "length", {value:"aa"});
 var f2 = function(a, b) {
   print(arguments.length, this, a, b);
@@ -59,6 +60,10 @@ serializeVM(function() {
   // Non-string .length
   print(foo);
   // CHECK-NEXT: function badlength() { [bytecode] }
+
+  // Source visibility directives
+  print(bar);
+  // CHECK-NEXT: function showSource(a, b, c){"show source"}
 
   print('call');
   // CHECK-LABEL: call

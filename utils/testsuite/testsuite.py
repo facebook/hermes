@@ -601,18 +601,14 @@ def runTest(filename, test_skiplist, keep_tmp, binary_path, hvm, esprima_runner,
                 # Compile to bytecode with Hermes.
                 try:
                     printVerbose("Compiling: {} to {}".format(filename, binfile.name))
-                    args = (
-                        [
-                            os.path.join(binary_path, "hermes"),
-                            temp.name,
-                            "-hermes-parser",
-                            "-emit-binary",
-                            "-out",
-                            binfile.name,
-                        ]
-                        + es6_args
-                        + extra_compile_flags
-                    )
+                    args = [
+                        os.path.join(binary_path, "hermesc"),
+                        temp.name,
+                        "-hermes-parser",
+                        "-emit-binary",
+                        "-out",
+                        binfile.name,
+                    ] + extra_compile_flags
                     if optEnabled:
                         args.append("-O")
                     else:

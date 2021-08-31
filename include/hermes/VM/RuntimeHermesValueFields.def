@@ -78,7 +78,6 @@ RUNTIME_HV_FIELD_PROTOTYPE(jsErrorStackAccessor)
 // revisit this in stage 2
 RUNTIME_HV_FIELD_RUNTIMEMODULE(specialCodeBlockDomain_)
 
-RUNTIME_HV_FIELD_INSTANCE(stringCycleCheckVisited_)
 RUNTIME_HV_FIELD_INSTANCE(global_)
 RUNTIME_HV_FIELD_INSTANCE(thrownValue_)
 #ifdef HERMES_ENABLE_DEBUGGER

@@ -13,6 +13,7 @@
 
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/IR/IR.h"
+#include "hermes/Optimizer/Wasm/WasmIntrinsics.h"
 
 #include "llvh/ADT/SmallVector.h"
 #include "llvh/ADT/ilist_node.h"
@@ -233,7 +234,7 @@ class AsInt32Inst : public SingleOperandInst {
  public:
   explicit AsInt32Inst(Value *value)
       : SingleOperandInst(ValueKind::AsInt32InstKind, value) {
-    setType(Type::createNumber());
+    setType(Type::createInt32());
   }
   explicit AsInt32Inst(const AsInt32Inst *src, llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
@@ -710,6 +711,63 @@ class GetBuiltinClosureInst : public Instruction {
   }
 };
 
+#ifdef HERMES_RUN_WASM
+/// Call an unsafe compiler intrinsic.
+class CallIntrinsicInst : public Instruction {
+  CallIntrinsicInst(const CallIntrinsicInst &) = delete;
+  void operator=(const CallIntrinsicInst &) = delete;
+
+ public:
+  enum { IntrinsicIndexIdx, ArgIdx };
+  explicit CallIntrinsicInst(
+      LiteralNumber *intrinsicIndex,
+      ArrayRef<Value *> args)
+      : Instruction(ValueKind::CallIntrinsicInstKind) {
+    assert(
+        intrinsicIndex->getValue() < WasmIntrinsics::_count &&
+        "invalid intrinsics call");
+    pushOperand(intrinsicIndex);
+    for (const auto &arg : args) {
+      pushOperand(arg);
+    }
+  }
+  explicit CallIntrinsicInst(
+      const CallIntrinsicInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  Value *getArgument(unsigned idx) {
+    return getOperand(ArgIdx + idx);
+  }
+
+  unsigned getNumArguments() const {
+    return getNumOperands() - 1;
+  }
+
+  WasmIntrinsics::Enum getIntrinsicsIndex() const {
+    return (WasmIntrinsics::Enum)cast<LiteralNumber>(
+               getOperand(IntrinsicIndexIdx))
+        ->asUInt32();
+  }
+
+  SideEffectKind getSideEffect() {
+    if (getIntrinsicsIndex() >= WasmIntrinsics::__uasm_store8)
+      return SideEffectKind::MayWrite;
+    if (getIntrinsicsIndex() >= WasmIntrinsics::__uasm_loadi8)
+      return SideEffectKind::MayRead;
+    return SideEffectKind::None;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::CallIntrinsicInstKind);
+  }
+};
+#endif
+
 class HBCCallNInst : public CallInst {
  public:
   /// The minimum number of args supported by a CallN instruction, including
@@ -930,14 +988,10 @@ class StoreNewOwnPropertyInst : public StoreOwnPropertyInst {
   void operator=(const StoreNewOwnPropertyInst &) = delete;
 
  public:
-  LiteralString *getPropertyName() const {
-    return cast<LiteralString>(getOperand(PropertyIdx));
-  }
-
   explicit StoreNewOwnPropertyInst(
       Value *storedValue,
       Value *object,
-      LiteralString *property,
+      Literal *property,
       LiteralBool *isEnumerable)
       : StoreOwnPropertyInst(
             ValueKind::StoreNewOwnPropertyInstKind,
@@ -945,6 +999,10 @@ class StoreNewOwnPropertyInst : public StoreOwnPropertyInst {
             object,
             property,
             isEnumerable) {
+    assert(
+        (llvh::isa<LiteralString>(property) ||
+         llvh::isa<LiteralNumber>(property)) &&
+        "Invalid property literal.");
     assert(
         object->getType().isObjectType() &&
         "object operand must be known to be an object");

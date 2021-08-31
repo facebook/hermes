@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "InternalBindings/InternalBindings.h"
 #include "RuntimeState.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/hermes.h"
@@ -18,8 +19,9 @@
 #include "llvh/Support/PrettyStackTrace.h"
 #include "llvh/Support/Program.h"
 #include "llvh/Support/Signals.h"
+#include "uv.h"
 
-#include <fcntl.h>
+#include <math.h> /* floor */
 
 using namespace facebook;
 
@@ -76,61 +78,6 @@ class ArrayRefBuffer : public jsi::Buffer {
   llvh::ArrayRef<uint8_t> array_;
 };
 
-// Defines the constants needed by fs.js.
-static void defineConstants(jsi::Runtime &runtime, jsi::Object &target) {
-#define DEFINE_CONSTANT(runtime, name)        \
-  do {                                        \
-    target.setProperty(runtime, #name, name); \
-  } while (0)
-#ifdef S_IFIFO
-  DEFINE_CONSTANT(runtime, S_IFIFO);
-#endif
-#ifdef S_IFLNK
-  DEFINE_CONSTANT(runtime, S_IFLNK);
-#endif
-#ifdef S_IFSOCK
-  DEFINE_CONSTANT(runtime, S_IFSOCK);
-#endif
-#ifdef F_OK
-  DEFINE_CONSTANT(runtime, F_OK);
-#endif
-#ifdef R_OK
-  DEFINE_CONSTANT(runtime, R_OK);
-#endif
-#ifdef W_OK
-  DEFINE_CONSTANT(runtime, W_OK);
-#endif
-#ifdef X_OK
-  DEFINE_CONSTANT(runtime, X_OK);
-#endif
-#ifdef O_SYMLINK
-  DEFINE_CONSTANT(runtime, O_SYMLINK);
-#endif
-  DEFINE_CONSTANT(runtime, S_IFMT);
-  DEFINE_CONSTANT(runtime, S_IFREG);
-  DEFINE_CONSTANT(runtime, O_WRONLY);
-#undef DEFINE_CONSTANT
-}
-
-/// Given the directory that the original JS file runs from and the
-/// relative path of the target, forms the absolute path
-/// for the target.
-static void canonicalizePath(
-    llvh::SmallVectorImpl<char> &dirname,
-    llvh::StringRef target) {
-  if (!target.empty() && target[0] == '/') {
-    // If the target is absolute (starts with a '/'), resolve from the module
-    // root (disregard the dirname).
-    dirname.clear();
-    llvh::sys::path::append(dirname, target.drop_front(1));
-    return;
-  }
-  llvh::sys::path::append(dirname, llvh::sys::path::Style::posix, target);
-
-  // Remove all dots. This is done to get rid of ../ or anything like ././.
-  llvh::sys::path::remove_dots(dirname, true, llvh::sys::path::Style::posix);
-}
-
 /// Adds a JS function wrapper around the StringRef buffer passed in.
 static const std::shared_ptr<jsi::Buffer> addjsWrapper(
     llvh::StringRef strBuffer) {
@@ -141,32 +88,27 @@ static const std::shared_ptr<jsi::Buffer> addjsWrapper(
   return std::make_unique<jsi::StringBuffer>(std::move(wrappedBuffer));
 }
 
-// Adds the 'constants' object as a property of internalBinding. Currently
-// this object only has the fs property defined on it.
-static jsi::Value constantsBinding(jsi::Runtime &rt, RuntimeState &rs) {
-  jsi::Object fsProp{rt};
-  defineConstants(rt, fsProp);
-  jsi::Object constants{rt};
-  constants.setProperty(rt, jsi::String::createFromAscii(rt, "fs"), fsProp);
-  jsi::String constantsLabel = jsi::String::createFromAscii(rt, "constants");
-  rs.setInternalBindingProp(constantsLabel, std::move(constants));
-  return rs.getInternalBindingProp(constantsLabel);
-}
-
-// Implements the internal binding JS functionality. Currently only includes
-// constants that are relevant to the execution of fs.js.
+/// Implements the internal binding JS functionality. Currently only includes
+/// constants that are relevant to the execution of fs.js.
 static jsi::Value internalBinding(
-    const jsi::String &propName,
-    jsi::Runtime &rt,
+    const std::string &propNameUTF8,
     RuntimeState &rs) {
-  if (rs.internalBindingPropExists(propName)) {
-    return rs.getInternalBindingProp(propName);
+  jsi::Runtime &rt = rs.getRuntime();
+  if (rs.internalBindingPropExists(propNameUTF8)) {
+    return rs.getInternalBindingProp(propNameUTF8);
   }
-  std::string propNameUTF8 = propName.utf8(rt);
   if (propNameUTF8 == "constants") {
-    return constantsBinding(rt, rs);
-  } else if (propNameUTF8 == "fs") { // Next to be implemented.
-    return jsi::Value::undefined();
+    return constantsBinding(rs);
+  } else if (propNameUTF8 == "fs") {
+    return fsBinding(rs);
+  } else if (propNameUTF8 == "buffer") {
+    return bufferBinding(rs);
+  } else if (propNameUTF8 == "util") {
+    return utilBinding(rs);
+  } else if (propNameUTF8 == "tty_wrap") {
+    return ttyBinding(rs);
+  } else if (propNameUTF8 == "pipe_wrap") {
+    return pipeBinding(rs);
   }
   // Will not go into this case but keeping it in case some other internal
   // binding functionality is going to be added in the future.
@@ -182,9 +124,9 @@ static jsi::Value internalBinding(
 /// returns the wrapper function which is called to `require` it.
 static jsi::Function resolveRequireCall(
     const jsi::String &filename,
-    const std::string &dirname,
-    jsi::Runtime &rt,
+    RuntimeState &rs,
     jsi::Object &builtinModules) {
+  jsi::Runtime &rt = rs.getRuntime();
   jsi::Value result;
   if (builtinModules.hasProperty(rt, filename)) {
     result = builtinModules.getProperty(rt, filename);
@@ -198,8 +140,7 @@ static jsi::Function resolveRequireCall(
       throw jsi::JSError(
           rt, "The following module is not supported yet: " + filenameUTF8);
     }
-    llvh::SmallString<32> fullFileName{dirname};
-    canonicalizePath(fullFileName, filenameUTF8);
+    llvh::SmallString<32> fullFileName = rs.resolvePath(filenameUTF8, "./");
 
     auto memBuffer = llvh::MemoryBuffer::getFileOrSTDIN(fullFileName.str());
     if (!memBuffer) {
@@ -217,47 +158,85 @@ static jsi::Function resolveRequireCall(
 /// Reads and exports the values from a given file.
 static jsi::Value require(
     const jsi::String &filename,
-    const std::string &dirname,
-    jsi::Runtime &rt,
     RuntimeState &rs,
-    jsi::Object &builtinModules) {
+    jsi::Object &builtinModules,
+    jsi::Function &intBinding) {
+  jsi::Runtime &rt = rs.getRuntime();
+
   std::string filenameUTF8 = filename.utf8(rt);
   llvh::Optional<jsi::Object> existingMod = rs.findRequiredModule(filenameUTF8);
   if (existingMod.hasValue()) {
     return std::move(*existingMod);
   }
-  jsi::Function result =
-      resolveRequireCall(filename, dirname, rt, builtinModules);
+  jsi::Function result = resolveRequireCall(filename, rs, builtinModules);
   jsi::Object mod{rt};
   jsi::Object exports{rt};
   mod.setProperty(rt, "exports", exports);
 
   jsi::Object &mapModule = rs.addRequiredModule(filenameUTF8, std::move(mod));
 
-  jsi::Value out = result.call(
-      rt,
-      exports,
-      rt.global().getProperty(rt, "require"),
-      mapModule,
-      filename,
-      dirname,
-      5);
+  if (builtinModules.hasProperty(rt, filename)) {
+    result.call(
+        rt,
+        exports,
+        rt.global().getProperty(rt, "require"),
+        mapModule,
+        intBinding,
+        filename,
+        std::string{rs.getDirname()},
+        6);
+  } else {
+    result.call(
+        rt,
+        exports,
+        rt.global().getProperty(rt, "require"),
+        mapModule,
+        filename,
+        std::string{rs.getDirname()},
+        5);
+  }
+
   return mapModule.getProperty(rt, "exports");
+}
+
+/// Sets up the hrtime function that will be defined on the process
+/// object. If there was an argument passed in, then it calculates
+/// the difference between the old time and the current time. Otherwise
+/// it just converts the ns representation that uv_hrtime outputs to
+/// an array with the seconds as the first element and the leftover
+/// nanoseconds as the second element.
+static jsi::Value
+hrtime(jsi::Runtime &rt, const jsi::Value *args, size_t count) {
+  double outputInNs = (double)uv_hrtime();
+  if (count == 1) {
+    jsi::Array argArray = args[0].asObject(rt).asArray(rt);
+    double oldTimeSeconds = argArray.getValueAtIndex(rt, 0).asNumber();
+    double oldTimeNs = argArray.getValueAtIndex(rt, 1).asNumber();
+    double diffInNs = outputInNs - (oldTimeSeconds * 1e9 + oldTimeNs);
+
+    return jsi::Array::createWithElements(
+        rt, floor(diffInNs / 1e9), (diffInNs - (floor(diffInNs / 1e9) * 1e9)));
+  } else
+    return jsi::Array::createWithElements(
+        rt,
+        floor(outputInNs / 1e9),
+        (outputInNs - (floor(outputInNs / 1e9) * 1e9)));
 }
 
 // Initializes all the builtin modules as well as several of
 // the functions/properties needed to execute the modules.
 static void initialize(
-    facebook::hermes::HermesRuntime &runtime,
-    const std::string &dirname,
     RuntimeState &rs,
-    jsi::Object &builtinModules) {
+    jsi::Object &builtinModules,
+    jsi::Function &intBinding) {
+  jsi::Runtime &runtime = rs.getRuntime();
+
   // Creates require JS function and links it to the c++ version.
   jsi::Function req = jsi::Function::createFromHostFunction(
       runtime,
       jsi::PropNameID::forAscii(runtime, "require"),
       1,
-      [&rs, &dirname, &builtinModules](
+      [&rs, &builtinModules, &intBinding](
           jsi::Runtime &rt,
           const jsi::Value &,
           const jsi::Value *args,
@@ -265,41 +244,72 @@ static void initialize(
         if (count == 0) {
           throw jsi::JSError(rt, "Not enough arguments passed in");
         }
-        return require(args[0].toString(rt), dirname, rt, rs, builtinModules);
+        return require(args[0].toString(rt), rs, builtinModules, intBinding);
       });
   runtime.global().setProperty(runtime, "require", req);
 
-  // Creates internalBinding JS function and links it to the c++ version.
-  jsi::Function intBinding = jsi::Function::createFromHostFunction(
-      runtime,
-      jsi::PropNameID::forAscii(runtime, "internalBinding"),
-      1,
-      [&rs](
-          jsi::Runtime &rt,
-          const jsi::Value &,
-          const jsi::Value *args,
-          size_t count) -> jsi::Value {
-        if (count == 0) {
-          throw jsi::JSError(rt, "Not enough arguments passed in");
-        }
-        return internalBinding(args[0].toString(rt), rt, rs);
-      });
-  runtime.global().setProperty(runtime, "internalBinding", intBinding);
-
   // Will add more properties as they are required.
-  jsi::Object process{runtime};
-  runtime.global().setProperty(runtime, "process", process);
-
   runtime.global().setProperty(runtime, "global", runtime.global());
+  require(
+      jsi::String::createFromAscii(runtime, "node-hermes-helpers"),
+      rs,
+      builtinModules,
+      intBinding);
 
   jsi::Object primordials{runtime};
   runtime.global().setProperty(runtime, "primordials", primordials);
   require(
       jsi::String::createFromAscii(runtime, "internal/per_context/primordials"),
-      dirname,
-      runtime,
       rs,
-      builtinModules);
+      builtinModules,
+      intBinding);
+
+  jsi::Object process{runtime};
+  runtime.global().setProperty(runtime, "process", process);
+  require(
+      jsi::String::createFromAscii(
+          runtime, "internal/bootstrap/switches/is_main_thread"),
+      rs,
+      builtinModules,
+      intBinding);
+
+  // This is a partial implementation of emitWarning, implemented
+  // just for the sake of printing error messages from the console
+  // constructor to stderr.
+  jsi::Function warning = jsi::Function::createFromHostFunction(
+      runtime,
+      jsi::PropNameID::forAscii(runtime, "emitWarning"),
+      1,
+      [](jsi::Runtime &rt,
+         const jsi::Value &,
+         const jsi::Value *args,
+         size_t count) -> jsi::Value {
+        if (count == 0) {
+          throw jsi::JSError(
+              rt, "Not enough arguments passed in to process.emitWarning");
+        }
+        llvh::errs() << args[0].toString(rt).utf8(rt) << '\n';
+        return jsi::Value::undefined();
+      });
+  process.setProperty(runtime, "emitWarning", warning);
+
+  jsi::Function hrt = jsi::Function::createFromHostFunction(
+      runtime,
+      jsi::PropNameID::forAscii(runtime, "hrtime"),
+      1,
+      [](jsi::Runtime &rt,
+         const jsi::Value &,
+         const jsi::Value *args,
+         size_t count) -> jsi::Value { return hrtime(rt, args, count); });
+  process.setProperty(runtime, "hrtime", hrt);
+
+  jsi::Object console = require(
+                            jsi::String::createFromAscii(runtime, "console"),
+                            rs,
+                            builtinModules,
+                            intBinding)
+                            .asObject(runtime);
+  runtime.global().setProperty(runtime, "console", console);
 }
 
 int main(int argc, char **argv) {
@@ -334,12 +344,11 @@ int main(int argc, char **argv) {
       : InputFilename == "-"                ? "<stdin>"
                                             : std::string(InputFilename);
 
-  auto runtime = facebook::hermes::makeHermesRuntime();
-  RuntimeState rs{*runtime};
-
   llvh::SmallString<32> dirName{InputFilename};
   llvh::sys::path::remove_filename(dirName, llvh::sys::path::Style::posix);
-  const std::string strDirname{dirName.data(), dirName.size()};
+
+  RuntimeState rs{std::move(dirName), uv_default_loop()};
+  jsi::Runtime &rt = rs.getRuntime();
 
   llvh::ArrayRef<uint8_t> moduleObj = getNodeBytecode();
   assert(
@@ -349,11 +358,29 @@ int main(int argc, char **argv) {
   std::shared_ptr<jsi::Buffer> buf =
       std::make_shared<ArrayRefBuffer>(moduleObj);
   jsi::Object builtinModules =
-      runtime->evaluateJavaScript(buf, "NodeBytecode.js").asObject(*runtime);
+      rt.evaluateJavaScript(buf, "NodeBytecode.js").asObject(rt);
+
+  // Creates internalBinding JS function. Will be passed as a param to
+  // builtinModules.
+  jsi::Function intBinding = jsi::Function::createFromHostFunction(
+      rt,
+      jsi::PropNameID::forAscii(rt, "internalBinding"),
+      1,
+      [&rs](
+          jsi::Runtime &rt,
+          const jsi::Value &,
+          const jsi::Value *args,
+          size_t count) -> jsi::Value {
+        if (count == 0) {
+          throw jsi::JSError(rt, "Not enough arguments passed in");
+        }
+        return internalBinding(args[0].toString(rt).utf8(rt), rs);
+      });
 
   try {
-    initialize(*runtime, strDirname, rs, builtinModules);
-    auto result = runtime->evaluateJavaScript(jsiBuffer, srcPath);
+    initialize(rs, builtinModules, intBinding);
+    auto result = rt.evaluateJavaScript(jsiBuffer, srcPath);
+    uv_run(rs.getLoop(), UV_RUN_DEFAULT);
 
   } catch (const jsi::JSIException &e) {
     llvh::errs() << "JavaScript terminated via uncaught exception: " << e.what()

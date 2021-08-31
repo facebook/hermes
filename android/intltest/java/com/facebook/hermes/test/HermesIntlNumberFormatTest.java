@@ -19,7 +19,7 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
 
   public void testIntlNumberFormat() throws IOException {
 
-    String basePath = "test262-main/test/intl402/NumberFormat";
+    String basePath = "test262/test/intl402/NumberFormat";
 
     Set<String> whiteList = new HashSet<>();
 
@@ -81,7 +81,7 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
   @Test
   public void testIntlNumberFormat_prototype() throws IOException {
 
-    String basePath = "test262-main/test/intl402/NumberFormat/prototype";
+    String basePath = "test262/test/intl402/NumberFormat/prototype";
 
     Set<String> whiteList = new HashSet<>();
     Set<String> blackList = new HashSet<>();
@@ -92,7 +92,7 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
   @Test
   public void testIntlNumberFormat_supportedLocalesOf() throws IOException {
 
-    String basePath = "test262-main/test/intl402/NumberFormat/supportedLocalesOf";
+    String basePath = "test262/test/intl402/NumberFormat/supportedLocalesOf";
 
     Set<String> whiteList = new HashSet<>();
     Set<String> blackList = new HashSet<>();
@@ -102,7 +102,7 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
   @Test
   public void testIntlNumberFormat_prototype_constructor() throws IOException {
 
-    String basePath = "test262-main/test/intl402/NumberFormat/prototype/constructor";
+    String basePath = "test262/test/intl402/NumberFormat/prototype/constructor";
 
     Set<String> whiteList = new HashSet<>();
     Set<String> blackList = new HashSet<>();
@@ -113,7 +113,7 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
   @Test
   public void testIntlNumberFormat_prototype_toStringTag() throws IOException {
 
-    String basePath = "test262-main/test/intl402/NumberFormat/prototype/toStringTag";
+    String basePath = "test262/test/intl402/NumberFormat/prototype/toStringTag";
 
     Set<String> whiteList = new HashSet<>();
     Set<String> deviations =
@@ -136,7 +136,7 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
   @Test
   public void testIntlNumberFormat_prototype_resolvedOptions() throws IOException {
 
-    String basePath = "test262-main/test/intl402/NumberFormat/prototype/resolvedOptions";
+    String basePath = "test262/test/intl402/NumberFormat/prototype/resolvedOptions";
 
     Set<String> whiteList = new HashSet<>();
     Set<String> deviations =
@@ -156,7 +156,7 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
   @Test
   public void testIntlNumberFormat_prototype_format() throws IOException {
 
-    String basePath = "test262-main/test/intl402/NumberFormat/prototype/format";
+    String basePath = "test262/test/intl402/NumberFormat/prototype/format";
 
     Set<String> whiteList = new HashSet<>();
 
@@ -269,7 +269,7 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
   @Test
   public void testIntlNumberFormat_prototype_formatToParts() throws IOException {
 
-    String basePath = "test262-main/test/intl402/NumberFormat/prototype/formatToParts";
+    String basePath = "test262/test/intl402/NumberFormat/prototype/formatToParts";
 
     Set<String> whiteList = new HashSet<>();
 

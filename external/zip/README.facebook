@@ -10,3 +10,18 @@ to
 ```
 #if MINIZ_X86_OR_X64_CPU && !defined(HERMES_UBSAN)
 ```
+
+Change this typedef in `zip.h`:
+```
+// 64-bit Windows is the only mainstream platform
+// where sizeof(long) != sizeof(void*)
+#ifdef _WIN64
+typedef long long ssize_t; /* byte count or error */
+#else
+typedef long ssize_t; /* byte count or error */
+#endif
+```
+to
+```
+typedef intptr_t ssize_t; /* byte count or error */
+```

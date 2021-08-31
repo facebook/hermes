@@ -17,11 +17,11 @@
 
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
+#include "hermes/BCGen/HBC/StringKind.h"
 #include "hermes/Public/Buffer.h"
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/LEB128.h"
 #include "hermes/Support/MemoryBuffer.h"
-#include "hermes/Support/StringKind.h"
 
 #include <algorithm>
 #include <iostream>
@@ -78,7 +78,7 @@ static llvh::cl::opt<std::string>
 
 namespace {
 template <typename T>
-unsigned byteSize(ArrayRef<T> ref) {
+unsigned byteSize(llvh::ArrayRef<T> ref) {
   return ref.size() * sizeof(T);
 }
 
@@ -363,7 +363,7 @@ class UsageCounter : public BytecodeVisitor {
   }
 
   void countSerializedLiterals(
-      ArrayRef<unsigned char> array,
+      llvh::ArrayRef<unsigned char> array,
       unsigned offset,
       unsigned count) {
     const unsigned char *ptr = array.data();

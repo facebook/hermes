@@ -306,6 +306,11 @@ bool BytecodeFileFields<Mutable>::populateFromBuffer(
             buf, h->cjsModuleCount, end);
       }
     }
+    void visitFunctionSourceTable() {
+      align(buf);
+      f.functionSourceTable = castArrayRef<std::pair<uint32_t, uint32_t>>(
+          buf, h->functionSourceCount, end);
+    }
   };
 
   BytecodeFileFieldsPopulator populator{*this, buffer.data(), buffer.end()};
@@ -415,7 +420,7 @@ constexpr uint8_t *rawptr_cast(T *p) {
 /// Align \p *ptr down to the start of the page it is pointing in to, and
 /// simultaneously adjust \p *byteLen up by the amount the ptr was shifted down
 /// by.
-inline void pageAlignDown(uint8_t **ptr, size_t *byteLen) {
+inline void pageAlignDown(uint8_t **ptr, size_t &byteLen) {
   const auto PS = oscompat::page_size();
 
   auto orig = *ptr;
@@ -474,7 +479,7 @@ void BCProviderFromBuffer::adviseStringTableSequential() {
       smallStringTableEntries,
       overflowStringTableEntries_);
 
-  pageAlignDown(&start, &adviceLength);
+  pageAlignDown(&start, adviceLength);
   oscompat::vm_madvise(start, adviceLength, oscompat::MAdvice::Sequential);
 }
 
@@ -500,8 +505,8 @@ void BCProviderFromBuffer::adviseStringTableRandom() {
   ASSERT_TOTAL_ARRAY_LEN(
       tableLength, smallStringTableEntries, overflowStringTableEntries_);
 
-  pageAlignDown(&tableStart, &tableLength);
-  pageAlignDown(&storageStart, &storageLength);
+  pageAlignDown(&tableStart, tableLength);
+  pageAlignDown(&storageStart, storageLength);
   oscompat::vm_madvise(tableStart, tableLength, oscompat::MAdvice::Random);
   oscompat::vm_madvise(storageStart, storageLength, oscompat::MAdvice::Random);
 }
@@ -526,7 +531,7 @@ void BCProviderFromBuffer::willNeedStringTable() {
       smallStringTableEntries,
       overflowStringTableEntries_);
 
-  pageAlignDown(&start, &prefetchLength);
+  pageAlignDown(&start, prefetchLength);
   oscompat::vm_prefetch(start, prefetchLength);
 }
 
@@ -572,6 +577,7 @@ BCProviderFromBuffer::BCProviderFromBuffer(
   segmentID_ = fileHeader->segmentID;
   cjsModuleTable_ = fields.cjsModuleTable;
   cjsModuleTableStatic_ = fields.cjsModuleTableStatic;
+  functionSourceTable_ = fields.functionSourceTable;
 }
 
 llvh::ArrayRef<uint8_t> BCProviderFromBuffer::getEpilogue() const {

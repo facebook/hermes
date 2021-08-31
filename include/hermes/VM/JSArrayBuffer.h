@@ -20,11 +20,9 @@ namespace vm {
 /// in order to extract its information in different ways.
 class JSArrayBuffer final : public JSObject {
  public:
-  // NOTE: This restricts the max size of an ArrayBuffer to 2 ^ 32 - 1 on 32-bit
-  // platforms.
   // A RangeError for a failed allocation should be thrown if the requested
-  // amount is larger than the native platform's `size_t`
-  using size_type = std::size_t;
+  // amount is larger than 2 ^ 32 - 1.
+  using size_type = std::uint32_t;
 
   static const ObjectVTable vt;
 

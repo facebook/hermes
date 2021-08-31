@@ -27,10 +27,6 @@ struct YoungGen::EvacAcceptor final : public RootAndSlotAcceptorDefault,
 
   using RootAndSlotAcceptorDefault::accept;
 
-  void accept(BasedPointer &basedPtr) override {
-    gen.ensureReferentCopied(&basedPtr);
-  }
-
   void accept(GCCell *&ptr) override {
     gen.ensureReferentCopied(&ptr);
   }

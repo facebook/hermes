@@ -55,12 +55,12 @@ class LowerAllocObject : public FunctionPass {
   /// overwritten by PutByIds.
   bool lowerAllocObjectBuffer(
       AllocObjectInst *allocInst,
-      llvh::SmallVectorImpl<StoreOwnPropertyInst *> &users,
+      llvh::SmallVectorImpl<StoreNewOwnPropertyInst *> &users,
       uint32_t maxSize);
   /// Estimate best number of elements to serialize into the buffer.
   /// Try optimizing for max bytecode size saving.
   uint32_t estimateBestNumElemsToSerialize(
-      llvh::SmallVectorImpl<StoreOwnPropertyInst *> &users);
+      llvh::SmallVectorImpl<StoreNewOwnPropertyInst *> &users);
 };
 
 /// Lowers AllocObjectLiterals which target object literals with

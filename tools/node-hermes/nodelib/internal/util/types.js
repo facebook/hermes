@@ -60,21 +60,43 @@ function isBigUint64Array(value) {
   return TypedArrayPrototypeGetSymbolToStringTag(value) === 'BigUint64Array';
 }
 
-// module.exports = _objectSpread(_objectSpread({}, internalBinding('types')), {}, {
-//   isArrayBufferView: ArrayBufferIsView,
-//   isTypedArray: isTypedArray,
-//   isUint8Array: isUint8Array,
-//   isUint8ClampedArray: isUint8ClampedArray,
-//   isUint16Array: isUint16Array,
-//   isUint32Array: isUint32Array,
-//   isInt8Array: isInt8Array,
-//   isInt16Array: isInt16Array,
-//   isInt32Array: isInt32Array,
-//   isFloat32Array: isFloat32Array,
-//   isFloat64Array: isFloat64Array,
-//   isBigInt64Array: isBigInt64Array,
-//   isBigUint64Array: isBigUint64Array
-// });
+// New function: Rather than defining in internalBinding('types'), is defined here
+function isMapIterator(value) {
+  return value[Symbol.toStringTag] === "Map Iterator";
+}
+
+// New function: Rather than defining in internalBinding('types'), is defined here
+function isMap(value) {
+  return Object.getPrototypeOf(value) === Map.prototype;
+}
+
+function isSetIterator(value) {
+  return value[Symbol.toStringTag] === "Set Iterator";
+}
+
+function isSet(value) {
+  return Object.getPrototypeOf(value) === Set.prototype;
+}
+
+module.exports = { //_objectSpread(_objectSpread({}, internalBinding('types')), {}, {
+  isArrayBufferView: ArrayBufferIsView,
+  isTypedArray: isTypedArray,
+  isUint8Array: isUint8Array,
+  isUint8ClampedArray: isUint8ClampedArray,
+  isUint16Array: isUint16Array,
+  isUint32Array: isUint32Array,
+  isInt8Array: isInt8Array,
+  isInt16Array: isInt16Array,
+  isInt32Array: isInt32Array,
+  isFloat32Array: isFloat32Array,
+  isFloat64Array: isFloat64Array,
+  isBigInt64Array: isBigInt64Array,
+  isBigUint64Array: isBigUint64Array,
+  isMapIterator: isMapIterator,
+  isMap: isMap,
+  isSetIterator: isSetIterator,
+  isSet: isSet,
+}; //});
 var isCryptoKey;
 var isKeyObject;
 ObjectDefineProperties(module.exports, {

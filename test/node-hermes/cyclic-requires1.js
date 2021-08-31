@@ -8,6 +8,7 @@
  */
 
 // RUN: %node-hermes %s | %FileCheck --match-full-lines %s
+// REQUIRES: node-hermes
 
 print('1: init');
 // CHECK-LABEL: 1: init

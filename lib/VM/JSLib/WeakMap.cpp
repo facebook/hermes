@@ -136,7 +136,7 @@ weakMapConstructor(void *, Runtime *runtime, NativeArgs args) {
           "WeakMap([iterable]) elements must be objects");
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
-    nextItem = vmcast<JSObject>(std::move(nextItemRes->get()));
+    nextItem = vmcast<JSObject>(nextItemRes->get());
     auto keyRes = JSObject::getComputed_RJS(nextItem, runtime, zero);
     if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);

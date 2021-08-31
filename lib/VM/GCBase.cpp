@@ -12,8 +12,6 @@
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/CellKind.h"
-#include "hermes/VM/GCBase-inline.h"
-#include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/RootAndSlotAcceptorDefault.h"
 #include "hermes/VM/Runtime.h"
@@ -23,7 +21,6 @@
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/FileSystem.h"
 #include "llvh/Support/Format.h"
-#include "llvh/Support/NativeFormatting.h"
 #include "llvh/Support/raw_os_ostream.h"
 #include "llvh/Support/raw_ostream.h"
 
@@ -47,8 +44,7 @@ GCBase::GCBase(
     const GCConfig &gcConfig,
     std::shared_ptr<CrashManager> crashMgr,
     HeapKind kind)
-    : metaTable_(getMetadataTable()),
-      gcCallbacks_(gcCallbacks),
+    : gcCallbacks_(gcCallbacks),
       pointerBase_(pointerBase),
       crashMgr_(crashMgr),
       heapKind_(kind),
@@ -69,6 +65,7 @@ GCBase::GCBase(
       randomizeAllocSpace_(gcConfig.getShouldRandomizeAllocSpace())
 #endif
 {
+  buildMetadataTable();
 #ifdef HERMESVM_PLATFORM_LOGGING
   hermesLog(
       "HermesGC",
@@ -1206,9 +1203,7 @@ void GCBase::IDTracker::deserialize(Deserializer &d) {
     GCPointer<GCCell> ptr{nullptr};
     d.readRelocation(&ptr, RelocationKind::GCPointer);
     auto res = objectIDMap_
-                   .try_emplace(
-                       GCPointerBase::storageTypeToRaw(ptr.getStorageType()),
-                       d.readInt<HeapSnapshot::NodeID>())
+                   .try_emplace(ptr.getRaw(), d.readInt<HeapSnapshot::NodeID>())
                    .second;
     (void)res;
     assert(res && "Shouldn't fail to insert during deserialization");

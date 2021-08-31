@@ -171,8 +171,6 @@ class YoungGen : public GCGeneration {
   /// already-installed forwarding pointer points.
   void ensureReferentCopied(GCCell **ptrLoc);
 
-  void ensureReferentCopied(BasedPointer *ptrLoc);
-
   /// Print stats (in JSON format) specific to young-gen collection to an output
   /// stream.
   void printStats(JSONEmitter &json) const;

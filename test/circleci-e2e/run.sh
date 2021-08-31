@@ -24,7 +24,7 @@ while (( "$#" )); do
    shift
 done
 
-# Clone a fresh copy of RN master
+# Clone a fresh copy of RN main
 git clone --depth=1 https://github.com/facebook/react-native
 
 cd react-native

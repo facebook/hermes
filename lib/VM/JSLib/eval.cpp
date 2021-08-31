@@ -7,20 +7,13 @@
 
 #include "JSLibInternal.h"
 
-#include "hermes/AST/SemValidate.h"
-#include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/HBC.h"
-#include "hermes/IR/IR.h"
-#include "hermes/IRGen/IRGen.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Support/MemoryBuffer.h"
-#include "hermes/Support/SimpleDiagHandler.h"
-#include "hermes/Utils/Options.h"
+#include "hermes/Support/ScopeChain.h"
 #include "hermes/VM/JSLib.h"
-#include "hermes/VM/Operations.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/StringPrimitive.h"
-#include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/StringView.h"
 #include "llvh/Support/ConvertUTF.h"
 #include "llvh/Support/raw_ostream.h"
@@ -50,8 +43,6 @@ CallResult<HermesValue> evalInEnvironment(
   compileFlags.emitAsyncBreakCheck = runtime->asyncBreakCheckInEval;
   compileFlags.lazy =
       utf8code.size() >= compileFlags.preemptiveFileCompilationThreshold;
-  compileFlags.allowFunctionToStringWithRuntimeSource =
-      runtime->getAllowFunctionToStringWithRuntimeSource();
 #ifdef HERMES_ENABLE_DEBUGGER
   // Required to allow stepping and examining local variables in eval'd code
   compileFlags.debug = true;
@@ -60,8 +51,7 @@ CallResult<HermesValue> evalInEnvironment(
   std::unique_ptr<hbc::BCProviderFromSrc> bytecode;
   {
     std::unique_ptr<hermes::Buffer> buffer;
-    if (compileFlags.lazy ||
-        compileFlags.allowFunctionToStringWithRuntimeSource) {
+    if (compileFlags.lazy) {
       buffer.reset(new hermes::OwnedMemoryBuffer(
           llvh::MemoryBuffer::getMemBufferCopy(utf8code)));
     } else {

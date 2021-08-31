@@ -9,17 +9,14 @@
 #define HERMES_BCGEN_HBC_BYTECODE_H
 
 #include "llvh/ADT/ArrayRef.h"
-#include "llvh/Support/SMLoc.h"
 
-#include "hermes/AST/Context.h"
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/BCGen/HBC/BytecodeInstructionGenerator.h"
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/DebugInfo.h"
-#include "hermes/IR/IR.h"
+#include "hermes/BCGen/HBC/StringKind.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Support/RegExpSerialization.h"
-#include "hermes/Support/StringKind.h"
 #include "hermes/Support/StringTableEntry.h"
 #include "hermes/Utils/Options.h"
 
@@ -60,43 +57,11 @@ class BytecodeFunction {
   /// Used during serialization. \p opcodes will be swapped after this call.
   explicit BytecodeFunction(
       std::vector<opcode_atom_t> &&opcodesAndJumpTables,
-      Function::DefinitionKind definitionKind,
-      ValueKind valueKind,
-      bool strictMode,
       FunctionHeader &&header,
       std::vector<HBCExceptionHandlerInfo> &&exceptionHandlers)
       : opcodesAndJumpTables_(std::move(opcodesAndJumpTables)),
         header_(std::move(header)),
-        exceptions_(std::move(exceptionHandlers)) {
-    switch (definitionKind) {
-      case Function::DefinitionKind::ES6Arrow:
-      case Function::DefinitionKind::ES6Method:
-        header_.flags.prohibitInvoke = FunctionHeaderFlag::ProhibitConstruct;
-        break;
-      case Function::DefinitionKind::ES6Constructor:
-        header_.flags.prohibitInvoke = FunctionHeaderFlag::ProhibitCall;
-        break;
-      default:
-        // ES9.0 9.2.3 step 4 states that generator functions and async
-        // functions cannot be constructed.
-        // We place this check outside the `DefinitionKind` because generator
-        // functions may also be ES6 methods, for example, and are not included
-        // in the DefinitionKind enum.
-        // Note that we only have to check for GeneratorFunctionKind in this
-        // case, because ES6 methods are already checked above, and ES6
-        // constructors are prohibited from being generator functions.
-        // As such, this is the only case in which we must change the
-        // prohibitInvoke flag based on valueKind.
-        header_.flags.prohibitInvoke =
-            (valueKind == ValueKind::GeneratorFunctionKind ||
-             valueKind == ValueKind::AsyncFunctionKind)
-            ? FunctionHeaderFlag::ProhibitConstruct
-            : FunctionHeaderFlag::ProhibitNone;
-        break;
-    }
-    header_.flags.strictMode = strictMode;
-    header_.flags.hasExceptionHandler = exceptions_.size();
-  }
+        exceptions_(std::move(exceptionHandlers)) {}
 
   const FunctionHeader &getHeader() const {
     return header_;
@@ -237,20 +202,15 @@ class BytecodeModule {
   /// Mapping from {global module ID => function index}.
   std::vector<std::pair<uint32_t, uint32_t>> cjsModuleTableStatic_{};
 
+  /// Mapping function ids to the string table offsets that store their
+  /// non-default source code representation that would be used by `toString`.
+  /// These are only available when functions are declared with source
+  /// visibility directives such as 'show source', 'hide source', etc.
+  std::vector<std::pair<uint32_t, uint32_t>> functionSourceTable_{};
+
   /// Storing information about the bytecode, needed when it is loaded by the
   /// runtime.
   BytecodeOptions options_{};
-
-#ifndef HERMESVM_LEAN
-  /// Stores references to source code strings for functions. These are only
-  /// available when compiling from source at run-time, and when lazily compiled
-  /// functions or Function.toString() returning source are enabled.
-  llvh::DenseMap<uint32_t, llvh::SMRange> functionSourceRangeMap_;
-
-  /// If there are any entries in functionSourceRangeMap_ we need to keep
-  /// Context alive so the source buffers don't dissapear from under us.
-  std::shared_ptr<Context> context_;
-#endif
 
  public:
   /// Used during serialization.
@@ -269,6 +229,7 @@ class BytecodeModule {
       uint32_t segmentID,
       std::vector<std::pair<uint32_t, uint32_t>> &&cjsModuleTable,
       std::vector<std::pair<uint32_t, uint32_t>> &&cjsModuleTableStatic,
+      std::vector<std::pair<uint32_t, uint32_t>> &&functionSourceTable,
       BytecodeOptions options)
       : globalFunctionIndex_(globalFunctionIndex),
         stringKinds_(std::move(stringKinds)),
@@ -283,6 +244,7 @@ class BytecodeModule {
         segmentID_(segmentID),
         cjsModuleTable_(std::move(cjsModuleTable)),
         cjsModuleTableStatic_(std::move(cjsModuleTableStatic)),
+        functionSourceTable_(std::move(functionSourceTable)),
         options_(options) {
     functions_.resize(functionCount);
   }
@@ -362,6 +324,10 @@ class BytecodeModule {
     return cjsModuleTableStatic_;
   }
 
+  llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getFunctionSourceTable() const {
+    return functionSourceTable_;
+  }
+
   DebugInfo &getDebugInfo() {
     return debugInfo_;
   }
@@ -412,32 +378,6 @@ class BytecodeModule {
   BytecodeOptions getBytecodeOptions() const {
     return options_;
   }
-
-#ifndef HERMESVM_LEAN
-  /// Called during BytecodeModule generation.
-  void setFunctionSourceRange(uint32_t functionID, llvh::SMRange range) {
-    functionSourceRangeMap_.try_emplace(functionID, range);
-  }
-
-  /// If we retain source code for any functions we also need to preserve
-  /// \c Context. Called during BytecodeModule generation.
-  void setContext(std::shared_ptr<Context> context) {
-    context_ = context;
-  }
-
-  /// Returns source code for a given function if available. Use \c isValid() on
-  /// the result to confirm source is actually available.
-  llvh::SMRange getFunctionSourceRange(uint32_t functionID) {
-    auto it = functionSourceRangeMap_.find(functionID);
-    return it == functionSourceRangeMap_.end() ? llvh::SMRange() : it->second;
-  }
-
-  /// This will only be available if we're retaining source code for at least
-  /// one function in this module.
-  std::shared_ptr<Context> getContext() const {
-    return context_;
-  }
-#endif
 };
 
 } // namespace hbc

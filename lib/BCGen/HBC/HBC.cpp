@@ -211,9 +211,8 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
 
     if (options.stripFunctionNames) {
       addString(kStrippedFunctionName);
-    } else {
-      traverseFunctionNames(M, shouldGenerate, addString);
     }
+    traverseFunctions(M, shouldGenerate, addString, options.stripFunctionNames);
 
     if (!M->getCJSModulesResolved()) {
       traverseCJSModuleNames(M, shouldGenerate, addString);
@@ -240,6 +239,13 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
         BMGen.addCJSModuleStatic(cjsModule->id, index);
       } else {
         BMGen.addCJSModule(index, BMGen.getStringID(cjsModule->filename.str()));
+      }
+    }
+
+    // Add entries to function source table for non-default source.
+    if (!F.isGlobalScope()) {
+      if (auto source = F.getSourceRepresentationStr()) {
+        BMGen.addFunctionSource(index, BMGen.getStringID(*source));
       }
     }
   }
@@ -328,6 +334,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecode(
       segment,
       sourceMapGen,
       std::move(baseBCProvider));
+
   if (options.format == OutputFormatKind::EmitBundle) {
     assert(BM != nullptr);
     BytecodeSerializer BS{OS, options};

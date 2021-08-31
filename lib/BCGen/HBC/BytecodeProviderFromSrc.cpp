@@ -17,18 +17,16 @@
 #include "hermes/SourceMap/SourceMapTranslator.h"
 #include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/SimpleDiagHandler.h"
-#include "hermes/VM/Deserializer.h"
-#include "hermes/VM/Serializer.h"
 
 #ifdef HERMESVM_SERIALIZE
-using hermes::vm::Deserializer;
+#include "hermes/VM/Serializer.h"
+
 using hermes::vm::Serializer;
 #endif
 
 namespace hermes {
 namespace hbc {
 
-#ifndef HERMESVM_LEAN
 namespace {
 bool isSingleFunctionExpression(ESTree::NodePtr ast) {
   auto *prog = llvh::dyn_cast<ESTree::ProgramNode>(ast);
@@ -75,6 +73,8 @@ BCProviderFromSrc::BCProviderFromSrc(
   segmentID_ = module_->getSegmentID();
   cjsModuleTable_ = module_->getCJSModuleTable();
   cjsModuleTableStatic_ = module_->getCJSModuleTableStatic();
+
+  functionSourceTable_ = module_->getFunctionSourceTable();
 
   debugInfo_ = &module_->getDebugInfo();
 }
@@ -166,8 +166,6 @@ BCProviderFromSrc::createBCProviderFromSrc(
     context->setLazyCompilation(true);
   }
 
-  context->setAllowFunctionToStringWithRuntimeSource(
-      compileFlags.allowFunctionToStringWithRuntimeSource);
   context->setGeneratorEnabled(compileFlags.enableGenerator);
   context->setDebugInfoSetting(
       compileFlags.debug ? DebugInfoSetting::ALL : DebugInfoSetting::THROWING);
@@ -241,10 +239,8 @@ BCProviderFromSrc::createBCProviderFromSrc(
   return {std::move(bytecode), std::string{}};
 }
 
-BCProviderLazy::BCProviderLazy(
-    hbc::BytecodeModule *bytecodeModule,
-    hbc::BytecodeFunction *bytecodeFunction)
-    : bytecodeModule_(bytecodeModule), bytecodeFunction_(bytecodeFunction) {
+BCProviderLazy::BCProviderLazy(hbc::BytecodeFunction *bytecodeFunction)
+    : bytecodeFunction_(bytecodeFunction) {
   // Lazy module should always contain one function to begin with.
   functionCount_ = 1;
 }
@@ -279,7 +275,6 @@ void BCProviderLazy::serialize(Serializer &s) const {
   hermes_fatal("Cannot serialize lazy BCProvider");
 }
 #endif // HERMESVM_SERIALIZE
-#endif // HERMESVM_LEAN
 
 } // namespace hbc
 } // namespace hermes

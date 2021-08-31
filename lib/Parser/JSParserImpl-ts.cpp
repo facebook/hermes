@@ -776,7 +776,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTSNamespaceDeclaration() {
 
   while (!check(TokenKind::r_brace)) {
     auto optMember =
-        parseStatementListItem(Param{}, false, AllowImportExport::Yes, members);
+        parseStatementListItem(Param{}, AllowImportExport::Yes, members);
     if (!optMember)
       return None;
   }

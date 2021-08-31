@@ -2196,105 +2196,105 @@ function formatWithOptionsInternal(inspectOptions, args) {
   return str;
 }
 
-// if (internalBinding('config').hasIntl) {
-//   var icu = internalBinding('icu'); // icu.getStringWidth(string, ambiguousAsFullWidth, expandEmojiSequence)
-//   // Defaults: ambiguousAsFullWidth = false; expandEmojiSequence = true;
-//   // TODO(BridgeAR): Expose the options to the user. That is probably the
-//   // best thing possible at the moment, since it's difficult to know what
-//   // the receiving end supports.
+if (false) {//(internalBinding('config').hasIntl) {
+  var icu = internalBinding('icu'); // icu.getStringWidth(string, ambiguousAsFullWidth, expandEmojiSequence)
+  // Defaults: ambiguousAsFullWidth = false; expandEmojiSequence = true;
+  // TODO(BridgeAR): Expose the options to the user. That is probably the
+  // best thing possible at the moment, since it's difficult to know what
+  // the receiving end supports.
 
-//   getStringWidth = function getStringWidth(str) {
-//     var removeControlChars = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
-//     var width = 0;
-//     if (removeControlChars) str = stripVTControlCharacters(str);
+  getStringWidth = function getStringWidth(str) {
+    var removeControlChars = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+    var width = 0;
+    if (removeControlChars) str = stripVTControlCharacters(str);
 
-//     for (var i = 0; i < str.length; i++) {
-//       // Try to avoid calling into C++ by first handling the ASCII portion of
-//       // the string. If it is fully ASCII, we skip the C++ part.
-//       var code = str.charCodeAt(i);
+    for (var i = 0; i < str.length; i++) {
+      // Try to avoid calling into C++ by first handling the ASCII portion of
+      // the string. If it is fully ASCII, we skip the C++ part.
+      var code = str.charCodeAt(i);
 
-//       if (code >= 127) {
-//         width += icu.getStringWidth(str.slice(i).normalize('NFC'));
-//         break;
-//       }
+      if (code >= 127) {
+        width += icu.getStringWidth(str.slice(i).normalize('NFC'));
+        break;
+      }
 
-//       width += code >= 32 ? 1 : 0;
-//     }
+      width += code >= 32 ? 1 : 0;
+    }
 
-//     return width;
-//   };
-// } else {
-//   /**
-//    * Returns the number of columns required to display the given string.
-//    */
-//   getStringWidth = function getStringWidth(str) {
-//     var removeControlChars = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
-//     var width = 0;
-//     if (removeControlChars) str = stripVTControlCharacters(str);
-//     str = StringPrototypeNormalize(str, 'NFC');
+    return width;
+  };
+} else {
+  /**
+   * Returns the number of columns required to display the given string.
+   */
+  getStringWidth = function getStringWidth(str) {
+    var removeControlChars = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+    var width = 0;
+    if (removeControlChars) str = stripVTControlCharacters(str);
+    str = StringPrototypeNormalize(str, 'NFC');
 
-//     var _iterator6 = _createForOfIteratorHelper(new SafeStringIterator(str)),
-//         _step6;
+    var _iterator6 = _createForOfIteratorHelper(new SafeStringIterator(str)),
+        _step6;
 
-//     try {
-//       for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
-//         var _char = _step6.value;
-//         var code = StringPrototypeCodePointAt(_char, 0);
+    try {
+      for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
+        var _char = _step6.value;
+        var code = StringPrototypeCodePointAt(_char, 0);
 
-//         if (isFullWidthCodePoint(code)) {
-//           width += 2;
-//         } else if (!isZeroWidthCodePoint(code)) {
-//           width++;
-//         }
-//       }
-//     } catch (err) {
-//       _iterator6.e(err);
-//     } finally {
-//       _iterator6.f();
-//     }
+        if (isFullWidthCodePoint(code)) {
+          width += 2;
+        } else if (!isZeroWidthCodePoint(code)) {
+          width++;
+        }
+      }
+    } catch (err) {
+      _iterator6.e(err);
+    } finally {
+      _iterator6.f();
+    }
 
-//     return width;
-//   };
-//   /**
-//    * Returns true if the character represented by a given
-//    * Unicode code point is full-width. Otherwise returns false.
-//    */
+    return width;
+  };
+  /**
+   * Returns true if the character represented by a given
+   * Unicode code point is full-width. Otherwise returns false.
+   */
 
 
-//   var isFullWidthCodePoint = function isFullWidthCodePoint(code) {
-//     // Code points are partially derived from:
-//     // https://www.unicode.org/Public/UNIDATA/EastAsianWidth.txt
-//     return code >= 0x1100 && (code <= 0x115f || // Hangul Jamo
-//     code === 0x2329 || // LEFT-POINTING ANGLE BRACKET
-//     code === 0x232a || // RIGHT-POINTING ANGLE BRACKET
-//     // CJK Radicals Supplement .. Enclosed CJK Letters and Months
-//     code >= 0x2e80 && code <= 0x3247 && code !== 0x303f || // Enclosed CJK Letters and Months .. CJK Unified Ideographs Extension A
-//     code >= 0x3250 && code <= 0x4dbf || // CJK Unified Ideographs .. Yi Radicals
-//     code >= 0x4e00 && code <= 0xa4c6 || // Hangul Jamo Extended-A
-//     code >= 0xa960 && code <= 0xa97c || // Hangul Syllables
-//     code >= 0xac00 && code <= 0xd7a3 || // CJK Compatibility Ideographs
-//     code >= 0xf900 && code <= 0xfaff || // Vertical Forms
-//     code >= 0xfe10 && code <= 0xfe19 || // CJK Compatibility Forms .. Small Form Variants
-//     code >= 0xfe30 && code <= 0xfe6b || // Halfwidth and Fullwidth Forms
-//     code >= 0xff01 && code <= 0xff60 || code >= 0xffe0 && code <= 0xffe6 || // Kana Supplement
-//     code >= 0x1b000 && code <= 0x1b001 || // Enclosed Ideographic Supplement
-//     code >= 0x1f200 && code <= 0x1f251 || // Miscellaneous Symbols and Pictographs 0x1f300 - 0x1f5ff
-//     // Emoticons 0x1f600 - 0x1f64f
-//     code >= 0x1f300 && code <= 0x1f64f || // CJK Unified Ideographs Extension B .. Tertiary Ideographic Plane
-//     code >= 0x20000 && code <= 0x3fffd);
-//   };
+  var isFullWidthCodePoint = function isFullWidthCodePoint(code) {
+    // Code points are partially derived from:
+    // https://www.unicode.org/Public/UNIDATA/EastAsianWidth.txt
+    return code >= 0x1100 && (code <= 0x115f || // Hangul Jamo
+    code === 0x2329 || // LEFT-POINTING ANGLE BRACKET
+    code === 0x232a || // RIGHT-POINTING ANGLE BRACKET
+    // CJK Radicals Supplement .. Enclosed CJK Letters and Months
+    code >= 0x2e80 && code <= 0x3247 && code !== 0x303f || // Enclosed CJK Letters and Months .. CJK Unified Ideographs Extension A
+    code >= 0x3250 && code <= 0x4dbf || // CJK Unified Ideographs .. Yi Radicals
+    code >= 0x4e00 && code <= 0xa4c6 || // Hangul Jamo Extended-A
+    code >= 0xa960 && code <= 0xa97c || // Hangul Syllables
+    code >= 0xac00 && code <= 0xd7a3 || // CJK Compatibility Ideographs
+    code >= 0xf900 && code <= 0xfaff || // Vertical Forms
+    code >= 0xfe10 && code <= 0xfe19 || // CJK Compatibility Forms .. Small Form Variants
+    code >= 0xfe30 && code <= 0xfe6b || // Halfwidth and Fullwidth Forms
+    code >= 0xff01 && code <= 0xff60 || code >= 0xffe0 && code <= 0xffe6 || // Kana Supplement
+    code >= 0x1b000 && code <= 0x1b001 || // Enclosed Ideographic Supplement
+    code >= 0x1f200 && code <= 0x1f251 || // Miscellaneous Symbols and Pictographs 0x1f300 - 0x1f5ff
+    // Emoticons 0x1f600 - 0x1f64f
+    code >= 0x1f300 && code <= 0x1f64f || // CJK Unified Ideographs Extension B .. Tertiary Ideographic Plane
+    code >= 0x20000 && code <= 0x3fffd);
+  };
 
-//   var isZeroWidthCodePoint = function isZeroWidthCodePoint(code) {
-//     return code <= 0x1F || // C0 control codes
-//     code >= 0x7F && code <= 0x9F || // C1 control codes
-//     code >= 0x300 && code <= 0x36F || // Combining Diacritical Marks
-//     code >= 0x200B && code <= 0x200F || // Modifying Invisible Characters
-//     // Combining Diacritical Marks for Symbols
-//     code >= 0x20D0 && code <= 0x20FF || code >= 0xFE00 && code <= 0xFE0F || // Variation Selectors
-//     code >= 0xFE20 && code <= 0xFE2F || // Combining Half Marks
-//     code >= 0xE0100 && code <= 0xE01EF; // Variation Selectors
-//   };
-// }
+  var isZeroWidthCodePoint = function isZeroWidthCodePoint(code) {
+    return code <= 0x1F || // C0 control codes
+    code >= 0x7F && code <= 0x9F || // C1 control codes
+    code >= 0x300 && code <= 0x36F || // Combining Diacritical Marks
+    code >= 0x200B && code <= 0x200F || // Modifying Invisible Characters
+    // Combining Diacritical Marks for Symbols
+    code >= 0x20D0 && code <= 0x20FF || code >= 0xFE00 && code <= 0xFE0F || // Variation Selectors
+    code >= 0xFE20 && code <= 0xFE2F || // Combining Half Marks
+    code >= 0xE0100 && code <= 0xE01EF; // Variation Selectors
+  };
+}
 /**
  * Remove all VT control characters. Use to estimate displayed string width.
  */

@@ -14,6 +14,7 @@ This script is intended to be compliant with both py2 and py3.
 """
 
 import argparse
+import io
 from os import path
 
 
@@ -22,25 +23,27 @@ def main():
     parser.add_argument("files", nargs="*")
     args = parser.parse_args()
 
-    print("({")
-    for arg in args.files:
-        # Ensure the file exists before writing out anything
-        if not path.exists(arg):
-            raise Exception('File "{}" doesn\'t exist'.format(arg))
+    with io.open(args.files[0], "w", encoding="utf-8") as o:
 
-        # Extracts the filename out of the full path and excludes the ".js" extension
-        print(
-            '"{filename}" : (function(exports, require, module, __filename, __dirname) {{'.format(
-                filename=arg[
-                    arg.index("nodelib") + len("nodelib") + 1 : -len(".js")
-                ].replace("\\", "/")
+        o.write("({")
+        for arg in args.files[1:]:
+            # Ensure the file exists before writing out anything
+            if not path.exists(arg):
+                raise Exception('File "{}" doesn\'t exist'.format(arg))
+
+            # Extracts the filename out of the full path and excludes the ".js" extension
+            o.write(
+                '"{filename}" : (function(exports, require, module, internalBinding, __filename, __dirname) {{'.format(
+                    filename=arg[
+                        arg.index("nodelib") + len("nodelib") + 1 : -len(".js")
+                    ].replace("\\", "/")
+                )
             )
-        )
-        with open(arg, "r") as f:
-            print(f.read())
-        print("}),")
+            with io.open(arg, "r", encoding="utf-8") as f:
+                o.write(f.read())
+            o.write("}),")
 
-    print("});")
+        o.write("});")
 
 
 if __name__ == "__main__":

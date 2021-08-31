@@ -69,7 +69,7 @@ print(new Date(-1, 2, 15, 15, 1, 37, 243).toString());
 print(new Date(NaN, 2, 15, 15, 1, 37, 243).toString());
 // CHECK-NEXT: Invalid Date
 print(new Date('2016T12:30').toString());
-// CHECK-NEXT: Fri Jan 01 2016 05:30:00 GMT-0700
+// CHECK-NEXT: Fri Jan 01 2016 12:30:00 GMT-0700
 
 print('@@toPrimitive');
 // CHECK-LABEL: @@toPrimitive
@@ -109,7 +109,7 @@ print(new Date(-1, 0, 0, 0, 0, 0).toUTCString());
 print('toJSON');
 // CHECK-LABEL: toJSON
 print(new Date('2016T12:30').toJSON());
-// CHECK-NEXT: 2016-01-01T12:30:00.000Z
+// CHECK-NEXT: 2016-01-01T19:30:00.000Z
 print(Date.prototype.toJSON.call({valueOf: function() {return Infinity;}}));
 // CHECK-NEXT: null
 try {
@@ -191,7 +191,7 @@ print(Date.parse('2016T12:30:00.000Z'));
 print(Date.parse('2016'));
 // CHECK-NEXT: 1451606400000
 print(Date.parse('2016T12:30'));
-// CHECK-NEXT: 1451651400000
+// CHECK-NEXT: 1451676600000
 print(Date.parse('2016T12:30:00.000-07:00'));
 // CHECK-NEXT: 1451676600000
 print(Date.parse('2016T12:30:47.1-07:00'));
@@ -244,6 +244,10 @@ print(Date.parse('Mon Jul 16 2019 13:1525 GMT-0700'));
 // CHECK-NEXT: NaN
 print(Date.parse('Mon Jul 16 2019 13:1525 GMT'));
 // CHECK-NEXT: NaN
+print(Date.parse('Mon Jul 16 2019 00:00:00'));
+// CHECK-NEXT: 1563260400000
+print(Date.parse('Mon Jul 16 2019'));
+// CHECK-NEXT: 1563260400000
 print(Date.parse('2021-04-10T01:00:00.000-01:30'));
 // CHECK-NEXT: 1618021800000
 
@@ -291,6 +295,8 @@ print(Date.parse('Tue May 05 2020  00:00:00'));
 print(Date.parse('Tue May 05 2020 00:00:00  PDT'));
 // CHECK-NEXT: 1588662000000
 print(Date.parse('Tue May 05 2020 00:00:00'.padEnd(60)));  // trailing spaces.
+// CHECK-NEXT: 1588662000000
+print(Date.parse('Tue May 05 2020'.padEnd(60)));
 // CHECK-NEXT: 1588662000000
 
 // Quick check that getters work; internal functions are unit tested instead.

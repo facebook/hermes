@@ -13,6 +13,7 @@
 const HermesParser = require('./HermesParser');
 const HermesToBabelAdapter = require('./HermesToBabelAdapter');
 const HermesToESTreeAdapter = require('./HermesToESTreeAdapter');
+const HermesTransformer = require('./HermesTransformer');
 
 type Options = {
   allowReturnOutsideFunction?: boolean,
@@ -43,7 +44,7 @@ function getOptions(options: Options) {
     options.sourceType !== 'module'
   ) {
     throw new Error(
-      'sourceType option must be "script", "module", or "unambiguous" if set',
+      'sourceType option must be "script", "module", or "unambiguous" if set'
     );
   }
 
@@ -68,4 +69,7 @@ function parse(code: string, opts: Options = {}): Program {
   return adapter.transform(ast);
 }
 
-module.exports = {parse};
+module.exports = {
+  parse,
+  transformFromAstSync: HermesTransformer.transformFromAstSync,
+};

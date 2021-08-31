@@ -19,7 +19,7 @@ function protoIsFirst(func) {
 //CHECK-NEXT:  %0 = StoreFrameInst %func, [func]
 //CHECK-NEXT:  %1 = LoadFrameInst [func]
 //CHECK-NEXT:  %2 = CallInst %1, undefined : undefined
-//CHECK-NEXT:  %3 = AllocObjectInst 3 : number, %2
+//CHECK-NEXT:  %3 = AllocObjectInst 2 : number, %2
 //CHECK-NEXT:  %4 = StoreNewOwnPropertyInst 2 : number, %3 : object, "a" : string, true : boolean
 //CHECK-NEXT:  %5 = StoreNewOwnPropertyInst 3 : number, %3 : object, "b" : string, true : boolean
 //CHECK-NEXT:  %6 = ReturnInst %3 : object
@@ -32,7 +32,7 @@ function protoIsConst1() {
 //CHECK-LABEL:function protoIsConst1()
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = AllocObjectInst 2 : number, null : null
+//CHECK-NEXT:  %0 = AllocObjectInst 1 : number, null : null
 //CHECK-NEXT:  %1 = StoreNewOwnPropertyInst 2 : number, %0 : object, "a" : string, true : boolean
 //CHECK-NEXT:  %2 = ReturnInst %0 : object
 
@@ -42,7 +42,7 @@ function protoIsConst2() {
 //CHECK-LABEL:function protoIsConst2()
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = AllocObjectInst 2 : number, 10 : number
+//CHECK-NEXT:  %0 = AllocObjectInst 1 : number, 10 : number
 //CHECK-NEXT:  %1 = StoreNewOwnPropertyInst 3 : number, %0 : object, "b" : string, true : boolean
 //CHECK-NEXT:  %2 = ReturnInst %0 : object
 
@@ -52,7 +52,7 @@ function protoIsConst3() {
 //CHECK-LABEL:function protoIsConst3()
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = AllocObjectInst 2 : number, null : null
+//CHECK-NEXT:  %0 = AllocObjectInst 1 : number, null : null
 //CHECK-NEXT:  %1 = StoreNewOwnPropertyInst 4 : number, %0 : object, "c" : string, true : boolean
 //CHECK-NEXT:  %2 = ReturnInst %0 : object
 
@@ -65,7 +65,7 @@ function protoIsDynamic(func, getParent) {
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StoreFrameInst %func, [func]
 //CHECK-NEXT:  %1 = StoreFrameInst %getParent, [getParent]
-//CHECK-NEXT:  %2 = AllocObjectInst 3 : number, empty
+//CHECK-NEXT:  %2 = AllocObjectInst 2 : number, empty
 //CHECK-NEXT:  %3 = LoadFrameInst [func]
 //CHECK-NEXT:  %4 = CallInst %3, undefined : undefined
 //CHECK-NEXT:  %5 = StoreNewOwnPropertyInst %4, %2 : object, "a" : string, true : boolean

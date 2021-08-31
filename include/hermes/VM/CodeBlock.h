@@ -156,10 +156,12 @@ class CodeBlock final
       uint32_t idx,
       unsigned int numLiterals) const;
 
-  std::pair<SerializedLiteralParser, SerializedLiteralParser>
-  getObjectBufferIter(
-      uint32_t keyIdx,
-      uint32_t valIdx,
+  SerializedLiteralParser getObjectBufferKeyIter(
+      uint32_t idx,
+      unsigned int numLiterals) const;
+
+  SerializedLiteralParser getObjectBufferValueIter(
+      uint32_t idx,
       unsigned int numLiterals) const;
 
   RuntimeModule *getRuntimeModule() const {
@@ -202,6 +204,10 @@ class CodeBlock final
   /// the code block \p codeBlock.
   OptValue<hbc::DebugSourceLocation> getSourceLocation(
       uint32_t offset = 0) const;
+
+  /// Look up the function source table and \return the String ID associated
+  /// with the current function if an entry is found, or llvh::None if not.
+  OptValue<uint32_t> getFunctionSourceID() const;
 
   OptValue<uint32_t> getDebugLexicalDataOffset() const;
 
@@ -311,17 +317,6 @@ class CodeBlock final
   /// the result must be deallocated via delete, which is overridden.
   /// \param runtimeModule The RuntimeModule the CodeBlock belongs to.
   static CodeBlock *deserialize(Deserializer &d, RuntimeModule *runtimeModule);
-#endif
-
-#ifndef HERMESVM_LEAN
-  /// Returns true if source code is available for the function backing this
-  /// CodeBlock. This will only be the case if the function is lazily compiled,
-  /// or we've enabled Function.toString() to return source and compilation was
-  /// done at run-time.
-  llvh::StringRef getFunctionSource() const;
-
-  /// Returns true if \c getFunctionSource() above will return function source.
-  bool hasFunctionSource() const;
 #endif
 };
 

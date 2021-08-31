@@ -1663,9 +1663,6 @@ class GCBase {
   uint64_t debugAllocationCounter_{0};
 #endif
 
-  /// The table to retrieve metadata about each cell kind.
-  const MetadataTable metaTable_;
-
   /// User-supplied callbacks invoked by the GC to query information or perform
   /// tasks.
   GCCallbacks *const gcCallbacks_;

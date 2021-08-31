@@ -19,6 +19,10 @@ namespace hbc {
 class BackendContext;
 }
 
+#ifdef HERMES_RUN_WASM
+class EmitWasmIntrinsicsContext;
+#endif // HERMES_RUN_WASM
+
 struct CodeGenerationSettings {
   /// Whether we should emit TDZ checks.
   bool enableTDZ{true};
@@ -60,6 +64,9 @@ struct OptimizationSettings {
 
   /// Attempt to resolve CommonJS require() calls at compile time.
   bool staticRequire{false};
+
+  /// Recognize and emit Asm.js/Wasm unsafe compiler intrinsics.
+  bool useUnsafeIntrinsics{false};
 };
 
 enum class DebugInfoSetting {
@@ -91,6 +98,30 @@ enum class ParseFlowSetting {
   /// containing two comparisons, even though it could otherwise be interpreted
   /// as a call expression with Flow type arguments.
   UNAMBIGUOUS,
+};
+
+/// An enum to track the "source visibility" of functions. This notion is coined
+/// to implement "directives" such as 'hide source' and 'sensitive' defined by
+/// https://github.com/tc39/proposal-function-implementation-hiding, as well as
+/// 'show source' Hermes proposed to explicitly preserve source for `toString`.
+///
+/// Members are ordered in an increasingly stronger manner, where only later
+/// source visibility can override the earlier but not vice versa.
+enum class SourceVisibility {
+  /// The implementation-default behavior, e.g. `toString` prints
+  /// `{ [bytecode] }` in Hermes.
+  Default,
+
+  /// Enforce the source code text to be available for the `toString` use.
+  ShowSource,
+
+  /// Enforce to have the syntax of NativeFunction, e.g. `toString` prints
+  /// `{ [native code] }`.
+  HideSource,
+
+  /// Considered security-sensitive, e.g. `toString` printed as NativeFunction;
+  /// hidden from error stack trace to protect from leaking its existence.
+  Sensitive,
 };
 
 /// Holds shared dependencies and state.
@@ -148,11 +179,6 @@ class Context {
   /// bytes.
   unsigned preemptiveFileCompilationThreshold_{0};
 
-  /// Allows Function.toString() to return original source code. As with lazy
-  /// compilation this requires source buffers, and hence this Context instance
-  /// to be retained after compilation.
-  bool allowFunctionToStringWithRuntimeSource_{false};
-
   /// If true, do not error on return statements that are not within functions.
   bool allowReturnOutsideFunction_{false};
 
@@ -193,6 +219,10 @@ class Context {
   /// The HBC backend context. We use a shared pointer to avoid any dependencies
   /// on its destructor.
   std::shared_ptr<hbc::BackendContext> hbcBackendContext_{};
+
+#ifdef HERMES_RUN_WASM
+  std::shared_ptr<EmitWasmIntrinsicsContext> wasmIntrinsicsContext_{};
+#endif // HERMES_RUN_WASM
 
  public:
   explicit Context(
@@ -349,14 +379,6 @@ class Context {
     preemptiveFileCompilationThreshold_ = byteCount;
   };
 
-  bool allowFunctionToStringWithRuntimeSource() const {
-    return allowFunctionToStringWithRuntimeSource_;
-  }
-
-  void setAllowFunctionToStringWithRuntimeSource(bool v) {
-    allowFunctionToStringWithRuntimeSource_ = v;
-  }
-
   bool allowReturnOutsideFunction() const {
     return allowReturnOutsideFunction_;
   }
@@ -379,6 +401,10 @@ class Context {
 
   bool getStaticBuiltinOptimization() const {
     return optimizationSettings_.staticBuiltins;
+  }
+
+  bool getUseUnsafeIntrinsics() const {
+    return optimizationSettings_.useUnsafeIntrinsics;
   }
 
   const CodeGenerationSettings &getCodeGenerationSettings() const {
@@ -407,6 +433,17 @@ class Context {
       std::shared_ptr<hbc::BackendContext> hbcBackendContext) {
     hbcBackendContext_ = std::move(hbcBackendContext);
   }
+
+#ifdef HERMES_RUN_WASM
+  EmitWasmIntrinsicsContext *getWasmIntrinsicsContext() {
+    return wasmIntrinsicsContext_.get();
+  }
+
+  void setWasmIntrinsicsContext(
+      std::shared_ptr<EmitWasmIntrinsicsContext> wasmIntrinsicsContext) {
+    wasmIntrinsicsContext_ = std::move(wasmIntrinsicsContext);
+  }
+#endif // HERMES_RUN_WASM
 };
 
 } // namespace hermes

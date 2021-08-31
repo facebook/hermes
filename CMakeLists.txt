@@ -55,6 +55,17 @@ endif()
 # https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_SYSROOT.html
 set(CMAKE_OSX_SYSROOT ${HERMES_APPLE_TARGET_PLATFORM})
 
+if(HERMES_APPLE_TARGET_PLATFORM MATCHES "catalyst")
+  set(CMAKE_OSX_SYSROOT "macosx")
+  set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-target x86_64-arm64-apple-ios14.0-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include")
+  set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} "-target x86_64-arm64-apple-ios14.0-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include")
+  set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+  set(CMAKE_HAVE_THREADS_LIBRARY 1)
+  set(CMAKE_USE_WIN32_THREADS_INIT 0)
+  set(CMAKE_USE_PTHREADS_INIT 1)
+  set(THREADS_PREFER_PTHREAD_FLAG ON)
+endif()
+
 # This must be consistent with the release_version in:
 # - android/build.gradle
 # - npm/package.json
@@ -216,6 +227,9 @@ set(HERMESVM_EXCEPTION_ON_OOM OFF CACHE BOOL
 set(HERMESVM_PLATFORM_LOGGING OFF CACHE BOOL
     "hermesLog(...) is enabled, using the platform's logging mechanism")
 
+set(HERMES_RUN_WASM OFF CACHE BOOL
+    "Emit Asm.js/Wasm unsafe compiler intrinsics")
+
 set(HERMES_USE_FLOWPARSER OFF CACHE BOOL
   "Use libflowparser for parsing es6")
 
@@ -250,21 +264,14 @@ set(HERMES_BUILD_APPLE_FRAMEWORK ON CACHE BOOL
 set(HERMES_BUILD_APPLE_DSYM OFF CACHE BOOL
   "Whether to build a DWARF debugging symbols bundle")
 
+set(HERMES_BUILD_NODE_HERMES OFF CACHE BOOL "Whether to build node-hermes")
+
+set(HERMES_BUILD_LEAN_LIBHERMES OFF CACHE BOOL "Exclude the Hermes compiler from libhermes.")
+
+set(HERMES_BUILD_SHARED_JSI OFF CACHE BOOL "Build JSI as a shared library.")
+
 if (HERMES_IS_ANDROID)
-  set(HERMES_IS_MOBILE_BUILD TRUE)
-
   add_definitions(-DHERMES_PLATFORM_UNICODE=HERMES_PLATFORM_UNICODE_JAVA)
-
-  # The toolchain passes -Wa,--noexecstack which is valid for compiling
-  # but not for linking. Just ignore it.
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-command-line-argument")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-command-line-argument")
-
-  # JS developers aren't VM developers. Give them a faster build.
-  set(CMAKE_CXX_FLAGS_DEBUG "-O3 -g -DNDEBUG")
-
-  # The release build can focus on size.
-  set(CMAKE_CXX_FLAGS_RELEASE "-Os -DNDEBUG")
 endif()
 
 if(HERMES_BUILD_APPLE_DSYM)
@@ -383,6 +390,9 @@ if(HERMESVM_EXCEPTION_ON_OOM)
 endif()
 if(HERMESVM_PLATFORM_LOGGING)
     add_definitions(-DHERMESVM_PLATFORM_LOGGING)
+endif()
+if(HERMES_RUN_WASM)
+    add_definitions(-DHERMES_RUN_WASM)
 endif()
 if (NOT (ANDROID_LINUX_PERF_PATH STREQUAL ""))
   add_definitions(-DANDROID_LINUX_PERF_PATH="${ANDROID_LINUX_PERF_PATH}")
@@ -602,6 +612,7 @@ add_subdirectory(public)
 add_subdirectory(external)
 add_subdirectory(API)
 add_subdirectory(android/intltest/java/com/facebook/hermes/test)
+add_subdirectory(unsupported)
 
 if(HERMES_ENABLE_TOOLS)
   add_subdirectory(tools)
@@ -610,7 +621,10 @@ endif()
 # Make sure JSI is compiled with PIC
 set(save_CMAKE_POSITION_INDEPENDENT_CODE ${CMAKE_POSITION_INDEPENDENT_CODE})
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(save_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+set(BUILD_SHARED_LIBS ${HERMES_BUILD_SHARED_JSI})
 add_subdirectory(${HERMES_JSI_DIR}/jsi ${CMAKE_CURRENT_BINARY_DIR}/jsi)
+set(BUILD_SHARED_LIBS ${save_BUILD_SHARED_LIBS})
 set(CMAKE_POSITION_INDEPENDENT_CODE ${save_CMAKE_POSITION_INDEPENDENT_CODE})
 
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/facebook)
@@ -638,8 +652,11 @@ if(HERMES_ENABLE_TEST_SUITE)
     hbc-deltaprep
     hbc-diff
     dependency-extractor
-    node-hermes
     )
+
+  if(HERMES_BUILD_NODE_HERMES)
+    list(APPEND HERMES_TEST_DEPS node-hermes)
+  endif()
 
   set(coverage_directory "")
   if (HERMES_ENABLE_CODE_COVERAGE)
@@ -660,9 +677,10 @@ if(HERMES_ENABLE_TEST_SUITE)
     hbcdump=${HERMES_TOOLS_OUTPUT_DIR}/hbcdump
     hbc-deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
     hbc_diff=${HERMES_TOOLS_OUTPUT_DIR}/hbc-diff
-    node-hermes=${HERMES_TOOLS_OUTPUT_DIR}/node-hermes
     build_mode=${HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST}
     exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
+    node_hermes_enabled_flag=${HERMES_BUILD_NODE_HERMES}
+    node-hermes=${HERMES_TOOLS_OUTPUT_DIR}/node-hermes
     serialize_enabled=${HERMESVM_SERIALIZE}
     profiler=${HERMES_PROFILER_MODE_IN_LIT_TEST}
     gc=${HERMESVM_GCKIND}

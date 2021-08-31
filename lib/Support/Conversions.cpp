@@ -167,3 +167,9 @@ size_t numberToString(double m, char *dest, size_t destSize) {
   return destPtr - dest - 1;
 }
 } // namespace hermes
+
+extern "C" {
+size_t hermes_numberToString(double m, char *dest, size_t destSize) {
+  return hermes::numberToString(m, dest, destSize);
+}
+}

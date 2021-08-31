@@ -93,6 +93,8 @@ class BytecodeSerializer {
 
   void serializeCJSModuleTable(BytecodeModule &BM);
 
+  void serializeFunctionSourceTable(BytecodeModule &BM);
+
   void serializeDebugInfo(BytecodeModule &BM);
 
   void serializeArrayBuffer(BytecodeModule &BM);
@@ -120,6 +122,7 @@ class BytecodeSerializer {
   void visitRegExpTable();
   void visitRegExpStorage();
   void visitCJSModuleTable();
+  void visitFunctionSourceTable();
 
  public:
   explicit BytecodeSerializer(

@@ -93,6 +93,9 @@ DEF_VALUE(HBCCreateFunctionInst, CreateFunctionInst)
 DEF_VALUE(HBCCreateGeneratorInst, Instruction)
 #endif
 MARK_LAST(CreateFunctionInst)
+#ifdef HERMES_RUN_WASM
+DEF_VALUE(CallIntrinsicInst, Instruction)
+#endif
 
 MARK_FIRST(TerminatorInst)
 DEF_VALUE(TerminatorInst, Instruction)

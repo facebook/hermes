@@ -8,7 +8,6 @@
 #include "hermes/VM/CellKind.h"
 
 #include <cassert>
-#include <cstddef>
 
 namespace hermes {
 namespace vm {

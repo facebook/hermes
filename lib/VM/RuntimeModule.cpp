@@ -16,7 +16,6 @@
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StringPrimitive.h"
-#include "hermes/VM/StringView.h"
 
 namespace hermes {
 namespace vm {
@@ -171,12 +170,11 @@ RuntimeModule *RuntimeModule::createLazyModule(
   // Set the bcProvider's BytecodeModule to point to the parent's.
   assert(parent->isInitialized() && "Parent module must have been initialized");
 
-  auto bcModule =
-      ((hbc::BCProviderFromSrc *)parent->getBytecode())->getBytecodeModule();
-  auto bcFunction = &bcModule->getFunction(functionID);
+  auto *bcFunction = &((hbc::BCProviderFromSrc *)parent->getBytecode())
+                          ->getBytecodeModule()
+                          ->getFunction(functionID);
 
-  RM->bcProvider_ =
-      hbc::BCProviderLazy::createBCProviderLazy(bcModule, bcFunction);
+  RM->bcProvider_ = hbc::BCProviderLazy::createBCProviderLazy(bcFunction);
 
   // We don't know which function index this block will eventually represent,
   // so just add it as 0 to ensure ownership. We'll move it later in

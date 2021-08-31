@@ -9,10 +9,12 @@
 #define HERMES_PARSER_PREPARSER_H
 
 #include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/SmallString.h"
 #include "llvh/ADT/SmallVector.h"
 #include "llvh/Support/SMLoc.h"
 
 namespace hermes {
+
 namespace parser {
 using llvh::SMLoc;
 
@@ -40,6 +42,11 @@ struct PreParsedFunctionInfo {
 
   /// Whether or not the function is strict.
   bool strictMode;
+
+  /// List of directives.
+  /// Note that we can't use \c UniqueString* here since they are
+  /// arena-allocated and reclaimed between parse passes.
+  llvh::SmallVector<llvh::SmallString<24>, 1> directives{};
 };
 
 /// Per buffer information from preparsing.

@@ -19,8 +19,6 @@
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvh/Support/ConvertUTF.h"
-
 namespace hermes {
 namespace vm {
 
@@ -101,35 +99,53 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
         "Can't call Function.prototype.toString() on non-callable");
   }
 
-#ifndef HERMESVM_LEAN
-  JSFunction *jsFunc;
-  if (runtime->getAllowFunctionToStringWithRuntimeSource() &&
-      (jsFunc = dyn_vmcast<JSFunction>(*func)) &&
-      jsFunc->getCodeBlock()->hasFunctionSource()) {
-    auto code = jsFunc->getCodeBlock()->getFunctionSource();
-    if (isAllASCII(std::begin(code), std::end(code))) {
-      return vm::StringPrimitive::createEfficient(
-          runtime, llvh::makeArrayRef(std::begin(code), std::end(code)));
+  /// Append the current function name to the \p strBuf.
+  auto appendFunctionName = [&func, &runtime](SmallU16String<64> &strBuf) {
+    // Extract the name.
+    auto propRes = JSObject::getNamed_RJS(
+        func, runtime, Predefined::getSymbolID(Predefined::name));
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
     }
-    std::u16string out;
-    out.resize(code.size());
-    const llvh::UTF8 *sourceStart = (const llvh::UTF8 *)code.data();
-    const llvh::UTF8 *sourceEnd = sourceStart + code.size();
-    llvh::UTF16 *targetStart = (llvh::UTF16 *)&out[0];
-    llvh::UTF16 *targetEnd = targetStart + out.size();
-    auto cRes = ConvertUTF8toUTF16(
-        &sourceStart,
-        sourceEnd,
-        &targetStart,
-        targetEnd,
-        llvh::lenientConversion);
-    (void)cRes;
-    assert(
-        cRes != llvh::ConversionResult::targetExhausted &&
-        "not enough space allocated for UTF16 conversion");
-    return vm::StringPrimitive::createEfficient(runtime, std::move(out));
+
+    // Convert the name to string, unless it is undefined.
+    if (!(*propRes)->isUndefined()) {
+      auto strRes =
+          toString_RJS(runtime, runtime->makeHandle(std::move(*propRes)));
+      if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      strRes->get()->appendUTF16String(strBuf);
+    }
+    return ExecutionStatus::RETURNED;
+  };
+
+  // Deal with JSFunctions that has a source String ID. That implies this
+  // function need a non-default toString implementation.
+  if (auto jsFunc = dyn_vmcast<JSFunction>(*func)) {
+    if (auto sourceID = jsFunc->getCodeBlock()->getFunctionSourceID()) {
+      StringPrimitive *source =
+          jsFunc->getCodeBlock()
+              ->getRuntimeModule()
+              ->getLazyRootModule()
+              ->getStringPrimFromStringIDMayAllocate(*sourceID);
+      // Empty source marks implementation-hidden function, fabricate a source
+      // code string that imitate a NativeFunction.
+      if (source->getStringLength() == 0) {
+        SmallU16String<64> strBuf{};
+        strBuf.append("function ");
+        if (LLVM_UNLIKELY(
+                appendFunctionName(strBuf) == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        strBuf.append("() { [native code] }");
+        return StringPrimitive::create(runtime, strBuf);
+      } else {
+        // Otherwise, it's the preserved source code.
+        return HermesValue::encodeStringValue(source);
+      }
+    };
   }
-#endif
 
   SmallU16String<64> strBuf{};
   if (vmisa<JSAsyncFunction>(*func)) {
@@ -140,21 +156,8 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
     strBuf.append("function ");
   }
 
-  // Extract the name.
-  auto propRes = JSObject::getNamed_RJS(
-      func, runtime, Predefined::getSymbolID(Predefined::name));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+  if (LLVM_UNLIKELY(appendFunctionName(strBuf) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
-  }
-
-  // Convert the name to string, unless it is undefined.
-  if (!(*propRes)->isUndefined()) {
-    auto strRes =
-        toString_RJS(runtime, runtime->makeHandle(std::move(*propRes)));
-    if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    strRes->get()->appendUTF16String(strBuf);
   }
 
   // Formal parameters and the rest of the body.

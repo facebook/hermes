@@ -441,7 +441,6 @@ LLVM_ATTRIBUTE_NOINLINE static void testInterpreterStackSize(
   const auto outerStackPointer = reinterpret_cast<uintptr_t>(&dummy);
   auto status = runtime->interpretFunction(codeBlock);
   ASSERT_EQ(ExecutionStatus::RETURNED, status.getStatus());
-  ASSERT_TRUE(status.getValue().isNativeValue());
   const auto innerStackPointer =
       reinterpret_cast<uintptr_t>(status.getValue().getNativePointer<void>());
   // Increase this only if you have a reason to grow the interpreter's frame.

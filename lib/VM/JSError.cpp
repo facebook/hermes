@@ -306,7 +306,9 @@ static Handle<PropStorage> getCallStackFunctionNames(
         name = HermesValue::encodeStringValue(
             runtime->getPredefinedString(Predefined::proxyTrap));
       }
-    } else if (cf.getCalleeClosureOrCBRef().isNativeValue()) {
+    } else if (!cf.getCalleeClosureOrCBRef().isObject()) {
+      // If CalleeClosureOrCB is not an object pointer, then it must be a native
+      // pointer to a CodeBlock.
       auto *cb =
           cf.getCalleeClosureOrCBRef().getNativePointer<const CodeBlock>();
       if (cb->getNameMayAllocate().isValid())

@@ -50,7 +50,7 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, HermesValue hv) {
       return OS << ']';
     }
     case NativeValueTag:
-      return OS << "[NativeValue " << hv.getNativeValue() << "]";
+      return OS << "[NativeValue " << hv.getNativeUInt32() << "]";
     case SymbolTag:
       return OS << "[Symbol "
                 << (hv.getSymbol().isNotUniqued() ? "(External)" : "(Internal)")
