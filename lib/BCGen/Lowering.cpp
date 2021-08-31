@@ -138,7 +138,9 @@ class LowerAllocObjectFuncContext
           LowerAllocObjectFuncContext,
           DomTreeDFS::StackNode<LowerAllocObjectFuncContext>> {
  public:
-  LowerAllocObjectFuncContext(DominanceInfo &DI, AllocObjectInst *allocInst)
+  LowerAllocObjectFuncContext(
+      const DominanceInfo &DI,
+      AllocObjectInst *allocInst)
       : DomTreeDFS::Visitor<
             LowerAllocObjectFuncContext,
             DomTreeDFS::StackNode<LowerAllocObjectFuncContext>>(DI),
