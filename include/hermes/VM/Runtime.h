@@ -728,7 +728,8 @@ class Runtime : public HandleRootOwner,
   ExecutionStatus stepFunction(InterpreterState &state);
 #endif
 
-  /// Inserts an object into the string cycle checking stack.
+  /// Inserts an object into the string cycle checking stack if it does not
+  /// already exist.
   /// \return true if a cycle was found
   bool insertVisitedObject(JSObject *obj);
 

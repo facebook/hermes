@@ -1328,10 +1328,11 @@ ExecutionStatus Runtime::raiseEvalUnsupported(llvh::StringRef code) {
 }
 
 bool Runtime::insertVisitedObject(JSObject *obj) {
-  const bool foundCycle = llvh::find(stringCycleCheckVisited_, obj) !=
-      stringCycleCheckVisited_.end();
+  if (llvh::find(stringCycleCheckVisited_, obj) !=
+      stringCycleCheckVisited_.end())
+    return true;
   stringCycleCheckVisited_.push_back(obj);
-  return foundCycle;
+  return false;
 }
 
 void Runtime::removeVisitedObject(JSObject *obj) {
