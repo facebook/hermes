@@ -22,8 +22,6 @@ target_link_libraries(hermesc
   hermesSupport
 )
 
-hermes_link_icu(hermesc)
-
 # The Hermes compiler is used as part of the build of the VM.
 # During cross-compilation, the compiler needs to be built for the host system,
 # then used to build the VM for the target system.

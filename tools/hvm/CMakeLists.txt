@@ -21,10 +21,7 @@ target_link_libraries(hvm
   hermesParser
   hermesSupport
   dtoa
-  ${CORE_FOUNDATION}
 )
-
-hermes_link_icu(hvm)
 
 install(TARGETS hvm
   RUNTIME DESTINATION bin

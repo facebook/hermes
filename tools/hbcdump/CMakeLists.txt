@@ -17,8 +17,6 @@ target_link_libraries(hbcdump
   hermesSupport
 )
 
-hermes_link_icu(hbcdump)
-
 install(TARGETS hbcdump
   RUNTIME DESTINATION bin
 )

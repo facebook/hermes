@@ -91,9 +91,6 @@ target_link_libraries(HermesVMRuntimeTests
   hermesParser
   hermesSupport
   dtoa
-  ${CORE_FOUNDATION}
  )
-
-hermes_link_icu(HermesVMRuntimeTests)
 
 add_subdirectory(Instrumentation)

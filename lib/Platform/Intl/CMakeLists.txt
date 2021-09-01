@@ -12,13 +12,10 @@ if(HERMES_IS_ANDROID)
   add_hermes_library(hermesPlatformIntl STATIC ${source_files}
       LINK_LIBS
       fbjni::fbjni
-      ${CORE_FOUNDATION}
   )
   set_source_files_properties(PlatformIntlAndroid.cpp PROPERTIES
       COMPILE_FLAGS "-frtti -fexceptions -std=c++14")
 else()
   add_hermes_library(hermesPlatformIntl STATIC ${source_files}
-      LINK_LIBS
-      ${CORE_FOUNDATION}
   )
 endif()

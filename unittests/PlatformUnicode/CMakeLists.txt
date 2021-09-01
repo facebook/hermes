@@ -14,7 +14,4 @@ add_hermes_unittest(PlatformUnicodeTests
 
 target_link_libraries(PlatformUnicodeTests
   hermesPlatformUnicode
-  ${CORE_FOUNDATION}
   )
-
-hermes_link_icu(PlatformUnicodeTests)
