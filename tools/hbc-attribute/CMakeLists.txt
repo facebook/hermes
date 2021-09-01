@@ -13,5 +13,3 @@ add_hermes_tool(hbc-attribute
 target_link_libraries(hbc-attribute
   hermesHBCBackend
 )
-
-hermes_link_icu(hbc-attribute)

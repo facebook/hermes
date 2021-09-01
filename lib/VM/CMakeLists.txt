@@ -175,7 +175,6 @@ set(link_libs
   hermesPlatformIntl
   hermesInternalBytecode
   dtoa
-  ${CORE_FOUNDATION}
 )
 
 add_hermes_library(hermesVMRuntime STATIC ${source_files}

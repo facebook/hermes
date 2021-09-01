@@ -20,7 +20,4 @@ target_link_libraries(interp-dispatch-bench
   hermesParser
   hermesSupport
   dtoa
-  ${CORE_FOUNDATION}
 )
-
-hermes_link_icu(interp-dispatch-bench)

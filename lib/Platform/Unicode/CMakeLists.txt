@@ -15,7 +15,6 @@ if(HERMES_IS_ANDROID)
   add_hermes_library(hermesPlatformUnicode STATIC ${source_files}
       LINK_LIBS
       fbjni::fbjni
-      ${CORE_FOUNDATION}
   )
   set_source_files_properties(PlatformUnicodeJava.cpp PROPERTIES
       COMPILE_FLAGS "-frtti -fexceptions -std=c++14")
