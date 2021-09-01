@@ -17,7 +17,7 @@
  * - Allow UTF-8 encoded code points that are part of a surrogate pair, even though
  *   this is technically invalid UTF-8 that UTF8ToString would convert to 0xfffd.
  */
-function HermesParserDecodeUTF8String(ptr, length, heap) {
+export default function HermesParserDecodeUTF8String(ptr, length, heap) {
   const endPtr = ptr + length;
   let str = '';
 
@@ -57,5 +57,3 @@ function HermesParserDecodeUTF8String(ptr, length, heap) {
 
   return str;
 }
-
-module.exports = HermesParserDecodeUTF8String;

@@ -9,17 +9,17 @@
 
 'use strict';
 
-const {
+import {
   HERMES_AST_VISITOR_KEYS,
   NODE_CHILD,
   NODE_LIST_CHILD,
-} = require('./HermesParserVisitorKeys');
+} from './HermesParserVisitorKeys';
 
 /**
  * The base class for transforming the Hermes AST to the desired output format.
  * Extended by concrete adapters which output an ESTree or Babel AST.
  */
-class HermesASTAdapter {
+export default class HermesASTAdapter {
   constructor(options, code) {
     this.sourceFilename = options.sourceFilename;
     this.sourceType = options.sourceType;
@@ -162,5 +162,3 @@ class HermesASTAdapter {
     return `${message} (${node.loc.start.line}:${node.loc.start.column})`;
   }
 }
-
-module.exports = HermesASTAdapter;

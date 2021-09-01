@@ -10,10 +10,10 @@
 
 'use strict';
 
-const HermesParser = require('./HermesParser');
-const HermesToBabelAdapter = require('./HermesToBabelAdapter');
-const HermesToESTreeAdapter = require('./HermesToESTreeAdapter');
-const HermesTransformer = require('./HermesTransformer');
+import * as HermesParser from './HermesParser';
+import HermesToBabelAdapter from './HermesToBabelAdapter';
+import HermesToESTreeAdapter from './HermesToESTreeAdapter';
+import {transformFromAstSync} from './HermesTransformer';
 
 type Options = {
   allowReturnOutsideFunction?: boolean,
@@ -61,7 +61,7 @@ function getAdapter(options: Options, code: string) {
     : new HermesToESTreeAdapter(options, code);
 }
 
-function parse(code: string, opts: Options = {}): Program {
+export function parse(code: string, opts: Options = {}): Program {
   const options = getOptions(opts);
   const ast = HermesParser.parse(code, options);
   const adapter = getAdapter(options, code);
@@ -69,7 +69,4 @@ function parse(code: string, opts: Options = {}): Program {
   return adapter.transform(ast);
 }
 
-module.exports = {
-  parse,
-  transformFromAstSync: HermesTransformer.transformFromAstSync,
-};
+export {transformFromAstSync} from './HermesTransformer';
