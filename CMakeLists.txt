@@ -458,16 +458,8 @@ endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Attempt to use system ICU first, if none specified.
-# Don't need ICU on Apple systems.
-if (APPLE)
-  set(ICU_FOUND 1)
-  set(ICU_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/external/icu_decls)
-  set(ICU_LIBRARIES
-    icucore
-  )
-  include_directories(${ICU_INCLUDE_DIRS})
-elseif(EMSCRIPTEN)
-  # Just ignore ICU on Emiscripten. For now.
+# Don't need ICU on Apple, Emscripten, and Android.
+if (APPLE OR EMSCRIPTEN OR HERMES_IS_ANDROID)
   set(ICU_FOUND 1)
 endif()
 
@@ -516,7 +508,7 @@ if (NOT ICU_FOUND AND HERMES_ENABLE_WIN10_ICU_FALLBACK AND
 endif()
 
 # If we have no ICU, then error out.
-if (NOT HERMES_IS_ANDROID AND NOT ICU_FOUND)
+if (NOT ICU_FOUND)
   message(FATAL_ERROR "Unable to find ICU.")
 endif()
 
