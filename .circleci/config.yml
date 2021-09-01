@@ -283,8 +283,6 @@ jobs:
       - run:
           name: Package the framework
           command: |
-            . ./utils/build-apple-framework.sh
-
             mkdir -p /tmp/cocoapods-package-root/destroot
             cp -R ./destroot /tmp/cocoapods-package-root
             cp hermes-engine.podspec LICENSE /tmp/cocoapods-package-root
@@ -293,8 +291,6 @@ jobs:
       - run:
           name: Package the CLI
           command: |
-            . ./utils/build-apple-framework.sh
-
             mkdir -p /tmp/hermes-cli-root
             cp -R ./destroot/bin/* /tmp/hermes-cli-root
 
