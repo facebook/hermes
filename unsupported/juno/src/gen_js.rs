@@ -881,23 +881,33 @@ impl<W: Write> GenJS<W> {
             }
 
             TemplateLiteral {
-                quasis: _,
-                expressions: _,
+                quasis,
+                expressions,
             } => {
-                unimplemented!("TemplateLiteral");
-                // out!(self, "`");
-                // let mut it_expr = expressions.iter();
-                // for quasi in quasis {
-                //     if let TemplateElement { raw, .. } = &quasi.kind {
-                //         out!(self, "{}", raw.str);
-                //         if let Some(expr) = it_expr.next() {
-                //             out!(self, "${{");
-                //             expr.visit(self, Some(node));
-                //             out!(self, "}}");
-                //         }
-                //     }
-                // }
-                // out!(self, "`");
+                out!(self, "`");
+                let mut it_expr = expressions.iter();
+                for quasi in quasis {
+                    if let TemplateElement {
+                        raw,
+                        tail: _,
+                        cooked: _,
+                    } = &quasi.kind
+                    {
+                        out!(
+                            self,
+                            "{}",
+                            char::decode_utf16(raw.str.iter().cloned())
+                                .map(|r| r.expect("Template element raw must be valid UTF-16"))
+                                .collect::<String>()
+                        );
+                        if let Some(expr) = it_expr.next() {
+                            out!(self, "${{");
+                            expr.visit(self, Some(node));
+                            out!(self, "}}");
+                        }
+                    }
+                }
+                out!(self, "`");
             }
             TaggedTemplateExpression { tag, quasi } => {
                 self.print_child(Some(tag), node, ChildPos::Left);

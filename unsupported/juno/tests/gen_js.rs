@@ -87,6 +87,18 @@ fn test_literals() {
     test_roundtrip("/abc/");
     test_roundtrip("/abc/gi");
     test_roundtrip("/abc/gi");
+
+    test_roundtrip(r#" `abc` "#);
+    test_roundtrip(r#" `abc\ndef` "#);
+    test_roundtrip(
+        r#" `abc
+        def` "#,
+    );
+    test_roundtrip(r#" `abc \ud800 def` "#);
+    test_roundtrip(r#" `abc \ud800 def` "#);
+    test_roundtrip(r#" `\ud83d\udcd5` "#);
+    test_roundtrip(r#" `escape backtick: \` should work` "#);
+    test_roundtrip(r#" `😹` "#);
 }
 
 #[test]
