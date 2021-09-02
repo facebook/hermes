@@ -2661,6 +2661,8 @@ impl<W: Write> GenJS<W> {
     /// which is situated at `child_pos` position in relation to its `parent`.
     fn need_parens(&self, parent: &Node, child: &Node, child_pos: ChildPos) -> NeedParens {
         use NodeKind::*;
+
+        #[allow(clippy::if_same_then_else)]
         if matches!(parent.kind, ArrowFunctionExpression { .. }) {
             // (x) => ({x: 10}) needs parens to avoid confusing it with a block and a
             // labelled statement.
@@ -2689,10 +2691,10 @@ impl<W: Write> GenJS<W> {
             || (is_unary_op(parent, UnaryExpressionOperator::Plus)
                 && self.root_starts_with(child, check_plus))
             || (child_pos == ChildPos::Right
-                && is_binary_op(parent, "-")
+                && is_binary_op(parent, BinaryExpressionOperator::Minus)
                 && self.root_starts_with(child, check_minus))
             || (child_pos == ChildPos::Right
-                && is_binary_op(parent, "+")
+                && is_binary_op(parent, BinaryExpressionOperator::Plus)
                 && self.root_starts_with(child, check_plus))
         {
             // -(-x) or -(--x) or -(-5)
@@ -2714,6 +2716,12 @@ impl<W: Write> GenJS<W> {
             // When optional chains are terminated by non-optional member/calls,
             // we need the left hand side to be parenthesized.
             // Avoids confusing `(a?.b).c` with `a?.b.c`.
+            return NeedParens::Yes;
+        } else if (check_and_or(parent) && check_nullish(child))
+            || (check_nullish(parent) && check_and_or(child))
+        {
+            // Nullish coalescing always requires parens when mixed with any
+            // other logical operations.
             return NeedParens::Yes;
         }
 
@@ -2826,9 +2834,9 @@ fn is_negative_number(node: &Node) -> bool {
     }
 }
 
-fn is_binary_op(node: &Node, op: &str) -> bool {
+fn is_binary_op(node: &Node, op: BinaryExpressionOperator) -> bool {
     match &node.kind {
-        NodeKind::BinaryExpression { operator, .. } => operator.as_str() == op,
+        NodeKind::BinaryExpression { operator, .. } => *operator == op,
         _ => false,
     }
 }
@@ -2848,6 +2856,26 @@ fn check_plus(node: &Node) -> bool {
 fn check_minus(node: &Node) -> bool {
     is_unary_op(node, UnaryExpressionOperator::Minus)
         || is_update_prefix(node, UpdateExpressionOperator::Decrement)
+}
+
+fn check_and_or(node: &Node) -> bool {
+    matches!(
+        &node.kind,
+        NodeKind::LogicalExpression {
+            operator: LogicalExpressionOperator::And | LogicalExpressionOperator::Or,
+            ..
+        }
+    )
+}
+
+fn check_nullish(node: &Node) -> bool {
+    matches!(
+        &node.kind,
+        NodeKind::LogicalExpression {
+            operator: LogicalExpressionOperator::NullishCoalesce,
+            ..
+        }
+    )
 }
 
 fn ends_with_block(node: Option<&Node>) -> bool {

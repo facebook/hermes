@@ -90,6 +90,12 @@ fn test_literals() {
 }
 
 #[test]
+fn test_identifier() {
+    test_roundtrip("foo");
+    test_roundtrip("class C { #foo() {} }");
+}
+
+#[test]
 fn test_binop() {
     use NodeKind::*;
     assert_eq!(
@@ -108,6 +114,17 @@ fn test_binop() {
     test_roundtrip("1 + 1");
     test_roundtrip("1 * 2 + (3 + 4)");
     test_roundtrip("1 ** 2 ** 3 ** 4");
+    test_roundtrip("1 in 2 + (2 - 4) / 3");
+    test_roundtrip("1 instanceof 2 + (2 - 4) / 3");
+}
+
+#[test]
+fn test_conditional() {
+    test_roundtrip("a ? b : c");
+    test_roundtrip("a ? b : c ? d : e");
+    test_roundtrip("(a ? b : c) ? d : e");
+    test_roundtrip("a ? b : (c ? d : e)");
+    test_roundtrip("a?.3:.4");
 }
 
 #[test]
@@ -122,6 +139,7 @@ fn test_functions() {
     test_roundtrip("function foo(x, y) {}");
     test_roundtrip("function foo(x, y=3) {}");
     test_roundtrip("function foo([x, y], {z}) {}");
+    test_roundtrip("function foo([x, y] = [1,2], {z:q}) {}");
     test_roundtrip("function foo() { return this; }");
     test_roundtrip("function *foo() {}");
     test_roundtrip("function *foo() { yield 1; }");
@@ -216,6 +234,15 @@ fn test_statements() {
 }
 
 #[test]
+fn test_logical() {
+    test_roundtrip("a && b || c");
+    test_roundtrip("a || b && c");
+    test_roundtrip("(a || b) && c");
+    test_roundtrip("(a || b) ?? c");
+    test_roundtrip("(a ?? b) || c");
+}
+
+#[test]
 fn test_sequences() {
     test_roundtrip("var x = (1, 2, 3);");
     test_roundtrip("foo((1, 2, 3), 4);");
@@ -296,6 +323,38 @@ fn test_members() {
     test_roundtrip("(a?.b?.c?.())?.d");
     test_roundtrip("(a?.b?.c?.())(d)");
     test_roundtrip("(a?.b?.c?.())?.(d)");
+    test_roundtrip("class C { constructor() { new.target; } }");
+}
+
+#[test]
+fn test_classes() {
+    test_roundtrip("class C {}");
+    test_roundtrip("class C extends D {}");
+    test_roundtrip(
+        "class C extends D {
+            prop1;
+            #prop2;
+            constructor() {}
+            a() {}
+            #b() {}
+            c(x, y) {}
+            static d() {}
+        }",
+    );
+    test_roundtrip(
+        "var cls = (class C extends D {
+            prop1;
+            #prop2;
+            constructor() {}
+            a() {}
+            #b() {}
+            c(x, y) {}
+            static d() {}
+            get e() {}
+            set e(v) {}
+            ;
+        })",
+    );
 }
 
 #[test]
