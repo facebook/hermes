@@ -335,6 +335,33 @@ struct ReturnType<NodeList> {
 
 namespace {
 
+enum class ParserDialect : uint8_t {
+  /// Good old JS.
+  JavaScript,
+  /// Parse all Flow type syntax.
+  Flow,
+  /// Parse all unambiguous Flow type syntax. Syntax that can be intepreted as
+  /// either Flow types or standard JavaScript is parsed as if it were standard
+  /// JavaScript.
+  ///
+  /// For example, `foo<T>(x)` is parsed as if it were standard JavaScript
+  /// containing two comparisons, even though it could otherwise be interpreted
+  /// as a call expression with Flow type arguments.
+  FlowUnambiguous,
+  /// Parse TypeScript.
+  TypeScript,
+};
+
+/// Flags controlling the behavior of the parser.
+struct ParserFlags {
+  /// Start parsing in strict mode.
+  bool strictMode = false;
+  /// Enable JSX parsing.
+  bool enableJSX = false;
+  /// Dialect control.
+  ParserDialect dialect = ParserDialect::JavaScript;
+};
+
 enum class DiagKind : uint32_t {
   Error,
   Warning,
@@ -462,8 +489,28 @@ struct ParserContext {
 } // namespace
 
 /// source is the zero terminated input. source[len-1] must be \0.
-extern "C" ParserContext *hermes_parser_parse(const char *source, size_t len) {
+extern "C" ParserContext *
+hermes_parser_parse(ParserFlags flags, const char *source, size_t len) {
   std::unique_ptr<ParserContext> parserCtx(new ParserContext());
+
+  parserCtx->context_.setStrictMode(flags.strictMode);
+  parserCtx->context_.setParseJSX(flags.enableJSX);
+
+  parserCtx->context_.setParseTS(false);
+  parserCtx->context_.setParseFlow(hermes::ParseFlowSetting::NONE);
+  switch (flags.dialect) {
+    case ParserDialect::JavaScript:
+      break;
+    case ParserDialect::Flow:
+      parserCtx->context_.setParseFlow(hermes::ParseFlowSetting::ALL);
+      break;
+    case ParserDialect::FlowUnambiguous:
+      parserCtx->context_.setParseFlow(hermes::ParseFlowSetting::UNAMBIGUOUS);
+      break;
+    case ParserDialect::TypeScript:
+      parserCtx->context_.setParseTS(true);
+      break;
+  }
 
   if (len == 0 || source[len - 1] != 0) {
     parserCtx->addError("Input is not zero terminated");

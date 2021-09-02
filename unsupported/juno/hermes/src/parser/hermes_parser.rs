@@ -13,6 +13,47 @@ use std::mem::MaybeUninit;
 use std::os::raw::{c_char, c_int};
 use support::NullTerminatedBuf;
 
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ParserDialect {
+    /// Good old JS.
+    JavaScript,
+    /// Parse all Flow type syntax.
+    Flow,
+    /// Parse all unambiguous Flow type syntax. Syntax that can be intepreted as
+    /// either Flow types or standard JavaScript is parsed as if it were standard
+    /// JavaScript.
+    ///
+    /// For example, `foo<T>(x)` is parsed as if it were standard JavaScript
+    /// containing two comparisons, even though it could otherwise be interpreted
+    /// as a call expression with Flow type arguments.
+    FlowUnambiguous,
+    /// Parse TypeScript.
+    TypeScript,
+}
+
+/// Flags controlling the behavior of the parser.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ParserFlags {
+    /// Start parsing in strict mode.
+    pub strict_mode: bool,
+    /// Enable JSX parsing.
+    pub enable_jsx: bool,
+    /// Dialect control.
+    pub dialect: ParserDialect,
+}
+
+impl Default for ParserFlags {
+    fn default() -> Self {
+        ParserFlags {
+            strict_mode: false,
+            enable_jsx: false,
+            dialect: ParserDialect::JavaScript,
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Coord {
@@ -90,7 +131,11 @@ struct ParserContext {
 
 extern "C" {
     /// Note: source[len-1] must be 0.
-    fn hermes_parser_parse(source: *const c_char, len: usize) -> *mut ParserContext;
+    fn hermes_parser_parse(
+        flags: ParserFlags,
+        source: *const c_char,
+        len: usize,
+    ) -> *mut ParserContext;
     fn hermes_parser_free(parser_ctx: *mut ParserContext);
     fn hermes_parser_get_first_error(parser_ctx: *const ParserContext) -> isize;
     fn hermes_parser_get_messages<'a>(parser_ctx: *const ParserContext)
@@ -125,9 +170,9 @@ impl Drop for HermesParser<'_> {
 
 impl HermesParser<'_> {
     /// `file_id` is an opaque value used for encoding source coordinates.
-    pub fn parse<'a>(source: &'a NullTerminatedBuf) -> HermesParser<'a> {
+    pub fn parse<'a>(flags: ParserFlags, source: &'a NullTerminatedBuf) -> HermesParser<'a> {
         HermesParser {
-            parser_ctx: unsafe { hermes_parser_parse(source.as_c_char_ptr(), source.len()) },
+            parser_ctx: unsafe { hermes_parser_parse(flags, source.as_c_char_ptr(), source.len()) },
             source,
         }
     }
@@ -192,7 +237,7 @@ mod tests {
     #[test]
     fn good_parse() {
         let buf = NullTerminatedBuf::from_str_check("var x = 10;\0");
-        let p = HermesParser::parse(&buf);
+        let p = HermesParser::parse(Default::default(), &buf);
         assert!(!p.has_errors());
         assert_eq!(p.root().unwrap().as_ref().kind, NodeKind::Program);
     }
@@ -200,7 +245,7 @@ mod tests {
     #[test]
     fn parse_error() {
         let buf = NullTerminatedBuf::from_str_check("var x+ = 10;");
-        let p = HermesParser::parse(&buf);
+        let p = HermesParser::parse(Default::default(), &buf);
         assert!(p.has_errors());
         assert!(p.root().is_none());
 
@@ -221,7 +266,7 @@ mod tests {
             //# sourceURL=my source URL
             ",
         );
-        let p = HermesParser::parse(&buf);
+        let p = HermesParser::parse(Default::default(), &buf);
         assert!(!p.has_errors());
         assert_eq!(
             p.magic_comment(MagicCommentKind::SourceUrl).unwrap(),

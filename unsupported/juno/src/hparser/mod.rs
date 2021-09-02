@@ -17,7 +17,7 @@ use std::fmt::Formatter;
 use support::NullTerminatedBuf;
 use thiserror::Error;
 
-pub use hermes::parser::MagicCommentKind;
+pub use hermes::parser::{MagicCommentKind, ParserDialect, ParserFlags};
 
 pub struct ParsedJS<'a> {
     parser: HermesParser<'a>,
@@ -27,9 +27,9 @@ impl ParsedJS<'_> {
     /// Parse the source and store an internal representation of the AST and/or a list of diagnostic
     /// messages. If at least one of the messages is an error, there is no AST.
     /// To avoid copying `source` can optionally be NUL-terminated.
-    pub fn parse<'a>(source: &'a NullTerminatedBuf) -> ParsedJS<'a> {
+    pub fn parse<'a>(flags: ParserFlags, source: &'a NullTerminatedBuf) -> ParsedJS<'a> {
         ParsedJS {
-            parser: HermesParser::parse(source),
+            parser: HermesParser::parse(flags, source),
         }
     }
 
@@ -92,9 +92,13 @@ impl std::fmt::Display for ParseError {
 /// It checks if the input is already null-terminated and avoids making the copy in that case.
 /// Note that if the null terminator is truly present in the input, it would parse successfully
 /// what ought to be an error.
-pub fn parse_with_file_id(source: &str, file_id: u32) -> Result<ast::NodePtr, ParseError> {
+pub fn parse_with_file_id(
+    flags: ParserFlags,
+    source: &str,
+    file_id: u32,
+) -> Result<ast::NodePtr, ParseError> {
     let buf = NullTerminatedBuf::from_str_check(source);
-    let parsed = ParsedJS::parse(&buf);
+    let parsed = ParsedJS::parse(flags, &buf);
     if let Some(ast) = parsed.to_ast(file_id) {
         Ok(ast)
     } else {
@@ -109,7 +113,7 @@ pub fn parse_with_file_id(source: &str, file_id: u32) -> Result<ast::NodePtr, Pa
 /// Note that if the null terminator is truly present in the input, it would parse successfully
 /// what ought to be an error.
 pub fn parse(source: &str) -> Result<ast::NodePtr, ParseError> {
-    parse_with_file_id(source, 0)
+    parse_with_file_id(Default::default(), source, 0)
 }
 
 #[cfg(test)]
