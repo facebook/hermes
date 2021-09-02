@@ -311,15 +311,17 @@ static constexpr uint32_t kNonLiteralPlaceholderLimit = 3;
 
 /// Whether the given value \v V can be serialized into the object literal
 /// buffer.
+static bool isSerializableLiteral(Value *V) {
+  return V &&
+      (llvh::isa<LiteralNull>(V) || llvh::isa<LiteralBool>(V) ||
+       llvh::isa<LiteralNumber>(V) || llvh::isa<LiteralString>(V));
+}
+
 static bool canSerialize(Value *V) {
-  if (!V) {
-    return false;
-  }
-  auto *L = llvh::dyn_cast<HBCLoadConstInst>(V);
-  // We also need to check undefined because we cannot encode undefined
-  // in the object literal buffer.
-  return L && !llvh::isa<LiteralUndefined>(L->getConst());
-};
+  if (auto *LCI = llvh::dyn_cast_or_null<HBCLoadConstInst>(V))
+    return isSerializableLiteral(LCI->getConst());
+  return false;
+}
 
 uint32_t LowerAllocObject::estimateBestNumElemsToSerialize(
     llvh::SmallVectorImpl<StoreNewOwnPropertyInst *> &users) {
@@ -475,15 +477,6 @@ bool LowerAllocObjectLiteral::lowerAlloc(AllocObjectLiteralInst *allocInst) {
   return true;
 }
 
-static bool AllocObjectLiteralCanSerialize(Value *V) {
-  if (!V) {
-    return false;
-  }
-  // LowerAllocObjectLiteral happens before LoadConstants, and thus
-  // we check for Literal and LiteralUndefined directly.
-  return llvh::isa<Literal>(V) && !llvh::isa<LiteralUndefined>(V);
-}
-
 uint32_t LowerAllocObjectLiteral::estimateBestNumElemsToSerialize(
     AllocObjectLiteralInst *allocInst) {
   // Reuse calc logic from LowerAllocObject.
@@ -498,7 +491,7 @@ uint32_t LowerAllocObjectLiteral::estimateBestNumElemsToSerialize(
     ++curSize;
     Literal *key = allocInst->getKey(i);
     Value *value = allocInst->getValue(i);
-    if (AllocObjectLiteralCanSerialize(value)) {
+    if (isSerializableLiteral(value)) {
       curSaving += kLiteralSavedBytes;
       if (curSaving > maxSaving) {
         maxSaving = curSaving;
@@ -553,7 +546,7 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
       propLiteral = cast<LiteralString>(key);
     }
 
-    if (AllocObjectLiteralCanSerialize(value)) {
+    if (isSerializableLiteral(value)) {
       propMap.push_back(std::pair<Literal *, Literal *>(
           propLiteral, llvh::cast<Literal>(value)));
     } else if (llvh::isa<LiteralString>(propLiteral)) {
