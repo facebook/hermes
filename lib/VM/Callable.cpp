@@ -796,15 +796,8 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
     auto *stack = runtime->allocUninitializedStack(boundArgCount);
 
     // Copy the bound arguments (but not the bound "this").
-    if (StackFrameLayout::StackIncrement == -1) {
-      std::uninitialized_copy_n(
-          self->getArgsWithThis(runtime) + 1, boundArgCount, stack);
-    } else {
-      std::uninitialized_copy_n(
-          self->getArgsWithThis(runtime) + 1,
-          boundArgCount,
-          llvh::make_reverse_iterator(stack + 1));
-    }
+    std::uninitialized_copy_n(
+        self->getArgsWithThis(runtime) + 1, boundArgCount, stack);
 
     // Loop while the target is another bound function.
     auto *targetAsBound = dyn_vmcast<BoundFunction>(self->getTarget(runtime));
@@ -1639,15 +1632,9 @@ void GeneratorInnerFunction::restoreStack(Runtime *runtime) {
   const uint32_t frameOffset = getFrameOffsetInContext();
   const uint32_t frameSize = getFrameSizeInContext(runtime);
   // Start at the lower end of the range to be copied.
-  PinnedHermesValue *dst = StackFrameLayout::StackIncrement > 0
-      ? runtime->getCurrentFrame().ptr()
-      : runtime->getCurrentFrame().ptr() - frameSize;
+  PinnedHermesValue *dst = runtime->getCurrentFrame().ptr() - frameSize;
   assert(
-      ((StackFrameLayout::StackIncrement > 0 &&
-        dst + frameSize <= runtime->getStackPointer()) ||
-       (StackFrameLayout::StackIncrement < 0 &&
-        dst >= runtime->getStackPointer())) &&
-      "reading off the end of the stack");
+      dst >= runtime->getStackPointer() && "reading off the end of the stack");
   const GCHermesValue *src = savedContext_.get(runtime)->data() + frameOffset;
   GCHermesValueUtil::copyToPinned(src, src + frameSize, dst);
 }
@@ -1656,14 +1643,9 @@ void GeneratorInnerFunction::saveStack(Runtime *runtime) {
   const uint32_t frameOffset = getFrameOffsetInContext();
   const uint32_t frameSize = getFrameSizeInContext(runtime);
   // Start at the lower end of the range to be copied.
-  PinnedHermesValue *first = StackFrameLayout::StackIncrement > 0
-      ? runtime->getCurrentFrame().ptr()
-      : runtime->getCurrentFrame().ptr() - frameSize;
+  PinnedHermesValue *first = runtime->getCurrentFrame().ptr() - frameSize;
   assert(
-      ((StackFrameLayout::StackIncrement > 0 &&
-        first + frameSize <= runtime->getStackPointer()) ||
-       (StackFrameLayout::StackIncrement < 0 &&
-        first >= runtime->getStackPointer())) &&
+      first >= runtime->getStackPointer() &&
       "reading off the end of the stack");
   // Use GCHermesValue::copy to ensure write barriers are executed.
   GCHermesValue::copy(

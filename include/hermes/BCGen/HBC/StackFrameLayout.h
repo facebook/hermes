@@ -129,9 +129,6 @@ struct StackFrameLayout {
     /// The number of additional registers the callee needs to allocate in the
     /// beginning of its frame.
     CalleeExtraRegistersAtStart = DebugEnvironment - Scratch + 1,
-
-    /// Direction of the stack.
-    StackIncrement = -1,
   };
 
   /// Calculate the number of register slots needed for an outgoing call: it
