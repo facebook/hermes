@@ -1701,7 +1701,7 @@ class ScopedNativeCallFrame {
   void fillArguments(uint32_t argCount, HermesValue fillValue) {
     assert(overflowHasBeenChecked_ && "ScopedNativeCallFrame could overflow");
     assert(argCount == frame_.getArgCount() && "Arg count mismatch.");
-    std::uninitialized_fill_n(&frame_.getArgRefUnsafe(0), argCount, fillValue);
+    std::uninitialized_fill_n(frame_.argsBegin(), argCount, fillValue);
   }
 
   /// \return whether the stack frame overflowed.

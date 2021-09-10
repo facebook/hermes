@@ -146,17 +146,6 @@ struct StackFrameLayout {
     uint32_t totalCount = FirstArg + numArgsExcludingThis;
     return totalCount >= numArgsExcludingThis ? totalCount : UINT32_MAX;
   }
-
-  /// \return the offset of the register containing the N-th argument to the
-  /// callee. -1 is this, 0 is the first explicit argument.
-  static int32_t argOffset(int32_t n) {
-    return FirstArg + n;
-  }
-
-  /// \return the offset of the local register with index n.
-  static int32_t localOffset(int32_t n) {
-    return FirstLocal - n;
-  }
 };
 
 } // namespace hbc

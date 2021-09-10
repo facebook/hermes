@@ -145,9 +145,9 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
       return runtime->raiseStackOverflow(
           Runtime::StackOverflowKind::NativeStack);
     std::uninitialized_copy_n(
-        &(callerFrame->getArgRefUnsafe(0)),
+        callerFrame.argsBegin(),
         callerFrame.getArgCount(),
-        &(newFrame->getArgRefUnsafe(0)));
+        newFrame->argsBegin());
     // I know statically that target is a Callable, but storing it as
     // a Callable makes it much harder to share all the JSProxy code,
     // so we cast here.

@@ -113,12 +113,6 @@ class StackFramePtrT {
 
 #undef _HERMESVM_DEFINE_STACKFRAME_REF
 
-  /// Return a reference to a local variable (the index must be valid).
-  LLVM_ATTRIBUTE_ALWAYS_INLINE
-  QualifiedHV &getLocalVarRef(int32_t n) const {
-    return frame_[StackFrameLayout::localOffset(n)];
-  }
-
   /// \return a pointer to the register at the start of the previous stack
   /// frame.
   QualifiedHV *getPreviousFramePointer() const {
@@ -199,19 +193,23 @@ class StackFramePtrT {
     return !getNewTargetRef().isUndefined();
   }
 
+  /// \return an iterator pointing to the first explicit argument.
+  ArgIteratorT<isConst> argsBegin() const {
+    return ArgIteratorT<isConst>(&getFirstArgRef());
+  }
+
   /// \return a reference to the register containing the N-th argument to the
   /// callee. -1 is this, 0 is the first explicit argument. It is an error to
   /// use a number greater or equal to \c getArgCount().
   QualifiedHV &getArgRef(int32_t n) const {
-    assert(
-        (n == -1 || (uint32_t)n < getArgCount()) && "invalid argument index");
-    return frame_[StackFrameLayout::argOffset(n)];
+    assert(n >= -1 && n < (int64_t)getArgCount() && "invalid argument index");
+    return argsBegin()[n];
   }
 
   /// Same as \c getArgRef() but allows to obtain a reference to one past the
   /// last argument.
   QualifiedHV &getArgRefUnsafe(int32_t n) const {
-    return frame_[StackFrameLayout::argOffset(n)];
+    return argsBegin()[n];
   }
 
   /// Initialize a new frame with the supplied values.

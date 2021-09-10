@@ -551,7 +551,7 @@ CallResult<HermesValue> BoundFunction::create(
     Runtime *runtime,
     Handle<Callable> target,
     unsigned argCountWithThis,
-    const PinnedHermesValue *argsWithThis) {
+    ConstArgIterator argsWithThis) {
   unsigned argCount = argCountWithThis > 0 ? argCountWithThis - 1 : 0;
 
   auto arrRes = ArrayStorage::create(runtime, argCount + 1);
@@ -797,7 +797,7 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
 
     // Copy the bound arguments (but not the bound "this").
     std::uninitialized_copy_n(
-        self->getArgsWithThis(runtime) + 1, boundArgCount, stack);
+        self->getArgsWithThis(runtime) + 1, boundArgCount, ArgIterator(stack));
 
     // Loop while the target is another bound function.
     auto *targetAsBound = dyn_vmcast<BoundFunction>(self->getTarget(runtime));

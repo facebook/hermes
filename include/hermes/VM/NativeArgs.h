@@ -14,6 +14,12 @@
 namespace hermes {
 namespace vm {
 
+template <bool isConst>
+using ArgIteratorT = typename std::
+    conditional<isConst, const PinnedHermesValue *, PinnedHermesValue *>::type;
+using ArgIterator = ArgIteratorT<false>;
+using ConstArgIterator = ArgIteratorT<true>;
+
 /// An instance of this object is passed to native functions to enable them
 /// to access their arguments.
 class NativeArgs final {
@@ -23,17 +29,6 @@ class NativeArgs final {
   unsigned const argCount_;
   /// The \c new.target value of the call.
   const PinnedHermesValue *const newTarget_;
-
-  /// Return a pointer to argument with index \p index, starting from 0 and
-  /// excluding 'thisArg'.
-  /// NOTE: this function deliberately doesn't perform a range check (even in
-  /// debug builds). It is always used only in the context of an existing range
-  /// check, or to obtain an iterator (which should always be compared against
-  /// the 'end' iterator before using. More importantly, if we had a range check
-  /// here, we wouldn't be able to obtain an iterator to an empty argument list.
-  const PinnedHermesValue *argPtr(unsigned index) const {
-    return thisArg_ + index + 1;
-  }
 
   /// \param thisArg points to ("this", "arg0", ... "argN").
   /// \param argCount number of JavaScript arguments excluding 'this'
@@ -103,7 +98,7 @@ class NativeArgs final {
   /// \return the specified argument by index starting from 0 (and excluding
   ///   'this'). If there is no such argument, return 'undefined'.
   HermesValue getArg(unsigned index) const {
-    return index < argCount_ ? static_cast<HermesValue>(*argPtr(index))
+    return index < argCount_ ? static_cast<HermesValue>(begin()[index])
                              : HermesValue::encodeUndefinedValue();
   }
 
@@ -111,7 +106,7 @@ class NativeArgs final {
   /// excluding 'this') into a Handle<>. If there is no such argument,
   /// 'undefined' is wrapped.
   Handle<> getArgHandle(unsigned index) const {
-    return index < argCount_ ? Handle<>(argPtr(index))
+    return index < argCount_ ? Handle<>(&begin()[index])
                              : HandleRootOwner::getUndefinedValue();
   }
 
@@ -121,8 +116,8 @@ class NativeArgs final {
   /// This is a very efficient operation - it never allocates a new handle.
   template <class T>
   Handle<T> dyncastArg(unsigned index) const {
-    return index < argCount_ && vmisa<T>(*argPtr(index))
-        ? Handle<T>::vmcast(argPtr(index))
+    return index < argCount_ && vmisa<T>(begin()[index])
+        ? Handle<T>::vmcast(&begin()[index])
         : HandleRootOwner::makeNullHandle<T>();
   }
 
@@ -158,13 +153,13 @@ class NativeArgs final {
     }
 
     Handle<> operator*() const {
-      return Handle<>(arg_);
+      return Handle<>(&*arg_);
     }
     Handle<> operator[](difference_type o) const {
-      return Handle<>(arg_ + o);
+      return Handle<>(&*(arg_ + o));
     }
     const HermesValue *operator->() const {
-      return arg_;
+      return &*arg_;
     }
 
     handle_iterator &operator++() {
@@ -216,13 +211,11 @@ class NativeArgs final {
     return llvh::make_range(handle_iterator(begin()), handle_iterator(end()));
   };
 
-  using const_iterator = const PinnedHermesValue *;
-
-  const_iterator begin() const {
-    return argPtr(0);
+  ConstArgIterator begin() const {
+    return thisArg_ + 1;
   }
-  const_iterator end() const {
-    return argPtr(0) + argCount_;
+  ConstArgIterator end() const {
+    return begin() + argCount_;
   }
 };
 
