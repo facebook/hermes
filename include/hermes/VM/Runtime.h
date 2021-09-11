@@ -1222,13 +1222,12 @@ class Runtime : public HandleRootOwner,
   /// @name Private VM State
   /// @{
 
-  PinnedHermesValue *registerStack_;
+  /// If the register stack is allocated by the runtime, then this stores its
+  /// location and size.
+  llvh::MutableArrayRef<PinnedHermesValue> registerStackAllocation_;
+  PinnedHermesValue *registerStackStart_;
   PinnedHermesValue *registerStackEnd_;
   PinnedHermesValue *stackPointer_;
-  /// Bytes of register stack to unmap on destruction.
-  /// When set to zero, the register stack is not allocated
-  /// by the runtime itself.
-  uint32_t registerStackBytesToUnmap_{0};
   /// Manages data to be used in the case of a crash.
   std::shared_ptr<CrashManager> crashMgr_;
   /// Points to the last register in the callers frame. The current frame (the
@@ -1885,7 +1884,7 @@ inline uint32_t Runtime::getStackLevel() const {
 }
 
 inline uint32_t Runtime::availableStackSize() const {
-  return (uint32_t)(stackPointer_ - registerStack_);
+  return (uint32_t)(stackPointer_ - registerStackStart_);
 }
 
 inline bool Runtime::checkAvailableStack(uint32_t count) {
