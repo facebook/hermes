@@ -226,7 +226,7 @@ var meta = ['\\x00', '\\x01', '\\x02', '\\x03', '\\x04', '\\x05', '\\x06', '\\x0
 // License: MIT, authors: @sindresorhus, Qix-, arjunmehta and LitoMore
 // Matches all ansi escape code sequences in a string
 
-var ansiPattern = "[\\u001B\\u009B][[\\]()#;?]*" + "(?:(?:(?:[a-zA-Z\\d]*(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)" + '|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))';
+var ansiPattern = "[\\u001B\\u009B][[\\]()#;?]*" + "(?:(?:(?:[a-zA-Z\\d]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)" + '|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))';
 var ansi = new RegExp(ansiPattern, 'g');
 var getStringWidth;
 
