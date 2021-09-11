@@ -132,14 +132,11 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
     // OR
     //   a. Assert: IsConstructor(target) is true.
     //   b. Return ? Construct(target, argumentsList, newTarget).
-    HermesValue newTarget = callerFrame->isConstructorCall()
-        ? callerFrame.getNewTargetRef()
-        : HermesValue::encodeUndefinedValue();
     ScopedNativeCallFrame newFrame{
         runtime,
         callerFrame.getArgCount(),
         target.getHermesValue(),
-        newTarget,
+        callerFrame.getNewTargetRef(),
         callerFrame.getThisArgRef()};
     if (LLVM_UNLIKELY(newFrame.overflowed()))
       return runtime->raiseStackOverflow(
