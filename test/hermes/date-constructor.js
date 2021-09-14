@@ -174,6 +174,8 @@ print(Date.parse('2016T12:30asdf'));
 // CHECK-NEXT: NaN
 print(Date.parse('2016T12:30Z-07:00'));
 // CHECK-NEXT: NaN
+print(Date.parse('2016T12:30-07'));
+// CHECK-NEXT: NaN
 print(Date.parse('2016-+01T12:30Z'));
 // CHECK-NEXT: NaN
 print(Date.parse('2016T12:30:00.000-07:00asdf'));
@@ -196,13 +198,23 @@ print(Date.parse('2016T12:30:00.000-07:00'));
 // CHECK-NEXT: 1451676600000
 print(Date.parse('2016T12:30:47.1-07:00'));
 // CHECK-NEXT: 1451676647100
+print(Date.parse('2016T12:30:47.1-0700'));
+// CHECK-NEXT: 1451676647100
 print(Date.parse('2016T12:30:47.12-07:00'));
+// CHECK-NEXT: 1451676647120
+print(Date.parse('2016T12:30:47.12-0700'));
 // CHECK-NEXT: 1451676647120
 print(Date.parse('2016T12:30:47.123-07:00'));
 // CHECK-NEXT: 1451676647123
+print(Date.parse('2016T12:30:47.123-0700'));
+// CHECK-NEXT: 1451676647123
 print(Date.parse('2016T12:30:47.1234-07:00'));
 // CHECK-NEXT: 1451676647123
+print(Date.parse('2016T12:30:47.1234-0700'));
+// CHECK-NEXT: 1451676647123
 print(Date.parse('2016T12:30:47.760738998-07:00'));
+// CHECK-NEXT: 1451676647760
+print(Date.parse('2016T12:30:47.760738998-0700'));
 // CHECK-NEXT: 1451676647760
 print(Date.parse('2016T12:30:47.760-07:00') === Date.parse('2016T12:30:47.760738998-07:00'));
 +// CHECK-NEXT: true
@@ -249,6 +261,8 @@ print(Date.parse('Mon Jul 16 2019 00:00:00'));
 print(Date.parse('Mon Jul 16 2019'));
 // CHECK-NEXT: 1563260400000
 print(Date.parse('2021-04-10T01:00:00.000-01:30'));
+// CHECK-NEXT: 1618021800000
+print(Date.parse('2021-04-10T01:00:00.000-0130'));
 // CHECK-NEXT: 1618021800000
 
 // Fault tolerance on garbages (marked as "G"s).
