@@ -23,21 +23,22 @@ using ConstArgIterator = ArgIteratorT<true>;
 /// An instance of this object is passed to native functions to enable them
 /// to access their arguments.
 class NativeArgs final {
-  /// Point to the first argument in the stack, which is 'this'.
-  const PinnedHermesValue *const thisArg_;
+  /// Point to the first explicit argument in the stack. 'this' can be accessed
+  /// at firstArg_[-1].
+  const ConstArgIterator firstArg_;
   /// The number of JavaScript arguments excluding 'this'.
   unsigned const argCount_;
   /// The \c new.target value of the call.
   const PinnedHermesValue *const newTarget_;
 
-  /// \param thisArg points to ("this", "arg0", ... "argN").
+  /// \param firstArg is an iterator to ("arg0", ... "argN").
   /// \param argCount number of JavaScript arguments excluding 'this'
   /// \param newTarget points to the value of \c new.target in the stack.
   NativeArgs(
-      const PinnedHermesValue *thisArg,
+      ConstArgIterator firstArg,
       unsigned argCount,
       const PinnedHermesValue *newTarget)
-      : thisArg_(thisArg), argCount_(argCount), newTarget_(newTarget) {}
+      : firstArg_(firstArg), argCount_(argCount), newTarget_(newTarget) {}
 
   template <bool isConst>
   friend class StackFramePtrT;
@@ -73,7 +74,7 @@ class NativeArgs final {
 
   /// \return the 'this' argument passed to the function.
   const PinnedHermesValue &getThisArg() const {
-    return *thisArg_;
+    return begin()[-1];
   }
 
   /// Efficiently wrap the 'this' argument into a Handle<>
@@ -137,9 +138,9 @@ class NativeArgs final {
       : public std::iterator<std::random_access_iterator_tag, Handle<>> {
     friend class NativeArgs;
 
-    const PinnedHermesValue *arg_;
+    ConstArgIterator arg_;
 
-    explicit handle_iterator(PinnedHermesValue const *arg) : arg_(arg) {}
+    explicit handle_iterator(ConstArgIterator arg) : arg_(arg) {}
 
    public:
     handle_iterator(const handle_iterator &) = default;
@@ -212,7 +213,7 @@ class NativeArgs final {
   };
 
   ConstArgIterator begin() const {
-    return thisArg_ + 1;
+    return firstArg_;
   }
   ConstArgIterator end() const {
     return begin() + argCount_;
