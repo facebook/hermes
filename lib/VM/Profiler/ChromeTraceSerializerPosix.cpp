@@ -13,29 +13,15 @@
 namespace hermes {
 namespace vm {
 
-static std::shared_ptr<ChromeStackFrameNode> findOrAddNewHelper(
-    ChromeFrameIdGenerator &frameIdGen,
-    std::vector<std::shared_ptr<ChromeStackFrameNode>> &v,
-    const SamplingProfiler::StackFrame &target) {
-  auto resIter = std::find_if(
-      v.begin(),
-      v.end(),
-      [&target](const std::shared_ptr<ChromeStackFrameNode> &node) {
-        return node->getFrameInfo() == target;
-      });
-  if (resIter != v.end()) {
-    return *resIter;
-  }
-  v.emplace_back(std::make_shared<ChromeStackFrameNode>(
-      frameIdGen.getNextFrameNodeId(), target));
-  assert(v.size() > 0);
-  return v.back();
-}
-
 std::shared_ptr<ChromeStackFrameNode> ChromeStackFrameNode::findOrAddNewChild(
     ChromeFrameIdGenerator &frameIdGen,
     const SamplingProfiler::StackFrame &target) {
-  return findOrAddNewHelper(frameIdGen, children_, target);
+  for (const auto &node : children_)
+    if (node->getFrameInfo() == target)
+      return node;
+  children_.emplace_back(std::make_unique<ChromeStackFrameNode>(
+      frameIdGen.getNextFrameNodeId(), target));
+  return children_.back();
 }
 
 /*static*/ ChromeTraceFormat ChromeTraceFormat::create(
