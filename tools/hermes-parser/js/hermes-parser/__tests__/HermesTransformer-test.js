@@ -9,7 +9,7 @@
 
 'use strict';
 
-const {parse, transformFromAstSync} = require('hermes-parser');
+const {parse, types, transformFromAstSync} = require('hermes-parser');
 
 describe('Traversal', () => {
   test('Replacement', () => {
@@ -19,6 +19,7 @@ describe('Traversal', () => {
       return {
         visitor: {
           CallExpression(path, state) {
+            expect(t).toBe(types);
             expect(path.get('callee').node.name).toEqual('foo');
             path.get('callee').replaceWith(t.Identifier('bar'));
           },

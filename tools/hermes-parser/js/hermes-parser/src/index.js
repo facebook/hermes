@@ -70,3 +70,4 @@ export function parse(code: string, opts: Options = {}): Program {
 }
 
 export {transformFromAstSync} from './HermesTransformer';
+export * as types from './types';
