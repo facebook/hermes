@@ -1,0 +1,15 @@
+{
+    "[flow]": {
+        "editor.codeActionsOnSave": [
+          "source.fixAll.eslint",
+          "source.fixAll.format",
+        ],
+        "editor.defaultFormatter": "nuclide.prettier",
+        "editor.formatOnSave": true,
+    },
+    "eslint.autofixOnSave.ruleAllowlist": [
+      "@fb-tools/sort-requires",
+      "prettier/prettier",
+    ],
+}
+
