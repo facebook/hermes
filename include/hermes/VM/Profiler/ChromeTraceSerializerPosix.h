@@ -42,8 +42,8 @@ class ChromeStackFrameNode {
  private:
   /// Unique id for the stack frame.
   uint32_t id_;
-  /// Frame information.
-  SamplingProfiler::StackFrame frameInfo_;
+  /// Frame information. Is None iff this is the root node.
+  llvh::Optional<SamplingProfiler::StackFrame> frameInfo_;
   /// All callee/children of this stack frame.
   std::vector<std::shared_ptr<ChromeStackFrameNode>> children_;
 
@@ -66,15 +66,17 @@ class ChromeStackFrameNode {
  public:
   explicit ChromeStackFrameNode(
       uint32_t nextFrameId,
-      const SamplingProfiler::StackFrame &frame)
+      llvh::Optional<SamplingProfiler::StackFrame> frame)
       : id_(nextFrameId), frameInfo_(frame) {}
 
   uint32_t getId() const {
     return id_;
   }
 
+  // Get the frame info for this node. Should never be called on the root node
+  // since it will be None.
   const SamplingProfiler::StackFrame &getFrameInfo() const {
-    return frameInfo_;
+    return *frameInfo_;
   }
 
   /// Find a child node matching \p target, otherwise add \p target
@@ -143,18 +145,16 @@ class ChromeTraceFormat {
   uint32_t pid_;
   /// Thread names map.
   SamplingProfiler::ThreadNamesMap threadNames_;
-  /// Collapsed/merged stack frame call trees.
-  /// Note: since different threads/stack may start from different root frame
-  /// so we may have a list of call tree instead of a single one.
-  std::vector<std::shared_ptr<ChromeStackFrameNode>> callTrees_;
+  /// The root of the stack frame tree.
+  const std::shared_ptr<ChromeStackFrameNode> root_;
   /// Maintain all transformed chrome sample events.
   std::vector<ChromeSampleEvent> sampleEvents_;
 
- private:
   explicit ChromeTraceFormat(
       uint32_t pid,
-      const SamplingProfiler::ThreadNamesMap &threadNames)
-      : pid_(pid), threadNames_(threadNames) {}
+      const SamplingProfiler::ThreadNamesMap &threadNames,
+      std::unique_ptr<ChromeStackFrameNode> root)
+      : pid_(pid), threadNames_(threadNames), root_(std::move(root)) {}
 
  public:
   static ChromeTraceFormat create(
@@ -170,9 +170,8 @@ class ChromeTraceFormat {
     return threadNames_;
   }
 
-  const std::vector<std::shared_ptr<ChromeStackFrameNode>> &getCallTree()
-      const {
-    return callTrees_;
+  const ChromeStackFrameNode &getRoot() const {
+    return *root_;
   }
 
   const std::vector<ChromeSampleEvent> &getSampledEvents() const {

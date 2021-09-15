@@ -43,25 +43,17 @@ std::shared_ptr<ChromeStackFrameNode> ChromeStackFrameNode::findOrAddNewChild(
     const SamplingProfiler::ThreadNamesMap &threadNames,
     const std::vector<SamplingProfiler::StackTrace> &sampledStacks) {
   ChromeFrameIdGenerator frameIdGen;
-  ChromeTraceFormat trace{pid, threadNames};
+  ChromeTraceFormat trace{
+      pid,
+      threadNames,
+      std::make_unique<ChromeStackFrameNode>(
+          frameIdGen.getNextFrameNodeId(), llvh::None)};
   for (const SamplingProfiler::StackTrace &sample : sampledStacks) {
-    std::shared_ptr<ChromeStackFrameNode> leafNode;
-    assert(sample.stack.size() > 0 && "Why does the sample have no stack?");
-
-    bool isRootFrame = true;
+    std::shared_ptr<ChromeStackFrameNode> leafNode = trace.root_;
     // Leaf frame is in sample[0] so dump it backward to
     // get root => leaf represenation.
-    for (auto iter = sample.stack.rbegin(); iter != sample.stack.rend();
-         ++iter) {
-      const SamplingProfiler::StackFrame &frame = *iter;
-      if (isRootFrame) {
-        leafNode = findOrAddNewHelper(frameIdGen, trace.callTrees_, frame);
-        isRootFrame = false;
-      } else {
-        leafNode = leafNode->findOrAddNewChild(frameIdGen, frame);
-      }
-    }
-    assert(leafNode != nullptr && "Why can't we find a leaf node?");
+    for (const auto &frame : llvh::reverse(sample.stack))
+      leafNode = leafNode->findOrAddNewChild(frameIdGen, frame);
     trace.sampleEvents_.emplace_back(sample.tid, sample.timeStamp, leafNode);
   }
   return trace;
@@ -174,127 +166,127 @@ void ChromeTraceSerializer::serializeSampledEvents(JSONEmitter &json) const {
 }
 
 void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
-  for (const auto &tree : trace_.getCallTree()) {
-    tree->dfsWalk([&json](
-                      const ChromeStackFrameNode &node,
-                      const ChromeStackFrameNode *parent) {
-      json.emitKey(oscompat::to_string(node.getId()));
+  trace_.getRoot().dfsWalk([&json](
+                               const ChromeStackFrameNode &node,
+                               const ChromeStackFrameNode *parent) {
+    json.emitKey(oscompat::to_string(node.getId()));
+
+    if (!parent) {
       json.openDict();
-
-      auto getJSFunctionName = [](hbc::BCProvider *bcProvider,
-                                  uint32_t funcId) {
-        hbc::RuntimeFunctionHeader functionHeader =
-            bcProvider->getFunctionHeader(funcId);
-        return bcProvider->getStringRefFromID(functionHeader.functionName())
-            .str();
-      };
-
-      auto getSourceLocation =
-          [](hbc::BCProvider *bcProvider,
-             uint32_t funcId,
-             uint32_t opcodeOffset) -> OptValue<hbc::DebugSourceLocation> {
-        const hbc::DebugOffsets *debugOffsets =
-            bcProvider->getDebugOffsets(funcId);
-        if (debugOffsets != nullptr &&
-            debugOffsets->sourceLocations != hbc::DebugOffsets::NO_OFFSET) {
-          return bcProvider->getDebugInfo()->getLocationForAddress(
-              debugOffsets->sourceLocations, opcodeOffset);
-        }
-        return llvh::None;
-      };
-
-      std::string frameName, categoryName;
-      const auto &frame = node.getFrameInfo();
-      switch (frame.kind) {
-        case SamplingProfiler::StackFrame::FrameKind::JSFunction: {
-          RuntimeModule *module = frame.jsFrame.module;
-          hbc::BCProvider *bcProvider = module->getBytecode();
-
-          llvh::raw_string_ostream os(frameName);
-          os << getJSFunctionName(bcProvider, frame.jsFrame.functionId);
-          categoryName = "JavaScript";
-
-          OptValue<hbc::DebugSourceLocation> sourceLocOpt = getSourceLocation(
-              bcProvider, frame.jsFrame.functionId, frame.jsFrame.offset);
-          if (sourceLocOpt.hasValue()) {
-            // Bundle has debug info.
-            std::string fileNameStr =
-                bcProvider->getDebugInfo()->getFilenameByID(
-                    sourceLocOpt.getValue().filenameId);
-
-            uint32_t line = sourceLocOpt.getValue().line;
-            uint32_t column = sourceLocOpt.getValue().column;
-            // format: frame_name(file:line:column)
-            os << "(" << fileNameStr << ":" << line << ":" << column << ")";
-            // Still emit line/column entries for babel/metro/prepack
-            // source map symbolication.
-            json.emitKeyValue("line", oscompat::to_string(line));
-            json.emitKeyValue("column", oscompat::to_string(column));
-
-            // Emit function's start line/column so that can we symbolicate
-            // name correctly.
-            OptValue<hbc::DebugSourceLocation> funcStartSourceLocOpt =
-                getSourceLocation(bcProvider, frame.jsFrame.functionId, 0);
-            if (funcStartSourceLocOpt.hasValue()) {
-              json.emitKeyValue(
-                  "funcLine",
-                  oscompat::to_string(funcStartSourceLocOpt.getValue().line));
-              json.emitKeyValue(
-                  "funcColumn",
-                  oscompat::to_string(funcStartSourceLocOpt.getValue().column));
-            }
-          } else {
-            // Without debug info, emit virtual address for source map
-            // symbolication.
-            uint32_t funcVirtAddr = bcProvider->getVirtualOffsetForFunction(
-                frame.jsFrame.functionId);
-            json.emitKeyValue(
-                "funcVirtAddr", oscompat::to_string(funcVirtAddr));
-            json.emitKeyValue(
-                "offset", oscompat::to_string(frame.jsFrame.offset));
-          }
-          break;
-        }
-
-        case SamplingProfiler::StackFrame::FrameKind::NativeFunction: {
-          frameName =
-              std::string("[Native] ") + getFunctionName(frame.nativeFrame);
-          categoryName = "Native";
-          break;
-        }
-
-        case SamplingProfiler::StackFrame::FrameKind::
-            FinalizableNativeFunction: {
-          // TODO: find a way to get host function name out of
-          // FinalizableNativeFunction.
-          frameName = "[HostFunction]";
-          categoryName = "Native";
-          break;
-        }
-
-        case SamplingProfiler::StackFrame::FrameKind::GCFrame: {
-          if (frame.gcFrame != nullptr) {
-            frameName = std::string("[GC ") + *frame.gcFrame + "]";
-          } else {
-            frameName = "[GC]";
-          }
-          categoryName = "Metadata";
-          break;
-        }
-
-        default:
-          llvm_unreachable("Unknown frame kind");
-      }
-
-      json.emitKeyValue("name", frameName);
-      json.emitKeyValue("category", categoryName);
-      // Root node does not have "parent" field.
-      if (parent != nullptr) {
-        json.emitKeyValue("parent", static_cast<double>(parent->getId()));
-      }
+      json.emitKeyValue("name", "[root]");
+      json.emitKeyValue("category", "root");
       json.closeDict();
-    });
-  }
+      return;
+    }
+
+    json.openDict();
+
+    auto getJSFunctionName = [](hbc::BCProvider *bcProvider, uint32_t funcId) {
+      hbc::RuntimeFunctionHeader functionHeader =
+          bcProvider->getFunctionHeader(funcId);
+      return bcProvider->getStringRefFromID(functionHeader.functionName())
+          .str();
+    };
+
+    auto getSourceLocation =
+        [](hbc::BCProvider *bcProvider,
+           uint32_t funcId,
+           uint32_t opcodeOffset) -> OptValue<hbc::DebugSourceLocation> {
+      const hbc::DebugOffsets *debugOffsets =
+          bcProvider->getDebugOffsets(funcId);
+      if (debugOffsets != nullptr &&
+          debugOffsets->sourceLocations != hbc::DebugOffsets::NO_OFFSET) {
+        return bcProvider->getDebugInfo()->getLocationForAddress(
+            debugOffsets->sourceLocations, opcodeOffset);
+      }
+      return llvh::None;
+    };
+
+    std::string frameName, categoryName;
+    const auto &frame = node.getFrameInfo();
+    switch (frame.kind) {
+      case SamplingProfiler::StackFrame::FrameKind::JSFunction: {
+        RuntimeModule *module = frame.jsFrame.module;
+        hbc::BCProvider *bcProvider = module->getBytecode();
+
+        llvh::raw_string_ostream os(frameName);
+        os << getJSFunctionName(bcProvider, frame.jsFrame.functionId);
+        categoryName = "JavaScript";
+
+        OptValue<hbc::DebugSourceLocation> sourceLocOpt = getSourceLocation(
+            bcProvider, frame.jsFrame.functionId, frame.jsFrame.offset);
+        if (sourceLocOpt.hasValue()) {
+          // Bundle has debug info.
+          std::string fileNameStr = bcProvider->getDebugInfo()->getFilenameByID(
+              sourceLocOpt.getValue().filenameId);
+
+          uint32_t line = sourceLocOpt.getValue().line;
+          uint32_t column = sourceLocOpt.getValue().column;
+          // format: frame_name(file:line:column)
+          os << "(" << fileNameStr << ":" << line << ":" << column << ")";
+          // Still emit line/column entries for babel/metro/prepack
+          // source map symbolication.
+          json.emitKeyValue("line", oscompat::to_string(line));
+          json.emitKeyValue("column", oscompat::to_string(column));
+
+          // Emit function's start line/column so that can we symbolicate
+          // name correctly.
+          OptValue<hbc::DebugSourceLocation> funcStartSourceLocOpt =
+              getSourceLocation(bcProvider, frame.jsFrame.functionId, 0);
+          if (funcStartSourceLocOpt.hasValue()) {
+            json.emitKeyValue(
+                "funcLine",
+                oscompat::to_string(funcStartSourceLocOpt.getValue().line));
+            json.emitKeyValue(
+                "funcColumn",
+                oscompat::to_string(funcStartSourceLocOpt.getValue().column));
+          }
+        } else {
+          // Without debug info, emit virtual address for source map
+          // symbolication.
+          uint32_t funcVirtAddr =
+              bcProvider->getVirtualOffsetForFunction(frame.jsFrame.functionId);
+          json.emitKeyValue("funcVirtAddr", oscompat::to_string(funcVirtAddr));
+          json.emitKeyValue(
+              "offset", oscompat::to_string(frame.jsFrame.offset));
+        }
+        break;
+      }
+
+      case SamplingProfiler::StackFrame::FrameKind::NativeFunction: {
+        frameName =
+            std::string("[Native] ") + getFunctionName(frame.nativeFrame);
+        categoryName = "Native";
+        break;
+      }
+
+      case SamplingProfiler::StackFrame::FrameKind::FinalizableNativeFunction: {
+        // TODO: find a way to get host function name out of
+        // FinalizableNativeFunction.
+        frameName = "[HostFunction]";
+        categoryName = "Native";
+        break;
+      }
+
+      case SamplingProfiler::StackFrame::FrameKind::GCFrame: {
+        if (frame.gcFrame != nullptr) {
+          frameName = std::string("[GC ") + *frame.gcFrame + "]";
+        } else {
+          frameName = "[GC]";
+        }
+        categoryName = "Metadata";
+        break;
+      }
+
+      default:
+        llvm_unreachable("Unknown frame kind");
+    }
+
+    json.emitKeyValue("name", frameName);
+    json.emitKeyValue("category", categoryName);
+    json.emitKeyValue("parent", static_cast<double>(parent->getId()));
+    json.closeDict();
+  });
 }
 
 void ChromeTraceSerializer::serialize(llvh::raw_ostream &OS) const {
