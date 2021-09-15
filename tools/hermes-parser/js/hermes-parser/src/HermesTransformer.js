@@ -13,24 +13,37 @@ import traverse from './traverse';
 import * as t from './types';
 
 // Extract the visitor object from the given plugin.
-function getPluginVisitor(plugin) {
-  if (typeof plugin === 'function') {
-    return plugin({types: t}).visitor;
+function getPluginVisitorAndOptions(ast, code, pluginItem) {
+  let plugin = pluginItem;
+  const pluginOptions = {
+    file: {ast, code},
+    opts: {}
+  };
+
+  if (Array.isArray(pluginItem)) {
+    plugin = pluginItem[0];
+    pluginOptions.opts = pluginItem[1];
   }
-  return plugin.visitor;
+
+  if (typeof plugin === 'function') {
+    return [plugin({types: t}).visitor, pluginOptions];
+  }
+  return [plugin.visitor, pluginOptions];
 }
 
 // Run each of the plugins on the source and return the resultant AST.
 export function transformFromAstSync(sourceAst, source, {plugins}) {
   const visitors = [];
-  const passes = [];
+  const visitorOptions = [];
 
   for (const plugin of plugins) {
-    visitors.push(getPluginVisitor(plugin));
+    const [vistor, options] = getPluginVisitorAndOptions(sourceAst, source, plugin);
+    visitors.push(vistor);
+    visitorOptions.push(options);
   }
 
   // Run all passes at once.
-  const visitor = traverse.visitors.merge(visitors, passes);
+  const visitor = traverse.visitors.merge(visitors, visitorOptions);
   traverse(sourceAst, visitor);
 
   return {ast: sourceAst};

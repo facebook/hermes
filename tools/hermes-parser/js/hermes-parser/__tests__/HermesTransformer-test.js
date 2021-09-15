@@ -14,7 +14,6 @@ const {parse, types, transformFromAstSync} = require('hermes-parser');
 describe('Traversal', () => {
   test('Replacement', () => {
     const source = '(foo());';
-    let called = false;
     const plugin = ({types: t}) => {
       return {
         visitor: {
@@ -44,5 +43,31 @@ describe('Traversal', () => {
         },
       ],
     });
+  });
+
+  test('Accepts options', () => {
+    const source = '(foo());';
+    let called = false;
+
+    const ast = parse(source);
+    transformFromAstSync(ast, source, {
+      plugins: [
+        [
+          {
+            visitor: {
+              CallExpression(path, state) {
+                expect(state.file.ast).toBe(ast);
+                expect(state.file.code).toBe(source);
+                expect(state.opts.someRandomKey).toBe(true);
+                called = true;
+              },
+            }
+          },
+          {someRandomKey: true},
+        ]
+      ],
+    });
+
+    expect(called).toBe(true);
   });
 });
