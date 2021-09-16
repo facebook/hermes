@@ -11,7 +11,7 @@ import inherit from '../inherit';
 
 export default function inheritTrailingComments(
   child: Object,
-  parent: Object
+  parent: Object,
 ): void {
   inherit('trailingComments', child, parent);
 }

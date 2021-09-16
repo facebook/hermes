@@ -17,7 +17,7 @@ function getPluginVisitorAndOptions(ast, code, pluginItem) {
   let plugin = pluginItem;
   const pluginOptions = {
     file: {ast, code},
-    opts: {}
+    opts: {},
   };
 
   if (Array.isArray(pluginItem)) {
@@ -37,7 +37,11 @@ export function transformFromAstSync(sourceAst, source, {plugins}) {
   const visitorOptions = [];
 
   for (const plugin of plugins) {
-    const [vistor, options] = getPluginVisitorAndOptions(sourceAst, source, plugin);
+    const [vistor, options] = getPluginVisitorAndOptions(
+      sourceAst,
+      source,
+      plugin,
+    );
     visitors.push(vistor);
     visitorOptions.push(options);
   }

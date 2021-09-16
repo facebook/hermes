@@ -11,7 +11,7 @@ import inherit from '../inherit';
 
 export default function inheritInnerComments(
   child: Object,
-  parent: Object
+  parent: Object,
 ): void {
   inherit('innerComments', child, parent);
 }

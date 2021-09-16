@@ -28,11 +28,11 @@ export function traverse<T>(
   handlers: TraversalHandler<T> | TraversalHandlers<T>,
   state?: T,
 ): void {
-  if (typeof handlers === "function") {
-    handlers = { enter: handlers };
+  if (typeof handlers === 'function') {
+    handlers = {enter: handlers};
   }
 
-  const { enter, exit } = (handlers: TraversalHandlers<T>);
+  const {enter, exit} = (handlers: TraversalHandlers<T>);
 
   traverseSimpleImpl(node, enter, exit, state, []);
 }
@@ -111,4 +111,3 @@ export function traverseFast(
     }
   }
 }
-

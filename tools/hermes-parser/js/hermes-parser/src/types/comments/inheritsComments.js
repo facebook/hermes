@@ -7,9 +7,9 @@
  * @format
  */
 
-import inheritTrailingComments from "./inheritTrailingComments";
-import inheritLeadingComments from "./inheritLeadingComments";
-import inheritInnerComments from "./inheritInnerComments";
+import inheritTrailingComments from './inheritTrailingComments';
+import inheritLeadingComments from './inheritLeadingComments';
+import inheritInnerComments from './inheritInnerComments';
 
 /**
  * Inherit all unique comments from `parent` node to `child` node.

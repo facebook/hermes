@@ -44,7 +44,7 @@ function getOptions(options: Options) {
     options.sourceType !== 'module'
   ) {
     throw new Error(
-      'sourceType option must be "script", "module", or "unambiguous" if set'
+      'sourceType option must be "script", "module", or "unambiguous" if set',
     );
   }
 

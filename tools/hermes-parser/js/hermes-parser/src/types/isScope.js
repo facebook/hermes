@@ -11,7 +11,7 @@ import {
   isFunction,
   isCatchClause,
   isBlockStatement,
-  isPattern
+  isPattern,
 } from './HermesParserNodeTypes';
 
 import {isScopable} from './isScopable';

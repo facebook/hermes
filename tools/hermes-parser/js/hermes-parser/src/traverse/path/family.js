@@ -299,7 +299,9 @@ export function getBindingIdentifierPaths(
   return ids;
 }
 
-export function getOuterBindingIdentifierPaths(duplicates?: boolean): {
+export function getOuterBindingIdentifierPaths(
+  duplicates?: boolean,
+): {
   [string]: NodePath,
 } {
   return this.getBindingIdentifierPaths(duplicates, true);
