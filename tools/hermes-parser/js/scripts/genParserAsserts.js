@@ -16,15 +16,15 @@ const {execSync} = require('child_process');
 
 const OUTPUT_FILE = path.resolve(
   __dirname,
-  '../hermes-parser/dist/types/generated/visitor-keys.js',
+  '../hermes-parser/dist/types/generated/asserts.js',
 );
 const TEMPLATE_FILE = path.resolve(
   __dirname,
-  'templates/HermesParserVisitorKeys.template',
+  'templates/HermesParserAsserts.template',
 );
-const TEMP_CUSTOM_AST_DEFINITIONS = path.resolve(
+const ALIAS_DEFINITIONS = path.resolve(
   __dirname,
-  '../hermes-parser/src/types/definitions/tempCustomASTDefs.js',
+  '../hermes-parser/src/types/definitions/aliases.js',
 );
 
 let fileContents = `/**
@@ -36,32 +36,52 @@ let fileContents = `/**
  * @format
  */
 
-export const HERMES_AST_VISITOR_KEYS = {};
-export const NODE_CHILD = 'Node';
-export const NODE_LIST_CHILD = 'NodeList';
-
 `;
 
 /**
- * Create visitor keys
+ * Generate concrete node types
  */
 fileContents += execSync(
   `c++ -E -P -I"${process.argv[2]}" -x c "${TEMPLATE_FILE}"`,
 );
 
 /**
- * Generate custom temp defs
+ * Generate alias node types
  */
-const tempCustomASTDefs = require(TEMP_CUSTOM_AST_DEFINITIONS);
-for (let typeName of Object.keys(tempCustomASTDefs)) {
-  const visitors = tempCustomASTDefs[typeName].visitor;
+const aliasDefs = require(ALIAS_DEFINITIONS);
+const FLIPPED_ALIAS_KEYS = Object.create(null);
+for (let typeName of Object.keys(aliasDefs)) {
+  for (let aliasName of aliasDefs[typeName]) {
+    if (FLIPPED_ALIAS_KEYS[aliasName]) {
+      FLIPPED_ALIAS_KEYS[aliasName].add(typeName);
+    } else {
+      FLIPPED_ALIAS_KEYS[aliasName] = new Set([typeName]);
+    }
+  }
+}
+for (let aliasKey of Object.keys(FLIPPED_ALIAS_KEYS)) {
   fileContents += `
 
-HERMES_AST_VISITOR_KEYS['${typeName}'] = {
-  ${Object.keys(visitors)
-    .map(name => `${name}: ${visitors[name]}`)
-    .join(',\n')}
-};`;
+export function assert${aliasKey}(node, opts) {
+  if (
+    (
+      node &&
+      (
+        ${Array.from(FLIPPED_ALIAS_KEYS[aliasKey])
+          .map(nodeType => `node.type === "${nodeType}"`)
+          .join(' ||\n')}
+      )
+    ) &&
+    (
+      typeof opts === "undefined" ||
+      shallowEqual(node, opts)
+    )
+  ) {
+    return;
+  }
+
+  throw new Error(throwMessage("${aliasKey}", node, opts));
+}`;
 }
 
 // Format then sign file and write to disk
