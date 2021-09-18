@@ -603,7 +603,7 @@ constexpr SegmentedArray::SegmentNumber SegmentedArray::maxNumSegments() {
       slotCapacityForAllocationSize(GC::maxAllocationSize());
   const SegmentedArray::SegmentNumber maxAllocSegments =
       maxAllocSlots - kValueToSegmentThreshold;
-  return min(maxAllocSegments, maxNumSegmentsWithoutOverflow());
+  return std::min(maxAllocSegments, maxNumSegmentsWithoutOverflow());
 }
 
 constexpr SegmentedArray::SegmentNumber

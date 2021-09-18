@@ -85,7 +85,7 @@ class HadesGC final : public GCBase {
 
   static constexpr uint32_t minAllocationSizeImpl() {
     return heapAlignSize(
-        max(sizeof(OldGen::FreelistCell), sizeof(CopyListCell)));
+        std::max(sizeof(OldGen::FreelistCell), sizeof(CopyListCell)));
   }
 
   /// \name GCBase overrides

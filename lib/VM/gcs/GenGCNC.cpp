@@ -243,7 +243,8 @@ using uintegral = typename std::enable_if<
 /// Otherwise return 0.
 template <typename T>
 constexpr int doubleDigitsDiff() {
-  return max(std::numeric_limits<T>::digits,
+  return std::max(
+             std::numeric_limits<T>::digits,
              std::numeric_limits<double>::digits) -
       std::numeric_limits<double>::digits;
 }

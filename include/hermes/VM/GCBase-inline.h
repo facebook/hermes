@@ -85,17 +85,19 @@ T *GCBase::makeA(uint32_t size, Args &&...args) {
 #ifdef HERMESVM_GC_RUNTIME
 constexpr uint32_t GCBase::maxAllocationSizeImpl() {
   // Return the lesser of the two GC options' max allowed sizes.
-  return min(HadesGC::maxAllocationSizeImpl(), GenGC::maxAllocationSizeImpl());
+  return std::min(
+      HadesGC::maxAllocationSizeImpl(), GenGC::maxAllocationSizeImpl());
 }
 
 constexpr uint32_t GCBase::minAllocationSizeImpl() {
   // Return the greater of the two GC options' min allowed sizes.
-  return max(HadesGC::minAllocationSizeImpl(), GenGC::minAllocationSizeImpl());
+  return std::max(
+      HadesGC::minAllocationSizeImpl(), GenGC::minAllocationSizeImpl());
 }
 #endif
 
 constexpr uint32_t GCBase::maxAllocationSize() {
-  return min(GC::maxAllocationSizeImpl(), GCCell::maxSize());
+  return std::min(GC::maxAllocationSizeImpl(), GCCell::maxSize());
 }
 
 constexpr uint32_t GCBase::minAllocationSize() {
