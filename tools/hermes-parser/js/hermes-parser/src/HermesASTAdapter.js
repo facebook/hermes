@@ -13,7 +13,7 @@ import {
   HERMES_AST_VISITOR_KEYS,
   NODE_CHILD,
   NODE_LIST_CHILD,
-} from './HermesParserVisitorKeys';
+} from './types/generated/visitor-keys';
 
 /**
  * The base class for transforming the Hermes AST to the desired output format.

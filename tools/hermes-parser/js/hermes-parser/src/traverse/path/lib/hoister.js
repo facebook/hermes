@@ -7,7 +7,6 @@
  * @format
  */
 
-import {react} from '../../../types';
 import * as t from '../../../types';
 
 const referenceVisitor = {
@@ -17,7 +16,7 @@ const referenceVisitor = {
     // We do have to consider member expressions for hoisting (e.g. `this.component`)
     if (
       path.isJSXIdentifier() &&
-      react.isCompatTag(path.node.name) &&
+      t.react.isCompatTag(path.node.name) &&
       !path.parentPath.isJSXMemberExpression()
     ) {
       return;

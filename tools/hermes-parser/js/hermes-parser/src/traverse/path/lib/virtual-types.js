@@ -7,8 +7,6 @@
  * @format
  */
 
-import type NodePath from '../index';
-import {react} from '../../../types';
 import * as t from '../../../types';
 
 export const ReferencedIdentifier = {
@@ -17,7 +15,7 @@ export const ReferencedIdentifier = {
     const {node, parent} = path;
     if (!t.isIdentifier(node, opts) && !t.isJSXMemberExpression(parent, opts)) {
       if (t.isJSXIdentifier(node, opts)) {
-        if (react.isCompatTag(node.name)) return false;
+        if (t.react.isCompatTag(node.name)) return false;
       } else {
         // not a JSXIdentifier or an Identifier
         return false;

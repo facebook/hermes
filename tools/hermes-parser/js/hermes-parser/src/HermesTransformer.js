@@ -9,7 +9,7 @@
 
 'use strict';
 
-import traverse from './traverse';
+import traverse, {NodePath, Scope} from './traverse';
 import * as t from './types';
 
 // Extract the visitor object from the given plugin.
@@ -32,23 +32,47 @@ function getPluginVisitorAndOptions(ast, code, pluginItem) {
 }
 
 // Run each of the plugins on the source and return the resultant AST.
-export function transformFromAstSync(sourceAst, source, {plugins}) {
+export function transformFromAstSync(ast, source, {plugins}) {
+  if (ast.type !== 'File') {
+    throw new Error('AST root must be a Program or File node');
+  }
+
   const visitors = [];
   const visitorOptions = [];
 
   for (const plugin of plugins) {
-    const [vistor, options] = getPluginVisitorAndOptions(
-      sourceAst,
-      source,
-      plugin,
-    );
-    visitors.push(vistor);
+    const [visitor, options] = getPluginVisitorAndOptions(ast, source, plugin);
+    visitors.push(visitor);
     visitorOptions.push(options);
   }
 
   // Run all passes at once.
   const visitor = traverse.visitors.merge(visitors, visitorOptions);
-  traverse(sourceAst, visitor);
 
-  return {ast: sourceAst};
+  let scope = Scope;
+  const hub = {
+    getCode: () => source,
+    getScope: () => scope,
+    // TODO: Remove this code path
+    addHelper: () => {
+      throw new Error('Helpers are not supported.');
+    },
+    // TODO: Intergrate buildCodeFrameError (See: https://fburl.com/6czq4tll)
+    buildError(node, msg, Error = TypeError): Error {
+      return new Error(msg);
+    },
+  };
+
+  const rootPath = NodePath.get({
+    hub: hub,
+    parentPath: null,
+    parent: ast,
+    container: ast,
+    key: 'program',
+  }).setContext();
+  scope = rootPath.scope;
+
+  traverse(ast, visitor, scope, {}, rootPath);
+
+  return {ast};
 }

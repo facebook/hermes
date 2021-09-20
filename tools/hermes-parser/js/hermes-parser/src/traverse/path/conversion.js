@@ -10,7 +10,6 @@
 // This file contains methods that convert the path node into another node or some other type of data.
 
 import * as t from '../../types';
-import nameFunction from '@babel/helper-function-name';
 
 export function toComputedKey(): Object {
   const node = this.node;
@@ -79,15 +78,6 @@ export function ensureBlock() {
 }
 
 /**
- * Keeping this for backward-compatibility. You should use arrowFunctionToExpression() for >=7.x.
- */
-export function arrowFunctionToShadowed() {
-  if (!this.isArrowFunctionExpression()) return;
-
-  this.arrowFunctionToExpression();
-}
-
-/**
  * Given an arbitrary function, process its content as if it were an arrow function, moving references
  * to "this", "arguments", "super", and such into the function's parent scope. This method is useful if
  * you have wrapped some set of items in an IIFE or other function, but want "this", "arguments", and super"
@@ -105,62 +95,6 @@ export function unwrapFunctionEnvironment() {
   }
 
   hoistFunctionEnvironment(this);
-}
-
-/**
- * Convert a given arrow function into a normal ES5 function expression.
- */
-export function arrowFunctionToExpression({
-  allowInsertArrow = true,
-  specCompliant = false,
-} = {}) {
-  if (!this.isArrowFunctionExpression()) {
-    throw this.buildCodeFrameError(
-      'Cannot convert non-arrow function to a function expression.',
-    );
-  }
-
-  const thisBinding = hoistFunctionEnvironment(
-    this,
-    specCompliant,
-    allowInsertArrow,
-  );
-
-  this.ensureBlock();
-  this.node.type = 'FunctionExpression';
-  if (specCompliant) {
-    const checkBinding = thisBinding
-      ? null
-      : this.parentPath.scope.generateUidIdentifier('arrowCheckId');
-    if (checkBinding) {
-      this.parentPath.scope.push({
-        id: checkBinding,
-        init: t.objectExpression([]),
-      });
-    }
-
-    this.get('body').unshiftContainer(
-      'body',
-      t.expressionStatement(
-        t.callExpression(this.hub.addHelper('newArrowCheck'), [
-          t.thisExpression(),
-          checkBinding
-            ? t.identifier(checkBinding.name)
-            : t.identifier(thisBinding),
-        ]),
-      ),
-    );
-
-    this.replaceWith(
-      t.callExpression(
-        t.memberExpression(
-          nameFunction(this, true) || this.node,
-          t.identifier('bind'),
-        ),
-        [checkBinding ? t.identifier(checkBinding.name) : t.thisExpression()],
-      ),
-    );
-  }
 }
 
 /**

@@ -7,33 +7,21 @@
  * @format
  */
 
+import {FLIPPED_ALIAS_KEYS, VISITOR_KEYS} from './definitions';
+import isCompatTag from './validators/react/isCompatTag';
+
 export * from './traverse';
+export * from './generated/node-types';
+export * from './generated/asserts';
 
-import {HERMES_AST_VISITOR_KEYS} from '../HermesParserVisitorKeys';
-
-export const VISITOR_KEYS = {};
-for (const key of Object.keys(HERMES_AST_VISITOR_KEYS)) {
-  VISITOR_KEYS[key] = Object.keys(HERMES_AST_VISITOR_KEYS[key]);
-}
-
-import {nodeBases} from './HermesParserNodeTypes';
-
-export * from './HermesParserNodeTypes';
-
-export const TYPES = Object.keys(HERMES_AST_VISITOR_KEYS);
-export const ALIAS_KEYS = {};
-export const FLIPPED_ALIAS_KEYS = {};
-export const DEPRECATED_KEYS = {};
+export const TYPES = Object.keys(VISITOR_KEYS).concat(
+  Object.keys(FLIPPED_ALIAS_KEYS),
+);
+export * from './definitions';
 
 /**
- * Test if a `nodeType` is a `targetType`.
- * This would ordinarily invoke alias logic, but there is none in Hermes yet.
+ * Comments
  */
-export function isType(nodeType: string, targetType: string) {
-  return nodeType === targetType;
-}
-
-// comments
 export {default as addComment} from './comments/addComment';
 export {default as addComments} from './comments/addComments';
 export {default as inheritInnerComments} from './comments/inheritInnerComments';
@@ -42,11 +30,28 @@ export {default as inheritsComments} from './comments/inheritsComments';
 export {default as inheritTrailingComments} from './comments/inheritTrailingComments';
 export {default as removeComments} from './comments/removeComments';
 
+// retrievers
+export {default as getBindingIdentifiers} from './retrievers/getBindingIdentifiers';
+export {default as getOuterBindingIdentifiers} from './retrievers/getOuterBindingIdentifiers';
+
 /**
- * Validation unimplemented for now.
+ * Validation
  */
-export function validate(node?: Object, key: string, val: any): void {}
-
-export {buildMatchMemberExpression} from './buildMatchMemberExpression';
-
-export {isScope} from './isScope';
+export {default as is} from './validators/is';
+export {default as isBinding} from './validators/isBinding';
+export {default as isBlockScoped} from './validators/isBlockScoped';
+export {default as isImmutable} from './validators/isImmutable';
+export {default as isLet} from './validators/isLet';
+export {default as isNode} from './validators/isNode';
+export {default as isNodesEquivalent} from './validators/isNodesEquivalent';
+export {default as isReferenced} from './validators/isReferenced';
+export {default as isScope} from './validators/isScope';
+export {default as isSpecifierDefault} from './validators/isSpecifierDefault';
+export {default as isType} from './validators/isType';
+export {default as isValidES3Identifier} from './validators/isValidES3Identifier';
+export {default as isValidIdentifier} from './validators/isValidIdentifier';
+export {default as isVar} from './validators/isVar';
+export {default as matchesPattern} from './validators/matchesPattern';
+export {default as validate} from './validators/validate';
+export {default as buildMatchMemberExpression} from './validators/buildMatchMemberExpression';
+export const react = {isCompatTag};
