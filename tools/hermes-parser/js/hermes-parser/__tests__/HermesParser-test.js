@@ -9,7 +9,7 @@
 
 'use strict';
 
-const {parse} = require('hermes-parser');
+import {parse} from 'hermes-parser';
 
 /**
  * Utility for quickly creating source locations inline.

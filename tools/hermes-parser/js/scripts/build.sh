@@ -52,5 +52,5 @@ node "$THIS_DIR/genNodeDeserializers.js" "$INCLUDE_PATH"
 
 for package in "${PACKAGES[@]}"; do
   PACKAGE_DIST_DIR="$THIS_DIR/../$package/dist"
-  babel --config-file="$THIS_DIR/../.babelrc" "$PACKAGE_DIST_DIR" --out-dir="$PACKAGE_DIST_DIR"
+  babel --config-file="$THIS_DIR/../babel.config.js" "$PACKAGE_DIST_DIR" --out-dir="$PACKAGE_DIST_DIR"
 done

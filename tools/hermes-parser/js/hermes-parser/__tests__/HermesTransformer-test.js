@@ -9,7 +9,7 @@
 
 'use strict';
 
-const {parse, types, transformFromAstSync} = require('hermes-parser');
+import {parse, types, transformFromAstSync} from 'hermes-parser';
 
 describe('Traversal', () => {
   test('Replacement', () => {
