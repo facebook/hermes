@@ -43,7 +43,6 @@ export {default as isBlockScoped} from './validators/isBlockScoped';
 export {default as isImmutable} from './validators/isImmutable';
 export {default as isLet} from './validators/isLet';
 export {default as isNode} from './validators/isNode';
-export {default as isNodesEquivalent} from './validators/isNodesEquivalent';
 export {default as isReferenced} from './validators/isReferenced';
 export {default as isScope} from './validators/isScope';
 export {default as isSpecifierDefault} from './validators/isSpecifierDefault';
