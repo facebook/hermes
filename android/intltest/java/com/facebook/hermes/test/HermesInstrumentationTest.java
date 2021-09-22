@@ -47,7 +47,7 @@ public class HermesInstrumentationTest extends InstrumentationTestCase {
       int result6 = rt.getGlobalNumberProperty("compareResult6");
       assertThat(result6).isEqualTo(1);
       int result7 = rt.getGlobalNumberProperty("compareResult7");
-      assertThat(result6).isEqualTo(-1);
+      assertThat(result7).isEqualTo(-1);
     }
   }
 
