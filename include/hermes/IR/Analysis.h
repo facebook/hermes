@@ -189,11 +189,11 @@ class StackNode {
   StackNode(const StackNode &) = delete;
   void operator=(const StackNode &) = delete;
 
-  StackNode(Visitor *, DominanceInfoNode *n)
+  StackNode(Visitor *, const DominanceInfoNode *n)
       : node_(n), childIter_(n->begin()), endIter_(n->end()), done_(false) {}
 
   // Accessors.
-  DominanceInfoNode *node() {
+  const DominanceInfoNode *node() {
     return node_;
   }
   // Return nullptr when the end is reached, or the next child otherwise.
@@ -209,9 +209,9 @@ class StackNode {
 
  private:
   // Members.
-  DominanceInfoNode *node_;
-  DominanceInfoNode::iterator childIter_;
-  DominanceInfoNode::iterator endIter_;
+  const DominanceInfoNode *node_;
+  DominanceInfoNode::const_iterator childIter_;
+  const DominanceInfoNode::const_iterator endIter_;
   bool done_;
 };
 
@@ -225,7 +225,7 @@ class Visitor {
     return static_cast<Derived *>(this);
   }
 
-  StackNode *newNode(DominanceInfoNode *n) {
+  StackNode *newNode(const DominanceInfoNode *n) {
     auto *sn = nodeAllocator_.Allocate();
     return new (sn) StackNode(derived(), n);
   }
@@ -235,9 +235,9 @@ class Visitor {
   }
 
  protected:
-  DominanceInfo &DT_;
+  const DominanceInfo &DT_;
 
-  Visitor(DominanceInfo &DT) : DT_(DT) {}
+  Visitor(const DominanceInfo &DT) : DT_(DT) {}
 
   /// Starting DFS from root node.
   bool DFS() {
@@ -245,7 +245,7 @@ class Visitor {
   }
 
   /// Starting DFS from a specific node.
-  bool DFS(DominanceInfoNode *DIN) {
+  bool DFS(const DominanceInfoNode *DIN) {
     llvh::SmallVector<StackNode *, 4> nodesToProcess;
 
     bool changed = false;

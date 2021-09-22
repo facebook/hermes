@@ -19,8 +19,6 @@ target_link_libraries(hdb
   hermesapi
 )
 
-hermes_link_icu(hdb)
-
 install(TARGETS hdb
   RUNTIME DESTINATION bin
 )

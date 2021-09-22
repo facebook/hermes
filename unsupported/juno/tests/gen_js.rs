@@ -87,6 +87,24 @@ fn test_literals() {
     test_roundtrip("/abc/");
     test_roundtrip("/abc/gi");
     test_roundtrip("/abc/gi");
+
+    test_roundtrip(r#" `abc` "#);
+    test_roundtrip(r#" `abc\ndef` "#);
+    test_roundtrip(
+        r#" `abc
+        def` "#,
+    );
+    test_roundtrip(r#" `abc \ud800 def` "#);
+    test_roundtrip(r#" `abc \ud800 def` "#);
+    test_roundtrip(r#" `\ud83d\udcd5` "#);
+    test_roundtrip(r#" `escape backtick: \` should work` "#);
+    test_roundtrip(r#" `😹` "#);
+}
+
+#[test]
+fn test_identifier() {
+    test_roundtrip("foo");
+    test_roundtrip("class C { #foo() {} }");
 }
 
 #[test]
@@ -108,6 +126,17 @@ fn test_binop() {
     test_roundtrip("1 + 1");
     test_roundtrip("1 * 2 + (3 + 4)");
     test_roundtrip("1 ** 2 ** 3 ** 4");
+    test_roundtrip("1 in 2 + (2 - 4) / 3");
+    test_roundtrip("1 instanceof 2 + (2 - 4) / 3");
+}
+
+#[test]
+fn test_conditional() {
+    test_roundtrip("a ? b : c");
+    test_roundtrip("a ? b : c ? d : e");
+    test_roundtrip("(a ? b : c) ? d : e");
+    test_roundtrip("a ? b : (c ? d : e)");
+    test_roundtrip("a?.3:.4");
 }
 
 #[test]
@@ -122,6 +151,7 @@ fn test_functions() {
     test_roundtrip("function foo(x, y) {}");
     test_roundtrip("function foo(x, y=3) {}");
     test_roundtrip("function foo([x, y], {z}) {}");
+    test_roundtrip("function foo([x, y] = [1,2], {z:q}) {}");
     test_roundtrip("function foo() { return this; }");
     test_roundtrip("function *foo() {}");
     test_roundtrip("function *foo() { yield 1; }");
@@ -143,6 +173,7 @@ fn test_calls() {
     test_roundtrip("f();");
     test_roundtrip("f(1);");
     test_roundtrip("f(1, 2);");
+    test_roundtrip("(f?.(1, 2))(3);");
     test_roundtrip("f?.(1, 2)?.(3)(5);");
     test_roundtrip("new f();");
     test_roundtrip("new f(1);");
@@ -215,6 +246,15 @@ fn test_statements() {
 }
 
 #[test]
+fn test_logical() {
+    test_roundtrip("a && b || c");
+    test_roundtrip("a || b && c");
+    test_roundtrip("(a || b) && c");
+    test_roundtrip("(a || b) ?? c");
+    test_roundtrip("(a ?? b) || c");
+}
+
+#[test]
 fn test_sequences() {
     test_roundtrip("var x = (1, 2, 3);");
     test_roundtrip("foo((1, 2, 3), 4);");
@@ -238,6 +278,121 @@ fn test_arrays() {
     test_roundtrip("([])");
     test_roundtrip("var x = [1, 2, 3, ...from]");
     test_roundtrip("var x = [1, 2, 3, ...from, 4, 5, 6]");
+}
+
+#[test]
+fn test_assignment() {
+    test_roundtrip("x = 1");
+    test_roundtrip("x = y = 1");
+    test_roundtrip("x += 1");
+    test_roundtrip("x -= 1");
+    test_roundtrip("x *= 1");
+    test_roundtrip("x /= 1");
+    test_roundtrip("x **= 1");
+    test_roundtrip("x |= 1");
+    test_roundtrip("x &= 1");
+    test_roundtrip("x ||= 1");
+    test_roundtrip("x &&= 1");
+    test_roundtrip("x ??= 1");
+    test_roundtrip("foo()[1] = 1");
+}
+
+#[test]
+fn test_unary() {
+    test_roundtrip("+x");
+    test_roundtrip("-x");
+    test_roundtrip("!x");
+    test_roundtrip("~x");
+    test_roundtrip("-(-x)");
+    test_roundtrip("+!-x");
+    test_roundtrip("delete x");
+    test_roundtrip("typeof x");
+}
+
+#[test]
+fn test_update() {
+    test_roundtrip("x++");
+    test_roundtrip("x--");
+    test_roundtrip("++x");
+    test_roundtrip("--x");
+    test_roundtrip("--(-x)");
+    test_roundtrip("+x++");
+}
+
+#[test]
+fn test_members() {
+    test_roundtrip("a.b");
+    test_roundtrip("a.b.c");
+    test_roundtrip("a?.b");
+    test_roundtrip("a?.[b]");
+    test_roundtrip("(a?.b).c");
+    test_roundtrip("a?.b().c");
+    test_roundtrip("(a?.b()).c");
+    test_roundtrip("a?.().b");
+    test_roundtrip("a?.().b");
+    test_roundtrip("a?.b?.c?.()");
+    test_roundtrip("(a?.b?.c?.()).d");
+    test_roundtrip("(a?.b?.c?.())?.d");
+    test_roundtrip("(a?.b?.c?.())(d)");
+    test_roundtrip("(a?.b?.c?.())?.(d)");
+    test_roundtrip("class C { constructor() { new.target; } }");
+}
+
+#[test]
+fn test_classes() {
+    test_roundtrip("class C {}");
+    test_roundtrip("class C extends D {}");
+    test_roundtrip(
+        "class C extends D {
+            prop1;
+            #prop2;
+            constructor() {}
+            a() {}
+            #b() {}
+            c(x, y) {}
+            static d() {}
+        }",
+    );
+    test_roundtrip(
+        "var cls = (class C extends D {
+            prop1;
+            #prop2;
+            constructor() {}
+            a() {}
+            #b() {}
+            c(x, y) {}
+            static d() {}
+            get e() {}
+            set e(v) {}
+            ;
+        })",
+    );
+}
+
+#[test]
+fn test_import() {
+    test_roundtrip("import x from 'foo'");
+    test_roundtrip("import x, {y} from 'foo'");
+    test_roundtrip("import * as Foo from 'foo'");
+    test_roundtrip("import x, {y as z, a as b} from 'foo'");
+    test_roundtrip("import {a, b, c} from 'foo'");
+    test_roundtrip("import 'foo';");
+    test_roundtrip("import 'foo' assert {kind: 'json'};");
+    test_roundtrip(
+        "
+        import 'foo';
+        import 'bar';
+        ",
+    );
+}
+
+#[test]
+fn test_export() {
+    test_roundtrip("export var x = 3;");
+    test_roundtrip("export function foo() {}");
+    test_roundtrip("export default function foo() {}");
+    test_roundtrip("export {x as y};");
+    test_roundtrip("export * from 'foo';");
 }
 
 #[test]

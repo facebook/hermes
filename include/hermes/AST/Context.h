@@ -52,9 +52,6 @@ struct OptimizationSettings {
   /// Enable any inlining of functions.
   bool inlining{true};
 
-  /// Enable IR outlining.
-  bool outlining{false};
-
   /// Reuse property cache entries for same property name.
   bool reusePropCache{true};
 

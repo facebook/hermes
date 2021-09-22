@@ -63,7 +63,7 @@ class KindAndSize {
   // On 64 bit platforms without compressed pointers, just make the size 32 bits
   // so that it can be accessed without any masking or shifting.
   static constexpr size_t kNumSizeBits =
-      min<size_t>(kNumBits - kNumKindBits, 32);
+      std::min<size_t>(kNumBits - kNumKindBits, 32);
   static_assert(
       kNumCellKinds < 256,
       "More cell kinds than available kind bits.");

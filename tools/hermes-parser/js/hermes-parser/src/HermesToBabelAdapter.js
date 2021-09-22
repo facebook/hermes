@@ -9,9 +9,9 @@
 
 'use strict';
 
-const HermesASTAdapter = require('./HermesASTAdapter');
+import HermesASTAdapter from './HermesASTAdapter';
 
-class HermesToBabelAdapter extends HermesASTAdapter {
+export default class HermesToBabelAdapter extends HermesASTAdapter {
   fixSourceLocation(node) {
     const loc = node.loc;
     if (loc == null) {
@@ -356,5 +356,3 @@ class HermesToBabelAdapter extends HermesASTAdapter {
     };
   }
 }
-
-module.exports = HermesToBabelAdapter;

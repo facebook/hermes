@@ -9,8 +9,8 @@
 
 'use strict';
 
-const HermesParserDeserializer = require('./HermesParserDeserializer');
-const HermesParserWASM = require('./HermesParserWASM');
+import HermesParserDeserializer from './HermesParserDeserializer';
+import HermesParserWASM from './HermesParserWASM';
 
 const hermesParse = HermesParserWASM.cwrap('hermesParse', 'number', [
   'number',
@@ -68,7 +68,7 @@ function copyToHeap(buffer, addr) {
   HermesParserWASM.HEAP8[addr + buffer.length] = 0;
 }
 
-function parse(source, options) {
+export function parse(source, options) {
   // Allocate space on heap for source text
   const sourceBuffer = Buffer.from(source, 'utf8');
   const sourceAddr = HermesParserWASM._malloc(sourceBuffer.length + 1);
@@ -116,7 +116,3 @@ function parse(source, options) {
     HermesParserWASM._free(sourceAddr);
   }
 }
-
-module.exports = {
-  parse,
-};

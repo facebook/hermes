@@ -9,7 +9,6 @@
 
 // This file contains methods responsible for replacing a node with another.
 
-import {codeFrameColumns} from '@babel/code-frame';
 import traverse from '../index';
 import NodePath from './index';
 import {path as pathCache} from '../cache';
@@ -88,14 +87,7 @@ export function replaceWithSourceString(replacement) {
   } catch (err) {
     const loc = err.loc;
     if (loc) {
-      err.message +=
-        ' - make sure this is an expression.\n' +
-        codeFrameColumns(replacement, {
-          start: {
-            line: loc.line,
-            column: loc.column + 1,
-          },
-        });
+      err.message += ' - make sure this is an expression.';
       err.code = 'BABEL_REPLACE_SOURCE_ERROR';
     }
     throw err;
@@ -237,8 +229,9 @@ export function replaceExpressionWithStatements(nodes: Array<Object>) {
   this.traverse(hoistVariablesVisitor);
 
   // add implicit returns to all ending expression statements
-  const completionRecords: Array<NodePath> =
-    this.get('callee').getCompletionRecords();
+  const completionRecords: Array<NodePath> = this.get(
+    'callee',
+  ).getCompletionRecords();
   for (const path of completionRecords) {
     if (!path.isExpressionStatement()) continue;
 

@@ -187,16 +187,14 @@ bool SamplingProfiler::GlobalProfiler::sampleStack() {
         localProfiler->domains_.capacity() == domainCapacityBefore &&
         "Must not dynamically allocate in signal handler");
 
-    if (sampledStackDepth_ > 0) {
-      assert(
-          sampledStackDepth_ <= sampleStorage_.stack.size() &&
-          "How can we sample more frames than storage?");
-      localProfiler->sampledStacks_.emplace_back(
-          sampleStorage_.tid,
-          sampleStorage_.timeStamp,
-          sampleStorage_.stack.begin(),
-          sampleStorage_.stack.begin() + sampledStackDepth_);
-    }
+    assert(
+        sampledStackDepth_ <= sampleStorage_.stack.size() &&
+        "How can we sample more frames than storage?");
+    localProfiler->sampledStacks_.emplace_back(
+        sampleStorage_.tid,
+        sampleStorage_.timeStamp,
+        sampleStorage_.stack.begin(),
+        sampleStorage_.stack.begin() + sampledStackDepth_);
   }
   return true;
 }

@@ -56,11 +56,9 @@ endif()
 target_link_libraries(libhermes
   jsi
   ${LIBHERMES_VM_DEP}
-  ${CORE_FOUNDATION}
   # Linker flags
   ${OPTIONAL_GC_SECTIONS}
 )
-hermes_link_icu(libhermes)
 
 # Export the required header directory
 target_include_directories(libhermes PUBLIC ..)

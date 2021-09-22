@@ -9,10 +9,10 @@
 
 'use strict';
 
-const HermesParserDecodeUTF8String = require('./HermesParserDecodeUTF8String');
-const NODE_DESERIALIZERS = require('./HermesParserNodeDeserializers');
+import HermesParserDecodeUTF8String from './HermesParserDecodeUTF8String';
+import NODE_DESERIALIZERS from './HermesParserNodeDeserializers';
 
-class HermesParserDeserializer {
+export default class HermesParserDeserializer {
   constructor(
     programBuffer,
     positionBuffer,
@@ -234,5 +234,3 @@ class HermesParserDeserializer {
     }
   }
 }
-
-module.exports = HermesParserDeserializer;

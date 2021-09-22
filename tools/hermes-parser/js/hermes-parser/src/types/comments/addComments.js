@@ -20,7 +20,7 @@ export default function addComments<T: Object>(
   const key = `${type}Comments`;
 
   if (node[key]) {
-    if (type === "leading") {
+    if (type === 'leading') {
       node[key] = comments.concat(node[key]);
     } else {
       node[key] = node[key].concat(comments);

@@ -16,7 +16,7 @@ export default function addComment<T: Object>(
   node: T,
   type: string,
   content: string,
-  line?: boolean
+  line?: boolean,
 ): T {
   return addComments(node, type, [
     {

@@ -25,6 +25,7 @@ android {
         arguments "-DIMPORT_HERMESC=${rootProject.ext.hermesC}"
         arguments "-DFBSOURCE_DIR=${rootProject.ext.fbsource}"
         arguments "-DHERMES_SLOW_DEBUG=False"
+        arguments "-DHERMES_BUILD_SHARED_JSI=True"
         targets "libhermes"
       }
     }
@@ -106,6 +107,7 @@ android {
 
   packagingOptions {
     exclude "**/libc++_shared.so"
+    exclude "**/libjsi.so"
     exclude "**/libfbjni.so"
   }
 

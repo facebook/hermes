@@ -507,13 +507,6 @@ static opt<bool> ReusePropCache(
 static CLFlag
     Inline('f', "inline", true, "inlining of functions", CompilerCategory);
 
-static CLFlag Outline(
-    'f',
-    "outline",
-    false,
-    "IR outlining to reduce code size",
-    CompilerCategory);
-
 static CLFlag StripFunctionNames(
     'f',
     "strip-function-names",
@@ -1050,8 +1043,6 @@ std::shared_ptr<Context> createContext(
 
   optimizationOpts.inlining = cl::OptimizationLevel != cl::OptLevel::O0 &&
       cl::BytecodeFormat == cl::BytecodeFormatKind::HBC && cl::Inline;
-  optimizationOpts.outlining =
-      cl::OptimizationLevel != cl::OptLevel::O0 && cl::Outline;
 
   optimizationOpts.reusePropCache = cl::ReusePropCache;
 

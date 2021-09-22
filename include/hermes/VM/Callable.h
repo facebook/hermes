@@ -386,7 +386,7 @@ class BoundFunction final : public Callable {
       Runtime *runtime,
       Handle<Callable> target,
       unsigned argCountWithThis,
-      const PinnedHermesValue *argsWithThis);
+      ConstArgIterator argsWithThis);
 
   /// Perform the actual call. This is a light-weight handler which is part of
   /// the private API - it is only used internally and by the interpreter.

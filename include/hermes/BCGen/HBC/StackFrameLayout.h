@@ -129,9 +129,6 @@ struct StackFrameLayout {
     /// The number of additional registers the callee needs to allocate in the
     /// beginning of its frame.
     CalleeExtraRegistersAtStart = DebugEnvironment - Scratch + 1,
-
-    /// Direction of the stack.
-    StackIncrement = -1,
   };
 
   /// Calculate the number of register slots needed for an outgoing call: it
@@ -148,17 +145,6 @@ struct StackFrameLayout {
     // The >= pattern is specially recognized as an overflow check.
     uint32_t totalCount = FirstArg + numArgsExcludingThis;
     return totalCount >= numArgsExcludingThis ? totalCount : UINT32_MAX;
-  }
-
-  /// \return the offset of the register containing the N-th argument to the
-  /// callee. -1 is this, 0 is the first explicit argument.
-  static int32_t argOffset(int32_t n) {
-    return FirstArg + n;
-  }
-
-  /// \return the offset of the local register with index n.
-  static int32_t localOffset(int32_t n) {
-    return FirstLocal - n;
   }
 };
 

@@ -164,7 +164,7 @@ class OrderedHashMap final : public GCCell {
   // It needs to be less than 1/4th the max 32-bit integer in order to use an
   // integer-based load factor check of 0.75.
   static constexpr uint32_t MAX_CAPACITY =
-      min(ArrayStorageSmall::maxElements(), UINT32_MAX / 4);
+      std::min(ArrayStorageSmall::maxElements(), UINT32_MAX / 4);
 
   /// Capacity of the hash table.
   uint32_t capacity_{INITIAL_CAPACITY};

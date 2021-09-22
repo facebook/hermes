@@ -6,6 +6,7 @@
  */
 
 use super::generated_ffi::NodeKind;
+use std::convert::AsRef;
 use std::marker::PhantomData;
 use std::ptr::NonNull;
 
@@ -134,8 +135,10 @@ impl NodePtr {
             ptr: NonNull::from(n),
         }
     }
+}
 
-    pub fn as_ref(&self) -> &Node {
+impl AsRef<Node> for NodePtr {
+    fn as_ref(&self) -> &Node {
         debug_assert!(!self.ptr.as_ptr().is_null(), "null NodePtr");
         unsafe { self.ptr.as_ref() }
     }
@@ -170,16 +173,19 @@ pub struct NodeListOptRef {
 }
 
 impl NodeListRef {
-    pub fn as_ref(&self) -> &NodeList {
-        debug_assert!(!self.ptr.is_null(), "null NodeListRef");
-        unsafe { &*self.ptr }
-    }
     pub fn iter(&self) -> NodeIterator {
         NodeIterator {
             head: self.ptr,
             cur: self.ptr,
             ph: PhantomData,
         }
+    }
+}
+
+impl AsRef<NodeList> for NodeListRef {
+    fn as_ref(&self) -> &NodeList {
+        debug_assert!(!self.ptr.is_null(), "null NodeListRef");
+        unsafe { &*self.ptr }
     }
 }
 

@@ -38,11 +38,8 @@ target_link_libraries(hermes
   hermesSupport
   dtoa
   hermesInstrumentation
-  ${CORE_FOUNDATION}
   ${LIBREADLINE}
 )
-
-hermes_link_icu(hermes)
 
 install(TARGETS hermes
   RUNTIME DESTINATION bin

@@ -71,7 +71,7 @@ endif()
 # - npm/package.json
 # - hermes-engine.podspec
 project(Hermes
-        VERSION 0.8.0
+        VERSION 0.9.0
         LANGUAGES C CXX)
 # Optional suffix like "-rc3"
 set(VERSION_SUFFIX "")
@@ -268,6 +268,8 @@ set(HERMES_BUILD_NODE_HERMES OFF CACHE BOOL "Whether to build node-hermes")
 
 set(HERMES_BUILD_LEAN_LIBHERMES OFF CACHE BOOL "Exclude the Hermes compiler from libhermes.")
 
+set(HERMES_BUILD_SHARED_JSI OFF CACHE BOOL "Build JSI as a shared library.")
+
 if (HERMES_IS_ANDROID)
   add_definitions(-DHERMES_PLATFORM_UNICODE=HERMES_PLATFORM_UNICODE_JAVA)
 endif()
@@ -456,16 +458,8 @@ endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Attempt to use system ICU first, if none specified.
-# Don't need ICU on Apple systems.
-if (APPLE)
-  set(ICU_FOUND 1)
-  set(ICU_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/external/icu_decls)
-  set(ICU_LIBRARIES
-    icucore
-  )
-  include_directories(${ICU_INCLUDE_DIRS})
-elseif(EMSCRIPTEN)
-  # Just ignore ICU on Emiscripten. For now.
+# Don't need ICU on Apple, Emscripten, and Android.
+if (APPLE OR EMSCRIPTEN OR HERMES_IS_ANDROID)
   set(ICU_FOUND 1)
 endif()
 
@@ -514,7 +508,7 @@ if (NOT ICU_FOUND AND HERMES_ENABLE_WIN10_ICU_FALLBACK AND
 endif()
 
 # If we have no ICU, then error out.
-if (NOT HERMES_IS_ANDROID AND NOT ICU_FOUND)
+if (NOT ICU_FOUND)
   message(FATAL_ERROR "Unable to find ICU.")
 endif()
 
@@ -619,7 +613,10 @@ endif()
 # Make sure JSI is compiled with PIC
 set(save_CMAKE_POSITION_INDEPENDENT_CODE ${CMAKE_POSITION_INDEPENDENT_CODE})
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(save_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+set(BUILD_SHARED_LIBS ${HERMES_BUILD_SHARED_JSI})
 add_subdirectory(${HERMES_JSI_DIR}/jsi ${CMAKE_CURRENT_BINARY_DIR}/jsi)
+set(BUILD_SHARED_LIBS ${save_BUILD_SHARED_LIBS})
 set(CMAKE_POSITION_INDEPENDENT_CODE ${save_CMAKE_POSITION_INDEPENDENT_CODE})
 
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/facebook)

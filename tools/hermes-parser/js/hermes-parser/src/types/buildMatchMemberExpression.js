@@ -23,7 +23,7 @@ import {
 function matchesPattern(
   member: Object,
   match: string | Array<string>,
-  allowPartial?: boolean
+  allowPartial?: boolean,
 ): boolean {
   // not a member expression
   if (!isMemberExpression(member)) return false;
@@ -66,7 +66,7 @@ function matchesPattern(
  */
 export function buildMatchMemberExpression(
   match: string,
-  allowPartial?: boolean
+  allowPartial?: boolean,
 ): Object => boolean {
   const parts = match.split('.');
 

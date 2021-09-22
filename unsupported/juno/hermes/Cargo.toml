@@ -1,0 +1,11 @@
+[package]
+name = "hermes"
+version = "0.1.0"
+authors = ["Facebook"]
+edition = "2018"
+license = "MIT"
+
+[dependencies]
+support = { path = "../support" }
+libc = "0.2"
+thiserror = "1.0"

@@ -71,10 +71,6 @@ HadesGC::OldGen::finishAlloc(GCCell *cell, uint32_t sz, uint16_t segmentIdx) {
   return cell;
 }
 
-AllocResult HadesGC::HeapSegment::bumpAlloc(uint32_t sz) {
-  return AlignedHeapSegment::alloc(sz);
-}
-
 void HadesGC::OldGen::addCellToFreelist(
     void *addr,
     uint32_t sz,
@@ -423,6 +419,10 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     return gc.inYoungGen(ptr) ||
         (CompactionEnabled && gc.compactee_.evacContains(ptr));
   }
+  inline bool shouldForward(CompressedPointer ptr) const {
+    return gc.inYoungGen(ptr) ||
+        (CompactionEnabled && gc.compactee_.evacContains(ptr));
+  }
 
   LLVM_NODISCARD GCCell *acceptRoot(GCCell *ptr) {
     if (shouldForward(ptr))
@@ -447,14 +447,14 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
 
   LLVM_NODISCARD CompressedPointer
   acceptHeap(CompressedPointer cptr, void *heapLoc) {
-    GCCell *ptr = cptr.get(pointerBase_);
-    if (shouldForward(ptr)) {
+    if (shouldForward(cptr)) {
+      GCCell *ptr = cptr.get(pointerBase_);
       assert(
           HeapSegment::getCellMarkBit(ptr) &&
           "Should only evacuate marked objects.");
       return forwardCell<CompressedPointer>(ptr);
     }
-    if (CompactionEnabled && gc.compactee_.contains(ptr)) {
+    if (CompactionEnabled && gc.compactee_.contains(cptr)) {
       // If a compaction is about to take place, dirty the card for any newly
       // evacuated cells, since the marker may miss them.
       HeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(heapLoc);
@@ -1746,6 +1746,9 @@ void HadesGC::prepareCompactee(bool forceCompaction) {
     addSegmentExtentToCrashManager(
         *compactee_.segment, kCompacteeNameForCrashMgr);
     compactee_.start = compactee_.segment->lowLim();
+    compactee_.startCP = CompressedPointer(
+        getPointerBase(),
+        reinterpret_cast<GCCell *>(compactee_.segment->lowLim()));
     compacteeHandleForSweep_ = compactee_.segment;
   }
 }
@@ -1774,6 +1777,7 @@ void HadesGC::completeMarking() {
   // Update the compactee tracking pointers so that the next YG collection will
   // do a compaction.
   compactee_.evacStart = compactee_.start;
+  compactee_.evacStartCP = compactee_.startCP;
   assert(
       oldGenMarker_->globalWorklist().empty() &&
       "Marking worklist wasn't drained");
@@ -1858,14 +1862,7 @@ void HadesGC::debitExternalMemory(GCCell *cell, uint32_t sz) {
   }
 }
 
-void HadesGC::writeBarrier(const GCHermesValue *loc, HermesValue value) {
-  assert(
-      !calledByBackgroundThread() &&
-      "Write barrier invoked by background thread.");
-  if (inYoungGen(loc)) {
-    // A pointer that lives in YG never needs any write barriers.
-    return;
-  }
+void HadesGC::writeBarrierSlow(const GCHermesValue *loc, HermesValue value) {
   if (ogMarkingBarriers_) {
     snapshotWriteBarrierInternal(*loc);
   }
@@ -1875,16 +1872,9 @@ void HadesGC::writeBarrier(const GCHermesValue *loc, HermesValue value) {
   relocationWriteBarrier(loc, value.getPointer());
 }
 
-void HadesGC::writeBarrier(
+void HadesGC::writeBarrierSlow(
     const GCSmallHermesValue *loc,
     SmallHermesValue value) {
-  assert(
-      !calledByBackgroundThread() &&
-      "Write barrier invoked by background thread.");
-  if (inYoungGen(loc)) {
-    // A pointer that lives in YG never needs any write barriers.
-    return;
-  }
   if (ogMarkingBarriers_) {
     snapshotWriteBarrierInternal(*loc);
   }
@@ -1894,16 +1884,9 @@ void HadesGC::writeBarrier(
   relocationWriteBarrier(loc, value.getPointer(getPointerBase()));
 }
 
-void HadesGC::writeBarrier(const GCPointerBase *loc, const GCCell *value) {
-  assert(
-      !calledByBackgroundThread() &&
-      "Write barrier invoked by background thread.");
-  if (inYoungGen(loc)) {
-    // A pointer that lives in YG never needs any write barriers.
-    return;
-  }
+void HadesGC::writeBarrierSlow(const GCPointerBase *loc, const GCCell *value) {
   if (ogMarkingBarriers_)
-    snapshotWriteBarrierInternal(loc->get(getPointerBase()));
+    snapshotWriteBarrierInternal(*loc);
   // Always do the non-snapshot write barrier in order for YG to be able to
   // scan cards.
   relocationWriteBarrier(loc, value);
@@ -1920,13 +1903,9 @@ void HadesGC::writeBarrier(SymbolID symbol) {
   // to long-lived strings.
 }
 
-void HadesGC::constructorWriteBarrier(
+void HadesGC::constructorWriteBarrierSlow(
     const GCHermesValue *loc,
     HermesValue value) {
-  if (inYoungGen(loc)) {
-    // A pointer that lives in YG never needs any write barriers.
-    return;
-  }
   // A constructor never needs to execute a SATB write barrier, since its
   // previous value was definitely not live.
   if (!value.isPointer()) {
@@ -1935,13 +1914,9 @@ void HadesGC::constructorWriteBarrier(
   relocationWriteBarrier(loc, value.getPointer());
 }
 
-void HadesGC::constructorWriteBarrier(
+void HadesGC::constructorWriteBarrierSlow(
     const GCSmallHermesValue *loc,
     SmallHermesValue value) {
-  if (inYoungGen(loc)) {
-    // A pointer that lives in YG never needs any write barriers.
-    return;
-  }
   // A constructor never needs to execute a SATB write barrier, since its
   // previous value was definitely not live.
   if (!value.isPointer()) {
@@ -1950,19 +1925,7 @@ void HadesGC::constructorWriteBarrier(
   relocationWriteBarrier(loc, value.getPointer(getPointerBase()));
 }
 
-void HadesGC::constructorWriteBarrier(
-    const GCPointerBase *loc,
-    const GCCell *value) {
-  if (inYoungGen(loc)) {
-    // A pointer that lives in YG never needs any write barriers.
-    return;
-  }
-  // A constructor never needs to execute a SATB write barrier, since its
-  // previous value was definitely not live.
-  relocationWriteBarrier(loc, value);
-}
-
-void HadesGC::constructorWriteBarrierRange(
+void HadesGC::constructorWriteBarrierRangeSlow(
     const GCHermesValue *start,
     uint32_t numHVs) {
   assert(
@@ -1973,79 +1936,32 @@ void HadesGC::constructorWriteBarrierRange(
   // can avoid doing anything for the whole range. If the range is in the OG,
   // then just dirty all the cards corresponding to it, and we can scan them for
   // pointers later. This is less precise but makes the write barrier faster.
-  if (inYoungGen(start))
-    return;
+
   AlignedHeapSegment::cardTableCovering(start)->dirtyCardsForAddressRange(
       start, start + numHVs);
 }
 
-void HadesGC::constructorWriteBarrierRange(
+void HadesGC::constructorWriteBarrierRangeSlow(
     const GCSmallHermesValue *start,
     uint32_t numHVs) {
   assert(
       AlignedStorage::containedInSame(start, start + numHVs) &&
       "Range must start and end within a heap segment.");
-  if (inYoungGen(start))
-    return;
   AlignedHeapSegment::cardTableCovering(start)->dirtyCardsForAddressRange(
       start, start + numHVs);
 }
 
-void HadesGC::snapshotWriteBarrier(const GCHermesValue *loc) {
-  if (inYoungGen(loc)) {
-    // A pointer that lives in YG never needs any write barriers.
-    return;
-  }
-  if (ogMarkingBarriers_) {
-    snapshotWriteBarrierInternal(*loc);
-  }
-}
-
-void HadesGC::snapshotWriteBarrier(const GCSmallHermesValue *loc) {
-  if (inYoungGen(loc)) {
-    // A pointer that lives in YG never needs any write barriers.
-    return;
-  }
-  if (ogMarkingBarriers_) {
-    snapshotWriteBarrierInternal(*loc);
-  }
-}
-
-void HadesGC::snapshotWriteBarrier(const GCPointerBase *loc) {
-  if (inYoungGen(loc)) {
-    // A pointer that lives in YG never needs any write barriers.
-    return;
-  }
-  if (ogMarkingBarriers_) {
-    snapshotWriteBarrierInternal(loc->get(getPointerBase()));
-  }
-}
-
-void HadesGC::snapshotWriteBarrierRange(
+void HadesGC::snapshotWriteBarrierRangeSlow(
     const GCHermesValue *start,
     uint32_t numHVs) {
-  if (inYoungGen(start)) {
-    // A pointer that lives in YG never needs any write barriers.
-    return;
-  }
-  if (!ogMarkingBarriers_) {
-    return;
-  }
   for (uint32_t i = 0; i < numHVs; ++i) {
     snapshotWriteBarrierInternal(start[i]);
   }
 }
 
-void HadesGC::snapshotWriteBarrierRange(
+void HadesGC::snapshotWriteBarrierRangeSlow(
     const GCSmallHermesValue *start,
     uint32_t numHVs) {
-  if (inYoungGen(start)) {
-    // A pointer that lives in YG never needs any write barriers.
-    return;
-  }
-  if (!ogMarkingBarriers_) {
-    return;
-  }
   for (uint32_t i = 0; i < numHVs; ++i) {
     snapshotWriteBarrierInternal(start[i]);
   }
@@ -2063,6 +1979,19 @@ void HadesGC::snapshotWriteBarrierInternal(GCCell *oldValue) {
   }
 }
 
+void HadesGC::snapshotWriteBarrierInternal(CompressedPointer oldValue) {
+  assert(
+      (!oldValue || oldValue.get(getPointerBase())->isValid()) &&
+      "Invalid cell encountered in snapshotWriteBarrier");
+  if (oldValue && !inYoungGen(oldValue)) {
+    GCCell *ptr = oldValue.get(getPointerBase());
+    HERMES_SLOW_ASSERT(
+        dbgContains(ptr) &&
+        "Non-heap pointer encountered in snapshotWriteBarrier");
+    oldGenMarker_->globalWorklist().enqueue(ptr);
+  }
+}
+
 void HadesGC::snapshotWriteBarrierInternal(HermesValue oldValue) {
   if (oldValue.isPointer()) {
     snapshotWriteBarrierInternal(static_cast<GCCell *>(oldValue.getPointer()));
@@ -2074,8 +2003,7 @@ void HadesGC::snapshotWriteBarrierInternal(HermesValue oldValue) {
 
 void HadesGC::snapshotWriteBarrierInternal(SmallHermesValue oldValue) {
   if (oldValue.isPointer()) {
-    snapshotWriteBarrierInternal(
-        static_cast<GCCell *>(oldValue.getPointer(getPointerBase())));
+    snapshotWriteBarrierInternal(oldValue.getPointer());
   } else if (oldValue.isSymbol()) {
     // Symbols need snapshot write barriers.
     snapshotWriteBarrierInternal(oldValue.getSymbol());
@@ -2685,6 +2613,8 @@ HadesGC::HeapSegment HadesGC::setYoungGen(HeapSegment seg) {
   addSegmentExtentToCrashManager(seg, "YG");
   youngGenFinalizables_.clear();
   std::swap(youngGen_, seg);
+  youngGenCP_ = CompressedPointer{
+      getPointerBase(), reinterpret_cast<GCCell *>(youngGen_.lowLim())};
   return seg;
 }
 
@@ -3012,18 +2942,6 @@ uint64_t HadesGC::OldGen::size() const {
 uint64_t HadesGC::OldGen::targetSizeBytes() const {
   assert(gc_->gcMutex_ && "Must hold gcMutex_ when accessing targetSegments_.");
   return targetSegments_ * HeapSegment::maxSize();
-}
-
-HadesGC::HeapSegment &HadesGC::youngGen() {
-  return youngGen_;
-}
-
-const HadesGC::HeapSegment &HadesGC::youngGen() const {
-  return youngGen_;
-}
-
-bool HadesGC::inYoungGen(const void *p) const {
-  return youngGen_.lowLim() == AlignedStorage::start(p);
 }
 
 size_t HadesGC::getYoungGenExternalBytes() const {

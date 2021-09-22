@@ -26,12 +26,6 @@ public class HermesInstrumentationTest extends InstrumentationTestCase {
   @Test
   public void testLocaleCompare() {
     try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
-      /* Reenable this once Intl is capable enough */
-      rt.evaluateJavaScript("intlType = typeof Intl");
-      if (rt.getGlobalStringProperty("intlType").equals("object")) {
-        return;
-      }
-
       rt.evaluateJavaScript("compareResult1 = 'a'.localeCompare('a');");
       rt.evaluateJavaScript("compareResult2 = 'a'.localeCompare('b');");
       rt.evaluateJavaScript("compareResult3 = 'a'.localeCompare('A');");
@@ -63,10 +57,19 @@ public class HermesInstrumentationTest extends InstrumentationTestCase {
     TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 
     try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
-      /* Reenable this once Intl is capable enough */
+      // The behavior of the locale conversions when Intl is not defined is
+      // implementation-defined, and in practice, different from what
+      // the ECMA 402 locale data specifies on Android.  Choose the expected
+      // value based on whether Intl is defined.
       rt.evaluateJavaScript("intlType = typeof Intl");
+      String expected1;
+      String expected3;
       if (rt.getGlobalStringProperty("intlType").equals("object")) {
-        return;
+        expected1 = "12/20/2012";
+        expected3 = "12/20/2012, 3:00:00 AM";
+      } else {
+        expected1 = "Dec 20, 2012";
+        expected3 = "Dec 20, 2012 3:00:00 AM";
       }
 
       rt.evaluateJavaScript(
@@ -78,11 +81,11 @@ public class HermesInstrumentationTest extends InstrumentationTestCase {
               .toString());
 
       String result1 = rt.getGlobalStringProperty("d1");
-      assertThat(result1).isEqualTo("Dec 20, 2012");
+      assertThat(result1).isEqualTo(expected1);
       String result2 = rt.getGlobalStringProperty("d2");
       assertThat(result2).isEqualTo("3:00:00 AM");
       String result3 = rt.getGlobalStringProperty("d3");
-      assertThat(result3).isEqualTo("Dec 20, 2012 3:00:00 AM");
+      assertThat(result3).isEqualTo(expected3);
     } finally {
       Locale.setDefault(defaultLocale);
       TimeZone.setDefault(defaultZone);

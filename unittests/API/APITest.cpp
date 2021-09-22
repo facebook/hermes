@@ -260,6 +260,66 @@ TEST_F(HermesRuntimeTest, ReferencesCanEscapeScope) {
   EXPECT_EQ(rootsDelta, 1);
 }
 
+TEST(HermesRuntimeCrashManagerTest, CrashGetStackTrace) {
+  class CrashManagerImpl : public hermes::vm::CrashManager {
+   public:
+    void registerMemory(void *, size_t) override {}
+    void unregisterMemory(void *) override {}
+    void setCustomData(const char *, const char *) override {}
+    void removeCustomData(const char *) override {}
+    void setContextualCustomData(const char *, const char *) override {}
+    void removeContextualCustomData(const char *) override {}
+    CallbackKey registerCallback(CallbackFunc cb) override {
+      auto key = callbacks.size();
+      callbacks.push_back(std::move(cb));
+      return key;
+    }
+    void unregisterCallback(CallbackKey /*key*/) override {}
+    void setHeapInfo(const HeapInformation & /*heapInfo*/) override {}
+
+    std::vector<CallbackFunc> callbacks;
+  };
+
+  auto cm = std::make_shared<CrashManagerImpl>();
+  auto rt = makeHermesRuntime(
+      hermes::vm::RuntimeConfig::Builder().withCrashMgr(cm).build());
+  Function runCrashCallbacks = Function::createFromHostFunction(
+      *rt,
+      PropNameID::forAscii(*rt, "runCrashCallbacks"),
+      0,
+      [&](Runtime &rt, const Value &, const Value *, size_t) {
+        // Create a temporary file to write the crash manager data to.
+        FILE *f = tmpfile();
+        for (const auto &cb : cm->callbacks)
+          cb(fileno(f));
+        const auto sz = ftell(f);
+        rewind(f);
+        // Dump the crash manager data to a std::string.
+        std::string out;
+        out.resize(sz);
+        const auto readsz = fread(&out[0], 1, sz, f);
+        EXPECT_EQ(readsz, sz);
+        fclose(f);
+        return String::createFromUtf8(rt, std::move(out));
+      });
+  rt->global().setProperty(
+      *rt, "runCrashCallbacks", std::move(runCrashCallbacks));
+  std::string jsCode = R"(
+function baz(){ return runCrashCallbacks(); }
+function bar(){ return baz(); }
+function foo(){ return bar(); }
+var out = foo();
+// Extract just the source locations of the call stack.
+JSON.stringify(JSON.parse(out).callstack.map(x => x.SourceLocation));
+)";
+  auto buf = std::make_shared<StringBuffer>(std::move(jsCode));
+  std::string callstack =
+      rt->evaluateJavaScript(buf, "crashCode.js").asString(*rt).utf8(*rt);
+  const char *expected =
+      "[\"crashCode.js:2:41\",\"crashCode.js:3:27\",\"crashCode.js:4:27\",\"crashCode.js:5:14\",null]";
+  EXPECT_EQ(callstack, expected);
+}
+
 TEST_F(HermesRuntimeTest, HostObjectWithOwnProperties) {
   class HostObjectWithPropertyNames : public HostObject {
     std::vector<PropNameID> getPropertyNames(Runtime &rt) override {

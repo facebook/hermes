@@ -168,7 +168,7 @@ class HermesValue32 {
   /// turned off on a 64-bit platform (e.g. with MallocGC) since we would end up
   /// using HermesValue32, but RawType would be 64 bits.
   static constexpr size_t kNumSmiBits =
-      min(kNumValueBits, static_cast<size_t>(54));
+      std::min(kNumValueBits, static_cast<size_t>(54));
 
   /// A 3 bit tag describing the stored value. Tags that represent multiple
   /// types are distinguished using an additional bit found in the "ETag".

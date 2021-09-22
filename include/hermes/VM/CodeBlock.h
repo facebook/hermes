@@ -156,10 +156,12 @@ class CodeBlock final
       uint32_t idx,
       unsigned int numLiterals) const;
 
-  std::pair<SerializedLiteralParser, SerializedLiteralParser>
-  getObjectBufferIter(
-      uint32_t keyIdx,
-      uint32_t valIdx,
+  SerializedLiteralParser getObjectBufferKeyIter(
+      uint32_t idx,
+      unsigned int numLiterals) const;
+
+  SerializedLiteralParser getObjectBufferValueIter(
+      uint32_t idx,
       unsigned int numLiterals) const;
 
   RuntimeModule *getRuntimeModule() const {

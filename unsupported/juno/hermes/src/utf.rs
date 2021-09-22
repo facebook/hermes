@@ -5,6 +5,25 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+//! Hermes Non-standard UTF-8 Support
+//!
+//! Hermes uses a custom UTF-8 encoding format, suitable for JavaScript.
+//! JavaScript strings are a sequence of 16-bit values that do not necessarily
+//! represent a valid UTF-16 string (although most of them usually are).
+//! Specifically the values can be unmatched surrogate pairs.
+//!
+//! The Hermes UTF-8 encoding was thus chosen to represent JavaScript strings
+//! losslessly. Each 16-bit value is encoded separately using the principles of
+//! UTF-8, ignoring whether it is a part o surrogate pair. The resulting byte
+//! sequence is definitely *NOT* guaranteed to be a valid UTF-8 string (although
+//! in practice it is in many cases, if only valid Unicode characters smaller
+//! than 0x10000 were used in the input).
+//!
+//! Note that even correct UTF-16 strings do not result a valid UTF-8 sequence,
+//! because Unicode characters larger than 0xFFFF are represented in UTF-16
+//! with a surrogate pair, and each element of the pair is encoded separately
+//! into UTF-8.
+
 use thiserror::Error;
 
 #[derive(Clone, Copy, Error, Debug, Eq, PartialEq)]

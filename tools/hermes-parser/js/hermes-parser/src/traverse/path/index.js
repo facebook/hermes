@@ -15,7 +15,6 @@ import traverse from '../index';
 import Scope from '../scope';
 import * as t from '../../types';
 import {path as pathCache} from '../cache';
-import generator from '@babel/generator';
 
 // NodePath is split across many files.
 import * as NodePath_ancestry from './ancestry';
@@ -143,7 +142,8 @@ export default class NodePath {
   }
 
   toString() {
-    return generator(this.node).code;
+    // TODO: Support displaying node
+    throw new Error('Printing nodes currently not supported');
   }
 
   get inList() {

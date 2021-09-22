@@ -9,9 +9,9 @@
 
 'use strict';
 
-const HermesASTAdapter = require('./HermesASTAdapter');
+import HermesASTAdapter from './HermesASTAdapter';
 
-class HermesToESTreeAdapter extends HermesASTAdapter {
+export default class HermesToESTreeAdapter extends HermesASTAdapter {
   constructor(options, code) {
     super(options);
     this.code = code;
@@ -155,5 +155,3 @@ class HermesToESTreeAdapter extends HermesASTAdapter {
     return node;
   }
 }
-
-module.exports = HermesToESTreeAdapter;

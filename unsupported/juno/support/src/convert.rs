@@ -7,7 +7,6 @@
 
 use std::mem;
 
-#[link(name = "hermesSupport")]
 extern "C" {
     /// \param m the number to convert
     /// \param dest output buffer

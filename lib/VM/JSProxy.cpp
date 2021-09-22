@@ -1403,7 +1403,7 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
         " ownKeys trap result is not an Object");
   }
   auto trapResultArray =
-      runtime->makeHandle<JSObject>(std::move(trapResultArrayRes->get()));
+      runtime->makeHandle<JSObject>(trapResultArrayRes->get());
   // 8. Let trapResult be ? CreateListFromArrayLike(trapResultArray, « String,
   // Symbol »)
   // 9. If trapResult contains any duplicate entries, throw a TypeError

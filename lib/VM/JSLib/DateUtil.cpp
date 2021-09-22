@@ -839,14 +839,18 @@ static double parseISODate(StringView u16str) {
         // Need a + or a -.
         return nan;
       }
-      if (!scanInt(it, end, tzh)) {
+      if (it > end - 2) {
+        return nan;
+      }
+      if (!scanInt(it, it + 2, tzh)) {
         return nan;
       }
       tzh *= sign;
-      if (!consume(u':')) {
+      consume(u':');
+      if (it > end - 2) {
         return nan;
       }
-      if (!scanInt(it, end, tzm)) {
+      if (!scanInt(it, it + 2, tzm)) {
         return nan;
       }
       tzm *= sign;

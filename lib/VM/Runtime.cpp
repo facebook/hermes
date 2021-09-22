@@ -114,11 +114,10 @@ CallResult<PseudoHandle<>> Runtime::getNamed(
 ExecutionStatus Runtime::putNamedThrowOnError(
     Handle<JSObject> obj,
     PropCacheID id,
-    HermesValue hv) {
+    SmallHermesValue shv) {
   CompressedPointer clazzPtr{obj->getClassGCPtr()};
   auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
   if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
-    auto shv = SmallHermesValue::encodeHermesValue(hv, this);
     JSObject::setNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
         *obj, this, cacheEntry->slot, shv);
     return ExecutionStatus::RETURNED;
@@ -135,12 +134,12 @@ ExecutionStatus Runtime::putNamedThrowOnError(
       cacheEntry->clazz = clazzPtr;
       cacheEntry->slot = desc.slot;
     }
-    auto shv = SmallHermesValue::encodeHermesValue(hv, this);
     JSObject::setNamedSlotValueUnsafe(*obj, this, desc.slot, shv);
     return ExecutionStatus::RETURNED;
   }
+  Handle<> value = makeHandle(shv.unboxToHV(this));
   return JSObject::putNamed_RJS(
-             obj, this, sym, makeHandle(hv), PropOpFlags().plusThrowOnError())
+             obj, this, sym, value, PropOpFlags().plusThrowOnError())
       .getStatus();
 }
 
@@ -186,29 +185,28 @@ Runtime::Runtime(
   if (LLVM_UNLIKELY(maxNumRegisters > kMaxSupportedNumRegisters)) {
     hermes_fatal("RuntimeConfig maxNumRegisters too big");
   }
-  registerStack_ = runtimeConfig.getRegisterStack();
-  if (!registerStack_) {
-    // registerStack_ should not be allocated with new, because then
+  registerStackStart_ = runtimeConfig.getRegisterStack();
+  if (!registerStackStart_) {
+    // registerStackAllocation_ should not be allocated with new, because then
     // default constructors would run for the whole stack space.
     // Round up to page size as required by vm_allocate.
-    const auto numBytesForRegisters = llvh::alignTo(
+    const uint32_t numBytesForRegisters = llvh::alignTo(
         sizeof(PinnedHermesValue) * maxNumRegisters, oscompat::page_size());
     auto result = oscompat::vm_allocate(numBytesForRegisters);
     if (!result) {
       hermes_fatal("Failed to allocate register stack", result.getError());
     }
-    registerStack_ = static_cast<PinnedHermesValue *>(result.get());
-    registerStackBytesToUnmap_ = numBytesForRegisters;
-    crashMgr_->registerMemory(registerStack_, numBytesForRegisters);
-  } else {
-    registerStackBytesToUnmap_ = 0;
+    registerStackStart_ = static_cast<PinnedHermesValue *>(result.get());
+    registerStackAllocation_ = {registerStackStart_, numBytesForRegisters};
+    crashMgr_->registerMemory(registerStackStart_, numBytesForRegisters);
   }
 
-  registerStackEnd_ = registerStack_ + maxNumRegisters;
+  registerStackEnd_ = registerStackStart_ + maxNumRegisters;
   if (shouldRandomizeMemoryLayout_) {
     const unsigned bytesOff = std::random_device()() % oscompat::page_size();
     registerStackEnd_ -= bytesOff / sizeof(PinnedHermesValue);
-    assert(registerStackEnd_ >= registerStack_ && "register stack too small");
+    assert(
+        registerStackEnd_ >= registerStackStart_ && "register stack too small");
   }
   stackPointer_ = registerStackEnd_;
 
@@ -356,9 +354,10 @@ Runtime::~Runtime() {
       "A pointer is left in the ID tracker that is from non-JS memory. "
       "Was untrackNative called?");
   crashMgr_->unregisterCallback(crashCallbackKey_);
-  if (registerStackBytesToUnmap_ > 0) {
-    crashMgr_->unregisterMemory(registerStack_);
-    oscompat::vm_free(registerStack_, registerStackBytesToUnmap_);
+  if (!registerStackAllocation_.empty()) {
+    crashMgr_->unregisterMemory(registerStackAllocation_.data());
+    oscompat::vm_free(
+        registerStackAllocation_.data(), registerStackAllocation_.size());
   }
   // Remove inter-module dependencies so we can delete them in any order.
   for (auto &module : runtimeModuleList_) {
@@ -1329,10 +1328,11 @@ ExecutionStatus Runtime::raiseEvalUnsupported(llvh::StringRef code) {
 }
 
 bool Runtime::insertVisitedObject(JSObject *obj) {
-  const bool foundCycle = llvh::find(stringCycleCheckVisited_, obj) !=
-      stringCycleCheckVisited_.end();
+  if (llvh::find(stringCycleCheckVisited_, obj) !=
+      stringCycleCheckVisited_.end())
+    return true;
   stringCycleCheckVisited_.push_back(obj);
-  return foundCycle;
+  return false;
 }
 
 void Runtime::removeVisitedObject(JSObject *obj) {
@@ -1799,8 +1799,13 @@ void Runtime::crashCallback(int fd) {
   json.emitKeyValue(
       "address", llvmStreamableToString(llvh::format_hex((uintptr_t)this, 10)));
   json.emitKeyValue(
-      "registerStack",
-      llvmStreamableToString(llvh::format_hex((uintptr_t)registerStack_, 10)));
+      "registerStackAllocation",
+      llvmStreamableToString(
+          llvh::format_hex((uintptr_t)registerStackAllocation_.data(), 10)));
+  json.emitKeyValue(
+      "registerStackStart",
+      llvmStreamableToString(
+          llvh::format_hex((uintptr_t)registerStackStart_, 10)));
   json.emitKeyValue(
       "registerStackPointer",
       llvmStreamableToString(llvh::format_hex((uintptr_t)stackPointer_, 10)));

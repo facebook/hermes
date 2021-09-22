@@ -15,5 +15,8 @@
     "flow": "flow",
     "test": "jest"
   },
-  "workspaces": ["hermes-eslint", "hermes-parser"]
+  "workspaces": ["hermes-eslint", "hermes-parser"],
+  "jest": {
+    "transformIgnorePatterns": ["/node_modules/", "/dist/"]
+  }
 }

@@ -438,7 +438,7 @@ CallResult<HermesValue> typedArrayPrototypeSetTypedArray(
   // array.
   // TODO: This could be implemented via a directional copy which either
   // copies forwards or backwards depending on how the regions overlap.
-  auto possibleTA = JSTypedArrayBase::allocate(src, runtime, srcLength);
+  auto possibleTA = src->allocate(runtime, srcLength);
   if (possibleTA == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }

@@ -15,7 +15,4 @@ target_link_libraries(hbc-diff
   hermesHBCBackend
   hermesSupport
   hermesInst
-  ${CORE_FOUNDATION}
 )
-
-hermes_link_icu(hbc-diff)

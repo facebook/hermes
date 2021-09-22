@@ -16,6 +16,7 @@
 /// ```
 /// will create a `Foo` enum with two variants and their string counterparts.
 /// `ErrorType` is the type of the error when a parse fails.
+#[macro_export]
 macro_rules! define_str_enum {
     ($name:ident, $error:ident, $(($variant:ident, $string:expr)),+ $(,)?) => {
         #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]

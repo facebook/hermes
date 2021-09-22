@@ -7,7 +7,7 @@
  * @format
  */
 
-import {COMMENT_KEYS} from '../constants';
+import {COMMENT_KEYS} from '../definitions/constants';
 
 /**
  * Remove comment properties from a node.

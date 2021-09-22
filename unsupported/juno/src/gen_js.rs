@@ -5,11 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::{ast::*, convert};
+use crate::ast::*;
 use std::{
     fmt,
     io::{self, BufWriter, Write},
 };
+use support::convert;
 
 /// Whether to pretty-print the generated JS.
 /// Does not do full formatting of the source, but does add indentation and
@@ -745,13 +746,13 @@ impl<W: Write> GenJS<W> {
                 property,
                 computed,
             } => {
-                object.visit(self, Some(node));
+                self.print_child(Some(object), node, ChildPos::Left);
                 if *computed {
                     out!(self, "[");
                 } else {
                     out!(self, ".");
                 }
-                property.visit(self, Some(node));
+                self.print_child(Some(property), node, ChildPos::Right);
                 if *computed {
                     out!(self, "]");
                 }
@@ -762,13 +763,13 @@ impl<W: Write> GenJS<W> {
                 computed,
                 optional,
             } => {
-                object.visit(self, Some(node));
+                self.print_child(Some(object), node, ChildPos::Left);
                 if *computed {
                     out!(self, "{}[", if *optional { "?." } else { "" });
                 } else {
                     out!(self, "{}.", if *optional { "?" } else { "" });
                 }
-                property.visit(self, Some(node));
+                self.print_child(Some(property), node, ChildPos::Right);
                 if *computed {
                     out!(self, "]");
                 }
@@ -880,23 +881,33 @@ impl<W: Write> GenJS<W> {
             }
 
             TemplateLiteral {
-                quasis: _,
-                expressions: _,
+                quasis,
+                expressions,
             } => {
-                unimplemented!("TemplateLiteral");
-                // out!(self, "`");
-                // let mut it_expr = expressions.iter();
-                // for quasi in quasis {
-                //     if let TemplateElement { raw, .. } = &quasi.kind {
-                //         out!(self, "{}", raw.str);
-                //         if let Some(expr) = it_expr.next() {
-                //             out!(self, "${{");
-                //             expr.visit(self, Some(node));
-                //             out!(self, "}}");
-                //         }
-                //     }
-                // }
-                // out!(self, "`");
+                out!(self, "`");
+                let mut it_expr = expressions.iter();
+                for quasi in quasis {
+                    if let TemplateElement {
+                        raw,
+                        tail: _,
+                        cooked: _,
+                    } = &quasi.kind
+                    {
+                        out!(
+                            self,
+                            "{}",
+                            char::decode_utf16(raw.str.iter().cloned())
+                                .map(|r| r.expect("Template element raw must be valid UTF-16"))
+                                .collect::<String>()
+                        );
+                        if let Some(expr) = it_expr.next() {
+                            out!(self, "${{");
+                            expr.visit(self, Some(node));
+                            out!(self, "}}");
+                        }
+                    }
+                }
+                out!(self, "`");
             }
             TaggedTemplateExpression { tag, quasi } => {
                 self.print_child(Some(tag), node, ChildPos::Left);
@@ -1203,16 +1214,17 @@ impl<W: Write> GenJS<W> {
                 }
                 source.visit(self, Some(node));
                 if let Some(attributes) = attributes {
-                    out!(self, " assert {{");
-                    for (i, attribute) in attributes.iter().enumerate() {
-                        if i > 0 {
-                            self.comma();
+                    if !attributes.is_empty() {
+                        out!(self, " assert {{");
+                        for (i, attribute) in attributes.iter().enumerate() {
+                            if i > 0 {
+                                self.comma();
+                            }
+                            attribute.visit(self, Some(node));
                         }
-                        attribute.visit(self, Some(node));
+                        out!(self, "}}");
                     }
-                    out!(self, "}}");
                 }
-                out!(self, ";");
                 self.newline();
             }
             ImportSpecifier {
@@ -1233,6 +1245,12 @@ impl<W: Write> GenJS<W> {
             ImportNamespaceSpecifier { local } => {
                 out!(self, "* as ");
                 local.visit(self, Some(node));
+            }
+            ImportAttribute { key, value } => {
+                key.visit(self, Some(node));
+                out!(self, ":");
+                self.space(ForceSpace::No);
+                value.visit(self, Some(node));
             }
 
             ExportNamedDeclaration {
@@ -1261,7 +1279,6 @@ impl<W: Write> GenJS<W> {
                         source.visit(self, Some(node));
                     }
                 }
-                out!(self, ";");
                 self.newline();
             }
             ExportSpecifier { exported, local } => {
@@ -1276,8 +1293,18 @@ impl<W: Write> GenJS<W> {
             ExportDefaultDeclaration { declaration } => {
                 out!(self, "export default ");
                 declaration.visit(self, Some(node));
-                out!(self, ";");
                 self.newline();
+            }
+            ExportAllDeclaration {
+                source,
+                export_kind,
+            } => {
+                out!(self, "export ");
+                if *export_kind != ExportKind::Value {
+                    out!(self, "{} ", export_kind.as_str());
+                }
+                out!(self, "* from ");
+                source.visit(self, Some(node));
             }
 
             ObjectPattern {
@@ -2241,7 +2268,7 @@ impl<W: Write> GenJS<W> {
             }
 
             _ => {
-                unimplemented!("Unsupported AST node kind: {}", node.kind.name());
+                unimplemented!("Cannot generate node kind: {}", node.kind.name());
             }
         };
     }
@@ -2644,6 +2671,8 @@ impl<W: Write> GenJS<W> {
     /// which is situated at `child_pos` position in relation to its `parent`.
     fn need_parens(&self, parent: &Node, child: &Node, child_pos: ChildPos) -> NeedParens {
         use NodeKind::*;
+
+        #[allow(clippy::if_same_then_else)]
         if matches!(parent.kind, ArrowFunctionExpression { .. }) {
             // (x) => ({x: 10}) needs parens to avoid confusing it with a block and a
             // labelled statement.
@@ -2672,10 +2701,10 @@ impl<W: Write> GenJS<W> {
             || (is_unary_op(parent, UnaryExpressionOperator::Plus)
                 && self.root_starts_with(child, check_plus))
             || (child_pos == ChildPos::Right
-                && is_binary_op(parent, "-")
+                && is_binary_op(parent, BinaryExpressionOperator::Minus)
                 && self.root_starts_with(child, check_minus))
             || (child_pos == ChildPos::Right
-                && is_binary_op(parent, "+")
+                && is_binary_op(parent, BinaryExpressionOperator::Plus)
                 && self.root_starts_with(child, check_plus))
         {
             // -(-x) or -(--x) or -(-5)
@@ -2687,6 +2716,23 @@ impl<W: Write> GenJS<W> {
             } else {
                 NeedParens::Space
             };
+        } else if matches!(parent.kind, MemberExpression { .. } | CallExpression { .. })
+            && matches!(
+                child.kind,
+                OptionalMemberExpression { .. } | OptionalCallExpression { .. }
+            )
+            && child_pos == ChildPos::Left
+        {
+            // When optional chains are terminated by non-optional member/calls,
+            // we need the left hand side to be parenthesized.
+            // Avoids confusing `(a?.b).c` with `a?.b.c`.
+            return NeedParens::Yes;
+        } else if (check_and_or(parent) && check_nullish(child))
+            || (check_nullish(parent) && check_and_or(child))
+        {
+            // Nullish coalescing always requires parens when mixed with any
+            // other logical operations.
+            return NeedParens::Yes;
         }
 
         let (child_prec, _child_assoc) = self.get_precedence(child);
@@ -2760,7 +2806,9 @@ impl<W: Write> GenJS<W> {
             UnaryExpression {
                 prefix, argument, ..
             } => !*prefix && self.expr_starts_with(argument, Some(expr), pred),
-            MemberExpression { object, .. } => self.expr_starts_with(object, Some(expr), pred),
+            MemberExpression { object, .. } | OptionalMemberExpression { object, .. } => {
+                self.expr_starts_with(object, Some(expr), pred)
+            }
             TaggedTemplateExpression { tag, .. } => self.expr_starts_with(tag, Some(expr), pred),
             _ => false,
         }
@@ -2796,9 +2844,9 @@ fn is_negative_number(node: &Node) -> bool {
     }
 }
 
-fn is_binary_op(node: &Node, op: &str) -> bool {
+fn is_binary_op(node: &Node, op: BinaryExpressionOperator) -> bool {
     match &node.kind {
-        NodeKind::BinaryExpression { operator, .. } => operator.as_str() == op,
+        NodeKind::BinaryExpression { operator, .. } => *operator == op,
         _ => false,
     }
 }
@@ -2818,6 +2866,26 @@ fn check_plus(node: &Node) -> bool {
 fn check_minus(node: &Node) -> bool {
     is_unary_op(node, UnaryExpressionOperator::Minus)
         || is_update_prefix(node, UpdateExpressionOperator::Decrement)
+}
+
+fn check_and_or(node: &Node) -> bool {
+    matches!(
+        &node.kind,
+        NodeKind::LogicalExpression {
+            operator: LogicalExpressionOperator::And | LogicalExpressionOperator::Or,
+            ..
+        }
+    )
+}
+
+fn check_nullish(node: &Node) -> bool {
+    matches!(
+        &node.kind,
+        NodeKind::LogicalExpression {
+            operator: LogicalExpressionOperator::NullishCoalesce,
+            ..
+        }
+    )
 }
 
 fn ends_with_block(node: Option<&Node>) -> bool {
@@ -2842,6 +2910,8 @@ fn ends_with_block(node: Option<&Node>) -> bool {
                 ..
             } => ends_with_block(alternate.as_deref().or(Some(consequent))),
             ClassDeclaration { .. } => true,
+            ExportDefaultDeclaration { declaration } => ends_with_block(Some(declaration)),
+            ExportNamedDeclaration { declaration, .. } => ends_with_block(declaration.as_deref()),
             _ => false,
         },
         None => false,

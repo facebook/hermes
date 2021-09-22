@@ -18,6 +18,8 @@
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/StringView.h"
 
+#include "llvh/ADT/ScopeExit.h"
+
 namespace hermes {
 namespace vm {
 
@@ -359,35 +361,6 @@ arrayIsArray(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(*res);
 }
 
-namespace {
-/// Used to detect cyclic string conversions, and should be allocated on the
-/// stack. On construction, inserts an object into the runtime string cycle
-/// check stack, and removes it when destroyed.
-/// Use the foundCycle method to know if the object has already been visited.
-class StringCycleChecker {
- public:
-  /// FIXME: Handle error on inserting the visited object.
-  StringCycleChecker(Runtime *runtime, Handle<JSObject> obj)
-      : runtime_(runtime),
-        obj_(obj),
-        foundCycle_(runtime->insertVisitedObject(*obj)) {}
-
-  ~StringCycleChecker() {
-    runtime_->removeVisitedObject(*obj_);
-  }
-
-  bool foundCycle() const {
-    return foundCycle_;
-  }
-
- private:
-  Runtime *runtime_;
-  Handle<JSObject> obj_;
-
-  bool foundCycle_;
-};
-} // namespace
-
 /// ES5.1 15.4.4.5.
 CallResult<HermesValue>
 arrayPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
@@ -425,10 +398,10 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   auto emptyString =
       runtime->getPredefinedStringHandle(Predefined::emptyString);
 
-  StringCycleChecker checker{runtime, array};
-  if (checker.foundCycle()) {
+  if (runtime->insertVisitedObject(*array))
     return emptyString.getHermesValue();
-  }
+  auto cycleScope =
+      llvh::make_scope_exit([&] { runtime->removeVisitedObject(*array); });
 
   auto propRes = JSObject::getNamed_RJS(
       array, runtime, Predefined::getSymbolID(Predefined::length));
@@ -752,10 +725,10 @@ arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
   auto emptyString =
       runtime->getPredefinedStringHandle(Predefined::emptyString);
 
-  StringCycleChecker checker{runtime, O};
-  if (checker.foundCycle()) {
+  if (runtime->insertVisitedObject(*O))
     return emptyString.getHermesValue();
-  }
+  auto cycleScope =
+      llvh::make_scope_exit([&] { runtime->removeVisitedObject(*O); });
 
   auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
