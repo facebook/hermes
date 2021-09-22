@@ -32,6 +32,7 @@ public class HermesInstrumentationTest extends InstrumentationTestCase {
       rt.evaluateJavaScript("compareResult4 = 'b'.localeCompare('A');");
       rt.evaluateJavaScript("compareResult5 = '\u00FC'.localeCompare('\u00FC');");
       rt.evaluateJavaScript("compareResult6 = '\u00FC'.localeCompare('u');");
+      rt.evaluateJavaScript("compareResult7 = ''.localeCompare('a');");
 
       int result1 = rt.getGlobalNumberProperty("compareResult1");
       assertThat(result1).isEqualTo(0);
@@ -45,6 +46,8 @@ public class HermesInstrumentationTest extends InstrumentationTestCase {
       assertThat(result5).isEqualTo(0);
       int result6 = rt.getGlobalNumberProperty("compareResult6");
       assertThat(result6).isEqualTo(1);
+      int result6 = rt.getGlobalNumberProperty("compareResult7");
+      assertThat(result6).isEqualTo(-1);
     }
   }
 
