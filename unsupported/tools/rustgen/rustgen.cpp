@@ -441,18 +441,16 @@ static void genConvert() {
     }
 
     llvh::outs() << "          cvt.ast_context.alloc(\n"
-                    "            ast::Node {\n"
-                    "                range,\n"
-                    "                kind: ast::NodeKind::"
-                 << cls.name << "(ast::" << cls.name << " {\n";
+                    "            ast::Node::"
+                 << cls.name << "(ast::" << cls.name << " {\n"
+                 << "                range,\n";
 
     for (const auto &fld : cls.fields) {
       // Shorthand initialization of each field.
       llvh::outs() << "                    " << fld.rustName() << ",\n";
     }
 
-    llvh::outs() << "                }),\n" // kind
-                    "            }\n" // Node
+    llvh::outs() << "            }),\n" // kind
                     "          )\n" // NodePtr
                     "        }\n"; // match block
   };
@@ -466,7 +464,7 @@ static void genConvert() {
   llvh::outs() << "        _ => panic!(\"Invalid node kind\")\n"
                   "    };\n\n";
   llvh::outs()
-      << "    cvt.ast_context.node_mut(res).range.end = cvt.cvt_smloc(nr.source_range.end.pred());\n"
+      << "    cvt.ast_context.node_mut(res).range_mut().end = cvt.cvt_smloc(nr.source_range.end.pred());\n"
          "\n"
          "    res";
   llvh::outs() << "}\n";

@@ -7,7 +7,7 @@
 
 use super::{
     kind::*, AssignmentExpressionOperator, BinaryExpressionOperator, Context, ExportKind,
-    ImportKind, LogicalExpressionOperator, MethodDefinitionKind, NodeKind, NodeLabel, NodeList,
+    ImportKind, LogicalExpressionOperator, MethodDefinitionKind, Node, NodeLabel, NodeList,
     NodePtr, NodeString, NodeVariant, PropertyKind, UnaryExpressionOperator,
     UpdateExpressionOperator, VariableDeclarationKind, Visitor,
 };
@@ -27,9 +27,9 @@ macro_rules! gen_validate_fn {
     }) => {
             /// Check whether this is a valid kind for `node`.
             fn validate_node(ctx: &Context, node: NodePtr) -> Result<(), ValidationError> {
-                match &node.get(ctx).kind {
+                match &node.get(ctx) {
                     $(
-                        NodeKind::$kind($kind {$($($field),*)?}) => {
+                        Node::$kind($kind {$($($field,)*)? .. }) => {
                             // Run the validation for each child.
                             // Use `true &&` to make it work when there's no children.
                             $($(
@@ -98,13 +98,13 @@ impl ValidChild for NodePtr {
         constraints: &[NodeVariant],
     ) -> Result<(), ValidationError> {
         for &constraint in constraints {
-            if instanceof(self.get(ctx).kind.variant(), constraint) {
+            if instanceof(self.get(ctx).variant(), constraint) {
                 return Ok(());
             }
         }
         Err(ValidationError {
             node,
-            message: format!("Unexpected {:?}", self.get(ctx).kind.variant()),
+            message: format!("Unexpected {:?}", self.get(ctx).variant()),
         })
     }
 }
@@ -118,7 +118,7 @@ impl ValidChild for NodeList {
     ) -> Result<(), ValidationError> {
         'elems: for elem in self {
             for &constraint in constraints {
-                if instanceof(elem.get(ctx).kind.variant(), constraint) {
+                if instanceof(elem.get(ctx).variant(), constraint) {
                     // Found a valid constraint for this element,
                     // move on to the next element.
                     continue 'elems;
@@ -127,7 +127,7 @@ impl ValidChild for NodeList {
             // Failed to find a constraint that matched, early return.
             return Err(ValidationError {
                 node,
-                message: format!("Unexpected {:?}", elem.get(ctx).kind.variant()),
+                message: format!("Unexpected {:?}", elem.get(ctx).variant()),
             });
         }
         Ok(())
@@ -151,15 +151,17 @@ fn instanceof(subtype: NodeVariant, supertype: NodeVariant) -> bool {
 }
 
 /// Custom validation function for constraints which can't be expressed
-/// using just the inheritance structure in NodeKind.
+/// using just the inheritance structure in Node.
 fn validate_custom(ctx: &Context, node: NodePtr) -> Result<(), ValidationError> {
-    match &node.get(ctx).kind {
-        NodeKind::MemberExpression(MemberExpression {
+    match &node.get(ctx) {
+        Node::MemberExpression(MemberExpression {
+            range: _,
             property,
             object: _,
             computed,
         })
-        | NodeKind::OptionalMemberExpression(OptionalMemberExpression {
+        | Node::OptionalMemberExpression(OptionalMemberExpression {
+            range: _,
             property,
             object: _,
             computed,
@@ -172,7 +174,8 @@ fn validate_custom(ctx: &Context, node: NodePtr) -> Result<(), ValidationError> 
             }
         }
 
-        NodeKind::Property(Property {
+        Node::Property(Property {
+            range: _,
             key,
             value,
             kind,

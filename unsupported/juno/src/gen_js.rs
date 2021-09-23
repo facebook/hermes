@@ -259,15 +259,16 @@ impl<W: Write> GenJS<W> {
 
     /// Generate the JS for each node kind.
     fn gen_node(&mut self, ctx: &Context, node: NodePtr, parent: Option<NodePtr>) {
-        match &node.get(ctx).kind {
-            NodeKind::Empty(_) => {}
-            NodeKind::Metadata(_) => {}
+        match &node.get(ctx) {
+            Node::Empty(_) => {}
+            Node::Metadata(_) => {}
 
-            NodeKind::Program(Program { body }) => {
+            Node::Program(Program { range: _, body }) => {
                 self.visit_stmt_list(ctx, body, node);
             }
 
-            NodeKind::FunctionExpression(FunctionExpression {
+            Node::FunctionExpression(FunctionExpression {
+                range: _,
                 id,
                 params,
                 body,
@@ -277,7 +278,8 @@ impl<W: Write> GenJS<W> {
                 generator,
                 is_async,
             })
-            | NodeKind::FunctionDeclaration(FunctionDeclaration {
+            | Node::FunctionDeclaration(FunctionDeclaration {
+                range: _,
                 id,
                 params,
                 body,
@@ -308,7 +310,8 @@ impl<W: Write> GenJS<W> {
                 self.visit_func_params_body(ctx, params, *return_type, *predicate, *body, node);
             }
 
-            NodeKind::ArrowFunctionExpression(ArrowFunctionExpression {
+            Node::ArrowFunctionExpression(ArrowFunctionExpression {
+                range: _,
                 id: _,
                 params,
                 body,
@@ -361,8 +364,8 @@ impl<W: Write> GenJS<W> {
                 self.space(ForceSpace::No);
                 out!(self, "=>");
                 self.space(ForceSpace::No);
-                match &body.get(ctx).kind {
-                    NodeKind::BlockStatement(_) => {
+                match &body.get(ctx) {
+                    Node::BlockStatement(_) => {
                         body.visit(ctx, self, Some(node));
                     }
                     _ => {
@@ -371,7 +374,11 @@ impl<W: Write> GenJS<W> {
                 }
             }
 
-            NodeKind::WhileStatement(WhileStatement { body, test }) => {
+            Node::WhileStatement(WhileStatement {
+                range: _,
+                body,
+                test,
+            }) => {
                 out!(self, "while");
                 self.space(ForceSpace::No);
                 out!(self, "(");
@@ -379,7 +386,11 @@ impl<W: Write> GenJS<W> {
                 out!(self, ")");
                 self.visit_stmt_or_block(ctx, *body, ForceBlock::No, node);
             }
-            NodeKind::DoWhileStatement(DoWhileStatement { body, test }) => {
+            Node::DoWhileStatement(DoWhileStatement {
+                range: _,
+                body,
+                test,
+            }) => {
                 out!(self, "do");
                 let block = self.visit_stmt_or_block(ctx, *body, ForceBlock::No, node);
                 if block {
@@ -395,7 +406,12 @@ impl<W: Write> GenJS<W> {
                 out!(self, ")");
             }
 
-            NodeKind::ForInStatement(ForInStatement { left, right, body }) => {
+            Node::ForInStatement(ForInStatement {
+                range: _,
+                left,
+                right,
+                body,
+            }) => {
                 out!(self, "for(");
                 left.visit(ctx, self, Some(node));
                 out!(self, " in ");
@@ -403,7 +419,8 @@ impl<W: Write> GenJS<W> {
                 out!(self, ")");
                 self.visit_stmt_or_block(ctx, *body, ForceBlock::No, node);
             }
-            NodeKind::ForOfStatement(ForOfStatement {
+            Node::ForOfStatement(ForOfStatement {
+                range: _,
                 left,
                 right,
                 body,
@@ -416,7 +433,8 @@ impl<W: Write> GenJS<W> {
                 out!(self, ")");
                 self.visit_stmt_or_block(ctx, *body, ForceBlock::No, node);
             }
-            NodeKind::ForStatement(ForStatement {
+            Node::ForStatement(ForStatement {
+                range: _,
                 init,
                 test,
                 update,
@@ -438,12 +456,12 @@ impl<W: Write> GenJS<W> {
                 self.visit_stmt_or_block(ctx, *body, ForceBlock::No, node);
             }
 
-            NodeKind::DebuggerStatement(_) => {
+            Node::DebuggerStatement(_) => {
                 out!(self, "debugger");
             }
-            NodeKind::EmptyStatement(_) => {}
+            Node::EmptyStatement(_) => {}
 
-            NodeKind::BlockStatement(BlockStatement { body }) => {
+            Node::BlockStatement(BlockStatement { range: _, body }) => {
                 if body.is_empty() {
                     out!(self, "{{}}");
                 } else {
@@ -457,14 +475,14 @@ impl<W: Write> GenJS<W> {
                 }
             }
 
-            NodeKind::BreakStatement(BreakStatement { label }) => {
+            Node::BreakStatement(BreakStatement { range: _, label }) => {
                 out!(self, "break");
                 if let Some(label) = label {
                     self.space(ForceSpace::Yes);
                     label.visit(ctx, self, Some(node));
                 }
             }
-            NodeKind::ContinueStatement(ContinueStatement { label }) => {
+            Node::ContinueStatement(ContinueStatement { range: _, label }) => {
                 out!(self, "continue");
                 if let Some(label) = label {
                     self.space(ForceSpace::Yes);
@@ -472,18 +490,22 @@ impl<W: Write> GenJS<W> {
                 }
             }
 
-            NodeKind::ThrowStatement(ThrowStatement { argument }) => {
+            Node::ThrowStatement(ThrowStatement { range: _, argument }) => {
                 out!(self, "throw ");
                 argument.visit(ctx, self, Some(node));
             }
-            NodeKind::ReturnStatement(ReturnStatement { argument }) => {
+            Node::ReturnStatement(ReturnStatement { range: _, argument }) => {
                 out!(self, "return");
                 if let Some(argument) = argument {
                     out!(self, " ");
                     argument.visit(ctx, self, Some(node));
                 }
             }
-            NodeKind::WithStatement(WithStatement { object, body }) => {
+            Node::WithStatement(WithStatement {
+                range: _,
+                object,
+                body,
+            }) => {
                 out!(self, "with");
                 self.space(ForceSpace::No);
                 out!(self, "(");
@@ -492,7 +514,8 @@ impl<W: Write> GenJS<W> {
                 self.visit_stmt_or_block(ctx, *body, ForceBlock::No, node);
             }
 
-            NodeKind::SwitchStatement(SwitchStatement {
+            Node::SwitchStatement(SwitchStatement {
+                range: _,
                 discriminant,
                 cases,
             }) => {
@@ -510,7 +533,11 @@ impl<W: Write> GenJS<W> {
                 }
                 out!(self, "}}");
             }
-            NodeKind::SwitchCase(SwitchCase { test, consequent }) => {
+            Node::SwitchCase(SwitchCase {
+                range: _,
+                test,
+                consequent,
+            }) => {
                 match test {
                     Some(test) => {
                         out!(self, "case ");
@@ -529,21 +556,27 @@ impl<W: Write> GenJS<W> {
                 }
             }
 
-            NodeKind::LabeledStatement(LabeledStatement { label, body }) => {
+            Node::LabeledStatement(LabeledStatement {
+                range: _,
+                label,
+                body,
+            }) => {
                 label.visit(ctx, self, Some(node));
                 out!(self, ":");
                 self.newline();
                 body.visit(ctx, self, Some(node));
             }
 
-            NodeKind::ExpressionStatement(ExpressionStatement {
+            Node::ExpressionStatement(ExpressionStatement {
+                range: _,
                 expression,
                 directive: _,
             }) => {
                 self.print_child(ctx, Some(*expression), node, ChildPos::Anywhere);
             }
 
-            NodeKind::TryStatement(TryStatement {
+            Node::TryStatement(TryStatement {
+                range: _,
                 block,
                 handler,
                 finalizer,
@@ -560,7 +593,8 @@ impl<W: Write> GenJS<W> {
                 }
             }
 
-            NodeKind::IfStatement(IfStatement {
+            Node::IfStatement(IfStatement {
+                range: _,
                 test,
                 consequent,
                 alternate,
@@ -570,12 +604,12 @@ impl<W: Write> GenJS<W> {
                 out!(self, "(");
                 test.visit(ctx, self, Some(node));
                 out!(self, ")");
-                let force_block =
-                    if alternate.is_some() && consequent.get(ctx).kind.is_if_without_else() {
-                        ForceBlock::Yes
-                    } else {
-                        ForceBlock::No
-                    };
+                let force_block = if alternate.is_some() && consequent.get(ctx).is_if_without_else()
+                {
+                    ForceBlock::Yes
+                } else {
+                    ForceBlock::No
+                };
                 let block = self.visit_stmt_or_block(ctx, *consequent, force_block, node);
                 if let Some(alternate) = alternate {
                     if !block {
@@ -585,32 +619,34 @@ impl<W: Write> GenJS<W> {
                         self.space(ForceSpace::No);
                     }
                     out!(self, "else");
-                    self.space(
-                        if matches!(&alternate.get(ctx).kind, NodeKind::BlockStatement(_)) {
-                            ForceSpace::No
-                        } else {
-                            ForceSpace::Yes
-                        },
-                    );
+                    self.space(if matches!(&alternate.get(ctx), Node::BlockStatement(_)) {
+                        ForceSpace::No
+                    } else {
+                        ForceSpace::Yes
+                    });
                     self.visit_stmt_or_block(ctx, *alternate, ForceBlock::No, node);
                 }
             }
 
-            NodeKind::BooleanLiteral(BooleanLiteral { value }) => {
+            Node::BooleanLiteral(BooleanLiteral { range: _, value }) => {
                 out!(self, "{}", if *value { "true" } else { "false" });
             }
-            NodeKind::NullLiteral(_) => {
+            Node::NullLiteral(_) => {
                 out!(self, "null");
             }
-            NodeKind::StringLiteral(StringLiteral { value }) => {
+            Node::StringLiteral(StringLiteral { range: _, value }) => {
                 out!(self, "\"");
                 self.print_escaped_string_literal(value, '"');
                 out!(self, "\"");
             }
-            NodeKind::NumericLiteral(NumericLiteral { value }) => {
+            Node::NumericLiteral(NumericLiteral { range: _, value }) => {
                 out!(self, "{}", convert::number_to_string(*value));
             }
-            NodeKind::RegExpLiteral(RegExpLiteral { pattern, flags }) => {
+            Node::RegExpLiteral(RegExpLiteral {
+                range: _,
+                pattern,
+                flags,
+            }) => {
                 out!(self, "/");
                 // Parser doesn't handle escapes when lexing RegExp,
                 // so we don't need to do any manual escaping here.
@@ -618,14 +654,17 @@ impl<W: Write> GenJS<W> {
                 out!(self, "/");
                 self.write_utf8(&flags.str);
             }
-            NodeKind::ThisExpression(_) => {
+            Node::ThisExpression(_) => {
                 out!(self, "this");
             }
-            NodeKind::Super(_) => {
+            Node::Super(_) => {
                 out!(self, "super");
             }
 
-            NodeKind::SequenceExpression(SequenceExpression { expressions }) => {
+            Node::SequenceExpression(SequenceExpression {
+                range: _,
+                expressions,
+            }) => {
                 out!(self, "(");
                 for (i, expr) in expressions.iter().enumerate() {
                     if i > 0 {
@@ -645,10 +684,14 @@ impl<W: Write> GenJS<W> {
                 out!(self, ")");
             }
 
-            NodeKind::ObjectExpression(ObjectExpression { properties }) => {
+            Node::ObjectExpression(ObjectExpression {
+                range: _,
+                properties,
+            }) => {
                 self.visit_props(ctx, properties, node);
             }
-            NodeKind::ArrayExpression(ArrayExpression {
+            Node::ArrayExpression(ArrayExpression {
+                range: _,
                 elements,
                 trailing_comma,
             }) => {
@@ -657,7 +700,7 @@ impl<W: Write> GenJS<W> {
                     if i > 0 {
                         self.comma();
                     }
-                    if let NodeKind::SpreadElement(_) = &elem.get(ctx).kind {
+                    if let Node::SpreadElement(_) = &elem.get(ctx) {
                         elem.visit(ctx, self, Some(node));
                     } else {
                         self.print_comma_expression(ctx, *elem, node);
@@ -669,12 +712,13 @@ impl<W: Write> GenJS<W> {
                 out!(self, "]");
             }
 
-            NodeKind::SpreadElement(SpreadElement { argument }) => {
+            Node::SpreadElement(SpreadElement { range: _, argument }) => {
                 out!(self, "...");
                 argument.visit(ctx, self, Some(node));
             }
 
-            NodeKind::NewExpression(NewExpression {
+            Node::NewExpression(NewExpression {
+                range: _,
                 callee,
                 type_arguments,
                 arguments,
@@ -693,7 +737,11 @@ impl<W: Write> GenJS<W> {
                 }
                 out!(self, ")");
             }
-            NodeKind::YieldExpression(YieldExpression { argument, delegate }) => {
+            Node::YieldExpression(YieldExpression {
+                range: _,
+                argument,
+                delegate,
+            }) => {
                 out!(self, "yield");
                 if *delegate {
                     out!(self, "*");
@@ -705,12 +753,16 @@ impl<W: Write> GenJS<W> {
                     argument.visit(ctx, self, Some(node));
                 }
             }
-            NodeKind::AwaitExpression(AwaitExpression { argument }) => {
+            Node::AwaitExpression(AwaitExpression { range: _, argument }) => {
                 out!(self, "await ");
                 argument.visit(ctx, self, Some(node));
             }
 
-            NodeKind::ImportExpression(ImportExpression { source, attributes }) => {
+            Node::ImportExpression(ImportExpression {
+                range: _,
+                source,
+                attributes,
+            }) => {
                 out!(self, "import(");
                 source.visit(ctx, self, Some(node));
                 if let Some(attributes) = attributes {
@@ -721,7 +773,8 @@ impl<W: Write> GenJS<W> {
                 out!(self, ")");
             }
 
-            NodeKind::CallExpression(CallExpression {
+            Node::CallExpression(CallExpression {
+                range: _,
                 callee,
                 type_arguments,
                 arguments,
@@ -739,7 +792,8 @@ impl<W: Write> GenJS<W> {
                 }
                 out!(self, ")");
             }
-            NodeKind::OptionalCallExpression(OptionalCallExpression {
+            Node::OptionalCallExpression(OptionalCallExpression {
+                range: _,
                 callee,
                 type_arguments,
                 arguments,
@@ -759,7 +813,8 @@ impl<W: Write> GenJS<W> {
                 out!(self, ")");
             }
 
-            NodeKind::AssignmentExpression(AssignmentExpression {
+            Node::AssignmentExpression(AssignmentExpression {
+                range: _,
                 operator,
                 left,
                 right,
@@ -770,7 +825,8 @@ impl<W: Write> GenJS<W> {
                 self.space(ForceSpace::No);
                 self.print_child(ctx, Some(*right), node, ChildPos::Right);
             }
-            NodeKind::UnaryExpression(UnaryExpression {
+            Node::UnaryExpression(UnaryExpression {
+                range: _,
                 operator,
                 argument,
                 prefix,
@@ -790,7 +846,8 @@ impl<W: Write> GenJS<W> {
                     out!(self, "{}", operator.as_str());
                 }
             }
-            NodeKind::UpdateExpression(UpdateExpression {
+            Node::UpdateExpression(UpdateExpression {
+                range: _,
                 operator,
                 argument,
                 prefix,
@@ -803,7 +860,8 @@ impl<W: Write> GenJS<W> {
                     out!(self, "{}", operator.as_str());
                 }
             }
-            NodeKind::MemberExpression(MemberExpression {
+            Node::MemberExpression(MemberExpression {
+                range: _,
                 object,
                 property,
                 computed,
@@ -819,7 +877,8 @@ impl<W: Write> GenJS<W> {
                     out!(self, "]");
                 }
             }
-            NodeKind::OptionalMemberExpression(OptionalMemberExpression {
+            Node::OptionalMemberExpression(OptionalMemberExpression {
+                range: _,
                 object,
                 property,
                 computed,
@@ -837,7 +896,8 @@ impl<W: Write> GenJS<W> {
                 }
             }
 
-            NodeKind::BinaryExpression(BinaryExpression {
+            Node::BinaryExpression(BinaryExpression {
+                range: _,
                 left,
                 right,
                 operator,
@@ -858,14 +918,15 @@ impl<W: Write> GenJS<W> {
                 self.print_child(ctx, Some(*right), node, ChildPos::Right);
             }
 
-            NodeKind::Directive(Directive { value }) => {
+            Node::Directive(Directive { range: _, value }) => {
                 value.visit(ctx, self, Some(node));
             }
-            NodeKind::DirectiveLiteral(DirectiveLiteral { .. }) => {
+            Node::DirectiveLiteral(DirectiveLiteral { range: _, .. }) => {
                 unimplemented!("No escaping for directive literals");
             }
 
-            NodeKind::ConditionalExpression(ConditionalExpression {
+            Node::ConditionalExpression(ConditionalExpression {
+                range: _,
                 test,
                 consequent,
                 alternate,
@@ -881,7 +942,8 @@ impl<W: Write> GenJS<W> {
                 self.print_child(ctx, Some(*alternate), node, ChildPos::Right);
             }
 
-            NodeKind::Identifier(Identifier {
+            Node::Identifier(Identifier {
+                range: _,
                 name,
                 type_annotation,
                 optional,
@@ -896,17 +958,25 @@ impl<W: Write> GenJS<W> {
                     type_annotation.visit(ctx, self, Some(node));
                 }
             }
-            NodeKind::PrivateName(PrivateName { id }) => {
+            Node::PrivateName(PrivateName { range: _, id }) => {
                 out!(self, "#");
                 id.visit(ctx, self, Some(node));
             }
-            NodeKind::MetaProperty(MetaProperty { meta, property }) => {
+            Node::MetaProperty(MetaProperty {
+                range: _,
+                meta,
+                property,
+            }) => {
                 meta.visit(ctx, self, Some(node));
                 out!(self, ".");
                 property.visit(ctx, self, Some(node));
             }
 
-            NodeKind::CatchClause(CatchClause { param, body }) => {
+            Node::CatchClause(CatchClause {
+                range: _,
+                param,
+                body,
+            }) => {
                 self.space(ForceSpace::No);
                 out!(self, "catch");
                 if let Some(param) = param {
@@ -918,7 +988,11 @@ impl<W: Write> GenJS<W> {
                 self.visit_stmt_or_block(ctx, *body, ForceBlock::Yes, node);
             }
 
-            NodeKind::VariableDeclaration(VariableDeclaration { kind, declarations }) => {
+            Node::VariableDeclaration(VariableDeclaration {
+                range: _,
+                kind,
+                declarations,
+            }) => {
                 out!(self, "{} ", kind.as_str());
                 for (i, decl) in declarations.iter().enumerate() {
                     if i > 0 {
@@ -927,7 +1001,7 @@ impl<W: Write> GenJS<W> {
                     decl.visit(ctx, self, Some(node));
                 }
             }
-            NodeKind::VariableDeclarator(VariableDeclarator { init, id }) => {
+            Node::VariableDeclarator(VariableDeclarator { range: _, init, id }) => {
                 id.visit(ctx, self, Some(node));
                 if let Some(init) = init {
                     out!(
@@ -942,18 +1016,20 @@ impl<W: Write> GenJS<W> {
                 }
             }
 
-            NodeKind::TemplateLiteral(TemplateLiteral {
+            Node::TemplateLiteral(TemplateLiteral {
+                range: _,
                 quasis,
                 expressions,
             }) => {
                 out!(self, "`");
                 let mut it_expr = expressions.iter();
                 for quasi in quasis {
-                    if let NodeKind::TemplateElement(TemplateElement {
+                    if let Node::TemplateElement(TemplateElement {
+                        range: _,
                         raw,
                         tail: _,
                         cooked: _,
-                    }) = &quasi.get(ctx).kind
+                    }) = &quasi.get(ctx)
                     {
                         let mut buf = [0u8; 4];
                         for char in raw.str.chars() {
@@ -972,15 +1048,20 @@ impl<W: Write> GenJS<W> {
                 }
                 out!(self, "`");
             }
-            NodeKind::TaggedTemplateExpression(TaggedTemplateExpression { tag, quasi }) => {
+            Node::TaggedTemplateExpression(TaggedTemplateExpression {
+                range: _,
+                tag,
+                quasi,
+            }) => {
                 self.print_child(ctx, Some(*tag), node, ChildPos::Left);
                 self.print_child(ctx, Some(*quasi), node, ChildPos::Right);
             }
-            NodeKind::TemplateElement(_) => {
+            Node::TemplateElement(_) => {
                 unreachable!("TemplateElement is handled in TemplateLiteral case");
             }
 
-            NodeKind::Property(Property {
+            Node::Property(Property {
+                range: _,
                 key,
                 value,
                 kind,
@@ -993,8 +1074,9 @@ impl<W: Write> GenJS<W> {
                     out!(self, "{}", kind.as_str());
                     need_sep = true;
                 } else if *method {
-                    match &value.get(ctx).kind {
-                        NodeKind::FunctionExpression(FunctionExpression {
+                    match &value.get(ctx) {
+                        Node::FunctionExpression(FunctionExpression {
+                            range: _,
                             generator,
                             is_async,
                             ..
@@ -1030,8 +1112,9 @@ impl<W: Write> GenJS<W> {
                     return;
                 }
                 if *kind != PropertyKind::Init || *method {
-                    match &value.get(ctx).kind {
-                        NodeKind::FunctionExpression(FunctionExpression {
+                    match &value.get(ctx) {
+                        Node::FunctionExpression(FunctionExpression {
+                            range: _,
                             params,
                             body,
                             return_type,
@@ -1056,7 +1139,8 @@ impl<W: Write> GenJS<W> {
                 }
             }
 
-            NodeKind::LogicalExpression(LogicalExpression {
+            Node::LogicalExpression(LogicalExpression {
+                range: _,
                 left,
                 right,
                 operator,
@@ -1068,7 +1152,8 @@ impl<W: Write> GenJS<W> {
                 self.print_child(ctx, Some(*right), node, ChildPos::Right);
             }
 
-            NodeKind::ClassExpression(ClassExpression {
+            Node::ClassExpression(ClassExpression {
+                range: _,
                 id,
                 type_parameters,
                 super_class,
@@ -1077,7 +1162,8 @@ impl<W: Write> GenJS<W> {
                 decorators,
                 body,
             })
-            | NodeKind::ClassDeclaration(ClassDeclaration {
+            | Node::ClassDeclaration(ClassDeclaration {
+                range: _,
                 id,
                 type_parameters,
                 super_class,
@@ -1119,7 +1205,7 @@ impl<W: Write> GenJS<W> {
                 body.visit(ctx, self, Some(node));
             }
 
-            NodeKind::ClassBody(ClassBody { body }) => {
+            Node::ClassBody(ClassBody { range: _, body }) => {
                 if body.is_empty() {
                     out!(self, "{{}}");
                 } else {
@@ -1135,7 +1221,8 @@ impl<W: Write> GenJS<W> {
                     self.newline();
                 }
             }
-            NodeKind::ClassProperty(ClassProperty {
+            Node::ClassProperty(ClassProperty {
+                range: _,
                 key,
                 value,
                 computed,
@@ -1163,7 +1250,8 @@ impl<W: Write> GenJS<W> {
                 }
                 out!(self, ";");
             }
-            NodeKind::ClassPrivateProperty(ClassPrivateProperty {
+            Node::ClassPrivateProperty(ClassPrivateProperty {
+                range: _,
                 key,
                 value,
                 is_static,
@@ -1185,7 +1273,8 @@ impl<W: Write> GenJS<W> {
                 }
                 out!(self, ";");
             }
-            NodeKind::MethodDefinition(MethodDefinition {
+            Node::MethodDefinition(MethodDefinition {
+                range: _,
                 key,
                 value,
                 kind,
@@ -1193,8 +1282,9 @@ impl<W: Write> GenJS<W> {
                 is_static,
             }) => {
                 let (is_async, generator, params, body, return_type, predicate) =
-                    match &value.get(ctx).kind {
-                        NodeKind::FunctionExpression(FunctionExpression {
+                    match &value.get(ctx) {
+                        Node::FunctionExpression(FunctionExpression {
+                            range: _,
                             generator,
                             is_async,
                             params,
@@ -1238,7 +1328,8 @@ impl<W: Write> GenJS<W> {
                 self.visit_func_params_body(ctx, params, *return_type, *predicate, *body, node);
             }
 
-            NodeKind::ImportDeclaration(ImportDeclaration {
+            Node::ImportDeclaration(ImportDeclaration {
+                range: _,
                 specifiers,
                 source,
                 attributes,
@@ -1253,7 +1344,7 @@ impl<W: Write> GenJS<W> {
                     if i > 0 {
                         self.comma();
                     }
-                    if let NodeKind::ImportSpecifier(_) = &spec.get(ctx).kind {
+                    if let Node::ImportSpecifier(_) = &spec.get(ctx) {
                         if !has_named_specs {
                             has_named_specs = true;
                             out!(self, "{{");
@@ -1285,7 +1376,8 @@ impl<W: Write> GenJS<W> {
                 }
                 self.newline();
             }
-            NodeKind::ImportSpecifier(ImportSpecifier {
+            Node::ImportSpecifier(ImportSpecifier {
+                range: _,
                 imported,
                 local,
                 import_kind,
@@ -1297,21 +1389,26 @@ impl<W: Write> GenJS<W> {
                 out!(self, " as ");
                 local.visit(ctx, self, Some(node));
             }
-            NodeKind::ImportDefaultSpecifier(ImportDefaultSpecifier { local }) => {
+            Node::ImportDefaultSpecifier(ImportDefaultSpecifier { range: _, local }) => {
                 local.visit(ctx, self, Some(node));
             }
-            NodeKind::ImportNamespaceSpecifier(ImportNamespaceSpecifier { local }) => {
+            Node::ImportNamespaceSpecifier(ImportNamespaceSpecifier { range: _, local }) => {
                 out!(self, "* as ");
                 local.visit(ctx, self, Some(node));
             }
-            NodeKind::ImportAttribute(ImportAttribute { key, value }) => {
+            Node::ImportAttribute(ImportAttribute {
+                range: _,
+                key,
+                value,
+            }) => {
                 key.visit(ctx, self, Some(node));
                 out!(self, ":");
                 self.space(ForceSpace::No);
                 value.visit(ctx, self, Some(node));
             }
 
-            NodeKind::ExportNamedDeclaration(ExportNamedDeclaration {
+            Node::ExportNamedDeclaration(ExportNamedDeclaration {
+                range: _,
                 declaration,
                 specifiers,
                 source,
@@ -1339,21 +1436,29 @@ impl<W: Write> GenJS<W> {
                 }
                 self.newline();
             }
-            NodeKind::ExportSpecifier(ExportSpecifier { exported, local }) => {
+            Node::ExportSpecifier(ExportSpecifier {
+                range: _,
+                exported,
+                local,
+            }) => {
                 local.visit(ctx, self, Some(node));
                 out!(self, " as ");
                 exported.visit(ctx, self, Some(node));
             }
-            NodeKind::ExportNamespaceSpecifier(ExportNamespaceSpecifier { exported }) => {
+            Node::ExportNamespaceSpecifier(ExportNamespaceSpecifier { range: _, exported }) => {
                 out!(self, "* as ");
                 exported.visit(ctx, self, Some(node));
             }
-            NodeKind::ExportDefaultDeclaration(ExportDefaultDeclaration { declaration }) => {
+            Node::ExportDefaultDeclaration(ExportDefaultDeclaration {
+                range: _,
+                declaration,
+            }) => {
                 out!(self, "export default ");
                 declaration.visit(ctx, self, Some(node));
                 self.newline();
             }
-            NodeKind::ExportAllDeclaration(ExportAllDeclaration {
+            Node::ExportAllDeclaration(ExportAllDeclaration {
+                range: _,
                 source,
                 export_kind,
             }) => {
@@ -1365,7 +1470,8 @@ impl<W: Write> GenJS<W> {
                 source.visit(ctx, self, Some(node));
             }
 
-            NodeKind::ObjectPattern(ObjectPattern {
+            Node::ObjectPattern(ObjectPattern {
+                range: _,
                 properties,
                 type_annotation,
             }) => {
@@ -1376,7 +1482,8 @@ impl<W: Write> GenJS<W> {
                     type_annotation.visit(ctx, self, Some(node));
                 }
             }
-            NodeKind::ArrayPattern(ArrayPattern {
+            Node::ArrayPattern(ArrayPattern {
+                range: _,
                 elements,
                 type_annotation,
             }) => {
@@ -1394,11 +1501,15 @@ impl<W: Write> GenJS<W> {
                     type_annotation.visit(ctx, self, Some(node));
                 }
             }
-            NodeKind::RestElement(RestElement { argument }) => {
+            Node::RestElement(RestElement { range: _, argument }) => {
                 out!(self, "...");
                 argument.visit(ctx, self, Some(node));
             }
-            NodeKind::AssignmentPattern(AssignmentPattern { left, right }) => {
+            Node::AssignmentPattern(AssignmentPattern {
+                range: _,
+                left,
+                right,
+            }) => {
                 left.visit(ctx, self, Some(node));
                 self.space(ForceSpace::No);
                 out!(self, "=");
@@ -1406,31 +1517,46 @@ impl<W: Write> GenJS<W> {
                 right.visit(ctx, self, Some(node));
             }
 
-            NodeKind::JSXIdentifier(JSXIdentifier { name }) => {
+            Node::JSXIdentifier(JSXIdentifier { range: _, name }) => {
                 out!(self, "{}", name.str);
             }
-            NodeKind::JSXMemberExpression(JSXMemberExpression { object, property }) => {
+            Node::JSXMemberExpression(JSXMemberExpression {
+                range: _,
+                object,
+                property,
+            }) => {
                 object.visit(ctx, self, Some(node));
                 out!(self, ".");
                 property.visit(ctx, self, Some(node));
             }
-            NodeKind::JSXNamespacedName(JSXNamespacedName { namespace, name }) => {
+            Node::JSXNamespacedName(JSXNamespacedName {
+                range: _,
+                namespace,
+                name,
+            }) => {
                 namespace.visit(ctx, self, Some(node));
                 out!(self, ":");
                 name.visit(ctx, self, Some(node));
             }
-            NodeKind::JSXEmptyExpression(_) => {}
-            NodeKind::JSXExpressionContainer(JSXExpressionContainer { expression }) => {
+            Node::JSXEmptyExpression(_) => {}
+            Node::JSXExpressionContainer(JSXExpressionContainer {
+                range: _,
+                expression,
+            }) => {
                 out!(self, "{{");
                 expression.visit(ctx, self, Some(node));
                 out!(self, "}}");
             }
-            NodeKind::JSXSpreadChild(JSXSpreadChild { expression }) => {
+            Node::JSXSpreadChild(JSXSpreadChild {
+                range: _,
+                expression,
+            }) => {
                 out!(self, "{{...");
                 expression.visit(ctx, self, Some(node));
                 out!(self, "}}");
             }
-            NodeKind::JSXOpeningElement(JSXOpeningElement {
+            Node::JSXOpeningElement(JSXOpeningElement {
+                range: _,
                 name,
                 attributes,
                 self_closing,
@@ -1447,29 +1573,38 @@ impl<W: Write> GenJS<W> {
                     out!(self, ">");
                 }
             }
-            NodeKind::JSXClosingElement(JSXClosingElement { name }) => {
+            Node::JSXClosingElement(JSXClosingElement { range: _, name }) => {
                 out!(self, "</");
                 name.visit(ctx, self, Some(node));
                 out!(self, ">");
             }
-            NodeKind::JSXAttribute(JSXAttribute { name, value }) => {
+            Node::JSXAttribute(JSXAttribute {
+                range: _,
+                name,
+                value,
+            }) => {
                 name.visit(ctx, self, Some(node));
                 if let Some(value) = value {
                     out!(self, "=");
                     value.visit(ctx, self, Some(node));
                 }
             }
-            NodeKind::JSXSpreadAttribute(JSXSpreadAttribute { argument }) => {
+            Node::JSXSpreadAttribute(JSXSpreadAttribute { range: _, argument }) => {
                 out!(self, "{{...");
                 argument.visit(ctx, self, Some(node));
                 out!(self, "}}");
             }
-            NodeKind::JSXText(JSXText { value: _, raw: _ }) => {
+            Node::JSXText(JSXText {
+                range: _,
+                value: _,
+                raw: _,
+            }) => {
                 unimplemented!("JSXText");
                 // FIXME: Ensure escaping here works properly.
                 // out!(self, "{}", value.str);
             }
-            NodeKind::JSXElement(JSXElement {
+            Node::JSXElement(JSXElement {
+                range: _,
                 opening_element,
                 children,
                 closing_element,
@@ -1486,7 +1621,8 @@ impl<W: Write> GenJS<W> {
                     closing_element.visit(ctx, self, Some(node));
                 }
             }
-            NodeKind::JSXFragment(JSXFragment {
+            Node::JSXFragment(JSXFragment {
+                range: _,
                 opening_fragment,
                 children,
                 closing_fragment,
@@ -1501,59 +1637,64 @@ impl<W: Write> GenJS<W> {
                 self.dec_indent();
                 closing_fragment.visit(ctx, self, Some(node));
             }
-            NodeKind::JSXOpeningFragment(_) => {
+            Node::JSXOpeningFragment(_) => {
                 out!(self, "<>");
             }
-            NodeKind::JSXClosingFragment(_) => {
+            Node::JSXClosingFragment(_) => {
                 out!(self, "</>");
             }
 
-            NodeKind::ExistsTypeAnnotation(_) => {
+            Node::ExistsTypeAnnotation(_) => {
                 out!(self, "*");
             }
-            NodeKind::EmptyTypeAnnotation(_) => {
+            Node::EmptyTypeAnnotation(_) => {
                 out!(self, "empty");
             }
-            NodeKind::StringTypeAnnotation(_) => {
+            Node::StringTypeAnnotation(_) => {
                 out!(self, "string");
             }
-            NodeKind::NumberTypeAnnotation(_) => {
+            Node::NumberTypeAnnotation(_) => {
                 out!(self, "number");
             }
-            NodeKind::StringLiteralTypeAnnotation(StringLiteralTypeAnnotation { value }) => {
+            Node::StringLiteralTypeAnnotation(StringLiteralTypeAnnotation { range: _, value }) => {
                 out!(self, "\"");
                 self.print_escaped_string_literal(value, '"');
                 out!(self, "\"");
             }
-            NodeKind::NumberLiteralTypeAnnotation(NumberLiteralTypeAnnotation {
-                value, ..
+            Node::NumberLiteralTypeAnnotation(NumberLiteralTypeAnnotation {
+                range: _,
+                value,
+                ..
             }) => {
                 out!(self, "{}", convert::number_to_string(*value));
             }
-            NodeKind::BooleanTypeAnnotation(_) => {
+            Node::BooleanTypeAnnotation(_) => {
                 out!(self, "boolean");
             }
-            NodeKind::BooleanLiteralTypeAnnotation(BooleanLiteralTypeAnnotation {
-                value, ..
+            Node::BooleanLiteralTypeAnnotation(BooleanLiteralTypeAnnotation {
+                range: _,
+                value,
+                ..
             }) => {
                 out!(self, "{}", if *value { "true" } else { "false" });
             }
-            NodeKind::NullLiteralTypeAnnotation(_) => {
+            Node::NullLiteralTypeAnnotation(_) => {
                 out!(self, "null");
             }
-            NodeKind::SymbolTypeAnnotation(_) => {
+            Node::SymbolTypeAnnotation(_) => {
                 out!(self, "symbol");
             }
-            NodeKind::AnyTypeAnnotation(_) => {
+            Node::AnyTypeAnnotation(_) => {
                 out!(self, "any");
             }
-            NodeKind::MixedTypeAnnotation(_) => {
+            Node::MixedTypeAnnotation(_) => {
                 out!(self, "mixed");
             }
-            NodeKind::VoidTypeAnnotation(_) => {
+            Node::VoidTypeAnnotation(_) => {
                 out!(self, "void");
             }
-            NodeKind::FunctionTypeAnnotation(FunctionTypeAnnotation {
+            Node::FunctionTypeAnnotation(FunctionTypeAnnotation {
+                range: _,
                 params,
                 this,
                 return_type,
@@ -1569,9 +1710,11 @@ impl<W: Write> GenJS<W> {
                 }
                 let mut need_comma = false;
                 if let Some(this) = this {
-                    match &this.get(ctx).kind {
-                        NodeKind::FunctionTypeParam(FunctionTypeParam {
-                            type_annotation, ..
+                    match &this.get(ctx) {
+                        Node::FunctionTypeParam(FunctionTypeParam {
+                            range: _,
+                            type_annotation,
+                            ..
                         }) => {
                             out!(self, "this:");
                             self.space(ForceSpace::No);
@@ -1608,7 +1751,8 @@ impl<W: Write> GenJS<W> {
                 }
                 return_type.visit(ctx, self, Some(node));
             }
-            NodeKind::FunctionTypeParam(FunctionTypeParam {
+            Node::FunctionTypeParam(FunctionTypeParam {
+                range: _,
                 name,
                 type_annotation,
                 optional,
@@ -1623,20 +1767,27 @@ impl<W: Write> GenJS<W> {
                 }
                 type_annotation.visit(ctx, self, Some(node));
             }
-            NodeKind::NullableTypeAnnotation(NullableTypeAnnotation { type_annotation }) => {
+            Node::NullableTypeAnnotation(NullableTypeAnnotation {
+                range: _,
+                type_annotation,
+            }) => {
                 out!(self, "?");
                 type_annotation.visit(ctx, self, Some(node));
             }
-            NodeKind::QualifiedTypeIdentifier(QualifiedTypeIdentifier { qualification, id }) => {
+            Node::QualifiedTypeIdentifier(QualifiedTypeIdentifier {
+                range: _,
+                qualification,
+                id,
+            }) => {
                 qualification.visit(ctx, self, Some(node));
                 out!(self, ".");
                 id.visit(ctx, self, Some(node));
             }
-            NodeKind::TypeofTypeAnnotation(TypeofTypeAnnotation { argument }) => {
+            Node::TypeofTypeAnnotation(TypeofTypeAnnotation { range: _, argument }) => {
                 out!(self, "typeof ");
                 argument.visit(ctx, self, Some(node));
             }
-            NodeKind::TupleTypeAnnotation(TupleTypeAnnotation { types }) => {
+            Node::TupleTypeAnnotation(TupleTypeAnnotation { range: _, types }) => {
                 out!(self, "[");
                 for (i, ty) in types.iter().enumerate() {
                     if i > 0 {
@@ -1646,11 +1797,14 @@ impl<W: Write> GenJS<W> {
                 }
                 out!(self, "]");
             }
-            NodeKind::ArrayTypeAnnotation(ArrayTypeAnnotation { element_type }) => {
+            Node::ArrayTypeAnnotation(ArrayTypeAnnotation {
+                range: _,
+                element_type,
+            }) => {
                 element_type.visit(ctx, self, Some(node));
                 out!(self, "[]");
             }
-            NodeKind::UnionTypeAnnotation(UnionTypeAnnotation { types }) => {
+            Node::UnionTypeAnnotation(UnionTypeAnnotation { range: _, types }) => {
                 for (i, ty) in types.iter().enumerate() {
                     if i > 0 {
                         self.space(ForceSpace::No);
@@ -1660,7 +1814,7 @@ impl<W: Write> GenJS<W> {
                     self.print_child(ctx, Some(*ty), node, ChildPos::Anywhere);
                 }
             }
-            NodeKind::IntersectionTypeAnnotation(IntersectionTypeAnnotation { types }) => {
+            Node::IntersectionTypeAnnotation(IntersectionTypeAnnotation { range: _, types }) => {
                 for (i, ty) in types.iter().enumerate() {
                     if i > 0 {
                         self.space(ForceSpace::No);
@@ -1670,7 +1824,8 @@ impl<W: Write> GenJS<W> {
                     self.print_child(ctx, Some(*ty), node, ChildPos::Anywhere);
                 }
             }
-            NodeKind::GenericTypeAnnotation(GenericTypeAnnotation {
+            Node::GenericTypeAnnotation(GenericTypeAnnotation {
+                range: _,
                 id,
                 type_parameters,
             }) => {
@@ -1679,7 +1834,8 @@ impl<W: Write> GenJS<W> {
                     type_parameters.visit(ctx, self, Some(node));
                 }
             }
-            NodeKind::IndexedAccessType(IndexedAccessType {
+            Node::IndexedAccessType(IndexedAccessType {
+                range: _,
                 object_type,
                 index_type,
             }) => {
@@ -1688,7 +1844,8 @@ impl<W: Write> GenJS<W> {
                 index_type.visit(ctx, self, Some(node));
                 out!(self, "]");
             }
-            NodeKind::OptionalIndexedAccessType(OptionalIndexedAccessType {
+            Node::OptionalIndexedAccessType(OptionalIndexedAccessType {
+                range: _,
                 object_type,
                 index_type,
                 optional,
@@ -1698,7 +1855,11 @@ impl<W: Write> GenJS<W> {
                 index_type.visit(ctx, self, Some(node));
                 out!(self, "]");
             }
-            NodeKind::InterfaceTypeAnnotation(InterfaceTypeAnnotation { extends, body }) => {
+            Node::InterfaceTypeAnnotation(InterfaceTypeAnnotation {
+                range: _,
+                extends,
+                body,
+            }) => {
                 out!(self, "interface");
                 if !extends.is_empty() {
                     out!(self, " extends ");
@@ -1716,17 +1877,19 @@ impl<W: Write> GenJS<W> {
                 }
             }
 
-            NodeKind::TypeAlias(TypeAlias {
+            Node::TypeAlias(TypeAlias {
+                range: _,
                 id,
                 type_parameters,
                 right,
             })
-            | NodeKind::DeclareTypeAlias(DeclareTypeAlias {
+            | Node::DeclareTypeAlias(DeclareTypeAlias {
+                range: _,
                 id,
                 type_parameters,
                 right,
             }) => {
-                if matches!(&node.get(ctx).kind, NodeKind::DeclareTypeAlias(_)) {
+                if matches!(&node.get(ctx), Node::DeclareTypeAlias(_)) {
                     out!(self, "declare ");
                 }
                 out!(self, "type ");
@@ -1741,7 +1904,8 @@ impl<W: Write> GenJS<W> {
                 }
                 right.visit(ctx, self, Some(node));
             }
-            NodeKind::OpaqueType(OpaqueType {
+            Node::OpaqueType(OpaqueType {
+                range: _,
                 id,
                 type_parameters,
                 impltype,
@@ -1764,13 +1928,15 @@ impl<W: Write> GenJS<W> {
                 }
                 impltype.visit(ctx, self, Some(node));
             }
-            NodeKind::InterfaceDeclaration(InterfaceDeclaration {
+            Node::InterfaceDeclaration(InterfaceDeclaration {
+                range: _,
                 id,
                 type_parameters,
                 extends,
                 body,
             })
-            | NodeKind::DeclareInterface(DeclareInterface {
+            | Node::DeclareInterface(DeclareInterface {
+                range: _,
                 id,
                 type_parameters,
                 extends,
@@ -1778,7 +1944,7 @@ impl<W: Write> GenJS<W> {
             }) => {
                 self.visit_interface(
                     ctx,
-                    if matches!(node.get(ctx).kind, NodeKind::InterfaceDeclaration(_)) {
+                    if matches!(node.get(ctx), Node::InterfaceDeclaration(_)) {
                         "interface"
                     } else {
                         "declare interface"
@@ -1790,7 +1956,8 @@ impl<W: Write> GenJS<W> {
                     node,
                 );
             }
-            NodeKind::DeclareOpaqueType(DeclareOpaqueType {
+            Node::DeclareOpaqueType(DeclareOpaqueType {
+                range: _,
                 id,
                 type_parameters,
                 impltype,
@@ -1815,7 +1982,8 @@ impl<W: Write> GenJS<W> {
                     impltype.visit(ctx, self, Some(node));
                 }
             }
-            NodeKind::DeclareClass(DeclareClass {
+            Node::DeclareClass(DeclareClass {
+                range: _,
                 id,
                 type_parameters,
                 extends,
@@ -1858,13 +2026,18 @@ impl<W: Write> GenJS<W> {
                 self.space(ForceSpace::No);
                 body.visit(ctx, self, Some(node));
             }
-            NodeKind::DeclareFunction(DeclareFunction { id, predicate }) => {
+            Node::DeclareFunction(DeclareFunction {
+                range: _,
+                id,
+                predicate,
+            }) => {
                 // This AST type uses the Identifier/TypeAnnotation
                 // pairing to put a name on a function header-looking construct,
                 // so we have to do some deep matching to get it to come out right.
                 out!(self, "declare function ");
-                match &id.get(ctx).kind {
-                    NodeKind::Identifier(Identifier {
+                match &id.get(ctx) {
+                    Node::Identifier(Identifier {
+                        range: _,
                         name,
                         type_annotation,
                         ..
@@ -1874,35 +2047,35 @@ impl<W: Write> GenJS<W> {
                             None => {
                                 unimplemented!("Malformed AST: Need to handle error");
                             }
-                            Some(type_annotation) => match &type_annotation.get(ctx).kind {
-                                NodeKind::TypeAnnotation(TypeAnnotation { type_annotation }) => {
-                                    match &type_annotation.get(ctx).kind {
-                                        NodeKind::FunctionTypeAnnotation(
-                                            FunctionTypeAnnotation {
-                                                params,
-                                                this,
-                                                return_type,
-                                                rest,
-                                                type_parameters,
-                                            },
-                                        ) => {
-                                            self.visit_func_type_params(
-                                                ctx,
-                                                params,
-                                                *this,
-                                                *rest,
-                                                *type_parameters,
-                                                node,
-                                            );
-                                            out!(self, ":");
-                                            self.space(ForceSpace::No);
-                                            return_type.visit(ctx, self, Some(node));
-                                        }
-                                        _ => {
-                                            unimplemented!("Malformed AST: Need to handle error");
-                                        }
+                            Some(type_annotation) => match &type_annotation.get(ctx) {
+                                Node::TypeAnnotation(TypeAnnotation {
+                                    range: _,
+                                    type_annotation,
+                                }) => match &type_annotation.get(ctx) {
+                                    Node::FunctionTypeAnnotation(FunctionTypeAnnotation {
+                                        range: _,
+                                        params,
+                                        this,
+                                        return_type,
+                                        rest,
+                                        type_parameters,
+                                    }) => {
+                                        self.visit_func_type_params(
+                                            ctx,
+                                            params,
+                                            *this,
+                                            *rest,
+                                            *type_parameters,
+                                            node,
+                                        );
+                                        out!(self, ":");
+                                        self.space(ForceSpace::No);
+                                        return_type.visit(ctx, self, Some(node));
                                     }
-                                }
+                                    _ => {
+                                        unimplemented!("Malformed AST: Need to handle error");
+                                    }
+                                },
                                 _ => {
                                     unimplemented!("Malformed AST: Need to handle error");
                                 }
@@ -1918,15 +2091,16 @@ impl<W: Write> GenJS<W> {
                     }
                 }
             }
-            NodeKind::DeclareVariable(DeclareVariable { id }) => {
+            Node::DeclareVariable(DeclareVariable { range: _, id }) => {
                 if let Some(parent) = parent {
-                    if !matches!(parent.get(ctx).kind, NodeKind::DeclareExportDeclaration(_)) {
+                    if !matches!(parent.get(ctx), Node::DeclareExportDeclaration(_)) {
                         out!(self, "declare ");
                     }
                 }
                 id.visit(ctx, self, Some(node));
             }
-            NodeKind::DeclareExportDeclaration(DeclareExportDeclaration {
+            Node::DeclareExportDeclaration(DeclareExportDeclaration {
+                range: _,
                 declaration,
                 specifiers,
                 source,
@@ -1953,27 +2127,34 @@ impl<W: Write> GenJS<W> {
                     }
                 }
             }
-            NodeKind::DeclareExportAllDeclaration(DeclareExportAllDeclaration { source }) => {
+            Node::DeclareExportAllDeclaration(DeclareExportAllDeclaration { range: _, source }) => {
                 out!(self, "declare export * from ");
                 source.visit(ctx, self, Some(node));
             }
-            NodeKind::DeclareModule(DeclareModule { id, body, .. }) => {
+            Node::DeclareModule(DeclareModule {
+                range: _, id, body, ..
+            }) => {
                 out!(self, "declare module ");
                 id.visit(ctx, self, Some(node));
                 self.space(ForceSpace::No);
                 body.visit(ctx, self, Some(node));
             }
-            NodeKind::DeclareModuleExports(DeclareModuleExports { type_annotation }) => {
+            Node::DeclareModuleExports(DeclareModuleExports {
+                range: _,
+                type_annotation,
+            }) => {
                 out!(self, "declare module.exports:");
                 self.space(ForceSpace::No);
                 type_annotation.visit(ctx, self, Some(node));
             }
 
-            NodeKind::InterfaceExtends(InterfaceExtends {
+            Node::InterfaceExtends(InterfaceExtends {
+                range: _,
                 id,
                 type_parameters,
             })
-            | NodeKind::ClassImplements(ClassImplements {
+            | Node::ClassImplements(ClassImplements {
+                range: _,
                 id,
                 type_parameters,
             }) => {
@@ -1983,10 +2164,14 @@ impl<W: Write> GenJS<W> {
                 }
             }
 
-            NodeKind::TypeAnnotation(TypeAnnotation { type_annotation }) => {
+            Node::TypeAnnotation(TypeAnnotation {
+                range: _,
+                type_annotation,
+            }) => {
                 type_annotation.visit(ctx, self, Some(node));
             }
-            NodeKind::ObjectTypeAnnotation(ObjectTypeAnnotation {
+            Node::ObjectTypeAnnotation(ObjectTypeAnnotation {
+                range: _,
                 properties,
                 indexers,
                 call_properties,
@@ -2044,7 +2229,8 @@ impl<W: Write> GenJS<W> {
                 self.newline();
                 out!(self, "{}", if *exact { "|}" } else { "}" });
             }
-            NodeKind::ObjectTypeProperty(ObjectTypeProperty {
+            Node::ObjectTypeProperty(ObjectTypeProperty {
+                range: _,
                 key,
                 value,
                 method,
@@ -2068,8 +2254,9 @@ impl<W: Write> GenJS<W> {
                     out!(self, "?");
                 }
                 if *method {
-                    match &value.get(ctx).kind {
-                        NodeKind::FunctionTypeAnnotation(FunctionTypeAnnotation {
+                    match &value.get(ctx) {
+                        Node::FunctionTypeAnnotation(FunctionTypeAnnotation {
+                            range: _,
                             params,
                             this,
                             return_type,
@@ -2098,11 +2285,12 @@ impl<W: Write> GenJS<W> {
                     value.visit(ctx, self, Some(node));
                 }
             }
-            NodeKind::ObjectTypeSpreadProperty(ObjectTypeSpreadProperty { argument }) => {
+            Node::ObjectTypeSpreadProperty(ObjectTypeSpreadProperty { range: _, argument }) => {
                 out!(self, "...");
                 argument.visit(ctx, self, Some(node));
             }
-            NodeKind::ObjectTypeInternalSlot(ObjectTypeInternalSlot {
+            Node::ObjectTypeInternalSlot(ObjectTypeInternalSlot {
+                range: _,
                 id,
                 value,
                 optional,
@@ -2119,8 +2307,9 @@ impl<W: Write> GenJS<W> {
                 }
                 out!(self, "]]");
                 if *method {
-                    match &value.get(ctx).kind {
-                        NodeKind::FunctionTypeAnnotation(FunctionTypeAnnotation {
+                    match &value.get(ctx) {
+                        Node::FunctionTypeAnnotation(FunctionTypeAnnotation {
+                            range: _,
                             params,
                             this,
                             return_type,
@@ -2149,12 +2338,17 @@ impl<W: Write> GenJS<W> {
                     value.visit(ctx, self, Some(node));
                 }
             }
-            NodeKind::ObjectTypeCallProperty(ObjectTypeCallProperty { value, is_static }) => {
+            Node::ObjectTypeCallProperty(ObjectTypeCallProperty {
+                range: _,
+                value,
+                is_static,
+            }) => {
                 if *is_static {
                     out!(self, "static ");
                 }
-                match &value.get(ctx).kind {
-                    NodeKind::FunctionTypeAnnotation(FunctionTypeAnnotation {
+                match &value.get(ctx) {
+                    Node::FunctionTypeAnnotation(FunctionTypeAnnotation {
+                        range: _,
                         params,
                         this,
                         return_type,
@@ -2178,7 +2372,8 @@ impl<W: Write> GenJS<W> {
                     }
                 }
             }
-            NodeKind::ObjectTypeIndexer(ObjectTypeIndexer {
+            Node::ObjectTypeIndexer(ObjectTypeIndexer {
+                range: _,
                 id,
                 key,
                 value,
@@ -2203,7 +2398,7 @@ impl<W: Write> GenJS<W> {
                 self.space(ForceSpace::No);
                 value.visit(ctx, self, Some(node));
             }
-            NodeKind::Variance(Variance { kind }) => {
+            Node::Variance(Variance { range: _, kind }) => {
                 out!(
                     self,
                     "{}",
@@ -2215,8 +2410,8 @@ impl<W: Write> GenJS<W> {
                 )
             }
 
-            NodeKind::TypeParameterDeclaration(TypeParameterDeclaration { params })
-            | NodeKind::TypeParameterInstantiation(TypeParameterInstantiation { params }) => {
+            Node::TypeParameterDeclaration(TypeParameterDeclaration { range: _, params })
+            | Node::TypeParameterInstantiation(TypeParameterInstantiation { range: _, params }) => {
                 out!(self, "<");
                 for (i, param) in params.iter().enumerate() {
                     if i > 0 {
@@ -2226,7 +2421,8 @@ impl<W: Write> GenJS<W> {
                 }
                 out!(self, ">");
             }
-            NodeKind::TypeParameter(TypeParameter {
+            Node::TypeParameter(TypeParameter {
+                range: _,
                 name,
                 bound,
                 variance,
@@ -2247,7 +2443,8 @@ impl<W: Write> GenJS<W> {
                     default.visit(ctx, self, Some(node));
                 }
             }
-            NodeKind::TypeCastExpression(TypeCastExpression {
+            Node::TypeCastExpression(TypeCastExpression {
+                range: _,
                 expression,
                 type_annotation,
             }) => {
@@ -2258,21 +2455,22 @@ impl<W: Write> GenJS<W> {
                 self.space(ForceSpace::No);
                 self.print_child(ctx, Some(*type_annotation), node, ChildPos::Right);
             }
-            NodeKind::InferredPredicate(_) => {
+            Node::InferredPredicate(_) => {
                 out!(self, "%checks");
             }
-            NodeKind::DeclaredPredicate(DeclaredPredicate { value }) => {
+            Node::DeclaredPredicate(DeclaredPredicate { range: _, value }) => {
                 out!(self, "%checks(");
                 value.visit(ctx, self, Some(node));
                 out!(self, ")");
             }
 
-            NodeKind::EnumDeclaration(EnumDeclaration { id, body }) => {
+            Node::EnumDeclaration(EnumDeclaration { range: _, id, body }) => {
                 out!(self, "enum ");
                 id.visit(ctx, self, Some(node));
                 body.visit(ctx, self, Some(node));
             }
-            NodeKind::EnumStringBody(EnumStringBody {
+            Node::EnumStringBody(EnumStringBody {
+                range: _,
                 members,
                 explicit_type,
                 has_unknown_members,
@@ -2286,7 +2484,8 @@ impl<W: Write> GenJS<W> {
                     node,
                 );
             }
-            NodeKind::EnumNumberBody(EnumNumberBody {
+            Node::EnumNumberBody(EnumNumberBody {
+                range: _,
                 members,
                 explicit_type,
                 has_unknown_members,
@@ -2300,7 +2499,8 @@ impl<W: Write> GenJS<W> {
                     node,
                 );
             }
-            NodeKind::EnumBooleanBody(EnumBooleanBody {
+            Node::EnumBooleanBody(EnumBooleanBody {
+                range: _,
                 members,
                 explicit_type,
                 has_unknown_members,
@@ -2314,18 +2514,19 @@ impl<W: Write> GenJS<W> {
                     node,
                 );
             }
-            NodeKind::EnumSymbolBody(EnumSymbolBody {
+            Node::EnumSymbolBody(EnumSymbolBody {
+                range: _,
                 members,
                 has_unknown_members,
             }) => {
                 self.visit_enum_body(ctx, "symbol", members, true, *has_unknown_members, node);
             }
-            NodeKind::EnumDefaultedMember(EnumDefaultedMember { id }) => {
+            Node::EnumDefaultedMember(EnumDefaultedMember { range: _, id }) => {
                 id.visit(ctx, self, Some(node));
             }
-            NodeKind::EnumStringMember(EnumStringMember { id, init })
-            | NodeKind::EnumNumberMember(EnumNumberMember { id, init })
-            | NodeKind::EnumBooleanMember(EnumBooleanMember { id, init }) => {
+            Node::EnumStringMember(EnumStringMember { range: _, id, init })
+            | Node::EnumNumberMember(EnumNumberMember { range: _, id, init })
+            | Node::EnumBooleanMember(EnumBooleanMember { range: _, id, init }) => {
                 id.visit(ctx, self, Some(node));
                 out!(
                     self,
@@ -2339,7 +2540,7 @@ impl<W: Write> GenJS<W> {
             }
 
             _ => {
-                unimplemented!("Cannot generate node kind: {}", node.get(ctx).kind.name());
+                unimplemented!("Cannot generate node kind: {}", node.get(ctx).name());
             }
         };
     }
@@ -2546,9 +2747,11 @@ impl<W: Write> GenJS<W> {
         out!(self, "(");
         let mut need_comma = false;
         if let Some(this) = this {
-            match &this.get(ctx).kind {
-                NodeKind::FunctionTypeParam(FunctionTypeParam {
-                    type_annotation, ..
+            match &this.get(ctx) {
+                Node::FunctionTypeParam(FunctionTypeParam {
+                    range: _,
+                    type_annotation,
+                    ..
                 }) => {
                     out!(self, "this:");
                     self.space(ForceSpace::No);
@@ -2658,7 +2861,7 @@ impl<W: Write> GenJS<W> {
         force_block: ForceBlock,
         parent: NodePtr,
     ) -> bool {
-        if let NodeKind::BlockStatement(BlockStatement { body }) = &node.get(ctx).kind {
+        if let Node::BlockStatement(BlockStatement { range: _, body }) = &node.get(ctx) {
             if body.is_empty() {
                 self.space(ForceSpace::No);
                 out!(self, "{{}}");
@@ -2715,27 +2918,31 @@ impl<W: Write> GenJS<W> {
         // Precedence order taken from
         // https://github.com/facebook/flow/blob/master/src/parser_utils/output/js_layout_generator.ml
         use precedence::*;
-        match &node.kind {
-            NodeKind::Identifier(_)
-            | NodeKind::NullLiteral(_)
-            | NodeKind::BooleanLiteral(_)
-            | NodeKind::StringLiteral(_)
-            | NodeKind::NumericLiteral(_)
-            | NodeKind::RegExpLiteral(_)
-            | NodeKind::ThisExpression(_)
-            | NodeKind::Super(_)
-            | NodeKind::ArrayExpression(_)
-            | NodeKind::ObjectExpression(_)
-            | NodeKind::ObjectPattern(_)
-            | NodeKind::FunctionExpression(_)
-            | NodeKind::ClassExpression(_)
-            | NodeKind::TemplateLiteral(_) => (PRIMARY, Assoc::Ltr),
-            NodeKind::MemberExpression(_)
-            | NodeKind::OptionalMemberExpression(_)
-            | NodeKind::MetaProperty(_)
-            | NodeKind::CallExpression(_)
-            | NodeKind::OptionalCallExpression(_) => (MEMBER, Assoc::Ltr),
-            NodeKind::NewExpression(NewExpression { arguments, .. }) => {
+        match &node {
+            Node::Identifier(_)
+            | Node::NullLiteral(_)
+            | Node::BooleanLiteral(_)
+            | Node::StringLiteral(_)
+            | Node::NumericLiteral(_)
+            | Node::RegExpLiteral(_)
+            | Node::ThisExpression(_)
+            | Node::Super(_)
+            | Node::ArrayExpression(_)
+            | Node::ObjectExpression(_)
+            | Node::ObjectPattern(_)
+            | Node::FunctionExpression(_)
+            | Node::ClassExpression(_)
+            | Node::TemplateLiteral(_) => (PRIMARY, Assoc::Ltr),
+            Node::MemberExpression(_)
+            | Node::OptionalMemberExpression(_)
+            | Node::MetaProperty(_)
+            | Node::CallExpression(_)
+            | Node::OptionalCallExpression(_) => (MEMBER, Assoc::Ltr),
+            Node::NewExpression(NewExpression {
+                range: _,
+                arguments,
+                ..
+            }) => {
                 // `new foo()` has higher precedence than `new foo`. In pretty mode we
                 // always append the `()`, but otherwise we must check the number of args.
                 if self.pretty == Pretty::Yes || !arguments.is_empty() {
@@ -2744,45 +2951,45 @@ impl<W: Write> GenJS<W> {
                     (NEW_NO_ARGS, Assoc::Ltr)
                 }
             }
-            NodeKind::TaggedTemplateExpression(_) | NodeKind::ImportExpression(_) => {
+            Node::TaggedTemplateExpression(_) | Node::ImportExpression(_) => {
                 (TAGGED_TEMPLATE, Assoc::Ltr)
             }
-            NodeKind::UpdateExpression(UpdateExpression { prefix, .. }) => {
+            Node::UpdateExpression(UpdateExpression {
+                range: _, prefix, ..
+            }) => {
                 if *prefix {
                     (POST_UPDATE, Assoc::Ltr)
                 } else {
                     (UNARY, Assoc::Rtl)
                 }
             }
-            NodeKind::UnaryExpression(_) => (UNARY, Assoc::Rtl),
-            NodeKind::BinaryExpression(BinaryExpression { operator, .. }) => {
-                (get_binary_precedence(*operator), Assoc::Ltr)
-            }
-            NodeKind::LogicalExpression(LogicalExpression { operator, .. }) => {
-                (get_logical_precedence(*operator), Assoc::Ltr)
-            }
-            NodeKind::ConditionalExpression(_) => (COND, Assoc::Rtl),
-            NodeKind::AssignmentExpression(_) => (ASSIGN, Assoc::Rtl),
-            NodeKind::YieldExpression(_) | NodeKind::ArrowFunctionExpression(_) => {
-                (YIELD, Assoc::Ltr)
-            }
-            NodeKind::SequenceExpression(_) => (SEQ, Assoc::Rtl),
+            Node::UnaryExpression(_) => (UNARY, Assoc::Rtl),
+            Node::BinaryExpression(BinaryExpression {
+                range: _, operator, ..
+            }) => (get_binary_precedence(*operator), Assoc::Ltr),
+            Node::LogicalExpression(LogicalExpression {
+                range: _, operator, ..
+            }) => (get_logical_precedence(*operator), Assoc::Ltr),
+            Node::ConditionalExpression(_) => (COND, Assoc::Rtl),
+            Node::AssignmentExpression(_) => (ASSIGN, Assoc::Rtl),
+            Node::YieldExpression(_) | Node::ArrowFunctionExpression(_) => (YIELD, Assoc::Ltr),
+            Node::SequenceExpression(_) => (SEQ, Assoc::Rtl),
 
-            NodeKind::ExistsTypeAnnotation(_)
-            | NodeKind::EmptyTypeAnnotation(_)
-            | NodeKind::StringTypeAnnotation(_)
-            | NodeKind::NumberTypeAnnotation(_)
-            | NodeKind::StringLiteralTypeAnnotation(_)
-            | NodeKind::NumberLiteralTypeAnnotation(_)
-            | NodeKind::BooleanTypeAnnotation(_)
-            | NodeKind::BooleanLiteralTypeAnnotation(_)
-            | NodeKind::NullLiteralTypeAnnotation(_)
-            | NodeKind::SymbolTypeAnnotation(_)
-            | NodeKind::AnyTypeAnnotation(_)
-            | NodeKind::MixedTypeAnnotation(_)
-            | NodeKind::VoidTypeAnnotation(_) => (PRIMARY, Assoc::Ltr),
-            NodeKind::UnionTypeAnnotation(_) => (UNION_TYPE, Assoc::Ltr),
-            NodeKind::IntersectionTypeAnnotation(_) => (INTERSECTION_TYPE, Assoc::Ltr),
+            Node::ExistsTypeAnnotation(_)
+            | Node::EmptyTypeAnnotation(_)
+            | Node::StringTypeAnnotation(_)
+            | Node::NumberTypeAnnotation(_)
+            | Node::StringLiteralTypeAnnotation(_)
+            | Node::NumberLiteralTypeAnnotation(_)
+            | Node::BooleanTypeAnnotation(_)
+            | Node::BooleanLiteralTypeAnnotation(_)
+            | Node::NullLiteralTypeAnnotation(_)
+            | Node::SymbolTypeAnnotation(_)
+            | Node::AnyTypeAnnotation(_)
+            | Node::MixedTypeAnnotation(_)
+            | Node::VoidTypeAnnotation(_) => (PRIMARY, Assoc::Ltr),
+            Node::UnionTypeAnnotation(_) => (UNION_TYPE, Assoc::Ltr),
+            Node::IntersectionTypeAnnotation(_) => (INTERSECTION_TYPE, Assoc::Ltr),
 
             _ => (ALWAYS_PAREN, Assoc::Ltr),
         }
@@ -2801,47 +3008,41 @@ impl<W: Write> GenJS<W> {
         let child_node = child.get(ctx);
 
         #[allow(clippy::if_same_then_else)]
-        if matches!(parent_node.kind, NodeKind::ArrowFunctionExpression(_)) {
+        if matches!(parent_node, Node::ArrowFunctionExpression(_)) {
             // (x) => ({x: 10}) needs parens to avoid confusing it with a block and a
             // labelled statement.
-            if child_pos == ChildPos::Right
-                && matches!(child_node.kind, NodeKind::ObjectExpression(_))
-            {
+            if child_pos == ChildPos::Right && matches!(child_node, Node::ObjectExpression(_)) {
                 return NeedParens::Yes;
             }
-        } else if matches!(parent_node.kind, NodeKind::ForStatement(_)) {
+        } else if matches!(parent_node, Node::ForStatement(_)) {
             // for((a in b);..;..) needs parens to avoid confusing it with for(a in b).
-            return NeedParens::from(match &child_node.kind {
-                NodeKind::BinaryExpression(BinaryExpression { operator, .. }) => {
-                    *operator == BinaryExpressionOperator::In
-                }
+            return NeedParens::from(match &child_node {
+                Node::BinaryExpression(BinaryExpression {
+                    range: _, operator, ..
+                }) => *operator == BinaryExpressionOperator::In,
                 _ => false,
             });
-        } else if matches!(parent_node.kind, NodeKind::ExpressionStatement(_)) {
+        } else if matches!(parent_node, Node::ExpressionStatement(_)) {
             // Expression statement like (function () {} + 1) needs parens.
             return NeedParens::from(self.root_starts_with(ctx, child, |kind| -> bool {
                 matches!(
                     kind,
-                    NodeKind::FunctionExpression(_)
-                        | NodeKind::ClassExpression(_)
-                        | NodeKind::ObjectExpression(_)
-                        | NodeKind::ObjectPattern(_)
+                    Node::FunctionExpression(_)
+                        | Node::ClassExpression(_)
+                        | Node::ObjectExpression(_)
+                        | Node::ObjectPattern(_)
                 )
             }));
-        } else if (parent_node.kind.is_unary_op(UnaryExpressionOperator::Minus)
-            && self.root_starts_with(ctx, child, NodeKind::check_minus))
-            || (parent_node.kind.is_unary_op(UnaryExpressionOperator::Plus)
-                && self.root_starts_with(ctx, child, NodeKind::check_plus))
+        } else if (parent_node.is_unary_op(UnaryExpressionOperator::Minus)
+            && self.root_starts_with(ctx, child, Node::check_minus))
+            || (parent_node.is_unary_op(UnaryExpressionOperator::Plus)
+                && self.root_starts_with(ctx, child, Node::check_plus))
             || (child_pos == ChildPos::Right
-                && parent_node
-                    .kind
-                    .is_binary_op(BinaryExpressionOperator::Minus)
-                && self.root_starts_with(ctx, child, NodeKind::check_minus))
+                && parent_node.is_binary_op(BinaryExpressionOperator::Minus)
+                && self.root_starts_with(ctx, child, Node::check_minus))
             || (child_pos == ChildPos::Right
-                && parent_node
-                    .kind
-                    .is_binary_op(BinaryExpressionOperator::Plus)
-                && self.root_starts_with(ctx, child, NodeKind::check_plus))
+                && parent_node.is_binary_op(BinaryExpressionOperator::Plus)
+                && self.root_starts_with(ctx, child, Node::check_plus))
         {
             // -(-x) or -(--x) or -(-5)
             // +(+x) or +(++x)
@@ -2853,19 +3054,19 @@ impl<W: Write> GenJS<W> {
                 NeedParens::Space
             };
         } else if matches!(
-            parent_node.kind,
-            NodeKind::MemberExpression(_) | NodeKind::CallExpression(_)
+            parent_node,
+            Node::MemberExpression(_) | Node::CallExpression(_)
         ) && matches!(
-            child_node.kind,
-            NodeKind::OptionalMemberExpression(_) | NodeKind::OptionalCallExpression(_)
+            child_node,
+            Node::OptionalMemberExpression(_) | Node::OptionalCallExpression(_)
         ) && child_pos == ChildPos::Left
         {
             // When optional chains are terminated by non-optional member/calls,
             // we need the left hand side to be parenthesized.
             // Avoids confusing `(a?.b).c` with `a?.b.c`.
             return NeedParens::Yes;
-        } else if (parent_node.kind.check_and_or() && child_node.kind.check_nullish())
-            || (parent_node.kind.check_nullish() && child_node.kind.check_and_or())
+        } else if (parent_node.check_and_or() && child_node.check_nullish())
+            || (parent_node.check_nullish() && child_node.check_and_or())
         {
             // Nullish coalescing always requires parens when mixed with any
             // other logical operations.
@@ -2904,7 +3105,7 @@ impl<W: Write> GenJS<W> {
         })
     }
 
-    fn root_starts_with<F: Fn(&NodeKind) -> bool>(
+    fn root_starts_with<F: Fn(&Node) -> bool>(
         &self,
         ctx: &Context,
         expr: NodePtr,
@@ -2913,7 +3114,7 @@ impl<W: Write> GenJS<W> {
         self.expr_starts_with(ctx, expr, None, pred)
     }
 
-    fn expr_starts_with<F: Fn(&NodeKind) -> bool>(
+    fn expr_starts_with<F: Fn(&Node) -> bool>(
         &self,
         ctx: &Context,
         expr: NodePtr,
@@ -2926,42 +3127,50 @@ impl<W: Write> GenJS<W> {
             }
         }
 
-        if pred(&expr.get(ctx).kind) {
+        if pred(expr.get(ctx)) {
             return true;
         }
 
         // Ensure the recursive calls are the last things to run,
         // hopefully the compiler makes this into a loop.
-        match &expr.get(ctx).kind {
-            NodeKind::CallExpression(CallExpression { callee, .. }) => {
-                self.expr_starts_with(ctx, *callee, Some(expr), pred)
-            }
-            NodeKind::OptionalCallExpression(OptionalCallExpression { callee, .. }) => {
-                self.expr_starts_with(ctx, *callee, Some(expr), pred)
-            }
-            NodeKind::BinaryExpression(BinaryExpression { left, .. }) => {
+        match &expr.get(ctx) {
+            Node::CallExpression(CallExpression {
+                range: _, callee, ..
+            }) => self.expr_starts_with(ctx, *callee, Some(expr), pred),
+            Node::OptionalCallExpression(OptionalCallExpression {
+                range: _, callee, ..
+            }) => self.expr_starts_with(ctx, *callee, Some(expr), pred),
+            Node::BinaryExpression(BinaryExpression { range: _, left, .. }) => {
                 self.expr_starts_with(ctx, *left, Some(expr), pred)
             }
-            NodeKind::LogicalExpression(LogicalExpression { left, .. }) => {
+            Node::LogicalExpression(LogicalExpression { range: _, left, .. }) => {
                 self.expr_starts_with(ctx, *left, Some(expr), pred)
             }
-            NodeKind::ConditionalExpression(ConditionalExpression { test, .. }) => {
+            Node::ConditionalExpression(ConditionalExpression { range: _, test, .. }) => {
                 self.expr_starts_with(ctx, *test, Some(expr), pred)
             }
-            NodeKind::AssignmentExpression(AssignmentExpression { left, .. }) => {
+            Node::AssignmentExpression(AssignmentExpression { range: _, left, .. }) => {
                 self.expr_starts_with(ctx, *left, Some(expr), pred)
             }
-            NodeKind::UpdateExpression(UpdateExpression {
-                prefix, argument, ..
+            Node::UpdateExpression(UpdateExpression {
+                range: _,
+                prefix,
+                argument,
+                ..
             }) => !*prefix && self.expr_starts_with(ctx, *argument, Some(expr), pred),
-            NodeKind::UnaryExpression(UnaryExpression {
-                prefix, argument, ..
+            Node::UnaryExpression(UnaryExpression {
+                range: _,
+                prefix,
+                argument,
+                ..
             }) => !*prefix && self.expr_starts_with(ctx, *argument, Some(expr), pred),
-            NodeKind::MemberExpression(MemberExpression { object, .. })
-            | NodeKind::OptionalMemberExpression(OptionalMemberExpression { object, .. }) => {
-                self.expr_starts_with(ctx, *object, Some(expr), pred)
-            }
-            NodeKind::TaggedTemplateExpression(TaggedTemplateExpression { tag, .. }) => {
+            Node::MemberExpression(MemberExpression {
+                range: _, object, ..
+            })
+            | Node::OptionalMemberExpression(OptionalMemberExpression {
+                range: _, object, ..
+            }) => self.expr_starts_with(ctx, *object, Some(expr), pred),
+            Node::TaggedTemplateExpression(TaggedTemplateExpression { range: _, tag, .. }) => {
                 self.expr_starts_with(ctx, *tag, Some(expr), pred)
             }
             _ => false,
@@ -2974,8 +3183,8 @@ impl<W: Write> GenJS<W> {
         let new_token = Some(RawToken {
             dst_line: self.position.line - 1,
             dst_col: self.position.col - 1,
-            src_line: node.range.start.line - 1,
-            src_col: node.range.start.col - 1,
+            src_line: node.range().start.line - 1,
+            src_col: node.range().start.col - 1,
             src_id: 0,
             name_id: !0,
         });
@@ -3013,18 +3222,23 @@ impl<W: Write> Visitor for GenJS<W> {
     }
 }
 
-impl NodeKind {
+impl Node {
     fn is_unary_op(&self, op: UnaryExpressionOperator) -> bool {
         match self {
-            NodeKind::UnaryExpression(UnaryExpression { operator, .. }) => *operator == op,
+            Node::UnaryExpression(UnaryExpression {
+                range: _, operator, ..
+            }) => *operator == op,
             _ => false,
         }
     }
 
     fn is_update_prefix(&self, op: UpdateExpressionOperator) -> bool {
         match self {
-            NodeKind::UpdateExpression(UpdateExpression {
-                prefix, operator, ..
+            Node::UpdateExpression(UpdateExpression {
+                range: _,
+                prefix,
+                operator,
+                ..
             }) => *prefix && *operator == op,
             _ => false,
         }
@@ -3032,21 +3246,29 @@ impl NodeKind {
 
     fn is_negative_number(&self) -> bool {
         match self {
-            NodeKind::NumericLiteral(NumericLiteral { value, .. }) => *value < 0f64,
+            Node::NumericLiteral(NumericLiteral {
+                range: _, value, ..
+            }) => *value < 0f64,
             _ => false,
         }
     }
 
     fn is_binary_op(&self, op: BinaryExpressionOperator) -> bool {
         match self {
-            NodeKind::BinaryExpression(BinaryExpression { operator, .. }) => *operator == op,
+            Node::BinaryExpression(BinaryExpression {
+                range: _, operator, ..
+            }) => *operator == op,
             _ => false,
         }
     }
 
     fn is_if_without_else(&self) -> bool {
         match self {
-            NodeKind::IfStatement(IfStatement { alternate, .. }) => alternate.is_none(),
+            Node::IfStatement(IfStatement {
+                range: _,
+                alternate,
+                ..
+            }) => alternate.is_none(),
             _ => false,
         }
     }
@@ -3064,7 +3286,8 @@ impl NodeKind {
     fn check_and_or(&self) -> bool {
         matches!(
             self,
-            NodeKind::LogicalExpression(LogicalExpression {
+            Node::LogicalExpression(LogicalExpression {
+                range: _,
                 operator: LogicalExpressionOperator::And | LogicalExpressionOperator::Or,
                 ..
             })
@@ -3074,7 +3297,8 @@ impl NodeKind {
     fn check_nullish(&self) -> bool {
         matches!(
             self,
-            NodeKind::LogicalExpression(LogicalExpression {
+            Node::LogicalExpression(LogicalExpression {
+                range: _,
                 operator: LogicalExpressionOperator::NullishCoalesce,
                 ..
             })
@@ -3084,41 +3308,52 @@ impl NodeKind {
 
 fn ends_with_block(ctx: &Context, node: Option<NodePtr>) -> bool {
     match node {
-        Some(node) => match &node.get(ctx).kind {
-            NodeKind::BlockStatement(_) | NodeKind::FunctionDeclaration(_) => true,
-            NodeKind::WhileStatement(WhileStatement { body, .. }) => {
+        Some(node) => match &node.get(ctx) {
+            Node::BlockStatement(_) | Node::FunctionDeclaration(_) => true,
+            Node::WhileStatement(WhileStatement { range: _, body, .. }) => {
                 ends_with_block(ctx, Some(*body))
             }
-            NodeKind::ForStatement(ForStatement { body, .. }) => ends_with_block(ctx, Some(*body)),
-            NodeKind::ForInStatement(ForInStatement { body, .. }) => {
+            Node::ForStatement(ForStatement { range: _, body, .. }) => {
                 ends_with_block(ctx, Some(*body))
             }
-            NodeKind::ForOfStatement(ForOfStatement { body, .. }) => {
+            Node::ForInStatement(ForInStatement { range: _, body, .. }) => {
                 ends_with_block(ctx, Some(*body))
             }
-            NodeKind::WithStatement(WithStatement { body, .. }) => {
+            Node::ForOfStatement(ForOfStatement { range: _, body, .. }) => {
                 ends_with_block(ctx, Some(*body))
             }
-            NodeKind::SwitchStatement(_) => true,
-            NodeKind::LabeledStatement(LabeledStatement { body, .. }) => {
+            Node::WithStatement(WithStatement { range: _, body, .. }) => {
                 ends_with_block(ctx, Some(*body))
             }
-            NodeKind::TryStatement(TryStatement {
-                finalizer, handler, ..
+            Node::SwitchStatement(_) => true,
+            Node::LabeledStatement(LabeledStatement { range: _, body, .. }) => {
+                ends_with_block(ctx, Some(*body))
+            }
+            Node::TryStatement(TryStatement {
+                range: _,
+                finalizer,
+                handler,
+                ..
             }) => ends_with_block(ctx, finalizer.or(*handler)),
-            NodeKind::CatchClause(CatchClause { body, .. }) => ends_with_block(ctx, Some(*body)),
-            NodeKind::IfStatement(IfStatement {
+            Node::CatchClause(CatchClause { range: _, body, .. }) => {
+                ends_with_block(ctx, Some(*body))
+            }
+            Node::IfStatement(IfStatement {
+                range: _,
                 alternate,
                 consequent,
                 ..
             }) => ends_with_block(ctx, alternate.or(Some(*consequent))),
-            NodeKind::ClassDeclaration(_) => true,
-            NodeKind::ExportDefaultDeclaration(ExportDefaultDeclaration { declaration }) => {
-                ends_with_block(ctx, Some(*declaration))
-            }
-            NodeKind::ExportNamedDeclaration(ExportNamedDeclaration { declaration, .. }) => {
-                ends_with_block(ctx, *declaration)
-            }
+            Node::ClassDeclaration(_) => true,
+            Node::ExportDefaultDeclaration(ExportDefaultDeclaration {
+                range: _,
+                declaration,
+            }) => ends_with_block(ctx, Some(*declaration)),
+            Node::ExportNamedDeclaration(ExportNamedDeclaration {
+                range: _,
+                declaration,
+                ..
+            }) => ends_with_block(ctx, *declaration),
             _ => false,
         },
         None => false,

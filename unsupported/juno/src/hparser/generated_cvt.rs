@@ -23,31 +23,25 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
     let res = match nr.kind {
         NodeKind::Empty => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::Empty(ast::Empty {
                 range,
-                kind: ast::NodeKind::Empty(ast::Empty {
-                }),
-            }
+            }),
           )
         }
         NodeKind::Metadata => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::Metadata(ast::Metadata {
                 range,
-                kind: ast::NodeKind::Metadata(ast::Metadata {
-                }),
-            }
+            }),
           )
         }
         NodeKind::Program => {
           let body = cvt_node_list(cvt, hermes_get_Program_body(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::Program(ast::Program {
                 range,
-                kind: ast::NodeKind::Program(ast::Program {
                     body,
-                }),
-            }
+            }),
           )
         }
         NodeKind::FunctionExpression => {
@@ -60,9 +54,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let generator = hermes_get_FunctionExpression_generator(n);
           let is_async = hermes_get_FunctionExpression_async(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::FunctionExpression(ast::FunctionExpression {
                 range,
-                kind: ast::NodeKind::FunctionExpression(ast::FunctionExpression {
                     id,
                     params,
                     body,
@@ -71,8 +64,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
                     predicate,
                     generator,
                     is_async,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ArrowFunctionExpression => {
@@ -85,9 +77,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let expression = hermes_get_ArrowFunctionExpression_expression(n);
           let is_async = hermes_get_ArrowFunctionExpression_async(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ArrowFunctionExpression(ast::ArrowFunctionExpression {
                 range,
-                kind: ast::NodeKind::ArrowFunctionExpression(ast::ArrowFunctionExpression {
                     id,
                     params,
                     body,
@@ -96,8 +87,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
                     predicate,
                     expression,
                     is_async,
-                }),
-            }
+            }),
           )
         }
         NodeKind::FunctionDeclaration => {
@@ -110,9 +100,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let generator = hermes_get_FunctionDeclaration_generator(n);
           let is_async = hermes_get_FunctionDeclaration_async(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::FunctionDeclaration(ast::FunctionDeclaration {
                 range,
-                kind: ast::NodeKind::FunctionDeclaration(ast::FunctionDeclaration {
                     id,
                     params,
                     body,
@@ -121,34 +110,29 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
                     predicate,
                     generator,
                     is_async,
-                }),
-            }
+            }),
           )
         }
         NodeKind::WhileStatement => {
           let body = cvt_node_ptr(cvt, hermes_get_WhileStatement_body(n));
           let test = cvt_node_ptr(cvt, hermes_get_WhileStatement_test(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::WhileStatement(ast::WhileStatement {
                 range,
-                kind: ast::NodeKind::WhileStatement(ast::WhileStatement {
                     body,
                     test,
-                }),
-            }
+            }),
           )
         }
         NodeKind::DoWhileStatement => {
           let body = cvt_node_ptr(cvt, hermes_get_DoWhileStatement_body(n));
           let test = cvt_node_ptr(cvt, hermes_get_DoWhileStatement_test(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::DoWhileStatement(ast::DoWhileStatement {
                 range,
-                kind: ast::NodeKind::DoWhileStatement(ast::DoWhileStatement {
                     body,
                     test,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ForInStatement => {
@@ -156,14 +140,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let right = cvt_node_ptr(cvt, hermes_get_ForInStatement_right(n));
           let body = cvt_node_ptr(cvt, hermes_get_ForInStatement_body(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ForInStatement(ast::ForInStatement {
                 range,
-                kind: ast::NodeKind::ForInStatement(ast::ForInStatement {
                     left,
                     right,
                     body,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ForOfStatement => {
@@ -172,15 +154,13 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let body = cvt_node_ptr(cvt, hermes_get_ForOfStatement_body(n));
           let is_await = hermes_get_ForOfStatement_await(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ForOfStatement(ast::ForOfStatement {
                 range,
-                kind: ast::NodeKind::ForOfStatement(ast::ForOfStatement {
                     left,
                     right,
                     body,
                     is_await,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ForStatement => {
@@ -189,140 +169,116 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let update = cvt_node_ptr_opt(cvt, hermes_get_ForStatement_update(n));
           let body = cvt_node_ptr(cvt, hermes_get_ForStatement_body(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ForStatement(ast::ForStatement {
                 range,
-                kind: ast::NodeKind::ForStatement(ast::ForStatement {
                     init,
                     test,
                     update,
                     body,
-                }),
-            }
+            }),
           )
         }
         NodeKind::DebuggerStatement => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::DebuggerStatement(ast::DebuggerStatement {
                 range,
-                kind: ast::NodeKind::DebuggerStatement(ast::DebuggerStatement {
-                }),
-            }
+            }),
           )
         }
         NodeKind::EmptyStatement => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::EmptyStatement(ast::EmptyStatement {
                 range,
-                kind: ast::NodeKind::EmptyStatement(ast::EmptyStatement {
-                }),
-            }
+            }),
           )
         }
         NodeKind::BlockStatement => {
           let body = cvt_node_list(cvt, hermes_get_BlockStatement_body(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::BlockStatement(ast::BlockStatement {
                 range,
-                kind: ast::NodeKind::BlockStatement(ast::BlockStatement {
                     body,
-                }),
-            }
+            }),
           )
         }
         NodeKind::BreakStatement => {
           let label = cvt_node_ptr_opt(cvt, hermes_get_BreakStatement_label(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::BreakStatement(ast::BreakStatement {
                 range,
-                kind: ast::NodeKind::BreakStatement(ast::BreakStatement {
                     label,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ContinueStatement => {
           let label = cvt_node_ptr_opt(cvt, hermes_get_ContinueStatement_label(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ContinueStatement(ast::ContinueStatement {
                 range,
-                kind: ast::NodeKind::ContinueStatement(ast::ContinueStatement {
                     label,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ThrowStatement => {
           let argument = cvt_node_ptr(cvt, hermes_get_ThrowStatement_argument(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ThrowStatement(ast::ThrowStatement {
                 range,
-                kind: ast::NodeKind::ThrowStatement(ast::ThrowStatement {
                     argument,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ReturnStatement => {
           let argument = cvt_node_ptr_opt(cvt, hermes_get_ReturnStatement_argument(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ReturnStatement(ast::ReturnStatement {
                 range,
-                kind: ast::NodeKind::ReturnStatement(ast::ReturnStatement {
                     argument,
-                }),
-            }
+            }),
           )
         }
         NodeKind::WithStatement => {
           let object = cvt_node_ptr(cvt, hermes_get_WithStatement_object(n));
           let body = cvt_node_ptr(cvt, hermes_get_WithStatement_body(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::WithStatement(ast::WithStatement {
                 range,
-                kind: ast::NodeKind::WithStatement(ast::WithStatement {
                     object,
                     body,
-                }),
-            }
+            }),
           )
         }
         NodeKind::SwitchStatement => {
           let discriminant = cvt_node_ptr(cvt, hermes_get_SwitchStatement_discriminant(n));
           let cases = cvt_node_list(cvt, hermes_get_SwitchStatement_cases(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::SwitchStatement(ast::SwitchStatement {
                 range,
-                kind: ast::NodeKind::SwitchStatement(ast::SwitchStatement {
                     discriminant,
                     cases,
-                }),
-            }
+            }),
           )
         }
         NodeKind::LabeledStatement => {
           let label = cvt_node_ptr(cvt, hermes_get_LabeledStatement_label(n));
           let body = cvt_node_ptr(cvt, hermes_get_LabeledStatement_body(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::LabeledStatement(ast::LabeledStatement {
                 range,
-                kind: ast::NodeKind::LabeledStatement(ast::LabeledStatement {
                     label,
                     body,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ExpressionStatement => {
           let expression = cvt_node_ptr(cvt, hermes_get_ExpressionStatement_expression(n));
           let directive = cvt_string_opt(hermes_get_ExpressionStatement_directive(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ExpressionStatement(ast::ExpressionStatement {
                 range,
-                kind: ast::NodeKind::ExpressionStatement(ast::ExpressionStatement {
                     expression,
                     directive,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TryStatement => {
@@ -330,14 +286,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let handler = cvt_node_ptr_opt(cvt, hermes_get_TryStatement_handler(n));
           let finalizer = cvt_node_ptr_opt(cvt, hermes_get_TryStatement_finalizer(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TryStatement(ast::TryStatement {
                 range,
-                kind: ast::NodeKind::TryStatement(ast::TryStatement {
                     block,
                     handler,
                     finalizer,
-                }),
-            }
+            }),
           )
         }
         NodeKind::IfStatement => {
@@ -345,133 +299,109 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let consequent = cvt_node_ptr(cvt, hermes_get_IfStatement_consequent(n));
           let alternate = cvt_node_ptr_opt(cvt, hermes_get_IfStatement_alternate(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::IfStatement(ast::IfStatement {
                 range,
-                kind: ast::NodeKind::IfStatement(ast::IfStatement {
                     test,
                     consequent,
                     alternate,
-                }),
-            }
+            }),
           )
         }
         NodeKind::NullLiteral => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::NullLiteral(ast::NullLiteral {
                 range,
-                kind: ast::NodeKind::NullLiteral(ast::NullLiteral {
-                }),
-            }
+            }),
           )
         }
         NodeKind::BooleanLiteral => {
           let value = hermes_get_BooleanLiteral_value(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::BooleanLiteral(ast::BooleanLiteral {
                 range,
-                kind: ast::NodeKind::BooleanLiteral(ast::BooleanLiteral {
                     value,
-                }),
-            }
+            }),
           )
         }
         NodeKind::StringLiteral => {
           let value = cvt_string(hermes_get_StringLiteral_value(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::StringLiteral(ast::StringLiteral {
                 range,
-                kind: ast::NodeKind::StringLiteral(ast::StringLiteral {
                     value,
-                }),
-            }
+            }),
           )
         }
         NodeKind::NumericLiteral => {
           let value = hermes_get_NumericLiteral_value(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::NumericLiteral(ast::NumericLiteral {
                 range,
-                kind: ast::NodeKind::NumericLiteral(ast::NumericLiteral {
                     value,
-                }),
-            }
+            }),
           )
         }
         NodeKind::RegExpLiteral => {
           let pattern = cvt_label(hermes_get_RegExpLiteral_pattern(n));
           let flags = cvt_label(hermes_get_RegExpLiteral_flags(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::RegExpLiteral(ast::RegExpLiteral {
                 range,
-                kind: ast::NodeKind::RegExpLiteral(ast::RegExpLiteral {
                     pattern,
                     flags,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ThisExpression => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ThisExpression(ast::ThisExpression {
                 range,
-                kind: ast::NodeKind::ThisExpression(ast::ThisExpression {
-                }),
-            }
+            }),
           )
         }
         NodeKind::Super => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::Super(ast::Super {
                 range,
-                kind: ast::NodeKind::Super(ast::Super {
-                }),
-            }
+            }),
           )
         }
         NodeKind::SequenceExpression => {
           let expressions = cvt_node_list(cvt, hermes_get_SequenceExpression_expressions(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::SequenceExpression(ast::SequenceExpression {
                 range,
-                kind: ast::NodeKind::SequenceExpression(ast::SequenceExpression {
                     expressions,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ObjectExpression => {
           let properties = cvt_node_list(cvt, hermes_get_ObjectExpression_properties(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ObjectExpression(ast::ObjectExpression {
                 range,
-                kind: ast::NodeKind::ObjectExpression(ast::ObjectExpression {
                     properties,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ArrayExpression => {
           let elements = cvt_node_list(cvt, hermes_get_ArrayExpression_elements(n));
           let trailing_comma = hermes_get_ArrayExpression_trailingComma(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ArrayExpression(ast::ArrayExpression {
                 range,
-                kind: ast::NodeKind::ArrayExpression(ast::ArrayExpression {
                     elements,
                     trailing_comma,
-                }),
-            }
+            }),
           )
         }
         NodeKind::SpreadElement => {
           let argument = cvt_node_ptr(cvt, hermes_get_SpreadElement_argument(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::SpreadElement(ast::SpreadElement {
                 range,
-                kind: ast::NodeKind::SpreadElement(ast::SpreadElement {
                     argument,
-                }),
-            }
+            }),
           )
         }
         NodeKind::NewExpression => {
@@ -479,51 +409,43 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let type_arguments = cvt_node_ptr_opt(cvt, hermes_get_NewExpression_typeArguments(n));
           let arguments = cvt_node_list(cvt, hermes_get_NewExpression_arguments(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::NewExpression(ast::NewExpression {
                 range,
-                kind: ast::NodeKind::NewExpression(ast::NewExpression {
                     callee,
                     type_arguments,
                     arguments,
-                }),
-            }
+            }),
           )
         }
         NodeKind::YieldExpression => {
           let argument = cvt_node_ptr_opt(cvt, hermes_get_YieldExpression_argument(n));
           let delegate = hermes_get_YieldExpression_delegate(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::YieldExpression(ast::YieldExpression {
                 range,
-                kind: ast::NodeKind::YieldExpression(ast::YieldExpression {
                     argument,
                     delegate,
-                }),
-            }
+            }),
           )
         }
         NodeKind::AwaitExpression => {
           let argument = cvt_node_ptr(cvt, hermes_get_AwaitExpression_argument(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::AwaitExpression(ast::AwaitExpression {
                 range,
-                kind: ast::NodeKind::AwaitExpression(ast::AwaitExpression {
                     argument,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ImportExpression => {
           let source = cvt_node_ptr(cvt, hermes_get_ImportExpression_source(n));
           let attributes = cvt_node_ptr_opt(cvt, hermes_get_ImportExpression_attributes(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ImportExpression(ast::ImportExpression {
                 range,
-                kind: ast::NodeKind::ImportExpression(ast::ImportExpression {
                     source,
                     attributes,
-                }),
-            }
+            }),
           )
         }
         NodeKind::CallExpression => {
@@ -531,14 +453,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let type_arguments = cvt_node_ptr_opt(cvt, hermes_get_CallExpression_typeArguments(n));
           let arguments = cvt_node_list(cvt, hermes_get_CallExpression_arguments(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::CallExpression(ast::CallExpression {
                 range,
-                kind: ast::NodeKind::CallExpression(ast::CallExpression {
                     callee,
                     type_arguments,
                     arguments,
-                }),
-            }
+            }),
           )
         }
         NodeKind::OptionalCallExpression => {
@@ -547,15 +467,13 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let arguments = cvt_node_list(cvt, hermes_get_OptionalCallExpression_arguments(n));
           let optional = hermes_get_OptionalCallExpression_optional(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::OptionalCallExpression(ast::OptionalCallExpression {
                 range,
-                kind: ast::NodeKind::OptionalCallExpression(ast::OptionalCallExpression {
                     callee,
                     type_arguments,
                     arguments,
                     optional,
-                }),
-            }
+            }),
           )
         }
         NodeKind::AssignmentExpression => {
@@ -563,14 +481,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let left = cvt_node_ptr(cvt, hermes_get_AssignmentExpression_left(n));
           let right = cvt_node_ptr(cvt, hermes_get_AssignmentExpression_right(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::AssignmentExpression(ast::AssignmentExpression {
                 range,
-                kind: ast::NodeKind::AssignmentExpression(ast::AssignmentExpression {
                     operator,
                     left,
                     right,
-                }),
-            }
+            }),
           )
         }
         NodeKind::UnaryExpression => {
@@ -578,14 +494,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let argument = cvt_node_ptr(cvt, hermes_get_UnaryExpression_argument(n));
           let prefix = hermes_get_UnaryExpression_prefix(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::UnaryExpression(ast::UnaryExpression {
                 range,
-                kind: ast::NodeKind::UnaryExpression(ast::UnaryExpression {
                     operator,
                     argument,
                     prefix,
-                }),
-            }
+            }),
           )
         }
         NodeKind::UpdateExpression => {
@@ -593,14 +507,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let argument = cvt_node_ptr(cvt, hermes_get_UpdateExpression_argument(n));
           let prefix = hermes_get_UpdateExpression_prefix(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::UpdateExpression(ast::UpdateExpression {
                 range,
-                kind: ast::NodeKind::UpdateExpression(ast::UpdateExpression {
                     operator,
                     argument,
                     prefix,
-                }),
-            }
+            }),
           )
         }
         NodeKind::MemberExpression => {
@@ -608,14 +520,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let property = cvt_node_ptr(cvt, hermes_get_MemberExpression_property(n));
           let computed = hermes_get_MemberExpression_computed(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::MemberExpression(ast::MemberExpression {
                 range,
-                kind: ast::NodeKind::MemberExpression(ast::MemberExpression {
                     object,
                     property,
                     computed,
-                }),
-            }
+            }),
           )
         }
         NodeKind::OptionalMemberExpression => {
@@ -624,15 +534,13 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let computed = hermes_get_OptionalMemberExpression_computed(n);
           let optional = hermes_get_OptionalMemberExpression_optional(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::OptionalMemberExpression(ast::OptionalMemberExpression {
                 range,
-                kind: ast::NodeKind::OptionalMemberExpression(ast::OptionalMemberExpression {
                     object,
                     property,
                     computed,
                     optional,
-                }),
-            }
+            }),
           )
         }
         NodeKind::LogicalExpression => {
@@ -640,14 +548,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let right = cvt_node_ptr(cvt, hermes_get_LogicalExpression_right(n));
           let operator = cvt_enum(hermes_get_LogicalExpression_operator(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::LogicalExpression(ast::LogicalExpression {
                 range,
-                kind: ast::NodeKind::LogicalExpression(ast::LogicalExpression {
                     left,
                     right,
                     operator,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ConditionalExpression => {
@@ -655,14 +561,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let alternate = cvt_node_ptr(cvt, hermes_get_ConditionalExpression_alternate(n));
           let consequent = cvt_node_ptr(cvt, hermes_get_ConditionalExpression_consequent(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ConditionalExpression(ast::ConditionalExpression {
                 range,
-                kind: ast::NodeKind::ConditionalExpression(ast::ConditionalExpression {
                     test,
                     alternate,
                     consequent,
-                }),
-            }
+            }),
           )
         }
         NodeKind::BinaryExpression => {
@@ -670,36 +574,30 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let right = cvt_node_ptr(cvt, hermes_get_BinaryExpression_right(n));
           let operator = cvt_enum(hermes_get_BinaryExpression_operator(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::BinaryExpression(ast::BinaryExpression {
                 range,
-                kind: ast::NodeKind::BinaryExpression(ast::BinaryExpression {
                     left,
                     right,
                     operator,
-                }),
-            }
+            }),
           )
         }
         NodeKind::Directive => {
           let value = cvt_node_ptr(cvt, hermes_get_Directive_value(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::Directive(ast::Directive {
                 range,
-                kind: ast::NodeKind::Directive(ast::Directive {
                     value,
-                }),
-            }
+            }),
           )
         }
         NodeKind::DirectiveLiteral => {
           let value = cvt_string(hermes_get_DirectiveLiteral_value(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::DirectiveLiteral(ast::DirectiveLiteral {
                 range,
-                kind: ast::NodeKind::DirectiveLiteral(ast::DirectiveLiteral {
                     value,
-                }),
-            }
+            }),
           )
         }
         NodeKind::Identifier => {
@@ -707,116 +605,98 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let type_annotation = cvt_node_ptr_opt(cvt, hermes_get_Identifier_typeAnnotation(n));
           let optional = hermes_get_Identifier_optional(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::Identifier(ast::Identifier {
                 range,
-                kind: ast::NodeKind::Identifier(ast::Identifier {
                     name,
                     type_annotation,
                     optional,
-                }),
-            }
+            }),
           )
         }
         NodeKind::PrivateName => {
           let id = cvt_node_ptr(cvt, hermes_get_PrivateName_id(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::PrivateName(ast::PrivateName {
                 range,
-                kind: ast::NodeKind::PrivateName(ast::PrivateName {
                     id,
-                }),
-            }
+            }),
           )
         }
         NodeKind::MetaProperty => {
           let meta = cvt_node_ptr(cvt, hermes_get_MetaProperty_meta(n));
           let property = cvt_node_ptr(cvt, hermes_get_MetaProperty_property(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::MetaProperty(ast::MetaProperty {
                 range,
-                kind: ast::NodeKind::MetaProperty(ast::MetaProperty {
                     meta,
                     property,
-                }),
-            }
+            }),
           )
         }
         NodeKind::SwitchCase => {
           let test = cvt_node_ptr_opt(cvt, hermes_get_SwitchCase_test(n));
           let consequent = cvt_node_list(cvt, hermes_get_SwitchCase_consequent(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::SwitchCase(ast::SwitchCase {
                 range,
-                kind: ast::NodeKind::SwitchCase(ast::SwitchCase {
                     test,
                     consequent,
-                }),
-            }
+            }),
           )
         }
         NodeKind::CatchClause => {
           let param = cvt_node_ptr_opt(cvt, hermes_get_CatchClause_param(n));
           let body = cvt_node_ptr(cvt, hermes_get_CatchClause_body(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::CatchClause(ast::CatchClause {
                 range,
-                kind: ast::NodeKind::CatchClause(ast::CatchClause {
                     param,
                     body,
-                }),
-            }
+            }),
           )
         }
         NodeKind::VariableDeclarator => {
           let init = cvt_node_ptr_opt(cvt, hermes_get_VariableDeclarator_init(n));
           let id = cvt_node_ptr(cvt, hermes_get_VariableDeclarator_id(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::VariableDeclarator(ast::VariableDeclarator {
                 range,
-                kind: ast::NodeKind::VariableDeclarator(ast::VariableDeclarator {
                     init,
                     id,
-                }),
-            }
+            }),
           )
         }
         NodeKind::VariableDeclaration => {
           let kind = cvt_enum(hermes_get_VariableDeclaration_kind(n));
           let declarations = cvt_node_list(cvt, hermes_get_VariableDeclaration_declarations(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::VariableDeclaration(ast::VariableDeclaration {
                 range,
-                kind: ast::NodeKind::VariableDeclaration(ast::VariableDeclaration {
                     kind,
                     declarations,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TemplateLiteral => {
           let quasis = cvt_node_list(cvt, hermes_get_TemplateLiteral_quasis(n));
           let expressions = cvt_node_list(cvt, hermes_get_TemplateLiteral_expressions(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TemplateLiteral(ast::TemplateLiteral {
                 range,
-                kind: ast::NodeKind::TemplateLiteral(ast::TemplateLiteral {
                     quasis,
                     expressions,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TaggedTemplateExpression => {
           let tag = cvt_node_ptr(cvt, hermes_get_TaggedTemplateExpression_tag(n));
           let quasi = cvt_node_ptr(cvt, hermes_get_TaggedTemplateExpression_quasi(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TaggedTemplateExpression(ast::TaggedTemplateExpression {
                 range,
-                kind: ast::NodeKind::TaggedTemplateExpression(ast::TaggedTemplateExpression {
                     tag,
                     quasi,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TemplateElement => {
@@ -824,14 +704,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let cooked = cvt_string_opt(hermes_get_TemplateElement_cooked(n));
           let raw = cvt_label(hermes_get_TemplateElement_raw(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TemplateElement(ast::TemplateElement {
                 range,
-                kind: ast::NodeKind::TemplateElement(ast::TemplateElement {
                     tail,
                     cooked,
                     raw,
-                }),
-            }
+            }),
           )
         }
         NodeKind::Property => {
@@ -842,17 +720,15 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let method = hermes_get_Property_method(n);
           let shorthand = hermes_get_Property_shorthand(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::Property(ast::Property {
                 range,
-                kind: ast::NodeKind::Property(ast::Property {
                     key,
                     value,
                     kind,
                     computed,
                     method,
                     shorthand,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ClassDeclaration => {
@@ -864,9 +740,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let decorators = cvt_node_list(cvt, hermes_get_ClassDeclaration_decorators(n));
           let body = cvt_node_ptr(cvt, hermes_get_ClassDeclaration_body(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ClassDeclaration(ast::ClassDeclaration {
                 range,
-                kind: ast::NodeKind::ClassDeclaration(ast::ClassDeclaration {
                     id,
                     type_parameters,
                     super_class,
@@ -874,8 +749,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
                     implements,
                     decorators,
                     body,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ClassExpression => {
@@ -887,9 +761,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let decorators = cvt_node_list(cvt, hermes_get_ClassExpression_decorators(n));
           let body = cvt_node_ptr(cvt, hermes_get_ClassExpression_body(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ClassExpression(ast::ClassExpression {
                 range,
-                kind: ast::NodeKind::ClassExpression(ast::ClassExpression {
                     id,
                     type_parameters,
                     super_class,
@@ -897,19 +770,16 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
                     implements,
                     decorators,
                     body,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ClassBody => {
           let body = cvt_node_list(cvt, hermes_get_ClassBody_body(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ClassBody(ast::ClassBody {
                 range,
-                kind: ast::NodeKind::ClassBody(ast::ClassBody {
                     body,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ClassProperty => {
@@ -922,9 +792,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let variance = cvt_node_ptr_opt(cvt, hermes_get_ClassProperty_variance(n));
           let type_annotation = cvt_node_ptr_opt(cvt, hermes_get_ClassProperty_typeAnnotation(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ClassProperty(ast::ClassProperty {
                 range,
-                kind: ast::NodeKind::ClassProperty(ast::ClassProperty {
                     key,
                     value,
                     computed,
@@ -933,8 +802,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
                     optional,
                     variance,
                     type_annotation,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ClassPrivateProperty => {
@@ -946,9 +814,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let variance = cvt_node_ptr_opt(cvt, hermes_get_ClassPrivateProperty_variance(n));
           let type_annotation = cvt_node_ptr_opt(cvt, hermes_get_ClassPrivateProperty_typeAnnotation(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ClassPrivateProperty(ast::ClassPrivateProperty {
                 range,
-                kind: ast::NodeKind::ClassPrivateProperty(ast::ClassPrivateProperty {
                     key,
                     value,
                     is_static,
@@ -956,8 +823,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
                     optional,
                     variance,
                     type_annotation,
-                }),
-            }
+            }),
           )
         }
         NodeKind::MethodDefinition => {
@@ -967,16 +833,14 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let computed = hermes_get_MethodDefinition_computed(n);
           let is_static = hermes_get_MethodDefinition_static(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::MethodDefinition(ast::MethodDefinition {
                 range,
-                kind: ast::NodeKind::MethodDefinition(ast::MethodDefinition {
                     key,
                     value,
                     kind,
                     computed,
                     is_static,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ImportDeclaration => {
@@ -985,15 +849,13 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let attributes = cvt_node_list_opt(cvt, hermes_get_ImportDeclaration_attributes(n));
           let import_kind = cvt_enum(hermes_get_ImportDeclaration_importKind(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ImportDeclaration(ast::ImportDeclaration {
                 range,
-                kind: ast::NodeKind::ImportDeclaration(ast::ImportDeclaration {
                     specifiers,
                     source,
                     attributes,
                     import_kind,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ImportSpecifier => {
@@ -1001,49 +863,41 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let local = cvt_node_ptr(cvt, hermes_get_ImportSpecifier_local(n));
           let import_kind = cvt_enum(hermes_get_ImportSpecifier_importKind(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ImportSpecifier(ast::ImportSpecifier {
                 range,
-                kind: ast::NodeKind::ImportSpecifier(ast::ImportSpecifier {
                     imported,
                     local,
                     import_kind,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ImportDefaultSpecifier => {
           let local = cvt_node_ptr(cvt, hermes_get_ImportDefaultSpecifier_local(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ImportDefaultSpecifier(ast::ImportDefaultSpecifier {
                 range,
-                kind: ast::NodeKind::ImportDefaultSpecifier(ast::ImportDefaultSpecifier {
                     local,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ImportNamespaceSpecifier => {
           let local = cvt_node_ptr(cvt, hermes_get_ImportNamespaceSpecifier_local(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ImportNamespaceSpecifier(ast::ImportNamespaceSpecifier {
                 range,
-                kind: ast::NodeKind::ImportNamespaceSpecifier(ast::ImportNamespaceSpecifier {
                     local,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ImportAttribute => {
           let key = cvt_node_ptr(cvt, hermes_get_ImportAttribute_key(n));
           let value = cvt_node_ptr(cvt, hermes_get_ImportAttribute_value(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ImportAttribute(ast::ImportAttribute {
                 range,
-                kind: ast::NodeKind::ImportAttribute(ast::ImportAttribute {
                     key,
                     value,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ExportNamedDeclaration => {
@@ -1052,181 +906,151 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let source = cvt_node_ptr_opt(cvt, hermes_get_ExportNamedDeclaration_source(n));
           let export_kind = cvt_enum(hermes_get_ExportNamedDeclaration_exportKind(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ExportNamedDeclaration(ast::ExportNamedDeclaration {
                 range,
-                kind: ast::NodeKind::ExportNamedDeclaration(ast::ExportNamedDeclaration {
                     declaration,
                     specifiers,
                     source,
                     export_kind,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ExportSpecifier => {
           let exported = cvt_node_ptr(cvt, hermes_get_ExportSpecifier_exported(n));
           let local = cvt_node_ptr(cvt, hermes_get_ExportSpecifier_local(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ExportSpecifier(ast::ExportSpecifier {
                 range,
-                kind: ast::NodeKind::ExportSpecifier(ast::ExportSpecifier {
                     exported,
                     local,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ExportNamespaceSpecifier => {
           let exported = cvt_node_ptr(cvt, hermes_get_ExportNamespaceSpecifier_exported(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ExportNamespaceSpecifier(ast::ExportNamespaceSpecifier {
                 range,
-                kind: ast::NodeKind::ExportNamespaceSpecifier(ast::ExportNamespaceSpecifier {
                     exported,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ExportDefaultDeclaration => {
           let declaration = cvt_node_ptr(cvt, hermes_get_ExportDefaultDeclaration_declaration(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ExportDefaultDeclaration(ast::ExportDefaultDeclaration {
                 range,
-                kind: ast::NodeKind::ExportDefaultDeclaration(ast::ExportDefaultDeclaration {
                     declaration,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ExportAllDeclaration => {
           let source = cvt_node_ptr(cvt, hermes_get_ExportAllDeclaration_source(n));
           let export_kind = cvt_enum(hermes_get_ExportAllDeclaration_exportKind(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ExportAllDeclaration(ast::ExportAllDeclaration {
                 range,
-                kind: ast::NodeKind::ExportAllDeclaration(ast::ExportAllDeclaration {
                     source,
                     export_kind,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ObjectPattern => {
           let properties = cvt_node_list(cvt, hermes_get_ObjectPattern_properties(n));
           let type_annotation = cvt_node_ptr_opt(cvt, hermes_get_ObjectPattern_typeAnnotation(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ObjectPattern(ast::ObjectPattern {
                 range,
-                kind: ast::NodeKind::ObjectPattern(ast::ObjectPattern {
                     properties,
                     type_annotation,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ArrayPattern => {
           let elements = cvt_node_list(cvt, hermes_get_ArrayPattern_elements(n));
           let type_annotation = cvt_node_ptr_opt(cvt, hermes_get_ArrayPattern_typeAnnotation(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ArrayPattern(ast::ArrayPattern {
                 range,
-                kind: ast::NodeKind::ArrayPattern(ast::ArrayPattern {
                     elements,
                     type_annotation,
-                }),
-            }
+            }),
           )
         }
         NodeKind::RestElement => {
           let argument = cvt_node_ptr(cvt, hermes_get_RestElement_argument(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::RestElement(ast::RestElement {
                 range,
-                kind: ast::NodeKind::RestElement(ast::RestElement {
                     argument,
-                }),
-            }
+            }),
           )
         }
         NodeKind::AssignmentPattern => {
           let left = cvt_node_ptr(cvt, hermes_get_AssignmentPattern_left(n));
           let right = cvt_node_ptr(cvt, hermes_get_AssignmentPattern_right(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::AssignmentPattern(ast::AssignmentPattern {
                 range,
-                kind: ast::NodeKind::AssignmentPattern(ast::AssignmentPattern {
                     left,
                     right,
-                }),
-            }
+            }),
           )
         }
         NodeKind::JSXIdentifier => {
           let name = cvt_label(hermes_get_JSXIdentifier_name(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::JSXIdentifier(ast::JSXIdentifier {
                 range,
-                kind: ast::NodeKind::JSXIdentifier(ast::JSXIdentifier {
                     name,
-                }),
-            }
+            }),
           )
         }
         NodeKind::JSXMemberExpression => {
           let object = cvt_node_ptr(cvt, hermes_get_JSXMemberExpression_object(n));
           let property = cvt_node_ptr(cvt, hermes_get_JSXMemberExpression_property(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::JSXMemberExpression(ast::JSXMemberExpression {
                 range,
-                kind: ast::NodeKind::JSXMemberExpression(ast::JSXMemberExpression {
                     object,
                     property,
-                }),
-            }
+            }),
           )
         }
         NodeKind::JSXNamespacedName => {
           let namespace = cvt_node_ptr(cvt, hermes_get_JSXNamespacedName_namespace(n));
           let name = cvt_node_ptr(cvt, hermes_get_JSXNamespacedName_name(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::JSXNamespacedName(ast::JSXNamespacedName {
                 range,
-                kind: ast::NodeKind::JSXNamespacedName(ast::JSXNamespacedName {
                     namespace,
                     name,
-                }),
-            }
+            }),
           )
         }
         NodeKind::JSXEmptyExpression => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::JSXEmptyExpression(ast::JSXEmptyExpression {
                 range,
-                kind: ast::NodeKind::JSXEmptyExpression(ast::JSXEmptyExpression {
-                }),
-            }
+            }),
           )
         }
         NodeKind::JSXExpressionContainer => {
           let expression = cvt_node_ptr(cvt, hermes_get_JSXExpressionContainer_expression(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::JSXExpressionContainer(ast::JSXExpressionContainer {
                 range,
-                kind: ast::NodeKind::JSXExpressionContainer(ast::JSXExpressionContainer {
                     expression,
-                }),
-            }
+            }),
           )
         }
         NodeKind::JSXSpreadChild => {
           let expression = cvt_node_ptr(cvt, hermes_get_JSXSpreadChild_expression(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::JSXSpreadChild(ast::JSXSpreadChild {
                 range,
-                kind: ast::NodeKind::JSXSpreadChild(ast::JSXSpreadChild {
                     expression,
-                }),
-            }
+            }),
           )
         }
         NodeKind::JSXOpeningElement => {
@@ -1234,62 +1058,52 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let attributes = cvt_node_list(cvt, hermes_get_JSXOpeningElement_attributes(n));
           let self_closing = hermes_get_JSXOpeningElement_selfClosing(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::JSXOpeningElement(ast::JSXOpeningElement {
                 range,
-                kind: ast::NodeKind::JSXOpeningElement(ast::JSXOpeningElement {
                     name,
                     attributes,
                     self_closing,
-                }),
-            }
+            }),
           )
         }
         NodeKind::JSXClosingElement => {
           let name = cvt_node_ptr(cvt, hermes_get_JSXClosingElement_name(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::JSXClosingElement(ast::JSXClosingElement {
                 range,
-                kind: ast::NodeKind::JSXClosingElement(ast::JSXClosingElement {
                     name,
-                }),
-            }
+            }),
           )
         }
         NodeKind::JSXAttribute => {
           let name = cvt_node_ptr(cvt, hermes_get_JSXAttribute_name(n));
           let value = cvt_node_ptr_opt(cvt, hermes_get_JSXAttribute_value(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::JSXAttribute(ast::JSXAttribute {
                 range,
-                kind: ast::NodeKind::JSXAttribute(ast::JSXAttribute {
                     name,
                     value,
-                }),
-            }
+            }),
           )
         }
         NodeKind::JSXSpreadAttribute => {
           let argument = cvt_node_ptr(cvt, hermes_get_JSXSpreadAttribute_argument(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::JSXSpreadAttribute(ast::JSXSpreadAttribute {
                 range,
-                kind: ast::NodeKind::JSXSpreadAttribute(ast::JSXSpreadAttribute {
                     argument,
-                }),
-            }
+            }),
           )
         }
         NodeKind::JSXText => {
           let value = cvt_string(hermes_get_JSXText_value(n));
           let raw = cvt_string(hermes_get_JSXText_raw(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::JSXText(ast::JSXText {
                 range,
-                kind: ast::NodeKind::JSXText(ast::JSXText {
                     value,
                     raw,
-                }),
-            }
+            }),
           )
         }
         NodeKind::JSXElement => {
@@ -1297,14 +1111,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let children = cvt_node_list(cvt, hermes_get_JSXElement_children(n));
           let closing_element = cvt_node_ptr_opt(cvt, hermes_get_JSXElement_closingElement(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::JSXElement(ast::JSXElement {
                 range,
-                kind: ast::NodeKind::JSXElement(ast::JSXElement {
                     opening_element,
                     children,
                     closing_element,
-                }),
-            }
+            }),
           )
         }
         NodeKind::JSXFragment => {
@@ -1312,159 +1124,127 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let children = cvt_node_list(cvt, hermes_get_JSXFragment_children(n));
           let closing_fragment = cvt_node_ptr(cvt, hermes_get_JSXFragment_closingFragment(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::JSXFragment(ast::JSXFragment {
                 range,
-                kind: ast::NodeKind::JSXFragment(ast::JSXFragment {
                     opening_fragment,
                     children,
                     closing_fragment,
-                }),
-            }
+            }),
           )
         }
         NodeKind::JSXOpeningFragment => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::JSXOpeningFragment(ast::JSXOpeningFragment {
                 range,
-                kind: ast::NodeKind::JSXOpeningFragment(ast::JSXOpeningFragment {
-                }),
-            }
+            }),
           )
         }
         NodeKind::JSXClosingFragment => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::JSXClosingFragment(ast::JSXClosingFragment {
                 range,
-                kind: ast::NodeKind::JSXClosingFragment(ast::JSXClosingFragment {
-                }),
-            }
+            }),
           )
         }
         NodeKind::ExistsTypeAnnotation => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ExistsTypeAnnotation(ast::ExistsTypeAnnotation {
                 range,
-                kind: ast::NodeKind::ExistsTypeAnnotation(ast::ExistsTypeAnnotation {
-                }),
-            }
+            }),
           )
         }
         NodeKind::EmptyTypeAnnotation => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::EmptyTypeAnnotation(ast::EmptyTypeAnnotation {
                 range,
-                kind: ast::NodeKind::EmptyTypeAnnotation(ast::EmptyTypeAnnotation {
-                }),
-            }
+            }),
           )
         }
         NodeKind::StringTypeAnnotation => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::StringTypeAnnotation(ast::StringTypeAnnotation {
                 range,
-                kind: ast::NodeKind::StringTypeAnnotation(ast::StringTypeAnnotation {
-                }),
-            }
+            }),
           )
         }
         NodeKind::NumberTypeAnnotation => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::NumberTypeAnnotation(ast::NumberTypeAnnotation {
                 range,
-                kind: ast::NodeKind::NumberTypeAnnotation(ast::NumberTypeAnnotation {
-                }),
-            }
+            }),
           )
         }
         NodeKind::StringLiteralTypeAnnotation => {
           let value = cvt_string(hermes_get_StringLiteralTypeAnnotation_value(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::StringLiteralTypeAnnotation(ast::StringLiteralTypeAnnotation {
                 range,
-                kind: ast::NodeKind::StringLiteralTypeAnnotation(ast::StringLiteralTypeAnnotation {
                     value,
-                }),
-            }
+            }),
           )
         }
         NodeKind::NumberLiteralTypeAnnotation => {
           let value = hermes_get_NumberLiteralTypeAnnotation_value(n);
           let raw = cvt_label(hermes_get_NumberLiteralTypeAnnotation_raw(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::NumberLiteralTypeAnnotation(ast::NumberLiteralTypeAnnotation {
                 range,
-                kind: ast::NodeKind::NumberLiteralTypeAnnotation(ast::NumberLiteralTypeAnnotation {
                     value,
                     raw,
-                }),
-            }
+            }),
           )
         }
         NodeKind::BooleanTypeAnnotation => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::BooleanTypeAnnotation(ast::BooleanTypeAnnotation {
                 range,
-                kind: ast::NodeKind::BooleanTypeAnnotation(ast::BooleanTypeAnnotation {
-                }),
-            }
+            }),
           )
         }
         NodeKind::BooleanLiteralTypeAnnotation => {
           let value = hermes_get_BooleanLiteralTypeAnnotation_value(n);
           let raw = cvt_label(hermes_get_BooleanLiteralTypeAnnotation_raw(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::BooleanLiteralTypeAnnotation(ast::BooleanLiteralTypeAnnotation {
                 range,
-                kind: ast::NodeKind::BooleanLiteralTypeAnnotation(ast::BooleanLiteralTypeAnnotation {
                     value,
                     raw,
-                }),
-            }
+            }),
           )
         }
         NodeKind::NullLiteralTypeAnnotation => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::NullLiteralTypeAnnotation(ast::NullLiteralTypeAnnotation {
                 range,
-                kind: ast::NodeKind::NullLiteralTypeAnnotation(ast::NullLiteralTypeAnnotation {
-                }),
-            }
+            }),
           )
         }
         NodeKind::SymbolTypeAnnotation => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::SymbolTypeAnnotation(ast::SymbolTypeAnnotation {
                 range,
-                kind: ast::NodeKind::SymbolTypeAnnotation(ast::SymbolTypeAnnotation {
-                }),
-            }
+            }),
           )
         }
         NodeKind::AnyTypeAnnotation => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::AnyTypeAnnotation(ast::AnyTypeAnnotation {
                 range,
-                kind: ast::NodeKind::AnyTypeAnnotation(ast::AnyTypeAnnotation {
-                }),
-            }
+            }),
           )
         }
         NodeKind::MixedTypeAnnotation => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::MixedTypeAnnotation(ast::MixedTypeAnnotation {
                 range,
-                kind: ast::NodeKind::MixedTypeAnnotation(ast::MixedTypeAnnotation {
-                }),
-            }
+            }),
           )
         }
         NodeKind::VoidTypeAnnotation => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::VoidTypeAnnotation(ast::VoidTypeAnnotation {
                 range,
-                kind: ast::NodeKind::VoidTypeAnnotation(ast::VoidTypeAnnotation {
-                }),
-            }
+            }),
           )
         }
         NodeKind::FunctionTypeAnnotation => {
@@ -1474,16 +1254,14 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let rest = cvt_node_ptr_opt(cvt, hermes_get_FunctionTypeAnnotation_rest(n));
           let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_FunctionTypeAnnotation_typeParameters(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::FunctionTypeAnnotation(ast::FunctionTypeAnnotation {
                 range,
-                kind: ast::NodeKind::FunctionTypeAnnotation(ast::FunctionTypeAnnotation {
                     params,
                     this,
                     return_type,
                     rest,
                     type_parameters,
-                }),
-            }
+            }),
           )
         }
         NodeKind::FunctionTypeParam => {
@@ -1491,119 +1269,99 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let type_annotation = cvt_node_ptr(cvt, hermes_get_FunctionTypeParam_typeAnnotation(n));
           let optional = hermes_get_FunctionTypeParam_optional(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::FunctionTypeParam(ast::FunctionTypeParam {
                 range,
-                kind: ast::NodeKind::FunctionTypeParam(ast::FunctionTypeParam {
                     name,
                     type_annotation,
                     optional,
-                }),
-            }
+            }),
           )
         }
         NodeKind::NullableTypeAnnotation => {
           let type_annotation = cvt_node_ptr(cvt, hermes_get_NullableTypeAnnotation_typeAnnotation(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::NullableTypeAnnotation(ast::NullableTypeAnnotation {
                 range,
-                kind: ast::NodeKind::NullableTypeAnnotation(ast::NullableTypeAnnotation {
                     type_annotation,
-                }),
-            }
+            }),
           )
         }
         NodeKind::QualifiedTypeIdentifier => {
           let qualification = cvt_node_ptr(cvt, hermes_get_QualifiedTypeIdentifier_qualification(n));
           let id = cvt_node_ptr(cvt, hermes_get_QualifiedTypeIdentifier_id(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::QualifiedTypeIdentifier(ast::QualifiedTypeIdentifier {
                 range,
-                kind: ast::NodeKind::QualifiedTypeIdentifier(ast::QualifiedTypeIdentifier {
                     qualification,
                     id,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TypeofTypeAnnotation => {
           let argument = cvt_node_ptr(cvt, hermes_get_TypeofTypeAnnotation_argument(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TypeofTypeAnnotation(ast::TypeofTypeAnnotation {
                 range,
-                kind: ast::NodeKind::TypeofTypeAnnotation(ast::TypeofTypeAnnotation {
                     argument,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TupleTypeAnnotation => {
           let types = cvt_node_list(cvt, hermes_get_TupleTypeAnnotation_types(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TupleTypeAnnotation(ast::TupleTypeAnnotation {
                 range,
-                kind: ast::NodeKind::TupleTypeAnnotation(ast::TupleTypeAnnotation {
                     types,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ArrayTypeAnnotation => {
           let element_type = cvt_node_ptr(cvt, hermes_get_ArrayTypeAnnotation_elementType(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ArrayTypeAnnotation(ast::ArrayTypeAnnotation {
                 range,
-                kind: ast::NodeKind::ArrayTypeAnnotation(ast::ArrayTypeAnnotation {
                     element_type,
-                }),
-            }
+            }),
           )
         }
         NodeKind::UnionTypeAnnotation => {
           let types = cvt_node_list(cvt, hermes_get_UnionTypeAnnotation_types(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::UnionTypeAnnotation(ast::UnionTypeAnnotation {
                 range,
-                kind: ast::NodeKind::UnionTypeAnnotation(ast::UnionTypeAnnotation {
                     types,
-                }),
-            }
+            }),
           )
         }
         NodeKind::IntersectionTypeAnnotation => {
           let types = cvt_node_list(cvt, hermes_get_IntersectionTypeAnnotation_types(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::IntersectionTypeAnnotation(ast::IntersectionTypeAnnotation {
                 range,
-                kind: ast::NodeKind::IntersectionTypeAnnotation(ast::IntersectionTypeAnnotation {
                     types,
-                }),
-            }
+            }),
           )
         }
         NodeKind::GenericTypeAnnotation => {
           let id = cvt_node_ptr(cvt, hermes_get_GenericTypeAnnotation_id(n));
           let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_GenericTypeAnnotation_typeParameters(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::GenericTypeAnnotation(ast::GenericTypeAnnotation {
                 range,
-                kind: ast::NodeKind::GenericTypeAnnotation(ast::GenericTypeAnnotation {
                     id,
                     type_parameters,
-                }),
-            }
+            }),
           )
         }
         NodeKind::IndexedAccessType => {
           let object_type = cvt_node_ptr(cvt, hermes_get_IndexedAccessType_objectType(n));
           let index_type = cvt_node_ptr(cvt, hermes_get_IndexedAccessType_indexType(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::IndexedAccessType(ast::IndexedAccessType {
                 range,
-                kind: ast::NodeKind::IndexedAccessType(ast::IndexedAccessType {
                     object_type,
                     index_type,
-                }),
-            }
+            }),
           )
         }
         NodeKind::OptionalIndexedAccessType => {
@@ -1611,27 +1369,23 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let index_type = cvt_node_ptr(cvt, hermes_get_OptionalIndexedAccessType_indexType(n));
           let optional = hermes_get_OptionalIndexedAccessType_optional(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::OptionalIndexedAccessType(ast::OptionalIndexedAccessType {
                 range,
-                kind: ast::NodeKind::OptionalIndexedAccessType(ast::OptionalIndexedAccessType {
                     object_type,
                     index_type,
                     optional,
-                }),
-            }
+            }),
           )
         }
         NodeKind::InterfaceTypeAnnotation => {
           let extends = cvt_node_list(cvt, hermes_get_InterfaceTypeAnnotation_extends(n));
           let body = cvt_node_ptr_opt(cvt, hermes_get_InterfaceTypeAnnotation_body(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::InterfaceTypeAnnotation(ast::InterfaceTypeAnnotation {
                 range,
-                kind: ast::NodeKind::InterfaceTypeAnnotation(ast::InterfaceTypeAnnotation {
                     extends,
                     body,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TypeAlias => {
@@ -1639,14 +1393,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_TypeAlias_typeParameters(n));
           let right = cvt_node_ptr(cvt, hermes_get_TypeAlias_right(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TypeAlias(ast::TypeAlias {
                 range,
-                kind: ast::NodeKind::TypeAlias(ast::TypeAlias {
                     id,
                     type_parameters,
                     right,
-                }),
-            }
+            }),
           )
         }
         NodeKind::OpaqueType => {
@@ -1655,15 +1407,13 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let impltype = cvt_node_ptr(cvt, hermes_get_OpaqueType_impltype(n));
           let supertype = cvt_node_ptr_opt(cvt, hermes_get_OpaqueType_supertype(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::OpaqueType(ast::OpaqueType {
                 range,
-                kind: ast::NodeKind::OpaqueType(ast::OpaqueType {
                     id,
                     type_parameters,
                     impltype,
                     supertype,
-                }),
-            }
+            }),
           )
         }
         NodeKind::InterfaceDeclaration => {
@@ -1672,15 +1422,13 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let extends = cvt_node_list(cvt, hermes_get_InterfaceDeclaration_extends(n));
           let body = cvt_node_ptr(cvt, hermes_get_InterfaceDeclaration_body(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::InterfaceDeclaration(ast::InterfaceDeclaration {
                 range,
-                kind: ast::NodeKind::InterfaceDeclaration(ast::InterfaceDeclaration {
                     id,
                     type_parameters,
                     extends,
                     body,
-                }),
-            }
+            }),
           )
         }
         NodeKind::DeclareTypeAlias => {
@@ -1688,14 +1436,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_DeclareTypeAlias_typeParameters(n));
           let right = cvt_node_ptr(cvt, hermes_get_DeclareTypeAlias_right(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::DeclareTypeAlias(ast::DeclareTypeAlias {
                 range,
-                kind: ast::NodeKind::DeclareTypeAlias(ast::DeclareTypeAlias {
                     id,
                     type_parameters,
                     right,
-                }),
-            }
+            }),
           )
         }
         NodeKind::DeclareOpaqueType => {
@@ -1704,15 +1450,13 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let impltype = cvt_node_ptr_opt(cvt, hermes_get_DeclareOpaqueType_impltype(n));
           let supertype = cvt_node_ptr_opt(cvt, hermes_get_DeclareOpaqueType_supertype(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::DeclareOpaqueType(ast::DeclareOpaqueType {
                 range,
-                kind: ast::NodeKind::DeclareOpaqueType(ast::DeclareOpaqueType {
                     id,
                     type_parameters,
                     impltype,
                     supertype,
-                }),
-            }
+            }),
           )
         }
         NodeKind::DeclareInterface => {
@@ -1721,15 +1465,13 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let extends = cvt_node_list(cvt, hermes_get_DeclareInterface_extends(n));
           let body = cvt_node_ptr(cvt, hermes_get_DeclareInterface_body(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::DeclareInterface(ast::DeclareInterface {
                 range,
-                kind: ast::NodeKind::DeclareInterface(ast::DeclareInterface {
                     id,
                     type_parameters,
                     extends,
                     body,
-                }),
-            }
+            }),
           )
         }
         NodeKind::DeclareClass => {
@@ -1740,41 +1482,35 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let mixins = cvt_node_list(cvt, hermes_get_DeclareClass_mixins(n));
           let body = cvt_node_ptr(cvt, hermes_get_DeclareClass_body(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::DeclareClass(ast::DeclareClass {
                 range,
-                kind: ast::NodeKind::DeclareClass(ast::DeclareClass {
                     id,
                     type_parameters,
                     extends,
                     implements,
                     mixins,
                     body,
-                }),
-            }
+            }),
           )
         }
         NodeKind::DeclareFunction => {
           let id = cvt_node_ptr(cvt, hermes_get_DeclareFunction_id(n));
           let predicate = cvt_node_ptr_opt(cvt, hermes_get_DeclareFunction_predicate(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::DeclareFunction(ast::DeclareFunction {
                 range,
-                kind: ast::NodeKind::DeclareFunction(ast::DeclareFunction {
                     id,
                     predicate,
-                }),
-            }
+            }),
           )
         }
         NodeKind::DeclareVariable => {
           let id = cvt_node_ptr(cvt, hermes_get_DeclareVariable_id(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::DeclareVariable(ast::DeclareVariable {
                 range,
-                kind: ast::NodeKind::DeclareVariable(ast::DeclareVariable {
                     id,
-                }),
-            }
+            }),
           )
         }
         NodeKind::DeclareExportDeclaration => {
@@ -1783,26 +1519,22 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let source = cvt_node_ptr_opt(cvt, hermes_get_DeclareExportDeclaration_source(n));
           let default = hermes_get_DeclareExportDeclaration_default(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::DeclareExportDeclaration(ast::DeclareExportDeclaration {
                 range,
-                kind: ast::NodeKind::DeclareExportDeclaration(ast::DeclareExportDeclaration {
                     declaration,
                     specifiers,
                     source,
                     default,
-                }),
-            }
+            }),
           )
         }
         NodeKind::DeclareExportAllDeclaration => {
           let source = cvt_node_ptr(cvt, hermes_get_DeclareExportAllDeclaration_source(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::DeclareExportAllDeclaration(ast::DeclareExportAllDeclaration {
                 range,
-                kind: ast::NodeKind::DeclareExportAllDeclaration(ast::DeclareExportAllDeclaration {
                     source,
-                }),
-            }
+            }),
           )
         }
         NodeKind::DeclareModule => {
@@ -1810,62 +1542,52 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let body = cvt_node_ptr(cvt, hermes_get_DeclareModule_body(n));
           let kind = cvt_label(hermes_get_DeclareModule_kind(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::DeclareModule(ast::DeclareModule {
                 range,
-                kind: ast::NodeKind::DeclareModule(ast::DeclareModule {
                     id,
                     body,
                     kind,
-                }),
-            }
+            }),
           )
         }
         NodeKind::DeclareModuleExports => {
           let type_annotation = cvt_node_ptr(cvt, hermes_get_DeclareModuleExports_typeAnnotation(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::DeclareModuleExports(ast::DeclareModuleExports {
                 range,
-                kind: ast::NodeKind::DeclareModuleExports(ast::DeclareModuleExports {
                     type_annotation,
-                }),
-            }
+            }),
           )
         }
         NodeKind::InterfaceExtends => {
           let id = cvt_node_ptr(cvt, hermes_get_InterfaceExtends_id(n));
           let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_InterfaceExtends_typeParameters(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::InterfaceExtends(ast::InterfaceExtends {
                 range,
-                kind: ast::NodeKind::InterfaceExtends(ast::InterfaceExtends {
                     id,
                     type_parameters,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ClassImplements => {
           let id = cvt_node_ptr(cvt, hermes_get_ClassImplements_id(n));
           let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_ClassImplements_typeParameters(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ClassImplements(ast::ClassImplements {
                 range,
-                kind: ast::NodeKind::ClassImplements(ast::ClassImplements {
                     id,
                     type_parameters,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TypeAnnotation => {
           let type_annotation = cvt_node_ptr(cvt, hermes_get_TypeAnnotation_typeAnnotation(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TypeAnnotation(ast::TypeAnnotation {
                 range,
-                kind: ast::NodeKind::TypeAnnotation(ast::TypeAnnotation {
                     type_annotation,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ObjectTypeAnnotation => {
@@ -1876,17 +1598,15 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let inexact = hermes_get_ObjectTypeAnnotation_inexact(n);
           let exact = hermes_get_ObjectTypeAnnotation_exact(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ObjectTypeAnnotation(ast::ObjectTypeAnnotation {
                 range,
-                kind: ast::NodeKind::ObjectTypeAnnotation(ast::ObjectTypeAnnotation {
                     properties,
                     indexers,
                     call_properties,
                     internal_slots,
                     inexact,
                     exact,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ObjectTypeProperty => {
@@ -1899,9 +1619,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let variance = cvt_node_ptr_opt(cvt, hermes_get_ObjectTypeProperty_variance(n));
           let kind = cvt_label(hermes_get_ObjectTypeProperty_kind(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ObjectTypeProperty(ast::ObjectTypeProperty {
                 range,
-                kind: ast::NodeKind::ObjectTypeProperty(ast::ObjectTypeProperty {
                     key,
                     value,
                     method,
@@ -1910,19 +1629,16 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
                     proto,
                     variance,
                     kind,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ObjectTypeSpreadProperty => {
           let argument = cvt_node_ptr(cvt, hermes_get_ObjectTypeSpreadProperty_argument(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ObjectTypeSpreadProperty(ast::ObjectTypeSpreadProperty {
                 range,
-                kind: ast::NodeKind::ObjectTypeSpreadProperty(ast::ObjectTypeSpreadProperty {
                     argument,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ObjectTypeInternalSlot => {
@@ -1932,29 +1648,25 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let is_static = hermes_get_ObjectTypeInternalSlot_static(n);
           let method = hermes_get_ObjectTypeInternalSlot_method(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ObjectTypeInternalSlot(ast::ObjectTypeInternalSlot {
                 range,
-                kind: ast::NodeKind::ObjectTypeInternalSlot(ast::ObjectTypeInternalSlot {
                     id,
                     value,
                     optional,
                     is_static,
                     method,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ObjectTypeCallProperty => {
           let value = cvt_node_ptr(cvt, hermes_get_ObjectTypeCallProperty_value(n));
           let is_static = hermes_get_ObjectTypeCallProperty_static(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ObjectTypeCallProperty(ast::ObjectTypeCallProperty {
                 range,
-                kind: ast::NodeKind::ObjectTypeCallProperty(ast::ObjectTypeCallProperty {
                     value,
                     is_static,
-                }),
-            }
+            }),
           )
         }
         NodeKind::ObjectTypeIndexer => {
@@ -1964,38 +1676,32 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let is_static = hermes_get_ObjectTypeIndexer_static(n);
           let variance = cvt_node_ptr_opt(cvt, hermes_get_ObjectTypeIndexer_variance(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::ObjectTypeIndexer(ast::ObjectTypeIndexer {
                 range,
-                kind: ast::NodeKind::ObjectTypeIndexer(ast::ObjectTypeIndexer {
                     id,
                     key,
                     value,
                     is_static,
                     variance,
-                }),
-            }
+            }),
           )
         }
         NodeKind::Variance => {
           let kind = cvt_label(hermes_get_Variance_kind(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::Variance(ast::Variance {
                 range,
-                kind: ast::NodeKind::Variance(ast::Variance {
                     kind,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TypeParameterDeclaration => {
           let params = cvt_node_list(cvt, hermes_get_TypeParameterDeclaration_params(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TypeParameterDeclaration(ast::TypeParameterDeclaration {
                 range,
-                kind: ast::NodeKind::TypeParameterDeclaration(ast::TypeParameterDeclaration {
                     params,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TypeParameter => {
@@ -2004,72 +1710,60 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let variance = cvt_node_ptr_opt(cvt, hermes_get_TypeParameter_variance(n));
           let default = cvt_node_ptr_opt(cvt, hermes_get_TypeParameter_default(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TypeParameter(ast::TypeParameter {
                 range,
-                kind: ast::NodeKind::TypeParameter(ast::TypeParameter {
                     name,
                     bound,
                     variance,
                     default,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TypeParameterInstantiation => {
           let params = cvt_node_list(cvt, hermes_get_TypeParameterInstantiation_params(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TypeParameterInstantiation(ast::TypeParameterInstantiation {
                 range,
-                kind: ast::NodeKind::TypeParameterInstantiation(ast::TypeParameterInstantiation {
                     params,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TypeCastExpression => {
           let expression = cvt_node_ptr(cvt, hermes_get_TypeCastExpression_expression(n));
           let type_annotation = cvt_node_ptr(cvt, hermes_get_TypeCastExpression_typeAnnotation(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TypeCastExpression(ast::TypeCastExpression {
                 range,
-                kind: ast::NodeKind::TypeCastExpression(ast::TypeCastExpression {
                     expression,
                     type_annotation,
-                }),
-            }
+            }),
           )
         }
         NodeKind::InferredPredicate => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::InferredPredicate(ast::InferredPredicate {
                 range,
-                kind: ast::NodeKind::InferredPredicate(ast::InferredPredicate {
-                }),
-            }
+            }),
           )
         }
         NodeKind::DeclaredPredicate => {
           let value = cvt_node_ptr(cvt, hermes_get_DeclaredPredicate_value(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::DeclaredPredicate(ast::DeclaredPredicate {
                 range,
-                kind: ast::NodeKind::DeclaredPredicate(ast::DeclaredPredicate {
                     value,
-                }),
-            }
+            }),
           )
         }
         NodeKind::EnumDeclaration => {
           let id = cvt_node_ptr(cvt, hermes_get_EnumDeclaration_id(n));
           let body = cvt_node_ptr(cvt, hermes_get_EnumDeclaration_body(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::EnumDeclaration(ast::EnumDeclaration {
                 range,
-                kind: ast::NodeKind::EnumDeclaration(ast::EnumDeclaration {
                     id,
                     body,
-                }),
-            }
+            }),
           )
         }
         NodeKind::EnumStringBody => {
@@ -2077,14 +1771,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let explicit_type = hermes_get_EnumStringBody_explicitType(n);
           let has_unknown_members = hermes_get_EnumStringBody_hasUnknownMembers(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::EnumStringBody(ast::EnumStringBody {
                 range,
-                kind: ast::NodeKind::EnumStringBody(ast::EnumStringBody {
                     members,
                     explicit_type,
                     has_unknown_members,
-                }),
-            }
+            }),
           )
         }
         NodeKind::EnumNumberBody => {
@@ -2092,14 +1784,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let explicit_type = hermes_get_EnumNumberBody_explicitType(n);
           let has_unknown_members = hermes_get_EnumNumberBody_hasUnknownMembers(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::EnumNumberBody(ast::EnumNumberBody {
                 range,
-                kind: ast::NodeKind::EnumNumberBody(ast::EnumNumberBody {
                     members,
                     explicit_type,
                     has_unknown_members,
-                }),
-            }
+            }),
           )
         }
         NodeKind::EnumBooleanBody => {
@@ -2107,212 +1797,174 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let explicit_type = hermes_get_EnumBooleanBody_explicitType(n);
           let has_unknown_members = hermes_get_EnumBooleanBody_hasUnknownMembers(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::EnumBooleanBody(ast::EnumBooleanBody {
                 range,
-                kind: ast::NodeKind::EnumBooleanBody(ast::EnumBooleanBody {
                     members,
                     explicit_type,
                     has_unknown_members,
-                }),
-            }
+            }),
           )
         }
         NodeKind::EnumSymbolBody => {
           let members = cvt_node_list(cvt, hermes_get_EnumSymbolBody_members(n));
           let has_unknown_members = hermes_get_EnumSymbolBody_hasUnknownMembers(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::EnumSymbolBody(ast::EnumSymbolBody {
                 range,
-                kind: ast::NodeKind::EnumSymbolBody(ast::EnumSymbolBody {
                     members,
                     has_unknown_members,
-                }),
-            }
+            }),
           )
         }
         NodeKind::EnumDefaultedMember => {
           let id = cvt_node_ptr(cvt, hermes_get_EnumDefaultedMember_id(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::EnumDefaultedMember(ast::EnumDefaultedMember {
                 range,
-                kind: ast::NodeKind::EnumDefaultedMember(ast::EnumDefaultedMember {
                     id,
-                }),
-            }
+            }),
           )
         }
         NodeKind::EnumStringMember => {
           let id = cvt_node_ptr(cvt, hermes_get_EnumStringMember_id(n));
           let init = cvt_node_ptr(cvt, hermes_get_EnumStringMember_init(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::EnumStringMember(ast::EnumStringMember {
                 range,
-                kind: ast::NodeKind::EnumStringMember(ast::EnumStringMember {
                     id,
                     init,
-                }),
-            }
+            }),
           )
         }
         NodeKind::EnumNumberMember => {
           let id = cvt_node_ptr(cvt, hermes_get_EnumNumberMember_id(n));
           let init = cvt_node_ptr(cvt, hermes_get_EnumNumberMember_init(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::EnumNumberMember(ast::EnumNumberMember {
                 range,
-                kind: ast::NodeKind::EnumNumberMember(ast::EnumNumberMember {
                     id,
                     init,
-                }),
-            }
+            }),
           )
         }
         NodeKind::EnumBooleanMember => {
           let id = cvt_node_ptr(cvt, hermes_get_EnumBooleanMember_id(n));
           let init = cvt_node_ptr(cvt, hermes_get_EnumBooleanMember_init(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::EnumBooleanMember(ast::EnumBooleanMember {
                 range,
-                kind: ast::NodeKind::EnumBooleanMember(ast::EnumBooleanMember {
                     id,
                     init,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSTypeAnnotation => {
           let type_annotation = cvt_node_ptr(cvt, hermes_get_TSTypeAnnotation_typeAnnotation(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSTypeAnnotation(ast::TSTypeAnnotation {
                 range,
-                kind: ast::NodeKind::TSTypeAnnotation(ast::TSTypeAnnotation {
                     type_annotation,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSAnyKeyword => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSAnyKeyword(ast::TSAnyKeyword {
                 range,
-                kind: ast::NodeKind::TSAnyKeyword(ast::TSAnyKeyword {
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSNumberKeyword => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSNumberKeyword(ast::TSNumberKeyword {
                 range,
-                kind: ast::NodeKind::TSNumberKeyword(ast::TSNumberKeyword {
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSBooleanKeyword => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSBooleanKeyword(ast::TSBooleanKeyword {
                 range,
-                kind: ast::NodeKind::TSBooleanKeyword(ast::TSBooleanKeyword {
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSStringKeyword => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSStringKeyword(ast::TSStringKeyword {
                 range,
-                kind: ast::NodeKind::TSStringKeyword(ast::TSStringKeyword {
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSSymbolKeyword => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSSymbolKeyword(ast::TSSymbolKeyword {
                 range,
-                kind: ast::NodeKind::TSSymbolKeyword(ast::TSSymbolKeyword {
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSVoidKeyword => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSVoidKeyword(ast::TSVoidKeyword {
                 range,
-                kind: ast::NodeKind::TSVoidKeyword(ast::TSVoidKeyword {
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSThisType => {
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSThisType(ast::TSThisType {
                 range,
-                kind: ast::NodeKind::TSThisType(ast::TSThisType {
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSLiteralType => {
           let literal = cvt_node_ptr(cvt, hermes_get_TSLiteralType_literal(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSLiteralType(ast::TSLiteralType {
                 range,
-                kind: ast::NodeKind::TSLiteralType(ast::TSLiteralType {
                     literal,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSIndexedAccessType => {
           let object_type = cvt_node_ptr(cvt, hermes_get_TSIndexedAccessType_objectType(n));
           let index_type = cvt_node_ptr(cvt, hermes_get_TSIndexedAccessType_indexType(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSIndexedAccessType(ast::TSIndexedAccessType {
                 range,
-                kind: ast::NodeKind::TSIndexedAccessType(ast::TSIndexedAccessType {
                     object_type,
                     index_type,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSArrayType => {
           let element_type = cvt_node_ptr(cvt, hermes_get_TSArrayType_elementType(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSArrayType(ast::TSArrayType {
                 range,
-                kind: ast::NodeKind::TSArrayType(ast::TSArrayType {
                     element_type,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSTypeReference => {
           let type_name = cvt_node_ptr(cvt, hermes_get_TSTypeReference_typeName(n));
           let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_TSTypeReference_typeParameters(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSTypeReference(ast::TSTypeReference {
                 range,
-                kind: ast::NodeKind::TSTypeReference(ast::TSTypeReference {
                     type_name,
                     type_parameters,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSQualifiedName => {
           let left = cvt_node_ptr(cvt, hermes_get_TSQualifiedName_left(n));
           let right = cvt_node_ptr_opt(cvt, hermes_get_TSQualifiedName_right(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSQualifiedName(ast::TSQualifiedName {
                 range,
-                kind: ast::NodeKind::TSQualifiedName(ast::TSQualifiedName {
                     left,
                     right,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSFunctionType => {
@@ -2320,14 +1972,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let return_type = cvt_node_ptr(cvt, hermes_get_TSFunctionType_returnType(n));
           let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_TSFunctionType_typeParameters(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSFunctionType(ast::TSFunctionType {
                 range,
-                kind: ast::NodeKind::TSFunctionType(ast::TSFunctionType {
                     params,
                     return_type,
                     type_parameters,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSConstructorType => {
@@ -2335,64 +1985,54 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let return_type = cvt_node_ptr(cvt, hermes_get_TSConstructorType_returnType(n));
           let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_TSConstructorType_typeParameters(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSConstructorType(ast::TSConstructorType {
                 range,
-                kind: ast::NodeKind::TSConstructorType(ast::TSConstructorType {
                     params,
                     return_type,
                     type_parameters,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSTypePredicate => {
           let parameter_name = cvt_node_ptr(cvt, hermes_get_TSTypePredicate_parameterName(n));
           let type_annotation = cvt_node_ptr(cvt, hermes_get_TSTypePredicate_typeAnnotation(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSTypePredicate(ast::TSTypePredicate {
                 range,
-                kind: ast::NodeKind::TSTypePredicate(ast::TSTypePredicate {
                     parameter_name,
                     type_annotation,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSTupleType => {
           let element_types = cvt_node_list(cvt, hermes_get_TSTupleType_elementTypes(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSTupleType(ast::TSTupleType {
                 range,
-                kind: ast::NodeKind::TSTupleType(ast::TSTupleType {
                     element_types,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSTypeAssertion => {
           let type_annotation = cvt_node_ptr(cvt, hermes_get_TSTypeAssertion_typeAnnotation(n));
           let expression = cvt_node_ptr(cvt, hermes_get_TSTypeAssertion_expression(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSTypeAssertion(ast::TSTypeAssertion {
                 range,
-                kind: ast::NodeKind::TSTypeAssertion(ast::TSTypeAssertion {
                     type_annotation,
                     expression,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSAsExpression => {
           let expression = cvt_node_ptr(cvt, hermes_get_TSAsExpression_expression(n));
           let type_annotation = cvt_node_ptr(cvt, hermes_get_TSAsExpression_typeAnnotation(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSAsExpression(ast::TSAsExpression {
                 range,
-                kind: ast::NodeKind::TSAsExpression(ast::TSAsExpression {
                     expression,
                     type_annotation,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSParameterProperty => {
@@ -2402,16 +2042,14 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let is_static = hermes_get_TSParameterProperty_static(n);
           let export = hermes_get_TSParameterProperty_export(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSParameterProperty(ast::TSParameterProperty {
                 range,
-                kind: ast::NodeKind::TSParameterProperty(ast::TSParameterProperty {
                     parameter,
                     accessibility,
                     readonly,
                     is_static,
                     export,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSTypeAliasDeclaration => {
@@ -2419,14 +2057,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_TSTypeAliasDeclaration_typeParameters(n));
           let type_annotation = cvt_node_ptr(cvt, hermes_get_TSTypeAliasDeclaration_typeAnnotation(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSTypeAliasDeclaration(ast::TSTypeAliasDeclaration {
                 range,
-                kind: ast::NodeKind::TSTypeAliasDeclaration(ast::TSTypeAliasDeclaration {
                     id,
                     type_parameters,
                     type_annotation,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSInterfaceDeclaration => {
@@ -2435,113 +2071,95 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let extends = cvt_node_list(cvt, hermes_get_TSInterfaceDeclaration_extends(n));
           let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_TSInterfaceDeclaration_typeParameters(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSInterfaceDeclaration(ast::TSInterfaceDeclaration {
                 range,
-                kind: ast::NodeKind::TSInterfaceDeclaration(ast::TSInterfaceDeclaration {
                     id,
                     body,
                     extends,
                     type_parameters,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSInterfaceHeritage => {
           let expression = cvt_node_ptr(cvt, hermes_get_TSInterfaceHeritage_expression(n));
           let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_TSInterfaceHeritage_typeParameters(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSInterfaceHeritage(ast::TSInterfaceHeritage {
                 range,
-                kind: ast::NodeKind::TSInterfaceHeritage(ast::TSInterfaceHeritage {
                     expression,
                     type_parameters,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSInterfaceBody => {
           let body = cvt_node_list(cvt, hermes_get_TSInterfaceBody_body(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSInterfaceBody(ast::TSInterfaceBody {
                 range,
-                kind: ast::NodeKind::TSInterfaceBody(ast::TSInterfaceBody {
                     body,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSEnumDeclaration => {
           let id = cvt_node_ptr(cvt, hermes_get_TSEnumDeclaration_id(n));
           let members = cvt_node_list(cvt, hermes_get_TSEnumDeclaration_members(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSEnumDeclaration(ast::TSEnumDeclaration {
                 range,
-                kind: ast::NodeKind::TSEnumDeclaration(ast::TSEnumDeclaration {
                     id,
                     members,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSEnumMember => {
           let id = cvt_node_ptr(cvt, hermes_get_TSEnumMember_id(n));
           let initializer = cvt_node_ptr_opt(cvt, hermes_get_TSEnumMember_initializer(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSEnumMember(ast::TSEnumMember {
                 range,
-                kind: ast::NodeKind::TSEnumMember(ast::TSEnumMember {
                     id,
                     initializer,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSModuleDeclaration => {
           let id = cvt_node_ptr(cvt, hermes_get_TSModuleDeclaration_id(n));
           let body = cvt_node_ptr(cvt, hermes_get_TSModuleDeclaration_body(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSModuleDeclaration(ast::TSModuleDeclaration {
                 range,
-                kind: ast::NodeKind::TSModuleDeclaration(ast::TSModuleDeclaration {
                     id,
                     body,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSModuleBlock => {
           let body = cvt_node_list(cvt, hermes_get_TSModuleBlock_body(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSModuleBlock(ast::TSModuleBlock {
                 range,
-                kind: ast::NodeKind::TSModuleBlock(ast::TSModuleBlock {
                     body,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSModuleMember => {
           let id = cvt_node_ptr(cvt, hermes_get_TSModuleMember_id(n));
           let initializer = cvt_node_ptr_opt(cvt, hermes_get_TSModuleMember_initializer(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSModuleMember(ast::TSModuleMember {
                 range,
-                kind: ast::NodeKind::TSModuleMember(ast::TSModuleMember {
                     id,
                     initializer,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSTypeParameterDeclaration => {
           let params = cvt_node_list(cvt, hermes_get_TSTypeParameterDeclaration_params(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSTypeParameterDeclaration(ast::TSTypeParameterDeclaration {
                 range,
-                kind: ast::NodeKind::TSTypeParameterDeclaration(ast::TSTypeParameterDeclaration {
                     params,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSTypeParameter => {
@@ -2549,58 +2167,48 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let constraint = cvt_node_ptr_opt(cvt, hermes_get_TSTypeParameter_constraint(n));
           let default = cvt_node_ptr_opt(cvt, hermes_get_TSTypeParameter_default(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSTypeParameter(ast::TSTypeParameter {
                 range,
-                kind: ast::NodeKind::TSTypeParameter(ast::TSTypeParameter {
                     name,
                     constraint,
                     default,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSTypeParameterInstantiation => {
           let params = cvt_node_list(cvt, hermes_get_TSTypeParameterInstantiation_params(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSTypeParameterInstantiation(ast::TSTypeParameterInstantiation {
                 range,
-                kind: ast::NodeKind::TSTypeParameterInstantiation(ast::TSTypeParameterInstantiation {
                     params,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSUnionType => {
           let types = cvt_node_list(cvt, hermes_get_TSUnionType_types(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSUnionType(ast::TSUnionType {
                 range,
-                kind: ast::NodeKind::TSUnionType(ast::TSUnionType {
                     types,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSIntersectionType => {
           let types = cvt_node_list(cvt, hermes_get_TSIntersectionType_types(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSIntersectionType(ast::TSIntersectionType {
                 range,
-                kind: ast::NodeKind::TSIntersectionType(ast::TSIntersectionType {
                     types,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSTypeQuery => {
           let expr_name = cvt_node_ptr(cvt, hermes_get_TSTypeQuery_exprName(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSTypeQuery(ast::TSTypeQuery {
                 range,
-                kind: ast::NodeKind::TSTypeQuery(ast::TSTypeQuery {
                     expr_name,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSConditionalType => {
@@ -2609,26 +2217,22 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let true_type = cvt_node_ptr(cvt, hermes_get_TSConditionalType_trueType(n));
           let false_t_ype = cvt_node_ptr(cvt, hermes_get_TSConditionalType_falseTYpe(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSConditionalType(ast::TSConditionalType {
                 range,
-                kind: ast::NodeKind::TSConditionalType(ast::TSConditionalType {
                     extends_type,
                     check_type,
                     true_type,
                     false_t_ype,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSTypeLiteral => {
           let members = cvt_node_list(cvt, hermes_get_TSTypeLiteral_members(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSTypeLiteral(ast::TSTypeLiteral {
                 range,
-                kind: ast::NodeKind::TSTypeLiteral(ast::TSTypeLiteral {
                     members,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSPropertySignature => {
@@ -2641,9 +2245,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let is_static = hermes_get_TSPropertySignature_static(n);
           let export = hermes_get_TSPropertySignature_export(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSPropertySignature(ast::TSPropertySignature {
                 range,
-                kind: ast::NodeKind::TSPropertySignature(ast::TSPropertySignature {
                     key,
                     type_annotation,
                     initializer,
@@ -2652,8 +2255,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
                     readonly,
                     is_static,
                     export,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSMethodSignature => {
@@ -2662,46 +2264,40 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let return_type = cvt_node_ptr_opt(cvt, hermes_get_TSMethodSignature_returnType(n));
           let computed = hermes_get_TSMethodSignature_computed(n);
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSMethodSignature(ast::TSMethodSignature {
                 range,
-                kind: ast::NodeKind::TSMethodSignature(ast::TSMethodSignature {
                     key,
                     params,
                     return_type,
                     computed,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSIndexSignature => {
           let parameters = cvt_node_list(cvt, hermes_get_TSIndexSignature_parameters(n));
           let type_annotation = cvt_node_ptr_opt(cvt, hermes_get_TSIndexSignature_typeAnnotation(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSIndexSignature(ast::TSIndexSignature {
                 range,
-                kind: ast::NodeKind::TSIndexSignature(ast::TSIndexSignature {
                     parameters,
                     type_annotation,
-                }),
-            }
+            }),
           )
         }
         NodeKind::TSCallSignatureDeclaration => {
           let params = cvt_node_list(cvt, hermes_get_TSCallSignatureDeclaration_params(n));
           let return_type = cvt_node_ptr_opt(cvt, hermes_get_TSCallSignatureDeclaration_returnType(n));
           cvt.ast_context.alloc(
-            ast::Node {
+            ast::Node::TSCallSignatureDeclaration(ast::TSCallSignatureDeclaration {
                 range,
-                kind: ast::NodeKind::TSCallSignatureDeclaration(ast::TSCallSignatureDeclaration {
                     params,
                     return_type,
-                }),
-            }
+            }),
           )
         }
         _ => panic!("Invalid node kind")
     };
 
-    cvt.ast_context.node_mut(res).range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+    cvt.ast_context.node_mut(res).range_mut().end = cvt.cvt_smloc(nr.source_range.end.pred());
 
     res}

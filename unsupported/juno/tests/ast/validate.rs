@@ -10,18 +10,27 @@ use juno::ast::*;
 #[test]
 fn test_valid() {
     let mut ctx = Context::new();
+    let range = SourceRange {
+        file: 0,
+        start: SourceLoc::invalid(),
+        end: SourceLoc::invalid(),
+    };
     let return_stmt = make_node!(
         ctx,
-        NodeKind::ReturnStatement(ReturnStatement { argument: None })
+        Node::ReturnStatement(ReturnStatement {
+            range,
+            argument: None
+        })
     );
     assert!(validate_tree(&ctx, return_stmt).is_ok());
 
     let return_stmt = make_node!(
         ctx,
-        NodeKind::ReturnStatement(ReturnStatement {
+        Node::ReturnStatement(ReturnStatement {
+            range,
             argument: Some(make_node!(
                 ctx,
-                NodeKind::NumericLiteral(NumericLiteral { value: 1.0 })
+                Node::NumericLiteral(NumericLiteral { range, value: 1.0 })
             ))
         })
     );
@@ -29,10 +38,14 @@ fn test_valid() {
 
     let return_stmt = make_node!(
         ctx,
-        NodeKind::ReturnStatement(ReturnStatement {
+        Node::ReturnStatement(ReturnStatement {
+            range,
             argument: Some(make_node!(
                 ctx,
-                NodeKind::ReturnStatement(ReturnStatement { argument: None })
+                Node::ReturnStatement(ReturnStatement {
+                    range,
+                    argument: None
+                })
             )),
         })
     );
@@ -42,22 +55,32 @@ fn test_valid() {
 #[test]
 fn test_error() {
     let mut ctx = Context::new();
+    let range = SourceRange {
+        file: 0,
+        start: SourceLoc::invalid(),
+        end: SourceLoc::invalid(),
+    };
     let ast = make_node!(
         ctx,
-        NodeKind::BlockStatement(BlockStatement {
+        Node::BlockStatement(BlockStatement {
+            range,
             body: vec![make_node!(
                 ctx,
-                NodeKind::ReturnStatement(ReturnStatement {
+                Node::ReturnStatement(ReturnStatement {
+                    range,
                     argument: Some(make_node!(
                         ctx,
-                        NodeKind::ReturnStatement(ReturnStatement { argument: None })
+                        Node::ReturnStatement(ReturnStatement {
+                            range,
+                            argument: None
+                        })
                     )),
                 })
             )],
         })
     );
-    let bad_ret: NodePtr = match &ast.get(&ctx).kind {
-        NodeKind::BlockStatement(BlockStatement { body }) => body[0],
+    let bad_ret: NodePtr = match &ast.get(&ctx) {
+        Node::BlockStatement(BlockStatement { body, .. }) => body[0],
         _ => {
             unreachable!("bad match");
         }

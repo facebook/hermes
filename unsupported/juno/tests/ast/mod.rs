@@ -15,13 +15,7 @@ use juno::ast::*;
 /// for the entire duration of the call.
 macro_rules! make_node {
     ($ctx:expr, $kind:expr $(,)?) => {{
-        use juno::ast;
-        let range = ast::SourceRange {
-            file: 0,
-            start: ast::SourceLoc { line: 1, col: 1 },
-            end: ast::SourceLoc { line: 1, col: 1 },
-        };
-        let node = Node { range, kind: $kind };
+        let node = $kind;
         $ctx.alloc(node)
     }};
 }
@@ -33,26 +27,34 @@ mod validate;
 fn test_visit() {
     let mut ctx = Context::new();
     // Dummy range, we don't care about ranges in this test.
+    let range = SourceRange {
+        file: 0,
+        start: SourceLoc { line: 1, col: 1 },
+        end: SourceLoc { line: 1, col: 1 },
+    };
     let ast = make_node!(
         ctx,
-        NodeKind::BlockStatement(BlockStatement {
+        Node::BlockStatement(BlockStatement {
+            range,
             body: vec![
                 make_node!(
                     ctx,
-                    NodeKind::ExpressionStatement(ExpressionStatement {
+                    Node::ExpressionStatement(ExpressionStatement {
+                        range,
                         expression: make_node!(
                             ctx,
-                            NodeKind::NumericLiteral(NumericLiteral { value: 1.0 }),
+                            Node::NumericLiteral(NumericLiteral { range, value: 1.0 }),
                         ),
                         directive: None,
                     }),
                 ),
                 make_node!(
                     ctx,
-                    NodeKind::ExpressionStatement(ExpressionStatement {
+                    Node::ExpressionStatement(ExpressionStatement {
+                        range,
                         expression: make_node!(
                             ctx,
-                            NodeKind::NumericLiteral(NumericLiteral { value: 2.0 }),
+                            Node::NumericLiteral(NumericLiteral { range, value: 2.0 }),
                         ),
                         directive: None,
                     }),
@@ -68,10 +70,10 @@ fn test_visit() {
 
     impl Visitor for NumberFinder {
         fn call(&mut self, ctx: &Context, node: NodePtr, parent: Option<NodePtr>) {
-            if let NodeKind::NumericLiteral(NumericLiteral { value }) = &node.get(ctx).kind {
+            if let Node::NumericLiteral(NumericLiteral { value, .. }) = &node.get(ctx) {
                 assert!(matches!(
-                    parent.unwrap().get(ctx).kind,
-                    NodeKind::ExpressionStatement(ExpressionStatement { .. })
+                    parent.unwrap().get(ctx),
+                    Node::ExpressionStatement(ExpressionStatement { .. })
                 ));
                 self.acc.push(*value);
             }

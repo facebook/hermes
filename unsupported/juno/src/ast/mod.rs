@@ -92,15 +92,15 @@ impl Context {
     }
 }
 
-/// A JavaScript AST node.
-#[derive(Debug)]
-pub struct Node {
-    /// Location of the node in the JS file.
-    pub range: SourceRange,
+// /// A JavaScript AST node.
+// #[derive(Debug)]
+// pub struct Node {
+//     /// Location of the node in the JS file.
+//     pub range: SourceRange,
 
-    /// Actual kind of the node.
-    pub kind: NodeKind,
-}
+//     /// Actual kind of the node.
+//     pub kind: NodeKind,
+// }
 
 impl NodePtr {
     /// Call the `visitor` on this node with a given `parent`.
@@ -111,7 +111,7 @@ impl NodePtr {
     /// Call the `visitor` on only this node's children.
     pub fn visit_children<V: Visitor>(self, ctx: &Context, visitor: &mut V) {
         let node = self.get(ctx);
-        node.kind.visit_children(ctx, visitor, self);
+        node.visit_children(ctx, visitor, self);
     }
 }
 

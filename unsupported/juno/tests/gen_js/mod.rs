@@ -65,11 +65,15 @@ fn test_roundtrip_flow(src1: &str) {
 #[test]
 fn test_literals() {
     let mut ctx = Context::new();
-    let null = make_node!(ctx, NodeKind::NullLiteral(NullLiteral {}));
-    assert_eq!(do_gen(&ctx, null, gen_js::Pretty::Yes).trim(), "null");
+    let range = SourceRange {
+        file: 0,
+        start: SourceLoc { line: 1, col: 1 },
+        end: SourceLoc { line: 1, col: 1 },
+    };
     let string = make_node!(
         ctx,
-        NodeKind::StringLiteral(StringLiteral {
+        Node::StringLiteral(StringLiteral {
+            range,
             value: juno::ast::NodeString {
                 str: vec!['A' as u16, 0x1234u16, '\t' as u16],
             }
@@ -79,8 +83,6 @@ fn test_literals() {
         do_gen(&ctx, string, gen_js::Pretty::Yes).trim(),
         r#""A\u1234\t""#,
     );
-    let number = make_node!(ctx, NodeKind::NumericLiteral(NumericLiteral { value: 1.0 }));
-    assert_eq!(do_gen(&ctx, number, gen_js::Pretty::Yes).trim(), "1");
 
     test_roundtrip("1");
     test_roundtrip("\"abc\"");
@@ -88,6 +90,8 @@ fn test_literals() {
     test_roundtrip(r#" "\ud83d\udcd5" "#);
     test_roundtrip("true");
     test_roundtrip("false");
+    test_roundtrip("null");
+    test_roundtrip("undefined");
 
     test_roundtrip("/abc/");
     test_roundtrip("/abc/gi");
@@ -117,11 +121,17 @@ fn test_identifier() {
 #[test]
 fn test_binop() {
     let mut ctx = Context::new();
-    let left = make_node!(ctx, NodeKind::NullLiteral(NullLiteral {}));
-    let right = make_node!(ctx, NodeKind::NullLiteral(NullLiteral {}));
+    let range = SourceRange {
+        file: 0,
+        start: SourceLoc { line: 1, col: 1 },
+        end: SourceLoc { line: 1, col: 1 },
+    };
+    let left = make_node!(ctx, Node::NullLiteral(NullLiteral { range }));
+    let right = make_node!(ctx, Node::NullLiteral(NullLiteral { range }));
     let binary = make_node!(
         ctx,
-        NodeKind::BinaryExpression(BinaryExpression {
+        Node::BinaryExpression(BinaryExpression {
+            range,
             left,
             operator: BinaryExpressionOperator::Plus,
             right,
@@ -407,22 +417,32 @@ fn test_export() {
 #[test]
 fn test_types() {
     let mut ctx = Context::new();
+    let range = SourceRange {
+        file: 0,
+        start: SourceLoc { line: 1, col: 1 },
+        end: SourceLoc { line: 1, col: 1 },
+    };
     let union_ty = make_node!(
         ctx,
-        NodeKind::UnionTypeAnnotation(UnionTypeAnnotation {
+        Node::UnionTypeAnnotation(UnionTypeAnnotation {
+            range,
             types: vec![
-                make_node!(ctx, NodeKind::NumberTypeAnnotation(NumberTypeAnnotation {})),
                 make_node!(
                     ctx,
-                    NodeKind::IntersectionTypeAnnotation(IntersectionTypeAnnotation {
+                    Node::NumberTypeAnnotation(NumberTypeAnnotation { range })
+                ),
+                make_node!(
+                    ctx,
+                    Node::IntersectionTypeAnnotation(IntersectionTypeAnnotation {
+                        range,
                         types: vec![
                             make_node!(
                                 ctx,
-                                NodeKind::BooleanTypeAnnotation(BooleanTypeAnnotation {})
+                                Node::BooleanTypeAnnotation(BooleanTypeAnnotation { range })
                             ),
                             make_node!(
                                 ctx,
-                                NodeKind::StringTypeAnnotation(StringTypeAnnotation {})
+                                Node::StringTypeAnnotation(StringTypeAnnotation { range })
                             )
                         ],
                     }),

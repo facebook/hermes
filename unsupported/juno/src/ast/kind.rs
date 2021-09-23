@@ -7,7 +7,17 @@
 
 use super::*;
 
-/// Generate boilerplate code for the `NodeKind` enum.
+/// Generate boilerplate code for the `Node` enum.
+///
+/// The `Node` enum has variants for each of the different types of AST nodes
+/// listed in [`nodekind_defs`].
+/// Each variant contains a struct of the same name, which is where the data is actually
+/// stored. These member structs' first fields contain data which is common to all kinds of nodes
+/// (e.g. `range`, which represents location info).
+/// Force each of the member structs as well as the `Node` enum to have `repr(C)`
+/// to ensure that the shared fields are in the same place
+/// in all the structs. This means that the identical match arms will be optimized
+/// away into some fast pointer arithmetic that's easy to inline.
 macro_rules! gen_nodekind_enum {
     ($name:ident {
         $(
@@ -32,28 +42,34 @@ macro_rules! gen_nodekind_enum {
         // * `bool`
         // * `f64`
         #[derive(Debug)]
-        pub enum NodeKind {
+        #[repr(C)]
+        pub enum Node {
             // Create each field in the enum.
             $($kind($kind),)*
         }
 
+
         $(
         #[derive(Debug)]
+        #[repr(C)]
         pub struct $kind {
-            // Create each field in the struct.
-            $(
-                $(pub $field : $type),*
-            )?
+            // Common fields to all node kinds.
+            pub range: SourceRange,
+            // Create each field that's meant for just this node kind.
+            $($(pub $field : $type,)*)?
         }
         )*
 
-        impl NodeKind {
+        impl Node {
             /// Visit the child fields of this kind.
             /// `node` is the node for which this is the kind.
-            pub fn visit_children< V: Visitor>(&self, ctx: &Context, visitor: &mut V, node: NodePtr) {
+            pub fn visit_children<V: Visitor>(&self, ctx: &Context, visitor: &mut V, node: NodePtr) {
                 match self {
                     $(
-                        Self::$kind($kind {$($($field),*)?}) => {
+                        Self::$kind($kind {
+                            $($($field,)*)?
+                            ..
+                        }) => {
                             $($(
                                 $field.visit(ctx, visitor, node);
                             )*)?
@@ -66,6 +82,24 @@ macro_rules! gen_nodekind_enum {
                 match self {
                     $(
                         Self::$kind { .. } => NodeVariant::$kind
+                    ),*
+                }
+            }
+
+            #[inline]
+            pub fn range(&self) -> &SourceRange {
+                match self {
+                    $(
+                        Self::$kind($kind { range, .. }) => range
+                    ),*
+                }
+            }
+
+            #[inline]
+            pub fn range_mut(&mut self) -> &mut SourceRange {
+                match self {
+                    $(
+                        Self::$kind($kind { range, .. }) => range
                     ),*
                 }
             }

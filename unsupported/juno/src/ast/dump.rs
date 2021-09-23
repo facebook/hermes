@@ -33,10 +33,10 @@ macro_rules! gen_dumper {
             use crate::ast::*;
             emitter.open_dict();
             emitter.emit_key("type");
-            emitter.emit_string(node.get(ctx).kind.name());
-            match &node.get(ctx).kind {
+            emitter.emit_string(node.get(ctx).name());
+            match &node.get(ctx) {
                 $(
-                    NodeKind::$kind($kind {$($($field),*)?}) => {
+                    Node::$kind($kind {$($($field,)*)? .. }) => {
                         $($(
                             emitter.emit_key(&ascii_snake_to_camel(stringify!($field)));
                             $field.dump(ctx, emitter);
