@@ -9,7 +9,7 @@ use super::generated_cvt::cvt_node_ptr;
 use crate::ast;
 use hermes::parser::{
     DataRef, HermesParser, NodeLabel, NodeLabelOpt, NodeListOptRef, NodeListRef, NodePtr,
-    NodePtrOpt, NodeString, NodeStringOpt, SMLoc, SMRange,
+    NodePtrOpt, NodeString, NodeStringOpt, SMLoc,
 };
 use hermes::utf::{
     is_utf8_continuation, utf8_with_surrogates_to_string, utf8_with_surrogates_to_utf16,
@@ -88,19 +88,11 @@ impl Converter<'_> {
         }
     }
 
-    pub fn smrange(&mut self, smr: SMRange) -> ast::SourceRange {
-        ast::SourceRange {
-            file: self.file_id,
-            start: self.cvt_smloc(smr.start),
-            end: self.cvt_smloc(smr.end.pred()),
-        }
-    }
-
     /// Convert a SMLoc to ast::SourceLoc using the line_cache. Best cache
     /// utilization is achieved if locations are always increasing. In this way
     /// the next location will almost always be in the current line or the next
     /// line.
-    fn cvt_smloc(&mut self, loc: SMLoc) -> ast::SourceLoc {
+    pub fn cvt_smloc(&mut self, loc: SMLoc) -> ast::SourceLoc {
         assert!(
             loc.is_valid(),
             "All source locations from Hermes parser must be valid"

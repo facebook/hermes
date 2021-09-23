@@ -14,9 +14,13 @@ use crate::ast;
 
 pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
     let nr = n.as_ref();
-    let range = cvt.smrange(nr.source_range);
+    let range = ast::SourceRange {
+        file: cvt.file_id,
+        start: cvt.cvt_smloc(nr.source_range.start),
+        end: ast::SourceLoc::invalid(),
+    };
 
-    match nr.kind {
+    let mut res = match nr.kind {
         NodeKind::Empty => ast::NodePtr::new(
             ast::Node {
                 range,
@@ -1862,5 +1866,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
             }
         ),
         _ => panic!("Invalid node kind")
-    }
-}
+    };
+
+    res.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+
+    res}

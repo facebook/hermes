@@ -375,10 +375,14 @@ static void genConvert() {
   llvh::outs()
       << "pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {\n";
   llvh::outs() << "    let nr = n.as_ref();\n"
-                  "    let range = cvt.smrange(nr.source_range);\n"
+                  "    let range = ast::SourceRange {\n"
+                  "        file: cvt.file_id,\n"
+                  "        start: cvt.cvt_smloc(nr.source_range.start),\n"
+                  "        end: ast::SourceLoc::invalid(),\n"
+                  "    };\n"
                   "\n";
 
-  llvh::outs() << "    match nr.kind {\n";
+  llvh::outs() << "    let mut res = match nr.kind {\n";
 
   auto genStruct = [](const TreeClass &cls) {
     if (cls.sentinel != SentinelType::None)
@@ -451,7 +455,11 @@ static void genConvert() {
   }
 
   llvh::outs() << "        _ => panic!(\"Invalid node kind\")\n"
-                  "    }\n";
+                  "    };\n\n";
+  llvh::outs()
+      << "    res.range.end = cvt.cvt_smloc(nr.source_range.end.pred());\n"
+         "\n"
+         "    res";
   llvh::outs() << "}\n";
 }
 
