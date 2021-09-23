@@ -6,3 +6,7 @@ edition = "2018"
 license = "MIT"
 
 [dependencies]
+base64 = "0.13"
+anyhow = "1.0"
+thiserror = "1.0"
+url = "2.2.2"

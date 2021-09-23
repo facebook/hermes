@@ -14,4 +14,5 @@ pub mod str_enum;
 
 pub mod case;
 pub mod convert;
+pub mod fetchurl;
 pub mod json;
