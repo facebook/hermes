@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::io::{BufReader, Read};
+use std::io::Read;
 use std::os::raw::c_char;
 
 /// An abstraction for a null-terminated buffer either read from disk, copied
@@ -26,7 +26,7 @@ impl NullTerminatedBuf<'_> {
 
     /// Create from a reader and null terminate.
     pub fn from_reader<'a, R: Read>(
-        reader: &'_ mut R,
+        mut reader: R,
     ) -> Result<NullTerminatedBuf<'a>, std::io::Error> {
         let mut v = Vec::<u8>::new();
         reader.read_to_end(&mut v)?;
@@ -46,8 +46,7 @@ impl NullTerminatedBuf<'_> {
         //       One problem is that there isn't an obvious way in Rust to check portably whether
         //       something has a fixed size and is memory mappable (i.e. is not a pipe).
 
-        let mut reader = BufReader::new(f);
-        Self::from_reader(&mut reader)
+        Self::from_reader(f)
     }
 
     /// Create by copying a slice and appending null-termination.
@@ -115,7 +114,7 @@ impl NullTerminatedBuf<'_> {
     }
 }
 
-impl std::convert::AsRef<[u8]> for NullTerminatedBuf<'_> {
+impl AsRef<[u8]> for NullTerminatedBuf<'_> {
     fn as_ref(&self) -> &[u8] {
         self.as_bytes()
     }
