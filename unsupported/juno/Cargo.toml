@@ -13,4 +13,8 @@ license = "MIT"
 hermes = { path = "./hermes" }
 support = { path = "./support" }
 libc = "0.2"
+structopt = "0.3"
 thiserror = "1.0"
+anyhow = "1.0"
+url = "2.2.2"
+sourcemap = "6.0.1"
