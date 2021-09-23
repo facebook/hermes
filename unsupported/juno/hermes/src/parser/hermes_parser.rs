@@ -57,8 +57,10 @@ impl Default for ParserFlags {
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Coord {
+    /// 1-based line.
     pub line: c_int,
-    pub column: c_int,
+    /// 0-based offset from start of line.
+    pub offset: c_int,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -91,7 +93,7 @@ impl std::fmt::Display for DiagMessage {
             f,
             "{}:{}:{}",
             self.coord.line,
-            self.coord.column,
+            self.coord.offset + 1,
             utf8_with_surrogates_to_string_lossy(self.message.as_slice())
         )
     }
@@ -253,7 +255,7 @@ mod tests {
         assert_eq!(messages.len(), 1);
         assert_eq!(
             p.find_coord(messages[0].loc).unwrap(),
-            Coord { line: 1, column: 6 }
+            Coord { line: 1, offset: 5 }
         );
     }
 

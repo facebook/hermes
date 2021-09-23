@@ -387,11 +387,11 @@ DiagKind toDiagKind(llvh::SourceMgr::DiagKind k) {
 struct Coord {
   /// 1-based.
   int line = -1;
-  /// 1-based.
-  int column = -1;
+  /// 0-based offset from start of line.
+  int offset = -1;
 
   Coord() = default;
-  Coord(int lineNo, int columnNo) : line(lineNo), column(columnNo) {}
+  Coord(int lineNo, int offset) : line(lineNo), offset(offset) {}
 };
 
 /// A temporary struct describing an error message, returned to Rust.
@@ -557,12 +557,12 @@ hermes_parser_find_location(ParserContext *parserCtx, SMLoc loc, Coord *res) {
   SourceErrorManager::SourceCoords coords;
   if (!parserCtx->context_.getSourceErrorManager().findBufferLineAndLoc(
           loc, coords)) {
-    res->line = res->column = -1;
+    res->line = res->offset = -1;
     return false;
   }
 
   res->line = coords.line;
-  res->column = coords.col;
+  res->offset = coords.col - 1;
   return true;
 }
 

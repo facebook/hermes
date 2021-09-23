@@ -41,11 +41,11 @@ impl Converter<'_> {
             file: self.file_id,
             start: ast::SourceLoc {
                 line: start.line as u32,
-                col: start.column as u32,
+                col: start.offset as u32 + 1,
             },
             end: ast::SourceLoc {
                 line: end.line as u32,
-                col: end.column as u32,
+                col: end.offset as u32 + 1,
             },
         }
     }

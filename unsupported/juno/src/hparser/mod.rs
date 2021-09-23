@@ -52,7 +52,7 @@ impl ParsedJS<'_> {
             (
                 ast::SourceLoc {
                     line: msg.coord.line as u32,
-                    col: msg.coord.column as u32,
+                    col: msg.coord.offset as u32 + 1,
                 },
                 utf8_with_surrogates_to_string_lossy(msg.message.as_slice()),
             )
