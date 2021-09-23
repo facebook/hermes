@@ -611,8 +611,12 @@ impl<W: Write> GenJS<W> {
                 out!(self, "{}", convert::number_to_string(*value));
             }
             RegExpLiteral { pattern, flags } => {
-                // FIXME: Needs to escape '/', might need more escaping as well.
-                out!(self, "/{}/{}", pattern.str, flags.str);
+                out!(self, "/");
+                // Parser doesn't handle escapes when lexing RegExp,
+                // so we don't need to do any manual escaping here.
+                self.write_utf8(&pattern.str);
+                out!(self, "/");
+                self.write_utf8(&flags.str);
             }
             ThisExpression => {
                 out!(self, "this");

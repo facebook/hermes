@@ -84,9 +84,12 @@ fn test_literals() {
     test_roundtrip(r#" "\ud83d\udcd5" "#);
     test_roundtrip("true");
     test_roundtrip("false");
+
     test_roundtrip("/abc/");
     test_roundtrip("/abc/gi");
     test_roundtrip("/abc/gi");
+    test_roundtrip(r#"/ab\/cd/gi"#);
+    test_roundtrip("/😹/");
 
     test_roundtrip(r#" `abc` "#);
     test_roundtrip(r#" `abc\ndef` "#);
