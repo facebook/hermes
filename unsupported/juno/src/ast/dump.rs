@@ -7,9 +7,8 @@
 
 use super::{
     AssignmentExpressionOperator, BinaryExpressionOperator, Context, ExportKind, ImportKind,
-    LogicalExpressionOperator, MethodDefinitionKind, NodeKind, NodeLabel, NodeList, NodePtr,
-    NodeString, PropertyKind, UnaryExpressionOperator, UpdateExpressionOperator,
-    VariableDeclarationKind,
+    LogicalExpressionOperator, MethodDefinitionKind, NodeLabel, NodeList, NodePtr, NodeString,
+    PropertyKind, UnaryExpressionOperator, UpdateExpressionOperator, VariableDeclarationKind,
 };
 use std::io::{self, Write};
 use support::{case::ascii_snake_to_camel, json::*};
@@ -31,12 +30,13 @@ macro_rules! gen_dumper {
         $(,)?
     }) => {
         fn dump_node<W: Write>(ctx: &Context, node: NodePtr, emitter: &mut JSONEmitter<W>) {
+            use crate::ast::*;
             emitter.open_dict();
             emitter.emit_key("type");
             emitter.emit_string(node.get(ctx).kind.name());
             match &node.get(ctx).kind {
                 $(
-                    NodeKind::$kind $({$($field),*})? => {
+                    NodeKind::$kind($kind {$($($field),*)?}) => {
                         $($(
                             emitter.emit_key(&ascii_snake_to_camel(stringify!($field)));
                             $field.dump(ctx, emitter);

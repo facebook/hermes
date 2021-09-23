@@ -34,12 +34,18 @@ macro_rules! gen_nodekind_enum {
         #[derive(Debug)]
         pub enum NodeKind {
             // Create each field in the enum.
-            $(
-                $kind $({
-                    $($field : $type),*
-                })?
-            ),*
+            $($kind($kind),)*
         }
+
+        $(
+        #[derive(Debug)]
+        pub struct $kind {
+            // Create each field in the struct.
+            $(
+                $(pub $field : $type),*
+            )?
+        }
+        )*
 
         impl NodeKind {
             /// Visit the child fields of this kind.
@@ -47,7 +53,7 @@ macro_rules! gen_nodekind_enum {
             pub fn visit_children< V: Visitor>(&self, ctx: &Context, visitor: &mut V, node: NodePtr) {
                 match self {
                     $(
-                        Self::$kind $({$($field),*})? => {
+                        Self::$kind($kind {$($($field),*)?}) => {
                             $($(
                                 $field.visit(ctx, visitor, node);
                             )*)?

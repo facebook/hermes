@@ -15,10 +15,10 @@ mod dump;
 mod kind;
 mod validate;
 
-pub use kind::NodeKind;
 use kind::NodeVariant;
 
 pub use dump::{dump_json, Pretty};
+pub use kind::*;
 pub use validate::{validate_tree, ValidationError};
 
 /// The storage for AST nodes.

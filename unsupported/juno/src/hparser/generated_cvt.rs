@@ -25,8 +25,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::Empty {
-                },
+                kind: ast::NodeKind::Empty(ast::Empty {
+                }),
             }
           )
         }
@@ -34,8 +34,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::Metadata {
-                },
+                kind: ast::NodeKind::Metadata(ast::Metadata {
+                }),
             }
           )
         }
@@ -44,9 +44,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::Program {
+                kind: ast::NodeKind::Program(ast::Program {
                     body,
-                },
+                }),
             }
           )
         }
@@ -62,7 +62,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::FunctionExpression {
+                kind: ast::NodeKind::FunctionExpression(ast::FunctionExpression {
                     id,
                     params,
                     body,
@@ -71,7 +71,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
                     predicate,
                     generator,
                     is_async,
-                },
+                }),
             }
           )
         }
@@ -87,7 +87,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ArrowFunctionExpression {
+                kind: ast::NodeKind::ArrowFunctionExpression(ast::ArrowFunctionExpression {
                     id,
                     params,
                     body,
@@ -96,7 +96,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
                     predicate,
                     expression,
                     is_async,
-                },
+                }),
             }
           )
         }
@@ -112,7 +112,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::FunctionDeclaration {
+                kind: ast::NodeKind::FunctionDeclaration(ast::FunctionDeclaration {
                     id,
                     params,
                     body,
@@ -121,7 +121,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
                     predicate,
                     generator,
                     is_async,
-                },
+                }),
             }
           )
         }
@@ -131,10 +131,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::WhileStatement {
+                kind: ast::NodeKind::WhileStatement(ast::WhileStatement {
                     body,
                     test,
-                },
+                }),
             }
           )
         }
@@ -144,10 +144,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::DoWhileStatement {
+                kind: ast::NodeKind::DoWhileStatement(ast::DoWhileStatement {
                     body,
                     test,
-                },
+                }),
             }
           )
         }
@@ -158,11 +158,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ForInStatement {
+                kind: ast::NodeKind::ForInStatement(ast::ForInStatement {
                     left,
                     right,
                     body,
-                },
+                }),
             }
           )
         }
@@ -174,12 +174,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ForOfStatement {
+                kind: ast::NodeKind::ForOfStatement(ast::ForOfStatement {
                     left,
                     right,
                     body,
                     is_await,
-                },
+                }),
             }
           )
         }
@@ -191,12 +191,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ForStatement {
+                kind: ast::NodeKind::ForStatement(ast::ForStatement {
                     init,
                     test,
                     update,
                     body,
-                },
+                }),
             }
           )
         }
@@ -204,8 +204,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::DebuggerStatement {
-                },
+                kind: ast::NodeKind::DebuggerStatement(ast::DebuggerStatement {
+                }),
             }
           )
         }
@@ -213,8 +213,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::EmptyStatement {
-                },
+                kind: ast::NodeKind::EmptyStatement(ast::EmptyStatement {
+                }),
             }
           )
         }
@@ -223,9 +223,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::BlockStatement {
+                kind: ast::NodeKind::BlockStatement(ast::BlockStatement {
                     body,
-                },
+                }),
             }
           )
         }
@@ -234,9 +234,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::BreakStatement {
+                kind: ast::NodeKind::BreakStatement(ast::BreakStatement {
                     label,
-                },
+                }),
             }
           )
         }
@@ -245,9 +245,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ContinueStatement {
+                kind: ast::NodeKind::ContinueStatement(ast::ContinueStatement {
                     label,
-                },
+                }),
             }
           )
         }
@@ -256,9 +256,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ThrowStatement {
+                kind: ast::NodeKind::ThrowStatement(ast::ThrowStatement {
                     argument,
-                },
+                }),
             }
           )
         }
@@ -267,9 +267,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ReturnStatement {
+                kind: ast::NodeKind::ReturnStatement(ast::ReturnStatement {
                     argument,
-                },
+                }),
             }
           )
         }
@@ -279,10 +279,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::WithStatement {
+                kind: ast::NodeKind::WithStatement(ast::WithStatement {
                     object,
                     body,
-                },
+                }),
             }
           )
         }
@@ -292,10 +292,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::SwitchStatement {
+                kind: ast::NodeKind::SwitchStatement(ast::SwitchStatement {
                     discriminant,
                     cases,
-                },
+                }),
             }
           )
         }
@@ -305,10 +305,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::LabeledStatement {
+                kind: ast::NodeKind::LabeledStatement(ast::LabeledStatement {
                     label,
                     body,
-                },
+                }),
             }
           )
         }
@@ -318,10 +318,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ExpressionStatement {
+                kind: ast::NodeKind::ExpressionStatement(ast::ExpressionStatement {
                     expression,
                     directive,
-                },
+                }),
             }
           )
         }
@@ -332,11 +332,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TryStatement {
+                kind: ast::NodeKind::TryStatement(ast::TryStatement {
                     block,
                     handler,
                     finalizer,
-                },
+                }),
             }
           )
         }
@@ -347,11 +347,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::IfStatement {
+                kind: ast::NodeKind::IfStatement(ast::IfStatement {
                     test,
                     consequent,
                     alternate,
-                },
+                }),
             }
           )
         }
@@ -359,8 +359,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::NullLiteral {
-                },
+                kind: ast::NodeKind::NullLiteral(ast::NullLiteral {
+                }),
             }
           )
         }
@@ -369,9 +369,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::BooleanLiteral {
+                kind: ast::NodeKind::BooleanLiteral(ast::BooleanLiteral {
                     value,
-                },
+                }),
             }
           )
         }
@@ -380,9 +380,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::StringLiteral {
+                kind: ast::NodeKind::StringLiteral(ast::StringLiteral {
                     value,
-                },
+                }),
             }
           )
         }
@@ -391,9 +391,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::NumericLiteral {
+                kind: ast::NodeKind::NumericLiteral(ast::NumericLiteral {
                     value,
-                },
+                }),
             }
           )
         }
@@ -403,10 +403,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::RegExpLiteral {
+                kind: ast::NodeKind::RegExpLiteral(ast::RegExpLiteral {
                     pattern,
                     flags,
-                },
+                }),
             }
           )
         }
@@ -414,8 +414,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ThisExpression {
-                },
+                kind: ast::NodeKind::ThisExpression(ast::ThisExpression {
+                }),
             }
           )
         }
@@ -423,8 +423,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::Super {
-                },
+                kind: ast::NodeKind::Super(ast::Super {
+                }),
             }
           )
         }
@@ -433,9 +433,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::SequenceExpression {
+                kind: ast::NodeKind::SequenceExpression(ast::SequenceExpression {
                     expressions,
-                },
+                }),
             }
           )
         }
@@ -444,9 +444,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ObjectExpression {
+                kind: ast::NodeKind::ObjectExpression(ast::ObjectExpression {
                     properties,
-                },
+                }),
             }
           )
         }
@@ -456,10 +456,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ArrayExpression {
+                kind: ast::NodeKind::ArrayExpression(ast::ArrayExpression {
                     elements,
                     trailing_comma,
-                },
+                }),
             }
           )
         }
@@ -468,9 +468,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::SpreadElement {
+                kind: ast::NodeKind::SpreadElement(ast::SpreadElement {
                     argument,
-                },
+                }),
             }
           )
         }
@@ -481,11 +481,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::NewExpression {
+                kind: ast::NodeKind::NewExpression(ast::NewExpression {
                     callee,
                     type_arguments,
                     arguments,
-                },
+                }),
             }
           )
         }
@@ -495,10 +495,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::YieldExpression {
+                kind: ast::NodeKind::YieldExpression(ast::YieldExpression {
                     argument,
                     delegate,
-                },
+                }),
             }
           )
         }
@@ -507,9 +507,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::AwaitExpression {
+                kind: ast::NodeKind::AwaitExpression(ast::AwaitExpression {
                     argument,
-                },
+                }),
             }
           )
         }
@@ -519,10 +519,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ImportExpression {
+                kind: ast::NodeKind::ImportExpression(ast::ImportExpression {
                     source,
                     attributes,
-                },
+                }),
             }
           )
         }
@@ -533,11 +533,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::CallExpression {
+                kind: ast::NodeKind::CallExpression(ast::CallExpression {
                     callee,
                     type_arguments,
                     arguments,
-                },
+                }),
             }
           )
         }
@@ -549,12 +549,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::OptionalCallExpression {
+                kind: ast::NodeKind::OptionalCallExpression(ast::OptionalCallExpression {
                     callee,
                     type_arguments,
                     arguments,
                     optional,
-                },
+                }),
             }
           )
         }
@@ -565,11 +565,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::AssignmentExpression {
+                kind: ast::NodeKind::AssignmentExpression(ast::AssignmentExpression {
                     operator,
                     left,
                     right,
-                },
+                }),
             }
           )
         }
@@ -580,11 +580,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::UnaryExpression {
+                kind: ast::NodeKind::UnaryExpression(ast::UnaryExpression {
                     operator,
                     argument,
                     prefix,
-                },
+                }),
             }
           )
         }
@@ -595,11 +595,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::UpdateExpression {
+                kind: ast::NodeKind::UpdateExpression(ast::UpdateExpression {
                     operator,
                     argument,
                     prefix,
-                },
+                }),
             }
           )
         }
@@ -610,11 +610,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::MemberExpression {
+                kind: ast::NodeKind::MemberExpression(ast::MemberExpression {
                     object,
                     property,
                     computed,
-                },
+                }),
             }
           )
         }
@@ -626,12 +626,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::OptionalMemberExpression {
+                kind: ast::NodeKind::OptionalMemberExpression(ast::OptionalMemberExpression {
                     object,
                     property,
                     computed,
                     optional,
-                },
+                }),
             }
           )
         }
@@ -642,11 +642,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::LogicalExpression {
+                kind: ast::NodeKind::LogicalExpression(ast::LogicalExpression {
                     left,
                     right,
                     operator,
-                },
+                }),
             }
           )
         }
@@ -657,11 +657,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ConditionalExpression {
+                kind: ast::NodeKind::ConditionalExpression(ast::ConditionalExpression {
                     test,
                     alternate,
                     consequent,
-                },
+                }),
             }
           )
         }
@@ -672,11 +672,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::BinaryExpression {
+                kind: ast::NodeKind::BinaryExpression(ast::BinaryExpression {
                     left,
                     right,
                     operator,
-                },
+                }),
             }
           )
         }
@@ -685,9 +685,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::Directive {
+                kind: ast::NodeKind::Directive(ast::Directive {
                     value,
-                },
+                }),
             }
           )
         }
@@ -696,9 +696,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::DirectiveLiteral {
+                kind: ast::NodeKind::DirectiveLiteral(ast::DirectiveLiteral {
                     value,
-                },
+                }),
             }
           )
         }
@@ -709,11 +709,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::Identifier {
+                kind: ast::NodeKind::Identifier(ast::Identifier {
                     name,
                     type_annotation,
                     optional,
-                },
+                }),
             }
           )
         }
@@ -722,9 +722,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::PrivateName {
+                kind: ast::NodeKind::PrivateName(ast::PrivateName {
                     id,
-                },
+                }),
             }
           )
         }
@@ -734,10 +734,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::MetaProperty {
+                kind: ast::NodeKind::MetaProperty(ast::MetaProperty {
                     meta,
                     property,
-                },
+                }),
             }
           )
         }
@@ -747,10 +747,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::SwitchCase {
+                kind: ast::NodeKind::SwitchCase(ast::SwitchCase {
                     test,
                     consequent,
-                },
+                }),
             }
           )
         }
@@ -760,10 +760,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::CatchClause {
+                kind: ast::NodeKind::CatchClause(ast::CatchClause {
                     param,
                     body,
-                },
+                }),
             }
           )
         }
@@ -773,10 +773,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::VariableDeclarator {
+                kind: ast::NodeKind::VariableDeclarator(ast::VariableDeclarator {
                     init,
                     id,
-                },
+                }),
             }
           )
         }
@@ -786,10 +786,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::VariableDeclaration {
+                kind: ast::NodeKind::VariableDeclaration(ast::VariableDeclaration {
                     kind,
                     declarations,
-                },
+                }),
             }
           )
         }
@@ -799,10 +799,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TemplateLiteral {
+                kind: ast::NodeKind::TemplateLiteral(ast::TemplateLiteral {
                     quasis,
                     expressions,
-                },
+                }),
             }
           )
         }
@@ -812,10 +812,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TaggedTemplateExpression {
+                kind: ast::NodeKind::TaggedTemplateExpression(ast::TaggedTemplateExpression {
                     tag,
                     quasi,
-                },
+                }),
             }
           )
         }
@@ -826,11 +826,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TemplateElement {
+                kind: ast::NodeKind::TemplateElement(ast::TemplateElement {
                     tail,
                     cooked,
                     raw,
-                },
+                }),
             }
           )
         }
@@ -844,14 +844,14 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::Property {
+                kind: ast::NodeKind::Property(ast::Property {
                     key,
                     value,
                     kind,
                     computed,
                     method,
                     shorthand,
-                },
+                }),
             }
           )
         }
@@ -866,7 +866,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ClassDeclaration {
+                kind: ast::NodeKind::ClassDeclaration(ast::ClassDeclaration {
                     id,
                     type_parameters,
                     super_class,
@@ -874,7 +874,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
                     implements,
                     decorators,
                     body,
-                },
+                }),
             }
           )
         }
@@ -889,7 +889,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ClassExpression {
+                kind: ast::NodeKind::ClassExpression(ast::ClassExpression {
                     id,
                     type_parameters,
                     super_class,
@@ -897,7 +897,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
                     implements,
                     decorators,
                     body,
-                },
+                }),
             }
           )
         }
@@ -906,9 +906,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ClassBody {
+                kind: ast::NodeKind::ClassBody(ast::ClassBody {
                     body,
-                },
+                }),
             }
           )
         }
@@ -924,7 +924,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ClassProperty {
+                kind: ast::NodeKind::ClassProperty(ast::ClassProperty {
                     key,
                     value,
                     computed,
@@ -933,7 +933,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
                     optional,
                     variance,
                     type_annotation,
-                },
+                }),
             }
           )
         }
@@ -948,7 +948,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ClassPrivateProperty {
+                kind: ast::NodeKind::ClassPrivateProperty(ast::ClassPrivateProperty {
                     key,
                     value,
                     is_static,
@@ -956,7 +956,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
                     optional,
                     variance,
                     type_annotation,
-                },
+                }),
             }
           )
         }
@@ -969,13 +969,13 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::MethodDefinition {
+                kind: ast::NodeKind::MethodDefinition(ast::MethodDefinition {
                     key,
                     value,
                     kind,
                     computed,
                     is_static,
-                },
+                }),
             }
           )
         }
@@ -987,12 +987,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ImportDeclaration {
+                kind: ast::NodeKind::ImportDeclaration(ast::ImportDeclaration {
                     specifiers,
                     source,
                     attributes,
                     import_kind,
-                },
+                }),
             }
           )
         }
@@ -1003,11 +1003,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ImportSpecifier {
+                kind: ast::NodeKind::ImportSpecifier(ast::ImportSpecifier {
                     imported,
                     local,
                     import_kind,
-                },
+                }),
             }
           )
         }
@@ -1016,9 +1016,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ImportDefaultSpecifier {
+                kind: ast::NodeKind::ImportDefaultSpecifier(ast::ImportDefaultSpecifier {
                     local,
-                },
+                }),
             }
           )
         }
@@ -1027,9 +1027,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ImportNamespaceSpecifier {
+                kind: ast::NodeKind::ImportNamespaceSpecifier(ast::ImportNamespaceSpecifier {
                     local,
-                },
+                }),
             }
           )
         }
@@ -1039,10 +1039,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ImportAttribute {
+                kind: ast::NodeKind::ImportAttribute(ast::ImportAttribute {
                     key,
                     value,
-                },
+                }),
             }
           )
         }
@@ -1054,12 +1054,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ExportNamedDeclaration {
+                kind: ast::NodeKind::ExportNamedDeclaration(ast::ExportNamedDeclaration {
                     declaration,
                     specifiers,
                     source,
                     export_kind,
-                },
+                }),
             }
           )
         }
@@ -1069,10 +1069,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ExportSpecifier {
+                kind: ast::NodeKind::ExportSpecifier(ast::ExportSpecifier {
                     exported,
                     local,
-                },
+                }),
             }
           )
         }
@@ -1081,9 +1081,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ExportNamespaceSpecifier {
+                kind: ast::NodeKind::ExportNamespaceSpecifier(ast::ExportNamespaceSpecifier {
                     exported,
-                },
+                }),
             }
           )
         }
@@ -1092,9 +1092,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ExportDefaultDeclaration {
+                kind: ast::NodeKind::ExportDefaultDeclaration(ast::ExportDefaultDeclaration {
                     declaration,
-                },
+                }),
             }
           )
         }
@@ -1104,10 +1104,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ExportAllDeclaration {
+                kind: ast::NodeKind::ExportAllDeclaration(ast::ExportAllDeclaration {
                     source,
                     export_kind,
-                },
+                }),
             }
           )
         }
@@ -1117,10 +1117,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ObjectPattern {
+                kind: ast::NodeKind::ObjectPattern(ast::ObjectPattern {
                     properties,
                     type_annotation,
-                },
+                }),
             }
           )
         }
@@ -1130,10 +1130,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ArrayPattern {
+                kind: ast::NodeKind::ArrayPattern(ast::ArrayPattern {
                     elements,
                     type_annotation,
-                },
+                }),
             }
           )
         }
@@ -1142,9 +1142,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::RestElement {
+                kind: ast::NodeKind::RestElement(ast::RestElement {
                     argument,
-                },
+                }),
             }
           )
         }
@@ -1154,10 +1154,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::AssignmentPattern {
+                kind: ast::NodeKind::AssignmentPattern(ast::AssignmentPattern {
                     left,
                     right,
-                },
+                }),
             }
           )
         }
@@ -1166,9 +1166,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::JSXIdentifier {
+                kind: ast::NodeKind::JSXIdentifier(ast::JSXIdentifier {
                     name,
-                },
+                }),
             }
           )
         }
@@ -1178,10 +1178,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::JSXMemberExpression {
+                kind: ast::NodeKind::JSXMemberExpression(ast::JSXMemberExpression {
                     object,
                     property,
-                },
+                }),
             }
           )
         }
@@ -1191,10 +1191,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::JSXNamespacedName {
+                kind: ast::NodeKind::JSXNamespacedName(ast::JSXNamespacedName {
                     namespace,
                     name,
-                },
+                }),
             }
           )
         }
@@ -1202,8 +1202,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::JSXEmptyExpression {
-                },
+                kind: ast::NodeKind::JSXEmptyExpression(ast::JSXEmptyExpression {
+                }),
             }
           )
         }
@@ -1212,9 +1212,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::JSXExpressionContainer {
+                kind: ast::NodeKind::JSXExpressionContainer(ast::JSXExpressionContainer {
                     expression,
-                },
+                }),
             }
           )
         }
@@ -1223,9 +1223,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::JSXSpreadChild {
+                kind: ast::NodeKind::JSXSpreadChild(ast::JSXSpreadChild {
                     expression,
-                },
+                }),
             }
           )
         }
@@ -1236,11 +1236,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::JSXOpeningElement {
+                kind: ast::NodeKind::JSXOpeningElement(ast::JSXOpeningElement {
                     name,
                     attributes,
                     self_closing,
-                },
+                }),
             }
           )
         }
@@ -1249,9 +1249,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::JSXClosingElement {
+                kind: ast::NodeKind::JSXClosingElement(ast::JSXClosingElement {
                     name,
-                },
+                }),
             }
           )
         }
@@ -1261,10 +1261,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::JSXAttribute {
+                kind: ast::NodeKind::JSXAttribute(ast::JSXAttribute {
                     name,
                     value,
-                },
+                }),
             }
           )
         }
@@ -1273,9 +1273,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::JSXSpreadAttribute {
+                kind: ast::NodeKind::JSXSpreadAttribute(ast::JSXSpreadAttribute {
                     argument,
-                },
+                }),
             }
           )
         }
@@ -1285,10 +1285,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::JSXText {
+                kind: ast::NodeKind::JSXText(ast::JSXText {
                     value,
                     raw,
-                },
+                }),
             }
           )
         }
@@ -1299,11 +1299,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::JSXElement {
+                kind: ast::NodeKind::JSXElement(ast::JSXElement {
                     opening_element,
                     children,
                     closing_element,
-                },
+                }),
             }
           )
         }
@@ -1314,11 +1314,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::JSXFragment {
+                kind: ast::NodeKind::JSXFragment(ast::JSXFragment {
                     opening_fragment,
                     children,
                     closing_fragment,
-                },
+                }),
             }
           )
         }
@@ -1326,8 +1326,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::JSXOpeningFragment {
-                },
+                kind: ast::NodeKind::JSXOpeningFragment(ast::JSXOpeningFragment {
+                }),
             }
           )
         }
@@ -1335,8 +1335,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::JSXClosingFragment {
-                },
+                kind: ast::NodeKind::JSXClosingFragment(ast::JSXClosingFragment {
+                }),
             }
           )
         }
@@ -1344,8 +1344,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ExistsTypeAnnotation {
-                },
+                kind: ast::NodeKind::ExistsTypeAnnotation(ast::ExistsTypeAnnotation {
+                }),
             }
           )
         }
@@ -1353,8 +1353,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::EmptyTypeAnnotation {
-                },
+                kind: ast::NodeKind::EmptyTypeAnnotation(ast::EmptyTypeAnnotation {
+                }),
             }
           )
         }
@@ -1362,8 +1362,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::StringTypeAnnotation {
-                },
+                kind: ast::NodeKind::StringTypeAnnotation(ast::StringTypeAnnotation {
+                }),
             }
           )
         }
@@ -1371,8 +1371,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::NumberTypeAnnotation {
-                },
+                kind: ast::NodeKind::NumberTypeAnnotation(ast::NumberTypeAnnotation {
+                }),
             }
           )
         }
@@ -1381,9 +1381,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::StringLiteralTypeAnnotation {
+                kind: ast::NodeKind::StringLiteralTypeAnnotation(ast::StringLiteralTypeAnnotation {
                     value,
-                },
+                }),
             }
           )
         }
@@ -1393,10 +1393,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::NumberLiteralTypeAnnotation {
+                kind: ast::NodeKind::NumberLiteralTypeAnnotation(ast::NumberLiteralTypeAnnotation {
                     value,
                     raw,
-                },
+                }),
             }
           )
         }
@@ -1404,8 +1404,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::BooleanTypeAnnotation {
-                },
+                kind: ast::NodeKind::BooleanTypeAnnotation(ast::BooleanTypeAnnotation {
+                }),
             }
           )
         }
@@ -1415,10 +1415,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::BooleanLiteralTypeAnnotation {
+                kind: ast::NodeKind::BooleanLiteralTypeAnnotation(ast::BooleanLiteralTypeAnnotation {
                     value,
                     raw,
-                },
+                }),
             }
           )
         }
@@ -1426,8 +1426,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::NullLiteralTypeAnnotation {
-                },
+                kind: ast::NodeKind::NullLiteralTypeAnnotation(ast::NullLiteralTypeAnnotation {
+                }),
             }
           )
         }
@@ -1435,8 +1435,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::SymbolTypeAnnotation {
-                },
+                kind: ast::NodeKind::SymbolTypeAnnotation(ast::SymbolTypeAnnotation {
+                }),
             }
           )
         }
@@ -1444,8 +1444,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::AnyTypeAnnotation {
-                },
+                kind: ast::NodeKind::AnyTypeAnnotation(ast::AnyTypeAnnotation {
+                }),
             }
           )
         }
@@ -1453,8 +1453,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::MixedTypeAnnotation {
-                },
+                kind: ast::NodeKind::MixedTypeAnnotation(ast::MixedTypeAnnotation {
+                }),
             }
           )
         }
@@ -1462,8 +1462,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::VoidTypeAnnotation {
-                },
+                kind: ast::NodeKind::VoidTypeAnnotation(ast::VoidTypeAnnotation {
+                }),
             }
           )
         }
@@ -1476,13 +1476,13 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::FunctionTypeAnnotation {
+                kind: ast::NodeKind::FunctionTypeAnnotation(ast::FunctionTypeAnnotation {
                     params,
                     this,
                     return_type,
                     rest,
                     type_parameters,
-                },
+                }),
             }
           )
         }
@@ -1493,11 +1493,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::FunctionTypeParam {
+                kind: ast::NodeKind::FunctionTypeParam(ast::FunctionTypeParam {
                     name,
                     type_annotation,
                     optional,
-                },
+                }),
             }
           )
         }
@@ -1506,9 +1506,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::NullableTypeAnnotation {
+                kind: ast::NodeKind::NullableTypeAnnotation(ast::NullableTypeAnnotation {
                     type_annotation,
-                },
+                }),
             }
           )
         }
@@ -1518,10 +1518,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::QualifiedTypeIdentifier {
+                kind: ast::NodeKind::QualifiedTypeIdentifier(ast::QualifiedTypeIdentifier {
                     qualification,
                     id,
-                },
+                }),
             }
           )
         }
@@ -1530,9 +1530,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TypeofTypeAnnotation {
+                kind: ast::NodeKind::TypeofTypeAnnotation(ast::TypeofTypeAnnotation {
                     argument,
-                },
+                }),
             }
           )
         }
@@ -1541,9 +1541,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TupleTypeAnnotation {
+                kind: ast::NodeKind::TupleTypeAnnotation(ast::TupleTypeAnnotation {
                     types,
-                },
+                }),
             }
           )
         }
@@ -1552,9 +1552,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ArrayTypeAnnotation {
+                kind: ast::NodeKind::ArrayTypeAnnotation(ast::ArrayTypeAnnotation {
                     element_type,
-                },
+                }),
             }
           )
         }
@@ -1563,9 +1563,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::UnionTypeAnnotation {
+                kind: ast::NodeKind::UnionTypeAnnotation(ast::UnionTypeAnnotation {
                     types,
-                },
+                }),
             }
           )
         }
@@ -1574,9 +1574,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::IntersectionTypeAnnotation {
+                kind: ast::NodeKind::IntersectionTypeAnnotation(ast::IntersectionTypeAnnotation {
                     types,
-                },
+                }),
             }
           )
         }
@@ -1586,10 +1586,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::GenericTypeAnnotation {
+                kind: ast::NodeKind::GenericTypeAnnotation(ast::GenericTypeAnnotation {
                     id,
                     type_parameters,
-                },
+                }),
             }
           )
         }
@@ -1599,10 +1599,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::IndexedAccessType {
+                kind: ast::NodeKind::IndexedAccessType(ast::IndexedAccessType {
                     object_type,
                     index_type,
-                },
+                }),
             }
           )
         }
@@ -1613,11 +1613,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::OptionalIndexedAccessType {
+                kind: ast::NodeKind::OptionalIndexedAccessType(ast::OptionalIndexedAccessType {
                     object_type,
                     index_type,
                     optional,
-                },
+                }),
             }
           )
         }
@@ -1627,10 +1627,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::InterfaceTypeAnnotation {
+                kind: ast::NodeKind::InterfaceTypeAnnotation(ast::InterfaceTypeAnnotation {
                     extends,
                     body,
-                },
+                }),
             }
           )
         }
@@ -1641,11 +1641,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TypeAlias {
+                kind: ast::NodeKind::TypeAlias(ast::TypeAlias {
                     id,
                     type_parameters,
                     right,
-                },
+                }),
             }
           )
         }
@@ -1657,12 +1657,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::OpaqueType {
+                kind: ast::NodeKind::OpaqueType(ast::OpaqueType {
                     id,
                     type_parameters,
                     impltype,
                     supertype,
-                },
+                }),
             }
           )
         }
@@ -1674,12 +1674,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::InterfaceDeclaration {
+                kind: ast::NodeKind::InterfaceDeclaration(ast::InterfaceDeclaration {
                     id,
                     type_parameters,
                     extends,
                     body,
-                },
+                }),
             }
           )
         }
@@ -1690,11 +1690,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::DeclareTypeAlias {
+                kind: ast::NodeKind::DeclareTypeAlias(ast::DeclareTypeAlias {
                     id,
                     type_parameters,
                     right,
-                },
+                }),
             }
           )
         }
@@ -1706,12 +1706,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::DeclareOpaqueType {
+                kind: ast::NodeKind::DeclareOpaqueType(ast::DeclareOpaqueType {
                     id,
                     type_parameters,
                     impltype,
                     supertype,
-                },
+                }),
             }
           )
         }
@@ -1723,12 +1723,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::DeclareInterface {
+                kind: ast::NodeKind::DeclareInterface(ast::DeclareInterface {
                     id,
                     type_parameters,
                     extends,
                     body,
-                },
+                }),
             }
           )
         }
@@ -1742,14 +1742,14 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::DeclareClass {
+                kind: ast::NodeKind::DeclareClass(ast::DeclareClass {
                     id,
                     type_parameters,
                     extends,
                     implements,
                     mixins,
                     body,
-                },
+                }),
             }
           )
         }
@@ -1759,10 +1759,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::DeclareFunction {
+                kind: ast::NodeKind::DeclareFunction(ast::DeclareFunction {
                     id,
                     predicate,
-                },
+                }),
             }
           )
         }
@@ -1771,9 +1771,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::DeclareVariable {
+                kind: ast::NodeKind::DeclareVariable(ast::DeclareVariable {
                     id,
-                },
+                }),
             }
           )
         }
@@ -1785,12 +1785,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::DeclareExportDeclaration {
+                kind: ast::NodeKind::DeclareExportDeclaration(ast::DeclareExportDeclaration {
                     declaration,
                     specifiers,
                     source,
                     default,
-                },
+                }),
             }
           )
         }
@@ -1799,9 +1799,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::DeclareExportAllDeclaration {
+                kind: ast::NodeKind::DeclareExportAllDeclaration(ast::DeclareExportAllDeclaration {
                     source,
-                },
+                }),
             }
           )
         }
@@ -1812,11 +1812,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::DeclareModule {
+                kind: ast::NodeKind::DeclareModule(ast::DeclareModule {
                     id,
                     body,
                     kind,
-                },
+                }),
             }
           )
         }
@@ -1825,9 +1825,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::DeclareModuleExports {
+                kind: ast::NodeKind::DeclareModuleExports(ast::DeclareModuleExports {
                     type_annotation,
-                },
+                }),
             }
           )
         }
@@ -1837,10 +1837,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::InterfaceExtends {
+                kind: ast::NodeKind::InterfaceExtends(ast::InterfaceExtends {
                     id,
                     type_parameters,
-                },
+                }),
             }
           )
         }
@@ -1850,10 +1850,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ClassImplements {
+                kind: ast::NodeKind::ClassImplements(ast::ClassImplements {
                     id,
                     type_parameters,
-                },
+                }),
             }
           )
         }
@@ -1862,9 +1862,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TypeAnnotation {
+                kind: ast::NodeKind::TypeAnnotation(ast::TypeAnnotation {
                     type_annotation,
-                },
+                }),
             }
           )
         }
@@ -1878,14 +1878,14 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ObjectTypeAnnotation {
+                kind: ast::NodeKind::ObjectTypeAnnotation(ast::ObjectTypeAnnotation {
                     properties,
                     indexers,
                     call_properties,
                     internal_slots,
                     inexact,
                     exact,
-                },
+                }),
             }
           )
         }
@@ -1901,7 +1901,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ObjectTypeProperty {
+                kind: ast::NodeKind::ObjectTypeProperty(ast::ObjectTypeProperty {
                     key,
                     value,
                     method,
@@ -1910,7 +1910,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
                     proto,
                     variance,
                     kind,
-                },
+                }),
             }
           )
         }
@@ -1919,9 +1919,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ObjectTypeSpreadProperty {
+                kind: ast::NodeKind::ObjectTypeSpreadProperty(ast::ObjectTypeSpreadProperty {
                     argument,
-                },
+                }),
             }
           )
         }
@@ -1934,13 +1934,13 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ObjectTypeInternalSlot {
+                kind: ast::NodeKind::ObjectTypeInternalSlot(ast::ObjectTypeInternalSlot {
                     id,
                     value,
                     optional,
                     is_static,
                     method,
-                },
+                }),
             }
           )
         }
@@ -1950,10 +1950,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ObjectTypeCallProperty {
+                kind: ast::NodeKind::ObjectTypeCallProperty(ast::ObjectTypeCallProperty {
                     value,
                     is_static,
-                },
+                }),
             }
           )
         }
@@ -1966,13 +1966,13 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::ObjectTypeIndexer {
+                kind: ast::NodeKind::ObjectTypeIndexer(ast::ObjectTypeIndexer {
                     id,
                     key,
                     value,
                     is_static,
                     variance,
-                },
+                }),
             }
           )
         }
@@ -1981,9 +1981,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::Variance {
+                kind: ast::NodeKind::Variance(ast::Variance {
                     kind,
-                },
+                }),
             }
           )
         }
@@ -1992,9 +1992,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TypeParameterDeclaration {
+                kind: ast::NodeKind::TypeParameterDeclaration(ast::TypeParameterDeclaration {
                     params,
-                },
+                }),
             }
           )
         }
@@ -2006,12 +2006,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TypeParameter {
+                kind: ast::NodeKind::TypeParameter(ast::TypeParameter {
                     name,
                     bound,
                     variance,
                     default,
-                },
+                }),
             }
           )
         }
@@ -2020,9 +2020,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TypeParameterInstantiation {
+                kind: ast::NodeKind::TypeParameterInstantiation(ast::TypeParameterInstantiation {
                     params,
-                },
+                }),
             }
           )
         }
@@ -2032,10 +2032,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TypeCastExpression {
+                kind: ast::NodeKind::TypeCastExpression(ast::TypeCastExpression {
                     expression,
                     type_annotation,
-                },
+                }),
             }
           )
         }
@@ -2043,8 +2043,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::InferredPredicate {
-                },
+                kind: ast::NodeKind::InferredPredicate(ast::InferredPredicate {
+                }),
             }
           )
         }
@@ -2053,9 +2053,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::DeclaredPredicate {
+                kind: ast::NodeKind::DeclaredPredicate(ast::DeclaredPredicate {
                     value,
-                },
+                }),
             }
           )
         }
@@ -2065,10 +2065,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::EnumDeclaration {
+                kind: ast::NodeKind::EnumDeclaration(ast::EnumDeclaration {
                     id,
                     body,
-                },
+                }),
             }
           )
         }
@@ -2079,11 +2079,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::EnumStringBody {
+                kind: ast::NodeKind::EnumStringBody(ast::EnumStringBody {
                     members,
                     explicit_type,
                     has_unknown_members,
-                },
+                }),
             }
           )
         }
@@ -2094,11 +2094,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::EnumNumberBody {
+                kind: ast::NodeKind::EnumNumberBody(ast::EnumNumberBody {
                     members,
                     explicit_type,
                     has_unknown_members,
-                },
+                }),
             }
           )
         }
@@ -2109,11 +2109,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::EnumBooleanBody {
+                kind: ast::NodeKind::EnumBooleanBody(ast::EnumBooleanBody {
                     members,
                     explicit_type,
                     has_unknown_members,
-                },
+                }),
             }
           )
         }
@@ -2123,10 +2123,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::EnumSymbolBody {
+                kind: ast::NodeKind::EnumSymbolBody(ast::EnumSymbolBody {
                     members,
                     has_unknown_members,
-                },
+                }),
             }
           )
         }
@@ -2135,9 +2135,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::EnumDefaultedMember {
+                kind: ast::NodeKind::EnumDefaultedMember(ast::EnumDefaultedMember {
                     id,
-                },
+                }),
             }
           )
         }
@@ -2147,10 +2147,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::EnumStringMember {
+                kind: ast::NodeKind::EnumStringMember(ast::EnumStringMember {
                     id,
                     init,
-                },
+                }),
             }
           )
         }
@@ -2160,10 +2160,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::EnumNumberMember {
+                kind: ast::NodeKind::EnumNumberMember(ast::EnumNumberMember {
                     id,
                     init,
-                },
+                }),
             }
           )
         }
@@ -2173,10 +2173,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::EnumBooleanMember {
+                kind: ast::NodeKind::EnumBooleanMember(ast::EnumBooleanMember {
                     id,
                     init,
-                },
+                }),
             }
           )
         }
@@ -2185,9 +2185,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSTypeAnnotation {
+                kind: ast::NodeKind::TSTypeAnnotation(ast::TSTypeAnnotation {
                     type_annotation,
-                },
+                }),
             }
           )
         }
@@ -2195,8 +2195,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSAnyKeyword {
-                },
+                kind: ast::NodeKind::TSAnyKeyword(ast::TSAnyKeyword {
+                }),
             }
           )
         }
@@ -2204,8 +2204,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSNumberKeyword {
-                },
+                kind: ast::NodeKind::TSNumberKeyword(ast::TSNumberKeyword {
+                }),
             }
           )
         }
@@ -2213,8 +2213,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSBooleanKeyword {
-                },
+                kind: ast::NodeKind::TSBooleanKeyword(ast::TSBooleanKeyword {
+                }),
             }
           )
         }
@@ -2222,8 +2222,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSStringKeyword {
-                },
+                kind: ast::NodeKind::TSStringKeyword(ast::TSStringKeyword {
+                }),
             }
           )
         }
@@ -2231,8 +2231,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSSymbolKeyword {
-                },
+                kind: ast::NodeKind::TSSymbolKeyword(ast::TSSymbolKeyword {
+                }),
             }
           )
         }
@@ -2240,8 +2240,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSVoidKeyword {
-                },
+                kind: ast::NodeKind::TSVoidKeyword(ast::TSVoidKeyword {
+                }),
             }
           )
         }
@@ -2249,8 +2249,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSThisType {
-                },
+                kind: ast::NodeKind::TSThisType(ast::TSThisType {
+                }),
             }
           )
         }
@@ -2259,9 +2259,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSLiteralType {
+                kind: ast::NodeKind::TSLiteralType(ast::TSLiteralType {
                     literal,
-                },
+                }),
             }
           )
         }
@@ -2271,10 +2271,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSIndexedAccessType {
+                kind: ast::NodeKind::TSIndexedAccessType(ast::TSIndexedAccessType {
                     object_type,
                     index_type,
-                },
+                }),
             }
           )
         }
@@ -2283,9 +2283,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSArrayType {
+                kind: ast::NodeKind::TSArrayType(ast::TSArrayType {
                     element_type,
-                },
+                }),
             }
           )
         }
@@ -2295,10 +2295,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSTypeReference {
+                kind: ast::NodeKind::TSTypeReference(ast::TSTypeReference {
                     type_name,
                     type_parameters,
-                },
+                }),
             }
           )
         }
@@ -2308,10 +2308,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSQualifiedName {
+                kind: ast::NodeKind::TSQualifiedName(ast::TSQualifiedName {
                     left,
                     right,
-                },
+                }),
             }
           )
         }
@@ -2322,11 +2322,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSFunctionType {
+                kind: ast::NodeKind::TSFunctionType(ast::TSFunctionType {
                     params,
                     return_type,
                     type_parameters,
-                },
+                }),
             }
           )
         }
@@ -2337,11 +2337,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSConstructorType {
+                kind: ast::NodeKind::TSConstructorType(ast::TSConstructorType {
                     params,
                     return_type,
                     type_parameters,
-                },
+                }),
             }
           )
         }
@@ -2351,10 +2351,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSTypePredicate {
+                kind: ast::NodeKind::TSTypePredicate(ast::TSTypePredicate {
                     parameter_name,
                     type_annotation,
-                },
+                }),
             }
           )
         }
@@ -2363,9 +2363,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSTupleType {
+                kind: ast::NodeKind::TSTupleType(ast::TSTupleType {
                     element_types,
-                },
+                }),
             }
           )
         }
@@ -2375,10 +2375,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSTypeAssertion {
+                kind: ast::NodeKind::TSTypeAssertion(ast::TSTypeAssertion {
                     type_annotation,
                     expression,
-                },
+                }),
             }
           )
         }
@@ -2388,10 +2388,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSAsExpression {
+                kind: ast::NodeKind::TSAsExpression(ast::TSAsExpression {
                     expression,
                     type_annotation,
-                },
+                }),
             }
           )
         }
@@ -2404,13 +2404,13 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSParameterProperty {
+                kind: ast::NodeKind::TSParameterProperty(ast::TSParameterProperty {
                     parameter,
                     accessibility,
                     readonly,
                     is_static,
                     export,
-                },
+                }),
             }
           )
         }
@@ -2421,11 +2421,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSTypeAliasDeclaration {
+                kind: ast::NodeKind::TSTypeAliasDeclaration(ast::TSTypeAliasDeclaration {
                     id,
                     type_parameters,
                     type_annotation,
-                },
+                }),
             }
           )
         }
@@ -2437,12 +2437,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSInterfaceDeclaration {
+                kind: ast::NodeKind::TSInterfaceDeclaration(ast::TSInterfaceDeclaration {
                     id,
                     body,
                     extends,
                     type_parameters,
-                },
+                }),
             }
           )
         }
@@ -2452,10 +2452,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSInterfaceHeritage {
+                kind: ast::NodeKind::TSInterfaceHeritage(ast::TSInterfaceHeritage {
                     expression,
                     type_parameters,
-                },
+                }),
             }
           )
         }
@@ -2464,9 +2464,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSInterfaceBody {
+                kind: ast::NodeKind::TSInterfaceBody(ast::TSInterfaceBody {
                     body,
-                },
+                }),
             }
           )
         }
@@ -2476,10 +2476,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSEnumDeclaration {
+                kind: ast::NodeKind::TSEnumDeclaration(ast::TSEnumDeclaration {
                     id,
                     members,
-                },
+                }),
             }
           )
         }
@@ -2489,10 +2489,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSEnumMember {
+                kind: ast::NodeKind::TSEnumMember(ast::TSEnumMember {
                     id,
                     initializer,
-                },
+                }),
             }
           )
         }
@@ -2502,10 +2502,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSModuleDeclaration {
+                kind: ast::NodeKind::TSModuleDeclaration(ast::TSModuleDeclaration {
                     id,
                     body,
-                },
+                }),
             }
           )
         }
@@ -2514,9 +2514,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSModuleBlock {
+                kind: ast::NodeKind::TSModuleBlock(ast::TSModuleBlock {
                     body,
-                },
+                }),
             }
           )
         }
@@ -2526,10 +2526,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSModuleMember {
+                kind: ast::NodeKind::TSModuleMember(ast::TSModuleMember {
                     id,
                     initializer,
-                },
+                }),
             }
           )
         }
@@ -2538,9 +2538,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSTypeParameterDeclaration {
+                kind: ast::NodeKind::TSTypeParameterDeclaration(ast::TSTypeParameterDeclaration {
                     params,
-                },
+                }),
             }
           )
         }
@@ -2551,11 +2551,11 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSTypeParameter {
+                kind: ast::NodeKind::TSTypeParameter(ast::TSTypeParameter {
                     name,
                     constraint,
                     default,
-                },
+                }),
             }
           )
         }
@@ -2564,9 +2564,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSTypeParameterInstantiation {
+                kind: ast::NodeKind::TSTypeParameterInstantiation(ast::TSTypeParameterInstantiation {
                     params,
-                },
+                }),
             }
           )
         }
@@ -2575,9 +2575,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSUnionType {
+                kind: ast::NodeKind::TSUnionType(ast::TSUnionType {
                     types,
-                },
+                }),
             }
           )
         }
@@ -2586,9 +2586,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSIntersectionType {
+                kind: ast::NodeKind::TSIntersectionType(ast::TSIntersectionType {
                     types,
-                },
+                }),
             }
           )
         }
@@ -2597,9 +2597,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSTypeQuery {
+                kind: ast::NodeKind::TSTypeQuery(ast::TSTypeQuery {
                     expr_name,
-                },
+                }),
             }
           )
         }
@@ -2611,12 +2611,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSConditionalType {
+                kind: ast::NodeKind::TSConditionalType(ast::TSConditionalType {
                     extends_type,
                     check_type,
                     true_type,
                     false_t_ype,
-                },
+                }),
             }
           )
         }
@@ -2625,9 +2625,9 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSTypeLiteral {
+                kind: ast::NodeKind::TSTypeLiteral(ast::TSTypeLiteral {
                     members,
-                },
+                }),
             }
           )
         }
@@ -2643,7 +2643,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSPropertySignature {
+                kind: ast::NodeKind::TSPropertySignature(ast::TSPropertySignature {
                     key,
                     type_annotation,
                     initializer,
@@ -2652,7 +2652,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
                     readonly,
                     is_static,
                     export,
-                },
+                }),
             }
           )
         }
@@ -2664,12 +2664,12 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSMethodSignature {
+                kind: ast::NodeKind::TSMethodSignature(ast::TSMethodSignature {
                     key,
                     params,
                     return_type,
                     computed,
-                },
+                }),
             }
           )
         }
@@ -2679,10 +2679,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSIndexSignature {
+                kind: ast::NodeKind::TSIndexSignature(ast::TSIndexSignature {
                     parameters,
                     type_annotation,
-                },
+                }),
             }
           )
         }
@@ -2692,10 +2692,10 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           cvt.ast_context.alloc(
             ast::Node {
                 range,
-                kind: ast::NodeKind::TSCallSignatureDeclaration {
+                kind: ast::NodeKind::TSCallSignatureDeclaration(ast::TSCallSignatureDeclaration {
                     params,
                     return_type,
-                },
+                }),
             }
           )
         }

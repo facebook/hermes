@@ -64,23 +64,22 @@ fn test_roundtrip_flow(src1: &str) {
 
 #[test]
 fn test_literals() {
-    use NodeKind::*;
     let mut ctx = Context::new();
-    let null = make_node!(ctx, NullLiteral);
+    let null = make_node!(ctx, NodeKind::NullLiteral(NullLiteral {}));
     assert_eq!(do_gen(&ctx, null, gen_js::Pretty::Yes).trim(), "null");
     let string = make_node!(
         ctx,
-        StringLiteral {
+        NodeKind::StringLiteral(StringLiteral {
             value: juno::ast::NodeString {
                 str: vec!['A' as u16, 0x1234u16, '\t' as u16],
             }
-        },
+        }),
     );
     assert_eq!(
         do_gen(&ctx, string, gen_js::Pretty::Yes).trim(),
         r#""A\u1234\t""#,
     );
-    let number = make_node!(ctx, NumericLiteral { value: 1.0 });
+    let number = make_node!(ctx, NodeKind::NumericLiteral(NumericLiteral { value: 1.0 }));
     assert_eq!(do_gen(&ctx, number, gen_js::Pretty::Yes).trim(), "1");
 
     test_roundtrip("1");
@@ -117,17 +116,16 @@ fn test_identifier() {
 
 #[test]
 fn test_binop() {
-    use NodeKind::*;
     let mut ctx = Context::new();
-    let left = make_node!(ctx, NullLiteral);
-    let right = make_node!(ctx, NullLiteral);
+    let left = make_node!(ctx, NodeKind::NullLiteral(NullLiteral {}));
+    let right = make_node!(ctx, NodeKind::NullLiteral(NullLiteral {}));
     let binary = make_node!(
         ctx,
-        BinaryExpression {
+        NodeKind::BinaryExpression(BinaryExpression {
             left,
             operator: BinaryExpressionOperator::Plus,
             right,
-        },
+        }),
     );
     assert_eq!(
         do_gen(&ctx, binary, gen_js::Pretty::Yes).trim(),
@@ -408,24 +406,29 @@ fn test_export() {
 
 #[test]
 fn test_types() {
-    use NodeKind::*;
     let mut ctx = Context::new();
     let union_ty = make_node!(
         ctx,
-        UnionTypeAnnotation {
+        NodeKind::UnionTypeAnnotation(UnionTypeAnnotation {
             types: vec![
-                make_node!(ctx, NumberTypeAnnotation),
+                make_node!(ctx, NodeKind::NumberTypeAnnotation(NumberTypeAnnotation {})),
                 make_node!(
                     ctx,
-                    IntersectionTypeAnnotation {
+                    NodeKind::IntersectionTypeAnnotation(IntersectionTypeAnnotation {
                         types: vec![
-                            make_node!(ctx, BooleanTypeAnnotation),
-                            make_node!(ctx, StringTypeAnnotation)
+                            make_node!(
+                                ctx,
+                                NodeKind::BooleanTypeAnnotation(BooleanTypeAnnotation {})
+                            ),
+                            make_node!(
+                                ctx,
+                                NodeKind::StringTypeAnnotation(StringTypeAnnotation {})
+                            )
                         ],
-                    },
+                    }),
                 )
             ],
-        },
+        }),
     );
     assert_eq!(
         do_gen(&ctx, union_ty, gen_js::Pretty::Yes).trim(),

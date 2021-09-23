@@ -6,10 +6,10 @@
  */
 
 use super::{
-    AssignmentExpressionOperator, BinaryExpressionOperator, Context, ExportKind, ImportKind,
-    LogicalExpressionOperator, MethodDefinitionKind, NodeKind, NodeLabel, NodeList, NodePtr,
-    NodeString, NodeVariant, PropertyKind, UnaryExpressionOperator, UpdateExpressionOperator,
-    VariableDeclarationKind, Visitor,
+    kind::*, AssignmentExpressionOperator, BinaryExpressionOperator, Context, ExportKind,
+    ImportKind, LogicalExpressionOperator, MethodDefinitionKind, NodeKind, NodeLabel, NodeList,
+    NodePtr, NodeString, NodeVariant, PropertyKind, UnaryExpressionOperator,
+    UpdateExpressionOperator, VariableDeclarationKind, Visitor,
 };
 
 macro_rules! gen_validate_fn {
@@ -29,7 +29,7 @@ macro_rules! gen_validate_fn {
             fn validate_node(ctx: &Context, node: NodePtr) -> Result<(), ValidationError> {
                 match &node.get(ctx).kind {
                     $(
-                        NodeKind::$kind $({$($field),*})? => {
+                        NodeKind::$kind($kind {$($($field),*)?}) => {
                             // Run the validation for each child.
                             // Use `true &&` to make it work when there's no children.
                             $($(
@@ -153,19 +153,18 @@ fn instanceof(subtype: NodeVariant, supertype: NodeVariant) -> bool {
 /// Custom validation function for constraints which can't be expressed
 /// using just the inheritance structure in NodeKind.
 fn validate_custom(ctx: &Context, node: NodePtr) -> Result<(), ValidationError> {
-    use NodeKind::*;
     match &node.get(ctx).kind {
-        MemberExpression {
+        NodeKind::MemberExpression(MemberExpression {
             property,
             object: _,
             computed,
-        }
-        | OptionalMemberExpression {
+        })
+        | NodeKind::OptionalMemberExpression(OptionalMemberExpression {
             property,
             object: _,
             computed,
             optional: _,
-        } => {
+        }) => {
             if *computed {
                 property.validate_child(ctx, node, &[NodeVariant::Expression])?;
             } else {
@@ -173,14 +172,14 @@ fn validate_custom(ctx: &Context, node: NodePtr) -> Result<(), ValidationError> 
             }
         }
 
-        Property {
+        NodeKind::Property(Property {
             key,
             value,
             kind,
             computed,
             method,
             shorthand,
-        } => {
+        }) => {
             if *computed && *shorthand {
                 return Err(ValidationError {
                     node,

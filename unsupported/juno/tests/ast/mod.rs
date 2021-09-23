@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use juno::ast::{Context, Node, NodeKind, NodePtr, Visitor};
+use juno::ast::*;
 
 /// Create a node with a default source range for testing.
 /// Use a macro to make it easier to construct nested macros
@@ -31,29 +31,34 @@ mod validate;
 #[test]
 #[allow(clippy::float_cmp)]
 fn test_visit() {
-    use NodeKind::*;
     let mut ctx = Context::new();
     // Dummy range, we don't care about ranges in this test.
     let ast = make_node!(
         ctx,
-        BlockStatement {
+        NodeKind::BlockStatement(BlockStatement {
             body: vec![
                 make_node!(
                     ctx,
-                    ExpressionStatement {
-                        expression: make_node!(ctx, NumericLiteral { value: 1.0 },),
+                    NodeKind::ExpressionStatement(ExpressionStatement {
+                        expression: make_node!(
+                            ctx,
+                            NodeKind::NumericLiteral(NumericLiteral { value: 1.0 }),
+                        ),
                         directive: None,
-                    },
+                    }),
                 ),
                 make_node!(
                     ctx,
-                    ExpressionStatement {
-                        expression: make_node!(ctx, NumericLiteral { value: 2.0 },),
+                    NodeKind::ExpressionStatement(ExpressionStatement {
+                        expression: make_node!(
+                            ctx,
+                            NodeKind::NumericLiteral(NumericLiteral { value: 2.0 }),
+                        ),
                         directive: None,
-                    },
+                    }),
                 ),
             ],
-        },
+        }),
     );
 
     // Accumulates the numbers found in the AST.
@@ -63,10 +68,10 @@ fn test_visit() {
 
     impl Visitor for NumberFinder {
         fn call(&mut self, ctx: &Context, node: NodePtr, parent: Option<NodePtr>) {
-            if let NumericLiteral { value } = &node.get(ctx).kind {
+            if let NodeKind::NumericLiteral(NumericLiteral { value }) = &node.get(ctx).kind {
                 assert!(matches!(
                     parent.unwrap().get(ctx).kind,
-                    ExpressionStatement { .. }
+                    NodeKind::ExpressionStatement(ExpressionStatement { .. })
                 ));
                 self.acc.push(*value);
             }

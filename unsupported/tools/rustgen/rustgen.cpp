@@ -444,14 +444,14 @@ static void genConvert() {
                     "            ast::Node {\n"
                     "                range,\n"
                     "                kind: ast::NodeKind::"
-                 << cls.name << " {\n";
+                 << cls.name << "(ast::" << cls.name << " {\n";
 
     for (const auto &fld : cls.fields) {
       // Shorthand initialization of each field.
       llvh::outs() << "                    " << fld.rustName() << ",\n";
     }
 
-    llvh::outs() << "                },\n" // kind
+    llvh::outs() << "                }),\n" // kind
                     "            }\n" // Node
                     "          )\n" // NodePtr
                     "        }\n"; // match block
