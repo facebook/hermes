@@ -229,7 +229,7 @@ void SourceMapGenerator::outputAsJSONImpl(llvh::raw_ostream &OS) const {
     json.openDict();
     for (const auto &entry : functionOffsets_) {
       const auto &segmentFunctionOffsets = entry.second;
-      json.emitKey(oscompat::to_string(entry.first));
+      json.emitKey(std::to_string(entry.first));
       json.openArray();
       json.emitValues((llvh::ArrayRef<uint32_t>)segmentFunctionOffsets);
       json.closeArray();

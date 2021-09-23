@@ -7,19 +7,12 @@
 
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 
-#include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
 #include "hermes/FrontEndDefs/Builtins.h"
-#include "hermes/Support/OSCompat.h"
-#include "hermes/Support/UTF8.h"
 
 #include "llvh/ADT/SmallString.h"
 #include "llvh/Support/Format.h"
-#include "llvh/Support/raw_ostream.h"
 
-#include <locale>
 #include <unordered_map>
-
-using hermes::oscompat::to_string;
 
 namespace hermes {
 namespace hbc {
