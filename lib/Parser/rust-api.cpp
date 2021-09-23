@@ -384,14 +384,35 @@ DiagKind toDiagKind(llvh::SourceMgr::DiagKind k) {
   }
 }
 
+struct DataRef {
+  const void *data;
+  size_t length;
+};
+
+template <typename T>
+inline DataRef toDataRef(const T &ref) {
+  return {ref.data(), ref.size()};
+}
+
+/// A coordinate in the input file identified by a 1-based line number and a
+/// 0-based byte offset within that line.
 struct Coord {
   /// 1-based.
-  int line = -1;
+  unsigned line = 0;
   /// 0-based offset from start of line.
-  int offset = -1;
+  unsigned offset = 0;
 
   Coord() = default;
   Coord(int lineNo, int offset) : line(lineNo), offset(offset) {}
+};
+
+/// Result from looking for a line in the input buffer. Contains the 1-based
+/// line number and a reference to the line itself in the buffer.
+struct LineCoord {
+  /// 1-based line number.
+  unsigned lineNo = 0;
+  /// Reference to the line itself, including the EOL, if present.
+  DataRef lineRef;
 };
 
 /// A temporary struct describing an error message, returned to Rust.
@@ -421,16 +442,6 @@ enum class MagicCommentKind : uint32_t {
   SourceUrl = 0,
   SourceMappingUrl = 1,
 };
-
-struct DataRef {
-  const void *data;
-  size_t length;
-};
-
-template <typename T>
-inline DataRef toDataRef(const T &ref) {
-  return {ref.data(), ref.size()};
-}
 
 /// This object contains the entire parser state.
 struct ParserContext {
@@ -557,7 +568,7 @@ hermes_parser_find_location(ParserContext *parserCtx, SMLoc loc, Coord *res) {
   SourceErrorManager::SourceCoords coords;
   if (!parserCtx->context_.getSourceErrorManager().findBufferLineAndLoc(
           loc, coords)) {
-    res->line = res->offset = -1;
+    res->line = res->offset = 0;
     return false;
   }
 
@@ -566,10 +577,37 @@ hermes_parser_find_location(ParserContext *parserCtx, SMLoc loc, Coord *res) {
   return true;
 }
 
+/// Return the line surrounding the specified location \p loc. This method
+/// allows the caller to calculate the location column taking UTF-8 into
+/// consideration and to perform its own location caching.
+extern "C" bool hermes_parser_find_line(
+    const ParserContext *parserCtx,
+    SMLoc loc,
+    LineCoord *res) {
+  auto coord =
+      parserCtx->context_.getSourceErrorManager().findBufferAndLine(loc);
+  if (!coord)
+    return false;
+
+  res->lineNo = coord->lineNo;
+  res->lineRef = toDataRef(coord->lineRef);
+  return true;
+}
+
+/// Return a reference to the specified (1-based) line.
+/// If the line is greater than the last line in the buffer, an empty
+/// reference is returned.
+extern "C" DataRef hermes_parser_get_line_ref(
+    const ParserContext *parserCtx,
+    unsigned line) {
+  return toDataRef(parserCtx->context_.getSourceErrorManager().getLineRef(
+      parserCtx->getBufferId(), line));
+}
+
 /// Note that we guarantee that the result is valid UTF-8 because we only
 /// return it if there were no parse errors.
 extern "C" DataRef hermes_parser_get_magic_comment(
-    ParserContext *parserCtx,
+    const ParserContext *parserCtx,
     MagicCommentKind kind) {
   // Make sure that we have successfully parsed the input. (The magic comments
   // could be set even if we didn't, but in that case are not guaranteed to be

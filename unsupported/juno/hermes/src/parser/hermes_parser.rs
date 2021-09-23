@@ -10,7 +10,7 @@ use crate::utf::utf8_with_surrogates_to_string_lossy;
 use std::fmt::Formatter;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
-use std::os::raw::{c_char, c_int};
+use std::os::raw::{c_char, c_uint};
 use support::NullTerminatedBuf;
 
 #[repr(u8)]
@@ -54,15 +54,6 @@ impl Default for ParserFlags {
     }
 }
 
-#[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Coord {
-    /// 1-based line.
-    pub line: c_int,
-    /// 0-based offset from start of line.
-    pub offset: c_int,
-}
-
 #[derive(Clone, Copy, Debug)]
 #[repr(u32)]
 pub enum DiagKind {
@@ -70,6 +61,59 @@ pub enum DiagKind {
     Warning,
     Remark,
     Note,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct DataRef<'a, T: 'a> {
+    data: *const T,
+    length: usize,
+    _marker: PhantomData<&'a T>,
+}
+
+impl<'a, T> DataRef<'a, T> {
+    pub fn is_empty(&self) -> bool {
+        self.length == 0
+    }
+    pub fn as_slice(&self) -> &'a [T] {
+        if self.data.is_null() {
+            &[]
+        } else {
+            unsafe { std::slice::from_raw_parts(self.data, self.length) }
+        }
+    }
+
+    // Note that the Clippy warning is bogus since we aren't deferencing a pointer.
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    pub fn try_offset_from(&self, ptr: *const T) -> Option<usize> {
+        unsafe {
+            if ptr >= self.data && ptr < self.data.add(self.length) {
+                Some(ptr.offset_from(self.data) as usize)
+            } else {
+                None
+            }
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Coord {
+    /// 1-based line.
+    pub line: c_uint,
+    /// 0-based offset from start of line.
+    pub offset: c_uint,
+}
+
+/// Result from looking for a line in the input buffer. Contains the 1-based
+/// line number and a reference to the line itself in the buffer.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct LineCoord<'a> {
+    /// 1-based line number.
+    pub line_no: c_uint,
+    /// Reference to the line itself, including the EOL, if present.
+    pub line_ref: DataRef<'a, u8>,
 }
 
 #[derive(Clone, Copy)]
@@ -106,27 +150,6 @@ pub enum MagicCommentKind {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
-struct DataRef<'a, T: 'a> {
-    data: *const T,
-    length: usize,
-    _marker: PhantomData<&'a T>,
-}
-
-impl<'a, T> DataRef<'a, T> {
-    pub fn is_empty(&self) -> bool {
-        self.length == 0
-    }
-    pub fn as_slice(&self) -> &'a [T] {
-        if self.data.is_null() {
-            &[]
-        } else {
-            unsafe { std::slice::from_raw_parts(self.data, self.length) }
-        }
-    }
-}
-
-#[repr(C)]
 struct ParserContext {
     _unused: i32,
 }
@@ -148,9 +171,24 @@ extern "C" {
         loc: SMLoc,
         res: *mut Coord,
     ) -> bool;
+    /// Return the line surrounding the specified location \p loc. This method
+    /// allows the caller to calculate the location column taking UTF-8 into
+    /// consideration and to perform its own location caching.
+    fn hermes_parser_find_line(
+        parser_ctx: *const ParserContext,
+        loc: SMLoc,
+        res: *mut LineCoord,
+    ) -> bool;
+    /// Return a reference to the specified (1-based) line.
+    /// If the line is greater than the last line in the buffer, an empty
+    /// reference is returned.
+    fn hermes_parser_get_line_ref<'a>(
+        parser_ctx: *const ParserContext,
+        line: c_uint,
+    ) -> DataRef<'a, u8>;
     /// Return a magic comment or an empty string. The string is always guaranteed to be valid UTF-8.
     fn hermes_parser_get_magic_comment<'a>(
-        parser_ctx: *mut ParserContext,
+        parser_ctx: *const ParserContext,
         kind: MagicCommentKind,
     ) -> DataRef<'a, u8>;
     fn hermes_get_node_name(node: NodePtr) -> DataRef<'static, u8>;
@@ -213,6 +251,25 @@ impl HermesParser<'_> {
         } else {
             None
         }
+    }
+
+    /// Find the line surrounding the specified location. This method enables
+    /// the caller to calculate the column taking UTF-8 into consideration and
+    /// to perform its own location caching.
+    pub fn find_line(&self, loc: SMLoc) -> Option<LineCoord> {
+        let mut res = MaybeUninit::<LineCoord>::uninit();
+        if unsafe { hermes_parser_find_line(self.parser_ctx, loc, res.as_mut_ptr()) } {
+            Some(unsafe { res.assume_init() })
+        } else {
+            None
+        }
+    }
+
+    /// Return a reference to the specified (1-based) line.
+    /// If the line is greater than the last line in the buffer, an empty
+    /// reference is returned.
+    pub fn get_line_ref(&self, line: u32) -> DataRef<u8> {
+        unsafe { hermes_parser_get_line_ref(self.parser_ctx, line) }
     }
 
     /// Return the last magic comment of the specified type (each comment overrides the previous
