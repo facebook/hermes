@@ -96,6 +96,16 @@ impl<'a, T> DataRef<'a, T> {
     }
 }
 
+impl<T> Default for DataRef<'_, T> {
+    fn default() -> Self {
+        DataRef {
+            data: std::ptr::null(),
+            length: 0,
+            _marker: Default::default(),
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Coord {

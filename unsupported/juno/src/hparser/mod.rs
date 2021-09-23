@@ -61,10 +61,7 @@ impl ParsedJS<'_> {
 
     /// Create and return an external representation of the AST, or None if there were parse errors.
     pub fn to_ast(&self, file_id: u32) -> Option<ast::NodePtr> {
-        let mut cvt = Converter {
-            hparser: &self.parser,
-            file_id,
-        };
+        let mut cvt = Converter::new(&self.parser, file_id);
 
         self.parser.root().map(|root| convert_ast(&mut cvt, root))
     }

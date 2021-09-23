@@ -8,46 +8,130 @@
 use super::generated_cvt::cvt_node_ptr;
 use crate::ast;
 use hermes::parser::{
-    HermesParser, NodeLabel, NodeLabelOpt, NodeListOptRef, NodeListRef, NodePtr, NodePtrOpt,
-    NodeString, NodeStringOpt, SMRange,
+    DataRef, HermesParser, NodeLabel, NodeLabelOpt, NodeListOptRef, NodeListRef, NodePtr,
+    NodePtrOpt, NodeString, NodeStringOpt, SMLoc, SMRange,
 };
-use hermes::utf::{utf8_with_surrogates_to_string, utf8_with_surrogates_to_utf16};
+use hermes::utf::{
+    is_utf8_continuation, utf8_with_surrogates_to_string, utf8_with_surrogates_to_utf16,
+};
+use std::convert::TryFrom;
 use std::str::FromStr;
+
+/// A cache to speed up finding locations. The assumption is that most lookups
+/// happen either in the current or the next source line, which would happen
+/// naturally if we are scanning the source left to right.
+/// If there is a cache hit in the current line, there is no lookup at all -
+/// just quick arithmetic to calculate the column offset. If the hit is in
+/// the next line, we "slide" the cache - the next line becomes the current
+/// one, and we fetch a reference to the next line, which is also an O(1)
+/// operation.
+#[derive(Debug, Default)]
+struct FindLineCache<'a> {
+    /// 1-based line number.
+    line_no: u32,
+    /// The last found line.
+    line_ref: DataRef<'a, u8>,
+    /// The following line.
+    next_line_ref: DataRef<'a, u8>,
+}
 
 /// Converts from Hermes AST to Juno AST
 pub struct Converter<'a> {
     pub hparser: &'a HermesParser<'a>,
     /// The file id to use for the converted coordinates.
     pub file_id: u32,
+
+    /// A cache to speed up finding locations.
+    line_cache: FindLineCache<'a>,
+}
+
+/// Adjust the source location backwards making sure it doesn't point to \r or
+/// in the middle of a utf-8 sequence.
+#[inline]
+fn adjust_source_location(buf: &[u8], mut index: usize) -> usize {
+    // In the very unlikely case that `index` points to a '\r', we skip backwards
+    // until we find another character, while being careful not to fall off the
+    // beginning of the buffer.
+    if buf[index] == b'\r' || is_utf8_continuation(buf[index]) {
+        loop {
+            if index == 0 {
+                // This is highly unlikely but theoretically possible. There were only
+                // '\r' between `index` and the start of the buffer.
+                break;
+            }
+            index -= 1;
+            if !(buf[index] == b'\r' || is_utf8_continuation(buf[index])) {
+                break;
+            }
+        }
+    }
+
+    index
+}
+
+impl FindLineCache<'_> {
+    fn make_source_loc(&self, mut index: usize) -> ast::SourceLoc {
+        index = adjust_source_location(self.line_ref.as_slice(), index);
+        ast::SourceLoc {
+            line: self.line_no,
+            col: u32::try_from(index + 1).unwrap(),
+        }
+    }
 }
 
 impl Converter<'_> {
+    pub fn new<'a>(hparser: &'a HermesParser<'a>, file_id: u32) -> Converter<'a> {
+        Converter {
+            hparser,
+            file_id,
+            line_cache: Default::default(),
+        }
+    }
+
     pub fn smrange(&mut self, smr: SMRange) -> ast::SourceRange {
-        assert!(
-            smr.start.is_valid() && smr.end.is_valid(),
-            "All source range from Hermes parser must be valid"
-        );
-
-        let start = self
-            .hparser
-            .find_coord(smr.start)
-            .expect("Location from Hermes parser cannot be found");
-        let end = self
-            .hparser
-            .find_coord(smr.end.pred())
-            .expect("Location from Hermes parser cannot be found");
-
         ast::SourceRange {
             file: self.file_id,
-            start: ast::SourceLoc {
-                line: start.line as u32,
-                col: start.offset as u32 + 1,
-            },
-            end: ast::SourceLoc {
-                line: end.line as u32,
-                col: end.offset as u32 + 1,
-            },
+            start: self.cvt_smloc(smr.start),
+            end: self.cvt_smloc(smr.end.pred()),
         }
+    }
+
+    /// Convert a SMLoc to ast::SourceLoc using the line_cache. Best cache
+    /// utilization is achieved if locations are always increasing. In this way
+    /// the next location will almost always be in the current line or the next
+    /// line.
+    fn cvt_smloc(&mut self, loc: SMLoc) -> ast::SourceLoc {
+        assert!(
+            loc.is_valid(),
+            "All source locations from Hermes parser must be valid"
+        );
+
+        // Check the cache with the hope that the lookup is within the last line or
+        // the next line.
+        if let Some(index) = self.line_cache.line_ref.try_offset_from(loc.as_ptr()) {
+            return self.line_cache.make_source_loc(index);
+        }
+        if let Some(index) = self.line_cache.next_line_ref.try_offset_from(loc.as_ptr()) {
+            self.line_cache.line_no += 1;
+            self.line_cache.line_ref = self.line_cache.next_line_ref;
+            self.line_cache.next_line_ref = self.hparser.get_line_ref(self.line_cache.line_no + 1);
+            return self.line_cache.make_source_loc(index);
+        }
+
+        let line_coord = self
+            .hparser
+            .find_line(loc)
+            .expect("Location from Hermes parser cannot be found");
+
+        // Populate the cache.
+        self.line_cache = FindLineCache {
+            line_no: line_coord.line_no,
+            line_ref: line_coord.line_ref,
+            next_line_ref: self.hparser.get_line_ref(line_coord.line_no + 1),
+        };
+
+        self.line_cache
+            .make_source_loc(line_coord.line_ref.try_offset_from(loc.as_ptr()).unwrap())
     }
 }
 
