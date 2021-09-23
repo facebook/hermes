@@ -1,6 +1,6 @@
 [workspace]
-members = ["hermes", "support"]
-default-members = ["hermes", "support"]
+members = [".", "hermes", "support"]
+default-members = [".", "hermes", "support"]
 
 [package]
 name = "juno"
