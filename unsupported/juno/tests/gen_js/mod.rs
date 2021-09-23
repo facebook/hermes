@@ -51,6 +51,17 @@ fn test_roundtrip(src1: &str) {
     test_roundtrip_with_flags(Default::default(), src1)
 }
 
+fn test_roundtrip_flow(src1: &str) {
+    test_roundtrip_with_flags(
+        hparser::ParserFlags {
+            strict_mode: false,
+            enable_jsx: false,
+            dialect: hparser::ParserDialect::Flow,
+        },
+        src1,
+    );
+}
+
 #[test]
 fn test_literals() {
     use NodeKind::*;
@@ -420,4 +431,18 @@ fn test_types() {
         do_gen(&ctx, union_ty, gen_js::Pretty::Yes).trim(),
         "number | boolean & string"
     );
+
+    test_roundtrip_flow("type A = number");
+    test_roundtrip_flow("type A = ?number");
+    test_roundtrip_flow("type A = string");
+    test_roundtrip_flow("type A = 'foo'");
+    test_roundtrip_flow("type A = 3");
+    test_roundtrip_flow("type A = boolean");
+    test_roundtrip_flow("type A = true | false");
+    test_roundtrip_flow("type A = symbol");
+    test_roundtrip_flow("type A = mixed");
+    test_roundtrip_flow("type A = any");
+    test_roundtrip_flow("type A = void");
+    test_roundtrip_flow("type A = number => number");
+    test_roundtrip_flow("type A = (number, string) => number");
 }
