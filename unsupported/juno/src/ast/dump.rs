@@ -8,7 +8,7 @@
 use super::{
     AssignmentExpressionOperator, BinaryExpressionOperator, Context, ExportKind, ImportKind,
     LogicalExpressionOperator, MethodDefinitionKind, NodeKind, NodeLabel, NodeList, NodePtr,
-    PropertyKind, StringLiteral, UnaryExpressionOperator, UpdateExpressionOperator,
+    NodeString, PropertyKind, UnaryExpressionOperator, UpdateExpressionOperator,
     VariableDeclarationKind,
 };
 use std::io::{self, Write};
@@ -133,7 +133,7 @@ impl DumpChild for ExportKind {
     }
 }
 
-impl DumpChild for StringLiteral {
+impl DumpChild for NodeString {
     fn dump<W: Write>(&self, _ctx: &Context, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string_literal(&self.str);
     }

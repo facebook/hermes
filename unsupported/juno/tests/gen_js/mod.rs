@@ -71,7 +71,7 @@ fn test_literals() {
     let string = make_node!(
         ctx,
         StringLiteral {
-            value: juno::ast::StringLiteral {
+            value: juno::ast::NodeString {
                 str: vec!['A' as u16, 0x1234u16, '\t' as u16],
             }
         },

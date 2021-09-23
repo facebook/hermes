@@ -8,7 +8,7 @@
 use super::{
     AssignmentExpressionOperator, BinaryExpressionOperator, Context, ExportKind, ImportKind,
     LogicalExpressionOperator, MethodDefinitionKind, NodeKind, NodeLabel, NodeList, NodePtr,
-    NodeVariant, PropertyKind, StringLiteral, UnaryExpressionOperator, UpdateExpressionOperator,
+    NodeString, NodeVariant, PropertyKind, UnaryExpressionOperator, UpdateExpressionOperator,
     VariableDeclarationKind, Visitor,
 };
 
@@ -74,7 +74,7 @@ impl ValidChild for MethodDefinitionKind {}
 impl ValidChild for ImportKind {}
 impl ValidChild for ExportKind {}
 
-impl ValidChild for StringLiteral {}
+impl ValidChild for NodeString {}
 
 impl<T: ValidChild> ValidChild for Option<T> {
     fn validate_child<'a>(

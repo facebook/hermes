@@ -180,12 +180,12 @@ pub type NodeList = Vec<NodePtr>;
 /// JS string literals don't have to contain valid UTF-8,
 /// so we wrap a `Vec<u16>`, which allows us to represent UTF-16 characters
 /// without being subject to Rust's restrictions on [`String`].
-pub struct StringLiteral {
+pub struct NodeString {
     pub str: Vec<u16>,
 }
 
-impl fmt::Debug for StringLiteral {
-    /// Format the StringLiteral as a `u""` string to make it more readable
+impl fmt::Debug for NodeString {
+    /// Format the NodeString as a `u""` string to make it more readable
     /// when debugging.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "u{:?}", String::from_utf16_lossy(&self.str))
@@ -335,7 +335,7 @@ impl NodeChild for MethodDefinitionKind {}
 impl NodeChild for ImportKind {}
 impl NodeChild for ExportKind {}
 
-impl NodeChild for StringLiteral {}
+impl NodeChild for NodeString {}
 
 impl<T: NodeChild> NodeChild for Option<T> {
     fn visit<V: Visitor>(&self, ctx: &Context, visitor: &mut V, node: NodePtr) {
@@ -369,7 +369,7 @@ mod tests {
             "u\"ABC\"",
             format!(
                 "{:?}",
-                StringLiteral {
+                NodeString {
                     str: vec!['A' as u16, 'B' as u16, 'C' as u16],
                 }
             )

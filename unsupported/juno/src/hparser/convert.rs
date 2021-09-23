@@ -153,13 +153,13 @@ pub unsafe fn cvt_node_list_opt(cvt: &mut Converter, n: NodeListOptRef) -> Optio
         .map(|n| unsafe { cvt_node_list(cvt, n) })
 }
 
-pub fn cvt_string(l: NodeString) -> ast::StringLiteral {
-    ast::StringLiteral {
+pub fn cvt_string(l: NodeString) -> ast::NodeString {
+    ast::NodeString {
         str: utf8_with_surrogates_to_utf16(l.as_slice()).unwrap(),
     }
 }
 
-pub fn cvt_string_opt(l: NodeStringOpt) -> Option<ast::StringLiteral> {
+pub fn cvt_string_opt(l: NodeStringOpt) -> Option<ast::NodeString> {
     l.as_node_string().map(cvt_string)
 }
 

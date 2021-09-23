@@ -2439,7 +2439,7 @@ impl<W: Write> GenJS<W> {
         }
     }
 
-    fn print_escaped_string_literal(&mut self, value: &StringLiteral, esc: char) {
+    fn print_escaped_string_literal(&mut self, value: &NodeString, esc: char) {
         for &c in &value.str {
             let c8 = char::from(c as u8);
             match c8 {

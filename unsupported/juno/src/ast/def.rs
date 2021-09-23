@@ -121,7 +121,7 @@ macro_rules! nodekind_defs {
             },
             ExpressionStatement[Statement] {
                 expression: NodePtr[Expression],
-                directive: Option<StringLiteral>,
+                directive: Option<NodeString>,
             },
             TryStatement[Statement] {
                 block: NodePtr[BlockStatement],
@@ -138,7 +138,7 @@ macro_rules! nodekind_defs {
                 value: bool,
             },
             StringLiteral[Literal] {
-                value: StringLiteral,
+                value: NodeString,
             },
             NumericLiteral[Literal] {
                 value: f64,
@@ -234,7 +234,7 @@ macro_rules! nodekind_defs {
                 value: NodePtr,
             },
             DirectiveLiteral[Literal] {
-                value: StringLiteral,
+                value: NodeString,
             },
             Identifier[Pattern] {
                 name: NodeLabel,
@@ -274,7 +274,7 @@ macro_rules! nodekind_defs {
             },
             TemplateElement {
                 tail: bool,
-                cooked: Option<StringLiteral>,
+                cooked: Option<NodeString>,
                 raw: NodeLabel,
             },
             Property {
@@ -423,8 +423,8 @@ macro_rules! nodekind_defs {
                 argument: NodePtr,
             },
             JSXText {
-                value: StringLiteral,
-                raw: StringLiteral,
+                value: NodeString,
+                raw: NodeString,
             },
             JSXElement[Expression] {
                 opening_element: NodePtr[JSXOpeningElement],
@@ -444,7 +444,7 @@ macro_rules! nodekind_defs {
             StringTypeAnnotation,
             NumberTypeAnnotation,
             StringLiteralTypeAnnotation {
-                value: StringLiteral,
+                value: NodeString,
             },
             NumberLiteralTypeAnnotation {
                 value: f64,
