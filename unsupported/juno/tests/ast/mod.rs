@@ -5,74 +5,76 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use juno::ast::{Node, NodeKind, NodePtr, SourceLoc, SourceRange, Visitor};
+use juno::ast::{Context, Node, NodeKind, NodePtr, Visitor};
+
+/// Create a node with a default source range for testing.
+/// Use a macro to make it easier to construct nested macros
+/// by spiltting mutable borrows of the context.
+/// Necessary because Rust doesn't yet support "two phase borrows" where
+/// we can borrow `ctx` for just the evaluation of an argument and not
+/// for the entire duration of the call.
+macro_rules! make_node {
+    ($ctx:expr, $kind:expr $(,)?) => {{
+        use juno::ast;
+        let range = ast::SourceRange {
+            file: 0,
+            start: ast::SourceLoc { line: 1, col: 1 },
+            end: ast::SourceLoc { line: 1, col: 1 },
+        };
+        let node = Node { range, kind: $kind };
+        $ctx.alloc(node)
+    }};
+}
 
 mod validate;
-
-pub fn node(kind: NodeKind) -> Box<Node> {
-    let range = SourceRange {
-        file: 0,
-        start: SourceLoc { line: 1, col: 1 },
-        end: SourceLoc { line: 1, col: 1 },
-    };
-
-    Box::new(Node { range, kind })
-}
 
 #[test]
 #[allow(clippy::float_cmp)]
 fn test_visit() {
     use NodeKind::*;
+    let mut ctx = Context::new();
     // Dummy range, we don't care about ranges in this test.
-    let range = SourceRange {
-        file: 0,
-        start: SourceLoc { line: 0, col: 0 },
-        end: SourceLoc { line: 0, col: 0 },
-    };
-    let ast = Box::new(Node {
-        range,
-        kind: BlockStatement {
+    let ast = make_node!(
+        ctx,
+        BlockStatement {
             body: vec![
-                NodePtr::new(Node {
-                    range,
-                    kind: ExpressionStatement {
-                        expression: Box::new(Node {
-                            range,
-                            kind: NumericLiteral { value: 1.0 },
-                        }),
+                make_node!(
+                    ctx,
+                    ExpressionStatement {
+                        expression: make_node!(ctx, NumericLiteral { value: 1.0 },),
                         directive: None,
                     },
-                }),
-                NodePtr::new(Node {
-                    range,
-                    kind: ExpressionStatement {
-                        expression: Box::new(Node {
-                            range,
-                            kind: NumericLiteral { value: 2.0 },
-                        }),
+                ),
+                make_node!(
+                    ctx,
+                    ExpressionStatement {
+                        expression: make_node!(ctx, NumericLiteral { value: 2.0 },),
                         directive: None,
                     },
-                }),
+                ),
             ],
         },
-    });
+    );
 
     // Accumulates the numbers found in the AST.
     struct NumberFinder {
         acc: Vec<f64>,
     }
 
-    impl<'a> Visitor<'a> for NumberFinder {
-        fn call(&mut self, node: &'a Node, parent: Option<&'a Node>) {
-            if let NumericLiteral { value } = &node.kind {
-                assert!(matches!(parent.unwrap().kind, ExpressionStatement { .. }));
+    impl Visitor for NumberFinder {
+        fn call(&mut self, ctx: &Context, node: NodePtr, parent: Option<NodePtr>) {
+            if let NumericLiteral { value } = &node.get(ctx).kind {
+                assert!(matches!(
+                    parent.unwrap().get(ctx).kind,
+                    ExpressionStatement { .. }
+                ));
                 self.acc.push(*value);
             }
-            node.visit_children(self);
+            node.visit_children(ctx, self);
         }
     }
 
     let mut visitor = NumberFinder { acc: vec![] };
-    ast.visit(&mut visitor, None);
+    ast.visit(&ctx, &mut visitor, None);
     assert_eq!(visitor.acc, [1.0, 2.0]);
 }

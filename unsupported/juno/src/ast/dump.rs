@@ -6,8 +6,8 @@
  */
 
 use super::{
-    AssignmentExpressionOperator, BinaryExpressionOperator, ExportKind, ImportKind,
-    LogicalExpressionOperator, MethodDefinitionKind, Node, NodeKind, NodeLabel, NodeList, NodePtr,
+    AssignmentExpressionOperator, BinaryExpressionOperator, Context, ExportKind, ImportKind,
+    LogicalExpressionOperator, MethodDefinitionKind, NodeKind, NodeLabel, NodeList, NodePtr,
     PropertyKind, StringLiteral, UnaryExpressionOperator, UpdateExpressionOperator,
     VariableDeclarationKind,
 };
@@ -30,16 +30,16 @@ macro_rules! gen_dumper {
         ),*
         $(,)?
     }) => {
-        fn dump_node<W: Write>(node: &Node, emitter: &mut JSONEmitter<W>) {
+        fn dump_node<W: Write>(ctx: &Context, node: NodePtr, emitter: &mut JSONEmitter<W>) {
             emitter.open_dict();
             emitter.emit_key("type");
-            emitter.emit_string(node.kind.name());
-            match &node.kind {
+            emitter.emit_string(node.get(ctx).kind.name());
+            match &node.get(ctx).kind {
                 $(
                     NodeKind::$kind $({$($field),*})? => {
                         $($(
                             emitter.emit_key(&ascii_snake_to_camel(stringify!($field)));
-                            $field.dump(emitter);
+                            $field.dump(ctx, emitter);
                         )*)?
                     }
                 ),*
@@ -52,120 +52,125 @@ macro_rules! gen_dumper {
 nodekind_defs! { gen_dumper }
 
 trait DumpChild {
-    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>);
+    fn dump<W: Write>(&self, ctx: &Context, emitter: &mut JSONEmitter<W>);
 }
 
 impl DumpChild for f64 {
-    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &Context, emitter: &mut JSONEmitter<W>) {
         emitter.emit_number(*self);
     }
 }
 
 impl DumpChild for bool {
-    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &Context, emitter: &mut JSONEmitter<W>) {
         emitter.emit_bool(*self);
     }
 }
 
 impl DumpChild for NodeLabel {
-    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &Context, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(&self.str);
     }
 }
 
 impl DumpChild for UnaryExpressionOperator {
-    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &Context, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(self.as_str());
     }
 }
 
 impl DumpChild for BinaryExpressionOperator {
-    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &Context, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(self.as_str());
     }
 }
 
 impl DumpChild for LogicalExpressionOperator {
-    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &Context, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(self.as_str());
     }
 }
 
 impl DumpChild for UpdateExpressionOperator {
-    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &Context, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(self.as_str());
     }
 }
 
 impl DumpChild for AssignmentExpressionOperator {
-    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &Context, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(self.as_str());
     }
 }
 
 impl DumpChild for VariableDeclarationKind {
-    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &Context, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(self.as_str());
     }
 }
 
 impl DumpChild for PropertyKind {
-    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &Context, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(self.as_str());
     }
 }
 
 impl DumpChild for MethodDefinitionKind {
-    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &Context, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(self.as_str());
     }
 }
 
 impl DumpChild for ImportKind {
-    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &Context, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(self.as_str());
     }
 }
 
 impl DumpChild for ExportKind {
-    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &Context, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(self.as_str());
     }
 }
 
 impl DumpChild for StringLiteral {
-    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &Context, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string_literal(&self.str);
     }
 }
 
 impl<T: DumpChild> DumpChild for Option<T> {
-    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, ctx: &Context, emitter: &mut JSONEmitter<W>) {
         match self {
             None => emitter.emit_null(),
-            Some(t) => t.dump(emitter),
+            Some(t) => t.dump(ctx, emitter),
         };
     }
 }
 
 impl DumpChild for NodePtr {
-    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
-        dump_node(self, emitter);
+    fn dump<W: Write>(&self, ctx: &Context, emitter: &mut JSONEmitter<W>) {
+        dump_node(ctx, *self, emitter);
     }
 }
 
 impl DumpChild for NodeList {
-    fn dump<W: Write>(&self, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, ctx: &Context, emitter: &mut JSONEmitter<W>) {
         emitter.open_array();
-        for elem in self {
-            dump_node(elem, emitter);
+        for &elem in self {
+            dump_node(ctx, elem, emitter);
         }
         emitter.close_array();
     }
 }
 
-pub fn dump_json<W: Write>(writer: W, root: &Node, pretty: Pretty) -> io::Result<()> {
+pub fn dump_json<W: Write>(
+    writer: W,
+    ctx: &Context,
+    root: NodePtr,
+    pretty: Pretty,
+) -> io::Result<()> {
     let mut emitter = JSONEmitter::new(writer, pretty);
-    dump_node(root, &mut emitter);
+    dump_node(ctx, root, &mut emitter);
     emitter.end()
 }

@@ -60,8 +60,8 @@ impl ParsedJS<'_> {
     }
 
     /// Create and return an external representation of the AST, or None if there were parse errors.
-    pub fn to_ast(&self, file_id: u32) -> Option<ast::NodePtr> {
-        let mut cvt = Converter::new(&self.parser, file_id);
+    pub fn to_ast(&self, ctx: &mut ast::Context, file_id: u32) -> Option<ast::NodePtr> {
+        let mut cvt = Converter::new(&self.parser, ctx, file_id);
 
         self.parser.root().map(|root| convert_ast(&mut cvt, root))
     }
@@ -92,11 +92,12 @@ impl std::fmt::Display for ParseError {
 pub fn parse_with_file_id(
     flags: ParserFlags,
     source: &str,
+    ctx: &mut ast::Context,
     file_id: u32,
 ) -> Result<ast::NodePtr, ParseError> {
     let buf = NullTerminatedBuf::from_str_check(source);
     let parsed = ParsedJS::parse(flags, &buf);
-    if let Some(ast) = parsed.to_ast(file_id) {
+    if let Some(ast) = parsed.to_ast(ctx, file_id) {
         Ok(ast)
     } else {
         let (loc, msg) = parsed.first_error().unwrap();
@@ -109,8 +110,8 @@ pub fn parse_with_file_id(
 /// It checks if the input is already null-terminated and avoids making the copy in that case.
 /// Note that if the null terminator is truly present in the input, it would parse successfully
 /// what ought to be an error.
-pub fn parse(source: &str) -> Result<ast::NodePtr, ParseError> {
-    parse_with_file_id(Default::default(), source, 0)
+pub fn parse(ctx: &mut ast::Context, source: &str) -> Result<ast::NodePtr, ParseError> {
+    parse_with_file_id(Default::default(), source, ctx, 0)
 }
 
 #[cfg(test)]
@@ -119,6 +120,7 @@ mod tests {
 
     #[test]
     fn test1() {
-        parse("function foo(p1) { var x = (10 + p1); }").expect("Parse failed");
+        let mut ctx = ast::Context::new();
+        parse(&mut ctx, "function foo(p1) { var x = (10 + p1); }").expect("Parse failed");
     }
 }

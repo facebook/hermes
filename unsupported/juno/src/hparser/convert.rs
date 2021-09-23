@@ -36,13 +36,15 @@ struct FindLineCache<'a> {
 }
 
 /// Converts from Hermes AST to Juno AST
-pub struct Converter<'a> {
-    pub hparser: &'a HermesParser<'a>,
+pub struct Converter<'parser, 'ctx> {
+    pub hparser: &'parser HermesParser<'parser>,
+    /// Rust AST context for allocation.
+    pub ast_context: &'ctx mut ast::Context,
     /// The file id to use for the converted coordinates.
     pub file_id: u32,
 
     /// A cache to speed up finding locations.
-    line_cache: FindLineCache<'a>,
+    line_cache: FindLineCache<'parser>,
 }
 
 /// Adjust the source location backwards making sure it doesn't point to \r or
@@ -79,10 +81,15 @@ impl FindLineCache<'_> {
     }
 }
 
-impl Converter<'_> {
-    pub fn new<'a>(hparser: &'a HermesParser<'a>, file_id: u32) -> Converter<'a> {
+impl Converter<'_, '_> {
+    pub fn new<'parser, 'ctx>(
+        hparser: &'parser HermesParser<'parser>,
+        ast_context: &'ctx mut ast::Context,
+        file_id: u32,
+    ) -> Converter<'parser, 'ctx> {
         Converter {
             hparser,
+            ast_context,
             file_id,
             line_cache: Default::default(),
         }

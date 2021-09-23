@@ -44,12 +44,12 @@ macro_rules! gen_nodekind_enum {
         impl NodeKind {
             /// Visit the child fields of this kind.
             /// `node` is the node for which this is the kind.
-            pub fn visit_children<'a, V: Visitor<'a>>(&'a self, visitor: &mut V, node: &'a Node) {
+            pub fn visit_children< V: Visitor>(&self, ctx: &Context, visitor: &mut V, node: NodePtr) {
                 match self {
                     $(
                         Self::$kind $({$($field),*})? => {
                             $($(
-                                $field.visit(visitor, node);
+                                $field.visit(ctx, visitor, node);
                             )*)?
                         }
                     ),*

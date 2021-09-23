@@ -21,6 +21,77 @@ use kind::NodeVariant;
 pub use dump::{dump_json, Pretty};
 pub use validate::{validate_tree, ValidationError};
 
+/// The storage for AST nodes.
+/// Can be used to allocate and free nodes.
+#[derive(Debug, Default)]
+pub struct Context {
+    /// List of all the nodes stored in this context.
+    storage: Vec<StorageEntry>,
+
+    /// First element of the free list if there is one.
+    free_list_head: Option<usize>,
+}
+
+#[derive(Debug)]
+enum StorageEntry {
+    /// Allocated node.
+    Used(Node),
+
+    /// Free list entry, with the index of the next entry in the free list.
+    Free(Option<usize>),
+}
+
+impl Context {
+    pub fn new() -> Context {
+        Default::default()
+    }
+
+    #[inline]
+    pub fn node(&self, ptr: NodePtr) -> &Node {
+        match &self.storage[ptr.0] {
+            StorageEntry::Used(node) => node,
+            StorageEntry::Free(_) => {
+                panic!("Attempt to get freed node");
+            }
+        }
+    }
+
+    #[inline]
+    pub fn node_mut(&mut self, ptr: NodePtr) -> &mut Node {
+        match &mut self.storage[ptr.0] {
+            StorageEntry::Used(node) => node,
+            StorageEntry::Free(_) => {
+                panic!("Attempt to get freed node");
+            }
+        }
+    }
+
+    pub fn alloc(&mut self, node: Node) -> NodePtr {
+        match self.free_list_head {
+            None => {
+                self.storage.push(StorageEntry::Used(node));
+                NodePtr(self.storage.len() - 1)
+            }
+            Some(idx) => match self.storage[idx] {
+                StorageEntry::Free(next) => {
+                    self.storage[idx] = StorageEntry::Used(node);
+                    self.free_list_head = next;
+                    NodePtr(idx)
+                }
+                StorageEntry::Used(_) => {
+                    panic!("Invalid entry in free list at {}", idx)
+                }
+            },
+        }
+    }
+
+    pub fn free(&mut self, ptr: NodePtr) {
+        let idx = ptr.0;
+        self.storage[idx] = StorageEntry::Free(self.free_list_head);
+        self.free_list_head = Some(idx);
+    }
+}
+
 /// A JavaScript AST node.
 #[derive(Debug)]
 pub struct Node {
@@ -31,22 +102,23 @@ pub struct Node {
     pub kind: NodeKind,
 }
 
-impl Node {
+impl NodePtr {
     /// Call the `visitor` on this node with a given `parent`.
-    pub fn visit<'a, V: Visitor<'a>>(&'a self, visitor: &mut V, parent: Option<&'a Node>) {
-        visitor.call(self, parent);
+    pub fn visit<V: Visitor>(self, ctx: &Context, visitor: &mut V, parent: Option<NodePtr>) {
+        visitor.call(ctx, self, parent);
     }
 
     /// Call the `visitor` on only this node's children.
-    pub fn visit_children<'a, V: Visitor<'a>>(&'a self, visitor: &mut V) {
-        self.kind.visit_children(visitor, self);
+    pub fn visit_children<V: Visitor>(self, ctx: &Context, visitor: &mut V) {
+        let node = self.get(ctx);
+        node.kind.visit_children(ctx, visitor, self);
     }
 }
 
 /// Trait implemented by those who call the visit functionality.
-pub trait Visitor<'a> {
+pub trait Visitor {
     /// Visit the Node `node` with the given `parent`.
-    fn call(&mut self, node: &'a Node, parent: Option<&'a Node>);
+    fn call(&mut self, ctx: &Context, node: NodePtr, parent: Option<NodePtr>);
 }
 
 /// A source range within a single JS file.
@@ -87,7 +159,20 @@ pub struct NodeLabel {
 }
 
 /// A single node child owned by a parent.
-pub type NodePtr = Box<Node>;
+#[derive(Debug, Copy, Clone)]
+pub struct NodePtr(usize);
+
+impl NodePtr {
+    #[inline]
+    pub fn get<'a>(&self, ctx: &'a Context) -> &'a Node {
+        ctx.node(*self)
+    }
+
+    #[inline]
+    pub fn get_mut<'a>(&self, ctx: &'a mut Context) -> &'a mut Node {
+        ctx.node_mut(*self)
+    }
+}
 
 /// A list of nodes owned by a parent.
 pub type NodeList = Vec<NodePtr>;
@@ -231,7 +316,7 @@ trait NodeChild {
     /// Visit this child of the given `node`.
     /// Should be no-op for any type that doesn't contain pointers to other
     /// `Node`s.
-    fn visit<'a, V: Visitor<'a>>(&'a self, _visitor: &mut V, _node: &'a Node) {}
+    fn visit<V: Visitor>(&self, _ctx: &Context, _visitor: &mut V, _node: NodePtr) {}
 }
 
 impl NodeChild for f64 {}
@@ -253,23 +338,23 @@ impl NodeChild for ExportKind {}
 impl NodeChild for StringLiteral {}
 
 impl<T: NodeChild> NodeChild for Option<T> {
-    fn visit<'a, V: Visitor<'a>>(&'a self, visitor: &mut V, node: &'a Node) {
+    fn visit<V: Visitor>(&self, ctx: &Context, visitor: &mut V, node: NodePtr) {
         if let Some(t) = self {
-            t.visit(visitor, node);
+            t.visit(ctx, visitor, node);
         }
     }
 }
 
 impl NodeChild for NodePtr {
-    fn visit<'a, V: Visitor<'a>>(&'a self, visitor: &mut V, node: &'a Node) {
-        visitor.call(self, Some(node));
+    fn visit<V: Visitor>(&self, ctx: &Context, visitor: &mut V, node: NodePtr) {
+        visitor.call(ctx, *self, Some(node));
     }
 }
 
 impl NodeChild for NodeList {
-    fn visit<'a, V: Visitor<'a>>(&'a self, visitor: &mut V, node: &'a Node) {
+    fn visit<V: Visitor>(&self, ctx: &Context, visitor: &mut V, node: NodePtr) {
         for child in self {
-            visitor.call(child, Some(node));
+            visitor.call(ctx, *child, Some(node));
         }
     }
 }

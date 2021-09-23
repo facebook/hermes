@@ -5,50 +5,63 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use super::node;
-use juno::ast::{validate_tree, Node, NodeKind};
+use juno::ast::{validate_tree, Context, Node, NodeKind, NodePtr};
 
 #[test]
 fn test_valid() {
     use NodeKind::*;
-    assert!(validate_tree(&node(ReturnStatement { argument: None })).is_ok());
+    let mut ctx = Context::new();
+    let return_stmt = make_node!(ctx, ReturnStatement { argument: None });
+    assert!(validate_tree(&ctx, return_stmt).is_ok());
 
-    assert!(
-        validate_tree(&node(ReturnStatement {
-            argument: Some(node(NumericLiteral { value: 1.0 }))
-        }))
-        .is_ok()
+    let return_stmt = make_node!(
+        ctx,
+        ReturnStatement {
+            argument: Some(make_node!(ctx, NumericLiteral { value: 1.0 }))
+        }
     );
+    assert!(validate_tree(&ctx, return_stmt).is_ok());
 
-    assert!(
-        validate_tree(&node(ReturnStatement {
-            argument: Some(node(ReturnStatement { argument: None })),
-        }))
-        .is_err()
+    let return_stmt = make_node!(
+        ctx,
+        ReturnStatement {
+            argument: Some(make_node!(ctx, ReturnStatement { argument: None })),
+        }
     );
+    assert!(validate_tree(&ctx, return_stmt).is_err());
 }
 
 #[test]
 fn test_error() {
     use NodeKind::*;
-    let ast = node(BlockStatement {
-        body: vec![node(ReturnStatement {
-            argument: Some(node(ReturnStatement { argument: None })),
-        })],
-    });
-    let bad_ret: &Node = match &ast.kind {
-        BlockStatement { body } => &body[0],
+    let mut ctx = Context::new();
+    let ast = make_node!(
+        ctx,
+        BlockStatement {
+            body: vec![make_node!(
+                ctx,
+                ReturnStatement {
+                    argument: Some(make_node!(ctx, ReturnStatement { argument: None })),
+                }
+            )],
+        }
+    );
+    let bad_ret: NodePtr = match &ast.get(&ctx).kind {
+        BlockStatement { body } => body[0],
         _ => {
             unreachable!("bad match");
         }
     };
-    match validate_tree(&ast) {
+    match validate_tree(&ctx, ast) {
         Ok(()) => {
             panic!("Must be error");
         }
         Err(e) => {
             assert_eq!(e.len(), 1);
-            assert_eq!(e[0].node as *const Node, bad_ret as *const Node);
+            assert_eq!(
+                e[0].node.get(&ctx) as *const Node,
+                bad_ret.get(&ctx) as *const Node
+            );
         }
     }
 }

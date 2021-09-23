@@ -78,10 +78,16 @@ fn load_source_map(url: Url) -> anyhow::Result<SourceMap> {
 
 /// Generate the specified output, if any.
 /// Returns whether any output was generated.
-fn gen_output(opt: &Opt, root: &NodePtr, _source_map: &Option<SourceMap>) -> anyhow::Result<bool> {
+fn gen_output(
+    opt: &Opt,
+    ctx: &ast::Context,
+    root: NodePtr,
+    _source_map: &Option<SourceMap>,
+) -> anyhow::Result<bool> {
     if opt.gen.ast {
         ast::dump_json(
             std::io::stdout(),
+            ctx,
             root,
             if opt.no_pretty {
                 ast::Pretty::No
@@ -93,6 +99,7 @@ fn gen_output(opt: &Opt, root: &NodePtr, _source_map: &Option<SourceMap>) -> any
     } else if opt.gen.js {
         gen_js::generate(
             std::io::stdout(),
+            ctx,
             root,
             if opt.no_pretty {
                 gen_js::Pretty::No
@@ -148,7 +155,8 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     let sm_url = parse_magic_url(&parsed, MagicCommentKind::SourceMappingUrl)?;
 
     // Convert to Juno AST.
-    let ast = parsed.to_ast(0).unwrap();
+    let mut ctx = ast::Context::new();
+    let ast = parsed.to_ast(&mut ctx, 0).unwrap();
     let cvt_time = start_time.elapsed();
 
     // We don't need the original parser anymore.
@@ -158,7 +166,7 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     let source_map = sm_url.map(load_source_map).transpose()?;
 
     // Generate output.
-    let generated = gen_output(opt, &ast, &source_map)?;
+    let generated = gen_output(opt, &ctx, ast, &source_map)?;
     let gen_time = if generated {
         start_time.elapsed()
     } else {
@@ -166,7 +174,7 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     };
 
     // Drop the AST. We are doing it explicitly just to measure the time.
-    drop(ast);
+    drop(ctx);
     let drop_time = start_time.elapsed();
 
     // Optionally print elapsed times.
