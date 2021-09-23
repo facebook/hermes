@@ -22,7 +22,7 @@ pub struct Converter<'a> {
 }
 
 impl Converter<'_> {
-    pub fn smrange(&self, smr: SMRange) -> ast::SourceRange {
+    pub fn smrange(&mut self, smr: SMRange) -> ast::SourceRange {
         assert!(
             smr.start.is_valid() && smr.end.is_valid(),
             "All source range from Hermes parser must be valid"
@@ -53,11 +53,11 @@ impl Converter<'_> {
 
 /// # Safety
 /// `n` must be valid.
-pub unsafe fn cvt_node_ptr_opt(cvt: &Converter, n: NodePtrOpt) -> Option<ast::NodePtr> {
+pub unsafe fn cvt_node_ptr_opt(cvt: &mut Converter, n: NodePtrOpt) -> Option<ast::NodePtr> {
     n.as_node_ptr().map(|n| unsafe { cvt_node_ptr(cvt, n) })
 }
 
-pub unsafe fn cvt_node_list(cvt: &Converter, n: NodeListRef) -> ast::NodeList {
+pub unsafe fn cvt_node_list(cvt: &mut Converter, n: NodeListRef) -> ast::NodeList {
     let mut res = Vec::<ast::NodePtr>::new();
     for node in n.iter() {
         res.push(cvt_node_ptr(cvt, NodePtr::new(node)));
@@ -65,7 +65,7 @@ pub unsafe fn cvt_node_list(cvt: &Converter, n: NodeListRef) -> ast::NodeList {
     res
 }
 
-pub unsafe fn cvt_node_list_opt(cvt: &Converter, n: NodeListOptRef) -> Option<ast::NodeList> {
+pub unsafe fn cvt_node_list_opt(cvt: &mut Converter, n: NodeListOptRef) -> Option<ast::NodeList> {
     n.as_node_list_ref()
         .map(|n| unsafe { cvt_node_list(cvt, n) })
 }

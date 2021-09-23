@@ -12,7 +12,7 @@ use hermes::parser::*;
 use super::convert::*;
 use crate::ast;
 
-pub unsafe fn cvt_node_ptr(cvt: &Converter, n: NodePtr) -> ast::NodePtr {
+pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
     let nr = n.as_ref();
     let range = cvt.smrange(nr.source_range);
 

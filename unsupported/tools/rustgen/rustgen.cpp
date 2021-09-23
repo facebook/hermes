@@ -373,7 +373,7 @@ static void genGetters() {
 
 static void genConvert() {
   llvh::outs()
-      << "pub unsafe fn cvt_node_ptr(cvt: &Converter, n: NodePtr) -> ast::NodePtr {\n";
+      << "pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {\n";
   llvh::outs() << "    let nr = n.as_ref();\n"
                   "    let range = cvt.smrange(nr.source_range);\n"
                   "\n";
