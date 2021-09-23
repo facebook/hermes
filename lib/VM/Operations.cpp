@@ -570,7 +570,7 @@ CallResult<HermesValue> toInteger(Runtime *runtime, Handle<> valueHandle) {
   if (std::isnan(num)) {
     result = 0;
   } else {
-    result = oscompat::trunc(num);
+    result = std::trunc(num);
   }
 
   return HermesValue::encodeDoubleValue(result);
@@ -1009,9 +1009,9 @@ numberToStringWithRadix(Runtime *runtime, double number, unsigned radix) {
   if (fPart != 0) {
     // Distance to the next double value.
     double next =
-        oscompat::nextafter(number, std::numeric_limits<double>::infinity());
+        std::nextafter(number, std::numeric_limits<double>::infinity());
     double minDenorm =
-        oscompat::nextafter(0.0, std::numeric_limits<double>::infinity());
+        std::nextafter(0.0, std::numeric_limits<double>::infinity());
 
     // Precision of the input (half the distance to the next double).
     // We only compute digits up to that precision.

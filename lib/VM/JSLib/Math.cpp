@@ -57,11 +57,11 @@ static double roundHalfwaysTowardsInfinity(double x) {
     return x;
   } else if (absf < 0.5) {
     // x may have too much precision to add 0.5. Just round to +/- 0.
-    return oscompat::copysign(0, x);
+    return std::copysign(0, x);
   } else {
     // Here we can apply the normal rounding algorithm, but we need to be
     // careful about -0.5, which must round to -0.
-    return oscompat::copysign(std::floor(x + 0.5), x);
+    return std::copysign(std::floor(x + 0.5), x);
   }
 }
 

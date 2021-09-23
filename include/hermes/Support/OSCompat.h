@@ -190,29 +190,6 @@ std::vector<bool> sched_getaffinity();
 /// or -1 on error.
 int sched_getcpu();
 
-/// The following functions are defined in Android's standard library, but not
-/// in the \c std namespace.
-inline double log2(double n);
-inline double trunc(double n);
-inline double copysign(double x, double y);
-inline double nextafter(double x, double y);
-
-inline double log2(double n) {
-  return ::log(n) / ::log(2.0);
-}
-
-inline double trunc(double n) {
-  return ::trunc(n);
-}
-
-inline double copysign(double x, double y) {
-  return ::copysign(x, y);
-}
-
-inline double nextafter(double x, double y) {
-  return ::nextafter(x, y);
-}
-
 #ifdef _WINDOWS
 
 #define STDIN_FILENO 0

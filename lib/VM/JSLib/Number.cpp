@@ -211,8 +211,8 @@ numberIsInteger(void *, Runtime *runtime, NativeArgs args) {
   }
   // Let integer be ToInteger(number).
   assert(!std::isnan(number) && "number must not be NaN after the check");
-  // Call oscompat::trunc because we've alredy checked NaN with isfinite.
-  double integer = oscompat::trunc(number);
+  // Call std::trunc because we've alredy checked NaN with isfinite.
+  double integer = std::trunc(number);
 
   // If integer is not equal to number, return false.
   // Otherwise, return true.
@@ -245,8 +245,8 @@ numberIsSafeInteger(void *, Runtime *runtime, NativeArgs args) {
 
   // Let integer be ToInteger(number).
   assert(!std::isnan(number) && "number must not be NaN after the check");
-  // Call oscompat::trunc because we've alredy checked NaN with isfinite.
-  double integer = oscompat::trunc(number);
+  // Call std::trunc because we've alredy checked NaN with isfinite.
+  double integer = std::trunc(number);
 
   if (integer != number) {
     // If integer is not equal to number, return false.
