@@ -73,6 +73,13 @@ pub struct SourceLoc {
     pub col: u32,
 }
 
+impl SourceLoc {
+    /// Return an instance of SourceLoc initialized to an invalid value.
+    pub fn invalid() -> SourceLoc {
+        SourceLoc { line: 0, col: 0 }
+    }
+}
+
 /// JS identifier represented as valid UTF-8.
 #[derive(Debug)]
 pub struct NodeLabel {
