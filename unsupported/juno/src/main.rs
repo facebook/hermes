@@ -158,7 +158,7 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     let source_map = sm_url.map(load_source_map).transpose()?;
 
     // Generate output.
-    let generated = gen_output(&opt, &ast, &source_map)?;
+    let generated = gen_output(opt, &ast, &source_map)?;
     let gen_time = if generated {
         start_time.elapsed()
     } else {

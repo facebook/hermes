@@ -576,7 +576,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
                 kind: ast::NodeKind::TemplateElement {
                     tail: hermes_get_TemplateElement_tail(n),
                     cooked: cvt_string_opt(hermes_get_TemplateElement_cooked(n)),
-                    raw: cvt_string(hermes_get_TemplateElement_raw(n)),
+                    raw: cvt_label(hermes_get_TemplateElement_raw(n)),
                 },
             }
         ),

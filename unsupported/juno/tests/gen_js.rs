@@ -19,8 +19,8 @@ fn do_gen(node: &Node, pretty: gen_js::Pretty) -> String {
 fn node(kind: NodeKind) -> NodePtr {
     let range = SourceRange {
         file: 0,
-        start: SourceLoc { line: 0, col: 0 },
-        end: SourceLoc { line: 0, col: 0 },
+        start: SourceLoc { line: 1, col: 1 },
+        end: SourceLoc { line: 1, col: 1 },
     };
 
     NodePtr::new(Node { range, kind })

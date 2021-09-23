@@ -6,6 +6,8 @@
  */
 
 use crate::ast::*;
+use sourcemap::{RawToken, SourceMap, SourceMapBuilder};
+
 use std::{
     fmt,
     io::{self, BufWriter, Write},
@@ -22,7 +24,8 @@ pub enum Pretty {
 }
 
 /// Generate JS for `root` and print it to `out`.
-pub fn generate<W: Write>(out: W, root: &Node, pretty: Pretty) -> io::Result<()> {
+/// FIXME: This currently only returns an empty SourceMap.
+pub fn generate<W: Write>(out: W, root: &Node, pretty: Pretty) -> io::Result<SourceMap> {
     GenJS::gen_root(out, root, pretty)
 }
 
@@ -152,6 +155,15 @@ struct GenJS<W: Write> {
     /// Current indentation level, used in pretty mode.
     indent: usize,
 
+    /// Current position of the writer.
+    position: SourceLoc,
+
+    /// Raw token tracking the most recent node.
+    cur_token: Option<RawToken>,
+
+    /// Build a source map as we go along.
+    sourcemap: SourceMapBuilder,
+
     /// Some(err) if an error has occurred when writing, else None.
     error: Option<io::Error>,
 }
@@ -159,9 +171,10 @@ struct GenJS<W: Write> {
 /// Print to the output stream if no errors have been seen so far.
 /// `$gen_js` is a mutable reference to the GenJS struct.
 /// `$arg` arguments follow the format pattern used by `format!`.
+/// The output must be ASCII and contain no newlines.
 macro_rules! out {
     ($gen_js:expr, $($arg:tt)*) => {{
-        $gen_js.write_if_no_errors(format_args!($($arg)*));
+        $gen_js.write_ascii(format_args!($($arg)*));
     }}
 }
 
@@ -169,18 +182,26 @@ impl<W: Write> GenJS<W> {
     /// Generate JS for `root` and flush the output.
     /// If at any point, JS generation resulted in an error, return `Err(err)`,
     /// otherwise return `Ok(())`.
-    fn gen_root(writer: W, root: &Node, pretty: Pretty) -> io::Result<()> {
+    fn gen_root(writer: W, root: &Node, pretty: Pretty) -> io::Result<SourceMap> {
         let mut gen_js = GenJS {
             out: BufWriter::new(writer),
             pretty,
             indent_step: 2,
             indent: 0,
+            position: SourceLoc { line: 1, col: 1 },
+            cur_token: None,
+            // FIXME: Pass in file name here.
+            sourcemap: SourceMapBuilder::new(None),
             error: None,
         };
         root.visit(&mut gen_js, None);
-        out!(gen_js, "\n");
+        gen_js.force_newline();
+        gen_js.flush_cur_token();
         match gen_js.error {
-            None => gen_js.out.flush(),
+            None => gen_js
+                .out
+                .flush()
+                .and(Ok(gen_js.sourcemap.into_sourcemap())),
             Some(err) => Err(err),
         }
     }
@@ -188,17 +209,53 @@ impl<W: Write> GenJS<W> {
     /// Write to the `out` writer if we haven't seen any errors.
     /// If we have seen any errors, do nothing.
     /// Used via the `out!` macro.
-    fn write_if_no_errors(&mut self, args: fmt::Arguments<'_>) {
+    /// The output must be ASCII and contain no newlines.
+    fn write_ascii(&mut self, args: fmt::Arguments<'_>) {
         if self.error.is_none() {
-            if let Err(e) = self.out.write_fmt(args) {
+            let buf = format!("{}", args);
+            debug_assert!(buf.is_ascii(), "Output must be ASCII");
+            debug_assert!(!buf.contains('\n'), "Output must have no newlines");
+            if let Err(e) = self.out.write_all(buf.as_bytes()) {
+                self.error = Some(e);
+            }
+            self.position.col += buf.len() as u32;
+        }
+    }
+
+    /// Write a single unicode character to the `out` writer if we haven't seen any errors.
+    /// Character must not be a newline.
+    /// Use `dst` as a temporary buffer.
+    /// If we have seen any errors, do nothing.
+    fn write_char(&mut self, ch: char, dst: &mut [u8]) {
+        debug_assert!(ch != '\n', "Output must not contain newlines");
+        if self.error.is_none() {
+            if let Err(e) = self.out.write_all(ch.encode_utf8(dst).as_bytes()) {
+                self.error = Some(e);
+            }
+            self.position.col += 1;
+        }
+    }
+
+    /// Write unicode to the `out` writer if we haven't seen any errors.
+    /// If we have seen any errors, do nothing.
+    /// The output must contain no newlines.
+    fn write_utf8(&mut self, s: &str) {
+        debug_assert!(
+            !s.chars().any(|c| c == '\n'),
+            "Output must not contain newlines"
+        );
+        if self.error.is_none() {
+            if let Err(e) = self.out.write_all(s.as_bytes()) {
                 self.error = Some(e);
             }
         }
+        self.position.col += s.chars().count() as u32;
     }
 
     /// Generate the JS for each node kind.
     fn gen_node(&mut self, node: &Node, parent: Option<&Node>) {
         use NodeKind::*;
+
         match &node.kind {
             Empty => {}
             Metadata => {}
@@ -824,7 +881,7 @@ impl<W: Write> GenJS<W> {
                 type_annotation,
                 optional,
             } => {
-                out!(self, "{}", &name.str);
+                self.write_utf8(name.str.as_ref());
                 if *optional {
                     out!(self, "?");
                 }
@@ -893,13 +950,14 @@ impl<W: Write> GenJS<W> {
                         cooked: _,
                     } = &quasi.kind
                     {
-                        out!(
-                            self,
-                            "{}",
-                            char::decode_utf16(raw.str.iter().cloned())
-                                .map(|r| r.expect("Template element raw must be valid UTF-16"))
-                                .collect::<String>()
-                        );
+                        let mut buf = [0u8; 4];
+                        for char in raw.str.chars() {
+                            if char == '\n' {
+                                self.force_newline_without_indent();
+                                continue;
+                            }
+                            self.write_char(char, &mut buf);
+                        }
                         if let Some(expr) = it_expr.next() {
                             out!(self, "${{");
                             expr.visit(self, Some(node));
@@ -1024,7 +1082,7 @@ impl<W: Write> GenJS<W> {
             } => {
                 for decorator in decorators {
                     decorator.visit(self, Some(node));
-                    out!(self, "\n");
+                    self.force_newline();
                 }
                 out!(self, "class");
                 if let Some(id) = id {
@@ -2305,8 +2363,25 @@ impl<W: Write> GenJS<W> {
     /// Print a newline and indent if pretty.
     fn newline(&mut self) {
         if self.pretty == Pretty::Yes {
-            out!(self, "\n{:indent$}", "", indent = self.indent as usize);
+            self.force_newline();
         }
+    }
+
+    /// Print a newline and indent.
+    fn force_newline(&mut self) {
+        self.force_newline_without_indent();
+        out!(self, "{:indent$}", "", indent = self.indent as usize);
+    }
+
+    /// Print a newline without any indent after.
+    fn force_newline_without_indent(&mut self) {
+        if self.error.is_none() {
+            if let Err(e) = self.out.write(&[b'\n']) {
+                self.error = Some(e);
+            }
+        }
+        self.position.line += 1;
+        self.position.col = 1;
     }
 
     /// Print the child of a `parent` node at the position `child_pos`.
@@ -2420,6 +2495,7 @@ impl<W: Write> GenJS<W> {
             self.space(ForceSpace::Yes);
             predicate.visit(self, Some(node));
         }
+        self.space(ForceSpace::No);
         body.visit(self, Some(node));
     }
 
@@ -2812,6 +2888,44 @@ impl<W: Write> GenJS<W> {
             TaggedTemplateExpression { tag, .. } => self.expr_starts_with(tag, Some(expr), pred),
             _ => false,
         }
+    }
+
+    /// Adds the current location as a segment pointing to the start of `node`.
+    fn add_segment(&mut self, node: &Node) {
+        // Convert from 1-indexed to 0-indexed as expected by source map.
+        let new_token = Some(RawToken {
+            dst_line: self.position.line - 1,
+            dst_col: self.position.col - 1,
+            src_line: node.range.start.line - 1,
+            src_col: node.range.start.col - 1,
+            src_id: 0,
+            name_id: !0,
+        });
+        self.flush_cur_token();
+        self.cur_token = new_token;
+    }
+
+    /// Add the `cur_token` to the sourcemap and set `cur_token` to `None`.
+    fn flush_cur_token(&mut self) {
+        if let Some(cur) = self.cur_token {
+            self.sourcemap.add_raw(
+                cur.dst_line,
+                cur.dst_col,
+                cur.src_line,
+                cur.src_col,
+                if cur.src_id != !0 {
+                    Some(cur.src_id)
+                } else {
+                    None
+                },
+                if cur.name_id != !0 {
+                    Some(cur.name_id)
+                } else {
+                    None
+                },
+            );
+        }
+        self.cur_token = None;
     }
 }
 

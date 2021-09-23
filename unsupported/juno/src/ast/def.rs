@@ -275,7 +275,7 @@ macro_rules! nodekind_defs {
             TemplateElement {
                 tail: bool,
                 cooked: Option<StringLiteral>,
-                raw: StringLiteral,
+                raw: NodeLabel,
             },
             Property {
                 key: NodePtr[Literal, Identifier, Expression],

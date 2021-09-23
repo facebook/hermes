@@ -12,8 +12,8 @@ mod validate;
 pub fn node(kind: NodeKind) -> Box<Node> {
     let range = SourceRange {
         file: 0,
-        start: SourceLoc { line: 0, col: 0 },
-        end: SourceLoc { line: 0, col: 0 },
+        start: SourceLoc { line: 1, col: 1 },
+        end: SourceLoc { line: 1, col: 1 },
     };
 
     Box::new(Node { range, kind })
