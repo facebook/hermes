@@ -190,21 +190,12 @@ std::vector<bool> sched_getaffinity();
 /// or -1 on error.
 int sched_getcpu();
 
-/// Same API as std::isxdigit. Windows does not have isxdigit in its standard
-/// library.
-inline bool isxdigit(unsigned char c);
-
 /// The following functions are defined in Android's standard library, but not
 /// in the \c std namespace.
 inline double log2(double n);
 inline double trunc(double n);
 inline double copysign(double x, double y);
 inline double nextafter(double x, double y);
-
-inline bool isxdigit(unsigned char c) {
-  return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') ||
-      (c >= 'A' && c <= 'F');
-}
 
 inline double log2(double n) {
   return ::log(n) / ::log(2.0);
