@@ -25,7 +25,9 @@ impl NullTerminatedBuf<'_> {
     }
 
     /// Create from a file and null terminated.
-    pub fn from_file(f: &mut std::fs::File) -> Result<NullTerminatedBuf, std::io::Error> {
+    pub fn from_file<'a>(
+        f: &'_ mut std::fs::File,
+    ) -> Result<NullTerminatedBuf<'a>, std::io::Error> {
         // TODO: this is an extremely naive implementation, it can be optimized in multiple ways:
         //       - obtain the size of the file and perform a single allocation and few syscalls
         //       - memory map the file
