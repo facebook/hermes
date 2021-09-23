@@ -80,25 +80,30 @@ unsigned SourceMgr::FindBufferContainingLoc(SMLoc Loc) const {
 }
 
 template <typename T>
-std::pair<const char *, unsigned> SourceMgr::SrcBuffer::getLineNumber(
-    const char *Ptr) const {
+std::vector<T> *SourceMgr::SrcBuffer::getOffsets() const {
   // Ensure OffsetCache is allocated and populated with offsets of all the
   // '\n' bytes.
-  std::vector<T> *Offsets = nullptr;
-  if (OffsetCache.isNull()) {
-    Offsets = new std::vector<T>();
-    OffsetCache = Offsets;
-    size_t Sz = Buffer->getBufferSize();
-    assert(Sz <= std::numeric_limits<T>::max());
-    StringRef S = Buffer->getBuffer();
-    for (size_t N = 0; N < Sz; ++N) {
-      if (S[N] == '\n') {
-        Offsets->push_back(static_cast<T>(N));
-      }
+  if (!OffsetCache.isNull())
+    return OffsetCache.get<std::vector<T> *>();
+
+  std::vector<T> *Offsets = new std::vector<T>();
+  OffsetCache = Offsets;
+  size_t Sz = Buffer->getBufferSize();
+  assert(Sz <= std::numeric_limits<T>::max());
+  StringRef S = Buffer->getBuffer();
+  for (size_t N = 0; N < Sz; ++N) {
+    if (S[N] == '\n') {
+      Offsets->push_back(static_cast<T>(N));
     }
-  } else {
-    Offsets = OffsetCache.get<std::vector<T> *>();
   }
+
+  return Offsets;
+}
+
+template <typename T>
+std::pair<StringRef, unsigned> SourceMgr::SrcBuffer::getLineNumber(
+    const char *Ptr) const {
+  std::vector<T> *Offsets = getOffsets<T>();
 
   const char *BufStart = Buffer->getBufferStart();
   assert(Ptr >= BufStart && Ptr <= Buffer->getBufferEnd());
@@ -116,8 +121,44 @@ std::pair<const char *, unsigned> SourceMgr::SrcBuffer::getLineNumber(
   const char *LineStart =
       EOL != Offsets->begin() ? BufStart + EOL[-1] + 1 : BufStart;
 
+  // The end of the line is the EOL inclusive or the end of the buffer exclusive.
+  const char *LineEnd =
+      EOL != Offsets->end() ? BufStart + *EOL + 1 : Buffer->getBufferEnd();
+
   // Lines count from 1, so add 1 to the distance from the 0th line.
-  return {LineStart, (1 + (EOL - Offsets->begin()))};
+  return {StringRef(LineStart, LineEnd - LineStart), (1 + (EOL - Offsets->begin()))};
+}
+
+template<typename T>
+StringRef SourceMgr::SrcBuffer::getLineRef(unsigned line) const {
+  assert(line >= 1 && "line number must be 1-based");
+  --line;
+
+  const char *BufStart = Buffer->getBufferStart();
+  std::vector<T> *Offsets = getOffsets<T>();
+  size_t size = Offsets->size();
+  if (line < size) {
+    auto EOL = Offsets->begin() + line;
+
+    // The start of the line is the previous line end + 1.
+    const char *LineStart =
+        EOL != Offsets->begin() ? BufStart + EOL[-1] + 1 : BufStart;
+
+    // The end of the line is the EOL inclusive.
+    const char *LineEnd = BufStart + *EOL + 1;
+
+    return StringRef(LineStart, LineEnd - LineStart);
+  } else {
+    // Asking for the last line?
+    if (line == size) {
+      const char *LineStart =
+          size != 0 ? BufStart + Offsets->back() + 1 : BufStart;
+      const char *LineEnd = Buffer->getBufferEnd();
+      return StringRef(LineStart, LineEnd - LineStart);
+    } else {
+      return StringRef(Buffer->getBufferEnd(), 0);
+    }
+  }
 }
 
 SourceMgr::SrcBuffer::SrcBuffer(SourceMgr::SrcBuffer &&Other)
@@ -141,8 +182,7 @@ SourceMgr::SrcBuffer::~SrcBuffer() {
   }
 }
 
-std::pair<unsigned, unsigned>
-SourceMgr::getLineAndColumn(SMLoc Loc, unsigned BufferID) const {
+std::pair<StringRef, unsigned> SourceMgr::FindLine(SMLoc Loc, unsigned int BufferID) const {
   if (!BufferID)
     BufferID = FindBufferContainingLoc(Loc);
   assert(BufferID && "Invalid Location!");
@@ -151,17 +191,35 @@ SourceMgr::getLineAndColumn(SMLoc Loc, unsigned BufferID) const {
   const char *Ptr = Loc.getPointer();
 
   size_t Sz = SB.Buffer->getBufferSize();
-  std::pair<const char *, unsigned> StartAndLineNo;
   if (Sz <= std::numeric_limits<uint8_t>::max())
-    StartAndLineNo = SB.getLineNumber<uint8_t>(Ptr);
+    return SB.getLineNumber<uint8_t>(Ptr);
   else if (Sz <= std::numeric_limits<uint16_t>::max())
-    StartAndLineNo = SB.getLineNumber<uint16_t>(Ptr);
+    return SB.getLineNumber<uint16_t>(Ptr);
   else if (Sz <= std::numeric_limits<uint32_t>::max())
-    StartAndLineNo = SB.getLineNumber<uint32_t>(Ptr);
+    return SB.getLineNumber<uint32_t>(Ptr);
   else
-    StartAndLineNo = SB.getLineNumber<uint64_t>(Ptr);
+    return SB.getLineNumber<uint64_t>(Ptr);
+}
 
-  return std::make_pair(StartAndLineNo.second, Ptr - StartAndLineNo.first + 1);
+StringRef SourceMgr::getLineRef(unsigned line, unsigned BufferID) const {
+  assert(BufferID != 0 && "BufferID must be specified");
+  auto &SB = getBufferInfo(BufferID);
+  size_t Sz = SB.Buffer->getBufferSize();
+  if (Sz <= std::numeric_limits<uint8_t>::max())
+    return SB.getLineRef<uint8_t>(line);
+  else if (Sz <= std::numeric_limits<uint16_t>::max())
+    return SB.getLineRef<uint16_t>(line);
+  else if (Sz <= std::numeric_limits<uint32_t>::max())
+    return SB.getLineRef<uint32_t>(line);
+  else
+    return SB.getLineRef<uint64_t>(line);
+}
+
+std::pair<unsigned, unsigned>
+SourceMgr::getLineAndColumn(SMLoc Loc, unsigned BufferID) const {
+  auto LineRefAndNo = FindLine(Loc, BufferID);
+  return std::make_pair(LineRefAndNo.second,
+                        Loc.getPointer() - LineRefAndNo.first.data() + 1);
 }
 
 void SourceMgr::PrintIncludeStack(SMLoc IncludeLoc, raw_ostream &OS) const {
