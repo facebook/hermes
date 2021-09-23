@@ -24,7 +24,18 @@ impl NullTerminatedBuf<'_> {
         NullTerminatedBuf(Inner::Ref(buf.as_bytes()))
     }
 
-    /// Create from a file and null terminated.
+    /// Create from a reader and null terminate.
+    pub fn from_reader<'a, R: Read>(
+        reader: &'_ mut R,
+    ) -> Result<NullTerminatedBuf<'a>, std::io::Error> {
+        let mut v = Vec::<u8>::new();
+        reader.read_to_end(&mut v)?;
+        v.push(0);
+
+        Ok(NullTerminatedBuf(Inner::Own(v)))
+    }
+
+    /// Create from a file and null terminate it.
     pub fn from_file<'a>(
         f: &'_ mut std::fs::File,
     ) -> Result<NullTerminatedBuf<'a>, std::io::Error> {
@@ -36,11 +47,7 @@ impl NullTerminatedBuf<'_> {
         //       something has a fixed size and is memory mappable (i.e. is not a pipe).
 
         let mut reader = BufReader::new(f);
-        let mut v = Vec::<u8>::new();
-        reader.read_to_end(&mut v)?;
-        v.push(0);
-
-        Ok(NullTerminatedBuf(Inner::Own(v)))
+        Self::from_reader(&mut reader)
     }
 
     /// Create by copying a slice and appending null-termination.
