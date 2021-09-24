@@ -245,7 +245,7 @@ public class DateTimeFormat {
       timeZone = DefaultTimeZone();
     } else {
       try {
-        timeZone = mPlatformDateTimeFormatter.normalizeValidTimeZone(timeZone);
+        timeZone = mPlatformDateTimeFormatter.normalizeValidTimeZone(timeZone.toString());
       } catch (JSRangeErrorException error) {
         throw error;
       }

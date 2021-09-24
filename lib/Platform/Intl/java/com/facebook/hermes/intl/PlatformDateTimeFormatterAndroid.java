@@ -18,6 +18,7 @@ import java.util.TimeZone;
 import java.util.Optional;
 import java.util.List;
 import java.util.Arrays;
+import java.util.function.Predicate;
 
 public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormatter {
   private DateFormat mDateFormat = null;
@@ -209,8 +210,14 @@ public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormat
   }
 
   @Override
-  public String normalizeValidTimeZone(String timeZone) throws JSRangeErrorException {
-    Optional<String> normalizedValidTimeZone = allAvailableTimeZones.stream().filter(tz -> tz.equalsIgnoreCase(timeZone)).findFirst();
+  public String normalizeValidTimeZone(final String timeZone) throws JSRangeErrorException {
+    Optional<String> normalizedValidTimeZone = allAvailableTimeZones.stream()
+      .filter(new Predicate<String>() {
+        @Override
+        public boolean test(String tz) {
+          return tz.equalsIgnoreCase(timeZone);
+        }
+      }).findFirst();
         
     if(!normalizedValidTimeZone.isPresent()) {
       String errorMessage = timeZone + " is invalid timeZone";
