@@ -9,41 +9,34 @@ use juno::ast::*;
 use juno::gen_js;
 use juno::hparser;
 
-fn do_gen(node: &Node, pretty: gen_js::Pretty) -> String {
+fn do_gen(ctx: &Context, node: NodePtr, pretty: gen_js::Pretty) -> String {
     use juno::gen_js::*;
     let mut out: Vec<u8> = vec![];
-    generate(&mut out, node, pretty).unwrap();
+    generate(&mut out, ctx, node, pretty).unwrap();
     String::from_utf8(out).expect("Invalid UTF-8 output in test")
 }
 
-fn node(kind: NodeKind) -> NodePtr {
-    let range = SourceRange {
-        file: 0,
-        start: SourceLoc { line: 0, col: 0 },
-        end: SourceLoc { line: 0, col: 0 },
-    };
-
-    NodePtr::new(Node { range, kind })
-}
-
-fn test_roundtrip(src1: &str) {
+fn test_roundtrip_with_flags(flags: hparser::ParserFlags, src1: &str) {
     use juno::ast::*;
 
+    let mut context = Context::new();
+    let ctx = &mut context;
+
     for pretty in &[gen_js::Pretty::Yes, gen_js::Pretty::No] {
-        let ast1 = hparser::parse(src1).unwrap();
+        let ast1 = hparser::parse_with_file_id(flags, src1, ctx, 0).unwrap();
         let mut dump: Vec<u8> = vec![];
-        dump_json(&mut dump, &ast1, juno::ast::Pretty::Yes).unwrap();
+        dump_json(&mut dump, ctx, ast1, juno::ast::Pretty::Yes).unwrap();
         let ast1_json = String::from_utf8(dump).expect("Invalid UTF-8 output in test");
 
-        let src2 = do_gen(&ast1, *pretty);
-        let ast2 = hparser::parse(&src2).unwrap_or_else(|_| {
+        let src2 = do_gen(ctx, ast1, *pretty);
+        let ast2 = hparser::parse_with_file_id(flags, &src2, ctx, 0).unwrap_or_else(|_| {
             panic!(
                 "Invalid JS generated: Pretty={:?}\nOriginal Source:\n{}\nGenerated Source:\n{}",
                 pretty, &src1, &src2,
             )
         });
         let mut dump: Vec<u8> = vec![];
-        dump_json(&mut dump, &ast2, juno::ast::Pretty::Yes).unwrap();
+        dump_json(&mut dump, ctx, ast2, juno::ast::Pretty::Yes).unwrap();
         let ast2_json = String::from_utf8(dump).expect("Invalid UTF-8 output in test");
 
         assert_eq!(
@@ -54,28 +47,41 @@ fn test_roundtrip(src1: &str) {
     }
 }
 
+fn test_roundtrip(src1: &str) {
+    test_roundtrip_with_flags(Default::default(), src1)
+}
+
+fn test_roundtrip_flow(src1: &str) {
+    test_roundtrip_with_flags(
+        hparser::ParserFlags {
+            strict_mode: false,
+            enable_jsx: false,
+            dialect: hparser::ParserDialect::Flow,
+        },
+        src1,
+    );
+}
+
 #[test]
 fn test_literals() {
-    use NodeKind::*;
-    assert_eq!(
-        do_gen(&node(NullLiteral), gen_js::Pretty::Yes).trim(),
-        "null"
+    let mut ctx = Context::new();
+    let range = SourceRange {
+        file: 0,
+        start: SourceLoc { line: 1, col: 1 },
+        end: SourceLoc { line: 1, col: 1 },
+    };
+    let string = make_node!(
+        ctx,
+        Node::StringLiteral(StringLiteral {
+            range,
+            value: juno::ast::NodeString {
+                str: vec!['A' as u16, 0x1234u16, '\t' as u16],
+            }
+        }),
     );
     assert_eq!(
-        do_gen(
-            &node(StringLiteral {
-                value: juno::ast::StringLiteral {
-                    str: vec!['A' as u16, 0x1234u16, '\t' as u16],
-                }
-            },),
-            gen_js::Pretty::Yes
-        )
-        .trim(),
+        do_gen(&ctx, string, gen_js::Pretty::Yes).trim(),
         r#""A\u1234\t""#,
-    );
-    assert_eq!(
-        do_gen(&node(NumericLiteral { value: 1.0 },), gen_js::Pretty::Yes).trim(),
-        "1"
     );
 
     test_roundtrip("1");
@@ -84,9 +90,14 @@ fn test_literals() {
     test_roundtrip(r#" "\ud83d\udcd5" "#);
     test_roundtrip("true");
     test_roundtrip("false");
+    test_roundtrip("null");
+    test_roundtrip("undefined");
+
     test_roundtrip("/abc/");
     test_roundtrip("/abc/gi");
     test_roundtrip("/abc/gi");
+    test_roundtrip(r#"/ab\/cd/gi"#);
+    test_roundtrip("/😹/");
 
     test_roundtrip(r#" `abc` "#);
     test_roundtrip(r#" `abc\ndef` "#);
@@ -109,17 +120,25 @@ fn test_identifier() {
 
 #[test]
 fn test_binop() {
-    use NodeKind::*;
+    let mut ctx = Context::new();
+    let range = SourceRange {
+        file: 0,
+        start: SourceLoc { line: 1, col: 1 },
+        end: SourceLoc { line: 1, col: 1 },
+    };
+    let left = make_node!(ctx, Node::NullLiteral(NullLiteral { range }));
+    let right = make_node!(ctx, Node::NullLiteral(NullLiteral { range }));
+    let binary = make_node!(
+        ctx,
+        Node::BinaryExpression(BinaryExpression {
+            range,
+            left,
+            operator: BinaryExpressionOperator::Plus,
+            right,
+        }),
+    );
     assert_eq!(
-        do_gen(
-            &node(BinaryExpression {
-                left: node(NullLiteral),
-                operator: BinaryExpressionOperator::Plus,
-                right: node(NullLiteral),
-            }),
-            gen_js::Pretty::Yes
-        )
-        .trim(),
+        do_gen(&ctx, binary, gen_js::Pretty::Yes).trim(),
         "null + null"
     );
 
@@ -397,20 +416,56 @@ fn test_export() {
 
 #[test]
 fn test_types() {
-    use NodeKind::*;
+    let mut ctx = Context::new();
+    let range = SourceRange {
+        file: 0,
+        start: SourceLoc { line: 1, col: 1 },
+        end: SourceLoc { line: 1, col: 1 },
+    };
+    let union_ty = make_node!(
+        ctx,
+        Node::UnionTypeAnnotation(UnionTypeAnnotation {
+            range,
+            types: vec![
+                make_node!(
+                    ctx,
+                    Node::NumberTypeAnnotation(NumberTypeAnnotation { range })
+                ),
+                make_node!(
+                    ctx,
+                    Node::IntersectionTypeAnnotation(IntersectionTypeAnnotation {
+                        range,
+                        types: vec![
+                            make_node!(
+                                ctx,
+                                Node::BooleanTypeAnnotation(BooleanTypeAnnotation { range })
+                            ),
+                            make_node!(
+                                ctx,
+                                Node::StringTypeAnnotation(StringTypeAnnotation { range })
+                            )
+                        ],
+                    }),
+                )
+            ],
+        }),
+    );
     assert_eq!(
-        do_gen(
-            &node(UnionTypeAnnotation {
-                types: vec![
-                    node(NumberTypeAnnotation),
-                    node(IntersectionTypeAnnotation {
-                        types: vec![node(BooleanTypeAnnotation), node(StringTypeAnnotation),]
-                    })
-                ]
-            }),
-            gen_js::Pretty::Yes
-        )
-        .trim(),
+        do_gen(&ctx, union_ty, gen_js::Pretty::Yes).trim(),
         "number | boolean & string"
     );
+
+    test_roundtrip_flow("type A = number");
+    test_roundtrip_flow("type A = ?number");
+    test_roundtrip_flow("type A = string");
+    test_roundtrip_flow("type A = 'foo'");
+    test_roundtrip_flow("type A = 3");
+    test_roundtrip_flow("type A = boolean");
+    test_roundtrip_flow("type A = true | false");
+    test_roundtrip_flow("type A = symbol");
+    test_roundtrip_flow("type A = mixed");
+    test_roundtrip_flow("type A = any");
+    test_roundtrip_flow("type A = void");
+    test_roundtrip_flow("type A = number => number");
+    test_roundtrip_flow("type A = (number, string) => number");
 }

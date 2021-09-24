@@ -373,12 +373,16 @@ static void genGetters() {
 
 static void genConvert() {
   llvh::outs()
-      << "pub unsafe fn cvt_node_ptr(cvt: &Converter, n: NodePtr) -> ast::NodePtr {\n";
+      << "pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {\n";
   llvh::outs() << "    let nr = n.as_ref();\n"
-                  "    let range = cvt.smrange(nr.source_range);\n"
+                  "    let range = ast::SourceRange {\n"
+                  "        file: cvt.file_id,\n"
+                  "        start: cvt.cvt_smloc(nr.source_range.start),\n"
+                  "        end: ast::SourceLoc::invalid(),\n"
+                  "    };\n"
                   "\n";
 
-  llvh::outs() << "    match nr.kind {\n";
+  llvh::outs() << "    let res = match nr.kind {\n";
 
   auto genStruct = [](const TreeClass &cls) {
     if (cls.sentinel != SentinelType::None)
@@ -386,15 +390,12 @@ static void genConvert() {
     if (strncmp(cls.name.c_str(), "Cover", 5) == 0)
       return;
 
-    llvh::outs() << "        NodeKind::" << cls.name
-                 << " => ast::NodePtr::new(\n"
-                    "            ast::Node {\n"
-                    "                range,\n"
-                    "                kind: ast::NodeKind::"
-                 << cls.name << " {\n";
+    llvh::outs() << "        NodeKind::" << cls.name << " => {\n";
 
+    // Declare all the fields as local vars to avoid multiple borrows
+    // of the context.
     for (const auto &fld : cls.fields) {
-      llvh::outs() << "                    " << fld.rustName() << ": ";
+      llvh::outs() << "          let " << fld.rustName() << " = ";
       bool close = true;
       switch (fld.type) {
         case FieldType::NodeString:
@@ -436,12 +437,22 @@ static void genConvert() {
       llvh::outs() << "hermes_get_" << cls.name << "_" << fld.name << "(n)";
       if (close)
         llvh::outs() << ")";
-      llvh::outs() << ",\n";
+      llvh::outs() << ";\n";
     }
 
-    llvh::outs() << "                },\n"
-                    "            }\n"
-                    "        ),\n";
+    llvh::outs() << "          cvt.ast_context.alloc(\n"
+                    "            ast::Node::"
+                 << cls.name << "(ast::" << cls.name << " {\n"
+                 << "                range,\n";
+
+    for (const auto &fld : cls.fields) {
+      // Shorthand initialization of each field.
+      llvh::outs() << "                    " << fld.rustName() << ",\n";
+    }
+
+    llvh::outs() << "            }),\n" // kind
+                    "          )\n" // NodePtr
+                    "        }\n"; // match block
   };
 
   for (const auto &cls : treeClasses_) {
@@ -451,7 +462,11 @@ static void genConvert() {
   }
 
   llvh::outs() << "        _ => panic!(\"Invalid node kind\")\n"
-                  "    }\n";
+                  "    };\n\n";
+  llvh::outs()
+      << "    cvt.ast_context.node_mut(res).range_mut().end = cvt.cvt_smloc(nr.source_range.end.pred());\n"
+         "\n"
+         "    res";
   llvh::outs() << "}\n";
 }
 

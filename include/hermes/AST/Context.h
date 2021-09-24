@@ -267,6 +267,10 @@ class Context {
     return sm_;
   }
 
+  const SourceErrorManager &getSourceErrorManager() const {
+    return sm_;
+  }
+
   /// \return the table for static require resolution, nullptr if not supplied.
   const std::vector<uint32_t> &getSegments() const {
     return segments_;

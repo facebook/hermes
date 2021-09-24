@@ -1883,8 +1883,8 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
             blockSourceCode.getValue(), bytecodeOffs);
         if (sourceLocation) {
           auto file = debugInfo->getFilenameByID(sourceLocation->filenameId);
-          res += ": " + file + ":" + oscompat::to_string(sourceLocation->line) +
-              ":" + oscompat::to_string(sourceLocation->column);
+          res += ": " + file + ":" + std::to_string(sourceLocation->line) +
+              ":" + std::to_string(sourceLocation->column);
         }
       }
       res += "\n";

@@ -1998,9 +1998,9 @@ CompileResult processSourceFiles(
     for (const auto segment : context->getSegments()) {
       std::string filename = base.str();
       if (segment != 0) {
-        filename += "." + oscompat::to_string(segment);
+        filename += "." + std::to_string(segment);
       }
-      std::string flavor = "hbc-seg-" + oscompat::to_string(segment);
+      std::string flavor = "hbc-seg-" + std::to_string(segment);
 
       OutputStream fileOS{llvh::outs()};
       if (!base.empty() && !fileOS.open(filename, F_None)) {

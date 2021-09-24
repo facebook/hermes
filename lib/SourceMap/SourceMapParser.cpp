@@ -81,8 +81,7 @@ std::unique_ptr<SourceMap> SourceMapParser::parse(
     if (file == nullptr) {
       sm.error(
           genericLoc,
-          "Source filename #" + oscompat::to_string(i) +
-              " not found or not string");
+          "Source filename #" + std::to_string(i) + " not found or not string");
       return nullptr;
     }
     const JSONValue *metadata = nullptr;

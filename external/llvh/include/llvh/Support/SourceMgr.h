@@ -76,13 +76,23 @@ private:
     /// offset corresponding to a particular SMLoc).
     mutable VariableSizeOffsets OffsetCache;
 
+    /// Lazily populate \c OffsetCache and return it.
+    template<typename T>
+    std::vector<T> *getOffsets() const;
+
     /// Populate \c OffsetCache and look up a given \p Ptr in it, assuming
     /// it points somewhere into \c Buffer. The static type parameter \p T
     /// must be an unsigned integer type from uint{8,16,32,64}_t large
     /// enough to store offsets inside \c Buffer.
-    /// \return a pointer to the start of the line and the line number.
+    /// \return the line and the line number.
     template<typename T>
-    std::pair<const char *, unsigned> getLineNumber(const char *Ptr) const;
+    std::pair<StringRef, unsigned> getLineNumber(const char *Ptr) const;
+
+    /// Return a reference to the line with the specified 1-based line number.
+    /// If the line is greater than the last line in the buffer, an empty
+    /// reference is returned.
+    template<typename T>
+    StringRef getLineRef(unsigned line) const;
 
     /// This is the location of the parent include, or null if at the top level.
     SMLoc IncludeLoc;
@@ -188,6 +198,16 @@ public:
   unsigned FindLineNumber(SMLoc Loc, unsigned BufferID = 0) const {
     return getLineAndColumn(Loc, BufferID).first;
   }
+
+  /// Find the line containing the specified location in the specified file.
+  /// Return the line number and a reference to the line itself.
+  /// This is not a fast method.
+  std::pair<StringRef, unsigned> FindLine(SMLoc Loc, unsigned BufferID = 0) const;
+
+  /// Return a reference to the specified (1-based) line.
+  /// If the line is greater than the last line in the buffer, an empty
+  /// reference is returned.
+  StringRef getLineRef(unsigned line, unsigned BufferID) const;
 
   /// Find the line and column number for the specified location in the
   /// specified file. This is not a fast method.

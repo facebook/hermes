@@ -5,5 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#[macro_use]
 mod ast;
+
 mod gen_js;
+
+mod lit;

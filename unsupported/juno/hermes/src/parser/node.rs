@@ -26,6 +26,10 @@ impl SMLoc {
             ptr: self.ptr.wrapping_sub(1),
         }
     }
+
+    pub fn as_ptr(self) -> *const u8 {
+        self.ptr
+    }
 }
 
 #[repr(C)]

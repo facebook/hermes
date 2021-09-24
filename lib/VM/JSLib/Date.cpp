@@ -398,7 +398,7 @@ static CallResult<double> makeTimeFromArgs(Runtime *runtime, NativeArgs args) {
   }
 
   // Years between 0 and 99 are treated as offsets from 1900.
-  double yint = oscompat::trunc(fields[y]);
+  double yint = std::trunc(fields[y]);
   if (!std::isnan(fields[y]) && 0 <= yint && yint <= 99) {
     fields[yr] = 1900 + yint;
   } else {
@@ -1033,7 +1033,7 @@ datePrototypeSetYear(void *ctx, Runtime *runtime, NativeArgs args) {
     self->setPrimitiveValue(std::numeric_limits<double>::quiet_NaN());
     return HermesValue::encodeNaNValue();
   }
-  double yint = oscompat::trunc(y);
+  double yint = std::trunc(y);
   double yr = 0 <= yint && yint <= 99 ? yint + 1900 : y;
   double date = utcTime(makeDate(
       makeDay(yr, monthFromTime(t), dateFromTime(t)), timeWithinDay(t)));

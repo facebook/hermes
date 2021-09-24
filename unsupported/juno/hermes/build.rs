@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::env;
-
 fn main() {
-    let hermes_build = env::var("HERMES_BUILD")
-        .expect("HERMES_BUILD must point to a Hermes CMake build directory");
+    let hermes_build = env!(
+        "HERMES_BUILD",
+        "HERMES_BUILD must point to a Hermes CMake build directory"
+    );
 
     println!("cargo:rustc-link-search={}/lib/Parser", hermes_build);
     println!(

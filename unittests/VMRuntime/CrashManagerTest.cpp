@@ -211,7 +211,7 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
   const std::string expectedKeyBase = "XYZ:HeapSegment:";
   for (int i = 0; i < 26; i++) {
     const std::string expectedKey =
-        expectedKeyBase + (i == 0 ? std::string("YG") : oscompat::to_string(i));
+        expectedKeyBase + (i == 0 ? std::string("YG") : std::to_string(i));
     std::string actual = contextualCustomData.at(expectedKey);
     void *ptr = nullptr;
     int numArgsWritten = std::sscanf(actual.c_str(), "%p", &ptr);

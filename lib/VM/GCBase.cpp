@@ -299,7 +299,7 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
     }
     // Assume all weak pointers have no names, and are stored in an array-like
     // structure.
-    std::string indexName = oscompat::to_string(nextEdge_++);
+    std::string indexName = std::to_string(nextEdge_++);
     snap_.addNamedEdge(
         HeapSnapshot::EdgeType::Weak,
         indexName,
@@ -468,7 +468,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
           nameRef,
           id);
     } else if (weak) {
-      std::string numericName = oscompat::to_string(nextEdge_++);
+      std::string numericName = std::to_string(nextEdge_++);
       snap_.addNamedEdge(HeapSnapshot::EdgeType::Weak, numericName.c_str(), id);
     } else {
       // Unnamed edges get indices.
@@ -1923,7 +1923,7 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
       if (len < 8) {
         auto &subStat =
             stat.breakdown
-                ["StringPrimitive (size " + oscompat::to_string(len) + ")"];
+                ["StringPrimitive (size " + std::to_string(len) + ")"];
         subStat.count++;
         subStat.size += sz;
       }

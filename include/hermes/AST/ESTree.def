@@ -442,7 +442,7 @@ ESTREE_NODE_2_ARGS(TaggedTemplateExpression, Base,
 ESTREE_NODE_3_ARGS(TemplateElement, Base,
                    NodeBoolean, tail, false,
                    NodeString, cooked, true,
-                   NodeString, raw, false)
+                   NodeLabel, raw, false)
 
 ESTREE_NODE_6_ARGS(
     Property, Base,

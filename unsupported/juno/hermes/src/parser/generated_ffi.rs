@@ -422,7 +422,7 @@ extern "C" {
     // TemplateElement
     pub fn hermes_get_TemplateElement_tail(node: NodePtr) -> bool;
     pub fn hermes_get_TemplateElement_cooked(node: NodePtr) -> NodeStringOpt;
-    pub fn hermes_get_TemplateElement_raw(node: NodePtr) -> NodeString;
+    pub fn hermes_get_TemplateElement_raw(node: NodePtr) -> NodeLabel;
     // Property
     pub fn hermes_get_Property_key(node: NodePtr) -> NodePtr;
     pub fn hermes_get_Property_value(node: NodePtr) -> NodePtr;

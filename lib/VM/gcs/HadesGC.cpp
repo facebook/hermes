@@ -2482,7 +2482,7 @@ void HadesGC::youngGenCollection(
       const size_t segIdx =
           SegmentInfo::segmentIndexFromStart(compactee_.segment->lowLim());
       segmentIndices_.push_back(segIdx);
-      removeSegmentExtentFromCrashManager(oscompat::to_string(segIdx));
+      removeSegmentExtentFromCrashManager(std::to_string(segIdx));
       removeSegmentExtentFromCrashManager(kCompacteeNameForCrashMgr);
 
       compactee_ = {};
@@ -3040,7 +3040,7 @@ llvh::ErrorOr<HadesGC::HeapSegment> HadesGC::createSegment() {
     segIdx = ++numSegments_;
   }
   pointerBase_->setSegment(segIdx, seg.lowLim());
-  addSegmentExtentToCrashManager(seg, oscompat::to_string(segIdx));
+  addSegmentExtentToCrashManager(seg, std::to_string(segIdx));
   seg.markBitArray().markAll();
   return llvh::ErrorOr<HadesGC::HeapSegment>(std::move(seg));
 }
@@ -3065,8 +3065,7 @@ void HadesGC::OldGen::addSegment(HeapSegment seg) {
     addCellToFreelist(res.ptr, sz, segments_.size() - 1);
   }
 
-  gc_->addSegmentExtentToCrashManager(
-      newSeg, oscompat::to_string(numSegments()));
+  gc_->addSegmentExtentToCrashManager(newSeg, std::to_string(numSegments()));
 }
 
 HadesGC::HeapSegment HadesGC::OldGen::removeSegment(size_t segmentIdx) {

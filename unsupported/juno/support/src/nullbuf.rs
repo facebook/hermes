@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::io::{BufReader, Read};
+use std::io::Read;
 use std::os::raw::c_char;
 
 /// An abstraction for a null-terminated buffer either read from disk, copied
@@ -24,8 +24,21 @@ impl NullTerminatedBuf<'_> {
         NullTerminatedBuf(Inner::Ref(buf.as_bytes()))
     }
 
-    /// Create from a file and null terminated.
-    pub fn from_file(f: &mut std::fs::File) -> Result<NullTerminatedBuf, std::io::Error> {
+    /// Create from a reader and null terminate.
+    pub fn from_reader<'a, R: Read>(
+        mut reader: R,
+    ) -> Result<NullTerminatedBuf<'a>, std::io::Error> {
+        let mut v = Vec::<u8>::new();
+        reader.read_to_end(&mut v)?;
+        v.push(0);
+
+        Ok(NullTerminatedBuf(Inner::Own(v)))
+    }
+
+    /// Create from a file and null terminate it.
+    pub fn from_file<'a>(
+        f: &'_ mut std::fs::File,
+    ) -> Result<NullTerminatedBuf<'a>, std::io::Error> {
         // TODO: this is an extremely naive implementation, it can be optimized in multiple ways:
         //       - obtain the size of the file and perform a single allocation and few syscalls
         //       - memory map the file
@@ -33,12 +46,7 @@ impl NullTerminatedBuf<'_> {
         //       One problem is that there isn't an obvious way in Rust to check portably whether
         //       something has a fixed size and is memory mappable (i.e. is not a pipe).
 
-        let mut reader = BufReader::new(f);
-        let mut v = Vec::<u8>::new();
-        reader.read_to_end(&mut v)?;
-        v.push(0);
-
-        Ok(NullTerminatedBuf(Inner::Own(v)))
+        Self::from_reader(f)
     }
 
     /// Create by copying a slice and appending null-termination.
@@ -106,7 +114,7 @@ impl NullTerminatedBuf<'_> {
     }
 }
 
-impl std::convert::AsRef<[u8]> for NullTerminatedBuf<'_> {
+impl AsRef<[u8]> for NullTerminatedBuf<'_> {
     fn as_ref(&self) -> &[u8] {
         self.as_bytes()
     }

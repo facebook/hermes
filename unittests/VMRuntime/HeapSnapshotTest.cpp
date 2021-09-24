@@ -1092,11 +1092,9 @@ static std::string functionInfoToString(
   auto line = llvh::cast<JSONNumber>(traceFunctionInfos[base + 4])->getValue();
   auto col = llvh::cast<JSONNumber>(traceFunctionInfos[base + 5])->getValue();
 
-  return std::string(name) + "(" + oscompat::to_string((int)functionID) +
-      ") @ " + std::string(scriptName) + "(" +
-      oscompat::to_string((int)scriptID) +
-      "):" + oscompat::to_string((int)line) + ":" +
-      oscompat::to_string((int)col);
+  return std::string(name) + "(" + std::to_string((int)functionID) + ") @ " +
+      std::string(scriptName) + "(" + std::to_string((int)scriptID) +
+      "):" + std::to_string((int)line) + ":" + std::to_string((int)col);
 }
 
 struct ChromeStackTreeNode {

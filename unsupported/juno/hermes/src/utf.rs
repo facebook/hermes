@@ -58,9 +58,23 @@ const UTF16_HIGH_SURROGATE: u32 = 0xD800;
 const UTF16_LOW_SURROGATE: u32 = 0xDC00;
 const UNICODE_REPLACEMENT_CHARACTER: u32 = char::REPLACEMENT_CHARACTER as u32;
 
+/// Return whether the character is part of a UTF-8 sequence.
 #[inline]
-fn is_utf8_start(ch: u8) -> bool {
+pub fn is_utf8(ch: u8) -> bool {
     (ch & 0x80) != 0
+}
+
+/// Return true if this is a UTF-8 leading byte.
+#[inline]
+pub fn is_utf8_lead(ch: u8) -> bool {
+    (ch & 0xC0) == 0xC0
+}
+
+/// Return true if this is a UTF-8 continuation byte, or in other words, this
+/// is a byte in the "middle" of a UTF-8 codepoint.
+#[inline]
+pub fn is_utf8_continuation(ch: u8) -> bool {
+    (ch & 0xC0) == 0x80
 }
 
 /// Returns whether cp is a high surrogate.
@@ -91,7 +105,7 @@ fn decode_utf8<const ALLOW_SURROGATES: bool>(
     from: &mut usize,
     ch: u8,
 ) -> Result<u32, UTFError> {
-    if !is_utf8_start(ch) {
+    if !is_utf8(ch) {
         *from += 1;
         Ok(ch as u32)
     } else {
@@ -105,7 +119,7 @@ fn decode_utf8_slow_path<const ALLOW_SURROGATES: bool>(
     from: &mut usize,
     ch: u32,
 ) -> Result<u32, UTFError> {
-    debug_assert!(is_utf8_start(ch as u8));
+    debug_assert!(is_utf8(ch as u8));
     let result: u32;
     let len = src.len();
     if (ch & 0xE0) == 0xC0 {
@@ -194,7 +208,7 @@ pub fn utf8_with_surrogates_to_utf16(src: &[u8]) -> Result<Vec<u16>, UTFError> {
     while from < len {
         // We checked `from` already.
         let b = unsafe { *src.get_unchecked(from) };
-        if !is_utf8_start(b) {
+        if !is_utf8(b) {
             from += 1;
             v.push(b as u16);
             continue;
@@ -223,7 +237,7 @@ fn utf8_with_surrogates_to_string_helper(src: &[u8]) -> (String, Option<UTFError
     while from < len {
         // We checked `from` already.
         let b = unsafe { *src.get_unchecked(from) };
-        if !is_utf8_start(b) {
+        if !is_utf8(b) {
             from += 1;
             str.push(b as char);
             continue;
