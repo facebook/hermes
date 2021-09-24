@@ -17,9 +17,15 @@ import androidx.annotation.RequiresApi;
 import java.text.AttributedCharacterIterator;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Optional;
+import java.util.List;
+import java.util.Arrays;
 
 public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter {
   private DateFormat mDateFormat = null;
+
+  @RequiresApi(api = Build.VERSION_CODES.N)
+  private List<String> allAvailableTimeZones = Arrays.asList(TimeZone.getAvailableIDs());
 
   @RequiresApi(api = Build.VERSION_CODES.N)
   @Override
@@ -269,8 +275,15 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
 
   @RequiresApi(api = Build.VERSION_CODES.N)
   @Override
-  public boolean isValidTimeZone(String timeZone) {
-    return TimeZone.getTimeZone(timeZone).getID().equals(timeZone);
+  public String normalizeValidTimeZone(String timeZone) throws JSRangeErrorException {
+    Optional<String> normalizedValidTimeZone = allAvailableTimeZones.stream().filter(tz -> tz.equalsIgnoreCase(timeZone)).findFirst();
+        
+    if(!normalizedValidTimeZone.isPresent()) {
+      String errorMessage = timeZone + " is invalid timeZone";
+      throw new JSRangeErrorException(errorMessage);
+    }
+    
+    return normalizedValidTimeZone.get();
   }
 
   @RequiresApi(api = Build.VERSION_CODES.N)

@@ -15,9 +15,14 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.Optional;
+import java.util.List;
+import java.util.Arrays;
 
 public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormatter {
   private DateFormat mDateFormat = null;
+
+  private List<String> allAvailableTimeZones = Arrays.asList(TimeZone.getAvailableIDs());
 
   @Override
   public String format(double n) {
@@ -204,8 +209,15 @@ public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormat
   }
 
   @Override
-  public boolean isValidTimeZone(String timeZone) {
-    return TimeZone.getTimeZone(timeZone).getID().equals(timeZone);
+  public String normalizeValidTimeZone(String timeZone) throws JSRangeErrorException {
+    Optional<String> normalizedValidTimeZone = allAvailableTimeZones.stream().filter(tz -> tz.equalsIgnoreCase(timeZone)).findFirst();
+        
+    if(!normalizedValidTimeZone.isPresent()) {
+      String errorMessage = timeZone + " is invalid timeZone";
+      throw new JSRangeErrorException(errorMessage);
+    }
+    
+    return normalizedValidTimeZone.get();
   }
 
   @Override
