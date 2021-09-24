@@ -113,6 +113,26 @@ public class HermesInstrumentationTest extends InstrumentationTestCase {
   }
 
   @Test
+  public void testDateTimeFormatCaseInsensitivity() {
+    try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
+      rt.evaluateJavaScript(
+          new StringBuilder()
+              .append("var date = new Date('2021-09-24T22:00:00Z');\n")
+              .append("var formattedDate = Intl.DateTimeFormat('en-US', {\n")
+              .append("timeZone: 'AmeRiCa/new_YORK',\n")
+              .append("day: 'numeric',\n")
+              .append("month: 'numeric',\n")
+              .append("hour: 'numeric',\n")
+              .append("minute: 'numeric'\n")
+              .append("}).format(date);\n")
+              .toString());
+
+      String result = rt.getGlobalStringProperty("formattedDate");
+      assertThat(result).isEqualTo("9/24, 6:00 PM");
+    }
+  }
+
+  @Test
   public void testCaseConversion() {
     Locale defaultLocale = Locale.getDefault();
     Locale.setDefault(new Locale("en-US"));
