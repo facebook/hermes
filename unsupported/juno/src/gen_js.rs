@@ -650,9 +650,9 @@ impl<W: Write> GenJS<W> {
                 out!(self, "/");
                 // Parser doesn't handle escapes when lexing RegExp,
                 // so we don't need to do any manual escaping here.
-                self.write_utf8(&pattern.str);
+                self.write_utf8(ctx.str(*pattern));
                 out!(self, "/");
-                self.write_utf8(&flags.str);
+                self.write_utf8(ctx.str(*flags));
             }
             Node::ThisExpression(_) => {
                 out!(self, "this");
@@ -948,7 +948,7 @@ impl<W: Write> GenJS<W> {
                 type_annotation,
                 optional,
             }) => {
-                self.write_utf8(name.str.as_ref());
+                self.write_utf8(ctx.str(*name).as_ref());
                 if *optional {
                     out!(self, "?");
                 }
@@ -1032,7 +1032,7 @@ impl<W: Write> GenJS<W> {
                     }) = &quasi.get(ctx)
                     {
                         let mut buf = [0u8; 4];
-                        for char in raw.str.chars() {
+                        for char in ctx.str(*raw).chars() {
                             if char == '\n' {
                                 self.force_newline_without_indent();
                                 continue;
@@ -1518,7 +1518,7 @@ impl<W: Write> GenJS<W> {
             }
 
             Node::JSXIdentifier(JSXIdentifier { range: _, name }) => {
-                out!(self, "{}", name.str);
+                out!(self, "{}", ctx.str(*name));
             }
             Node::JSXMemberExpression(JSXMemberExpression {
                 range: _,
@@ -2042,7 +2042,7 @@ impl<W: Write> GenJS<W> {
                         type_annotation,
                         ..
                     }) => {
-                        out!(self, "{}", &name.str);
+                        out!(self, "{}", &ctx.str(*name));
                         match type_annotation {
                             None => {
                                 unimplemented!("Malformed AST: Need to handle error");
@@ -2402,7 +2402,7 @@ impl<W: Write> GenJS<W> {
                 out!(
                     self,
                     "{}",
-                    match kind.str.as_str() {
+                    match ctx.str(*kind) {
                         "plus" => "+",
                         "minus" => "-",
                         _ => unimplemented!("Malformed variance"),
@@ -2431,7 +2431,7 @@ impl<W: Write> GenJS<W> {
                 if let Some(variance) = variance {
                     variance.visit(ctx, self, Some(node));
                 }
-                out!(self, "{}", &name.str);
+                out!(self, "{}", ctx.str(*name));
                 if let Some(bound) = bound {
                     out!(self, ":");
                     self.space(ForceSpace::No);

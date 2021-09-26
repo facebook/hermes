@@ -132,6 +132,15 @@ impl Converter<'_, '_> {
         self.line_cache
             .make_source_loc(line_coord.line_ref.try_offset_from(loc.as_ptr()).unwrap())
     }
+
+    pub fn cvt_label(&mut self, u: NodeLabel) -> ast::NodeLabel {
+        self.ast_context
+            .add_atom(utf8_with_surrogates_to_string(u.as_slice()).unwrap())
+    }
+
+    pub fn cvt_label_opt(&mut self, u: NodeLabelOpt) -> Option<ast::NodeLabel> {
+        u.as_node_label().map(|u| self.cvt_label(u))
+    }
 }
 
 /// # Safety
@@ -161,16 +170,6 @@ pub fn cvt_string(l: NodeString) -> ast::NodeString {
 
 pub fn cvt_string_opt(l: NodeStringOpt) -> Option<ast::NodeString> {
     l.as_node_string().map(cvt_string)
-}
-
-pub fn cvt_label(u: NodeLabel) -> ast::NodeLabel {
-    ast::NodeLabel {
-        str: utf8_with_surrogates_to_string(u.as_slice()).unwrap(),
-    }
-}
-
-pub fn cvt_label_opt(u: NodeLabelOpt) -> Option<ast::NodeLabel> {
-    u.as_node_label().map(cvt_label)
 }
 
 /// Convert any of the enum `NodeLabel`s into their respective Rust enum types.

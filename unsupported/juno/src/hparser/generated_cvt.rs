@@ -342,8 +342,8 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           )
         }
         NodeKind::RegExpLiteral => {
-          let pattern = cvt_label(hermes_get_RegExpLiteral_pattern(n));
-          let flags = cvt_label(hermes_get_RegExpLiteral_flags(n));
+          let pattern = cvt.cvt_label(hermes_get_RegExpLiteral_pattern(n));
+          let flags = cvt.cvt_label(hermes_get_RegExpLiteral_flags(n));
           cvt.ast_context.alloc(
             ast::Node::RegExpLiteral(ast::RegExpLiteral {
                 range,
@@ -601,7 +601,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           )
         }
         NodeKind::Identifier => {
-          let name = cvt_label(hermes_get_Identifier_name(n));
+          let name = cvt.cvt_label(hermes_get_Identifier_name(n));
           let type_annotation = cvt_node_ptr_opt(cvt, hermes_get_Identifier_typeAnnotation(n));
           let optional = hermes_get_Identifier_optional(n);
           cvt.ast_context.alloc(
@@ -702,7 +702,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
         NodeKind::TemplateElement => {
           let tail = hermes_get_TemplateElement_tail(n);
           let cooked = cvt_string_opt(hermes_get_TemplateElement_cooked(n));
-          let raw = cvt_label(hermes_get_TemplateElement_raw(n));
+          let raw = cvt.cvt_label(hermes_get_TemplateElement_raw(n));
           cvt.ast_context.alloc(
             ast::Node::TemplateElement(ast::TemplateElement {
                 range,
@@ -998,7 +998,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           )
         }
         NodeKind::JSXIdentifier => {
-          let name = cvt_label(hermes_get_JSXIdentifier_name(n));
+          let name = cvt.cvt_label(hermes_get_JSXIdentifier_name(n));
           cvt.ast_context.alloc(
             ast::Node::JSXIdentifier(ast::JSXIdentifier {
                 range,
@@ -1185,7 +1185,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
         }
         NodeKind::NumberLiteralTypeAnnotation => {
           let value = hermes_get_NumberLiteralTypeAnnotation_value(n);
-          let raw = cvt_label(hermes_get_NumberLiteralTypeAnnotation_raw(n));
+          let raw = cvt.cvt_label(hermes_get_NumberLiteralTypeAnnotation_raw(n));
           cvt.ast_context.alloc(
             ast::Node::NumberLiteralTypeAnnotation(ast::NumberLiteralTypeAnnotation {
                 range,
@@ -1203,7 +1203,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
         }
         NodeKind::BooleanLiteralTypeAnnotation => {
           let value = hermes_get_BooleanLiteralTypeAnnotation_value(n);
-          let raw = cvt_label(hermes_get_BooleanLiteralTypeAnnotation_raw(n));
+          let raw = cvt.cvt_label(hermes_get_BooleanLiteralTypeAnnotation_raw(n));
           cvt.ast_context.alloc(
             ast::Node::BooleanLiteralTypeAnnotation(ast::BooleanLiteralTypeAnnotation {
                 range,
@@ -1540,7 +1540,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
         NodeKind::DeclareModule => {
           let id = cvt_node_ptr(cvt, hermes_get_DeclareModule_id(n));
           let body = cvt_node_ptr(cvt, hermes_get_DeclareModule_body(n));
-          let kind = cvt_label(hermes_get_DeclareModule_kind(n));
+          let kind = cvt.cvt_label(hermes_get_DeclareModule_kind(n));
           cvt.ast_context.alloc(
             ast::Node::DeclareModule(ast::DeclareModule {
                 range,
@@ -1617,7 +1617,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           let is_static = hermes_get_ObjectTypeProperty_static(n);
           let proto = hermes_get_ObjectTypeProperty_proto(n);
           let variance = cvt_node_ptr_opt(cvt, hermes_get_ObjectTypeProperty_variance(n));
-          let kind = cvt_label(hermes_get_ObjectTypeProperty_kind(n));
+          let kind = cvt.cvt_label(hermes_get_ObjectTypeProperty_kind(n));
           cvt.ast_context.alloc(
             ast::Node::ObjectTypeProperty(ast::ObjectTypeProperty {
                 range,
@@ -1687,7 +1687,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           )
         }
         NodeKind::Variance => {
-          let kind = cvt_label(hermes_get_Variance_kind(n));
+          let kind = cvt.cvt_label(hermes_get_Variance_kind(n));
           cvt.ast_context.alloc(
             ast::Node::Variance(ast::Variance {
                 range,
@@ -1705,7 +1705,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
           )
         }
         NodeKind::TypeParameter => {
-          let name = cvt_label(hermes_get_TypeParameter_name(n));
+          let name = cvt.cvt_label(hermes_get_TypeParameter_name(n));
           let bound = cvt_node_ptr_opt(cvt, hermes_get_TypeParameter_bound(n));
           let variance = cvt_node_ptr_opt(cvt, hermes_get_TypeParameter_variance(n));
           let default = cvt_node_ptr_opt(cvt, hermes_get_TypeParameter_default(n));
@@ -2037,7 +2037,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
         }
         NodeKind::TSParameterProperty => {
           let parameter = cvt_node_ptr(cvt, hermes_get_TSParameterProperty_parameter(n));
-          let accessibility = cvt_label_opt(hermes_get_TSParameterProperty_accessibility(n));
+          let accessibility = cvt.cvt_label_opt(hermes_get_TSParameterProperty_accessibility(n));
           let readonly = hermes_get_TSParameterProperty_readonly(n);
           let is_static = hermes_get_TSParameterProperty_static(n);
           let export = hermes_get_TSParameterProperty_export(n);

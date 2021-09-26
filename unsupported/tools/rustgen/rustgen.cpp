@@ -418,7 +418,8 @@ static void genConvert() {
               (cls.name == "AssignmentExpression" && fld.name == "operator"))
             llvh::outs() << "cvt_enum(";
           else
-            llvh::outs() << "cvt_label" << (fld.optional ? "_opt" : "") << "(";
+            llvh::outs() << "cvt.cvt_label" << (fld.optional ? "_opt" : "")
+                         << "(";
           break;
         case FieldType::Boolean:
         case FieldType::Number:

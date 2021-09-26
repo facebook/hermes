@@ -11,6 +11,7 @@ use thiserror::Error;
 
 #[macro_use]
 mod def;
+mod atom_table;
 mod dump;
 mod kind;
 mod validate;
@@ -21,6 +22,8 @@ pub use dump::{dump_json, Pretty};
 pub use kind::*;
 pub use validate::{validate_tree, ValidationError};
 
+pub use atom_table::{Atom, AtomTable, INVALID_ATOM};
+
 /// The storage for AST nodes.
 /// Can be used to allocate and free nodes.
 #[derive(Debug, Default)]
@@ -30,6 +33,9 @@ pub struct Context {
 
     /// First element of the free list if there is one.
     free_list_head: Option<usize>,
+
+    /// All identifiers are kept here.
+    atom_tab: AtomTable,
 }
 
 #[derive(Debug)]
@@ -89,6 +95,18 @@ impl Context {
         let idx = ptr.0;
         self.storage[idx] = StorageEntry::Free(self.free_list_head);
         self.free_list_head = Some(idx);
+    }
+
+    /// Add a string to the identifier table.
+    #[inline]
+    pub fn add_atom<V: Into<String> + AsRef<str>>(&mut self, value: V) -> Atom {
+        self.atom_tab.add_atom(value)
+    }
+
+    /// Obtain the contents of an atom from the atom table.
+    #[inline]
+    pub fn str(&self, index: Atom) -> &str {
+        self.atom_tab.str(index)
     }
 }
 
@@ -153,10 +171,7 @@ impl SourceLoc {
 }
 
 /// JS identifier represented as valid UTF-8.
-#[derive(Debug)]
-pub struct NodeLabel {
-    pub str: String,
-}
+pub type NodeLabel = Atom;
 
 /// A single node child owned by a parent.
 #[derive(Debug, Copy, Clone)]

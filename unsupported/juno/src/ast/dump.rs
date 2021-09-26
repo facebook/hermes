@@ -68,8 +68,8 @@ impl DumpChild for bool {
 }
 
 impl DumpChild for NodeLabel {
-    fn dump<W: Write>(&self, _ctx: &Context, emitter: &mut JSONEmitter<W>) {
-        emitter.emit_string(&self.str);
+    fn dump<W: Write>(&self, ctx: &Context, emitter: &mut JSONEmitter<W>) {
+        emitter.emit_string(ctx.str(*self));
     }
 }
 
