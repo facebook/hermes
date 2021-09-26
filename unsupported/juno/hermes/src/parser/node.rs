@@ -64,7 +64,7 @@ pub struct UniqueString {
 }
 
 #[repr(transparent)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct NodeLabel {
     ptr: *const UniqueString,
 }

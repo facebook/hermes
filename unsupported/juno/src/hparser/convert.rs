@@ -14,6 +14,7 @@ use hermes::parser::{
 use hermes::utf::{
     is_utf8_continuation, utf8_with_surrogates_to_string, utf8_with_surrogates_to_utf16,
 };
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::str::FromStr;
 
@@ -45,6 +46,11 @@ pub struct Converter<'parser, 'ctx> {
 
     /// A cache to speed up finding locations.
     line_cache: FindLineCache<'parser>,
+
+    /// Map from NodeLabel, which has been uniqued in Hermes, to an
+    /// ast::Identifier. This allows us to avoid repeated conversion of the same
+    /// NodeLabel.
+    atom_tab: HashMap<NodeLabel, ast::Atom>,
 }
 
 /// Adjust the source location backwards making sure it doesn't point to \r or
@@ -92,6 +98,7 @@ impl Converter<'_, '_> {
             ast_context,
             file_id,
             line_cache: Default::default(),
+            atom_tab: Default::default(),
         }
     }
 
@@ -134,8 +141,10 @@ impl Converter<'_, '_> {
     }
 
     pub fn cvt_label(&mut self, u: NodeLabel) -> ast::NodeLabel {
-        self.ast_context
-            .add_atom(utf8_with_surrogates_to_string(u.as_slice()).unwrap())
+        let ctx = &mut *self.ast_context;
+        *self.atom_tab.entry(u).or_insert_with(move || {
+            ctx.add_atom(utf8_with_surrogates_to_string(u.as_slice()).unwrap())
+        })
     }
 
     pub fn cvt_label_opt(&mut self, u: NodeLabelOpt) -> Option<ast::NodeLabel> {
