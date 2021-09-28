@@ -18,7 +18,7 @@ fn run_lit_tests() {
     Command::new(lit)
         .arg("-sv")
         .arg("--param")
-        .arg("test_exec_root=./target/lit")
+        .arg("test_exec_root=../../target/lit")
         .arg("--param")
         .arg(format!(
             "juno={}",
@@ -26,7 +26,7 @@ fn run_lit_tests() {
         ))
         .arg("--param")
         .arg(format!("FileCheck={}/bin/FileCheck", hermes_build))
-        .arg(format!("{}/lit/", env!("CARGO_MANIFEST_DIR")))
+        .arg(format!("{}/../../lit/", env!("CARGO_MANIFEST_DIR")))
         .assert()
         .success();
 }
