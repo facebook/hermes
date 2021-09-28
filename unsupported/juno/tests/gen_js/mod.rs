@@ -500,3 +500,69 @@ fn test_jsx() {
         ",
     );
 }
+
+#[test]
+fn test_sourcemap() {
+    use juno::gen_js::*;
+    let mut ctx = Context::new();
+
+    let ast1 = hparser::parse(&mut ctx, "function foo() { return 1 }").unwrap();
+    let mut out: Vec<u8> = vec![];
+    let sourcemap = generate(&mut out, &ctx, ast1, Pretty::Yes).unwrap();
+    let string = String::from_utf8(out).expect("Invalid UTF-8 output in test");
+    assert_eq!(
+        string,
+        "function foo() {
+  return 1;
+}\n"
+    );
+    assert_eq!(sourcemap.get_token_count(), 4);
+
+    assert_eq!(
+        sourcemap.get_token(0).unwrap().get_raw_token(),
+        sourcemap::RawToken {
+            dst_line: 0,
+            dst_col: 0,
+            src_line: 0,
+            src_col: 0,
+            src_id: 0,
+            name_id: !0,
+        }
+    );
+
+    assert_eq!(
+        sourcemap.get_token(1).unwrap().get_raw_token(),
+        sourcemap::RawToken {
+            dst_line: 0,
+            dst_col: 9,
+            src_line: 0,
+            src_col: 9,
+            src_id: 0,
+            name_id: !0,
+        }
+    );
+
+    assert_eq!(
+        sourcemap.get_token(2).unwrap().get_raw_token(),
+        sourcemap::RawToken {
+            dst_line: 1,
+            dst_col: 2,
+            src_line: 0,
+            src_col: 17,
+            src_id: 0,
+            name_id: !0,
+        }
+    );
+
+    assert_eq!(
+        sourcemap.get_token(3).unwrap().get_raw_token(),
+        sourcemap::RawToken {
+            dst_line: 1,
+            dst_col: 9,
+            src_line: 0,
+            src_col: 24,
+            src_id: 0,
+            name_id: !0,
+        }
+    );
+}
