@@ -1597,11 +1597,16 @@ impl<W: Write> GenJS<W> {
             Node::JSXText(JSXText {
                 range: _,
                 value: _,
-                raw: _,
+                raw,
             }) => {
-                unimplemented!("JSXText");
-                // FIXME: Ensure escaping here works properly.
-                // out!(self, "{}", value.str);
+                let mut buf = [0u8; 4];
+                for char in ctx.str(*raw).chars() {
+                    if char == '\n' {
+                        self.force_newline_without_indent();
+                        continue;
+                    }
+                    self.write_char(char, &mut buf);
+                }
             }
             Node::JSXElement(JSXElement {
                 range: _,
@@ -1611,13 +1616,9 @@ impl<W: Write> GenJS<W> {
             }) => {
                 opening_element.visit(ctx, self, Some(node));
                 if let Some(closing_element) = closing_element {
-                    self.inc_indent();
-                    self.newline();
                     for child in children {
                         child.visit(ctx, self, Some(node));
-                        self.newline();
                     }
-                    self.dec_indent();
                     closing_element.visit(ctx, self, Some(node));
                 }
             }
@@ -1628,13 +1629,9 @@ impl<W: Write> GenJS<W> {
                 closing_fragment,
             }) => {
                 opening_fragment.visit(ctx, self, Some(node));
-                self.inc_indent();
-                self.newline();
                 for child in children {
                     child.visit(ctx, self, Some(node));
-                    self.newline();
                 }
-                self.dec_indent();
                 closing_fragment.visit(ctx, self, Some(node));
             }
             Node::JSXOpeningFragment(_) => {

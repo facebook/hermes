@@ -424,7 +424,7 @@ macro_rules! nodekind_defs {
             },
             JSXText {
                 value: NodeString,
-                raw: NodeString,
+                raw: NodeLabel,
             },
             JSXElement[Expression] {
                 opening_element: NodePtr[JSXOpeningElement],

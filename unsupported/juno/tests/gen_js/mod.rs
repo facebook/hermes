@@ -62,6 +62,17 @@ fn test_roundtrip_flow(src1: &str) {
     );
 }
 
+fn test_roundtrip_jsx(src1: &str) {
+    test_roundtrip_with_flags(
+        hparser::ParserFlags {
+            strict_mode: false,
+            enable_jsx: true,
+            dialect: hparser::ParserDialect::JavaScript,
+        },
+        src1,
+    )
+}
+
 #[test]
 fn test_literals() {
     let mut ctx = Context::new();
@@ -468,4 +479,24 @@ fn test_types() {
     test_roundtrip_flow("type A = void");
     test_roundtrip_flow("type A = number => number");
     test_roundtrip_flow("type A = (number, string) => number");
+}
+
+#[test]
+fn test_jsx() {
+    test_roundtrip_jsx("<foo />");
+    test_roundtrip_jsx("<foo></foo>");
+    test_roundtrip_jsx("<foo>abc</foo>");
+    test_roundtrip_jsx("<></>");
+    test_roundtrip_jsx(
+        "
+        <foo>
+            <bar x={1} y='3' {...z} />
+            abcdef and an emoji: 😹
+            &gt; &x1f639;
+            end of test text
+            <baz.bar />
+            <hello:goodbye />
+        </foo>
+        ",
+    );
 }

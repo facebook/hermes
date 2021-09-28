@@ -646,7 +646,7 @@ ESTREE_NODE_1_ARGS(
 ESTREE_NODE_2_ARGS(
     JSXText, Base,
     NodeString, value, false,
-    NodeString, raw, false)
+    NodeLabel, raw, false)
 
 ESTREE_NODE_3_ARGS(
     JSXElement, Base,

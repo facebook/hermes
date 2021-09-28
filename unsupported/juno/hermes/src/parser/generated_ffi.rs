@@ -538,7 +538,7 @@ extern "C" {
     pub fn hermes_get_JSXSpreadAttribute_argument(node: NodePtr) -> NodePtr;
     // JSXText
     pub fn hermes_get_JSXText_value(node: NodePtr) -> NodeString;
-    pub fn hermes_get_JSXText_raw(node: NodePtr) -> NodeString;
+    pub fn hermes_get_JSXText_raw(node: NodePtr) -> NodeLabel;
     // JSXElement
     pub fn hermes_get_JSXElement_openingElement(node: NodePtr) -> NodePtr;
     pub fn hermes_get_JSXElement_children(node: NodePtr) -> NodeListRef;

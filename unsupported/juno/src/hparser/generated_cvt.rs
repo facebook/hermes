@@ -1097,7 +1097,7 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
         }
         NodeKind::JSXText => {
           let value = cvt_string(hermes_get_JSXText_value(n));
-          let raw = cvt_string(hermes_get_JSXText_raw(n));
+          let raw = cvt.cvt_label(hermes_get_JSXText_raw(n));
           cvt.ast_context.alloc(
             ast::Node::JSXText(ast::JSXText {
                 range,

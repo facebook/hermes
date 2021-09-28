@@ -629,23 +629,33 @@ const Token *JSLexer::advanceInJSXChild() {
 
         // Build up cooked value using XHTML entities
         tmpStorage_.clear();
+        rawStorage_.clear();
         for (;;) {
           char c = *curCharPtr_;
 
-          if (c == '&') {
+          if (LLVM_UNLIKELY(isUTF8Start(*curCharPtr_))) {
+            uint32_t codepoint = _decodeUTF8SlowPath(curCharPtr_);
+            appendUnicodeToStorage(codepoint);
+            appendUnicodeToStorage(codepoint, rawStorage_);
+            continue;
+          } else if (c == '&') {
+            const char *htmlStart = curCharPtr_;
             auto codePoint = consumeHTMLEntityOptional();
             if (codePoint.hasValue()) {
               appendUnicodeToStorage(*codePoint);
+              rawStorage_.append(
+                  {htmlStart, (size_t)(curCharPtr_ - htmlStart)});
               continue;
             }
           } else if (
               (c == 0 && curCharPtr_ == bufferEnd_) || c == '{' || c == '<') {
             token_.setJSXText(
                 getStringLiteral(tmpStorage_.str()),
-                getStringLiteral(StringRef(start, curCharPtr_ - start)));
+                getStringLiteral(rawStorage_.str()));
             break;
           }
           tmpStorage_.push_back(c);
+          rawStorage_.push_back(c);
           ++curCharPtr_;
         }
         break;
