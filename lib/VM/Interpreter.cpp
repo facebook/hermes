@@ -719,7 +719,8 @@ static void printDebugInfo(
     if (operandType == OperandType::Reg8 || operandType == OperandType::Reg32) {
       // Print the register value, if source.
       if (i != 0 || decoded.meta.numOperands == 1)
-        dbgs() << "=" << DumpHermesValue(REG(value.integer));
+        dbgs() << "="
+               << DumpHermesValue(REG(static_cast<uint32_t>(value.integer)));
     }
   }
 

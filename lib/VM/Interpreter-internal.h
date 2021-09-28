@@ -11,7 +11,23 @@
 #include "hermes/VM/Interpreter.h"
 
 // Convenient aliases for operand registers.
+#if !defined(__arm__) || !defined(__clang__) || \
+    !defined(HERMESVM_ALLOW_INLINE_ASM)
 #define REG(index) frameRegs[index]
+#else
+// Work around bad codegen from clang on armv7 that causes it to emit two
+// separate loads instead of a single ldrd.
+#define REG(index)                                                           \
+  (*({                                                                       \
+    PinnedHermesValue *addr;                                                 \
+    static_assert(sizeof(PinnedHermesValue) == 8, "asm depends on HV size"); \
+    static_assert(sizeof(index) <= 4, "index must fit in a register");       \
+    asm("add.w   %0, %1, %2, lsl #3"                                         \
+        : "=r"(addr)                                                         \
+        : "r"(frameRegs), "r"(index));                                       \
+    addr;                                                                    \
+  }))
+#endif
 #define O1REG(name) REG(ip->i##name.op1)
 #define O2REG(name) REG(ip->i##name.op2)
 #define O3REG(name) REG(ip->i##name.op3)
