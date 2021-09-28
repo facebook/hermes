@@ -764,7 +764,7 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
 
   // Pop the stack down to the first argument, erasing the call frame - we don't
   // need the call frame since we will build a new one.
-  runtime->popToSavedStackPointer(&originalCalleeFrame->getArgRefUnsafe(0));
+  runtime->popToSavedStackPointer(&originalCalleeFrame.getThisArgRef());
 
   // Loop, copying the bound arguments of all chained bound functions.
   for (;;) {
@@ -781,8 +781,9 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
       // higher than the current pointer. So, first we pop everything that we
       // may have pushed, then allocate the correct amount to get back to the
       // initial state.
-      runtime->popToSavedStackPointer(&originalCalleeFrame->getArgRefUnsafe(0));
-      runtime->allocUninitializedStack(StackFrameLayout::ThisArg + 1);
+      runtime->popToSavedStackPointer(&originalCalleeFrame.getThisArgRef());
+      runtime->allocUninitializedStack(
+          StackFrameLayout::CallerExtraRegistersAtEnd + 1);
       assert(
           runtime->getStackPointer() == originalCalleeFrame.ptr() &&
           "Stack wasn't restored properly");
@@ -811,12 +812,8 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
     // Allocate space for "thisArg" and the frame metdata following the outgoing
     // registers. Note that we already checked earlier that we have enough
     // stack.
-    static_assert(
-        StackFrameLayout::CallerExtraRegistersAtEnd ==
-            StackFrameLayout::ThisArg,
-        "Stack frame layout changed without updating _boundCall");
-    auto *stack =
-        runtime->allocUninitializedStack(StackFrameLayout::ThisArg + 1);
+    auto *stack = runtime->allocUninitializedStack(
+        StackFrameLayout::CallerExtraRegistersAtEnd + 1);
 
     // Initialize the new frame metadata.
     auto newCalleeFrame = StackFramePtr::initFrame(
@@ -1632,9 +1629,10 @@ void GeneratorInnerFunction::restoreStack(Runtime *runtime) {
   const uint32_t frameOffset = getFrameOffsetInContext();
   const uint32_t frameSize = getFrameSizeInContext(runtime);
   // Start at the lower end of the range to be copied.
-  PinnedHermesValue *dst = runtime->getCurrentFrame().ptr() - frameSize;
+  PinnedHermesValue *dst = runtime->getCurrentFrame().ptr();
   assert(
-      dst >= runtime->getStackPointer() && "reading off the end of the stack");
+      dst + frameSize <= runtime->getStackPointer() &&
+      "writing off the end of the stack");
   const GCHermesValue *src = savedContext_.get(runtime)->data() + frameOffset;
   GCHermesValueUtil::copyToPinned(src, src + frameSize, dst);
 }
@@ -1643,9 +1641,9 @@ void GeneratorInnerFunction::saveStack(Runtime *runtime) {
   const uint32_t frameOffset = getFrameOffsetInContext();
   const uint32_t frameSize = getFrameSizeInContext(runtime);
   // Start at the lower end of the range to be copied.
-  PinnedHermesValue *first = runtime->getCurrentFrame().ptr() - frameSize;
+  PinnedHermesValue *first = runtime->getCurrentFrame().ptr();
   assert(
-      first >= runtime->getStackPointer() &&
+      first + frameSize <= runtime->getStackPointer() &&
       "reading off the end of the stack");
   // Use GCHermesValue::copy to ensure write barriers are executed.
   GCHermesValue::copy(

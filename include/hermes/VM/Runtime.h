@@ -1874,17 +1874,17 @@ inline Runtime::FormatSymbolID Runtime::formatSymbolID(SymbolID id) {
 
 inline void Runtime::popToSavedStackPointer(PinnedHermesValue *stackPointer) {
   assert(
-      stackPointer >= stackPointer_ &&
+      stackPointer <= stackPointer_ &&
       "attempting to pop the stack to a higher level");
   stackPointer_ = stackPointer;
 }
 
 inline uint32_t Runtime::getStackLevel() const {
-  return (uint32_t)(registerStackEnd_ - stackPointer_);
+  return (uint32_t)(stackPointer_ - registerStackStart_);
 }
 
 inline uint32_t Runtime::availableStackSize() const {
-  return (uint32_t)(stackPointer_ - registerStackStart_);
+  return (uint32_t)(registerStackEnd_ - stackPointer_);
 }
 
 inline bool Runtime::checkAvailableStack(uint32_t count) {
@@ -1895,7 +1895,7 @@ inline bool Runtime::checkAvailableStack(uint32_t count) {
 
 inline PinnedHermesValue *Runtime::allocUninitializedStack(uint32_t count) {
   assert(availableStackSize() >= count && "register stack overflow");
-  return stackPointer_ -= count;
+  return stackPointer_ += count;
 }
 
 inline bool Runtime::checkAndAllocStack(uint32_t count, HermesValue initValue) {
@@ -1939,14 +1939,15 @@ inline StackFramePtr Runtime::restoreStackAndPreviousFrame() {
 
 inline llvh::iterator_range<StackFrameIterator> Runtime::getStackFrames() {
   return {
-      StackFrameIterator{currentFrame_}, StackFrameIterator{registerStackEnd_}};
+      StackFrameIterator{currentFrame_},
+      StackFrameIterator{registerStackStart_}};
 };
 
 inline llvh::iterator_range<ConstStackFrameIterator> Runtime::getStackFrames()
     const {
   return {
       ConstStackFrameIterator{currentFrame_},
-      ConstStackFrameIterator{registerStackEnd_}};
+      ConstStackFrameIterator{registerStackStart_}};
 };
 
 inline ExecutionStatus Runtime::setThrownValue(HermesValue value) {

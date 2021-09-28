@@ -204,11 +204,11 @@ Runtime::Runtime(
   registerStackEnd_ = registerStackStart_ + maxNumRegisters;
   if (shouldRandomizeMemoryLayout_) {
     const unsigned bytesOff = std::random_device()() % oscompat::page_size();
-    registerStackEnd_ -= bytesOff / sizeof(PinnedHermesValue);
+    registerStackStart_ += bytesOff / sizeof(PinnedHermesValue);
     assert(
         registerStackEnd_ >= registerStackStart_ && "register stack too small");
   }
-  stackPointer_ = registerStackEnd_;
+  stackPointer_ = registerStackStart_;
 
   // Setup the "root" stack frame.
   setCurrentFrameToTopOfStack();
@@ -414,7 +414,7 @@ void Runtime::markRoots(
   {
     MarkRootsPhaseTimer timer(this, RootAcceptor::Section::Registers);
     acceptor.beginRootSection(RootAcceptor::Section::Registers);
-    for (auto *p = stackPointer_, *e = registerStackEnd_; p != e; ++p)
+    for (auto *p = registerStackStart_, *e = stackPointer_; p != e; ++p)
       acceptor.accept(*p);
     acceptor.endRootSection();
   }
@@ -1156,7 +1156,7 @@ llvh::Optional<Runtime::StackFrameInfo> Runtime::stackFrameInfoByIndex(
 /// call.
 uint32_t Runtime::calcFrameOffset(ConstStackFrameIterator it) const {
   assert(it != getStackFrames().end() && "invalid frame");
-  return registerStackEnd_ - it->ptr();
+  return it->ptr() - registerStackStart_;
 }
 
 /// \return the offset between the location of the current frame and the
@@ -1721,9 +1721,10 @@ void Runtime::allocStack(uint32_t count, HermesValue initValue) {
   // constants are propagated into initValue, which enables clang to use
   // memset_pattern_16. This ends up being a significant loss as it is an
   // indirect call.
+  auto *oldStackPointer = stackPointer_;
   allocUninitializedStack(count);
   // Initialize the new registers.
-  std::uninitialized_fill_n(stackPointer_, count, initValue);
+  std::uninitialized_fill_n(oldStackPointer, count, initValue);
 }
 
 void Runtime::dumpCallFrames(llvh::raw_ostream &OS) {
@@ -1827,7 +1828,7 @@ void Runtime::crashWriteCallStack(JSONEmitter &json) {
   for (auto frame : getStackFrames()) {
     json.openDict();
     json.emitKeyValue(
-        "StackFrameRegOffs", (uint32_t)(registerStackEnd_ - frame.ptr()));
+        "StackFrameRegOffs", (uint32_t)(frame.ptr() - registerStackStart_));
     auto codeBlock = frame.getSavedCodeBlock();
     if (codeBlock) {
       json.emitKeyValue("FunctionID", codeBlock->getFunctionID());

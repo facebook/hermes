@@ -195,7 +195,7 @@ class StackFramePtrT {
 
   /// \return an iterator pointing to the first explicit argument.
   ArgIteratorT<isConst> argsBegin() const {
-    return ArgIteratorT<isConst>(&getFirstArgRef());
+    return ArgIteratorT<isConst>(&getThisArgRef());
   }
 
   /// \return a reference to the register containing the N-th argument to the

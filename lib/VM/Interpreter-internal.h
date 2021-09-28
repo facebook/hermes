@@ -11,7 +11,7 @@
 #include "hermes/VM/Interpreter.h"
 
 // Convenient aliases for operand registers.
-#define REG(index) frameRegs[-((int32_t)index)]
+#define REG(index) frameRegs[index]
 #define O1REG(name) REG(ip->i##name.op1)
 #define O2REG(name) REG(ip->i##name.op2)
 #define O3REG(name) REG(ip->i##name.op3)
