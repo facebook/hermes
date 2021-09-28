@@ -196,6 +196,19 @@ fn test_functions() {
     test_roundtrip("x => {3}");
     test_roundtrip("async x => {3}");
     test_roundtrip("async (x,y) => {3}");
+    test_roundtrip("(x => 1) + (y => 1)");
+    test_roundtrip("x = y => 1");
+    test_roundtrip("x = (y => 1)");
+    test_roundtrip(
+        "function foo() {
+        return (y => 1);
+    }",
+    );
+    test_roundtrip(
+        "function* foo() {
+        yield y => 1;
+    }",
+    );
 }
 
 #[test]
@@ -334,6 +347,11 @@ fn test_unary() {
     test_roundtrip("!x");
     test_roundtrip("~x");
     test_roundtrip("-(-x)");
+    test_roundtrip("-(-5)");
+    test_roundtrip("--x");
+    test_roundtrip("x--");
+    test_roundtrip("++x");
+    test_roundtrip("x++");
     test_roundtrip("+!-x");
     test_roundtrip("delete x");
     test_roundtrip("typeof x");

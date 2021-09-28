@@ -769,13 +769,11 @@ impl<W: Write> GenJS<W> {
                 } else if argument.is_some() {
                     out!(self, " ");
                 }
-                if let Some(argument) = argument {
-                    argument.visit(ctx, self, Some(node));
-                }
+                self.print_child(ctx, *argument, node, ChildPos::Right);
             }
             Node::AwaitExpression(AwaitExpression { range: _, argument }) => {
                 out!(self, "await ");
-                argument.visit(ctx, self, Some(node));
+                self.print_child(ctx, Some(*argument), node, ChildPos::Right);
             }
 
             Node::ImportExpression(ImportExpression {
@@ -3031,7 +3029,8 @@ impl<W: Write> GenJS<W> {
             }) => (get_logical_precedence(*operator), Assoc::Ltr),
             Node::ConditionalExpression(_) => (COND, Assoc::Rtl),
             Node::AssignmentExpression(_) => (ASSIGN, Assoc::Rtl),
-            Node::YieldExpression(_) | Node::ArrowFunctionExpression(_) => (YIELD, Assoc::Ltr),
+            Node::ArrowFunctionExpression(_) => (ARROW, Assoc::Ltr),
+            Node::YieldExpression(_) => (YIELD, Assoc::Ltr),
             Node::SequenceExpression(_) => (SEQ, Assoc::Rtl),
 
             Node::ExistsTypeAnnotation(_)
@@ -3340,6 +3339,7 @@ impl Node {
     fn check_minus(&self) -> bool {
         self.is_unary_op(UnaryExpressionOperator::Minus)
             || self.is_update_prefix(UpdateExpressionOperator::Decrement)
+            || self.is_negative_number()
     }
 
     fn check_and_or(&self) -> bool {
