@@ -8,6 +8,7 @@
 use juno::ast::*;
 use juno::gen_js;
 use juno::hparser;
+use juno::sourcemap::merge_sourcemaps;
 
 fn do_gen(ctx: &Context, node: NodePtr, pretty: gen_js::Pretty) -> String {
     use juno::gen_js::*;
@@ -523,7 +524,6 @@ fn test_jsx() {
 fn test_sourcemap() {
     use juno::gen_js::*;
     let mut ctx = Context::new();
-
     let ast1 = hparser::parse(&mut ctx, "function foo() { return 1 }").unwrap();
     let mut out: Vec<u8> = vec![];
     let sourcemap = generate(&mut out, &ctx, ast1, Pretty::Yes).unwrap();
@@ -583,4 +583,39 @@ fn test_sourcemap() {
             name_id: !0,
         }
     );
+}
+
+#[test]
+fn test_sourcemap_merged() {
+    use juno::gen_js::*;
+    let mut context = Context::new();
+    let ctx = &mut context;
+    // original TS source:
+    // type A = number;
+    // function foo() { 1; }
+
+    let input_src = r#"function foo() { 1; }"#;
+    let input_map = sourcemap::SourceMap::from_slice(
+        br#"{
+            "version":3,
+            "file":"test.js",
+            "sourceRoot":"",
+            "sources":["test.ts"],
+            "names":[],
+            "mappings":"AACA,SAAS,GAAG,KAAK,CAAC,CAAC,CAAC,CAAC"
+        }"#,
+    )
+    .unwrap();
+    let mut out: Vec<u8> = vec![];
+    let node = hparser::parse_with_file_id(Default::default(), input_src, ctx, 0).unwrap();
+    let output_map = generate(&mut out, ctx, node, Pretty::Yes).unwrap();
+    let output = String::from_utf8(out).expect("Invalid UTF-8 output in test");
+    assert_eq!(output, "function foo() {\n  1;\n}\n",);
+
+    let merged = merge_sourcemaps(&input_map, &output_map);
+
+    // Source maps are 0-indexed, so use those for testing purposes.
+    let input_token: sourcemap::Token = merged.lookup_token(1, 2).unwrap();
+    assert_eq!(input_token.get_source().unwrap(), "test.ts");
+    assert_eq!(input_token.get_src(), (1, 17));
 }

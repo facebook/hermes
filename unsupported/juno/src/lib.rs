@@ -8,3 +8,4 @@
 pub mod ast;
 pub mod gen_js;
 pub mod hparser;
+pub mod sourcemap;
