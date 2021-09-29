@@ -956,7 +956,7 @@ CallResult<double> dateNowValue(Runtime *runtime, NativeArgs args) {
   // 1. Let x be TimeClip(x).
   double x = timeClip(xRes->getNumber());
   // 2. If x is NaN, throw a RangeError exception.
-  if (isnan(x)) {
+  if (std::isnan(x)) {
     return runtime->raiseRangeError("Invalid time value");
   }
 
@@ -1399,7 +1399,7 @@ CallResult<HermesValue> intlDatePrototypeToSomeLocaleString(
     int dtoFlags) {
   double x = date->getPrimitiveValue();
   std::u16string str;
-  if (isnan(x)) {
+  if (std::isnan(x)) {
     str = u"Invalid Date";
   } else {
     CallResult<std::vector<std::u16string>> localesRes =
