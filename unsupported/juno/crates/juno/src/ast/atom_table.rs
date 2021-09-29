@@ -16,7 +16,7 @@ type NumIndex = u32;
 pub struct AtomTable {
     /// Strings are added here and never removed or mutated.
     strings: Vec<String>,
-    /// Maps from a reference inside [strings] to the index in [strings].
+    /// Maps from a reference inside [`AtomTable::strings`] to the index in [`AtomTable::strings`].
     /// Since strings are never removed or modified, the lifetime of the key
     /// is effectively static.
     map: HashMap<&'static str, NumIndex>,

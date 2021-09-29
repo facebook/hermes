@@ -99,7 +99,7 @@ fn decode_surrogate_pair(hi: u32, lo: u32) -> u32 {
     ((hi - UTF16_HIGH_SURROGATE) << 10) + (lo - UTF16_LOW_SURROGATE) + 0x10000
 }
 
-/// @param ch the byte at src[from], which also implies that src[from] is a valid index.
+/// @param ch the byte at `src[from]`, which also implies that `src[from]` is a valid index.
 fn decode_utf8<const ALLOW_SURROGATES: bool>(
     src: &[u8],
     from: &mut usize,
@@ -113,7 +113,7 @@ fn decode_utf8<const ALLOW_SURROGATES: bool>(
     }
 }
 
-/// @param ch the byte at src[from], which also implies that src[from] is a valid index.
+/// @param ch the byte at `src[from]`, which also implies that `src[from]` is a valid index.
 fn decode_utf8_slow_path<const ALLOW_SURROGATES: bool>(
     src: &[u8],
     from: &mut usize,
