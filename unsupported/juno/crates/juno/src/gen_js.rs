@@ -183,6 +183,15 @@ macro_rules! out {
     }}
 }
 
+/// Emit a source mapping token at this point with the given node, and call `out!()`.
+/// Call this macro instead of `out!()` directly if emitting the start of an AST node.
+macro_rules! out_token {
+    ($gen_js:expr, $node:expr, $($arg:tt)*) => {{
+        $gen_js.add_segment($node);
+        out!($gen_js, $($arg)*);
+    }}
+}
+
 impl<W: Write> GenJS<W> {
     /// Generate JS for `root` and flush the output.
     /// If at any point, JS generation resulted in an error, return `Err(err)`,
@@ -289,11 +298,11 @@ impl<W: Write> GenJS<W> {
                 generator,
                 is_async,
             }) => {
-                self.add_segment(node.get(ctx));
                 if *is_async {
-                    out!(self, "async ");
+                    out_token!(self, node.get(ctx), "async function");
+                } else {
+                    out_token!(self, node.get(ctx), "function");
                 }
-                out!(self, "function");
                 if *generator {
                     out!(self, "*");
                     if id.is_some() {
@@ -492,13 +501,11 @@ impl<W: Write> GenJS<W> {
             }
 
             Node::ThrowStatement(ThrowStatement { range: _, argument }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "throw ");
+                out_token!(self, node.get(ctx), "throw ");
                 argument.visit(ctx, self, Some(node));
             }
             Node::ReturnStatement(ReturnStatement { range: _, argument }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "return");
+                out_token!(self, node.get(ctx), "return");
                 if let Some(argument) = argument {
                     out!(self, " ");
                     argument.visit(ctx, self, Some(node));
@@ -509,8 +516,7 @@ impl<W: Write> GenJS<W> {
                 object,
                 body,
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "with");
+                out_token!(self, node.get(ctx), "with");
                 self.space(ForceSpace::No);
                 out!(self, "(");
                 object.visit(ctx, self, Some(node));
@@ -523,8 +529,7 @@ impl<W: Write> GenJS<W> {
                 discriminant,
                 cases,
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "switch");
+                out_token!(self, node.get(ctx), "switch");
                 self.space(ForceSpace::No);
                 out!(self, "(");
                 discriminant.visit(ctx, self, Some(node));
@@ -543,14 +548,13 @@ impl<W: Write> GenJS<W> {
                 test,
                 consequent,
             }) => {
-                self.add_segment(node.get(ctx));
                 match test {
                     Some(test) => {
-                        out!(self, "case ");
+                        out_token!(self, node.get(ctx), "case ");
                         test.visit(ctx, self, Some(node));
                     }
                     None => {
-                        out!(self, "default");
+                        out_token!(self, node.get(ctx), "default");
                     }
                 };
                 out!(self, ":");
@@ -587,8 +591,7 @@ impl<W: Write> GenJS<W> {
                 handler,
                 finalizer,
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "try");
+                out_token!(self, node.get(ctx), "try");
                 self.visit_stmt_or_block(ctx, *block, ForceBlock::Yes, node);
                 if let Some(handler) = handler {
                     handler.visit(ctx, self, Some(node));
@@ -606,8 +609,7 @@ impl<W: Write> GenJS<W> {
                 consequent,
                 alternate,
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "if");
+                out_token!(self, node.get(ctx), "if");
                 self.space(ForceSpace::No);
                 out!(self, "(");
                 test.visit(ctx, self, Some(node));
@@ -637,30 +639,30 @@ impl<W: Write> GenJS<W> {
             }
 
             Node::BooleanLiteral(BooleanLiteral { range: _, value }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "{}", if *value { "true" } else { "false" });
+                out_token!(
+                    self,
+                    node.get(ctx),
+                    "{}",
+                    if *value { "true" } else { "false" }
+                );
             }
             Node::NullLiteral(_) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "null");
+                out_token!(self, node.get(ctx), "null");
             }
             Node::StringLiteral(StringLiteral { range: _, value }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "\"");
+                out_token!(self, node.get(ctx), "\"");
                 self.print_escaped_string_literal(value, '"');
                 out!(self, "\"");
             }
             Node::NumericLiteral(NumericLiteral { range: _, value }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "{}", convert::number_to_string(*value));
+                out_token!(self, node.get(ctx), "{}", convert::number_to_string(*value));
             }
             Node::RegExpLiteral(RegExpLiteral {
                 range: _,
                 pattern,
                 flags,
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "/");
+                out_token!(self, node.get(ctx), "/");
                 // Parser doesn't handle escapes when lexing RegExp,
                 // so we don't need to do any manual escaping here.
                 self.write_utf8(ctx.str(*pattern));
@@ -668,12 +670,10 @@ impl<W: Write> GenJS<W> {
                 self.write_utf8(ctx.str(*flags));
             }
             Node::ThisExpression(_) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "this");
+                out_token!(self, node.get(ctx), "this");
             }
             Node::Super(_) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "super");
+                out_token!(self, node.get(ctx), "super");
             }
 
             Node::SequenceExpression(SequenceExpression {
@@ -703,7 +703,6 @@ impl<W: Write> GenJS<W> {
                 range: _,
                 properties,
             }) => {
-                self.add_segment(node.get(ctx));
                 self.visit_props(ctx, properties, node);
             }
             Node::ArrayExpression(ArrayExpression {
@@ -711,8 +710,7 @@ impl<W: Write> GenJS<W> {
                 elements,
                 trailing_comma,
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "[");
+                out_token!(self, node.get(ctx), "[");
                 for (i, elem) in elements.iter().enumerate() {
                     if i > 0 {
                         self.comma();
@@ -730,8 +728,7 @@ impl<W: Write> GenJS<W> {
             }
 
             Node::SpreadElement(SpreadElement { range: _, argument }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "...");
+                out_token!(self, node.get(ctx), "...");
                 argument.visit(ctx, self, Some(node));
             }
 
@@ -741,8 +738,7 @@ impl<W: Write> GenJS<W> {
                 type_arguments,
                 arguments,
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "new ");
+                out_token!(self, node.get(ctx), "new ");
                 self.print_child(ctx, Some(*callee), node, ChildPos::Left);
                 if let Some(type_arguments) = type_arguments {
                     type_arguments.visit(ctx, self, Some(node));
@@ -761,8 +757,7 @@ impl<W: Write> GenJS<W> {
                 argument,
                 delegate,
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "yield");
+                out_token!(self, node.get(ctx), "yield");
                 if *delegate {
                     out!(self, "*");
                     self.space(ForceSpace::No);
@@ -781,8 +776,7 @@ impl<W: Write> GenJS<W> {
                 source,
                 attributes,
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "import(");
+                out_token!(self, node.get(ctx), "import(");
                 source.visit(ctx, self, Some(node));
                 if let Some(attributes) = attributes {
                     out!(self, ",");
@@ -979,8 +973,7 @@ impl<W: Write> GenJS<W> {
                 }
             }
             Node::PrivateName(PrivateName { range: _, id }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "#");
+                out_token!(self, node.get(ctx), "#");
                 id.visit(ctx, self, Some(node));
             }
             Node::MetaProperty(MetaProperty {
@@ -999,8 +992,7 @@ impl<W: Write> GenJS<W> {
                 body,
             }) => {
                 self.space(ForceSpace::No);
-                self.add_segment(node.get(ctx));
-                out!(self, "catch");
+                out_token!(self, node.get(ctx), "catch");
                 if let Some(param) = param {
                     self.space(ForceSpace::No);
                     out!(self, "(");
@@ -1015,8 +1007,7 @@ impl<W: Write> GenJS<W> {
                 kind,
                 declarations,
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "{} ", kind.as_str());
+                out_token!(self, node.get(ctx), "{} ", kind.as_str());
                 for (i, decl) in declarations.iter().enumerate() {
                     if i > 0 {
                         self.comma();
@@ -1044,8 +1035,7 @@ impl<W: Write> GenJS<W> {
                 quasis,
                 expressions,
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "`");
+                out_token!(self, node.get(ctx), "`");
                 let mut it_expr = expressions.iter();
                 for quasi in quasis {
                     if let Node::TemplateElement(TemplateElement {
@@ -1093,10 +1083,9 @@ impl<W: Write> GenJS<W> {
                 method,
                 shorthand,
             }) => {
-                self.add_segment(node.get(ctx));
                 let mut need_sep = false;
                 if *kind != PropertyKind::Init {
-                    out!(self, "{}", kind.as_str());
+                    out_token!(self, node.get(ctx), "{}", kind.as_str());
                     need_sep = true;
                 } else if *method {
                     match &value.get(ctx) {
@@ -1197,12 +1186,15 @@ impl<W: Write> GenJS<W> {
                 decorators,
                 body,
             }) => {
-                self.add_segment(node.get(ctx));
-                for decorator in decorators {
-                    decorator.visit(ctx, self, Some(node));
-                    self.force_newline();
+                if !decorators.is_empty() {
+                    for decorator in decorators {
+                        decorator.visit(ctx, self, Some(node));
+                        self.force_newline();
+                    }
+                    out!(self, "class");
+                } else {
+                    out_token!(self, node.get(ctx), "class");
                 }
-                out!(self, "class");
                 if let Some(id) = id {
                     self.space(ForceSpace::Yes);
                     id.visit(ctx, self, Some(node));
@@ -1258,7 +1250,6 @@ impl<W: Write> GenJS<W> {
                 variance: _,
                 type_annotation: _,
             }) => {
-                self.add_segment(node.get(ctx));
                 if *is_static {
                     out!(self, "static ");
                 }
@@ -1287,7 +1278,6 @@ impl<W: Write> GenJS<W> {
                 variance: _,
                 type_annotation: _,
             }) => {
-                self.add_segment(node.get(ctx));
                 if *is_static {
                     out!(self, "static ");
                 }
@@ -1363,8 +1353,7 @@ impl<W: Write> GenJS<W> {
                 attributes,
                 import_kind,
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "import ");
+                out_token!(self, node.get(ctx), "import ");
                 if *import_kind != ImportKind::Value {
                     out!(self, "{} ", import_kind.as_str());
                 }
@@ -1443,8 +1432,7 @@ impl<W: Write> GenJS<W> {
                 source,
                 export_kind,
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "export ");
+                out_token!(self, node.get(ctx), "export ");
                 if *export_kind != ExportKind::Value {
                     out!(self, "{} ", export_kind.as_str());
                 }
@@ -1483,8 +1471,7 @@ impl<W: Write> GenJS<W> {
                 range: _,
                 declaration,
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "export default ");
+                out_token!(self, node.get(ctx), "export default ");
                 declaration.visit(ctx, self, Some(node));
                 self.newline();
             }
@@ -1493,8 +1480,7 @@ impl<W: Write> GenJS<W> {
                 source,
                 export_kind,
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "export ");
+                out_token!(self, node.get(ctx), "export ");
                 if *export_kind != ExportKind::Value {
                     out!(self, "{} ", export_kind.as_str());
                 }
@@ -1550,8 +1536,7 @@ impl<W: Write> GenJS<W> {
             }
 
             Node::JSXIdentifier(JSXIdentifier { range: _, name }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "{}", ctx.str(*name));
+                out_token!(self, node.get(ctx), "{}", ctx.str(*name));
             }
             Node::JSXMemberExpression(JSXMemberExpression {
                 range: _,
@@ -1668,33 +1653,26 @@ impl<W: Write> GenJS<W> {
                 closing_fragment.visit(ctx, self, Some(node));
             }
             Node::JSXOpeningFragment(_) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "<>");
+                out_token!(self, node.get(ctx), "<>");
             }
             Node::JSXClosingFragment(_) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "</>");
+                out_token!(self, node.get(ctx), "</>");
             }
 
             Node::ExistsTypeAnnotation(_) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "*");
+                out_token!(self, node.get(ctx), "*");
             }
             Node::EmptyTypeAnnotation(_) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "empty");
+                out_token!(self, node.get(ctx), "empty");
             }
             Node::StringTypeAnnotation(_) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "string");
+                out_token!(self, node.get(ctx), "string");
             }
             Node::NumberTypeAnnotation(_) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "number");
+                out_token!(self, node.get(ctx), "number");
             }
             Node::StringLiteralTypeAnnotation(StringLiteralTypeAnnotation { range: _, value }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "\"");
+                out_token!(self, node.get(ctx), "\"");
                 self.print_escaped_string_literal(value, '"');
                 out!(self, "\"");
             }
@@ -1703,40 +1681,37 @@ impl<W: Write> GenJS<W> {
                 value,
                 ..
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "{}", convert::number_to_string(*value));
+                out_token!(self, node.get(ctx), "{}", convert::number_to_string(*value));
             }
             Node::BooleanTypeAnnotation(_) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "boolean");
+                out_token!(self, node.get(ctx), "boolean");
             }
             Node::BooleanLiteralTypeAnnotation(BooleanLiteralTypeAnnotation {
                 range: _,
                 value,
                 ..
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "{}", if *value { "true" } else { "false" });
+                out_token!(
+                    self,
+                    node.get(ctx),
+                    "{}",
+                    if *value { "true" } else { "false" }
+                );
             }
             Node::NullLiteralTypeAnnotation(_) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "null");
+                out_token!(self, node.get(ctx), "null");
             }
             Node::SymbolTypeAnnotation(_) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "symbol");
+                out_token!(self, node.get(ctx), "symbol");
             }
             Node::AnyTypeAnnotation(_) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "any");
+                out_token!(self, node.get(ctx), "any");
             }
             Node::MixedTypeAnnotation(_) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "mixed");
+                out_token!(self, node.get(ctx), "mixed");
             }
             Node::VoidTypeAnnotation(_) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "void");
+                out_token!(self, node.get(ctx), "void");
             }
             Node::FunctionTypeAnnotation(FunctionTypeAnnotation {
                 range: _,
@@ -1934,11 +1909,11 @@ impl<W: Write> GenJS<W> {
                 type_parameters,
                 right,
             }) => {
-                self.add_segment(node.get(ctx));
                 if matches!(&node.get(ctx), Node::DeclareTypeAlias(_)) {
-                    out!(self, "declare ");
+                    out_token!(self, node.get(ctx), "declare type");
+                } else {
+                    out_token!(self, node.get(ctx), "type ");
                 }
-                out!(self, "type ");
                 id.visit(ctx, self, Some(node));
                 if let Some(type_parameters) = type_parameters {
                     type_parameters.visit(ctx, self, Some(node));
@@ -1957,8 +1932,7 @@ impl<W: Write> GenJS<W> {
                 impltype,
                 supertype,
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "opaque type ");
+                out_token!(self, node.get(ctx), "opaque type ");
                 id.visit(ctx, self, Some(node));
                 if let Some(type_parameters) = type_parameters {
                     type_parameters.visit(ctx, self, Some(node));
@@ -1989,7 +1963,6 @@ impl<W: Write> GenJS<W> {
                 extends,
                 body,
             }) => {
-                self.add_segment(node.get(ctx));
                 self.visit_interface(
                     ctx,
                     if matches!(node.get(ctx), Node::InterfaceDeclaration(_)) {
@@ -2011,8 +1984,7 @@ impl<W: Write> GenJS<W> {
                 impltype,
                 supertype,
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "opaque type ");
+                out_token!(self, node.get(ctx), "opaque type ");
                 id.visit(ctx, self, Some(node));
                 if let Some(type_parameters) = type_parameters {
                     type_parameters.visit(ctx, self, Some(node));
@@ -2040,8 +2012,7 @@ impl<W: Write> GenJS<W> {
                 mixins,
                 body,
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "declare class ");
+                out_token!(self, node.get(ctx), "declare class ");
                 id.visit(ctx, self, Some(node));
                 if let Some(type_parameters) = type_parameters {
                     type_parameters.visit(ctx, self, Some(node));
@@ -2084,8 +2055,7 @@ impl<W: Write> GenJS<W> {
                 // This AST type uses the Identifier/TypeAnnotation
                 // pairing to put a name on a function header-looking construct,
                 // so we have to do some deep matching to get it to come out right.
-                self.add_segment(node.get(ctx));
-                out!(self, "declare function ");
+                out_token!(self, node.get(ctx), "declare function ");
                 match &id.get(ctx) {
                     Node::Identifier(Identifier {
                         range: _,
@@ -2157,8 +2127,7 @@ impl<W: Write> GenJS<W> {
                 source,
                 default,
             }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "declare export ");
+                out_token!(self, node.get(ctx), "declare export ");
                 if *default {
                     out!(self, "default ");
                 }
@@ -2180,8 +2149,7 @@ impl<W: Write> GenJS<W> {
                 }
             }
             Node::DeclareExportAllDeclaration(DeclareExportAllDeclaration { range: _, source }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "declare export * from ");
+                out_token!(self, node.get(ctx), "declare export * from ");
                 source.visit(ctx, self, Some(node));
             }
             Node::DeclareModule(DeclareModule {
@@ -2452,9 +2420,9 @@ impl<W: Write> GenJS<W> {
                 value.visit(ctx, self, Some(node));
             }
             Node::Variance(Variance { range: _, kind }) => {
-                self.add_segment(node.get(ctx));
-                out!(
+                out_token!(
                     self,
+                    node.get(ctx),
                     "{}",
                     match ctx.str(*kind) {
                         "plus" => "+",
@@ -2510,19 +2478,16 @@ impl<W: Write> GenJS<W> {
                 self.print_child(ctx, Some(*type_annotation), node, ChildPos::Right);
             }
             Node::InferredPredicate(_) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "%checks");
+                out_token!(self, node.get(ctx), "%checks");
             }
             Node::DeclaredPredicate(DeclaredPredicate { range: _, value }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "%checks(");
+                out_token!(self, node.get(ctx), "%checks(");
                 value.visit(ctx, self, Some(node));
                 out!(self, ")");
             }
 
             Node::EnumDeclaration(EnumDeclaration { range: _, id, body }) => {
-                self.add_segment(node.get(ctx));
-                out!(self, "enum ");
+                out_token!(self, node.get(ctx), "enum ");
                 id.visit(ctx, self, Some(node));
                 body.visit(ctx, self, Some(node));
             }
