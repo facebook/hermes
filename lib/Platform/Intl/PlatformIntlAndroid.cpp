@@ -70,8 +70,18 @@ using JOptionsMap = jni::JMap<jni::JString, jni::JObject>;
 using JPartMap = jni::JMap<jni::JString, jni::JString>;
 using JPartsList = jni::JList<JPartMap>;
 
-jni::local_ref<jstring> stringToJava(std::u16string str) {
-  return jni::make_jstring(str);
+jni::local_ref<jstring> stringToJava(const std::u16string &utf16) {
+  // Work around a bug in fbjni where make_jstring returns null for empty
+  // u16strings.
+  // TODO(T101910387): Switch back to make_jstring once it is fixed.
+  const auto env = jni::Environment::current();
+  static_assert(
+      sizeof(jchar) == sizeof(std::u16string::value_type),
+      "Expecting jchar to be the same size as std::u16string::CharT");
+  jstring result = env->NewString(
+      reinterpret_cast<const jchar *>(utf16.c_str()), utf16.size());
+  FACEBOOK_JNI_THROW_PENDING_EXCEPTION();
+  return jni::adopt_local(result);
 }
 
 jni::local_ref<JLocalesList> localesToJava(
@@ -79,7 +89,7 @@ jni::local_ref<JLocalesList> localesToJava(
   jni::local_ref<JArrayList<jni::JString>> ret =
       JArrayList<jni::JString>::create(locales.size());
   for (const auto &locale : locales) {
-    ret->add(jni::make_jstring(locale));
+    ret->add(stringToJava(locale));
   }
   return ret;
 }
@@ -94,9 +104,9 @@ jni::local_ref<JOptionsMap> optionsToJava(const Options &options) {
       jvalue = jni::autobox(static_cast<jdouble>(kv.second.getNumber()));
     } else {
       assert(kv.second.isString() && "Option is not valid type");
-      jvalue = jni::make_jstring(kv.second.getString());
+      jvalue = stringToJava(kv.second.getString());
     }
-    ret->put(jni::make_jstring(kv.first), jvalue);
+    ret->put(stringToJava(kv.first), jvalue);
   }
   return ret;
 }
