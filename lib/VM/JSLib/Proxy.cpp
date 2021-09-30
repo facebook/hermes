@@ -103,8 +103,8 @@ proxyConstructor(void *, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue>
 proxyRevocationSteps(void *, Runtime *runtime, NativeArgs args) {
   // 1. Let p be F.[[RevocableProxy]].
-  auto cc = runtime->getCurrentFrame()->getCalleeClosure();
-  auto revoker = vmcast<NativeFunction>(cc);
+  auto revoker = vmcast<NativeFunction>(
+      runtime->getCurrentFrame()->getCalleeClosureUnsafe());
   HermesValue proxyVal =
       getRevocableProxySlot(revoker, runtime).unboxToHV(runtime);
   // 2. If p is null, return undefined.

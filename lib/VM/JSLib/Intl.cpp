@@ -679,10 +679,10 @@ intlCollatorSupportedLocalesOf(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 intlCollatorCompare(void *, Runtime *runtime, NativeArgs args) {
-  PseudoHandle<Callable> cc =
-      createPseudoHandle(runtime->getCurrentFrame()->getCalleeClosure());
+  auto *nf = vmcast<NativeFunction>(
+      runtime->getCurrentFrame()->getCalleeClosureUnsafe());
   PseudoHandle<DecoratedObject> collatorHandle =
-      getCollator(PseudoHandle<NativeFunction>::vmcast(std::move(cc)), runtime);
+      getCollator(createPseudoHandle(nf), runtime);
 
   // Since collatorHandle came out of an internal slot, it's an
   // assertable failure if it has the wrong type.
@@ -967,10 +967,10 @@ CallResult<double> dateNowValue(Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 intlDateTimeFormatFormat(void *, Runtime *runtime, NativeArgs args) {
-  PseudoHandle<Callable> cc =
-      createPseudoHandle(runtime->getCurrentFrame()->getCalleeClosure());
-  PseudoHandle<DecoratedObject> dateTimeFormatHandle = getDateTimeFormat(
-      PseudoHandle<NativeFunction>::vmcast(std::move(cc)), runtime);
+  auto *nf = vmcast<NativeFunction>(
+      runtime->getCurrentFrame()->getCalleeClosureUnsafe());
+  PseudoHandle<DecoratedObject> dateTimeFormatHandle =
+      getDateTimeFormat(createPseudoHandle(nf), runtime);
 
   // Since dateTimeFormatHandle came out of an internal slot, it's an
   // assertable failure if it has the wrong type.
@@ -1247,10 +1247,10 @@ intlNumberFormatSupportedLocalesOf(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 intlNumberFormatFormat(void *, Runtime *runtime, NativeArgs args) {
-  PseudoHandle<Callable> cc =
-      createPseudoHandle(runtime->getCurrentFrame()->getCalleeClosure());
-  PseudoHandle<DecoratedObject> numberFormatHandle = getNumberFormat(
-      PseudoHandle<NativeFunction>::vmcast(std::move(cc)), runtime);
+  auto *nf = vmcast<NativeFunction>(
+      runtime->getCurrentFrame()->getCalleeClosureUnsafe());
+  PseudoHandle<DecoratedObject> numberFormatHandle =
+      getNumberFormat(createPseudoHandle(nf), runtime);
 
   // Since numberFormatHandle came out of an internal slot, it's an
   // assertable failure if it has the wrong type.

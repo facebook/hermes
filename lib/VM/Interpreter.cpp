@@ -156,7 +156,7 @@ CallResult<PseudoHandle<JSGenerator>> Interpreter::createGenerator_RJS(
   }
 
   auto generatorFunction = runtime->makeHandle(vmcast<JSGeneratorFunction>(
-      runtime->getCurrentFrame().getCalleeClosure()));
+      runtime->getCurrentFrame().getCalleeClosureUnsafe()));
 
   auto prototypeProp = JSObject::getNamed_RJS(
       generatorFunction,
@@ -1730,7 +1730,7 @@ tailCall:
 
       CASE(CompleteGenerator) {
         auto *innerFn = vmcast<GeneratorInnerFunction>(
-            runtime->getCurrentFrame().getCalleeClosure());
+            runtime->getCurrentFrame().getCalleeClosureUnsafe());
         innerFn->setState(GeneratorInnerFunction::State::Completed);
         ip = NEXTINST(CompleteGenerator);
         DISPATCH;
@@ -1751,7 +1751,7 @@ tailCall:
 
       CASE(StartGenerator) {
         auto *innerFn = vmcast<GeneratorInnerFunction>(
-            runtime->getCurrentFrame().getCalleeClosure());
+            runtime->getCurrentFrame().getCalleeClosureUnsafe());
         if (innerFn->getState() ==
             GeneratorInnerFunction::State::SuspendedStart) {
           nextIP = NEXTINST(StartGenerator);
@@ -1766,7 +1766,7 @@ tailCall:
 
       CASE(ResumeGenerator) {
         auto *innerFn = vmcast<GeneratorInnerFunction>(
-            runtime->getCurrentFrame().getCalleeClosure());
+            runtime->getCurrentFrame().getCalleeClosureUnsafe());
         O1REG(ResumeGenerator) = innerFn->getResult().unboxToHV(runtime);
         O2REG(ResumeGenerator) = HermesValue::encodeBoolValue(
             innerFn->getAction() == GeneratorInnerFunction::Action::Return);

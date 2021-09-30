@@ -179,10 +179,6 @@ class StackFramePtrT {
   /// CodeBlock *.
   inline Handle<Callable> getCalleeClosureHandleUnsafe() const;
 
-  /// \return a pointer to the callee closure, if we have it, or nullptr
-  ///   if it is a CodeBlock.
-  Callable *getCalleeClosure() const;
-
   /// \return the callee's CodeBlock, i.e. the CodeBlock that is executing in
   ///   this frame. It could be nullptr if calleeClosure is a Callable but not
   ///   a JSFunction.

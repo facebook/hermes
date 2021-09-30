@@ -1733,7 +1733,7 @@ void Runtime::dumpCallFrames(llvh::raw_ostream &OS) {
   unsigned i = 0;
   for (StackFramePtr sf : getStackFrames()) {
     OS << i++ << " ";
-    if (auto *closure = sf.getCalleeClosure()) {
+    if (auto *closure = dyn_vmcast<Callable>(sf.getCalleeClosureOrCBRef())) {
       OS << cellKindStr(closure->getKind()) << " ";
     }
     if (auto *cb = sf.getCalleeCodeBlock()) {
