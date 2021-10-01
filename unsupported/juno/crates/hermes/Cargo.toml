@@ -9,3 +9,6 @@ license = "MIT"
 support = { path = "../support" }
 libc = "0.2"
 thiserror = "1.0"
+
+[build-dependencies]
+toml = "=0.5.7"

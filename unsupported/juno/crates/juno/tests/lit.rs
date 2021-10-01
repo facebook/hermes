@@ -6,13 +6,21 @@
  */
 
 use assert_cmd::Command;
+use std::{env, fs};
+use toml::Value;
 
 #[test]
 fn run_lit_tests() {
-    let hermes_build = env!(
-        "HERMES_BUILD",
-        "HERMES_BUILD must point to a Hermes CMake build directory"
-    );
+    let hermes_build = match env::var("HERMES_BUILD") {
+        Ok(dir) => dir,
+        Err(_) => {
+            let file =
+                fs::read_to_string(format!("{}/../../.hermes.toml", env!("CARGO_MANIFEST_DIR")))
+                    .expect("Must provide either HERMES_BUILD env variable or .hermes.toml file");
+            let value = file.parse::<Value>().unwrap();
+            value["hermes_build"].as_str().unwrap().to_owned()
+        }
+    };
 
     let lit = format!("{}/bin/hermes-lit", hermes_build);
     Command::new(lit)

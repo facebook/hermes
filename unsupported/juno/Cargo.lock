@@ -140,6 +140,7 @@ dependencies = [
  "libc",
  "support",
  "thiserror",
+ "toml",
 ]
 
 [[package]]
@@ -186,6 +187,7 @@ dependencies = [
  "structopt",
  "support",
  "thiserror",
+ "toml",
  "url",
 ]
 
@@ -433,6 +435,7 @@ dependencies = [
  "anyhow",
  "base64 0.13.0",
  "thiserror",
+ "toml",
  "url",
 ]
 
@@ -490,6 +493,15 @@ name = "tinyvec_macros"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
+
+[[package]]
+name = "toml"
+version = "0.5.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75cf45bb0bef80604d001caaec0d09da99611b3c0fd39d3080468875cdb65645"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "treeline"
