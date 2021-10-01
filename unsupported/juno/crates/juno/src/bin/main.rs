@@ -5,12 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use anyhow::{self, Context};
+use anyhow::{self, ensure, Context};
 use juno::ast::{self, NodePtr};
 use juno::gen_js;
 use juno::hparser::{self, MagicCommentKind, ParsedJS};
+use juno::sourcemap::merge_sourcemaps;
 use sourcemap::SourceMap;
 use std::fs::File;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use structopt::{clap::AppSettings, clap::ArgGroup, StructOpt};
@@ -44,9 +46,35 @@ struct Opt {
     #[structopt(parse(from_os_str))]
     input_path: PathBuf,
 
+    /// Path to output to.
+    /// Defaults to `-`, which is `stdout`.
+    #[structopt(long = "out", short = "o", default_value = "-", parse(from_os_str))]
+    output_path: PathBuf,
+
+    /// Whether to output a source map.
+    /// The source map will be merged with an input source map if provided.
+    /// Can only be used when generating JS.
+    #[structopt(long)]
+    sourcemap: bool,
+
     /// Measure and print times.
     #[structopt(long = "Xtime")]
     xtime: bool,
+}
+
+impl Opt {
+    /// Ensure the arguments are valid.
+    /// Return `Err` if there are any conflicts.
+    fn validate(&self) -> anyhow::Result<()> {
+        if self.sourcemap {
+            ensure!(
+                self.output_path != Path::new("-"),
+                "Source map requires an output path",
+            );
+            ensure!(self.gen.js, "Source map requires JS output",);
+        }
+        Ok(())
+    }
 }
 
 /// Read the specified file or stdin into a null terminated buffer.
@@ -82,11 +110,20 @@ fn gen_output(
     opt: &Opt,
     ctx: &ast::Context,
     root: NodePtr,
-    _source_map: &Option<SourceMap>,
+    input_map: &Option<SourceMap>,
 ) -> anyhow::Result<bool> {
+    let out: Box<dyn Write> = if opt.output_path == Path::new("-") {
+        Box::new(std::io::stdout())
+    } else {
+        Box::new(
+            File::create(&opt.output_path)
+                .with_context(|| opt.output_path.display().to_string())?,
+        )
+    };
+
     if opt.gen.ast {
         ast::dump_json(
-            std::io::stdout(),
+            out,
             ctx,
             root,
             if opt.no_pretty {
@@ -97,8 +134,8 @@ fn gen_output(
         )?;
         Ok(true)
     } else if opt.gen.js {
-        gen_js::generate(
-            std::io::stdout(),
+        let generated_map = gen_js::generate(
+            out,
             ctx,
             root,
             if opt.no_pretty {
@@ -107,6 +144,18 @@ fn gen_output(
                 gen_js::Pretty::Yes
             },
         )?;
+        if opt.sourcemap {
+            // Workaround because `PathBuf` doesn't have a way to append an extension,
+            // only to replace the existing one.
+            let mut path = opt.output_path.clone().into_os_string();
+            path.push(".map");
+            let sourcemap_file = File::create(PathBuf::from(path))?;
+            let merged_map = match input_map {
+                None => generated_map,
+                Some(input_map) => merge_sourcemaps(input_map, &generated_map),
+            };
+            merged_map.to_writer(sourcemap_file)?;
+        }
         Ok(true)
     } else {
         Ok(false)
@@ -130,6 +179,8 @@ enum TransformStatus {
 }
 
 fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
+    opt.validate()?;
+
     // Read the input into memory.
     let input = opt.input_path.as_path();
     let buf = read_file_or_stdin(input)?;
