@@ -6,11 +6,10 @@
  */
 
 use anyhow::{self, ensure, Context};
-use juno::ast::{self, NodePtr};
+use juno::ast::{self, NodePtr, SourceRange};
 use juno::gen_js;
 use juno::hparser::{self, MagicCommentKind, ParsedJS};
 use juno::sourcemap::merge_sourcemaps;
-use juno::source_manager::SourceId;
 use sourcemap::SourceMap;
 use std::fs::File;
 use std::io::Write;
@@ -182,9 +181,14 @@ enum TransformStatus {
 fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     opt.validate()?;
 
+    let mut ctx = ast::Context::new();
+
     // Read the input into memory.
     let input = opt.input_path.as_path();
-    let buf = read_file_or_stdin(input)?;
+    let file_id = ctx
+        .sm_mut()
+        .add_source(input.to_string_lossy(), read_file_or_stdin(input)?);
+    let buf = ctx.sm().source_buffer_rc(file_id);
 
     // Start measuring time.
     let start_time = std::time::Instant::now();
@@ -193,13 +197,7 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     let parsed = hparser::ParsedJS::parse(Default::default(), &buf);
     let parse_time = start_time.elapsed();
     if let Some(e) = parsed.first_error() {
-        eprintln!(
-            "{}:{}:{}: error: {}",
-            input.display(),
-            e.0.line,
-            e.0.col,
-            e.1
-        );
+        ctx.sm().error(SourceRange::from_loc(file_id, e.0), e.1);
         return Ok(TransformStatus::Error);
     }
 
@@ -207,8 +205,7 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     let sm_url = parse_magic_url(&parsed, MagicCommentKind::SourceMappingUrl)?;
 
     // Convert to Juno AST.
-    let mut ctx = ast::Context::new();
-    let ast = parsed.to_ast(&mut ctx, SourceId::INVALID).unwrap();
+    let ast = parsed.to_ast(&mut ctx, file_id).unwrap();
     let cvt_time = start_time.elapsed();
 
     // We don't need the original parser anymore.

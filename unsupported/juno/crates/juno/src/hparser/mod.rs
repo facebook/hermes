@@ -85,14 +85,17 @@ impl std::fmt::Display for ParseError {
 }
 
 /// This is a simple function that is intended to be used mostly for testing.
-/// When there ar errors, it returns only the first error.
-pub fn parse_with_file_id(
+/// It automatically imports the source string into the source manager.
+/// When there are errors, it returns only the first error.
+pub fn parse_with_flags(
     flags: ParserFlags,
     source: &str,
     ctx: &mut ast::Context,
-    file_id: SourceId,
 ) -> Result<ast::NodePtr, ParseError> {
-    let buf = NullTerminatedBuf::from_str_check(source);
+    let file_id = ctx
+        .sm_mut()
+        .add_source("<input>", NullTerminatedBuf::from_str_check(source));
+    let buf = ctx.sm().source_buffer_rc(file_id);
     let parsed = ParsedJS::parse(flags, &buf);
     if let Some(ast) = parsed.to_ast(ctx, file_id) {
         Ok(ast)
@@ -103,9 +106,10 @@ pub fn parse_with_file_id(
 }
 
 /// This is a simple function that is intended to be used mostly for testing.
-/// When there ar errors, it returns only the first error.
+/// It automatically imports the source string into the source manager.
+/// When there are errors, it returns only the first error.
 pub fn parse(ctx: &mut ast::Context, source: &str) -> Result<ast::NodePtr, ParseError> {
-    parse_with_file_id(Default::default(), source, ctx, SourceId::INVALID)
+    parse_with_flags(Default::default(), source, ctx)
 }
 
 #[cfg(test)]

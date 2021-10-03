@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::source_manager::SourceId;
+use crate::source_manager::{SourceId, SourceManager};
 use std::fmt;
 use support::define_str_enum;
 use thiserror::Error;
@@ -37,6 +37,9 @@ pub struct Context {
 
     /// All identifiers are kept here.
     atom_tab: AtomTable,
+
+    /// Source manager of this context.
+    source_mgr: SourceManager,
 }
 
 #[derive(Debug)]
@@ -100,7 +103,7 @@ impl Context {
 
     /// Add a string to the identifier table.
     #[inline]
-    pub fn add_atom<V: Into<String> + AsRef<str>>(&mut self, value: V) -> Atom {
+    pub fn atom<V: Into<String> + AsRef<str>>(&self, value: V) -> Atom {
         self.atom_tab.atom(value)
     }
 
@@ -108,6 +111,16 @@ impl Context {
     #[inline]
     pub fn str(&self, index: Atom) -> &str {
         self.atom_tab.str(index)
+    }
+
+    /// Return an immutable reference to SourceManager
+    pub fn sm(&self) -> &SourceManager {
+        &self.source_mgr
+    }
+
+    /// Return a mutable reference to SourceManager
+    pub fn sm_mut(&mut self) -> &mut SourceManager {
+        &mut self.source_mgr
     }
 }
 
@@ -152,6 +165,17 @@ pub struct SourceRange {
 
     /// End of the source range, inclusive.
     pub end: SourceLoc,
+}
+
+impl SourceRange {
+    /// Create a SourceRange describing a single location.
+    pub fn from_loc(file: SourceId, start: SourceLoc) -> SourceRange {
+        SourceRange {
+            file,
+            start,
+            end: start,
+        }
+    }
 }
 
 /// Line and column of a file.

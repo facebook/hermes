@@ -143,9 +143,10 @@ impl Converter<'_, '_> {
 
     pub fn cvt_label(&mut self, u: NodeLabel) -> ast::NodeLabel {
         let ctx = &mut *self.ast_context;
-        *self.atom_tab.entry(u).or_insert_with(move || {
-            ctx.add_atom(utf8_with_surrogates_to_string(u.as_slice()).unwrap())
-        })
+        *self
+            .atom_tab
+            .entry(u)
+            .or_insert_with(move || ctx.atom(utf8_with_surrogates_to_string(u.as_slice()).unwrap()))
     }
 
     pub fn cvt_label_opt(&mut self, u: NodeLabelOpt) -> Option<ast::NodeLabel> {
