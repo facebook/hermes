@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use crate::source_manager::SourceId;
 use std::fmt;
 use support::define_str_enum;
 use thiserror::Error;
@@ -144,7 +145,7 @@ pub trait Visitor {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct SourceRange {
     /// Index of the file this range is in.
-    pub file: u32,
+    pub file: SourceId,
 
     /// Start of the source range, inclusive.
     pub start: SourceLoc,

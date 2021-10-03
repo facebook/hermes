@@ -17,6 +17,7 @@ use std::fmt::Formatter;
 use support::NullTerminatedBuf;
 use thiserror::Error;
 
+use crate::source_manager::SourceId;
 pub use hermes::parser::{MagicCommentKind, ParserDialect, ParserFlags};
 
 pub struct ParsedJS<'a> {
@@ -59,7 +60,7 @@ impl ParsedJS<'_> {
     }
 
     /// Create and return an external representation of the AST, or None if there were parse errors.
-    pub fn to_ast(&self, ctx: &mut ast::Context, file_id: u32) -> Option<ast::NodePtr> {
+    pub fn to_ast(&self, ctx: &mut ast::Context, file_id: SourceId) -> Option<ast::NodePtr> {
         let mut cvt = Converter::new(&self.parser, ctx, file_id);
 
         self.parser.root().map(|root| convert_ast(&mut cvt, root))
@@ -89,7 +90,7 @@ pub fn parse_with_file_id(
     flags: ParserFlags,
     source: &str,
     ctx: &mut ast::Context,
-    file_id: u32,
+    file_id: SourceId,
 ) -> Result<ast::NodePtr, ParseError> {
     let buf = NullTerminatedBuf::from_str_check(source);
     let parsed = ParsedJS::parse(flags, &buf);
@@ -104,7 +105,7 @@ pub fn parse_with_file_id(
 /// This is a simple function that is intended to be used mostly for testing.
 /// When there ar errors, it returns only the first error.
 pub fn parse(ctx: &mut ast::Context, source: &str) -> Result<ast::NodePtr, ParseError> {
-    parse_with_file_id(Default::default(), source, ctx, 0)
+    parse_with_file_id(Default::default(), source, ctx, SourceId::INVALID)
 }
 
 #[cfg(test)]

@@ -6,6 +6,7 @@
  */
 
 use juno::ast::*;
+use juno::source_manager::SourceId;
 
 /// Create a node with a default source range for testing.
 /// Use a macro to make it easier to construct nested macros
@@ -28,7 +29,7 @@ fn test_visit() {
     let mut ctx = Context::new();
     // Dummy range, we don't care about ranges in this test.
     let range = SourceRange {
-        file: 0,
+        file: SourceId::INVALID,
         start: SourceLoc { line: 1, col: 1 },
         end: SourceLoc { line: 1, col: 1 },
     };

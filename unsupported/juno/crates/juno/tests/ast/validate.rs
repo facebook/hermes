@@ -6,12 +6,13 @@
  */
 
 use juno::ast::*;
+use juno::source_manager::SourceId;
 
 #[test]
 fn test_valid() {
     let mut ctx = Context::new();
     let range = SourceRange {
-        file: 0,
+        file: SourceId::INVALID,
         start: SourceLoc::invalid(),
         end: SourceLoc::invalid(),
     };
@@ -56,7 +57,7 @@ fn test_valid() {
 fn test_error() {
     let mut ctx = Context::new();
     let range = SourceRange {
-        file: 0,
+        file: SourceId::INVALID,
         start: SourceLoc::invalid(),
         end: SourceLoc::invalid(),
     };

@@ -8,6 +8,7 @@
 use juno::ast::*;
 use juno::gen_js;
 use juno::hparser;
+use juno::source_manager::SourceId;
 use juno::sourcemap::merge_sourcemaps;
 
 fn do_gen(ctx: &Context, node: NodePtr, pretty: gen_js::Pretty) -> String {
@@ -24,18 +25,19 @@ fn test_roundtrip_with_flags(flags: hparser::ParserFlags, src1: &str) {
     let ctx = &mut context;
 
     for pretty in &[gen_js::Pretty::Yes, gen_js::Pretty::No] {
-        let ast1 = hparser::parse_with_file_id(flags, src1, ctx, 0).unwrap();
+        let ast1 = hparser::parse_with_file_id(flags, src1, ctx, SourceId::INVALID).unwrap();
         let mut dump: Vec<u8> = vec![];
         dump_json(&mut dump, ctx, ast1, juno::ast::Pretty::Yes).unwrap();
         let ast1_json = String::from_utf8(dump).expect("Invalid UTF-8 output in test");
 
         let src2 = do_gen(ctx, ast1, *pretty);
-        let ast2 = hparser::parse_with_file_id(flags, &src2, ctx, 0).unwrap_or_else(|_| {
-            panic!(
+        let ast2 = hparser::parse_with_file_id(flags, &src2, ctx, SourceId::INVALID)
+            .unwrap_or_else(|_| {
+                panic!(
                 "Invalid JS generated: Pretty={:?}\nOriginal Source:\n{}\nGenerated Source:\n{}",
                 pretty, &src1, &src2,
             )
-        });
+            });
         let mut dump: Vec<u8> = vec![];
         dump_json(&mut dump, ctx, ast2, juno::ast::Pretty::Yes).unwrap();
         let ast2_json = String::from_utf8(dump).expect("Invalid UTF-8 output in test");
@@ -78,7 +80,7 @@ fn test_roundtrip_jsx(src1: &str) {
 fn test_literals() {
     let mut ctx = Context::new();
     let range = SourceRange {
-        file: 0,
+        file: SourceId::INVALID,
         start: SourceLoc { line: 1, col: 1 },
         end: SourceLoc { line: 1, col: 1 },
     };
@@ -134,7 +136,7 @@ fn test_identifier() {
 fn test_binop() {
     let mut ctx = Context::new();
     let range = SourceRange {
-        file: 0,
+        file: SourceId::INVALID,
         start: SourceLoc { line: 1, col: 1 },
         end: SourceLoc { line: 1, col: 1 },
     };
@@ -448,7 +450,7 @@ fn test_export() {
 fn test_types() {
     let mut ctx = Context::new();
     let range = SourceRange {
-        file: 0,
+        file: SourceId::INVALID,
         start: SourceLoc { line: 1, col: 1 },
         end: SourceLoc { line: 1, col: 1 },
     };
@@ -607,7 +609,8 @@ fn test_sourcemap_merged() {
     )
     .unwrap();
     let mut out: Vec<u8> = vec![];
-    let node = hparser::parse_with_file_id(Default::default(), input_src, ctx, 0).unwrap();
+    let node =
+        hparser::parse_with_file_id(Default::default(), input_src, ctx, SourceId::INVALID).unwrap();
     let output_map = generate(&mut out, ctx, node, Pretty::Yes).unwrap();
     let output = String::from_utf8(out).expect("Invalid UTF-8 output in test");
     assert_eq!(output, "function foo() {\n  1;\n}\n",);

@@ -10,6 +10,7 @@ use juno::ast::{self, NodePtr};
 use juno::gen_js;
 use juno::hparser::{self, MagicCommentKind, ParsedJS};
 use juno::sourcemap::merge_sourcemaps;
+use juno::source_manager::SourceId;
 use sourcemap::SourceMap;
 use std::fs::File;
 use std::io::Write;
@@ -207,7 +208,7 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
 
     // Convert to Juno AST.
     let mut ctx = ast::Context::new();
-    let ast = parsed.to_ast(&mut ctx, 0).unwrap();
+    let ast = parsed.to_ast(&mut ctx, SourceId::INVALID).unwrap();
     let cvt_time = start_time.elapsed();
 
     // We don't need the original parser anymore.

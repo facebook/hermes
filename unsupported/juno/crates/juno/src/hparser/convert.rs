@@ -7,6 +7,7 @@
 
 use super::generated_cvt::cvt_node_ptr;
 use crate::ast;
+use crate::source_manager::SourceId;
 use hermes::parser::{
     DataRef, HermesParser, NodeLabel, NodeLabelOpt, NodeListOptRef, NodeListRef, NodePtr,
     NodePtrOpt, NodeString, NodeStringOpt, SMLoc,
@@ -42,7 +43,7 @@ pub struct Converter<'parser, 'ctx> {
     /// Rust AST context for allocation.
     pub ast_context: &'ctx mut ast::Context,
     /// The file id to use for the converted coordinates.
-    pub file_id: u32,
+    pub file_id: SourceId,
 
     /// A cache to speed up finding locations.
     line_cache: FindLineCache<'parser>,
@@ -91,7 +92,7 @@ impl Converter<'_, '_> {
     pub fn new<'parser, 'ctx>(
         hparser: &'parser HermesParser<'parser>,
         ast_context: &'ctx mut ast::Context,
-        file_id: u32,
+        file_id: SourceId,
     ) -> Converter<'parser, 'ctx> {
         Converter {
             hparser,
