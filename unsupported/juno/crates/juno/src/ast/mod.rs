@@ -101,7 +101,7 @@ impl Context {
     /// Add a string to the identifier table.
     #[inline]
     pub fn add_atom<V: Into<String> + AsRef<str>>(&mut self, value: V) -> Atom {
-        self.atom_tab.add_atom(value)
+        self.atom_tab.atom(value)
     }
 
     /// Obtain the contents of an atom from the atom table.

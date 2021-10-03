@@ -5,15 +5,23 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::cell::UnsafeCell;
 use std::collections::HashMap;
 
 /// Type used to hold a string index internally.
 type NumIndex = u32;
 
 /// A string uniquing table - only one copy of a string is stored and all attempts
-/// to add the same string again return the same atom.
+/// to add the same string again return the same atom. This table is intended to
+/// be easily shareable, so it utilizes interior mutability. UnsafeCell<> is safe
+/// because we never allow reference to it to escape.
 #[derive(Debug, Default)]
-pub struct AtomTable {
+pub struct AtomTable(UnsafeCell<Inner>);
+
+/// A string uniquing table - only one copy of a string is stored and all attempts
+/// to add the same string again return the same atom.
+#[derive(Default)]
+struct Inner {
     /// Strings are added here and never removed or mutated.
     strings: Vec<String>,
     /// Maps from a reference inside [`AtomTable::strings`] to the index in [`AtomTable::strings`].
@@ -29,15 +37,10 @@ pub struct Atom(NumIndex);
 /// A special value reserved for the invalid atom.
 pub const INVALID_ATOM: Atom = Atom(NumIndex::MAX);
 
-impl AtomTable {
-    /// Create a new empty atom table.
-    pub fn new() -> AtomTable {
-        Default::default()
-    }
-
+impl Inner {
     /// Add a string to the table and return its atom index. The same
     /// string always returns the same index.
-    pub fn add_atom<V: Into<String> + AsRef<str>>(&mut self, value: V) -> Atom {
+    fn add_atom<V: Into<String> + AsRef<str>>(&mut self, value: V) -> Atom {
         if let Some(index) = self.map.get(value.as_ref()) {
             return Atom(*index);
         }
@@ -62,8 +65,28 @@ impl AtomTable {
     }
 
     /// Return the contents of the specified atom.
-    pub fn str(&self, ident: Atom) -> &str {
+    #[inline]
+    fn str(&self, ident: Atom) -> &str {
         self.strings[ident.0 as usize].as_str()
+    }
+}
+
+impl AtomTable {
+    /// Create a new empty atom table.
+    pub fn new() -> AtomTable {
+        Default::default()
+    }
+
+    /// Add a string to the table and return its atom index. The same
+    /// string always returns the same index.
+    pub fn atom<V: Into<String> + AsRef<str>>(&self, value: V) -> Atom {
+        unsafe { &mut *self.0.get() }.add_atom(value)
+    }
+
+    /// Return the contents of the specified atom.
+    #[inline]
+    pub fn str(&self, ident: Atom) -> &str {
+        unsafe { &*self.0.get() }.str(ident)
     }
 }
 
@@ -81,18 +104,18 @@ mod tests {
 
     #[test]
     fn test_tab() {
-        let mut idtab = AtomTable::new();
+        let idtab = AtomTable::new();
 
-        let id_foo = idtab.add_atom("foo");
+        let id_foo = idtab.atom("foo");
         let p_foo: *const str = idtab.str(id_foo);
-        let id_bar = idtab.add_atom("bar");
+        let id_bar = idtab.atom("bar");
         assert_ne!(id_foo, id_bar);
 
-        assert_eq!(idtab.add_atom("foo"), id_foo);
-        assert_eq!(idtab.add_atom("bar"), id_bar);
+        assert_eq!(idtab.atom("foo"), id_foo);
+        assert_eq!(idtab.atom("bar"), id_bar);
 
-        assert_eq!(idtab.add_atom(String::from("foo")), id_foo);
-        assert_eq!(idtab.add_atom(String::from("bar")), id_bar);
+        assert_eq!(idtab.atom(String::from("foo")), id_foo);
+        assert_eq!(idtab.atom(String::from("bar")), id_bar);
 
         assert_eq!(idtab.str(id_foo), "foo");
         assert_eq!(idtab.str(id_bar), "bar");
