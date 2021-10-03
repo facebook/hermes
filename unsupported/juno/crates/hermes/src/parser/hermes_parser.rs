@@ -209,7 +209,7 @@ pub struct HermesParser<'a> {
     parser_ctx: *mut ParserContext,
     /// If the input is not zero-terminated, we create a zero-terminated copy
     /// here.
-    source: &'a NullTerminatedBuf<'a>,
+    source: &'a NullTerminatedBuf,
 }
 
 impl Drop for HermesParser<'_> {
@@ -220,7 +220,7 @@ impl Drop for HermesParser<'_> {
 
 impl HermesParser<'_> {
     /// `file_id` is an opaque value used for encoding source coordinates.
-    pub fn parse<'a>(flags: ParserFlags, source: &'a NullTerminatedBuf) -> HermesParser<'a> {
+    pub fn parse(flags: ParserFlags, source: &NullTerminatedBuf) -> HermesParser {
         HermesParser {
             parser_ctx: unsafe { hermes_parser_parse(flags, source.as_c_char_ptr(), source.len()) },
             source,

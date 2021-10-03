@@ -26,8 +26,7 @@ pub struct ParsedJS<'a> {
 impl ParsedJS<'_> {
     /// Parse the source and store an internal representation of the AST and/or a list of diagnostic
     /// messages. If at least one of the messages is an error, there is no AST.
-    /// To avoid copying `source` can optionally be NUL-terminated.
-    pub fn parse<'a>(flags: ParserFlags, source: &'a NullTerminatedBuf) -> ParsedJS<'a> {
+    pub fn parse(flags: ParserFlags, source: &NullTerminatedBuf) -> ParsedJS {
         ParsedJS {
             parser: HermesParser::parse(flags, source),
         }
@@ -86,9 +85,6 @@ impl std::fmt::Display for ParseError {
 
 /// This is a simple function that is intended to be used mostly for testing.
 /// When there ar errors, it returns only the first error.
-/// It checks if the input is already null-terminated and avoids making the copy in that case.
-/// Note that if the null terminator is truly present in the input, it would parse successfully
-/// what ought to be an error.
 pub fn parse_with_file_id(
     flags: ParserFlags,
     source: &str,
@@ -107,9 +103,6 @@ pub fn parse_with_file_id(
 
 /// This is a simple function that is intended to be used mostly for testing.
 /// When there ar errors, it returns only the first error.
-/// It checks if the input is already null-terminated and avoids making the copy in that case.
-/// Note that if the null terminator is truly present in the input, it would parse successfully
-/// what ought to be an error.
 pub fn parse(ctx: &mut ast::Context, source: &str) -> Result<ast::NodePtr, ParseError> {
     parse_with_file_id(Default::default(), source, ctx, 0)
 }
