@@ -27,7 +27,7 @@ import typeof x from 'foo';
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo"
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "attributes": [],
+// CHECK-NEXT:         "assertions": [],
 // CHECK-NEXT:         "importKind": "typeof"
 // CHECK-NEXT:       },
 
@@ -47,7 +47,7 @@ import type x from 'foo';
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo"
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "attributes": [],
+// CHECK-NEXT:         "assertions": [],
 // CHECK-NEXT:         "importKind": "type"
 // CHECK-NEXT:       },
 
@@ -72,7 +72,7 @@ import { type type } from 'foo';
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo"
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "attributes": [],
+// CHECK-NEXT:         "assertions": [],
 // CHECK-NEXT:         "importKind": "value"
 // CHECK-NEXT:       },
 
@@ -97,7 +97,7 @@ import { type type as type } from 'foo';
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo"
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "attributes": [],
+// CHECK-NEXT:         "assertions": [],
 // CHECK-NEXT:         "importKind": "value"
 // CHECK-NEXT:       },
 
@@ -122,7 +122,7 @@ import { type T as U } from 'foo';
 // CHECK-NEXT:         "type": "StringLiteral",
 // CHECK-NEXT:         "value": "foo"
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "attributes": [],
+// CHECK-NEXT:       "assertions": [],
 // CHECK-NEXT:       "importKind": "value"
 // CHECK-NEXT:     },
 
@@ -142,6 +142,6 @@ import type from 'foo';
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo"
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "attributes": [],
+// CHECK-NEXT:         "assertions": [],
 // CHECK-NEXT:         "importKind": "value"
 // CHECK-NEXT:       }

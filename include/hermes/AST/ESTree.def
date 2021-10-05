@@ -526,7 +526,7 @@ ESTREE_NODE_4_ARGS(
     ImportDeclaration, Base,
     NodeList, specifiers, false,
     NodePtr, source, false,
-    NodeList, attributes, true,
+    NodeList, assertions, true,
     NodeLabel, importKind, false)
 
 ESTREE_NODE_3_ARGS(

@@ -474,7 +474,7 @@ extern "C" {
     // ImportDeclaration
     pub fn hermes_get_ImportDeclaration_specifiers(node: NodePtr) -> NodeListRef;
     pub fn hermes_get_ImportDeclaration_source(node: NodePtr) -> NodePtr;
-    pub fn hermes_get_ImportDeclaration_attributes(node: NodePtr) -> NodeListOptRef;
+    pub fn hermes_get_ImportDeclaration_assertions(node: NodePtr) -> NodeListOptRef;
     pub fn hermes_get_ImportDeclaration_importKind(node: NodePtr) -> NodeLabel;
     // ImportSpecifier
     pub fn hermes_get_ImportSpecifier_imported(node: NodePtr) -> NodePtr;

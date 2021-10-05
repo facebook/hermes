@@ -846,14 +846,14 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
         NodeKind::ImportDeclaration => {
           let specifiers = cvt_node_list(cvt, hermes_get_ImportDeclaration_specifiers(n));
           let source = cvt_node_ptr(cvt, hermes_get_ImportDeclaration_source(n));
-          let attributes = cvt_node_list_opt(cvt, hermes_get_ImportDeclaration_attributes(n));
+          let assertions = cvt_node_list_opt(cvt, hermes_get_ImportDeclaration_assertions(n));
           let import_kind = cvt_enum(hermes_get_ImportDeclaration_importKind(n));
           cvt.ast_context.alloc(
             ast::Node::ImportDeclaration(ast::ImportDeclaration {
                 range,
                     specifiers,
                     source,
-                    attributes,
+                    assertions,
                     import_kind,
             }),
           )

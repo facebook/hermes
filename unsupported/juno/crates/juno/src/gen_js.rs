@@ -1350,7 +1350,7 @@ impl<W: Write> GenJS<W> {
                 range: _,
                 specifiers,
                 source,
-                attributes,
+                assertions,
                 import_kind,
             }) => {
                 out_token!(self, node.get(ctx), "import ");
@@ -1380,10 +1380,10 @@ impl<W: Write> GenJS<W> {
                     out!(self, "from ");
                 }
                 source.visit(ctx, self, Some(node));
-                if let Some(attributes) = attributes {
-                    if !attributes.is_empty() {
+                if let Some(assertions) = assertions {
+                    if !assertions.is_empty() {
                         out!(self, " assert {{");
-                        for (i, attribute) in attributes.iter().enumerate() {
+                        for (i, attribute) in assertions.iter().enumerate() {
                             if i > 0 {
                                 self.comma();
                             }

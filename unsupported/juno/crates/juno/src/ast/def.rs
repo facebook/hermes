@@ -335,7 +335,7 @@ macro_rules! nodekind_defs {
             ImportDeclaration[Declaration] {
                 specifiers: NodeList[ImportSpecifier],
                 source: NodePtr[StringLiteral],
-                attributes: Option<NodeList>[ImportAttribute],
+                assertions: Option<NodeList>[ImportAttribute],
                 import_kind: ImportKind,
             },
             ImportSpecifier {
