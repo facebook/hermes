@@ -10,8 +10,8 @@
 /// ES7 22.2 TypedArray
 //===----------------------------------------------------------------------===//
 #include "JSLibInternal.h"
-#include "Sorting.h"
 #include "hermes/VM/JSArrayBuffer.h"
+#include "hermes/VM/JSLib/Sorting.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StringBuilder.h"
@@ -318,7 +318,7 @@ class TypedArraySortModel : public SortModel {
   }
 
   // Compare elements at index a and at index b.
-  virtual CallResult<bool> less(uint32_t a, uint32_t b) override {
+  virtual CallResult<int> compare(uint32_t a, uint32_t b) override {
     GCScopeMarkerRAII gcMarker{gcScope_, gcMarker_};
     HermesValue aVal = JSObject::getOwnIndexed(*self_, runtime_, a);
     HermesValue bVal = JSObject::getOwnIndexed(*self_, runtime_, b);
@@ -328,9 +328,9 @@ class TypedArraySortModel : public SortModel {
       if (LLVM_UNLIKELY(a == 0) && LLVM_UNLIKELY(b == 0) &&
           LLVM_UNLIKELY(std::signbit(a)) && LLVM_UNLIKELY(!std::signbit(b))) {
         // -0 < +0, according to the spec.
-        return true;
+        return -1;
       }
-      return a < b;
+      return (a < b) ? -1 : (a > b ? 1 : 0);
     }
     assert(compareFn_ && "Cannot use this version if the compareFn is null");
     // ES7 22.2.3.26 2a.
@@ -350,7 +350,9 @@ class TypedArraySortModel : public SortModel {
     if (LLVM_UNLIKELY(!self_->attached(runtime_))) {
       return runtime_->raiseTypeError("Callback to sort() detached the array");
     }
-    return intRes->getNumber() < 0;
+    // Cannot return intRes's value directly because it can be NaN
+    auto res = intRes->getNumber();
+    return (res < 0) ? -1 : (res > 0 ? 1 : 0);
   }
 };
 

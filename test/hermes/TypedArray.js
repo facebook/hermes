@@ -947,6 +947,19 @@ cons.forEach(function(ta) {
   assert.equal(x[1], 2);
   assert.equal(x[2], 1);
 
+  // Check stable.
+  x = new ta([1, 111, 11, 22, 2, 33, 3]);
+  x.sort(function(a, b) {
+    return (a + "").length - (b + "").length;
+  });
+  assert.equal(x[0], 1);
+  assert.equal(x[1], 2);
+  assert.equal(x[2], 3);
+  assert.equal(x[3], 11);
+  assert.equal(x[4], 22);
+  assert.equal(x[5], 33);
+  assert.equal(x[6], 111);
+
   assert.throws(function() {
     x.sort(null);
   }, TypeError);
