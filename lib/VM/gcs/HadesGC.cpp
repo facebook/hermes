@@ -1639,13 +1639,19 @@ void HadesGC::collectOGInBackground() {
   assert(gcMutex_ && "Must hold GC mutex when scheduling background work.");
   assert(
       !backgroundTaskActive_ && "Should only have one active task at a time");
+  assert(kConcurrentGC && "Background work can only be done in concurrent GC");
 #ifndef NDEBUG
   backgroundTaskActive_ = true;
 #endif
 
   ogThreadStatus_ = backgroundExecutor_->add([this]() {
+    std::unique_lock<Mutex> lk(gcMutex_);
     while (true) {
-      std::lock_guard<Mutex> lk(gcMutex_);
+      // If the mutator has requested the background task to stop and yield
+      // gcMutex_, wait on ogPauseCondVar_ until the mutator acquires the mutex
+      // and signals that we may resume.
+      ogPauseCondVar_.wait(
+          lk, [this] { return !ogPaused_.load(std::memory_order_relaxed); });
       assert(
           backgroundTaskActive_ &&
           "backgroundTaskActive_ must be true when the background task is in the loop.");
@@ -1659,6 +1665,23 @@ void HadesGC::collectOGInBackground() {
       }
     }
   });
+}
+
+std::unique_lock<Mutex> HadesGC::pauseBackgroundTask() {
+  assert(kConcurrentGC && "Should not be called in incremental mode");
+  assert(!calledByBackgroundThread() && "Must be called from mutator");
+  // Signal to the background thread that it should stop and wait on
+  // ogPauseCondVar_.
+  ogPaused_.store(true, std::memory_order_relaxed);
+  // Acquire gcMutex_ as soon as it is released by the background thread.
+  // TODO(T102252908): Once we have C++17, make this a lock_guard and use
+  // mandatory NRVO.
+  std::unique_lock<Mutex> lk(gcMutex_);
+  // Signal to the background thread that it may resume. Note that it will just
+  // go to wait on gcMutex_, since it is currently held by this thread.
+  ogPaused_.store(false, std::memory_order_relaxed);
+  ogPauseCondVar_.notify_one();
+  return lk;
 }
 
 void HadesGC::incrementalCollect(bool backgroundThread) {
@@ -2385,7 +2408,7 @@ void HadesGC::youngGenCollection(
   ygCollectionStats_->beginCPUTimeSection();
   ygCollectionStats_->setBeginTime();
   // Acquire the GC lock for the duration of the YG collection.
-  std::lock_guard<Mutex> lk{gcMutex_};
+  auto lk = kConcurrentGC ? pauseBackgroundTask() : std::unique_lock<Mutex>();
   // The YG is not parseable while a collection is occurring.
   assert(!inGC() && "Cannot be in GC at the start of YG!");
   GCCycle cycle{this, gcCallbacks_, "Young Gen"};

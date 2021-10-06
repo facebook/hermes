@@ -696,6 +696,14 @@ class HadesGC final : public GCBase {
   /// GC. This includes mark bits, free lists, etc.
   Mutex gcMutex_;
 
+  /// Flag used to signal to the background thread that it should stop and yield
+  /// the gcMutex_ to the mutator as soon as possible.
+  AtomicIfConcurrentGC<bool> ogPaused_{false};
+
+  /// Condition variable that the background thread should wait on when
+  /// ogPaused_ is set to true, until the mutator has acquired gcMutex_.
+  std::condition_variable_any ogPauseCondVar_;
+
   enum class Phase : uint8_t {
     None,
     Mark,
@@ -919,6 +927,13 @@ class HadesGC final : public GCBase {
   /// thread, to perform it concurrently with the mutator.
   void collectOGInBackground();
 
+  /// Forces work on the background thread to be suspended and returns a lock
+  /// holding gcMutex_. This is used to ensure that the mutator receives
+  /// priority in acquiring gcMutex_, and does not remain blocked on the
+  /// background thread for an extended period of time. The background thread
+  /// will resume once the lock is released.
+  std::unique_lock<Mutex> pauseBackgroundTask();
+
   /// Perform a single step of an OG collection. \p backgroundThread indicates
   /// whether this call was made from the background thread.
   void incrementalCollect(bool backgroundThread);
@@ -1077,7 +1092,7 @@ inline T *HadesGC::makeA(uint32_t size, Args &&...args) {
       "Call to makeA must use a size aligned to HeapAlign");
   assert(noAllocLevel_ == 0 && "No allocs allowed right now.");
   if (longLived == LongLived::Yes) {
-    std::lock_guard<Mutex> lk{gcMutex_};
+    auto lk = kConcurrentGC ? pauseBackgroundTask() : std::unique_lock<Mutex>();
     return new (allocLongLived(size)) T(std::forward<Args>(args)...);
   }
 
