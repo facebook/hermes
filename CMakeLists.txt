@@ -665,6 +665,7 @@ if(HERMES_ENABLE_TEST_SUITE)
     test_exec_root=${HERMES_BINARY_DIR}/test
     unittests_dir=${HERMES_BINARY_DIR}/unittests
     debugger_enabled=${HERMES_ENABLE_DEBUGGER}
+    intl_enabled=${HERMES_ENABLE_INTL}
     use_flowparser=${HERMES_USE_FLOWPARSER}
     hbc_deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
     dependency_extractor=${HERMES_TOOLS_OUTPUT_DIR}/dependency-extractor

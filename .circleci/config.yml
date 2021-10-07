@@ -691,7 +691,7 @@ jobs:
             # We need to build only x86 for running the tests. This saves a lot of computing resources.
             echo 'abis=x86' >> gradle.properties
             adb logcat -c || true
-            ./gradlew :intltest:preparetest262 && ./gradlew :intltest:connectedAndroidTest
+            ./gradlew :intltest:prepareTests && ./gradlew :intltest:connectedAndroidTest
             adb logcat -d > /tmp/hermes/output/adblog.txt
             # Move report to output dir
             mv /tmp/hermes/build_android /tmp/hermes/output/build_android

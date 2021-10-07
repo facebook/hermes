@@ -5,6 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// RUN: %hermes %s
+// REQUIRES: intl
+
 function assert(pred, str) {
   if (!pred) {
     throw new Error('assertion failed' + (str === undefined ? '' : (': ' + str)));
@@ -12,7 +15,6 @@ function assert(pred, str) {
 }
 
 // This is all required by the standard
-
 function testServiceTypes(service) {
   assert(service !== undefined);
   assert(service.prototype.constructor === service);

@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-// Run "./gradlew :intltest:preparetest262" from the root to download and copy the test files to the
+// Run "./gradlew :intltest:prepareTests" from the root to download and copy the test files to the
 // APK assets.
 public class HermesIntlTest262Base extends InstrumentationTestCase {
 
