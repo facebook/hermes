@@ -168,7 +168,9 @@ CallResult<HermesValue> partsToJS(
   }
   Handle<JSArray> array = *arrayRes;
   uint64_t index = 0;
+  GCScopeMarkerRAII marker{runtime};
   for (auto &part : *result) {
+    marker.flush();
     CallResult<Handle<JSObject>> partRes = partToJS(runtime, std::move(part));
     if (LLVM_UNLIKELY(partRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
