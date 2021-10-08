@@ -1013,10 +1013,6 @@ std::vector<detail::WeakRefKey *> GCBase::buildKeyList(
   return res;
 }
 
-WeakRefMutex &GCBase::weakRefMutex() {
-  return weakRefMutex_;
-}
-
 HeapSnapshot::NodeID GCBase::getObjectID(const void *cell) {
   assert(cell && "Called getObjectID on a null pointer");
   return idTracker_.getObjectID(pointerBase_->pointerToBasedNonNull(cell));

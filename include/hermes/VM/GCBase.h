@@ -1362,7 +1362,9 @@ class GCBase {
 
   /// \return A reference to the mutex that controls accessing any WeakRef.
   ///   This mutex must be held if a WeakRef is created or modified.
-  WeakRefMutex &weakRefMutex();
+  WeakRefMutex &weakRefMutex() {
+    return weakRefMutex_;
+  }
 
   /// Assumes that all known reachable WeakMaps have been collected in
   /// \p reachableWeakMaps.  For all these WeakMaps, find all
