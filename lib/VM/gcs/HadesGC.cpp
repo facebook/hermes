@@ -796,6 +796,9 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
   }
 
   void accept(WeakRefBase &wr) override {
+    assert(
+        gc.weakRefMutex() &&
+        "Must hold weak ref mutex when marking a WeakRef.");
     WeakRefSlot *slot = wr.unsafeGetSlot();
     assert(
         slot->state() != WeakSlotState::Free &&
@@ -863,7 +866,6 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
       }
     }
 
-    std::lock_guard<Mutex> wrLk{gc.weakRefMutex()};
     size_t numMarkedBytes = 0;
     assert(markLimit && "markLimit must be non-zero!");
     while (!localWorklist_.empty() && numMarkedBytes < markLimit) {

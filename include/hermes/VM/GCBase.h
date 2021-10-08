@@ -1600,14 +1600,13 @@ class GCBase {
   /// If a cell has any weak references to mark, and the acceptor supports
   /// marking them, mark those weak references.
   template <typename Acceptor>
-  static void
-  markWeakRefsIfNecessary(GCCell *cell, CellKind kind, Acceptor &acceptor);
+  void markWeakRefsIfNecessary(GCCell *cell, CellKind kind, Acceptor &acceptor);
 
   /// Overload of \p markWeakRefsIfNecessary for acceptors that support marking
   /// weak references.
   /// Don't call this directly, use the three-argument variant instead.
   template <typename Acceptor>
-  static void markWeakRefsIfNecessary(
+  void markWeakRefsIfNecessary(
       GCCell *cell,
       CellKind kind,
       Acceptor &acceptor,
@@ -1615,8 +1614,11 @@ class GCBase {
     // In C++17, we could implement this via "constexpr if" rather than
     // overloads with std::true_type.
     // Once C++17 is available, switch to using that.
-    VTable::vtableArray[static_cast<size_t>(kind)]->markWeakIfExists(
-        cell, acceptor);
+    if (auto *cb = VTable::vtableArray[static_cast<size_t>(kind)]
+                       ->getMarkWeakCallback()) {
+      std::lock_guard<Mutex> wrLk{weakRefMutex()};
+      cb(cell, acceptor);
+    }
   }
 
   /// Overload of \p markWeakRefsIfNecessary for acceptors that do not support

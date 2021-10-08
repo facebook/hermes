@@ -110,7 +110,8 @@ struct VTable {
   /// isn't.
   using FinalizeCallback = void(GCCell *, GC *gc);
   FinalizeCallback *const finalize_;
-  /// Call gc functions on weak-reference-holding objects.
+  /// Call GC functions on weak-reference-holding objects. In a concurrent GC,
+  /// guaranteed to be called while the weak ref mutex is held.
   using MarkWeakCallback = void(GCCell *, WeakRefAcceptor &);
   MarkWeakCallback *const markWeak_;
   /// Report if there is any size contribution from an object beyond the GC.
@@ -175,11 +176,9 @@ struct VTable {
     finalize_(cell, gc);
   }
 
-  void markWeakIfExists(GCCell *cell, WeakRefAcceptor &acceptor) const {
+  MarkWeakCallback *getMarkWeakCallback() const {
     assert(isValid());
-    if (markWeak_) {
-      markWeak_(cell, acceptor);
-    }
+    return markWeak_;
   }
 
   size_t getMallocSize(GCCell *cell) const {
