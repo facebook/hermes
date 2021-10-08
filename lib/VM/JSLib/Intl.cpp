@@ -9,7 +9,7 @@
 
 #include "hermes/Platform/Intl/PlatformIntl.h"
 
-#ifdef HERMES_PLATFORM_INTL
+#ifdef HERMES_ENABLE_INTL
 
 #include "hermes/VM/ArrayLike.h"
 #include "hermes/VM/JSLib/DateUtil.h"

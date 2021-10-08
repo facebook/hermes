@@ -8,11 +8,7 @@
 #ifndef HERMES_PLATFORMINTL_PLATFORMINTL_H
 #define HERMES_PLATFORMINTL_PLATFORMINTL_H
 
-// Intl implementation options
-#define HERMES_PLATFORM_INTL_DUMMY 1
-#define HERMES_PLATFORM_INTL_ANDROID 2
-
-#ifdef HERMES_PLATFORM_INTL
+#ifdef HERMES_ENABLE_INTL
 #include "hermes/VM/CallResult.h"
 #include "hermes/VM/DecoratedObject.h"
 #include "hermes/VM/Handle.h"

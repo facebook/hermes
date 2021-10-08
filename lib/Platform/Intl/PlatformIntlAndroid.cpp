@@ -12,7 +12,6 @@
 // Android.  It's likely it could be made to work against the
 // non-Android ICU4J packages, too, if necessary, but it would take a
 // bit more work.
-#if HERMES_PLATFORM_INTL == HERMES_PLATFORM_INTL_ANDROID
 
 #include <fbjni/fbjni.h>
 
@@ -573,5 +572,3 @@ std::vector<Part> NumberFormat::formatToParts(double number) noexcept {
 
 } // namespace platform_intl
 } // namespace hermes
-
-#endif

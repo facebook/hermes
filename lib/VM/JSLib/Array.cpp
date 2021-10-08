@@ -472,7 +472,7 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
         // passed on from this function to the element's
         // "toLocaleString" method.
         auto callRes =
-#ifdef HERMES_PLATFORM_INTL
+#ifdef HERMES_ENABLE_INTL
             Callable::executeCall2(
                 func, runtime, elementObj, args.getArg(0), args.getArg(1));
 #else

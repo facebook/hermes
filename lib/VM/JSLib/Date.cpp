@@ -590,7 +590,7 @@ CallResult<HermesValue> datePrototypeToLocaleStringHelper(
   assert(
       (uint64_t)ctx < (uint64_t)ToLocaleStringKind::NumKinds &&
       "dataPrototypeToLocaleString with wrong kind as context");
-#ifdef HERMES_PLATFORM_INTL
+#ifdef HERMES_ENABLE_INTL
   static NativeFunctionPtr toLocaleStringFunctions[] = {
       intlDatePrototypeToLocaleString,
       intlDatePrototypeToLocaleDateString,
