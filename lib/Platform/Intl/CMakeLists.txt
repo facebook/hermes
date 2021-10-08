@@ -10,6 +10,13 @@ if(HERMES_ENABLE_INTL)
         fbjni::fbjni
     )
     target_compile_options(hermesPlatformIntl PRIVATE -frtti -fexceptions)
+  elseif(APPLE)
+    add_hermes_library(hermesPlatformIntl STATIC PlatformIntlApple.mm
+        LINK_LIBS
+        ${FOUNDATION}
+    )
+    # Work around a bug in unity builds where it tries to build Obj-C as C++.
+    set_target_properties(hermesPlatformIntl PROPERTIES UNITY_BUILD false)
   else()
     add_hermes_library(hermesPlatformIntl STATIC PlatformIntlDummy.cpp)
   endif()
