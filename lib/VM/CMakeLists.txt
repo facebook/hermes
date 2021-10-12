@@ -172,10 +172,13 @@ set(link_libs
   hermesInst
   hermesSupport
   hermesPlatform
-  hermesPlatformIntl
   hermesInternalBytecode
   dtoa
 )
+
+if(HERMES_ENABLE_INTL)
+  list(APPEND link_libs hermesPlatformIntl)
+endif()
 
 add_hermes_library(hermesVMRuntime STATIC ${source_files}
     LINK_LIBS

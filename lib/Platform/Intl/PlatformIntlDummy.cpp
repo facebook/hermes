@@ -7,8 +7,6 @@
 
 #include "hermes/Platform/Intl/PlatformIntl.h"
 
-#if HERMES_PLATFORM_INTL == HERMES_PLATFORM_INTL_DUMMY
-
 #include <deque>
 #include <string>
 #include <unordered_map>
@@ -163,5 +161,3 @@ NumberFormat::formatToParts(double number) noexcept {
 
 } // namespace platform_intl
 } // namespace hermes
-
-#endif

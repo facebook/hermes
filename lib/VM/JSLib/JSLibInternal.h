@@ -528,7 +528,7 @@ Handle<JSObject> createInstrumentObject(Runtime *runtime);
 
 } // namespace vm
 
-#ifdef HERMES_PLATFORM_INTL
+#ifdef HERMES_ENABLE_INTL
 namespace intl {
 
 // TODO T65916424: Consider how we can move this somewhere more modular.

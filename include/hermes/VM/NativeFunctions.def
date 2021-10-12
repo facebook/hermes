@@ -413,7 +413,7 @@ NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSAsyncFunction>)
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY
 
-#ifdef HERMES_PLATFORM_INTL
+#ifdef HERMES_ENABLE_INTL
 // TODO T65916424: Consider how we can move these somewhere more modular.
 // I would prefer these be in the ::hermes::intl namespace, but the current
 // macros make that difficult.

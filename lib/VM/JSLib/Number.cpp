@@ -326,7 +326,7 @@ numberPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 numberPrototypeToLocaleString(void *ctx, Runtime *runtime, NativeArgs args) {
-#ifdef HERMES_PLATFORM_INTL
+#ifdef HERMES_ENABLE_INTL
   return intlNumberPrototypeToLocaleString(/* unused */ ctx, runtime, args);
 #else
 

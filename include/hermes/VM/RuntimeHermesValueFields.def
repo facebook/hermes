@@ -88,7 +88,7 @@ RUNTIME_HV_FIELD_INSTANCE(debuggerInternalObject_)
 RUNTIME_HV_FIELD_INSTANCE(serializeClosure)
 #endif
 
-#ifdef HERMES_PLATFORM_INTL
+#ifdef HERMES_ENABLE_INTL
 // TODO T65916424: move these out of Runtime
 RUNTIME_HV_FIELD_INSTANCE(intlCollator)
 RUNTIME_HV_FIELD_PROTOTYPE(intlCollatorPrototype)

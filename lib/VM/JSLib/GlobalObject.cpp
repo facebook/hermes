@@ -767,7 +767,7 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
       createInstrumentObject(runtime)));
 #endif
 
-#ifdef HERMES_PLATFORM_INTL
+#ifdef HERMES_ENABLE_INTL
   // Define the global Intl object
   // TODO T65916424: Consider how we can move this somewhere more modular.
 

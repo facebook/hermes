@@ -871,7 +871,7 @@ stringPrototypeToLowerCase(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 stringPrototypeToLocaleLowerCase(void *ctx, Runtime *runtime, NativeArgs args) {
-#ifdef HERMES_PLATFORM_INTL
+#ifdef HERMES_ENABLE_INTL
   return intlStringPrototypeToLocaleLowerCase(/* unused */ ctx, runtime, args);
 #else
   if (LLVM_UNLIKELY(
@@ -905,7 +905,7 @@ stringPrototypeToUpperCase(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 stringPrototypeToLocaleUpperCase(void *ctx, Runtime *runtime, NativeArgs args) {
-#ifdef HERMES_PLATFORM_INTL
+#ifdef HERMES_ENABLE_INTL
   return intlStringPrototypeToLocaleUpperCase(/* unused */ ctx, runtime, args);
 #else
   if (LLVM_UNLIKELY(
@@ -1075,7 +1075,7 @@ stringPrototypeTrimEnd(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 stringPrototypeLocaleCompare(void *ctx, Runtime *runtime, NativeArgs args) {
-#ifdef HERMES_PLATFORM_INTL
+#ifdef HERMES_ENABLE_INTL
   return intlStringPrototypeLocaleCompare(/* unused */ ctx, runtime, args);
 #else
   auto thisValue = args.getThisHandle();
