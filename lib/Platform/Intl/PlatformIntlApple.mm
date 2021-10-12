@@ -12,18 +12,76 @@
 namespace hermes {
 namespace platform_intl {
 
+// Implementation of https://tc39.es/ecma402/#sec-canonicalizelocalelist
 vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales) {
-  return std::vector<std::u16string>{u"fr-FR", u"es-ES"};
+    // 1. If locales is undefined, then
+    // Return a new empty List.
+    if (locales.size() == 0) {
+      return std::vector<std::u16string>();
+    }
+    // Note:: Some other major input validation occurs closer to VM in 'normalizeLocales' in
+    // JSLib/Intl.cpp
+
+    // 2. Let seen be a new empty List.
+    std::vector<std::u16string> seen;
+    
+    // 3. If Type(locales) is String or Type(locales) is Object and locales has an
+    // [[InitializedLocale]] internal slot, then
+    // 4. Else
+    // We don't yet support Locale object - https://tc39.es/ecma402/#locale-objects
+    // As of now, 'locales' can only be a string list/array.
+    // 'O' is not a string array of locales
+
+    // 5. Let len be ? ToLength(? Get(O, "length")).
+    // 6. Let k be 0.
+    // 7. Repeat, while k < len
+    
+    for(auto locale = locales.begin(); locale != locales.end(); locale++) {
+        // We don't have steps for 7a. 7b. 7c. i-iv  .. as we only allow string arrays here..
+        // Smoke validation.
+        // Throw RangeError if input locale string is (1) empty (2) non-ASCII string.
+        if (locale->empty()) {
+            // Ask how to throw exception
+            // return runtime->raiseRangeError(ex.what());
+        }
+        for(char const &c: *locale) {
+            if (static_cast<unsigned char>(c) > 127) {
+            // Ask how to throw exception
+            // return runtime->raiseRangeError(ex.what());
+        }
+        }
+        // 7.c.v & 7.c.vi
+        // Check for tag later
+        std::u16string canonicalizedTag;
+        
+        // 7.c.vii
+        // 'error: invalid argument type 'std::__wrap_iter<std::basic_string<char16_t> *>' to unary expression' with '&& !std::find(seen.begin(), seen.end(), canonicalizedTag)'
+        if(!canonicalizedTag.empty())
+        {
+            seen.push_back(canonicalizedTag);
+        }
+    }
+    return seen;
 }
 
+// Implementer note: This method corresponds roughly to
+// https://tc39.es/ecma402/#sec-canonicalizelocalelist
+//
+// Also see the implementer notes on DateTimeFormat#DateTimeFormat()
+// for more discussion of locales and CanonicalizeLocaleList.
+
+//1. Let O be RequireObjectCoercible(this value).
+//2. Let S be ? ToString(O).
 vm::CallResult<std::u16string> toLocaleLowerCase(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales,
     const std::u16string &str) {
   return std::u16string(u"lowered");
 }
+
+
 vm::CallResult<std::u16string> toLocaleUpperCase(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales,
@@ -156,3 +214,4 @@ NumberFormat::formatToParts(double number) noexcept {
 
 } // namespace platform_intl
 } // namespace hermes
+
