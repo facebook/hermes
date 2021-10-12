@@ -538,8 +538,10 @@ endfunction()
 
 if (APPLE)
   find_library(CORE_FOUNDATION CoreFoundation)
+  find_library(FOUNDATION Foundation)
 else()
   set(CORE_FOUNDATION "")
+  set(FOUNDATION "")
 endif()
 
 if (HERMES_USE_FLOWPARSER)
