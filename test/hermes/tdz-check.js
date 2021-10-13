@@ -45,3 +45,8 @@ test(() => {
     return x;
 });
 //CHECK-NEXT: caught ReferenceError: accessing an uninitialized variable
+
+test(() => {
+    const foo = print(foo, typeof foo)
+});
+//CHECK-NEXT: caught ReferenceError: accessing an uninitialized variable
