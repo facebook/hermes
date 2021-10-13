@@ -38,28 +38,30 @@ vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
     // 6. Let k be 0.
     // 7. Repeat, while k < len
     
-    for(auto locale = locales.begin(); locale != locales.end(); locale++) {
+    for(std::u16string locale : locales) {
         // We don't have steps for 7a. 7b. 7c. i-iv  .. as we only allow string arrays here..
         // Smoke validation.
         // Throw RangeError if input locale string is (1) empty (2) non-ASCII string.
-        if (locale->empty()) {
+        if (local == nil) {
             // Ask how to throw exception
-            // return runtime->raiseRangeError(ex.what());
+            return runtime->raiseRangeError("Incorrect locale information provided");
+        }
+        if (locale->empty()) {
+            return runtime->raiseRangeError("Incorrect locale information provided");
         }
         for(char const &c: *locale) {
             if (static_cast<unsigned char>(c) > 127) {
-            // Ask how to throw exception
-            // return runtime->raiseRangeError(ex.what());
-        }
+              return runtime->raiseRangeError("Incorrect locale information provided");
+            }
         }
         // 7.c.v & 7.c.vi
         // Check for tag later
-        std::u16string canonicalizedTag;
+        std::u16string canonicalizedTag = [NSLocale canonicalLocaleIdentifierFromString:locale];
         
         // 7.c.vii
         // 'error: invalid argument type 'std::__wrap_iter<std::basic_string<char16_t> *>' to unary expression' with '&& !std::find(seen.begin(), seen.end(), canonicalizedTag)'
-        if(!canonicalizedTag.empty())
-        {
+        if(!canonicalizedTag.empty() 
+            && !std::find(seen.begin(), seen.end(), canonicalizedTag) != seen.end()) {
             seen.push_back(canonicalizedTag);
         }
     }
