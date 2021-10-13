@@ -25,7 +25,7 @@ class EmitWasmIntrinsicsContext;
 
 struct CodeGenerationSettings {
   /// Whether we should emit TDZ checks.
-  bool enableTDZ{true};
+  bool enableTDZ{false};
   /// Whether we can assume there are unlimited number of registers.
   /// This affects how we generate the IR, as we can decide whether
   /// to hold as many temporary values as we like.

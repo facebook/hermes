@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -Xflow-parser -dump-ir -O0 %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -fenable-tdz -Xflow-parser -dump-ir -O0 %s | %FileCheck --match-full-lines %s
 // REQUIRES: flowparser
 
 function foo() {

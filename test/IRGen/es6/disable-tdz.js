@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -O0 -dump-ir %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -O0 -fenable-tdz -dump-ir %s | %FileCheck --match-full-lines %s
 // RUN: %hermesc -O0 -fno-enable-tdz -dump-ir %s | %FileCheck --match-full-lines --check-prefix=CHKDIS %s
 
 function check1() {

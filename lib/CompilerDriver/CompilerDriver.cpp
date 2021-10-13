@@ -517,7 +517,7 @@ static CLFlag StripFunctionNames(
 static CLFlag EnableTDZ(
     'f',
     "enable-tdz",
-    true,
+    false,
     "Enable TDZ checks for let/const",
     CompilerCategory);
 
