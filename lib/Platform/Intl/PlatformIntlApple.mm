@@ -4,10 +4,40 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-
 #include "hermes/Platform/Intl/PlatformIntl.h"
 
 #import <Foundation/Foundation.h>
+
+NSString *u16StringToNSString(std::u16string src) {
+  auto size = src.size();
+  if (size == 0) {
+    return nil;
+  }
+  auto cString = (const unichar*)src.c_str();
+  if (cString == nullptr) {
+    return nil;
+  }
+  return [NSString stringWithCharacters:cString length:size];
+}
+
+std::u16string nsStringToU16String(NSString *src) {
+  auto result = std::u16string();
+  auto constexpr divisor = sizeof(char16_t) / sizeof(char);
+  if ([src canBeConvertedToEncoding:NSUTF16StringEncoding]) {
+    auto size = [src lengthOfBytesUsingEncoding:NSUTF16StringEncoding] + 1; // for NULL terminator;
+    auto buffer = (char *)malloc(size);
+    auto success = [src getCString:buffer maxLength:size encoding:NSUTF16StringEncoding];
+    if (success) {
+      result = std::u16string((char16_t *)buffer, size / divisor);
+    }
+    free(buffer);
+    return result;
+  } else {
+    auto data = [src dataUsingEncoding:NSUTF16StringEncoding allowLossyConversion:YES];
+    result = std::u16string((char16_t *)data.bytes, data.length / divisor);
+  }
+  return result;
+}
 
 namespace hermes {
 namespace platform_intl {
@@ -23,42 +53,36 @@ vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
     }
     // Note:: Some other major input validation occurs closer to VM in 'normalizeLocales' in
     // JSLib/Intl.cpp
-
     // 2. Let seen be a new empty List.
     std::vector<std::u16string> seen;
-    
     // 3. If Type(locales) is String or Type(locales) is Object and locales has an
     // [[InitializedLocale]] internal slot, then
     // 4. Else
     // We don't yet support Locale object - https://tc39.es/ecma402/#locale-objects
     // As of now, 'locales' can only be a string list/array.
     // 'O' is not a string array of locales
-
     // 5. Let len be ? ToLength(? Get(O, "length")).
     // 6. Let k be 0.
     // 7. Repeat, while k < len
-    
     for(std::u16string locale : locales) {
-    {   // We don't have steps for 7a. 7b. 7c. i-iv  .. as we only allow string arrays here..
+        // We don't have steps for 7a. 7b. 7c. i-iv  .. as we only allow string arrays here..
         // Smoke validation.
         // Throw RangeError if input locale string is (1) empty (2) non-ASCII string.
-//        if (locale == nil) {
-//            // Ask how to throw exception
-//            return runtime->raiseRangeError("Incorrect locale information provided");
-//        }
         if (locale.empty()) {
             return runtime->raiseRangeError("Incorrect locale information provided");
         }
+        if (std::find(locale.begin(), locale.end(), '_') != locale.end()){
+            return runtime->raiseRangeError("Incorrect locale information provided");
+        }
         // 7.c.v & 7.c.vi
-        // Check for tag later
-        //std::u16string canonicalizedTag = [NSLocale canonicalLocaleIdentifierFromString:locale];
-        std::u16string canonicalizedTag = locale;
+        auto tempLocale = u16StringToNSString(locale);
+        NSString *tempCanonicalizedTag = [NSLocale canonicalLocaleIdentifierFromString:tempLocale];
+        auto canonicalizedTag = nsStringToU16String(tempCanonicalizedTag);
         // 7.c.vii
-        if(!canonicalizedTag.empty()
-            && std::find(seen.begin(), seen.end(), canonicalizedTag) != seen.end()) {
+        if(!canonicalizedTag.empty() && std::find(seen.begin(), seen.end(), canonicalizedTag) == seen.end()) {
             seen.push_back(canonicalizedTag);
         }
-    }}
+    }
         return seen;
     }
     // Implementer note: This method corresponds roughly to
