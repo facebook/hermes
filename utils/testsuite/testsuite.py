@@ -27,6 +27,7 @@ try:
         PERMANENT_SKIP_LIST,
         UNSUPPORTED_FEATURES,
         PERMANENT_UNSUPPORTED_FEATURES,
+        INTL_SKIP_LIST,
     )
 except ImportError:
     import esprima_test_runner as esprima
@@ -39,6 +40,7 @@ except ImportError:
         PERMANENT_SKIP_LIST,
         UNSUPPORTED_FEATURES,
         PERMANENT_UNSUPPORTED_FEATURES,
+        INTL_SKIP_LIST,
     )
 
 
@@ -491,7 +493,7 @@ ESPRIMA_TEST_STATUS_MAP = {
 }
 
 
-def runTest(filename, test_skiplist, keep_tmp, binary_path, hvm, esprima_runner, lazy):
+def runTest(filename, test_skiplist, keep_tmp, binary_path, hvm, esprima_runner, lazy, test_intl):
     """
     Runs a single js test pointed by filename
     """
@@ -501,6 +503,9 @@ def runTest(filename, test_skiplist, keep_tmp, binary_path, hvm, esprima_runner,
 
     if lazy:
         skiplisted = skiplisted or fileInSkiplist(filename, LAZY_SKIP_LIST)
+
+    if not test_intl:
+        skiplisted = skiplisted or fileInSkiplist(filename, INTL_SKIP_LIST)
 
     skippedType = (
         TestFlag.TEST_PERMANENTLY_SKIPPED
@@ -920,6 +925,13 @@ def get_arg_parser():
         action="store_true",
         help="Force lazy evaluation",
     )
+    parser.add_argument(
+        "--test-intl",
+        dest="test_intl",
+        default=False,
+        action="store_true",
+        help="Also test skiplisted INTL tests",
+    )
     return parser
 
 
@@ -938,6 +950,7 @@ def run(
     keep_tmp,
     show_all,
     lazy,
+    test_intl
 ):
     global count
     global verbose
@@ -1005,7 +1018,7 @@ def run(
     esprima_runner = esprima.EsprimaTestRunner(verbose)
 
     calls = makeCalls(
-        (test_skiplist, keep_tmp, binary_path, hvm, esprima_runner, lazy),
+        (test_skiplist, keep_tmp, binary_path, hvm, esprima_runner, lazy, test_intl),
         onlyfiles,
         rangeLeft,
         rangeRight,

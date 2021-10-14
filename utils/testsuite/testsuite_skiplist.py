@@ -1900,6 +1900,8 @@ PERMANENT_UNSUPPORTED_FEATURES = [
     "cross-realm",
 ]
 
+INTL_SKIP_LIST = []
+
 assert len(set(SKIP_LIST)) == len(SKIP_LIST), "Skiplist has duplicates: " + str(
     [item for item, count in collections.Counter(SKIP_LIST).items() if count > 1]
 )
