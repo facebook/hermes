@@ -330,6 +330,10 @@ class HadesGC::CollectionStats final {
     cpuTimeSectionStart_ = {};
   }
 
+  uint64_t beforeAllocatedBytes() const {
+    return allocatedBefore_;
+  }
+
   /// Since Hades allows allocations during an old gen collection, use the
   /// initially allocated bytes and the swept bytes to determine the actual
   /// impact of the GC.
@@ -698,8 +702,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
       : gc{gc},
         pointerBase_{gc.getPointerBase()},
         markedSymbols_{gc.gcCallbacks_->getSymbolsEnd()},
-        writeBarrierMarkedSymbols_{gc.gcCallbacks_->getSymbolsEnd()},
-        bytesToMark_{gc.oldGen_.allocatedBytes()} {}
+        writeBarrierMarkedSymbols_{gc.gcCallbacks_->getSymbolsEnd()} {}
 
   void acceptHeap(GCCell *cell, const void *heapLoc) {
     assert(cell && "Cannot pass null pointer to acceptHeap");
@@ -814,9 +817,9 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
     byteDrainRate_ = rate;
   }
 
-  /// \return an upper bound on the number of bytes left to mark.
-  uint64_t bytesToMark() const {
-    return bytesToMark_;
+  /// \return the total number of bytes marked so far.
+  uint64_t markedBytes() const {
+    return markedBytes_;
   }
 
   /// Drain the mark stack of cells to be processed.
@@ -882,10 +885,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
       numMarkedBytes += sz;
       gc.markCell(cell, *this);
     }
-    assert(
-        bytesToMark_ >= numMarkedBytes &&
-        "Cannot have marked more bytes than were originally in the OG.");
-    bytesToMark_ -= numMarkedBytes;
+    markedBytes_ += numMarkedBytes;
     return !localWorklist_.empty();
   }
 
@@ -946,12 +946,8 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
   /// Only used by incremental collections.
   size_t byteDrainRate_{0};
 
-  /// This approximates the number of bytes that have not yet been marked by
-  /// drainSomeWork. It should be initialised at the start of a collection to
-  /// the number of allocated bytes at that point. That value serves as an upper
-  /// bound on the number of bytes that can be marked, since any newly added
-  /// objects after that will already be marked.
-  uint64_t bytesToMark_;
+  /// The number of bytes that have been marked so far.
+  uint64_t markedBytes_{0};
 
   void push(GCCell *cell) {
     assert(
@@ -3170,8 +3166,13 @@ size_t HadesGC::getDrainRate() {
   // If any of the above calculations end up being a tiny drain rate, make the
   // lower limit at least 8 KB, to ensure collections eventually end.
   constexpr uint64_t byteDrainRateMin = 8192;
+  uint64_t preAllocated = ogCollectionStats_->beforeAllocatedBytes();
+  uint64_t markedBytes = oldGenMarker_->markedBytes();
+  assert(
+      markedBytes <= preAllocated &&
+      "Cannot mark more bytes than were initially allocated");
   return std::max(
-      oldGenMarker_->bytesToMark() / ygCollectionsUntilFull, byteDrainRateMin);
+      (preAllocated - markedBytes) / ygCollectionsUntilFull, byteDrainRateMin);
 }
 
 void HadesGC::addSegmentExtentToCrashManager(
