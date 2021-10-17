@@ -10,36 +10,15 @@
 
 NSString *u16StringToNSString(std::u16string src) {
   auto size = src.size();
-  if (size == 0) {
-    return nil;
-  }
   auto cString = (const unichar *)src.c_str();
-  if (cString == nullptr) {
-    return nil;
-  }
   return [NSString stringWithCharacters:cString length:size];
 }
 
 std::u16string nsStringToU16String(NSString *src) {
-  auto result = std::u16string();
-  auto constexpr divisor = sizeof(char16_t) / sizeof(char);
-  if ([src canBeConvertedToEncoding:NSUTF16StringEncoding]) {
-    auto size = [src lengthOfBytesUsingEncoding:NSUTF16StringEncoding] +
-        1; // for NULL terminator;
-    auto buffer = (char *)malloc(size);
-    auto success = [src getCString:buffer
-                         maxLength:size
-                          encoding:NSUTF16StringEncoding];
-    if (success) {
-      result = std::u16string((char16_t *)buffer, size / divisor);
-    }
-    free(buffer);
-    return result;
-  } else {
-    auto data = [src dataUsingEncoding:NSUTF16StringEncoding
-                  allowLossyConversion:YES];
-    result = std::u16string((char16_t *)data.bytes, data.length / divisor);
-  }
+  auto size = src.length;
+  std::u16string result;
+  result.resize(size);
+  [src getCharacters:(unichar *)&result[0] range:NSMakeRange(0, size)];
   return result;
 }
 
