@@ -10,7 +10,7 @@
 
 NSString *u16StringToNSString(std::u16string src) {
   auto size = src.size();
-  auto cString = (const unichar *)src.c_str();
+  const auto *cString = (const unichar *)src.c_str();
   return [NSString stringWithCharacters:cString length:size];
 }
 
@@ -30,10 +30,7 @@ vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales) {
   // 1. If locales is undefined, then
-  // Return a new empty List.
-  if (locales.size() == 0) {
-    return std::vector<std::u16string>();
-  }
+  // Return a new empty List - not needed, empty vector created below
   // Note:: Some other major input validation occurs closer to VM in
   // 'normalizeLocales' in JSLib/Intl.cpp
   // 2. Let seen be a new empty List.
@@ -48,24 +45,21 @@ vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
   // 6. Let k be 0.
   // 7. Repeat, while k < len
   for (std::u16string locale : locales) {
-    // We don't have steps for 7a. 7b. 7c. i-iv  .. as we only allow string
-    // arrays here.. Smoke validation. Throw RangeError if input locale string
-    // is (1) empty (2) non-ASCII string.
+    // TODO - BCP 47 tag validation
+    // 7.c.v. If IsStructurallyValidLanguageTag(tag) is false, throw a
+    // RangeError exception.
     if (locale.empty()) {
       return runtime->raiseRangeError("Incorrect locale information provided");
     }
-    if (std::find(locale.begin(), locale.end(), '_') != locale.end()) {
-      return runtime->raiseRangeError("Incorrect locale information provided");
-    }
-    // 7.c.v & 7.c.vi
-    auto tempLocale = u16StringToNSString(locale);
-    NSString *tempCanonicalizedTag =
-        [NSLocale canonicalLocaleIdentifierFromString:tempLocale];
-    auto canonicalizedTag = nsStringToU16String(tempCanonicalizedTag);
-    // 7.c.vii
-    if (!canonicalizedTag.empty() &&
-        std::find(seen.begin(), seen.end(), canonicalizedTag) == seen.end()) {
-      seen.push_back(canonicalizedTag);
+    // 7.c.vi. Let canonicalizedTag be CanonicalizeUnicodeLocaleId(tag).
+    auto *localeNSString = u16StringToNSString(locale);
+    NSString *canonicalizedTagNSString =
+        [NSLocale canonicalLocaleIdentifierFromString:localeNSString];
+    auto canonicalizedTag = nsStringToU16String(canonicalizedTagNSString);
+    // 7.c.vii. If canonicalizedTag is not an element of seen, append
+    // canonicalizedTag as the last element of seen.
+    if (std::find(seen.begin(), seen.end(), canonicalizedTag) == seen.end()) {
+      seen.push_back(std::move(canonicalizedTag));
     }
   }
   return seen;
