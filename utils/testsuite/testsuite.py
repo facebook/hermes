@@ -930,7 +930,7 @@ def get_arg_parser():
         dest="test_intl",
         default=False,
         action="store_true",
-        help="Also test skiplisted INTL tests",
+        help="Run supported Intl tests.",
     )
     return parser
 
