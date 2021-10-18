@@ -18,12 +18,41 @@ vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
   return std::vector<std::u16string>{u"fr-FR", u"es-ES"};
 }
 
+// Implementer note: This method corresponds roughly to
+// https://tc39.es/ecma402/#sup-string.prototype.tolocalelowercase
 vm::CallResult<std::u16string> toLocaleLowerCase(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales,
     const std::u16string &str) {
+  // 3. Let requestedLocales be ? CanonicalizeLocaleList(locales).
+  std::vector<std::u16string>> requestedLocales = canonicalizeLocaleList(locales);
+  NSLocale* requestedLocale; 
+  // 4. If requestedLocales is not an empty List, then
+  if (!requestedLocales.empty()) {
+    // a. Let requestedLocale be requestedLocales[0].
+    requestedLocale = [NSLocale localeWithLocaleIdentifier:requestedLocales[0]];
+  } else { // 5. Else,
+    // a. Let requestedLocale be  ().
+    NSString* nsStr = u16StringToNSString(str);
+    return nsStringToU16String([nsStr lowercaseStringWithLocale:[NSLocale currentLocale]);
+  }
+  // 6. Let noExtensionsLocale be the String value that is requestedLocale with any Unicode locale extension sequences (6.2.1) removed.
+
+  // 7. Let availableLocales be a List with language tags that includes the languages for which the Unicode Character Database contains language sensitive case mappings. Implementations may add additional language tags if they support case mapping for additional locales.
+  NSArray<NSString *> *availableLocales = [NSLocale availableLocaleIdentifiers];
+  // 8. Let locale be BestAvailableLocale(availableLocales, noExtensionsLocale).
+  // 9. If locale is undefined, let locale be "und".
+  // 10. Let cpList be a List containing in order the code points of S as defined in es2022, 6.1.4, starting at the first element of S.
+  // 11. Let cuList be a List where the elements are the result of a lower case transformation of the ordered code points in cpList according to the Unicode Default Case Conversion algorithm or an implementation-defined conversion algorithm. A conforming implementation's lower case transformation algorithm must always yield the same cpList given the same cuList and locale.
+  // 12. Let L be a String whose elements are the UTF-16 Encoding (defined in es2022, 6.1.4) of the code points of cuList.
+  // 13. Return L.
+
+  //https://developer.apple.com/documentation/foundation/nsstring/1417298-lowercasestringwithlocale
   return std::u16string(u"lowered");
 }
+
+// Implementer note: This method corresponds roughly to
+// https://tc39.es/ecma402/#sup-string.prototype.tolocaleuppercase
 vm::CallResult<std::u16string> toLocaleUpperCase(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales,

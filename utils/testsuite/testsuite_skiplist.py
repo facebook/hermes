@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import collections
 import re
 
-
 # The skiplist is ordered by decreasing severity.
 SKIP_LIST = [
     # Fails due to a bug in Hermes Function.apply(): T28044390.
@@ -1679,13 +1678,11 @@ SKIP_LIST = [
     ### Failing Flow tests end ###
 ]
 
-
 # Tests that we want to skip only when testing lazy compilation.
 LAZY_SKIP_LIST = [
     # Variable resolution in catch handlers.
     "test262/test/language/statements/try/scope-catch-param-lex-close.js",
 ]
-
 
 # This skiplist is specifically for tests that Hermes never intends to support,
 # and so should not be counted in totals for targeting 100% coverage.
@@ -1794,19 +1791,6 @@ PERMANENT_SKIP_LIST = [
     "test262/test/built-ins/AsyncGeneratorFunction/",
     "test262/test/built-ins/SharedArrayBuffer/",
     "test262/test/built-ins/intl402/",
-    "test262/test/intl402/Collator/",
-    "test262/test/intl402/Date/",
-    "test262/test/intl402/DateTimeFormat/",
-    "test262/test/intl402/DisplayNames/",
-    "test262/test/intl402/Intl/",
-    "test262/test/intl402/ListFormat/",
-    "test262/test/intl402/Locale/",
-    "test262/test/intl402/Number/",
-    "test262/test/intl402/NumberFormat/",
-    "test262/test/intl402/PluralRules/",
-    "test262/test/intl402/Segmenter/",
-    "test262/test/intl402/String/",
-    "test262/test/intl402/RelativeTimeFormat/",
     "mjsunit/asm/",
     "mjsunit/regress/wasm/",
     "mjsunit/wasm/",
