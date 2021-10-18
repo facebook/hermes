@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
+// REQUIRES: intl
 
 print("get canonical locales test");
 // CHECK-LABEL: get canonical locales test
@@ -16,25 +17,5 @@ print(Intl.getCanonicalLocales(["EN-us", "Fr"]));
 print(Intl.getCanonicalLocales(["zh-zh", "ZH"]));
 // CHECK-NEXT: zh-ZH,zh
 
-print(Intl.getCanonicalLocales(["aam", "zyb", "art-lojban"]));
-// CHECK-NEXT: aas,za,jbo
-
 print(Intl.getCanonicalLocales([]).length);
 //CHECK-NEXT: 0
-
-try {
-  Intl.getCanonicalLocales([""]);
-  print("Succeeded");
-} catch (e) {
-  print("Caught", e.name, e.message);
-}
-//CHECK-NEXT: Caught{{.*}}
-
-// Invalid unicode
-try {
-  Intl.getCanonicalLocales(["\ud800bc"]);
-  print("Succeeded");
-} catch (e) {
-  print("Caught", e.name, e.message);
-}
-//CHECK-NEXT: Caught{{.*}}
