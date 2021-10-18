@@ -27,7 +27,7 @@ try:
         PERMANENT_SKIP_LIST,
         UNSUPPORTED_FEATURES,
         PERMANENT_UNSUPPORTED_FEATURES,
-        SUPPORTED_INTL_TESTS,
+        INTL_TESTS,
     )
 except ImportError:
     import esprima_test_runner as esprima
@@ -40,7 +40,7 @@ except ImportError:
         PERMANENT_SKIP_LIST,
         UNSUPPORTED_FEATURES,
         PERMANENT_UNSUPPORTED_FEATURES,
-        SUPPORTED_INTL_TESTS,
+        INTL_TESTS,
     )
 
 
@@ -505,7 +505,7 @@ def runTest(filename, test_skiplist, keep_tmp, binary_path, hvm, esprima_runner,
         skiplisted = skiplisted or fileInSkiplist(filename, LAZY_SKIP_LIST)
 
     if not test_intl:
-        skiplisted = skiplisted or fileInSkiplist(filename, SUPPORTED_INTL_TESTS)
+        skiplisted = skiplisted or fileInSkiplist(filename, INTL_TESTS)
 
     skippedType = (
         TestFlag.TEST_PERMANENTLY_SKIPPED

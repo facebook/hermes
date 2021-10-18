@@ -1900,8 +1900,8 @@ PERMANENT_UNSUPPORTED_FEATURES = [
     "cross-realm",
 ]
 
-# Tests for Intl features supported by Hermes
-SUPPORTED_INTL_TESTS = []
+# Tests for Intl features
+INTL_TESTS = ["test262/test/intl402"]
 
 assert len(set(SKIP_LIST)) == len(SKIP_LIST), "Skiplist has duplicates: " + str(
     [item for item, count in collections.Counter(SKIP_LIST).items() if count > 1]
