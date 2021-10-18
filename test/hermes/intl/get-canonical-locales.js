@@ -19,21 +19,8 @@ print(Intl.getCanonicalLocales(["zh-zh", "ZH"]));
 print(Intl.getCanonicalLocales(["aam", "zyb", "art-lojban"]));
 // CHECK-NEXT: aas,za,jbo
 
-try {
-  Intl.getCanonicalLocales(["EN_US"]);
-  print("Succeeded");
-} catch (e) {
-  print("Caught", e.name, e.message);
-}
-//CHECK-NEXT: Caught{{.*}}
-
-try {
-  Intl.getCanonicalLocales([]);
-  print("Succeeded");
-} catch (e) {
-  print("Caught", e.name, e.message);
-}
-//CHECK-NEXT: Succeeded
+print(Intl.getCanonicalLocales([]).length);
+//CHECK-NEXT: 0
 
 try {
   Intl.getCanonicalLocales([""]);

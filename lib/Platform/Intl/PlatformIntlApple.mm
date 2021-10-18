@@ -26,7 +26,7 @@ namespace hermes {
 namespace platform_intl {
 
 // Implementation of https://tc39.es/ecma402/#sec-canonicalizelocalelist
-vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
+vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales) {
   // 1. If locales is undefined, then
@@ -64,11 +64,18 @@ vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
   }
   return seen;
 }
+
 // Implementer note: This method corresponds roughly to
 // https://tc39.es/ecma402/#sec-canonicalizelocalelist
 //
 // Also see the implementer notes on DateTimeFormat#DateTimeFormat()
 // for more discussion of locales and CanonicalizeLocaleList.
+vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
+    vm::Runtime *runtime,
+    const std::vector<std::u16string> &locales) {
+  return canonicalizeLocaleList(locales);
+}
+
 // 1. Let O be RequireObjectCoercible(this value).
 // 2. Let S be ? ToString(O).
 vm::CallResult<std::u16string> toLocaleLowerCase(
