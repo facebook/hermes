@@ -67,6 +67,7 @@ vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
     const std::vector<std::u16string> &locales) {
   return canonicalizeLocaleList(runtime, locales);
 }
+
 vm::CallResult<std::u16string> toLocaleLowerCase(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales,
@@ -86,6 +87,7 @@ struct Collator::Impl {
 
 Collator::Collator() : impl_(std::make_unique<Impl>()) {}
 Collator::~Collator() {}
+
 vm::CallResult<std::vector<std::u16string>> Collator::supportedLocalesOf(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales,
@@ -120,6 +122,7 @@ struct DateTimeFormat::Impl {
 
 DateTimeFormat::DateTimeFormat() : impl_(std::make_unique<Impl>()) {}
 DateTimeFormat::~DateTimeFormat() {}
+
 vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales,
@@ -163,6 +166,7 @@ struct NumberFormat::Impl {
 
 NumberFormat::NumberFormat() : impl_(std::make_unique<Impl>()) {}
 NumberFormat::~NumberFormat() {}
+
 vm::CallResult<std::vector<std::u16string>> NumberFormat::supportedLocalesOf(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales,
