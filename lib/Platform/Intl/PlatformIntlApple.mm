@@ -56,6 +56,10 @@ vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
     NSString *canonicalizedTagNSString =
         [NSLocale canonicalLocaleIdentifierFromString:localeNSString];
     auto canonicalizedTag = nsStringToU16String(canonicalizedTagNSString);
+    // Throw if invalid unicode was previously present in locale
+    if (canonicalizedTag.empty()) {
+      return runtime->raiseRangeError("Incorrect locale information provided");
+    }
     // 7.c.vii. If canonicalizedTag is not an element of seen, append
     // canonicalizedTag as the last element of seen.
     if (std::find(seen.begin(), seen.end(), canonicalizedTag) == seen.end()) {
@@ -73,7 +77,7 @@ vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
 vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales) {
-  return canonicalizeLocaleList(locales);
+  return canonicalizeLocaleList(runtime, locales);
 }
 
 // 1. Let O be RequireObjectCoercible(this value).
