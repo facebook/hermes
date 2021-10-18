@@ -8,12 +8,14 @@
 
 #import <Foundation/Foundation.h>
 
+namespace hermes {
+namespace platform_intl {
+namespace {
 NSString *u16StringToNSString(std::u16string src) {
   auto size = src.size();
   const auto *cString = (const unichar *)src.c_str();
   return [NSString stringWithCharacters:cString length:size];
 }
-
 std::u16string nsStringToU16String(NSString *src) {
   auto size = src.length;
   std::u16string result;
@@ -21,18 +23,15 @@ std::u16string nsStringToU16String(NSString *src) {
   [src getCharacters:(unichar *)&result[0] range:NSMakeRange(0, size)];
   return result;
 }
-
-namespace hermes {
-namespace platform_intl {
+}
 
 // Implementation of https://tc39.es/ecma402/#sec-canonicalizelocalelist
 vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales) {
   // 1. If locales is undefined, then
-  // Return a new empty List - not needed, empty vector created below
-  // Note:: Some other major input validation occurs closer to VM in
-  // 'normalizeLocales' in JSLib/Intl.cpp
+  //   a. Return a new empty List
+  // Not needed, this validation occurs closer to VM in 'normalizeLocales'.
   // 2. Let seen be a new empty List.
   std::vector<std::u16string> seen;
   // 3. If Type(locales) is String or Type(locales) is Object and locales has an
@@ -40,26 +39,18 @@ vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
   // 4. Else
   // We don't yet support Locale object -
   // https://tc39.es/ecma402/#locale-objects As of now, 'locales' can only be a
-  // string list/array. 'O' is not a string array of locales
+  // string list/array. Validation occurs in normalizeLocaleList, so this
+  // function just takes a vector of strings.
   // 5. Let len be ? ToLength(? Get(O, "length")).
   // 6. Let k be 0.
   // 7. Repeat, while k < len
   for (std::u16string locale : locales) {
     // TODO - BCP 47 tag validation
-    // 7.c.v. If IsStructurallyValidLanguageTag(tag) is false, throw a
-    // RangeError exception.
-    if (locale.empty()) {
-      return runtime->raiseRangeError("Incorrect locale information provided");
-    }
     // 7.c.vi. Let canonicalizedTag be CanonicalizeUnicodeLocaleId(tag).
     auto *localeNSString = u16StringToNSString(locale);
     NSString *canonicalizedTagNSString =
         [NSLocale canonicalLocaleIdentifierFromString:localeNSString];
     auto canonicalizedTag = nsStringToU16String(canonicalizedTagNSString);
-    // Throw if invalid unicode was previously present in locale
-    if (canonicalizedTag.empty()) {
-      return runtime->raiseRangeError("Incorrect locale information provided");
-    }
     // 7.c.vii. If canonicalizedTag is not an element of seen, append
     // canonicalizedTag as the last element of seen.
     if (std::find(seen.begin(), seen.end(), canonicalizedTag) == seen.end()) {
@@ -69,19 +60,12 @@ vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
   return seen;
 }
 
-// Implementer note: This method corresponds roughly to
 // https://tc39.es/ecma402/#sec-canonicalizelocalelist
-//
-// Also see the implementer notes on DateTimeFormat#DateTimeFormat()
-// for more discussion of locales and CanonicalizeLocaleList.
 vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales) {
   return canonicalizeLocaleList(runtime, locales);
 }
-
-// 1. Let O be RequireObjectCoercible(this value).
-// 2. Let S be ? ToString(O).
 vm::CallResult<std::u16string> toLocaleLowerCase(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales,
