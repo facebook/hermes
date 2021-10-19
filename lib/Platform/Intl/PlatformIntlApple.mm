@@ -24,30 +24,44 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales,
     const std::u16string &str) {
+  NSString* nsStr = u16StringToNSString(str);
+
   // 3. Let requestedLocales be ? CanonicalizeLocaleList(locales).
-    auto requestedLocales = getCanonicalLocales(runtime, locales);
+  vm::CallResult<std::vector<std::u16string>> requestedLocales = getCanonicalLocales(runtime, locales);
+  // getcano doesnt throw so should this be removed?
+  if (LLVM_UNLIKELY(requestedLocales == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
   // 4. If requestedLocales is not an empty List, then
-    if (!requestedLocales->empty()) {
+  if (!requestedLocales->empty()) {
     // a. Let requestedLocale be requestedLocales[0].
-    auto requestedLocale = requestedLocales->at(0);
+    std::u16string requestedLocale = requestedLocales->at(0); // at j checks out of bound = redundant
   } else { // 5. Else,
-    // a. Let requestedLocale be  ().
-    NSString* nsStr = u16StringToNSString(str);
+    // a. Let requestedLocale be DefaultLocale().
     return nsStringToU16String([nsStr lowercaseStringWithLocale:[NSLocale currentLocale]]);
   }
   // 6. Let noExtensionsLocale be the String value that is requestedLocale with any Unicode locale extension sequences (6.2.1) removed.
-
+  // TODO
+  
   // 7. Let availableLocales be a List with language tags that includes the languages for which the Unicode Character Database contains language sensitive case mappings. Implementations may add additional language tags if they support case mapping for additional locales.
   NSArray<NSString *> *availableLocales = [NSLocale availableLocaleIdentifiers];
+  
   // 8. Let locale be BestAvailableLocale(availableLocales, noExtensionsLocale).
+  NSString *locale = requestedLocale; // [LocaleMatcher BestAvailableLocale:requestedLocale:availableLocales];
+
   // 9. If locale is undefined, let locale be "und".
+  if (locale == nil) {
+    locale = @"und";
+  }
+
   // 10. Let cpList be a List containing in order the code points of S as defined in es2022, 6.1.4, starting at the first element of S.
   // 11. Let cuList be a List where the elements are the result of a lower case transformation of the ordered code points in cpList according to the Unicode Default Case Conversion algorithm or an implementation-defined conversion algorithm. A conforming implementation's lower case transformation algorithm must always yield the same cpList given the same cuList and locale.
   // 12. Let L be a String whose elements are the UTF-16 Encoding (defined in es2022, 6.1.4) of the code points of cuList.
-  // 13. Return L.
+  NSString L = [nsStr lowercaseStringWithLocale:[NSLocale init:locale]];
 
-  //https://developer.apple.com/documentation/foundation/nsstring/1417298-lowercasestringwithlocale
-  return std::u16string(u"lowered");
+  // 13. Return L.
+  return  nsStringToU16String(L);
 }
 
 // Implementer note: This method corresponds roughly to
