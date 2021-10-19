@@ -25,16 +25,15 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
     const std::vector<std::u16string> &locales,
     const std::u16string &str) {
   // 3. Let requestedLocales be ? CanonicalizeLocaleList(locales).
-  std::vector<std::u16string>> requestedLocales = canonicalizeLocaleList(locales);
-  NSLocale* requestedLocale; 
+    auto requestedLocales = getCanonicalLocales(runtime, locales);
   // 4. If requestedLocales is not an empty List, then
-  if (!requestedLocales.empty()) {
+    if (!requestedLocales->empty()) {
     // a. Let requestedLocale be requestedLocales[0].
-    requestedLocale = [NSLocale localeWithLocaleIdentifier:requestedLocales[0]];
+    auto requestedLocale = requestedLocales->at(0);
   } else { // 5. Else,
     // a. Let requestedLocale be  ().
     NSString* nsStr = u16StringToNSString(str);
-    return nsStringToU16String([nsStr lowercaseStringWithLocale:[NSLocale currentLocale]);
+    return nsStringToU16String([nsStr lowercaseStringWithLocale:[NSLocale currentLocale]]);
   }
   // 6. Let noExtensionsLocale be the String value that is requestedLocale with any Unicode locale extension sequences (6.2.1) removed.
 
