@@ -628,12 +628,9 @@ jobs:
     executor:
       name: android/android-machine
     environment:
-      - TERM: dumb
       - HERMES_WS_DIR: /tmp/hermes
     steps:
       - checkout
-      - attach_workspace:
-          at: /tmp/hermes/input
       - run:
           name: Set up build dependencies
           command: |
@@ -641,28 +638,21 @@ jobs:
       - run:
           name: Set up workspace
           command: |
-            mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
-            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+            mkdir "$HERMES_WS_DIR/output"
       - run:
           name: Build Hermes Compiler
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py --build-system="Unix Makefiles" --build-type=MinSizeRel ./build
+            ~/hermes/utils/build/configure.py --build-system="Unix Makefiles" --build-type=MinSizeRel ./build
             # Build the Hermes compiler so that the cross compiler build can
             # access it to build the VM
             cmake --build ./build -j 4 --target hermesc
-      - run:
-          name: Set up environment variables
-          command: |
-            export ANDROID_SDK="$ANDROID_HOME"
-            export ANDROID_NDK="$ANDROID_HOME/ndk-bundle"
-
       - android/start-emulator-and-run-tests:
-          run-tests-working-directory: "$HERMES_WS_DIR/hermes/android"
           post-emulator-launch-assemble-command: |
-            cd $HERMES_WS_DIR/hermes/android
+            cd android
             echo 'abis=x86' >> gradle.properties
             ./gradlew :intltest:prepareTests
+          run-tests-working-directory: ~/hermes/android
           test-command: ./gradlew :intltest:connectedAndroidTest
       - run:
           name: Save logcat output
@@ -671,4 +661,4 @@ jobs:
             # Move report to output dir
             mv /tmp/hermes/build_android /tmp/hermes/output/build_android
       - store_artifacts:
-          path: /tmp/hermes/output/
+          path: $HERMES_WS_DIR/output
