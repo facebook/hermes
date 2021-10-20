@@ -649,10 +649,10 @@ jobs:
           name: Build Hermes Compiler
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py --build-type=MinSizeRel ./build
+            hermes/utils/build/configure.py --build-system="Unix Makefiles" --build-type=MinSizeRel ./build
             # Build the Hermes compiler so that the cross compiler build can
             # access it to build the VM
-            cmake --build ./build --target hermesc
+            cmake --build ./build -j 4 --target hermesc
       - run:
           name: Build Hermes for Android and Run tests
           command: |
@@ -661,8 +661,8 @@ jobs:
             cd "$HERMES_WS_DIR/hermes/android"
             # We need to build only x86 for running the tests. This saves a lot of computing resources.
             echo 'abis=x86' >> gradle.properties
-            ./gradlew :intltest:prepareTests
       - android/start-emulator-and-run-tests:
+          post-emulator-launch-assemble-command: ./gradlew :intltest:prepareTests
           test-command: ./gradlew :intltest:connectedAndroidTest
       - run:
           name: Save logcat output
