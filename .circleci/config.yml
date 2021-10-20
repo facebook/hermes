@@ -625,8 +625,8 @@ jobs:
 
   test-e2e-intl:
     # This is mostly based on the last test-e2e job, hence the comments there holds.
-    name: android/android-machine
-    resource-class: large
+    executor:
+      name: android/android-machine
     environment:
       - TERM: dumb
       - JVM_OPTS: -Xmx3200m
