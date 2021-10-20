@@ -625,13 +625,10 @@ jobs:
 
   test-e2e-intl:
     # This is mostly based on the last test-e2e job, hence the comments there holds.
-    macos:
-      xcode: 12.4.0
+    name: android/android-machine
+    resource-class: large
     environment:
       - TERM: dumb
-      # Homebrew currently breaks while updating:
-      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
-      - HOMEBREW_NO_AUTO_UPDATE: 1
       - JVM_OPTS: -Xmx3200m
       - ANDROID_HOME: /usr/local/share/android-sdk
       - ANDROID_SDK_HOME: /usr/local/share/android-sdk
@@ -644,29 +641,10 @@ jobs:
       - attach_workspace:
           at: /tmp/hermes/input
       - run:
-          name: Setup dependencies
-          command: |
-            echo $(/usr/libexec/java_home)
-            brew tap homebrew/cask
-            brew install --cask android-sdk
-            (yes | sdkmanager "platform-tools" "platforms;android-26" --verbose) || true
-            echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:$PATH"' >>  ~/.bash_profile
-      - run:
-          name: Install emulator dependencies
-          command: (yes | sdkmanager "extras;intel;Hardware_Accelerated_Execution_Manager" "system-images;android-26;google_apis;x86" "emulator" --verbose) || true
-      - run:
-          name: Create emulator definition
-          command: |
-            avdmanager create avd -n Pixel_2_API_26 -k "system-images;android-26;google_apis;x86" -g google_apis -d "Nexus 5"
-      - run:
-          name: Run emulator in background
-          command: /usr/local/share/android-sdk/emulator/emulator @Pixel_2_API_26 -memory 2048 -noaudio
-          background: true
-      - run:
           name: Set up build dependencies
           command: |
-            (yes | sdkmanager "ndk;21.0.6113669" "cmake;3.10.2.4988404" --verbose) || true
-            echo 'export PATH="/usr/local/share/android-sdk/cmake/3.10.2.4988404/bin:$PATH"' >>  ~/.bash_profile
+            yes | sdkmanager "cmake;3.10.2.4988404" --verbose
+            echo 'export PATH="/opt/android/sdk/cmake/3.10.2.4988404/bin:$PATH"' >>  ~/.bash_profile
       - run:
           name: Set up workspace
           command: |
@@ -683,15 +661,18 @@ jobs:
       - run:
           name: Build Hermes for Android and Run tests
           command: |
-            # Ensure the emulator is ready.
-            adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done; input keyevent 82'
             export ANDROID_SDK="$ANDROID_HOME"
-            export ANDROID_NDK="$ANDROID_HOME/ndk/21.0.6113669"
+            export ANDROID_NDK="$ANDROID_HOME/ndk-bundle"
             cd "$HERMES_WS_DIR/hermes/android"
             # We need to build only x86 for running the tests. This saves a lot of computing resources.
             echo 'abis=x86' >> gradle.properties
             adb logcat -c || true
-            ./gradlew :intltest:prepareTests && ./gradlew :intltest:connectedAndroidTest
+            ./gradlew :intltest:prepareTests
+      - android/start-emulator-and-run-tests:
+          test-command: ./gradlew :intltest:connectedAndroidTest
+      - run:
+          name: Save logcat output
+          command: |
             adb logcat -d > /tmp/hermes/output/adblog.txt
             # Move report to output dir
             mv /tmp/hermes/build_android /tmp/hermes/output/build_android
