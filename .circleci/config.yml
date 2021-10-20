@@ -628,7 +628,7 @@ jobs:
     executor:
       name: android/android-machine
     environment:
-      - HERMES_WS_DIR: /tmp/hermes
+      - HERMES_WS_DIR: ~/
     steps:
       - checkout
       - run:
@@ -636,16 +636,10 @@ jobs:
           command: |
             (yes | sdkmanager "cmake;3.10.2.4988404" --verbose) || true
       - run:
-          name: Set up workspace
-          command: |
-            mkdir "$HERMES_WS_DIR/output"
-      - run:
           name: Build Hermes Compiler
           command: |
-            cd "$HERMES_WS_DIR"
+            cd $HERMES_WS_DIR
             ~/hermes/utils/build/configure.py --build-system="Unix Makefiles" --build-type=MinSizeRel ./build
-            # Build the Hermes compiler so that the cross compiler build can
-            # access it to build the VM
             cmake --build ./build -j 4 --target hermesc
       - android/start-emulator-and-run-tests:
           post-emulator-launch-assemble-command: |
@@ -657,8 +651,9 @@ jobs:
       - run:
           name: Save logcat output
           command: |
-            adb logcat -d > /tmp/hermes/output/adblog.txt
+            mkdir $HERMES_WS_DIR/output
+            adb logcat -d > $HERMES_WS_DIR/output/adblog.txt
             # Move report to output dir
-            mv /tmp/hermes/build_android /tmp/hermes/output/build_android
+            mv $HERMES_WS_DIR/build_android $HERMES_WS_DIR/output/build_android
       - store_artifacts:
           path: $HERMES_WS_DIR/output
