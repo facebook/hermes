@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -fenable-tdz -O0 %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -fenable-tdz -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -Xenable-tdz -O0 %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -Xenable-tdz -O %s | %FileCheck --match-full-lines %s
 
 function test(f) {
     try {

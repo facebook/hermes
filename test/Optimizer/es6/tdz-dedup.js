@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -fenable-tdz -O0 -dump-ir %s | %FileCheck --match-full-lines %s
-// RUN: %hermesc -fenable-tdz -custom-opt=typeinference -custom-opt=tdzdedup -dump-ir %s | %FileCheck --match-full-lines --check-prefix=CHKOPT %s
+// RUN: %hermesc -Xenable-tdz -O0 -dump-ir %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -Xenable-tdz -custom-opt=typeinference -custom-opt=tdzdedup -dump-ir %s | %FileCheck --match-full-lines --check-prefix=CHKOPT %s
 
 function check_after_store(p) {
     let x = 10;

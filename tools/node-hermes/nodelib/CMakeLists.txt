@@ -62,7 +62,7 @@ add_custom_command(
 # Compile the one source file to bytecode.
 add_custom_command(
   OUTPUT NodeBytecode.hbc
-  COMMAND ${hermesc_EXE} ${JS_COMPILER_FLAGS} -fno-enable-tdz -emit-binary -out=${CMAKE_CURRENT_BINARY_DIR}/NodeBytecode.hbc ${CMAKE_CURRENT_BINARY_DIR}/WrappedNode.js
+  COMMAND ${hermesc_EXE} ${JS_COMPILER_FLAGS} -emit-binary -out=${CMAKE_CURRENT_BINARY_DIR}/NodeBytecode.hbc ${CMAKE_CURRENT_BINARY_DIR}/WrappedNode.js
   DEPENDS ${hermesc_EXE} WrappedNode.js
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   VERBATIM
