@@ -629,8 +629,10 @@ jobs:
       name: android/android-machine
     environment:
       - HERMES_WS_DIR: ~/
+    working_directory: ~/
     steps:
-      - checkout
+      - checkout:
+          path: hermes
       - run:
           name: Set up build dependencies
           command: |
@@ -638,22 +640,21 @@ jobs:
       - run:
           name: Build Hermes Compiler
           command: |
-            cd $HERMES_WS_DIR
-            ~/hermes/utils/build/configure.py --build-system="Unix Makefiles" --build-type=MinSizeRel ./build
+            hermes/utils/build/configure.py --build-system="Unix Makefiles" --build-type=MinSizeRel ./build
             cmake --build ./build -j 4 --target hermesc
       - android/start-emulator-and-run-tests:
           post-emulator-launch-assemble-command: |
-            cd android
+            cd hermes/android
             echo 'abis=x86' >> gradle.properties
             ./gradlew :intltest:prepareTests
-          run-tests-working-directory: ~/hermes/android
+          run-tests-working-directory: hermes/android
           test-command: ./gradlew :intltest:connectedAndroidTest
       - run:
           name: Save logcat output
           command: |
-            mkdir $HERMES_WS_DIR/output
-            adb logcat -d > $HERMES_WS_DIR/output/adblog.txt
+            mkdir output
+            adb logcat -d > output/adblog.txt
             # Move report to output dir
-            mv $HERMES_WS_DIR/build_android $HERMES_WS_DIR/output/build_android
+            mv build_android output/build_android
       - store_artifacts:
-          path: $HERMES_WS_DIR/output
+          path: output
