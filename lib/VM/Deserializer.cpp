@@ -143,15 +143,6 @@ void Deserializer::init(
                    << "\n");                                          \
   idx++;
 
-#define NATIVE_CONSTRUCTOR_TYPED(classname, type, type2, func)         \
-  funcPtr = func<classname<type, type2>>;                              \
-  assert(!objectTable_[idx]);                                          \
-  objectTable_[idx] = (void *)funcPtr;                                 \
-  LLVM_DEBUG(                                                          \
-      llvh::dbgs() << idx << ", " << #func << "<" << #classname << "<" \
-                   << #type << ", " << #type2 << ">>"                  \
-                   << ", " << (void *)funcPtr << "\n");                \
-  idx++;
 #include "hermes/VM/NativeFunctions.def"
 #undef NATIVE_CONSTRUCTOR
 

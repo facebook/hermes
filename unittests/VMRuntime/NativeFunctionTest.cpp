@@ -49,9 +49,7 @@ TEST(NativeFunctionNameTest, SmokeTest) {
   func = NativeConstructor::creatorFunction<
       JSTypedArray<int16_t, CellKind::Int16ArrayKind>>;
   EXPECT_STREQ(
-      "NativeConstructor::creatorFunction"
-      "<JSTypedArray<int16_t, CellKind::Int16ArrayKind>>",
-      getFunctionName(func));
+      "NativeConstructor::creatorFunction<Int16Array>", getFunctionName(func));
 #endif
 }
 } // namespace
