@@ -660,6 +660,7 @@ jobs:
       - android/start-emulator-and-run-tests:
           run-tests-working-directory: "$HERMES_WS_DIR/hermes/android"
           post-emulator-launch-assemble-command: |
+            cd $HERMES_WS_DIR/hermes/android
             echo 'abis=x86' >> gradle.properties
             ./gradlew :intltest:prepareTests
           test-command: ./gradlew :intltest:connectedAndroidTest
