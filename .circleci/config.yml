@@ -644,7 +644,8 @@ jobs:
           name: Set up build dependencies
           command: |
             (yes | sdkmanager "cmake;3.10.2.4988404" --verbose) || true
-            echo 'export PATH="/opt/android/sdk/cmake/3.10.2.4988404/bin:$PATH"' >>  ~/.bash_profile
+            sudo apt-get update
+            sudo apt-get install -y ninja-build
       - run:
           name: Set up workspace
           command: |
