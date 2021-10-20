@@ -638,8 +638,6 @@ jobs:
           name: Set up build dependencies
           command: |
             (yes | sdkmanager "cmake;3.10.2.4988404" --verbose) || true
-            sudo apt-get update
-            sudo apt-get install -y ninja-build
       - run:
           name: Set up workspace
           command: |
@@ -654,15 +652,16 @@ jobs:
             # access it to build the VM
             cmake --build ./build -j 4 --target hermesc
       - run:
-          name: Build Hermes for Android and Run tests
+          name: Set up environment variables
           command: |
             export ANDROID_SDK="$ANDROID_HOME"
             export ANDROID_NDK="$ANDROID_HOME/ndk-bundle"
-            cd "$HERMES_WS_DIR/hermes/android"
-            # We need to build only x86 for running the tests. This saves a lot of computing resources.
-            echo 'abis=x86' >> gradle.properties
+
       - android/start-emulator-and-run-tests:
-          post-emulator-launch-assemble-command: ./gradlew :intltest:prepareTests
+          run-tests-working-directory: "$HERMES_WS_DIR/hermes/android"
+          post-emulator-launch-assemble-command: |
+            echo 'abis=x86' >> gradle.properties
+            ./gradlew :intltest:prepareTests
           test-command: ./gradlew :intltest:connectedAndroidTest
       - run:
           name: Save logcat output
