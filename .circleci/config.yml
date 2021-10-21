@@ -633,7 +633,7 @@ jobs:
       - checkout:
           path: hermes
       - run:
-          name: Set up
+          name: Setup dependencies
           command: (yes | sdkmanager "cmake;3.10.2.4988404" --verbose) || true
       - run:
           name: Build Hermes Compiler
