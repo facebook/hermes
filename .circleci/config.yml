@@ -567,7 +567,7 @@ jobs:
           command: |
             git clone https://github.com/facebook/react-native
             cd react-native
-            npm install
+            npm install --force
             npm install ~/hermes-engine-v0.9.0.tgz
             echo "console.log('Using Hermes: ' + (global.HermesInternal != null));" >> packages/rn-tester/js/RNTesterApp.android.js
             ./gradlew :packages:rn-tester:android:app:installHermesRelease
