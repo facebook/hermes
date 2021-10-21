@@ -38,7 +38,7 @@ workflows:
             - windows
       - test-emscripten
       - test-linux
-      - test-e2e
+      - test-e2e:
           requires:
             - npm
       - test-e2e-intl
