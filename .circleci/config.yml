@@ -459,27 +459,23 @@ jobs:
           name: Copy artifacts
           command: |
             cd npm
-            mkdir /tmp/npm /tmp/artifacts
-            cp *.tgz /tmp/npm
-            cp *.tgz /tmp/artifacts
+            cp *.tgz /tmp/hermes/output
             # Also copy the other packages for the sole purpose of not having
             # to visit multiple jobs pages to download all release artifacts
-            cp /tmp/hermes/input/*.tar.gz /tmp/artifacts
-
+            cp /tmp/hermes/input/*.tar.gz /tmp/hermes/output
       - run:
           name: Checksum artifacts
           command: |
-            cd /tmp/artifacts
+            cd /tmp/hermes/output
             for file in *
             do
               sha256sum "$file" > "$file.sha256"
             done
-
       - store_artifacts:
-          path: /tmp/artifacts
+          path: /tmp/hermes/output
 
       - persist_to_workspace:
-          root: /tmp/npm
+          root: /tmp/hermes/output
           paths:
             - .
 
