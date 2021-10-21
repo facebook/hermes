@@ -568,8 +568,8 @@ jobs:
             npm install --global yarn
             git clone https://github.com/facebook/react-native
             cd react-native
-            npm install --force
-            npm install ~/hermes-engine-v0.9.0.tgz
+            yarn install
+            npm install ~/hermes-engine-v*.tgz
             echo "console.log('Using Hermes: ' + (global.HermesInternal != null));" >> packages/rn-tester/js/RNTesterApp.android.js
       - android/start-emulator-and-run-tests:
           post-emulator-launch-assemble-command: ''
