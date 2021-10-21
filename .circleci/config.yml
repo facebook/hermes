@@ -560,26 +560,6 @@ jobs:
       - run:
           name: Download pkg
           command: curl https://22135-154201259-gh.circle-artifacts.com/0/tmp/hermes/output/hermes-engine-v0.9.0.tgz -L --output hermes-engine-v0.9.0.tgz
-      - run:
-          name: Setup dependencies
-          command: |
-            mkdir -p /tmp/hermes/output
-            # Node some version greater than 11 is needed by one of the app dependencies
-            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.1/install.sh | bash
-            NVM_DIR="$HOME/.nvm"
-            . "$NVM_DIR/nvm.sh"
-            echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
-            echo '. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
-            nvm install 14
-            nvm use 14
-            # Reinstall the latest version of Yarn.
-            npm install --global yarn
-      - run:
-          name: Print versions
-          command: |
-            node --version
-            yarn --version
-            echo $(/usr/libexec/java_home)
 #      - attach_workspace:
 #          at: /tmp/hermes/input
       - run:
