@@ -70,6 +70,8 @@ struct DateTimeFormat::Impl {
   std::u16string locale;
 };
 
+// Implementation of
+// https://tc39.es/ecma402/#datetimeformat-objects
 DateTimeFormat::DateTimeFormat() : impl_(std::make_unique<Impl>()) {}
 DateTimeFormat::~DateTimeFormat() {}
 
