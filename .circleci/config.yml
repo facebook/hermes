@@ -649,6 +649,7 @@ jobs:
           test-command: ./gradlew :intltest:connectedAndroidTest
       - run:
           name: Save logcat output
+          when: always
           command: |
             mkdir output
             adb logcat -d > output/adblog.txt
