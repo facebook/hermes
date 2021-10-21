@@ -647,4 +647,5 @@ jobs:
             ./gradlew :intltest:prepareTests
           run-tests-working-directory: hermes/android
           run-logcat: true
+          additional-emulator-args: -timezone Europe/Paris
           test-command: ./gradlew :intltest:connectedAndroidTest
