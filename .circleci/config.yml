@@ -565,6 +565,7 @@ jobs:
       - run:
           name: Prepare RNTester
           command: |
+            npm install --global yarn
             git clone https://github.com/facebook/react-native
             cd react-native
             npm install --force
