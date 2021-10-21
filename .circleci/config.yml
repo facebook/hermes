@@ -626,15 +626,15 @@ jobs:
   test-e2e-intl:
     executor:
       name: android/android-machine
-    working_directory: ~/
+    working_directory: /home/circleci
+    environment:
+      HERMES_WS_DIR: /home/circleci
     steps:
       - checkout:
           path: hermes
       - run:
           name: Set up
-          command: |
-            export HERMES_WS_DIR=$PWD
-            (yes | sdkmanager "cmake;3.10.2.4988404" --verbose) || true
+          command: (yes | sdkmanager "cmake;3.10.2.4988404" --verbose) || true
       - run:
           name: Build Hermes Compiler
           command: |
