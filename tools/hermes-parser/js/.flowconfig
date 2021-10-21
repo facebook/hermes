@@ -3,6 +3,10 @@
 <PROJECT_ROOT>/scripts
 
 [options]
+emoji=true
+exact_by_default=true
+module.system=node
+indexed_access=true
 ; Yarn workspaces hoist packages to the top level node_modules, causing module resolution errors if
 ; we do not specify where each package's type definitions can be found.
 module.name_mapper='^hermes-parser$' -> '<PROJECT_ROOT>/hermes-parser/src/index.js'
@@ -10,3 +14,24 @@ module.name_mapper='^hermes-estree$' -> '<PROJECT_ROOT>/hermes-estree/src/index.
 
 [version]
 0.154.0
+
+[lints]
+untyped-type-import=error
+unclear-type=error
+
+; ES6 module lints
+invalid-import-star-use=error
+non-const-var-export=error
+this-in-exported-function=error
+mixed-import-and-require=error
+export-renamed-default=error
+default-import-access=error
+
+[strict]
+deprecated-type
+nonstrict-import
+sketchy-null
+unclear-type
+unsafe-getters-setters
+untyped-import
+untyped-type-import

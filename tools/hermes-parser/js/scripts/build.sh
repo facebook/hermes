@@ -39,7 +39,15 @@ fi
 for package in "${PACKAGES[@]}"; do
   PACKAGE_DIR="$THIS_DIR/../$package"
   rm -rf "$PACKAGE_DIR/dist"
+
   cp -r "$PACKAGE_DIR/src" "$PACKAGE_DIR/dist"
+
+  # There is no system for flow to emit flow declarations for files
+  # So we rename all the JS files to .js.flow so they are treated like flow declarations
+  find "$PACKAGE_DIR/dist" -type f -name "*.js" -exec rename ".js" ".js.flow" {} \;
+
+  # Copy just the JS files again
+  (cd "$PACKAGE_DIR/src" && find . -type f -name '*.js' -exec cp --parents -t ../dist {} +)
 done
 
 # Generate code, written into package dist directories

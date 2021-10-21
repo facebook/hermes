@@ -8,6 +8,9 @@
     "type": "git",
     "url": "git@github.com:facebook/hermes.git"
   },
+  "dependencies": {
+    "hermes-estree": "0.4.8"
+  },
   "files": [
     "dist"
   ]

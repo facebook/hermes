@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @flow
+ * @flow strict
  * @format
  */
 
@@ -31,13 +31,40 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
   THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
 'use strict';
 
-import type {Identifier, Node} from './ScopeManagerTypes';
+import type {
+  AFunction,
+  CatchClause,
+  ClassDeclaration,
+  ClassExpression,
+  DeclareClass,
+  DeclareFunction,
+  DeclareInterface,
+  DeclareOpaqueType,
+  DeclareTypeAlias,
+  DeclareVariable,
+  EnumDeclaration,
+  ESNode as Node,
+  FunctionDeclaration,
+  FunctionExpression,
+  Identifier,
+  ImportDeclaration,
+  ImportDefaultSpecifier,
+  ImportNamespaceSpecifier,
+  ImportSpecifier,
+  InterfaceDeclaration,
+  OpaqueType,
+  TypeAlias,
+  TypeParameter,
+  VariableDeclaration,
+  VariableDeclarator,
+} from 'hermes-estree';
 
 const Variable = require('./variable');
 
-const DefinitionType = {
+const DefinitionType = ({
   CatchClause: 'CatchClause',
   ClassName: 'ClassName',
   Enum: 'Enum',
@@ -48,38 +75,49 @@ const DefinitionType = {
   Type: 'Type',
   TypeParameter: 'TypeParameter',
   Variable: 'Variable',
-};
+}: $ReadOnly<{
+  CatchClause: 'CatchClause',
+  ClassName: 'ClassName',
+  Enum: 'Enum',
+  FunctionName: 'FunctionName',
+  ImplicitGlobalVariable: 'ImplicitGlobalVariable',
+  ImportBinding: 'ImportBinding',
+  Parameter: 'Parameter',
+  Type: 'Type',
+  TypeParameter: 'TypeParameter',
+  Variable: 'Variable',
+}>);
 
-class Definition {
+class DefinitionBase {
   /**
    * Type of the occurrence (e.g. "Parameter", "Variable", ...).
    */
-  type: string;
+  +type: string;
 
   /**
    * The identifier AST node of the occurrence.
    */
-  name: Identifier;
+  +name: Identifier;
 
   /**
    * The enclosing node of the identifier.
    */
-  node: Node;
+  +node: Node;
 
   /**
    * The enclosing statement node of the identifier.
    */
-  parent: ?Node;
+  +parent: ?Node;
 
   /**
    * The index in the declaration statement.
    */
-  index: ?number;
+  +index: ?number;
 
   /**
    * The kind of the declaration statement.
    */
-  kind: ?string;
+  +kind: ?string;
 
   constructor({
     type,
@@ -105,47 +143,68 @@ class Definition {
   }
 }
 
-class CatchClauseDefinition extends Definition {
-  constructor(catchNode: Node) {
+class CatchClauseDefinition extends DefinitionBase {
+  declare +type: typeof DefinitionType['CatchClause'];
+  declare +parent: null;
+
+  constructor(idNode: Identifier, catchNode: CatchClause) {
     super({
       type: DefinitionType.CatchClause,
-      name: catchNode.param,
+      name: idNode,
       node: catchNode,
     });
   }
 }
 
-class ClassNameDefinition extends Definition {
-  constructor(classNode: Node) {
+class ClassNameDefinition extends DefinitionBase {
+  declare +type: typeof DefinitionType['ClassName'];
+  declare +parent: null;
+
+  constructor(
+    idNode: Identifier,
+    classNode: ClassDeclaration | ClassExpression | DeclareClass,
+  ) {
     super({
       type: DefinitionType.ClassName,
-      name: classNode.id,
+      name: idNode,
       node: classNode,
     });
   }
 }
 
-class EnumDefinition extends Definition {
-  constructor(enumDeclarationNode: Node) {
+class EnumDefinition extends DefinitionBase {
+  declare +type: typeof DefinitionType['Enum'];
+  declare +parent: null;
+
+  constructor(idNode: Identifier, enumDeclarationNode: EnumDeclaration) {
     super({
       type: DefinitionType.Enum,
-      name: enumDeclarationNode.id,
+      name: idNode,
       node: enumDeclarationNode,
     });
   }
 }
 
-class FunctionNameDefinition extends Definition {
-  constructor(functionNode: Node) {
+class FunctionNameDefinition extends DefinitionBase {
+  declare +type: typeof DefinitionType['FunctionName'];
+  declare +parent: null;
+
+  constructor(
+    idNode: Identifier,
+    functionNode: FunctionDeclaration | FunctionExpression | DeclareFunction,
+  ) {
     super({
       type: DefinitionType.FunctionName,
-      name: functionNode.id,
+      name: idNode,
       node: functionNode,
     });
   }
 }
 
-class ImplicitGlobalVariableDefinition extends Definition {
+class ImplicitGlobalVariableDefinition extends DefinitionBase {
+  declare +type: typeof DefinitionType['ImplicitGlobalVariable'];
+  declare +parent: null;
+
   constructor(idNode: Identifier, node: Node) {
     super({
       type: DefinitionType.ImplicitGlobalVariable,
@@ -155,11 +214,17 @@ class ImplicitGlobalVariableDefinition extends Definition {
   }
 }
 
-class ImportBindingDefinition extends Definition {
+class ImportBindingDefinition extends DefinitionBase {
+  declare +type: typeof DefinitionType['ImportBinding'];
+  declare +parent: ImportDeclaration;
+
   constructor(
     idNode: Identifier,
-    specifierNode: Node,
-    importDeclarationNode: Node,
+    specifierNode:
+      | ImportSpecifier
+      | ImportDefaultSpecifier
+      | ImportNamespaceSpecifier,
+    importDeclarationNode: ImportDeclaration,
   ) {
     super({
       type: DefinitionType.ImportBinding,
@@ -170,7 +235,10 @@ class ImportBindingDefinition extends Definition {
   }
 }
 
-class ParameterDefinition extends Definition {
+class ParameterDefinition extends DefinitionBase {
+  declare +type: typeof DefinitionType['Parameter'];
+  declare +parent: null;
+
   /**
    * Whether the parameter definition is a part of a rest parameter.
    */
@@ -178,7 +246,7 @@ class ParameterDefinition extends Definition {
 
   constructor(
     idNode: Identifier,
-    functionNode: Node,
+    functionNode: AFunction,
     index: number,
     rest: boolean,
   ) {
@@ -193,8 +261,20 @@ class ParameterDefinition extends Definition {
   }
 }
 
-class TypeDefinition extends Definition {
-  constructor(idNode: Identifier, declNode: Node) {
+class TypeDefinition extends DefinitionBase {
+  declare +type: typeof DefinitionType['Type'];
+  declare +parent: null;
+
+  constructor(
+    idNode: Identifier,
+    declNode:
+      | DeclareTypeAlias
+      | DeclareOpaqueType
+      | DeclareInterface
+      | TypeAlias
+      | OpaqueType
+      | InterfaceDeclaration,
+  ) {
     super({
       type: DefinitionType.Type,
       name: idNode,
@@ -203,8 +283,11 @@ class TypeDefinition extends Definition {
   }
 }
 
-class TypeParameterDefinition extends Definition {
-  constructor(typeParamNode: Node) {
+class TypeParameterDefinition extends DefinitionBase {
+  declare +type: typeof DefinitionType['TypeParameter'];
+  declare +parent: null;
+
+  constructor(typeParamNode: TypeParameter) {
     // The ScopeManager API expects an Identifier node that can be referenced
     // for each definition. TypeParameter nodes do not actually contain an
     // Identifier node, so we create a fake one with the correct name,
@@ -215,6 +298,8 @@ class TypeParameterDefinition extends Definition {
       name: typeParamNode.name,
       parent: typeParamNode,
       range: typeParamNode.range,
+      optional: false,
+      typeAnnotation: null,
     };
     super({
       type: DefinitionType.TypeParameter,
@@ -224,11 +309,14 @@ class TypeParameterDefinition extends Definition {
   }
 }
 
-class VariableDefinition extends Definition {
+class VariableDefinition extends DefinitionBase {
+  declare +type: typeof DefinitionType['Variable'];
+  declare +parent: DeclareVariable | VariableDeclaration;
+
   constructor(
     idNode: Identifier,
-    declaratorNode: Node,
-    declarationNode: Node,
+    declaratorNode: DeclareVariable | VariableDeclarator,
+    declarationNode: VariableDefinition['parent'],
     index: number,
     kind: string,
   ) {
@@ -243,10 +331,21 @@ class VariableDefinition extends Definition {
   }
 }
 
+export type Definition =
+  | CatchClauseDefinition
+  | ClassNameDefinition
+  | EnumDefinition
+  | FunctionNameDefinition
+  | ImplicitGlobalVariableDefinition
+  | ImportBindingDefinition
+  | ParameterDefinition
+  | TypeDefinition
+  | TypeParameterDefinition
+  | VariableDefinition;
+
 module.exports = {
   CatchClauseDefinition,
   ClassNameDefinition,
-  Definition,
   DefinitionType,
   EnumDefinition,
   FunctionNameDefinition,
