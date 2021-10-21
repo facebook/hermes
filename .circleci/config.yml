@@ -444,6 +444,11 @@ jobs:
       - attach_workspace:
           at: /tmp/hermes/input
 
+      - run:
+          name: Install dependencies and set up
+          command: |
+            mkdir -p /tmp/hermes/output
+
       - checkout
 
       - run:
@@ -463,6 +468,7 @@ jobs:
             # Also copy the other packages for the sole purpose of not having
             # to visit multiple jobs pages to download all release artifacts
             cp /tmp/hermes/input/*.tar.gz /tmp/hermes/output
+
       - run:
           name: Checksum artifacts
           command: |
@@ -471,6 +477,7 @@ jobs:
             do
               sha256sum "$file" > "$file.sha256"
             done
+
       - store_artifacts:
           path: /tmp/hermes/output
 
