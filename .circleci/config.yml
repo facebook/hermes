@@ -40,7 +40,7 @@ workflows:
       - test-linux
       - test-e2e:
           requires:
-            - linux
+            - npm
       - test-e2e-intl
 
 # Default settings for Apple jobs (apple-runtime, test-apple-runtime)
