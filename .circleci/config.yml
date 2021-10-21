@@ -571,6 +571,7 @@ jobs:
             npm install ~/hermes-engine-v0.9.0.tgz
             echo "console.log('Using Hermes: ' + (global.HermesInternal != null));" >> packages/rn-tester/js/RNTesterApp.android.js
       - android/start-emulator-and-run-tests:
+          post-emulator-launch-assemble-command:
           run-tests-working-directory: react-native
           run-logcat: true
           test-command: |
