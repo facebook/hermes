@@ -626,7 +626,7 @@ jobs:
   test-e2e-intl:
     executor:
       name: android/android-machine
-    working_directory: /home/circleci
+    working_directory: ~/
     steps:
       - checkout:
           path: hermes
