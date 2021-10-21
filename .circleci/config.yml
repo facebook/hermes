@@ -557,8 +557,8 @@ jobs:
       name: android/android-machine
     working_directory: /home/circleci
     steps:
-     - attach_workspace:
-         at: /tmp
+      - attach_workspace:
+          at: /tmp
       - run:
           name: Prepare RNTester
           command: |
