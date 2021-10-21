@@ -37,9 +37,8 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
   std::u16string requestedLocale;
   if (!requestedLocales->empty()) {
     // a. Let requestedLocale be requestedLocales[0].
-     std::vector<std::u16string> val = requestedLocales.getValue();
-     requestedLocale = val[0];
-       // at j checks out of bound = redundant
+    std::vector<std::u16string> val = requestedLocales.getValue();
+    requestedLocale = val[0];
   } else { // 5. Else,
     // a. Let requestedLocale be DefaultLocale().
     return nsStringToU16String([nsStr lowercaseStringWithLocale:[NSLocale currentLocale]]);
@@ -51,21 +50,21 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
   NSArray<NSString *> *availableLocales = [NSLocale availableLocaleIdentifiers];
   
   // 8. Let locale be BestAvailableLocale(availableLocales, noExtensionsLocale).
-    //NSString *locale = requestedLocale; // [LocaleMatcher BestAvailableLocale:requestedLocale:availableLocales];
-    //auto *locale = [LocaleMatcher BestAvailableLocale :requestedLocale:availableLocales];
+  //NSString *locale = requestedLocale; // [LocaleMatcher BestAvailableLocale:requestedLocale:availableLocales];
+  //auto *locale = [LocaleMatcher BestAvailableLocale :requestedLocale:availableLocales];
   // 9. If locale is undefined, let locale be "und".
-//  if (locale == nil) {
-//    locale = @"und";
-//  }
+  //  if (locale == nil) {
+  //    locale = @"und";
+  //  }
 
   // 10. Let cpList be a List containing in order the code points of S as defined in es2022, 6.1.4, starting at the first element of S.
   // 11. Let cuList be a List where the elements are the result of a lower case transformation of the ordered code points in cpList according to the Unicode Default Case Conversion algorithm or an implementation-defined conversion algorithm. A conforming implementation's lower case transformation algorithm must always yield the same cpList given the same cuList and locale.
   // 12. Let L be a String whose elements are the UTF-16 Encoding (defined in es2022, 6.1.4) of the code points of cuList.
-    NSString *l = u16StringToNSString(requestedLocale);
-    // 13. Return L.
-    return nsStringToU16String([nsStr lowercaseStringWithLocale:[[NSLocale alloc]initWithLocaleIdentifier:l]]);
+  NSString *l = u16StringToNSString(requestedLocale);
+  // 13. Return L.
+  return nsStringToU16String([nsStr lowercaseStringWithLocale:[[NSLocale alloc]initWithLocaleIdentifier:l]]);
   //return nsStringToU16String(L);
-    }
+}
 
 // Implementer note: This method corresponds roughly to
 // https://tc39.es/ecma402/#sup-string.prototype.tolocaleuppercase
