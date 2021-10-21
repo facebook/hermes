@@ -626,18 +626,13 @@ jobs:
   test-e2e-intl:
     executor:
       name: android/android-machine
-    environment:
-      - HERMES_WS_DIR: $(echo $HOME)
-    working_directory: ~/
+    working_directory: /home/circleci
     steps:
       - checkout:
           path: hermes
       - run:
           name: Set up build dependencies
-          command: |
-            cd $HERMES_WS_DIR
-            echo $PWD
-            (yes | sdkmanager "cmake;3.10.2.4988404" --verbose) || true
+          command: (yes | sdkmanager "cmake;3.10.2.4988404" --verbose) || true
       - run:
           name: Build Hermes Compiler
           command: |
@@ -645,6 +640,7 @@ jobs:
             cmake --build ./build -j 4 --target hermesc
       - android/start-emulator-and-run-tests:
           post-emulator-launch-assemble-command: |
+            export HERMES_WS_DIR=$PWD
             cd hermes/android
             echo 'abis=x86' >> gradle.properties
             ./gradlew :intltest:prepareTests
