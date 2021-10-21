@@ -631,8 +631,10 @@ jobs:
       - checkout:
           path: hermes
       - run:
-          name: Set up build dependencies
-          command: (yes | sdkmanager "cmake;3.10.2.4988404" --verbose) || true
+          name: Set up
+          command: |
+            export HERMES_WS_DIR=$PWD
+            (yes | sdkmanager "cmake;3.10.2.4988404" --verbose) || true
       - run:
           name: Build Hermes Compiler
           command: |
@@ -640,7 +642,6 @@ jobs:
             cmake --build ./build -j 4 --target hermesc
       - android/start-emulator-and-run-tests:
           post-emulator-launch-assemble-command: |
-            export HERMES_WS_DIR=$PWD
             cd hermes/android
             echo 'abis=x86' >> gradle.properties
             ./gradlew :intltest:prepareTests
