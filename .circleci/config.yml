@@ -628,7 +628,7 @@ jobs:
     executor:
       name: android/android-machine
     environment:
-      - HERMES_WS_DIR: ~/
+      - HERMES_WS_DIR: $HOME
     working_directory: ~/
     steps:
       - checkout:
