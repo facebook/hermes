@@ -646,13 +646,5 @@ jobs:
             echo 'abis=x86' >> gradle.properties
             ./gradlew :intltest:prepareTests
           run-tests-working-directory: hermes/android
+          run-logcat: true
           test-command: ./gradlew :intltest:connectedAndroidTest
-      - run:
-          name: Save logcat output
-          when: always
-          command: |
-            mkdir output
-            adb logcat -d > output/adblog.txt
-            mv build_android/intltest/reports output/reports
-      - store_artifacts:
-          path: output
