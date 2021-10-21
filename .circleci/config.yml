@@ -39,6 +39,8 @@ workflows:
       - test-emscripten
       - test-linux
       - test-e2e
+          # requires:
+          #   - npm
       - test-e2e-intl
 
 # Default settings for Apple jobs (apple-runtime, test-apple-runtime)
@@ -555,7 +557,7 @@ jobs:
       name: android/android-machine
     working_directory: /home/circleci
     steps:
-      -run:
+      - run:
           name: Download pkg
           command: curl https://22135-154201259-gh.circle-artifacts.com/0/tmp/hermes/output/hermes-engine-v0.9.0.tgz -L --output hermes-engine-v0.9.0.tgz
       - run:
