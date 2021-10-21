@@ -576,8 +576,8 @@ jobs:
           run-logcat: true
           test-command: |
             ./gradlew :packages:rn-tester:android:app:installHermesRelease
-            adb shell am start com.facebook.react.uiapp/.RNTesterActivity
-            timeout 30s adb logcat -e "Using Hermes: true" -m 1
+            && adb shell am start com.facebook.react.uiapp/.RNTesterActivity
+            && timeout 30s adb logcat -e "Using Hermes: true" -m 1
 
   test-e2e-intl:
     executor:
