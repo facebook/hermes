@@ -624,11 +624,10 @@ jobs:
           path: /tmp/hermes/output/
 
   test-e2e-intl:
-    # This is mostly based on the last test-e2e job, hence the comments there holds.
     executor:
       name: android/android-machine
     environment:
-      - HERMES_WS_DIR: $HOME
+      - HERMES_WS_DIR: $(echo $HOME)
     working_directory: ~/
     steps:
       - checkout:
@@ -636,6 +635,8 @@ jobs:
       - run:
           name: Set up build dependencies
           command: |
+            cd $HERMES_WS_DIR
+            echo $PWD
             (yes | sdkmanager "cmake;3.10.2.4988404" --verbose) || true
       - run:
           name: Build Hermes Compiler
@@ -654,7 +655,6 @@ jobs:
           command: |
             mkdir output
             adb logcat -d > output/adblog.txt
-            # Move report to output dir
-            mv build_android output/build_android
+            mv build_android/intltest/reports output/reports
       - store_artifacts:
           path: output
