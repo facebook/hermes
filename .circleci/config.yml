@@ -598,11 +598,8 @@ jobs:
             hermes/utils/build/configure.py --build-system="Unix Makefiles" --build-type=MinSizeRel ./build
             cmake --build ./build -j 4 --target hermesc
       - android/start-emulator-and-run-tests:
-          post-emulator-launch-assemble-command: |
-            cd hermes/android
-            echo 'abis=x86' >> gradle.properties
-            ./gradlew :intltest:prepareTests
+          post-emulator-launch-assemble-command: ''
           run-tests-working-directory: hermes/android
           run-logcat: true
           additional-emulator-args: -timezone Europe/Paris
-          test-command: ./gradlew :intltest:connectedAndroidTest
+          test-command: ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
