@@ -40,7 +40,7 @@ workflows:
       - test-linux
       - test-e2e:
           requires:
-            - npm
+            - linux
       - test-e2e-intl
 
 # Default settings for Apple jobs (apple-runtime, test-apple-runtime)
@@ -555,7 +555,7 @@ jobs:
     working_directory: /home/circleci
     steps:
       - attach_workspace:
-          at: /tmp/input
+          at: /tmp
       - run:
           name: Prepare RNTester
           command: |
@@ -563,7 +563,7 @@ jobs:
             git clone https://github.com/facebook/react-native
             cd react-native
             yarn install
-            npm install /tmp/input/hermes-engine-v*.tgz
+            npm install /tmp/hermes-engine-v*.tgz
             echo "console.log('Using Hermes: ' + (global.HermesInternal != null));" >> packages/rn-tester/js/RNTesterApp.android.js
       - android/start-emulator-and-run-tests:
           post-emulator-launch-assemble-command: ''
