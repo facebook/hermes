@@ -87,6 +87,37 @@ vm::ExecutionStatus DateTimeFormat::initialize(
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   impl_->locale = u"en-US";
+  //        1. Let requestedLocales be ? CanonicalizeLocaleList(locales).
+  vm::CallResult<std::vector<std::u16string>> requestedLocales =
+      getCanonicalLocales(runtime, locales);
+  //        3. Let opt be a new Record.
+  Impl opt;
+  //        4. Let matcher be ? GetOption(options, "localeMatcher", "string", «
+  //        "lookup", "best fit" », "best fit").
+  //        5. Set opt.[[localeMatcher]] to matcher.
+  Impl matcher = normalizeOptions(kDTFOptions); // Not right
+
+  //        6. Let calendar be ? GetOption(options, "calendar", "string",
+  //        undefined, undefined).
+  //        7. If calendar is not undefined, then
+  //        a. If calendar does not match the Unicode Locale Identifier type
+  //        nonterminal, throw a RangeError exception.
+  //        8. Set opt.[[ca]] to calendar.
+
+  //        9. Let numberingSystem be ? GetOption(options, "numberingSystem",
+  //        "string", undefined, undefined).
+  //        10. If numberingSystem is not undefined, then
+  //        a. If numberingSystem does not match the Unicode Locale Identifier
+  //        type nonterminal, throw a RangeError exception.
+  //        11. Set opt.[[nu]] to numberingSystem.
+
+  //        12. Let hour12 be ? GetOption(options, "hour12", "boolean",
+  //        undefined, undefined).
+  //        13. Let hourCycle be ? GetOption(options, "hourCycle", "string", «
+  //        "h11", "h12", "h23", "h24" », undefined).
+  //        14. If hour12 is not undefined, then
+  //        a. Let hourCycle be null.
+  //        15. Set opt.[[hc]] to hourCycle.
   return vm::ExecutionStatus::RETURNED;
 }
 
@@ -94,6 +125,9 @@ Options DateTimeFormat::resolvedOptions() noexcept {
   Options options;
   options.emplace(u"locale", Option(impl_->locale));
   options.emplace(u"numeric", Option(false));
+  // Implementation of
+  // https://tc39.es/ecma402/#sec-todatetimeoptions
+  //        2. Let options be ? ToDateTimeOptions(options, "any", "date").
   return options;
 }
 
