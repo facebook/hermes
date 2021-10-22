@@ -624,76 +624,25 @@ jobs:
           path: /tmp/hermes/output/
 
   test-e2e-intl:
-    # This is mostly based on the last test-e2e job, hence the comments there holds.
-    macos:
-      xcode: 12.4.0
+    executor:
+      name: android/android-machine
+    working_directory: /home/circleci
     environment:
-      - TERM: dumb
-      # Homebrew currently breaks while updating:
-      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
-      - HOMEBREW_NO_AUTO_UPDATE: 1
-      - JVM_OPTS: -Xmx3200m
-      - ANDROID_HOME: /usr/local/share/android-sdk
-      - ANDROID_SDK_HOME: /usr/local/share/android-sdk
-      - ANDROID_SDK_ROOT: /usr/local/share/android-sdk
-      - QEMU_AUDIO_DRV: none
-      - JAVA_HOME: $(/usr/libexec/java_home)
-      - HERMES_WS_DIR: /tmp/hermes
+      HERMES_WS_DIR: /home/circleci
     steps:
-      - checkout
-      - attach_workspace:
-          at: /tmp/hermes/input
+      - checkout:
+          path: hermes
       - run:
           name: Setup dependencies
-          command: |
-            echo $(/usr/libexec/java_home)
-            brew tap homebrew/cask
-            brew install --cask android-sdk
-            (yes | sdkmanager "platform-tools" "platforms;android-26" --verbose) || true
-            echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:$PATH"' >>  ~/.bash_profile
-      - run:
-          name: Install emulator dependencies
-          command: (yes | sdkmanager "extras;intel;Hardware_Accelerated_Execution_Manager" "system-images;android-26;google_apis;x86" "emulator" --verbose) || true
-      - run:
-          name: Create emulator definition
-          command: |
-            avdmanager create avd -n Pixel_2_API_26 -k "system-images;android-26;google_apis;x86" -g google_apis -d "Nexus 5"
-      - run:
-          name: Run emulator in background
-          command: /usr/local/share/android-sdk/emulator/emulator @Pixel_2_API_26 -memory 2048 -noaudio
-          background: true
-      - run:
-          name: Set up build dependencies
-          command: |
-            (yes | sdkmanager "ndk;21.0.6113669" "cmake;3.10.2.4988404" --verbose) || true
-            echo 'export PATH="/usr/local/share/android-sdk/cmake/3.10.2.4988404/bin:$PATH"' >>  ~/.bash_profile
-      - run:
-          name: Set up workspace
-          command: |
-            mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
-            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+          command: (yes | sdkmanager "cmake;3.10.2.4988404" --verbose) || true
       - run:
           name: Build Hermes Compiler
           command: |
-            cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py ./build
-            # Build the Hermes compiler so that the cross compiler build can
-            # access it to build the VM
-            cmake --build ./build --target hermesc
-      - run:
-          name: Build Hermes for Android and Run tests
-          command: |
-            # Ensure the emulator is ready.
-            adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done; input keyevent 82'
-            export ANDROID_SDK="$ANDROID_HOME"
-            export ANDROID_NDK="$ANDROID_HOME/ndk/21.0.6113669"
-            cd "$HERMES_WS_DIR/hermes/android"
-            # We need to build only x86 for running the tests. This saves a lot of computing resources.
-            echo 'abis=x86' >> gradle.properties
-            adb logcat -c || true
-            ./gradlew :intltest:prepareTests && ./gradlew :intltest:connectedAndroidTest
-            adb logcat -d > /tmp/hermes/output/adblog.txt
-            # Move report to output dir
-            mv /tmp/hermes/build_android /tmp/hermes/output/build_android
-      - store_artifacts:
-          path: /tmp/hermes/output/
+            hermes/utils/build/configure.py --build-system="Unix Makefiles" --build-type=MinSizeRel ./build
+            cmake --build ./build -j 4 --target hermesc
+      - android/start-emulator-and-run-tests:
+          post-emulator-launch-assemble-command: ''
+          run-tests-working-directory: hermes/android
+          run-logcat: true
+          additional-emulator-args: -timezone Europe/Paris
+          test-command: ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
