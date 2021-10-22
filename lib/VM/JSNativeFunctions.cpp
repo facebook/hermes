@@ -36,8 +36,6 @@ constexpr uint8_t u8sizeof(const char (&str)[N]) {
 #define NATIVE_FUNCTION_TYPED_2_STR(func, type, type2) \
 #func "<" #type ", " #type2 ">"
 #define NATIVE_CONSTRUCTOR_STR(func) #func
-#define NATIVE_CONSTRUCTOR_TYPED_STR(classname, type, type2, func) \
-#func "<" #classname "<" #type ", " #type2 ">>"
 
 static llvh::DenseMap<const void *, const char *> funcNames() {
   static constexpr uint8_t nameLengths[] = {
@@ -47,14 +45,11 @@ static llvh::DenseMap<const void *, const char *> funcNames() {
 #define NATIVE_FUNCTION_TYPED_2(func, type, type2) \
   u8sizeof(NATIVE_FUNCTION_TYPED_2_STR(func, type, type2)),
 #define NATIVE_CONSTRUCTOR(func) u8sizeof(NATIVE_CONSTRUCTOR_STR(func)),
-#define NATIVE_CONSTRUCTOR_TYPED(classname, type, type2, func) \
-  u8sizeof(NATIVE_CONSTRUCTOR_TYPED_STR(classname, type, type2, func)),
 #include "hermes/VM/NativeFunctions.def"
 #undef NATIVE_FUNCTION
 #undef NATIVE_FUNCTION_TYPED
 #undef NATIVE_FUNCTION_TYPED_2
 #undef NATIVE_CONSTRUCTOR
-#undef NATIVE_CONSTRUCTOR_TYPED
   };
 
   static constexpr char names[] = {
@@ -64,14 +59,11 @@ static llvh::DenseMap<const void *, const char *> funcNames() {
 #define NATIVE_FUNCTION_TYPED_2(func, type, type2) \
   NATIVE_FUNCTION_TYPED_2_STR(func, type, type2) "\0"
 #define NATIVE_CONSTRUCTOR(func) NATIVE_CONSTRUCTOR_STR(func) "\0"
-#define NATIVE_CONSTRUCTOR_TYPED(classname, type, type2, func) \
-  NATIVE_CONSTRUCTOR_TYPED_STR(classname, type, type2, func) "\0"
 #include "hermes/VM/NativeFunctions.def"
 #undef NATIVE_FUNCTION
 #undef NATIVE_FUNCTION_TYPED
 #undef NATIVE_FUNCTION_TYPED_2
 #undef NATIVE_CONSTRUCTOR
-#undef NATIVE_CONSTRUCTOR_TYPED
   };
 
   static const void *const functionPointers[] = {
@@ -83,14 +75,11 @@ static llvh::DenseMap<const void *, const char *> funcNames() {
   // first.
 #define NATIVE_CONSTRUCTOR(func) \
   (void *)(NativeConstructor::CreatorFunction *) func,
-#define NATIVE_CONSTRUCTOR_TYPED(classname, type, type2, func) \
-  (void *)(NativeConstructor::CreatorFunction *) func<classname<type, type2>>,
 #include "hermes/VM/NativeFunctions.def"
 #undef NATIVE_FUNCTION
 #undef NATIVE_FUNCTION_TYPED
 #undef NATIVE_FUNCTION_TYPED_2
 #undef NATIVE_CONSTRUCTOR
-#undef NATIVE_CONSTRUCTOR_TYPED
   };
 
   size_t numFuncs = sizeof functionPointers / sizeof *functionPointers;

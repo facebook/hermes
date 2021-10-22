@@ -88,17 +88,6 @@ Serializer::Serializer(
                    << "\n");                                                 \
   currentId_++;
 
-  // Assign relocation id for constructor functions with template,
-#define NATIVE_CONSTRUCTOR_TYPED(classname, type, type2, func)                \
-  funcPtr = func<classname<type, type2>>;                                     \
-  assert(relocationMap_.count((void *)funcPtr) == 0);                         \
-  relocationMap_[(void *)funcPtr] = currentId_;                               \
-  LLVM_DEBUG(                                                                 \
-      llvh::dbgs() << currentId_ << ", " << #func << "<" << #classname << "<" \
-                   << #type << ", " << #type2 << ">>"                         \
-                   << ", " << (void *)funcPtr << "\n");                       \
-  currentId_++;
-
 #include "hermes/VM/NativeFunctions.def"
 
   // Map external pointers.

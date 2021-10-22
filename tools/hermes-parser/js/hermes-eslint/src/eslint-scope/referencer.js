@@ -4,6 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @flow strict
  * @format
  */
 
@@ -32,11 +33,67 @@
 */
 'use strict';
 
-const Syntax = require('estraverse').Syntax;
-const esrecurse = require('esrecurse');
+import type {
+  ESNode,
+  AssignmentPattern,
+  AssignmentExpression,
+  CatchClause,
+  Program,
+  Identifier,
+  UpdateExpression,
+  TypeParameter,
+  DeclareTypeAlias,
+  DeclareOpaqueType,
+  DeclareInterface,
+  DeclareVariable,
+  DeclareFunction,
+  DeclareClass,
+  DeclareModule,
+  MemberExpression,
+  OptionalMemberExpression,
+  Property,
+  MethodDefinition,
+  LabeledStatement,
+  ForStatement,
+  ClassExpression,
+  ClassDeclaration,
+  ClassProperty,
+  ClassPrivateProperty,
+  BlockStatement,
+  WithStatement,
+  VariableDeclaration,
+  SwitchStatement,
+  FunctionDeclaration,
+  FunctionExpression,
+  ForOfStatement,
+  ForInStatement,
+  ArrowFunctionExpression,
+  ImportDeclaration,
+  ExportAllDeclaration,
+  ExportDefaultDeclaration,
+  ExportNamedDeclaration,
+  ExportSpecifier,
+  GenericTypeAnnotation,
+  FunctionTypeAnnotation,
+  QualifiedTypeIdentifier,
+  ObjectTypeProperty,
+  ObjectTypeIndexer,
+  ObjectTypeInternalSlot,
+  FunctionTypeParam,
+  TypeAlias,
+  OpaqueType,
+  InterfaceDeclaration,
+  EnumDeclaration,
+  ImportSpecifier,
+} from 'hermes-estree';
+import type {VisitorOptions} from './Visitor';
+import type ScopeManager from './scope-manager';
+import type {Scope} from './scope';
+import type {PatternVisitorCallback} from './pattern-visitor';
+
 const {ReadWriteFlag, Reference} = require('./reference');
 const Variable = require('./variable');
-const PatternVisitor = require('./pattern-visitor');
+const {PatternVisitor, isPattern} = require('./pattern-visitor');
 const {
   CatchClauseDefinition,
   ClassNameDefinition,
@@ -49,6 +106,7 @@ const {
   TypeParameterDefinition,
   VariableDefinition,
 } = require('./definition');
+const Visitor = require('./Visitor');
 const assert = require('assert');
 
 // Importing ImportDeclaration.
@@ -57,17 +115,20 @@ const assert = require('assert');
 // FIXME: Now, we don't create module environment, because the context is
 // implementation dependent.
 
-class Importer extends esrecurse.Visitor {
-  constructor(declaration, referencer) {
+class Importer extends Visitor {
+  +declaration;
+  +referencer: Referencer;
+
+  constructor(declaration, referencer: Referencer) {
     super(null, referencer.options);
     this.declaration = declaration;
     this.referencer = referencer;
   }
 
-  visitImport(id, specifier) {
+  visitImport(id: Identifier, specifier: ImportSpecifier) {
     this.referencer.visitPattern(id, pattern => {
       this.referencer
-        .currentScope()
+        .currentScopeAssert()
         .__define(
           pattern,
           new ImportBindingDefinition(pattern, specifier, this.declaration),
@@ -101,8 +162,13 @@ class Importer extends esrecurse.Visitor {
 }
 
 // Referencing variables and creating bindings.
-class Referencer extends esrecurse.Visitor {
-  constructor(options, scopeManager) {
+class Referencer extends Visitor {
+  +options: VisitorOptions;
+  +scopeManager: ScopeManager;
+  +parent: null;
+  isInnerMethodDefinition: boolean;
+
+  constructor(options: VisitorOptions, scopeManager: ScopeManager) {
     super(null, options);
     this.options = options;
     this.scopeManager = scopeManager;
@@ -110,31 +176,43 @@ class Referencer extends esrecurse.Visitor {
     this.isInnerMethodDefinition = false;
   }
 
-  currentScope() {
+  currentScopeAssert(): Scope {
+    if (this.scopeManager.__currentScope == null) {
+      throw new Error('Expected there to be a current scope');
+    }
     return this.scopeManager.__currentScope;
   }
 
-  close(node) {
-    while (this.currentScope() && node === this.currentScope().block) {
-      this.scopeManager.__currentScope = this.currentScope().__close(
+  currentScope(): ?Scope {
+    return this.scopeManager.__currentScope;
+  }
+
+  close(node: ESNode): void {
+    while (this.currentScope() && node === this.currentScopeAssert().block) {
+      this.scopeManager.__currentScope = this.currentScopeAssert().__close(
         this.scopeManager,
       );
     }
   }
 
-  pushInnerMethodDefinition(isInnerMethodDefinition) {
+  pushInnerMethodDefinition(isInnerMethodDefinition: boolean): boolean {
     const previous = this.isInnerMethodDefinition;
 
     this.isInnerMethodDefinition = isInnerMethodDefinition;
     return previous;
   }
 
-  popInnerMethodDefinition(isInnerMethodDefinition) {
-    this.isInnerMethodDefinition = isInnerMethodDefinition;
+  popInnerMethodDefinition(isInnerMethodDefinition: ?boolean): void {
+    this.isInnerMethodDefinition = isInnerMethodDefinition === true;
   }
 
-  referencingDefaultValue(pattern, assignments, maybeImplicitGlobal, init) {
-    const scope = this.currentScope();
+  referencingDefaultValue(
+    pattern: Identifier,
+    assignments: $ReadOnlyArray<AssignmentPattern | AssignmentExpression>,
+    maybeImplicitGlobal: null | {node: ESNode, pattern: Identifier},
+    init: boolean,
+  ): void {
+    const scope = this.currentScopeAssert();
 
     assignments.forEach(assignment => {
       scope.__referencingValue(
@@ -147,7 +225,7 @@ class Referencer extends esrecurse.Visitor {
     });
   }
 
-  visitArray(arr) {
+  visitArray(arr: $ReadOnlyArray<ESNode>): void {
     if (arr) {
       for (const child of arr) {
         this.visit(child);
@@ -155,13 +233,26 @@ class Referencer extends esrecurse.Visitor {
     }
   }
 
-  visitPattern(node, options, callback) {
-    let visitPatternOptions = options;
-    let visitPatternCallback = callback;
+  visitPattern(
+    node: ESNode,
+    optionsOrCallback:
+      | $ReadOnly<{...VisitorOptions, visitAllNodes?: boolean}>
+      | PatternVisitorCallback,
+    callback?: PatternVisitorCallback,
+  ): void {
+    let visitAllNodes: boolean;
+    let visitPatternOptions: VisitorOptions;
+    let visitPatternCallback: PatternVisitorCallback;
 
-    if (typeof options === 'function') {
-      visitPatternCallback = options;
-      visitPatternOptions = {visitAllNodes: false};
+    if (typeof optionsOrCallback === 'function') {
+      visitPatternCallback = optionsOrCallback;
+      visitAllNodes = false;
+    } else {
+      if (callback == null) {
+        throw new Error('Missing expected callback');
+      }
+      visitPatternCallback = callback;
+      visitAllNodes = optionsOrCallback.visitAllNodes ?? false;
     }
 
     // Call the callback at left hand identifier nodes, and collect extra nodes to visit.
@@ -174,33 +265,44 @@ class Referencer extends esrecurse.Visitor {
     visitor.visit(node);
 
     // Process all unvisited nodes recursively.
-    if (visitPatternOptions.visitAllNodes) {
-      visitor.extraNodesToVisit.forEach(this.visit, this);
+    if (visitAllNodes) {
+      visitor.extraNodesToVisit.forEach(node => this.visit(node));
     }
   }
 
-  visitFunction(node) {
+  visitFunction(
+    node: FunctionDeclaration | FunctionExpression | ArrowFunctionExpression,
+  ): void {
     // FunctionDeclaration name is defined in upper scope
     // NOTE: Not referring variableScope. It is intended.
     // Since
     //  in ES5, FunctionDeclaration should be in FunctionBody.
     //  in ES6, FunctionDeclaration should be block scoped.
 
-    if (node.type === Syntax.FunctionDeclaration) {
+    if (node.type === 'FunctionDeclaration' && node.id) {
+      const id = node.id;
       // id is defined in upper scope
-      this.currentScope().__define(node.id, new FunctionNameDefinition(node));
+      this.currentScopeAssert().__define(
+        id,
+        new FunctionNameDefinition(id, node),
+      );
     }
 
     // If type parameters exist, add them to type scope before function expression name.
-    if (node.typeParameters != null && node.typeParameters.length !== 0) {
-      const parentScope = this.scopeManager.__currentScope;
+    if (
+      node.typeParameters != null &&
+      node.typeParameters.params.length !== 0
+    ) {
+      const typeParameters = node.typeParameters;
+      const parentScope = this.currentScopeAssert();
 
       const typeScope = this.scopeManager.__nestTypeScope(node);
-      this.visit(node.typeParameters);
+      this.visit(typeParameters);
 
       // Forward future defines in type scope to parent scope
-      typeScope.__define = function() {
-        return parentScope.__define.apply(parentScope, arguments);
+      // $FlowExpectedError[cannot-write]
+      typeScope.__define = function(node, def) {
+        return parentScope.__define(node, def);
       };
     }
 
@@ -209,7 +311,7 @@ class Referencer extends esrecurse.Visitor {
 
     // FunctionExpression with name creates its special scope;
     // FunctionExpressionNameScope.
-    if (node.type === Syntax.FunctionExpression && node.id) {
+    if (node.type === 'FunctionExpression' && node.id) {
       this.scopeManager.__nestFunctionExpressionNameScope(node);
     }
 
@@ -226,7 +328,7 @@ class Referencer extends esrecurse.Visitor {
       }
 
       that
-        .currentScope()
+        .currentScopeAssert()
         .__define(
           pattern,
           new ParameterDefinition(pattern, node, i, info.rest),
@@ -244,29 +346,13 @@ class Referencer extends esrecurse.Visitor {
       );
     }
 
-    // if there's a rest argument, add that
-    if (node.rest) {
-      this.visitPattern(
-        {
-          type: 'RestElement',
-          argument: node.rest,
-        },
-        pattern => {
-          this.currentScope().__define(
-            pattern,
-            new ParameterDefinition(pattern, node, node.params.length, true),
-          );
-        },
-      );
-    }
-
     this.visit(node.predicate);
 
     // In TypeScript there are a number of function-like constructs which have no body,
     // so check it exists before traversing
     if (node.body) {
       // Skip BlockStatement to prevent creating BlockStatement scope.
-      if (node.body.type === Syntax.BlockStatement) {
+      if (node.body.type === 'BlockStatement') {
         this.visitChildren(node.body);
       } else {
         this.visit(node.body);
@@ -276,9 +362,10 @@ class Referencer extends esrecurse.Visitor {
     this.close(node);
   }
 
-  visitClass(node) {
-    if (node.type === Syntax.ClassDeclaration) {
-      this.currentScope().__define(node.id, new ClassNameDefinition(node));
+  visitClass(node: ClassDeclaration | ClassExpression): void {
+    if (node.type === 'ClassDeclaration' && node.id) {
+      const id = node.id;
+      this.currentScopeAssert().__define(id, new ClassNameDefinition(id, node));
     }
 
     this.visit(node.superClass);
@@ -286,7 +373,8 @@ class Referencer extends esrecurse.Visitor {
     this.scopeManager.__nestClassScope(node);
 
     if (node.id) {
-      this.currentScope().__define(node.id, new ClassNameDefinition(node));
+      const id = node.id;
+      this.currentScopeAssert().__define(id, new ClassNameDefinition(id, node));
     }
 
     this.visit(node.typeParameters);
@@ -297,14 +385,14 @@ class Referencer extends esrecurse.Visitor {
     this.close(node);
   }
 
-  visitProperty(node) {
+  visitProperty(node: Property | MethodDefinition): void {
     let previous;
 
     if (node.computed) {
       this.visit(node.key);
     }
 
-    const isMethodDefinition = node.type === Syntax.MethodDefinition;
+    const isMethodDefinition = node.type === 'MethodDefinition';
 
     if (isMethodDefinition) {
       previous = this.pushInnerMethodDefinition(true);
@@ -315,8 +403,9 @@ class Referencer extends esrecurse.Visitor {
     }
   }
 
-  visitClassProperty(node) {
-    if (node.computed) {
+  visitClassProperty(node: ClassProperty | ClassPrivateProperty): void {
+    // private properties cannot be computed
+    if (node.type === 'ClassProperty' && node.computed) {
       this.visit(node.key);
     }
 
@@ -325,18 +414,16 @@ class Referencer extends esrecurse.Visitor {
     this.visit(node.typeAnnotation);
   }
 
-  visitForIn(node) {
-    if (
-      node.left.type === Syntax.VariableDeclaration &&
-      node.left.kind !== 'var'
-    ) {
+  visitForIn(node: ForOfStatement | ForInStatement): void {
+    if (node.left.type === 'VariableDeclaration' && node.left.kind !== 'var') {
       this.scopeManager.__nestForScope(node);
     }
 
-    if (node.left.type === Syntax.VariableDeclaration) {
-      this.visit(node.left);
-      this.visitPattern(node.left.declarations[0].id, pattern => {
-        this.currentScope().__referencingValue(
+    if (node.left.type === 'VariableDeclaration') {
+      const decl = node.left;
+      this.visit(decl);
+      this.visitPattern(decl.declarations[0].id, pattern => {
+        this.currentScopeAssert().__referencingValue(
           pattern,
           ReadWriteFlag.WRITE,
           node.right,
@@ -348,7 +435,7 @@ class Referencer extends esrecurse.Visitor {
       this.visitPattern(node.left, {visitAllNodes: true}, (pattern, info) => {
         let maybeImplicitGlobal = null;
 
-        if (!this.currentScope().isStrict) {
+        if (!this.currentScopeAssert().isStrict) {
           maybeImplicitGlobal = {
             pattern,
             node,
@@ -360,7 +447,7 @@ class Referencer extends esrecurse.Visitor {
           maybeImplicitGlobal,
           false,
         );
-        this.currentScope().__referencingValue(
+        this.currentScopeAssert().__referencingValue(
           pattern,
           ReadWriteFlag.WRITE,
           node.right,
@@ -375,7 +462,11 @@ class Referencer extends esrecurse.Visitor {
     this.close(node);
   }
 
-  visitVariableDeclaration(variableTargetScope, node, index) {
+  visitVariableDeclaration(
+    variableTargetScope: Scope,
+    node: VariableDeclaration,
+    index: number,
+  ): void {
     const decl = node.declarations[index];
     const init = decl.init;
 
@@ -387,7 +478,7 @@ class Referencer extends esrecurse.Visitor {
 
       this.referencingDefaultValue(pattern, info.assignments, null, true);
       if (init) {
-        this.currentScope().__referencingValue(
+        this.currentScopeAssert().__referencingValue(
           pattern,
           ReadWriteFlag.WRITE,
           init,
@@ -398,13 +489,14 @@ class Referencer extends esrecurse.Visitor {
     });
   }
 
-  AssignmentExpression(node) {
-    if (PatternVisitor.isPattern(node.left)) {
+  AssignmentExpression(node: AssignmentExpression): void {
+    const left = node.left;
+    if (isPattern(left)) {
       if (node.operator === '=') {
-        this.visitPattern(node.left, {visitAllNodes: true}, (pattern, info) => {
+        this.visitPattern(left, {visitAllNodes: true}, (pattern, info) => {
           let maybeImplicitGlobal = null;
 
-          if (!this.currentScope().isStrict) {
+          if (!this.currentScopeAssert().isStrict) {
             maybeImplicitGlobal = {
               pattern,
               node,
@@ -416,7 +508,7 @@ class Referencer extends esrecurse.Visitor {
             maybeImplicitGlobal,
             false,
           );
-          this.currentScope().__referencingValue(
+          this.currentScopeAssert().__referencingValue(
             pattern,
             ReadWriteFlag.WRITE,
             node.right,
@@ -424,9 +516,9 @@ class Referencer extends esrecurse.Visitor {
             false,
           );
         });
-      } else {
-        this.currentScope().__referencingValue(
-          node.left,
+      } else if (left.type === 'Identifier') {
+        this.currentScopeAssert().__referencingValue(
+          left,
           ReadWriteFlag.RW,
           node.right,
         );
@@ -437,19 +529,24 @@ class Referencer extends esrecurse.Visitor {
     this.visit(node.right);
   }
 
-  CatchClause(node) {
+  CatchClause(node: CatchClause): void {
     this.scopeManager.__nestCatchScope(node);
 
-    this.visitPattern(node.param, {visitAllNodes: true}, (pattern, info) => {
-      this.currentScope().__define(pattern, new CatchClauseDefinition(node));
-      this.referencingDefaultValue(pattern, info.assignments, null, true);
-    });
+    if (node.param) {
+      this.visitPattern(node.param, {visitAllNodes: true}, (pattern, info) => {
+        this.currentScopeAssert().__define(
+          pattern,
+          new CatchClauseDefinition(pattern, node),
+        );
+        this.referencingDefaultValue(pattern, info.assignments, null, true);
+      });
+    }
     this.visit(node.body);
 
     this.close(node);
   }
 
-  Program(node) {
+  Program(node: Program): void {
     this.scopeManager.__nestGlobalScope(node);
 
     if (this.scopeManager.isModule()) {
@@ -460,15 +557,16 @@ class Referencer extends esrecurse.Visitor {
     this.close(node);
   }
 
-  Identifier(node) {
-    this.currentScope().__referencingValue(node);
+  Identifier(node: Identifier): void {
+    this.currentScopeAssert().__referencingValue(node);
     this.visitChildren(node);
   }
 
-  UpdateExpression(node) {
-    if (PatternVisitor.isPattern(node.argument)) {
-      this.currentScope().__referencingValue(
-        node.argument,
+  UpdateExpression(node: UpdateExpression): void {
+    const argument = node.argument;
+    if (isPattern(argument)) {
+      this.currentScopeAssert().__referencingValue(
+        argument,
         ReadWriteFlag.RW,
         null,
       );
@@ -477,45 +575,47 @@ class Referencer extends esrecurse.Visitor {
     }
   }
 
-  visitMemberExpression(node) {
+  visitMemberExpression(
+    node: MemberExpression | OptionalMemberExpression,
+  ): void {
     this.visit(node.object);
     if (node.computed) {
       this.visit(node.property);
     }
   }
 
-  MemberExpression(node) {
+  MemberExpression(node: MemberExpression): void {
     this.visitMemberExpression(node);
   }
 
-  OptionalMemberExpression(node) {
+  OptionalMemberExpression(node: OptionalMemberExpression): void {
     this.visitMemberExpression(node);
   }
 
-  Property(node) {
+  Property(node: Property): void {
     this.visitProperty(node);
   }
 
-  MethodDefinition(node) {
+  MethodDefinition(node: MethodDefinition): void {
     this.visitProperty(node);
   }
 
-  BreakStatement() {}
+  BreakStatement(): void {}
 
-  ContinueStatement() {}
+  ContinueStatement(): void {}
 
-  LabeledStatement(node) {
+  LabeledStatement(node: LabeledStatement): void {
     this.visit(node.body);
   }
 
-  ForStatement(node) {
+  ForStatement(node: ForStatement): void {
     // Create ForStatement declaration.
     // NOTE: In ES6, ForStatement dynamically generates
     // per iteration environment. However, escope is
     // a static analyzer, we only generate one scope for ForStatement.
     if (
       node.init &&
-      node.init.type === Syntax.VariableDeclaration &&
+      node.init.type === 'VariableDeclaration' &&
       node.init.kind !== 'var'
     ) {
       this.scopeManager.__nestForScope(node);
@@ -526,23 +626,23 @@ class Referencer extends esrecurse.Visitor {
     this.close(node);
   }
 
-  ClassExpression(node) {
+  ClassExpression(node: ClassExpression): void {
     this.visitClass(node);
   }
 
-  ClassDeclaration(node) {
+  ClassDeclaration(node: ClassDeclaration): void {
     this.visitClass(node);
   }
 
-  ClassProperty(node) {
+  ClassProperty(node: ClassProperty): void {
     this.visitClassProperty(node);
   }
 
-  ClassPrivateProperty(node) {
+  ClassPrivateProperty(node: ClassPrivateProperty): void {
     this.visitClassProperty(node);
   }
 
-  BlockStatement(node) {
+  BlockStatement(node: BlockStatement): void {
     this.scopeManager.__nestBlockScope(node);
 
     this.visitChildren(node);
@@ -550,11 +650,11 @@ class Referencer extends esrecurse.Visitor {
     this.close(node);
   }
 
-  ThisExpression() {
-    this.currentScope().variableScope.__detectThis();
+  ThisExpression(): void {
+    this.currentScopeAssert().variableScope.__detectThis();
   }
 
-  WithStatement(node) {
+  WithStatement(node: WithStatement): void {
     this.visit(node.object);
 
     // Then nest scope for WithStatement.
@@ -565,11 +665,11 @@ class Referencer extends esrecurse.Visitor {
     this.close(node);
   }
 
-  VariableDeclaration(node) {
+  VariableDeclaration(node: VariableDeclaration): void {
     const variableTargetScope =
       node.kind === 'var'
-        ? this.currentScope().variableScope
-        : this.currentScope();
+        ? this.currentScopeAssert().variableScope
+        : this.currentScopeAssert();
 
     for (let i = 0, iz = node.declarations.length; i < iz; ++i) {
       const decl = node.declarations[i];
@@ -582,7 +682,7 @@ class Referencer extends esrecurse.Visitor {
   }
 
   // sec 13.11.8
-  SwitchStatement(node) {
+  SwitchStatement(node: SwitchStatement): void {
     this.visit(node.discriminant);
 
     this.scopeManager.__nestSwitchScope(node);
@@ -594,27 +694,27 @@ class Referencer extends esrecurse.Visitor {
     this.close(node);
   }
 
-  FunctionDeclaration(node) {
+  FunctionDeclaration(node: FunctionDeclaration): void {
     this.visitFunction(node);
   }
 
-  FunctionExpression(node) {
+  FunctionExpression(node: FunctionExpression): void {
     this.visitFunction(node);
   }
 
-  ForOfStatement(node) {
+  ForOfStatement(node: ForOfStatement): void {
     this.visitForIn(node);
   }
 
-  ForInStatement(node) {
+  ForInStatement(node: ForInStatement): void {
     this.visitForIn(node);
   }
 
-  ArrowFunctionExpression(node) {
+  ArrowFunctionExpression(node: ArrowFunctionExpression): void {
     this.visitFunction(node);
   }
 
-  ImportDeclaration(node) {
+  ImportDeclaration(node: ImportDeclaration): void {
     assert(
       this.scopeManager.isModule(),
       'ImportDeclaration should appear when the mode is ES6 and in the module context.',
@@ -625,11 +725,16 @@ class Referencer extends esrecurse.Visitor {
     importer.visit(node);
   }
 
-  visitExportDeclaration(node) {
-    if (node.source) {
+  visitExportDeclaration(
+    node:
+      | ExportAllDeclaration
+      | ExportDefaultDeclaration
+      | ExportNamedDeclaration,
+  ): void {
+    if (node.type !== 'ExportDefaultDeclaration' && node.source) {
       return;
     }
-    if (node.declaration) {
+    if (node.type !== 'ExportAllDeclaration' && node.declaration) {
       this.visit(node.declaration);
       return;
     }
@@ -637,35 +742,29 @@ class Referencer extends esrecurse.Visitor {
     this.visitChildren(node);
   }
 
-  ExportDeclaration(node) {
+  ExportAllDeclaration(node: ExportAllDeclaration): void {
     this.visitExportDeclaration(node);
   }
 
-  ExportAllDeclaration(node) {
+  ExportDefaultDeclaration(node: ExportDefaultDeclaration): void {
     this.visitExportDeclaration(node);
   }
 
-  ExportDefaultDeclaration(node) {
+  ExportNamedDeclaration(node: ExportNamedDeclaration): void {
     this.visitExportDeclaration(node);
   }
 
-  ExportNamedDeclaration(node) {
-    this.visitExportDeclaration(node);
+  ExportSpecifier(node: ExportSpecifier): void {
+    this.visit(node.local);
   }
 
-  ExportSpecifier(node) {
-    const local = node.id || node.local;
-
-    this.visit(local);
-  }
-
-  MetaProperty() {
+  MetaProperty(): void {
     // do nothing.
   }
 
-  GenericTypeAnnotation(node) {
-    if (node.id.type === Syntax.Identifier) {
-      this.currentScope().__referencingType(node.id);
+  GenericTypeAnnotation(node: GenericTypeAnnotation): void {
+    if (node.id.type === 'Identifier') {
+      this.currentScopeAssert().__referencingType(node.id);
     } else {
       this.visit(node.id);
     }
@@ -673,7 +772,7 @@ class Referencer extends esrecurse.Visitor {
     this.visit(node.typeParameters);
   }
 
-  FunctionTypeAnnotation(node) {
+  FunctionTypeAnnotation(node: FunctionTypeAnnotation): void {
     const hasTypeScope = this.maybeCreateTypeScope(node);
 
     this.visit(node.typeParameters);
@@ -686,20 +785,21 @@ class Referencer extends esrecurse.Visitor {
     }
   }
 
-  QualifiedTypeIdentifier(node) {
+  QualifiedTypeIdentifier(node: QualifiedTypeIdentifier): void {
     // Only the first component of a qualified type identifier is a reference,
     // e.g. 'Foo' in `type T = Foo.Bar.Baz`.
-    if (node.qualification.type === Syntax.Identifier) {
-      this.currentScope().__referencingValue(node.qualification);
+    if (node.qualification.type === 'Identifier') {
+      const qualification = node.qualification;
+      this.currentScopeAssert().__referencingValue(qualification);
     } else {
       this.visit(node.qualification);
     }
   }
 
-  ObjectTypeProperty(node) {
+  ObjectTypeProperty(node: ObjectTypeProperty): void {
     // Do not visit 'key' child if it is an identifier to prevent key being treated as a reference.
     // e.g. 'foo' is a property name in `type T = { foo: string }`.
-    if (node.key.type !== Syntax.Identifier) {
+    if (node.key.type !== 'Identifier') {
       this.visit(node.key);
     }
 
@@ -707,7 +807,7 @@ class Referencer extends esrecurse.Visitor {
     this.visit(node.variance);
   }
 
-  ObjectTypeIndexer(node) {
+  ObjectTypeIndexer(node: ObjectTypeIndexer): void {
     // Do not visit 'id' child to prevent id from being treated as a reference.
     // e.g. 'foo' is an unreferenceable name for the indexer parameter in
     // `type T = { [foo: string]: number }`.
@@ -716,24 +816,35 @@ class Referencer extends esrecurse.Visitor {
     this.visit(node.variance);
   }
 
-  ObjectTypeInternalSlot(node) {
+  ObjectTypeInternalSlot(node: ObjectTypeInternalSlot): void {
     // Do not visit 'id' child to prevent id from being treated as a reference.
     // e.g. 'foo' is an internal slot name in `type T = { [[foo]]: number }`.
     this.visit(node.value);
   }
 
-  FunctionTypeParam(node) {
+  FunctionTypeParam(node: FunctionTypeParam): void {
     // Do not visit 'name' child to prevent name from being treated as a reference.
     // e.g. 'foo' is a parameter name in a type that should not be treated like a
     // definition or reference in `type T = (foo: string) => void`.
     this.visit(node.typeAnnotation);
   }
 
-  createTypeDefinition(node) {
-    this.currentScope().__define(node.id, new TypeDefinition(node.id, node));
+  createTypeDefinition(
+    node:
+      | DeclareTypeAlias
+      | DeclareOpaqueType
+      | DeclareInterface
+      | TypeAlias
+      | OpaqueType
+      | InterfaceDeclaration,
+  ): void {
+    this.currentScopeAssert().__define(
+      node.id,
+      new TypeDefinition(node.id, node),
+    );
   }
 
-  visitTypeAlias(node) {
+  visitTypeAlias(node: DeclareTypeAlias | TypeAlias): void {
     this.createTypeDefinition(node);
 
     const hasTypeScope = this.maybeCreateTypeScope(node);
@@ -746,7 +857,7 @@ class Referencer extends esrecurse.Visitor {
     }
   }
 
-  visitOpaqueType(node) {
+  visitOpaqueType(node: DeclareOpaqueType | OpaqueType): void {
     this.createTypeDefinition(node);
 
     const hasTypeScope = this.maybeCreateTypeScope(node);
@@ -760,7 +871,9 @@ class Referencer extends esrecurse.Visitor {
     }
   }
 
-  visitInterfaceDeclaration(node) {
+  visitInterfaceDeclaration(
+    node: DeclareInterface | InterfaceDeclaration,
+  ): void {
     this.createTypeDefinition(node);
 
     const hasTypeScope = this.maybeCreateTypeScope(node);
@@ -774,25 +887,38 @@ class Referencer extends esrecurse.Visitor {
     }
   }
 
-  TypeAlias(node) {
+  TypeAlias(node: TypeAlias): void {
     this.visitTypeAlias(node);
   }
 
-  OpaqueType(node) {
+  OpaqueType(node: OpaqueType): void {
     this.visitOpaqueType(node);
   }
 
-  InterfaceDeclaration(node) {
+  InterfaceDeclaration(node: InterfaceDeclaration): void {
     this.visitInterfaceDeclaration(node);
   }
 
-  EnumDeclaration(node) {
-    this.currentScope().__define(node.id, new EnumDefinition(node));
+  EnumDeclaration(node: EnumDeclaration): void {
+    this.currentScopeAssert().__define(
+      node.id,
+      new EnumDefinition(node.id, node),
+    );
 
     // Enum body cannot contain identifier references, so no need to visit body.
   }
 
-  maybeCreateTypeScope(node) {
+  maybeCreateTypeScope(
+    node:
+      | DeclareTypeAlias
+      | DeclareOpaqueType
+      | DeclareInterface
+      | DeclareClass
+      | FunctionTypeAnnotation
+      | TypeAlias
+      | OpaqueType
+      | InterfaceDeclaration,
+  ): boolean {
     if (
       node.typeParameters &&
       node.typeParameters.params &&
@@ -805,29 +931,29 @@ class Referencer extends esrecurse.Visitor {
     return false;
   }
 
-  TypeParameter(node) {
+  TypeParameter(node: TypeParameter): void {
     const def = new TypeParameterDefinition(node);
-    this.currentScope().__define(def.name, def);
+    this.currentScopeAssert().__define(def.name, def);
 
     this.visit(node.bound);
     this.visit(node.variance);
     this.visit(node.default);
   }
 
-  DeclareTypeAlias(node) {
+  DeclareTypeAlias(node: DeclareTypeAlias): void {
     this.visitTypeAlias(node);
   }
 
-  DeclareOpaqueType(node) {
+  DeclareOpaqueType(node: DeclareOpaqueType): void {
     this.visitOpaqueType(node);
   }
 
-  DeclareInterface(node) {
+  DeclareInterface(node: DeclareInterface): void {
     this.visitInterfaceDeclaration(node);
   }
 
-  DeclareVariable(node) {
-    this.currentScope().__define(
+  DeclareVariable(node: DeclareVariable): void {
+    this.currentScopeAssert().__define(
       node.id,
       new VariableDefinition(node.id, node, node, 0, 'declare'),
     );
@@ -835,15 +961,21 @@ class Referencer extends esrecurse.Visitor {
     this.visit(node.id.typeAnnotation);
   }
 
-  DeclareFunction(node) {
-    this.currentScope().__define(node.id, new FunctionNameDefinition(node));
+  DeclareFunction(node: DeclareFunction): void {
+    this.currentScopeAssert().__define(
+      node.id,
+      new FunctionNameDefinition(node.id, node),
+    );
 
     this.visit(node.id.typeAnnotation);
     this.visit(node.predicate);
   }
 
-  DeclareClass(node) {
-    this.currentScope().__define(node.id, new ClassNameDefinition(node));
+  DeclareClass(node: DeclareClass): void {
+    this.currentScopeAssert().__define(
+      node.id,
+      new ClassNameDefinition(node.id, node),
+    );
 
     const hasTypeScope = this.maybeCreateTypeScope(node);
 
@@ -858,7 +990,7 @@ class Referencer extends esrecurse.Visitor {
     }
   }
 
-  DeclareModule(node) {
+  DeclareModule(node: DeclareModule): void {
     this.scopeManager.__nestDeclareModuleScope(node);
 
     // Do not visit 'id', since module name is neither a reference nor a

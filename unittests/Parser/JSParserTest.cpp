@@ -175,6 +175,15 @@ TEST(JSParserTest, TestRegExp) {
   ASSERT_TRUE(parsed.hasValue());
 }
 
+TEST(JSParserTest, TestStoredComments) {
+  Context context;
+  JSParser parser(context, "'hi' /* hi */");
+  parser.setStoreComments(true);
+  auto parsed = parser.parse();
+  ASSERT_TRUE(parsed.hasValue());
+  ASSERT_EQ(1, parser.getStoredComments().size());
+}
+
 TEST(JSParserTest, TestUnterminatedBOMInDirective) {
   Context context;
   // Begin an unterminated Byte Order Mark (BOM) after the first one.

@@ -62,33 +62,25 @@ HermesValue typeOf(Runtime *runtime, Handle<> valueHandle) {
       return HermesValue::encodeStringValue(runtime->getPredefinedString(
           valueHandle->isUndefined() ? Predefined::undefined
                                      : Predefined::object));
-      break;
     case StrTag:
       return HermesValue::encodeStringValue(
           runtime->getPredefinedString(Predefined::string));
-      break;
     case BoolTag:
       return HermesValue::encodeStringValue(
           runtime->getPredefinedString(Predefined::boolean));
-      break;
     case SymbolTag:
       return HermesValue::encodeStringValue(
           runtime->getPredefinedString(Predefined::symbol));
-      break;
     case ObjectTag:
-      if (vmisa<Callable>(*valueHandle)) {
+      if (vmisa<Callable>(*valueHandle))
         return HermesValue::encodeStringValue(
             runtime->getPredefinedString(Predefined::function));
-      } else {
-        return HermesValue::encodeStringValue(
-            runtime->getPredefinedString(Predefined::object));
-      }
-      break;
+      return HermesValue::encodeStringValue(
+          runtime->getPredefinedString(Predefined::object));
     default:
       assert(valueHandle->isNumber() && "Invalid type.");
       return HermesValue::encodeStringValue(
           runtime->getPredefinedString(Predefined::number));
-      break;
   }
 }
 
