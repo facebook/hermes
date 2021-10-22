@@ -553,75 +553,29 @@ jobs:
             cmake --build ./embuild --target emhermesc
             EMHERMESC="$PWD/embuild/bin/emhermesc.js" node ./hermes/tools/emhermesc/test.js
   test-e2e:
-    # For now we run E2E tests on MacOS as running an Android emulator on Linux is
-    # not supported with Circle CI:
-    # https://support.circleci.com/hc/en-us/articles/360000028928-Testing-with-Android-emulator-on-CircleCI-2-0
-    # Windows is another option, but I came across a convenient Mac OS example first:
-    # https://gist.github.com/DoguD/58b4b86a5d892130af84074078581b87
-    macos:
-      xcode: 12.4.0
-    environment:
-      - TERM: dumb
-      # Homebrew currently breaks while updating:
-      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
-      - HOMEBREW_NO_AUTO_UPDATE: 1
-      - JVM_OPTS: -Xmx3200m
-      - ANDROID_HOME: /usr/local/share/android-sdk
-      - ANDROID_SDK_HOME: /usr/local/share/android-sdk
-      - ANDROID_SDK_ROOT: /usr/local/share/android-sdk
-      - ANDROID_NDK_HOME: /usr/local/share/android-ndk
-      - QEMU_AUDIO_DRV: none
-      - JAVA_HOME: $(/usr/libexec/java_home)
+    executor:
+      name: android/android-machine
+    working_directory: /home/circleci
     steps:
-      - run:
-          name: Setup dependencies
-          command: |
-            mkdir -p /tmp/hermes/output
-            # Node some version greater than 11 is needed by one of the app dependencies
-            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.1/install.sh | bash
-            NVM_DIR="$HOME/.nvm"
-            . "$NVM_DIR/nvm.sh"
-            echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
-            echo '. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
-            nvm install 14
-            nvm use 14
-            # Reinstall the latest version of Yarn.
-            npm install --global yarn
-            brew tap homebrew/cask
-            brew install --cask android-sdk
-            brew install --cask android-ndk
-            echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:$PATH"' >> $BASH_ENV
-            # At some point, adb ended up in platform-tools/platform-tools. Work around that.
-            echo 'export PATH="/usr/local/share/android-sdk/platform-tools/platform-tools:$PATH"' >> $BASH_ENV
-      - run:
-          name: Print versions
-          command: |
-            node --version
-            yarn --version
-            echo $(/usr/libexec/java_home)
-      - run:
-          name: Install emulator dependencies
-          command: (yes | sdkmanager "platform-tools" "platforms;android-26" "extras;intel;Hardware_Accelerated_Execution_Manager" "build-tools;26.0.0" "system-images;android-26;google_apis;x86" "emulator" --verbose) || true
-      - run:
-          name: Create emulator definition
-          command: |
-            avdmanager create avd -n Pixel_2_API_26 -k "system-images;android-26;google_apis;x86" -g google_apis -d "Nexus 5"
-      - run:
-          name: Run emulator in background
-          command: /usr/local/share/android-sdk/emulator/emulator @Pixel_2_API_26 -memory 2048 -noaudio
-          background: true
-      - checkout
       - attach_workspace:
-          at: /tmp/hermes/input
+          at: /tmp/input
       - run:
-          name: Run E2E test with main Hermes and Release React Native
+          name: Prepare RNTester
           command: |
-            cd test/circleci-e2e
-            ./run.sh --hermes-npm-package /tmp/hermes/input/hermes-engine-v*.tgz
-          # The react-native setup tool takes AGES "Installing CocoaPods dependencies"
-          no_output_timeout: 45m
-      - store_artifacts:
-          path: /tmp/hermes/output/
+            npm install --global yarn
+            git clone https://github.com/facebook/react-native
+            cd react-native
+            yarn install
+            npm install /tmp/input/hermes-engine-v*.tgz
+            echo "console.log('Using Hermes: ' + (global.HermesInternal != null));" >> packages/rn-tester/js/RNTesterApp.android.js
+      - android/start-emulator-and-run-tests:
+          post-emulator-launch-assemble-command: ''
+          run-tests-working-directory: react-native
+          run-logcat: true
+          test-command: >-
+            ./gradlew :packages:rn-tester:android:app:installHermesRelease
+            && adb shell am start com.facebook.react.uiapp/.RNTesterActivity
+            && timeout 30s adb logcat -e "Using Hermes: true" -m 1
 
   test-e2e-intl:
     executor:
