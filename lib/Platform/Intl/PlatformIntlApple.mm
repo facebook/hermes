@@ -11,7 +11,43 @@
 
 namespace hermes {
 namespace platform_intl {
+namespace {
+NSString *bestAvailableLocale(NSString *locale, NSArray *availableLocales) {
+  // Implementer note: This method corresponds roughly to
+  // https://tc39.es/ecma402/#sec-bestavailablelocale}
+  // 1. Let candidate be locale
+  NSString *candidate = locale;
 
+  // 2. Repeat
+  while (true) {
+    // a. If availableLocales contains an element equal to candidate, return
+    // candidate.
+    if ([availableLocales containsObject:candidate]) {
+      return candidate;
+    }
+
+    // b. Let pos be the character index of the last occurrence of "-" (U+002D)
+    // within candidate.
+    NSUInteger pos =
+        [candidate rangeOfString:@"-" options:NSBackwardsSearch].location;
+    // ...If that character does not occur, return undefined.
+    if (pos < 0ul) {
+      return @"";
+    }
+
+    // c. If pos ≥ 2 and the character "-" occurs at index pos-2 of candidate,
+    // decrease pos by 2.
+    if (pos >= 2ul &&
+        [@"-" isEqualToString:[candidate substringWithRange:NSMakeRange(
+                                                                pos - 2, 1)]]) {
+      pos -= 2;
+    }
+    // d. Let candidate be the substring of candidate from position 0,
+    // inclusive, to position pos, exclusive.
+    candidate = [candidate substringToIndex:pos];
+  }
+}
+}
 vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales) {
@@ -24,10 +60,11 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales,
     const std::u16string &str) {
-  NSString* nsStr = u16StringToNSString(str);
+  NSString *nsStr = u16StringToNSString(str);
 
   // 3. Let requestedLocales be ? CanonicalizeLocaleList(locales).
-  vm::CallResult<std::vector<std::u16string>> requestedLocales = getCanonicalLocales(runtime, locales);
+  vm::CallResult<std::vector<std::u16string>> requestedLocales =
+      getCanonicalLocales(runtime, locales);
   // getcano doesnt throw so should this be removed?
   if (LLVM_UNLIKELY(requestedLocales == llvh::ExecutionStatus::EXCEPTION)) {
     return llvh::ExecutionStatus::EXCEPTION;
@@ -41,29 +78,42 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
     requestedLocale = val[0];
   } else { // 5. Else,
     // a. Let requestedLocale be DefaultLocale().
-    return nsStringToU16String([nsStr lowercaseStringWithLocale:[NSLocale currentLocale]]);
+    return nsStringToU16String(
+        [nsStr lowercaseStringWithLocale:[NSLocale currentLocale]]);
   }
-  // 6. Let noExtensionsLocale be the String value that is requestedLocale with any Unicode locale extension sequences (6.2.1) removed.
+  // 6. Let noExtensionsLocale be the String value that is requestedLocale with
+  // any Unicode locale extension sequences (6.2.1) removed.
   // TODO
-  
-  // 7. Let availableLocales be a List with language tags that includes the languages for which the Unicode Character Database contains language sensitive case mappings. Implementations may add additional language tags if they support case mapping for additional locales.
-  NSArray<NSString *> *availableLocales = [NSLocale availableLocaleIdentifiers];
-  
-  // 8. Let locale be BestAvailableLocale(availableLocales, noExtensionsLocale).
-  //NSString *locale = requestedLocale; // [LocaleMatcher BestAvailableLocale:requestedLocale:availableLocales];
-  //auto *locale = [LocaleMatcher BestAvailableLocale :requestedLocale:availableLocales];
-  // 9. If locale is undefined, let locale be "und".
-  //  if (locale == nil) {
-  //    locale = @"und";
-  //  }
 
-  // 10. Let cpList be a List containing in order the code points of S as defined in es2022, 6.1.4, starting at the first element of S.
-  // 11. Let cuList be a List where the elements are the result of a lower case transformation of the ordered code points in cpList according to the Unicode Default Case Conversion algorithm or an implementation-defined conversion algorithm. A conforming implementation's lower case transformation algorithm must always yield the same cpList given the same cuList and locale.
-  // 12. Let L be a String whose elements are the UTF-16 Encoding (defined in es2022, 6.1.4) of the code points of cuList.
-  NSString *l = u16StringToNSString(requestedLocale);
+  // 7. Let availableLocales be a List with language tags that includes the
+  // languages for which the Unicode Character Database contains language
+  // sensitive case mappings. Implementations may add additional language tags
+  // if they support case mapping for additional locales.
+  NSArray<NSString *> *availableLocales = [NSLocale availableLocaleIdentifiers];
+
+  // 8. Let locale be BestAvailableLocale(availableLocales, noExtensionsLocale).
+  NSString *NSBestLocale = u16StringToNSString(requestedLocale);
+  // No matching function for call to 'bestAvailableLocale'???
+  auto *bestLocale = bestAvailableLocale(availableLocales, NSBestLocale);
+  // 9. If locale is undefined, let locale be "und".
+  if (bestLocale == nil) {
+    bestLocale = @"und";
+  }
+
+  // 10. Let cpList be a List containing in order the code points of S as
+  // defined in es2022, 6.1.4, starting at the first element of S.
+  // 11. Let cuList be a List where the elements are the result of a lower case
+  // transformation of the ordered code points in cpList according to the
+  // Unicode Default Case Conversion algorithm or an implementation-defined
+  // conversion algorithm. A conforming implementation's lower case
+  // transformation algorithm must always yield the same cpList given the same
+  // cuList and locale.
+  // 12. Let L be a String whose elements are the UTF-16 Encoding (defined in
+  // es2022, 6.1.4) of the code points of cuList.
+  NSString *L = u16StringToNSString(bestLocale);
   // 13. Return L.
-  return nsStringToU16String([nsStr lowercaseStringWithLocale:[[NSLocale alloc]initWithLocaleIdentifier:l]]);
-  //return nsStringToU16String(L);
+  return nsStringToU16String([nsStr
+      lowercaseStringWithLocale:[[NSLocale alloc] initWithLocaleIdentifier:L]]);
 }
 
 // Implementer note: This method corresponds roughly to
