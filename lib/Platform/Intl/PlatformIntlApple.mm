@@ -12,6 +12,25 @@
 namespace hermes {
 namespace platform_intl {
 
+std::vector<std::u16string> nsStringArrayToU16StringArray(NSArray<NSString *> * array) {
+  auto size = [array count];
+  std::vector<std::u16string> result;
+  result.reserve(size);
+  for (size_t i = 0; i < size; i++) {
+    result[i] = nsStringToU16String(array[i]);
+  }
+  return result;
+}
+
+NSArray<NSString *> *u16StringArrayTonsStringArray(std::vector<std::u16string> array) {
+  auto size = array.size();
+  NSArray<NSString *> * result = [NSArray arrayWithCapacity:size];
+  for (size_t i = 0; i < size; i++) {
+    result[i] = u16StringToNSString(array[i]);
+  }
+  return result;
+}
+
 vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales) {
@@ -29,6 +48,15 @@ vm::CallResult<std::u16string> toLocaleUpperCase(
     const std::vector<std::u16string> &locales,
     const std::u16string &str) {
   return std::u16string(u"uppered");
+}
+
+// Implementation of
+// https://tc39.es/ecma402/#sec-supportedlocales
+vm::CallResult<std::vector<std::u16string>> SupportedLocales(
+    std::vector<std::u16string> availableLocales,
+    std::vector<std::u16string> requestedLocales,
+    const Options &options) {
+  return {};
 }
 
 struct Collator::Impl {
@@ -75,11 +103,19 @@ struct DateTimeFormat::Impl {
 DateTimeFormat::DateTimeFormat() : impl_(std::make_unique<Impl>()) {}
 DateTimeFormat::~DateTimeFormat() {}
 
+// Implementation of
+// https://tc39.es/ecma402/#sec-intl.datetimeformat.supportedlocalesof
 vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
-  return std::vector<std::u16string>{u"en-CA", u"de-DE"};
+  // 1. Let availableLocales be %DateTimeFormat%.[[AvailableLocales]].
+  NSArray<NSString *> *nsAvailableLocales = [NSLocale availableLocaleIdentifiers];
+  // 2. Let requestedLocales be ? CanonicalizeLocaleList(locales).
+  vm::CallResult<std::vector<std::u16string>> requestedLocales = getCanonicalLocales(locales);
+  std::vector<std::u16string> availableLocales = nsStringArrayToU16StringArray(nsAvailableLocales);
+  // 3. Return ? SupportedLocales(availableLocales, requestedLocales, options).
+  return SupportedLocales(availableLocales, requestedLocales, options);
 }
 
 vm::ExecutionStatus DateTimeFormat::initialize(
