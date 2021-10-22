@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @flow
+ * @flow strict
  * @format
  */
 
@@ -33,7 +33,7 @@
 */
 'use strict';
 
-import type {Identifier, Node} from './ScopeManagerTypes';
+import type {Identifier, ESNode as Node} from 'hermes-estree';
 import type {Scope} from './scope';
 import type Variable from './variable';
 

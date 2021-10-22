@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @flow
+ * @flow strict
  * @format
  */
 
@@ -33,8 +33,8 @@
 */
 'use strict';
 
+import type {ESNode as Node} from 'hermes-estree';
 import type {VisitorKeys} from '../HermesESLintVisitorKeys';
-import type {Node} from './ScopeManagerTypes';
 import type {Scope} from './scope';
 import type Variable from './variable';
 
@@ -134,7 +134,7 @@ class ScopeManager {
       return scopes[0];
     }
 
-    if (inner) {
+    if (inner === true) {
       for (let i = scopes.length - 1; i >= 0; --i) {
         const scope = scopes[i];
 
@@ -199,55 +199,55 @@ class ScopeManager {
     return scope;
   }
 
-  __nestGlobalScope(node: Node): GlobalScope {
+  __nestGlobalScope(node: GlobalScope['block']): GlobalScope {
     return this.__nestScope(new GlobalScope(this, node));
   }
 
-  __nestBlockScope(node: Node): BlockScope {
+  __nestBlockScope(node: BlockScope['block']): BlockScope {
     return this.__nestScope(new BlockScope(this, this.__currentScope, node));
   }
 
-  __nestFunctionScope(node: Node, isMethodDefinition: boolean): FunctionScope {
+  __nestFunctionScope(node: FunctionScope['block'], isMethodDefinition: boolean): FunctionScope {
     return this.__nestScope(
       new FunctionScope(this, this.__currentScope, node, isMethodDefinition),
     );
   }
 
-  __nestForScope(node: Node): ForScope {
+  __nestForScope(node: ForScope['block']): ForScope {
     return this.__nestScope(new ForScope(this, this.__currentScope, node));
   }
 
-  __nestCatchScope(node: Node): CatchScope {
+  __nestCatchScope(node: CatchScope['block']): CatchScope {
     return this.__nestScope(new CatchScope(this, this.__currentScope, node));
   }
 
-  __nestWithScope(node: Node): WithScope {
+  __nestWithScope(node: WithScope['block']): WithScope {
     return this.__nestScope(new WithScope(this, this.__currentScope, node));
   }
 
-  __nestClassScope(node: Node): ClassScope {
+  __nestClassScope(node: ClassScope['block']): ClassScope {
     return this.__nestScope(new ClassScope(this, this.__currentScope, node));
   }
 
-  __nestSwitchScope(node: Node): SwitchScope {
+  __nestSwitchScope(node: SwitchScope['block']): SwitchScope {
     return this.__nestScope(new SwitchScope(this, this.__currentScope, node));
   }
 
-  __nestModuleScope(node: Node): ModuleScope {
+  __nestModuleScope(node: ModuleScope['block']): ModuleScope {
     return this.__nestScope(new ModuleScope(this, this.__currentScope, node));
   }
 
-  __nestTypeScope(node: Node): TypeScope {
+  __nestTypeScope(node: TypeScope['block']): TypeScope {
     return this.__nestScope(new TypeScope(this, this.__currentScope, node));
   }
 
-  __nestDeclareModuleScope(node: Node): DeclareModuleScope {
+  __nestDeclareModuleScope(node: DeclareModuleScope['block']): DeclareModuleScope {
     return this.__nestScope(
       new DeclareModuleScope(this, this.__currentScope, node),
     );
   }
 
-  __nestFunctionExpressionNameScope(node: Node): FunctionExpressionNameScope {
+  __nestFunctionExpressionNameScope(node: FunctionExpressionNameScope['block']): FunctionExpressionNameScope {
     return this.__nestScope(
       new FunctionExpressionNameScope(this, this.__currentScope, node),
     );
