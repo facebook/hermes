@@ -78,7 +78,7 @@ impl Default for FetchFlags {
 /// Fetch data from a URL with optional restrictions from accessing file system or network (if
 /// everything is restricted, the only allowed option are data URLs where everything is encoded
 /// in the URL itself).
-pub fn fetch_url(url: Url, flags: FetchFlags) -> Result<Data, FetchError> {
+pub fn fetch_url(url: &Url, flags: FetchFlags) -> Result<Data, FetchError> {
     match url.scheme() {
         "file" => {
             if flags.allow_file {
@@ -95,14 +95,14 @@ pub fn fetch_url(url: Url, flags: FetchFlags) -> Result<Data, FetchError> {
 /// A convenience wrapper around [fetch_url()] with a string URL and default flags.
 pub fn fetch_from_str_url(str: &str) -> Result<Data, FetchError> {
     fetch_url(
-        Url::parse(str).map_err(|e| FetchError::URLParseError(anyhow::anyhow!(e)))?,
+        &Url::parse(str).map_err(|e| FetchError::URLParseError(anyhow::anyhow!(e)))?,
         Default::default(),
     )
 }
 
 /// Fetch from a data URL.
 /// Data URL format is: `data:[<mediatype>][;base64],<data>`
-fn fetch_data(url: Url) -> Result<Data, FetchError> {
+fn fetch_data(url: &Url) -> Result<Data, FetchError> {
     if !url.cannot_be_a_base() || url.has_host() {
         return Err(FetchError::InvalidURL(
             "data URL cannot be a base or contain a host",
@@ -132,7 +132,7 @@ fn fetch_data(url: Url) -> Result<Data, FetchError> {
 }
 
 /// Fetch from a file URL.
-fn fetch_file(url: Url) -> Result<Data, FetchError> {
+fn fetch_file(url: &Url) -> Result<Data, FetchError> {
     let path = url
         .to_file_path()
         .map_err(|_| FetchError::InvalidURL("invalid file URL"))?;

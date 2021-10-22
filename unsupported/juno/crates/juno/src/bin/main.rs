@@ -97,9 +97,11 @@ fn parse_magic_url(
     parsed.magic_comment(kind).map(Url::parse).transpose()
 }
 
-/// Fetch and parse the source map at the specified URL.
+/// Consume the URL and fetch and parse the source map from it.
+/// The URL is consumed to ensure that it is freed immediately after it is no
+/// longer needed. Data URLs can potentially contain megabytes of data.
 fn load_source_map(url: Url) -> anyhow::Result<SourceMap> {
-    fetchurl::fetch_url(url, Default::default())
+    fetchurl::fetch_url(&url, Default::default())
         .context("Error fetching source map")
         .and_then(|data| SourceMap::from_slice(data.as_ref()).context("Error parsing source map"))
 }
