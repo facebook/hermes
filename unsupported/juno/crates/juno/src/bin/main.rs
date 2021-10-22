@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use anyhow::{self, ensure, Context};
+use anyhow::{self, ensure, Context, Error};
 use juno::ast::{self, NodePtr, SourceRange};
 use juno::gen_js;
 use juno::hparser::{self, MagicCommentKind, ParsedJS};
@@ -15,7 +15,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::exit;
-use structopt::{clap::AppSettings, clap::ArgGroup, StructOpt};
+use structopt::{clap::arg_enum, clap::AppSettings, clap::ArgGroup, StructOpt};
 use support::fetchurl;
 use support::NullTerminatedBuf;
 use url::{self, Url};
@@ -29,6 +29,14 @@ struct Gen {
     /// Generate JavaScript source.
     #[structopt(long = "gen-js", group = "gen")]
     js: bool,
+}
+
+arg_enum! {
+    #[derive(Debug, Copy, Clone, PartialEq)]
+    enum InputSourceMap {
+        Ignore,
+        Auto,
+    }
 }
 
 #[derive(Debug, StructOpt)]
@@ -56,6 +64,15 @@ struct Opt {
     /// Can only be used when generating JS.
     #[structopt(long)]
     sourcemap: bool,
+
+    /// Base URL to prepend to relative URLs.
+    #[structopt(long)]
+    base_url: Option<Url>,
+
+    /// How to handle the source map directives.
+    #[structopt(long, possible_values = &InputSourceMap::variants(),
+                case_insensitive = true, default_value="Auto")]
+    input_source_map: InputSourceMap,
 
     /// Measure and print times.
     #[structopt(long = "Xtime")]
@@ -93,8 +110,13 @@ fn read_file_or_stdin(input: &Path) -> anyhow::Result<NullTerminatedBuf> {
 fn parse_magic_url(
     parsed: &ParsedJS,
     kind: MagicCommentKind,
-) -> Result<Option<Url>, url::ParseError> {
-    parsed.magic_comment(kind).map(Url::parse).transpose()
+    opt: &Opt,
+) -> Result<Option<Url>, Error> {
+    parsed
+        .magic_comment(kind)
+        .map(|s| Url::options().base_url(opt.base_url.as_ref()).parse(s))
+        .transpose()
+        .with_context(|| format!("Error parsing {}", kind.name()))
 }
 
 /// Consume the URL and fetch and parse the source map from it.
@@ -102,8 +124,11 @@ fn parse_magic_url(
 /// longer needed. Data URLs can potentially contain megabytes of data.
 fn load_source_map(url: Url) -> anyhow::Result<SourceMap> {
     fetchurl::fetch_url(&url, Default::default())
-        .context("Error fetching source map")
-        .and_then(|data| SourceMap::from_slice(data.as_ref()).context("Error parsing source map"))
+        .with_context(|| format!("Source map: {}", &url))
+        .and_then(|data| {
+            SourceMap::from_slice(data.as_ref())
+                .with_context(|| format!("Source map: {}: error parsing", &url))
+        })
 }
 
 /// Generate the specified output, if any.
@@ -204,7 +229,11 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     }
 
     // Extract the optional source mapping URL.
-    let sm_url = parse_magic_url(&parsed, MagicCommentKind::SourceMappingUrl)?;
+    let sm_url = if opt.input_source_map != InputSourceMap::Ignore {
+        parse_magic_url(&parsed, MagicCommentKind::SourceMappingUrl, opt)?
+    } else {
+        None
+    };
 
     // Convert to Juno AST.
     let ast = parsed.to_ast(&mut ctx, file_id).unwrap();
