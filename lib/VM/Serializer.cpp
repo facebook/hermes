@@ -56,26 +56,6 @@ Serializer::Serializer(
                    << "\n");                                              \
   relocationMap_[(void *)func] = currentId_++;
 
-  // Assign relocation id for native functions with template of one type
-  // function pointers.
-#define NATIVE_FUNCTION_TYPED(func, type)                                  \
-  assert(relocationMap_.count((void *)func<type>) == 0);                   \
-  relocationMap_[(void *)func<type>] = currentId_;                         \
-  LLVM_DEBUG(                                                              \
-      llvh::dbgs() << currentId_ << ", " << #func << "<" << #type << ">, " \
-                   << (void *)func<type> << "\n");                         \
-  currentId_++;
-
-  // Assign relocation id for native functions with template of two types.
-  // function pointers.
-#define NATIVE_FUNCTION_TYPED_2(func, type, type2)                             \
-  assert(relocationMap_.count((void *)func<type, type2>) == 0);                \
-  relocationMap_[(void *)func<type, type2>] = currentId_;                      \
-  LLVM_DEBUG(                                                                  \
-      llvh::dbgs() << currentId_ << ", " << #func << "<" << #type << ", "      \
-                   << #type2 << ">, " << ((void *)func<type, type2>) << "\n"); \
-  currentId_++;
-
   // Assign relocation id for all constructor function without template function
   // pointers.
   NativeConstructor::CreatorFunction *funcPtr;

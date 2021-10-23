@@ -117,22 +117,6 @@ void Deserializer::init(
       llvh::dbgs() << idx << ", " << #func << ", " << (void *)func << "\n"); \
   idx++;
 
-#define NATIVE_FUNCTION_TYPED(func, type)                           \
-  assert(!objectTable_[idx]);                                       \
-  objectTable_[idx] = (void *)func<type>;                           \
-  LLVM_DEBUG(                                                       \
-      llvh::dbgs() << idx << ", " << #func << "<" << #type << ">, " \
-                   << (void *)func<type> << "\n");                  \
-  idx++;
-
-#define NATIVE_FUNCTION_TYPED_2(func, type, type2)                           \
-  assert(!objectTable_[idx]);                                                \
-  objectTable_[idx] = (void *)func<type, type2>;                             \
-  LLVM_DEBUG(                                                                \
-      llvh::dbgs() << idx << ", " << #func << "<" << #type << ", " << #type2 \
-                   << ">, " << ((void *)func<type, type2>) << "\n");         \
-  idx++;
-
   NativeConstructor::CreatorFunction *funcPtr;
 #define NATIVE_CONSTRUCTOR(func)                                      \
   funcPtr = func;                                                     \

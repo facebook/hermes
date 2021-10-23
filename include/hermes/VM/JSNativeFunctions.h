@@ -18,12 +18,6 @@ namespace vm {
 
 #define NATIVE_FUNCTION(func) \
   CallResult<HermesValue> func(void *, Runtime *, NativeArgs);
-#define NATIVE_FUNCTION_TYPED(func, type) \
-  template <typename T>                   \
-  CallResult<HermesValue> func(void *, Runtime *, NativeArgs);
-#define NATIVE_FUNCTION_TYPED_2(func, type, type2) \
-  template <typename T, CellKind C>                \
-  CallResult<HermesValue> func(void *, Runtime *, NativeArgs);
 #include "hermes/VM/NativeFunctions.def"
 
 /// Get a human-readable name of a native function.

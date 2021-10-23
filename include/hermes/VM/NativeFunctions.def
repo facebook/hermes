@@ -16,14 +16,6 @@
 #define NATIVE_CONSTRUCTOR(func)
 #endif
 
-#ifndef NATIVE_FUNCTION_TYPED
-#define NATIVE_FUNCTION_TYPED(func, type)
-#endif
-
-#ifndef NATIVE_FUNCTION_TYPED_2
-#define NATIVE_FUNCTION_TYPED_2(func, type, type2)
-#endif
-
 NATIVE_FUNCTION(arrayBufferConstructor)
 NATIVE_FUNCTION(arrayBufferIsView)
 
@@ -436,5 +428,3 @@ NATIVE_FUNCTION(intlStringPrototypeToLocaleUpperCase)
 
 #undef NATIVE_FUNCTION
 #undef NATIVE_CONSTRUCTOR
-#undef NATIVE_FUNCTION_TYPED
-#undef NATIVE_FUNCTION_TYPED_2

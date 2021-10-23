@@ -31,45 +31,25 @@ constexpr uint8_t u8sizeof(const char (&str)[N]) {
   return N;
 }
 
-#define NATIVE_FUNCTION_STR(func) #func
-#define NATIVE_FUNCTION_TYPED_STR(func, type) #func "<" #type ">"
-#define NATIVE_FUNCTION_TYPED_2_STR(func, type, type2) \
-#func "<" #type ", " #type2 ">"
-#define NATIVE_CONSTRUCTOR_STR(func) #func
-
 static llvh::DenseMap<const void *, const char *> funcNames() {
   static constexpr uint8_t nameLengths[] = {
-#define NATIVE_FUNCTION(func) u8sizeof(NATIVE_FUNCTION_STR(func)),
-#define NATIVE_FUNCTION_TYPED(func, type) \
-  u8sizeof(NATIVE_FUNCTION_TYPED_STR(func, type)),
-#define NATIVE_FUNCTION_TYPED_2(func, type, type2) \
-  u8sizeof(NATIVE_FUNCTION_TYPED_2_STR(func, type, type2)),
-#define NATIVE_CONSTRUCTOR(func) u8sizeof(NATIVE_CONSTRUCTOR_STR(func)),
+#define NATIVE_FUNCTION(func) u8sizeof(#func),
+#define NATIVE_CONSTRUCTOR(func) u8sizeof(#func),
 #include "hermes/VM/NativeFunctions.def"
 #undef NATIVE_FUNCTION
-#undef NATIVE_FUNCTION_TYPED
-#undef NATIVE_FUNCTION_TYPED_2
 #undef NATIVE_CONSTRUCTOR
   };
 
   static constexpr char names[] = {
-#define NATIVE_FUNCTION(func) NATIVE_FUNCTION_STR(func) "\0"
-#define NATIVE_FUNCTION_TYPED(func, type) \
-  NATIVE_FUNCTION_TYPED_STR(func, type) "\0"
-#define NATIVE_FUNCTION_TYPED_2(func, type, type2) \
-  NATIVE_FUNCTION_TYPED_2_STR(func, type, type2) "\0"
-#define NATIVE_CONSTRUCTOR(func) NATIVE_CONSTRUCTOR_STR(func) "\0"
+#define NATIVE_FUNCTION(func) #func "\0"
+#define NATIVE_CONSTRUCTOR(func) #func "\0"
 #include "hermes/VM/NativeFunctions.def"
 #undef NATIVE_FUNCTION
-#undef NATIVE_FUNCTION_TYPED
-#undef NATIVE_FUNCTION_TYPED_2
 #undef NATIVE_CONSTRUCTOR
   };
 
   static const void *const functionPointers[] = {
 #define NATIVE_FUNCTION(func) (void *)func,
-#define NATIVE_FUNCTION_TYPED(func, type) (void *)func<type>,
-#define NATIVE_FUNCTION_TYPED_2(func, type, type2) (void *)func<type, type2>,
 
   // Creator functions are overloaded, we have to cast them to CreatorFunction *
   // first.
@@ -77,8 +57,6 @@ static llvh::DenseMap<const void *, const char *> funcNames() {
   (void *)(NativeConstructor::CreatorFunction *) func,
 #include "hermes/VM/NativeFunctions.def"
 #undef NATIVE_FUNCTION
-#undef NATIVE_FUNCTION_TYPED
-#undef NATIVE_FUNCTION_TYPED_2
 #undef NATIVE_CONSTRUCTOR
   };
 
