@@ -81,9 +81,7 @@ NATIVE_FUNCTION(dataViewPrototypeByteOffset)
 #undef TYPED_ARRAY
 #undef TYPED_ARRAY_NO_CLAMP
 
-#define TYPED_ARRAY(name, type) \
-  NATIVE_FUNCTION_TYPED_2(      \
-      typedArrayConstructor, type, CellKind::name##ArrayKind)
+#define TYPED_ARRAY(name, type) NATIVE_FUNCTION(name##ArrayConstructor)
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY
 

@@ -367,8 +367,10 @@ Handle<JSObject> createDataViewConstructor(Runtime *runtime);
 
 Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime);
 
-template <typename T, CellKind C>
-Handle<JSObject> createTypedArrayConstructor(Runtime *runtime);
+#define TYPED_ARRAY(name, type) \
+  Handle<JSObject> create##name##ArrayConstructor(Runtime *runtime);
+#include "hermes/VM/TypedArrays.def"
+#undef TYPED_ARRAY
 
 /// Create and initialize the global Set constructor. Populate the methods
 /// of Set.prototype.
