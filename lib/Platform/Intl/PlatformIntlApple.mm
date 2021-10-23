@@ -12,7 +12,9 @@
 namespace hermes {
 namespace platform_intl {
 namespace {
-std::u16string bestAvailableLocale(std::vector<std::u16string> &availableLocales, std::u16string &locale) {
+std::u16string bestAvailableLocale(
+    std::vector<std::u16string> &availableLocales,
+    std::u16string &locale) {
   // Implementer note: This method corresponds roughly to
   // https://tc39.es/ecma402/#sec-bestavailablelocale
   // 1. Let candidate be locale
@@ -22,7 +24,9 @@ std::u16string bestAvailableLocale(std::vector<std::u16string> &availableLocales
   while (true) {
     // a. If availableLocales contains an element equal to candidate, return
     // candidate.
-    if (std::find(availableLocales.begin(), availableLocales.end(), candidate) != availableLocales.end()) {
+    if (std::find(
+            availableLocales.begin(), availableLocales.end(), candidate) !=
+        availableLocales.end()) {
       return candidate;
     }
 
@@ -37,7 +41,7 @@ std::u16string bestAvailableLocale(std::vector<std::u16string> &availableLocales
 
     // c. If pos ≥ 2 and the character "-" occurs at index pos-2 of candidate,
     // decrease pos by 2.
-    if (pos >= 2 && candidate.at(pos-2) == '-') {
+    if (pos >= 2 && candidate.at(pos - 2) == '-') {
       pos -= 2;
     }
     // d. Let candidate be the substring of candidate from position 0,
@@ -80,7 +84,9 @@ std::u16string toNoExtensionsLocale(std::u16string &locale) {
 }
 // Implementer note: This method corresponds roughly to
 // https://tc39.es/ecma402/#sec-lookupmatcher
-std::u16string lookupMatcher(std::vector<std::u16string> &requestedLocales, std::vector<std::u16string> &availableLocales) {
+std::u16string lookupMatcher(
+    std::vector<std::u16string> &requestedLocales,
+    std::vector<std::u16string> &availableLocales) {
   // 1. Let result be a new Record.
   std::u16string result;
   // 2. For each element locale of requestedLocales, do
@@ -88,23 +94,25 @@ std::u16string lookupMatcher(std::vector<std::u16string> &requestedLocales, std:
     // a. Let noExtensionsLocale be the String value that is locale with
     // any Unicode locale extension sequences removed.
     std::u16string noExtensionsLocale = toNoExtensionsLocale(locale);
-    // b. Let availableLocale be BestAvailableLocale(availableLocales, noExtensionsLocale).
-    std::u16string availableLocale = bestAvailableLocale(availableLocales, noExtensionsLocale);
+    // b. Let availableLocale be BestAvailableLocale(availableLocales,
+    // noExtensionsLocale).
+    std::u16string availableLocale =
+        bestAvailableLocale(availableLocales, noExtensionsLocale);
     // c. If availableLocale is not undefined, then
     if (!availableLocale.empty()) {
       // i. Set result.[[locale]] to availableLocale.
       result = availableLocale;
       // ii. If locale and noExtensionsLocale are not the same String value,
-        if (locale != noExtensionsLocale) {
-            // then
-            // 1. Let extension be the String value consisting of the substring of the
-            // Unicode locale extension sequence within locale.
-            // 2. Set result.[[extension]] to extension.
-            // iii. Return result.
-            std::u16string extension = noExtensionsLocale;
-            result = extension;
-            return result;
-        }
+      if (locale != noExtensionsLocale) {
+        // then
+        // 1. Let extension be the String value consisting of the substring of
+        // the Unicode locale extension sequence within locale.
+        // 2. Set result.[[extension]] to extension.
+        // iii. Return result.
+        std::u16string extension = noExtensionsLocale;
+        result = extension;
+        return result;
+      }
     }
     // 3. Let defLocale be DefaultLocale().
     NSString *defLocale = [[NSLocale currentLocale] localeIdentifier];
@@ -116,17 +124,21 @@ std::u16string lookupMatcher(std::vector<std::u16string> &requestedLocales, std:
 // Implementer note: This method corresponds roughly to
 // https://402.ecma-international.org/7.0/#sec-lookupsupportedlocales
 std::vector<std::u16string> lookupSupportedLocales(
-    std::vector<std::u16string> &availableLocales, 
+    std::vector<std::u16string> &availableLocales,
     std::vector<std::u16string> &requestedLocales) {
   // 1. Let subset be a new empty List.
   std::vector<std::u16string> subset;
   // 2. For each element locale of requestedLocales in List order, do
-  for (std::u16string locale : requestedLocales){
-    // a. Let noExtensionsLocale be the String value that is locale with all Unicode locale extension sequences removed.
+  for (std::u16string locale : requestedLocales) {
+    // a. Let noExtensionsLocale be the String value that is locale with all
+    // Unicode locale extension sequences removed.
     std::u16string noExtensionsLocale = toNoExtensionsLocale(locale);
-    // b. Let availableLocale be BestAvailableLocale(availableLocales, noExtensionsLocale).
-    std::u16string availableLocale = bestAvailableLocale(availableLocales, noExtensionsLocale);
-    // c. If availableLocale is not undefined, append locale to the end of subset.
+    // b. Let availableLocale be BestAvailableLocale(availableLocales,
+    // noExtensionsLocale).
+    std::u16string availableLocale =
+        bestAvailableLocale(availableLocales, noExtensionsLocale);
+    // c. If availableLocale is not undefined, append locale to the end of
+    // subset.
     if (!availableLocale.empty()) {
       subset.push_back(locale);
     }
@@ -180,15 +192,16 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
 
   // 8. Let locale be BestAvailableLocale(availableLocales, noExtensionsLocale).
   // Convert to C++ array for bestAvailableLocale function
-    std::vector<std::u16string> availableLocalesVector;
-    for(id object in availableLocales) {
-        std::u16string u16StringFromVector = nsStringToU16String(object);
-        availableLocalesVector.push_back(u16StringFromVector);
-    }
-  std::u16string bestLocale = bestAvailableLocale(availableLocalesVector, noExtensionsLocale);
+  std::vector<std::u16string> availableLocalesVector;
+  for (id object in availableLocales) {
+    std::u16string u16StringFromVector = nsStringToU16String(object);
+    availableLocalesVector.push_back(u16StringFromVector);
+  }
+  std::u16string bestLocale =
+      bestAvailableLocale(availableLocalesVector, noExtensionsLocale);
   // 9. If locale is undefined, let locale be "und".
   if (bestLocale.empty()) {
-      bestLocale += u"";
+    bestLocale += u"";
   }
 
   // 10. Let cpList be a List containing in order the code points of S as
