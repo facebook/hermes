@@ -46,6 +46,8 @@ std::u16string bestAvailableLocale(std::u16string &locale, std::vector<std::u16s
   }
 }
 
+// Implementer note: For more information review
+// https://402.ecma-international.org/7.0/#sec-unicode-locale-extension-sequences
 std::u16string toNoExtensionsLocale(std::u16string &locale) {
   std::vector<std::u16string> subtags;
   size_t i = 0, j = 0;
@@ -75,6 +77,28 @@ std::u16string toNoExtensionsLocale(std::u16string &locale) {
   }
 
   return result;
+}
+
+// Implementer note: This method corresponds roughly to
+// https://402.ecma-international.org/7.0/#sec-lookupsupportedlocales
+std::vector<std::u16string> lookupSupportedLocales(
+    std::vector<std::u16string> &availableLocales, 
+    std::vector<std::u16string> &requestedLocales) {
+  // 1. Let subset be a new empty List.
+  std::vector<std::u16string> subset;
+  // 2. For each element locale of requestedLocales in List order, do
+  for (std::u16string locale : requestedLocales){
+    // a. Let noExtensionsLocale be the String value that is locale with all Unicode locale extension sequences removed.
+    std::u16string noExtensionsLocale = toNoExtensionsLocale(locale);
+    // b. Let availableLocale be BestAvailableLocale(availableLocales, noExtensionsLocale).
+    std::u16string availableLocale = bestAvailableLocale(availableLocale, noExtensionsLocale);
+    // c. If availableLocale is not undefined, append locale to the end of subset.
+    if (!availableLocale.empty()) {
+      subset.push_back(locale);
+    }
+  }
+  // 3. Return subset.
+  return subset;
 }
 }
 vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
