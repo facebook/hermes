@@ -73,11 +73,9 @@ NATIVE_FUNCTION(dataViewPrototypeBuffer)
 NATIVE_FUNCTION(dataViewPrototypeByteLength)
 NATIVE_FUNCTION(dataViewPrototypeByteOffset)
 
-// NATIVE_FUNCTION_TYPED for template with one type.
-// NATIVE_FUNCTION_TYPED_2 for template with two types.
-#define TYPED_ARRAY(name, type)                     \
-  NATIVE_FUNCTION_TYPED(dataViewPrototypeGet, type) \
-  NATIVE_FUNCTION_TYPED_2(dataViewPrototypeSet, type, CellKind::name##ArrayKind)
+#define TYPED_ARRAY(name, type)               \
+  NATIVE_FUNCTION(dataViewPrototypeGet##name) \
+  NATIVE_FUNCTION(dataViewPrototypeSet##name)
 #define TYPED_ARRAY_NO_CLAMP
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY

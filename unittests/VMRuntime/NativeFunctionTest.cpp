@@ -35,11 +35,9 @@ TEST(NativeFunctionNameTest, SmokeTest) {
 #ifdef HERMESVM_SERIALIZE
   EXPECT_STREQ("print", getFunctionName(print));
   EXPECT_STREQ(
-      "dataViewPrototypeGet<int8_t>",
-      getFunctionName(dataViewPrototypeGet<int8_t>));
+      "dataViewPrototypeGetInt8", getFunctionName(dataViewPrototypeGetInt8));
   EXPECT_STREQ(
-      "dataViewPrototypeSet<int8_t, CellKind::Int8ArrayKind>",
-      getFunctionName(dataViewPrototypeSet<int8_t, CellKind::Int8ArrayKind>));
+      "dataViewPrototypeSetInt8", getFunctionName(dataViewPrototypeSetInt8));
 
   using CreatorFunction = NativeConstructor::CreatorFunction;
   CreatorFunction *func = NativeConstructor::creatorFunction<JSError>;
