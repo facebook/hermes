@@ -23,8 +23,8 @@ print(`${'CAFÉ'.toLocaleLowerCase('en-NZ')}`);
 print(`${',̆'.toLocaleLowerCase('cs-CZ')}`);
 // CHECK-NEXT: ,̆
 
-print(`${''.toLocaleLowerCase('en-US')}`);
-// CHECK-NEXT: ""
+print(`${''.toLocaleLowerCase('en-US').length}`);
+// CHECK-NEXT: 0
 
 try {
     const wrongDataType = 26;
