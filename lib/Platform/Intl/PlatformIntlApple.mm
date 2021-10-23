@@ -22,7 +22,7 @@ std::u16string bestAvailableLocale(std::u16string &locale, std::vector<std::u16s
   while (true) {
     // a. If availableLocales contains an element equal to candidate, return
     // candidate.
-    if (std::find(availableLocales.begin(), availableLocales.end(), candidate) != candidate.end()) {
+    if (std::find(availableLocales.begin(), availableLocales.end(), candidate) != availableLocales.end()) {
       return candidate;
     }
 
