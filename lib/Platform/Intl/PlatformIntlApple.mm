@@ -14,7 +14,7 @@ namespace platform_intl {
 namespace {
 std::u16string bestAvailableLocale(std::u16string &locale, std::vector<std::u16string> &availableLocales) {
   // Implementer note: This method corresponds roughly to
-  // https://tc39.es/ecma402/#sec-bestavailablelocale}
+  // https://tc39.es/ecma402/#sec-bestavailablelocale
   // 1. Let candidate be locale
   std::u16string candidate = locale;
 
@@ -22,7 +22,7 @@ std::u16string bestAvailableLocale(std::u16string &locale, std::vector<std::u16s
   while (true) {
     // a. If availableLocales contains an element equal to candidate, return
     // candidate.
-    if (std::find(availableLocales.begin(), availableLocales.end(), candidate) != seen.end()) {
+    if (std::find(availableLocales.begin(), availableLocales.end(), candidate) != candidate.end()) {
       return candidate;
     }
 
@@ -51,7 +51,7 @@ std::u16string bestAvailableLocale(std::u16string &locale, std::vector<std::u16s
 std::u16string toNoExtensionsLocale(std::u16string &locale) {
   std::vector<std::u16string> subtags;
   size_t i = 0, j = 0;
-  while (i < locales.size()) {
+  while (i < locale.size()) {
     if (locale.at(i) == '-') {
       subtags.push_back(locale.substr(j, i));
       j = i + 1;
@@ -91,7 +91,7 @@ std::vector<std::u16string> lookupSupportedLocales(
     // a. Let noExtensionsLocale be the String value that is locale with all Unicode locale extension sequences removed.
     std::u16string noExtensionsLocale = toNoExtensionsLocale(locale);
     // b. Let availableLocale be BestAvailableLocale(availableLocales, noExtensionsLocale).
-    std::u16string availableLocale = bestAvailableLocale(availableLocale, noExtensionsLocale);
+    std::u16string availableLocale = bestAvailableLocale(noExtensionsLocale, availableLocales);
     // c. If availableLocale is not undefined, append locale to the end of subset.
     if (!availableLocale.empty()) {
       subset.push_back(locale);
@@ -145,12 +145,16 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
   NSArray<NSString *> *availableLocales = [NSLocale availableLocaleIdentifiers];
 
   // 8. Let locale be BestAvailableLocale(availableLocales, noExtensionsLocale).
-  NSString *NSBestLocale = u16StringToNSString(noExtensionsLocale);
-  // No matching function for call to 'bestAvailableLocale'???
-  auto *bestLocale = bestAvailableLocale(availableLocales, NSBestLocale);
+  // Convert to C++ array for bestAvailableLocale function
+    std::vector<std::u16string> availableLocalesVector;
+    for(id object in availableLocales) {
+        std::u16string u16StringFromVector = nsStringToU16String(object);
+        availableLocalesVector.push_back(u16StringFromVector);
+    }
+  std::u16string bestLocale = bestAvailableLocale(noExtensionsLocale, availableLocalesVector);
   // 9. If locale is undefined, let locale be "und".
-  if (bestLocale == nil) {
-    bestLocale = @"und";
+  if (bestLocale.empty()) {
+      bestLocale += u"";
   }
 
   // 10. Let cpList be a List containing in order the code points of S as
