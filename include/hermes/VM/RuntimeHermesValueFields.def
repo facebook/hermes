@@ -84,10 +84,6 @@ RUNTIME_HV_FIELD_INSTANCE(thrownValue_)
 RUNTIME_HV_FIELD_INSTANCE(debuggerInternalObject_)
 #endif // HERMES_ENABLE_DEBUGGER
 
-#ifdef HERMESVM_SERIALIZE
-RUNTIME_HV_FIELD_INSTANCE(serializeClosure)
-#endif
-
 #ifdef HERMES_ENABLE_INTL
 // TODO T65916424: move these out of Runtime
 RUNTIME_HV_FIELD_INSTANCE(intlCollator)

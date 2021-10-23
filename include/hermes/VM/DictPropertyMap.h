@@ -157,12 +157,6 @@ class DictPropertyMap final
 
  public:
   using size_type = uint32_t;
-#ifdef HERMESVM_SERIALIZE
-  /// Fast constructor used by deserializer.
-  DictPropertyMap(Deserializer &d, size_type capacity, size_type hashCapacity);
-  friend void DictPropertyMapSerialize(Serializer &s, const GCCell *cell);
-  friend void DictPropertyMapDeserialize(Deserializer &d, CellKind kind);
-#endif
 
   using DescriptorPair = std::pair<GCSymbolID, NamedPropertyDescriptor>;
 

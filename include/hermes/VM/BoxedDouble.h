@@ -24,13 +24,6 @@ class BoxedDouble final : public GCCell {
   double value_;
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  explicit BoxedDouble(Deserializer &d);
-
-  friend void BoxedDoubleSerialize(Serializer &s, const GCCell *cell);
-  friend void BoxedDoubleDeserialize(Deserializer &d, CellKind kind);
-#endif
-
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::BoxedDoubleKind;
   }

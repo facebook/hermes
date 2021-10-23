@@ -374,26 +374,6 @@ class GenGC final : public GCBase {
   /// objects exist, their sizes, and what they point to.
   virtual void createSnapshot(llvh::raw_ostream &os) override;
 
-#ifdef HERMESVM_SERIALIZE
-  /// Serialize WeakRefs.
-  virtual void serializeWeakRefs(Serializer &s) override;
-
-  /// Deserialize WeakRefs.
-  virtual void deserializeWeakRefs(Deserializer &d) override;
-
-  /// Serialize heap objects.
-  virtual void serializeHeap(Serializer &s) override;
-
-  /// Deserialize heap objects.
-  virtual void deserializeHeap(Deserializer &d) override;
-
-  /// See GCBase documentation for this function.
-  virtual void deserializeStart() override;
-
-  /// See GCBase documentation for this function.
-  virtual void deserializeEnd() override;
-#endif
-
   /// Returns the number of bytes allocated allocated since the last GC.
   gcheapsize_t bytesAllocatedSinceLastGC() const override;
 

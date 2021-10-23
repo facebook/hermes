@@ -25,7 +25,6 @@
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/HeapSnapshot.h"
 #include "hermes/VM/HermesValue.h"
-#include "hermes/VM/SerializeHeader.h"
 #include "hermes/VM/SlotAcceptor.h"
 #include "hermes/VM/SlotVisitor.h"
 #include "hermes/VM/SmallHermesValue.h"
@@ -61,10 +60,6 @@ class JSWeakMapImpl;
 using JSWeakMap = JSWeakMapImpl<CellKind::WeakMapKind>;
 
 class GCCell;
-#ifdef HERMESVM_SERIALIZE
-class Serializer;
-class Deserializer;
-#endif
 
 /// This is a single slot in the weak reference table. It contains a pointer to
 /// a GC managed object. The GC will make sure it is updated when the object is
@@ -161,18 +156,6 @@ class WeakRefSlot {
     assert(state() == Unmarked && "initial state should be unmarked");
   }
 
-#ifdef HERMESVM_SERIALIZE
-  // Deserialization methods.
-  WeakRefSlot() : tagged_{nullptr} {}
-  // RelocationKind::NativePointer is kind of a misnomer: it really refers
-  // to the kind of pointer - a raw pointer, as opposed to HermesValue or
-  // GCPointer - not the type of the pointee (in this case, a GCCell).
-  static constexpr RelocationKind kRelocKind = RelocationKind::NativePointer;
-  void *deserializeAddr() {
-    return &tagged_;
-  }
-#endif // HERMESVM_SERIALIZE
-
  private:
   /// Tagged pointer to either a GCCell or another WeakRefSlot (if the slot has
   /// been freed for reuse). Typed as char* to simplify tagging/untagging.
@@ -260,14 +243,6 @@ class WeakRefSlot {
     assert(state() == Unmarked && "initial state should be unmarked");
   }
 
-#ifdef HERMESVM_SERIALIZE
-  // Deserialization methods.
-  WeakRefSlot() : value_{HermesValue::encodeEmptyValue()}, state_{Unmarked} {}
-  static constexpr RelocationKind kRelocKind = RelocationKind::HermesValue;
-  void *deserializeAddr() {
-    return &value_;
-  }
-#endif // HERMESVM_SERIALIZE
  private:
   // value_ and state_ are read and written by different threads. We rely on
   // them being independent words so that they can be used without
@@ -642,11 +617,6 @@ class GCBase {
     /// Flush the current fragment and write all flushed fragments to \p snap.
     void addSamplesToSnapshot(HeapSnapshot &snap);
 
-#ifdef HERMESVM_SERIALIZE
-    void serialize(Serializer &s) const;
-    void deserialize(Deserializer &d);
-#endif
-
    private:
     /// Flush out heap profiler data to the callback after a new kFlushThreshold
     /// bytes are allocated.
@@ -875,14 +845,6 @@ class GCBase {
     /// Get the current last ID. All other existing IDs are less than or equal
     /// to this one.
     HeapSnapshot::NodeID lastID() const;
-
-#ifdef HERMESVM_SERIALIZE
-    /// Serialize this IDTracker to the output stream.
-    void serialize(Serializer &s) const;
-
-    /// Deserialize IDTracker from the MemoryBuffer.
-    void deserialize(Deserializer &d);
-#endif
 
     /// Get the next unique native ID for a chunk of native memory.
     /// NOTE: public to get assigned native ids without needing to reserve in
@@ -1204,31 +1166,6 @@ class GCBase {
   /// trace to \p os. After this call, any remembered data about sampled objects
   /// will be gone.
   virtual void disableSamplingHeapProfiler(llvh::raw_ostream &os);
-
-#ifdef HERMESVM_SERIALIZE
-  /// Serialize WeakRefs.
-  virtual void serializeWeakRefs(Serializer &s) = 0;
-
-  /// Deserialize WeakRefs
-  virtual void deserializeWeakRefs(Deserializer &d) = 0;
-
-  /// Serialze all heap objects to a stream.
-  virtual void serializeHeap(Serializer &s) = 0;
-
-  /// Deserialize heap objects.
-  virtual void deserializeHeap(Deserializer &d) = 0;
-
-  /// Signal GC we are deserializing. Switch to oldgen if necessary for GenGC
-  /// Otherwise do nothing.
-  virtual void deserializeStart() {
-    deserializeInProgress_ = true;
-  }
-
-  /// Signal GC we are serializing. Switch to youngGen if necessary
-  virtual void deserializeEnd() {
-    deserializeInProgress_ = false;
-  }
-#endif
 
   /// Default implementations for the external memory credit/debit APIs: do
   /// nothing.
@@ -1733,12 +1670,6 @@ class GCBase {
 
   /// Attaches stack-traces to objects when enabled.
   SamplingAllocationLocationTracker samplingAllocationTracker_;
-
-#ifdef HERMESVM_SERIALIZE
-  /// If true, then the runtime is currently deserializing heap data structures
-  /// from a file. Don't run any garbage collections.
-  bool deserializeInProgress_{false};
-#endif
 
 #ifndef NDEBUG
   /// The number of reasons why no allocation is allowed in this heap right

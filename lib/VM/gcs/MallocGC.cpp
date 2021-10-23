@@ -588,32 +588,6 @@ void MallocGC::createSnapshot(llvh::raw_ostream &os) {
   GCBase::createSnapshot(this, os);
 }
 
-#ifdef HERMESVM_SERIALIZE
-void MallocGC::serializeWeakRefs(Serializer &s) {
-  hermes_fatal("serializeWeakRefs not implemented for current GC");
-}
-
-void MallocGC::deserializeWeakRefs(Deserializer &d) {
-  hermes_fatal("deserializeWeakRefs not implemented for current GC");
-}
-
-void MallocGC::serializeHeap(Serializer &s) {
-  hermes_fatal("serializeHeap not implemented for current GC");
-}
-
-void MallocGC::deserializeHeap(Deserializer &d) {
-  hermes_fatal("serializeHeap not implemented for current GC");
-}
-
-void MallocGC::deserializeStart() {
-  hermes_fatal("Serialization/Deserialization not allowed with MallocGC");
-}
-
-void MallocGC::deserializeEnd() {
-  hermes_fatal("Serialization/Deserialization not allowed with MallocGC");
-}
-#endif
-
 /// @name Forward instantiations
 /// @{
 

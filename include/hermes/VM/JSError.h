@@ -42,12 +42,6 @@ using StackTracePtr = std::unique_ptr<StackTrace>;
 /// Error Object.
 class JSError final : public JSObject {
  public:
-#ifdef HERMESVM_SERIALIZE
-  JSError(Deserializer &d);
-
-  friend void ErrorSerialize(Serializer &s, const GCCell *cell);
-#endif
-
   using Super = JSObject;
   static const ObjectVTable vt;
   static bool classof(const GCCell *cell) {

@@ -24,12 +24,6 @@ class PropertyAccessor final : public GCCell {
         getter(runtime, *getter, &runtime->getHeap()),
         setter(runtime, *setter, &runtime->getHeap()) {}
 
-#ifdef HERMESVM_SERIALIZE
-  /// Fast constructor used by deserialization. Don't do any GC allocation. Only
-  /// calls super Constructor.
-  PropertyAccessor(Deserializer &d);
-#endif
-
   static const VTable vt;
 
   static bool classof(const GCCell *cell) {

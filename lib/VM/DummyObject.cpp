@@ -7,12 +7,10 @@
 
 #include "hermes/VM/DummyObject.h"
 
-#include "hermes/VM/Deserializer.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HermesValue-inline.h"
-#include "hermes/VM/Serializer.h"
 
 namespace hermes {
 namespace vm {
@@ -98,16 +96,6 @@ void DummyObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("HermesNull", &self->hvNull);
   mb.addField("other", &self->other);
 }
-
-#ifdef HERMESVM_SERIALIZE
-void DummyObjectSerialize(Serializer &s, const GCCell *cell) {
-  llvm_unreachable("DummyObject cannot be serialized.");
-}
-
-void DummyObjectDeserialize(Deserializer &d, CellKind kind) {
-  llvm_unreachable("DummyObject cannot be deserialized.");
-}
-#endif
 
 } // namespace vm
 } // namespace hermes

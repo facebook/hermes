@@ -563,10 +563,6 @@ class HiddenClass final : public GCCell {
   static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
   static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 
-#ifdef HERMESVM_SERIALIZE
-  friend void HiddenClassSerialize(Serializer &s, const GCCell *cell);
-  friend void HiddenClassDeserialize(Deserializer &d, CellKind kind);
-#endif
  private:
   /// The symbol that was added when transitioning to this hidden class.
   const GCSymbolID symbolID_;

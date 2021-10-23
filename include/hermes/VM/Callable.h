@@ -33,11 +33,6 @@ class Environment final
   AtomicIfConcurrentGC<uint32_t> size_;
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  friend void EnvironmentSerialize(Serializer &s, const GCCell *cell);
-  friend void EnvironmentDeserialize(Deserializer &d, CellKind kind);
-#endif
-
   static const VTable vt;
 
   static bool classof(const GCCell *cell) {
@@ -97,14 +92,6 @@ class Environment final
         &runtime->getHeap());
   }
 
-#ifdef HERMESVM_SERIALIZE
-  /// Fast constructor used by Deserializer, do not take \p parentEnvironment as
-  /// an argument. Don't initialize slots.
-  Environment(Runtime *runtime, uint32_t size)
-      : VariableSizeRuntimeCell(&runtime->getHeap(), &vt, allocationSize(size)),
-        size_(size) {}
-#endif
-
  private:
   /// \return a pointer to the array of HermesValue.
   GCHermesValue *getSlots() {
@@ -143,16 +130,6 @@ class Callable : public JSObject {
   GCPointer<Environment> environment_{};
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  /// Fast constructor used by deserializer.
-  Callable(Deserializer &d, const VTable *vt);
-
-  friend void serializeCallableImpl(
-      Serializer &s,
-      const GCCell *cell,
-      unsigned overlapSlots);
-#endif
-
   static bool classof(const GCCell *cell) {
     return kindInRange(
         cell->getKind(),
@@ -410,13 +387,6 @@ class BoundFunction final : public Callable {
   }
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  explicit BoundFunction(Deserializer &d);
-
-  friend void BoundFunctionSerialize(Serializer &s, const GCCell *cell);
-  friend void BoundFunctionDeserialize(Deserializer &d, CellKind kind);
-#endif
-
   BoundFunction(
       Runtime *runtime,
       Handle<JSObject> parent,
@@ -467,20 +437,6 @@ class NativeFunction : public Callable {
 #endif
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  NativeFunction(
-      Deserializer &d,
-      const VTable *vt,
-      void *context,
-      NativeFunctionPtr functionPtr);
-
-  static void serializeNativeFunctionImpl(
-      Serializer &s,
-      const GCCell *cell,
-      unsigned overlapSlots);
-  friend void NativeFunctionSerialize(Serializer &s, const GCCell *cell);
-#endif
-
   using Super = Callable;
   static const CallableVTable vt;
 
@@ -735,17 +691,6 @@ class NativeConstructor final : public NativeFunction {
   static CallResult<PseudoHandle<JSObject>>
   creatorFunction(Runtime *runtime, Handle<JSObject> prototype, void *context);
 
-#ifdef HERMESVM_SERIALIZE
-  NativeConstructor(
-      Deserializer &d,
-      void *context,
-      NativeFunctionPtr functionPtr,
-      CellKind targetKind,
-      CreatorFunction *creatorFunction);
-
-  friend void NativeConstructorSerialize(Serializer &s, const GCCell *cell);
-#endif
-
   static const CallableVTable vt;
 
   static bool classof(const GCCell *cell) {
@@ -898,16 +843,6 @@ class JSFunction : public Callable {
   GCPointer<Domain> domain_;
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  JSFunction(Deserializer &d, const VTable *vt);
-
-  friend void serializeFunctionImpl(
-      Serializer &s,
-      const GCCell *cell,
-      unsigned overlapSlots);
-  friend void FunctionDeserialize(Deserializer &d, CellKind kind);
-#endif
-
   JSFunction(
       Runtime *runtime,
       const VTable *vtp,
@@ -1044,12 +979,6 @@ class JSAsyncFunction final : public JSFunction {
     return cell->getKind() == CellKind::AsyncFunctionKind;
   }
 
-#ifdef HERMESVM_SERIALIZE
-  explicit JSAsyncFunction(Deserializer &d);
-
-  friend void AsyncFunctionDeserialize(Deserializer &d, CellKind kind);
-#endif
-
   JSAsyncFunction(
       Runtime *runtime,
       const VTable *vtp,
@@ -1119,12 +1048,6 @@ class JSGeneratorFunction final : public JSFunction {
   }
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  explicit JSGeneratorFunction(Deserializer &d);
-
-  friend void GeneratorFunctionDeserialize(Deserializer &d, CellKind kind);
-#endif
-
   JSGeneratorFunction(
       Runtime *runtime,
       const VTable *vtp,
@@ -1288,15 +1211,6 @@ class GeneratorInnerFunction final : public JSFunction {
   }
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  explicit GeneratorInnerFunction(Deserializer &d);
-
-  friend void GeneratorInnerFunctionSerialize(
-      Serializer &s,
-      const GCCell *cell);
-  friend void GeneratorInnerFunctionDeserialize(Deserializer &d, CellKind kind);
-#endif
-
   GeneratorInnerFunction(
       Runtime *runtime,
       Handle<Domain> domain,

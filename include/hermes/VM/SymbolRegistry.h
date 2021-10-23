@@ -72,12 +72,6 @@ class SymbolRegistry {
   bool hasSymbol(SymbolID symbol) const {
     return registeredSymbols_.find(symbol) != registeredSymbols_.end();
   }
-
-#ifdef HERMESVM_SERIALIZE
-  void serialize(Serializer &s);
-
-  void deserialize(Deserializer &d);
-#endif
 };
 
 } // namespace vm

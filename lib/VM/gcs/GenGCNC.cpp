@@ -18,12 +18,10 @@
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 #include "hermes/VM/CompactionResult-inline.h"
 #include "hermes/VM/CompleteMarkState-inline.h"
-#include "hermes/VM/Deserializer.h"
 #include "hermes/VM/ExpectedPageSize.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/HeapSnapshot.h"
 #include "hermes/VM/JSWeakMapImpl.h"
-#include "hermes/VM/Serializer.h"
 #include "hermes/VM/SmallHermesValue-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/SweepResultNC.h"
@@ -1329,113 +1327,6 @@ void GenGC::createSnapshot(llvh::raw_ostream &os) {
   checkWellFormedHeap();
 #endif
 }
-
-#ifdef HERMESVM_SERIALIZE
-void GenGC::serializeWeakRefs(Serializer &s) {
-  int numWeakRefSlots = weakSlots_.size();
-  s.writeInt<uint32_t>(numWeakRefSlots);
-  for (auto &slot : weakSlots_) {
-    // Serialize WeakRefSlot slot.
-    auto state = slot.state();
-    s.writeInt<uint32_t>(state);
-    // Should not be serializing in the middle of GC.
-    assert(state != WeakSlotState::Marked && "marked state would be lost");
-    if (state != WeakSlotState::Free) {
-      assert(state == WeakSlotState::Unmarked);
-      if (WeakRefSlot::kRelocKind == RelocationKind::HermesValue) {
-        s.writeHermesValue(
-            slot.hasValue() ? slot.value() : HermesValue::encodeEmptyValue());
-      } else {
-        s.writeRelocation(slot.getPointer());
-      }
-    }
-    // Call endObject() for slot because another free WeakSlot may have a
-    // pointer to &slot.
-    s.endObject(&slot);
-  }
-}
-
-void GenGC::deserializeWeakRefs(Deserializer &d) {
-  if (weakSlots_.size() != 0) {
-    hermes_fatal(
-        "must deserialize WeakRefs before there are weak refs in heap");
-  }
-
-  uint32_t numWeakRefSlots = d.readInt<uint32_t>();
-  weakSlots_.resize(numWeakRefSlots);
-  for (auto &slot : weakSlots_) {
-    // Deserialize this WeakRefSlot.
-    auto state = d.readInt<uint32_t>();
-    if (state == WeakSlotState::Free) {
-      freeWeakSlot(&slot);
-    } else {
-      assert(state == WeakSlotState::Unmarked);
-      if (WeakRefSlot::kRelocKind == RelocationKind::HermesValue) {
-        d.readHermesValue(
-            reinterpret_cast<HermesValue *>(slot.deserializeAddr()));
-      } else {
-        d.readRelocation(slot.deserializeAddr(), WeakRefSlot::kRelocKind);
-      }
-    }
-    d.endObject(&slot);
-  }
-}
-
-#undef DEBUG_TYPE
-#define DEBUG_TYPE "serialize"
-void GenGC::serializeHeap(Serializer &s) {
-  // We need to yield/claim at outer scope, to cover the calls to
-  // forUsedSegments below.
-  AllocContextYieldThenClaim yielder(this);
-  // We'll say we're in GC even though we're not, to avoid assertion failures.
-  GCCycle cycle{this};
-
-  auto serializeObject = [&s](const GCCell *cell) {
-    LLVM_DEBUG(
-        llvh::dbgs() << "Heap Serialize Cell " << cellKindStr(cell->getKind())
-                     << ", id " << cell->getDebugAllocationId() << "\n");
-    s.writeInt<uint8_t>((uint8_t)cell->getKind());
-    s.serializeCell(cell);
-  };
-
-  oldGen_.forAllObjs(serializeObject);
-
-  // Write a 255 at the end to signal that we finish serializing heap objects.
-  s.writeInt<uint8_t>(255);
-}
-
-void GenGC::deserializeHeap(Deserializer &d) {
-  uint8_t kind;
-  while ((kind = d.readInt<uint8_t>()) != 255) {
-    LLVM_DEBUG(
-        llvh::dbgs() << "Heap Deserialize Cell " << cellKindStr((CellKind)kind)
-                     << "\n");
-    d.deserializeCell(kind);
-  }
-}
-#undef DEBUG_TYPE
-#define DEBUG_TYPE "gc"
-void GenGC::deserializeStart() {
-  GCBase::deserializeStart();
-  // First, yield the allocation context, so the heap is well-formed.
-  yieldAllocContext();
-
-  allocContextFromYG_ = false;
-  claimAllocContext();
-}
-
-void GenGC::deserializeEnd() {
-  // First, yield the allocation context, so the heap is well-formed.
-  yieldAllocContext();
-  // If we were doing direct OG allocation, the card object boundaries
-  // will not be valid.  Recreate it.
-  oldGen_.recreateCardTableBoundaries();
-  // Now switch to doing YG alloc, and claim the alloc context from the YG.
-  allocContextFromYG_ = true;
-  claimAllocContext();
-  GCBase::deserializeEnd();
-}
-#endif
 
 void GenGC::printStats(JSONEmitter &json) {
   GCBase::printStats(json);
