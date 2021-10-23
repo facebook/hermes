@@ -12,40 +12,69 @@
 namespace hermes {
 namespace platform_intl {
 namespace {
-NSString *bestAvailableLocale(NSString *locale, NSArray *availableLocales) {
+std::u16string bestAvailableLocale(std::u16string &locale, std::vector<std::u16string> &availableLocales) {
   // Implementer note: This method corresponds roughly to
   // https://tc39.es/ecma402/#sec-bestavailablelocale}
   // 1. Let candidate be locale
-  NSString *candidate = locale;
+  std::u16string candidate = locale;
 
   // 2. Repeat
   while (true) {
     // a. If availableLocales contains an element equal to candidate, return
     // candidate.
-    if ([availableLocales containsObject:candidate]) {
+    if (std::find(availableLocales.begin(), availableLocales.end(), candidate) != seen.end()) {
       return candidate;
     }
 
     // b. Let pos be the character index of the last occurrence of "-" (U+002D)
     // within candidate.
-    NSUInteger pos =
-        [candidate rangeOfString:@"-" options:NSBackwardsSearch].location;
+    size_t pos = candidate.find(u"-", 0);
+
     // ...If that character does not occur, return undefined.
-    if (pos < 0ul) {
-      return @"";
+    if (pos < 0) {
+      return u"";
     }
 
     // c. If pos ≥ 2 and the character "-" occurs at index pos-2 of candidate,
     // decrease pos by 2.
-    if (pos >= 2ul &&
-        [@"-" isEqualToString:[candidate substringWithRange:NSMakeRange(
-                                                                pos - 2, 1)]]) {
+    if (pos >= 2 && candidate.at(pos-2) == '-') {
       pos -= 2;
     }
     // d. Let candidate be the substring of candidate from position 0,
     // inclusive, to position pos, exclusive.
-    candidate = [candidate substringToIndex:pos];
+    candidate = candidate.substr(0, pos);
   }
+}
+
+std::u16string toNoExtensionsLocale(std::u16string &locale) {
+  std::vector<std::u16string> subtags;
+  size_t i = 0, j = 0;
+  while (i < locales.size()) {
+    if (locale.at(i) == '-') {
+      subtags.push_back(locale.substr(j, i));
+      j = i + 1;
+    }
+    i++;
+  }
+
+  std::u16string result;
+  size_t size = subtags.size();
+  if (size > 0) {
+    result.append(subtags.at(0));
+  }
+  for (size_t s = 1; s < size; s++) {
+    // If next tag is a private marker and there are remaining tags
+    if (subtags.at(s) != u"u" && s < size - 1) {
+      // Skip those tags until you reach end or another singleton subtag
+      while (s < size - 1 && subtags.at(s + 1).size() > 1) {
+        s++;
+      }
+    } else {
+      result.append(subtags.at(s));
+    }
+  }
+
+  return result;
 }
 }
 vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
@@ -83,7 +112,7 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
   }
   // 6. Let noExtensionsLocale be the String value that is requestedLocale with
   // any Unicode locale extension sequences (6.2.1) removed.
-  // TODO
+  std::u16string noExtensionsLocale = toNoExtensionsLocale(requestedLocale);
 
   // 7. Let availableLocales be a List with language tags that includes the
   // languages for which the Unicode Character Database contains language
@@ -92,7 +121,7 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
   NSArray<NSString *> *availableLocales = [NSLocale availableLocaleIdentifiers];
 
   // 8. Let locale be BestAvailableLocale(availableLocales, noExtensionsLocale).
-  NSString *NSBestLocale = u16StringToNSString(requestedLocale);
+  NSString *NSBestLocale = u16StringToNSString(noExtensionsLocale);
   // No matching function for call to 'bestAvailableLocale'???
   auto *bestLocale = bestAvailableLocale(availableLocales, NSBestLocale);
   // 9. If locale is undefined, let locale be "und".
