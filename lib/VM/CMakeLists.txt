@@ -12,7 +12,6 @@ set(source_files
   CellKind.cpp
   CheckHeapWellFormedAcceptor.cpp
   CodeBlock.cpp
-  Deserializer.cpp
   DictPropertyMap.cpp
   Domain.cpp
   DummyObject.cpp
@@ -55,7 +54,6 @@ set(source_files
   Profiler/CodeCoverageProfiler.cpp
   Profiler/InlineCacheProfiler.cpp
   Profiler/SamplingProfilerPosix.cpp
-  Serializer.cpp
   SegmentedArray.cpp
   SerializedLiteralParser.cpp
   SingleObject.cpp
