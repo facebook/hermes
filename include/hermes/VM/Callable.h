@@ -733,11 +733,7 @@ class NativeConstructor final : public NativeFunction {
   /// types to CallResult<PseudoHandle<JSObject>>.
   template <class NativeClass>
   static CallResult<PseudoHandle<JSObject>>
-  creatorFunction(Runtime *runtime, Handle<JSObject> prototype, void *context) {
-    (void)context;
-    return toCallResultPseudoHandleJSObject(
-        NativeClass::create(runtime, prototype));
-  }
+  creatorFunction(Runtime *runtime, Handle<JSObject> prototype, void *context);
 
 #ifdef HERMESVM_SERIALIZE
   NativeConstructor(
@@ -886,33 +882,6 @@ class NativeConstructor final : public NativeFunction {
       Handle<Callable> selfHandle,
       Runtime *runtime);
 #endif
-
-  template <class From>
-  static CallResult<PseudoHandle<JSObject>> toCallResultPseudoHandleJSObject(
-      PseudoHandle<From> &&other) {
-    return PseudoHandle<JSObject>{std::move(other)};
-  }
-
-  template <class From>
-  static CallResult<PseudoHandle<JSObject>> toCallResultPseudoHandleJSObject(
-      CallResult<PseudoHandle<From>> &&other) {
-    return std::move(other);
-  }
-
-  template <class From>
-  static CallResult<PseudoHandle<JSObject>> toCallResultPseudoHandleJSObject(
-      CallResult<Handle<From>> other) {
-    if (LLVM_UNLIKELY(other == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    return PseudoHandle<JSObject>{*other};
-  }
-
-  template <class From>
-  static CallResult<PseudoHandle<JSObject>> toCallResultPseudoHandleJSObject(
-      Handle<From> other) {
-    return PseudoHandle<JSObject>{other};
-  }
 };
 
 /// An interpreted callable function with environment.

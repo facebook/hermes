@@ -32,7 +32,6 @@ TEST_F(NativeFunctionTest, AdditionalSlots) {
 }
 
 TEST(NativeFunctionNameTest, SmokeTest) {
-#ifdef HERMESVM_SERIALIZE
   EXPECT_STREQ("print", getFunctionName(print));
   EXPECT_STREQ(
       "dataViewPrototypeGetInt8", getFunctionName(dataViewPrototypeGetInt8));
@@ -48,6 +47,5 @@ TEST(NativeFunctionNameTest, SmokeTest) {
       JSTypedArray<int16_t, CellKind::Int16ArrayKind>>;
   EXPECT_STREQ(
       "NativeConstructor::creatorFunction<Int16Array>", getFunctionName(func));
-#endif
 }
 } // namespace

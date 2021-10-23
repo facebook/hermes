@@ -9,8 +9,16 @@
 
 #include "hermes/VM/ArrayLike.h"
 #include "hermes/VM/BuildMetadata.h"
+#include "hermes/VM/JSDataView.h"
+#include "hermes/VM/JSDate.h"
+#include "hermes/VM/JSError.h"
+#include "hermes/VM/JSMapImpl.h"
 #include "hermes/VM/JSNativeFunctions.h"
 #include "hermes/VM/JSProxy.h"
+#include "hermes/VM/JSRegExp.h"
+#include "hermes/VM/JSTypedArray.h"
+#include "hermes/VM/JSWeakMapImpl.h"
+#include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/SmallXString.h"
 #include "hermes/VM/StackFrame-inline.h"
@@ -1052,6 +1060,48 @@ CallResult<PseudoHandle<JSObject>> NativeFunction::_newObjectImpl(
 
 //===----------------------------------------------------------------------===//
 // class NativeConstructor
+
+template <class From>
+static CallResult<PseudoHandle<JSObject>> toCallResultPseudoHandleJSObject(
+    PseudoHandle<From> &&other) {
+  return PseudoHandle<JSObject>{std::move(other)};
+}
+
+template <class From>
+static CallResult<PseudoHandle<JSObject>> toCallResultPseudoHandleJSObject(
+    CallResult<PseudoHandle<From>> &&other) {
+  return std::move(other);
+}
+
+template <class From>
+static CallResult<PseudoHandle<JSObject>> toCallResultPseudoHandleJSObject(
+    CallResult<Handle<From>> other) {
+  if (LLVM_UNLIKELY(other == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return PseudoHandle<JSObject>{*other};
+}
+
+template <class From>
+static CallResult<PseudoHandle<JSObject>> toCallResultPseudoHandleJSObject(
+    Handle<From> other) {
+  return PseudoHandle<JSObject>{other};
+}
+
+template <class NativeClass>
+CallResult<PseudoHandle<JSObject>> NativeConstructor::creatorFunction(
+    Runtime *runtime,
+    Handle<JSObject> prototype,
+    void *) {
+  return toCallResultPseudoHandleJSObject(
+      NativeClass::create(runtime, prototype));
+}
+
+#define NATIVE_CONSTRUCTOR(fun)                    \
+  template CallResult<PseudoHandle<JSObject>> fun( \
+      Runtime *, Handle<JSObject>, void *);
+#include "hermes/VM/NativeFunctions.def"
+#undef NATIVE_CONSTRUCTOR
 
 const CallableVTable NativeConstructor::vt{
     {
