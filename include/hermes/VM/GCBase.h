@@ -79,92 +79,6 @@ class WeakRefSlot {
     reset(v);
   }
 
-#if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
-  /// Tagged pointer implementation. Only supports HermesValues with object tag.
-
-  bool hasValue() const {
-    return hasPointer();
-  }
-
-  /// Return the object as a HermesValue.
-  const HermesValue value() const {
-    assert(
-        (state() == Unmarked || state() == Marked) && "unclean GC mark state");
-    assert(hasPointer() && "tried to access collected referent");
-    return HermesValue::encodeObjectValue(getPointer());
-  }
-
-  // GC methods to update slot when referent moves/dies.
-
-  /// Return the pointer to a GCCell, whether or not this slot is marked.
-  void *getPointer() const {
-    assert(state() != Free && "use nextFree instead");
-    return tagged_ - state();
-  }
-
-  /// Update the stored pointer (because the object moved).
-  void setPointer(void *newPtr) {
-    assert(state() != Free && "tried to update unallocated slot");
-    tagged_ = (char *)newPtr + (ptrdiff_t)state();
-  }
-
-  /// Clear the pointer (because the object died).
-  void clearPointer() {
-    tagged_ = (char *)state();
-  }
-
-  // GC methods to recycle slots.
-
-  /// Return true if this slot stores a non-null pointer to something. For any
-  /// slot reachable by the mutator, that something is a GCCell.
-  bool hasPointer() const {
-    assert(state() != Free && "Should never query a free WeakRef");
-    return reinterpret_cast<uintptr_t>(tagged_) > Free;
-  }
-
-  State state() const {
-    return static_cast<State>((reinterpret_cast<uintptr_t>(tagged_) & 3));
-  }
-
-  void mark() LLVM_NO_SANITIZE("pointer-overflow") {
-    assert(state() == Unmarked && "already marked");
-    tagged_ += Marked;
-  }
-
-  void unmark() LLVM_NO_SANITIZE("pointer-overflow") {
-    assert(state() == Marked && "not yet marked");
-    tagged_ -= Marked;
-  }
-
-  void free(WeakRefSlot *nextFree) LLVM_NO_SANITIZE("pointer-overflow") {
-    assert(state() == Unmarked && "cannot free a reachable slot");
-    tagged_ = (char *)nextFree;
-    tagged_ += Free;
-    assert(state() == Free);
-  }
-
-  WeakRefSlot *nextFree() const LLVM_NO_SANITIZE("pointer-overflow") {
-    assert(state() == Free);
-    return (WeakRefSlot *)(tagged_ - Free);
-  }
-
-  /// Re-initialize a freed slot.
-  void reset(HermesValue v) {
-    assert(v.isObject() && "Weak ref must be to object");
-    static_assert(Unmarked == 0, "unmarked state should not need tagging");
-    tagged_ = (char *)v.getObject();
-    assert(state() == Unmarked && "initial state should be unmarked");
-  }
-
- private:
-  /// Tagged pointer to either a GCCell or another WeakRefSlot (if the slot has
-  /// been freed for reuse). Typed as char* to simplify tagging/untagging.
-  /// The low two bits encode the integer value of the state.
-  char *tagged_;
-
-#else
-  /// HermesValue implementation. Supports any value as referent.
-
   bool hasValue() const {
     // An empty value means the pointer has been cleared, and a native value
     // means it is free.
@@ -249,7 +163,7 @@ class WeakRefSlot {
   // synchronization.
   PinnedHermesValue value_;
   State state_;
-#endif
+
   // End of split between tagged pointer/HermesValue implementations.
 };
 using WeakSlotState = WeakRefSlot::State;
