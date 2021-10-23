@@ -12,7 +12,7 @@
 namespace hermes {
 namespace platform_intl {
 namespace {
-std::u16string bestAvailableLocale(std::u16string &locale, std::vector<std::u16string> &availableLocales) {
+std::u16string bestAvailableLocale(std::vector<std::u16string> &availableLocales, std::u16string &locale) {
   // Implementer note: This method corresponds roughly to
   // https://tc39.es/ecma402/#sec-bestavailablelocale
   // 1. Let candidate be locale
@@ -89,7 +89,7 @@ std::u16string lookupMatcher(std::vector<std::u16string> &requestedLocales, std:
     // any Unicode locale extension sequences removed.
     std::u16string noExtensionsLocale = toNoExtensionsLocale(locale);
     // b. Let availableLocale be BestAvailableLocale(availableLocales, noExtensionsLocale).
-    std::u16string availableLocale = bestAvailableLocale(noExtensionsLocale, availableLocales);
+    std::u16string availableLocale = bestAvailableLocale(availableLocales, noExtensionsLocale);
     // c. If availableLocale is not undefined, then
     if (!availableLocale.empty()) {
       // i. Set result.[[locale]] to availableLocale.
@@ -125,7 +125,7 @@ std::vector<std::u16string> lookupSupportedLocales(
     // a. Let noExtensionsLocale be the String value that is locale with all Unicode locale extension sequences removed.
     std::u16string noExtensionsLocale = toNoExtensionsLocale(locale);
     // b. Let availableLocale be BestAvailableLocale(availableLocales, noExtensionsLocale).
-    std::u16string availableLocale = bestAvailableLocale(noExtensionsLocale, availableLocales);
+    std::u16string availableLocale = bestAvailableLocale(availableLocales, noExtensionsLocale);
     // c. If availableLocale is not undefined, append locale to the end of subset.
     if (!availableLocale.empty()) {
       subset.push_back(locale);
@@ -185,7 +185,7 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
         std::u16string u16StringFromVector = nsStringToU16String(object);
         availableLocalesVector.push_back(u16StringFromVector);
     }
-  std::u16string bestLocale = bestAvailableLocale(noExtensionsLocale, availableLocalesVector);
+  std::u16string bestLocale = bestAvailableLocale(availableLocalesVector, noExtensionsLocale);
   // 9. If locale is undefined, let locale be "und".
   if (bestLocale.empty()) {
       bestLocale += u"";
