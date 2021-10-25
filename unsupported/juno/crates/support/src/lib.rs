@@ -7,6 +7,8 @@
 
 mod nullbuf;
 pub use nullbuf::NullTerminatedBuf;
+mod timer;
+pub use timer::Timer;
 
 #[macro_use]
 #[allow(unused_macros)]

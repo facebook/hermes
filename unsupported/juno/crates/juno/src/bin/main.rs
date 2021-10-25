@@ -16,8 +16,8 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use structopt::{clap::arg_enum, clap::AppSettings, clap::ArgGroup, StructOpt};
-use support::fetchurl;
 use support::NullTerminatedBuf;
+use support::{fetchurl, Timer};
 use url::{self, Url};
 
 #[derive(StructOpt, Debug)]
@@ -218,11 +218,11 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     let buf = ctx.sm().source_buffer_rc(file_id);
 
     // Start measuring time.
-    let start_time = std::time::Instant::now();
+    let mut timer = Timer::new();
 
     // Parse.
     let parsed = hparser::ParsedJS::parse(Default::default(), &buf);
-    let parse_time = start_time.elapsed();
+    timer.mark("Parse");
     if let Some(e) = parsed.first_error() {
         ctx.sm().error(SourceRange::from_loc(file_id, e.0), e.1);
         return Ok(TransformStatus::Error);
@@ -237,7 +237,7 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
 
     // Convert to Juno AST.
     let ast = parsed.to_ast(&mut ctx, file_id).unwrap();
-    let cvt_time = start_time.elapsed();
+    timer.mark("Cvt");
 
     // We don't need the original parser anymore.
     drop(parsed);
@@ -246,26 +246,17 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     let source_map = sm_url.map(load_source_map).transpose()?;
 
     // Generate output.
-    let generated = gen_output(opt, &ctx, ast, &source_map)?;
-    let gen_time = if generated {
-        start_time.elapsed()
-    } else {
-        cvt_time
-    };
+    if gen_output(opt, &ctx, ast, &source_map)? {
+        timer.mark("Gen");
+    }
 
     // Drop the AST. We are doing it explicitly just to measure the time.
     drop(ctx);
-    let drop_time = start_time.elapsed();
+    timer.mark("Drop");
 
     // Optionally print elapsed times.
     if opt.xtime {
-        println!("Parse: {:?}", parse_time);
-        println!("Cvt  : {:?}", cvt_time - parse_time);
-        if generated {
-            println!("Gen  : {:?}", gen_time - cvt_time);
-        }
-        println!("Drop : {:?}", drop_time - gen_time);
-        println!("Total: {:?}", drop_time);
+        print!("{:#}", timer);
     }
 
     Ok(TransformStatus::Success)
