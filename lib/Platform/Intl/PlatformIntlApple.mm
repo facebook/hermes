@@ -12,11 +12,11 @@
 namespace hermes {
 namespace platform_intl {
 namespace {
-std::u16string bestAvailableLocale(
-    std::vector<std::u16string> &availableLocales,
-    std::u16string &locale) {
-  // Implementer note: This method corresponds roughly to
-  // https://tc39.es/ecma402/#sec-bestavailablelocale
+// Implementer note: This method corresponds roughly to
+// https://tc39.es/ecma402/#sec-bestavailablelocale
+llvh::Optional<std::u16string> bestAvailableLocale(
+    const std::vector<std::u16string> &availableLocales,
+    const std::u16string &locale) {
   // 1. Let candidate be locale
   std::u16string candidate = locale;
 
@@ -36,7 +36,7 @@ std::u16string bestAvailableLocale(
 
     // ...If that character does not occur, return undefined.
     if (pos < 0) {
-      return u"";
+      return;
     }
 
     // c. If pos ≥ 2 and the character "-" occurs at index pos-2 of candidate,
@@ -96,12 +96,12 @@ std::u16string lookupMatcher(
     std::u16string noExtensionsLocale = toNoExtensionsLocale(locale);
     // b. Let availableLocale be BestAvailableLocale(availableLocales,
     // noExtensionsLocale).
-    std::u16string availableLocale =
+    llvm::Optional<std::u16string> availableLocale =
         bestAvailableLocale(availableLocales, noExtensionsLocale);
     // c. If availableLocale is not undefined, then
-    if (!availableLocale.empty()) {
+    if (!availableLocale.hasValue()) {
       // i. Set result.[[locale]] to availableLocale.
-      result = availableLocale;
+      result = availableLocale.getValue();
       // ii. If locale and noExtensionsLocale are not the same String value,
       if (locale != noExtensionsLocale) {
         // then
@@ -135,11 +135,11 @@ std::vector<std::u16string> lookupSupportedLocales(
     std::u16string noExtensionsLocale = toNoExtensionsLocale(locale);
     // b. Let availableLocale be BestAvailableLocale(availableLocales,
     // noExtensionsLocale).
-    std::u16string availableLocale =
+    llvm::Optional<std::u16string> availableLocale =
         bestAvailableLocale(availableLocales, noExtensionsLocale);
     // c. If availableLocale is not undefined, append locale to the end of
     // subset.
-    if (!availableLocale.empty()) {
+    if (availableLocale.hasValue()) {
       subset.push_back(locale);
     }
   }
@@ -197,11 +197,11 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
     std::u16string u16StringFromVector = nsStringToU16String(object);
     availableLocalesVector.push_back(u16StringFromVector);
   }
-  std::u16string bestLocale =
+  llvm::Optional<std::u16string> locale =
       bestAvailableLocale(availableLocalesVector, noExtensionsLocale);
   // 9. If locale is undefined, let locale be "und".
-  if (bestLocale.empty()) {
-    bestLocale += u"";
+  if (!locale.hasValue() || locale.empty()) {
+    locale = u"und";
   }
 
   // 10. Let cpList be a List containing in order the code points of S as
@@ -214,7 +214,7 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
   // cuList and locale.
   // 12. Let L be a String whose elements are the UTF-16 Encoding (defined in
   // es2022, 6.1.4) of the code points of cuList.
-  NSString *L = u16StringToNSString(bestLocale);
+  NSString *L = u16StringToNSString(locale.getValue());
   // 13. Return L.
   return nsStringToU16String([nsStr
       lowercaseStringWithLocale:[[NSLocale alloc] initWithLocaleIdentifier:L]]);
