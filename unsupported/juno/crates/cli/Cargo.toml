@@ -1,16 +1,18 @@
 [package]
-name = "juno"
+name = "cli"
 version = "0.1.0"
 authors = ["Facebook"]
 edition = "2018"
 license = "MIT"
 
-[dependencies]
-hermes = { path = "../hermes" }
-support = { path = "../support" }
-thiserror = "1.0"
-sourcemap = "6.0"
+[[bin]]
+name = "juno"
+path = "src/main.rs"
 
-[dev-dependencies]
-assert_cmd = "0.12"
-toml = "=0.5.7"
+[dependencies]
+support = { path = "../support" }
+juno = { path = "../juno" }
+structopt = "0.3"
+anyhow = "1.0"
+url = "2.2.2"
+sourcemap = "6.0"
