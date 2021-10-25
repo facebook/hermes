@@ -10,9 +10,6 @@
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HermesValue-inline.h"
 
-#include "llvh/Support/Debug.h"
-#define DEBUG_TYPE "serialize"
-
 namespace hermes {
 namespace vm {
 
@@ -36,31 +33,6 @@ void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.setVTable(&SegmentedArray::Segment::vt);
   mb.addArray("data", self->data_, &self->length_, sizeof(GCHermesValue));
 }
-
-#ifdef HERMESVM_SERIALIZE
-SegmentedArray::Segment::Segment(Deserializer &d)
-    : GCCell(&d.getRuntime()->getHeap(), &vt) {
-  length_.store(d.readInt<uint32_t>(), std::memory_order_release);
-  for (uint32_t i = 0; i < length(); i++) {
-    d.readHermesValue(&data_[i]);
-  }
-}
-
-void SegmentSerialize(Serializer &s, const GCCell *cell) {
-  auto *self = vmcast<const SegmentedArray::Segment>(cell);
-  s.writeInt<uint32_t>(self->length());
-  for (uint32_t i = 0; i < self->length(); i++) {
-    s.writeHermesValue(self->data_[i]);
-  }
-  s.endObject(cell);
-}
-
-void SegmentDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::SegmentKind && "Expected Segment");
-  auto *cell = d.getRuntime()->makeAFixed<SegmentedArray::Segment>(d);
-  d.endObject(cell);
-}
-#endif
 
 PseudoHandle<SegmentedArray::Segment> SegmentedArray::Segment::create(
     Runtime *runtime) {
@@ -112,37 +84,6 @@ void SegmentedArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       &self->numSlotsUsed_,
       sizeof(GCHermesValue));
 }
-
-#ifdef HERMESVM_SERIALIZE
-void SegmentedArraySerialize(Serializer &s, const GCCell *cell) {
-  auto *self = vmcast<const SegmentedArray>(cell);
-  s.writeInt<SegmentedArray::size_type>(self->slotCapacity());
-  s.writeInt<SegmentedArray::size_type>(
-      self->numSlotsUsed_.load(std::memory_order_relaxed));
-
-  for (uint32_t i = 0; i < self->numSlotsUsed_.load(std::memory_order_relaxed);
-       i++) {
-    s.writeHermesValue(self->at(i));
-  }
-
-  s.endObject(cell);
-}
-
-void SegmentedArrayDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::SegmentedArrayKind && "Expected SegmentedArray");
-  SegmentedArray::size_type slotCapacity =
-      d.readInt<SegmentedArray::size_type>();
-  SegmentedArray::size_type numSlotsUsed =
-      d.readInt<SegmentedArray::size_type>();
-  const auto allocSize = SegmentedArray::allocationSizeForSlots(slotCapacity);
-  SegmentedArray *cell = d.getRuntime()->makeAVariable<SegmentedArray>(
-      allocSize, d.getRuntime(), allocSize, numSlotsUsed);
-  for (auto it = cell->begin(); it != cell->end(); ++it) {
-    d.readHermesValue(&*it);
-  }
-  d.endObject(cell);
-}
-#endif
 
 CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::create(
     Runtime *runtime,
@@ -536,5 +477,3 @@ gcheapsize_t SegmentedArray::_trimSizeCallback(const GCCell *cell) {
 
 } // namespace vm
 } // namespace hermes
-
-#undef DEBUG_TYPE

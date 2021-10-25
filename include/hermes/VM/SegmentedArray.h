@@ -81,13 +81,6 @@ class SegmentedArray final
     /// the segment with empty values.
     void setLength(Runtime *runtime, uint32_t newLength);
 
-#ifdef HERMESVM_SERIALIZE
-    explicit Segment(Deserializer &d);
-
-    friend void SegmentSerialize(Serializer &s, const GCCell *cell);
-    friend void SegmentDeserialize(Deserializer &d, CellKind kind);
-#endif
-
     friend void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
    private:
@@ -233,13 +226,6 @@ class SegmentedArray final
   };
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  friend void SegmentSerialize(Serializer &s, const GCCell *cell);
-  friend void SegmentDeserialize(Deserializer &d, CellKind kind);
-  friend void SegmentedArraySerialize(Serializer &s, const GCCell *cell);
-  friend void SegmentedArrayDeserialize(Deserializer &d, CellKind kind);
-#endif
-
   static constexpr size_type maxElements();
 
   /// Creates a new SegmentedArray that has space for at least the requested \p
@@ -376,13 +362,6 @@ class SegmentedArray final
       : VariableSizeRuntimeCell(&runtime->getHeap(), &vt, allocSize),
         numSlotsUsed_(0) {}
 
-#ifdef HERMESVM_SERIALIZE
-  /// Constructor used during deserialization. Allows number of used slots to be
-  /// initialized to a non-zero value.
-  SegmentedArray(Runtime *runtime, uint32_t allocSize, size_type numSlotsUsed)
-      : VariableSizeRuntimeCell(&runtime->getHeap(), &vt, allocSize),
-        numSlotsUsed_(numSlotsUsed) {}
-#endif
  private:
   /// Throws a RangeError with a descriptive message describing the attempted
   /// capacity allocated, and the max that is allowed.

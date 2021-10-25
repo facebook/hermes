@@ -69,50 +69,6 @@ void ObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   }
 }
 
-#ifdef HERMESVM_SERIALIZE
-void JSObject::serializeObjectImpl(
-    Serializer &s,
-    const GCCell *cell,
-    unsigned overlapSlots) {
-  auto *self = vmcast<const JSObject>(cell);
-  s.writeData(&self->flags_, sizeof(ObjectFlags));
-  s.writeRelocation(self->parent_.get(s.getRuntime()));
-  s.writeRelocation(self->clazz_.get(s.getRuntime()));
-  s.writeRelocation(self->propStorage_.get(s.getRuntime()));
-
-  // Record the number of overlap slots, so that the deserialization code
-  // doesn't need to keep track of it.
-  s.writeInt<uint8_t>(overlapSlots);
-  for (size_t i = overlapSlots; i < JSObject::DIRECT_PROPERTY_SLOTS; i++) {
-    s.writeSmallHermesValue(self->directProps()[i]);
-  }
-}
-
-void ObjectSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSObject>());
-  s.endObject(cell);
-}
-
-void ObjectDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::ObjectKind && "Expected JSObject");
-  auto *obj = d.getRuntime()->makeAFixed<JSObject>(d, &JSObject::vt.base);
-  d.endObject(obj);
-}
-
-JSObject::JSObject(Deserializer &d, const VTable *vtp)
-    : GCCell(&d.getRuntime()->getHeap(), vtp) {
-  d.readData(&flags_, sizeof(ObjectFlags));
-  d.readRelocation(&parent_, RelocationKind::GCPointer);
-  d.readRelocation(&clazz_, RelocationKind::GCPointer);
-  d.readRelocation(&propStorage_, RelocationKind::GCPointer);
-
-  auto overlapSlots = d.readInt<uint8_t>();
-  for (size_t i = overlapSlots; i < JSObject::DIRECT_PROPERTY_SLOTS; i++) {
-    d.readSmallHermesValue(&directProps()[i]);
-  }
-}
-#endif
-
 PseudoHandle<JSObject> JSObject::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {

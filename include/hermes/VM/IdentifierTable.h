@@ -201,12 +201,6 @@ class IdentifierTable {
       Runtime *runtime,
       Handle<StringPrimitive> desc);
 
-#ifdef HERMESVM_SERIALIZE
-  void serialize(Serializer &s);
-
-  void deserialize(Deserializer &d);
-#endif
-
  private:
   /// Entry in the lookup vector. An entry can represent 5 different types:
   /// 1. A lazy ASCII identifier: asciiPtr_ will be set to a pointer to
@@ -357,12 +351,6 @@ class IdentifierTable {
     uint32_t getHash() const {
       return hash_;
     }
-
-#ifdef HERMESVM_SERIALIZE
-    void serialize(Serializer &s);
-
-    void deserialize(Deserializer &d);
-#endif
   };
 
   /// A vector that expands its capacity less aggressively.

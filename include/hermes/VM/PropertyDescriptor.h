@@ -10,8 +10,6 @@
 
 #include <cstdint>
 
-#include "hermes/VM/Deserializer.h"
-
 namespace hermes {
 namespace vm {
 
@@ -71,13 +69,6 @@ struct PropertyFlags {
   PropertyFlags() {
     _flags = 0;
   }
-
-#ifdef HERMESVM_SERIALIZE
-  /// Fast constructor used by Deserializer. Read data from the stream directly.
-  PropertyFlags(Deserializer &d) {
-    d.readData(&_flags, sizeof(PropertyFlags));
-  }
-#endif
 
   void clear() {
     _flags = 0;

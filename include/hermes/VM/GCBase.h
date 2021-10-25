@@ -25,7 +25,6 @@
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/HeapSnapshot.h"
 #include "hermes/VM/HermesValue.h"
-#include "hermes/VM/SerializeHeader.h"
 #include "hermes/VM/SlotAcceptor.h"
 #include "hermes/VM/SlotVisitor.h"
 #include "hermes/VM/SmallHermesValue.h"
@@ -61,10 +60,6 @@ class JSWeakMapImpl;
 using JSWeakMap = JSWeakMapImpl<CellKind::WeakMapKind>;
 
 class GCCell;
-#ifdef HERMESVM_SERIALIZE
-class Serializer;
-class Deserializer;
-#endif
 
 /// This is a single slot in the weak reference table. It contains a pointer to
 /// a GC managed object. The GC will make sure it is updated when the object is
@@ -83,104 +78,6 @@ class WeakRefSlot {
   WeakRefSlot(HermesValue v) {
     reset(v);
   }
-
-#if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
-  /// Tagged pointer implementation. Only supports HermesValues with object tag.
-
-  bool hasValue() const {
-    return hasPointer();
-  }
-
-  /// Return the object as a HermesValue.
-  const HermesValue value() const {
-    assert(
-        (state() == Unmarked || state() == Marked) && "unclean GC mark state");
-    assert(hasPointer() && "tried to access collected referent");
-    return HermesValue::encodeObjectValue(getPointer());
-  }
-
-  // GC methods to update slot when referent moves/dies.
-
-  /// Return the pointer to a GCCell, whether or not this slot is marked.
-  void *getPointer() const {
-    assert(state() != Free && "use nextFree instead");
-    return tagged_ - state();
-  }
-
-  /// Update the stored pointer (because the object moved).
-  void setPointer(void *newPtr) {
-    assert(state() != Free && "tried to update unallocated slot");
-    tagged_ = (char *)newPtr + (ptrdiff_t)state();
-  }
-
-  /// Clear the pointer (because the object died).
-  void clearPointer() {
-    tagged_ = (char *)state();
-  }
-
-  // GC methods to recycle slots.
-
-  /// Return true if this slot stores a non-null pointer to something. For any
-  /// slot reachable by the mutator, that something is a GCCell.
-  bool hasPointer() const {
-    assert(state() != Free && "Should never query a free WeakRef");
-    return reinterpret_cast<uintptr_t>(tagged_) > Free;
-  }
-
-  State state() const {
-    return static_cast<State>((reinterpret_cast<uintptr_t>(tagged_) & 3));
-  }
-
-  void mark() LLVM_NO_SANITIZE("pointer-overflow") {
-    assert(state() == Unmarked && "already marked");
-    tagged_ += Marked;
-  }
-
-  void unmark() LLVM_NO_SANITIZE("pointer-overflow") {
-    assert(state() == Marked && "not yet marked");
-    tagged_ -= Marked;
-  }
-
-  void free(WeakRefSlot *nextFree) LLVM_NO_SANITIZE("pointer-overflow") {
-    assert(state() == Unmarked && "cannot free a reachable slot");
-    tagged_ = (char *)nextFree;
-    tagged_ += Free;
-    assert(state() == Free);
-  }
-
-  WeakRefSlot *nextFree() const LLVM_NO_SANITIZE("pointer-overflow") {
-    assert(state() == Free);
-    return (WeakRefSlot *)(tagged_ - Free);
-  }
-
-  /// Re-initialize a freed slot.
-  void reset(HermesValue v) {
-    assert(v.isObject() && "Weak ref must be to object");
-    static_assert(Unmarked == 0, "unmarked state should not need tagging");
-    tagged_ = (char *)v.getObject();
-    assert(state() == Unmarked && "initial state should be unmarked");
-  }
-
-#ifdef HERMESVM_SERIALIZE
-  // Deserialization methods.
-  WeakRefSlot() : tagged_{nullptr} {}
-  // RelocationKind::NativePointer is kind of a misnomer: it really refers
-  // to the kind of pointer - a raw pointer, as opposed to HermesValue or
-  // GCPointer - not the type of the pointee (in this case, a GCCell).
-  static constexpr RelocationKind kRelocKind = RelocationKind::NativePointer;
-  void *deserializeAddr() {
-    return &tagged_;
-  }
-#endif // HERMESVM_SERIALIZE
-
- private:
-  /// Tagged pointer to either a GCCell or another WeakRefSlot (if the slot has
-  /// been freed for reuse). Typed as char* to simplify tagging/untagging.
-  /// The low two bits encode the integer value of the state.
-  char *tagged_;
-
-#else
-  /// HermesValue implementation. Supports any value as referent.
 
   bool hasValue() const {
     // An empty value means the pointer has been cleared, and a native value
@@ -260,21 +157,13 @@ class WeakRefSlot {
     assert(state() == Unmarked && "initial state should be unmarked");
   }
 
-#ifdef HERMESVM_SERIALIZE
-  // Deserialization methods.
-  WeakRefSlot() : value_{HermesValue::encodeEmptyValue()}, state_{Unmarked} {}
-  static constexpr RelocationKind kRelocKind = RelocationKind::HermesValue;
-  void *deserializeAddr() {
-    return &value_;
-  }
-#endif // HERMESVM_SERIALIZE
  private:
   // value_ and state_ are read and written by different threads. We rely on
   // them being independent words so that they can be used without
   // synchronization.
   PinnedHermesValue value_;
   State state_;
-#endif
+
   // End of split between tagged pointer/HermesValue implementations.
 };
 using WeakSlotState = WeakRefSlot::State;
@@ -642,11 +531,6 @@ class GCBase {
     /// Flush the current fragment and write all flushed fragments to \p snap.
     void addSamplesToSnapshot(HeapSnapshot &snap);
 
-#ifdef HERMESVM_SERIALIZE
-    void serialize(Serializer &s) const;
-    void deserialize(Deserializer &d);
-#endif
-
    private:
     /// Flush out heap profiler data to the callback after a new kFlushThreshold
     /// bytes are allocated.
@@ -875,14 +759,6 @@ class GCBase {
     /// Get the current last ID. All other existing IDs are less than or equal
     /// to this one.
     HeapSnapshot::NodeID lastID() const;
-
-#ifdef HERMESVM_SERIALIZE
-    /// Serialize this IDTracker to the output stream.
-    void serialize(Serializer &s) const;
-
-    /// Deserialize IDTracker from the MemoryBuffer.
-    void deserialize(Deserializer &d);
-#endif
 
     /// Get the next unique native ID for a chunk of native memory.
     /// NOTE: public to get assigned native ids without needing to reserve in
@@ -1204,31 +1080,6 @@ class GCBase {
   /// trace to \p os. After this call, any remembered data about sampled objects
   /// will be gone.
   virtual void disableSamplingHeapProfiler(llvh::raw_ostream &os);
-
-#ifdef HERMESVM_SERIALIZE
-  /// Serialize WeakRefs.
-  virtual void serializeWeakRefs(Serializer &s) = 0;
-
-  /// Deserialize WeakRefs
-  virtual void deserializeWeakRefs(Deserializer &d) = 0;
-
-  /// Serialze all heap objects to a stream.
-  virtual void serializeHeap(Serializer &s) = 0;
-
-  /// Deserialize heap objects.
-  virtual void deserializeHeap(Deserializer &d) = 0;
-
-  /// Signal GC we are deserializing. Switch to oldgen if necessary for GenGC
-  /// Otherwise do nothing.
-  virtual void deserializeStart() {
-    deserializeInProgress_ = true;
-  }
-
-  /// Signal GC we are serializing. Switch to youngGen if necessary
-  virtual void deserializeEnd() {
-    deserializeInProgress_ = false;
-  }
-#endif
 
   /// Default implementations for the external memory credit/debit APIs: do
   /// nothing.
@@ -1733,12 +1584,6 @@ class GCBase {
 
   /// Attaches stack-traces to objects when enabled.
   SamplingAllocationLocationTracker samplingAllocationTracker_;
-
-#ifdef HERMESVM_SERIALIZE
-  /// If true, then the runtime is currently deserializing heap data structures
-  /// from a file. Don't run any garbage collections.
-  bool deserializeInProgress_{false};
-#endif
 
 #ifndef NDEBUG
   /// The number of reasons why no allocation is allowed in this heap right

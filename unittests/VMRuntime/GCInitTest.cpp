@@ -18,7 +18,6 @@ using namespace hermes::vm;
 // and only in dbg, where we can set the test page size.
 
 #ifndef NDEBUG
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 
 namespace {
 
@@ -61,5 +60,4 @@ INSTANTIATE_TEST_CASE_P(
 
 } // namespace
 
-#endif
 #endif

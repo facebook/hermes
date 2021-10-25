@@ -119,9 +119,6 @@ set(HERMESVM_PROFILER_JSFUNCTION OFF CACHE BOOL
 set(HERMESVM_PROFILER_NATIVECALL OFF CACHE BOOL
   "Enable native call profiling in hermes VM")
 
-set(HERMESVM_SERIALIZE OFF CACHE BOOL
-  "Enable heap serialization and deserialization")
-
 CHECK_CXX_SOURCE_COMPILES(
         "int main() { void *p = &&label; goto *p; label: return 0; }"
         HAVE_COMPUTED_GOTO)
@@ -335,9 +332,6 @@ endif()
 if(HERMESVM_PROFILER_NATIVECALL)
     add_definitions(-DHERMESVM_PROFILER_NATIVECALL)
     set(HERMES_PROFILER_MODE_IN_LIT_TEST "EXTERN")
-endif()
-if(HERMESVM_SERIALIZE)
-  add_definitions(-DHERMESVM_SERIALIZE)
 endif()
 if(HERMESVM_INDIRECT_THREADING)
     add_definitions(-DHERMESVM_INDIRECT_THREADING)
@@ -678,7 +672,6 @@ if(HERMES_ENABLE_TEST_SUITE)
     exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
     node_hermes_enabled_flag=${HERMES_BUILD_NODE_HERMES}
     node-hermes=${HERMES_TOOLS_OUTPUT_DIR}/node-hermes
-    serialize_enabled=${HERMESVM_SERIALIZE}
     profiler=${HERMES_PROFILER_MODE_IN_LIT_TEST}
     gc=${HERMESVM_GCKIND}
     ubsan=${HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER}

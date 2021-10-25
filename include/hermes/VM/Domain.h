@@ -105,13 +105,6 @@ class Domain final : public GCCell {
   OptValue<uint32_t> cjsEntryModuleID_;
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  /// Fast constructor used by Deserializer. Do not do heap allocation.
-  Domain(Deserializer &d);
-
-  friend void DomainSerialize(Serializer &s, const GCCell *cell);
-#endif
-
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::DomainKind;
   }
@@ -281,12 +274,6 @@ class RequireContext final : public JSObject {
   static StringPrimitive *getDirname(Runtime *runtime, RequireContext *self) {
     return self->dirname_.get(runtime);
   }
-
-#ifdef HERMESVM_SERIALIZE
-  explicit RequireContext(Deserializer &d);
-
-  friend void RequireContextDeserialize(Deserializer &d, CellKind kind);
-#endif
 
   RequireContext(
       Runtime *runtime,

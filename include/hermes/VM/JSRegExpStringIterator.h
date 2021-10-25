@@ -42,13 +42,6 @@ class JSRegExpStringIterator : public JSObject {
       Runtime *runtime);
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  explicit JSRegExpStringIterator(Deserializer &d);
-
-  friend void RegExpStringIteratorSerialize(Serializer &s, const GCCell *cell);
-  friend void RegExpStringIteratorDeserialize(Deserializer &d, CellKind kind);
-#endif
-
   JSRegExpStringIterator(
       Runtime *runtime,
       Handle<JSObject> parent,

@@ -108,14 +108,6 @@ class DecoratedObject : public JSObject {
   static void _finalizeImpl(GCCell *cell, GC *);
   static size_t _mallocSizeImpl(GCCell *cell);
 
- public:
-#ifdef HERMESVM_SERIALIZE
-  explicit DecoratedObject(Deserializer &d);
-
-  friend void DecoratedObjectSerialize(Serializer &s, const GCCell *cell);
-  friend void DecoratedObjectDeserialize(Deserializer &d, CellKind kind);
-#endif
-
  private:
   std::unique_ptr<Decoration> decoration_;
 };

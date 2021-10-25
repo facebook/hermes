@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
-#ifndef NDEBUG
+#ifndef HERMESVM_GC_MALLOC
 
 #include "gtest/gtest.h"
 
@@ -14,8 +13,8 @@
 #include "TestHelpers.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/OSCompat.h"
+#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GC.h"
-#include "hermes/VM/GenGCHeapSegment.h"
 #include "hermes/VM/LimitedStorageProvider.h"
 #include "hermes/VM/PointerBase.h"
 
@@ -25,25 +24,16 @@ using namespace hermes;
 using namespace hermes::vm;
 
 namespace {
-struct GCLazySegmentNCTest : public ::testing::Test {
-  ~GCLazySegmentNCTest() {
-    oscompat::unset_test_vm_allocate_limit();
-  }
-};
+struct GCLazySegmentNCTest : public ::testing::Test {};
 
 using GCLazySegmentNCDeathTest = GCLazySegmentNCTest;
 
-constexpr size_t kHeapSizeHint =
-    GenGCHeapSegment::maxSize() * GenGC::kYoungGenFractionDenom;
+using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
 
+constexpr size_t kHeapSizeHint = AlignedHeapSegment::maxSize() * 10;
 const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
-
-constexpr size_t kHeapVA =
-    AlignedStorage::size() * (GenGC::kYoungGenFractionDenom);
-
+constexpr size_t kHeapVA = AlignedStorage::size() * 10;
 constexpr size_t kHeapVALimited = kHeapVA / 2 + AlignedStorage::size() - 1;
-
-using SegmentCell = EmptyCell<GenGCHeapSegment::maxSize()>;
 
 /// We are able to materialize every segment.
 TEST_F(GCLazySegmentNCTest, MaterializeAll) {
@@ -72,6 +62,7 @@ TEST_F(GCLazySegmentNCTest, MaterializeEnough) {
   }
 }
 
+#if defined(HERMESVM_GC_NONCONTIG_GENERATIONAL) && !defined(NDEBUG)
 /// There is enough space in the old generation to perform a young gen
 /// collection, but we could not materialize a segment, so we must do a full
 /// collection instead.
@@ -185,7 +176,7 @@ TEST_F(GCLazySegmentNCDeathTest, FailToMaterializeContinue) {
   EXPECT_EQ(1, gc.numFullGCs());
 }
 
-} // namespace
+#endif // HERMESVM_GC_NONCONTIG_GENERATIONAL && !NDEBUG
 
-#endif
-#endif // HERMESVM_GC_NONCONTIG_GENERATIONAL
+} // namespace
+#endif // !HERMESVM_GC_MALLOC
