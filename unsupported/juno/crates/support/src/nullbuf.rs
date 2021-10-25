@@ -14,7 +14,7 @@ pub struct NullTerminatedBuf(Vec<u8>);
 
 impl NullTerminatedBuf {
     /// Create from a reader and null terminate.
-    pub fn from_reader<R: Read>(mut reader: R) -> Result<NullTerminatedBuf, std::io::Error> {
+    pub fn from_reader(reader: &mut dyn Read) -> Result<NullTerminatedBuf, std::io::Error> {
         let mut v = Vec::<u8>::new();
         reader.read_to_end(&mut v)?;
         v.push(0);
