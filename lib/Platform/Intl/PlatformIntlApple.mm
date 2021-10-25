@@ -52,7 +52,7 @@ vm::CallResult<std::u16string> toLocaleUpperCase(
 
 // Implementation of
 // https://tc39.es/ecma402/#sec-supportedlocales
-vm::CallResult<std::vector<std::u16string>> SupportedLocales(
+vm::CallResult<std::vector<std::u16string>> supportedlocales(
     std::vector<std::u16string> availableLocales,
     std::vector<std::u16string> requestedLocales,
     const Options &options) {
@@ -94,12 +94,12 @@ double Collator::compare(
   return x.compare(y);
 }
 
+// Implementation of
+// https://tc39.es/ecma402/#datetimeformat-objects
 struct DateTimeFormat::Impl {
   std::u16string locale;
 };
 
-// Implementation of
-// https://tc39.es/ecma402/#datetimeformat-objects
 DateTimeFormat::DateTimeFormat() : impl_(std::make_unique<Impl>()) {}
 DateTimeFormat::~DateTimeFormat() {}
 
@@ -114,46 +114,130 @@ vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
   // 2. Let requestedLocales be ? CanonicalizeLocaleList(locales).
   vm::CallResult<std::vector<std::u16string>> requestedLocales = getCanonicalLocales(locales);
   std::vector<std::u16string> availableLocales = nsStringArrayToU16StringArray(nsAvailableLocales);
-  // 3. Return ? SupportedLocales(availableLocales, requestedLocales, options).
-  return SupportedLocales(availableLocales, requestedLocales, options);
+  // 3. Return ? (availableLocales, requestedLocales, options).
+  return supportedlocales(availableLocales, requestedLocales, options);
 }
 
+// Implementation of 
+// https://tc39.es/ecma402/#sec-todatetimeoptions
+vm::CallResult<Options> toDateTimeOptions(Options &options, std::u16string required, std::u16string defaults) {
+  // 1. If options is undefined, let options be null; otherwise let options be ? ToObject(options).
+  // 2. Let options be OrdinaryObjectCreate(options).
+  // 3. Let needDefaults be true.
+  bool needDefaults = true;
+  // 4. If required is "date" or "any", then
+  if (required == "date" || required == "any") {
+    // a. For each property name prop of « "weekday", "year", "month", "day" », do
+    for (std::u16string prop : {"weekday", "year", "month", "day"}) {
+      // i. Let value be ? Get(options, prop).
+      if (objects.find(prop) != objects.end()) {
+        // ii. If value is not undefined, let needDefaults be false.
+        needDefaults = false;
+      }
+    }
+  }
+  // 5. If required is "time" or "any", then
+  if (required == "time" || required == "any") {
+      // a. For each property name prop of « "dayPeriod", "hour", "minute", "second", "fractionalSecondDigits" », do
+    for (std::u16string prop : {"hour", "minute", "second"}) {
+      // i. Let value be ? Get(options, prop).
+      if (objects.find(prop) != objects.end()) {
+        // ii. If value is not undefined, let needDefaults be false.
+        needDefaults = false;
+      }
+    }
+  }
+  // 6. Let dateStyle be ? Get(options, "dateStyle").
+  Option dateStyle = objects.find("dateStyle");
+  // 7. Let timeStyle be ? Get(options, "timeStyle").
+  Option timeStyle = objects.find("timeStyle");
+  // 8. If dateStyle is not undefined or timeStyle is not undefined, let needDefaults be false.
+  if (dateStyle != objects.end() || timeStyle != objects.end()) {
+    needDefaults = false;
+  }
+  // 9. If required is "date" and timeStyle is not undefined, then
+  if (required == "date" && timeStyle != objects.end()) {
+    // a. Throw a TypeError exception.
+    return vm::ExecutionStatus::EXCEPTION;
+  }
+  // 10. If required is "time" and dateStyle is not undefined, then
+  if (required == "time" && dateStyle != objects.end()) {
+    // a. Throw a TypeError exception.
+    return vm::ExecutionStatus::EXCEPTION;
+  }
+  // 11. If needDefaults is true and defaults is either "date" or "all", then
+  if (needDefaults && (defaults == "date" || defaults == "all")) {
+    // a. For each property name prop of « "year", "month", "day" », do
+    for (std::u16string prop : {"year", "month", "day"}) {
+      // TODO: implement createDataPropertyOrThrow
+      // i. Perform ? CreateDataPropertyOrThrow(options, prop, "numeric").
+    }
+  }
+  // 12. If needDefaults is true and defaults is either "time" or "all", then
+  if (needDefaults && (defaults == "time" || defaults == "all")) {
+    // a. For each property name prop of « "hour", "minute", "second" », do
+    for (std::u16string prop : {"hour", "minute", "second"}) {
+      // i. Perform ? CreateDataPropertyOrThrow(options, prop, "numeric").
+    }
+  }
+  // 13. return options
+  return options;
+}
+
+// Implementation of
+// https://tc39.es/ecma402/#sec-getoption
+vm::CallResult<Option> getOption(
+    Options &option, 
+    std::u16string property,
+    std::u16string type,
+    std::vector<std::u16string> values,
+    Option fallback) {
+  return {};
+}
+
+// Implementation of
+// https://tc39.es/ecma402/#sec-initializedatetimeformat
 vm::ExecutionStatus DateTimeFormat::initialize(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
-  impl_->locale = u"en-US";
-  //        1. Let requestedLocales be ? CanonicalizeLocaleList(locales).
+  // 1. Let requestedLocales be ? CanonicalizeLocaleList(locales).
   vm::CallResult<std::vector<std::u16string>> requestedLocales =
       getCanonicalLocales(runtime, locales);
-  //        3. Let opt be a new Record.
+  if (LLVM_UNLIKELY(requestedLocales == vm::ExecutionStatus::EXCEPTION)) {
+    return vm::ExecutionStatus::EXCEPTION;
+  }
+  // 2. Let options be ? ToDateTimeOptions(options, "any", "date").
+  Options dateOptions = toDateTimeOptions(options, "any", "date");
+  // 3. Let opt be a new Record.
   Impl opt;
-  //        4. Let matcher be ? GetOption(options, "localeMatcher", "string", «
-  //        "lookup", "best fit" », "best fit").
-  //        5. Set opt.[[localeMatcher]] to matcher.
+  // 4. Let matcher be ? GetOption(options, "localeMatcher", "string", «
+  //   "lookup", "best fit" », "best fit").
   Impl matcher = normalizeOptions(kDTFOptions); // Not right
+  // 5. Set opt.[[localeMatcher]] to matcher.
+  
 
-  //        6. Let calendar be ? GetOption(options, "calendar", "string",
-  //        undefined, undefined).
-  //        7. If calendar is not undefined, then
-  //        a. If calendar does not match the Unicode Locale Identifier type
-  //        nonterminal, throw a RangeError exception.
-  //        8. Set opt.[[ca]] to calendar.
+  // 6. Let calendar be ? GetOption(options, "calendar", "string",
+  //    undefined, undefined).
+  // 7. If calendar is not undefined, then
+  //    a. If calendar does not match the Unicode Locale Identifier type
+  //       nonterminal, throw a RangeError exception.
+  // 8. Set opt.[[ca]] to calendar.
 
-  //        9. Let numberingSystem be ? GetOption(options, "numberingSystem",
-  //        "string", undefined, undefined).
-  //        10. If numberingSystem is not undefined, then
-  //        a. If numberingSystem does not match the Unicode Locale Identifier
+  // 9. Let numberingSystem be ? GetOption(options, "numberingSystem",
+  //    "string", undefined, undefined).
+  // 10. If numberingSystem is not undefined, then
+  //     a. If numberingSystem does not match the Unicode Locale Identifier
   //        type nonterminal, throw a RangeError exception.
-  //        11. Set opt.[[nu]] to numberingSystem.
+  // 11. Set opt.[[nu]] to numberingSystem.
 
-  //        12. Let hour12 be ? GetOption(options, "hour12", "boolean",
-  //        undefined, undefined).
-  //        13. Let hourCycle be ? GetOption(options, "hourCycle", "string", «
-  //        "h11", "h12", "h23", "h24" », undefined).
-  //        14. If hour12 is not undefined, then
-  //        a. Let hourCycle be null.
-  //        15. Set opt.[[hc]] to hourCycle.
+  // 12. Let hour12 be ? GetOption(options, "hour12", "boolean",
+  //     undefined, undefined).
+  // 13. Let hourCycle be ? GetOption(options, "hourCycle", "string", «
+  //     "h11", "h12", "h23", "h24" », undefined).
+  // 14. If hour12 is not undefined, then
+  //     a. Let hourCycle be null.
+  // 15. Set opt.[[hc]] to hourCycle.
   return vm::ExecutionStatus::RETURNED;
 }
 
