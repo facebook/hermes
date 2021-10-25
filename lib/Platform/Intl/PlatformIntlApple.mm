@@ -51,11 +51,11 @@ llvh::Optional<std::u16string> bestAvailableLocale(
 
 // Implementer note: For more information review
 // https://402.ecma-international.org/7.0/#sec-unicode-locale-extension-sequences
-std::u16string toNoExtensionsLocale(std::u16string &locale) {
+std::u16string toNoExtensionsLocale(const std::u16string &locale) {
   std::vector<std::u16string> subtags;
   size_t i = 0, j = 0;
   while (i < locale.size()) {
-    if (locale.at(i) == '-') {
+    if (locale[i] == u'-') {
       subtags.push_back(locale.substr(j, i));
       j = i + 1;
     }
