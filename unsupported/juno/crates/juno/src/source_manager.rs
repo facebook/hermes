@@ -27,17 +27,9 @@ impl SourceId {
 
 /// SourceManager owns a collection of source buffers and their names and handles
 /// reporting errors.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct SourceManager {
     sources: Vec<(String, Rc<NullTerminatedBuf>)>,
-}
-
-impl Default for SourceManager {
-    fn default() -> Self {
-        SourceManager {
-            sources: Default::default(),
-        }
-    }
 }
 
 impl SourceManager {

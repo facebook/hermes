@@ -8,8 +8,11 @@
  * @format
  */
 
-'use strict';
-
-export type VisitorKeys = $ReadOnly<{[string]: $ReadOnlyArray<string>}>;
-
-declare module.exports: VisitorKeys;
+export type ParserOptions = {
+  allowReturnOutsideFunction?: boolean,
+  babel?: boolean,
+  flow?: 'all' | 'detect',
+  sourceFilename?: string,
+  sourceType?: 'module' | 'script' | 'unambiguous',
+  tokens?: boolean,
+};

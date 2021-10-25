@@ -1,15 +1,12 @@
 {
-  "name": "hermes-parser",
+  "name": "hermes-estree",
   "version": "0.4.8",
-  "description": "A JavaScript parser built from the Hermes engine",
+  "description": "Flow types for the Flow-ESTree spec produced by the hermes parser",
   "main": "dist/index.js",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git@github.com:facebook/hermes.git"
-  },
-  "dependencies": {
-    "hermes-estree": "0.4.8"
   },
   "files": [
     "dist"

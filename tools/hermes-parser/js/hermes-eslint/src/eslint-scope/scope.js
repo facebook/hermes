@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @flow
+ * @flow strict
  * @format
  */
 
@@ -33,12 +33,35 @@
 */
 'use strict';
 
+import type {
+  ArrowFunctionExpression,
+  BlockStatement,
+  CatchClause,
+  ClassDeclaration,
+  ClassExpression,
+  DeclareClass,
+  DeclareInterface,
+  DeclareModule,
+  DeclareOpaqueType,
+  DeclareTypeAlias,
+  ESNode as Node,
+  ForInStatement,
+  ForOfStatement,
+  ForStatement,
+  FunctionDeclaration,
+  FunctionExpression,
+  FunctionTypeAnnotation,
+  Identifier,
+  InterfaceDeclaration,
+  OpaqueType,
+  Program,
+  SwitchStatement,
+  TypeAlias,
+  WithStatement,
+} from 'hermes-estree';
 import type {Definition} from './definition';
-import type {Identifier, Node} from './ScopeManagerTypes';
 import type {ImplicitGlobal, ReadWriteFlagType} from './reference';
 import type ScopeManager from './scope-manager';
-
-const Syntax = require('estraverse').Syntax;
 
 const {ReadWriteFlag, Reference} = require('./reference');
 const Variable = require('./variable');
@@ -49,7 +72,7 @@ const {
 } = require('./definition');
 const assert = require('assert');
 
-const ScopeType = {
+const ScopeType = ({
   Block: 'block',
   Catch: 'catch',
   Class: 'class',
@@ -62,18 +85,25 @@ const ScopeType = {
   Switch: 'switch',
   Type: 'type',
   With: 'with',
-};
+}: $ReadOnly<{
+  Block: 'block',
+  Catch: 'catch',
+  Class: 'class',
+  DeclareModule: 'declare-module',
+  For: 'for',
+  Function: 'function',
+  FunctionExpressionName: 'function-expression-name',
+  Global: 'global',
+  Module: 'module',
+  Switch: 'switch',
+  Type: 'type',
+  With: 'with',
+}>);
 
 /**
  * Test if scope is strict
  */
-function isStrictScope(
-  scope: Scope,
-  block: Node,
-  isMethodDefinition: boolean,
-): boolean {
-  let body;
-
+function isStrictScope(scope: Scope, isMethodDefinition: boolean): boolean {
   // When upper scope exists and is strict, inner scope is also strict.
   if (scope.upper && scope.upper.isStrict) {
     return true;
@@ -91,26 +121,26 @@ function isStrictScope(
     return false;
   }
 
-  if (scope.type === ScopeType.Function) {
-    if (
-      block.type === Syntax.ArrowFunctionExpression &&
-      block.body.type !== Syntax.BlockStatement
-    ) {
-      return false;
-    }
-
-    if (block.type === Syntax.Program) {
-      body = block;
+  const body = (() => {
+    if (scope.type === ScopeType.Function) {
+      if (scope.block.type === 'ArrowFunctionExpression') {
+        if (scope.block.body.type !== 'BlockStatement') {
+          return false;
+        } else {
+          return scope.block.body;
+        }
+      } else if (scope.block.type === 'Program') {
+        return scope.block;
+      } else {
+        return scope.block.body;
+      }
+    } else if (scope.type === ScopeType.Global) {
+      return scope.block;
     } else {
-      body = block.body;
-    }
-
-    if (!body) {
       return false;
     }
-  } else if (scope.type === ScopeType.Global) {
-    body = block;
-  } else {
+  })();
+  if (body === false) {
     return false;
   }
 
@@ -118,12 +148,12 @@ function isStrictScope(
   for (let i = 0, iz = body.body.length; i < iz; ++i) {
     const stmt = body.body[i];
 
-    if (stmt.type !== Syntax.ExpressionStatement) {
+    if (stmt.type !== 'ExpressionStatement') {
       break;
     }
     const expr = stmt.expression;
 
-    if (expr.type !== Syntax.Literal || typeof expr.value !== 'string') {
+    if (expr.type !== 'Literal' || typeof expr.value !== 'string') {
       break;
     }
     if (expr.raw !== null && expr.raw !== undefined) {
@@ -163,18 +193,23 @@ function shouldBeStaticallyClosed(def: Definition): boolean {
     def.type === DefinitionType.ClassName ||
     def.type === DefinitionType.Enum ||
     def.type === DefinitionType.Type ||
-    (def.type === DefinitionType.Variable && def.parent?.kind !== 'var')
+    (def.type === DefinitionType.Variable && def.parent.type !== 'DeclareVariable' && def.parent.kind !== 'var')
   );
+}
+
+function asScope(scope: ScopeBase): Scope {
+  // $FlowExpectedError[incompatible-return] - it's impossible to tell flow this is safe
+  return scope;
 }
 
 /**
  * @class Scope
  */
-class Scope {
+class ScopeBase {
   /**
    * The type of the scope.
    */
-  type: string;
+  +type: string;
 
   /**
    * The scoped {@link Variable}s of this scope, as <code>{ Variable.name
@@ -194,9 +229,9 @@ class Scope {
   dynamic: boolean;
 
   /**
-   * A reference to the scope-defining syntax node.
+   * A reference to the scope-defining 'node'.
    */
-  block: Node;
+  +block: Node;
 
   /**
    * The {@link Reference|references} that are not resolved with this scope.
@@ -278,21 +313,21 @@ class Scope {
       this.type === ScopeType.Function ||
       this.type === ScopeType.Module ||
       this.type === ScopeType.DeclareModule
-        ? this
+        ? asScope(this)
         : // $FlowFixMe[incompatible-use] upperScope can only be null for Global scope
           upperScope.variableScope;
 
     this.upper = upperScope;
 
-    this.isStrict = isStrictScope(this, block, isMethodDefinition);
+    this.isStrict = isStrictScope(asScope(this), isMethodDefinition);
 
     if (this.upper) {
-      this.upper.childScopes.push(this);
+      this.upper.childScopes.push(asScope(this));
     }
 
     this.__declaredVariables = scopeManager.__declaredVariables;
 
-    registerScope(scopeManager, this);
+    registerScope(scopeManager, asScope(this));
   }
 
   __shouldStaticallyClose(scopeManager: ScopeManager): boolean {
@@ -394,7 +429,7 @@ class Scope {
     this.through.push(ref);
   }
 
-  __addDeclaredVariablesOfNode(variable: Variable, node: Node): void {
+  __addDeclaredVariablesOfNode(variable: Variable, node: ?Node): void {
     if (node == null) {
       return;
     }
@@ -414,14 +449,14 @@ class Scope {
     name: string,
     set: Map<string, Variable>,
     variables: Array<Variable>,
-    node: Node,
+    node: ?Identifier,
     def: ?Definition,
   ): void {
     let variable;
 
     const existingVariable = set.get(name);
     if (!existingVariable) {
-      const newVariable = new Variable(name, this);
+      const newVariable = new Variable(name, asScope(this));
       set.set(name, newVariable);
       variables.push(newVariable);
       variable = newVariable;
@@ -439,21 +474,21 @@ class Scope {
     }
   }
 
-  __define(node: Node, def: Definition): void {
-    if (node && node.type === Syntax.Identifier) {
+  __define(node: ?Node, def: Definition): void {
+    if (node && node.type === 'Identifier') {
       this.__defineGeneric(node.name, this.set, this.variables, node, def);
     }
   }
 
   __referencingValue(
     node: Identifier,
-    assign?: ReadWriteFlagType,
-    writeExpr?: Node,
+    assign?: ?ReadWriteFlagType,
+    writeExpr?: ?Node,
     maybeImplicitGlobal?: ?ImplicitGlobal,
-    init?: boolean,
+    init?: ?boolean,
   ): void {
     // because Array element may be null
-    if (!node || node.type !== Syntax.Identifier) {
+    if (!node || node.type !== 'Identifier') {
       return;
     }
 
@@ -464,7 +499,7 @@ class Scope {
 
     const ref = new Reference(
       node /* identifier */,
-      this /* scope */,
+      asScope(this) /* scope */,
       assign || ReadWriteFlag.READ /* read-write flag */,
       writeExpr /* writeExpr */,
       maybeImplicitGlobal /* maybeImplicitGlobal */,
@@ -479,7 +514,7 @@ class Scope {
   __referencingType(node: Identifier): void {
     const ref = new Reference(
       node /* identifier */,
-      this /* scope */,
+      asScope(this) /* scope */,
       ReadWriteFlag.READ /* read-write flag */,
       null /* writeExpr */,
       null /* maybeImplicitGlobal */,
@@ -505,7 +540,7 @@ class Scope {
     let ref, i, iz;
 
     assert(this.__isClosed, 'Scope should be closed.');
-    assert(ident.type === Syntax.Identifier, 'Target should be identifier.');
+    assert(ident.type === 'Identifier', 'Target should be identifier.');
     for (i = 0, iz = this.references.length; i < iz; ++i) {
       ref = this.references[i];
       if (ref.identifier === ident) {
@@ -549,14 +584,31 @@ class Scope {
   }
 }
 
-class GlobalScope extends Scope {
+export type Scope =
+  | GlobalScope
+  | ModuleScope
+  | FunctionExpressionNameScope
+  | CatchScope
+  | WithScope
+  | BlockScope
+  | SwitchScope
+  | FunctionScope
+  | ForScope
+  | ClassScope
+  | TypeScope
+  | DeclareModuleScope;
+
+class GlobalScope extends ScopeBase {
+  declare +type: (typeof ScopeType)['Global'];
+  declare +block: Program;
+
   implicit: {
     set: Map<string, Variable>,
     variables: Array<Variable>,
     referencesLeftToResolve: Array<Reference>,
   };
 
-  constructor(scopeManager: ScopeManager, block: Node) {
+  constructor(scopeManager: ScopeManager, block: GlobalScope['block']) {
     super(scopeManager, ScopeType.Global, null, block, false);
     this.implicit = {
       set: new Map(),
@@ -592,7 +644,7 @@ class GlobalScope extends Scope {
   }
 
   __defineImplicit(node: Node, def: Definition): void {
-    if (node && node.type === Syntax.Identifier) {
+    if (node && node.type === 'Identifier') {
       this.__defineGeneric(
         node.name,
         this.implicit.set,
@@ -604,14 +656,24 @@ class GlobalScope extends Scope {
   }
 }
 
-class ModuleScope extends Scope {
-  constructor(scopeManager: ScopeManager, upperScope: ?Scope, block: Node) {
+class ModuleScope extends ScopeBase {
+  declare +type: (typeof ScopeType)['Module'];
+  declare +block: Program;
+
+  constructor(scopeManager: ScopeManager, upperScope: ?Scope, block: ModuleScope['block']) {
     super(scopeManager, ScopeType.Module, upperScope, block, false);
   }
 }
 
-class FunctionExpressionNameScope extends Scope {
-  constructor(scopeManager: ScopeManager, upperScope: ?Scope, block: Node) {
+class FunctionExpressionNameScope extends ScopeBase {
+  declare +type: (typeof ScopeType)['FunctionExpressionName'];
+  declare +block: FunctionExpression;
+
+  constructor(
+    scopeManager: ScopeManager,
+    upperScope: ?Scope,
+    block: FunctionExpressionNameScope['block'],
+  ) {
     super(
       scopeManager,
       ScopeType.FunctionExpressionName,
@@ -619,19 +681,41 @@ class FunctionExpressionNameScope extends Scope {
       block,
       false,
     );
-    this.__define(block.id, new FunctionNameDefinition(block));
+    assert(block.id);
+    this.__define(
+      block.id,
+      new FunctionNameDefinition(
+        // $FlowExpectedError[incompatible-call]
+        block.id,
+        block,
+      ),
+    );
     this.functionExpressionScope = true;
   }
 }
 
-class CatchScope extends Scope {
-  constructor(scopeManager: ScopeManager, upperScope: ?Scope, block: Node) {
+class CatchScope extends ScopeBase {
+  declare +type: (typeof ScopeType)['Catch'];
+  declare +block: CatchClause;
+
+  constructor(
+    scopeManager: ScopeManager,
+    upperScope: ?Scope,
+    block: CatchScope['block'],
+  ) {
     super(scopeManager, ScopeType.Catch, upperScope, block, false);
   }
 }
 
-class WithScope extends Scope {
-  constructor(scopeManager: ScopeManager, upperScope: ?Scope, block: Node) {
+class WithScope extends ScopeBase {
+  declare +type: (typeof ScopeType)['With'];
+  declare +block: WithStatement;
+
+  constructor(
+    scopeManager: ScopeManager,
+    upperScope: ?Scope,
+    block: WithScope['block'],
+  ) {
     super(scopeManager, ScopeType.With, upperScope, block, false);
   }
 
@@ -652,23 +736,44 @@ class WithScope extends Scope {
   }
 }
 
-class BlockScope extends Scope {
-  constructor(scopeManager: ScopeManager, upperScope: ?Scope, block: Node) {
+class BlockScope extends ScopeBase {
+  declare +type: (typeof ScopeType)['Block'];
+  declare +block: BlockStatement;
+
+  constructor(
+    scopeManager: ScopeManager,
+    upperScope: ?Scope,
+    block: BlockScope['block'],
+  ) {
     super(scopeManager, ScopeType.Block, upperScope, block, false);
   }
 }
 
-class SwitchScope extends Scope {
-  constructor(scopeManager: ScopeManager, upperScope: ?Scope, block: Node) {
+class SwitchScope extends ScopeBase {
+  declare +type: (typeof ScopeType)['Switch'];
+  declare +block: SwitchStatement;
+
+  constructor(
+    scopeManager: ScopeManager,
+    upperScope: ?Scope,
+    block: SwitchScope['block'],
+  ) {
     super(scopeManager, ScopeType.Switch, upperScope, block, false);
   }
 }
 
-class FunctionScope extends Scope {
+class FunctionScope extends ScopeBase {
+  declare +type: (typeof ScopeType)['Function'];
+  declare +block:
+    | ArrowFunctionExpression
+    | FunctionDeclaration
+    | FunctionExpression
+    | Program;
+
   constructor(
     scopeManager: ScopeManager,
     upperScope: ?Scope,
-    block: Node,
+    block: FunctionScope['block'],
     isMethodDefinition: boolean,
   ) {
     super(
@@ -681,7 +786,7 @@ class FunctionScope extends Scope {
 
     // section 9.2.13, FunctionDeclarationInstantiation.
     // NOTE Arrow functions never have an arguments objects.
-    if (this.block.type !== Syntax.ArrowFunctionExpression) {
+    if (this.block.type !== 'ArrowFunctionExpression') {
       this.__defineArguments();
     }
   }
@@ -695,7 +800,7 @@ class FunctionScope extends Scope {
     //     function arguments() {
     //     }
     // }
-    if (this.block.type === Syntax.ArrowFunctionExpression) {
+    if (this.block.type === 'ArrowFunctionExpression') {
       return false;
     }
 
@@ -749,29 +854,64 @@ class FunctionScope extends Scope {
   }
 }
 
-class ForScope extends Scope {
-  constructor(scopeManager: ScopeManager, upperScope: ?Scope, block: Node) {
+class ForScope extends ScopeBase {
+  declare +type: (typeof ScopeType)['For'];
+  declare +block: ForInStatement | ForOfStatement | ForStatement;
+
+  constructor(
+    scopeManager: ScopeManager,
+    upperScope: ?Scope,
+    block: ForScope['block'],
+  ) {
     super(scopeManager, ScopeType.For, upperScope, block, false);
   }
 }
 
-class ClassScope extends Scope {
-  constructor(scopeManager: ScopeManager, upperScope: ?Scope, block: Node) {
+class ClassScope extends ScopeBase {
+  declare +type: (typeof ScopeType)['Class'];
+  declare +block: ClassDeclaration | ClassExpression;
+
+  constructor(
+    scopeManager: ScopeManager,
+    upperScope: ?Scope,
+    block: ClassScope['block'],
+  ) {
     super(scopeManager, ScopeType.Class, upperScope, block, false);
   }
 }
 
-class TypeScope extends Scope {
-  constructor(scopeManager: ScopeManager, upperScope: ?Scope, typeNode: Node) {
+class TypeScope extends ScopeBase {
+  declare +type: (typeof ScopeType)['Type'];
+  declare +block:
+    | FunctionDeclaration
+    | FunctionExpression
+    | ArrowFunctionExpression
+    | DeclareTypeAlias
+    | DeclareOpaqueType
+    | DeclareInterface
+    | DeclareClass
+    | FunctionTypeAnnotation
+    | TypeAlias
+    | OpaqueType
+    | InterfaceDeclaration;
+
+  constructor(
+    scopeManager: ScopeManager,
+    upperScope: ?Scope,
+    typeNode: TypeScope['block'],
+  ) {
     super(scopeManager, ScopeType.Type, upperScope, typeNode, false);
   }
 }
 
-class DeclareModuleScope extends Scope {
+class DeclareModuleScope extends ScopeBase {
+  declare +type: (typeof ScopeType)['DeclareModule'];
+  declare +block: DeclareModule;
+
   constructor(
     scopeManager: ScopeManager,
     upperScope: ?Scope,
-    declareModuleNode: Node,
+    declareModuleNode: DeclareModuleScope['block'],
   ) {
     super(
       scopeManager,
@@ -784,7 +924,6 @@ class DeclareModuleScope extends Scope {
 }
 
 module.exports = {
-  Scope,
   ScopeType,
   GlobalScope,
   ModuleScope,

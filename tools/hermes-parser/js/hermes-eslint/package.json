@@ -13,7 +13,7 @@
   ],
   "dependencies": {
     "esrecurse": "^4.3.0",
-    "estraverse": "^4.1.1",
+    "hermes-estree": "0.4.8",
     "hermes-parser": "0.4.8"
   }
 }

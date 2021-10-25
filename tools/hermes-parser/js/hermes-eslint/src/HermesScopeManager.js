@@ -4,27 +4,29 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @flow
+ * @flow strict
  * @format
  */
 
 'use strict';
 
-import type {Node} from './eslint-scope/ScopeManagerTypes';
+import type {Program} from 'hermes-estree';
 
 const ScopeManager = require('./eslint-scope/scope-manager');
-const {Definition} = require('./eslint-scope/definition');
 const Referencer = require('./eslint-scope/referencer');
 const VisitorKeys = require('./HermesESLintVisitorKeys');
 
-function create(ast: Node): ScopeManager {
-  const options = {
+function create(ast: Program): ScopeManager {
+  const scopeManager = new ScopeManager({
     sourceType: ast.sourceType,
     childVisitorKeys: VisitorKeys,
-  };
-
-  const scopeManager = new ScopeManager(options);
-  const referencer = new Referencer(options, scopeManager);
+  });
+  const referencer = new Referencer(
+    {
+      childVisitorKeys: VisitorKeys,
+    },
+    scopeManager,
+  );
 
   referencer.visit(ast);
 

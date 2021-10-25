@@ -24,10 +24,6 @@
 #define NATIVE_FUNCTION_TYPED_2(func, type, type2)
 #endif
 
-#ifndef NATIVE_CONSTRUCTOR_TYPED
-#define NATIVE_CONSTRUCTOR_TYPED(classname, type, type2, func)
-#endif
-
 NATIVE_FUNCTION(arrayBufferConstructor)
 NATIVE_FUNCTION(arrayBufferIsView)
 
@@ -404,12 +400,8 @@ NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSWeakSet>)
 NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSGeneratorFunction>)
 NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSAsyncFunction>)
 
-#define TYPED_ARRAY(name, type)  \
-  NATIVE_CONSTRUCTOR_TYPED(      \
-      JSTypedArray,              \
-      type,                      \
-      CellKind::name##ArrayKind, \
-      NativeConstructor::creatorFunction)
+#define TYPED_ARRAY(name, type) \
+  NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<name##Array>)
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY
 
@@ -450,4 +442,3 @@ NATIVE_FUNCTION(intlStringPrototypeToLocaleUpperCase)
 #undef NATIVE_CONSTRUCTOR
 #undef NATIVE_FUNCTION_TYPED
 #undef NATIVE_FUNCTION_TYPED_2
-#undef NATIVE_CONSTRUCTOR_TYPED
