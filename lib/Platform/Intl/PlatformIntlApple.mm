@@ -11,7 +11,7 @@
 
 namespace hermes {
 namespace platform_intl {
-
+namespace {
 std::vector<std::u16string> nsStringArrayToU16StringArray(NSArray<NSString *> * array) {
   auto size = [array count];
   std::vector<std::u16string> result;
@@ -21,10 +21,10 @@ std::vector<std::u16string> nsStringArrayToU16StringArray(NSArray<NSString *> * 
   }
   return result;
 }
-
+}
 NSArray<NSString *> *u16StringArrayTonsStringArray(std::vector<std::u16string> array) {
   auto size = array.size();
-  NSArray<NSString *> * result = [NSArray arrayWithCapacity:size];
+    NSMutableArray *result = [NSMutableArray arrayWithCapacity: size];
   for (size_t i = 0; i < size; i++) {
     result[i] = u16StringToNSString(array[i]);
   }
@@ -112,7 +112,7 @@ vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
   // 1. Let availableLocales be %DateTimeFormat%.[[AvailableLocales]].
   NSArray<NSString *> *nsAvailableLocales = [NSLocale availableLocaleIdentifiers];
   // 2. Let requestedLocales be ? CanonicalizeLocaleList(locales).
-  vm::CallResult<std::vector<std::u16string>> requestedLocales = getCanonicalLocales(locales);
+  vm::CallResult<std::vector<std::u16string>> requestedLocales = getCanonicalLocales(runtime, locales);
   std::vector<std::u16string> availableLocales = nsStringArrayToU16StringArray(nsAvailableLocales);
   // 3. Return ? (availableLocales, requestedLocales, options).
   return supportedlocales(availableLocales, requestedLocales, options);
@@ -126,9 +126,9 @@ vm::CallResult<Options> toDateTimeOptions(Options &options, std::u16string requi
   // 3. Let needDefaults be true.
   bool needDefaults = true;
   // 4. If required is "date" or "any", then
-  if (required == "date" || required == "any") {
+  if (required == u"date" || required == u"any") {
     // a. For each property name prop of « "weekday", "year", "month", "day" », do
-    for (std::u16string prop : {"weekday", "year", "month", "day"}) {
+    for (std::u16string prop : {u"weekday", u"year", u"month", u"day"}) {
       // i. Let value be ? Get(options, prop).
       if (objects.find(prop) != objects.end()) {
         // ii. If value is not undefined, let needDefaults be false.
@@ -137,11 +137,11 @@ vm::CallResult<Options> toDateTimeOptions(Options &options, std::u16string requi
     }
   }
   // 5. If required is "time" or "any", then
-  if (required == "time" || required == "any") {
+  if (required == u"time" || required == u"any") {
       // a. For each property name prop of « "dayPeriod", "hour", "minute", "second", "fractionalSecondDigits" », do
-    for (std::u16string prop : {"hour", "minute", "second"}) {
+    for (std::u16string prop : {u"hour", u"minute", u"second"}) {
       // i. Let value be ? Get(options, prop).
-      if (objects.find(prop) != objects.end()) {
+      if (normalizeOptions().find(prop) != objects.end()) {
         // ii. If value is not undefined, let needDefaults be false.
         needDefaults = false;
       }
@@ -156,27 +156,27 @@ vm::CallResult<Options> toDateTimeOptions(Options &options, std::u16string requi
     needDefaults = false;
   }
   // 9. If required is "date" and timeStyle is not undefined, then
-  if (required == "date" && timeStyle != objects.end()) {
+  if (required == u"date" && timeStyle != objects.end()) {
     // a. Throw a TypeError exception.
     return vm::ExecutionStatus::EXCEPTION;
   }
   // 10. If required is "time" and dateStyle is not undefined, then
-  if (required == "time" && dateStyle != objects.end()) {
+  if (required == u"time" && dateStyle != objects.end()) {
     // a. Throw a TypeError exception.
     return vm::ExecutionStatus::EXCEPTION;
   }
   // 11. If needDefaults is true and defaults is either "date" or "all", then
-  if (needDefaults && (defaults == "date" || defaults == "all")) {
+  if (needDefaults && (defaults == u"date" || defaults == u"all")) {
     // a. For each property name prop of « "year", "month", "day" », do
-    for (std::u16string prop : {"year", "month", "day"}) {
+    for (std::u16string prop : {u"year", u"month", u"day"}) {
       // TODO: implement createDataPropertyOrThrow
       // i. Perform ? CreateDataPropertyOrThrow(options, prop, "numeric").
     }
   }
   // 12. If needDefaults is true and defaults is either "time" or "all", then
-  if (needDefaults && (defaults == "time" || defaults == "all")) {
+  if (needDefaults && (defaults == u"time" || defaults == u"all")) {
     // a. For each property name prop of « "hour", "minute", "second" », do
-    for (std::u16string prop : {"hour", "minute", "second"}) {
+    for (std::u16string prop : {u"hour", u"minute", u"second"}) {
       // i. Perform ? CreateDataPropertyOrThrow(options, prop, "numeric").
     }
   }
