@@ -52,12 +52,36 @@ vm::CallResult<std::u16string> toLocaleUpperCase(
 
 // Implementation of
 // https://tc39.es/ecma402/#sec-supportedlocales
-vm::CallResult<std::vector<std::u16string>> supportedlocales(
+vm::CallResult<std::vector<std::u16string>> supportedLocales(
     std::vector<std::u16string> availableLocales,
     std::vector<std::u16string> requestedLocales,
     const Options &options) {
-  return {};
-}
+    //    If options is not undefined, then
+    //    Let options be ? ToObject(options).
+    //    Let matcher be ? GetOption(options, "localeMatcher", "string", « "lookup", "best fit" », "best fit").
+        std::u16string matcher;
+        if (!options.empty()) {
+    //    TODO: options, matcher
+        }
+    //    Else, let matcher be "best fit".
+        else {
+            matcher = u"best fit";
+        }
+    //    If matcher is "best fit", then
+    //    Let supportedLocales be BestFitSupportedLocales(availableLocales, requestedLocales).
+        std::vector<std::u16string> supportedLocales;
+    //    TODO: Is bestFitSupportedLocales required? https://402.ecma-international.org/7.0/#sec-bestfitsupportedlocales
+        if (matcher == u"best fit") {
+            supportedLocales = lookupSupportedLocales(availableLocales, requestedLocales);
+        }
+    //    Else,
+    //    Let supportedLocales be LookupSupportedLocales(availableLocales, requestedLocales).
+        else {
+            supportedLocales = lookupSupportedLocales(availableLocales, requestedLocales);
+        }
+    //    Return CreateArrayFromList(supportedLocales).
+        return supportedLocales;
+    }
 
 struct Collator::Impl {
   std::u16string locale;
@@ -115,7 +139,7 @@ vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
   vm::CallResult<std::vector<std::u16string>> requestedLocales = getCanonicalLocales(runtime, locales);
   std::vector<std::u16string> availableLocales = nsStringArrayToU16StringArray(nsAvailableLocales);
   // 3. Return ? (availableLocales, requestedLocales, options).
-  return supportedlocales(availableLocales, requestedLocales, options);
+        return supportedLocales(availableLocales, requestedLocales.getValue(), options);
 }
 
 // Implementation of 
