@@ -24,29 +24,28 @@ llvh::Optional<std::u16string> bestAvailableLocale(
   while (true) {
     // a. If availableLocales contains an element equal to candidate, return
     // candidate.
-    if (std::find(
-            availableLocales.begin(), availableLocales.end(), candidate) !=
+    if (llvh::find(availableLocales, candidate) !=
         availableLocales.end()) {
       return candidate;
     }
 
     // b. Let pos be the character index of the last occurrence of "-" (U+002D)
     // within candidate.
-    size_t pos = candidate.find(u"-", 0);
+    const size_t pos = candidate.rfind(u'-');
 
     // ...If that character does not occur, return undefined.
-    if (pos < 0) {
+    if (pos == std::string::npos) {
       return;
     }
 
     // c. If pos ≥ 2 and the character "-" occurs at index pos-2 of candidate,
     // decrease pos by 2.
-    if (pos >= 2 && candidate.at(pos - 2) == '-') {
+    if (pos >= 2 && candidate[pos - 2] == '-') {
       pos -= 2;
     }
     // d. Let candidate be the substring of candidate from position 0,
     // inclusive, to position pos, exclusive.
-    candidate = candidate.substr(0, pos);
+    candidate.resize(pos);
   }
 }
 
