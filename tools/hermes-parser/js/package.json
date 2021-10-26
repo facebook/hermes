@@ -2,13 +2,13 @@
   "name": "hermes-parser-packages",
   "private": true,
   "devDependencies": {
-    "@babel/core": "7.15.8",
     "@babel/cli": "7.15.7",
-    "@babel/preset-env": "7.15.8",
+    "@babel/core": "7.15.8",
     "@babel/plugin-proposal-class-properties": "7.14.5",
     "@babel/plugin-transform-flow-strip-types": "7.14.5",
+    "@babel/preset-env": "7.15.8",
     "flow-bin": "0.154.0",
-    "jest": "^26.4.2"
+    "jest": "^27.3.1"
   },
   "scripts": {
     "build": "./scripts/build.sh",
@@ -19,11 +19,5 @@
     "hermes-eslint",
     "hermes-estree",
     "hermes-parser"
-  ],
-  "jest": {
-    "transformIgnorePatterns": [
-      "/node_modules/",
-      "/dist/"
-    ]
-  }
+  ]
 }
