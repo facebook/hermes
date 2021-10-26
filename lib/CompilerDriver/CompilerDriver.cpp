@@ -514,12 +514,12 @@ static CLFlag StripFunctionNames(
     "Strip function names to reduce string table size",
     CompilerCategory);
 
-static CLFlag EnableTDZ(
-    'f',
-    "enable-tdz",
-    false,
-    "Enable TDZ checks for let/const",
-    CompilerCategory);
+static opt<bool> EnableTDZ(
+    "Xenable-tdz",
+    init(false),
+    Hidden,
+    desc("UNSUPPORTED: Enable TDZ checks for let/const"),
+    cat(CompilerCategory));
 
 #define WARNING_CATEGORY(name, specifier, description) \
   static CLFlag name##Warning(                         \

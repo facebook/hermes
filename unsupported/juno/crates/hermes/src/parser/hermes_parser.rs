@@ -154,9 +154,19 @@ impl std::fmt::Display for DiagMessage {
 }
 
 #[repr(u32)]
+#[derive(Copy, Clone)]
 pub enum MagicCommentKind {
     SourceUrl = 0,
     SourceMappingUrl = 1,
+}
+
+impl MagicCommentKind {
+    pub fn name(self) -> &'static str {
+        match self {
+            MagicCommentKind::SourceUrl => "sourceUrl",
+            MagicCommentKind::SourceMappingUrl => "sourceMappingUrl",
+        }
+    }
 }
 
 #[repr(C)]

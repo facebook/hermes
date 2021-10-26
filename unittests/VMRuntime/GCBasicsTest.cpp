@@ -475,10 +475,10 @@ TEST(GCCallbackTest, TestCallbackInvoked) {
   }
 }
 
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
+#ifndef HERMESVM_GC_MALLOC
+using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
 TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
-  constexpr size_t kHeapSizeHint =
-      AlignedHeapSegment::maxSize() * GenGC::kYoungGenFractionDenom;
+  constexpr size_t kHeapSizeHint = AlignedHeapSegment::maxSize() * 10;
 
   const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
   auto runtime = DummyRuntime::create(kGCConfig);
@@ -487,21 +487,20 @@ TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
   GCScope scope{&rt};
   auto handle = rt.makeHandle<SegmentCell>(SegmentCell::create(rt));
   const auto originalID = rt.getHeap().getObjectID(*handle);
-  GC::HeapInfo originalHeapInfo;
-  rt.getHeap().getHeapInfo(originalHeapInfo);
+  GC::HeapInfo oldHeapInfo;
+  rt.getHeap().getHeapInfo(oldHeapInfo);
   // A second allocation should put the first object into the old gen.
   auto handle2 = rt.makeHandle<SegmentCell>(SegmentCell::create(rt));
   (void)handle2;
   auto idAfter = rt.getHeap().getObjectID(*handle);
-  GC::HeapInfo afterHeapInfo;
-  rt.getHeap().getHeapInfo(afterHeapInfo);
+  GC::HeapInfo newHeapInfo;
+  rt.getHeap().getHeapInfo(newHeapInfo);
   EXPECT_EQ(originalID, idAfter);
   // There should have been one young gen collection.
-  EXPECT_EQ(
-      afterHeapInfo.youngGenStats.numCollections,
-      originalHeapInfo.youngGenStats.numCollections + 1);
+  EXPECT_GT(newHeapInfo.numCollections, oldHeapInfo.numCollections);
+  oldHeapInfo = newHeapInfo;
   // Fill the old gen to force a collection.
-  auto N = rt.getHeap().maxSize() / SegmentCell::size() - 1;
+  auto N = kHeapSizeHint / SegmentCell::size() - 1;
   {
     GCScopeMarkerRAII marker{&rt};
     for (size_t i = 0; i < N - 1; ++i) {
@@ -510,12 +509,10 @@ TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
   }
   SegmentCell::create(rt);
   idAfter = rt.getHeap().getObjectID(*handle);
-  rt.getHeap().getHeapInfo(afterHeapInfo);
+  rt.getHeap().getHeapInfo(newHeapInfo);
   EXPECT_EQ(originalID, idAfter);
   // There should have been one old gen collection.
-  EXPECT_EQ(
-      afterHeapInfo.fullStats.numCollections,
-      originalHeapInfo.fullStats.numCollections + 1);
+  EXPECT_GT(newHeapInfo.numCollections, oldHeapInfo.numCollections);
 }
 #endif
 

@@ -20,10 +20,6 @@ class SingleObject final : public JSObject {
   using Super = JSObject;
   static const ObjectVTable vt;
 
-#ifdef HERMESVM_SERIALIZE
-  SingleObject(Deserializer &d, const VTable *vt);
-#endif
-
   static bool classof(const GCCell *cell) {
     return cell->getKind() == kind;
   }

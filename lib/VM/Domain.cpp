@@ -12,8 +12,6 @@
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 
-#define DEBUG_TYPE "serialize"
-
 namespace hermes {
 namespace vm {
 
@@ -38,82 +36,6 @@ void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("cjsModules", &self->cjsModules_);
   mb.addField("throwingRequire", &self->throwingRequire_);
 }
-
-#ifdef HERMESVM_SERIALIZE
-Domain::Domain(Deserializer &d) : GCCell(&d.getRuntime()->getHeap(), &vt) {
-  d.readRelocation(&cjsModules_, RelocationKind::GCPointer);
-
-  // Field CopyableVector<RuntimeModule *> cjsRuntimeModules_{};
-  size_t size = d.readInt<size_t>();
-  cjsRuntimeModules_.reserve(size);
-  for (size_t i = 0; i < size; i++) {
-    cjsRuntimeModules_.push_back(nullptr, &d.getRuntime()->getHeap());
-    d.readRelocation(&cjsRuntimeModules_[i], RelocationKind::NativePointer);
-  }
-
-  // Field llvh::DenseMap<SymbolID, uint32_t> cjsModuleTable_{};
-  size = d.readInt<size_t>();
-  for (size_t i = 0; i < size; i++) {
-    auto res = cjsModuleTable_
-                   .try_emplace(
-                       SymbolID::unsafeCreate(d.readInt<uint32_t>()),
-                       d.readInt<uint32_t>())
-                   .second;
-    if (!res) {
-      hermes_fatal("Shouldn't fail to insert during deserialization");
-    }
-  }
-
-  // Field CopyableVector<RuntimeModule *> runtimeModules_{};
-  size = d.readInt<size_t>();
-  for (size_t i = 0; i < size; i++) {
-    runtimeModules_.push_back(
-        RuntimeModule::deserialize(d), &d.getRuntime()->getHeap());
-  }
-
-  d.readRelocation(&throwingRequire_, RelocationKind::GCPointer);
-}
-
-void DomainSerialize(Serializer &s, const GCCell *cell) {
-  auto *self = vmcast<const Domain>(cell);
-
-  s.writeRelocation(self->cjsModules_.get(s.getRuntime()));
-
-  // Field CopyableVector<RuntimeModule *> cjsRuntimeModules_{};
-  size_t size = self->cjsRuntimeModules_.size();
-  s.writeInt<size_t>(size);
-  for (size_t i = 0; i < size; i++) {
-    s.writeRelocation(self->cjsRuntimeModules_[i]);
-  }
-
-  // Field llvh::DenseMap<SymbolID, uint32_t> cjsModuleTable_{};
-  size = self->cjsModuleTable_.size();
-  s.writeInt<size_t>(size);
-  for (auto it = self->cjsModuleTable_.begin();
-       it != self->cjsModuleTable_.end();
-       it++) {
-    s.writeInt<uint32_t>(it->first.unsafeGetRaw());
-    s.writeInt<uint32_t>(it->second);
-  }
-
-  // Field CopyableVector<RuntimeModule *> runtimeModules_{};
-  // Domain owns RuntimeModules. Call serialize funtion for them here.
-  size = self->runtimeModules_.size();
-  s.writeInt<size_t>(size);
-  for (size_t i = 0; i < size; i++) {
-    self->runtimeModules_[i]->serialize(s);
-  }
-
-  s.writeRelocation(self->throwingRequire_.get(s.getRuntime()));
-  s.endObject(cell);
-}
-
-void DomainDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::DomainKind && "Expected Domain");
-  auto *cell = d.getRuntime()->makeAFixed<Domain, HasFinalizer::Yes>(d);
-  d.endObject(cell);
-}
-#endif
 
 PseudoHandle<Domain> Domain::create(Runtime *runtime) {
   auto *cell = runtime->makeAFixed<Domain, HasFinalizer::Yes>(runtime);
@@ -423,28 +345,6 @@ void RequireContextBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField(&self->dirname_);
 }
 
-#ifdef HERMESVM_SERIALIZE
-RequireContext::RequireContext(Deserializer &d) : JSObject(d, &vt.base) {
-  d.readRelocation(&domain_, RelocationKind::GCPointer);
-  d.readRelocation(&dirname_, RelocationKind::GCPointer);
-}
-
-void RequireContextSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<RequireContext>());
-  const auto *self = static_cast<const RequireContext *>(cell);
-  s.writeRelocation(self->domain_.get(s.getRuntime()));
-  s.writeRelocation(self->dirname_.get(s.getRuntime()));
-  s.endObject(cell);
-}
-
-void RequireContextDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::RequireContextKind && "Expected RequireContext");
-  auto *cell = d.getRuntime()->makeAFixed<RequireContext>(d);
-  d.endObject(cell);
-}
-#endif
-
 Handle<RequireContext> RequireContext::create(
     Runtime *runtime,
     Handle<Domain> domain,
@@ -463,5 +363,3 @@ Handle<RequireContext> RequireContext::create(
 
 } // namespace vm
 } // namespace hermes
-
-#undef DEBUG_TYPE

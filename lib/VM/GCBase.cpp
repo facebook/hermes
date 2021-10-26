@@ -916,11 +916,7 @@ bool GCBase::isMostRecentCellInFinalizerVector(
 #ifdef HERMESVM_SANITIZE_HANDLES
 bool GCBase::shouldSanitizeHandles() {
   static std::uniform_real_distribution<> dist(0.0, 1.0);
-  return dist(randomEngine_) < sanitizeRate_
-#ifdef HERMESVM_SERIALIZE
-      && !deserializeInProgress_
-#endif
-      ;
+  return dist(randomEngine_) < sanitizeRate_;
 }
 #endif
 
@@ -1164,48 +1160,6 @@ void GCBase::IDTracker::moveObject(
     reverseMappingIt->second = newLocation.getRawValue();
   }
 }
-
-#ifdef HERMESVM_SERIALIZE
-void GCBase::AllocationLocationTracker::serialize(Serializer &s) const {
-  if (enabled_) {
-    hermes_fatal(
-        "Serialization not supported when AllocationLocationTracker enabled");
-  }
-}
-
-void GCBase::AllocationLocationTracker::deserialize(Deserializer &d) {
-  if (enabled_) {
-    hermes_fatal(
-        "Deserialization not supported when AllocationLocationTracker enabled");
-  }
-}
-
-void GCBase::IDTracker::serialize(Serializer &s) const {
-  s.writeInt<HeapSnapshot::NodeID>(lastID_);
-  s.writeInt<size_t>(objectIDMap_.size());
-  for (auto it = objectIDMap_.begin(); it != objectIDMap_.end(); it++) {
-    s.writeRelocation(
-        s.getRuntime()->basedToPointerNonNull(BasedPointer{it->first}));
-    s.writeInt<HeapSnapshot::NodeID>(it->second);
-  }
-}
-
-void GCBase::IDTracker::deserialize(Deserializer &d) {
-  lastID_ = d.readInt<HeapSnapshot::NodeID>();
-  size_t size = d.readInt<size_t>();
-  for (size_t i = 0; i < size; i++) {
-    // Heap must have been deserialized before this function. All deserialized
-    // pointer must be non-null at this time.
-    GCPointer<GCCell> ptr{nullptr};
-    d.readRelocation(&ptr, RelocationKind::GCPointer);
-    auto res = objectIDMap_
-                   .try_emplace(ptr.getRaw(), d.readInt<HeapSnapshot::NodeID>())
-                   .second;
-    (void)res;
-    assert(res && "Shouldn't fail to insert during deserialization");
-  }
-}
-#endif
 
 llvh::SmallVector<HeapSnapshot::NodeID, 1>
     &GCBase::IDTracker::getExtraNativeIDs(HeapSnapshot::NodeID node) {

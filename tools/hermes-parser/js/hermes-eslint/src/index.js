@@ -4,13 +4,15 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
 'use strict';
 
+import type {Program} from 'hermes-estree';
 import type {VisitorKeys as VisitorKeysType} from './HermesESLintVisitorKeys';
+import type ScopeManagerClass from './eslint-scope/scope-manager';
 
 const HermesParser = require('hermes-parser');
 const ScopeManager = require('./HermesScopeManager');
@@ -20,13 +22,11 @@ type Options = {
   sourceType?: 'module' | 'script',
 };
 
-type Program = Object;
-
-function parse(code: string, options: Options = {}): Program {
+function parse(code: string, options?: Options): Program {
   const parserOptions = {
     allowReturnOutsideFunction: true,
     flow: 'all',
-    sourceType: options.sourceType ?? 'module',
+    sourceType: options?.sourceType ?? 'module',
     tokens: true,
   };
 
@@ -46,10 +46,10 @@ function parse(code: string, options: Options = {}): Program {
 
 function parseForESLint(
   code: string,
-  options: Options = {},
+  options?: Options,
 ): {
   ast: Program,
-  scopeManager: Object,
+  scopeManager: ScopeManagerClass,
   visitorKeys: VisitorKeysType,
 } {
   const ast = parse(code, options);

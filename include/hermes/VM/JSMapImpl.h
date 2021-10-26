@@ -25,12 +25,6 @@ class JSMapImpl final : public JSObject {
   using Super = JSObject;
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  JSMapImpl(Deserializer &d, const VTable *vt);
-
-  static void serializeMapOrSetImpl(Serializer &s, const GCCell *cell);
-#endif
-
   static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
@@ -267,15 +261,6 @@ class JSMapIteratorImpl final : public JSObject {
   static void MapOrSetIteratorBuildMeta(
       const GCCell *cell,
       Metadata::Builder &mb);
-
-#ifdef HERMESVM_SERIALIZE
-  explicit JSMapIteratorImpl(Deserializer &d);
-
-  template <CellKind>
-  friend void serializeMapOrSetIteratorImpl(Serializer &s, const GCCell *cell);
-  friend void MapIteratorDeserialize(Deserializer &d, CellKind kind);
-  friend void SetIteratorDeserialize(Deserializer &d, CellKind kind);
-#endif
 
   JSMapIteratorImpl(
       Runtime *runtime,

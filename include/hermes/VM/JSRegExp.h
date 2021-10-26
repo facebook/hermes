@@ -109,12 +109,6 @@ class JSRegExp final : public JSObject {
 
  public:
   friend void RegExpBuildMeta(const GCCell *, Metadata::Builder &);
-#ifdef HERMESVM_SERIALIZE
-  explicit JSRegExp(Deserializer &d);
-
-  friend void RegExpSerialize(Serializer &s, const GCCell *cell);
-  friend void RegExpDeserialize(Deserializer &d, CellKind kind);
-#endif
 
   JSRegExp(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
       : JSObject(runtime, &vt.base, *parent, *clazz),

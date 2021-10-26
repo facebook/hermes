@@ -87,27 +87,6 @@ void ProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@handler", &self->slots_.handler);
 }
 
-#ifdef HERMESVM_SERIALIZE
-JSProxy::JSProxy(Deserializer &d) : JSObject(d, &vt.base) {
-  d.readRelocation(&slots_.target, RelocationKind::GCPointer);
-  d.readRelocation(&slots_.handler, RelocationKind::GCPointer);
-}
-
-void ProxySerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSProxy>());
-  auto *self = vmcast<const JSProxy>(cell);
-  s.writeRelocation(self->slots_.target.get(s.getRuntime()));
-  s.writeRelocation(self->slots_.handler.get(s.getRuntime()));
-  s.endObject(cell);
-}
-
-void ProxyDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::ProxyKind && "Expected Proxy");
-  auto *cell = d.getRuntime()->makeAFixed<JSProxy>(d);
-  d.endObject(cell);
-}
-#endif
-
 PseudoHandle<JSProxy> JSProxy::create(Runtime *runtime) {
   JSProxy *proxy = runtime->makeAFixed<JSProxy>(
       runtime,

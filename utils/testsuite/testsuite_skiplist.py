@@ -1798,7 +1798,14 @@ PERMANENT_SKIP_LIST = [
     "test262/test/intl402/Date/",
     "test262/test/intl402/DateTimeFormat/",
     "test262/test/intl402/DisplayNames/",
-    "test262/test/intl402/Intl/",
+    "test262/test/intl402/Intl/supportedValuesOf/",
+    "test262/test/intl402/Intl/toStringTag/",
+    "test262/test/intl402/Intl/builtin.js",
+    "test262/test/intl402/Intl/getCanonicalLocales/error-cases.js",
+    "test262/test/intl402/Intl/getCanonicalLocales/canonicalized-unicode-ext-seq.js",
+    "test262/test/intl402/Intl/getCanonicalLocales/main.js",
+    "test262/test/intl402/Intl/getCanonicalLocales/has-property.js",
+    "test262/test/intl402/Intl/getCanonicalLocales/Locale-object.js",
     "test262/test/intl402/ListFormat/",
     "test262/test/intl402/Locale/",
     "test262/test/intl402/Number/",
@@ -1899,6 +1906,9 @@ PERMANENT_UNSUPPORTED_FEATURES = [
     "SharedArrayBuffer",
     "cross-realm",
 ]
+
+# Tests for Intl features
+INTL_TESTS = ["test262/test/intl402"]
 
 assert len(set(SKIP_LIST)) == len(SKIP_LIST), "Skiplist has duplicates: " + str(
     [item for item, count in collections.Counter(SKIP_LIST).items() if count > 1]

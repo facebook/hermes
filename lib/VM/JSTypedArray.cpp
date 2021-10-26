@@ -10,9 +10,6 @@
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Callable.h"
 
-#include "llvh/Support/Debug.h"
-#define DEBUG_TYPE "serialize"
-
 namespace hermes {
 namespace vm {
 
@@ -45,24 +42,6 @@ std::pair<uint32_t, uint32_t> JSTypedArrayBase::_getOwnIndexedRangeImpl(
   auto *self = vmcast<JSTypedArrayBase>(selfObj);
   return {0, self->getLength()};
 }
-
-#ifdef HERMESVM_SERIALIZE
-JSTypedArrayBase::JSTypedArrayBase(Deserializer &d, const VTable *vt)
-    : JSObject(d, vt) {
-  d.readRelocation(&buffer_, RelocationKind::GCPointer);
-  length_ = d.readInt<JSTypedArrayBase::size_type>();
-  offset_ = d.readInt<size_type>();
-}
-
-void serializeTypedArrayBase(Serializer &s, const GCCell *cell) {
-  auto *self = vmcast<const JSTypedArrayBase>(cell);
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<JSTypedArrayBase>());
-  s.writeRelocation(self->buffer_.get(s.getRuntime()));
-  s.writeInt<JSTypedArrayBase::size_type>(self->length_);
-  s.writeInt<JSTypedArrayBase::size_type>(self->offset_);
-}
-#endif
 
 bool JSTypedArrayBase::_haveOwnIndexedImpl(
     JSObject *selfObj,
@@ -345,29 +324,6 @@ const ObjectVTable JSTypedArray<T, C>::vt{
     _checkAllOwnIndexedImpl,
 };
 
-#ifdef HERMESVM_SERIALIZE
-template <typename T, CellKind C>
-JSTypedArray<T, C>::JSTypedArray(Deserializer &d)
-    : JSTypedArrayBase(d, &vt.base) {}
-
-template <typename T, CellKind C>
-void deserializeTypedArray(Deserializer &d, CellKind kind) {
-  auto *cell = d.getRuntime()->makeAFixed<JSTypedArray<T, C>>(d);
-  d.endObject(cell);
-}
-
-#define TYPED_ARRAY(name, type)                                      \
-  void name##ArraySerialize(Serializer &s, const GCCell *cell) {     \
-    serializeTypedArrayBase(s, cell);                                \
-    s.endObject(cell);                                               \
-  }                                                                  \
-  void name##ArrayDeserialize(Deserializer &d, CellKind kind) {      \
-    deserializeTypedArray<type, CellKind::name##ArrayKind>(d, kind); \
-  }
-#include "hermes/VM/TypedArrays.def"
-#undef TYPED_ARRAY
-#endif // HERMESVM_SERIALIZE
-
 #define TYPED_ARRAY(name, type)                                          \
   void name##ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) { \
     TypedArrayBaseBuildMeta(cell, mb);                                   \
@@ -521,5 +477,3 @@ CallResult<bool> JSTypedArray<T, C>::_setOwnIndexedImpl(
 
 } // namespace vm
 } // namespace hermes
-
-#undef DEBUG_TYPE

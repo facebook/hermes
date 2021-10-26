@@ -149,107 +149,19 @@ clearTimeout(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-#ifdef HERMESVM_SERIALIZE
-static std::vector<void *> getNativeFunctionPtrs();
-
-/// serializeVM(funciton() {/*resumed*/}, [filename]) will serialize the VM
-/// state to a file. When deserialize from the file, we will continue to execute
-/// the closure funciton provided. Serialize filename is specified by
-/// -serializevm-path when provided, otherwise we will use the second argument.
-static vm::CallResult<vm::HermesValue>
-serializeVM(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
-  using namespace vm;
-
-  if (!args.getArg(0).isObject()) {
-    return runtime->raiseTypeError("Invalid/Missing function argument");
-  }
-
-  std::unique_ptr<llvh::raw_ostream> serializeStream = nullptr;
-  if (ctx) {
-    const auto *fileName = reinterpret_cast<std::string *>(ctx);
-    std::error_code EC;
-    serializeStream =
-        std::make_unique<llvh::raw_fd_ostream>(llvh::StringRef(*fileName), EC);
-    if (EC) {
-      return runtime->raiseTypeError(
-          TwineChar16("Could not write to file located at ") +
-          llvh::StringRef(*fileName));
-    }
-  } else {
-    // See if filename is provided as an argument.
-    if (!args.getArg(1).isString()) {
-      return runtime->raiseTypeError(
-          "Missing filename argument or filename argument not a string");
-    }
-    std::string fileName;
-
-    // In the rare events where we have a UTF16 string, convert it to ASCII.
-    auto str = Handle<StringPrimitive>::vmcast(args.getArgHandle(1));
-    auto jsFileName = StringPrimitive::createStringView(runtime, str);
-    llvh::SmallVector<char16_t, 16> buf;
-    convertUTF16ToUTF8WithReplacements(fileName, jsFileName.getUTF16Ref(buf));
-
-    if (fileName.empty()) {
-      return runtime->raiseTypeError("Filename must not be empty");
-    }
-    std::error_code EC;
-    serializeStream =
-        std::make_unique<llvh::raw_fd_ostream>(llvh::StringRef(fileName), EC);
-    if (EC) {
-      return runtime->raiseTypeError(
-          TwineChar16("Could not write to file located at ") +
-          llvh::StringRef(fileName));
-    }
-  }
-
-  auto closureFunction = Handle<JSFunction>::vmcast(args.getArgHandle(0));
-
-  Serializer s(*serializeStream, runtime, getNativeFunctionPtrs);
-  runtime->setSerializeClosure(closureFunction);
-  runtime->serialize(s);
-  return HermesValue::encodeUndefinedValue();
-}
-
-/// Gather function pointers of native functions and put them in \p vec.
-static std::vector<void *> getNativeFunctionPtrs() {
-  std::vector<void *> res;
-  res.push_back((void *)quit);
-  res.push_back((void *)createHeapSnapshot);
-  res.push_back((void *)serializeVM);
-  res.push_back((void *)loadSegment);
-  res.push_back((void *)setTimeout);
-  res.push_back((void *)clearTimeout);
-  return res;
-}
-#endif
-
 void installConsoleBindings(
     vm::Runtime *runtime,
     ConsoleHostContext &ctx,
     vm::StatSamplingThread *statSampler,
-#ifdef HERMESVM_SERIALIZE
-    const std::string *serializePath,
-#endif
     const std::string *filename) {
   vm::DefinePropertyFlags normalDPF =
       vm::DefinePropertyFlags::getNewNonEnumerableFlags();
-
-#if defined HERMESVM_SERIALIZE && !defined NDEBUG
-  // Verify that all native pointers can be captured by getNativeFunctionPtrs.
-  std::vector<void *> pointers = getNativeFunctionPtrs();
-#endif
 
   auto defineGlobalFunc = [&](vm::SymbolID name,
                               vm::NativeFunctionPtr functionPtr,
                               void *context,
                               unsigned paramCount) -> void {
     vm::GCScopeMarkerRAII marker{runtime};
-#ifdef HERMESVM_SERIALIZE
-    assert(
-        (std::find(pointers.begin(), pointers.end(), (void *)functionPtr) !=
-         pointers.end()) &&
-        "All function pointers must be added in getNativeFunctionPtrs");
-#endif
     auto func = vm::NativeFunction::createWithoutPrototype(
         runtime, context, functionPtr, name, paramCount);
     auto res = vm::JSObject::defineOwnProperty(
@@ -268,17 +180,6 @@ void installConsoleBindings(
       createHeapSnapshot,
       nullptr,
       1);
-#ifdef HERMESVM_SERIALIZE
-  defineGlobalFunc(
-      runtime
-          ->ignoreAllocationFailure(
-              runtime->getIdentifierTable().getSymbolHandle(
-                  runtime, llvh::createASCIIRef("serializeVM")))
-          .get(),
-      serializeVM,
-      reinterpret_cast<void *>(const_cast<std::string *>(serializePath)),
-      1);
-#endif
 
   // Define the 'loadSegment' function.
   defineGlobalFunc(
@@ -362,48 +263,8 @@ bool executeHBCBytecodeImpl(
     vm::instrumentation::PerfEvents::begin();
   }
 
-#ifdef HERMESVM_SERIALIZE
-  // Handle Serialization/Deserialization options
-  std::shared_ptr<llvh::raw_ostream> serializeFile = nullptr;
-  std::shared_ptr<llvh::MemoryBuffer> deserializeFile = nullptr;
-  if (!options.SerializeAfterInitFile.empty()) {
-    if (!options.DeserializeFile.empty()) {
-      llvh::errs()
-          << "Cannot serialize and deserialize in the same execution\n";
-      return false;
-    }
-    std::error_code EC;
-    serializeFile = std::make_shared<llvh::raw_fd_ostream>(
-        llvh::StringRef(options.SerializeAfterInitFile), EC);
-    if (EC) {
-      llvh::errs() << "Failed to read Serialize file: "
-                   << options.SerializeAfterInitFile << "\n";
-      return false;
-    }
-  }
-
-  if (options.DeserializeFile != "") {
-    auto inputFileOrErr = llvh::MemoryBuffer::getFile(options.DeserializeFile);
-    if (!inputFileOrErr) {
-      llvh::errs() << "Failed to read Deserialize file: "
-                   << options.DeserializeFile << '\n';
-      return false;
-    }
-    deserializeFile = std::move(*inputFileOrErr);
-  }
-#endif
-
   std::unique_ptr<vm::StatSamplingThread> statSampler;
-#ifdef HERMESVM_SERIALIZE
-  auto runtime = vm::Runtime::create(
-      options.runtimeConfig.rebuild()
-          .withSerializeAfterInitFile(serializeFile)
-          .withDeserializeFile(deserializeFile)
-          .withExternalPointersVectorCallBack(getNativeFunctionPtrs)
-          .build());
-#else
   auto runtime = vm::Runtime::create(options.runtimeConfig);
-#endif
   if (options.stabilizeInstructionCount) {
     // Try to limit features that can introduce unpredictable CPU instruction
     // behavior. Date is a potential cause, but is not handled currently.
@@ -430,14 +291,7 @@ bool executeHBCBytecodeImpl(
   vm::GCScope scope(runtime.get());
   ConsoleHostContext ctx{runtime.get()};
 
-  installConsoleBindings(
-      runtime.get(),
-      ctx,
-      statSampler.get(),
-#ifdef HERMESVM_SERIALIZE
-      options.SerializeVMPath.empty() ? nullptr : &options.SerializeVMPath,
-#endif
-      filename);
+  installConsoleBindings(runtime.get(), ctx, statSampler.get(), filename);
 
   vm::RuntimeModuleFlags flags;
   flags.persistent = true;

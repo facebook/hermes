@@ -60,7 +60,6 @@ set(RTSources
   RuntimeConfigTest.cpp
   SamplingHeapProfilerTest.cpp
   SegmentedArrayTest.cpp
-  SerializerTest.cpp
   SmallHermesValueTest.cpp
   SmallXStringTest.cpp
   StaticBuiltinsTest.cpp

@@ -12,6 +12,18 @@
 namespace hermes {
 namespace platform_intl {
 namespace {
+NSString *u16StringToNSString(std::u16string src) {
+  auto size = src.size();
+  const auto *cString = (const unichar *)src.c_str();
+  return [NSString stringWithCharacters:cString length:size];
+}
+std::u16string nsStringToU16String(NSString *src) {
+  auto size = src.length;
+  std::u16string result;
+  result.resize(size);
+  [src getCharacters:(unichar *)&result[0] range:NSMakeRange(0, size)];
+  return result;
+}
 // Implementer note: This method corresponds roughly to
 // https://tc39.es/ecma402/#sec-bestavailablelocale
 llvh::Optional<std::u16string> bestAvailableLocale(
@@ -78,7 +90,6 @@ std::u16string toNoExtensionsLocale(const std::u16string &locale) {
       result.append(subtags.at(s));
     }
   }
-
   return result;
 }
 
@@ -113,17 +124,17 @@ locale_match_t lookupMatcher(
         // the Unicode locale extension sequence within locale.
         // 2. Set result.[[extension]] to extension.
         result.extension = result.locale.substr(0, locale.length() - noExtensionsLocale.length());
-        // iii. Return result.
-        return result;
       }
+      // iii. Return result.
+      return result;
     }
-    // 3. Let defLocale be DefaultLocale().
-    NSString *defLocale = [[NSLocale currentLocale] localeIdentifier];
-    // 4. Set result.[[locale]] to defLocale.
-    result.locale = nsStringToU16String(defLocale);
-    // 5. Return result.
-    return result;
   }
+  // 3. Let defLocale be DefaultLocale().
+  NSString *defLocale = [[NSLocale currentLocale] localeIdentifier];
+  // 4. Set result.[[locale]] to defLocale.
+  result.locale = nsStringToU16String(defLocale);
+  // 5. Return result.
+  return result;
 }
 // Implementer note: This method corresponds roughly to
 // https://402.ecma-international.org/7.0/#sec-lookupsupportedlocales
@@ -151,10 +162,47 @@ std::vector<std::u16string> lookupSupportedLocales(
   return subset;
 }
 }
+
+// Implementation of https://tc39.es/ecma402/#sec-canonicalizelocalelist
+vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
+    vm::Runtime *runtime,
+    const std::vector<std::u16string> &locales) {
+  // 1. If locales is undefined, then
+  //   a. Return a new empty List
+  // Not needed, this validation occurs closer to VM in 'normalizeLocales'.
+  // 2. Let seen be a new empty List.
+  std::vector<std::u16string> seen;
+  // 3. If Type(locales) is String or Type(locales) is Object and locales has an
+  // [[InitializedLocale]] internal slot, then
+  // 4. Else
+  // We don't yet support Locale object -
+  // https://tc39.es/ecma402/#locale-objects As of now, 'locales' can only be a
+  // string list/array. Validation occurs in normalizeLocaleList, so this
+  // function just takes a vector of strings.
+  // 5. Let len be ? ToLength(? Get(O, "length")).
+  // 6. Let k be 0.
+  // 7. Repeat, while k < len
+  for (std::u16string locale : locales) {
+    // TODO - BCP 47 tag validation
+    // 7.c.vi. Let canonicalizedTag be CanonicalizeUnicodeLocaleId(tag).
+    auto *localeNSString = u16StringToNSString(locale);
+    NSString *canonicalizedTagNSString =
+        [NSLocale canonicalLocaleIdentifierFromString:localeNSString];
+    auto canonicalizedTag = nsStringToU16String(canonicalizedTagNSString);
+    // 7.c.vii. If canonicalizedTag is not an element of seen, append
+    // canonicalizedTag as the last element of seen.
+    if (std::find(seen.begin(), seen.end(), canonicalizedTag) == seen.end()) {
+      seen.push_back(std::move(canonicalizedTag));
+    }
+  }
+  return seen;
+}
+
+// https://tc39.es/ecma402/#sec-canonicalizelocalelist
 vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales) {
-  return std::vector<std::u16string>{u"fr-FR", u"es-ES"};
+  return canonicalizeLocaleList(runtime, locales);
 }
 
 // Implementer note: This method corresponds roughly to

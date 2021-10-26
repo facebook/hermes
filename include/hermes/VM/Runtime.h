@@ -18,7 +18,6 @@
 #include "hermes/VM/CallResult.h"
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/Debugger/Debugger.h"
-#include "hermes/VM/Deserializer.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCStorage.h"
@@ -35,7 +34,6 @@
 #include "hermes/VM/RegExpMatch.h"
 #include "hermes/VM/RuntimeModule.h"
 #include "hermes/VM/RuntimeStats.h"
-#include "hermes/VM/Serializer.h"
 #include "hermes/VM/StackFrame.h"
 #include "hermes/VM/StackTracesTree-NoRuntime.h"
 #include "hermes/VM/SymbolRegistry.h"
@@ -911,27 +909,6 @@ class Runtime : public HandleRootOwner,
   /// Called when various GC events(e.g. collection start/end) happen.
   void onGCEvent(GCEventKind kind, const std::string &extraInfo) override;
 
-#ifdef HERMESVM_SERIALIZE
-  /// Fill the header with current Runtime config
-  void populateHeaderRuntimeConfig(SerializeHeader &header);
-
-  /// Check if the SerializeHeader read from the file matches Runtime config of
-  /// current run.
-  void checkHeaderRuntimeConfig(SerializeHeader &header) const;
-
-  /// Serialize the VM state.
-  void serialize(Serializer &s);
-
-  /// Set the closure function to execute after deserialization.
-  void setSerializeClosure(Handle<JSFunction> function) {
-    serializeClosure = function.getHermesValue();
-  }
-
-  HermesValue getSerializeClosure() {
-    return serializeClosure;
-  }
-#endif
-
 #ifdef HERMESVM_PROFILER_BB
   using ClassId = InlineCacheProfiler::ClassId;
 
@@ -1110,23 +1087,6 @@ class Runtime : public HandleRootOwner,
 
   /// Write a JS stack trace as part of a \c crashCallback() run.
   void crashWriteCallStack(JSONEmitter &json);
-
-#ifdef HERMESVM_SERIALIZE
-  void serializeIdentifierTable(Serializer &s);
-
-  /// Serialize Runtime fields.
-  void serializeRuntimeFields(Serializer &s);
-
-  /// Deserialize Runtime fields.
-  void deserializeRuntimeFields(Deserializer &d);
-
-  /// Deserialize the VM state.
-  /// \param inputFile MemoryBuffer to read from.
-  /// \param currentlyInYoung Whether we are allocating from the young gen
-  /// before deserialization starts and should we go back to allocating from the
-  /// young gen after deserialziation.
-  void deserializeImpl(Deserializer &d, bool currentlyInYoung);
-#endif
 
  private:
   GCStorage heapStorage_;

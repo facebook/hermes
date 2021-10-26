@@ -9,9 +9,6 @@
 
 #include "hermes/VM/BuildMetadata.h"
 
-#include "llvh/Support/Debug.h"
-#define DEBUG_TYPE "serialize"
-
 namespace hermes {
 namespace vm {
 
@@ -43,18 +40,6 @@ void FinalizableNativeFunctionBuildMeta(
   NativeFunctionBuildMeta(cell, mb);
   mb.setVTable(&FinalizableNativeFunction::vt.base.base);
 }
-
-#ifdef HERMESVM_SERIALIZE
-void FinalizableNativeFunctionSerialize(Serializer &s, const GCCell *cell) {
-  llvh::outs()
-      << "Serialize function not implemented for FinalizableNativeFunction\n";
-}
-
-void FinalizableNativeFunctionDeserialize(Deserializer &d, CellKind kind) {
-  llvh::outs()
-      << "Deserialize function not implemented for FinalizableNativeFunction\n";
-}
-#endif
 
 CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
     Runtime *runtime,
@@ -115,18 +100,6 @@ void HostObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.setVTable(&HostObject::vt.base);
 }
 
-#ifdef HERMESVM_SERIALIZE
-void HostObjectSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvh::dbgs() << "Serialize function not implemented for HostObject\n");
-}
-
-void HostObjectDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvh::dbgs() << "Deserialize function not implemented for HostObject\n");
-}
-#endif
-
 CallResult<HermesValue> HostObject::createWithoutPrototype(
     Runtime *runtime,
     std::unique_ptr<HostObjectProxy> proxy) {
@@ -146,5 +119,3 @@ CallResult<HermesValue> HostObject::createWithoutPrototype(
 
 } // namespace vm
 } // namespace hermes
-
-#undef DEBUG_TYPE

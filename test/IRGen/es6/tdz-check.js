@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -fenable-tdz -O0 -dump-ir %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -Xenable-tdz -O0 -dump-ir %s | %FileCheck --match-full-lines %s
 
 function check1() {
     return x + y;

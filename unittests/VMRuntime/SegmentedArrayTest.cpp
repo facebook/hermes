@@ -15,9 +15,6 @@ using namespace hermes::vm;
 
 namespace {
 
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
-// Only NCGen has a limit that makes this allocation feasible.
-
 struct SegmentedArrayBigHeapTest : public RuntimeTestFixtureBase {
   static const GCConfig kMassiveTestGCConfig;
   static const RuntimeConfig kTestRTConfig;
@@ -43,7 +40,6 @@ TEST_F(SegmentedArrayBigHeapTest, AllocMaxSizeArray) {
   EXPECT_EQ(res, ExecutionStatus::RETURNED)
       << "Allocating a max size array failed";
 }
-#endif
 
 using SegmentedArrayTest = RuntimeTestFixture;
 

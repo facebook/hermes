@@ -11,8 +11,6 @@
 #include "hermes/VM/StringPrimitive.h"
 
 #include "JSLib/JSLibInternal.h"
-#include "llvh/Support/Debug.h"
-#define DEBUG_TYPE "serialize"
 
 namespace hermes {
 namespace vm {
@@ -42,37 +40,6 @@ void RegExpStringIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("iteratedRegExp", &self->iteratedRegExp_);
   mb.addField("iteratedString", &self->iteratedString_);
 }
-
-#ifdef HERMESVM_SERIALIZE
-JSRegExpStringIterator::JSRegExpStringIterator(Deserializer &d)
-    : JSObject(d, &vt.base) {
-  d.readRelocation(&iteratedRegExp_, RelocationKind::GCPointer);
-  d.readRelocation(&iteratedString_, RelocationKind::GCPointer);
-  global_ = d.readInt<bool>();
-  unicode_ = d.readInt<bool>();
-  done_ = d.readInt<bool>();
-}
-
-void RegExpStringIteratorSerialize(Serializer &s, const GCCell *cell) {
-  auto *self = vmcast<const JSRegExpStringIterator>(cell);
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<JSRegExpStringIterator>());
-  s.writeRelocation(self->iteratedRegExp_.get(s.getRuntime()));
-  s.writeRelocation(self->iteratedString_.get(s.getRuntime()));
-  s.writeInt<bool>(self->global_);
-  s.writeInt<bool>(self->unicode_);
-  s.writeInt<bool>(self->done_);
-  s.endObject(cell);
-}
-
-void RegExpStringIteratorDeserialize(Deserializer &d, CellKind kind) {
-  assert(
-      kind == CellKind::RegExpStringIteratorKind &&
-      "Expected RegExpStringIterator");
-  auto *cell = d.getRuntime()->makeAFixed<JSRegExpStringIterator>(d);
-  d.endObject(cell);
-}
-#endif
 
 /// ES11 21.2.5.8.1 CreateRegExpStringIterator ( R, S, global, fullUnicode )
 PseudoHandle<JSRegExpStringIterator> JSRegExpStringIterator::create(
@@ -182,5 +149,3 @@ CallResult<HermesValue> JSRegExpStringIterator::nextElement(
 
 } // namespace vm
 } // namespace hermes
-
-#undef DEBUG_TYPE

@@ -152,12 +152,6 @@ class JSTypedArrayBase : public JSObject {
       uint8_t byteWidth);
 
  protected:
-#ifdef HERMESVM_SERIALIZE
-  JSTypedArrayBase(Deserializer &d, const VTable *vt);
-
-  friend void serializeTypedArrayBase(Serializer &s, const GCCell *cell);
-#endif
-
   /// buffer_ is the underlying buffer which holds the data to be viewed.
   /// This buffer may be shared with other JSTypedArray instantiations.
   GCPointer<JSArrayBuffer> buffer_;
@@ -290,13 +284,6 @@ class JSTypedArray final : public JSTypedArrayBase {
  public:
   // NOTE: If any fields are ever added beyond the base class, then the
   // *BuildMeta functions must be updated to call addJSObjectOverlapSlots.
-
-#ifdef HERMESVM_SERIALIZE
-  explicit JSTypedArray(Deserializer &d);
-
-  template <typename, CellKind>
-  friend void deserializeTypedArray(Deserializer &d, CellKind kind);
-#endif
 
   explicit JSTypedArray(
       Runtime *runtime,

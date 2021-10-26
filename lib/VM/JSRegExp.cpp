@@ -17,9 +17,6 @@
 #include "hermes/VM/Runtime-inline.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvh/Support/Debug.h"
-#define DEBUG_TYPE "serialize"
-
 namespace hermes {
 namespace vm {
 
@@ -57,40 +54,6 @@ void RegExpBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.setVTable(&JSRegExp::vt.base);
   mb.addField(&self->pattern_);
 }
-
-#ifdef HERMESVM_SERIALIZE
-JSRegExp::JSRegExp(Deserializer &d) : JSObject(d, &vt.base) {
-  d.readRelocation(&pattern_, RelocationKind::GCPointer);
-  uint32_t size = d.readInt<uint32_t>();
-  initializeBytecode(d.readArrayRef<uint8_t>(size));
-  // bytecode_ is tracked by IDTracker for heapsnapshot. We should do
-  // relocation for it.
-  d.endObject(bytecode_);
-
-  d.readData(&syntaxFlags_, sizeof(syntaxFlags_));
-}
-
-void RegExpSerialize(Serializer &s, const GCCell *cell) {
-  auto *self = vmcast<const JSRegExp>(cell);
-  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSRegExp>());
-  s.writeRelocation(self->pattern_.get(s.getRuntime()));
-  s.writeInt<uint32_t>(self->bytecodeSize_);
-  s.writeData(self->bytecode_, self->bytecodeSize_);
-  // bytecode_ is tracked by IDTracker for heapsnapshot. We should do
-  // relocation for it.
-  s.endObject(self->bytecode_);
-
-  s.writeData(&self->syntaxFlags_, sizeof(self->syntaxFlags_));
-
-  s.endObject(cell);
-}
-
-void RegExpDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::RegExpKind && "Expected RegExp");
-  auto *cell = d.getRuntime()->makeAFixed<JSRegExp, HasFinalizer::Yes>(d);
-  d.endObject(cell);
-}
-#endif
 
 PseudoHandle<JSRegExp> JSRegExp::create(
     Runtime *runtime,
@@ -417,5 +380,3 @@ CallResult<HermesValue> JSRegExp::escapePattern(
 
 } // namespace vm
 } // namespace hermes
-
-#undef DEBUG_TYPE

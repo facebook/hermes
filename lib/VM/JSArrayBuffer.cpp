@@ -10,9 +10,6 @@
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Runtime-inline.h"
 
-#include "llvh/Support/Debug.h"
-#define DEBUG_TYPE "serialize"
-
 namespace hermes {
 namespace vm {
 
@@ -48,52 +45,6 @@ void ArrayBufferBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
   mb.setVTable(&JSArrayBuffer::vt.base);
 }
-
-#ifdef HERMESVM_SERIALIZE
-JSArrayBuffer::JSArrayBuffer(Deserializer &d)
-    : JSObject(d, &vt.base), data_(nullptr), size_(0), attached_(false) {
-  size_type size = d.readInt<size_type>();
-  attached_ = d.readInt<uint8_t>();
-  if (!attached_) {
-    return;
-  }
-  // Don't need to zero out the data since we'll be copying into it immediately.
-  // This call sets size_, data_, and attached_.
-  if (LLVM_UNLIKELY(
-          createDataBlock(d.getRuntime(), size, false) ==
-          ExecutionStatus::EXCEPTION)) {
-    hermes_fatal("Fail to malloc storage for ArrayBuffer");
-  }
-  if (size != 0) {
-    d.readData(data_, size);
-    // data_ is tracked by IDTracker for heapsnapshot. We should do relocation
-    // for it.
-    d.endObject(data_);
-  }
-}
-
-void ArrayBufferSerialize(Serializer &s, const GCCell *cell) {
-  auto *self = vmcast<const JSArrayBuffer>(cell);
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<JSArrayBuffer>());
-  s.writeInt<JSArrayBuffer::size_type>(self->size_);
-  s.writeInt<uint8_t>((uint8_t)self->attached_);
-  // Only serialize data_ when attached_.
-  if (self->attached_ && self->size_ != 0) {
-    s.writeData(self->data_, self->size_);
-    // data_ is tracked by IDTracker for heapsnapshot. We should do relocation
-    // for it.
-    s.endObject(self->data_);
-  }
-
-  s.endObject(cell);
-}
-
-void ArrayBufferDeserialize(Deserializer &d, CellKind kind) {
-  auto *cell = d.getRuntime()->makeAFixed<JSArrayBuffer, HasFinalizer::Yes>(d);
-  d.endObject(cell);
-}
-#endif
 
 PseudoHandle<JSArrayBuffer> JSArrayBuffer::create(
     Runtime *runtime,
@@ -265,5 +216,3 @@ JSArrayBuffer::createDataBlock(Runtime *runtime, size_type size, bool zero) {
 
 } // namespace vm
 } // namespace hermes
-
-#undef DEBUG_TYPE

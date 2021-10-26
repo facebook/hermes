@@ -46,13 +46,6 @@ class JSGenerator final : public JSObject {
   }
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  explicit JSGenerator(Deserializer &d);
-
-  friend void GeneratorSerialize(Serializer &s, const GCCell *cell);
-  friend void GeneratorDeserialize(Deserializer &d, CellKind kind);
-#endif
-
   JSGenerator(
       Runtime *runtime,
       Handle<JSObject> parent,

@@ -196,4 +196,4 @@ TEST_F(AlignedHeapSegmentDeathTest, GrowToTooBig) {
 
 } // namespace
 
-#endif // HERMESVM_GC_NONCONTIG_GENERATIONAL
+#endif // !HERMESVM_GC_MALLOC

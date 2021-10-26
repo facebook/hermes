@@ -220,26 +220,6 @@ class MallocGC final : public GCBase {
   /// Same as in superclass GCBase.
   virtual void createSnapshot(llvh::raw_ostream &os) override;
 
-#ifdef HERMESVM_SERIALIZE
-  /// Same as in superclass GCBase.
-  virtual void serializeWeakRefs(Serializer &s) override;
-
-  /// Same as in superclass GCBase.
-  virtual void deserializeWeakRefs(Deserializer &d) override;
-
-  /// Serialze all heap objects to a stream.
-  virtual void serializeHeap(Serializer &s) override;
-
-  /// Deserialize heap objects.
-  virtual void deserializeHeap(Deserializer &d) override;
-
-  /// Signal GC we are deserializing.
-  virtual void deserializeStart() override;
-
-  /// Signal GC we are serializing.
-  virtual void deserializeEnd() override;
-#endif
-
   void getHeapInfo(HeapInfo &info) override;
   void getHeapInfoWithMallocSize(HeapInfo &info) override;
   void getCrashManagerHeapInfo(CrashManager::HeapInformation &info) override;

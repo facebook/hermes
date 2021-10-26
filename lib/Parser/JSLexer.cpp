@@ -10,6 +10,7 @@
 #include "dtoa/dtoa.h"
 #include "hermes/Support/Conversions.h"
 
+#include "llvh/ADT/ScopeExit.h"
 #include "llvh/ADT/StringSwitch.h"
 
 using llvh::Twine;
@@ -853,6 +854,13 @@ bool JSLexer::isCurrentTokenADirective() {
           // It implies a new line, so we are good.
           return true;
         } else if (ptr[1] == '*') { // Block comment?
+          auto savedCommentStorageSize = commentStorage_.size();
+          auto commentScope = llvh::make_scope_exit([&] {
+            if (storeComments_)
+              commentStorage_.erase(
+                  commentStorage_.begin() + savedCommentStorageSize,
+                  commentStorage_.end());
+          });
           SourceErrorManager::SaveAndSuppressMessages suppress(&sm_);
           ptr = skipBlockComment(ptr);
           continue;
@@ -904,7 +912,15 @@ OptValue<TokenKind> JSLexer::lookahead1(OptValue<TokenKind> expectedToken) {
   SMLoc end = token_.getEndLoc();
   const char *cur = curCharPtr_;
   SourceErrorManager::SaveAndSuppressMessages suppress(&sm_);
-  size_t savedCommentStorageSize = commentStorage_.size();
+
+  // Remove any comments that were stored during the lookahead
+  auto savedCommentStorageSize = commentStorage_.size();
+  auto commentScope = llvh::make_scope_exit([&] {
+    if (storeComments_)
+      commentStorage_.erase(
+          commentStorage_.begin() + savedCommentStorageSize,
+          commentStorage_.end());
+  });
 
   advance();
   OptValue<TokenKind> kind = token_.getKind();
@@ -924,13 +940,6 @@ OptValue<TokenKind> JSLexer::lookahead1(OptValue<TokenKind> expectedToken) {
     token_.setResWord(savedKind, savedIdent);
   }
   seek(SMLoc::getFromPointer(cur));
-
-  // Remove any comments that were stored during the lookahead
-  if (storeComments_ && savedCommentStorageSize < commentStorage_.size()) {
-    commentStorage_.erase(
-        commentStorage_.begin() + savedCommentStorageSize,
-        commentStorage_.end());
-  }
 
   // Undo the storage for the token we just advanced to.
   if (LLVM_UNLIKELY(storeTokens_)) {

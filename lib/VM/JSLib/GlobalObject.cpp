@@ -600,10 +600,9 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
   runtime->typedArrayBaseConstructor =
       createTypedArrayBaseConstructor(runtime).getHermesValue();
 
-#define TYPED_ARRAY(name, type)                                             \
-  runtime->name##ArrayConstructor =                                         \
-      createTypedArrayConstructor<type, CellKind::name##ArrayKind>(runtime) \
-          .getHermesValue();                                                \
+#define TYPED_ARRAY(name, type)                                 \
+  runtime->name##ArrayConstructor =                             \
+      create##name##ArrayConstructor(runtime).getHermesValue(); \
   gcScope.clearAllHandles();
 #include "hermes/VM/TypedArrays.def"
 

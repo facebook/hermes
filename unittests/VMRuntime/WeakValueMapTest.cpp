@@ -28,12 +28,15 @@ using testhelpers::DummyObject;
 TEST_F(WeakValueMapTest, SmokeTest) {
   runtime->collect("test");
 
-  WeakValueMap<int, JSNumber> wvp{};
+  // Since the lifetime of the runtime is longer than the lifetime of the map,
+  // we give the runtime a shared_ptr to the map.
+  auto wvpPtr = std::make_shared<WeakValueMap<int, JSNumber>>();
+  auto &wvp = *wvpPtr;
 
   auto dummyObj = runtime->makeHandle(DummyObject::create(&runtime->getHeap()));
   dummyObj->markWeakCallback = std::make_unique<DummyObject::MarkWeakCallback>(
-      [&wvp](GCCell *, WeakRefAcceptor &acceptor) {
-        wvp.markWeakRefs(acceptor);
+      [wvpPtr](GCCell *, WeakRefAcceptor &acceptor) {
+        wvpPtr->markWeakRefs(acceptor);
       });
 
   auto makeNumber = [&](int n) -> JSNumber * {

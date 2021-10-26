@@ -307,17 +307,6 @@ class CodeBlock final
   /// \return the offset of the next instruction after the one at \p offset.
   uint32_t getNextOffset(uint32_t offset) const;
 #endif
-
-#ifdef HERMESVM_SERIALIZE
-  /// Serialize this CodeBlock.
-  void serialize(Serializer &s) const;
-
-  /// Deserialize and create a new CodeBlock. \return a pointer to the
-  /// CodeBlock. It has the same semantics as \p create() wrt memory management:
-  /// the result must be deallocated via delete, which is overridden.
-  /// \param runtimeModule The RuntimeModule the CodeBlock belongs to.
-  static CodeBlock *deserialize(Deserializer &d, RuntimeModule *runtimeModule);
-#endif
 };
 
 } // namespace vm
