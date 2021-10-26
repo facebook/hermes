@@ -596,7 +596,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_subdirectory(external/llvh)
 add_subdirectory(utils/hermes-lit)
-add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(public)
 add_subdirectory(external)
