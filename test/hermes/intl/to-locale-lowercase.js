@@ -25,12 +25,3 @@ print(`${',̆'.toLocaleLowerCase('cs-CZ')}`);
 
 print(`${''.toLocaleLowerCase('en-US').length}`);
 // CHECK-NEXT: 0
-
-try {
-    const wrongDataType = 26;
-    wrongDataType.getCanonicalLocales(["en-GB"]);
-    print("Succeeded");
-  } catch (e) {
-    print("Caught", e.name, e.message);
-  }
-  // CHECK-NEXT: Caught{{.*}}
