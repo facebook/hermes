@@ -11,9 +11,6 @@ if(LIBREADLINE_FOUND AND LIBTINFO_FOUND)
   set(LIBREADLINE ${LIBREADLINE_FOUND} ${LIBTINFO_FOUND})
 endif()
 
-configure_file(ReplConfig.h.in ${CMAKE_CURRENT_BINARY_DIR}/ReplConfig.h
-  ESCAPE_QUOTES)
-
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 set(HERMES_LINK_COMPONENTS LLVHSupport)
@@ -23,6 +20,10 @@ add_hermes_tool(hermes
   repl.cpp
   ${ALL_HEADER_FILES}
   )
+
+if(HAVE_LIBREADLINE)
+  target_compile_definitions(hermes PRIVATE HAVE_LIBREADLINE)
+endif()
 
 target_link_libraries(hermes
   hermesVMRuntime
