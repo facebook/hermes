@@ -57,6 +57,7 @@ node "$THIS_DIR/genParserNodeTypes.js" "$INCLUDE_PATH"
 node "$THIS_DIR/genParserAsserts.js" "$INCLUDE_PATH"
 node "$THIS_DIR/genESLintVisitorKeys.js" "$INCLUDE_PATH"
 node "$THIS_DIR/genNodeDeserializers.js" "$INCLUDE_PATH"
+node "$THIS_DIR/genSelectorTypes.js" "$INCLUDE_PATH"
 
 for package in "${PACKAGES[@]}"; do
   PACKAGE_DIST_DIR="$THIS_DIR/../$package/dist"

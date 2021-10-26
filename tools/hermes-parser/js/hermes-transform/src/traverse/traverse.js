@@ -8,7 +8,7 @@
  * @format
  */
 
-import type {ESNode, Program} from 'hermes-estree';
+import type {ESNode, ESQueryNodeSelectors, Program} from 'hermes-estree';
 import type {ScopeManager, Scope, Variable} from 'hermes-eslint';
 
 import {NodeEventGenerator} from './NodeEventGenerator';
@@ -32,12 +32,7 @@ export type TraversalContext = $ReadOnly<{
   getScope: (node?: ESNode) => Scope,
 }>;
 
-export type Visitor = (
-  context: TraversalContext,
-) => $ReadOnly<{
-  // TODO - auto-generate more node types here so that we can auto-type more things
-  [string]: (node: ESNode) => void,
-}>;
+export type Visitor = (context: TraversalContext) => ESQueryNodeSelectors;
 
 export function traverse(
   ast: Program,

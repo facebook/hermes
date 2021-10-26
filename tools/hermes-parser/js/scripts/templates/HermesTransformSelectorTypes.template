@@ -1,0 +1,383 @@
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// We only care about the names
+#define NodeLabel(ARG)
+#define NodeString(ARG)
+#define NodeBoolean(ARG)
+#define NodeNumber(ARG)
+#define NodePtr(ARG)
+#define NodeList(ARG)
+
+// we don't want the TS types
+#define HERMES_PARSE_TS 0
+// we don't want the Cover nodes
+#define ESTREE_DEFINE_COVER_NODES 0
+
+//
+// Declare the imports
+//
+#undef ESTREE_NODE_0_ARGS
+#define ESTREE_NODE_0_ARGS( \
+    NAME,                   \
+    BASE)                   \
+NAME,
+
+// we don't care about the declared properties, so all of these can just redirect to the zero-arg version
+#define ESTREE_NODE_1_ARGS( \
+    NAME,                   \
+    BASE,                   \
+    ARG0TY,                 \
+    ARG0NM,                 \
+    ARG0OPT)                \
+ESTREE_NODE_0_ARGS(         \
+  NAME,                     \
+  BASE)
+
+#define ESTREE_NODE_2_ARGS( \
+    NAME,                   \
+    BASE,                   \
+    ARG0TY,                 \
+    ARG0NM,                 \
+    ARG0OPT,                \
+    ARG1TY,                 \
+    ARG1NM,                 \
+    ARG1PT)                 \
+ESTREE_NODE_0_ARGS(         \
+  NAME,                     \
+  BASE)
+
+#define ESTREE_NODE_3_ARGS( \
+    NAME,                   \
+    BASE,                   \
+    ARG0TY,                 \
+    ARG0NM,                 \
+    ARG0OPT,                \
+    ARG1TY,                 \
+    ARG1NM,                 \
+    ARG1PT,                 \
+    ARG2TY,                 \
+    ARG2NM,                 \
+    ARG2PT)                 \
+ESTREE_NODE_0_ARGS(         \
+  NAME,                     \
+  BASE)
+
+#define ESTREE_NODE_4_ARGS( \
+    NAME,                   \
+    BASE,                   \
+    ARG0TY,                 \
+    ARG0NM,                 \
+    ARG0OPT,                \
+    ARG1TY,                 \
+    ARG1NM,                 \
+    ARG1PT,                 \
+    ARG2TY,                 \
+    ARG2NM,                 \
+    ARG2PT,                 \
+    ARG3TY,                 \
+    ARG3NM,                 \
+    ARG3PT)                 \
+ESTREE_NODE_0_ARGS(         \
+  NAME,                     \
+  BASE)
+
+#define ESTREE_NODE_5_ARGS( \
+    NAME,                   \
+    BASE,                   \
+    ARG0TY,                 \
+    ARG0NM,                 \
+    ARG0OPT,                \
+    ARG1TY,                 \
+    ARG1NM,                 \
+    ARG1PT,                 \
+    ARG2TY,                 \
+    ARG2NM,                 \
+    ARG2PT,                 \
+    ARG3TY,                 \
+    ARG3NM,                 \
+    ARG3PT,                 \
+    ARG4TY,                 \
+    ARG4NM,                 \
+    ARG4PT)                 \
+ESTREE_NODE_0_ARGS(         \
+  NAME,                     \
+  BASE)
+
+#define ESTREE_NODE_6_ARGS( \
+    NAME,                   \
+    BASE,                   \
+    ARG0TY,                 \
+    ARG0NM,                 \
+    ARG0OPT,                \
+    ARG1TY,                 \
+    ARG1NM,                 \
+    ARG1PT,                 \
+    ARG2TY,                 \
+    ARG2NM,                 \
+    ARG2PT,                 \
+    ARG3TY,                 \
+    ARG3NM,                 \
+    ARG3PT,                 \
+    ARG4TY,                 \
+    ARG4NM,                 \
+    ARG4PT,                 \
+    ARG5TY,                 \
+    ARG5NM,                 \
+    ARG5PT)                 \
+ESTREE_NODE_0_ARGS(         \
+  NAME,                     \
+  BASE)
+
+#define ESTREE_NODE_7_ARGS( \
+    NAME,                   \
+    BASE,                   \
+    ARG0TY,                 \
+    ARG0NM,                 \
+    ARG0OPT,                \
+    ARG1TY,                 \
+    ARG1NM,                 \
+    ARG1PT,                 \
+    ARG2TY,                 \
+    ARG2NM,                 \
+    ARG2PT,                 \
+    ARG3TY,                 \
+    ARG3NM,                 \
+    ARG3PT,                 \
+    ARG4TY,                 \
+    ARG4NM,                 \
+    ARG4PT,                 \
+    ARG5TY,                 \
+    ARG5NM,                 \
+    ARG5PT,                 \
+    ARG6TY,                 \
+    ARG6NM,                 \
+    ARG6PT)                 \
+ESTREE_NODE_0_ARGS(         \
+  NAME,                     \
+  BASE)
+
+#define ESTREE_NODE_8_ARGS( \
+    NAME,                   \
+    BASE,                   \
+    ARG0TY,                 \
+    ARG0NM,                 \
+    ARG0OPT,                \
+    ARG1TY,                 \
+    ARG1NM,                 \
+    ARG1PT,                 \
+    ARG2TY,                 \
+    ARG2NM,                 \
+    ARG2PT,                 \
+    ARG3TY,                 \
+    ARG3NM,                 \
+    ARG3PT,                 \
+    ARG4TY,                 \
+    ARG4NM,                 \
+    ARG4PT,                 \
+    ARG5TY,                 \
+    ARG5NM,                 \
+    ARG5PT,                 \
+    ARG6TY,                 \
+    ARG6NM,                 \
+    ARG6PT,                 \
+    ARG7TY,                 \
+    ARG7NM,                 \
+    ARG7PT)                 \
+ESTREE_NODE_0_ARGS(         \
+  NAME,                     \
+  BASE)
+
+import type {
+#include "hermes/AST/ESTree.def"
+ESNode,
+} from './types';
+
+
+
+//
+// Declare the type
+//
+#define MAKE_EXIT(NAME) #NAME
+#undef ESTREE_NODE_0_ARGS
+#define ESTREE_NODE_0_ARGS(                 \
+    NAME,                                   \
+    BASE)                                   \
+NAME: (node: NAME) => void,                 \
+MAKE_EXIT(NAME:exit): (node: NAME) => void,
+
+// we don't care about the declared properties, so all of these can just redirect to the zero-arg version
+#define ESTREE_NODE_1_ARGS( \
+    NAME,                   \
+    BASE,                   \
+    ARG0TY,                 \
+    ARG0NM,                 \
+    ARG0OPT)                \
+ESTREE_NODE_0_ARGS(         \
+  NAME,                     \
+  BASE)
+
+#define ESTREE_NODE_2_ARGS( \
+    NAME,                   \
+    BASE,                   \
+    ARG0TY,                 \
+    ARG0NM,                 \
+    ARG0OPT,                \
+    ARG1TY,                 \
+    ARG1NM,                 \
+    ARG1PT)                 \
+ESTREE_NODE_0_ARGS(         \
+  NAME,                     \
+  BASE)
+
+#define ESTREE_NODE_3_ARGS( \
+    NAME,                   \
+    BASE,                   \
+    ARG0TY,                 \
+    ARG0NM,                 \
+    ARG0OPT,                \
+    ARG1TY,                 \
+    ARG1NM,                 \
+    ARG1PT,                 \
+    ARG2TY,                 \
+    ARG2NM,                 \
+    ARG2PT)                 \
+ESTREE_NODE_0_ARGS(         \
+  NAME,                     \
+  BASE)
+
+#define ESTREE_NODE_4_ARGS( \
+    NAME,                   \
+    BASE,                   \
+    ARG0TY,                 \
+    ARG0NM,                 \
+    ARG0OPT,                \
+    ARG1TY,                 \
+    ARG1NM,                 \
+    ARG1PT,                 \
+    ARG2TY,                 \
+    ARG2NM,                 \
+    ARG2PT,                 \
+    ARG3TY,                 \
+    ARG3NM,                 \
+    ARG3PT)                 \
+ESTREE_NODE_0_ARGS(         \
+  NAME,                     \
+  BASE)
+
+#define ESTREE_NODE_5_ARGS( \
+    NAME,                   \
+    BASE,                   \
+    ARG0TY,                 \
+    ARG0NM,                 \
+    ARG0OPT,                \
+    ARG1TY,                 \
+    ARG1NM,                 \
+    ARG1PT,                 \
+    ARG2TY,                 \
+    ARG2NM,                 \
+    ARG2PT,                 \
+    ARG3TY,                 \
+    ARG3NM,                 \
+    ARG3PT,                 \
+    ARG4TY,                 \
+    ARG4NM,                 \
+    ARG4PT)                 \
+ESTREE_NODE_0_ARGS(         \
+  NAME,                     \
+  BASE)
+
+#define ESTREE_NODE_6_ARGS( \
+    NAME,                   \
+    BASE,                   \
+    ARG0TY,                 \
+    ARG0NM,                 \
+    ARG0OPT,                \
+    ARG1TY,                 \
+    ARG1NM,                 \
+    ARG1PT,                 \
+    ARG2TY,                 \
+    ARG2NM,                 \
+    ARG2PT,                 \
+    ARG3TY,                 \
+    ARG3NM,                 \
+    ARG3PT,                 \
+    ARG4TY,                 \
+    ARG4NM,                 \
+    ARG4PT,                 \
+    ARG5TY,                 \
+    ARG5NM,                 \
+    ARG5PT)                 \
+ESTREE_NODE_0_ARGS(         \
+  NAME,                     \
+  BASE)
+
+#define ESTREE_NODE_7_ARGS( \
+    NAME,                   \
+    BASE,                   \
+    ARG0TY,                 \
+    ARG0NM,                 \
+    ARG0OPT,                \
+    ARG1TY,                 \
+    ARG1NM,                 \
+    ARG1PT,                 \
+    ARG2TY,                 \
+    ARG2NM,                 \
+    ARG2PT,                 \
+    ARG3TY,                 \
+    ARG3NM,                 \
+    ARG3PT,                 \
+    ARG4TY,                 \
+    ARG4NM,                 \
+    ARG4PT,                 \
+    ARG5TY,                 \
+    ARG5NM,                 \
+    ARG5PT,                 \
+    ARG6TY,                 \
+    ARG6NM,                 \
+    ARG6PT)                 \
+ESTREE_NODE_0_ARGS(         \
+  NAME,                     \
+  BASE)
+
+#define ESTREE_NODE_8_ARGS( \
+    NAME,                   \
+    BASE,                   \
+    ARG0TY,                 \
+    ARG0NM,                 \
+    ARG0OPT,                \
+    ARG1TY,                 \
+    ARG1NM,                 \
+    ARG1PT,                 \
+    ARG2TY,                 \
+    ARG2NM,                 \
+    ARG2PT,                 \
+    ARG3TY,                 \
+    ARG3NM,                 \
+    ARG3PT,                 \
+    ARG4TY,                 \
+    ARG4NM,                 \
+    ARG4PT,                 \
+    ARG5TY,                 \
+    ARG5NM,                 \
+    ARG5PT,                 \
+    ARG6TY,                 \
+    ARG6NM,                 \
+    ARG6PT,                 \
+    ARG7TY,                 \
+    ARG7NM,                 \
+    ARG7PT)                 \
+ESTREE_NODE_0_ARGS(         \
+  NAME,                     \
+  BASE)
+
+export type ESQueryNodeSelectors = $ReadOnly<{
+#include "hermes/AST/ESTree.def"
+
+// plus an index signature for other, complex selectors
+[selector: string]: (node: ESNode) => void,
+}>;
