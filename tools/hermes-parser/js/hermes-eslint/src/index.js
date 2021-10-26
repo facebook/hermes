@@ -61,4 +61,4 @@ function parseForESLint(
   };
 }
 
-module.exports = {parse, parseForESLint};
+module.exports = {parse, parseForESLint, VisitorKeys};
