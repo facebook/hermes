@@ -81,13 +81,18 @@ std::u16string toNoExtensionsLocale(const std::u16string &locale) {
 
   return result;
 }
+
 // Implementer note: This method corresponds roughly to
 // https://tc39.es/ecma402/#sec-lookupmatcher
-std::u16string lookupMatcher(
+typedef struct locale_match_t {
+  std::u16string matched_locale;
+  std::u16string extensions;
+} locale_match_t;
+locale_match_t lookupMatcher(
     std::vector<std::u16string> &requestedLocales,
     std::vector<std::u16string> &availableLocales) {
   // 1. Let result be a new Record.
-  std::u16string result;
+  locale_match_t result;
   // 2. For each element locale of requestedLocales, do
   for (std::u16string locale : requestedLocales) {
     // a. Let noExtensionsLocale be the String value that is locale with
@@ -100,7 +105,7 @@ std::u16string lookupMatcher(
     // c. If availableLocale is not undefined, then
     if (!availableLocale.hasValue()) {
       // i. Set result.[[locale]] to availableLocale.
-      result = availableLocale.getValue();
+      result.locale = availableLocale.getValue();
       // ii. If locale and noExtensionsLocale are not the same String value,
       if (locale != noExtensionsLocale) {
         // then
@@ -108,16 +113,17 @@ std::u16string lookupMatcher(
         // the Unicode locale extension sequence within locale.
         // 2. Set result.[[extension]] to extension.
         // iii. Return result.
-        std::u16string extension = noExtensionsLocale;
-        result = extension;
+        result.locale = noExtensionsLocale;
+        //result.extension = locale.substring(0, locale.size() - noExtensionsLocale.size());
         return result;
       }
     }
     // 3. Let defLocale be DefaultLocale().
     NSString *defLocale = [[NSLocale currentLocale] localeIdentifier];
     // 4. Set result.[[locale]] to defLocale.
+    result.locale = nsStringToU16String(defLocale);
     // 5. Return result.
-    return nsStringToU16String(defLocale);
+    return result;
   }
 }
 // Implementer note: This method corresponds roughly to
