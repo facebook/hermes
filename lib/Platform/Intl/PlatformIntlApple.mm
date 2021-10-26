@@ -31,11 +31,11 @@ llvh::Optional<std::u16string> bestAvailableLocale(
 
     // b. Let pos be the character index of the last occurrence of "-" (U+002D)
     // within candidate.
-    const size_t pos = candidate.rfind(u'-');
+    size_t pos = candidate.rfind(u'-');
 
     // ...If that character does not occur, return undefined.
     if (pos == std::string::npos) {
-      return;
+        return {};
     }
 
     // c. If pos ≥ 2 and the character "-" occurs at index pos-2 of candidate,
@@ -85,8 +85,8 @@ std::u16string toNoExtensionsLocale(const std::u16string &locale) {
 // Implementer note: This method corresponds roughly to
 // https://tc39.es/ecma402/#sec-lookupmatcher
 typedef struct locale_match_t {
-  std::u16string matched_locale;
-  std::u16string extensions;
+  std::u16string locale;
+  std::u16string extension;
 } locale_match_t;
 locale_match_t lookupMatcher(
     std::vector<std::u16string> &requestedLocales,
@@ -100,7 +100,7 @@ locale_match_t lookupMatcher(
     std::u16string noExtensionsLocale = toNoExtensionsLocale(locale);
     // b. Let availableLocale be BestAvailableLocale(availableLocales,
     // noExtensionsLocale).
-    llvm::Optional<std::u16string> availableLocale =
+    llvh::Optional<std::u16string> availableLocale =
         bestAvailableLocale(availableLocales, noExtensionsLocale);
     // c. If availableLocale is not undefined, then
     if (!availableLocale.hasValue()) {
@@ -112,9 +112,8 @@ locale_match_t lookupMatcher(
         // 1. Let extension be the String value consisting of the substring of
         // the Unicode locale extension sequence within locale.
         // 2. Set result.[[extension]] to extension.
+        result.extension = result.locale.substr(0, locale.length() - noExtensionsLocale.length());
         // iii. Return result.
-        result.locale = noExtensionsLocale;
-        //result.extension = locale.substring(0, locale.size() - noExtensionsLocale.size());
         return result;
       }
     }
@@ -140,7 +139,7 @@ std::vector<std::u16string> lookupSupportedLocales(
     std::u16string noExtensionsLocale = toNoExtensionsLocale(locale);
     // b. Let availableLocale be BestAvailableLocale(availableLocales,
     // noExtensionsLocale).
-    llvm::Optional<std::u16string> availableLocale =
+    llvh::Optional<std::u16string> availableLocale =
         bestAvailableLocale(availableLocales, noExtensionsLocale);
     // c. If availableLocale is not undefined, append locale to the end of
     // subset.
@@ -202,10 +201,10 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
     std::u16string u16StringFromVector = nsStringToU16String(object);
     availableLocalesVector.push_back(u16StringFromVector);
   }
-  llvm::Optional<std::u16string> locale =
+  llvh::Optional<std::u16string> locale =
       bestAvailableLocale(availableLocalesVector, noExtensionsLocale);
   // 9. If locale is undefined, let locale be "und".
-  if (!locale.hasValue() || locale.empty()) {
+  if (!locale.hasValue()) {
     locale = u"und";
   }
 
