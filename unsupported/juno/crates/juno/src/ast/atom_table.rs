@@ -26,7 +26,7 @@ pub struct AtomTable(UnsafeCell<Inner>);
 struct Inner {
     /// Strings are added here and never removed or mutated.
     strings: Vec<String>,
-    /// Maps from a reference inside [`AtomTable::strings`] to the index in [`AtomTable::strings`].
+    /// Maps from a reference inside [`Inner::strings`] to the index in [`Inner::strings`].
     /// Since strings are never removed or modified, the lifetime of the key
     /// is effectively static.
     map: HashMap<&'static str, NumIndex>,
