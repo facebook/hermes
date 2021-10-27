@@ -271,9 +271,9 @@ vm::CallResult<Options> getOption(// Needs to be changed to Options options some
     std::vector<std::u16string> values,
     const Options fallback) {
 //    2. Let value be ? Get(options, property).
-      auto value = options.find(property);
+      std::u16string value = options.find(property)->first;
 //    3. If value is undefined, return fallback.
-      if (value != options.end()) {
+      if (value == options.end()) {
           return fallback;
       }
 //    4. Assert: type is "boolean" or "string".
