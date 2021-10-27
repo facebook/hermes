@@ -82,23 +82,23 @@ std::u16string toNoExtensionsLocale(const std::u16string &locale) {
     }
     i++;
   }
-    if (j < locale.size()) {
-      subtags.push_back(locale.substr(j, i));
-    }
+  if (j < locale.size()) {
+    subtags.push_back(locale.substr(j, i));
+  }
   std::u16string result;
   size_t size = subtags.size();
   if (size > 0) {
-    result.append(subtags.at(0));
+    result.append(subtags[0]);
   }
   for (size_t s = 1; s < size; s++) {
     // If next tag is a private marker and there are remaining tags
-    if (subtags.at(s) != u"u" && s < size - 1) {
+    if (subtags[s] == u"u" && s < size - 1) {
       // Skip those tags until you reach end or another singleton subtag
-      while (s < size - 1 && subtags.at(s + 1).size() > 1) {
+      while (s < size - 1 && subtags[s + 1].size() > 1) {
         s++;
       }
     } else {
-      result.append(subtags.at(s));
+      result.append(subtags[s]);
     }
   }
   return result;
