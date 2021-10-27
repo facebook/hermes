@@ -107,9 +107,10 @@ vm::CallResult<std::vector<std::u16string>> supportedLocales(
     //    If options is not undefined, then
     //    Let options be ? ToObject(options).
     //    Let matcher be ? GetOption(options, "localeMatcher", "string", « "lookup", "best fit" », "best fit").
-        std::u16string matcher;
         if (!options.empty()) {
-    //    TODO: options, matcher
+            std::vector<std::u16string> vectorForMatcher = {u"lookup", u"best fit"};
+            // getOption not calling?
+            auto matcher = getOption(options, u"localeMatcher", u"string", vectorForMatcher, u"best fit");
         }
     //    Else, let matcher be "best fit".
         else {
@@ -170,6 +171,11 @@ double Collator::compare(
 // https://tc39.es/ecma402/#datetimeformat-objects
 struct DateTimeFormat::Impl {
   std::u16string locale;
+  std::u16string localeMatcher;
+  std::u16string ca;
+  std::u16string nu;
+  std::u16string hc;
+  std::u16string localeData;
 };
 
 DateTimeFormat::DateTimeFormat() : impl_(std::make_unique<Impl>()) {}
@@ -192,7 +198,7 @@ vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
 
 // Implementation of 
 // https://tc39.es/ecma402/#sec-todatetimeoptions
-vm::CallResult<Options> toDateTimeOptions(Options &options, std::u16string required, std::u16string defaults) {
+vm::CallResult<Options> toDateTimeOptions(const Options &options, std::u16string required, std::u16string defaults) {
   // 1. If options is undefined, let options be null; otherwise let options be ? ToObject(options).
   // 2. Let options be OrdinaryObjectCreate(options).
   // 3. Let needDefaults be true.
@@ -202,7 +208,7 @@ vm::CallResult<Options> toDateTimeOptions(Options &options, std::u16string requi
     // a. For each property name prop of « "weekday", "year", "month", "day" », do
     for (std::u16string prop : {u"weekday", u"year", u"month", u"day"}) {
       // i. Let value be ? Get(options, prop).
-      if (objects.find(prop) != objects.end()) {
+        if (options.find(prop) != options.end()) {
         // ii. If value is not undefined, let needDefaults be false.
         needDefaults = false;
       }
@@ -213,27 +219,27 @@ vm::CallResult<Options> toDateTimeOptions(Options &options, std::u16string requi
       // a. For each property name prop of « "dayPeriod", "hour", "minute", "second", "fractionalSecondDigits" », do
     for (std::u16string prop : {u"hour", u"minute", u"second"}) {
       // i. Let value be ? Get(options, prop).
-      if (normalizeOptions().find(prop) != objects.end()) {
+      if (options.find(prop) != options.end()) {
         // ii. If value is not undefined, let needDefaults be false.
         needDefaults = false;
       }
     }
   }
   // 6. Let dateStyle be ? Get(options, "dateStyle").
-  Option dateStyle = objects.find("dateStyle");
+  auto dateStyle = options.find(u"dateStyle");
   // 7. Let timeStyle be ? Get(options, "timeStyle").
-  Option timeStyle = objects.find("timeStyle");
+  auto timeStyle = options.find(u"timeStyle");
   // 8. If dateStyle is not undefined or timeStyle is not undefined, let needDefaults be false.
-  if (dateStyle != objects.end() || timeStyle != objects.end()) {
+  if (dateStyle != options.end() || timeStyle != options.end()) {
     needDefaults = false;
   }
   // 9. If required is "date" and timeStyle is not undefined, then
-  if (required == u"date" && timeStyle != objects.end()) {
+  if (required == u"date" && timeStyle != options.end()) {
     // a. Throw a TypeError exception.
     return vm::ExecutionStatus::EXCEPTION;
   }
   // 10. If required is "time" and dateStyle is not undefined, then
-  if (required == u"time" && dateStyle != objects.end()) {
+  if (required == u"time" && dateStyle != options.end()) {
     // a. Throw a TypeError exception.
     return vm::ExecutionStatus::EXCEPTION;
   }
@@ -258,13 +264,33 @@ vm::CallResult<Options> toDateTimeOptions(Options &options, std::u16string requi
 
 // Implementation of
 // https://tc39.es/ecma402/#sec-getoption
-vm::CallResult<Option> getOption(
-    Options &option, 
+vm::CallResult<Options> getOption(// Needs to be changed to Options options somehow to return value?
+    const Options &options,
     std::u16string property,
     std::u16string type,
     std::vector<std::u16string> values,
-    Option fallback) {
-  return {};
+    const Options fallback) {
+//    2. Let value be ? Get(options, property).
+      auto value = options.find(property);
+//    3. If value is undefined, return fallback.
+      if (value != options.end()) {
+          return fallback;
+      }
+//    4. Assert: type is "boolean" or "string".
+//    5. If type is "boolean", then
+    if (type == u"boolean") {
+//    a. Set value to ! ToBoolean(value).
+    }
+//    6. If type is "string", then
+    if (type == u"string") {
+//    a. Set value to ? ToString(value).
+    }
+//    7. If values is not undefined and values does not contain an element equal to value, throw a RangeError exception.
+     if (!values.empty() && std::find(values.begin(), values.end(), value) != values.end()) {
+         return vm::ExecutionStatus::EXCEPTION;
+     }
+//    8. Return value. WRONG RETURN
+     return value;
 }
 
 // Implementation of
@@ -280,36 +306,68 @@ vm::ExecutionStatus DateTimeFormat::initialize(
     return vm::ExecutionStatus::EXCEPTION;
   }
   // 2. Let options be ? ToDateTimeOptions(options, "any", "date").
-  Options dateOptions = toDateTimeOptions(options, "any", "date");
+  auto o = toDateTimeOptions(options, u"any", u"date");
   // 3. Let opt be a new Record.
   Impl opt;
   // 4. Let matcher be ? GetOption(options, "localeMatcher", "string", «
   //   "lookup", "best fit" », "best fit").
-  Impl matcher = normalizeOptions(kDTFOptions); // Not right
+  std::vector<std::u16string> values = {u"lookup", u"best fit"};
+  // LAST OPTIONS SHOULD BE FALLBACK/best fit?
+  auto matcher = getOption(options, u"localeMatcher", u"string", values, options);
   // 5. Set opt.[[localeMatcher]] to matcher.
-  
+  opt.localeMatcher = matcher;
 
   // 6. Let calendar be ? GetOption(options, "calendar", "string",
   //    undefined, undefined).
+  // Bad way of passing through undefined
+  std::vector<std::u16string> emptyVector;
+  Options emptyMap;
+  auto calendar = getOption(options, u"calendar", u"string", emptyVector, emptyMap);
   // 7. If calendar is not undefined, then
   //    a. If calendar does not match the Unicode Locale Identifier type
   //       nonterminal, throw a RangeError exception.
   // 8. Set opt.[[ca]] to calendar.
-
+  if (calendar->size() != 0) {
+      opt.ca = calendar;
+  }
+        
   // 9. Let numberingSystem be ? GetOption(options, "numberingSystem",
   //    "string", undefined, undefined).
+  auto numberingSystem = getOption(options, u"numberingSystem", u"string", emptyVector, emptyMap);
   // 10. If numberingSystem is not undefined, then
   //     a. If numberingSystem does not match the Unicode Locale Identifier
   //        type nonterminal, throw a RangeError exception.
   // 11. Set opt.[[nu]] to numberingSystem.
-
+  if (numberingSystem->size() != 0) {
+      opt.nu = numberingSystem;
+  }
+        
   // 12. Let hour12 be ? GetOption(options, "hour12", "boolean",
   //     undefined, undefined).
+  auto hour12 = getOption(options, u"hour12", u"boolean", emptyVector, emptyMap);
   // 13. Let hourCycle be ? GetOption(options, "hourCycle", "string", «
   //     "h11", "h12", "h23", "h24" », undefined).
+  std::vector<std::u16string> hourCycleVector = {u"h11", u"h12", u"h23", u"h24"};
+  auto hourCycle = getOption(options, u"hourCycle", u"string", hourCycleVector, emptyMap);
   // 14. If hour12 is not undefined, then
   //     a. Let hourCycle be null.
+  if (hour12->size() != 0) {
+      hourCycle = NULL;
+  }
   // 15. Set opt.[[hc]] to hourCycle.
+  opt.hc = hourCycle;
+        
+//  16. Let localeData be %DateTimeFormat%.[[LocaleData]].
+  NSArray<NSString *> *nslocaleData = [NSLocale availableLocaleIdentifiers];
+//  TODO: resolveLocale? https://tc39.es/ecma402/#sec-resolvelocale
+    std::u16string r;
+//  17. Let r be ResolveLocale(%DateTimeFormat%.[[AvailableLocales]], requestedLocales, opt, %DateTimeFormat%.[[RelevantExtensionKeys]], localeData).
+//  18. Set dateTimeFormat.[[Locale]] to r.[[locale]].
+//  19. Let calendar be r.[[ca]].
+//  20. Set dateTimeFormat.[[Calendar]] to calendar.
+//  21. Set dateTimeFormat.[[HourCycle]] to r.[[hc]].
+//  22. Set dateTimeFormat.[[NumberingSystem]] to r.[[nu]].
+//  23. Let dataLocale be r.[[dataLocale]].
   return vm::ExecutionStatus::RETURNED;
 }
 
