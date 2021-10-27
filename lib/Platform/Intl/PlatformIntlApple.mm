@@ -24,7 +24,7 @@ std::u16string nsStringToU16String(NSString *src) {
   [src getCharacters:(unichar *)&result[0] range:NSMakeRange(0, size)];
   return result;
 }
-static std::vector<std::u16string> getAvailableLocalesVector() {
+std::vector<std::u16string> getAvailableLocalesVector() {
     NSArray<NSString *> *availableLocales = [NSLocale availableLocaleIdentifiers];
     std::vector<std::u16string> availableLocalesVector;
       for (id object in availableLocales) {
@@ -123,7 +123,7 @@ LocaleMatch lookupMatcher(
     llvh::Optional<std::u16string> availableLocale =
         bestAvailableLocale(availableLocales, noExtensionsLocale);
     // c. If availableLocale is not undefined, then
-    if (!availableLocale.hasValue()) {
+    if (availableLocale) {
       // i. Set result.[[locale]] to availableLocale.
         result.locale = std::move(*availableLocale);
       // ii. If locale and noExtensionsLocale are not the same String value,
@@ -163,7 +163,7 @@ std::vector<std::u16string> lookupSupportedLocales(
         bestAvailableLocale(availableLocales, noExtensionsLocale);
     // c. If availableLocale is not undefined, append locale to the end of
     // subset.
-    if (!availableLocale.hasValue()) {
+    if (availableLocale) {
       subset.push_back(locale);
     }
   }
