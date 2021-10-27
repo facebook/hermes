@@ -82,7 +82,9 @@ std::u16string toNoExtensionsLocale(const std::u16string &locale) {
     }
     i++;
   }
-
+    if (j < locale.size()) {
+      subtags.push_back(locale.substr(j, i));
+    }
   std::u16string result;
   size_t size = subtags.size();
   if (size > 0) {
