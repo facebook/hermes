@@ -52,7 +52,7 @@ fileContents += execSync(
 /**
  * Generate custom temp defs
  */
-const tempCustomASTDefs = require(TEMP_CUSTOM_AST_DEFINITIONS);
+const tempCustomASTDefs = require(TEMP_CUSTOM_AST_DEFINITIONS).default;
 for (let typeName of Object.keys(tempCustomASTDefs)) {
   const visitors = tempCustomASTDefs[typeName].visitor;
   fileContents += `

@@ -10,7 +10,11 @@
 
 'use strict';
 
-import {HermesESTreeJSON, formatAndWriteDistArtifact} from './scriptUtils';
+import {
+  HermesESTreeJSON,
+  formatAndWriteDistArtifact,
+  FLIPPED_ALIAS_KEYS,
+} from './scriptUtils';
 import aliasDefs from '../hermes-parser/src/types/definitions/aliases';
 
 const assertionFunctions: Array<string> = [];
@@ -37,17 +41,6 @@ export function assert${node.name}(node, opts) {
 /**
  * Generate alias node types
  */
-// $FlowExpectedError[incompatible-type]
-const FLIPPED_ALIAS_KEYS: {[string]: Set<string>} = Object.create(null);
-for (const typeName of Object.keys(aliasDefs)) {
-  for (const aliasName of aliasDefs[typeName]) {
-    if (FLIPPED_ALIAS_KEYS[aliasName]) {
-      FLIPPED_ALIAS_KEYS[aliasName].add(typeName);
-    } else {
-      FLIPPED_ALIAS_KEYS[aliasName] = new Set([typeName]);
-    }
-  }
-}
 for (const aliasKey of Object.keys(FLIPPED_ALIAS_KEYS)) {
   const aliasSet = Array.from(FLIPPED_ALIAS_KEYS[aliasKey])
     .map(k => `'${k}'`)

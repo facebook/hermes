@@ -16,6 +16,7 @@ import {execSync} from 'child_process';
 import fs from 'fs';
 import mkdirp from 'mkdirp';
 import path from 'path';
+import aliasDefs from '../hermes-parser/src/types/definitions/aliases';
 
 export type ESTreeJSON = $ReadOnlyArray<
   $ReadOnly<{
@@ -114,3 +115,22 @@ export const LITERAL_TYPES: $ReadOnlySet<string> = new Set([
   // future-proofing for when this is added
   'BigIntLiteral',
 ]);
+
+export const FLIPPED_ALIAS_KEYS: $ReadOnly<{
+  [string]: $ReadOnlySet<string>,
+}> = (() => {
+  // $FlowExpectedError[incompatible-type]
+  const flippedAliasKeys: {[string]: Set<string>} = Object.create(null);
+
+  for (let typeName of Object.keys(aliasDefs)) {
+    for (let aliasName of aliasDefs[typeName]) {
+      if (flippedAliasKeys[aliasName]) {
+        flippedAliasKeys[aliasName].add(typeName);
+      } else {
+        flippedAliasKeys[aliasName] = new Set([typeName]);
+      }
+    }
+  }
+
+  return flippedAliasKeys;
+})();
