@@ -15,6 +15,7 @@ indexed_access=true
 module.name_mapper='^hermes-parser$' -> '<PROJECT_ROOT>/hermes-parser/src/index.js'
 module.name_mapper='^hermes-estree$' -> '<PROJECT_ROOT>/hermes-estree/src/index.js'
 module.name_mapper='^hermes-eslint$' -> '<PROJECT_ROOT>/hermes-eslint/src/index.js'
+module.name_mapper='^hermes-transform$' -> '<PROJECT_ROOT>/hermes-transform/src/index.js'
 
 [version]
 0.162.1

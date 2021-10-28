@@ -100,18 +100,12 @@ export interface Position {
 export interface Program extends BaseNode {
   +type: 'Program';
   +sourceType: 'script' | 'module';
-  +body: $ReadOnlyArray<Directive | Statement | ModuleDeclaration>;
+  +body: $ReadOnlyArray<Statement | ModuleDeclaration>;
   +tokens: $ReadOnlyArray<Token>;
   +comments: $ReadOnlyArray<Comment>;
   +loc: SourceLocation;
   // program is the only node without a parent - but typing it as such is _super_ annoying and difficult
   +parent: ESNode;
-}
-
-export interface Directive extends BaseNode {
-  +type: 'ExpressionStatement';
-  +expression: Literal;
-  +directive: string;
 }
 
 // Flow declares a "Node" type as part of its HTML typedefs.
@@ -136,7 +130,7 @@ export type ESNode =
   | MethodDefinition
   | ModuleDeclaration
   | ModuleSpecifier
-  | Directive
+  | ImportAttribute
   // flow nodes
   | TypeAnnotation
   | TypeAnnotationType
@@ -173,8 +167,7 @@ export type ESNode =
 
 interface BaseFunction extends BaseNode {
   +params: $ReadOnlyArray<Pattern>;
-  +generator?: boolean;
-  +async?: boolean;
+  +async: boolean;
   // The body is either BlockStatement or Expression because arrow functions
   // can have a body that's either. FunctionDeclarations and
   // FunctionExpressions have only BlockStatement bodies.
@@ -209,7 +202,16 @@ export type Statement =
   | ForStatement
   | ForInStatement
   | ForOfStatement
-  | Declaration;
+  | TypeAlias
+  | OpaqueType
+  | InterfaceDeclaration
+  | Declaration
+  | DeclareTypeAlias
+  | DeclareOpaqueType
+  | DeclareInterface
+  | DeclareExportAllDeclaration
+  | DeclareExportDeclaration
+  | DeclareModuleExports;
 
 export interface EmptyStatement extends BaseNode {
   +type: 'EmptyStatement';
@@ -224,6 +226,7 @@ export interface BlockStatement extends BaseNode {
 export interface ExpressionStatement extends BaseNode {
   +type: 'ExpressionStatement';
   +expression: Expression;
+  +directive: string | null;
 }
 
 export interface IfStatement extends BaseNode {
@@ -315,19 +318,14 @@ export interface DebuggerStatement extends BaseNode {
 export type Declaration =
   | FunctionDeclaration
   | VariableDeclaration
-  | ClassDeclaration
-  | TypeAlias
-  | OpaqueType
-  | DeclareTypeAlias
-  | DeclareOpaqueType
-  | InterfaceDeclaration
-  | DeclareInterface;
+  | ClassDeclaration;
 
 export interface FunctionDeclaration extends BaseFunction {
   +type: 'FunctionDeclaration';
   /** It is null when a function declaration is a part of the `export default function` statement */
   +id: Identifier | null;
   +body: BlockStatement;
+  +generator: boolean;
 }
 
 export interface VariableDeclaration extends BaseNode {
@@ -370,7 +368,8 @@ type Expression =
   | AwaitExpression
   | ImportExpression
   | ChainExpression
-  | TypeCastExpression;
+  | TypeCastExpression
+  | PrivateName;
 
 export interface ThisExpression extends BaseNode {
   +type: 'ThisExpression';
@@ -379,6 +378,8 @@ export interface ThisExpression extends BaseNode {
 export interface ArrayExpression extends BaseNode {
   +type: 'ArrayExpression';
   +elements: $ReadOnlyArray<Expression | SpreadElement>;
+  // this is not part of the ESTree spec, but hermes emits it
+  +trailingComma: boolean;
 }
 
 export interface ObjectExpression extends BaseNode {
@@ -412,6 +413,7 @@ export interface FunctionExpression extends BaseFunction {
   +id?: Identifier | null;
   +type: 'FunctionExpression';
   +body: BlockStatement;
+  +generator: boolean;
 }
 
 export interface SequenceExpression extends BaseNode {
@@ -466,9 +468,7 @@ interface BaseCallExpression extends BaseNode {
   +arguments: $ReadOnlyArray<Expression | SpreadElement>;
   +typeArguments: null | TypeParameterInstantiation;
 }
-export type CallExpression = SimpleCallExpression | NewExpression;
-
-export interface SimpleCallExpression extends BaseCallExpression {
+export interface CallExpression extends BaseCallExpression {
   +type: 'CallExpression';
 }
 
@@ -485,7 +485,7 @@ export interface MemberExpression extends BaseMemberExpression {
   +type: 'MemberExpression';
 }
 
-export type ChainElement = SimpleCallExpression | MemberExpression;
+export type ChainElement = CallExpression | MemberExpression;
 
 export interface ChainExpression extends BaseNode {
   +type: 'ChainExpression';
@@ -517,29 +517,24 @@ export interface Identifier extends BaseNode {
   +name: string;
 
   +typeAnnotation: TypeAnnotation | null;
-  +optional: false;
+  // only applies to function arguments
+  +optional: boolean;
 }
 
 export type Literal =
-  | FlowBigIntLiteral
   | BigIntLiteral
+  | BigIntLiteralLegacy
   | BooleanLiteral
   | NullLiteral
-  | NumberLiteral
+  | NumericLiteral
   | RegExpLiteral
   | StringLiteral;
 
-export interface FlowBigIntLiteral extends BaseNode {
+export interface BigIntLiteral extends BaseNode {
   +type: 'Literal';
   +value: null /* | bigint */;
   +bigint: string;
   +raw: string;
-}
-
-export interface BigIntLiteral extends BaseNode {
-  +type: 'BigIntLiteral';
-  +value: null /* | bigint */;
-  +bigint: string;
 }
 
 export interface BooleanLiteral extends BaseNode {
@@ -552,7 +547,7 @@ export interface NullLiteral extends BaseNode {
   +value: null;
 }
 
-export interface NumberLiteral extends BaseNode {
+export interface NumericLiteral extends BaseNode {
   +type: 'Literal';
   +value: number;
 }
@@ -642,6 +637,9 @@ export interface ArrowFunctionExpression extends BaseFunction {
   +type: 'ArrowFunctionExpression';
   +expression: boolean;
   +body: BlockStatement | Expression;
+  // hermes emits this - but it's always null
+  +id: null;
+  // note - arrow functions cannot be generators
 }
 
 export interface YieldExpression extends BaseNode {
@@ -675,7 +673,7 @@ export interface ObjectPattern extends BaseNode {
   +type: 'ObjectPattern';
   +properties: $ReadOnlyArray<AssignmentProperty | RestElement>;
   // if used as a VariableDeclarator.id
-  +typeAnnotation: TypeAnnotation;
+  +typeAnnotation: TypeAnnotation | null;
 }
 
 export interface ArrayPattern extends BaseNode {
@@ -752,7 +750,8 @@ export type ModuleSpecifier =
   | ImportSpecifier
   | ImportDefaultSpecifier
   | ImportNamespaceSpecifier
-  | ExportSpecifier;
+  | ExportSpecifier
+  | ExportNamespaceSpecifier;
 
 export interface ImportDeclaration extends BaseNode {
   +type: 'ImportDeclaration';
@@ -760,20 +759,27 @@ export interface ImportDeclaration extends BaseNode {
     ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier,
   >;
   +source: StringLiteral;
+  +assertions: $ReadOnlyArray<ImportAttribute>;
 
-  +importKind: null | 'value' | 'type' | 'typeof';
+  +importKind: 'value' | 'type' | 'typeof';
+}
+export interface ImportAttribute extends BaseNode {
+  +type: 'ImportAttribute';
+  +key: Identifier;
+  +value: StringLiteral;
 }
 
 export interface ImportSpecifier extends BaseNode {
   +type: 'ImportSpecifier';
   +imported: Identifier;
   +local: Identifier;
-  +importKind: null;
+  +importKind: null | 'type' | 'typeof';
 }
 
 export interface ImportExpression extends BaseNode {
   +type: 'ImportExpression';
   +source: Expression;
+  +attributes: $ReadOnlyArray<ImportAttribute> | null;
 }
 
 export interface ImportDefaultSpecifier extends BaseNode {
@@ -789,9 +795,9 @@ export interface ImportNamespaceSpecifier extends BaseNode {
 export interface ExportNamedDeclaration extends BaseNode {
   +type: 'ExportNamedDeclaration';
   +declaration?: Declaration | null;
-  +specifiers: $ReadOnlyArray<ExportSpecifier>;
+  +specifiers: $ReadOnlyArray<ExportSpecifier | ExportNamespaceSpecifier>;
   +source?: Literal | null;
-  +exportKind?: 'value' | 'type';
+  +exportKind: 'value' | 'type';
 }
 
 export interface ExportSpecifier extends BaseNode {
@@ -808,6 +814,8 @@ export interface ExportDefaultDeclaration extends BaseNode {
 export interface ExportAllDeclaration extends BaseNode {
   +type: 'ExportAllDeclaration';
   +source: Literal;
+  +exportKind: 'value' | 'type';
+  +exported: Identifier;
 }
 
 export interface AwaitExpression extends BaseNode {
@@ -825,6 +833,9 @@ export type TypeAnnotationType =
   | BooleanTypeAnnotation
   | NullLiteralTypeAnnotation
   | AnyTypeAnnotation
+  | EmptyTypeAnnotation
+  | SymbolTypeAnnotation
+  | ThisTypeAnnotation
   | MixedTypeAnnotation
   | VoidTypeAnnotation
   | StringLiteralTypeAnnotation
@@ -864,9 +875,6 @@ export interface TypeAnnotation extends BaseNode {
 export interface TypeAlias extends BaseTypeAlias {
   +type: 'TypeAlias';
 }
-export interface DeclareTypeAlias extends BaseTypeAlias {
-  +type: 'DeclareTypeAlias';
-}
 
 interface BaseOpaqueType extends BaseNode {
   +id: Identifier;
@@ -876,10 +884,6 @@ interface BaseOpaqueType extends BaseNode {
 export interface OpaqueType extends BaseOpaqueType {
   +type: 'OpaqueType';
   +impltype: TypeAnnotationType;
-}
-export interface DeclareOpaqueType extends BaseOpaqueType {
-  +type: 'DeclareOpaqueType';
-  +impltype: null;
 }
 
 export interface NumberTypeAnnotation extends BaseNode {
@@ -896,6 +900,15 @@ export interface NullLiteralTypeAnnotation extends BaseNode {
 }
 export interface AnyTypeAnnotation extends BaseNode {
   +type: 'AnyTypeAnnotation';
+}
+export interface EmptyTypeAnnotation extends BaseNode {
+  +type: 'EmptyTypeAnnotation';
+}
+export interface SymbolTypeAnnotation extends BaseNode {
+  +type: 'SymbolTypeAnnotation';
+}
+export interface ThisTypeAnnotation extends BaseNode {
+  +type: 'ThisTypeAnnotation';
 }
 export interface MixedTypeAnnotation extends BaseNode {
   +type: 'MixedTypeAnnotation';
@@ -977,6 +990,7 @@ export interface FunctionTypeAnnotation extends BaseNode {
   +returnType: TypeAnnotationType;
   +rest: null | FunctionTypeParam;
   +typeParameters: null | TypeParameterDeclaration;
+  +this: TypeAnnotationType | null;
 }
 export interface FunctionTypeParam extends BaseNode {
   +type: 'FunctionTypeParam';
@@ -1035,6 +1049,7 @@ export interface OptionalIndexedAccessType extends BaseNode {
   +type: 'OptionalIndexedAccessType';
   +objectType: TypeAnnotation;
   +indexType: TypeAnnotation;
+  +optional: boolean;
 }
 
 export interface TypeCastExpression extends BaseNode {
@@ -1056,10 +1071,6 @@ export interface InterfaceDeclaration extends BaseInterfaceDeclaration {
   +type: 'InterfaceDeclaration';
 }
 
-export interface DeclareInterface extends BaseInterfaceDeclaration {
-  +type: 'DeclareInterface';
-}
-
 export interface InterfaceExtends extends BaseNode {
   +type: 'InterfaceExtends';
   +id: Identifier;
@@ -1072,15 +1083,11 @@ interface ClassPropertyBase extends BaseNode {
   +typeAnnotation: null | TypeAnnotationType;
   +static: boolean;
   +variance: null | Variance;
+  +declare: boolean;
+  // hermes always emit this as false
+  +optional: false;
 }
 
-export interface ClassProperty extends ClassPropertyBase {
-  +type: 'ClassProperty';
-  +computed: false; // flow itself doesn't support computed ClassProperties, even though they might parse fine.
-}
-export interface ClassPrivateProperty extends ClassPropertyBase {
-  +type: 'ClassPrivateProperty';
-}
 export interface ClassImplements extends BaseNode {
   +type: 'ClassImplements';
   +id: Identifier;
@@ -1114,16 +1121,19 @@ export interface EnumDeclaration extends BaseNode {
   +body: EnumNumberBody | EnumStringBody | EnumBooleanBody | EnumSymbolBody;
 }
 
-export interface EnumNumberBody extends BaseNode {
-  +type: 'EnumNumberBody';
+interface BaseEnumBody extends BaseNode {
   +explicitType: boolean;
+  +hasUnknownMembers: boolean;
+}
+
+export interface EnumNumberBody extends BaseEnumBody {
+  +type: 'EnumNumberBody';
   // enum number members cannot be defaulted
   +members: $ReadOnlyArray<EnumNumberMember>;
 }
 
-export interface EnumStringBody extends BaseNode {
+export interface EnumStringBody extends BaseEnumBody {
   +type: 'EnumStringBody';
-  +explicitType: boolean;
   +members: $ReadOnlyArray<EnumStringMember | EnumDefaultedMember>;
 }
 
@@ -1133,9 +1143,8 @@ export interface EnumStringMember extends BaseNode {
   +init: StringLiteral;
 }
 
-export interface EnumBooleanBody extends BaseNode {
+export interface EnumBooleanBody extends BaseEnumBody {
   +type: 'EnumBooleanBody';
-  +explicitType: boolean;
   +members: $ReadOnlyArray<EnumBooleanMember>;
 }
 
@@ -1145,9 +1154,8 @@ export interface EnumBooleanMember extends BaseNode {
   +init: BooleanLiteral;
 }
 
-export interface EnumSymbolBody extends BaseNode {
+export interface EnumSymbolBody extends BaseEnumBody {
   +type: 'EnumSymbolBody';
-  +explicitType: boolean;
   +members: $ReadOnlyArray<EnumDefaultedMember>;
 }
 
@@ -1159,7 +1167,7 @@ export interface EnumDefaultedMember extends BaseNode {
 export interface EnumNumberMember extends BaseNode {
   +type: 'EnumNumberMember';
   +id: Identifier;
-  +init: NumberLiteral;
+  +init: NumericLiteral;
 }
 
 /*****************
@@ -1189,14 +1197,63 @@ export interface DeclareFunction extends BaseNode {
 
 export interface DeclareModule extends BaseNode {
   +type: 'DeclareModule';
+  +id: StringLiteral | Identifier;
   +body: BlockStatement;
+  +kind: 'CommonJS' | 'ES';
+}
+
+export interface DeclareInterface extends BaseInterfaceDeclaration {
+  +type: 'DeclareInterface';
+}
+
+export interface DeclareTypeAlias extends BaseTypeAlias {
+  +type: 'DeclareTypeAlias';
+}
+
+export interface DeclareOpaqueType extends BaseOpaqueType {
+  +type: 'DeclareOpaqueType';
+  +impltype: null;
+}
+
+export interface DeclareExportAllDeclaration extends BaseNode {
+  +type: 'DeclareExportAllDeclaration';
+  +source: StringLiteral;
+}
+
+export interface DeclareExportDeclaration extends BaseNode {
+  +type: 'DeclareExportDeclaration';
+  +specifiers: $ReadOnlyArray<ExportSpecifier>;
+  +declaration:
+    | TypeAnnotationType
+    | DeclareClass
+    | DeclareFunction
+    | DeclareOpaqueType
+    | DeclareInterface
+    | null;
+  +source: StringLiteral | null;
+  +default: boolean;
+}
+
+export interface DeclareModuleExports extends BaseNode {
+  +type: 'DeclareModuleExports';
+  +typeAnnotation: TypeAnnotation;
+}
+
+export interface DeclaredPredicate extends BaseNode {
+  +type: 'DeclaredPredicate';
+  +value: Expression;
 }
 
 /**********************
  * JSX specific nodes *
  **********************/
 
-export type JSXChild = JSXElement | JSXExpression | JSXFragment | JSXText;
+export type JSXChild =
+  | JSXElement
+  | JSXExpression
+  | JSXFragment
+  | JSXText
+  | JSXSpreadChild;
 export type JSXExpression = JSXEmptyExpression | JSXExpressionContainer;
 export type JSXTagNameExpression =
   | JSXIdentifier
@@ -1217,7 +1274,8 @@ export type JSXNode =
   | JSXOpeningElement
   | JSXOpeningFragment
   | JSXSpreadAttribute
-  | JSXText;
+  | JSXText
+  | JSXSpreadChild;
 
 export interface JSXAttribute extends BaseNode {
   +type: 'JSXAttribute';
@@ -1296,13 +1354,49 @@ export interface JSXText extends BaseNode {
   +raw: string;
 }
 
-// Babel style optional chain. We can remove these once flow updates their optional chain representation
+export interface JSXSpreadChild extends BaseNode {
+  +type: 'JSXSpreadChild';
+  +expression: Expression;
+}
+
+/******************************************************
+ * Deprecated spec nodes awaiting migration by Hermes *
+ ******************************************************/
+
+// `ChainExpression` is the new standard for optional chaining
 export interface OptionalCallExpression extends BaseCallExpression {
   +type: 'OptionalCallExpression';
   +optional: boolean;
 }
-
 export interface OptionalMemberExpression extends BaseMemberExpression {
   +type: 'OptionalMemberExpression';
   +optional: boolean;
+}
+
+// `ExportAllDeclaration` is the new standard for `export * as y from 'z'`
+export interface ExportNamespaceSpecifier extends BaseNode {
+  +type: 'ExportNamespaceSpecifier';
+  +exported: Identifier;
+}
+
+// `Literal` is the new standard for bigints (see the BigIntLiteral interface)
+export interface BigIntLiteralLegacy extends BaseNode {
+  +type: 'BigIntLiteral';
+  +value: null /* | bigint */;
+  +bigint: string;
+}
+
+// `PropertyDefinition` is the new standard for all class properties
+export interface ClassProperty extends ClassPropertyBase {
+  +type: 'ClassProperty';
+  +computed: false; // flow itself doesn't support computed ClassProperties, even though they might parse fine.
+}
+export interface ClassPrivateProperty extends ClassPropertyBase {
+  +type: 'ClassPrivateProperty';
+}
+
+// `PrivateIdentifier` is the new standard for #private identifiers
+export interface PrivateName extends BaseNode {
+  +type: 'PrivateName';
+  +id: Identifier;
 }
