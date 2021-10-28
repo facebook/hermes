@@ -49,8 +49,8 @@ describe('traverse', () => {
       'Program',
       'VariableDeclaration',
       'VariableDeclarator',
-      'Literal',
       'Identifier',
+      'Literal',
     ]);
   });
 
