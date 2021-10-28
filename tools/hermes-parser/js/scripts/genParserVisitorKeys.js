@@ -4,74 +4,59 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @flow strict
  * @format
  */
 
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
+import {
+  HermesESTreeJSON,
+  formatAndWriteDistArtifact,
+  LITERAL_TYPES,
+} from './scriptUtils';
+import tempCustomASTDefs from '../hermes-parser/src/types/definitions/tempCustomASTDefs';
 
-const {execSync} = require('child_process');
+const ALLOWED_ARG_TYPES = new Set(['NodePtr', 'NodeList']);
 
-const OUTPUT_FILE = path.resolve(
-  __dirname,
-  '../hermes-parser/dist/types/generated/visitor-keys.js',
+// $FlowExpectedError[incompatible-type]
+const visitorKeys: {[string]: {[string]: 'Node' | 'NodeList'}} = Object.create(
+  null,
 );
-const TEMPLATE_FILE = path.resolve(
-  __dirname,
-  'templates/HermesParserVisitorKeys.template',
-);
-const TEMP_CUSTOM_AST_DEFINITIONS = path.resolve(
-  __dirname,
-  '../hermes-parser/src/types/definitions/tempCustomASTDefs.js',
-);
+for (const node of HermesESTreeJSON) {
+  const nodeVisitorKeys = {};
+  for (const arg of node.arguments) {
+    switch (arg.type) {
+      case 'NodeList':
+        nodeVisitorKeys[arg.name] = 'NodeList';
+        break;
 
-let fileContents = `/**
- * Copyright (c) Facebook, Inc. and its affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- * @format
- */
+      case 'NodePtr':
+        nodeVisitorKeys[arg.name] = 'Node';
+        break;
 
-export const HERMES_AST_VISITOR_KEYS = {};
-export const NODE_CHILD = 'Node';
-export const NODE_LIST_CHILD = 'NodeList';
+      default:
+        break;
+    }
+  }
+  visitorKeys[node.name] = nodeVisitorKeys;
+}
 
-`;
-
-/**
- * Create visitor keys
- */
-fileContents += execSync(
-  `c++ -E -P -I"${process.argv[2]}" -x c "${TEMPLATE_FILE}"`,
-);
-
-/**
- * Generate custom temp defs
- */
-const tempCustomASTDefs = require(TEMP_CUSTOM_AST_DEFINITIONS).default;
+// custom temp defs
 for (let typeName of Object.keys(tempCustomASTDefs)) {
   const visitors = tempCustomASTDefs[typeName].visitor;
-  fileContents += `
-
-HERMES_AST_VISITOR_KEYS['${typeName}'] = {
-  ${Object.keys(visitors)
-    .map(name => `${name}: ${visitors[name]}`)
-    .join(',\n')}
-};`;
+  visitorKeys[typeName] = {...visitors};
 }
 
-// Format then sign file and write to disk
-const formattedContents = execSync('prettier --parser=flow', {
-  input: fileContents,
-}).toString();
+const visitorKeysFileContents = `\
+export const NODE_CHILD = 'Node';
+export const NODE_LIST_CHILD = 'NodeList';
+export const HERMES_AST_VISITOR_KEYS = ${JSON.stringify(visitorKeys, null, 2)};
+`;
 
-const outputDir = path.dirname(OUTPUT_FILE);
-if (!fs.existsSync(outputDir)) {
-  fs.mkdirSync(outputDir, {recursive: true});
-}
-
-fs.writeFileSync(OUTPUT_FILE, formattedContents);
+formatAndWriteDistArtifact({
+  code: visitorKeysFileContents,
+  package: 'hermes-parser',
+  filename: 'visitor-keys.js',
+  subdirSegments: ['types', 'generated'],
+});

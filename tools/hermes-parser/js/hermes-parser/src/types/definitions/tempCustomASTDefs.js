@@ -8,9 +8,9 @@
  * @format
  */
 
-type AstType = 'NODE_CHILD' | 'NODE_LIST_CHILD';
-const NODE = 'NODE_CHILD';
-const NODE_LIST = 'NODE_LIST_CHILD';
+type AstType = 'Node' | 'NodeList';
+const NODE = 'Node';
+const NODE_LIST = 'NodeList';
 
 /**
  * Custom AST definitions.
