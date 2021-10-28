@@ -14,6 +14,7 @@
 
 import {execSync} from 'child_process';
 import fs from 'fs';
+import mkdirp from 'mkdirp';
 import path from 'path';
 
 export type ESTreeJSON = $ReadOnlyArray<
@@ -92,12 +93,24 @@ export function formatAndWriteDistArtifact({
   // make sure the code has a header
   const code = code_.slice(0, 3) === '/**' ? code_ : HEADER(flow) + code_;
 
-  // Format then sign file and write to disk
+  // Format the file
   const formattedContents = execSync('prettier --parser=flow', {
     input: code,
   }).toString();
-  fs.writeFileSync(
-    path.resolve(__dirname, '..', pkg, 'dist', ...subdirSegments, filename),
-    formattedContents,
-  );
+
+  // make sure the folder exists first
+  const folder = path.resolve(__dirname, '..', pkg, 'dist', ...subdirSegments);
+  mkdirp.sync(folder);
+  // write to disk
+  fs.writeFileSync(path.resolve(folder, filename), formattedContents);
 }
+
+export const LITERAL_TYPES: $ReadOnlySet<string> = new Set([
+  'RegExpLiteral',
+  'StringLiteral',
+  'BooleanLiteral',
+  'NumericLiteral',
+  'NullLiteral',
+  // future-proofing for when this is added
+  'BigIntLiteral',
+]);

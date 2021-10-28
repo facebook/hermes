@@ -4,54 +4,43 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @flow strict
  * @format
  */
 
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
+import {HermesESTreeJSON, formatAndWriteDistArtifact} from './scriptUtils';
+import aliasDefs from '../hermes-parser/src/types/definitions/aliases';
 
-const {execSync} = require('child_process');
+const assertionFunctions: Array<string> = [];
 
-const OUTPUT_FILE = path.resolve(
-  __dirname,
-  '../hermes-parser/dist/types/generated/asserts.js',
-);
-const TEMPLATE_FILE = path.resolve(
-  __dirname,
-  'templates/HermesParserAsserts.template',
-);
-const ALIAS_DEFINITIONS = path.resolve(
-  __dirname,
-  '../hermes-parser/src/types/definitions/aliases.js',
-);
+for (const node of HermesESTreeJSON) {
+  assertionFunctions.push(
+    `\
+export function assert${node.name}(node, opts) {
+  if (
+    node &&
+    node.type === '${node.name}' &&
+    (typeof opts === "undefined" ||
+    shallowEqual(node, opts))
+  ) {
+    return;
+  }
 
-let fileContents = `/**
- * Copyright (c) Facebook, Inc. and its affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- * @format
- */
-
-`;
-
-/**
- * Generate concrete node types
- */
-fileContents += execSync(
-  `c++ -E -P -I"${process.argv[2]}" -x c "${TEMPLATE_FILE}"`,
-);
+  throw new Error(throwMessage(${node.name}, node, opts));
+}
+`,
+  );
+}
 
 /**
  * Generate alias node types
  */
-const aliasDefs = require(ALIAS_DEFINITIONS);
-const FLIPPED_ALIAS_KEYS = Object.create(null);
-for (let typeName of Object.keys(aliasDefs)) {
-  for (let aliasName of aliasDefs[typeName]) {
+// $FlowExpectedError[incompatible-type]
+const FLIPPED_ALIAS_KEYS: {[string]: Set<string>} = Object.create(null);
+for (const typeName of Object.keys(aliasDefs)) {
+  for (const aliasName of aliasDefs[typeName]) {
     if (FLIPPED_ALIAS_KEYS[aliasName]) {
       FLIPPED_ALIAS_KEYS[aliasName].add(typeName);
     } else {
@@ -59,39 +48,42 @@ for (let typeName of Object.keys(aliasDefs)) {
     }
   }
 }
-for (let aliasKey of Object.keys(FLIPPED_ALIAS_KEYS)) {
-  fileContents += `
-
+for (const aliasKey of Object.keys(FLIPPED_ALIAS_KEYS)) {
+  const aliasSet = Array.from(FLIPPED_ALIAS_KEYS[aliasKey])
+    .map(k => `'${k}'`)
+    .join(', ');
+  assertionFunctions.push(
+    `\
+const ${aliasKey}_ALIAS_SET = new Set([${aliasSet}]);
 export function assert${aliasKey}(node, opts) {
   if (
-    (
-      node &&
-      (
-        ${Array.from(FLIPPED_ALIAS_KEYS[aliasKey])
-          .map(nodeType => `node.type === "${nodeType}"`)
-          .join(' ||\n')}
-      )
-    ) &&
-    (
-      typeof opts === "undefined" ||
-      shallowEqual(node, opts)
-    )
+    node &&
+    ${aliasKey}_ALIAS_SET.has(node.type) &&
+    (typeof opts === "undefined" ||
+    shallowEqual(node, opts))
   ) {
     return;
   }
 
   throw new Error(throwMessage("${aliasKey}", node, opts));
-}`;
+}
+`,
+  );
 }
 
-// Format then sign file and write to disk
-const formattedContents = execSync('prettier --parser=flow', {
-  input: fileContents,
-}).toString();
+const fileContents = `\
+import shallowEqual from '../utils/shallowEqual';
 
-const outputDir = path.dirname(OUTPUT_FILE);
-if (!fs.existsSync(outputDir)) {
-  fs.mkdirSync(outputDir, {recursive: true});
+function throwMessage(type, node, opts = {}) {
+  return \`Expected type "\${type}" with option \${JSON.stringify(opts)}, but instead got "\${node.type}".\`;
 }
 
-fs.writeFileSync(OUTPUT_FILE, formattedContents);
+${assertionFunctions.join('\n')}
+`;
+
+formatAndWriteDistArtifact({
+  code: fileContents,
+  package: 'hermes-parser',
+  filename: 'asserts.js',
+  subdirSegments: ['types', 'generated'],
+});

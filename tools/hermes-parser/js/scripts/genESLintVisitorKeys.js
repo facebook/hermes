@@ -10,7 +10,11 @@
 
 'use strict';
 
-import {HermesESTreeJSON, formatAndWriteDistArtifact} from './scriptUtils';
+import {
+  HermesESTreeJSON,
+  formatAndWriteDistArtifact,
+  LITERAL_TYPES,
+} from './scriptUtils';
 
 const ALLOWED_ARG_TYPES = new Set(['NodePtr', 'NodeList']);
 
@@ -31,13 +35,9 @@ visitorKeys['VariableDeclarator'] = ['id', 'init'];
 // correct the "literal" types
 // the base defs declare each literal as a separate node, but ESTree treats them as a single node
 visitorKeys['Literal'] = [];
-delete visitorKeys['RegExpLiteral'];
-delete visitorKeys['StringLiteral'];
-delete visitorKeys['BooleanLiteral'];
-delete visitorKeys['NumericLiteral'];
-delete visitorKeys['NullLiteral'];
-// future-proofing for when this is added
-delete visitorKeys['BigIntLiteral'];
+for (const type of LITERAL_TYPES) {
+  delete visitorKeys[type];
+}
 
 const visitorKeysFileContents = `module.exports = ${JSON.stringify(
   visitorKeys,

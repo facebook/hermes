@@ -52,7 +52,7 @@ fileContents += execSync(
 /**
  * Generate alias node types
  */
-const aliasDefs = require(ALIAS_DEFINITIONS);
+const aliasDefs = require(ALIAS_DEFINITIONS).default;
 const FLIPPED_ALIAS_KEYS = Object.create(null);
 for (let typeName of Object.keys(aliasDefs)) {
   for (let aliasName of aliasDefs[typeName]) {

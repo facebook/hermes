@@ -4,6 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @flow strict
  * @format
  */
 
@@ -20,7 +21,7 @@
  *  - Remove TS support.
  *  - Rename "Property" alias, ESTree has a "Property" AST node.
  */
-module.exports = {
+export default ({
   ArrayExpression: ['Expression'],
   AssignmentExpression: ['Expression'],
   BinaryExpression: ['Binary', 'Expression'],
@@ -335,4 +336,4 @@ module.exports = {
   TSNonNullExpression: ['Expression'],
   TSExportAssignment: ['Statement'],
   TSNamespaceExportDeclaration: ['Statement'],
-};
+}: $ReadOnly<{[string]: $ReadOnlyArray<string>}>);
