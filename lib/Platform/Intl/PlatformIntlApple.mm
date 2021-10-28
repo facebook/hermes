@@ -24,7 +24,7 @@ std::u16string nsStringToU16String(NSString *src) {
   [src getCharacters:(unichar *)&result[0] range:NSMakeRange(0, size)];
   return result;
 }
-std::vector<std::u16string> nsStringArrayToU16StringArray(NSArray<NSString *> * array) {
+std::vector<std::u16string> nsStringArrayToU16StringArray(const NSArray<NSString *> *array) {
   auto size = [array count];
   std::vector<std::u16string> result;
   result.reserve(size);
@@ -33,9 +33,9 @@ std::vector<std::u16string> nsStringArrayToU16StringArray(NSArray<NSString *> * 
   }
   return result;
 }
-NSArray<NSString *> *u16StringArrayTonsStringArray(std::vector<std::u16string> array) {
+NSArray<NSString *> *u16StringArrayToNSStringArray(const std::vector<std::u16string> &array) {
   auto size = array.size();
-    NSMutableArray *result = [NSMutableArray arrayWithCapacity: size];
+  NSMutableArray *result = [NSMutableArray arrayWithCapacity: size];
   for (size_t i = 0; i < size; i++) {
     result[i] = u16StringToNSString(array[i]);
   }
@@ -99,38 +99,75 @@ vm::CallResult<std::u16string> toLocaleUpperCase(
 }
 
 // Implementation of
+// https://tc39.es/ecma402/#sec-getoption
+vm::CallResult<Option> getOption(
+    const Options &options,
+    const std::u16string property,
+    const std::u16string type,
+    const std::vector<std::u16string> values,
+    const Option &fallback) {
+  // 1. Assert type(options) is object
+  // 2. Let value be ? Get(options, property).
+  auto value = options.find(property);
+  // 3. If value is undefined, return fallback.
+  if (value == options.end()) {
+    return fallback;
+  }
+  // 4. Assert: type is "boolean" or "string".
+  // 5. If type is "boolean", then
+  if (type == u"boolean") {
+    if(!value->second.isBool()) {
+      // TODO: in what layer do we call into runtime to throw exceptions
+      //return runtime->raiseRangeError(u"Boolean option expected but not found");
+    }
+    // a. Set value to ! ToBoolean(value).
+  }
+  // 6. If type is "string", then
+  if (type == u"string") {
+    if(!value->second.isString()) {
+      //return runtime->raiseRangeError(u"String option expected but not found");
+    }
+    // a. Set value to ? ToString(value).
+  }
+  // 7. If values is not undefined and values does not contain an element equal to value, throw a RangeError exception.
+  if (!values.empty() && llvh::find(values, value->second) == values.end()) {
+    return vm::ExecutionStatus::EXCEPTION;
+  }
+  // 8. Return value.
+  return value->second;
+}
+
+// Implementation of
 // https://tc39.es/ecma402/#sec-supportedlocales
 vm::CallResult<std::vector<std::u16string>> supportedLocales(
-    std::vector<std::u16string> availableLocales,
-    std::vector<std::u16string> requestedLocales,
+    const std::vector<std::u16string> availableLocales,
+    const std::vector<std::u16string> requestedLocales,
     const Options &options) {
-    //    If options is not undefined, then
-    //    Let options be ? ToObject(options).
-    //    Let matcher be ? GetOption(options, "localeMatcher", "string", « "lookup", "best fit" », "best fit").
-        if (!options.empty()) {
-            std::vector<std::u16string> vectorForMatcher = {u"lookup", u"best fit"};
-            // getOption not calling?
-            auto matcher = getOption(options, u"localeMatcher", u"string", vectorForMatcher, u"best fit");
-        }
-    //    Else, let matcher be "best fit".
-        else {
-            matcher = u"best fit";
-        }
-    //    If matcher is "best fit", then
-    //    Let supportedLocales be BestFitSupportedLocales(availableLocales, requestedLocales).
-        std::vector<std::u16string> supportedLocales;
-    //    TODO: Is bestFitSupportedLocales required? https://402.ecma-international.org/7.0/#sec-bestfitsupportedlocales
-        if (matcher == u"best fit") {
-            supportedLocales = lookupSupportedLocales(availableLocales, requestedLocales);
-        }
-    //    Else,
-    //    Let supportedLocales be LookupSupportedLocales(availableLocales, requestedLocales).
-        else {
-            supportedLocales = lookupSupportedLocales(availableLocales, requestedLocales);
-        }
-    //    Return CreateArrayFromList(supportedLocales).
-        return supportedLocales;
-    }
+  std::u16string matcher;
+  if (!options.empty()) {
+    std::vector<std::u16string> vectorForMatcher = {u"lookup", u"best fit"};
+    // TODO: Need to check function didn't throw
+    matcher = getOption(options, u"localeMatcher", u"string", vectorForMatcher, u"best fit").getValue().getString();
+  }
+  // Else, let matcher be "best fit".
+  else {
+    matcher = u"best fit";
+  }
+  // If matcher is "best fit", then
+  // Let supportedLocales be BestFitSupportedLocales(availableLocales, requestedLocales).
+  std::vector<std::u16string> supportedLocales;
+  // TODO: Is bestFitSupportedLocales required? https://402.ecma-international.org/7.0/#sec-bestfitsupportedlocales
+  if (matcher == u"best fit") {
+    supportedLocales = lookupSupportedLocales(availableLocales, requestedLocales);
+  }
+  // Else,
+  // Let supportedLocales be LookupSupportedLocales(availableLocales, requestedLocales).
+  else {
+    supportedLocales = lookupSupportedLocales(availableLocales, requestedLocales);
+  }
+  // Return CreateArrayFromList(supportedLocales).
+  return supportedLocales;
+}
 
 struct Collator::Impl {
   std::u16string locale;
@@ -189,11 +226,13 @@ vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
     const Options &options) noexcept {
   // 1. Let availableLocales be %DateTimeFormat%.[[AvailableLocales]].
   NSArray<NSString *> *nsAvailableLocales = [NSLocale availableLocaleIdentifiers];
+  
   // 2. Let requestedLocales be ? CanonicalizeLocaleList(locales).
   vm::CallResult<std::vector<std::u16string>> requestedLocales = getCanonicalLocales(runtime, locales);
   std::vector<std::u16string> availableLocales = nsStringArrayToU16StringArray(nsAvailableLocales);
+  
   // 3. Return ? (availableLocales, requestedLocales, options).
-        return supportedLocales(availableLocales, requestedLocales.getValue(), options);
+  return supportedLocales(availableLocales, requestedLocales.getValue(), options);
 }
 
 // Implementation of 
@@ -260,37 +299,6 @@ vm::CallResult<Options> toDateTimeOptions(const Options &options, std::u16string
   }
   // 13. return options
   return options;
-}
-
-// Implementation of
-// https://tc39.es/ecma402/#sec-getoption
-vm::CallResult<Options> getOption(// Needs to be changed to Options options somehow to return value?
-    const Options &options,
-    std::u16string property,
-    std::u16string type,
-    std::vector<std::u16string> values,
-    const Options fallback) {
-//    2. Let value be ? Get(options, property).
-      std::u16string value = options.find(property)->first;
-//    3. If value is undefined, return fallback.
-      if (value == options.end()) {
-          return fallback;
-      }
-//    4. Assert: type is "boolean" or "string".
-//    5. If type is "boolean", then
-    if (type == u"boolean") {
-//    a. Set value to ! ToBoolean(value).
-    }
-//    6. If type is "string", then
-    if (type == u"string") {
-//    a. Set value to ? ToString(value).
-    }
-//    7. If values is not undefined and values does not contain an element equal to value, throw a RangeError exception.
-     if (!values.empty() && std::find(values.begin(), values.end(), value) != values.end()) {
-         return vm::ExecutionStatus::EXCEPTION;
-     }
-//    8. Return value. WRONG RETURN
-     return value;
 }
 
 // Implementation of
