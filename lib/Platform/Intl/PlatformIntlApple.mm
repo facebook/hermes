@@ -138,34 +138,52 @@ vm::CallResult<Option> getOption(
 }
 
 // Implementation of
+// https://tc39.es/ecma402/#sec-lookupsupportedlocales
+std::vector<std::u16string> lookupSupportedLocales(
+    const std::vector<std::u16string> &availableLocales,
+    const std::vector<std::u16string> &requestedLocales) {
+  // 1. Let subset be a new empty List.
+  std::vector<std::u16string> subset;
+  // 2. For each element locale of requestedLocales, do
+  for (const std::u16string &locale: requestedLocales) {
+    // a. Let noExtensionsLocale be the String value that is locale with any Unicode locale extension sequences removed.
+    //std::u16string noExtensionsLocale = toNoExtensionsLocale(locale);
+    // b. Let availableLocale be BestAvailableLocale(availableLocales, noExtensionsLocale).
+    //std::u16string availableLocale = bestAvailableLocale(availableLocales, noExtensionsLocale);
+    // c. If availableLocale is not undefined, append locale to the end of subset.
+    // if (!availableLocale.empty()) { subset.push_back(locale); }
+  }
+
+  // 3. Return subset.
+  return subset;
+}
+
+// Implementation of
 // https://tc39.es/ecma402/#sec-supportedlocales
 vm::CallResult<std::vector<std::u16string>> supportedLocales(
     const std::vector<std::u16string> availableLocales,
     const std::vector<std::u16string> requestedLocales,
     const Options &options) {
-  std::u16string matcher;
-  if (!options.empty()) {
-    std::vector<std::u16string> vectorForMatcher = {u"lookup", u"best fit"};
-    // TODO: Need to check function didn't throw
-    matcher = getOption(options, u"localeMatcher", u"string", vectorForMatcher, u"best fit").getValue().getString();
+  // 1. Set options to ? CoerceOptionsToObject(options).
+  // 2. Let matcher be ? GetOption(options, "localeMatcher", "string", « "lookup", "best fit" », "best fit").
+  std::vector<std::u16string> vectorForMatcher = {u"lookup", u"best fit"};
+  vm::CallResult<std::u16string> matcher = getOption(options, u"localeMatcher", u"string", vectorForMatcher, u"best fit").getValue().getString();
+  if (LLVM_UNLIKELY(matcher == vm::ExecutionStatus::EXCEPTION)) {
+    return vm::ExecutionStatus::EXCEPTION;
   }
-  // Else, let matcher be "best fit".
-  else {
-    matcher = u"best fit";
-  }
-  // If matcher is "best fit", then
-  // Let supportedLocales be BestFitSupportedLocales(availableLocales, requestedLocales).
+  
   std::vector<std::u16string> supportedLocales;
-  // TODO: Is bestFitSupportedLocales required? https://402.ecma-international.org/7.0/#sec-bestfitsupportedlocales
-  if (matcher == u"best fit") {
+  // 3. If matcher is "best fit", then
+  if (matcher.getValue() == u"best fit") {
+    // a. Let supportedLocales be BestFitSupportedLocales(availableLocales, requestedLocales).
+    // TODO: Is bestFitSupportedLocales required?
+    supportedLocales = lookupSupportedLocales(availableLocales, requestedLocales);
+  } else { // 4. Else,
+    // a. Let supportedLocales be LookupSupportedLocales(availableLocales, requestedLocales).
     supportedLocales = lookupSupportedLocales(availableLocales, requestedLocales);
   }
-  // Else,
-  // Let supportedLocales be LookupSupportedLocales(availableLocales, requestedLocales).
-  else {
-    supportedLocales = lookupSupportedLocales(availableLocales, requestedLocales);
-  }
-  // Return CreateArrayFromList(supportedLocales).
+  
+  // 5. Return CreateArrayFromList(supportedLocales).
   return supportedLocales;
 }
 
@@ -320,17 +338,16 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   // 4. Let matcher be ? GetOption(options, "localeMatcher", "string", «
   //   "lookup", "best fit" », "best fit").
   std::vector<std::u16string> values = {u"lookup", u"best fit"};
-  // LAST OPTIONS SHOULD BE FALLBACK/best fit?
-  auto matcher = getOption(options, u"localeMatcher", u"string", values, options);
+  Option matcherFallback = new Option(u"best fit");
+  auto matcher = getOption(options, u"localeMatcher", u"string", values, matcherFallback);
   // 5. Set opt.[[localeMatcher]] to matcher.
   opt.localeMatcher = matcher;
 
   // 6. Let calendar be ? GetOption(options, "calendar", "string",
   //    undefined, undefined).
-  // Bad way of passing through undefined
   std::vector<std::u16string> emptyVector;
-  Options emptyMap;
-  auto calendar = getOption(options, u"calendar", u"string", emptyVector, emptyMap);
+  Option undefinedFallback = new Option(false); // TODO: Pass undefined.
+  auto calendar = getOption(options, u"calendar", u"string", emptyVector, undefinedFallback);
   // 7. If calendar is not undefined, then
   //    a. If calendar does not match the Unicode Locale Identifier type
   //       nonterminal, throw a RangeError exception.
@@ -341,7 +358,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
         
   // 9. Let numberingSystem be ? GetOption(options, "numberingSystem",
   //    "string", undefined, undefined).
-  auto numberingSystem = getOption(options, u"numberingSystem", u"string", emptyVector, emptyMap);
+  auto numberingSystem = getOption(options, u"numberingSystem", u"string", emptyVector, undefinedFallback);
   // 10. If numberingSystem is not undefined, then
   //     a. If numberingSystem does not match the Unicode Locale Identifier
   //        type nonterminal, throw a RangeError exception.
@@ -352,11 +369,11 @@ vm::ExecutionStatus DateTimeFormat::initialize(
         
   // 12. Let hour12 be ? GetOption(options, "hour12", "boolean",
   //     undefined, undefined).
-  auto hour12 = getOption(options, u"hour12", u"boolean", emptyVector, emptyMap);
+  auto hour12 = getOption(options, u"hour12", u"boolean", emptyVector, undefinedFallback);
   // 13. Let hourCycle be ? GetOption(options, "hourCycle", "string", «
   //     "h11", "h12", "h23", "h24" », undefined).
   std::vector<std::u16string> hourCycleVector = {u"h11", u"h12", u"h23", u"h24"};
-  auto hourCycle = getOption(options, u"hourCycle", u"string", hourCycleVector, emptyMap);
+  auto hourCycle = getOption(options, u"hourCycle", u"string", hourCycleVector, undefinedFallback);
   // 14. If hour12 is not undefined, then
   //     a. Let hourCycle be null.
   if (hour12->size() != 0) {
