@@ -47,7 +47,7 @@ function HEADER(flow: FlowStyle): string {
   if (flow !== false) {
     flowDirective = ` * ${'@'}flow`;
     if (flow !== 'loose') {
-      flowDirective += flow;
+      flowDirective += ` ${flow}`;
     }
     flowDirective += '\n';
   }

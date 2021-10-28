@@ -12,7 +12,7 @@
 
 import type {ESNode} from './types';
 
-// This type is overridden in the output by codegen wherein
+// This file is overridden in the output by codegen wherein
 // we add an individual property sig for each and every node.
 
 export type ESQueryNodeSelectors = $ReadOnly<{

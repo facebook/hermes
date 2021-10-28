@@ -1400,3 +1400,5 @@ export interface PrivateName extends BaseNode {
   +type: 'PrivateName';
   +id: Identifier;
 }
+
+export {};

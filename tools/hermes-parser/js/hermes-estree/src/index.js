@@ -13,4 +13,4 @@
 export type * from './HermesESTreeSelectorTypes';
 export type * from './types';
 
-module.exports = ({}: {...});
+export {};
