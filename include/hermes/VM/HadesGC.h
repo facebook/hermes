@@ -188,10 +188,6 @@ class HadesGC final : public GCBase {
   }
   void writeBarrierSlow(const GCPointerBase *loc, const GCCell *value);
 
-  /// The given symbol is being written at the given loc (required to be in the
-  /// heap).
-  void writeBarrier(SymbolID symbol);
-
   /// Special versions of \p writeBarrier for when there was no previous value
   /// initialized into the space.
   void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value) {
@@ -249,6 +245,10 @@ class HadesGC final : public GCBase {
       snapshotWriteBarrierInternal(*loc);
   }
   void snapshotWriteBarrier(const GCPointerBase *loc) {
+    if (LLVM_UNLIKELY(!inYoungGen(loc) && ogMarkingBarriers_))
+      snapshotWriteBarrierInternal(*loc);
+  }
+  void snapshotWriteBarrier(const GCSymbolID *loc) {
     if (LLVM_UNLIKELY(!inYoungGen(loc) && ogMarkingBarriers_))
       snapshotWriteBarrierInternal(*loc);
   }

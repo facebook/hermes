@@ -1900,17 +1900,6 @@ void HadesGC::writeBarrierSlow(const GCPointerBase *loc, const GCCell *value) {
   relocationWriteBarrier(loc, value);
 }
 
-void HadesGC::writeBarrier(SymbolID symbol) {
-  assert(
-      !calledByBackgroundThread() &&
-      "Write barrier invoked by background thread.");
-  if (ogMarkingBarriers_) {
-    snapshotWriteBarrierInternal(symbol);
-  }
-  // No need for a generational write barrier for symbols, they always point
-  // to long-lived strings.
-}
-
 void HadesGC::constructorWriteBarrierSlow(
     const GCHermesValue *loc,
     HermesValue value) {

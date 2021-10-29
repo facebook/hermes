@@ -177,9 +177,6 @@ class GenGC final : public GCBase {
   /// be in the heap).  The value is may be null.  Execute a write barrier.
   void writeBarrier(const GCPointerBase *loc, const GCCell *value);
 
-  /// Write barriers for symbols are no-ops in GenGC.
-  void writeBarrier(SymbolID) {}
-
   /// The given value is being written at the given loc (required to
   /// be in the heap).  If value is a pointer, execute a write barrier.
   /// The memory pointed to by \p loc is guaranteed to not have a valid pointer.
@@ -273,6 +270,7 @@ class GenGC final : public GCBase {
   void snapshotWriteBarrier(const GCHermesValue *loc) {}
   void snapshotWriteBarrier(const GCSmallHermesValue *loc) {}
   void snapshotWriteBarrier(const GCPointerBase *loc) {}
+  void snapshotWriteBarrier(const GCSymbolID *loc) {}
   void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs) {}
   void snapshotWriteBarrierRange(
       const GCSmallHermesValue *start,
