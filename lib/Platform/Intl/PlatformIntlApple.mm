@@ -119,6 +119,7 @@ vm::CallResult<Option> getOption(
     if(!value->second.isBool()) {
       // TODO: in what layer do we call into runtime to throw exceptions
       //return runtime->raiseRangeError(u"Boolean option expected but not found");
+      return vm::ExecutionStatus::EXCEPTION;
     }
     // a. Set value to ! ToBoolean(value).
   }
@@ -126,6 +127,7 @@ vm::CallResult<Option> getOption(
   if (type == u"string") {
     if(!value->second.isString()) {
       //return runtime->raiseRangeError(u"String option expected but not found");
+      return vm::ExecutionStatus::EXCEPTION;
     }
     // a. Set value to ? ToString(value).
   }
@@ -235,6 +237,39 @@ struct DateTimeFormat::Impl {
 
 DateTimeFormat::DateTimeFormat() : impl_(std::make_unique<Impl>()) {}
 DateTimeFormat::~DateTimeFormat() {}
+
+// Enum declaration for DateTimeFormat internal slots
+// https://tc39.es/ecma402/#datetimeformat-objects
+enum class FormatMatcher : size_t = {BESTFIT = 0, BASIC};
+static const std::u16string FormatMatcherStr[] = {u"best fit", u"basic"};
+enum class HourCycle = {Undefined = 0, H11, H12, H23, H24};
+enum class Weekday : size_t {Undefined = 0, Narrow, Short, Long};
+enum class Era : size_t {Undefined = 0, Narrow, Short, Long};
+enum class Year : size_t {Undefined = 0, TwoDigit, Numeric};
+enum class Month : size_t {Undefined = 0, TwoDigit, Numeric, Narrow, Short, Long};
+enum class Day : size_t {Undefined = 0, TwoDigit, Numeric};
+enum class DayPeriod : size_t {Undefined = 0, Narrow, Short, Long};
+enum class Hour : size_t {Undefined = 0, TwoDigit, Numeric};
+enum class Minute : size_t {Undefined = 0, TwoDigit, Numeric};
+enum class Second : size_t {Undefined = 0, TwoDigit, Numeric};
+enum class TimeZoneName : size_t {Undefined = 0, Short, Long, ShortOffset, LongOffset, ShortGeneric, LongGeneric};
+enum class DateTimeStyle : size_t {Undefined = 0, Full, Long, Medium, Short};
+
+HourCycle mHourCycle {HourCycle::Undefined};
+
+FormatMatcher mFormatMatcher {FormatMatcher::Undefined};
+Weekday mWeekday {Weekday::Undefined};
+Era mEra {Era::Undefined};
+Year mYear {Year::Undefined};
+Month mMonth {Month::Undefined};
+Day mDay {Day::Undefined};
+DayPeriod mDayPeriod {DayPeriod::Undefined};
+Hour mHour {Hour::Undefined};
+Minute mMinute {Minute::Undefined};
+Second mSecond {Second::Undefined};
+TimeZoneName mTimeZoneName {TimeZoneName::Undefined};
+DateTimeStyle mDateStyle {DateTimeStyle::Undefined};
+DateTimeStyle mTimeStyle {DateTimeStyle::Undefined};
 
 // Implementation of
 // https://tc39.es/ecma402/#sec-intl.datetimeformat.supportedlocalesof
