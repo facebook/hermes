@@ -74,32 +74,24 @@ llvh::Optional<std::u16string> bestAvailableLocale(
 // https://402.ecma-international.org/7.0/#sec-unicode-locale-extension-sequences
 std::u16string toNoExtensionsLocale(const std::u16string &locale) {
   std::vector<std::u16string> subtags;
-  size_t i = 0, j = 0;
-  while (i < locale.size()) {
-    if (locale[i] == u'-') {
-      subtags.push_back(locale.substr(j, i));
-      j = i + 1;
-    }
-    i++;
-  }
-  if (j < locale.size()) {
-    subtags.push_back(locale.substr(j, i));
+  auto s = locale.begin(), e = locale.end();
+  while (true) {
+    auto tagEnd = std::find(s, e, u'-');
+    subtags.emplace_back(s, tagEnd);
+    if (tagEnd == e)
+      break;
+    s = tagEnd + 1;
   }
   std::u16string result;
   size_t size = subtags.size();
-  if (size > 0) {
-    result.append(subtags[0]);
-  }
-  for (size_t s = 1; s < size; s++) {
+  for (size_t s = 0; s < size;) {
+    result.append(subtags[s]);
+    s++;
     // If next tag is a private marker and there are remaining tags
-    if (subtags[s] == u"u" && s < size - 1) {
+    if (subtags[s] == u"u" && s < size - 1)
       // Skip those tags until you reach end or another singleton subtag
-      while (s < size - 1 && subtags[s + 1].size() > 1) {
+      while (s < size && subtags[s].size() > 1)
         s++;
-      }
-    } else {
-      result.append(subtags[s]);
-    }
   }
   return result;
 }
