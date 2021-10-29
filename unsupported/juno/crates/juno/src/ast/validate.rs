@@ -252,13 +252,8 @@ impl Validator {
     }
 }
 
-impl Visitor for Validator {
-    fn call<'gc>(
-        &mut self,
-        ctx: &'gc GCContext,
-        node: &'gc Node<'gc>,
-        _parent: Option<&'gc Node<'gc>>,
-    ) {
+impl<'gc> Visitor<'gc> for Validator {
+    fn call(&mut self, ctx: &'gc GCContext, node: &'gc Node<'gc>, _parent: Option<&'gc Node<'gc>>) {
         self.validate_node(ctx, node);
     }
 }

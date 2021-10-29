@@ -113,9 +113,9 @@ fn test_visit() {
         acc: Vec<f64>,
     }
 
-    impl Visitor for NumberFinder {
+    impl<'gc> Visitor<'gc> for NumberFinder {
         /// Visit the Node `node` with the given `parent`.
-        fn call<'gc>(
+        fn call(
             &mut self,
             ctx: &'gc GCContext,
             node: &'gc Node<'gc>,
@@ -188,8 +188,8 @@ fn test_visit_mut() {
 
     struct Pass {}
 
-    impl VisitorMut for Pass {
-        fn call<'gc>(
+    impl<'gc> VisitorMut<'gc> for Pass {
+        fn call(
             &mut self,
             ctx: &'gc GCContext,
             node: &'gc Node<'gc>,
@@ -296,4 +296,48 @@ fn test_many_nodes() {
             panic!("Incorrect cached value: {:#?}", n);
         }
     };
+}
+
+#[test]
+fn test_store_node() {
+    let mut ctx = Context::new();
+
+    struct Foo<'gc> {
+        n: Option<&'gc Node<'gc>>,
+    }
+
+    impl<'gc> Foo<'gc> {
+        fn set_n(&mut self, node: &'gc Node<'gc>) {
+            self.n = Some(node);
+        }
+    }
+
+    impl<'gc> Visitor<'gc> for Foo<'gc> {
+        fn call(
+            &mut self,
+            gc: &'gc GCContext,
+            node: &'gc Node<'gc>,
+            _parent: Option<&'gc Node<'gc>>,
+        ) {
+            self.set_n(node);
+            node.visit_children(gc, self)
+        }
+    }
+
+    {
+        let gc = GCContext::new(&mut ctx);
+        let mut pass = Foo { n: None };
+        let ast = NodePtr::from_node(
+            &gc,
+            NumericLiteralBuilder::build_template(
+                &gc,
+                NumericLiteralTemplate {
+                    metadata: Default::default(),
+                    value: 1.0f64,
+                },
+            ),
+        );
+        ast.node(&gc).visit(&gc, &mut pass, None);
+        assert!(pass.n.is_some());
+    }
 }

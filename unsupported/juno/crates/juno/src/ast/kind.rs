@@ -84,7 +84,7 @@ macro_rules! gen_nodekind_enum {
             }
 
             /// Visit the child fields of `self`.
-            pub fn visit_children<'ast: 'gc, V: Visitor>(
+            pub fn visit_children<'ast: 'gc, V: Visitor<'gc>>(
                 &'gc self,
                 ctx: &'gc GCContext<'ast, '_>,
                 visitor: &mut V,
@@ -106,7 +106,7 @@ macro_rules! gen_nodekind_enum {
             /// Visit the child fields of the provided `builder`.
             /// `self` is the *original* parent of the children to visit,
             /// but the children which will be visited are determined via `builder`.
-            pub fn visit_children_mut<'ast: 'gc, V: VisitorMut>(
+            pub fn visit_children_mut<'ast: 'gc, V: VisitorMut<'gc>>(
                 &'gc self,
                 builder: NodeBuilder<'gc>,
                 ctx: &'gc GCContext<'ast, '_>,

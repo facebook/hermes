@@ -3324,13 +3324,8 @@ impl<W: Write> GenJS<W> {
     }
 }
 
-impl<W: Write> Visitor for GenJS<W> {
-    fn call<'gc>(
-        &mut self,
-        ctx: &'gc GCContext,
-        node: &'gc Node<'gc>,
-        parent: Option<&'gc Node<'gc>>,
-    ) {
+impl<'gc, W: Write> Visitor<'gc> for GenJS<W> {
+    fn call(&mut self, ctx: &'gc GCContext, node: &'gc Node<'gc>, parent: Option<&'gc Node<'gc>>) {
         self.gen_node(ctx, node, parent);
     }
 }

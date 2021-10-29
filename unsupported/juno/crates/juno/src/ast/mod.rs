@@ -278,8 +278,8 @@ impl<'ast> Context<'ast> {
             markbit_marked: bool,
         }
 
-        impl Visitor for Marker {
-            fn call<'gc>(
+        impl<'gc> Visitor<'gc> for Marker {
+            fn call(
                 &mut self,
                 gc: &'gc GCContext,
                 node: &'gc Node<'gc>,
@@ -525,14 +525,9 @@ impl NodePtr {
 }
 
 /// Trait implemented by those who call the visit functionality.
-pub trait Visitor {
+pub trait Visitor<'gc> {
     /// Visit the Node `node` with the given `parent`.
-    fn call<'gc>(
-        &mut self,
-        ctx: &'gc GCContext,
-        node: &'gc Node<'gc>,
-        parent: Option<&'gc Node<'gc>>,
-    );
+    fn call(&mut self, ctx: &'gc GCContext, node: &'gc Node<'gc>, parent: Option<&'gc Node<'gc>>);
 }
 
 #[derive(Debug)]
@@ -560,9 +555,9 @@ impl<T> TransformResult<T> {
 }
 
 /// Trait implemented by those who call the visit functionality.
-pub trait VisitorMut {
+pub trait VisitorMut<'gc> {
     /// Visit the Node `node` with the given `parent`.
-    fn call<'gc>(
+    fn call(
         &mut self,
         ctx: &'gc GCContext,
         node: &'gc Node<'gc>,
@@ -797,7 +792,7 @@ define_str_enum!(
 );
 
 impl<'gc> Node<'gc> {
-    pub fn visit<V: Visitor>(
+    pub fn visit<V: Visitor<'gc>>(
         &'gc self,
         ctx: &'gc GCContext,
         visitor: &mut V,
@@ -806,7 +801,7 @@ impl<'gc> Node<'gc> {
         visitor.call(ctx, self, parent);
     }
 
-    pub fn visit_mut<V: VisitorMut>(
+    pub fn visit_mut<V: VisitorMut<'gc>>(
         &'gc self,
         ctx: &'gc GCContext,
         visitor: &mut V,
@@ -829,7 +824,7 @@ where
     /// Visit this child of the given `node`.
     /// Should be no-op for any type that doesn't contain pointers to other
     /// `Node`s.
-    fn visit_child<V: Visitor>(
+    fn visit_child<V: Visitor<'gc>>(
         self,
         _ctx: &'gc GCContext,
         _visitor: &mut V,
@@ -840,7 +835,7 @@ where
     /// Visit this child of the given `node`.
     /// Should be no-op for any type that doesn't contain pointers to other
     /// `Node`s.
-    fn visit_child_mut<V: VisitorMut>(
+    fn visit_child_mut<V: VisitorMut<'gc>>(
         self,
         _ctx: &'gc GCContext,
         _visitor: &mut V,
@@ -957,7 +952,12 @@ impl NodeChild<'_> for &Option<NodeString> {
 impl<'gc, T: NodeChild<'gc> + NodeChild<'gc, Out = T>> NodeChild<'gc> for Option<T> {
     type Out = Self;
 
-    fn visit_child<V: Visitor>(self, ctx: &'gc GCContext, visitor: &mut V, node: &'gc Node<'gc>) {
+    fn visit_child<V: Visitor<'gc>>(
+        self,
+        ctx: &'gc GCContext,
+        visitor: &mut V,
+        node: &'gc Node<'gc>,
+    ) {
         if let Some(t) = self {
             t.visit_child(ctx, visitor, node);
         }
@@ -966,7 +966,7 @@ impl<'gc, T: NodeChild<'gc> + NodeChild<'gc, Out = T>> NodeChild<'gc> for Option
     /// Visit this child of the given `node`.
     /// Should be no-op for any type that doesn't contain pointers to other
     /// `Node`s.
-    fn visit_child_mut<V: VisitorMut>(
+    fn visit_child_mut<V: VisitorMut<'gc>>(
         self,
         ctx: &'gc GCContext,
         visitor: &mut V,
@@ -990,7 +990,12 @@ impl<'gc, T: NodeChild<'gc> + NodeChild<'gc, Out = T>> NodeChild<'gc> for Option
 impl<'gc> NodeChild<'gc> for &Option<&'gc Node<'gc>> {
     type Out = Option<&'gc Node<'gc>>;
 
-    fn visit_child<V: Visitor>(self, ctx: &'gc GCContext, visitor: &mut V, node: &'gc Node<'gc>) {
+    fn visit_child<V: Visitor<'gc>>(
+        self,
+        ctx: &'gc GCContext,
+        visitor: &mut V,
+        node: &'gc Node<'gc>,
+    ) {
         if let Some(t) = *self {
             t.visit_child(ctx, visitor, node);
         }
@@ -999,7 +1004,7 @@ impl<'gc> NodeChild<'gc> for &Option<&'gc Node<'gc>> {
     /// Visit this child of the given `node`.
     /// Should be no-op for any type that doesn't contain pointers to other
     /// `Node`s.
-    fn visit_child_mut<V: VisitorMut>(
+    fn visit_child_mut<V: VisitorMut<'gc>>(
         self,
         ctx: &'gc GCContext,
         visitor: &mut V,
@@ -1023,14 +1028,19 @@ impl<'gc> NodeChild<'gc> for &Option<&'gc Node<'gc>> {
 impl<'gc> NodeChild<'gc> for &'gc Node<'gc> {
     type Out = Self;
 
-    fn visit_child<V: Visitor>(self, ctx: &'gc GCContext, visitor: &mut V, node: &'gc Node<'gc>) {
+    fn visit_child<V: Visitor<'gc>>(
+        self,
+        ctx: &'gc GCContext,
+        visitor: &mut V,
+        node: &'gc Node<'gc>,
+    ) {
         visitor.call(ctx, self, Some(node));
     }
 
     /// Visit this child of the given `node`.
     /// Should be no-op for any type that doesn't contain pointers to other
     /// `Node`s.
-    fn visit_child_mut<V: VisitorMut>(
+    fn visit_child_mut<V: VisitorMut<'gc>>(
         self,
         ctx: &'gc GCContext,
         visitor: &mut V,
@@ -1047,13 +1057,18 @@ impl<'gc> NodeChild<'gc> for &'gc Node<'gc> {
 impl<'gc> NodeChild<'gc> for &NodeList<'gc> {
     type Out = NodeList<'gc>;
 
-    fn visit_child<V: Visitor>(self, ctx: &'gc GCContext, visitor: &mut V, node: &'gc Node<'gc>) {
+    fn visit_child<V: Visitor<'gc>>(
+        self,
+        ctx: &'gc GCContext,
+        visitor: &mut V,
+        node: &'gc Node<'gc>,
+    ) {
         for child in self {
             visitor.call(ctx, *child, Some(node));
         }
     }
 
-    fn visit_child_mut<V: VisitorMut>(
+    fn visit_child_mut<V: VisitorMut<'gc>>(
         self,
         ctx: &'gc GCContext,
         visitor: &mut V,
@@ -1097,7 +1112,12 @@ impl<'gc> NodeChild<'gc> for &NodeList<'gc> {
 impl<'gc> NodeChild<'gc> for &Option<NodeList<'gc>> {
     type Out = Option<NodeList<'gc>>;
 
-    fn visit_child<V: Visitor>(self, ctx: &'gc GCContext, visitor: &mut V, node: &'gc Node<'gc>) {
+    fn visit_child<V: Visitor<'gc>>(
+        self,
+        ctx: &'gc GCContext,
+        visitor: &mut V,
+        node: &'gc Node<'gc>,
+    ) {
         if let Some(list) = self {
             for child in list {
                 visitor.call(ctx, *child, Some(node));
@@ -1105,7 +1125,7 @@ impl<'gc> NodeChild<'gc> for &Option<NodeList<'gc>> {
         }
     }
 
-    fn visit_child_mut<V: VisitorMut>(
+    fn visit_child_mut<V: VisitorMut<'gc>>(
         self,
         ctx: &'gc GCContext,
         visitor: &mut V,
