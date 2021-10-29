@@ -17,11 +17,17 @@ print(`${'TEST'.toLocaleLowerCase()}`);
 print(`${'İstanbul'.toLocaleLowerCase('en-US')}`);
 // CHECK-NEXT: i̇stanbul
 
-print(`${'CAFÉ'.toLocaleLowerCase('en-NZ')}`);
-// CHECK-NEXT: café
+print(`${'İstanbul'.toLocaleLowerCase('tr')}`);
+// CHECK-NEXT: istanbul
 
-print(`${',̆'.toLocaleLowerCase('cs-CZ')}`);
-// CHECK-NEXT: ,̆
+print(`${'CAFÉTÉRIA'.toLocaleLowerCase('en-NZ')}`);
+// CHECK-NEXT: cafétéria
+
+print(`${'CAFÉTÉRIA'.toLocaleLowerCase('tr')}`);
+// CHECK-NEXT: cafétérıa
+
+print(`${'\U0001f3eb,̆IA\u0307'.toLocaleLowerCase('cs-CZ')}`);
+// CHECK-NEXT: u0001f3eb,̆iȧ
 
 print(`${''.toLocaleLowerCase('en-US').length}`);
 // CHECK-NEXT: 0
