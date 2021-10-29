@@ -106,6 +106,10 @@ pub struct Context<'ast> {
     /// technically unsafe.
     nodeptr_count: Pin<Box<NodePtrCounter>>,
 
+    /// Capacity at which to allocate the next chunk.
+    /// Doubles every chunk until reaching [`MAX_CHUNK_CAPACITY`].
+    next_chunk_capacity: Cell<usize>,
+
     /// All identifiers are kept here.
     atom_tab: AtomTable,
 
@@ -113,8 +117,8 @@ pub struct Context<'ast> {
     source_mgr: SourceManager,
 }
 
-// TODO: Double the size every new chunk.
-const CHUNK_CAPACITY: usize = 1024;
+const MIN_CHUNK_CAPACITY: usize = 1 << 10;
+const MAX_CHUNK_CAPACITY: usize = MIN_CHUNK_CAPACITY * (1 << 10);
 
 impl Default for Context<'_> {
     fn default() -> Self {
@@ -137,6 +141,7 @@ impl<'ast> Context<'ast> {
             })),
             atom_tab: Default::default(),
             source_mgr: Default::default(),
+            next_chunk_capacity: Cell::new(MIN_CHUNK_CAPACITY),
         };
         result.new_chunk();
         result
@@ -156,7 +161,8 @@ impl<'ast> Context<'ast> {
             entry.markbit.set(false);
             entry
         } else {
-            if nodes.last().unwrap().len() >= CHUNK_CAPACITY {
+            let chunk = nodes.last().unwrap();
+            if chunk.len() >= chunk.capacity() {
                 self.new_chunk();
             }
             let chunk = nodes.last_mut().unwrap();
@@ -174,7 +180,13 @@ impl<'ast> Context<'ast> {
     /// Allocate a new chunk in the node storage.
     fn new_chunk(&self) {
         let nodes = unsafe { &mut *self.nodes.get() };
-        nodes.push(Vec::with_capacity(CHUNK_CAPACITY));
+        let capacity = self.next_chunk_capacity.get();
+        nodes.push(Vec::with_capacity(capacity));
+
+        // Double the capacity if there's room.
+        if capacity < MAX_CHUNK_CAPACITY {
+            self.next_chunk_capacity.set(capacity * 2);
+        }
     }
 
     /// Add a string to the identifier table.

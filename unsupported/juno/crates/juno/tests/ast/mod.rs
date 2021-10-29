@@ -258,3 +258,18 @@ fn test_visit_mut() {
         gc.gc();
     }
 }
+
+#[test]
+fn test_many_nodes() {
+    let mut ctx = Context::new();
+    let gc = GCContext::new(&mut ctx);
+    for _ in 0..10_000 {
+        NumericLiteralBuilder::build_template(
+            &gc,
+            NumericLiteralTemplate {
+                metadata: Default::default(),
+                value: 1.0,
+            },
+        );
+    }
+}
