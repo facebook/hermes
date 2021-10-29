@@ -254,22 +254,46 @@ fn test_visit_mut() {
     }
 
     {
-        let mut gc = GCContext::new(&mut ctx);
-        gc.gc();
+        ctx.gc();
     }
 }
 
 #[test]
 fn test_many_nodes() {
     let mut ctx = Context::new();
-    let gc = GCContext::new(&mut ctx);
-    for _ in 0..10_000 {
-        NumericLiteralBuilder::build_template(
-            &gc,
-            NumericLiteralTemplate {
-                metadata: Default::default(),
-                value: 1.0,
-            },
-        );
+    let mut cached = None;
+    let mut val = 0f64;
+    for _ in 0..10 {
+        {
+            let gc = GCContext::new(&mut ctx);
+            for i in 0..10_000 {
+                cached = Some(NodePtr::from_node(
+                    &gc,
+                    NumericLiteralBuilder::build_template(
+                        &gc,
+                        NumericLiteralTemplate {
+                            metadata: Default::default(),
+                            value: i as f64,
+                        },
+                    ),
+                ));
+                val = i as f64;
+            }
+        }
+        ctx.gc();
     }
+
+    let gc = GCContext::new(&mut ctx);
+    match cached.unwrap().node(&gc) {
+        Node::NumericLiteral(NumericLiteral { value, .. }) => {
+            assert!(
+                (*value - val).abs() < f64::EPSILON,
+                "Incorrect cached value: {:#?}",
+                *value
+            );
+        }
+        n => {
+            panic!("Incorrect cached value: {:#?}", n);
+        }
+    };
 }

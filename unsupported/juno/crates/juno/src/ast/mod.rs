@@ -55,20 +55,51 @@ pub use validate::{validate_tree, ValidationError};
 
 pub use atom_table::{Atom, AtomTable, INVALID_ATOM};
 
+/// ID which indicates a `StorageEntry` is free.
+const FREE_ENTRY: u32 = 0;
+
 /// A single entry in the heap.
 #[derive(Debug)]
 struct StorageEntry<'ctx> {
     /// ID of the context to which this entry belongs.
-    ctx_id: u32,
+    /// Top bit is used as a mark bit, and flips meaning every time a GC happens.
+    /// If this field is `0`, then this entry is free.
+    ctx_id_markbit: Cell<u32>,
 
     /// Refcount of how many [`NodePtr`] point to this node.
+    /// Entry may only be freed if this number is `0` and no other entries reference this entry
+    /// directly.
     count: Cell<u32>,
-
-    /// Whether this entry has been marked during GC.
-    markbit: Cell<bool>,
 
     /// Actual node stored in this entry.
     inner: Node<'ctx>,
+}
+
+impl<'ctx> StorageEntry<'ctx> {
+    unsafe fn from_node<'a>(node: &'a Node<'a>) -> &'a StorageEntry<'a> {
+        let inner_offset = offset_of!(StorageEntry, inner) as isize;
+        let inner = node as *const Node<'a>;
+        &*(inner.offset(-inner_offset) as *const StorageEntry<'a>)
+    }
+
+    #[inline]
+    fn set_markbit(&self, bit: bool) {
+        let id = self.ctx_id_markbit.get();
+        if bit {
+            self.ctx_id_markbit.set(id | 1 << 31);
+        } else {
+            self.ctx_id_markbit.set(id & !(1 << 31));
+        }
+    }
+
+    #[inline]
+    fn markbit(&self) -> bool {
+        (self.ctx_id_markbit.get() >> 31) != 0
+    }
+
+    fn is_free(&self) -> bool {
+        self.ctx_id_markbit.get() == FREE_ENTRY
+    }
 }
 
 /// Structure pointed to by `Context` and `NodePtr` to facilitate panicking if there are
@@ -115,6 +146,10 @@ pub struct Context<'ast> {
 
     /// Source manager of this context.
     source_mgr: SourceManager,
+
+    /// `true` if `1` indicates an entry is marked, `false` if `0` indicates an entry is marked.
+    /// Flipped every time GC occurs.
+    markbit_marked: bool,
 }
 
 const MIN_CHUNK_CAPACITY: usize = 1 << 10;
@@ -129,7 +164,7 @@ impl Default for Context<'_> {
 impl<'ast> Context<'ast> {
     /// Allocate a new `Context` with a new ID.
     pub fn new() -> Self {
-        static NEXT_ID: AtomicU32 = AtomicU32::new(0);
+        static NEXT_ID: AtomicU32 = AtomicU32::new(FREE_ENTRY + 1);
         let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
         let result = Self {
             id,
@@ -142,6 +177,7 @@ impl<'ast> Context<'ast> {
             atom_tab: Default::default(),
             source_mgr: Default::default(),
             next_chunk_capacity: Cell::new(MIN_CHUNK_CAPACITY),
+            markbit_marked: true,
         };
         result.new_chunk();
         result
@@ -156,9 +192,14 @@ impl<'ast> Context<'ast> {
         let node: Node<'ast> = unsafe { std::mem::transmute(n) };
         let entry = if let Some(mut entry) = free.pop() {
             let entry = unsafe { entry.as_mut() };
-            debug_assert!(entry.ctx_id == self.id, "Incorrect context ID");
+            debug_assert!(
+                entry.ctx_id_markbit.get() == FREE_ENTRY,
+                "Incorrect context ID"
+            );
             debug_assert!(entry.count.get() == 0, "Freed entry has pointers to it");
-            entry.markbit.set(false);
+            entry.ctx_id_markbit.set(self.id);
+            entry.set_markbit(!self.markbit_marked);
+            entry.inner = node;
             entry
         } else {
             let chunk = nodes.last().unwrap();
@@ -166,12 +207,13 @@ impl<'ast> Context<'ast> {
                 self.new_chunk();
             }
             let chunk = nodes.last_mut().unwrap();
-            chunk.push(StorageEntry {
-                ctx_id: self.id,
+            let entry = StorageEntry {
+                ctx_id_markbit: Cell::new(self.id),
                 count: Cell::new(0),
                 inner: node,
-                markbit: Cell::new(false),
-            });
+            };
+            entry.set_markbit(!self.markbit_marked);
+            chunk.push(entry);
             chunk.last().unwrap()
         };
         &entry.inner
@@ -211,7 +253,82 @@ impl<'ast> Context<'ast> {
         &mut self.source_mgr
     }
 
-    fn gc(&mut self) {}
+    pub fn gc(&mut self) {
+        let nodes = unsafe { &mut *self.nodes.get() };
+        let free = unsafe { &mut *self.free.get() };
+
+        // Begin by collecting all the roots: entries with non-zero refcount.
+        let mut roots: Vec<&StorageEntry> = vec![];
+        for chunk in nodes.iter() {
+            for entry in chunk.iter() {
+                debug_assert!(
+                    entry.markbit() != self.markbit_marked,
+                    "Entry marked before start of GC"
+                );
+                if entry.is_free() {
+                    continue;
+                }
+                if entry.count.get() > 0 {
+                    roots.push(entry);
+                }
+            }
+        }
+
+        struct Marker {
+            markbit_marked: bool,
+        }
+
+        impl Visitor for Marker {
+            fn call<'gc>(
+                &mut self,
+                gc: &'gc GCContext,
+                node: &'gc Node<'gc>,
+                _parent: Option<&'gc Node<'gc>>,
+            ) {
+                let entry = unsafe { StorageEntry::from_node(node) };
+                if entry.markbit() == self.markbit_marked {
+                    // Stop visiting early if we've already marked this part,
+                    // because we must have also marked all the children.
+                    return;
+                }
+                entry.set_markbit(self.markbit_marked);
+                node.visit_children(gc, self);
+            }
+        }
+
+        // Use a visitor to mark every node reachable from roots.
+        let mut marker = Marker {
+            markbit_marked: self.markbit_marked,
+        };
+        {
+            let gc = GCContext::new(self);
+            for root in &roots {
+                root.inner.visit(&gc, &mut marker, None);
+            }
+        }
+
+        for chunk in nodes.iter_mut() {
+            for entry in chunk.iter_mut() {
+                if entry.is_free() {
+                    // Skip free entries.
+                    continue;
+                }
+                if entry.count.get() > 0 {
+                    // Keep referenced entries alive.
+                    continue;
+                }
+                if entry.markbit() == self.markbit_marked {
+                    // Keep marked entries alive.
+                    continue;
+                }
+                // Passed all checks, this entry is free.
+                entry.ctx_id_markbit.set(FREE_ENTRY);
+                free.push(unsafe { NonNull::new_unchecked(entry as *mut StorageEntry) });
+            }
+        }
+
+        self.markbit_marked = !self.markbit_marked;
+    }
 }
 
 impl Drop for Context<'_> {
@@ -308,10 +425,6 @@ impl<'ast, 'ctx> GCContext<'ast, 'ctx> {
     #[inline]
     pub fn sm_mut(&mut self) -> &mut SourceManager {
         self.ctx.sm_mut()
-    }
-
-    pub fn gc(&mut self) {
-        self.ctx.gc();
     }
 }
 
