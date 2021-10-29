@@ -6,96 +6,114 @@
  */
 
 use juno::ast::*;
-use juno::source_manager::SourceId;
 
 #[test]
 fn test_valid() {
     let mut ctx = Context::new();
-    let range = SourceRange {
-        file: SourceId::INVALID,
-        start: SourceLoc::invalid(),
-        end: SourceLoc::invalid(),
+    let return_stmt = {
+        let gc = GCContext::new(&mut ctx);
+        NodePtr::from_node(
+            &gc,
+            ReturnStatementBuilder::build_template(
+                &gc,
+                ReturnStatementTemplate {
+                    metadata: Default::default(),
+                    argument: None,
+                },
+            ),
+        )
     };
-    let return_stmt = make_node!(
-        ctx,
-        Node::ReturnStatement(ReturnStatement {
-            range,
-            argument: None
-        })
-    );
-    assert!(validate_tree(&ctx, return_stmt).is_ok());
+    assert!(validate_tree(&mut ctx, &return_stmt).is_ok());
 
-    let return_stmt = make_node!(
-        ctx,
-        Node::ReturnStatement(ReturnStatement {
-            range,
-            argument: Some(make_node!(
-                ctx,
-                Node::NumericLiteral(NumericLiteral { range, value: 1.0 })
-            ))
-        })
-    );
-    assert!(validate_tree(&ctx, return_stmt).is_ok());
+    let return_stmt = {
+        let gc = GCContext::new(&mut ctx);
+        NodePtr::from_node(
+            &gc,
+            ReturnStatementBuilder::build_template(
+                &gc,
+                ReturnStatementTemplate {
+                    metadata: Default::default(),
+                    argument: Some(NumericLiteralBuilder::build_template(
+                        &gc,
+                        NumericLiteralTemplate {
+                            metadata: Default::default(),
+                            value: 1.0,
+                        },
+                    )),
+                },
+            ),
+        )
+    };
+    assert!(validate_tree(&mut ctx, &return_stmt).is_ok());
 
-    let return_stmt = make_node!(
-        ctx,
-        Node::ReturnStatement(ReturnStatement {
-            range,
-            argument: Some(make_node!(
-                ctx,
-                Node::ReturnStatement(ReturnStatement {
-                    range,
-                    argument: None
-                })
-            )),
-        })
-    );
-    assert!(validate_tree(&ctx, return_stmt).is_err());
+    let return_stmt = {
+        let gc = GCContext::new(&mut ctx);
+        NodePtr::from_node(
+            &gc,
+            ReturnStatementBuilder::build_template(
+                &gc,
+                ReturnStatementTemplate {
+                    metadata: Default::default(),
+                    argument: Some(ReturnStatementBuilder::build_template(
+                        &gc,
+                        ReturnStatementTemplate {
+                            metadata: Default::default(),
+                            argument: None,
+                        },
+                    )),
+                },
+            ),
+        )
+    };
+    assert!(validate_tree(&mut ctx, &return_stmt).is_err());
 }
 
 #[test]
 fn test_error() {
     let mut ctx = Context::new();
-    let range = SourceRange {
-        file: SourceId::INVALID,
-        start: SourceLoc::invalid(),
-        end: SourceLoc::invalid(),
+
+    let ast: NodePtr = {
+        let gc = GCContext::new(&mut ctx);
+        NodePtr::from_node(
+            &gc,
+            BlockStatementBuilder::build_template(
+                &gc,
+                BlockStatementTemplate {
+                    metadata: Default::default(),
+                    body: vec![ReturnStatementBuilder::build_template(
+                        &gc,
+                        ReturnStatementTemplate {
+                            metadata: Default::default(),
+                            argument: Some(ReturnStatementBuilder::build_template(
+                                &gc,
+                                ReturnStatementTemplate {
+                                    metadata: Default::default(),
+                                    argument: None,
+                                },
+                            )),
+                        },
+                    )],
+                },
+            ),
+        )
     };
-    let ast = make_node!(
-        ctx,
-        Node::BlockStatement(BlockStatement {
-            range,
-            body: vec![make_node!(
-                ctx,
-                Node::ReturnStatement(ReturnStatement {
-                    range,
-                    argument: Some(make_node!(
-                        ctx,
-                        Node::ReturnStatement(ReturnStatement {
-                            range,
-                            argument: None
-                        })
-                    )),
-                })
-            )],
-        })
-    );
-    let bad_ret: NodePtr = match &ast.get(&ctx) {
-        Node::BlockStatement(BlockStatement { body, .. }) => body[0],
-        _ => {
-            unreachable!("bad match");
+
+    let bad_ret: NodePtr = {
+        let gc = GCContext::new(&mut ctx);
+        match ast.node(&gc) {
+            Node::BlockStatement(BlockStatement { body, .. }) => NodePtr::from_node(&gc, body[0]),
+            _ => {
+                unreachable!("bad match");
+            }
         }
     };
-    match validate_tree(&ctx, ast) {
+    match validate_tree(&mut ctx, &ast) {
         Ok(()) => {
             panic!("Must be error");
         }
         Err(e) => {
             assert_eq!(e.len(), 1);
-            assert_eq!(
-                e[0].node.get(&ctx) as *const Node,
-                bad_ret.get(&ctx) as *const Node
-            );
+            assert_eq!(e[0].node, bad_ret);
         }
     }
 }

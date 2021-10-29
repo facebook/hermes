@@ -7,8 +7,8 @@
 
 use super::{
     kind::*, AssignmentExpressionOperator, BinaryExpressionOperator, Context, ExportKind,
-    ImportKind, LogicalExpressionOperator, MethodDefinitionKind, Node, NodeLabel, NodeList,
-    NodePtr, NodeString, NodeVariant, PropertyKind, UnaryExpressionOperator,
+    GCContext, ImportKind, LogicalExpressionOperator, MethodDefinitionKind, Node, NodeLabel,
+    NodeList, NodePtr, NodeString, NodeVariant, PropertyKind, UnaryExpressionOperator,
     UpdateExpressionOperator, VariableDeclarationKind, Visitor,
 };
 
@@ -26,8 +26,11 @@ macro_rules! gen_validate_fn {
         $(,)?
     }) => {
             /// Check whether this is a valid kind for `node`.
-            fn validate_node(ctx: &Context, node: NodePtr) -> Result<(), ValidationError> {
-                match &node.get(ctx) {
+            fn validate_node<'gc>(
+                ctx: &'gc GCContext,
+                node: &'gc Node<'gc>,
+            ) -> Result<(), ValidationError> {
+                match node {
                     $(
                         Node::$kind($kind {$($($field,)*)? .. }) => {
                             // Run the validation for each child.
@@ -46,41 +49,38 @@ macro_rules! gen_validate_fn {
 
 nodekind_defs! { gen_validate_fn }
 
-trait ValidChild {
+trait ValidChild<'gc> {
     /// Check whether this is a valid child of `node` given the constraints.
     fn validate_child(
         &self,
-        _ctx: &Context,
-        _node: NodePtr,
+        _ctx: &'gc GCContext,
+        _node: &'gc Node<'gc>,
         _constraints: &[NodeVariant],
     ) -> Result<(), ValidationError> {
         Ok(())
     }
 }
 
-impl ValidChild for f64 {}
+impl ValidChild<'_> for f64 {}
+impl ValidChild<'_> for bool {}
+impl ValidChild<'_> for NodeLabel {}
+impl ValidChild<'_> for UnaryExpressionOperator {}
+impl ValidChild<'_> for BinaryExpressionOperator {}
+impl ValidChild<'_> for LogicalExpressionOperator {}
+impl ValidChild<'_> for UpdateExpressionOperator {}
+impl ValidChild<'_> for AssignmentExpressionOperator {}
+impl ValidChild<'_> for VariableDeclarationKind {}
+impl ValidChild<'_> for PropertyKind {}
+impl ValidChild<'_> for MethodDefinitionKind {}
+impl ValidChild<'_> for ImportKind {}
+impl ValidChild<'_> for ExportKind {}
+impl ValidChild<'_> for NodeString {}
 
-impl ValidChild for bool {}
-
-impl ValidChild for NodeLabel {}
-impl ValidChild for UnaryExpressionOperator {}
-impl ValidChild for BinaryExpressionOperator {}
-impl ValidChild for LogicalExpressionOperator {}
-impl ValidChild for UpdateExpressionOperator {}
-impl ValidChild for AssignmentExpressionOperator {}
-impl ValidChild for VariableDeclarationKind {}
-impl ValidChild for PropertyKind {}
-impl ValidChild for MethodDefinitionKind {}
-impl ValidChild for ImportKind {}
-impl ValidChild for ExportKind {}
-
-impl ValidChild for NodeString {}
-
-impl<T: ValidChild> ValidChild for Option<T> {
-    fn validate_child<'a>(
+impl<'gc, T: ValidChild<'gc>> ValidChild<'gc> for Option<T> {
+    fn validate_child(
         &self,
-        ctx: &'a Context,
-        node: NodePtr,
+        ctx: &'gc GCContext,
+        node: &'gc Node<'gc>,
         constraints: &[NodeVariant],
     ) -> Result<(), ValidationError> {
         match self {
@@ -90,45 +90,47 @@ impl<T: ValidChild> ValidChild for Option<T> {
     }
 }
 
-impl ValidChild for NodePtr {
-    fn validate_child<'a>(
+impl<'gc> ValidChild<'gc> for &Node<'gc> {
+    fn validate_child(
         &self,
-        ctx: &'a Context,
-        node: NodePtr,
+        ctx: &'gc GCContext,
+        node: &'gc Node<'gc>,
         constraints: &[NodeVariant],
     ) -> Result<(), ValidationError> {
         for &constraint in constraints {
-            if instanceof(self.get(ctx).variant(), constraint) {
+            if instanceof(self.variant(), constraint) {
                 return Ok(());
             }
         }
-        Err(ValidationError {
+        Err(ValidationError::new(
+            ctx,
             node,
-            message: format!("Unexpected {:?}", self.get(ctx).variant()),
-        })
+            format!("Unexpected {:?}", self.variant()),
+        ))
     }
 }
 
-impl ValidChild for NodeList {
-    fn validate_child<'a>(
+impl<'gc> ValidChild<'gc> for NodeList<'gc> {
+    fn validate_child(
         &self,
-        ctx: &'a Context,
-        node: NodePtr,
+        ctx: &'gc GCContext,
+        node: &'gc Node<'gc>,
         constraints: &[NodeVariant],
     ) -> Result<(), ValidationError> {
         'elems: for elem in self {
             for &constraint in constraints {
-                if instanceof(elem.get(ctx).variant(), constraint) {
+                if instanceof(elem.variant(), constraint) {
                     // Found a valid constraint for this element,
                     // move on to the next element.
                     continue 'elems;
                 }
             }
             // Failed to find a constraint that matched, early return.
-            return Err(ValidationError {
+            return Err(ValidationError::new(
+                ctx,
                 node,
-                message: format!("Unexpected {:?}", elem.get(ctx).variant()),
-            });
+                format!("Unexpected {:?}", elem.variant()),
+            ));
         }
         Ok(())
     }
@@ -152,16 +154,16 @@ fn instanceof(subtype: NodeVariant, supertype: NodeVariant) -> bool {
 
 /// Custom validation function for constraints which can't be expressed
 /// using just the inheritance structure in Node.
-fn validate_custom(ctx: &Context, node: NodePtr) -> Result<(), ValidationError> {
-    match &node.get(ctx) {
+fn validate_custom<'gc>(ctx: &'gc GCContext, node: &'gc Node<'gc>) -> Result<(), ValidationError> {
+    match node {
         Node::MemberExpression(MemberExpression {
-            range: _,
+            metadata: _,
             property,
             object: _,
             computed,
         })
         | Node::OptionalMemberExpression(OptionalMemberExpression {
-            range: _,
+            metadata: _,
             property,
             object: _,
             computed,
@@ -175,7 +177,7 @@ fn validate_custom(ctx: &Context, node: NodePtr) -> Result<(), ValidationError> 
         }
 
         Node::Property(Property {
-            range: _,
+            metadata: _,
             key,
             value,
             kind,
@@ -184,10 +186,11 @@ fn validate_custom(ctx: &Context, node: NodePtr) -> Result<(), ValidationError> 
             shorthand,
         }) => {
             if *computed && *shorthand {
-                return Err(ValidationError {
+                return Err(ValidationError::new(
+                    ctx,
                     node,
-                    message: "Property cannot be computed and shorthand".to_string(),
-                });
+                    "Property cannot be computed and shorthand".to_string(),
+                ));
             }
             if !*computed {
                 key.validate_child(ctx, node, &[NodeVariant::Identifier, NodeVariant::Literal])?;
@@ -214,6 +217,15 @@ pub struct ValidationError {
     pub message: String,
 }
 
+impl ValidationError {
+    pub fn new<'gc>(gc: &'gc GCContext, node: &'gc Node<'gc>, message: String) -> ValidationError {
+        ValidationError {
+            node: NodePtr::from_node(gc, node),
+            message,
+        }
+    }
+}
+
 /// Runs validation on the AST and stores errors.
 struct Validator {
     /// Every error encountered so far.
@@ -222,17 +234,17 @@ struct Validator {
 }
 
 impl Validator {
-    pub fn new() -> Validator {
+    pub fn new() -> Self {
         Validator { errors: Vec::new() }
     }
 
     /// Run validation recursively starting at the `root`.
-    pub fn validate_root(&mut self, ctx: &Context, root: NodePtr) {
+    pub fn validate_root<'gc>(&mut self, ctx: &'gc GCContext, root: &'gc Node<'gc>) {
         self.validate_node(ctx, root);
     }
 
     /// Validate `node` and recursively validate its children.
-    fn validate_node(&mut self, ctx: &Context, node: NodePtr) {
+    fn validate_node<'gc>(&mut self, ctx: &'gc GCContext, node: &'gc Node<'gc>) {
         if let Err(e) = validate_node(ctx, node) {
             self.errors.push(e);
         }
@@ -241,16 +253,22 @@ impl Validator {
 }
 
 impl Visitor for Validator {
-    fn call(&mut self, ctx: &Context, node: NodePtr, _parent: Option<NodePtr>) {
+    fn call<'gc>(
+        &mut self,
+        ctx: &'gc GCContext,
+        node: &'gc Node<'gc>,
+        _parent: Option<&'gc Node<'gc>>,
+    ) {
         self.validate_node(ctx, node);
     }
 }
 
 /// Validate the full AST tree.
 /// If it fails, return all the errors encountered along the way.
-pub fn validate_tree(ctx: &Context, root: NodePtr) -> Result<(), Vec<ValidationError>> {
+pub fn validate_tree(ctx: &mut Context, root: &NodePtr) -> Result<(), Vec<ValidationError>> {
     let mut validator = Validator::new();
-    validator.validate_root(ctx, root);
+    let gc = GCContext::new(ctx);
+    validator.validate_root(&gc, root.node(&gc));
     if validator.errors.is_empty() {
         Ok(())
     } else {

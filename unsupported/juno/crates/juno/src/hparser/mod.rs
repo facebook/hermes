@@ -24,7 +24,7 @@ pub struct ParsedJS<'a> {
     parser: HermesParser<'a>,
 }
 
-impl ParsedJS<'_> {
+impl<'parser> ParsedJS<'parser> {
     /// Parse the source and store an internal representation of the AST and/or a list of diagnostic
     /// messages. If at least one of the messages is an error, there is no AST.
     pub fn parse(flags: ParserFlags, source: &NullTerminatedBuf) -> ParsedJS {
@@ -60,15 +60,26 @@ impl ParsedJS<'_> {
     }
 
     /// Create and return an external representation of the AST, or None if there were parse errors.
-    pub fn to_ast(&self, ctx: &mut ast::Context, file_id: SourceId) -> Option<ast::NodePtr> {
-        let mut cvt = Converter::new(&self.parser, ctx, file_id);
+    pub fn to_ast<'gc, 'ast: 'gc>(
+        &'parser self,
+        ctx: &'gc ast::GCContext<'ast, '_>,
+        file_id: SourceId,
+    ) -> Option<&'gc ast::Node<'gc>> {
+        let mut cvt: Converter<'parser> = Converter::new(&self.parser, file_id);
 
-        self.parser.root().map(|root| convert_ast(&mut cvt, root))
+        match self.parser.root() {
+            None => None,
+            Some(node) => Some(convert_ast(&mut cvt, ctx, node)),
+        }
     }
 }
 
-fn convert_ast(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
-    unsafe { cvt_node_ptr(cvt, n) }
+fn convert_ast<'parser, 'gc, 'ast: 'gc>(
+    cvt: &mut Converter<'parser>,
+    ctx: &'gc ast::GCContext<'ast, '_>,
+    n: NodePtr,
+) -> &'gc ast::Node<'gc> {
+    unsafe { cvt_node_ptr(cvt, ctx, n) }
 }
 
 /// The first error encountered when parsing.
@@ -97,8 +108,9 @@ pub fn parse_with_flags(
         .add_source("<input>", NullTerminatedBuf::from_str_check(source));
     let buf = ctx.sm().source_buffer_rc(file_id);
     let parsed = ParsedJS::parse(flags, &buf);
-    if let Some(ast) = parsed.to_ast(ctx, file_id) {
-        Ok(ast)
+    let gc = ast::GCContext::new(ctx);
+    if let Some(ast) = parsed.to_ast(&gc, file_id) {
+        Ok(ast::NodePtr::from_node(&gc, ast))
     } else {
         let (loc, msg) = parsed.first_error().unwrap();
         Err(ParseError { loc, msg })

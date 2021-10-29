@@ -135,7 +135,7 @@ fn load_source_map(url: Url) -> anyhow::Result<SourceMap> {
 /// Returns whether any output was generated.
 fn gen_output(
     opt: &Opt,
-    ctx: &ast::Context,
+    ctx: &mut ast::Context,
     root: NodePtr,
     input_map: &Option<SourceMap>,
 ) -> anyhow::Result<bool> {
@@ -152,7 +152,7 @@ fn gen_output(
         ast::dump_json(
             out,
             ctx,
-            root,
+            &root,
             if opt.no_pretty {
                 ast::Pretty::No
             } else {
@@ -164,7 +164,7 @@ fn gen_output(
         let generated_map = gen_js::generate(
             out,
             ctx,
-            root,
+            &root,
             if opt.no_pretty {
                 gen_js::Pretty::No
             } else {
@@ -235,8 +235,11 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
         None
     };
 
-    // Convert to Juno AST.
-    let ast = parsed.to_ast(&mut ctx, file_id).unwrap();
+    let ast = {
+        // Convert to Juno AST.
+        let gc = ast::GCContext::new(&mut ctx);
+        NodePtr::from_node(&gc, parsed.to_ast(&gc, file_id).unwrap())
+    };
     timer.mark("Cvt");
 
     // We don't need the original parser anymore.
@@ -246,7 +249,7 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     let source_map = sm_url.map(load_source_map).transpose()?;
 
     // Generate output.
-    if gen_output(opt, &ctx, ast, &source_map)? {
+    if gen_output(opt, &mut ctx, ast, &source_map)? {
         timer.mark("Gen");
     }
 

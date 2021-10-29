@@ -12,7 +12,10 @@ use hermes::parser::*;
 use super::convert::*;
 use crate::ast;
 
-pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
+pub unsafe fn cvt_node_ptr<'parser, 'gc, 'ast: 'gc>(
+  cvt: &mut Converter<'parser>, 
+  gc: &'gc ast::GCContext<'ast, '_>, 
+  n: NodePtr) -> &'gc ast::Node<'gc> {
     let nr = n.as_ref();
     let range = ast::SourceRange {
         file: cvt.file_id,
@@ -22,2282 +25,2281 @@ pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {
 
     let res = match nr.kind {
         NodeKind::Empty => {
-          cvt.ast_context.alloc(
-            ast::Node::Empty(ast::Empty {
-                range,
-            }),
-          )
+          let mut template = ast::EmptyTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::EmptyBuilder::build_template(gc, template)
         }
         NodeKind::Metadata => {
-          cvt.ast_context.alloc(
-            ast::Node::Metadata(ast::Metadata {
-                range,
-            }),
-          )
+          let mut template = ast::MetadataTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::MetadataBuilder::build_template(gc, template)
         }
         NodeKind::Program => {
-          let body = cvt_node_list(cvt, hermes_get_Program_body(n));
-          cvt.ast_context.alloc(
-            ast::Node::Program(ast::Program {
-                range,
-                    body,
-            }),
-          )
+          let body = cvt_node_list(cvt, gc, hermes_get_Program_body(n));
+          let mut template = ast::ProgramTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  body,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ProgramBuilder::build_template(gc, template)
         }
         NodeKind::FunctionExpression => {
-          let id = cvt_node_ptr_opt(cvt, hermes_get_FunctionExpression_id(n));
-          let params = cvt_node_list(cvt, hermes_get_FunctionExpression_params(n));
-          let body = cvt_node_ptr(cvt, hermes_get_FunctionExpression_body(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_FunctionExpression_typeParameters(n));
-          let return_type = cvt_node_ptr_opt(cvt, hermes_get_FunctionExpression_returnType(n));
-          let predicate = cvt_node_ptr_opt(cvt, hermes_get_FunctionExpression_predicate(n));
+          let id = cvt_node_ptr_opt(cvt, gc, hermes_get_FunctionExpression_id(n));
+          let params = cvt_node_list(cvt, gc, hermes_get_FunctionExpression_params(n));
+          let body = cvt_node_ptr(cvt, gc, hermes_get_FunctionExpression_body(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_FunctionExpression_typeParameters(n));
+          let return_type = cvt_node_ptr_opt(cvt, gc, hermes_get_FunctionExpression_returnType(n));
+          let predicate = cvt_node_ptr_opt(cvt, gc, hermes_get_FunctionExpression_predicate(n));
           let generator = hermes_get_FunctionExpression_generator(n);
           let is_async = hermes_get_FunctionExpression_async(n);
-          cvt.ast_context.alloc(
-            ast::Node::FunctionExpression(ast::FunctionExpression {
-                range,
-                    id,
-                    params,
-                    body,
-                    type_parameters,
-                    return_type,
-                    predicate,
-                    generator,
-                    is_async,
-            }),
-          )
+          let mut template = ast::FunctionExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  params,
+                  body,
+                  type_parameters,
+                  return_type,
+                  predicate,
+                  generator,
+                  is_async,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::FunctionExpressionBuilder::build_template(gc, template)
         }
         NodeKind::ArrowFunctionExpression => {
-          let id = cvt_node_ptr_opt(cvt, hermes_get_ArrowFunctionExpression_id(n));
-          let params = cvt_node_list(cvt, hermes_get_ArrowFunctionExpression_params(n));
-          let body = cvt_node_ptr(cvt, hermes_get_ArrowFunctionExpression_body(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_ArrowFunctionExpression_typeParameters(n));
-          let return_type = cvt_node_ptr_opt(cvt, hermes_get_ArrowFunctionExpression_returnType(n));
-          let predicate = cvt_node_ptr_opt(cvt, hermes_get_ArrowFunctionExpression_predicate(n));
+          let id = cvt_node_ptr_opt(cvt, gc, hermes_get_ArrowFunctionExpression_id(n));
+          let params = cvt_node_list(cvt, gc, hermes_get_ArrowFunctionExpression_params(n));
+          let body = cvt_node_ptr(cvt, gc, hermes_get_ArrowFunctionExpression_body(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_ArrowFunctionExpression_typeParameters(n));
+          let return_type = cvt_node_ptr_opt(cvt, gc, hermes_get_ArrowFunctionExpression_returnType(n));
+          let predicate = cvt_node_ptr_opt(cvt, gc, hermes_get_ArrowFunctionExpression_predicate(n));
           let expression = hermes_get_ArrowFunctionExpression_expression(n);
           let is_async = hermes_get_ArrowFunctionExpression_async(n);
-          cvt.ast_context.alloc(
-            ast::Node::ArrowFunctionExpression(ast::ArrowFunctionExpression {
-                range,
-                    id,
-                    params,
-                    body,
-                    type_parameters,
-                    return_type,
-                    predicate,
-                    expression,
-                    is_async,
-            }),
-          )
+          let mut template = ast::ArrowFunctionExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  params,
+                  body,
+                  type_parameters,
+                  return_type,
+                  predicate,
+                  expression,
+                  is_async,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ArrowFunctionExpressionBuilder::build_template(gc, template)
         }
         NodeKind::FunctionDeclaration => {
-          let id = cvt_node_ptr_opt(cvt, hermes_get_FunctionDeclaration_id(n));
-          let params = cvt_node_list(cvt, hermes_get_FunctionDeclaration_params(n));
-          let body = cvt_node_ptr(cvt, hermes_get_FunctionDeclaration_body(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_FunctionDeclaration_typeParameters(n));
-          let return_type = cvt_node_ptr_opt(cvt, hermes_get_FunctionDeclaration_returnType(n));
-          let predicate = cvt_node_ptr_opt(cvt, hermes_get_FunctionDeclaration_predicate(n));
+          let id = cvt_node_ptr_opt(cvt, gc, hermes_get_FunctionDeclaration_id(n));
+          let params = cvt_node_list(cvt, gc, hermes_get_FunctionDeclaration_params(n));
+          let body = cvt_node_ptr(cvt, gc, hermes_get_FunctionDeclaration_body(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_FunctionDeclaration_typeParameters(n));
+          let return_type = cvt_node_ptr_opt(cvt, gc, hermes_get_FunctionDeclaration_returnType(n));
+          let predicate = cvt_node_ptr_opt(cvt, gc, hermes_get_FunctionDeclaration_predicate(n));
           let generator = hermes_get_FunctionDeclaration_generator(n);
           let is_async = hermes_get_FunctionDeclaration_async(n);
-          cvt.ast_context.alloc(
-            ast::Node::FunctionDeclaration(ast::FunctionDeclaration {
-                range,
-                    id,
-                    params,
-                    body,
-                    type_parameters,
-                    return_type,
-                    predicate,
-                    generator,
-                    is_async,
-            }),
-          )
+          let mut template = ast::FunctionDeclarationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  params,
+                  body,
+                  type_parameters,
+                  return_type,
+                  predicate,
+                  generator,
+                  is_async,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::FunctionDeclarationBuilder::build_template(gc, template)
         }
         NodeKind::WhileStatement => {
-          let body = cvt_node_ptr(cvt, hermes_get_WhileStatement_body(n));
-          let test = cvt_node_ptr(cvt, hermes_get_WhileStatement_test(n));
-          cvt.ast_context.alloc(
-            ast::Node::WhileStatement(ast::WhileStatement {
-                range,
-                    body,
-                    test,
-            }),
-          )
+          let body = cvt_node_ptr(cvt, gc, hermes_get_WhileStatement_body(n));
+          let test = cvt_node_ptr(cvt, gc, hermes_get_WhileStatement_test(n));
+          let mut template = ast::WhileStatementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  body,
+                  test,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::WhileStatementBuilder::build_template(gc, template)
         }
         NodeKind::DoWhileStatement => {
-          let body = cvt_node_ptr(cvt, hermes_get_DoWhileStatement_body(n));
-          let test = cvt_node_ptr(cvt, hermes_get_DoWhileStatement_test(n));
-          cvt.ast_context.alloc(
-            ast::Node::DoWhileStatement(ast::DoWhileStatement {
-                range,
-                    body,
-                    test,
-            }),
-          )
+          let body = cvt_node_ptr(cvt, gc, hermes_get_DoWhileStatement_body(n));
+          let test = cvt_node_ptr(cvt, gc, hermes_get_DoWhileStatement_test(n));
+          let mut template = ast::DoWhileStatementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  body,
+                  test,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::DoWhileStatementBuilder::build_template(gc, template)
         }
         NodeKind::ForInStatement => {
-          let left = cvt_node_ptr(cvt, hermes_get_ForInStatement_left(n));
-          let right = cvt_node_ptr(cvt, hermes_get_ForInStatement_right(n));
-          let body = cvt_node_ptr(cvt, hermes_get_ForInStatement_body(n));
-          cvt.ast_context.alloc(
-            ast::Node::ForInStatement(ast::ForInStatement {
-                range,
-                    left,
-                    right,
-                    body,
-            }),
-          )
+          let left = cvt_node_ptr(cvt, gc, hermes_get_ForInStatement_left(n));
+          let right = cvt_node_ptr(cvt, gc, hermes_get_ForInStatement_right(n));
+          let body = cvt_node_ptr(cvt, gc, hermes_get_ForInStatement_body(n));
+          let mut template = ast::ForInStatementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  left,
+                  right,
+                  body,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ForInStatementBuilder::build_template(gc, template)
         }
         NodeKind::ForOfStatement => {
-          let left = cvt_node_ptr(cvt, hermes_get_ForOfStatement_left(n));
-          let right = cvt_node_ptr(cvt, hermes_get_ForOfStatement_right(n));
-          let body = cvt_node_ptr(cvt, hermes_get_ForOfStatement_body(n));
+          let left = cvt_node_ptr(cvt, gc, hermes_get_ForOfStatement_left(n));
+          let right = cvt_node_ptr(cvt, gc, hermes_get_ForOfStatement_right(n));
+          let body = cvt_node_ptr(cvt, gc, hermes_get_ForOfStatement_body(n));
           let is_await = hermes_get_ForOfStatement_await(n);
-          cvt.ast_context.alloc(
-            ast::Node::ForOfStatement(ast::ForOfStatement {
-                range,
-                    left,
-                    right,
-                    body,
-                    is_await,
-            }),
-          )
+          let mut template = ast::ForOfStatementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  left,
+                  right,
+                  body,
+                  is_await,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ForOfStatementBuilder::build_template(gc, template)
         }
         NodeKind::ForStatement => {
-          let init = cvt_node_ptr_opt(cvt, hermes_get_ForStatement_init(n));
-          let test = cvt_node_ptr_opt(cvt, hermes_get_ForStatement_test(n));
-          let update = cvt_node_ptr_opt(cvt, hermes_get_ForStatement_update(n));
-          let body = cvt_node_ptr(cvt, hermes_get_ForStatement_body(n));
-          cvt.ast_context.alloc(
-            ast::Node::ForStatement(ast::ForStatement {
-                range,
-                    init,
-                    test,
-                    update,
-                    body,
-            }),
-          )
+          let init = cvt_node_ptr_opt(cvt, gc, hermes_get_ForStatement_init(n));
+          let test = cvt_node_ptr_opt(cvt, gc, hermes_get_ForStatement_test(n));
+          let update = cvt_node_ptr_opt(cvt, gc, hermes_get_ForStatement_update(n));
+          let body = cvt_node_ptr(cvt, gc, hermes_get_ForStatement_body(n));
+          let mut template = ast::ForStatementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  init,
+                  test,
+                  update,
+                  body,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ForStatementBuilder::build_template(gc, template)
         }
         NodeKind::DebuggerStatement => {
-          cvt.ast_context.alloc(
-            ast::Node::DebuggerStatement(ast::DebuggerStatement {
-                range,
-            }),
-          )
+          let mut template = ast::DebuggerStatementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::DebuggerStatementBuilder::build_template(gc, template)
         }
         NodeKind::EmptyStatement => {
-          cvt.ast_context.alloc(
-            ast::Node::EmptyStatement(ast::EmptyStatement {
-                range,
-            }),
-          )
+          let mut template = ast::EmptyStatementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::EmptyStatementBuilder::build_template(gc, template)
         }
         NodeKind::BlockStatement => {
-          let body = cvt_node_list(cvt, hermes_get_BlockStatement_body(n));
-          cvt.ast_context.alloc(
-            ast::Node::BlockStatement(ast::BlockStatement {
-                range,
-                    body,
-            }),
-          )
+          let body = cvt_node_list(cvt, gc, hermes_get_BlockStatement_body(n));
+          let mut template = ast::BlockStatementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  body,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::BlockStatementBuilder::build_template(gc, template)
         }
         NodeKind::BreakStatement => {
-          let label = cvt_node_ptr_opt(cvt, hermes_get_BreakStatement_label(n));
-          cvt.ast_context.alloc(
-            ast::Node::BreakStatement(ast::BreakStatement {
-                range,
-                    label,
-            }),
-          )
+          let label = cvt_node_ptr_opt(cvt, gc, hermes_get_BreakStatement_label(n));
+          let mut template = ast::BreakStatementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  label,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::BreakStatementBuilder::build_template(gc, template)
         }
         NodeKind::ContinueStatement => {
-          let label = cvt_node_ptr_opt(cvt, hermes_get_ContinueStatement_label(n));
-          cvt.ast_context.alloc(
-            ast::Node::ContinueStatement(ast::ContinueStatement {
-                range,
-                    label,
-            }),
-          )
+          let label = cvt_node_ptr_opt(cvt, gc, hermes_get_ContinueStatement_label(n));
+          let mut template = ast::ContinueStatementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  label,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ContinueStatementBuilder::build_template(gc, template)
         }
         NodeKind::ThrowStatement => {
-          let argument = cvt_node_ptr(cvt, hermes_get_ThrowStatement_argument(n));
-          cvt.ast_context.alloc(
-            ast::Node::ThrowStatement(ast::ThrowStatement {
-                range,
-                    argument,
-            }),
-          )
+          let argument = cvt_node_ptr(cvt, gc, hermes_get_ThrowStatement_argument(n));
+          let mut template = ast::ThrowStatementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  argument,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ThrowStatementBuilder::build_template(gc, template)
         }
         NodeKind::ReturnStatement => {
-          let argument = cvt_node_ptr_opt(cvt, hermes_get_ReturnStatement_argument(n));
-          cvt.ast_context.alloc(
-            ast::Node::ReturnStatement(ast::ReturnStatement {
-                range,
-                    argument,
-            }),
-          )
+          let argument = cvt_node_ptr_opt(cvt, gc, hermes_get_ReturnStatement_argument(n));
+          let mut template = ast::ReturnStatementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  argument,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ReturnStatementBuilder::build_template(gc, template)
         }
         NodeKind::WithStatement => {
-          let object = cvt_node_ptr(cvt, hermes_get_WithStatement_object(n));
-          let body = cvt_node_ptr(cvt, hermes_get_WithStatement_body(n));
-          cvt.ast_context.alloc(
-            ast::Node::WithStatement(ast::WithStatement {
-                range,
-                    object,
-                    body,
-            }),
-          )
+          let object = cvt_node_ptr(cvt, gc, hermes_get_WithStatement_object(n));
+          let body = cvt_node_ptr(cvt, gc, hermes_get_WithStatement_body(n));
+          let mut template = ast::WithStatementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  object,
+                  body,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::WithStatementBuilder::build_template(gc, template)
         }
         NodeKind::SwitchStatement => {
-          let discriminant = cvt_node_ptr(cvt, hermes_get_SwitchStatement_discriminant(n));
-          let cases = cvt_node_list(cvt, hermes_get_SwitchStatement_cases(n));
-          cvt.ast_context.alloc(
-            ast::Node::SwitchStatement(ast::SwitchStatement {
-                range,
-                    discriminant,
-                    cases,
-            }),
-          )
+          let discriminant = cvt_node_ptr(cvt, gc, hermes_get_SwitchStatement_discriminant(n));
+          let cases = cvt_node_list(cvt, gc, hermes_get_SwitchStatement_cases(n));
+          let mut template = ast::SwitchStatementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  discriminant,
+                  cases,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::SwitchStatementBuilder::build_template(gc, template)
         }
         NodeKind::LabeledStatement => {
-          let label = cvt_node_ptr(cvt, hermes_get_LabeledStatement_label(n));
-          let body = cvt_node_ptr(cvt, hermes_get_LabeledStatement_body(n));
-          cvt.ast_context.alloc(
-            ast::Node::LabeledStatement(ast::LabeledStatement {
-                range,
-                    label,
-                    body,
-            }),
-          )
+          let label = cvt_node_ptr(cvt, gc, hermes_get_LabeledStatement_label(n));
+          let body = cvt_node_ptr(cvt, gc, hermes_get_LabeledStatement_body(n));
+          let mut template = ast::LabeledStatementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  label,
+                  body,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::LabeledStatementBuilder::build_template(gc, template)
         }
         NodeKind::ExpressionStatement => {
-          let expression = cvt_node_ptr(cvt, hermes_get_ExpressionStatement_expression(n));
+          let expression = cvt_node_ptr(cvt, gc, hermes_get_ExpressionStatement_expression(n));
           let directive = cvt_string_opt(hermes_get_ExpressionStatement_directive(n));
-          cvt.ast_context.alloc(
-            ast::Node::ExpressionStatement(ast::ExpressionStatement {
-                range,
-                    expression,
-                    directive,
-            }),
-          )
+          let mut template = ast::ExpressionStatementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  expression,
+                  directive,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ExpressionStatementBuilder::build_template(gc, template)
         }
         NodeKind::TryStatement => {
-          let block = cvt_node_ptr(cvt, hermes_get_TryStatement_block(n));
-          let handler = cvt_node_ptr_opt(cvt, hermes_get_TryStatement_handler(n));
-          let finalizer = cvt_node_ptr_opt(cvt, hermes_get_TryStatement_finalizer(n));
-          cvt.ast_context.alloc(
-            ast::Node::TryStatement(ast::TryStatement {
-                range,
-                    block,
-                    handler,
-                    finalizer,
-            }),
-          )
+          let block = cvt_node_ptr(cvt, gc, hermes_get_TryStatement_block(n));
+          let handler = cvt_node_ptr_opt(cvt, gc, hermes_get_TryStatement_handler(n));
+          let finalizer = cvt_node_ptr_opt(cvt, gc, hermes_get_TryStatement_finalizer(n));
+          let mut template = ast::TryStatementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  block,
+                  handler,
+                  finalizer,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TryStatementBuilder::build_template(gc, template)
         }
         NodeKind::IfStatement => {
-          let test = cvt_node_ptr(cvt, hermes_get_IfStatement_test(n));
-          let consequent = cvt_node_ptr(cvt, hermes_get_IfStatement_consequent(n));
-          let alternate = cvt_node_ptr_opt(cvt, hermes_get_IfStatement_alternate(n));
-          cvt.ast_context.alloc(
-            ast::Node::IfStatement(ast::IfStatement {
-                range,
-                    test,
-                    consequent,
-                    alternate,
-            }),
-          )
+          let test = cvt_node_ptr(cvt, gc, hermes_get_IfStatement_test(n));
+          let consequent = cvt_node_ptr(cvt, gc, hermes_get_IfStatement_consequent(n));
+          let alternate = cvt_node_ptr_opt(cvt, gc, hermes_get_IfStatement_alternate(n));
+          let mut template = ast::IfStatementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  test,
+                  consequent,
+                  alternate,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::IfStatementBuilder::build_template(gc, template)
         }
         NodeKind::NullLiteral => {
-          cvt.ast_context.alloc(
-            ast::Node::NullLiteral(ast::NullLiteral {
-                range,
-            }),
-          )
+          let mut template = ast::NullLiteralTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::NullLiteralBuilder::build_template(gc, template)
         }
         NodeKind::BooleanLiteral => {
           let value = hermes_get_BooleanLiteral_value(n);
-          cvt.ast_context.alloc(
-            ast::Node::BooleanLiteral(ast::BooleanLiteral {
-                range,
-                    value,
-            }),
-          )
+          let mut template = ast::BooleanLiteralTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  value,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::BooleanLiteralBuilder::build_template(gc, template)
         }
         NodeKind::StringLiteral => {
           let value = cvt_string(hermes_get_StringLiteral_value(n));
-          cvt.ast_context.alloc(
-            ast::Node::StringLiteral(ast::StringLiteral {
-                range,
-                    value,
-            }),
-          )
+          let mut template = ast::StringLiteralTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  value,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::StringLiteralBuilder::build_template(gc, template)
         }
         NodeKind::NumericLiteral => {
           let value = hermes_get_NumericLiteral_value(n);
-          cvt.ast_context.alloc(
-            ast::Node::NumericLiteral(ast::NumericLiteral {
-                range,
-                    value,
-            }),
-          )
+          let mut template = ast::NumericLiteralTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  value,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::NumericLiteralBuilder::build_template(gc, template)
         }
         NodeKind::RegExpLiteral => {
-          let pattern = cvt.cvt_label(hermes_get_RegExpLiteral_pattern(n));
-          let flags = cvt.cvt_label(hermes_get_RegExpLiteral_flags(n));
-          cvt.ast_context.alloc(
-            ast::Node::RegExpLiteral(ast::RegExpLiteral {
-                range,
-                    pattern,
-                    flags,
-            }),
-          )
+          let pattern = cvt.cvt_label(gc, hermes_get_RegExpLiteral_pattern(n));
+          let flags = cvt.cvt_label(gc, hermes_get_RegExpLiteral_flags(n));
+          let mut template = ast::RegExpLiteralTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  pattern,
+                  flags,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::RegExpLiteralBuilder::build_template(gc, template)
         }
         NodeKind::ThisExpression => {
-          cvt.ast_context.alloc(
-            ast::Node::ThisExpression(ast::ThisExpression {
-                range,
-            }),
-          )
+          let mut template = ast::ThisExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ThisExpressionBuilder::build_template(gc, template)
         }
         NodeKind::Super => {
-          cvt.ast_context.alloc(
-            ast::Node::Super(ast::Super {
-                range,
-            }),
-          )
+          let mut template = ast::SuperTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::SuperBuilder::build_template(gc, template)
         }
         NodeKind::SequenceExpression => {
-          let expressions = cvt_node_list(cvt, hermes_get_SequenceExpression_expressions(n));
-          cvt.ast_context.alloc(
-            ast::Node::SequenceExpression(ast::SequenceExpression {
-                range,
-                    expressions,
-            }),
-          )
+          let expressions = cvt_node_list(cvt, gc, hermes_get_SequenceExpression_expressions(n));
+          let mut template = ast::SequenceExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  expressions,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::SequenceExpressionBuilder::build_template(gc, template)
         }
         NodeKind::ObjectExpression => {
-          let properties = cvt_node_list(cvt, hermes_get_ObjectExpression_properties(n));
-          cvt.ast_context.alloc(
-            ast::Node::ObjectExpression(ast::ObjectExpression {
-                range,
-                    properties,
-            }),
-          )
+          let properties = cvt_node_list(cvt, gc, hermes_get_ObjectExpression_properties(n));
+          let mut template = ast::ObjectExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  properties,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ObjectExpressionBuilder::build_template(gc, template)
         }
         NodeKind::ArrayExpression => {
-          let elements = cvt_node_list(cvt, hermes_get_ArrayExpression_elements(n));
+          let elements = cvt_node_list(cvt, gc, hermes_get_ArrayExpression_elements(n));
           let trailing_comma = hermes_get_ArrayExpression_trailingComma(n);
-          cvt.ast_context.alloc(
-            ast::Node::ArrayExpression(ast::ArrayExpression {
-                range,
-                    elements,
-                    trailing_comma,
-            }),
-          )
+          let mut template = ast::ArrayExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  elements,
+                  trailing_comma,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ArrayExpressionBuilder::build_template(gc, template)
         }
         NodeKind::SpreadElement => {
-          let argument = cvt_node_ptr(cvt, hermes_get_SpreadElement_argument(n));
-          cvt.ast_context.alloc(
-            ast::Node::SpreadElement(ast::SpreadElement {
-                range,
-                    argument,
-            }),
-          )
+          let argument = cvt_node_ptr(cvt, gc, hermes_get_SpreadElement_argument(n));
+          let mut template = ast::SpreadElementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  argument,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::SpreadElementBuilder::build_template(gc, template)
         }
         NodeKind::NewExpression => {
-          let callee = cvt_node_ptr(cvt, hermes_get_NewExpression_callee(n));
-          let type_arguments = cvt_node_ptr_opt(cvt, hermes_get_NewExpression_typeArguments(n));
-          let arguments = cvt_node_list(cvt, hermes_get_NewExpression_arguments(n));
-          cvt.ast_context.alloc(
-            ast::Node::NewExpression(ast::NewExpression {
-                range,
-                    callee,
-                    type_arguments,
-                    arguments,
-            }),
-          )
+          let callee = cvt_node_ptr(cvt, gc, hermes_get_NewExpression_callee(n));
+          let type_arguments = cvt_node_ptr_opt(cvt, gc, hermes_get_NewExpression_typeArguments(n));
+          let arguments = cvt_node_list(cvt, gc, hermes_get_NewExpression_arguments(n));
+          let mut template = ast::NewExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  callee,
+                  type_arguments,
+                  arguments,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::NewExpressionBuilder::build_template(gc, template)
         }
         NodeKind::YieldExpression => {
-          let argument = cvt_node_ptr_opt(cvt, hermes_get_YieldExpression_argument(n));
+          let argument = cvt_node_ptr_opt(cvt, gc, hermes_get_YieldExpression_argument(n));
           let delegate = hermes_get_YieldExpression_delegate(n);
-          cvt.ast_context.alloc(
-            ast::Node::YieldExpression(ast::YieldExpression {
-                range,
-                    argument,
-                    delegate,
-            }),
-          )
+          let mut template = ast::YieldExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  argument,
+                  delegate,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::YieldExpressionBuilder::build_template(gc, template)
         }
         NodeKind::AwaitExpression => {
-          let argument = cvt_node_ptr(cvt, hermes_get_AwaitExpression_argument(n));
-          cvt.ast_context.alloc(
-            ast::Node::AwaitExpression(ast::AwaitExpression {
-                range,
-                    argument,
-            }),
-          )
+          let argument = cvt_node_ptr(cvt, gc, hermes_get_AwaitExpression_argument(n));
+          let mut template = ast::AwaitExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  argument,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::AwaitExpressionBuilder::build_template(gc, template)
         }
         NodeKind::ImportExpression => {
-          let source = cvt_node_ptr(cvt, hermes_get_ImportExpression_source(n));
-          let attributes = cvt_node_ptr_opt(cvt, hermes_get_ImportExpression_attributes(n));
-          cvt.ast_context.alloc(
-            ast::Node::ImportExpression(ast::ImportExpression {
-                range,
-                    source,
-                    attributes,
-            }),
-          )
+          let source = cvt_node_ptr(cvt, gc, hermes_get_ImportExpression_source(n));
+          let attributes = cvt_node_ptr_opt(cvt, gc, hermes_get_ImportExpression_attributes(n));
+          let mut template = ast::ImportExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  source,
+                  attributes,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ImportExpressionBuilder::build_template(gc, template)
         }
         NodeKind::CallExpression => {
-          let callee = cvt_node_ptr(cvt, hermes_get_CallExpression_callee(n));
-          let type_arguments = cvt_node_ptr_opt(cvt, hermes_get_CallExpression_typeArguments(n));
-          let arguments = cvt_node_list(cvt, hermes_get_CallExpression_arguments(n));
-          cvt.ast_context.alloc(
-            ast::Node::CallExpression(ast::CallExpression {
-                range,
-                    callee,
-                    type_arguments,
-                    arguments,
-            }),
-          )
+          let callee = cvt_node_ptr(cvt, gc, hermes_get_CallExpression_callee(n));
+          let type_arguments = cvt_node_ptr_opt(cvt, gc, hermes_get_CallExpression_typeArguments(n));
+          let arguments = cvt_node_list(cvt, gc, hermes_get_CallExpression_arguments(n));
+          let mut template = ast::CallExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  callee,
+                  type_arguments,
+                  arguments,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::CallExpressionBuilder::build_template(gc, template)
         }
         NodeKind::OptionalCallExpression => {
-          let callee = cvt_node_ptr(cvt, hermes_get_OptionalCallExpression_callee(n));
-          let type_arguments = cvt_node_ptr_opt(cvt, hermes_get_OptionalCallExpression_typeArguments(n));
-          let arguments = cvt_node_list(cvt, hermes_get_OptionalCallExpression_arguments(n));
+          let callee = cvt_node_ptr(cvt, gc, hermes_get_OptionalCallExpression_callee(n));
+          let type_arguments = cvt_node_ptr_opt(cvt, gc, hermes_get_OptionalCallExpression_typeArguments(n));
+          let arguments = cvt_node_list(cvt, gc, hermes_get_OptionalCallExpression_arguments(n));
           let optional = hermes_get_OptionalCallExpression_optional(n);
-          cvt.ast_context.alloc(
-            ast::Node::OptionalCallExpression(ast::OptionalCallExpression {
-                range,
-                    callee,
-                    type_arguments,
-                    arguments,
-                    optional,
-            }),
-          )
+          let mut template = ast::OptionalCallExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  callee,
+                  type_arguments,
+                  arguments,
+                  optional,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::OptionalCallExpressionBuilder::build_template(gc, template)
         }
         NodeKind::AssignmentExpression => {
           let operator = cvt_enum(hermes_get_AssignmentExpression_operator(n));
-          let left = cvt_node_ptr(cvt, hermes_get_AssignmentExpression_left(n));
-          let right = cvt_node_ptr(cvt, hermes_get_AssignmentExpression_right(n));
-          cvt.ast_context.alloc(
-            ast::Node::AssignmentExpression(ast::AssignmentExpression {
-                range,
-                    operator,
-                    left,
-                    right,
-            }),
-          )
+          let left = cvt_node_ptr(cvt, gc, hermes_get_AssignmentExpression_left(n));
+          let right = cvt_node_ptr(cvt, gc, hermes_get_AssignmentExpression_right(n));
+          let mut template = ast::AssignmentExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  operator,
+                  left,
+                  right,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::AssignmentExpressionBuilder::build_template(gc, template)
         }
         NodeKind::UnaryExpression => {
           let operator = cvt_enum(hermes_get_UnaryExpression_operator(n));
-          let argument = cvt_node_ptr(cvt, hermes_get_UnaryExpression_argument(n));
+          let argument = cvt_node_ptr(cvt, gc, hermes_get_UnaryExpression_argument(n));
           let prefix = hermes_get_UnaryExpression_prefix(n);
-          cvt.ast_context.alloc(
-            ast::Node::UnaryExpression(ast::UnaryExpression {
-                range,
-                    operator,
-                    argument,
-                    prefix,
-            }),
-          )
+          let mut template = ast::UnaryExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  operator,
+                  argument,
+                  prefix,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::UnaryExpressionBuilder::build_template(gc, template)
         }
         NodeKind::UpdateExpression => {
           let operator = cvt_enum(hermes_get_UpdateExpression_operator(n));
-          let argument = cvt_node_ptr(cvt, hermes_get_UpdateExpression_argument(n));
+          let argument = cvt_node_ptr(cvt, gc, hermes_get_UpdateExpression_argument(n));
           let prefix = hermes_get_UpdateExpression_prefix(n);
-          cvt.ast_context.alloc(
-            ast::Node::UpdateExpression(ast::UpdateExpression {
-                range,
-                    operator,
-                    argument,
-                    prefix,
-            }),
-          )
+          let mut template = ast::UpdateExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  operator,
+                  argument,
+                  prefix,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::UpdateExpressionBuilder::build_template(gc, template)
         }
         NodeKind::MemberExpression => {
-          let object = cvt_node_ptr(cvt, hermes_get_MemberExpression_object(n));
-          let property = cvt_node_ptr(cvt, hermes_get_MemberExpression_property(n));
+          let object = cvt_node_ptr(cvt, gc, hermes_get_MemberExpression_object(n));
+          let property = cvt_node_ptr(cvt, gc, hermes_get_MemberExpression_property(n));
           let computed = hermes_get_MemberExpression_computed(n);
-          cvt.ast_context.alloc(
-            ast::Node::MemberExpression(ast::MemberExpression {
-                range,
-                    object,
-                    property,
-                    computed,
-            }),
-          )
+          let mut template = ast::MemberExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  object,
+                  property,
+                  computed,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::MemberExpressionBuilder::build_template(gc, template)
         }
         NodeKind::OptionalMemberExpression => {
-          let object = cvt_node_ptr(cvt, hermes_get_OptionalMemberExpression_object(n));
-          let property = cvt_node_ptr(cvt, hermes_get_OptionalMemberExpression_property(n));
+          let object = cvt_node_ptr(cvt, gc, hermes_get_OptionalMemberExpression_object(n));
+          let property = cvt_node_ptr(cvt, gc, hermes_get_OptionalMemberExpression_property(n));
           let computed = hermes_get_OptionalMemberExpression_computed(n);
           let optional = hermes_get_OptionalMemberExpression_optional(n);
-          cvt.ast_context.alloc(
-            ast::Node::OptionalMemberExpression(ast::OptionalMemberExpression {
-                range,
-                    object,
-                    property,
-                    computed,
-                    optional,
-            }),
-          )
+          let mut template = ast::OptionalMemberExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  object,
+                  property,
+                  computed,
+                  optional,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::OptionalMemberExpressionBuilder::build_template(gc, template)
         }
         NodeKind::LogicalExpression => {
-          let left = cvt_node_ptr(cvt, hermes_get_LogicalExpression_left(n));
-          let right = cvt_node_ptr(cvt, hermes_get_LogicalExpression_right(n));
+          let left = cvt_node_ptr(cvt, gc, hermes_get_LogicalExpression_left(n));
+          let right = cvt_node_ptr(cvt, gc, hermes_get_LogicalExpression_right(n));
           let operator = cvt_enum(hermes_get_LogicalExpression_operator(n));
-          cvt.ast_context.alloc(
-            ast::Node::LogicalExpression(ast::LogicalExpression {
-                range,
-                    left,
-                    right,
-                    operator,
-            }),
-          )
+          let mut template = ast::LogicalExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  left,
+                  right,
+                  operator,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::LogicalExpressionBuilder::build_template(gc, template)
         }
         NodeKind::ConditionalExpression => {
-          let test = cvt_node_ptr(cvt, hermes_get_ConditionalExpression_test(n));
-          let alternate = cvt_node_ptr(cvt, hermes_get_ConditionalExpression_alternate(n));
-          let consequent = cvt_node_ptr(cvt, hermes_get_ConditionalExpression_consequent(n));
-          cvt.ast_context.alloc(
-            ast::Node::ConditionalExpression(ast::ConditionalExpression {
-                range,
-                    test,
-                    alternate,
-                    consequent,
-            }),
-          )
+          let test = cvt_node_ptr(cvt, gc, hermes_get_ConditionalExpression_test(n));
+          let alternate = cvt_node_ptr(cvt, gc, hermes_get_ConditionalExpression_alternate(n));
+          let consequent = cvt_node_ptr(cvt, gc, hermes_get_ConditionalExpression_consequent(n));
+          let mut template = ast::ConditionalExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  test,
+                  alternate,
+                  consequent,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ConditionalExpressionBuilder::build_template(gc, template)
         }
         NodeKind::BinaryExpression => {
-          let left = cvt_node_ptr(cvt, hermes_get_BinaryExpression_left(n));
-          let right = cvt_node_ptr(cvt, hermes_get_BinaryExpression_right(n));
+          let left = cvt_node_ptr(cvt, gc, hermes_get_BinaryExpression_left(n));
+          let right = cvt_node_ptr(cvt, gc, hermes_get_BinaryExpression_right(n));
           let operator = cvt_enum(hermes_get_BinaryExpression_operator(n));
-          cvt.ast_context.alloc(
-            ast::Node::BinaryExpression(ast::BinaryExpression {
-                range,
-                    left,
-                    right,
-                    operator,
-            }),
-          )
+          let mut template = ast::BinaryExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  left,
+                  right,
+                  operator,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::BinaryExpressionBuilder::build_template(gc, template)
         }
         NodeKind::Directive => {
-          let value = cvt_node_ptr(cvt, hermes_get_Directive_value(n));
-          cvt.ast_context.alloc(
-            ast::Node::Directive(ast::Directive {
-                range,
-                    value,
-            }),
-          )
+          let value = cvt_node_ptr(cvt, gc, hermes_get_Directive_value(n));
+          let mut template = ast::DirectiveTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  value,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::DirectiveBuilder::build_template(gc, template)
         }
         NodeKind::DirectiveLiteral => {
           let value = cvt_string(hermes_get_DirectiveLiteral_value(n));
-          cvt.ast_context.alloc(
-            ast::Node::DirectiveLiteral(ast::DirectiveLiteral {
-                range,
-                    value,
-            }),
-          )
+          let mut template = ast::DirectiveLiteralTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  value,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::DirectiveLiteralBuilder::build_template(gc, template)
         }
         NodeKind::Identifier => {
-          let name = cvt.cvt_label(hermes_get_Identifier_name(n));
-          let type_annotation = cvt_node_ptr_opt(cvt, hermes_get_Identifier_typeAnnotation(n));
+          let name = cvt.cvt_label(gc, hermes_get_Identifier_name(n));
+          let type_annotation = cvt_node_ptr_opt(cvt, gc, hermes_get_Identifier_typeAnnotation(n));
           let optional = hermes_get_Identifier_optional(n);
-          cvt.ast_context.alloc(
-            ast::Node::Identifier(ast::Identifier {
-                range,
-                    name,
-                    type_annotation,
-                    optional,
-            }),
-          )
+          let mut template = ast::IdentifierTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  name,
+                  type_annotation,
+                  optional,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::IdentifierBuilder::build_template(gc, template)
         }
         NodeKind::PrivateName => {
-          let id = cvt_node_ptr(cvt, hermes_get_PrivateName_id(n));
-          cvt.ast_context.alloc(
-            ast::Node::PrivateName(ast::PrivateName {
-                range,
-                    id,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_PrivateName_id(n));
+          let mut template = ast::PrivateNameTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::PrivateNameBuilder::build_template(gc, template)
         }
         NodeKind::MetaProperty => {
-          let meta = cvt_node_ptr(cvt, hermes_get_MetaProperty_meta(n));
-          let property = cvt_node_ptr(cvt, hermes_get_MetaProperty_property(n));
-          cvt.ast_context.alloc(
-            ast::Node::MetaProperty(ast::MetaProperty {
-                range,
-                    meta,
-                    property,
-            }),
-          )
+          let meta = cvt_node_ptr(cvt, gc, hermes_get_MetaProperty_meta(n));
+          let property = cvt_node_ptr(cvt, gc, hermes_get_MetaProperty_property(n));
+          let mut template = ast::MetaPropertyTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  meta,
+                  property,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::MetaPropertyBuilder::build_template(gc, template)
         }
         NodeKind::SwitchCase => {
-          let test = cvt_node_ptr_opt(cvt, hermes_get_SwitchCase_test(n));
-          let consequent = cvt_node_list(cvt, hermes_get_SwitchCase_consequent(n));
-          cvt.ast_context.alloc(
-            ast::Node::SwitchCase(ast::SwitchCase {
-                range,
-                    test,
-                    consequent,
-            }),
-          )
+          let test = cvt_node_ptr_opt(cvt, gc, hermes_get_SwitchCase_test(n));
+          let consequent = cvt_node_list(cvt, gc, hermes_get_SwitchCase_consequent(n));
+          let mut template = ast::SwitchCaseTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  test,
+                  consequent,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::SwitchCaseBuilder::build_template(gc, template)
         }
         NodeKind::CatchClause => {
-          let param = cvt_node_ptr_opt(cvt, hermes_get_CatchClause_param(n));
-          let body = cvt_node_ptr(cvt, hermes_get_CatchClause_body(n));
-          cvt.ast_context.alloc(
-            ast::Node::CatchClause(ast::CatchClause {
-                range,
-                    param,
-                    body,
-            }),
-          )
+          let param = cvt_node_ptr_opt(cvt, gc, hermes_get_CatchClause_param(n));
+          let body = cvt_node_ptr(cvt, gc, hermes_get_CatchClause_body(n));
+          let mut template = ast::CatchClauseTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  param,
+                  body,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::CatchClauseBuilder::build_template(gc, template)
         }
         NodeKind::VariableDeclarator => {
-          let init = cvt_node_ptr_opt(cvt, hermes_get_VariableDeclarator_init(n));
-          let id = cvt_node_ptr(cvt, hermes_get_VariableDeclarator_id(n));
-          cvt.ast_context.alloc(
-            ast::Node::VariableDeclarator(ast::VariableDeclarator {
-                range,
-                    init,
-                    id,
-            }),
-          )
+          let init = cvt_node_ptr_opt(cvt, gc, hermes_get_VariableDeclarator_init(n));
+          let id = cvt_node_ptr(cvt, gc, hermes_get_VariableDeclarator_id(n));
+          let mut template = ast::VariableDeclaratorTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  init,
+                  id,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::VariableDeclaratorBuilder::build_template(gc, template)
         }
         NodeKind::VariableDeclaration => {
           let kind = cvt_enum(hermes_get_VariableDeclaration_kind(n));
-          let declarations = cvt_node_list(cvt, hermes_get_VariableDeclaration_declarations(n));
-          cvt.ast_context.alloc(
-            ast::Node::VariableDeclaration(ast::VariableDeclaration {
-                range,
-                    kind,
-                    declarations,
-            }),
-          )
+          let declarations = cvt_node_list(cvt, gc, hermes_get_VariableDeclaration_declarations(n));
+          let mut template = ast::VariableDeclarationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  kind,
+                  declarations,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::VariableDeclarationBuilder::build_template(gc, template)
         }
         NodeKind::TemplateLiteral => {
-          let quasis = cvt_node_list(cvt, hermes_get_TemplateLiteral_quasis(n));
-          let expressions = cvt_node_list(cvt, hermes_get_TemplateLiteral_expressions(n));
-          cvt.ast_context.alloc(
-            ast::Node::TemplateLiteral(ast::TemplateLiteral {
-                range,
-                    quasis,
-                    expressions,
-            }),
-          )
+          let quasis = cvt_node_list(cvt, gc, hermes_get_TemplateLiteral_quasis(n));
+          let expressions = cvt_node_list(cvt, gc, hermes_get_TemplateLiteral_expressions(n));
+          let mut template = ast::TemplateLiteralTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  quasis,
+                  expressions,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TemplateLiteralBuilder::build_template(gc, template)
         }
         NodeKind::TaggedTemplateExpression => {
-          let tag = cvt_node_ptr(cvt, hermes_get_TaggedTemplateExpression_tag(n));
-          let quasi = cvt_node_ptr(cvt, hermes_get_TaggedTemplateExpression_quasi(n));
-          cvt.ast_context.alloc(
-            ast::Node::TaggedTemplateExpression(ast::TaggedTemplateExpression {
-                range,
-                    tag,
-                    quasi,
-            }),
-          )
+          let tag = cvt_node_ptr(cvt, gc, hermes_get_TaggedTemplateExpression_tag(n));
+          let quasi = cvt_node_ptr(cvt, gc, hermes_get_TaggedTemplateExpression_quasi(n));
+          let mut template = ast::TaggedTemplateExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  tag,
+                  quasi,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TaggedTemplateExpressionBuilder::build_template(gc, template)
         }
         NodeKind::TemplateElement => {
           let tail = hermes_get_TemplateElement_tail(n);
           let cooked = cvt_string_opt(hermes_get_TemplateElement_cooked(n));
-          let raw = cvt.cvt_label(hermes_get_TemplateElement_raw(n));
-          cvt.ast_context.alloc(
-            ast::Node::TemplateElement(ast::TemplateElement {
-                range,
-                    tail,
-                    cooked,
-                    raw,
-            }),
-          )
+          let raw = cvt.cvt_label(gc, hermes_get_TemplateElement_raw(n));
+          let mut template = ast::TemplateElementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  tail,
+                  cooked,
+                  raw,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TemplateElementBuilder::build_template(gc, template)
         }
         NodeKind::Property => {
-          let key = cvt_node_ptr(cvt, hermes_get_Property_key(n));
-          let value = cvt_node_ptr(cvt, hermes_get_Property_value(n));
+          let key = cvt_node_ptr(cvt, gc, hermes_get_Property_key(n));
+          let value = cvt_node_ptr(cvt, gc, hermes_get_Property_value(n));
           let kind = cvt_enum(hermes_get_Property_kind(n));
           let computed = hermes_get_Property_computed(n);
           let method = hermes_get_Property_method(n);
           let shorthand = hermes_get_Property_shorthand(n);
-          cvt.ast_context.alloc(
-            ast::Node::Property(ast::Property {
-                range,
-                    key,
-                    value,
-                    kind,
-                    computed,
-                    method,
-                    shorthand,
-            }),
-          )
+          let mut template = ast::PropertyTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  key,
+                  value,
+                  kind,
+                  computed,
+                  method,
+                  shorthand,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::PropertyBuilder::build_template(gc, template)
         }
         NodeKind::ClassDeclaration => {
-          let id = cvt_node_ptr_opt(cvt, hermes_get_ClassDeclaration_id(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_ClassDeclaration_typeParameters(n));
-          let super_class = cvt_node_ptr_opt(cvt, hermes_get_ClassDeclaration_superClass(n));
-          let super_type_parameters = cvt_node_ptr_opt(cvt, hermes_get_ClassDeclaration_superTypeParameters(n));
-          let implements = cvt_node_list(cvt, hermes_get_ClassDeclaration_implements(n));
-          let decorators = cvt_node_list(cvt, hermes_get_ClassDeclaration_decorators(n));
-          let body = cvt_node_ptr(cvt, hermes_get_ClassDeclaration_body(n));
-          cvt.ast_context.alloc(
-            ast::Node::ClassDeclaration(ast::ClassDeclaration {
-                range,
-                    id,
-                    type_parameters,
-                    super_class,
-                    super_type_parameters,
-                    implements,
-                    decorators,
-                    body,
-            }),
-          )
+          let id = cvt_node_ptr_opt(cvt, gc, hermes_get_ClassDeclaration_id(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_ClassDeclaration_typeParameters(n));
+          let super_class = cvt_node_ptr_opt(cvt, gc, hermes_get_ClassDeclaration_superClass(n));
+          let super_type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_ClassDeclaration_superTypeParameters(n));
+          let implements = cvt_node_list(cvt, gc, hermes_get_ClassDeclaration_implements(n));
+          let decorators = cvt_node_list(cvt, gc, hermes_get_ClassDeclaration_decorators(n));
+          let body = cvt_node_ptr(cvt, gc, hermes_get_ClassDeclaration_body(n));
+          let mut template = ast::ClassDeclarationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  type_parameters,
+                  super_class,
+                  super_type_parameters,
+                  implements,
+                  decorators,
+                  body,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ClassDeclarationBuilder::build_template(gc, template)
         }
         NodeKind::ClassExpression => {
-          let id = cvt_node_ptr_opt(cvt, hermes_get_ClassExpression_id(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_ClassExpression_typeParameters(n));
-          let super_class = cvt_node_ptr_opt(cvt, hermes_get_ClassExpression_superClass(n));
-          let super_type_parameters = cvt_node_ptr_opt(cvt, hermes_get_ClassExpression_superTypeParameters(n));
-          let implements = cvt_node_list(cvt, hermes_get_ClassExpression_implements(n));
-          let decorators = cvt_node_list(cvt, hermes_get_ClassExpression_decorators(n));
-          let body = cvt_node_ptr(cvt, hermes_get_ClassExpression_body(n));
-          cvt.ast_context.alloc(
-            ast::Node::ClassExpression(ast::ClassExpression {
-                range,
-                    id,
-                    type_parameters,
-                    super_class,
-                    super_type_parameters,
-                    implements,
-                    decorators,
-                    body,
-            }),
-          )
+          let id = cvt_node_ptr_opt(cvt, gc, hermes_get_ClassExpression_id(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_ClassExpression_typeParameters(n));
+          let super_class = cvt_node_ptr_opt(cvt, gc, hermes_get_ClassExpression_superClass(n));
+          let super_type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_ClassExpression_superTypeParameters(n));
+          let implements = cvt_node_list(cvt, gc, hermes_get_ClassExpression_implements(n));
+          let decorators = cvt_node_list(cvt, gc, hermes_get_ClassExpression_decorators(n));
+          let body = cvt_node_ptr(cvt, gc, hermes_get_ClassExpression_body(n));
+          let mut template = ast::ClassExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  type_parameters,
+                  super_class,
+                  super_type_parameters,
+                  implements,
+                  decorators,
+                  body,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ClassExpressionBuilder::build_template(gc, template)
         }
         NodeKind::ClassBody => {
-          let body = cvt_node_list(cvt, hermes_get_ClassBody_body(n));
-          cvt.ast_context.alloc(
-            ast::Node::ClassBody(ast::ClassBody {
-                range,
-                    body,
-            }),
-          )
+          let body = cvt_node_list(cvt, gc, hermes_get_ClassBody_body(n));
+          let mut template = ast::ClassBodyTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  body,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ClassBodyBuilder::build_template(gc, template)
         }
         NodeKind::ClassProperty => {
-          let key = cvt_node_ptr(cvt, hermes_get_ClassProperty_key(n));
-          let value = cvt_node_ptr_opt(cvt, hermes_get_ClassProperty_value(n));
+          let key = cvt_node_ptr(cvt, gc, hermes_get_ClassProperty_key(n));
+          let value = cvt_node_ptr_opt(cvt, gc, hermes_get_ClassProperty_value(n));
           let computed = hermes_get_ClassProperty_computed(n);
           let is_static = hermes_get_ClassProperty_static(n);
           let declare = hermes_get_ClassProperty_declare(n);
           let optional = hermes_get_ClassProperty_optional(n);
-          let variance = cvt_node_ptr_opt(cvt, hermes_get_ClassProperty_variance(n));
-          let type_annotation = cvt_node_ptr_opt(cvt, hermes_get_ClassProperty_typeAnnotation(n));
-          cvt.ast_context.alloc(
-            ast::Node::ClassProperty(ast::ClassProperty {
-                range,
-                    key,
-                    value,
-                    computed,
-                    is_static,
-                    declare,
-                    optional,
-                    variance,
-                    type_annotation,
-            }),
-          )
+          let variance = cvt_node_ptr_opt(cvt, gc, hermes_get_ClassProperty_variance(n));
+          let type_annotation = cvt_node_ptr_opt(cvt, gc, hermes_get_ClassProperty_typeAnnotation(n));
+          let mut template = ast::ClassPropertyTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  key,
+                  value,
+                  computed,
+                  is_static,
+                  declare,
+                  optional,
+                  variance,
+                  type_annotation,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ClassPropertyBuilder::build_template(gc, template)
         }
         NodeKind::ClassPrivateProperty => {
-          let key = cvt_node_ptr(cvt, hermes_get_ClassPrivateProperty_key(n));
-          let value = cvt_node_ptr_opt(cvt, hermes_get_ClassPrivateProperty_value(n));
+          let key = cvt_node_ptr(cvt, gc, hermes_get_ClassPrivateProperty_key(n));
+          let value = cvt_node_ptr_opt(cvt, gc, hermes_get_ClassPrivateProperty_value(n));
           let is_static = hermes_get_ClassPrivateProperty_static(n);
           let declare = hermes_get_ClassPrivateProperty_declare(n);
           let optional = hermes_get_ClassPrivateProperty_optional(n);
-          let variance = cvt_node_ptr_opt(cvt, hermes_get_ClassPrivateProperty_variance(n));
-          let type_annotation = cvt_node_ptr_opt(cvt, hermes_get_ClassPrivateProperty_typeAnnotation(n));
-          cvt.ast_context.alloc(
-            ast::Node::ClassPrivateProperty(ast::ClassPrivateProperty {
-                range,
-                    key,
-                    value,
-                    is_static,
-                    declare,
-                    optional,
-                    variance,
-                    type_annotation,
-            }),
-          )
+          let variance = cvt_node_ptr_opt(cvt, gc, hermes_get_ClassPrivateProperty_variance(n));
+          let type_annotation = cvt_node_ptr_opt(cvt, gc, hermes_get_ClassPrivateProperty_typeAnnotation(n));
+          let mut template = ast::ClassPrivatePropertyTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  key,
+                  value,
+                  is_static,
+                  declare,
+                  optional,
+                  variance,
+                  type_annotation,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ClassPrivatePropertyBuilder::build_template(gc, template)
         }
         NodeKind::MethodDefinition => {
-          let key = cvt_node_ptr(cvt, hermes_get_MethodDefinition_key(n));
-          let value = cvt_node_ptr(cvt, hermes_get_MethodDefinition_value(n));
+          let key = cvt_node_ptr(cvt, gc, hermes_get_MethodDefinition_key(n));
+          let value = cvt_node_ptr(cvt, gc, hermes_get_MethodDefinition_value(n));
           let kind = cvt_enum(hermes_get_MethodDefinition_kind(n));
           let computed = hermes_get_MethodDefinition_computed(n);
           let is_static = hermes_get_MethodDefinition_static(n);
-          cvt.ast_context.alloc(
-            ast::Node::MethodDefinition(ast::MethodDefinition {
-                range,
-                    key,
-                    value,
-                    kind,
-                    computed,
-                    is_static,
-            }),
-          )
+          let mut template = ast::MethodDefinitionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  key,
+                  value,
+                  kind,
+                  computed,
+                  is_static,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::MethodDefinitionBuilder::build_template(gc, template)
         }
         NodeKind::ImportDeclaration => {
-          let specifiers = cvt_node_list(cvt, hermes_get_ImportDeclaration_specifiers(n));
-          let source = cvt_node_ptr(cvt, hermes_get_ImportDeclaration_source(n));
-          let assertions = cvt_node_list_opt(cvt, hermes_get_ImportDeclaration_assertions(n));
+          let specifiers = cvt_node_list(cvt, gc, hermes_get_ImportDeclaration_specifiers(n));
+          let source = cvt_node_ptr(cvt, gc, hermes_get_ImportDeclaration_source(n));
+          let assertions = cvt_node_list_opt(cvt, gc, hermes_get_ImportDeclaration_assertions(n));
           let import_kind = cvt_enum(hermes_get_ImportDeclaration_importKind(n));
-          cvt.ast_context.alloc(
-            ast::Node::ImportDeclaration(ast::ImportDeclaration {
-                range,
-                    specifiers,
-                    source,
-                    assertions,
-                    import_kind,
-            }),
-          )
+          let mut template = ast::ImportDeclarationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  specifiers,
+                  source,
+                  assertions,
+                  import_kind,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ImportDeclarationBuilder::build_template(gc, template)
         }
         NodeKind::ImportSpecifier => {
-          let imported = cvt_node_ptr(cvt, hermes_get_ImportSpecifier_imported(n));
-          let local = cvt_node_ptr(cvt, hermes_get_ImportSpecifier_local(n));
+          let imported = cvt_node_ptr(cvt, gc, hermes_get_ImportSpecifier_imported(n));
+          let local = cvt_node_ptr(cvt, gc, hermes_get_ImportSpecifier_local(n));
           let import_kind = cvt_enum(hermes_get_ImportSpecifier_importKind(n));
-          cvt.ast_context.alloc(
-            ast::Node::ImportSpecifier(ast::ImportSpecifier {
-                range,
-                    imported,
-                    local,
-                    import_kind,
-            }),
-          )
+          let mut template = ast::ImportSpecifierTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  imported,
+                  local,
+                  import_kind,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ImportSpecifierBuilder::build_template(gc, template)
         }
         NodeKind::ImportDefaultSpecifier => {
-          let local = cvt_node_ptr(cvt, hermes_get_ImportDefaultSpecifier_local(n));
-          cvt.ast_context.alloc(
-            ast::Node::ImportDefaultSpecifier(ast::ImportDefaultSpecifier {
-                range,
-                    local,
-            }),
-          )
+          let local = cvt_node_ptr(cvt, gc, hermes_get_ImportDefaultSpecifier_local(n));
+          let mut template = ast::ImportDefaultSpecifierTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  local,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ImportDefaultSpecifierBuilder::build_template(gc, template)
         }
         NodeKind::ImportNamespaceSpecifier => {
-          let local = cvt_node_ptr(cvt, hermes_get_ImportNamespaceSpecifier_local(n));
-          cvt.ast_context.alloc(
-            ast::Node::ImportNamespaceSpecifier(ast::ImportNamespaceSpecifier {
-                range,
-                    local,
-            }),
-          )
+          let local = cvt_node_ptr(cvt, gc, hermes_get_ImportNamespaceSpecifier_local(n));
+          let mut template = ast::ImportNamespaceSpecifierTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  local,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ImportNamespaceSpecifierBuilder::build_template(gc, template)
         }
         NodeKind::ImportAttribute => {
-          let key = cvt_node_ptr(cvt, hermes_get_ImportAttribute_key(n));
-          let value = cvt_node_ptr(cvt, hermes_get_ImportAttribute_value(n));
-          cvt.ast_context.alloc(
-            ast::Node::ImportAttribute(ast::ImportAttribute {
-                range,
-                    key,
-                    value,
-            }),
-          )
+          let key = cvt_node_ptr(cvt, gc, hermes_get_ImportAttribute_key(n));
+          let value = cvt_node_ptr(cvt, gc, hermes_get_ImportAttribute_value(n));
+          let mut template = ast::ImportAttributeTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  key,
+                  value,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ImportAttributeBuilder::build_template(gc, template)
         }
         NodeKind::ExportNamedDeclaration => {
-          let declaration = cvt_node_ptr_opt(cvt, hermes_get_ExportNamedDeclaration_declaration(n));
-          let specifiers = cvt_node_list(cvt, hermes_get_ExportNamedDeclaration_specifiers(n));
-          let source = cvt_node_ptr_opt(cvt, hermes_get_ExportNamedDeclaration_source(n));
+          let declaration = cvt_node_ptr_opt(cvt, gc, hermes_get_ExportNamedDeclaration_declaration(n));
+          let specifiers = cvt_node_list(cvt, gc, hermes_get_ExportNamedDeclaration_specifiers(n));
+          let source = cvt_node_ptr_opt(cvt, gc, hermes_get_ExportNamedDeclaration_source(n));
           let export_kind = cvt_enum(hermes_get_ExportNamedDeclaration_exportKind(n));
-          cvt.ast_context.alloc(
-            ast::Node::ExportNamedDeclaration(ast::ExportNamedDeclaration {
-                range,
-                    declaration,
-                    specifiers,
-                    source,
-                    export_kind,
-            }),
-          )
+          let mut template = ast::ExportNamedDeclarationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  declaration,
+                  specifiers,
+                  source,
+                  export_kind,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ExportNamedDeclarationBuilder::build_template(gc, template)
         }
         NodeKind::ExportSpecifier => {
-          let exported = cvt_node_ptr(cvt, hermes_get_ExportSpecifier_exported(n));
-          let local = cvt_node_ptr(cvt, hermes_get_ExportSpecifier_local(n));
-          cvt.ast_context.alloc(
-            ast::Node::ExportSpecifier(ast::ExportSpecifier {
-                range,
-                    exported,
-                    local,
-            }),
-          )
+          let exported = cvt_node_ptr(cvt, gc, hermes_get_ExportSpecifier_exported(n));
+          let local = cvt_node_ptr(cvt, gc, hermes_get_ExportSpecifier_local(n));
+          let mut template = ast::ExportSpecifierTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  exported,
+                  local,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ExportSpecifierBuilder::build_template(gc, template)
         }
         NodeKind::ExportNamespaceSpecifier => {
-          let exported = cvt_node_ptr(cvt, hermes_get_ExportNamespaceSpecifier_exported(n));
-          cvt.ast_context.alloc(
-            ast::Node::ExportNamespaceSpecifier(ast::ExportNamespaceSpecifier {
-                range,
-                    exported,
-            }),
-          )
+          let exported = cvt_node_ptr(cvt, gc, hermes_get_ExportNamespaceSpecifier_exported(n));
+          let mut template = ast::ExportNamespaceSpecifierTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  exported,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ExportNamespaceSpecifierBuilder::build_template(gc, template)
         }
         NodeKind::ExportDefaultDeclaration => {
-          let declaration = cvt_node_ptr(cvt, hermes_get_ExportDefaultDeclaration_declaration(n));
-          cvt.ast_context.alloc(
-            ast::Node::ExportDefaultDeclaration(ast::ExportDefaultDeclaration {
-                range,
-                    declaration,
-            }),
-          )
+          let declaration = cvt_node_ptr(cvt, gc, hermes_get_ExportDefaultDeclaration_declaration(n));
+          let mut template = ast::ExportDefaultDeclarationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  declaration,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ExportDefaultDeclarationBuilder::build_template(gc, template)
         }
         NodeKind::ExportAllDeclaration => {
-          let source = cvt_node_ptr(cvt, hermes_get_ExportAllDeclaration_source(n));
+          let source = cvt_node_ptr(cvt, gc, hermes_get_ExportAllDeclaration_source(n));
           let export_kind = cvt_enum(hermes_get_ExportAllDeclaration_exportKind(n));
-          cvt.ast_context.alloc(
-            ast::Node::ExportAllDeclaration(ast::ExportAllDeclaration {
-                range,
-                    source,
-                    export_kind,
-            }),
-          )
+          let mut template = ast::ExportAllDeclarationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  source,
+                  export_kind,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ExportAllDeclarationBuilder::build_template(gc, template)
         }
         NodeKind::ObjectPattern => {
-          let properties = cvt_node_list(cvt, hermes_get_ObjectPattern_properties(n));
-          let type_annotation = cvt_node_ptr_opt(cvt, hermes_get_ObjectPattern_typeAnnotation(n));
-          cvt.ast_context.alloc(
-            ast::Node::ObjectPattern(ast::ObjectPattern {
-                range,
-                    properties,
-                    type_annotation,
-            }),
-          )
+          let properties = cvt_node_list(cvt, gc, hermes_get_ObjectPattern_properties(n));
+          let type_annotation = cvt_node_ptr_opt(cvt, gc, hermes_get_ObjectPattern_typeAnnotation(n));
+          let mut template = ast::ObjectPatternTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  properties,
+                  type_annotation,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ObjectPatternBuilder::build_template(gc, template)
         }
         NodeKind::ArrayPattern => {
-          let elements = cvt_node_list(cvt, hermes_get_ArrayPattern_elements(n));
-          let type_annotation = cvt_node_ptr_opt(cvt, hermes_get_ArrayPattern_typeAnnotation(n));
-          cvt.ast_context.alloc(
-            ast::Node::ArrayPattern(ast::ArrayPattern {
-                range,
-                    elements,
-                    type_annotation,
-            }),
-          )
+          let elements = cvt_node_list(cvt, gc, hermes_get_ArrayPattern_elements(n));
+          let type_annotation = cvt_node_ptr_opt(cvt, gc, hermes_get_ArrayPattern_typeAnnotation(n));
+          let mut template = ast::ArrayPatternTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  elements,
+                  type_annotation,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ArrayPatternBuilder::build_template(gc, template)
         }
         NodeKind::RestElement => {
-          let argument = cvt_node_ptr(cvt, hermes_get_RestElement_argument(n));
-          cvt.ast_context.alloc(
-            ast::Node::RestElement(ast::RestElement {
-                range,
-                    argument,
-            }),
-          )
+          let argument = cvt_node_ptr(cvt, gc, hermes_get_RestElement_argument(n));
+          let mut template = ast::RestElementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  argument,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::RestElementBuilder::build_template(gc, template)
         }
         NodeKind::AssignmentPattern => {
-          let left = cvt_node_ptr(cvt, hermes_get_AssignmentPattern_left(n));
-          let right = cvt_node_ptr(cvt, hermes_get_AssignmentPattern_right(n));
-          cvt.ast_context.alloc(
-            ast::Node::AssignmentPattern(ast::AssignmentPattern {
-                range,
-                    left,
-                    right,
-            }),
-          )
+          let left = cvt_node_ptr(cvt, gc, hermes_get_AssignmentPattern_left(n));
+          let right = cvt_node_ptr(cvt, gc, hermes_get_AssignmentPattern_right(n));
+          let mut template = ast::AssignmentPatternTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  left,
+                  right,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::AssignmentPatternBuilder::build_template(gc, template)
         }
         NodeKind::JSXIdentifier => {
-          let name = cvt.cvt_label(hermes_get_JSXIdentifier_name(n));
-          cvt.ast_context.alloc(
-            ast::Node::JSXIdentifier(ast::JSXIdentifier {
-                range,
-                    name,
-            }),
-          )
+          let name = cvt.cvt_label(gc, hermes_get_JSXIdentifier_name(n));
+          let mut template = ast::JSXIdentifierTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  name,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::JSXIdentifierBuilder::build_template(gc, template)
         }
         NodeKind::JSXMemberExpression => {
-          let object = cvt_node_ptr(cvt, hermes_get_JSXMemberExpression_object(n));
-          let property = cvt_node_ptr(cvt, hermes_get_JSXMemberExpression_property(n));
-          cvt.ast_context.alloc(
-            ast::Node::JSXMemberExpression(ast::JSXMemberExpression {
-                range,
-                    object,
-                    property,
-            }),
-          )
+          let object = cvt_node_ptr(cvt, gc, hermes_get_JSXMemberExpression_object(n));
+          let property = cvt_node_ptr(cvt, gc, hermes_get_JSXMemberExpression_property(n));
+          let mut template = ast::JSXMemberExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  object,
+                  property,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::JSXMemberExpressionBuilder::build_template(gc, template)
         }
         NodeKind::JSXNamespacedName => {
-          let namespace = cvt_node_ptr(cvt, hermes_get_JSXNamespacedName_namespace(n));
-          let name = cvt_node_ptr(cvt, hermes_get_JSXNamespacedName_name(n));
-          cvt.ast_context.alloc(
-            ast::Node::JSXNamespacedName(ast::JSXNamespacedName {
-                range,
-                    namespace,
-                    name,
-            }),
-          )
+          let namespace = cvt_node_ptr(cvt, gc, hermes_get_JSXNamespacedName_namespace(n));
+          let name = cvt_node_ptr(cvt, gc, hermes_get_JSXNamespacedName_name(n));
+          let mut template = ast::JSXNamespacedNameTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  namespace,
+                  name,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::JSXNamespacedNameBuilder::build_template(gc, template)
         }
         NodeKind::JSXEmptyExpression => {
-          cvt.ast_context.alloc(
-            ast::Node::JSXEmptyExpression(ast::JSXEmptyExpression {
-                range,
-            }),
-          )
+          let mut template = ast::JSXEmptyExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::JSXEmptyExpressionBuilder::build_template(gc, template)
         }
         NodeKind::JSXExpressionContainer => {
-          let expression = cvt_node_ptr(cvt, hermes_get_JSXExpressionContainer_expression(n));
-          cvt.ast_context.alloc(
-            ast::Node::JSXExpressionContainer(ast::JSXExpressionContainer {
-                range,
-                    expression,
-            }),
-          )
+          let expression = cvt_node_ptr(cvt, gc, hermes_get_JSXExpressionContainer_expression(n));
+          let mut template = ast::JSXExpressionContainerTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  expression,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::JSXExpressionContainerBuilder::build_template(gc, template)
         }
         NodeKind::JSXSpreadChild => {
-          let expression = cvt_node_ptr(cvt, hermes_get_JSXSpreadChild_expression(n));
-          cvt.ast_context.alloc(
-            ast::Node::JSXSpreadChild(ast::JSXSpreadChild {
-                range,
-                    expression,
-            }),
-          )
+          let expression = cvt_node_ptr(cvt, gc, hermes_get_JSXSpreadChild_expression(n));
+          let mut template = ast::JSXSpreadChildTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  expression,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::JSXSpreadChildBuilder::build_template(gc, template)
         }
         NodeKind::JSXOpeningElement => {
-          let name = cvt_node_ptr(cvt, hermes_get_JSXOpeningElement_name(n));
-          let attributes = cvt_node_list(cvt, hermes_get_JSXOpeningElement_attributes(n));
+          let name = cvt_node_ptr(cvt, gc, hermes_get_JSXOpeningElement_name(n));
+          let attributes = cvt_node_list(cvt, gc, hermes_get_JSXOpeningElement_attributes(n));
           let self_closing = hermes_get_JSXOpeningElement_selfClosing(n);
-          cvt.ast_context.alloc(
-            ast::Node::JSXOpeningElement(ast::JSXOpeningElement {
-                range,
-                    name,
-                    attributes,
-                    self_closing,
-            }),
-          )
+          let mut template = ast::JSXOpeningElementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  name,
+                  attributes,
+                  self_closing,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::JSXOpeningElementBuilder::build_template(gc, template)
         }
         NodeKind::JSXClosingElement => {
-          let name = cvt_node_ptr(cvt, hermes_get_JSXClosingElement_name(n));
-          cvt.ast_context.alloc(
-            ast::Node::JSXClosingElement(ast::JSXClosingElement {
-                range,
-                    name,
-            }),
-          )
+          let name = cvt_node_ptr(cvt, gc, hermes_get_JSXClosingElement_name(n));
+          let mut template = ast::JSXClosingElementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  name,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::JSXClosingElementBuilder::build_template(gc, template)
         }
         NodeKind::JSXAttribute => {
-          let name = cvt_node_ptr(cvt, hermes_get_JSXAttribute_name(n));
-          let value = cvt_node_ptr_opt(cvt, hermes_get_JSXAttribute_value(n));
-          cvt.ast_context.alloc(
-            ast::Node::JSXAttribute(ast::JSXAttribute {
-                range,
-                    name,
-                    value,
-            }),
-          )
+          let name = cvt_node_ptr(cvt, gc, hermes_get_JSXAttribute_name(n));
+          let value = cvt_node_ptr_opt(cvt, gc, hermes_get_JSXAttribute_value(n));
+          let mut template = ast::JSXAttributeTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  name,
+                  value,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::JSXAttributeBuilder::build_template(gc, template)
         }
         NodeKind::JSXSpreadAttribute => {
-          let argument = cvt_node_ptr(cvt, hermes_get_JSXSpreadAttribute_argument(n));
-          cvt.ast_context.alloc(
-            ast::Node::JSXSpreadAttribute(ast::JSXSpreadAttribute {
-                range,
-                    argument,
-            }),
-          )
+          let argument = cvt_node_ptr(cvt, gc, hermes_get_JSXSpreadAttribute_argument(n));
+          let mut template = ast::JSXSpreadAttributeTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  argument,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::JSXSpreadAttributeBuilder::build_template(gc, template)
         }
         NodeKind::JSXText => {
           let value = cvt_string(hermes_get_JSXText_value(n));
-          let raw = cvt.cvt_label(hermes_get_JSXText_raw(n));
-          cvt.ast_context.alloc(
-            ast::Node::JSXText(ast::JSXText {
-                range,
-                    value,
-                    raw,
-            }),
-          )
+          let raw = cvt.cvt_label(gc, hermes_get_JSXText_raw(n));
+          let mut template = ast::JSXTextTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  value,
+                  raw,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::JSXTextBuilder::build_template(gc, template)
         }
         NodeKind::JSXElement => {
-          let opening_element = cvt_node_ptr(cvt, hermes_get_JSXElement_openingElement(n));
-          let children = cvt_node_list(cvt, hermes_get_JSXElement_children(n));
-          let closing_element = cvt_node_ptr_opt(cvt, hermes_get_JSXElement_closingElement(n));
-          cvt.ast_context.alloc(
-            ast::Node::JSXElement(ast::JSXElement {
-                range,
-                    opening_element,
-                    children,
-                    closing_element,
-            }),
-          )
+          let opening_element = cvt_node_ptr(cvt, gc, hermes_get_JSXElement_openingElement(n));
+          let children = cvt_node_list(cvt, gc, hermes_get_JSXElement_children(n));
+          let closing_element = cvt_node_ptr_opt(cvt, gc, hermes_get_JSXElement_closingElement(n));
+          let mut template = ast::JSXElementTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  opening_element,
+                  children,
+                  closing_element,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::JSXElementBuilder::build_template(gc, template)
         }
         NodeKind::JSXFragment => {
-          let opening_fragment = cvt_node_ptr(cvt, hermes_get_JSXFragment_openingFragment(n));
-          let children = cvt_node_list(cvt, hermes_get_JSXFragment_children(n));
-          let closing_fragment = cvt_node_ptr(cvt, hermes_get_JSXFragment_closingFragment(n));
-          cvt.ast_context.alloc(
-            ast::Node::JSXFragment(ast::JSXFragment {
-                range,
-                    opening_fragment,
-                    children,
-                    closing_fragment,
-            }),
-          )
+          let opening_fragment = cvt_node_ptr(cvt, gc, hermes_get_JSXFragment_openingFragment(n));
+          let children = cvt_node_list(cvt, gc, hermes_get_JSXFragment_children(n));
+          let closing_fragment = cvt_node_ptr(cvt, gc, hermes_get_JSXFragment_closingFragment(n));
+          let mut template = ast::JSXFragmentTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  opening_fragment,
+                  children,
+                  closing_fragment,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::JSXFragmentBuilder::build_template(gc, template)
         }
         NodeKind::JSXOpeningFragment => {
-          cvt.ast_context.alloc(
-            ast::Node::JSXOpeningFragment(ast::JSXOpeningFragment {
-                range,
-            }),
-          )
+          let mut template = ast::JSXOpeningFragmentTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::JSXOpeningFragmentBuilder::build_template(gc, template)
         }
         NodeKind::JSXClosingFragment => {
-          cvt.ast_context.alloc(
-            ast::Node::JSXClosingFragment(ast::JSXClosingFragment {
-                range,
-            }),
-          )
+          let mut template = ast::JSXClosingFragmentTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::JSXClosingFragmentBuilder::build_template(gc, template)
         }
         NodeKind::ExistsTypeAnnotation => {
-          cvt.ast_context.alloc(
-            ast::Node::ExistsTypeAnnotation(ast::ExistsTypeAnnotation {
-                range,
-            }),
-          )
+          let mut template = ast::ExistsTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ExistsTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::EmptyTypeAnnotation => {
-          cvt.ast_context.alloc(
-            ast::Node::EmptyTypeAnnotation(ast::EmptyTypeAnnotation {
-                range,
-            }),
-          )
+          let mut template = ast::EmptyTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::EmptyTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::StringTypeAnnotation => {
-          cvt.ast_context.alloc(
-            ast::Node::StringTypeAnnotation(ast::StringTypeAnnotation {
-                range,
-            }),
-          )
+          let mut template = ast::StringTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::StringTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::NumberTypeAnnotation => {
-          cvt.ast_context.alloc(
-            ast::Node::NumberTypeAnnotation(ast::NumberTypeAnnotation {
-                range,
-            }),
-          )
+          let mut template = ast::NumberTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::NumberTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::StringLiteralTypeAnnotation => {
           let value = cvt_string(hermes_get_StringLiteralTypeAnnotation_value(n));
-          cvt.ast_context.alloc(
-            ast::Node::StringLiteralTypeAnnotation(ast::StringLiteralTypeAnnotation {
-                range,
-                    value,
-            }),
-          )
+          let mut template = ast::StringLiteralTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  value,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::StringLiteralTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::NumberLiteralTypeAnnotation => {
           let value = hermes_get_NumberLiteralTypeAnnotation_value(n);
-          let raw = cvt.cvt_label(hermes_get_NumberLiteralTypeAnnotation_raw(n));
-          cvt.ast_context.alloc(
-            ast::Node::NumberLiteralTypeAnnotation(ast::NumberLiteralTypeAnnotation {
-                range,
-                    value,
-                    raw,
-            }),
-          )
+          let raw = cvt.cvt_label(gc, hermes_get_NumberLiteralTypeAnnotation_raw(n));
+          let mut template = ast::NumberLiteralTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  value,
+                  raw,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::NumberLiteralTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::BooleanTypeAnnotation => {
-          cvt.ast_context.alloc(
-            ast::Node::BooleanTypeAnnotation(ast::BooleanTypeAnnotation {
-                range,
-            }),
-          )
+          let mut template = ast::BooleanTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::BooleanTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::BooleanLiteralTypeAnnotation => {
           let value = hermes_get_BooleanLiteralTypeAnnotation_value(n);
-          let raw = cvt.cvt_label(hermes_get_BooleanLiteralTypeAnnotation_raw(n));
-          cvt.ast_context.alloc(
-            ast::Node::BooleanLiteralTypeAnnotation(ast::BooleanLiteralTypeAnnotation {
-                range,
-                    value,
-                    raw,
-            }),
-          )
+          let raw = cvt.cvt_label(gc, hermes_get_BooleanLiteralTypeAnnotation_raw(n));
+          let mut template = ast::BooleanLiteralTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  value,
+                  raw,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::BooleanLiteralTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::NullLiteralTypeAnnotation => {
-          cvt.ast_context.alloc(
-            ast::Node::NullLiteralTypeAnnotation(ast::NullLiteralTypeAnnotation {
-                range,
-            }),
-          )
+          let mut template = ast::NullLiteralTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::NullLiteralTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::SymbolTypeAnnotation => {
-          cvt.ast_context.alloc(
-            ast::Node::SymbolTypeAnnotation(ast::SymbolTypeAnnotation {
-                range,
-            }),
-          )
+          let mut template = ast::SymbolTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::SymbolTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::AnyTypeAnnotation => {
-          cvt.ast_context.alloc(
-            ast::Node::AnyTypeAnnotation(ast::AnyTypeAnnotation {
-                range,
-            }),
-          )
+          let mut template = ast::AnyTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::AnyTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::MixedTypeAnnotation => {
-          cvt.ast_context.alloc(
-            ast::Node::MixedTypeAnnotation(ast::MixedTypeAnnotation {
-                range,
-            }),
-          )
+          let mut template = ast::MixedTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::MixedTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::VoidTypeAnnotation => {
-          cvt.ast_context.alloc(
-            ast::Node::VoidTypeAnnotation(ast::VoidTypeAnnotation {
-                range,
-            }),
-          )
+          let mut template = ast::VoidTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::VoidTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::FunctionTypeAnnotation => {
-          let params = cvt_node_list(cvt, hermes_get_FunctionTypeAnnotation_params(n));
-          let this = cvt_node_ptr_opt(cvt, hermes_get_FunctionTypeAnnotation_this(n));
-          let return_type = cvt_node_ptr(cvt, hermes_get_FunctionTypeAnnotation_returnType(n));
-          let rest = cvt_node_ptr_opt(cvt, hermes_get_FunctionTypeAnnotation_rest(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_FunctionTypeAnnotation_typeParameters(n));
-          cvt.ast_context.alloc(
-            ast::Node::FunctionTypeAnnotation(ast::FunctionTypeAnnotation {
-                range,
-                    params,
-                    this,
-                    return_type,
-                    rest,
-                    type_parameters,
-            }),
-          )
+          let params = cvt_node_list(cvt, gc, hermes_get_FunctionTypeAnnotation_params(n));
+          let this = cvt_node_ptr_opt(cvt, gc, hermes_get_FunctionTypeAnnotation_this(n));
+          let return_type = cvt_node_ptr(cvt, gc, hermes_get_FunctionTypeAnnotation_returnType(n));
+          let rest = cvt_node_ptr_opt(cvt, gc, hermes_get_FunctionTypeAnnotation_rest(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_FunctionTypeAnnotation_typeParameters(n));
+          let mut template = ast::FunctionTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  params,
+                  this,
+                  return_type,
+                  rest,
+                  type_parameters,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::FunctionTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::FunctionTypeParam => {
-          let name = cvt_node_ptr_opt(cvt, hermes_get_FunctionTypeParam_name(n));
-          let type_annotation = cvt_node_ptr(cvt, hermes_get_FunctionTypeParam_typeAnnotation(n));
+          let name = cvt_node_ptr_opt(cvt, gc, hermes_get_FunctionTypeParam_name(n));
+          let type_annotation = cvt_node_ptr(cvt, gc, hermes_get_FunctionTypeParam_typeAnnotation(n));
           let optional = hermes_get_FunctionTypeParam_optional(n);
-          cvt.ast_context.alloc(
-            ast::Node::FunctionTypeParam(ast::FunctionTypeParam {
-                range,
-                    name,
-                    type_annotation,
-                    optional,
-            }),
-          )
+          let mut template = ast::FunctionTypeParamTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  name,
+                  type_annotation,
+                  optional,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::FunctionTypeParamBuilder::build_template(gc, template)
         }
         NodeKind::NullableTypeAnnotation => {
-          let type_annotation = cvt_node_ptr(cvt, hermes_get_NullableTypeAnnotation_typeAnnotation(n));
-          cvt.ast_context.alloc(
-            ast::Node::NullableTypeAnnotation(ast::NullableTypeAnnotation {
-                range,
-                    type_annotation,
-            }),
-          )
+          let type_annotation = cvt_node_ptr(cvt, gc, hermes_get_NullableTypeAnnotation_typeAnnotation(n));
+          let mut template = ast::NullableTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  type_annotation,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::NullableTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::QualifiedTypeIdentifier => {
-          let qualification = cvt_node_ptr(cvt, hermes_get_QualifiedTypeIdentifier_qualification(n));
-          let id = cvt_node_ptr(cvt, hermes_get_QualifiedTypeIdentifier_id(n));
-          cvt.ast_context.alloc(
-            ast::Node::QualifiedTypeIdentifier(ast::QualifiedTypeIdentifier {
-                range,
-                    qualification,
-                    id,
-            }),
-          )
+          let qualification = cvt_node_ptr(cvt, gc, hermes_get_QualifiedTypeIdentifier_qualification(n));
+          let id = cvt_node_ptr(cvt, gc, hermes_get_QualifiedTypeIdentifier_id(n));
+          let mut template = ast::QualifiedTypeIdentifierTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  qualification,
+                  id,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::QualifiedTypeIdentifierBuilder::build_template(gc, template)
         }
         NodeKind::TypeofTypeAnnotation => {
-          let argument = cvt_node_ptr(cvt, hermes_get_TypeofTypeAnnotation_argument(n));
-          cvt.ast_context.alloc(
-            ast::Node::TypeofTypeAnnotation(ast::TypeofTypeAnnotation {
-                range,
-                    argument,
-            }),
-          )
+          let argument = cvt_node_ptr(cvt, gc, hermes_get_TypeofTypeAnnotation_argument(n));
+          let mut template = ast::TypeofTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  argument,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TypeofTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::TupleTypeAnnotation => {
-          let types = cvt_node_list(cvt, hermes_get_TupleTypeAnnotation_types(n));
-          cvt.ast_context.alloc(
-            ast::Node::TupleTypeAnnotation(ast::TupleTypeAnnotation {
-                range,
-                    types,
-            }),
-          )
+          let types = cvt_node_list(cvt, gc, hermes_get_TupleTypeAnnotation_types(n));
+          let mut template = ast::TupleTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  types,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TupleTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::ArrayTypeAnnotation => {
-          let element_type = cvt_node_ptr(cvt, hermes_get_ArrayTypeAnnotation_elementType(n));
-          cvt.ast_context.alloc(
-            ast::Node::ArrayTypeAnnotation(ast::ArrayTypeAnnotation {
-                range,
-                    element_type,
-            }),
-          )
+          let element_type = cvt_node_ptr(cvt, gc, hermes_get_ArrayTypeAnnotation_elementType(n));
+          let mut template = ast::ArrayTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  element_type,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ArrayTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::UnionTypeAnnotation => {
-          let types = cvt_node_list(cvt, hermes_get_UnionTypeAnnotation_types(n));
-          cvt.ast_context.alloc(
-            ast::Node::UnionTypeAnnotation(ast::UnionTypeAnnotation {
-                range,
-                    types,
-            }),
-          )
+          let types = cvt_node_list(cvt, gc, hermes_get_UnionTypeAnnotation_types(n));
+          let mut template = ast::UnionTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  types,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::UnionTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::IntersectionTypeAnnotation => {
-          let types = cvt_node_list(cvt, hermes_get_IntersectionTypeAnnotation_types(n));
-          cvt.ast_context.alloc(
-            ast::Node::IntersectionTypeAnnotation(ast::IntersectionTypeAnnotation {
-                range,
-                    types,
-            }),
-          )
+          let types = cvt_node_list(cvt, gc, hermes_get_IntersectionTypeAnnotation_types(n));
+          let mut template = ast::IntersectionTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  types,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::IntersectionTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::GenericTypeAnnotation => {
-          let id = cvt_node_ptr(cvt, hermes_get_GenericTypeAnnotation_id(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_GenericTypeAnnotation_typeParameters(n));
-          cvt.ast_context.alloc(
-            ast::Node::GenericTypeAnnotation(ast::GenericTypeAnnotation {
-                range,
-                    id,
-                    type_parameters,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_GenericTypeAnnotation_id(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_GenericTypeAnnotation_typeParameters(n));
+          let mut template = ast::GenericTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  type_parameters,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::GenericTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::IndexedAccessType => {
-          let object_type = cvt_node_ptr(cvt, hermes_get_IndexedAccessType_objectType(n));
-          let index_type = cvt_node_ptr(cvt, hermes_get_IndexedAccessType_indexType(n));
-          cvt.ast_context.alloc(
-            ast::Node::IndexedAccessType(ast::IndexedAccessType {
-                range,
-                    object_type,
-                    index_type,
-            }),
-          )
+          let object_type = cvt_node_ptr(cvt, gc, hermes_get_IndexedAccessType_objectType(n));
+          let index_type = cvt_node_ptr(cvt, gc, hermes_get_IndexedAccessType_indexType(n));
+          let mut template = ast::IndexedAccessTypeTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  object_type,
+                  index_type,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::IndexedAccessTypeBuilder::build_template(gc, template)
         }
         NodeKind::OptionalIndexedAccessType => {
-          let object_type = cvt_node_ptr(cvt, hermes_get_OptionalIndexedAccessType_objectType(n));
-          let index_type = cvt_node_ptr(cvt, hermes_get_OptionalIndexedAccessType_indexType(n));
+          let object_type = cvt_node_ptr(cvt, gc, hermes_get_OptionalIndexedAccessType_objectType(n));
+          let index_type = cvt_node_ptr(cvt, gc, hermes_get_OptionalIndexedAccessType_indexType(n));
           let optional = hermes_get_OptionalIndexedAccessType_optional(n);
-          cvt.ast_context.alloc(
-            ast::Node::OptionalIndexedAccessType(ast::OptionalIndexedAccessType {
-                range,
-                    object_type,
-                    index_type,
-                    optional,
-            }),
-          )
+          let mut template = ast::OptionalIndexedAccessTypeTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  object_type,
+                  index_type,
+                  optional,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::OptionalIndexedAccessTypeBuilder::build_template(gc, template)
         }
         NodeKind::InterfaceTypeAnnotation => {
-          let extends = cvt_node_list(cvt, hermes_get_InterfaceTypeAnnotation_extends(n));
-          let body = cvt_node_ptr_opt(cvt, hermes_get_InterfaceTypeAnnotation_body(n));
-          cvt.ast_context.alloc(
-            ast::Node::InterfaceTypeAnnotation(ast::InterfaceTypeAnnotation {
-                range,
-                    extends,
-                    body,
-            }),
-          )
+          let extends = cvt_node_list(cvt, gc, hermes_get_InterfaceTypeAnnotation_extends(n));
+          let body = cvt_node_ptr_opt(cvt, gc, hermes_get_InterfaceTypeAnnotation_body(n));
+          let mut template = ast::InterfaceTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  extends,
+                  body,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::InterfaceTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::TypeAlias => {
-          let id = cvt_node_ptr(cvt, hermes_get_TypeAlias_id(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_TypeAlias_typeParameters(n));
-          let right = cvt_node_ptr(cvt, hermes_get_TypeAlias_right(n));
-          cvt.ast_context.alloc(
-            ast::Node::TypeAlias(ast::TypeAlias {
-                range,
-                    id,
-                    type_parameters,
-                    right,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_TypeAlias_id(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_TypeAlias_typeParameters(n));
+          let right = cvt_node_ptr(cvt, gc, hermes_get_TypeAlias_right(n));
+          let mut template = ast::TypeAliasTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  type_parameters,
+                  right,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TypeAliasBuilder::build_template(gc, template)
         }
         NodeKind::OpaqueType => {
-          let id = cvt_node_ptr(cvt, hermes_get_OpaqueType_id(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_OpaqueType_typeParameters(n));
-          let impltype = cvt_node_ptr(cvt, hermes_get_OpaqueType_impltype(n));
-          let supertype = cvt_node_ptr_opt(cvt, hermes_get_OpaqueType_supertype(n));
-          cvt.ast_context.alloc(
-            ast::Node::OpaqueType(ast::OpaqueType {
-                range,
-                    id,
-                    type_parameters,
-                    impltype,
-                    supertype,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_OpaqueType_id(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_OpaqueType_typeParameters(n));
+          let impltype = cvt_node_ptr(cvt, gc, hermes_get_OpaqueType_impltype(n));
+          let supertype = cvt_node_ptr_opt(cvt, gc, hermes_get_OpaqueType_supertype(n));
+          let mut template = ast::OpaqueTypeTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  type_parameters,
+                  impltype,
+                  supertype,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::OpaqueTypeBuilder::build_template(gc, template)
         }
         NodeKind::InterfaceDeclaration => {
-          let id = cvt_node_ptr(cvt, hermes_get_InterfaceDeclaration_id(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_InterfaceDeclaration_typeParameters(n));
-          let extends = cvt_node_list(cvt, hermes_get_InterfaceDeclaration_extends(n));
-          let body = cvt_node_ptr(cvt, hermes_get_InterfaceDeclaration_body(n));
-          cvt.ast_context.alloc(
-            ast::Node::InterfaceDeclaration(ast::InterfaceDeclaration {
-                range,
-                    id,
-                    type_parameters,
-                    extends,
-                    body,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_InterfaceDeclaration_id(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_InterfaceDeclaration_typeParameters(n));
+          let extends = cvt_node_list(cvt, gc, hermes_get_InterfaceDeclaration_extends(n));
+          let body = cvt_node_ptr(cvt, gc, hermes_get_InterfaceDeclaration_body(n));
+          let mut template = ast::InterfaceDeclarationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  type_parameters,
+                  extends,
+                  body,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::InterfaceDeclarationBuilder::build_template(gc, template)
         }
         NodeKind::DeclareTypeAlias => {
-          let id = cvt_node_ptr(cvt, hermes_get_DeclareTypeAlias_id(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_DeclareTypeAlias_typeParameters(n));
-          let right = cvt_node_ptr(cvt, hermes_get_DeclareTypeAlias_right(n));
-          cvt.ast_context.alloc(
-            ast::Node::DeclareTypeAlias(ast::DeclareTypeAlias {
-                range,
-                    id,
-                    type_parameters,
-                    right,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_DeclareTypeAlias_id(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_DeclareTypeAlias_typeParameters(n));
+          let right = cvt_node_ptr(cvt, gc, hermes_get_DeclareTypeAlias_right(n));
+          let mut template = ast::DeclareTypeAliasTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  type_parameters,
+                  right,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::DeclareTypeAliasBuilder::build_template(gc, template)
         }
         NodeKind::DeclareOpaqueType => {
-          let id = cvt_node_ptr(cvt, hermes_get_DeclareOpaqueType_id(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_DeclareOpaqueType_typeParameters(n));
-          let impltype = cvt_node_ptr_opt(cvt, hermes_get_DeclareOpaqueType_impltype(n));
-          let supertype = cvt_node_ptr_opt(cvt, hermes_get_DeclareOpaqueType_supertype(n));
-          cvt.ast_context.alloc(
-            ast::Node::DeclareOpaqueType(ast::DeclareOpaqueType {
-                range,
-                    id,
-                    type_parameters,
-                    impltype,
-                    supertype,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_DeclareOpaqueType_id(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_DeclareOpaqueType_typeParameters(n));
+          let impltype = cvt_node_ptr_opt(cvt, gc, hermes_get_DeclareOpaqueType_impltype(n));
+          let supertype = cvt_node_ptr_opt(cvt, gc, hermes_get_DeclareOpaqueType_supertype(n));
+          let mut template = ast::DeclareOpaqueTypeTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  type_parameters,
+                  impltype,
+                  supertype,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::DeclareOpaqueTypeBuilder::build_template(gc, template)
         }
         NodeKind::DeclareInterface => {
-          let id = cvt_node_ptr(cvt, hermes_get_DeclareInterface_id(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_DeclareInterface_typeParameters(n));
-          let extends = cvt_node_list(cvt, hermes_get_DeclareInterface_extends(n));
-          let body = cvt_node_ptr(cvt, hermes_get_DeclareInterface_body(n));
-          cvt.ast_context.alloc(
-            ast::Node::DeclareInterface(ast::DeclareInterface {
-                range,
-                    id,
-                    type_parameters,
-                    extends,
-                    body,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_DeclareInterface_id(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_DeclareInterface_typeParameters(n));
+          let extends = cvt_node_list(cvt, gc, hermes_get_DeclareInterface_extends(n));
+          let body = cvt_node_ptr(cvt, gc, hermes_get_DeclareInterface_body(n));
+          let mut template = ast::DeclareInterfaceTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  type_parameters,
+                  extends,
+                  body,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::DeclareInterfaceBuilder::build_template(gc, template)
         }
         NodeKind::DeclareClass => {
-          let id = cvt_node_ptr(cvt, hermes_get_DeclareClass_id(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_DeclareClass_typeParameters(n));
-          let extends = cvt_node_list(cvt, hermes_get_DeclareClass_extends(n));
-          let implements = cvt_node_list(cvt, hermes_get_DeclareClass_implements(n));
-          let mixins = cvt_node_list(cvt, hermes_get_DeclareClass_mixins(n));
-          let body = cvt_node_ptr(cvt, hermes_get_DeclareClass_body(n));
-          cvt.ast_context.alloc(
-            ast::Node::DeclareClass(ast::DeclareClass {
-                range,
-                    id,
-                    type_parameters,
-                    extends,
-                    implements,
-                    mixins,
-                    body,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_DeclareClass_id(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_DeclareClass_typeParameters(n));
+          let extends = cvt_node_list(cvt, gc, hermes_get_DeclareClass_extends(n));
+          let implements = cvt_node_list(cvt, gc, hermes_get_DeclareClass_implements(n));
+          let mixins = cvt_node_list(cvt, gc, hermes_get_DeclareClass_mixins(n));
+          let body = cvt_node_ptr(cvt, gc, hermes_get_DeclareClass_body(n));
+          let mut template = ast::DeclareClassTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  type_parameters,
+                  extends,
+                  implements,
+                  mixins,
+                  body,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::DeclareClassBuilder::build_template(gc, template)
         }
         NodeKind::DeclareFunction => {
-          let id = cvt_node_ptr(cvt, hermes_get_DeclareFunction_id(n));
-          let predicate = cvt_node_ptr_opt(cvt, hermes_get_DeclareFunction_predicate(n));
-          cvt.ast_context.alloc(
-            ast::Node::DeclareFunction(ast::DeclareFunction {
-                range,
-                    id,
-                    predicate,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_DeclareFunction_id(n));
+          let predicate = cvt_node_ptr_opt(cvt, gc, hermes_get_DeclareFunction_predicate(n));
+          let mut template = ast::DeclareFunctionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  predicate,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::DeclareFunctionBuilder::build_template(gc, template)
         }
         NodeKind::DeclareVariable => {
-          let id = cvt_node_ptr(cvt, hermes_get_DeclareVariable_id(n));
-          cvt.ast_context.alloc(
-            ast::Node::DeclareVariable(ast::DeclareVariable {
-                range,
-                    id,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_DeclareVariable_id(n));
+          let mut template = ast::DeclareVariableTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::DeclareVariableBuilder::build_template(gc, template)
         }
         NodeKind::DeclareExportDeclaration => {
-          let declaration = cvt_node_ptr_opt(cvt, hermes_get_DeclareExportDeclaration_declaration(n));
-          let specifiers = cvt_node_list(cvt, hermes_get_DeclareExportDeclaration_specifiers(n));
-          let source = cvt_node_ptr_opt(cvt, hermes_get_DeclareExportDeclaration_source(n));
+          let declaration = cvt_node_ptr_opt(cvt, gc, hermes_get_DeclareExportDeclaration_declaration(n));
+          let specifiers = cvt_node_list(cvt, gc, hermes_get_DeclareExportDeclaration_specifiers(n));
+          let source = cvt_node_ptr_opt(cvt, gc, hermes_get_DeclareExportDeclaration_source(n));
           let default = hermes_get_DeclareExportDeclaration_default(n);
-          cvt.ast_context.alloc(
-            ast::Node::DeclareExportDeclaration(ast::DeclareExportDeclaration {
-                range,
-                    declaration,
-                    specifiers,
-                    source,
-                    default,
-            }),
-          )
+          let mut template = ast::DeclareExportDeclarationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  declaration,
+                  specifiers,
+                  source,
+                  default,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::DeclareExportDeclarationBuilder::build_template(gc, template)
         }
         NodeKind::DeclareExportAllDeclaration => {
-          let source = cvt_node_ptr(cvt, hermes_get_DeclareExportAllDeclaration_source(n));
-          cvt.ast_context.alloc(
-            ast::Node::DeclareExportAllDeclaration(ast::DeclareExportAllDeclaration {
-                range,
-                    source,
-            }),
-          )
+          let source = cvt_node_ptr(cvt, gc, hermes_get_DeclareExportAllDeclaration_source(n));
+          let mut template = ast::DeclareExportAllDeclarationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  source,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::DeclareExportAllDeclarationBuilder::build_template(gc, template)
         }
         NodeKind::DeclareModule => {
-          let id = cvt_node_ptr(cvt, hermes_get_DeclareModule_id(n));
-          let body = cvt_node_ptr(cvt, hermes_get_DeclareModule_body(n));
-          let kind = cvt.cvt_label(hermes_get_DeclareModule_kind(n));
-          cvt.ast_context.alloc(
-            ast::Node::DeclareModule(ast::DeclareModule {
-                range,
-                    id,
-                    body,
-                    kind,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_DeclareModule_id(n));
+          let body = cvt_node_ptr(cvt, gc, hermes_get_DeclareModule_body(n));
+          let kind = cvt.cvt_label(gc, hermes_get_DeclareModule_kind(n));
+          let mut template = ast::DeclareModuleTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  body,
+                  kind,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::DeclareModuleBuilder::build_template(gc, template)
         }
         NodeKind::DeclareModuleExports => {
-          let type_annotation = cvt_node_ptr(cvt, hermes_get_DeclareModuleExports_typeAnnotation(n));
-          cvt.ast_context.alloc(
-            ast::Node::DeclareModuleExports(ast::DeclareModuleExports {
-                range,
-                    type_annotation,
-            }),
-          )
+          let type_annotation = cvt_node_ptr(cvt, gc, hermes_get_DeclareModuleExports_typeAnnotation(n));
+          let mut template = ast::DeclareModuleExportsTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  type_annotation,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::DeclareModuleExportsBuilder::build_template(gc, template)
         }
         NodeKind::InterfaceExtends => {
-          let id = cvt_node_ptr(cvt, hermes_get_InterfaceExtends_id(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_InterfaceExtends_typeParameters(n));
-          cvt.ast_context.alloc(
-            ast::Node::InterfaceExtends(ast::InterfaceExtends {
-                range,
-                    id,
-                    type_parameters,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_InterfaceExtends_id(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_InterfaceExtends_typeParameters(n));
+          let mut template = ast::InterfaceExtendsTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  type_parameters,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::InterfaceExtendsBuilder::build_template(gc, template)
         }
         NodeKind::ClassImplements => {
-          let id = cvt_node_ptr(cvt, hermes_get_ClassImplements_id(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_ClassImplements_typeParameters(n));
-          cvt.ast_context.alloc(
-            ast::Node::ClassImplements(ast::ClassImplements {
-                range,
-                    id,
-                    type_parameters,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_ClassImplements_id(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_ClassImplements_typeParameters(n));
+          let mut template = ast::ClassImplementsTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  type_parameters,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ClassImplementsBuilder::build_template(gc, template)
         }
         NodeKind::TypeAnnotation => {
-          let type_annotation = cvt_node_ptr(cvt, hermes_get_TypeAnnotation_typeAnnotation(n));
-          cvt.ast_context.alloc(
-            ast::Node::TypeAnnotation(ast::TypeAnnotation {
-                range,
-                    type_annotation,
-            }),
-          )
+          let type_annotation = cvt_node_ptr(cvt, gc, hermes_get_TypeAnnotation_typeAnnotation(n));
+          let mut template = ast::TypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  type_annotation,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::ObjectTypeAnnotation => {
-          let properties = cvt_node_list(cvt, hermes_get_ObjectTypeAnnotation_properties(n));
-          let indexers = cvt_node_list(cvt, hermes_get_ObjectTypeAnnotation_indexers(n));
-          let call_properties = cvt_node_list(cvt, hermes_get_ObjectTypeAnnotation_callProperties(n));
-          let internal_slots = cvt_node_list(cvt, hermes_get_ObjectTypeAnnotation_internalSlots(n));
+          let properties = cvt_node_list(cvt, gc, hermes_get_ObjectTypeAnnotation_properties(n));
+          let indexers = cvt_node_list(cvt, gc, hermes_get_ObjectTypeAnnotation_indexers(n));
+          let call_properties = cvt_node_list(cvt, gc, hermes_get_ObjectTypeAnnotation_callProperties(n));
+          let internal_slots = cvt_node_list(cvt, gc, hermes_get_ObjectTypeAnnotation_internalSlots(n));
           let inexact = hermes_get_ObjectTypeAnnotation_inexact(n);
           let exact = hermes_get_ObjectTypeAnnotation_exact(n);
-          cvt.ast_context.alloc(
-            ast::Node::ObjectTypeAnnotation(ast::ObjectTypeAnnotation {
-                range,
-                    properties,
-                    indexers,
-                    call_properties,
-                    internal_slots,
-                    inexact,
-                    exact,
-            }),
-          )
+          let mut template = ast::ObjectTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  properties,
+                  indexers,
+                  call_properties,
+                  internal_slots,
+                  inexact,
+                  exact,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ObjectTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::ObjectTypeProperty => {
-          let key = cvt_node_ptr(cvt, hermes_get_ObjectTypeProperty_key(n));
-          let value = cvt_node_ptr(cvt, hermes_get_ObjectTypeProperty_value(n));
+          let key = cvt_node_ptr(cvt, gc, hermes_get_ObjectTypeProperty_key(n));
+          let value = cvt_node_ptr(cvt, gc, hermes_get_ObjectTypeProperty_value(n));
           let method = hermes_get_ObjectTypeProperty_method(n);
           let optional = hermes_get_ObjectTypeProperty_optional(n);
           let is_static = hermes_get_ObjectTypeProperty_static(n);
           let proto = hermes_get_ObjectTypeProperty_proto(n);
-          let variance = cvt_node_ptr_opt(cvt, hermes_get_ObjectTypeProperty_variance(n));
-          let kind = cvt.cvt_label(hermes_get_ObjectTypeProperty_kind(n));
-          cvt.ast_context.alloc(
-            ast::Node::ObjectTypeProperty(ast::ObjectTypeProperty {
-                range,
-                    key,
-                    value,
-                    method,
-                    optional,
-                    is_static,
-                    proto,
-                    variance,
-                    kind,
-            }),
-          )
+          let variance = cvt_node_ptr_opt(cvt, gc, hermes_get_ObjectTypeProperty_variance(n));
+          let kind = cvt.cvt_label(gc, hermes_get_ObjectTypeProperty_kind(n));
+          let mut template = ast::ObjectTypePropertyTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  key,
+                  value,
+                  method,
+                  optional,
+                  is_static,
+                  proto,
+                  variance,
+                  kind,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ObjectTypePropertyBuilder::build_template(gc, template)
         }
         NodeKind::ObjectTypeSpreadProperty => {
-          let argument = cvt_node_ptr(cvt, hermes_get_ObjectTypeSpreadProperty_argument(n));
-          cvt.ast_context.alloc(
-            ast::Node::ObjectTypeSpreadProperty(ast::ObjectTypeSpreadProperty {
-                range,
-                    argument,
-            }),
-          )
+          let argument = cvt_node_ptr(cvt, gc, hermes_get_ObjectTypeSpreadProperty_argument(n));
+          let mut template = ast::ObjectTypeSpreadPropertyTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  argument,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ObjectTypeSpreadPropertyBuilder::build_template(gc, template)
         }
         NodeKind::ObjectTypeInternalSlot => {
-          let id = cvt_node_ptr(cvt, hermes_get_ObjectTypeInternalSlot_id(n));
-          let value = cvt_node_ptr(cvt, hermes_get_ObjectTypeInternalSlot_value(n));
+          let id = cvt_node_ptr(cvt, gc, hermes_get_ObjectTypeInternalSlot_id(n));
+          let value = cvt_node_ptr(cvt, gc, hermes_get_ObjectTypeInternalSlot_value(n));
           let optional = hermes_get_ObjectTypeInternalSlot_optional(n);
           let is_static = hermes_get_ObjectTypeInternalSlot_static(n);
           let method = hermes_get_ObjectTypeInternalSlot_method(n);
-          cvt.ast_context.alloc(
-            ast::Node::ObjectTypeInternalSlot(ast::ObjectTypeInternalSlot {
-                range,
-                    id,
-                    value,
-                    optional,
-                    is_static,
-                    method,
-            }),
-          )
+          let mut template = ast::ObjectTypeInternalSlotTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  value,
+                  optional,
+                  is_static,
+                  method,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ObjectTypeInternalSlotBuilder::build_template(gc, template)
         }
         NodeKind::ObjectTypeCallProperty => {
-          let value = cvt_node_ptr(cvt, hermes_get_ObjectTypeCallProperty_value(n));
+          let value = cvt_node_ptr(cvt, gc, hermes_get_ObjectTypeCallProperty_value(n));
           let is_static = hermes_get_ObjectTypeCallProperty_static(n);
-          cvt.ast_context.alloc(
-            ast::Node::ObjectTypeCallProperty(ast::ObjectTypeCallProperty {
-                range,
-                    value,
-                    is_static,
-            }),
-          )
+          let mut template = ast::ObjectTypeCallPropertyTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  value,
+                  is_static,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ObjectTypeCallPropertyBuilder::build_template(gc, template)
         }
         NodeKind::ObjectTypeIndexer => {
-          let id = cvt_node_ptr_opt(cvt, hermes_get_ObjectTypeIndexer_id(n));
-          let key = cvt_node_ptr(cvt, hermes_get_ObjectTypeIndexer_key(n));
-          let value = cvt_node_ptr(cvt, hermes_get_ObjectTypeIndexer_value(n));
+          let id = cvt_node_ptr_opt(cvt, gc, hermes_get_ObjectTypeIndexer_id(n));
+          let key = cvt_node_ptr(cvt, gc, hermes_get_ObjectTypeIndexer_key(n));
+          let value = cvt_node_ptr(cvt, gc, hermes_get_ObjectTypeIndexer_value(n));
           let is_static = hermes_get_ObjectTypeIndexer_static(n);
-          let variance = cvt_node_ptr_opt(cvt, hermes_get_ObjectTypeIndexer_variance(n));
-          cvt.ast_context.alloc(
-            ast::Node::ObjectTypeIndexer(ast::ObjectTypeIndexer {
-                range,
-                    id,
-                    key,
-                    value,
-                    is_static,
-                    variance,
-            }),
-          )
+          let variance = cvt_node_ptr_opt(cvt, gc, hermes_get_ObjectTypeIndexer_variance(n));
+          let mut template = ast::ObjectTypeIndexerTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  key,
+                  value,
+                  is_static,
+                  variance,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::ObjectTypeIndexerBuilder::build_template(gc, template)
         }
         NodeKind::Variance => {
-          let kind = cvt.cvt_label(hermes_get_Variance_kind(n));
-          cvt.ast_context.alloc(
-            ast::Node::Variance(ast::Variance {
-                range,
-                    kind,
-            }),
-          )
+          let kind = cvt.cvt_label(gc, hermes_get_Variance_kind(n));
+          let mut template = ast::VarianceTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  kind,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::VarianceBuilder::build_template(gc, template)
         }
         NodeKind::TypeParameterDeclaration => {
-          let params = cvt_node_list(cvt, hermes_get_TypeParameterDeclaration_params(n));
-          cvt.ast_context.alloc(
-            ast::Node::TypeParameterDeclaration(ast::TypeParameterDeclaration {
-                range,
-                    params,
-            }),
-          )
+          let params = cvt_node_list(cvt, gc, hermes_get_TypeParameterDeclaration_params(n));
+          let mut template = ast::TypeParameterDeclarationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  params,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TypeParameterDeclarationBuilder::build_template(gc, template)
         }
         NodeKind::TypeParameter => {
-          let name = cvt.cvt_label(hermes_get_TypeParameter_name(n));
-          let bound = cvt_node_ptr_opt(cvt, hermes_get_TypeParameter_bound(n));
-          let variance = cvt_node_ptr_opt(cvt, hermes_get_TypeParameter_variance(n));
-          let default = cvt_node_ptr_opt(cvt, hermes_get_TypeParameter_default(n));
-          cvt.ast_context.alloc(
-            ast::Node::TypeParameter(ast::TypeParameter {
-                range,
-                    name,
-                    bound,
-                    variance,
-                    default,
-            }),
-          )
+          let name = cvt.cvt_label(gc, hermes_get_TypeParameter_name(n));
+          let bound = cvt_node_ptr_opt(cvt, gc, hermes_get_TypeParameter_bound(n));
+          let variance = cvt_node_ptr_opt(cvt, gc, hermes_get_TypeParameter_variance(n));
+          let default = cvt_node_ptr_opt(cvt, gc, hermes_get_TypeParameter_default(n));
+          let mut template = ast::TypeParameterTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  name,
+                  bound,
+                  variance,
+                  default,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TypeParameterBuilder::build_template(gc, template)
         }
         NodeKind::TypeParameterInstantiation => {
-          let params = cvt_node_list(cvt, hermes_get_TypeParameterInstantiation_params(n));
-          cvt.ast_context.alloc(
-            ast::Node::TypeParameterInstantiation(ast::TypeParameterInstantiation {
-                range,
-                    params,
-            }),
-          )
+          let params = cvt_node_list(cvt, gc, hermes_get_TypeParameterInstantiation_params(n));
+          let mut template = ast::TypeParameterInstantiationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  params,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TypeParameterInstantiationBuilder::build_template(gc, template)
         }
         NodeKind::TypeCastExpression => {
-          let expression = cvt_node_ptr(cvt, hermes_get_TypeCastExpression_expression(n));
-          let type_annotation = cvt_node_ptr(cvt, hermes_get_TypeCastExpression_typeAnnotation(n));
-          cvt.ast_context.alloc(
-            ast::Node::TypeCastExpression(ast::TypeCastExpression {
-                range,
-                    expression,
-                    type_annotation,
-            }),
-          )
+          let expression = cvt_node_ptr(cvt, gc, hermes_get_TypeCastExpression_expression(n));
+          let type_annotation = cvt_node_ptr(cvt, gc, hermes_get_TypeCastExpression_typeAnnotation(n));
+          let mut template = ast::TypeCastExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  expression,
+                  type_annotation,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TypeCastExpressionBuilder::build_template(gc, template)
         }
         NodeKind::InferredPredicate => {
-          cvt.ast_context.alloc(
-            ast::Node::InferredPredicate(ast::InferredPredicate {
-                range,
-            }),
-          )
+          let mut template = ast::InferredPredicateTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::InferredPredicateBuilder::build_template(gc, template)
         }
         NodeKind::DeclaredPredicate => {
-          let value = cvt_node_ptr(cvt, hermes_get_DeclaredPredicate_value(n));
-          cvt.ast_context.alloc(
-            ast::Node::DeclaredPredicate(ast::DeclaredPredicate {
-                range,
-                    value,
-            }),
-          )
+          let value = cvt_node_ptr(cvt, gc, hermes_get_DeclaredPredicate_value(n));
+          let mut template = ast::DeclaredPredicateTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  value,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::DeclaredPredicateBuilder::build_template(gc, template)
         }
         NodeKind::EnumDeclaration => {
-          let id = cvt_node_ptr(cvt, hermes_get_EnumDeclaration_id(n));
-          let body = cvt_node_ptr(cvt, hermes_get_EnumDeclaration_body(n));
-          cvt.ast_context.alloc(
-            ast::Node::EnumDeclaration(ast::EnumDeclaration {
-                range,
-                    id,
-                    body,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_EnumDeclaration_id(n));
+          let body = cvt_node_ptr(cvt, gc, hermes_get_EnumDeclaration_body(n));
+          let mut template = ast::EnumDeclarationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  body,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::EnumDeclarationBuilder::build_template(gc, template)
         }
         NodeKind::EnumStringBody => {
-          let members = cvt_node_list(cvt, hermes_get_EnumStringBody_members(n));
+          let members = cvt_node_list(cvt, gc, hermes_get_EnumStringBody_members(n));
           let explicit_type = hermes_get_EnumStringBody_explicitType(n);
           let has_unknown_members = hermes_get_EnumStringBody_hasUnknownMembers(n);
-          cvt.ast_context.alloc(
-            ast::Node::EnumStringBody(ast::EnumStringBody {
-                range,
-                    members,
-                    explicit_type,
-                    has_unknown_members,
-            }),
-          )
+          let mut template = ast::EnumStringBodyTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  members,
+                  explicit_type,
+                  has_unknown_members,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::EnumStringBodyBuilder::build_template(gc, template)
         }
         NodeKind::EnumNumberBody => {
-          let members = cvt_node_list(cvt, hermes_get_EnumNumberBody_members(n));
+          let members = cvt_node_list(cvt, gc, hermes_get_EnumNumberBody_members(n));
           let explicit_type = hermes_get_EnumNumberBody_explicitType(n);
           let has_unknown_members = hermes_get_EnumNumberBody_hasUnknownMembers(n);
-          cvt.ast_context.alloc(
-            ast::Node::EnumNumberBody(ast::EnumNumberBody {
-                range,
-                    members,
-                    explicit_type,
-                    has_unknown_members,
-            }),
-          )
+          let mut template = ast::EnumNumberBodyTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  members,
+                  explicit_type,
+                  has_unknown_members,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::EnumNumberBodyBuilder::build_template(gc, template)
         }
         NodeKind::EnumBooleanBody => {
-          let members = cvt_node_list(cvt, hermes_get_EnumBooleanBody_members(n));
+          let members = cvt_node_list(cvt, gc, hermes_get_EnumBooleanBody_members(n));
           let explicit_type = hermes_get_EnumBooleanBody_explicitType(n);
           let has_unknown_members = hermes_get_EnumBooleanBody_hasUnknownMembers(n);
-          cvt.ast_context.alloc(
-            ast::Node::EnumBooleanBody(ast::EnumBooleanBody {
-                range,
-                    members,
-                    explicit_type,
-                    has_unknown_members,
-            }),
-          )
+          let mut template = ast::EnumBooleanBodyTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  members,
+                  explicit_type,
+                  has_unknown_members,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::EnumBooleanBodyBuilder::build_template(gc, template)
         }
         NodeKind::EnumSymbolBody => {
-          let members = cvt_node_list(cvt, hermes_get_EnumSymbolBody_members(n));
+          let members = cvt_node_list(cvt, gc, hermes_get_EnumSymbolBody_members(n));
           let has_unknown_members = hermes_get_EnumSymbolBody_hasUnknownMembers(n);
-          cvt.ast_context.alloc(
-            ast::Node::EnumSymbolBody(ast::EnumSymbolBody {
-                range,
-                    members,
-                    has_unknown_members,
-            }),
-          )
+          let mut template = ast::EnumSymbolBodyTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  members,
+                  has_unknown_members,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::EnumSymbolBodyBuilder::build_template(gc, template)
         }
         NodeKind::EnumDefaultedMember => {
-          let id = cvt_node_ptr(cvt, hermes_get_EnumDefaultedMember_id(n));
-          cvt.ast_context.alloc(
-            ast::Node::EnumDefaultedMember(ast::EnumDefaultedMember {
-                range,
-                    id,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_EnumDefaultedMember_id(n));
+          let mut template = ast::EnumDefaultedMemberTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::EnumDefaultedMemberBuilder::build_template(gc, template)
         }
         NodeKind::EnumStringMember => {
-          let id = cvt_node_ptr(cvt, hermes_get_EnumStringMember_id(n));
-          let init = cvt_node_ptr(cvt, hermes_get_EnumStringMember_init(n));
-          cvt.ast_context.alloc(
-            ast::Node::EnumStringMember(ast::EnumStringMember {
-                range,
-                    id,
-                    init,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_EnumStringMember_id(n));
+          let init = cvt_node_ptr(cvt, gc, hermes_get_EnumStringMember_init(n));
+          let mut template = ast::EnumStringMemberTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  init,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::EnumStringMemberBuilder::build_template(gc, template)
         }
         NodeKind::EnumNumberMember => {
-          let id = cvt_node_ptr(cvt, hermes_get_EnumNumberMember_id(n));
-          let init = cvt_node_ptr(cvt, hermes_get_EnumNumberMember_init(n));
-          cvt.ast_context.alloc(
-            ast::Node::EnumNumberMember(ast::EnumNumberMember {
-                range,
-                    id,
-                    init,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_EnumNumberMember_id(n));
+          let init = cvt_node_ptr(cvt, gc, hermes_get_EnumNumberMember_init(n));
+          let mut template = ast::EnumNumberMemberTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  init,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::EnumNumberMemberBuilder::build_template(gc, template)
         }
         NodeKind::EnumBooleanMember => {
-          let id = cvt_node_ptr(cvt, hermes_get_EnumBooleanMember_id(n));
-          let init = cvt_node_ptr(cvt, hermes_get_EnumBooleanMember_init(n));
-          cvt.ast_context.alloc(
-            ast::Node::EnumBooleanMember(ast::EnumBooleanMember {
-                range,
-                    id,
-                    init,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_EnumBooleanMember_id(n));
+          let init = cvt_node_ptr(cvt, gc, hermes_get_EnumBooleanMember_init(n));
+          let mut template = ast::EnumBooleanMemberTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  init,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::EnumBooleanMemberBuilder::build_template(gc, template)
         }
         NodeKind::TSTypeAnnotation => {
-          let type_annotation = cvt_node_ptr(cvt, hermes_get_TSTypeAnnotation_typeAnnotation(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSTypeAnnotation(ast::TSTypeAnnotation {
-                range,
-                    type_annotation,
-            }),
-          )
+          let type_annotation = cvt_node_ptr(cvt, gc, hermes_get_TSTypeAnnotation_typeAnnotation(n));
+          let mut template = ast::TSTypeAnnotationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  type_annotation,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSTypeAnnotationBuilder::build_template(gc, template)
         }
         NodeKind::TSAnyKeyword => {
-          cvt.ast_context.alloc(
-            ast::Node::TSAnyKeyword(ast::TSAnyKeyword {
-                range,
-            }),
-          )
+          let mut template = ast::TSAnyKeywordTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSAnyKeywordBuilder::build_template(gc, template)
         }
         NodeKind::TSNumberKeyword => {
-          cvt.ast_context.alloc(
-            ast::Node::TSNumberKeyword(ast::TSNumberKeyword {
-                range,
-            }),
-          )
+          let mut template = ast::TSNumberKeywordTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSNumberKeywordBuilder::build_template(gc, template)
         }
         NodeKind::TSBooleanKeyword => {
-          cvt.ast_context.alloc(
-            ast::Node::TSBooleanKeyword(ast::TSBooleanKeyword {
-                range,
-            }),
-          )
+          let mut template = ast::TSBooleanKeywordTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSBooleanKeywordBuilder::build_template(gc, template)
         }
         NodeKind::TSStringKeyword => {
-          cvt.ast_context.alloc(
-            ast::Node::TSStringKeyword(ast::TSStringKeyword {
-                range,
-            }),
-          )
+          let mut template = ast::TSStringKeywordTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSStringKeywordBuilder::build_template(gc, template)
         }
         NodeKind::TSSymbolKeyword => {
-          cvt.ast_context.alloc(
-            ast::Node::TSSymbolKeyword(ast::TSSymbolKeyword {
-                range,
-            }),
-          )
+          let mut template = ast::TSSymbolKeywordTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSSymbolKeywordBuilder::build_template(gc, template)
         }
         NodeKind::TSVoidKeyword => {
-          cvt.ast_context.alloc(
-            ast::Node::TSVoidKeyword(ast::TSVoidKeyword {
-                range,
-            }),
-          )
+          let mut template = ast::TSVoidKeywordTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSVoidKeywordBuilder::build_template(gc, template)
         }
         NodeKind::TSThisType => {
-          cvt.ast_context.alloc(
-            ast::Node::TSThisType(ast::TSThisType {
-                range,
-            }),
-          )
+          let mut template = ast::TSThisTypeTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSThisTypeBuilder::build_template(gc, template)
         }
         NodeKind::TSLiteralType => {
-          let literal = cvt_node_ptr(cvt, hermes_get_TSLiteralType_literal(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSLiteralType(ast::TSLiteralType {
-                range,
-                    literal,
-            }),
-          )
+          let literal = cvt_node_ptr(cvt, gc, hermes_get_TSLiteralType_literal(n));
+          let mut template = ast::TSLiteralTypeTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  literal,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSLiteralTypeBuilder::build_template(gc, template)
         }
         NodeKind::TSIndexedAccessType => {
-          let object_type = cvt_node_ptr(cvt, hermes_get_TSIndexedAccessType_objectType(n));
-          let index_type = cvt_node_ptr(cvt, hermes_get_TSIndexedAccessType_indexType(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSIndexedAccessType(ast::TSIndexedAccessType {
-                range,
-                    object_type,
-                    index_type,
-            }),
-          )
+          let object_type = cvt_node_ptr(cvt, gc, hermes_get_TSIndexedAccessType_objectType(n));
+          let index_type = cvt_node_ptr(cvt, gc, hermes_get_TSIndexedAccessType_indexType(n));
+          let mut template = ast::TSIndexedAccessTypeTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  object_type,
+                  index_type,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSIndexedAccessTypeBuilder::build_template(gc, template)
         }
         NodeKind::TSArrayType => {
-          let element_type = cvt_node_ptr(cvt, hermes_get_TSArrayType_elementType(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSArrayType(ast::TSArrayType {
-                range,
-                    element_type,
-            }),
-          )
+          let element_type = cvt_node_ptr(cvt, gc, hermes_get_TSArrayType_elementType(n));
+          let mut template = ast::TSArrayTypeTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  element_type,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSArrayTypeBuilder::build_template(gc, template)
         }
         NodeKind::TSTypeReference => {
-          let type_name = cvt_node_ptr(cvt, hermes_get_TSTypeReference_typeName(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_TSTypeReference_typeParameters(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSTypeReference(ast::TSTypeReference {
-                range,
-                    type_name,
-                    type_parameters,
-            }),
-          )
+          let type_name = cvt_node_ptr(cvt, gc, hermes_get_TSTypeReference_typeName(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_TSTypeReference_typeParameters(n));
+          let mut template = ast::TSTypeReferenceTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  type_name,
+                  type_parameters,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSTypeReferenceBuilder::build_template(gc, template)
         }
         NodeKind::TSQualifiedName => {
-          let left = cvt_node_ptr(cvt, hermes_get_TSQualifiedName_left(n));
-          let right = cvt_node_ptr_opt(cvt, hermes_get_TSQualifiedName_right(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSQualifiedName(ast::TSQualifiedName {
-                range,
-                    left,
-                    right,
-            }),
-          )
+          let left = cvt_node_ptr(cvt, gc, hermes_get_TSQualifiedName_left(n));
+          let right = cvt_node_ptr_opt(cvt, gc, hermes_get_TSQualifiedName_right(n));
+          let mut template = ast::TSQualifiedNameTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  left,
+                  right,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSQualifiedNameBuilder::build_template(gc, template)
         }
         NodeKind::TSFunctionType => {
-          let params = cvt_node_list(cvt, hermes_get_TSFunctionType_params(n));
-          let return_type = cvt_node_ptr(cvt, hermes_get_TSFunctionType_returnType(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_TSFunctionType_typeParameters(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSFunctionType(ast::TSFunctionType {
-                range,
-                    params,
-                    return_type,
-                    type_parameters,
-            }),
-          )
+          let params = cvt_node_list(cvt, gc, hermes_get_TSFunctionType_params(n));
+          let return_type = cvt_node_ptr(cvt, gc, hermes_get_TSFunctionType_returnType(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_TSFunctionType_typeParameters(n));
+          let mut template = ast::TSFunctionTypeTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  params,
+                  return_type,
+                  type_parameters,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSFunctionTypeBuilder::build_template(gc, template)
         }
         NodeKind::TSConstructorType => {
-          let params = cvt_node_list(cvt, hermes_get_TSConstructorType_params(n));
-          let return_type = cvt_node_ptr(cvt, hermes_get_TSConstructorType_returnType(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_TSConstructorType_typeParameters(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSConstructorType(ast::TSConstructorType {
-                range,
-                    params,
-                    return_type,
-                    type_parameters,
-            }),
-          )
+          let params = cvt_node_list(cvt, gc, hermes_get_TSConstructorType_params(n));
+          let return_type = cvt_node_ptr(cvt, gc, hermes_get_TSConstructorType_returnType(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_TSConstructorType_typeParameters(n));
+          let mut template = ast::TSConstructorTypeTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  params,
+                  return_type,
+                  type_parameters,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSConstructorTypeBuilder::build_template(gc, template)
         }
         NodeKind::TSTypePredicate => {
-          let parameter_name = cvt_node_ptr(cvt, hermes_get_TSTypePredicate_parameterName(n));
-          let type_annotation = cvt_node_ptr(cvt, hermes_get_TSTypePredicate_typeAnnotation(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSTypePredicate(ast::TSTypePredicate {
-                range,
-                    parameter_name,
-                    type_annotation,
-            }),
-          )
+          let parameter_name = cvt_node_ptr(cvt, gc, hermes_get_TSTypePredicate_parameterName(n));
+          let type_annotation = cvt_node_ptr(cvt, gc, hermes_get_TSTypePredicate_typeAnnotation(n));
+          let mut template = ast::TSTypePredicateTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  parameter_name,
+                  type_annotation,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSTypePredicateBuilder::build_template(gc, template)
         }
         NodeKind::TSTupleType => {
-          let element_types = cvt_node_list(cvt, hermes_get_TSTupleType_elementTypes(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSTupleType(ast::TSTupleType {
-                range,
-                    element_types,
-            }),
-          )
+          let element_types = cvt_node_list(cvt, gc, hermes_get_TSTupleType_elementTypes(n));
+          let mut template = ast::TSTupleTypeTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  element_types,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSTupleTypeBuilder::build_template(gc, template)
         }
         NodeKind::TSTypeAssertion => {
-          let type_annotation = cvt_node_ptr(cvt, hermes_get_TSTypeAssertion_typeAnnotation(n));
-          let expression = cvt_node_ptr(cvt, hermes_get_TSTypeAssertion_expression(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSTypeAssertion(ast::TSTypeAssertion {
-                range,
-                    type_annotation,
-                    expression,
-            }),
-          )
+          let type_annotation = cvt_node_ptr(cvt, gc, hermes_get_TSTypeAssertion_typeAnnotation(n));
+          let expression = cvt_node_ptr(cvt, gc, hermes_get_TSTypeAssertion_expression(n));
+          let mut template = ast::TSTypeAssertionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  type_annotation,
+                  expression,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSTypeAssertionBuilder::build_template(gc, template)
         }
         NodeKind::TSAsExpression => {
-          let expression = cvt_node_ptr(cvt, hermes_get_TSAsExpression_expression(n));
-          let type_annotation = cvt_node_ptr(cvt, hermes_get_TSAsExpression_typeAnnotation(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSAsExpression(ast::TSAsExpression {
-                range,
-                    expression,
-                    type_annotation,
-            }),
-          )
+          let expression = cvt_node_ptr(cvt, gc, hermes_get_TSAsExpression_expression(n));
+          let type_annotation = cvt_node_ptr(cvt, gc, hermes_get_TSAsExpression_typeAnnotation(n));
+          let mut template = ast::TSAsExpressionTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  expression,
+                  type_annotation,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSAsExpressionBuilder::build_template(gc, template)
         }
         NodeKind::TSParameterProperty => {
-          let parameter = cvt_node_ptr(cvt, hermes_get_TSParameterProperty_parameter(n));
-          let accessibility = cvt.cvt_label_opt(hermes_get_TSParameterProperty_accessibility(n));
+          let parameter = cvt_node_ptr(cvt, gc, hermes_get_TSParameterProperty_parameter(n));
+          let accessibility = cvt.cvt_label_opt(gc, hermes_get_TSParameterProperty_accessibility(n));
           let readonly = hermes_get_TSParameterProperty_readonly(n);
           let is_static = hermes_get_TSParameterProperty_static(n);
           let export = hermes_get_TSParameterProperty_export(n);
-          cvt.ast_context.alloc(
-            ast::Node::TSParameterProperty(ast::TSParameterProperty {
-                range,
-                    parameter,
-                    accessibility,
-                    readonly,
-                    is_static,
-                    export,
-            }),
-          )
+          let mut template = ast::TSParameterPropertyTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  parameter,
+                  accessibility,
+                  readonly,
+                  is_static,
+                  export,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSParameterPropertyBuilder::build_template(gc, template)
         }
         NodeKind::TSTypeAliasDeclaration => {
-          let id = cvt_node_ptr(cvt, hermes_get_TSTypeAliasDeclaration_id(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_TSTypeAliasDeclaration_typeParameters(n));
-          let type_annotation = cvt_node_ptr(cvt, hermes_get_TSTypeAliasDeclaration_typeAnnotation(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSTypeAliasDeclaration(ast::TSTypeAliasDeclaration {
-                range,
-                    id,
-                    type_parameters,
-                    type_annotation,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_TSTypeAliasDeclaration_id(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_TSTypeAliasDeclaration_typeParameters(n));
+          let type_annotation = cvt_node_ptr(cvt, gc, hermes_get_TSTypeAliasDeclaration_typeAnnotation(n));
+          let mut template = ast::TSTypeAliasDeclarationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  type_parameters,
+                  type_annotation,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSTypeAliasDeclarationBuilder::build_template(gc, template)
         }
         NodeKind::TSInterfaceDeclaration => {
-          let id = cvt_node_ptr(cvt, hermes_get_TSInterfaceDeclaration_id(n));
-          let body = cvt_node_ptr(cvt, hermes_get_TSInterfaceDeclaration_body(n));
-          let extends = cvt_node_list(cvt, hermes_get_TSInterfaceDeclaration_extends(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_TSInterfaceDeclaration_typeParameters(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSInterfaceDeclaration(ast::TSInterfaceDeclaration {
-                range,
-                    id,
-                    body,
-                    extends,
-                    type_parameters,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_TSInterfaceDeclaration_id(n));
+          let body = cvt_node_ptr(cvt, gc, hermes_get_TSInterfaceDeclaration_body(n));
+          let extends = cvt_node_list(cvt, gc, hermes_get_TSInterfaceDeclaration_extends(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_TSInterfaceDeclaration_typeParameters(n));
+          let mut template = ast::TSInterfaceDeclarationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  body,
+                  extends,
+                  type_parameters,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSInterfaceDeclarationBuilder::build_template(gc, template)
         }
         NodeKind::TSInterfaceHeritage => {
-          let expression = cvt_node_ptr(cvt, hermes_get_TSInterfaceHeritage_expression(n));
-          let type_parameters = cvt_node_ptr_opt(cvt, hermes_get_TSInterfaceHeritage_typeParameters(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSInterfaceHeritage(ast::TSInterfaceHeritage {
-                range,
-                    expression,
-                    type_parameters,
-            }),
-          )
+          let expression = cvt_node_ptr(cvt, gc, hermes_get_TSInterfaceHeritage_expression(n));
+          let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_TSInterfaceHeritage_typeParameters(n));
+          let mut template = ast::TSInterfaceHeritageTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  expression,
+                  type_parameters,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSInterfaceHeritageBuilder::build_template(gc, template)
         }
         NodeKind::TSInterfaceBody => {
-          let body = cvt_node_list(cvt, hermes_get_TSInterfaceBody_body(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSInterfaceBody(ast::TSInterfaceBody {
-                range,
-                    body,
-            }),
-          )
+          let body = cvt_node_list(cvt, gc, hermes_get_TSInterfaceBody_body(n));
+          let mut template = ast::TSInterfaceBodyTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  body,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSInterfaceBodyBuilder::build_template(gc, template)
         }
         NodeKind::TSEnumDeclaration => {
-          let id = cvt_node_ptr(cvt, hermes_get_TSEnumDeclaration_id(n));
-          let members = cvt_node_list(cvt, hermes_get_TSEnumDeclaration_members(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSEnumDeclaration(ast::TSEnumDeclaration {
-                range,
-                    id,
-                    members,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_TSEnumDeclaration_id(n));
+          let members = cvt_node_list(cvt, gc, hermes_get_TSEnumDeclaration_members(n));
+          let mut template = ast::TSEnumDeclarationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  members,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSEnumDeclarationBuilder::build_template(gc, template)
         }
         NodeKind::TSEnumMember => {
-          let id = cvt_node_ptr(cvt, hermes_get_TSEnumMember_id(n));
-          let initializer = cvt_node_ptr_opt(cvt, hermes_get_TSEnumMember_initializer(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSEnumMember(ast::TSEnumMember {
-                range,
-                    id,
-                    initializer,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_TSEnumMember_id(n));
+          let initializer = cvt_node_ptr_opt(cvt, gc, hermes_get_TSEnumMember_initializer(n));
+          let mut template = ast::TSEnumMemberTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  initializer,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSEnumMemberBuilder::build_template(gc, template)
         }
         NodeKind::TSModuleDeclaration => {
-          let id = cvt_node_ptr(cvt, hermes_get_TSModuleDeclaration_id(n));
-          let body = cvt_node_ptr(cvt, hermes_get_TSModuleDeclaration_body(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSModuleDeclaration(ast::TSModuleDeclaration {
-                range,
-                    id,
-                    body,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_TSModuleDeclaration_id(n));
+          let body = cvt_node_ptr(cvt, gc, hermes_get_TSModuleDeclaration_body(n));
+          let mut template = ast::TSModuleDeclarationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  body,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSModuleDeclarationBuilder::build_template(gc, template)
         }
         NodeKind::TSModuleBlock => {
-          let body = cvt_node_list(cvt, hermes_get_TSModuleBlock_body(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSModuleBlock(ast::TSModuleBlock {
-                range,
-                    body,
-            }),
-          )
+          let body = cvt_node_list(cvt, gc, hermes_get_TSModuleBlock_body(n));
+          let mut template = ast::TSModuleBlockTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  body,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSModuleBlockBuilder::build_template(gc, template)
         }
         NodeKind::TSModuleMember => {
-          let id = cvt_node_ptr(cvt, hermes_get_TSModuleMember_id(n));
-          let initializer = cvt_node_ptr_opt(cvt, hermes_get_TSModuleMember_initializer(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSModuleMember(ast::TSModuleMember {
-                range,
-                    id,
-                    initializer,
-            }),
-          )
+          let id = cvt_node_ptr(cvt, gc, hermes_get_TSModuleMember_id(n));
+          let initializer = cvt_node_ptr_opt(cvt, gc, hermes_get_TSModuleMember_initializer(n));
+          let mut template = ast::TSModuleMemberTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  initializer,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSModuleMemberBuilder::build_template(gc, template)
         }
         NodeKind::TSTypeParameterDeclaration => {
-          let params = cvt_node_list(cvt, hermes_get_TSTypeParameterDeclaration_params(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSTypeParameterDeclaration(ast::TSTypeParameterDeclaration {
-                range,
-                    params,
-            }),
-          )
+          let params = cvt_node_list(cvt, gc, hermes_get_TSTypeParameterDeclaration_params(n));
+          let mut template = ast::TSTypeParameterDeclarationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  params,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSTypeParameterDeclarationBuilder::build_template(gc, template)
         }
         NodeKind::TSTypeParameter => {
-          let name = cvt_node_ptr(cvt, hermes_get_TSTypeParameter_name(n));
-          let constraint = cvt_node_ptr_opt(cvt, hermes_get_TSTypeParameter_constraint(n));
-          let default = cvt_node_ptr_opt(cvt, hermes_get_TSTypeParameter_default(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSTypeParameter(ast::TSTypeParameter {
-                range,
-                    name,
-                    constraint,
-                    default,
-            }),
-          )
+          let name = cvt_node_ptr(cvt, gc, hermes_get_TSTypeParameter_name(n));
+          let constraint = cvt_node_ptr_opt(cvt, gc, hermes_get_TSTypeParameter_constraint(n));
+          let default = cvt_node_ptr_opt(cvt, gc, hermes_get_TSTypeParameter_default(n));
+          let mut template = ast::TSTypeParameterTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  name,
+                  constraint,
+                  default,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSTypeParameterBuilder::build_template(gc, template)
         }
         NodeKind::TSTypeParameterInstantiation => {
-          let params = cvt_node_list(cvt, hermes_get_TSTypeParameterInstantiation_params(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSTypeParameterInstantiation(ast::TSTypeParameterInstantiation {
-                range,
-                    params,
-            }),
-          )
+          let params = cvt_node_list(cvt, gc, hermes_get_TSTypeParameterInstantiation_params(n));
+          let mut template = ast::TSTypeParameterInstantiationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  params,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSTypeParameterInstantiationBuilder::build_template(gc, template)
         }
         NodeKind::TSUnionType => {
-          let types = cvt_node_list(cvt, hermes_get_TSUnionType_types(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSUnionType(ast::TSUnionType {
-                range,
-                    types,
-            }),
-          )
+          let types = cvt_node_list(cvt, gc, hermes_get_TSUnionType_types(n));
+          let mut template = ast::TSUnionTypeTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  types,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSUnionTypeBuilder::build_template(gc, template)
         }
         NodeKind::TSIntersectionType => {
-          let types = cvt_node_list(cvt, hermes_get_TSIntersectionType_types(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSIntersectionType(ast::TSIntersectionType {
-                range,
-                    types,
-            }),
-          )
+          let types = cvt_node_list(cvt, gc, hermes_get_TSIntersectionType_types(n));
+          let mut template = ast::TSIntersectionTypeTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  types,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSIntersectionTypeBuilder::build_template(gc, template)
         }
         NodeKind::TSTypeQuery => {
-          let expr_name = cvt_node_ptr(cvt, hermes_get_TSTypeQuery_exprName(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSTypeQuery(ast::TSTypeQuery {
-                range,
-                    expr_name,
-            }),
-          )
+          let expr_name = cvt_node_ptr(cvt, gc, hermes_get_TSTypeQuery_exprName(n));
+          let mut template = ast::TSTypeQueryTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  expr_name,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSTypeQueryBuilder::build_template(gc, template)
         }
         NodeKind::TSConditionalType => {
-          let extends_type = cvt_node_ptr(cvt, hermes_get_TSConditionalType_extendsType(n));
-          let check_type = cvt_node_ptr(cvt, hermes_get_TSConditionalType_checkType(n));
-          let true_type = cvt_node_ptr(cvt, hermes_get_TSConditionalType_trueType(n));
-          let false_t_ype = cvt_node_ptr(cvt, hermes_get_TSConditionalType_falseTYpe(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSConditionalType(ast::TSConditionalType {
-                range,
-                    extends_type,
-                    check_type,
-                    true_type,
-                    false_t_ype,
-            }),
-          )
+          let extends_type = cvt_node_ptr(cvt, gc, hermes_get_TSConditionalType_extendsType(n));
+          let check_type = cvt_node_ptr(cvt, gc, hermes_get_TSConditionalType_checkType(n));
+          let true_type = cvt_node_ptr(cvt, gc, hermes_get_TSConditionalType_trueType(n));
+          let false_t_ype = cvt_node_ptr(cvt, gc, hermes_get_TSConditionalType_falseTYpe(n));
+          let mut template = ast::TSConditionalTypeTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  extends_type,
+                  check_type,
+                  true_type,
+                  false_t_ype,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSConditionalTypeBuilder::build_template(gc, template)
         }
         NodeKind::TSTypeLiteral => {
-          let members = cvt_node_list(cvt, hermes_get_TSTypeLiteral_members(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSTypeLiteral(ast::TSTypeLiteral {
-                range,
-                    members,
-            }),
-          )
+          let members = cvt_node_list(cvt, gc, hermes_get_TSTypeLiteral_members(n));
+          let mut template = ast::TSTypeLiteralTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  members,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSTypeLiteralBuilder::build_template(gc, template)
         }
         NodeKind::TSPropertySignature => {
-          let key = cvt_node_ptr(cvt, hermes_get_TSPropertySignature_key(n));
-          let type_annotation = cvt_node_ptr_opt(cvt, hermes_get_TSPropertySignature_typeAnnotation(n));
-          let initializer = cvt_node_ptr_opt(cvt, hermes_get_TSPropertySignature_initializer(n));
+          let key = cvt_node_ptr(cvt, gc, hermes_get_TSPropertySignature_key(n));
+          let type_annotation = cvt_node_ptr_opt(cvt, gc, hermes_get_TSPropertySignature_typeAnnotation(n));
+          let initializer = cvt_node_ptr_opt(cvt, gc, hermes_get_TSPropertySignature_initializer(n));
           let optional = hermes_get_TSPropertySignature_optional(n);
           let computed = hermes_get_TSPropertySignature_computed(n);
           let readonly = hermes_get_TSPropertySignature_readonly(n);
           let is_static = hermes_get_TSPropertySignature_static(n);
           let export = hermes_get_TSPropertySignature_export(n);
-          cvt.ast_context.alloc(
-            ast::Node::TSPropertySignature(ast::TSPropertySignature {
-                range,
-                    key,
-                    type_annotation,
-                    initializer,
-                    optional,
-                    computed,
-                    readonly,
-                    is_static,
-                    export,
-            }),
-          )
+          let mut template = ast::TSPropertySignatureTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  key,
+                  type_annotation,
+                  initializer,
+                  optional,
+                  computed,
+                  readonly,
+                  is_static,
+                  export,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSPropertySignatureBuilder::build_template(gc, template)
         }
         NodeKind::TSMethodSignature => {
-          let key = cvt_node_ptr(cvt, hermes_get_TSMethodSignature_key(n));
-          let params = cvt_node_list(cvt, hermes_get_TSMethodSignature_params(n));
-          let return_type = cvt_node_ptr_opt(cvt, hermes_get_TSMethodSignature_returnType(n));
+          let key = cvt_node_ptr(cvt, gc, hermes_get_TSMethodSignature_key(n));
+          let params = cvt_node_list(cvt, gc, hermes_get_TSMethodSignature_params(n));
+          let return_type = cvt_node_ptr_opt(cvt, gc, hermes_get_TSMethodSignature_returnType(n));
           let computed = hermes_get_TSMethodSignature_computed(n);
-          cvt.ast_context.alloc(
-            ast::Node::TSMethodSignature(ast::TSMethodSignature {
-                range,
-                    key,
-                    params,
-                    return_type,
-                    computed,
-            }),
-          )
+          let mut template = ast::TSMethodSignatureTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  key,
+                  params,
+                  return_type,
+                  computed,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSMethodSignatureBuilder::build_template(gc, template)
         }
         NodeKind::TSIndexSignature => {
-          let parameters = cvt_node_list(cvt, hermes_get_TSIndexSignature_parameters(n));
-          let type_annotation = cvt_node_ptr_opt(cvt, hermes_get_TSIndexSignature_typeAnnotation(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSIndexSignature(ast::TSIndexSignature {
-                range,
-                    parameters,
-                    type_annotation,
-            }),
-          )
+          let parameters = cvt_node_list(cvt, gc, hermes_get_TSIndexSignature_parameters(n));
+          let type_annotation = cvt_node_ptr_opt(cvt, gc, hermes_get_TSIndexSignature_typeAnnotation(n));
+          let mut template = ast::TSIndexSignatureTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  parameters,
+                  type_annotation,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSIndexSignatureBuilder::build_template(gc, template)
         }
         NodeKind::TSCallSignatureDeclaration => {
-          let params = cvt_node_list(cvt, hermes_get_TSCallSignatureDeclaration_params(n));
-          let return_type = cvt_node_ptr_opt(cvt, hermes_get_TSCallSignatureDeclaration_returnType(n));
-          cvt.ast_context.alloc(
-            ast::Node::TSCallSignatureDeclaration(ast::TSCallSignatureDeclaration {
-                range,
-                    params,
-                    return_type,
-            }),
-          )
+          let params = cvt_node_list(cvt, gc, hermes_get_TSCallSignatureDeclaration_params(n));
+          let return_type = cvt_node_ptr_opt(cvt, gc, hermes_get_TSCallSignatureDeclaration_returnType(n));
+          let mut template = ast::TSCallSignatureDeclarationTemplate {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  params,
+                  return_type,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::TSCallSignatureDeclarationBuilder::build_template(gc, template)
         }
         _ => panic!("Invalid node kind")
     };
 
-    cvt.ast_context.node_mut(res).range_mut().end = cvt.cvt_smloc(nr.source_range.end.pred());
-
-    res}
+    res
+}

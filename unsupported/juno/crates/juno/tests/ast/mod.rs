@@ -6,63 +6,107 @@
  */
 
 use juno::ast::*;
-use juno::source_manager::SourceId;
-
-/// Create a node with a default source range for testing.
-/// Use a macro to make it easier to construct nested macros
-/// by spiltting mutable borrows of the context.
-/// Necessary because Rust doesn't yet support "two phase borrows" where
-/// we can borrow `ctx` for just the evaluation of an argument and not
-/// for the entire duration of the call.
-macro_rules! make_node {
-    ($ctx:expr, $kind:expr $(,)?) => {{
-        let node = $kind;
-        $ctx.alloc(node)
-    }};
-}
 
 mod validate;
+
+#[test]
+#[should_panic]
+fn test_node_outlives_context() {
+    let ast;
+    {
+        let mut ctx = Context::new();
+        ast = {
+            let gc = GCContext::new(&mut ctx);
+            NodePtr::from_node(
+                &gc,
+                NumericLiteralBuilder::build_template(
+                    &gc,
+                    NumericLiteralTemplate {
+                        metadata: Default::default(),
+                        value: 1.0f64,
+                    },
+                ),
+            )
+        };
+        // Forget `ast` in order to prevent the `Drop` impl from being called on panic.
+        std::mem::forget(ast);
+    }
+}
+
+#[test]
+#[should_panic]
+#[allow(clippy::redundant_clone)]
+fn test_node_clone_outlives_context() {
+    let ast;
+    {
+        let mut ctx = Context::new();
+        {
+            let ast_orig = {
+                let gc = GCContext::new(&mut ctx);
+                NodePtr::from_node(
+                    &gc,
+                    NumericLiteralBuilder::build_template(
+                        &gc,
+                        NumericLiteralTemplate {
+                            metadata: Default::default(),
+                            value: 1.0f64,
+                        },
+                    ),
+                )
+            };
+            ast = ast_orig.clone();
+            // Forget `ast` in order to prevent the `Drop` impl from being called on panic.
+            std::mem::forget(ast);
+        }
+    }
+}
 
 #[test]
 #[allow(clippy::float_cmp)]
 fn test_visit() {
     let mut ctx = Context::new();
-    // Dummy range, we don't care about ranges in this test.
-    let range = SourceRange {
-        file: SourceId::INVALID,
-        start: SourceLoc { line: 1, col: 1 },
-        end: SourceLoc { line: 1, col: 1 },
+    let ast = {
+        let gc = GCContext::new(&mut ctx);
+        NodePtr::from_node(
+            &gc,
+            BlockStatementBuilder::build_template(
+                &gc,
+                BlockStatementTemplate {
+                    metadata: Default::default(),
+                    body: vec![
+                        ExpressionStatementBuilder::build_template(
+                            &gc,
+                            ExpressionStatementTemplate {
+                                metadata: Default::default(),
+                                expression: NumericLiteralBuilder::build_template(
+                                    &gc,
+                                    NumericLiteralTemplate {
+                                        metadata: Default::default(),
+                                        value: 1.0,
+                                    },
+                                ),
+                                directive: None,
+                            },
+                        ),
+                        ExpressionStatementBuilder::build_template(
+                            &gc,
+                            ExpressionStatementTemplate {
+                                metadata: Default::default(),
+                                expression: NumericLiteralBuilder::build_template(
+                                    &gc,
+                                    NumericLiteralTemplate {
+                                        metadata: Default::default(),
+                                        value: 2.0,
+                                    },
+                                ),
+                                directive: None,
+                            },
+                        ),
+                    ],
+                },
+            ),
+        )
     };
-    let ast = make_node!(
-        ctx,
-        Node::BlockStatement(BlockStatement {
-            range,
-            body: vec![
-                make_node!(
-                    ctx,
-                    Node::ExpressionStatement(ExpressionStatement {
-                        range,
-                        expression: make_node!(
-                            ctx,
-                            Node::NumericLiteral(NumericLiteral { range, value: 1.0 }),
-                        ),
-                        directive: None,
-                    }),
-                ),
-                make_node!(
-                    ctx,
-                    Node::ExpressionStatement(ExpressionStatement {
-                        range,
-                        expression: make_node!(
-                            ctx,
-                            Node::NumericLiteral(NumericLiteral { range, value: 2.0 }),
-                        ),
-                        directive: None,
-                    }),
-                ),
-            ],
-        }),
-    );
 
     // Accumulates the numbers found in the AST.
     struct NumberFinder {
@@ -70,10 +114,16 @@ fn test_visit() {
     }
 
     impl Visitor for NumberFinder {
-        fn call(&mut self, ctx: &Context, node: NodePtr, parent: Option<NodePtr>) {
-            if let Node::NumericLiteral(NumericLiteral { value, .. }) = &node.get(ctx) {
+        /// Visit the Node `node` with the given `parent`.
+        fn call<'gc>(
+            &mut self,
+            ctx: &'gc GCContext,
+            node: &'gc Node<'gc>,
+            parent: Option<&'gc Node<'gc>>,
+        ) {
+            if let Node::NumericLiteral(NumericLiteral { value, .. }) = node {
                 assert!(matches!(
-                    parent.unwrap().get(ctx),
+                    parent.unwrap(),
                     Node::ExpressionStatement(ExpressionStatement { .. })
                 ));
                 self.acc.push(*value);
@@ -83,6 +133,128 @@ fn test_visit() {
     }
 
     let mut visitor = NumberFinder { acc: vec![] };
-    ast.visit(&ctx, &mut visitor, None);
+    let gc = GCContext::new(&mut ctx);
+    ast.node(&gc).visit(&gc, &mut visitor, None);
     assert_eq!(visitor.acc, [1.0, 2.0]);
+}
+
+#[test]
+fn test_visit_mut() {
+    let mut ctx = Context::new();
+
+    let (x, y) = (1.0, 2.0);
+    let ast = {
+        let gc = GCContext::new(&mut ctx);
+        NodePtr::from_node(
+            &gc,
+            ExpressionStatementBuilder::build_template(
+                &gc,
+                ExpressionStatementTemplate {
+                    metadata: Default::default(),
+                    directive: None,
+                    expression: BinaryExpressionBuilder::build_template(
+                        &gc,
+                        BinaryExpressionTemplate {
+                            metadata: Default::default(),
+                            operator: BinaryExpressionOperator::Plus,
+                            left: NumericLiteralBuilder::build_template(
+                                &gc,
+                                NumericLiteralTemplate {
+                                    metadata: Default::default(),
+                                    value: x,
+                                },
+                            ),
+                            right: UnaryExpressionBuilder::build_template(
+                                &gc,
+                                UnaryExpressionTemplate {
+                                    metadata: Default::default(),
+                                    prefix: true,
+                                    operator: UnaryExpressionOperator::Minus,
+                                    argument: NumericLiteralBuilder::build_template(
+                                        &gc,
+                                        NumericLiteralTemplate {
+                                            metadata: Default::default(),
+                                            value: y,
+                                        },
+                                    ),
+                                },
+                            ),
+                        },
+                    ),
+                },
+            ),
+        )
+    };
+
+    struct Pass {}
+
+    impl VisitorMut for Pass {
+        fn call<'gc>(
+            &mut self,
+            ctx: &'gc GCContext,
+            node: &'gc Node<'gc>,
+            _parent: Option<&'gc Node<'gc>>,
+        ) -> TransformResult<&'gc Node<'gc>> {
+            if let Node::BinaryExpression(
+                e1 @ BinaryExpression {
+                    operator: BinaryExpressionOperator::Plus,
+                    right:
+                        Node::UnaryExpression(UnaryExpression {
+                            operator: UnaryExpressionOperator::Minus,
+                            argument: e2,
+                            ..
+                        }),
+                    ..
+                },
+            ) = node
+            {
+                let mut builder = BinaryExpressionBuilder::from_node(e1);
+                builder.operator(BinaryExpressionOperator::Minus);
+                builder.right(e2);
+                return node.visit_children_mut(NodeBuilder::BinaryExpression(builder), ctx, self);
+            }
+            node.visit_children_mut(NodeBuilder::from_node(node), ctx, self)
+        }
+    }
+    let mut pass = Pass {};
+
+    let transformed = {
+        let gc = GCContext::new(&mut ctx);
+        NodePtr::from_node(&gc, ast.node(&gc).visit_mut(&gc, &mut pass, None))
+    };
+
+    {
+        let gc = GCContext::new(&mut ctx);
+        match transformed.node(&gc) {
+            Node::ExpressionStatement(ExpressionStatement {
+                expression:
+                    Node::BinaryExpression(BinaryExpression {
+                        operator: BinaryExpressionOperator::Minus,
+                        left:
+                            Node::NumericLiteral(NumericLiteral {
+                                value: val_left, ..
+                            }),
+                        right:
+                            Node::NumericLiteral(NumericLiteral {
+                                value: val_right, ..
+                            }),
+                        ..
+                    }),
+                ..
+            }) => {
+                assert_eq!(
+                    (*val_left, *val_right),
+                    (x, y),
+                    "Transformation failed: {:#?}",
+                    transformed.node(&gc),
+                );
+            }
+            _ => panic!("Transformation failed: {:#?}", transformed.node(&gc)),
+        };
+    }
+
+    {
+        let mut gc = GCContext::new(&mut ctx);
+        gc.gc();
+    }
 }
