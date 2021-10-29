@@ -5,9 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef REPLCONFIG_H
-#define REPLCONFIG_H
-
-// empty placeholder
-
-#endif // REPLCONFIG_H
+fn main() {
+    if cfg!(target_os = "macos") {
+        println!("cargo:rustc-link-arg=-Wl,-stack_size,0x1000000");
+    }
+}

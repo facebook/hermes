@@ -4,11 +4,13 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @flow strict
  * @format
  */
 
-const NODE = 'NODE_CHILD';
-const NODE_LIST = 'NODE_LIST_CHILD';
+type AstType = 'Node' | 'NodeList';
+const NODE = 'Node';
+const NODE_LIST = 'NodeList';
 
 /**
  * Custom AST definitions.
@@ -27,7 +29,7 @@ const NODE_LIST = 'NODE_LIST_CHILD';
  *
  * TODO: Change babel to use the Hermes AST format so this is no longer needed.
  */
-module.exports = {
+export default ({
   File: {
     builder: ['program'],
     visitor: {program: NODE},
@@ -57,10 +59,6 @@ module.exports = {
       typeParameters: NODE_LIST,
     },
   },
-  ThisTypeAnnotation: {
-    builder: [],
-    visitor: {},
-  },
   ClassMethod: {
     builder: [
       'kind',
@@ -84,4 +82,9 @@ module.exports = {
     builder: [],
     visitor: {},
   },
-};
+}: $ReadOnly<{
+  [string]: $ReadOnly<{
+    builder: $ReadOnlyArray<string>,
+    visitor: $ReadOnly<{[string]: AstType}>,
+  }>,
+}>);

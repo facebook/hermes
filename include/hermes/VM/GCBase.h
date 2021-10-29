@@ -163,8 +163,6 @@ class WeakRefSlot {
   // synchronization.
   PinnedHermesValue value_;
   State state_;
-
-  // End of split between tagged pointer/HermesValue implementations.
 };
 using WeakSlotState = WeakRefSlot::State;
 
@@ -1090,7 +1088,6 @@ class GCBase {
   void writeBarrier(const GCHermesValue *loc, HermesValue value);
   void writeBarrier(const GCSmallHermesValue *loc, SmallHermesValue value);
   void writeBarrier(const GCPointerBase *loc, const GCCell *value);
-  void writeBarrier(SymbolID symbol);
   void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value);
   void constructorWriteBarrier(
       const GCSmallHermesValue *loc,
@@ -1107,6 +1104,7 @@ class GCBase {
   void snapshotWriteBarrier(const GCHermesValue *loc);
   void snapshotWriteBarrier(const GCSmallHermesValue *loc);
   void snapshotWriteBarrier(const GCPointerBase *loc);
+  void snapshotWriteBarrier(const GCSymbolID *symbol);
   void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs);
   void snapshotWriteBarrierRange(
       const GCSmallHermesValue *start,

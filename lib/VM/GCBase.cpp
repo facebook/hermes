@@ -963,7 +963,6 @@ bool GCBase::shouldSanitizeHandles() {
 GCBASE_BARRIER_2(writeBarrier, const GCHermesValue *, HermesValue);
 GCBASE_BARRIER_2(writeBarrier, const GCSmallHermesValue *, SmallHermesValue);
 GCBASE_BARRIER_2(writeBarrier, const GCPointerBase *, const GCCell *);
-GCBASE_BARRIER_1(writeBarrier, SymbolID);
 GCBASE_BARRIER_2(constructorWriteBarrier, const GCHermesValue *, HermesValue);
 GCBASE_BARRIER_2(
     constructorWriteBarrier,
@@ -983,6 +982,7 @@ GCBASE_BARRIER_2(
 GCBASE_BARRIER_1(snapshotWriteBarrier, const GCHermesValue *);
 GCBASE_BARRIER_1(snapshotWriteBarrier, const GCSmallHermesValue *);
 GCBASE_BARRIER_1(snapshotWriteBarrier, const GCPointerBase *);
+GCBASE_BARRIER_1(snapshotWriteBarrier, const GCSymbolID *);
 GCBASE_BARRIER_2(snapshotWriteBarrierRange, const GCHermesValue *, uint32_t);
 GCBASE_BARRIER_2(
     snapshotWriteBarrierRange,
