@@ -413,7 +413,7 @@ impl<'ast, 'ctx> GCContext<'ast, 'ctx> {
 
     /// Allocate a node in the `ctx`.
     #[inline]
-    fn alloc<'gc>(&'gc self, n: Node<'_>) -> &'gc Node<'gc> {
+    fn alloc(&self, n: Node) -> &Node {
         self.ctx.alloc(n)
     }
 
