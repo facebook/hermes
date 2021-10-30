@@ -75,6 +75,31 @@ impl SourceManager {
             msg.into()
         );
     }
+    pub fn note<S: Into<String>>(&self, range: SourceRange, msg: S) {
+        // NOTE: this method deliberately takes immutable `self`. A SourceManager
+        // should be easily shareable. It will be implemented using interior
+        // mutability.
+        eprintln!(
+            "{}:{}:{}: note: {}",
+            self.source_name(range.file),
+            range.start.line,
+            range.start.col,
+            msg.into()
+        );
+    }
+    /// Report a warning at the specified range in the specified source buffer.
+    pub fn warning<S: Into<String>>(&self, range: SourceRange, msg: S) {
+        // NOTE: this method deliberately takes immutable `self`. A SourceManager
+        // should be easily shareable. It will be implemented using interior
+        // mutability.
+        eprintln!(
+            "{}:{}:{}: warning: {}",
+            self.source_name(range.file),
+            range.start.line,
+            range.start.col,
+            msg.into()
+        );
+    }
 }
 
 #[cfg(test)]
