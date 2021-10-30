@@ -47,7 +47,7 @@ mod dump;
 mod kind;
 mod validate;
 
-use kind::NodeVariant;
+pub use kind::NodeVariant;
 
 pub use dump::{dump_json, Pretty};
 pub use kind::*;
