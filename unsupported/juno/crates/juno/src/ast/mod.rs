@@ -235,6 +235,11 @@ impl<'ast> Context<'ast> {
         }
     }
 
+    /// Return the atom table.
+    pub fn atom_table(&self) -> &AtomTable {
+        &self.atom_tab
+    }
+
     /// Add a string to the identifier table.
     #[inline]
     pub fn atom<V: Into<String> + AsRef<str>>(&self, value: V) -> Atom {
@@ -415,6 +420,11 @@ impl<'ast, 'ctx> GCContext<'ast, 'ctx> {
     #[inline]
     fn alloc(&self, n: Node) -> &Node {
         self.ctx.alloc(n)
+    }
+
+    /// Return a reference to the owning Context.
+    pub fn ctx(&self) -> &Context<'ast> {
+        self.ctx
     }
 
     /// Add a string to the identifier table.
