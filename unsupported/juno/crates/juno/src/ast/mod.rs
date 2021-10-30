@@ -54,6 +54,7 @@ pub use kind::*;
 pub use validate::{validate_tree, validate_tree_pure, TreeValidationError, ValidationError};
 
 pub use atom_table::{Atom, AtomTable, INVALID_ATOM};
+use std::hash::{Hash, Hasher};
 
 /// ID which indicates a `StorageEntry` is free.
 const FREE_ENTRY: u32 = 0;
@@ -456,7 +457,7 @@ impl<'ast, 'ctx> GCContext<'ast, 'ctx> {
 ///
 /// It can be used to keep references to `Node`s outside of the lifetime of a [`GCContext`],
 /// but the only way to derefence and inspect the `Node` is to use a `GCContext`.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq)]
 pub struct NodePtr {
     /// The `NodePtrCounter` counting for the `Context` to which this belongs.
     counter: NonNull<NodePtrCounter>,
@@ -464,6 +465,18 @@ pub struct NodePtr {
     /// Pointer to the `StorageEntry` containing the `Node`.
     /// Stored as `c_void` to avoid specifying lifetimes, as dereferencing is checked manually.
     entry: NonNull<c_void>,
+}
+
+impl Hash for NodePtr {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.entry.hash(state)
+    }
+}
+
+impl PartialEq for NodePtr {
+    fn eq(&self, other: &Self) -> bool {
+        self.entry == other.entry
+    }
 }
 
 impl Drop for NodePtr {
