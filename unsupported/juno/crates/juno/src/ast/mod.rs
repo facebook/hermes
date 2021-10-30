@@ -150,6 +150,9 @@ pub struct Context<'ast> {
     /// `true` if `1` indicates an entry is marked, `false` if `0` indicates an entry is marked.
     /// Flipped every time GC occurs.
     markbit_marked: bool,
+
+    /// Whether strict mode has been forced.
+    strict_mode: bool,
 }
 
 const MIN_CHUNK_CAPACITY: usize = 1 << 10;
@@ -178,6 +181,7 @@ impl<'ast> Context<'ast> {
             source_mgr: Default::default(),
             next_chunk_capacity: Cell::new(MIN_CHUNK_CAPACITY),
             markbit_marked: true,
+            strict_mode: false,
         };
         result.new_chunk();
         result
@@ -251,6 +255,16 @@ impl<'ast> Context<'ast> {
     /// Return a mutable reference to SourceManager
     pub fn sm_mut(&mut self) -> &mut SourceManager {
         &mut self.source_mgr
+    }
+
+    /// Return true if strict mode has been forced globally.
+    pub fn strict_mode(&self) -> bool {
+        self.strict_mode
+    }
+
+    /// Enable strict mode. Note that it cannot be unset.
+    pub fn enable_strict_mode(&mut self) {
+        self.strict_mode = true;
     }
 
     pub fn gc(&mut self) {
