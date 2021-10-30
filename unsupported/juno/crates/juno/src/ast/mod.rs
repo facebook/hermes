@@ -682,7 +682,7 @@ impl SourceRange {
 #[derive(Debug)]
 pub struct NodeMetadata<'a> {
     phantom: PhantomData<&'a Node<'a>>,
-    range: SourceRange,
+    pub range: SourceRange,
 }
 
 impl<'a> NodeMetadata<'a> {
