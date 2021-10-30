@@ -953,12 +953,6 @@ bool GCBase::shouldSanitizeHandles() {
         break;                                                              \
     }                                                                       \
   }
-#else
-#define GCBASE_BARRIER_1(name, type1) \
-  void GCBase::name(type1 arg1) {}
-#define GCBASE_BARRIER_2(name, type1, type2) \
-  void GCBase::name(type1 arg1, type2 arg2) {}
-#endif
 
 GCBASE_BARRIER_2(writeBarrier, const GCHermesValue *, HermesValue);
 GCBASE_BARRIER_2(writeBarrier, const GCSmallHermesValue *, SmallHermesValue);
@@ -993,6 +987,7 @@ GCBASE_BARRIER_1(weakRefReadBarrier, HermesValue);
 
 #undef GCBASE_BARRIER_1
 #undef GCBASE_BARRIER_2
+#endif
 
 /*static*/
 std::vector<detail::WeakRefKey *> GCBase::buildKeyList(

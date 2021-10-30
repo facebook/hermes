@@ -246,22 +246,59 @@ using WeakSlotState = WeakRefSlot::State;
 ///
 ///   The given value is being written at the given loc (required to
 ///   be in the heap).  If value is a pointer, execute a write barrier.
-///      void writeBarrier(void *loc, HermesValue value);
+///     void writeBarrier(GCHermesValue *loc, HermesValue value);
+///     void writeBarrier(
+///         const GCSmallHermesValue *loc,
+///         SmallHermesValue value);
 ///
 ///   The given pointer value is being written at the given loc (required to
 ///   be in the heap).  The value is may be null.  Execute a write barrier.
-///      void writeBarrier(void *loc, void *value);
+///     void writeBarrier(const GCPointerBase *loc, const GCCell *value);
+///
+///   The given value/pointer is being written at a previously uninitialised loc
+///   (required to be in the heap).
+///     void constructorWriteBarrier(
+///         const GCHermesValue *loc,
+///         HermesValue value);
+///     void constructorWriteBarrier(
+///         const GCSmallHermesValue *loc,
+///         SmallHermesValue value);
+///     void constructorWriteBarrier(
+///         const GCPointerBase *loc,
+///         const GCCell *value);
 ///
 ///   A weak ref is about to be read. Executes a read barrier so the GC can
 ///   take action such as extending the lifetime of the reference. The
 ///   HermesValue version does nothing if the value isn't a pointer.
-///      void weakRefReadBarrier(void *value);
-///      void weakRefReadBarrier(HermesValue value);
+///     void weakRefReadBarrier(void *value);
+///     void weakRefReadBarrier(HermesValue value);
 ///
 ///   We copied HermesValues into the given region.  Note that \p numHVs is
 ///   the number of HermesValues in the the range, not the char length.
 ///   Do any necessary barriers.
-///      void writeBarrierRange(GCHermesValue* start, uint32_t numHVs);
+///     void writeBarrierRange(GCHermesValue* start, uint32_t numHVs);
+///     void writeBarrierRange(
+///         const GCSmallHermesValue *start, uint32_t
+///         numHVs);
+///     void constructorWriteBarrierRange(
+///         const GCHermesValue *start,
+///         uint32_t numHVs);
+///     void constructorWriteBarrierRange(
+///         const GCSmallHermesValue *start,
+///         uint32_t numHVs);
+///
+///   The given loc or region is about to be overwritten, but the new value is
+///   not important. Perform any necessary barriers.
+///     void snapshotWriteBarrier(const GCHermesValue *loc);
+///     void snapshotWriteBarrier(const GCSmallHermesValue *loc);
+///     void snapshotWriteBarrier(const GCPointerBase *loc);
+///     void snapshotWriteBarrier(const GCSymboldID *symbol);
+///     void snapshotWriteBarrierRange(
+///         const GCHermesValue *start,
+///         uint32_t numHVs);
+///     void snapshotWriteBarrierRange(
+///         const GCSmallHermesValue *start,
+///         uint32_t numHVs);
 ///
 ///   In debug builds: is a write barrier necessary for a write of the given
 ///   GC pointer \p value to the given \p loc?
@@ -1084,6 +1121,7 @@ class GCBase {
   virtual void creditExternalMemory(GCCell *alloc, uint32_t size) {}
   virtual void debitExternalMemory(GCCell *alloc, uint32_t size) {}
 
+#ifdef HERMESVM_GC_RUNTIME
   /// Default implementations for read and write barriers: do nothing.
   void writeBarrier(const GCHermesValue *loc, HermesValue value);
   void writeBarrier(const GCSmallHermesValue *loc, SmallHermesValue value);
@@ -1111,6 +1149,7 @@ class GCBase {
       uint32_t numHVs);
   void weakRefReadBarrier(GCCell *value);
   void weakRefReadBarrier(HermesValue value);
+#endif
 
 #ifndef NDEBUG
   virtual bool needsWriteBarrier(void *loc, GCCell *value) {
