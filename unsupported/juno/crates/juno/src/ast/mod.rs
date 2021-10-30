@@ -55,6 +55,7 @@ pub use validate::{validate_tree, validate_tree_pure, TreeValidationError, Valid
 
 pub use atom_table::{Atom, AtomTable, INVALID_ATOM};
 use std::hash::{Hash, Hasher};
+use std::ops::Deref;
 
 /// ID which indicates a `StorageEntry` is free.
 const FREE_ENTRY: u32 = 0;
@@ -450,6 +451,50 @@ impl<'ast, 'ctx> GCContext<'ast, 'ctx> {
     #[inline]
     pub fn sm_mut(&mut self) -> &mut SourceManager {
         self.ctx.sm_mut()
+    }
+}
+
+/// A wrapper around Node&, with "shallow" hashing and equality, suitable for
+/// hash tables.
+#[derive(Debug)]
+pub struct NodeRef<'gc>(pub &'gc Node<'gc>);
+
+impl<'gc> NodeRef<'gc> {
+    pub fn from_node(node: &'gc Node<'gc>) -> Self {
+        Self(node)
+    }
+}
+
+impl<'gc> PartialEq for NodeRef<'gc> {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self, other)
+    }
+}
+
+impl Eq for NodeRef<'_> {}
+
+impl Hash for NodeRef<'_> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        (self.0 as *const Node).hash(state)
+    }
+}
+
+impl<'gc> Deref for NodeRef<'gc> {
+    type Target = Node<'gc>;
+    fn deref(&self) -> &'gc Self::Target {
+        self.0
+    }
+}
+
+impl<'gc> AsRef<Node<'gc>> for NodeRef<'gc> {
+    fn as_ref(&self) -> &'gc Node<'gc> {
+        self.0
+    }
+}
+
+impl<'gc> From<&'gc Node<'gc>> for NodeRef<'gc> {
+    fn from(node: &'gc Node<'gc>) -> Self {
+        NodeRef(node)
     }
 }
 
