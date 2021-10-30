@@ -71,9 +71,9 @@ impl Display for Timer {
             let mult = f64::powf(1e3, scale as f64);
 
             let mut fmt = |m: &Mark| {
-                write!(
+                writeln!(
                     f,
-                    "{0:1$}: {2:>3$.4$} {5}\n",
+                    "{0:1$}: {2:>3$.4$} {5}",
                     m.0,
                     max_name_width,
                     m.1.as_secs_f64() * mult,
