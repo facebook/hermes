@@ -6,7 +6,7 @@
  */
 
 use anyhow::{self, ensure, Context, Error};
-use juno::ast::{self, NodePtr, SourceRange};
+use juno::ast::{self, validate_tree, NodePtr, SourceRange};
 use juno::gen_js;
 use juno::hparser::{self, MagicCommentKind, ParsedJS};
 use juno::sourcemap::merge_sourcemaps;
@@ -214,7 +214,7 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     let input = opt.input_path.as_path();
     let file_id = ctx
         .sm_mut()
-        .add_source(input.to_string_lossy(), read_file_or_stdin(input)?);
+        .add_source(input.display().to_string(), read_file_or_stdin(input)?);
     let buf = ctx.sm().source_buffer_rc(file_id);
 
     // Start measuring time.
@@ -240,10 +240,12 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
         let gc = ast::GCContext::new(&mut ctx);
         NodePtr::from_node(&gc, parsed.to_ast(&gc, file_id).unwrap())
     };
-    timer.mark("Cvt");
-
     // We don't need the original parser anymore.
     drop(parsed);
+    timer.mark("Cvt");
+
+    validate_tree(&mut ctx, &ast).with_context(|| input.display().to_string())?;
+    timer.mark("Validate AST");
 
     // Fetch and parse the source map before we generate the output.
     let source_map = sm_url.map(load_source_map).transpose()?;

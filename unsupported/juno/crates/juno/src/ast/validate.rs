@@ -12,6 +12,8 @@ use super::{
     UpdateExpressionOperator, VariableDeclarationKind, Visitor,
 };
 
+use thiserror::Error;
+
 macro_rules! gen_validate_fn {
     ($name:ident {
         $(
@@ -260,7 +262,7 @@ impl<'gc> Visitor<'gc> for Validator {
 
 /// Validate the full AST tree.
 /// If it fails, return all the errors encountered along the way.
-pub fn validate_tree(ctx: &mut Context, root: &NodePtr) -> Result<(), Vec<ValidationError>> {
+pub fn validate_tree_pure(ctx: &mut Context, root: &NodePtr) -> Result<(), Vec<ValidationError>> {
     let mut validator = Validator::new();
     let gc = GCContext::new(ctx);
     validator.validate_root(&gc, root.node(&gc));
@@ -268,5 +270,25 @@ pub fn validate_tree(ctx: &mut Context, root: &NodePtr) -> Result<(), Vec<Valida
         Ok(())
     } else {
         Err(validator.errors)
+    }
+}
+
+#[derive(Debug, Error)]
+#[error("{0} AST validation errors")]
+pub struct TreeValidationError(usize);
+
+/// Validate the full AST tree.
+/// If it fails, reports all errors to the source manager.
+pub fn validate_tree(ctx: &mut Context, root: &NodePtr) -> Result<(), TreeValidationError> {
+    match validate_tree_pure(ctx, root) {
+        Ok(_) => Ok(()),
+        Err(errors) => {
+            let lock = GCContext::new(ctx);
+            for e in &errors {
+                lock.sm()
+                    .error(*e.node.node(&lock).range(), e.message.as_str());
+            }
+            Err(TreeValidationError(errors.len()))
+        }
     }
 }

@@ -23,7 +23,7 @@ fn test_valid() {
             ),
         )
     };
-    assert!(validate_tree(&mut ctx, &return_stmt).is_ok());
+    assert!(validate_tree_pure(&mut ctx, &return_stmt).is_ok());
 
     let return_stmt = {
         let gc = GCContext::new(&mut ctx);
@@ -44,7 +44,7 @@ fn test_valid() {
             ),
         )
     };
-    assert!(validate_tree(&mut ctx, &return_stmt).is_ok());
+    assert!(validate_tree_pure(&mut ctx, &return_stmt).is_ok());
 
     let return_stmt = {
         let gc = GCContext::new(&mut ctx);
@@ -65,7 +65,7 @@ fn test_valid() {
             ),
         )
     };
-    assert!(validate_tree(&mut ctx, &return_stmt).is_err());
+    assert!(validate_tree_pure(&mut ctx, &return_stmt).is_err());
 }
 
 #[test]
@@ -107,7 +107,7 @@ fn test_error() {
             }
         }
     };
-    match validate_tree(&mut ctx, &ast) {
+    match validate_tree_pure(&mut ctx, &ast) {
         Ok(()) => {
             panic!("Must be error");
         }

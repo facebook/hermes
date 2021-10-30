@@ -51,7 +51,7 @@ use kind::NodeVariant;
 
 pub use dump::{dump_json, Pretty};
 pub use kind::*;
-pub use validate::{validate_tree, ValidationError};
+pub use validate::{validate_tree, validate_tree_pure, TreeValidationError, ValidationError};
 
 pub use atom_table::{Atom, AtomTable, INVALID_ATOM};
 
