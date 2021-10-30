@@ -20,11 +20,14 @@ print(`${'İstanbul'.toLocaleLowerCase('en-US')}`);
 print(`${'İstanbul'.toLocaleLowerCase('tr')}`);
 // CHECK-NEXT: istanbul
 
-print(`${'CAFÉTÉRIA'.toLocaleLowerCase('en-NZ')}`);
-// CHECK-NEXT: cafétéria
+print(`${'CAFÉTÉRIA İĮ̀'.toLocaleLowerCase('en-NZ')}`);
+// CHECK-NEXT: cafétéria i̇į̀
 
-print(`${'CAFÉTÉRIA'.toLocaleLowerCase('tr')}`);
-// CHECK-NEXT: cafétérıa
+print(`${'CAFÉTÉRIA İĮ̀'.toLocaleLowerCase('tr')}`);
+// CHECK-NEXT: cafétérıa iį̀
+
+print(`${'CAFÉTÉRIA İĮ̀'.toLocaleLowerCase('lt')}`);
+// CHECK-NEXT: cafétéria i̇į̇̀
 
 print(`${'\U0001f3eb,̆IA\u0307'.toLocaleLowerCase('cs-CZ')}`);
 // CHECK-NEXT: u0001f3eb,̆iȧ
