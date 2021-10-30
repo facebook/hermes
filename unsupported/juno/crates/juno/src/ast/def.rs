@@ -48,7 +48,7 @@ macro_rules! nodekind_defs {
             ArrowFunctionExpression[Expression] {
                 id: Option<&'a Node<'a>>[Identifier],
                 params: NodeList<'a>[Pattern],
-                body: &'a Node<'a>[BlockStatement],
+                body: &'a Node<'a>[Expression, BlockStatement],
                 type_parameters: Option<&'a Node<'a>>[TypeParameterDeclaration],
                 return_type: Option<&'a Node<'a>>[TypeAnnotation],
                 predicate: Option<&'a Node<'a>>[InferredPredicate, DeclaredPredicate],
