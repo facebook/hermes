@@ -10,7 +10,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-// Run "./gradlew :intltest:prepareTests" from the root to download and copy the test files to the
+// Run "./gradlew :intltest:prepareTests" from the root to copy the test files to the
 // APK assets.
 public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
 
