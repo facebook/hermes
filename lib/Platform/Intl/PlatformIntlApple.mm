@@ -227,6 +227,212 @@ double Collator::compare(
 // Implementation of
 // https://tc39.es/ecma402/#datetimeformat-objects
 struct DateTimeFormat::Impl {
+  // Enum declaration for DateTimeFormat internal slots
+  // https://tc39.es/ecma402/#datetimeformat-objects
+  enum class FormatMatcher : size_t {Undefined = 0, Bestfit, Basic};
+  enum class HourCycle : size_t {Undefined = 0, H11, H12, H23, H24};
+  enum class Weekday : size_t {Undefined = 0, Narrow, Short, Long};
+  enum class Era : size_t {Undefined = 0, Narrow, Short, Long};
+  enum class Year : size_t {Undefined = 0, TwoDigit, Numeric};
+  enum class Month : size_t {Undefined = 0, TwoDigit, Numeric, Narrow, Short, Long};
+  enum class Day : size_t {Undefined = 0, TwoDigit, Numeric};
+  enum class DayPeriod : size_t {Undefined = 0, Narrow, Short, Long};
+  enum class Hour : size_t {Undefined = 0, TwoDigit, Numeric};
+  enum class Minute : size_t {Undefined = 0, TwoDigit, Numeric};
+  enum class Second : size_t {Undefined = 0, TwoDigit, Numeric};
+  enum class TimeZoneName : size_t {Undefined = 0, Short, Long};
+  enum class DateTimeStyle : size_t {Undefined = 0, Full, Long, Medium, Short};
+
+  static std::u16string formatMatcherString(const FormatMatcher &formatMatcher) {
+    switch (formatMatcher) {
+      case FormatMatcher::Bestfit:
+        return u"best fit";
+      case FormatMatcher::Basic:
+        return u"basic";
+      case FormatMatcher::Undefined:
+        return u"";
+      default:
+        return u"";
+    }
+  }
+  
+  static std::u16string hourCycleString(const HourCycle &hourCycle) {
+    switch (hourCycle) {
+      case HourCycle::H11:
+        return u"h11";
+      case HourCycle::H12:
+        return u"h12";
+      case HourCycle::H23:
+        return u"h23";
+      case HourCycle::H24:
+        return u"h24";
+      case HourCycle::Undefined:
+        return u"";
+      default:
+        return u"";
+    }
+  }
+  
+  static std::u16string weekdayString(const Weekday &weekday) {
+    switch (weekday) {
+      case Weekday::Narrow:
+        return u"narrow";
+      case Weekday::Short:
+        return u"short";
+      case Weekday::Long:
+        return u"long";
+      case Weekday::Undefined:
+        return u"";
+      default:
+        return u"";
+    }
+  }
+  
+  static std::u16string eraString(const Era &era) {
+    switch (era) {
+      case Era::Narrow:
+        return u"narrow";
+      case Era::Short:
+        return u"short";
+      case Era::Long:
+        return u"long";
+      case Era::Undefined:
+        return u"";
+      default:
+        return u"";
+    }
+  }
+  
+  static std::u16string yearString(const Year &year) {
+    switch (era) {
+      case Year::Numeric:
+        return u"numeric";
+      case Year::TwoDigit:
+        return u"2-digit";
+      case Year::Undefined:
+        return u"";
+      default:
+        return u"";
+    }
+  }
+  
+  static std::u16string monthString(const Month &month) {
+    switch (month) {
+      case Month::Numeric:
+        return u"numeric";
+      case Month::TwoDigit:
+        return u"2-digit";
+      case Month::Narrow:
+        return u"narrow";
+      case Month::Short:
+        return u"short";
+      case Month::Long:
+        return u"long";
+      case Month::Undefined:
+        return u"";
+      default:
+        return u"";
+    }
+  }
+  
+  static std::u16string dayString(const Day &day) {
+    switch (day) {
+      case Day::Numeric:
+        return u"numeric";
+      case Day::TwoDigit:
+        return u"2-digit";
+      case Day::Undefined:
+        return u"";
+      default:
+        return u"";
+    }
+  }
+  
+  static std::u16string hourString(const Hour &hour) {
+    switch (hour) {
+      case Hour::Numeric:
+        return u"numeric";
+      case Hour::TwoDigit:
+        return u"2-digit";
+      case Hour::Undefined:
+        return u"";
+      default:
+        return u"";
+    }
+  }
+  
+  static std::u16string minuteString(const Minute &minute) {
+    switch (minute) {
+      case Minute::Numeric:
+        return u"numeric";
+      case Minute::TwoDigit:
+        return u"2-digit";
+      case Minute::Undefined:
+        return u"";
+      default:
+        return u"";
+    }
+  }
+  
+  static std::u16string secondString(const Second &second) {
+    switch (second) {
+      case Second::Numeric:
+        return u"numeric";
+      case Second::TwoDigit:
+        return u"2-digit";
+      case Second::Undefined:
+        return u"";
+      default:
+        return u"";
+    }
+  }
+  
+  static std::u16string timeZoneNameString(const TimeZoneName &timeZoneName) {
+    switch (timeZoneName) {
+      case TimeZoneName::Short:
+        return u"short";
+      case TimeZoneName::Long:
+        return u"long";
+      case TimeZoneName::Undefined:
+        return u"";
+      default:
+        return u"";
+    }
+  }
+  
+  // https://tc39.es/ecma402/#sec-date-time-style-format
+  static std::u16string dateTimeStyleString(const DateTimeStyle &dateTimeStyle) {
+    switch (dateTimeStyle) {
+      case DateTimeStyle::Short:
+        return u"short";
+      case DateTimeStyle::Long:
+        return u"long";
+      case DateTimeStyle::Full:
+        return u"full";
+      case DateTimeStyle::Medium:
+        return u"medium";
+      case DateTimeStyle::Undefined:
+        return u"";
+      default:
+        return u"";
+    }
+  }
+  
+  FormatMatcher mFormatMatcher {FormatMatcher::Undefined};
+  HourCycle mHourCycle {HourCycle::Undefined};
+  Weekday mWeekday {Weekday::Undefined};
+  Era mEra {Era::Undefined};
+  Year mYear {Year::Undefined};
+  Month mMonth {Month::Undefined};
+  Day mDay {Day::Undefined};
+  DayPeriod mDayPeriod {DayPeriod::Undefined};
+  Hour mHour {Hour::Undefined};
+  Minute mMinute {Minute::Undefined};
+  Second mSecond {Second::Undefined};
+  TimeZoneName mTimeZoneName {TimeZoneName::Undefined};
+  DateTimeStyle mDateStyle {DateTimeStyle::Undefined};
+  DateTimeStyle mTimeStyle {DateTimeStyle::Undefined};
+  
   std::u16string locale;
   std::u16string localeMatcher;
   std::u16string ca;
@@ -238,38 +444,7 @@ struct DateTimeFormat::Impl {
 DateTimeFormat::DateTimeFormat() : impl_(std::make_unique<Impl>()) {}
 DateTimeFormat::~DateTimeFormat() {}
 
-// Enum declaration for DateTimeFormat internal slots
-// https://tc39.es/ecma402/#datetimeformat-objects
-enum class FormatMatcher : size_t = {BESTFIT = 0, BASIC};
-static const std::u16string FormatMatcherStr[] = {u"best fit", u"basic"};
-enum class HourCycle = {Undefined = 0, H11, H12, H23, H24};
-enum class Weekday : size_t {Undefined = 0, Narrow, Short, Long};
-enum class Era : size_t {Undefined = 0, Narrow, Short, Long};
-enum class Year : size_t {Undefined = 0, TwoDigit, Numeric};
-enum class Month : size_t {Undefined = 0, TwoDigit, Numeric, Narrow, Short, Long};
-enum class Day : size_t {Undefined = 0, TwoDigit, Numeric};
-enum class DayPeriod : size_t {Undefined = 0, Narrow, Short, Long};
-enum class Hour : size_t {Undefined = 0, TwoDigit, Numeric};
-enum class Minute : size_t {Undefined = 0, TwoDigit, Numeric};
-enum class Second : size_t {Undefined = 0, TwoDigit, Numeric};
-enum class TimeZoneName : size_t {Undefined = 0, Short, Long, ShortOffset, LongOffset, ShortGeneric, LongGeneric};
-enum class DateTimeStyle : size_t {Undefined = 0, Full, Long, Medium, Short};
 
-HourCycle mHourCycle {HourCycle::Undefined};
-
-FormatMatcher mFormatMatcher {FormatMatcher::Undefined};
-Weekday mWeekday {Weekday::Undefined};
-Era mEra {Era::Undefined};
-Year mYear {Year::Undefined};
-Month mMonth {Month::Undefined};
-Day mDay {Day::Undefined};
-DayPeriod mDayPeriod {DayPeriod::Undefined};
-Hour mHour {Hour::Undefined};
-Minute mMinute {Minute::Undefined};
-Second mSecond {Second::Undefined};
-TimeZoneName mTimeZoneName {TimeZoneName::Undefined};
-DateTimeStyle mDateStyle {DateTimeStyle::Undefined};
-DateTimeStyle mTimeStyle {DateTimeStyle::Undefined};
 
 // Implementation of
 // https://tc39.es/ecma402/#sec-intl.datetimeformat.supportedlocalesof
