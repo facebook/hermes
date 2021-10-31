@@ -18,6 +18,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * This class represents the Java part of the Android Intl.DateTimeFormat implementation. The
@@ -245,6 +246,9 @@ public class DateTimeFormat {
       timeZone = DefaultTimeZone();
     } else {
       try {
+        if (!isValidTimeZoneName(timeZone.toString())) {
+          throw new JSRangeErrorException("Invalid timezone name!");
+        }
         timeZone = mPlatformDateTimeFormatter.normalizeValidTimeZone(timeZone.toString());
       } catch (JSRangeErrorException error) {
         throw error;
@@ -379,7 +383,11 @@ public class DateTimeFormat {
       mHourCycle = hc;
     }
   }
-  
+
+  private boolean isValidTimeZoneName(String timeZone) {
+    return Pattern.compile("^[\\x00-\\x7F]+[a-zA-Z]+$").matcher(timeZone).find();
+  }
+
   @DoNotStrip
   public DateTimeFormat(List<String> locales, Map<String, Object> options)
       throws JSRangeErrorException {
