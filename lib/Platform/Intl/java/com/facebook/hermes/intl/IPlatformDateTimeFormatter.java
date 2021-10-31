@@ -421,7 +421,7 @@ public interface IPlatformDateTimeFormatter {
 
   String getDefaultNumberingSystem(ILocaleObject<?> localeObject) throws JSRangeErrorException;
 
-  boolean isValidTimeZone(String timeZone);
+  String normalizeValidTimeZone(String timeZone) throws JSRangeErrorException;
 
   String[] getAvailableLocales();
 }

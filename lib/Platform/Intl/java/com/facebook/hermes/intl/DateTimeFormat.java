@@ -244,9 +244,10 @@ public class DateTimeFormat {
     if (JSObjects.isUndefined(timeZone)) {
       timeZone = DefaultTimeZone();
     } else {
-      String normalizedTimeZone = normalizeTimeZoneName(JSObjects.getJavaString(timeZone));
-      if (!isValidTimeZoneName(normalizedTimeZone)) {
-        throw new JSRangeErrorException("Invalid timezone name!");
+      try {
+        timeZone = mPlatformDateTimeFormatter.normalizeValidTimeZone(timeZone.toString());
+      } catch (JSRangeErrorException error) {
+        throw error;
       }
     }
     mTimeZone = timeZone;
@@ -378,28 +379,7 @@ public class DateTimeFormat {
       mHourCycle = hc;
     }
   }
-
-  private String normalizeTimeZoneName(String timeZoneName) {
-    // https://tc39.es/ecma402/#sec-case-sensitivity-and-case-mapping
-    // Note that we should convert only upper case translation in ASCII range.
-    StringBuilder normalized = new StringBuilder(timeZoneName.length());
-    int offset = 'a' - 'A';
-    for (int idx = 0; idx < timeZoneName.length(); idx++) {
-      char c = timeZoneName.charAt(idx);
-      if (c >= 'a' && c <= 'z') {
-        normalized.append((char) (c - offset));
-      } else {
-        normalized.append(c);
-      }
-    }
-
-    return normalized.toString();
-  }
-
-  private boolean isValidTimeZoneName(String timeZone) {
-    return mPlatformDateTimeFormatter.isValidTimeZone(timeZone);
-  }
-
+  
   @DoNotStrip
   public DateTimeFormat(List<String> locales, Map<String, Object> options)
       throws JSRangeErrorException {
