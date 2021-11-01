@@ -1816,6 +1816,7 @@ PERMANENT_SKIP_LIST = [
     "test262/test/intl402/String/prototype/toLocaleLowerCase/special_casing_Lithuanian.js",
     "test262/test/intl402/String/prototype/toLocaleLowerCase/special_casing_Azeri.js",
     "test262/test/intl402/String/prototype/toLocaleLowerCase/special_casing_Turkish.js",
+    "test262/test/intl402/String/prototype/toLocaleUpperCase/special_casing_Lithuanian.js",
     "test262/test/intl402/RelativeTimeFormat/",
     "mjsunit/asm/",
     "mjsunit/regress/wasm/",
