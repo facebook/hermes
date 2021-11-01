@@ -283,7 +283,23 @@ vm::CallResult<std::u16string> toLocaleUpperCase(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales,
     const std::u16string &str) {
-  return std::u16string(u"uppered");
+  NSString *nsStr = u16StringToNSString(str);
+  // Steps 3-9 in localeListToLocaleString()
+  llvh::Optional<std::u16string> locale = localeListToLocaleString(runtime, locales);
+  // 10. Let cpList be a List containing in order the code points of S as
+  // defined in es2022, 6.1.4, starting at the first element of S.
+  // 11. Let cuList be a List where the elements are the result of a lower case
+  // transformation of the ordered code points in cpList according to the
+  // Unicode Default Case Conversion algorithm or an implementation-defined
+  // conversion algorithm. A conforming implementation's lower case
+  // transformation algorithm must always yield the same cpList given the same
+  // cuList and locale.
+  // 12. Let L be a String whose elements are the UTF-16 Encoding (defined in
+  // es2022, 6.1.4) of the code points of cuList.
+  NSString *L = u16StringToNSString(locale.getValue());
+  // 13. Return L.
+  return nsStringToU16String([nsStr
+      uppercaseStringWithLocale:[[NSLocale alloc] initWithLocaleIdentifier:L]]);
 }
 
 struct Collator::Impl {
