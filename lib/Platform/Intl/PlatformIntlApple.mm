@@ -24,6 +24,40 @@ std::u16string nsStringToU16String(NSString *src) {
   [src getCharacters:(unichar *)&result[0] range:NSMakeRange(0, size)];
   return result;
 }
+
+class ParsedLanguageIdentifier : public vm::DecoratedObject::Decoration {
+ public:
+  ParsedLanguageIdentifier();
+  ~ParsedLanguageIdentifier();
+  // public function declaration
+
+ private:
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
+};
+
+struct ParsedLanguageIdentifier::Impl {
+  std::u16string languageSubtag;
+  std::u16string scriptSubtag;
+  std::u16string regionSubtag;
+  std::vector<std::u16string> variantSubtagList;
+};
+
+class ParsedLocaleIdentifier : public vm::DecoratedObject::Decoration {
+ public:
+  ParsedLocaleIdentifier();
+  ~ParsedLocaleIdentifier();
+  // public function declaration
+
+ private:
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
+};
+
+struct ParsedLocaleIdentifier::Impl {
+  ParsedLanguageIdentifier languageIdentifier;
+  // Other extensions
+};
 }
 
 // Implementation of https://tc39.es/ecma402/#sec-canonicalizelocalelist
