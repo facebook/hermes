@@ -24,14 +24,16 @@ std::u16string nsStringToU16String(NSString *src) {
   [src getCharacters:(unichar *)&result[0] range:NSMakeRange(0, size)];
   return result;
 }
-std::vector<std::u16string> getAvailableLocalesVector() {
-    NSArray<NSString *> *availableLocales = [NSLocale availableLocaleIdentifiers];
-    std::vector<std::u16string> availableLocalesVector;
-      for (id object in availableLocales) {
-        std::u16string u16StringFromVector = nsStringToU16String(object);
-        availableLocalesVector.push_back(u16StringFromVector);
-      }
-    return availableLocalesVector;
+const std::vector<std::u16string>& getAvailableLocalesVector() {
+    static const std::vector<std::u16string> *availableLocalesVector = []{
+      NSArray<NSString *> *availableLocales = [NSLocale availableLocaleIdentifiers];
+      // Intentionally leaked to avoid destruction order problems.
+      auto *vec = new std::vector<std::u16string>();
+      for (id str in availableLocales)
+        vec->push_back(nsStringToU16String(str));
+      return vec;
+      }();
+    return *availableLocalesVector;
 }
 std::u16string getDefaultLocale() {
   NSString *defLocale = [[NSLocale currentLocale] localeIdentifier];
@@ -98,48 +100,6 @@ std::u16string toNoExtensionsLocale(const std::u16string &locale) {
         s++;
   }
   return result;
-}
-llvh::Optional<std::u16string> localeListToLocaleString(vm::Runtime *runtime,
-  const std::vector<std::u16string> &locales) {
-  // 3. Let requestedLocales be ? CanonicalizeLocaleList(locales).
-  vm::CallResult<std::vector<std::u16string>> requestedLocales =
-  getCanonicalLocales(runtime, locales);
-  // getcano doesnt throw so should this be removed?
-  // How should an exception be thrown here if return state is string?
-//  if (LLVM_UNLIKELY(requestedLocales == llvh::ExecutionStatus::EXCEPTION)) {
-//    return llvh::ExecutionStatus::EXCEPTION;
-//  }
-
-  // 4. If requestedLocales is not an empty List, then
-  std::u16string requestedLocale;
-  if (!requestedLocales->empty()) {
-    // a. Let requestedLocale be requestedLocales[0].
-    std::vector<std::u16string> val = requestedLocales.getValue();
-    requestedLocale = val[0];
-  } else { // 5. Else,
-    // a. Let requestedLocale be DefaultLocale().
-    // Return just the default Locale as a u16string
-    requestedLocale = getDefaultLocale();
-    return requestedLocale;
-  }
-  // 6. Let noExtensionsLocale be the String value that is requestedLocale with
-  // any Unicode locale extension sequences (6.2.1) removed.
-  std::u16string noExtensionsLocale = toNoExtensionsLocale(requestedLocale);
-
-  // 7. Let availableLocales be a List with language tags that includes the
-  // languages for which the Unicode Character Database contains language
-  // sensitive case mappings. Implementations may add additional language tags
-  // if they support case mapping for additional locales.
-  // 8. Let locale be BestAvailableLocale(availableLocales, noExtensionsLocale).
-  // Convert to C++ array for bestAvailableLocale function
-  static std::vector<std::u16string> availableLocalesVector = getAvailableLocalesVector();
-  llvh::Optional<std::u16string> locale =
-      bestAvailableLocale(availableLocalesVector, noExtensionsLocale);
-  // 9. If locale is undefined, let locale be "und".
-  if (!locale.hasValue()) {
-    locale = u"und";
-  }
-  return locale;
 }
 // Implementer note: This method corresponds roughly to
 // https://tc39.es/ecma402/#sec-lookupmatcher
@@ -252,6 +212,48 @@ vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
   return canonicalizeLocaleList(runtime, locales);
 }
 
+llvh::Optional<std::u16string> localeListToLocaleString(vm::Runtime *runtime,
+  const std::vector<std::u16string> &locales) {
+  // 3. Let requestedLocales be ? CanonicalizeLocaleList(locales).
+  vm::CallResult<std::vector<std::u16string>> requestedLocales =
+  canonicalizeLocaleList(runtime, locales);
+  // getcano doesnt throw so should this be removed?
+  // How should an exception be thrown here if return state is string?
+//  if (LLVM_UNLIKELY(requestedLocales == llvh::ExecutionStatus::EXCEPTION)) {
+//    return llvh::ExecutionStatus::EXCEPTION;
+//  }
+
+  // 4. If requestedLocales is not an empty List, then
+  std::u16string requestedLocale;
+  if (!requestedLocales->empty()) {
+    // a. Let requestedLocale be requestedLocales[0].
+    std::vector<std::u16string> val = requestedLocales.getValue();
+    requestedLocale = val[0];
+  } else { // 5. Else,
+    // a. Let requestedLocale be DefaultLocale().
+    // Return just the default Locale as a u16string
+    requestedLocale = getDefaultLocale();
+    return requestedLocale;
+  }
+  // 6. Let noExtensionsLocale be the String value that is requestedLocale with
+  // any Unicode locale extension sequences (6.2.1) removed.
+  std::u16string noExtensionsLocale = toNoExtensionsLocale(requestedLocale);
+
+  // 7. Let availableLocales be a List with language tags that includes the
+  // languages for which the Unicode Character Database contains language
+  // sensitive case mappings. Implementations may add additional language tags
+  // if they support case mapping for additional locales.
+  // 8. Let locale be BestAvailableLocale(availableLocales, noExtensionsLocale).
+  // Convert to C++ array for bestAvailableLocale function
+  static std::vector<std::u16string> availableLocalesVector = getAvailableLocalesVector();
+  llvh::Optional<std::u16string> locale =
+      bestAvailableLocale(availableLocalesVector, noExtensionsLocale);
+  // 9. If locale is undefined, let locale be "und".
+  if (!locale.hasValue()) {
+    locale = u"und";
+  }
+  return locale;
+}
 // Implementer note: This method corresponds roughly to
 // https://tc39.es/ecma402/#sup-string.prototype.tolocalelowercase
 vm::CallResult<std::u16string> toLocaleLowerCase(
