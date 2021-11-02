@@ -41,7 +41,7 @@ std::u16string getDefaultLocale() {
 }
 // Implementer note: This method corresponds roughly to
 // https://tc39.es/ecma402/#sec-bestavailablelocale
-llvh::Optional<std::u16string> bestAvailableLocale(
+std::u16string bestAvailableLocale(
     const std::vector<std::u16string> &availableLocales,
     const std::u16string &locale) {
   // 1. Let candidate be locale
@@ -62,7 +62,7 @@ llvh::Optional<std::u16string> bestAvailableLocale(
 
     // ...If that character does not occur, return undefined.
     if (pos == std::string::npos) {
-        return llvh::None;
+        return u"und";
     }
 
     // c. If pos ≥ 2 and the character "-" occurs at index pos-2 of candidate,
@@ -138,8 +138,7 @@ LocaleMatch lookupMatcher(
     }
   }
   // availableLocale was undefined, so set result.[[locale]] to defLocale.
-  std::u16string defaultLocale = getDefaultLocale();
-  result.locale = defaultLocale;
+  result.locale = getDefaultLocale();
   // 5. Return result.
   return result;
 }
@@ -212,7 +211,7 @@ vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
   return canonicalizeLocaleList(runtime, locales);
 }
 
-llvh::Optional<std::u16string> localeListToLocaleString(vm::Runtime *runtime,
+std::u16string localeListToLocaleString(vm::Runtime *runtime,
   const std::vector<std::u16string> &locales) {
   // 3. Let requestedLocales be ? CanonicalizeLocaleList(locales).
   vm::CallResult<std::vector<std::u16string>> requestedLocales =
@@ -224,17 +223,10 @@ llvh::Optional<std::u16string> localeListToLocaleString(vm::Runtime *runtime,
 //  }
 
   // 4. If requestedLocales is not an empty List, then
-  std::u16string requestedLocale;
-  if (!requestedLocales->empty()) {
-    // a. Let requestedLocale be requestedLocales[0].
-    std::vector<std::u16string> val = requestedLocales.getValue();
-    requestedLocale = val[0];
-  } else { // 5. Else,
-    // a. Let requestedLocale be DefaultLocale().
-    // Return just the default Locale as a u16string
-    requestedLocale = getDefaultLocale();
-    return requestedLocale;
-  }
+  // a. Let requestedLocale be requestedLocales[0].
+  // 5. Else,
+  // a. Let requestedLocale be DefaultLocale().
+  std::u16string requestedLocale = requestedLocales->empty() ? getDefaultLocale() : std::move(requestedLocales->front());
   // 6. Let noExtensionsLocale be the String value that is requestedLocale with
   // any Unicode locale extension sequences (6.2.1) removed.
   std::u16string noExtensionsLocale = toNoExtensionsLocale(requestedLocale);
@@ -245,13 +237,9 @@ llvh::Optional<std::u16string> localeListToLocaleString(vm::Runtime *runtime,
   // if they support case mapping for additional locales.
   // 8. Let locale be BestAvailableLocale(availableLocales, noExtensionsLocale).
   // Convert to C++ array for bestAvailableLocale function
-  static std::vector<std::u16string> availableLocalesVector = getAvailableLocalesVector();
-  llvh::Optional<std::u16string> locale =
+  const std::vector<std::u16string> availableLocalesVector = getAvailableLocalesVector();
+  std::u16string locale =
       bestAvailableLocale(availableLocalesVector, noExtensionsLocale);
-  // 9. If locale is undefined, let locale be "und".
-  if (!locale.hasValue()) {
-    locale = u"und";
-  }
   return locale;
 }
 // Implementer note: This method corresponds roughly to
