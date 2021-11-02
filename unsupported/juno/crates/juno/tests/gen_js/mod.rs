@@ -371,6 +371,11 @@ fn test_members() {
     test_roundtrip("(a?.b?.c?.())(d)");
     test_roundtrip("(a?.b?.c?.())?.(d)");
     test_roundtrip("class C { constructor() { new.target; } }");
+    test_roundtrip("50..toString()");
+    test_roundtrip("1.5.toString()");
+    test_roundtrip("1e100.toString()");
+    test_roundtrip("-1e100.toString()");
+    test_roundtrip("0x10293.toString()");
 }
 
 #[test]

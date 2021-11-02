@@ -889,7 +889,18 @@ impl<W: Write> GenJS<W> {
                 property,
                 computed,
             }) => {
-                self.print_child(ctx, Some(*object), node, ChildPos::Left);
+                match object {
+                    Node::NumericLiteral(NumericLiteral { value, .. }) => {
+                        // Account for possible `50..toString()`.
+                        let string = convert::number_to_string(*value);
+                        // If there is an `e` or a decimal point, no need for an extra `.`.
+                        let suffix = string.find::<&[char]>(&['E', 'e', '.']).map_or(".", |_| "");
+                        out_token!(self, node, "{}{}", string, suffix);
+                    }
+                    _ => {
+                        self.print_child(ctx, Some(*object), node, ChildPos::Left);
+                    }
+                }
                 if *computed {
                     out!(self, "[");
                 } else {
