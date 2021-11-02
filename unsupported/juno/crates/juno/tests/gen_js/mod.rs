@@ -100,6 +100,7 @@ fn test_literals() {
     test_roundtrip("\"abc\"");
     test_roundtrip(r#" "\ud800" "#);
     test_roundtrip(r#" "\ud83d\udcd5" "#);
+    test_roundtrip(r#" "\u060b" "#);
     test_roundtrip("true");
     test_roundtrip("false");
     test_roundtrip("null");

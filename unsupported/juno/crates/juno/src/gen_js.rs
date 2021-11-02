@@ -2730,44 +2730,45 @@ impl<W: Write> GenJS<W> {
 
     fn print_escaped_string_literal(&mut self, value: &NodeString, esc: char) {
         for &c in &value.str {
-            let c8 = char::from(c as u8);
-            match c8 {
-                '\\' => {
-                    out!(self, "\\\\");
-                    continue;
-                }
-                '\x08' => {
-                    out!(self, "\\b");
-                    continue;
-                }
-                '\x0c' => {
-                    out!(self, "\\f");
-                    continue;
-                }
-                '\n' => {
-                    out!(self, "\\n");
-                    continue;
-                }
-                '\r' => {
-                    out!(self, "\\r");
-                    continue;
-                }
-                '\t' => {
-                    out!(self, "\\t");
-                    continue;
-                }
-                '\x0b' => {
-                    out!(self, "\\v");
-                    continue;
-                }
-                _ => {}
-            };
+            if c <= u8::MAX as u16 {
+                match char::from(c as u8) {
+                    '\\' => {
+                        out!(self, "\\\\");
+                        continue;
+                    }
+                    '\x08' => {
+                        out!(self, "\\b");
+                        continue;
+                    }
+                    '\x0c' => {
+                        out!(self, "\\f");
+                        continue;
+                    }
+                    '\n' => {
+                        out!(self, "\\n");
+                        continue;
+                    }
+                    '\r' => {
+                        out!(self, "\\r");
+                        continue;
+                    }
+                    '\t' => {
+                        out!(self, "\\t");
+                        continue;
+                    }
+                    '\x0b' => {
+                        out!(self, "\\v");
+                        continue;
+                    }
+                    _ => {}
+                };
+            }
             if c == esc as u16 {
                 out!(self, "\\");
             }
             if (0x20..=0x7f).contains(&c) {
                 // Printable.
-                out!(self, "{}", c8);
+                out!(self, "{}", char::from(c as u8));
             } else {
                 out!(self, "\\u{:04x}", c);
             }
