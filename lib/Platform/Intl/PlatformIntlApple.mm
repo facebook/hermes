@@ -214,16 +214,14 @@ vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
   return canonicalizeLocaleList(runtime, locales);
 }
 
-std::u16string localeListToLocaleString(vm::Runtime *runtime,
+vm::CallResult<std::u16string> localeListToLocaleString(vm::Runtime *runtime,
   const std::vector<std::u16string> &locales) {
   // 3. Let requestedLocales be ? CanonicalizeLocaleList(locales).
   vm::CallResult<std::vector<std::u16string>> requestedLocales =
   canonicalizeLocaleList(runtime, locales);
-  // getcano doesnt throw so should this be removed?
-  // How should an exception be thrown here if return state is string?
-//  if (LLVM_UNLIKELY(requestedLocales == llvh::ExecutionStatus::EXCEPTION)) {
-//    return llvh::ExecutionStatus::EXCEPTION;
-//  }
+  if (LLVM_UNLIKELY(requestedLocales == llvh::ExecutionStatus::EXCEPTION)) {
+    return llvh::ExecutionStatus::EXCEPTION;
+  }
 
   // 4. If requestedLocales is not an empty List, then
   // a. Let requestedLocale be requestedLocales[0].
@@ -253,7 +251,7 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
     const std::u16string &str) {
   NSString *nsStr = u16StringToNSString(str);
   // Steps 3-9 in localeListToLocaleString()
-  llvh::Optional<std::u16string> locale = localeListToLocaleString(runtime, locales);
+  vm::CallResult<std::u16string> locale = localeListToLocaleString(runtime, locales);
   // 10. Let cpList be a List containing in order the code points of S as
   // defined in es2022, 6.1.4, starting at the first element of S.
   // 11. Let cuList be a List where the elements are the result of a lower case
@@ -278,7 +276,7 @@ vm::CallResult<std::u16string> toLocaleUpperCase(
     const std::u16string &str) {
   NSString *nsStr = u16StringToNSString(str);
   // Steps 3-9 in localeListToLocaleString()
-  llvh::Optional<std::u16string> locale = localeListToLocaleString(runtime, locales);
+  vm::CallResult<std::u16string> locale = localeListToLocaleString(runtime, locales);
   // 10. Let cpList be a List containing in order the code points of S as
   // defined in es2022, 6.1.4, starting at the first element of S.
   // 11. Let cuList be a List where the elements are the result of a lower case
