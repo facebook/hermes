@@ -24,16 +24,17 @@ std::u16string nsStringToU16String(NSString *src) {
   [src getCharacters:(unichar *)&result[0] range:NSMakeRange(0, size)];
   return result;
 }
-const std::vector<std::u16string>& getAvailableLocalesVector() {
-    static const std::vector<std::u16string> *availableLocalesVector = []{
-      NSArray<NSString *> *availableLocales = [NSLocale availableLocaleIdentifiers];
-      // Intentionally leaked to avoid destruction order problems.
-      auto *vec = new std::vector<std::u16string>();
-      for (id str in availableLocales)
-        vec->push_back(nsStringToU16String(str));
-      return vec;
-      }();
-    return *availableLocalesVector;
+const std::vector<std::u16string> &getAvailableLocalesVector() {
+  static const std::vector<std::u16string> *availableLocalesVector = [] {
+    NSArray<NSString *> *availableLocales =
+        [NSLocale availableLocaleIdentifiers];
+    // Intentionally leaked to avoid destruction order problems.
+    auto *vec = new std::vector<std::u16string>();
+    for (id str in availableLocales)
+      vec->push_back(nsStringToU16String(str));
+    return vec;
+  }();
+  return *availableLocalesVector;
 }
 std::u16string getDefaultLocale() {
   NSString *defLocale = [[NSLocale currentLocale] localeIdentifier];
@@ -51,8 +52,7 @@ std::u16string bestAvailableLocale(
   while (true) {
     // a. If availableLocales contains an element equal to candidate, return
     // candidate.
-    if (llvh::find(availableLocales, candidate) !=
-        availableLocales.end()) {
+    if (llvh::find(availableLocales, candidate) != availableLocales.end()) {
       return candidate;
     }
 
@@ -62,7 +62,7 @@ std::u16string bestAvailableLocale(
 
     // ...If that character does not occur, return undefined.
     if (pos == std::string::npos) {
-        return u"und";
+      return u"und";
     }
 
     // c. If pos ≥ 2 and the character "-" occurs at index pos-2 of candidate,
@@ -127,14 +127,15 @@ LocaleMatch lookupMatcher(
     // c. If availableLocale is not undefined, then
     if (availableLocale) {
       // i. Set result.[[locale]] to availableLocale.
-        result.locale = std::move(*availableLocale);
+      result.locale = std::move(*availableLocale);
       // ii. If locale and noExtensionsLocale are not the same String value,
       if (locale != noExtensionsLocale) {
         // then
         // 1. Let extension be the String value consisting of the substring of
         // the Unicode locale extension sequence within locale.
         // 2. Set result.[[extension]] to extension.
-        result.extension = result.locale.substr(noExtensionsLocale.length(), locale.length());
+        result.extension =
+            result.locale.substr(noExtensionsLocale.length(), locale.length());
       }
       // iii. Return result.
       return result;
@@ -214,11 +215,12 @@ vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
   return canonicalizeLocaleList(runtime, locales);
 }
 
-vm::CallResult<std::u16string> localeListToLocaleString(vm::Runtime *runtime,
-  const std::vector<std::u16string> &locales) {
+vm::CallResult<std::u16string> localeListToLocaleString(
+    vm::Runtime *runtime,
+    const std::vector<std::u16string> &locales) {
   // 3. Let requestedLocales be ? CanonicalizeLocaleList(locales).
   vm::CallResult<std::vector<std::u16string>> requestedLocales =
-  canonicalizeLocaleList(runtime, locales);
+      canonicalizeLocaleList(runtime, locales);
   if (LLVM_UNLIKELY(requestedLocales == llvh::ExecutionStatus::EXCEPTION)) {
     return llvh::ExecutionStatus::EXCEPTION;
   }
@@ -227,10 +229,13 @@ vm::CallResult<std::u16string> localeListToLocaleString(vm::Runtime *runtime,
   // a. Let requestedLocale be requestedLocales[0].
   // 5. Else,
   // a. Let requestedLocale be DefaultLocale().
-  std::u16string requestedLocale = requestedLocales->empty() ? getDefaultLocale() : std::move(requestedLocales->front());
+  std::u16string requestedLocale = requestedLocales->empty()
+      ? getDefaultLocale()
+      : std::move(requestedLocales->front());
   // 6. Let noExtensionsLocale be the String value that is requestedLocale with
   // any Unicode locale extension sequences (6.2.1) removed.
-  std::u16string noExtensionsLocale = toNoUnicodeExtensionsLocale(requestedLocale);
+  std::u16string noExtensionsLocale =
+      toNoUnicodeExtensionsLocale(requestedLocale);
 
   // 7. Let availableLocales be a List with language tags that includes the
   // languages for which the Unicode Character Database contains language
@@ -238,7 +243,8 @@ vm::CallResult<std::u16string> localeListToLocaleString(vm::Runtime *runtime,
   // if they support case mapping for additional locales.
   // 8. Let locale be BestAvailableLocale(availableLocales, noExtensionsLocale).
   // Convert to C++ array for bestAvailableLocale function
-  const std::vector<std::u16string> availableLocalesVector = getAvailableLocalesVector();
+  const std::vector<std::u16string> availableLocalesVector =
+      getAvailableLocalesVector();
   std::u16string locale =
       bestAvailableLocale(availableLocalesVector, noExtensionsLocale);
   return locale;
@@ -251,7 +257,8 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
     const std::u16string &str) {
   NSString *nsStr = u16StringToNSString(str);
   // Steps 3-9 in localeListToLocaleString()
-  vm::CallResult<std::u16string> locale = localeListToLocaleString(runtime, locales);
+  vm::CallResult<std::u16string> locale =
+      localeListToLocaleString(runtime, locales);
   // 10. Let cpList be a List containing in order the code points of S as
   // defined in es2022, 6.1.4, starting at the first element of S.
   // 11. Let cuList be a List where the elements are the result of a lower case
@@ -276,7 +283,8 @@ vm::CallResult<std::u16string> toLocaleUpperCase(
     const std::u16string &str) {
   NSString *nsStr = u16StringToNSString(str);
   // Steps 3-9 in localeListToLocaleString()
-  vm::CallResult<std::u16string> locale = localeListToLocaleString(runtime, locales);
+  vm::CallResult<std::u16string> locale =
+      localeListToLocaleString(runtime, locales);
   // 10. Let cpList be a List containing in order the code points of S as
   // defined in es2022, 6.1.4, starting at the first element of S.
   // 11. Let cuList be a List where the elements are the result of a lower case
