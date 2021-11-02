@@ -282,13 +282,16 @@ impl<'ast> Context<'ast> {
         let mut roots: Vec<&StorageEntry> = vec![];
         for chunk in nodes.iter() {
             for entry in chunk.iter() {
-                debug_assert!(
-                    entry.markbit() != self.markbit_marked,
-                    "Entry marked before start of GC"
-                );
                 if entry.is_free() {
                     continue;
                 }
+                debug_assert!(
+                    entry.markbit() != self.markbit_marked,
+                    "Entry marked before start of GC: {:?}\nentry.markbit()={}\nmarkbit_marked={}",
+                    &entry,
+                    entry.markbit(),
+                    self.markbit_marked,
+                );
                 if entry.count.get() > 0 {
                     roots.push(entry);
                 }
