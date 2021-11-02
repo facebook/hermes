@@ -200,6 +200,16 @@ fn test_calls() {
     test_roundtrip("f?.(1, 2)?.(3)(5);");
     test_roundtrip("new f();");
     test_roundtrip("new f(1);");
+    test_roundtrip("new(a.b);");
+    test_roundtrip("new(a.b());");
+    test_roundtrip("new(a.b())();");
+    test_roundtrip("new(a.b())(c);");
+    test_roundtrip("new(a?.b())(c);");
+    test_roundtrip("new(1 + 2);");
+    test_roundtrip("new(fn(foo)[bar])()");
+    test_roundtrip("new(fn(foo)[bar])(c)");
+    test_roundtrip("new(fn(foo).bar)()");
+    test_roundtrip("new(fn(foo).bar)(c)");
     test_roundtrip("import('foo')");
 }
 

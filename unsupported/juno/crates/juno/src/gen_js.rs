@@ -3127,6 +3127,17 @@ impl<W: Write> GenJS<W> {
                 }) => *operator == BinaryExpressionOperator::In,
                 _ => false,
             });
+        } else if matches!(parent, Node::NewExpression(_)) {
+            // `new(fn())` needs parens to avoid confusing it with `new fn()`.
+            // Need to check the entire subtree to ensure there isn't a call anywhere in it,
+            // because if there is, it would take precedence and terminate the `new` early.
+            // As an example, see the difference between
+            // `new(foo().bar)` (which gets `bar` on `foo()`)
+            // and
+            // `new foo().bar` (which gets `bar` on `new foo()`)
+            if child_pos == ChildPos::Left && contains_call(ctx, child) {
+                return NeedParens::Yes;
+            }
         } else if matches!(parent, Node::ExpressionStatement(_)) {
             // Expression statement like (function () {} + 1) needs parens.
             return NeedParens::from(self.root_starts_with(ctx, child, |kind| -> bool {
@@ -3471,4 +3482,34 @@ fn stmt_skip_semi<'gc>(ctx: &'gc GCContext, node: Option<&'gc Node<'gc>>) -> boo
         },
         None => false,
     }
+}
+
+/// Return true if `node` contains a `CallExpression`.
+fn contains_call<'gc>(gc: &'gc GCContext, node: &'gc Node<'gc>) -> bool {
+    struct CallFinder {
+        found: bool,
+    }
+    impl<'gc> Visitor<'gc> for CallFinder {
+        fn call(
+            &mut self,
+            gc: &'gc GCContext,
+            node: &'gc Node<'gc>,
+            _parent: Option<&'gc Node<'gc>>,
+        ) {
+            match node {
+                Node::CallExpression(_)
+                | Node::OptionalCallExpression(OptionalCallExpression {
+                    optional: false, ..
+                }) => {
+                    self.found = true;
+                }
+                _ => {
+                    node.visit_children(gc, self);
+                }
+            };
+        }
+    }
+    let mut finder = CallFinder { found: false };
+    node.visit(gc, &mut finder, None);
+    finder.found
 }
