@@ -10,6 +10,7 @@ use juno::ast::{self, validate_tree, NodePtr, SourceRange};
 use juno::gen_js;
 use juno::hparser::{self, MagicCommentKind, ParsedJS};
 use juno::sourcemap::merge_sourcemaps;
+use pass::PassManager;
 use sourcemap::SourceMap;
 use std::fs::File;
 use std::io::Write;
@@ -73,6 +74,10 @@ struct Opt {
     #[structopt(long, possible_values = &InputSourceMap::variants(),
                 case_insensitive = true, default_value="Auto")]
     input_source_map: InputSourceMap,
+
+    /// Whether to run optimization passes.
+    #[structopt(short = "O")]
+    optimize: bool,
 
     /// Measure and print times.
     #[structopt(long = "Xtime")]
@@ -148,11 +153,18 @@ fn gen_output(
         )
     };
 
+    let final_ast = if opt.optimize {
+        let pm = PassManager::standard();
+        pm.run(ctx, root)
+    } else {
+        root
+    };
+
     if opt.gen.ast {
         ast::dump_json(
             out,
             ctx,
-            &root,
+            &final_ast,
             if opt.no_pretty {
                 ast::Pretty::No
             } else {
@@ -164,7 +176,7 @@ fn gen_output(
         let generated_map = gen_js::generate(
             out,
             ctx,
-            &root,
+            &final_ast,
             if opt.no_pretty {
                 gen_js::Pretty::No
             } else {

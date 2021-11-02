@@ -12,6 +12,7 @@ path = "src/main.rs"
 [dependencies]
 support = { path = "../support" }
 juno = { path = "../juno" }
+pass = { path = "../pass" }
 structopt = "0.3"
 anyhow = "1.0"
 url = "2.2.2"
