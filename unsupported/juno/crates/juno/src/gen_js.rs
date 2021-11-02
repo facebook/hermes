@@ -635,14 +635,8 @@ impl<W: Write> GenJS<W> {
                 } else {
                     ForceBlock::No
                 };
-                let block = self.visit_stmt_or_block(ctx, *consequent, force_block, node);
+                self.visit_stmt_or_block(ctx, *consequent, force_block, node);
                 if let Some(alternate) = alternate {
-                    if !block {
-                        out!(self, ";");
-                        self.newline();
-                    } else {
-                        self.space(ForceSpace::No);
-                    }
                     out!(self, "else");
                     self.space(if matches!(alternate, Node::BlockStatement(_)) {
                         ForceSpace::No
@@ -2969,11 +2963,12 @@ impl<W: Write> GenJS<W> {
             self.dec_indent();
             self.newline();
             out!(self, "}}");
+            self.newline();
             true
         } else {
             self.inc_indent();
             self.newline();
-            node.visit(ctx, self, Some(parent));
+            self.visit_stmt_in_block(ctx, node, parent);
             self.dec_indent();
             self.newline();
             false
@@ -3001,7 +2996,7 @@ impl<W: Write> GenJS<W> {
         parent: &'gc Node<'gc>,
     ) {
         stmt.visit(ctx, self, Some(parent));
-        if !ends_with_block(ctx, Some(stmt)) {
+        if !stmt_skip_semi(ctx, Some(stmt)) {
             out!(self, ";");
         }
     }
@@ -3419,54 +3414,48 @@ impl Node<'_> {
     }
 }
 
-fn ends_with_block<'gc>(ctx: &'gc GCContext, node: Option<&'gc Node<'gc>>) -> bool {
+/// Whether to skip the semicolon at the end of `node`.
+/// Block statements don't need semicolons at the end, but other statements which contain
+/// statements don't need them either.
+/// For example:
+/// ```js
+/// if (x)
+///   y();
+/// ```
+/// The semicolon will be emitted as part of emitting `y()`, which is an `ExpressionStatement`,
+/// so the `IfStatement` does not need to emit a semicolon.
+fn stmt_skip_semi<'gc>(ctx: &'gc GCContext, node: Option<&'gc Node<'gc>>) -> bool {
     match node {
         Some(node) => match &node {
-            Node::BlockStatement(_) | Node::FunctionDeclaration(_) => true,
-            Node::WhileStatement(WhileStatement {
-                metadata: _, body, ..
-            }) => ends_with_block(ctx, Some(*body)),
-            Node::ForStatement(ForStatement {
-                metadata: _, body, ..
-            }) => ends_with_block(ctx, Some(*body)),
-            Node::ForInStatement(ForInStatement {
-                metadata: _, body, ..
-            }) => ends_with_block(ctx, Some(*body)),
-            Node::ForOfStatement(ForOfStatement {
-                metadata: _, body, ..
-            }) => ends_with_block(ctx, Some(*body)),
-            Node::WithStatement(WithStatement {
-                metadata: _, body, ..
-            }) => ends_with_block(ctx, Some(*body)),
+            Node::BlockStatement(_)
+            | Node::FunctionDeclaration(_)
+            | Node::WhileStatement(_)
+            | Node::ForStatement(_)
+            | Node::ForInStatement(_)
+            | Node::ForOfStatement(_)
+            | Node::IfStatement(_)
+            | Node::WithStatement(_) => true,
             Node::SwitchStatement(_) => true,
-            Node::LabeledStatement(LabeledStatement {
-                metadata: _, body, ..
-            }) => ends_with_block(ctx, Some(*body)),
+            Node::LabeledStatement(LabeledStatement { body, .. }) => {
+                stmt_skip_semi(ctx, Some(*body))
+            }
             Node::TryStatement(TryStatement {
                 metadata: _,
                 finalizer,
                 handler,
                 ..
-            }) => ends_with_block(ctx, finalizer.or(*handler)),
-            Node::CatchClause(CatchClause {
-                metadata: _, body, ..
-            }) => ends_with_block(ctx, Some(*body)),
-            Node::IfStatement(IfStatement {
-                metadata: _,
-                alternate,
-                consequent,
-                ..
-            }) => ends_with_block(ctx, alternate.or(Some(*consequent))),
+            }) => stmt_skip_semi(ctx, finalizer.or(*handler)),
+            Node::CatchClause(CatchClause { body, .. }) => stmt_skip_semi(ctx, Some(*body)),
             Node::ClassDeclaration(_) => true,
             Node::ExportDefaultDeclaration(ExportDefaultDeclaration {
                 metadata: _,
                 declaration,
-            }) => ends_with_block(ctx, Some(*declaration)),
+            }) => stmt_skip_semi(ctx, Some(*declaration)),
             Node::ExportNamedDeclaration(ExportNamedDeclaration {
                 metadata: _,
                 declaration,
                 ..
-            }) => ends_with_block(ctx, *declaration),
+            }) => stmt_skip_semi(ctx, *declaration),
             _ => false,
         },
         None => false,

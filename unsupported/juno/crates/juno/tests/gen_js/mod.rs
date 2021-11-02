@@ -208,6 +208,7 @@ fn test_statements() {
     test_roundtrip("while (1) {}");
     test_roundtrip("while (1) { fn(); }");
     test_roundtrip("while (1) fn();");
+    test_roundtrip("while (1) fn()");
     test_roundtrip("for (;;) { fn(); }");
     test_roundtrip("for (;;) fn();");
     test_roundtrip("for (x;;) { fn(); }");
@@ -266,6 +267,12 @@ fn test_statements() {
     test_roundtrip("if (x) {fn();}");
     test_roundtrip("if (x) {fn();} else {fn();}");
     test_roundtrip("if (x) fn(); else fn();");
+    test_roundtrip(
+        "if (x)
+          try { } catch (e) { }
+        else
+          fn();",
+    );
 }
 
 #[test]
