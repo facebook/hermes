@@ -78,7 +78,7 @@ std::u16string bestAvailableLocale(
 
 // Implementer note: For more information review
 // https://402.ecma-international.org/7.0/#sec-unicode-locale-extension-sequences
-std::u16string toNoExtensionsLocale(const std::u16string &locale) {
+std::u16string toNoUnicodeExtensionsLocale(const std::u16string &locale) {
   std::vector<std::u16string> subtags;
   auto s = locale.begin(), e = locale.end();
   while (true) {
@@ -93,6 +93,9 @@ std::u16string toNoExtensionsLocale(const std::u16string &locale) {
   for (size_t s = 0; s < size;) {
     result.append(subtags[s]);
     s++;
+    if (s < size) {
+      result.append(u"-");
+    }
     // If next tag is a private marker and there are remaining tags
     if (subtags[s] == u"u" && s < size - 1)
       // Skip those tags until you reach end or another singleton subtag
@@ -116,7 +119,7 @@ LocaleMatch lookupMatcher(
   for (std::u16string locale : requestedLocales) {
     // a. Let noExtensionsLocale be the String value that is locale with
     // any Unicode locale extension sequences removed.
-    std::u16string noExtensionsLocale = toNoExtensionsLocale(locale);
+    std::u16string noExtensionsLocale = toNoUnicodeExtensionsLocale(locale);
     // b. Let availableLocale be BestAvailableLocale(availableLocales,
     // noExtensionsLocale).
     llvh::Optional<std::u16string> availableLocale =
@@ -153,7 +156,7 @@ std::vector<std::u16string> lookupSupportedLocales(
   for (const std::u16string &locale : requestedLocales) {
     // a. Let noExtensionsLocale be the String value that is locale with all
     // Unicode locale extension sequences removed.
-    std::u16string noExtensionsLocale = toNoExtensionsLocale(locale);
+    std::u16string noExtensionsLocale = toNoUnicodeExtensionsLocale(locale);
     // b. Let availableLocale be BestAvailableLocale(availableLocales,
     // noExtensionsLocale).
     llvh::Optional<std::u16string> availableLocale =
@@ -229,7 +232,7 @@ std::u16string localeListToLocaleString(vm::Runtime *runtime,
   std::u16string requestedLocale = requestedLocales->empty() ? getDefaultLocale() : std::move(requestedLocales->front());
   // 6. Let noExtensionsLocale be the String value that is requestedLocale with
   // any Unicode locale extension sequences (6.2.1) removed.
-  std::u16string noExtensionsLocale = toNoExtensionsLocale(requestedLocale);
+  std::u16string noExtensionsLocale = toNoUnicodeExtensionsLocale(requestedLocale);
 
   // 7. Let availableLocales be a List with language tags that includes the
   // languages for which the Unicode Character Database contains language
