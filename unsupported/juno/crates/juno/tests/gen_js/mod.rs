@@ -325,6 +325,10 @@ fn test_assignment() {
     test_roundtrip("x &&= 1");
     test_roundtrip("x ??= 1");
     test_roundtrip("foo()[1] = 1");
+    test_roundtrip("a = b && c");
+    test_roundtrip("(a = b) && c");
+    test_roundtrip("a && b = c");
+    test_roundtrip("a && (b = c)");
 }
 
 #[test]

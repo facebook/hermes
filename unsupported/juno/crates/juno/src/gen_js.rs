@@ -69,7 +69,7 @@ mod precedence {
 
     pub fn get_binary_precedence(op: BinaryExpressionOperator) -> Precedence {
         use BinaryExpressionOperator::*;
-        match op {
+        (match op {
             Exp => 12,
             Mult => 11,
             Mod => 11,
@@ -90,18 +90,18 @@ mod precedence {
             BitAnd => 6,
             BitXor => 5,
             BitOr => 4,
-            In => 8 + BIN_START,
-            Instanceof => 8 + BIN_START,
-        }
+            In => 8,
+            Instanceof => 8,
+        }) + BIN_START
     }
 
     pub fn get_logical_precedence(op: LogicalExpressionOperator) -> Precedence {
         use LogicalExpressionOperator::*;
-        match op {
+        (match op {
             And => 3,
             Or => 2,
             NullishCoalesce => 1,
-        }
+        }) + BIN_START
     }
 }
 
