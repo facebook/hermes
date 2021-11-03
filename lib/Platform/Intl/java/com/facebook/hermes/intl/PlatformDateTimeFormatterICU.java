@@ -20,8 +20,6 @@ import java.util.Date;
 import java.util.Optional;
 import java.util.List;
 import java.util.Arrays;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
 
 public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter {
   private DateFormat mDateFormat = null;
@@ -273,25 +271,6 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
       TimeZone timeZoneObject = TimeZone.getTimeZone(JSObjects.getJavaString(timeZone));
       mDateFormat.setTimeZone(timeZoneObject);
     }
-  }
-
-  @RequiresApi(api = Build.VERSION_CODES.N)
-  @Override
-  public String normalizeValidTimeZone(final String timeZone) throws JSRangeErrorException {
-    Optional<String> normalizedValidTimeZone = allAvailableTimeZones.stream()
-    .filter(new Predicate<String>() {
-      @Override
-      public boolean test(String tz) {
-        return tz.compareToIgnoreCase(timeZone) == 0;
-      }
-    }).findAny();
-
-    if(!normalizedValidTimeZone.isPresent()) {
-      String errorMessage = timeZone + " is invalid timeZone";
-      throw new JSRangeErrorException(errorMessage);
-    }
-
-    return normalizedValidTimeZone.get();
   }
 
   @RequiresApi(api = Build.VERSION_CODES.N)

@@ -18,6 +18,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.regex.Pattern;
 
 /**
@@ -139,6 +140,15 @@ public class DateTimeFormat {
     return options;
   }
 
+  public String normalizeValidTimeZone(final String timeZone) throws JSRangeErrorException {
+    for (String id : TimeZone.getAvailableIDs()){
+      if(id.compareToIgnoreCase(timeZone) == 0){
+        return id;
+      }
+    }
+    throw new JSRangeErrorException(timeZone + " is an invalid timeZone");
+  }
+
   private Object DefaultTimeZone() throws JSRangeErrorException {
     return mPlatformDateTimeFormatter.getDefaultTimeZone(mResolvedLocaleObject);
   }
@@ -245,14 +255,10 @@ public class DateTimeFormat {
     if (JSObjects.isUndefined(timeZone)) {
       timeZone = DefaultTimeZone();
     } else {
-      try {
-        if (!isValidTimeZoneName(timeZone.toString())) {
-          throw new JSRangeErrorException("Invalid timezone name!");
-        }
-        timeZone = mPlatformDateTimeFormatter.normalizeValidTimeZone(timeZone.toString());
-      } catch (JSRangeErrorException error) {
-        throw error;
+      if (!isValidTimeZoneName(timeZone.toString())) {
+        throw new JSRangeErrorException("Invalid timezone name!");
       }
+      timeZone = normalizeValidTimeZone(timeZone.toString());
     }
     mTimeZone = timeZone;
 
