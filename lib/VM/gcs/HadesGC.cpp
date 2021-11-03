@@ -1263,7 +1263,7 @@ HadesGC::HadesGC(
           pointerBase,
           gcConfig,
           std::move(crashMgr),
-          HeapKind::HADES),
+          HeapKind::HadesGC),
       maxHeapSize_{std::max(
           static_cast<size_t>(
               llvh::alignTo<AlignedStorage::size()>(gcConfig.getMaxHeapSize())),

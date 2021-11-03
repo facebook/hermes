@@ -122,7 +122,7 @@ class GenGC final : public GCBase {
   ~GenGC();
 
   static bool classof(const GCBase *gc) {
-    return gc->getKind() == HeapKind::NCGEN;
+    return gc->getKind() == HeapKind::GenGC;
   }
 
 #ifndef NDEBUG

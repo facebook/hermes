@@ -95,7 +95,7 @@ GenGC::GenGC(
           pointerBase,
           gcConfig,
           std::move(crashMgr),
-          HeapKind::NCGEN),
+          HeapKind::GenGC),
       storageProvider_(std::move(provider)),
       generationSizes_(Size(gcConfig)),
       // ExpectedPageSize.h defines a static value for the expected page size,

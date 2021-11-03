@@ -61,6 +61,12 @@ using JSWeakMap = JSWeakMapImpl<CellKind::WeakMapKind>;
 
 class GCCell;
 
+#ifdef HERMESVM_GC_RUNTIME
+#define RUNTIME_GC_KINDS \
+  GC_KIND(HadesGC)       \
+  GC_KIND(GenGC)
+#endif
+
 /// This is a single slot in the weak reference table. It contains a pointer to
 /// a GC managed object. The GC will make sure it is updated when the object is
 /// moved; if the object is garbage-collected, the pointer will be cleared.
@@ -866,7 +872,7 @@ class GCBase {
   enum class FixedSizeValue { Yes, No, Unknown };
 #endif
 
-  enum class HeapKind { NCGEN, HADES, MALLOC };
+  enum class HeapKind { GenGC, HadesGC, MallocGC };
 
   GCBase(
       GCCallbacks *gcCallbacks,
@@ -1651,7 +1657,25 @@ class GCBase {
 #endif
 
  private:
-  /// Callback called if it's not null when the Live Data Tripwire is triggered.
+#ifdef HERMESVM_GC_RUNTIME
+  /// Use the kind tag of the GC to statically call a function with one of the
+  /// available runtime GCs.
+  template <typename Func>
+  auto runtimeGCDispatch(Func f) {
+    switch (getKind()) {
+#define GC_KIND(kind)          \
+  case GCBase::HeapKind::kind: \
+    return f(llvh::cast<kind>(this));
+      RUNTIME_GC_KINDS
+#undef GC_KIND
+      default:
+        llvm_unreachable("No other valid GC for RuntimeGC");
+    }
+  }
+#endif
+
+  /// Callback called if it's not null when the Live Data Tripwire is
+  /// triggered.
   std::function<void(GCTripwireContext &)> tripwireCallback_;
 
   /// Maximum size limit before the heap size tripwire will trigger.

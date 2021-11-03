@@ -922,36 +922,14 @@ bool GCBase::shouldSanitizeHandles() {
 
 #ifdef HERMESVM_GC_RUNTIME
 
-#define GCBASE_BARRIER_1(name, type1)                                       \
-  void GCBase::name(type1 arg1) {                                           \
-    switch (getKind()) {                                                    \
-      case GCBase::HeapKind::HADES:                                         \
-        llvh::cast<HadesGC>(this)->name(arg1);                              \
-        break;                                                              \
-      case GCBase::HeapKind::NCGEN:                                         \
-        llvh::cast<GenGC>(this)->name(arg1);                                \
-        break;                                                              \
-      case GCBase::HeapKind::MALLOC:                                        \
-        llvm_unreachable(                                                   \
-            "MallocGC should not be used with the RuntimeGC build config"); \
-        break;                                                              \
-    }                                                                       \
+#define GCBASE_BARRIER_1(name, type1)                     \
+  void GCBase::name(type1 arg1) {                         \
+    runtimeGCDispatch([&](auto *gc) { gc->name(arg1); }); \
   }
 
-#define GCBASE_BARRIER_2(name, type1, type2)                                \
-  void GCBase::name(type1 arg1, type2 arg2) {                               \
-    switch (getKind()) {                                                    \
-      case GCBase::HeapKind::HADES:                                         \
-        llvh::cast<HadesGC>(this)->name(arg1, arg2);                        \
-        break;                                                              \
-      case GCBase::HeapKind::NCGEN:                                         \
-        llvh::cast<GenGC>(this)->name(arg1, arg2);                          \
-        break;                                                              \
-      case GCBase::HeapKind::MALLOC:                                        \
-        llvm_unreachable(                                                   \
-            "MallocGC should not be used with the RuntimeGC build config"); \
-        break;                                                              \
-    }                                                                       \
+#define GCBASE_BARRIER_2(name, type1, type2)                    \
+  void GCBase::name(type1 arg1, type2 arg2) {                   \
+    runtimeGCDispatch([&](auto *gc) { gc->name(arg1, arg2); }); \
   }
 
 GCBASE_BARRIER_2(writeBarrier, const GCHermesValue *, HermesValue);
