@@ -100,7 +100,8 @@ vm::CallResult<std::u16string> toLocaleUpperCase(
 
 // Implementation of
 // https://tc39.es/ecma402/#sec-getoption
-vm::CallResult<Option> getOption(
+// Funcion split into two depending on which data type is needed
+vm::CallResult<Option> getOptionBool(
     const Options &options,
     const std::u16string property,
     const std::u16string type,
@@ -121,15 +122,6 @@ vm::CallResult<Option> getOption(
       //return runtime->raiseRangeError(u"Boolean option expected but not found");
       return vm::ExecutionStatus::EXCEPTION;
     }
-    // a. Set value to ! ToBoolean(value).
-  }
-  // 6. If type is "string", then
-  if (type == u"string") {
-    if(!value->second.isString()) {
-      //return runtime->raiseRangeError(u"String option expected but not found");
-      return vm::ExecutionStatus::EXCEPTION;
-    }
-    // a. Set value to ? ToString(value).
   }
   // 7. If values is not undefined and values does not contain an element equal to value, throw a RangeError exception.
   if (!values.empty() && llvh::find(values, value->second) == values.end()) {
@@ -138,7 +130,32 @@ vm::CallResult<Option> getOption(
   // 8. Return value.
   return value->second;
 }
-
+vm::CallResult<Option> getOptionString(
+     const Options &options,
+     const std::u16string property,
+     const std::u16string type,
+     const std::vector<std::u16string> values,
+     const Option &fallback) {
+  // 1. Assert type(options) is object
+  // 2. Let value be ? Get(options, property).
+  auto value = options.find(property);
+  // 3. If value is undefined, return fallback.
+  if (value == options.end()) {
+    return fallback;
+  }
+  if (type == u"string") {
+    if(!value->second.isString()) {
+      //return runtime->raiseRangeError(u"String option expected but not found");
+      return vm::ExecutionStatus::EXCEPTION;
+    }
+    // 7. If values is not undefined and values does not contain an element equal to value, throw a RangeError exception.
+    if (!values.empty() && llvh::find(values, value->second) == values.end()) {
+      return vm::ExecutionStatus::EXCEPTION;
+    }
+  }
+  // 8. Return value.
+  return value->second;
+}
 // Implementation of
 // https://tc39.es/ecma402/#sec-lookupsupportedlocales
 std::vector<std::u16string> lookupSupportedLocales(
@@ -169,7 +186,7 @@ vm::CallResult<std::vector<std::u16string>> supportedLocales(
   // 1. Set options to ? CoerceOptionsToObject(options).
   // 2. Let matcher be ? GetOption(options, "localeMatcher", "string", « "lookup", "best fit" », "best fit").
   std::vector<std::u16string> vectorForMatcher = {u"lookup", u"best fit"};
-  vm::CallResult<std::u16string> matcher = getOption(options, u"localeMatcher", u"string", vectorForMatcher, u"best fit").getValue().getString();
+  vm::CallResult<std::u16string> matcher = getOptionString(options, u"localeMatcher", u"string", vectorForMatcher, u"best fit").getValue().getString();
   if (LLVM_UNLIKELY(matcher == vm::ExecutionStatus::EXCEPTION)) {
     return vm::ExecutionStatus::EXCEPTION;
   }
@@ -304,7 +321,7 @@ struct DateTimeFormat::Impl {
   }
   
   static std::u16string yearString(const Year &year) {
-    switch (era) {
+    switch (year) {
       case Year::Numeric:
         return u"numeric";
       case Year::TwoDigit:
@@ -433,12 +450,23 @@ struct DateTimeFormat::Impl {
   DateTimeStyle mDateStyle {DateTimeStyle::Undefined};
   DateTimeStyle mTimeStyle {DateTimeStyle::Undefined};
   
-  std::u16string locale;
+  // For opt in initialize
   std::u16string localeMatcher;
   std::u16string ca;
   std::u16string nu;
   std::u16string hc;
-  std::u16string localeData;
+  
+  // For dateTimeFormat in initialize
+  std::vector<std::u16string> localeData;
+  std::u16string Locale;
+  std::u16string Calendar;
+  std::u16string HourCycle;
+  std::u16string NumberingSystem;
+  
+  // For r in initialize
+  std::u16string resolveLocale;
+  std::u16string locale;
+  std::u16string dataLocale;
 };
 
 DateTimeFormat::DateTimeFormat() : impl_(std::make_unique<Impl>()) {}
@@ -549,60 +577,92 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   //   "lookup", "best fit" », "best fit").
   std::vector<std::u16string> values = {u"lookup", u"best fit"};
   Option matcherFallback = new Option(u"best fit");
-  auto matcher = getOption(options, u"localeMatcher", u"string", values, matcherFallback);
+  auto matcher = getOptionString(options, u"localeMatcher", u"string", values, matcherFallback);
   // 5. Set opt.[[localeMatcher]] to matcher.
-  opt.localeMatcher = matcher;
+  opt.localeMatcher = matcher->getString();
 
   // 6. Let calendar be ? GetOption(options, "calendar", "string",
   //    undefined, undefined).
   std::vector<std::u16string> emptyVector;
-  Option undefinedFallback = new Option(false); // TODO: Pass undefined.
-  auto calendar = getOption(options, u"calendar", u"string", emptyVector, undefinedFallback);
+  Option undefinedFallback = new Option(u"und"); // TODO: Pass undefined.
+  auto calendar = getOptionString(options, u"calendar", u"string", emptyVector, undefinedFallback);
   // 7. If calendar is not undefined, then
   //    a. If calendar does not match the Unicode Locale Identifier type
   //       nonterminal, throw a RangeError exception.
   // 8. Set opt.[[ca]] to calendar.
-  if (calendar->size() != 0) {
-      opt.ca = calendar;
+  if (calendar->getString() != u"und") {
+      opt.ca = calendar->getString();
+  }
+  else {
+    return vm::ExecutionStatus::EXCEPTION;
   }
         
   // 9. Let numberingSystem be ? GetOption(options, "numberingSystem",
   //    "string", undefined, undefined).
-  auto numberingSystem = getOption(options, u"numberingSystem", u"string", emptyVector, undefinedFallback);
+  auto numberingSystem = getOptionString(options, u"numberingSystem", u"string", emptyVector, undefinedFallback);
   // 10. If numberingSystem is not undefined, then
   //     a. If numberingSystem does not match the Unicode Locale Identifier
   //        type nonterminal, throw a RangeError exception.
   // 11. Set opt.[[nu]] to numberingSystem.
-  if (numberingSystem->size() != 0) {
-      opt.nu = numberingSystem;
+  if (numberingSystem->getString() != u"und") {
+      opt.nu = numberingSystem->getString();
+  }
+  else {
+    return vm::ExecutionStatus::EXCEPTION;
   }
         
   // 12. Let hour12 be ? GetOption(options, "hour12", "boolean",
   //     undefined, undefined).
-  auto hour12 = getOption(options, u"hour12", u"boolean", emptyVector, undefinedFallback);
+  auto hour12 = getOptionBool(options, u"hour12", u"boolean", emptyVector, undefinedFallback);
   // 13. Let hourCycle be ? GetOption(options, "hourCycle", "string", «
   //     "h11", "h12", "h23", "h24" », undefined).
   std::vector<std::u16string> hourCycleVector = {u"h11", u"h12", u"h23", u"h24"};
-  auto hourCycle = getOption(options, u"hourCycle", u"string", hourCycleVector, undefinedFallback);
+  auto hourCycle = getOptionString(options, u"hourCycle", u"string", hourCycleVector, undefinedFallback);
   // 14. If hour12 is not undefined, then
   //     a. Let hourCycle be null.
-  if (hour12->size() != 0) {
-      hourCycle = NULL;
+  if (hour12->getString() != u"und") {
+      hourCycle->getString() = u"null";
   }
   // 15. Set opt.[[hc]] to hourCycle.
-  opt.hc = hourCycle;
+  opt.hc = hourCycle->getString();
         
 //  16. Let localeData be %DateTimeFormat%.[[LocaleData]].
-  NSArray<NSString *> *nslocaleData = [NSLocale availableLocaleIdentifiers];
+    Impl dateTimeFormat;
 //  TODO: resolveLocale? https://tc39.es/ecma402/#sec-resolvelocale
-    std::u16string r;
+    Impl r;
 //  17. Let r be ResolveLocale(%DateTimeFormat%.[[AvailableLocales]], requestedLocales, opt, %DateTimeFormat%.[[RelevantExtensionKeys]], localeData).
+    r.resolveLocale = locale;
 //  18. Set dateTimeFormat.[[Locale]] to r.[[locale]].
+    dateTimeFormat.Locale = r.locale;
 //  19. Let calendar be r.[[ca]].
+    r.ca = calendar->getString();
 //  20. Set dateTimeFormat.[[Calendar]] to calendar.
+    dateTimeFormat.Calendar = calendar->getString();
 //  21. Set dateTimeFormat.[[HourCycle]] to r.[[hc]].
+    dateTimeFormat.HourCycle = r.hc;
 //  22. Set dateTimeFormat.[[NumberingSystem]] to r.[[nu]].
+    dateTimeFormat.NumberingSystem = r.nu;
 //  23. Let dataLocale be r.[[dataLocale]].
+    auto dataLocale = r.dataLocale;
+//  24. Let timeZone be ? Get(options, "timeZone").
+    auto timeZone = options.find(u"timeZone");
+//  25. If timeZone is undefined, then
+    if (timeZone == options.end()) {
+//  a. Let timeZone be DefaultTimeZone().
+      NSString *nstrTime;
+      nstrTime = (NSString*)[NSTimeZone defaultTimeZone];
+      std::u16string defaultTime = nsStringToU16String(nstrTime);
+      timeZone->second.getString() = defaultTime;
+    }
+//  26. Else,
+    else {
+//  a. Let timeZone be ? ToString(timeZone).
+      timeZone = timeZone->second.getString();
+//  TODO: Find a way to get timezone validity
+//  b. If the result of IsValidTimeZoneName(timeZone) is false, then
+//  i. Throw a RangeError exception.
+//  c. Let timeZone be CanonicalizeTimeZoneName(timeZone).
+    }
   return vm::ExecutionStatus::RETURNED;
 }
 
