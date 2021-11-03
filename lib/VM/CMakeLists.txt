@@ -116,14 +116,7 @@ set(source_files
   JSLib/require.cpp
 )
 
-if (${HERMESVM_GCKIND} STREQUAL "NONCONTIG_GENERATIONAL")
-  list(APPEND source_files gcs/AlignedHeapSegment.cpp gcs/AlignedStorage.cpp
-                           gcs/CardTableNC.cpp gcs/FillerCell.cpp
-                           gcs/CompleteMarkState.cpp gcs/GCGeneration.cpp
-                           gcs/GCSegmentAddressIndex.cpp gcs/GenGCNC.cpp
-                           gcs/OldGenNC.cpp gcs/OldGenSegmentRanges.cpp
-                           gcs/YoungGenNC.cpp gcs/GenGCHeapSegment.cpp)
-elseif (${HERMESVM_GCKIND} STREQUAL "MALLOC")
+if (${HERMESVM_GCKIND} STREQUAL "MALLOC")
   list(APPEND source_files gcs/MallocGC.cpp gcs/FillerCell.cpp)
 elseif (${HERMESVM_GCKIND} STREQUAL "HADES")
   list(APPEND source_files
@@ -138,10 +131,6 @@ elseif (${HERMESVM_GCKIND} STREQUAL "RUNTIME")
           gcs/AlignedHeapSegment.cpp gcs/AlignedStorage.cpp
           gcs/CardTableNC.cpp gcs/FillerCell.cpp
           gcs/HadesGC.cpp
-          gcs/CompleteMarkState.cpp gcs/GCGeneration.cpp
-          gcs/GCSegmentAddressIndex.cpp gcs/GenGCNC.cpp
-          gcs/OldGenNC.cpp gcs/OldGenSegmentRanges.cpp
-          gcs/YoungGenNC.cpp gcs/GenGCHeapSegment.cpp
   )
 else()
   message(WARNING "Not linking garbage collector")
