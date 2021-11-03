@@ -14,9 +14,9 @@ fn test_valid() {
         let gc = GCContext::new(&mut ctx);
         NodePtr::from_node(
             &gc,
-            ReturnStatementBuilder::build_template(
+            builder::ReturnStatement::build_template(
                 &gc,
-                ReturnStatementTemplate {
+                template::ReturnStatement {
                     metadata: Default::default(),
                     argument: None,
                 },
@@ -29,13 +29,13 @@ fn test_valid() {
         let gc = GCContext::new(&mut ctx);
         NodePtr::from_node(
             &gc,
-            ReturnStatementBuilder::build_template(
+            builder::ReturnStatement::build_template(
                 &gc,
-                ReturnStatementTemplate {
+                template::ReturnStatement {
                     metadata: Default::default(),
-                    argument: Some(NumericLiteralBuilder::build_template(
+                    argument: Some(builder::NumericLiteral::build_template(
                         &gc,
-                        NumericLiteralTemplate {
+                        template::NumericLiteral {
                             metadata: Default::default(),
                             value: 1.0,
                         },
@@ -50,13 +50,13 @@ fn test_valid() {
         let gc = GCContext::new(&mut ctx);
         NodePtr::from_node(
             &gc,
-            ReturnStatementBuilder::build_template(
+            builder::ReturnStatement::build_template(
                 &gc,
-                ReturnStatementTemplate {
+                template::ReturnStatement {
                     metadata: Default::default(),
-                    argument: Some(ReturnStatementBuilder::build_template(
+                    argument: Some(builder::ReturnStatement::build_template(
                         &gc,
-                        ReturnStatementTemplate {
+                        template::ReturnStatement {
                             metadata: Default::default(),
                             argument: None,
                         },
@@ -76,17 +76,17 @@ fn test_error() {
         let gc = GCContext::new(&mut ctx);
         NodePtr::from_node(
             &gc,
-            BlockStatementBuilder::build_template(
+            builder::BlockStatement::build_template(
                 &gc,
-                BlockStatementTemplate {
+                template::BlockStatement {
                     metadata: Default::default(),
-                    body: vec![ReturnStatementBuilder::build_template(
+                    body: vec![builder::ReturnStatement::build_template(
                         &gc,
-                        ReturnStatementTemplate {
+                        template::ReturnStatement {
                             metadata: Default::default(),
-                            argument: Some(ReturnStatementBuilder::build_template(
+                            argument: Some(builder::ReturnStatement::build_template(
                                 &gc,
-                                ReturnStatementTemplate {
+                                template::ReturnStatement {
                                     metadata: Default::default(),
                                     argument: None,
                                 },

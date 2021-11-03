@@ -80,9 +80,9 @@ fn test_literals() {
         let gc = GCContext::new(&mut ctx);
         NodePtr::from_node(
             &gc,
-            StringLiteralBuilder::build_template(
+            builder::StringLiteral::build_template(
                 &gc,
-                StringLiteralTemplate {
+                template::StringLiteral {
                     metadata: Default::default(),
                     value: juno::ast::NodeString {
                         str: vec!['A' as u16, 0x1234u16, '\t' as u16],

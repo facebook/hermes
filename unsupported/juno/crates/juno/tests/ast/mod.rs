@@ -19,9 +19,9 @@ fn test_node_outlives_context() {
             let gc = GCContext::new(&mut ctx);
             NodePtr::from_node(
                 &gc,
-                NumericLiteralBuilder::build_template(
+                builder::NumericLiteral::build_template(
                     &gc,
-                    NumericLiteralTemplate {
+                    template::NumericLiteral {
                         metadata: Default::default(),
                         value: 1.0f64,
                     },
@@ -45,9 +45,9 @@ fn test_node_clone_outlives_context() {
                 let gc = GCContext::new(&mut ctx);
                 NodePtr::from_node(
                     &gc,
-                    NumericLiteralBuilder::build_template(
+                    builder::NumericLiteral::build_template(
                         &gc,
-                        NumericLiteralTemplate {
+                        template::NumericLiteral {
                             metadata: Default::default(),
                             value: 1.0f64,
                         },
@@ -69,18 +69,18 @@ fn test_visit() {
         let gc = GCContext::new(&mut ctx);
         NodePtr::from_node(
             &gc,
-            BlockStatementBuilder::build_template(
+            builder::BlockStatement::build_template(
                 &gc,
-                BlockStatementTemplate {
+                template::BlockStatement {
                     metadata: Default::default(),
                     body: vec![
-                        ExpressionStatementBuilder::build_template(
+                        builder::ExpressionStatement::build_template(
                             &gc,
-                            ExpressionStatementTemplate {
+                            template::ExpressionStatement {
                                 metadata: Default::default(),
-                                expression: NumericLiteralBuilder::build_template(
+                                expression: builder::NumericLiteral::build_template(
                                     &gc,
-                                    NumericLiteralTemplate {
+                                    template::NumericLiteral {
                                         metadata: Default::default(),
                                         value: 1.0,
                                     },
@@ -88,13 +88,13 @@ fn test_visit() {
                                 directive: None,
                             },
                         ),
-                        ExpressionStatementBuilder::build_template(
+                        builder::ExpressionStatement::build_template(
                             &gc,
-                            ExpressionStatementTemplate {
+                            template::ExpressionStatement {
                                 metadata: Default::default(),
-                                expression: NumericLiteralBuilder::build_template(
+                                expression: builder::NumericLiteral::build_template(
                                     &gc,
-                                    NumericLiteralTemplate {
+                                    template::NumericLiteral {
                                         metadata: Default::default(),
                                         value: 2.0,
                                     },
@@ -147,32 +147,32 @@ fn test_visit_mut() {
         let gc = GCContext::new(&mut ctx);
         NodePtr::from_node(
             &gc,
-            ExpressionStatementBuilder::build_template(
+            builder::ExpressionStatement::build_template(
                 &gc,
-                ExpressionStatementTemplate {
+                template::ExpressionStatement {
                     metadata: Default::default(),
                     directive: None,
-                    expression: BinaryExpressionBuilder::build_template(
+                    expression: builder::BinaryExpression::build_template(
                         &gc,
-                        BinaryExpressionTemplate {
+                        template::BinaryExpression {
                             metadata: Default::default(),
                             operator: BinaryExpressionOperator::Plus,
-                            left: NumericLiteralBuilder::build_template(
+                            left: builder::NumericLiteral::build_template(
                                 &gc,
-                                NumericLiteralTemplate {
+                                template::NumericLiteral {
                                     metadata: Default::default(),
                                     value: x,
                                 },
                             ),
-                            right: UnaryExpressionBuilder::build_template(
+                            right: builder::UnaryExpression::build_template(
                                 &gc,
-                                UnaryExpressionTemplate {
+                                template::UnaryExpression {
                                     metadata: Default::default(),
                                     prefix: true,
                                     operator: UnaryExpressionOperator::Minus,
-                                    argument: NumericLiteralBuilder::build_template(
+                                    argument: builder::NumericLiteral::build_template(
                                         &gc,
-                                        NumericLiteralTemplate {
+                                        template::NumericLiteral {
                                             metadata: Default::default(),
                                             value: y,
                                         },
@@ -208,12 +208,16 @@ fn test_visit_mut() {
                 },
             ) = node
             {
-                let mut builder = BinaryExpressionBuilder::from_node(e1);
+                let mut builder = builder::BinaryExpression::from_node(e1);
                 builder.operator(BinaryExpressionOperator::Minus);
                 builder.right(e2);
-                return node.visit_children_mut(NodeBuilder::BinaryExpression(builder), ctx, self);
+                return node.visit_children_mut(
+                    builder::Builder::BinaryExpression(builder),
+                    ctx,
+                    self,
+                );
             }
-            node.visit_children_mut(NodeBuilder::from_node(node), ctx, self)
+            node.visit_children_mut(builder::Builder::from_node(node), ctx, self)
         }
     }
     let mut pass = Pass {};
@@ -269,9 +273,9 @@ fn test_many_nodes() {
             for i in 0..10_000 {
                 cached = Some(NodePtr::from_node(
                     &gc,
-                    NumericLiteralBuilder::build_template(
+                    builder::NumericLiteral::build_template(
                         &gc,
-                        NumericLiteralTemplate {
+                        template::NumericLiteral {
                             metadata: Default::default(),
                             value: i as f64,
                         },
@@ -329,9 +333,9 @@ fn test_store_node() {
         let mut pass = Foo { n: None };
         let ast = NodePtr::from_node(
             &gc,
-            NumericLiteralBuilder::build_template(
+            builder::NumericLiteral::build_template(
                 &gc,
-                NumericLiteralTemplate {
+                template::NumericLiteral {
                     metadata: Default::default(),
                     value: 1.0f64,
                 },

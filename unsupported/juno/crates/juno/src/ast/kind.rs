@@ -6,7 +6,6 @@
  */
 
 use super::*;
-use paste::paste;
 
 /// Generate boilerplate code for the `Node` enum.
 ///
@@ -60,20 +59,6 @@ macro_rules! gen_nodekind_enum {
         }
         )*
 
-        paste! {
-        $(
-        #[derive(Debug, Clone)]
-        #[repr(C)]
-        pub struct [<$kind Template>]<'a> {
-            // Common fields to all node kinds.
-            pub metadata: TemplateMetadata<'a>,
-            // Create each field that's meant for just this node kind.
-            $($(pub $field : $type,)*)?
-        }
-        )*
-        }
-
-
         impl<'gc> Node<'gc> {
             pub fn variant(&self) -> NodeVariant {
                 match self {
@@ -108,14 +93,14 @@ macro_rules! gen_nodekind_enum {
             /// but the children which will be visited are determined via `builder`.
             pub fn visit_children_mut<'ast: 'gc, V: VisitorMut<'gc>>(
                 &'gc self,
-                builder: NodeBuilder<'gc>,
+                builder: builder::Builder<'gc>,
                 ctx: &'gc GCContext<'ast, '_>,
                 visitor: &mut V,
             ) -> TransformResult<&'gc Node<'gc>> {
                 #[allow(unused_mut)]
                 match builder {
                     $(
-                        NodeBuilder::$kind(mut builder) => {
+                        builder::Builder::$kind(mut builder) => {
                             $($(
                                 if let TransformResult::Changed($field) = (&builder.inner.$field)
                                     .visit_child_mut(ctx, visitor, self) {
@@ -192,87 +177,136 @@ macro_rules! gen_nodekind_enum {
             }
         }
 
-        paste! {
-
-        /// Used for building various kinds of AST nodes.
-        #[derive(Debug)]
-        pub enum NodeBuilder<'a> {
-            // Create each field in the enum.
-            $($kind([<$kind Builder>]<'a>),)*
-        }
-
-        impl<'a> NodeBuilder<'a> {
-            pub fn from_node(node: &'a Node<'a>) -> Self {
-                match node {
-                    $(
-                    Node::$kind(original) => Self::$kind([<$kind Builder>]::from_node(original)),
-                    )*
-                }
+        pub mod template {
+            use super::{
+                AssignmentExpressionOperator,
+                BinaryExpressionOperator,
+                ExportKind,
+                ImportKind,
+                LogicalExpressionOperator,
+                MethodDefinitionKind,
+                Node,
+                NodeLabel,
+                NodeList,
+                NodeString,
+                PropertyKind,
+                UnaryExpressionOperator,
+                UpdateExpressionOperator,
+                VariableDeclarationKind,
+            };
+            $(
+            #[derive(Debug, Clone)]
+            #[repr(C)]
+            pub struct $kind<'a> {
+                // Common fields to all node kinds.
+                pub metadata: super::TemplateMetadata<'a>,
+                // Create each field that's meant for just this node kind.
+                $($(pub $field : $type,)*)?
             }
+            )*
         }
 
-        $(
-        /// Used for building nodes.
-        #[derive(Debug)]
-        pub struct [<$kind Builder>]<'a> {
-            is_changed: bool,
-            pub(super) inner: $kind<'a>,
-        }
+        pub mod builder {
+            use super::{
+                AssignmentExpressionOperator,
+                BinaryExpressionOperator,
+                ExportKind,
+                GCContext,
+                ImportKind,
+                LogicalExpressionOperator,
+                MethodDefinitionKind,
+                Node,
+                NodeChild,
+                NodeLabel,
+                NodeList,
+                NodeMetadata,
+                NodeString,
+                PropertyKind,
+                TransformResult,
+                UnaryExpressionOperator,
+                UpdateExpressionOperator,
+                VariableDeclarationKind,
+            };
 
-        impl<'a> [<$kind Builder>]<'a> {
-            /// Initialize the builder from `node`.
-            pub fn from_node(node: &'a $kind<'a>) -> Self {
-                Self {
-                    is_changed: false,
-                    inner: $kind {
-                        metadata: NodeMetadata {
-                            phantom: node.metadata.phantom,
-                            range: node.metadata.range,
-                        },
-                        $($(
-                            $field: (&node.$field).duplicate(),
-                        )*)?
+            /// Used for building various kinds of AST nodes.
+            #[derive(Debug)]
+            pub enum Builder<'a> {
+                // Create each field in the enum.
+                $($kind(self::$kind<'a>),)*
+            }
+
+            impl<'a> Builder<'a> {
+                pub fn from_node(node: &'a Node<'a>) -> Self {
+                    match node {
+                        $(
+                        Node::$kind(original) => Self::$kind(self::$kind::from_node(original)),
+                        )*
                     }
                 }
             }
 
-            /// Return Unchanged if the node the builder started with was never changed.
-            /// Return Changed(node) with a new node if it was changed.
-            pub fn build(self, gc: &'a GCContext<'_, '_>) -> TransformResult<&'a Node<'a>> {
-                if self.is_changed {
-                    TransformResult::Changed(gc.alloc(Node::$kind(self.inner)))
-                } else {
-                    TransformResult::Unchanged
-                }
+            $(
+            /// Used for building nodes.
+            #[derive(Debug)]
+            pub struct $kind<'a> {
+                is_changed: bool,
+                pub(super) inner: super::$kind<'a>,
             }
 
-            /// Build from a template.
-            pub fn build_template(
-                gc: &'a GCContext<'_, '_>,
-                node: [<$kind Template>]<'a>,
-            ) -> &'a Node<'a> {
-                [<$kind Builder>] {
-                    is_changed: true,
-                    inner: $kind {
-                        metadata: NodeMetadata::build_template(node.metadata),
-                        $($(
-                                $field: node.$field,
-                        )*)?
+            impl<'a> $kind<'a> {
+                /// Initialize the builder from `node`.
+                pub fn from_node(node: &'a super::$kind<'a>) -> Self {
+                    Self {
+                        is_changed: false,
+                        inner: super::$kind {
+                            metadata: NodeMetadata {
+                                phantom: node.metadata.phantom,
+                                range: node.metadata.range,
+                            },
+                            $($(
+                                $field: (&node.$field).duplicate(),
+                            )*)?
+                        }
                     }
-                }.build(gc).unwrap()
-            }
+                }
 
-            // Setters for the fields.
-            $($(
-            pub fn $field(&mut self, $field: $type) {
-                self.is_changed = true;
-                self.inner.$field = $field;
+                /// Return Unchanged if the node the builder started with was never changed.
+                /// Return Changed(node) with a new node if it was changed.
+                pub fn build(self, gc: &'a GCContext) -> TransformResult<&'a Node<'a>> {
+                    if self.is_changed {
+                        TransformResult::Changed(gc.alloc(super::Node::$kind(self.inner)))
+                    } else {
+                        TransformResult::Unchanged
+                    }
+                }
+
+                /// Build from a template.
+                pub fn build_template(
+                    gc: &'a GCContext,
+                    node: super::template::$kind<'a>,
+                ) -> &'a Node<'a> {
+                    Self {
+                        is_changed: true,
+                        inner: super::$kind {
+                            metadata: NodeMetadata::build_template(node.metadata),
+                            $($(
+                                    $field: node.$field,
+                            )*)?
+                        }
+                    }.build(gc).unwrap()
+                }
+
+                // Setters for the fields.
+                $($(
+                pub fn $field(&mut self, $field: $type) {
+                    self.is_changed = true;
+                    self.inner.$field = $field;
+                }
+                )*)?
             }
-            )*)?
+            )*
+
         }
-        )*
-
-        } // paste
 
     };
 }

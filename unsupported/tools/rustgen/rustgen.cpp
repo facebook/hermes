@@ -444,7 +444,7 @@ static void genConvert() {
     }
 
     llvh::outs()
-        << "          let mut template = ast::" << cls.name << "Template {\n"
+        << "          let mut template = ast::template::" << cls.name << " {\n"
         << "              metadata: ast::TemplateMetadata {range, ..Default::default()},\n";
 
     for (const auto &fld : cls.fields) {
@@ -455,8 +455,8 @@ static void genConvert() {
     llvh::outs()
         << "          };\n" // kind
            "          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());\n"
-        << "          ast::" << cls.name
-        << "Builder::build_template(gc, template)\n"
+        << "          ast::builder::" << cls.name
+        << "::build_template(gc, template)\n"
         << "        }\n"; // match block
   };
 

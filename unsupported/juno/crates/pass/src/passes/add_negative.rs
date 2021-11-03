@@ -66,11 +66,11 @@ impl<'gc> VisitorMut<'gc> for AddNegative {
             },
         ) = node
         {
-            let mut builder = BinaryExpressionBuilder::from_node(e1);
+            let mut builder = builder::BinaryExpression::from_node(e1);
             builder.operator(BinaryExpressionOperator::Minus);
             builder.right(e2);
-            return node.visit_children_mut(NodeBuilder::BinaryExpression(builder), gc, self);
+            return node.visit_children_mut(builder::Builder::BinaryExpression(builder), gc, self);
         }
-        node.visit_children_mut(NodeBuilder::from_node(node), gc, self)
+        node.visit_children_mut(builder::Builder::from_node(node), gc, self)
     }
 }
