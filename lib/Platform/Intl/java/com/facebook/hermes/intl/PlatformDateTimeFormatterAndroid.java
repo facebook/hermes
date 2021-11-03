@@ -15,14 +15,9 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
-import java.util.Optional;
-import java.util.List;
-import java.util.Arrays;
 
 public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormatter {
   private DateFormat mDateFormat = null;
-
-  private List<String> allAvailableTimeZones = Arrays.asList(TimeZone.getAvailableIDs());
 
   @Override
   public String format(double n) {

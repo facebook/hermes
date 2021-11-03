@@ -140,7 +140,7 @@ public class DateTimeFormat {
     return options;
   }
 
-  public String normalizeValidTimeZone(final String timeZone) throws JSRangeErrorException {
+  public String normalizeTimeZone(final String timeZone) throws JSRangeErrorException {
     for (String id : TimeZone.getAvailableIDs()){
       if(id.compareToIgnoreCase(timeZone) == 0){
         return id;
@@ -258,7 +258,7 @@ public class DateTimeFormat {
       if (!isValidTimeZoneName(timeZone.toString())) {
         throw new JSRangeErrorException("Invalid timezone name!");
       }
-      timeZone = normalizeValidTimeZone(timeZone.toString());
+      timeZone = normalizeTimeZone(timeZone.toString());
     }
     mTimeZone = timeZone;
 

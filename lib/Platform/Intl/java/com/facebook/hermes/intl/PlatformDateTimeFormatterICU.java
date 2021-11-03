@@ -17,15 +17,9 @@ import androidx.annotation.RequiresApi;
 import java.text.AttributedCharacterIterator;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Optional;
-import java.util.List;
-import java.util.Arrays;
 
 public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter {
   private DateFormat mDateFormat = null;
-
-  @RequiresApi(api = Build.VERSION_CODES.N)
-  private List<String> allAvailableTimeZones = Arrays.asList(TimeZone.getAvailableIDs());
 
   @RequiresApi(api = Build.VERSION_CODES.N)
   @Override
