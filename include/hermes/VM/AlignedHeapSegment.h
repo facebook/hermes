@@ -20,7 +20,6 @@
 #include "hermes/VM/MarkBitArrayNC.h"
 #include "hermes/VM/PointerBase.h"
 #include "hermes/VM/SegmentInfo.h"
-#include "hermes/VM/SweepResultNC.h"
 
 #include "llvh/Support/MathExtras.h"
 

@@ -10,12 +10,9 @@
 
 #if defined(HERMESVM_GC_MALLOC)
 #include "hermes/VM/MallocGC.h"
-#elif defined(HERMESVM_GC_NONCONTIG_GENERATIONAL)
-#include "hermes/VM/GenGCNC.h"
 #elif defined(HERMESVM_GC_HADES)
 #include "hermes/VM/HadesGC.h"
 #elif defined(HERMESVM_GC_RUNTIME)
-#include "hermes/VM/GenGCNC.h"
 #include "hermes/VM/HadesGC.h"
 #include "hermes/VM/MallocGC.h"
 #else

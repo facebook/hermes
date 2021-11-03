@@ -870,7 +870,7 @@ class GCBase {
   enum class FixedSizeValue { Yes, No, Unknown };
 #endif
 
-  enum class HeapKind { GenGC, HadesGC, MallocGC };
+  enum class HeapKind { HadesGC, MallocGC };
 
   GCBase(
       GCCallbacks *gcCallbacks,
