@@ -62,9 +62,7 @@ using JSWeakMap = JSWeakMapImpl<CellKind::WeakMapKind>;
 class GCCell;
 
 #ifdef HERMESVM_GC_RUNTIME
-#define RUNTIME_GC_KINDS \
-  GC_KIND(HadesGC)       \
-  GC_KIND(GenGC)
+#define RUNTIME_GC_KINDS GC_KIND(HadesGC)
 #endif
 
 /// This is a single slot in the weak reference table. It contains a pointer to
