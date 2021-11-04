@@ -5,9 +5,4 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-pub mod ast;
-pub mod gen_js;
-pub mod hparser;
-pub mod sema;
-pub mod source_manager;
-pub mod sourcemap;
+mod decl_collector;
