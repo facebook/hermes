@@ -459,7 +459,7 @@ impl<'ast, 'ctx> GCContext<'ast, 'ctx> {
 
 /// A wrapper around Node&, with "shallow" hashing and equality, suitable for
 /// hash tables.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct NodeRef<'gc>(pub &'gc Node<'gc>);
 
 impl<'gc> NodeRef<'gc> {
@@ -470,7 +470,7 @@ impl<'gc> NodeRef<'gc> {
 
 impl<'gc> PartialEq for NodeRef<'gc> {
     fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(self, other)
+        std::ptr::eq(self.0, other.0)
     }
 }
 
@@ -1234,6 +1234,7 @@ impl<'gc> NodeChild<'gc> for &Option<NodeList<'gc>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
 
     #[test]
     fn test_string_literal() {
@@ -1246,5 +1247,37 @@ mod tests {
                 }
             )
         );
+    }
+
+    #[test]
+    fn test_node_ref() {
+        let mut ctx = Context::new();
+        let lock = GCContext::new(&mut ctx);
+
+        let mut m = HashMap::new();
+
+        let n1 = NodeRef::from(NumericLiteralBuilder::build_template(
+            &lock,
+            NumericLiteralTemplate {
+                metadata: Default::default(),
+                value: 10.0,
+            },
+        ));
+        let n2 = NodeRef::from(NumericLiteralBuilder::build_template(
+            &lock,
+            NumericLiteralTemplate {
+                metadata: Default::default(),
+                value: 20.0,
+            },
+        ));
+        let n25 = Box::new(n2);
+        assert_ne!(n1, n2);
+        assert_eq!(n2, *n25);
+        m.insert(n1, 10);
+        m.insert(n2, 20);
+
+        assert_eq!(10, *m.get(&n1).unwrap());
+        assert_eq!(20, *m.get(&n2).unwrap());
+        assert_eq!(20, *m.get(&*n25).unwrap());
     }
 }
