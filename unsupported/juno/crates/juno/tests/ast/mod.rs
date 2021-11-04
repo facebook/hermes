@@ -211,13 +211,13 @@ fn test_visit_mut() {
                 let mut builder = builder::BinaryExpression::from_node(e1);
                 builder.operator(BinaryExpressionOperator::Minus);
                 builder.right(e2);
-                return node.visit_children_mut(
+                return node.replace_with_new(
                     builder::Builder::BinaryExpression(builder),
                     ctx,
                     self,
                 );
             }
-            node.visit_children_mut(builder::Builder::from_node(node), ctx, self)
+            node.visit_children_mut(ctx, self)
         }
     }
     let mut pass = Pass {};

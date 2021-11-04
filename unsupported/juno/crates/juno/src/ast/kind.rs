@@ -88,10 +88,36 @@ macro_rules! gen_nodekind_enum {
                 }
             }
 
-            /// Visit the child fields of the provided `builder`.
+            /// Visit the child fields of this node.
+            /// `self` is the *original* parent of the children to visit.
+            /// Will only allocate a new node if one of the children was changed.
+            pub fn visit_children_mut<'ast: 'gc, V: VisitorMut<'gc>>(
+                &'gc self,
+                ctx: &'gc GCContext<'ast, '_>,
+                visitor: &mut V,
+            ) -> TransformResult<&'gc Node<'gc>> {
+                let builder = builder::Builder::from_node(self);
+                #[allow(unused_mut)]
+                match builder {
+                    $(
+                        builder::Builder::$kind(mut builder) => {
+                            $($(
+                                if let TransformResult::Changed($field) = (&builder.inner.$field)
+                                    .visit_child_mut(ctx, visitor, self) {
+                                    builder.$field($field);
+                                }
+                            )*)?
+                            builder.build(ctx)
+                        }
+                    ),*
+                }
+            }
+
+            /// Replace `self` in the AST with the result of the `builder`.
+            /// Always allocates a new node.
             /// `self` is the *original* parent of the children to visit,
             /// but the children which will be visited are determined via `builder`.
-            pub fn visit_children_mut<'ast: 'gc, V: VisitorMut<'gc>>(
+            pub fn replace_with_new<'ast: 'gc, V: VisitorMut<'gc>>(
                 &'gc self,
                 builder: builder::Builder<'gc>,
                 ctx: &'gc GCContext<'ast, '_>,
@@ -108,6 +134,36 @@ macro_rules! gen_nodekind_enum {
                                 }
                             )*)?
                             builder.build(ctx)
+                        }
+                    ),*
+                }
+            }
+
+            /// Replace `self` in the AST with the `existing` node.
+            /// `self` is the *original* parent of the children to visit,
+            /// but the children which will be visited are determined via `existing`.
+            /// Will only allocate a new node if the `existing` node also must be modified.
+            pub fn replace_with_existing<'ast: 'gc, V: VisitorMut<'gc>>(
+                &'gc self,
+                existing: &'gc Node<'gc>,
+                ctx: &'gc GCContext<'ast, '_>,
+                visitor: &mut V,
+            ) -> TransformResult<&'gc Node<'gc>> {
+                let builder = builder::Builder::from_node(existing);
+                #[allow(unused_mut)]
+                match builder {
+                    $(
+                        builder::Builder::$kind(mut builder) => {
+                            $($(
+                                if let TransformResult::Changed($field) = (&builder.inner.$field)
+                                    .visit_child_mut(ctx, visitor, self) {
+                                    builder.$field($field);
+                                }
+                            )*)?
+                            match builder.build(ctx) {
+                                TransformResult::Unchanged => TransformResult::Changed(existing),
+                                TransformResult::Changed(n) => TransformResult::Changed(n),
+                            }
                         }
                     ),*
                 }
@@ -285,15 +341,12 @@ macro_rules! gen_nodekind_enum {
                     gc: &'a GCContext,
                     node: super::template::$kind<'a>,
                 ) -> &'a Node<'a> {
-                    Self {
-                        is_changed: true,
-                        inner: super::$kind {
-                            metadata: NodeMetadata::build_template(node.metadata),
-                            $($(
-                                    $field: node.$field,
-                            )*)?
-                        }
-                    }.build(gc).unwrap()
+                    gc.alloc(super::Node::$kind(super::$kind {
+                        metadata: NodeMetadata::build_template(node.metadata),
+                        $($(
+                                $field: node.$field,
+                        )*)?
+                    }))
                 }
 
                 // Setters for the fields.

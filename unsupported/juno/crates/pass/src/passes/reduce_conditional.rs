@@ -59,13 +59,8 @@ impl<'gc> VisitorMut<'gc> for ReduceConditional {
         }) = node
         {
             let reduced = if *value { consequent } else { alternate };
-            let builder = builder::Builder::from_node(reduced);
-            // TODO: Make this pattern easier to use and harder to make a mistake.
-            return match node.visit_children_mut(builder, gc, self) {
-                TransformResult::Unchanged => TransformResult::Changed(reduced),
-                TransformResult::Changed(new_node) => TransformResult::Changed(new_node),
-            };
+            return node.replace_with_existing(reduced, gc, self);
         }
-        node.visit_children_mut(builder::Builder::from_node(node), gc, self)
+        node.visit_children_mut(gc, self)
     }
 }
