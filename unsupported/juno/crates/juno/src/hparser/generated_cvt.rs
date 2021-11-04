@@ -13,9 +13,9 @@ use super::convert::*;
 use crate::ast;
 
 pub unsafe fn cvt_node_ptr<'parser, 'gc, 'ast: 'gc>(
-    cvt: &mut Converter<'parser>,
-    gc: &'gc ast::GCLock<'ast, '_>,
-    n: NodePtr) -> &'gc ast::Node<'gc> {
+  cvt: &mut Converter<'parser>, 
+  gc: &'gc ast::GCLock, 
+  n: NodePtr) -> &'gc ast::Node<'gc> {
     let nr = n.as_ref();
     let range = ast::SourceRange {
         file: cvt.file_id,
