@@ -7,11 +7,12 @@
 
 use super::sem_context::*;
 use crate::ast::{
-    self, Atom, GCContext, Identifier, Node, NodeList, NodePtr, NodeVariant,
-    UnaryExpressionOperator, VariableDeclarationKind, Visitor,
+    self, builder, template, Atom, GCContext, Identifier, Node, NodeList, NodePtr, NodeVariant,
+    SourceRange, TemplateMetadata, UnaryExpressionOperator, VariableDeclarationKind, Visitor,
 };
 use crate::sema::decl_collector::DeclCollector;
 use crate::sema::keywords::Keywords;
+use crate::sema::known_globals::KNOWN_GLOBALS;
 use crate::{node_cast, node_isa};
 use smallvec::SmallVec;
 use support::ScopedHashMap;
@@ -209,10 +210,59 @@ impl<'gc> Resolver<'gc> {
 
             // Create the global scope.
             pself.in_new_scope(lock, node, |pself| {
+                // If we are warning on undefined symbols, pre-define the known
+                // globals to decrease the number of warnings.
+                if lock.ctx().warn_undefined {
+                    pself.declare_known_globals(lock, *node.range());
+                }
+
                 pself.process_collected_declarations(lock, node);
                 node.visit_children(lock, pself);
             });
         });
+    }
+
+    /// Declare the well known globals to avoid strict mode warnings about them.
+    /// `program_range`'s start is used as a synthetic location for the identifiers.
+    fn declare_known_globals(&mut self, lock: &'gc GCContext, program_range: SourceRange) {
+        // A range for the synthetic Identifier nodes we will create.
+        let range = SourceRange {
+            file: program_range.file,
+            start: program_range.start,
+            end: program_range.start,
+        };
+        for s in KNOWN_GLOBALS {
+            let name = lock.atom(*s);
+            debug_assert!(
+                self.binding_table.value(name).is_none(),
+                "Duplicated well known global"
+            );
+
+            // Allocate a synthetic identifier.
+            let ident_node = builder::Identifier::build_template(
+                lock,
+                template::Identifier {
+                    metadata: TemplateMetadata {
+                        range,
+                        ..Default::default()
+                    },
+                    name,
+                    type_annotation: None,
+                    optional: false,
+                },
+            );
+
+            let decl = self
+                .sem
+                .new_global(name, DeclKind::UndeclaredGlobalProperty);
+            self.binding_table.insert(
+                name,
+                Binding {
+                    decl,
+                    ident: node_cast!(Node::Identifier, ident_node),
+                },
+            );
+        }
     }
 
     fn visit_function_like(&mut self, lock: &'gc GCContext, node: &'gc Node<'gc>) {

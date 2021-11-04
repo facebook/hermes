@@ -14,6 +14,7 @@
 
 mod decl_collector;
 mod keywords;
+mod known_globals;
 mod resolver;
 mod sem_context;
 
