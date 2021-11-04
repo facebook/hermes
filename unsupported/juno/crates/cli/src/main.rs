@@ -79,6 +79,14 @@ struct Opt {
     #[structopt(short = "O")]
     optimize: bool,
 
+    /// Enable strict mode.
+    #[structopt(long)]
+    strict_mode: bool,
+
+    /// Warn about undefined variables in strict mode functions.
+    #[structopt(long)]
+    warn_undefined: bool,
+
     /// Measure and print times.
     #[structopt(long = "Xtime")]
     xtime: bool,
@@ -222,6 +230,12 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
 
     let mut ctx = ast::Context::new();
 
+    // Propagate flags.
+    if opt.strict_mode {
+        ctx.enable_strict_mode();
+    }
+    ctx.warn_undefined = opt.warn_undefined;
+
     // Read the input into memory.
     let input = opt.input_path.as_path();
     let file_id = ctx
@@ -233,7 +247,13 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     let mut timer = Timer::new();
 
     // Parse.
-    let parsed = hparser::ParsedJS::parse(Default::default(), &buf);
+    let parsed = hparser::ParsedJS::parse(
+        hparser::ParserFlags {
+            strict_mode: ctx.strict_mode(),
+            ..Default::default()
+        },
+        &buf,
+    );
     timer.mark("Parse");
     if let Some(e) = parsed.first_error() {
         ctx.sm().error(SourceRange::from_loc(file_id, e.0), e.1);

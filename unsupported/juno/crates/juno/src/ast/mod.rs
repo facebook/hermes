@@ -155,6 +155,9 @@ pub struct Context<'ast> {
 
     /// Whether strict mode has been forced.
     strict_mode: bool,
+
+    /// Whether to warn about undefined variables in strict mode functions.
+    pub warn_undefined: bool,
 }
 
 const MIN_CHUNK_CAPACITY: usize = 1 << 10;
@@ -184,6 +187,7 @@ impl<'ast> Context<'ast> {
             next_chunk_capacity: Cell::new(MIN_CHUNK_CAPACITY),
             markbit_marked: true,
             strict_mode: false,
+            warn_undefined: false,
         };
         result.new_chunk();
         result
