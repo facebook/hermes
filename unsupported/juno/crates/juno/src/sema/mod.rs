@@ -7,3 +7,6 @@
 
 mod decl_collector;
 mod keywords;
+mod sem_context;
+
+pub use sem_context::*;
