@@ -870,6 +870,26 @@ impl<'gc> Visitor<'gc> for Resolver<'gc> {
 
             Node::BlockStatement(_) => self.visit_block_statement(lock, node, parent.unwrap()),
 
+            Node::CatchClause(ast::CatchClause { param, body, .. }) => {
+                self.in_new_scope(lock, node, |pself| {
+                    if let Some(id_node @ Node::Identifier(_)) = param {
+                        // For compatibility with ES5, we need to treat a single catch variable
+                        // specially, see: B.3.5 VariableStatements in Catch Blocks
+                        // https://www.ecma-international.org/ecma-262/10.0/index.html#sec-variablestatements-in-catch-blocks
+                        pself.validate_and_declare_identifier(lock, DeclKind::ES5Catch, id_node);
+                    } else {
+                        let mut idents = SmallVec::<[&Node; 4]>::new();
+                        Self::extract_declared_idents_from_id(lock, *param, &mut idents);
+                        for id_node in idents {
+                            pself.validate_and_declare_identifier(lock, DeclKind::Let, id_node);
+                        }
+                    }
+                    // Process body's declarations, skip visiting it, visit its children.
+                    pself.process_collected_declarations(lock, body);
+                    body.visit_children(lock, pself);
+                });
+            }
+
             Node::MetaProperty(ast::MetaProperty {
                 meta: Node::Identifier(meta),
                 property: Node::Identifier(prop),
