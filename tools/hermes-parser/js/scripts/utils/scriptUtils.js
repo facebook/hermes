@@ -12,11 +12,11 @@
 
 'use strict';
 
-import {execSync} from 'child_process';
 import fs from 'fs';
 import mkdirp from 'mkdirp';
 import path from 'path';
 import aliasDefs from './aliases';
+import * as prettier from 'prettier';
 
 export type ESTreeJSON = $ReadOnlyArray<
   $ReadOnly<{
@@ -95,9 +95,7 @@ export function formatAndWriteDistArtifact({
   const code = code_.slice(0, 3) === '/**' ? code_ : HEADER(flow) + code_;
 
   // Format the file
-  const formattedContents = execSync('prettier --parser=flow', {
-    input: code,
-  }).toString();
+  const formattedContents = prettier.format(code, {parser: 'flow'});
 
   // make sure the folder exists first
   const folder = path.resolve(

@@ -11,6 +11,7 @@
 import type {Identifier} from 'hermes-estree';
 
 import {transform} from '../../src/transform/transform';
+import * as t from '../../src/generated/node-types';
 
 describe('transform', () => {
   it('should do nothing (including no formatting) if no mutations are applied', () => {
@@ -31,7 +32,7 @@ describe('transform', () => {
 
         context.replaceNode(
           node,
-          context.shallowCloneNode(node, {
+          t.Identifier({
             name: 'y',
           }),
         );
@@ -54,15 +55,17 @@ const y = 1;
 
           context.insertBeforeStatement(
             node,
-            context.shallowCloneNode(node, {
+            t.VariableDeclaration({
+              kind: 'const',
               declarations: [
-                context.shallowCloneNode(node.declarations[0], {
-                  id: context.shallowCloneNode(
-                    ((node.declarations[0].id: $FlowFixMe): Identifier),
-                    {
-                      name: 'y',
-                    },
-                  ),
+                t.VariableDeclarator({
+                  id: t.Identifier({
+                    name: 'y',
+                  }),
+                  init: t.NumericLiteral({
+                    value: 1,
+                    raw: '1',
+                  }),
                 }),
               ],
             }),
@@ -86,15 +89,17 @@ const x = 1;
 
           context.insertAfterStatement(
             node,
-            context.shallowCloneNode(node, {
+            t.VariableDeclaration({
+              kind: 'const',
               declarations: [
-                context.shallowCloneNode(node.declarations[0], {
-                  id: context.shallowCloneNode(
-                    ((node.declarations[0].id: $FlowFixMe): Identifier),
-                    {
-                      name: 'y',
-                    },
-                  ),
+                t.VariableDeclarator({
+                  id: t.Identifier({
+                    name: 'y',
+                  }),
+                  init: t.NumericLiteral({
+                    value: 1,
+                    raw: '1',
+                  }),
                 }),
               ],
             }),

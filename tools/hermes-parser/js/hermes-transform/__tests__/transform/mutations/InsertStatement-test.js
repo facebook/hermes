@@ -20,21 +20,13 @@ import type {
 } from 'hermes-estree';
 
 import {parseForESLint} from 'hermes-eslint';
+import * as t from '../../../src/generated/node-types';
 import {
   createInsertStatementMutation,
   performInsertStatementMutation,
 } from '../../../src/transform/mutations/InsertStatement';
 import {MutationContext} from '../../../src/transform/MutationContext';
 import {traverse} from '../../../src/traverse/traverse';
-
-const EXPRESSION_STATEMENT = (): ExpressionStatement =>
-  ({
-    type: 'ExpressionStatement',
-    expression: {
-      type: 'Identifier',
-      name: 'inserted',
-    },
-  }: $FlowFixMe);
 
 type StatementTypes = Statement['type'] | ModuleDeclaration['type'];
 const CODE_SAMPLES: {[StatementTypes]: string} = {
@@ -121,7 +113,7 @@ describe('InsertStatement', () => {
     skipTypes = DEFAULT_SKIP_STATEMENTS,
   }: {
     wrapCode: (code: string) => string,
-    getAssertionObject: (nodes: [ESNode, ESNode]) => mixed,
+    getAssertionObject: (nodes: [mixed, mixed]) => mixed,
     skipTypes?: $ReadOnlyArray<StatementTypes>,
   }) {
     function loopSamples(side: 'before' | 'after') {
@@ -135,7 +127,11 @@ describe('InsertStatement', () => {
             type,
             wrapCode(CODE_SAMPLES[type]),
           );
-          const nodeToInsert = EXPRESSION_STATEMENT();
+          const nodeToInsert = t.ExpressionStatement({
+            expression: t.Identifier({
+              name: 'inserted',
+            }),
+          });
           const mutation = createInsertStatementMutation(side, target, [
             nodeToInsert,
           ]);

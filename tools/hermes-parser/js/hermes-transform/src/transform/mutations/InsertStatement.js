@@ -18,13 +18,17 @@ import type {
   StatementParentSingle,
 } from 'hermes-estree';
 import type {MutationContext} from '../MutationContext';
+import type {DetachedNode} from '../../detachedNode';
+
 import {InvalidInsertionError, UnexpectedTransformationState} from '../Errors';
+import {asESNode} from '../../detachedNode';
+import * as t from '../../generated/node-types';
 
 export type InsertStatementMutation = $ReadOnly<{
   type: 'insertStatement',
   side: 'before' | 'after',
   target: ModuleDeclaration | Statement,
-  nodesToInsert: $ReadOnlyArray<Statement | ModuleDeclaration>,
+  nodesToInsert: $ReadOnlyArray<DetachedNode<Statement | ModuleDeclaration>>,
 }>;
 
 export function createInsertStatementMutation(
@@ -56,7 +60,7 @@ export function performInsertStatementMutation(
 
   if (insertionParent.type === 'array') {
     const parent: interface {
-      [string]: $ReadOnlyArray<Statement | ModuleDeclaration>,
+      [string]: $ReadOnlyArray<DetachedNode<Statement | ModuleDeclaration>>,
     } = insertionParent.parent;
     switch (mutation.side) {
       case 'before': {
@@ -78,23 +82,22 @@ export function performInsertStatementMutation(
       }
     }
 
-    // ensure the parent pointers are correct
-    for (const statement of parent[insertionParent.key]) {
+    // ensure the parent pointers are correctly set to the new parent
+    for (const statement of mutation.nodesToInsert) {
       // $FlowExpectedError[cannot-write] - intentionally mutating the AST
-      statement.parent = parent;
+      asESNode(statement).parent = parent;
     }
     return;
   }
 
   const statementsToInsert =
     // $FlowExpectedError[incompatible-cast] -- this is enforced by assertValidModuleDeclarationParent above
-    (mutation.nodesToInsert: $ReadOnlyArray<Statement>);
+    (mutation.nodesToInsert: $ReadOnlyArray<DetachedNode<Statement>>);
 
   const {parent, key} = insertionParent;
 
   // $FlowExpectedError[prop-missing]
-  const statementToWrap: Statement = parent[key];
-  if (statementToWrap.type === 'BlockStatement') {
+  if (parent[key].type === 'BlockStatement') {
     // This should be impossible because the direct parent is either a `BlockStatement` or is something else.
     // If it's a `BlockStatement` then it is handled above
     throw new UnexpectedTransformationState(
@@ -102,22 +105,15 @@ export function performInsertStatementMutation(
     );
   }
 
+  const statementToWrap = parent[key];
   // we need to wrap this key in a BlockStatement so we can insert the new statement
-  // TODO - use the node creation API when it's generated
-  const blockStatement: $Diff<BlockStatement, BaseNode> = {
-    type: 'BlockStatement',
+  const blockStatement = t.BlockStatement({
     body:
       mutation.side === 'before'
         ? [...statementsToInsert, statementToWrap]
         : [statementToWrap, ...statementsToInsert],
     parent: insertionParent.parent,
-  };
-
-  // ensure the parent pointers are correct
-  for (const statement of blockStatement.body) {
-    // $FlowExpectedError[cannot-write] - intentionally mutating the AST
-    statement.parent = blockStatement;
-  }
+  });
 
   (insertionParent.parent: interface {[string]: mixed})[insertionParent.key] =
     blockStatement;
@@ -240,7 +236,7 @@ function isModuleDeclaration(node: ESNode): boolean %checks {
 
 function assertValidModuleDeclarationParent(
   target: ESNode,
-  nodesToInsert: $ReadOnlyArray<ESNode>,
+  nodesToInsert: $ReadOnlyArray<DetachedNode<ModuleDeclaration | Statement>>,
 ): void {
   if (
     target.type === 'Program' ||
@@ -250,12 +246,13 @@ function assertValidModuleDeclarationParent(
   }
 
   for (const node of nodesToInsert) {
-    if (!isModuleDeclaration(node)) {
+    const esnode = asESNode(node);
+    if (!isModuleDeclaration(esnode)) {
       continue;
     }
 
     throw new InvalidInsertionError(
-      `${node.type} cannot be inserted into a ${target.type}.`,
+      `${esnode.type} cannot be inserted into a ${target.type}.`,
     );
   }
 }

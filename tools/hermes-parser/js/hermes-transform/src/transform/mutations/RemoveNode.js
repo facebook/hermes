@@ -10,6 +10,7 @@
 
 import type {ESNode} from 'hermes-estree';
 import type {MutationContext} from '../MutationContext';
+import type {DetachedNode} from '../../detachedNode';
 
 export type RemoveNodeMutation = $ReadOnly<{
   type: 'removeNode',

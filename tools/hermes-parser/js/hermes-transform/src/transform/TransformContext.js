@@ -18,6 +18,7 @@ import type {InsertStatementMutation} from './mutations/InsertStatement';
 import type {RemoveNodeMutation} from './mutations/RemoveNode';
 import type {ReplaceNodeMutation} from './mutations/ReplaceNode';
 import type {ReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
+import type {DetachedNode} from '../detachedNode';
 
 import {getVisitorKeys} from '../getVisitorKeys';
 import {createInsertStatementMutation} from './mutations/InsertStatement';
@@ -25,6 +26,7 @@ import {createReplaceNodeMutation} from './mutations/ReplaceNode';
 import {createReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
 import {createRemoveNodeMutation} from './mutations/RemoveNode';
 import {SimpleTraverser} from '../traverse/SimpleTraverser';
+import {deepCloneNode, shallowCloneNode} from '../detachedNode';
 
 type Mutation = $ReadOnly<
   | InsertStatementMutation
@@ -53,7 +55,7 @@ export type TransformContext = $ReadOnly<{
    * If you want to literally duplicate a node to place somewhere else
    * in the AST, then use `deepCloneNode` instead.
    */
-  shallowCloneNode: <T: ESNode>(node: T, newProps: $Shape<T>) => T,
+  shallowCloneNode: typeof shallowCloneNode,
 
   /**
    * Deeply clones the node and all its children, then applies the
@@ -62,7 +64,7 @@ export type TransformContext = $ReadOnly<{
    * Because this is a deep clone, using it high up in the AST can
    * result in a lot of work being done.
    */
-  deepCloneNode: <T: ESNode>(node: T, newProps: $Shape<T>) => T,
+  deepCloneNode: typeof deepCloneNode,
 
   /**
    * Insert `nodeToInsert` after the `target` statement.
@@ -70,7 +72,7 @@ export type TransformContext = $ReadOnly<{
    */
   insertAfterStatement: (
     target: ModuleDeclaration | Statement,
-    nodeToInsert: SingleOrArray<ModuleDeclaration | Statement>,
+    nodeToInsert: SingleOrArray<DetachedNode<ModuleDeclaration | Statement>>,
   ) => void,
 
   /**
@@ -79,14 +81,17 @@ export type TransformContext = $ReadOnly<{
    */
   insertBeforeStatement: (
     target: ModuleDeclaration | Statement,
-    nodeToInsert: SingleOrArray<ModuleDeclaration | Statement>,
+    nodeToInsert: SingleOrArray<DetachedNode<ModuleDeclaration | Statement>>,
   ) => void,
 
   /**
    * Replace the `target` node with the `nodeToReplaceWith` node.
    * This simply does an in-place replacement in the AST.
    */
-  replaceNode: (target: ESNode, nodeToReplaceWith: ESNode) => void,
+  replaceNode: (
+    target: ESNode,
+    nodeToReplaceWith: DetachedNode<ESNode>,
+  ) => void,
 
   /**
    * Replaces the `target` node with all of the `nodesToReplaceWith` nodes.
@@ -94,7 +99,9 @@ export type TransformContext = $ReadOnly<{
    */
   replaceStatementWithMany: (
     target: ModuleDeclaration | Statement,
-    nodesToReplaceWith: $ReadOnlyArray<ModuleDeclaration | Statement>,
+    nodesToReplaceWith: $ReadOnlyArray<
+      DetachedNode<ModuleDeclaration | Statement>,
+    >,
   ) => void,
 
   /**
@@ -114,53 +121,9 @@ export function getTransformContext(): TransformContext {
   return {
     mutations,
 
-    shallowCloneNode: (<T>(node, newProps) => {
-      const clone = Object.assign(
-        {},
-        node,
-        newProps,
-        // clear the parent pointer
-        {parent: null},
-      );
+    shallowCloneNode: (shallowCloneNode: TransformContext['shallowCloneNode']),
 
-      // fix up the parent pointers for the direct children
-      for (const key of getVisitorKeys(node)) {
-        if (
-          typeof clone[key] === 'object' &&
-          clone[key] &&
-          typeof clone[key].type === 'string'
-        ) {
-          clone.parent = clone;
-        }
-      }
-
-      // $FlowExpectedError[incompatible-cast]
-      return clone;
-    }: TransformContext['shallowCloneNode']),
-
-    deepCloneNode: (<T>(node, newProps) => {
-      const clone: ESNode = JSON.parse(
-        JSON.stringify(node, (key, value) => {
-          // null out parent pointers
-          if (key === 'parent') {
-            return undefined;
-          }
-          return value;
-        }),
-      );
-
-      // set the parent pointers
-      SimpleTraverser.traverse(clone, {
-        enter(node, parent) {
-          // $FlowExpectedError[cannot-write]
-          node.parent = parent;
-        },
-        leave() {},
-      });
-
-      // $FlowExpectedError[incompatible-cast]
-      return clone;
-    }: TransformContext['deepCloneNode']),
+    deepCloneNode: (deepCloneNode: TransformContext['deepCloneNode']),
 
     insertAfterStatement: ((target, nodesToInsert): void => {
       mutations.push(
@@ -190,7 +153,9 @@ export function getTransformContext(): TransformContext {
   };
 }
 
-function toArray<T: ESNode>(thing: SingleOrArray<T>): $ReadOnlyArray<T> {
+function toArray<T: ESNode>(
+  thing: SingleOrArray<DetachedNode<T>>,
+): $ReadOnlyArray<DetachedNode<T>> {
   if (Array.isArray(thing)) {
     return thing;
   }

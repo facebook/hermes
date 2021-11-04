@@ -14,11 +14,14 @@ import type {
   StatementParentArray,
 } from 'hermes-estree';
 import type {MutationContext} from '../MutationContext';
+import type {DetachedNode} from '../../detachedNode';
 
 export type ReplaceStatementWithManyMutation = $ReadOnly<{
   type: 'replaceStatementWithMany',
   target: ModuleDeclaration | Statement,
-  nodesToReplaceWith: $ReadOnlyArray<ModuleDeclaration | Statement>,
+  nodesToReplaceWith: $ReadOnlyArray<
+    DetachedNode<ModuleDeclaration | Statement>,
+  >,
 }>;
 
 export function createReplaceStatementWithManyMutation(
