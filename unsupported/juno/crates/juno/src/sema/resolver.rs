@@ -215,7 +215,7 @@ impl<'gc> Resolver<'gc> {
         });
     }
 
-    fn visit_function(&mut self, lock: &'gc GCContext, node: &'gc Node<'gc>) {
+    fn visit_function_like(&mut self, lock: &'gc GCContext, node: &'gc Node<'gc>) {
         self.in_new_function(lock, node, |pself| {
             let body = node.function_like_body();
             // Search for "use strict".
@@ -331,6 +331,35 @@ impl<'gc> Resolver<'gc> {
                 body.visit(lock, pself, Some(node));
             });
         });
+    }
+
+    fn visit_function_expression(
+        &mut self,
+        lock: &'gc GCContext,
+        fe: &ast::FunctionExpression<'gc>,
+        node: &'gc Node<'gc>,
+    ) {
+        // If there is a name, declare it.
+        if let Some(node_id @ Node::Identifier(ident)) = fe.id {
+            self.in_new_scope(lock, node, |pself| {
+                if pself.validate_declaration_name(lock, DeclKind::FunctionExprName, ident) {
+                    let decl = pself.sem.new_decl(
+                        pself.current_scope.unwrap(),
+                        ident.name,
+                        DeclKind::FunctionExprName,
+                    );
+                    pself
+                        .sem
+                        .set_ident_decl(NodePtr::from_node(lock, node_id), decl);
+                    pself
+                        .binding_table
+                        .insert(ident.name, Binding { decl, ident });
+                }
+                pself.visit_function_like(lock, node);
+            });
+        } else {
+            self.visit_function_like(lock, node);
+        }
     }
 
     fn visit_identifier(
@@ -782,8 +811,10 @@ impl<'gc> Visitor<'gc> for Resolver<'gc> {
                     .scope_mut(self.current_scope.unwrap())
                     .hoisted_functions
                     .push(NodePtr::from_node(lock, node));
-                self.visit_function(lock, node);
+                self.visit_function_like(lock, node);
             }
+
+            Node::FunctionExpression(fe) => self.visit_function_expression(lock, fe, node),
 
             Node::Identifier(ident) => self.visit_identifier(lock, ident, node, parent.unwrap()),
 
