@@ -4,15 +4,25 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @flow
  * @format
  */
 
-'use strict';
+/*
+This class does some very "javascripty" things in the name of
+performance which are ultimately impossible to soundly type.
+
+So instead of adding strict types and a large number of suppression
+comments, instead it is left untyped and subclasses are strictly
+typed via a separate flow declaration file.
+*/
+
+import type {HermesNode} from './HermesAST';
 
 import HermesASTAdapter from './HermesASTAdapter';
 
 export default class HermesToBabelAdapter extends HermesASTAdapter {
-  fixSourceLocation(node) {
+  fixSourceLocation(node: HermesNode): void {
     const loc = node.loc;
     if (loc == null) {
       return;
@@ -28,7 +38,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     node.end = loc.rangeEnd;
   }
 
-  mapNode(node) {
+  mapNode(node: HermesNode): HermesNode {
     this.fixSourceLocation(node);
     switch (node.type) {
       case 'Program':
@@ -77,7 +87,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     }
   }
 
-  mapProgram(node) {
+  mapProgram(node: HermesNode): HermesNode {
     // Visit child nodes and convert to directives
     const {comments, ...program} = this.mapNodeWithDirectives(node);
 
@@ -107,7 +117,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     };
   }
 
-  mapNodeWithDirectives(node) {
+  mapNodeWithDirectives(node: HermesNode): HermesNode {
     const directives = [];
     for (const child of node.body) {
       if (child.type === 'ExpressionStatement' && child.directive != null) {
@@ -149,12 +159,12 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     return node;
   }
 
-  mapIdentifier(node) {
+  mapIdentifier(node: HermesNode): HermesNode {
     node.loc.identifierName = node.name;
     return this.mapNodeDefault(node);
   }
 
-  mapTemplateElement(node) {
+  mapTemplateElement(node: HermesNode): HermesNode {
     // Adjust start loc to exclude "`" at beginning of template literal if this is the first quasi,
     // otherwise exclude "}" from previous expression.
     const startCharsToExclude = 1;
@@ -185,7 +195,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     };
   }
 
-  mapGenericTypeAnnotation(node) {
+  mapGenericTypeAnnotation(node: HermesNode): HermesNode {
     // Convert simple `this` generic type to ThisTypeAnnotation
     if (
       node.typeParameters === null &&
@@ -203,7 +213,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     return this.mapNodeDefault(node);
   }
 
-  mapSymbolTypeAnnotation(node) {
+  mapSymbolTypeAnnotation(node: HermesNode): HermesNode {
     return {
       type: 'GenericTypeAnnotation',
       loc: node.loc,
@@ -220,7 +230,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     };
   }
 
-  mapProperty(node) {
+  mapProperty(node: HermesNode): HermesNode {
     const key = this.mapNode(node.key);
     const value = this.mapNode(node.value);
 
@@ -264,7 +274,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     }
   }
 
-  mapMethodDefinition(node) {
+  mapMethodDefinition(node: HermesNode): HermesNode {
     const key = this.mapNode(node.key);
     const value = this.mapNode(node.value);
 
@@ -301,7 +311,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     };
   }
 
-  mapRestElement(node) {
+  mapRestElement(node: HermesNode): HermesNode {
     const restElement = this.mapNodeDefault(node);
 
     // Hermes puts type annotations on rest elements on the argument node,
@@ -315,7 +325,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     return restElement;
   }
 
-  mapImportExpression(node) {
+  mapImportExpression(node: HermesNode): HermesNode {
     // Babel expects ImportExpression to be structued as a regular
     // CallExpression where the callee is an Import node.
     return {
@@ -333,7 +343,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     };
   }
 
-  mapFunction(node) {
+  mapFunction(node: HermesNode): HermesNode {
     // Remove the first parameter if it is a this-type annotation,
     // which is not recognized by Babel.
     if (node.params.length !== 0 && node.params[0].name === 'this') {
@@ -347,7 +357,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
    * If Babel (the version we target) does not support a type annotation we
    * parse, we need to return some other valid type annotation in its place.
    */
-  mapUnsupportedTypeAnnotation(node) {
+  mapUnsupportedTypeAnnotation(node: HermesNode): HermesNode {
     return {
       type: 'AnyTypeAnnotation',
       loc: node.loc,

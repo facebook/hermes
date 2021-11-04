@@ -57,8 +57,6 @@ yarn babel-node "$THIS_DIR/genESTreeJSON.js" "$INCLUDE_PATH"
 yarn babel-node "$THIS_DIR/genWasmParser.js" "$WASM_PARSER"
 yarn babel-node "$THIS_DIR/genNodeDeserializers.js" "$INCLUDE_PATH"
 yarn babel-node "$THIS_DIR/genParserVisitorKeys.js"
-yarn babel-node "$THIS_DIR/genParserNodeTypes.js"
-yarn babel-node "$THIS_DIR/genParserAsserts.js"
 yarn babel-node "$THIS_DIR/genESLintVisitorKeys.js"
 yarn babel-node "$THIS_DIR/genSelectorTypes.js"
 

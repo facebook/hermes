@@ -14,8 +14,8 @@ import {
   HermesESTreeJSON,
   formatAndWriteDistArtifact,
   LITERAL_TYPES,
-} from './scriptUtils';
-import tempCustomASTDefs from '../hermes-parser/src/types/definitions/tempCustomASTDefs';
+} from './utils/scriptUtils';
+import tempCustomASTDefs from './utils/tempCustomASTDefs';
 
 const ALLOWED_ARG_TYPES = new Set(['NodePtr', 'NodeList']);
 
@@ -57,5 +57,5 @@ formatAndWriteDistArtifact({
   code: visitorKeysFileContents,
   package: 'hermes-parser',
   filename: 'visitor-keys.js',
-  subdirSegments: ['types', 'generated'],
+  subdirSegments: ['generated'],
 });

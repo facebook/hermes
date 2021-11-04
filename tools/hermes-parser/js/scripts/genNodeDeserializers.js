@@ -14,7 +14,7 @@
 
 'use strict';
 
-import {formatAndWriteDistArtifact} from './scriptUtils';
+import {formatAndWriteDistArtifact} from './utils/scriptUtils';
 
 const fs = require('fs');
 const path = require('path');

@@ -16,7 +16,7 @@ import {execSync} from 'child_process';
 import fs from 'fs';
 import mkdirp from 'mkdirp';
 import path from 'path';
-import aliasDefs from '../hermes-parser/src/types/definitions/aliases';
+import aliasDefs from './aliases';
 
 export type ESTreeJSON = $ReadOnlyArray<
   $ReadOnly<{
@@ -39,7 +39,7 @@ export type ESTreeJSON = $ReadOnlyArray<
 >;
 
 // $FlowExpectedError[cannot-resolve-module]
-export const HermesESTreeJSON: ESTreeJSON = require('./dist/HermesESTreeJSON.json');
+export const HermesESTreeJSON: ESTreeJSON = require('../dist/HermesESTreeJSON.json');
 
 type FlowStyle = false | 'loose' | 'strict' | 'strict-local';
 function HEADER(flow: FlowStyle): string {
@@ -100,7 +100,14 @@ export function formatAndWriteDistArtifact({
   }).toString();
 
   // make sure the folder exists first
-  const folder = path.resolve(__dirname, '..', pkg, 'dist', ...subdirSegments);
+  const folder = path.resolve(
+    __dirname,
+    '..',
+    '..',
+    pkg,
+    'dist',
+    ...subdirSegments,
+  );
   mkdirp.sync(folder);
   // write to disk
   fs.writeFileSync(path.resolve(folder, filename), formattedContents);

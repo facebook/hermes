@@ -17,7 +17,7 @@ import type {
 
 import fs from 'fs';
 import path from 'path';
-import {HermesESTreeJSON} from '../scripts/scriptUtils';
+import {HermesESTreeJSON} from '../scripts/utils/scriptUtils';
 import {parseForESLint} from 'hermes-eslint';
 import {traverse} from 'hermes-transform';
 
