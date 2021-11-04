@@ -619,17 +619,27 @@ pub trait Visitor<'gc> {
     fn call(&mut self, ctx: &'gc GCLock, node: &'gc Node<'gc>, parent: Option<&'gc Node<'gc>>);
 }
 
+/// Indicates what mutation occurred to an element of the AST during [`VisitorMut`] use.
 #[derive(Debug)]
 pub enum TransformResult<T> {
+    /// No change to the element.
     Unchanged,
+
+    /// Element must be removed, if possible.
+    /// If the element cannot be removed, it will be replaced with EmptyStatement.
+    /// **Only statements may be removed from non-optional fields,
+    /// as removing expressions would result in an invalid AST.**
+    Removed,
+
+    /// Element should be swapped out for the wrapped element.
     Changed(T),
 }
 
 impl<T> TransformResult<T> {
     pub fn unwrap(self) -> T {
         match self {
-            Self::Unchanged => {
-                panic!("called `TransformResult::unwrap()` on a `None` value");
+            Self::Unchanged | Self::Removed => {
+                panic!("called `TransformResult::unwrap()` without a changed value");
             }
             Self::Changed(t) => t,
         }
@@ -637,7 +647,7 @@ impl<T> TransformResult<T> {
 
     pub fn unwrap_or(self, default: T) -> T {
         match self {
-            Self::Unchanged => default,
+            Self::Unchanged | Self::Removed => default,
             Self::Changed(t) => t,
         }
     }
@@ -890,15 +900,18 @@ impl<'gc> Node<'gc> {
         visitor.call(ctx, self, parent);
     }
 
+    /// Visit this node with `visitor` and return the modified root node.
+    /// If the root node is to be removed, return `None`.
     pub fn visit_mut<V: VisitorMut<'gc>>(
         &'gc self,
         ctx: &'gc GCLock,
         visitor: &mut V,
         parent: Option<&'gc Node<'gc>>,
-    ) -> &'gc Node<'gc> {
+    ) -> Option<&'gc Node<'gc>> {
         match visitor.call(ctx, self, parent) {
-            TransformResult::Unchanged => self,
-            TransformResult::Changed(new_node) => new_node,
+            TransformResult::Unchanged => Some(self),
+            TransformResult::Removed => None,
+            TransformResult::Changed(new_node) => Some(new_node),
         }
     }
 }
@@ -1061,6 +1074,7 @@ impl<'gc, T: NodeChild<'gc> + NodeChild<'gc, Out = T>> NodeChild<'gc> for Option
             None => Unchanged,
             Some(inner) => match inner.visit_child_mut(ctx, visitor, parent) {
                 Unchanged => Unchanged,
+                Removed => Changed(None),
                 Changed(new_node) => Changed(Some(new_node)),
             },
         }
@@ -1094,6 +1108,7 @@ impl<'gc> NodeChild<'gc> for &Option<&'gc Node<'gc>> {
             None => Unchanged,
             Some(inner) => match inner.visit_child_mut(ctx, visitor, parent) {
                 Unchanged => Unchanged,
+                Removed => Changed(None),
                 Changed(new_node) => Changed(Some(new_node)),
             },
         }
@@ -1120,7 +1135,24 @@ impl<'gc> NodeChild<'gc> for &'gc Node<'gc> {
         visitor: &mut V,
         parent: &'gc Node<'gc>,
     ) -> TransformResult<Self::Out> {
-        visitor.call(ctx, self, Some(parent))
+        match visitor.call(ctx, self, Some(parent)) {
+            TransformResult::Removed => {
+                TransformResult::Changed(builder::EmptyStatement::build_template(
+                    ctx,
+                    template::EmptyStatement {
+                        metadata: TemplateMetadata {
+                            phantom: Default::default(),
+                            range: SourceRange {
+                                file: self.range().file,
+                                start: self.range().start,
+                                end: self.range().start,
+                            },
+                        },
+                    },
+                ))
+            }
+            result => result,
+        }
     }
 
     fn duplicate(self) -> Self::Out {
@@ -1149,26 +1181,31 @@ impl<'gc> NodeChild<'gc> for &NodeList<'gc> {
         // Assume no copies to start.
         while index < len {
             let node = visitor.call(ctx, self[index], Some(parent));
-            // First change found.
-            if let Changed(new_node) = node {
-                let mut result: Self::Out = vec![];
-                // Fill in the elements we skippped.
-                for elem in self.iter().take(index) {
-                    result.push(elem);
-                }
-                result.push(new_node);
+            if let Unchanged = node {
                 index += 1;
-                // Fill the rest of the elements.
-                while index < len {
-                    match visitor.call(ctx, self[index], Some(parent)) {
-                        Unchanged => result.push(self[index]),
-                        Changed(new_node) => result.push(new_node),
-                    }
-                    index += 1;
-                }
-                return Changed(result);
+                continue;
             }
+            // First change found, either removed or changed node.
+            let mut result: Self::Out = vec![];
+            // Fill in the elements we skippped.
+            for elem in self.iter().take(index) {
+                result.push(elem);
+            }
+            // If the node was changed, push it. Otherwise it's removed, so just skip it.
+            if let Changed(new_node) = node {
+                result.push(new_node);
+            };
             index += 1;
+            // Fill the rest of the elements.
+            while index < len {
+                match visitor.call(ctx, self[index], Some(parent)) {
+                    Unchanged => result.push(self[index]),
+                    Removed => {}
+                    Changed(new_node) => result.push(new_node),
+                }
+                index += 1;
+            }
+            return Changed(result);
         }
         Unchanged
     }
@@ -1200,6 +1237,7 @@ impl<'gc> NodeChild<'gc> for &Option<NodeList<'gc>> {
             None => Unchanged,
             Some(inner) => match inner.visit_child_mut(ctx, visitor, parent) {
                 Unchanged => Unchanged,
+                Removed => Changed(None),
                 Changed(new_node) => Changed(Some(new_node)),
             },
         }

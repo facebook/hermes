@@ -219,7 +219,7 @@ fn test_visit_mut() {
 
     let transformed = {
         let gc = GCLock::new(&mut ctx);
-        NodeRc::from_node(&gc, ast.node(&gc).visit_mut(&gc, &mut pass, None))
+        NodeRc::from_node(&gc, ast.node(&gc).visit_mut(&gc, &mut pass, None).unwrap())
     };
 
     {

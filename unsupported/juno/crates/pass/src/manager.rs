@@ -43,6 +43,9 @@ impl PassManager {
                 let gc = GCLock::new(ctx);
                 result = match pass.run(&gc, result.node(&gc)) {
                     TransformResult::Unchanged => result,
+                    TransformResult::Removed => {
+                        panic!("Program node removed");
+                    }
                     TransformResult::Changed(new_node) => NodeRc::from_node(&gc, new_node),
                 };
             }

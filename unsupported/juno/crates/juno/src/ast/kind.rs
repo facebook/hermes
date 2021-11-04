@@ -162,6 +162,9 @@ macro_rules! gen_nodekind_enum {
                             )*)?
                             match builder.build(ctx) {
                                 TransformResult::Unchanged => TransformResult::Changed(existing),
+                                TransformResult::Removed => {
+                                    unreachable!("Builder can't remove a node");
+                                }
                                 TransformResult::Changed(n) => TransformResult::Changed(n),
                             }
                         }
