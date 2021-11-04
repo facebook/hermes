@@ -1216,9 +1216,9 @@ bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
       (stats.afterAllocatedBytes() + stats.afterExternalBytes()) /
           gc_->occupancyTarget_ -
       stats.afterExternalBytes();
-  const size_t targetSegments =
-      llvh::divideCeil(targetSizeBytes, HeapSegment::maxSize());
-  setTargetSegments(std::min(targetSegments, maxNumSegments()));
+  const uint64_t clampedSizeBytes = std::min<uint64_t>(
+      targetSizeBytes, maxNumSegments() * HeapSegment::maxSize());
+  targetSizeBytes_.update(clampedSizeBytes);
   sweepIterator_ = {};
   return false;
 }
@@ -1302,7 +1302,7 @@ HadesGC::HadesGC(
        requestedInitHeapSegments,
        // At least one YG segment and one OG segment.
        static_cast<size_t>(2)});
-  oldGen_.setTargetSegments(initHeapSegments - 1);
+  oldGen_.setTargetSizeBytes((initHeapSegments - 1) * HeapSegment::maxSize());
 }
 
 HadesGC::~HadesGC() {
@@ -2992,8 +2992,9 @@ uint64_t HadesGC::OldGen::size() const {
 }
 
 uint64_t HadesGC::OldGen::targetSizeBytes() const {
-  assert(gc_->gcMutex_ && "Must hold gcMutex_ when accessing targetSegments_.");
-  return targetSegments_ * HeapSegment::maxSize();
+  assert(
+      gc_->gcMutex_ && "Must hold gcMutex_ when accessing targetSizeBytes_.");
+  return llvh::alignTo(targetSizeBytes_, HeapSegment::maxSize());
 }
 
 size_t HadesGC::getYoungGenExternalBytes() const {
@@ -3130,9 +3131,11 @@ HadesGC::HeapSegment HadesGC::OldGen::removeSegment(size_t segmentIdx) {
   return oldSeg;
 }
 
-void HadesGC::OldGen::setTargetSegments(size_t targetSegments) {
-  assert(gc_->gcMutex_ && "Must hold gcMutex_ when accessing targetSegments_.");
-  targetSegments_ = targetSegments;
+void HadesGC::OldGen::setTargetSizeBytes(size_t targetSizeBytes) {
+  assert(
+      gc_->gcMutex_ && "Must hold gcMutex_ when accessing targetSizeBytes_.");
+  assert(!targetSizeBytes_ && "Should only initialise targetSizeBytes_ once.");
+  targetSizeBytes_ = ExponentialMovingAverage(0.5, targetSizeBytes);
 }
 
 bool HadesGC::inOldGen(const void *p) const {
@@ -3178,10 +3181,9 @@ size_t HadesGC::getDrainRate() {
   // OG faster than it fills up.
   assert(!kConcurrentGC);
 
-  // Assume this many bytes are live in the OG. We want to make progress so
-  // that over all YG collections before the heap fills up, we are able to
-  // complete marking before OG fills up.
-  // Don't include external memory since that doesn't need to be marked.
+  // We want to make progress so that over all YG collections before the heap
+  // fills up, we are able to complete marking before OG fills up. Don't include
+  // external memory since that doesn't need to be marked.
   const size_t bytesToFill =
       std::max(oldGen_.targetSizeBytes(), oldGen_.size()) -
       oldGen_.allocatedBytes();

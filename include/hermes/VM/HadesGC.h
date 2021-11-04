@@ -407,8 +407,8 @@ class HadesGC final : public GCBase {
     /// \return the segment previously at segmentIdx
     HeapSegment removeSegment(size_t segmentIdx);
 
-    /// Indicate that OG should target having \p targetSegments segments.
-    void setTargetSegments(size_t targetSegments);
+    /// Indicate that OG should target having a size of \p targetSizeBytes.
+    void setTargetSizeBytes(size_t targetSizeBytes);
 
     /// Allocate into OG. Returns a pointer to the newly allocated space. That
     /// space must be filled before releasing the gcMutex_.
@@ -451,7 +451,9 @@ class HadesGC final : public GCBase {
 
     /// \return the total number of bytes that we aim to use in the OG
     /// section of the JS heap, including free list entries. This may be smaller
-    /// or greater than size().
+    /// or greater than size(). It is rounded up to the nearest segment to make
+    /// to reflect the fact that in practice, the heap size will be an integer
+    /// multiple of segment size.
     uint64_t targetSizeBytes() const;
 
     /// Add some external memory cost to the OG.
@@ -556,10 +558,11 @@ class HadesGC final : public GCBase {
     /// remain valid across a push_back.
     std::deque<HeapSegment> segments_;
 
-    /// This is the target number of segments in the OG JS heap. It does not
+    /// This is the target size in bytes for the OG JS heap. It does not
     /// include external memory and may be larger or smaller than the actual
-    /// number of segments allocated.
-    size_t targetSegments_{0};
+    /// capacity of the heap. Should be initialised using setTargetSizeBytes
+    /// before use.
+    ExponentialMovingAverage targetSizeBytes_{0, 0};
 
     /// This is the sum of all bytes currently allocated in the heap, excluding
     /// bump-allocated segments. Use \c allocatedBytes() to include
