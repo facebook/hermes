@@ -8,6 +8,8 @@
  * @format
  */
 
+import type {Identifier} from 'hermes-estree';
+
 import {transform} from '../../src/transform/transform';
 
 describe('transform', () => {
@@ -36,6 +38,74 @@ describe('transform', () => {
       },
     }));
 
-    expect(result).toBe('const y = 1;');
+    expect(result).toBe(`\
+const y = 1;
+`);
+  });
+
+  describe('insert', () => {
+    it('works with the insertBeforeStatement mutation', () => {
+      const code = 'const x = 1;';
+      const result = transform(code, context => ({
+        VariableDeclaration(node) {
+          if (node.type !== 'VariableDeclaration') {
+            return;
+          }
+
+          context.insertBeforeStatement(
+            node,
+            context.shallowCloneNode(node, {
+              declarations: [
+                context.shallowCloneNode(node.declarations[0], {
+                  id: context.shallowCloneNode(
+                    ((node.declarations[0].id: $FlowFixMe): Identifier),
+                    {
+                      name: 'y',
+                    },
+                  ),
+                }),
+              ],
+            }),
+          );
+        },
+      }));
+
+      expect(result).toBe(`\
+const y = 1;
+const x = 1;
+`);
+    });
+
+    it('works with the insertAfterStatement mutation', () => {
+      const code = 'const x = 1;';
+      const result = transform(code, context => ({
+        VariableDeclaration(node) {
+          if (node.type !== 'VariableDeclaration') {
+            return;
+          }
+
+          context.insertAfterStatement(
+            node,
+            context.shallowCloneNode(node, {
+              declarations: [
+                context.shallowCloneNode(node.declarations[0], {
+                  id: context.shallowCloneNode(
+                    ((node.declarations[0].id: $FlowFixMe): Identifier),
+                    {
+                      name: 'y',
+                    },
+                  ),
+                }),
+              ],
+            }),
+          );
+        },
+      }));
+
+      expect(result).toBe(`\
+const x = 1;
+const y = 1;
+`);
+    });
   });
 });

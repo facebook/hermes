@@ -209,9 +209,6 @@ export type Statement =
   | DeclareTypeAlias
   | DeclareOpaqueType
   | DeclareInterface
-  | DeclareExportAllDeclaration
-  | DeclareExportDeclaration
-  | DeclareModuleExports
   | DeclareModule;
 
 // nodes that can be the direct parent of a statement
@@ -758,7 +755,10 @@ export type ModuleDeclaration =
   | ImportDeclaration
   | ExportNamedDeclaration
   | ExportDefaultDeclaration
-  | ExportAllDeclaration;
+  | ExportAllDeclaration
+  | DeclareExportDeclaration
+  | DeclareExportAllDeclaration
+  | DeclareModuleExports;
 
 export type ModuleSpecifier =
   | ImportSpecifier
