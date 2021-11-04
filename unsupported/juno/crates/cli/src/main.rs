@@ -9,6 +9,7 @@ use anyhow::{self, ensure, Context, Error};
 use juno::ast::{self, validate_tree, NodePtr, SourceRange};
 use juno::gen_js;
 use juno::hparser::{self, MagicCommentKind, ParsedJS};
+use juno::sema;
 use juno::sourcemap::merge_sourcemaps;
 use pass::PassManager;
 use sourcemap::SourceMap;
@@ -281,6 +282,28 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
 
     // Fetch and parse the source map before we generate the output.
     let source_map = sm_url.map(load_source_map).transpose()?;
+
+    {
+        let lock = ast::GCContext::new(&mut ctx);
+        let sem = sema::resolve_program(&lock, ast.node(&lock));
+        println!(
+            "{} error(s), {} warning(s)",
+            lock.sm().num_errors(),
+            lock.sm().num_warnings()
+        );
+        if lock.sm().num_errors() != 0 {
+            return Ok(TransformStatus::Error);
+        }
+
+        println!("{:7} functions", sem.all_functions().len());
+        println!("{:7} lexical scopes", sem.all_scopes().len());
+        println!("{:7} declarations", sem.all_decls().len());
+        println!("{:7} ident resolutions", sem.all_ident_decls().len());
+        println!();
+        timer.mark("Sema");
+        drop(sem);
+        timer.mark("Drop Sema");
+    }
 
     // Generate output.
     if gen_output(opt, &mut ctx, ast, &source_map)? {

@@ -1260,16 +1260,16 @@ mod tests {
 
         let mut m = HashMap::new();
 
-        let n1 = NodeRef::from(NumericLiteralBuilder::build_template(
+        let n1 = NodeRef::from(builder::NumericLiteral::build_template(
             &lock,
-            NumericLiteralTemplate {
+            template::NumericLiteral {
                 metadata: Default::default(),
                 value: 10.0,
             },
         ));
-        let n2 = NodeRef::from(NumericLiteralBuilder::build_template(
+        let n2 = NodeRef::from(builder::NumericLiteral::build_template(
             &lock,
-            NumericLiteralTemplate {
+            template::NumericLiteral {
                 metadata: Default::default(),
                 value: 20.0,
             },
