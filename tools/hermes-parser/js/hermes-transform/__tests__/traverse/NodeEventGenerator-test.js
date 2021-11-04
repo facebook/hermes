@@ -39,7 +39,13 @@ describe('NodeEventGenerator', () => {
     it('throws on invalid selectors', () => {
       const emitter = new SafeEmitter();
 
-      for (const selector of ['Foo', 'Bar', 'Foo > Bar', 'Identifier > Foo', 'Identifier:notexit']) {
+      for (const selector of [
+        'Foo',
+        'Bar',
+        'Foo > Bar',
+        'Identifier > Foo',
+        'Identifier:notexit',
+      ]) {
         const emitter = new SafeEmitter();
         emitter.on(selector, () => {});
         expect(() => new NodeEventGenerator(emitter)).toThrow();
@@ -65,7 +71,12 @@ describe('NodeEventGenerator', () => {
       emitter = new SafeEmitter();
       emitSpy = jest.spyOn(emitter, 'emit');
 
-      for (const selector of ['ExpressionStatement', 'Identifier', 'ExpressionStatement > Identifier', 'ExpressionStatement:exit']) {
+      for (const selector of [
+        'ExpressionStatement',
+        'Identifier',
+        'ExpressionStatement > Identifier',
+        'ExpressionStatement:exit',
+      ]) {
         emitter.on(selector, () => {});
       }
       generator = new NodeEventGenerator(emitter);
@@ -86,11 +97,17 @@ describe('NodeEventGenerator', () => {
       generator.leaveNode(dummyNode);
 
       expect(emitSpy).toHaveBeenCalledTimes(1);
-      expect(emitSpy).toHaveBeenCalledWith('ExpressionStatement:exit', dummyNode);
+      expect(emitSpy).toHaveBeenCalledWith(
+        'ExpressionStatement:exit',
+        dummyNode,
+      );
     });
 
     it('should generate events for AST queries', () => {
-      const dummyNode: $FlowFixMe = {type: 'Identifier', parent: {type: 'ExpressionStatement'}};
+      const dummyNode: $FlowFixMe = {
+        type: 'Identifier',
+        parent: {type: 'ExpressionStatement'},
+      };
 
       // make sure the generator has the ancestry recorded
       generator.enterNode(dummyNode.parent);
@@ -99,7 +116,10 @@ describe('NodeEventGenerator', () => {
       generator.enterNode(dummyNode);
 
       expect(emitSpy).toHaveBeenCalledTimes(2);
-      expect(emitSpy).toHaveBeenCalledWith('ExpressionStatement > Identifier', dummyNode);
+      expect(emitSpy).toHaveBeenCalledWith(
+        'ExpressionStatement > Identifier',
+        dummyNode,
+      );
     });
   });
 
@@ -152,9 +172,9 @@ describe('NodeEventGenerator', () => {
       sourceText: string,
       possibleQueries: $ReadOnlyArray<string>,
       // these tests do simple access into the AST, so it's much easier to just have the access untyped
-      expectedEmissions: ($FlowFixMe) => Emissions
+      expectedEmissions: $FlowFixMe => Emissions,
     ): void {
-      (it)(`${sourceText} - ${possibleQueries.join('; ')}`, () => {
+      it(`${sourceText} - ${possibleQueries.join('; ')}`, () => {
         const {ast} = parseForESLint(sourceText);
         const emissions = getEmissions(ast, possibleQueries).filter(
           emission => possibleQueries.indexOf(emission[0]) !== -1,

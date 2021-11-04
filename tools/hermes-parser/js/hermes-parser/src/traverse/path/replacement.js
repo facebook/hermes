@@ -229,9 +229,8 @@ export function replaceExpressionWithStatements(nodes: Array<Object>) {
   this.traverse(hoistVariablesVisitor);
 
   // add implicit returns to all ending expression statements
-  const completionRecords: Array<NodePath> = this.get(
-    'callee',
-  ).getCompletionRecords();
+  const completionRecords: Array<NodePath> =
+    this.get('callee').getCompletionRecords();
   for (const path of completionRecords) {
     if (!path.isExpressionStatement()) continue;
 

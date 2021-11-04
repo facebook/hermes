@@ -207,7 +207,10 @@ class ScopeManager {
     return this.__nestScope(new BlockScope(this, this.__currentScope, node));
   }
 
-  __nestFunctionScope(node: FunctionScope['block'], isMethodDefinition: boolean): FunctionScope {
+  __nestFunctionScope(
+    node: FunctionScope['block'],
+    isMethodDefinition: boolean,
+  ): FunctionScope {
     return this.__nestScope(
       new FunctionScope(this, this.__currentScope, node, isMethodDefinition),
     );
@@ -241,13 +244,17 @@ class ScopeManager {
     return this.__nestScope(new TypeScope(this, this.__currentScope, node));
   }
 
-  __nestDeclareModuleScope(node: DeclareModuleScope['block']): DeclareModuleScope {
+  __nestDeclareModuleScope(
+    node: DeclareModuleScope['block'],
+  ): DeclareModuleScope {
     return this.__nestScope(
       new DeclareModuleScope(this, this.__currentScope, node),
     );
   }
 
-  __nestFunctionExpressionNameScope(node: FunctionExpressionNameScope['block']): FunctionExpressionNameScope {
+  __nestFunctionExpressionNameScope(
+    node: FunctionExpressionNameScope['block'],
+  ): FunctionExpressionNameScope {
     return this.__nestScope(
       new FunctionExpressionNameScope(this, this.__currentScope, node),
     );

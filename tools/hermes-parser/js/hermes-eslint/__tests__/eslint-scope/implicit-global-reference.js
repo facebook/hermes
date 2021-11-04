@@ -68,9 +68,9 @@ describe('implicit global reference', () => {
       ),
     ).toEqual([[]]);
 
-    expect(
-      scopes[0].implicit.variables.map(variable => variable.name),
-    ).toEqual(['x']);
+    expect(scopes[0].implicit.variables.map(variable => variable.name)).toEqual(
+      ['x'],
+    );
   });
 
   it('assignment leaks', () => {
@@ -86,9 +86,9 @@ describe('implicit global reference', () => {
       scopes.map(scope => scope.variables.map(variable => variable.name)),
     ).toEqual([['outer'], ['arguments']]);
 
-    expect(
-      scopes[0].implicit.variables.map(variable => variable.name),
-    ).toEqual(['x']);
+    expect(scopes[0].implicit.variables.map(variable => variable.name)).toEqual(
+      ['x'],
+    );
   });
 
   it("assignment doesn't leak", () => {
@@ -124,9 +124,9 @@ describe('implicit global reference', () => {
       scopes.map(scope => scope.variables.map(variable => variable.name)),
     ).toEqual([['outer'], ['arguments'], []]);
 
-    expect(
-      scopes[0].implicit.variables.map(variable => variable.name),
-    ).toEqual(['x']);
+    expect(scopes[0].implicit.variables.map(variable => variable.name)).toEqual(
+      ['x'],
+    );
   });
 
   it("for-in-statement doesn't leaks", () => {
