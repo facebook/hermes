@@ -156,7 +156,7 @@ macro_rules! nodekind_defs {
                 properties: NodeList<'a>[Property],
             },
             ArrayExpression[Expression] {
-                elements: NodeList<'a>[Expression, SpreadElement],
+                elements: NodeList<'a>[Expression, SpreadElement, Empty],
                 trailing_comma: bool,
             },
             SpreadElement {
