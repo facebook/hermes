@@ -365,3 +365,72 @@ macro_rules! gen_nodekind_enum {
 }
 
 nodekind_defs! { gen_nodekind_enum }
+
+impl<'gc> Node<'gc> {
+    /// Shallow equality comparison.
+    pub fn ptr_eq(&self, other: &'_ Node<'_>) -> bool {
+        std::ptr::eq(self, other)
+    }
+
+    fn panic(&self, msg: &str) -> ! {
+        panic!("{} {}", self.name(), msg)
+    }
+    fn function_like_panic(&self) -> ! {
+        self.panic("is not function-like")
+    }
+    pub fn is_function_like(&self) -> bool {
+        matches!(
+            self,
+            Node::FunctionExpression(..)
+                | Node::ArrowFunctionExpression(..)
+                | Node::FunctionDeclaration(..)
+        )
+    }
+    pub fn function_like_id(&self) -> Option<&Node> {
+        match self {
+            Node::FunctionExpression(FunctionExpression { id, .. })
+            | Node::ArrowFunctionExpression(ArrowFunctionExpression { id, .. })
+            | Node::FunctionDeclaration(FunctionDeclaration { id, .. }) => *id,
+            _ => self.function_like_panic(),
+        }
+    }
+    pub fn function_like_params(&self) -> &NodeList {
+        match self {
+            Node::FunctionExpression(FunctionExpression { params, .. })
+            | Node::ArrowFunctionExpression(ArrowFunctionExpression { params, .. })
+            | Node::FunctionDeclaration(FunctionDeclaration { params, .. }) => params,
+            _ => self.function_like_panic(),
+        }
+    }
+    pub fn function_like_body(&self) -> &Node {
+        match self {
+            Node::FunctionExpression(FunctionExpression { body, .. })
+            | Node::ArrowFunctionExpression(ArrowFunctionExpression { body, .. })
+            | Node::FunctionDeclaration(FunctionDeclaration { body, .. }) => body,
+            _ => self.function_like_panic(),
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! node_cast {
+    ($kind:path, $node:expr) => {
+        match $node {
+            $kind(v) => v,
+            _ => panic!(
+                "invalid cast to {} from {}",
+                stringify!($kind),
+                $node.name()
+            ),
+        }
+    };
+}
+#[macro_export]
+macro_rules! node_isa {
+    ($kind:path, $node:expr) => {
+        match $node {
+            $kind(_) => true,
+            _ => false,
+        }
+    };
+}
