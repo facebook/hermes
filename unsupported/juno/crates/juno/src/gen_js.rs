@@ -2982,7 +2982,6 @@ impl<W: Write> GenJS<W> {
             self.newline();
             self.visit_stmt_in_block(ctx, node, parent);
             self.dec_indent();
-            self.newline();
             false
         }
     }

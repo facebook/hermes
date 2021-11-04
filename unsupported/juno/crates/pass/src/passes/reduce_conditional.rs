@@ -7,6 +7,7 @@
 
 //! Pass for optimizing conditional expressions where the conditional is a literal.
 //!
+//! Operates on both conditional expressions and `if` statements (with or without `else`).
 //! For example, transforms
 //! ```js
 //! true ? a : b
@@ -47,20 +48,38 @@ impl Pass for ReduceConditional {
 impl<'gc> VisitorMut<'gc> for ReduceConditional {
     fn call(
         &mut self,
-        gc: &'gc GCLock<'_, '_>,
+        lock: &'gc GCLock,
         node: &'gc Node<'gc>,
         _parent: Option<&'gc Node<'gc>>,
     ) -> TransformResult<&'gc Node<'gc>> {
-        if let Node::ConditionalExpression(ConditionalExpression {
-            test: Node::BooleanLiteral(BooleanLiteral { value, .. }),
-            consequent,
-            alternate,
-            ..
-        }) = node
-        {
-            let reduced = if *value { consequent } else { alternate };
-            return node.replace_with_existing(reduced, gc, self);
+        match node {
+            Node::ConditionalExpression(ConditionalExpression {
+                test: Node::BooleanLiteral(BooleanLiteral { value, .. }),
+                consequent,
+                alternate,
+                ..
+            })
+            | Node::IfStatement(IfStatement {
+                test: Node::BooleanLiteral(BooleanLiteral { value, .. }),
+                consequent,
+                alternate: Some(alternate),
+                ..
+            }) => {
+                node.replace_with_existing(if *value { consequent } else { alternate }, lock, self)
+            }
+            Node::IfStatement(IfStatement {
+                test: Node::BooleanLiteral(BooleanLiteral { value, .. }),
+                consequent,
+                alternate: None,
+                ..
+            }) => {
+                if *value {
+                    node.replace_with_existing(consequent, lock, self)
+                } else {
+                    TransformResult::Removed
+                }
+            }
+            _ => node.visit_children_mut(lock, self),
         }
-        node.visit_children_mut(gc, self)
     }
 }
