@@ -573,7 +573,7 @@ jobs:
           run-tests-working-directory: react-native
           run-logcat: true
           test-command: >-
-            ./gradlew :packages:rn-tester:android:app:installHermesRelease
+            ./gradlew -PreactNativeArchitectures=x86 :packages:rn-tester:android:app:installHermesRelease
             && adb shell am start com.facebook.react.uiapp/.RNTesterActivity
             && timeout 30s adb logcat -e "Using Hermes: true" -m 1
 
