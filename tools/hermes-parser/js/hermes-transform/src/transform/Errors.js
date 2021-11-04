@@ -8,7 +8,7 @@
  * @format
  */
 
-'use strict';
+import type {ESNode} from 'hermes-estree';
 
-export {traverse} from './traverse/traverse';
-export {transform} from './transform/transform';
+export class NodeIsDeletedError extends Error {}
+export class NodeIsMutatedError extends Error {}

@@ -211,7 +211,22 @@ export type Statement =
   | DeclareInterface
   | DeclareExportAllDeclaration
   | DeclareExportDeclaration
-  | DeclareModuleExports;
+  | DeclareModuleExports
+  | DeclareModule;
+
+// nodes that can be the direct parent of a statement
+export type StatementParentSingle =
+  | IfStatement
+  | LabeledStatement
+  | WithStatement
+  | WhileStatement
+  | DoWhileStatement
+  | ForStatement
+  | ForInStatement
+  | ForOfStatement;
+// nodes that can be the parent of a statement that store the statements in an array
+export type StatementParentArray = SwitchCase | Program | BlockStatement;
+export type StatementParent = StatementParentSingle | StatementParentArray;
 
 export interface EmptyStatement extends BaseNode {
   +type: 'EmptyStatement';
@@ -220,7 +235,6 @@ export interface EmptyStatement extends BaseNode {
 export interface BlockStatement extends BaseNode {
   +type: 'BlockStatement';
   +body: $ReadOnlyArray<Statement>;
-  +innerComments?: $ReadOnlyArray<Comment>;
 }
 
 export interface ExpressionStatement extends BaseNode {
@@ -311,6 +325,11 @@ export interface ForInStatement extends BaseForXStatement {
   +type: 'ForInStatement';
 }
 
+export interface ForOfStatement extends BaseForXStatement {
+  +type: 'ForOfStatement';
+  +await: boolean;
+}
+
 export interface DebuggerStatement extends BaseNode {
   +type: 'DebuggerStatement';
 }
@@ -340,7 +359,7 @@ export interface VariableDeclarator extends BaseNode {
   +init?: Expression | null;
 }
 
-type Expression =
+export type Expression =
   | ThisExpression
   | ArrayExpression
   | ObjectExpression
@@ -618,11 +637,6 @@ export type AssignmentOperator =
   | '&=';
 
 export type UpdateOperator = '++' | '--';
-
-export interface ForOfStatement extends BaseForXStatement {
-  +type: 'ForOfStatement';
-  +await: boolean;
-}
 
 export interface Super extends BaseNode {
   +type: 'Super';
