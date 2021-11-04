@@ -37,6 +37,12 @@ const std::vector<std::u16string> &getAvailableLocalesVector() {
   return *availableLocalesVector;
 }
 std::u16string getDefaultLocale() {
+  // Environment variable used for testing only
+  const char* testLocale = std::getenv("_HERMES_TEST_LOCALE");
+  if (testLocale) {
+    NSString *nsTestLocale = [NSString stringWithUTF8String: testLocale];
+    return nsStringToU16String(nsTestLocale);
+  }
   NSString *defLocale = [[NSLocale currentLocale] localeIdentifier];
   return nsStringToU16String(defLocale);
 }
