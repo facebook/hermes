@@ -1720,10 +1720,11 @@ void HadesGC::prepareCompactee(bool forceCompaction) {
     return;
 
   llvh::Optional<size_t> compacteeIdx;
-  // We should compact if the target size of the heap has fallen below its
-  // actual size. Since the selected segment will be removed from the heap, we
-  // only want to compact if there are at least 2 segments in the OG.
-  if ((forceCompaction || oldGen_.targetSizeBytes() < oldGen_.size()) &&
+  // We should compact if the actual size of the heap is more than 5% larger
+  // than the target size. Since the selected segment will be removed from the
+  // heap, we only want to compact if there are at least 2 segments in the OG.
+  double threshold = oldGen_.targetSizeBytes() * 1.05;
+  if ((forceCompaction || oldGen_.size() > threshold) &&
       oldGen_.numSegments() > 1) {
     // Select the one with the fewest allocated bytes, to
     // minimise scanning and copying. We intentionally avoid selecting the very
