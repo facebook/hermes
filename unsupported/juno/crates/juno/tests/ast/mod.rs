@@ -16,8 +16,8 @@ fn test_node_outlives_context() {
     {
         let mut ctx = Context::new();
         ast = {
-            let gc = GCContext::new(&mut ctx);
-            NodePtr::from_node(
+            let gc = GCLock::new(&mut ctx);
+            NodeRc::from_node(
                 &gc,
                 builder::NumericLiteral::build_template(
                     &gc,
@@ -42,8 +42,8 @@ fn test_node_clone_outlives_context() {
         let mut ctx = Context::new();
         {
             let ast_orig = {
-                let gc = GCContext::new(&mut ctx);
-                NodePtr::from_node(
+                let gc = GCLock::new(&mut ctx);
+                NodeRc::from_node(
                     &gc,
                     builder::NumericLiteral::build_template(
                         &gc,
@@ -66,8 +66,8 @@ fn test_node_clone_outlives_context() {
 fn test_visit() {
     let mut ctx = Context::new();
     let ast = {
-        let gc = GCContext::new(&mut ctx);
-        NodePtr::from_node(
+        let gc = GCLock::new(&mut ctx);
+        NodeRc::from_node(
             &gc,
             builder::BlockStatement::build_template(
                 &gc,
@@ -115,12 +115,7 @@ fn test_visit() {
 
     impl<'gc> Visitor<'gc> for NumberFinder {
         /// Visit the Node `node` with the given `parent`.
-        fn call(
-            &mut self,
-            ctx: &'gc GCContext,
-            node: &'gc Node<'gc>,
-            parent: Option<&'gc Node<'gc>>,
-        ) {
+        fn call(&mut self, ctx: &'gc GCLock, node: &'gc Node<'gc>, parent: Option<&'gc Node<'gc>>) {
             if let Node::NumericLiteral(NumericLiteral { value, .. }) = node {
                 assert!(matches!(
                     parent.unwrap(),
@@ -133,7 +128,7 @@ fn test_visit() {
     }
 
     let mut visitor = NumberFinder { acc: vec![] };
-    let gc = GCContext::new(&mut ctx);
+    let gc = GCLock::new(&mut ctx);
     ast.node(&gc).visit(&gc, &mut visitor, None);
     assert_eq!(visitor.acc, [1.0, 2.0]);
 }
@@ -144,8 +139,8 @@ fn test_visit_mut() {
 
     let (x, y) = (1.0, 2.0);
     let ast = {
-        let gc = GCContext::new(&mut ctx);
-        NodePtr::from_node(
+        let gc = GCLock::new(&mut ctx);
+        NodeRc::from_node(
             &gc,
             builder::ExpressionStatement::build_template(
                 &gc,
@@ -191,7 +186,7 @@ fn test_visit_mut() {
     impl<'gc> VisitorMut<'gc> for Pass {
         fn call(
             &mut self,
-            ctx: &'gc GCContext,
+            ctx: &'gc GCLock,
             node: &'gc Node<'gc>,
             _parent: Option<&'gc Node<'gc>>,
         ) -> TransformResult<&'gc Node<'gc>> {
@@ -223,12 +218,12 @@ fn test_visit_mut() {
     let mut pass = Pass {};
 
     let transformed = {
-        let gc = GCContext::new(&mut ctx);
-        NodePtr::from_node(&gc, ast.node(&gc).visit_mut(&gc, &mut pass, None))
+        let gc = GCLock::new(&mut ctx);
+        NodeRc::from_node(&gc, ast.node(&gc).visit_mut(&gc, &mut pass, None))
     };
 
     {
-        let gc = GCContext::new(&mut ctx);
+        let gc = GCLock::new(&mut ctx);
         match transformed.node(&gc) {
             Node::ExpressionStatement(ExpressionStatement {
                 expression:
@@ -269,9 +264,9 @@ fn test_many_nodes() {
     let mut val = 0f64;
     for _ in 0..10 {
         {
-            let gc = GCContext::new(&mut ctx);
+            let gc = GCLock::new(&mut ctx);
             for i in 0..10_000 {
-                cached = Some(NodePtr::from_node(
+                cached = Some(NodeRc::from_node(
                     &gc,
                     builder::NumericLiteral::build_template(
                         &gc,
@@ -287,7 +282,7 @@ fn test_many_nodes() {
         ctx.gc();
     }
 
-    let gc = GCContext::new(&mut ctx);
+    let gc = GCLock::new(&mut ctx);
     match cached.unwrap().node(&gc) {
         Node::NumericLiteral(NumericLiteral { value, .. }) => {
             assert!(
@@ -317,21 +312,16 @@ fn test_store_node() {
     }
 
     impl<'gc> Visitor<'gc> for Foo<'gc> {
-        fn call(
-            &mut self,
-            gc: &'gc GCContext,
-            node: &'gc Node<'gc>,
-            _parent: Option<&'gc Node<'gc>>,
-        ) {
+        fn call(&mut self, gc: &'gc GCLock, node: &'gc Node<'gc>, _parent: Option<&'gc Node<'gc>>) {
             self.set_n(node);
             node.visit_children(gc, self)
         }
     }
 
     {
-        let gc = GCContext::new(&mut ctx);
+        let gc = GCLock::new(&mut ctx);
         let mut pass = Foo { n: None };
-        let ast = NodePtr::from_node(
+        let ast = NodeRc::from_node(
             &gc,
             builder::NumericLiteral::build_template(
                 &gc,

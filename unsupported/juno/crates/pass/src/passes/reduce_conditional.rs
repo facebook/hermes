@@ -37,7 +37,7 @@ impl Pass for ReduceConditional {
     }
     fn run<'gc>(
         &mut self,
-        gc: &'gc GCContext<'_, '_>,
+        gc: &'gc GCLock<'_, '_>,
         node: &'gc Node<'gc>,
     ) -> TransformResult<&'gc Node<'gc>> {
         VisitorMut::call(self, gc, node, None)
@@ -47,7 +47,7 @@ impl Pass for ReduceConditional {
 impl<'gc> VisitorMut<'gc> for ReduceConditional {
     fn call(
         &mut self,
-        gc: &'gc GCContext<'_, '_>,
+        gc: &'gc GCLock<'_, '_>,
         node: &'gc Node<'gc>,
         _parent: Option<&'gc Node<'gc>>,
     ) -> TransformResult<&'gc Node<'gc>> {

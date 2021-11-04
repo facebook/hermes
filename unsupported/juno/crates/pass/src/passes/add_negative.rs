@@ -39,7 +39,7 @@ impl Pass for AddNegative {
     }
     fn run<'gc>(
         &mut self,
-        gc: &'gc GCContext<'_, '_>,
+        gc: &'gc GCLock<'_, '_>,
         node: &'gc Node<'gc>,
     ) -> TransformResult<&'gc Node<'gc>> {
         VisitorMut::call(self, gc, node, None)
@@ -49,7 +49,7 @@ impl Pass for AddNegative {
 impl<'gc> VisitorMut<'gc> for AddNegative {
     fn call(
         &mut self,
-        gc: &'gc GCContext<'_, '_>,
+        gc: &'gc GCLock<'_, '_>,
         node: &'gc Node<'gc>,
         _parent: Option<&'gc Node<'gc>>,
     ) -> TransformResult<&'gc Node<'gc>> {

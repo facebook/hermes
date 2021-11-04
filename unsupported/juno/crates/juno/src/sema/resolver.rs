@@ -7,7 +7,7 @@
 
 use super::sem_context::*;
 use crate::ast::{
-    self, builder, template, Atom, GCContext, Identifier, Node, NodeList, NodePtr, NodeVariant,
+    self, builder, template, Atom, GCLock, Identifier, Node, NodeList, NodeRc, NodeVariant,
     SourceRange, TemplateMetadata, UnaryExpressionOperator, VariableDeclarationKind, Visitor,
 };
 use crate::sema::decl_collector::DeclCollector;
@@ -48,7 +48,7 @@ struct Resolver<'gc> {
 
 impl FunctionContext<'_> {
     /// Return the optional function name as a string.
-    fn name_str<'a>(&self, lock: &'a GCContext) -> Option<&'a str> {
+    fn name_str<'a>(&self, lock: &'a GCLock) -> Option<&'a str> {
         if let Node::Program(_) = self.node {
             Some("global")
         } else if let Some(Node::Identifier(Identifier { name, .. })) = self.node.function_like_id()
@@ -61,7 +61,7 @@ impl FunctionContext<'_> {
 }
 
 /// Perform semantic validation of the AST and return semantic resolution information.
-pub fn resolve_program<'gc>(lock: &'gc GCContext, root: &'gc Node<'gc>) -> SemContext {
+pub fn resolve_program<'gc>(lock: &'gc GCLock, root: &'gc Node<'gc>) -> SemContext {
     let mut r = Resolver::new(lock);
     r.program(lock, root);
     r.sem
@@ -69,7 +69,7 @@ pub fn resolve_program<'gc>(lock: &'gc GCContext, root: &'gc Node<'gc>) -> SemCo
 
 // Public functions
 impl<'gc> Resolver<'gc> {
-    fn new(lock: &'gc GCContext) -> Resolver<'gc> {
+    fn new(lock: &'gc GCLock) -> Resolver<'gc> {
         let kw = Keywords::new(lock.ctx().atom_table());
         Resolver {
             kw,
@@ -82,7 +82,7 @@ impl<'gc> Resolver<'gc> {
         }
     }
 
-    fn program(&mut self, ctx: &'gc GCContext, node: &'gc Node<'gc>) {
+    fn program(&mut self, ctx: &'gc GCLock, node: &'gc Node<'gc>) {
         assert!(node_isa!(Node::Program, node));
         self.visit_program(ctx, node);
     }
@@ -113,7 +113,7 @@ impl<'gc> Resolver<'gc> {
     /// and pop the function context.
     fn in_new_function<R, F: FnOnce(&mut Self) -> R>(
         &mut self,
-        lock: &'gc GCContext,
+        lock: &'gc GCLock,
         root: &'gc Node<'gc>,
         f: F,
     ) -> R {
@@ -155,7 +155,7 @@ impl<'gc> Resolver<'gc> {
     /// `scope_node` - the AST node to associate the scope with.
     fn in_new_scope<R, F: FnOnce(&mut Self) -> R>(
         &mut self,
-        lock: &GCContext,
+        lock: &GCLock,
         scope_node: &Node,
         f: F,
     ) -> R {
@@ -173,7 +173,7 @@ impl<'gc> Resolver<'gc> {
         }
         // Associate the new lexical scope with the node.
         self.sem
-            .set_node_scope(NodePtr::from_node(lock, scope_node), new_scope);
+            .set_node_scope(NodeRc::from_node(lock, scope_node), new_scope);
 
         let res = f(self);
 
@@ -198,7 +198,7 @@ impl<'gc> Resolver<'gc> {
 
 // Business logic.
 impl<'gc> Resolver<'gc> {
-    fn visit_program(&mut self, lock: &'gc GCContext, node: &'gc Node<'gc>) {
+    fn visit_program(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>) {
         self.in_new_function(lock, node, |pself| {
             // Search for "use strict".
             if find_use_strict(&node_cast!(Node::Program, node).body).is_some() {
@@ -224,7 +224,7 @@ impl<'gc> Resolver<'gc> {
 
     /// Declare the well known globals to avoid strict mode warnings about them.
     /// `program_range`'s start is used as a synthetic location for the identifiers.
-    fn declare_known_globals(&mut self, lock: &'gc GCContext, program_range: SourceRange) {
+    fn declare_known_globals(&mut self, lock: &'gc GCLock, program_range: SourceRange) {
         // A range for the synthetic Identifier nodes we will create.
         let range = SourceRange {
             file: program_range.file,
@@ -265,7 +265,7 @@ impl<'gc> Resolver<'gc> {
         }
     }
 
-    fn visit_function_like(&mut self, lock: &'gc GCContext, node: &'gc Node<'gc>) {
+    fn visit_function_like(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>) {
         self.in_new_function(lock, node, |pself| {
             let body = node.function_like_body();
             // Search for "use strict".
@@ -320,7 +320,7 @@ impl<'gc> Resolver<'gc> {
                     );
                     pself
                         .sem
-                        .set_ident_decl(NodePtr::from_node(lock, param_id_node), param_decl);
+                        .set_ident_decl(NodeRc::from_node(lock, param_id_node), param_decl);
 
                     match pself.binding_table.get_mut(&param_id.name) {
                         // Check for parameter re-declaration.
@@ -385,7 +385,7 @@ impl<'gc> Resolver<'gc> {
 
     fn visit_function_expression(
         &mut self,
-        lock: &'gc GCContext,
+        lock: &'gc GCLock,
         fe: &ast::FunctionExpression<'gc>,
         node: &'gc Node<'gc>,
     ) {
@@ -400,7 +400,7 @@ impl<'gc> Resolver<'gc> {
                     );
                     pself
                         .sem
-                        .set_ident_decl(NodePtr::from_node(lock, node_id), decl);
+                        .set_ident_decl(NodeRc::from_node(lock, node_id), decl);
                     pself
                         .binding_table
                         .insert(ident.name, Binding { decl, ident });
@@ -414,7 +414,7 @@ impl<'gc> Resolver<'gc> {
 
     fn visit_identifier(
         &mut self,
-        lock: &GCContext,
+        lock: &GCLock,
         ident: &'gc Identifier,
         node: &Node,
         parent: &Node,
@@ -449,7 +449,7 @@ impl<'gc> Resolver<'gc> {
         self.resolve_identifier(lock, ident, node, false);
     }
 
-    fn visit_block_statement(&mut self, lock: &'gc GCContext, node: &'gc Node<'gc>, parent: &Node) {
+    fn visit_block_statement(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>, parent: &Node) {
         // Some nodes with attached BlockStatement have already dealt with the scope.
         if let Node::FunctionDeclaration(_)
         | Node::FunctionExpression(_)
@@ -473,12 +473,12 @@ impl<'gc> Resolver<'gc> {
 
     fn resolve_identifier(
         &mut self,
-        lock: &GCContext,
+        lock: &GCLock,
         ident: &'gc Identifier,
         node: &Node,
         in_typeof: bool,
     ) {
-        let ptr = NodePtr::from_node(lock, node);
+        let ptr = NodeRc::from_node(lock, node);
         let decl = if let Some(decl) = self.sem.ident_decl(&ptr) {
             // If identifier already resolved, pick the resolved declaration.
             Some(decl)
@@ -497,7 +497,7 @@ impl<'gc> Resolver<'gc> {
                     .sem
                     .func_arguments_decl(self.function_context().func_id, ident.name);
                 self.sem
-                    .set_ident_decl(NodePtr::from_node(lock, node), args_decl);
+                    .set_ident_decl(NodeRc::from_node(lock, node), args_decl);
             }
             return;
         }
@@ -536,7 +536,7 @@ impl<'gc> Resolver<'gc> {
 
     /// Declare all declarations optionally associated with `scope_node` by
     /// [`DeclCollector`] in the current scope.
-    fn process_collected_declarations(&mut self, lock: &GCContext, scope_node: &Node) {
+    fn process_collected_declarations(&mut self, lock: &GCLock, scope_node: &Node) {
         if let Some(scope_decls) = self
             .function_context()
             .decls
@@ -548,7 +548,7 @@ impl<'gc> Resolver<'gc> {
 
     /// Declare all declarations from `scope_decls` in the current scope by
     /// calling [`Self::validate_and_declare_identifier()'].
-    fn process_declarations(&mut self, lock: &GCContext, scope_decls: &[&'gc Node<'gc>]) {
+    fn process_declarations(&mut self, lock: &GCLock, scope_decls: &[&'gc Node<'gc>]) {
         for &decl in scope_decls {
             let mut idents = SmallVec::<[&Node; 4]>::new();
             let decl_kind = self.extract_idents_from_decl(lock, decl, &mut idents);
@@ -568,7 +568,7 @@ impl<'gc> Resolver<'gc> {
     ///     declarations.
     fn validate_and_declare_identifier(
         &mut self,
-        lock: &GCContext,
+        lock: &GCLock,
         decl_kind: DeclKind,
         id_node: &'gc Node<'gc>,
     ) {
@@ -679,14 +679,14 @@ impl<'gc> Resolver<'gc> {
         };
 
         self.sem
-            .set_ident_decl(NodePtr::from_node(lock, id_node), decl_id.unwrap());
+            .set_ident_decl(NodeRc::from_node(lock, id_node), decl_id.unwrap());
     }
 
     /// Ensure that the specified identifier is valid to be used in a declaration.
     /// Return true if valid, otherwise generate an error and return false.
     fn validate_declaration_name(
         &self,
-        lock: &GCContext,
+        lock: &GCLock,
         decl_kind: DeclKind,
         ident: &Identifier,
     ) -> bool {
@@ -733,7 +733,7 @@ impl<'gc> Resolver<'gc> {
     /// as DeclKind::ScopedFunction, so they can be distinguished.
     fn extract_idents_from_decl<A: smallvec::Array<Item = &'gc Node<'gc>>>(
         &self,
-        lock: &GCContext,
+        lock: &GCLock,
         decl: &'gc Node<'gc>,
         idents: &mut SmallVec<A>,
     ) -> DeclKind {
@@ -796,7 +796,7 @@ impl<'gc> Resolver<'gc> {
     /// Normally that is just a single identifier, but it can be more in case of
     /// destructuring.
     fn extract_declared_idents_from_id<A: smallvec::Array<Item = &'gc Node<'gc>>>(
-        lock: &GCContext,
+        lock: &GCLock,
         node_opt: Option<&'gc Node<'gc>>,
         idents: &mut SmallVec<A>,
     ) {
@@ -849,7 +849,7 @@ impl<'gc> Resolver<'gc> {
 }
 
 impl<'gc> Visitor<'gc> for Resolver<'gc> {
-    fn call(&mut self, lock: &'gc GCContext, node: &'gc Node<'gc>, parent: Option<&'gc Node<'gc>>) {
+    fn call(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>, parent: Option<&'gc Node<'gc>>) {
         match node {
             Node::Program(_) => {
                 panic!("visited unexpected {}", node.name())
@@ -860,7 +860,7 @@ impl<'gc> Visitor<'gc> for Resolver<'gc> {
                 self.sem
                     .scope_mut(self.current_scope.unwrap())
                     .hoisted_functions
-                    .push(NodePtr::from_node(lock, node));
+                    .push(NodeRc::from_node(lock, node));
                 self.visit_function_like(lock, node);
             }
 

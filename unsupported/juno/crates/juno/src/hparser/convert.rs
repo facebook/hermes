@@ -134,7 +134,7 @@ impl<'parser> Converter<'parser> {
             .make_source_loc(line_coord.line_ref.try_offset_from(loc.as_ptr()).unwrap())
     }
 
-    pub fn cvt_label(&mut self, ctx: &ast::GCContext<'_, '_>, u: NodeLabel) -> ast::NodeLabel {
+    pub fn cvt_label(&mut self, ctx: &ast::GCLock<'_, '_>, u: NodeLabel) -> ast::NodeLabel {
         *self
             .atom_tab
             .entry(u)
@@ -143,7 +143,7 @@ impl<'parser> Converter<'parser> {
 
     pub fn cvt_label_opt(
         &mut self,
-        ctx: &ast::GCContext<'_, '_>,
+        ctx: &ast::GCLock<'_, '_>,
         u: NodeLabelOpt,
     ) -> Option<ast::NodeLabel> {
         u.as_node_label().map(|u| self.cvt_label(ctx, u))
@@ -154,7 +154,7 @@ impl<'parser> Converter<'parser> {
 /// `n` must be valid.
 pub unsafe fn cvt_node_ptr_opt<'gc, 'ast: 'gc>(
     cvt: &mut Converter<'_>,
-    ctx: &'gc ast::GCContext<'ast, '_>,
+    ctx: &'gc ast::GCLock<'ast, '_>,
     n: NodePtrOpt,
 ) -> Option<&'gc ast::Node<'gc>> {
     n.as_node_ptr()
@@ -163,7 +163,7 @@ pub unsafe fn cvt_node_ptr_opt<'gc, 'ast: 'gc>(
 
 pub unsafe fn cvt_node_list<'gc, 'ast: 'gc>(
     cvt: &mut Converter<'_>,
-    ctx: &'gc ast::GCContext<'ast, '_>,
+    ctx: &'gc ast::GCLock<'ast, '_>,
     n: NodeListRef,
 ) -> ast::NodeList<'gc> {
     let mut res = ast::NodeList::new();
@@ -175,7 +175,7 @@ pub unsafe fn cvt_node_list<'gc, 'ast: 'gc>(
 
 pub unsafe fn cvt_node_list_opt<'gc, 'ast: 'gc>(
     cvt: &mut Converter<'_>,
-    ctx: &'gc ast::GCContext<'ast, '_>,
+    ctx: &'gc ast::GCLock<'ast, '_>,
     n: NodeListOptRef,
 ) -> Option<ast::NodeList<'gc>> {
     n.as_node_list_ref()

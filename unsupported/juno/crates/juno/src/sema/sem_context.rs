@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::ast::{Atom, NodePtr};
+use crate::ast::{Atom, NodeRc};
 use std::collections::HashMap;
 use std::num::NonZeroU32;
 
@@ -122,7 +122,7 @@ pub struct LexicalScope {
     pub decls: Vec<DeclId>,
     /// A list of functions that need to be hoisted and materialized before we
     /// can generate the rest of the scope.
-    pub hoisted_functions: Vec<NodePtr>,
+    pub hoisted_functions: Vec<NodeRc>,
 }
 
 pub struct FunctionInfo {
@@ -144,10 +144,10 @@ pub struct SemContext {
     scopes: Vec<LexicalScope>,
     funcs: Vec<FunctionInfo>,
     /// Resolved identifiers: declarations associated with Identifier AST nodes.
-    ident_decls: HashMap<NodePtr, DeclId>,
+    ident_decls: HashMap<NodeRc, DeclId>,
     /// Lexical scopes associated with AST nodes. Usually BlockStatement, but
     /// occasionally others.
-    node_scopes: HashMap<NodePtr, LexicalScopeId>,
+    node_scopes: HashMap<NodeRc, LexicalScopeId>,
 }
 
 impl SemContext {
@@ -219,23 +219,23 @@ impl SemContext {
         )
     }
 
-    pub fn all_ident_decls(&self) -> &HashMap<NodePtr, DeclId> {
+    pub fn all_ident_decls(&self) -> &HashMap<NodeRc, DeclId> {
         &self.ident_decls
     }
-    pub(super) fn set_ident_decl(&mut self, node: NodePtr, decl: DeclId) {
+    pub(super) fn set_ident_decl(&mut self, node: NodeRc, decl: DeclId) {
         self.ident_decls.insert(node, decl);
     }
-    pub fn ident_decl(&self, node: &NodePtr) -> Option<DeclId> {
+    pub fn ident_decl(&self, node: &NodeRc) -> Option<DeclId> {
         self.ident_decls.get(node).copied()
     }
 
-    pub fn all_node_scopes(&self) -> &HashMap<NodePtr, LexicalScopeId> {
+    pub fn all_node_scopes(&self) -> &HashMap<NodeRc, LexicalScopeId> {
         &self.node_scopes
     }
-    pub(super) fn set_node_scope(&mut self, node: NodePtr, scope: LexicalScopeId) {
+    pub(super) fn set_node_scope(&mut self, node: NodeRc, scope: LexicalScopeId) {
         self.node_scopes.insert(node, scope);
     }
-    pub fn node_scope(&self, node: NodePtr) -> Option<LexicalScopeId> {
+    pub fn node_scope(&self, node: NodeRc) -> Option<LexicalScopeId> {
         self.node_scopes.get(&node).copied()
     }
 

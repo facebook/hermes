@@ -34,8 +34,8 @@ macro_rules! gen_nodekind_enum {
         // The kind of an AST node.
         // Matching against this enum allows traversal of the AST.
         // Each variant of the enum must only have fields of the following types:
-        // * `NodePtr`
-        // * `Option<NodePtr>`
+        // * `NodeRc`
+        // * `Option<NodeRc>`
         // * `NodeList`
         // * `StringLiteral`
         // * `NodeLabel`
@@ -71,7 +71,7 @@ macro_rules! gen_nodekind_enum {
             /// Visit the child fields of `self`.
             pub fn visit_children<'ast: 'gc, V: Visitor<'gc>>(
                 &'gc self,
-                ctx: &'gc GCContext<'ast, '_>,
+                ctx: &'gc GCLock<'ast, '_>,
                 visitor: &mut V,
             ) {
                 match self {
@@ -93,7 +93,7 @@ macro_rules! gen_nodekind_enum {
             /// Will only allocate a new node if one of the children was changed.
             pub fn visit_children_mut<'ast: 'gc, V: VisitorMut<'gc>>(
                 &'gc self,
-                ctx: &'gc GCContext<'ast, '_>,
+                ctx: &'gc GCLock<'ast, '_>,
                 visitor: &mut V,
             ) -> TransformResult<&'gc Node<'gc>> {
                 let builder = builder::Builder::from_node(self);
@@ -120,7 +120,7 @@ macro_rules! gen_nodekind_enum {
             pub fn replace_with_new<'ast: 'gc, V: VisitorMut<'gc>>(
                 &'gc self,
                 builder: builder::Builder<'gc>,
-                ctx: &'gc GCContext<'ast, '_>,
+                ctx: &'gc GCLock<'ast, '_>,
                 visitor: &mut V,
             ) -> TransformResult<&'gc Node<'gc>> {
                 #[allow(unused_mut)]
@@ -146,7 +146,7 @@ macro_rules! gen_nodekind_enum {
             pub fn replace_with_existing<'ast: 'gc, V: VisitorMut<'gc>>(
                 &'gc self,
                 existing: &'gc Node<'gc>,
-                ctx: &'gc GCContext<'ast, '_>,
+                ctx: &'gc GCLock<'ast, '_>,
                 visitor: &mut V,
             ) -> TransformResult<&'gc Node<'gc>> {
                 let builder = builder::Builder::from_node(existing);
@@ -267,7 +267,7 @@ macro_rules! gen_nodekind_enum {
                 AssignmentExpressionOperator,
                 BinaryExpressionOperator,
                 ExportKind,
-                GCContext,
+                GCLock,
                 ImportKind,
                 LogicalExpressionOperator,
                 MethodDefinitionKind,
@@ -328,7 +328,7 @@ macro_rules! gen_nodekind_enum {
 
                 /// Return Unchanged if the node the builder started with was never changed.
                 /// Return Changed(node) with a new node if it was changed.
-                pub fn build(self, gc: &'a GCContext) -> TransformResult<&'a Node<'a>> {
+                pub fn build(self, gc: &'a GCLock) -> TransformResult<&'a Node<'a>> {
                     if self.is_changed {
                         TransformResult::Changed(gc.alloc(super::Node::$kind(self.inner)))
                     } else {
@@ -338,7 +338,7 @@ macro_rules! gen_nodekind_enum {
 
                 /// Build from a template.
                 pub fn build_template(
-                    gc: &'a GCContext,
+                    gc: &'a GCLock,
                     node: super::template::$kind<'a>,
                 ) -> &'a Node<'a> {
                     gc.alloc(super::Node::$kind(super::$kind {

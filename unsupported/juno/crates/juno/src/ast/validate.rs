@@ -6,10 +6,10 @@
  */
 
 use super::{
-    kind::*, AssignmentExpressionOperator, BinaryExpressionOperator, Context, ExportKind,
-    GCContext, ImportKind, LogicalExpressionOperator, MethodDefinitionKind, Node, NodeLabel,
-    NodeList, NodePtr, NodeString, NodeVariant, PropertyKind, UnaryExpressionOperator,
-    UpdateExpressionOperator, VariableDeclarationKind, Visitor,
+    kind::*, AssignmentExpressionOperator, BinaryExpressionOperator, Context, ExportKind, GCLock,
+    ImportKind, LogicalExpressionOperator, MethodDefinitionKind, Node, NodeLabel, NodeList, NodeRc,
+    NodeString, NodeVariant, PropertyKind, UnaryExpressionOperator, UpdateExpressionOperator,
+    VariableDeclarationKind, Visitor,
 };
 
 use thiserror::Error;
@@ -29,7 +29,7 @@ macro_rules! gen_validate_fn {
     }) => {
             /// Check whether this is a valid kind for `node`.
             fn validate_node<'gc>(
-                ctx: &'gc GCContext,
+                ctx: &'gc GCLock,
                 node: &'gc Node<'gc>,
             ) -> Result<(), ValidationError> {
                 match node {
@@ -55,7 +55,7 @@ trait ValidChild<'gc> {
     /// Check whether this is a valid child of `node` given the constraints.
     fn validate_child(
         &self,
-        _ctx: &'gc GCContext,
+        _ctx: &'gc GCLock,
         _node: &'gc Node<'gc>,
         _constraints: &[NodeVariant],
     ) -> Result<(), ValidationError> {
@@ -81,7 +81,7 @@ impl ValidChild<'_> for NodeString {}
 impl<'gc, T: ValidChild<'gc>> ValidChild<'gc> for Option<T> {
     fn validate_child(
         &self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         node: &'gc Node<'gc>,
         constraints: &[NodeVariant],
     ) -> Result<(), ValidationError> {
@@ -95,7 +95,7 @@ impl<'gc, T: ValidChild<'gc>> ValidChild<'gc> for Option<T> {
 impl<'gc> ValidChild<'gc> for &Node<'gc> {
     fn validate_child(
         &self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         node: &'gc Node<'gc>,
         constraints: &[NodeVariant],
     ) -> Result<(), ValidationError> {
@@ -115,7 +115,7 @@ impl<'gc> ValidChild<'gc> for &Node<'gc> {
 impl<'gc> ValidChild<'gc> for NodeList<'gc> {
     fn validate_child(
         &self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         node: &'gc Node<'gc>,
         constraints: &[NodeVariant],
     ) -> Result<(), ValidationError> {
@@ -156,7 +156,7 @@ fn instanceof(subtype: NodeVariant, supertype: NodeVariant) -> bool {
 
 /// Custom validation function for constraints which can't be expressed
 /// using just the inheritance structure in Node.
-fn validate_custom<'gc>(ctx: &'gc GCContext, node: &'gc Node<'gc>) -> Result<(), ValidationError> {
+fn validate_custom<'gc>(ctx: &'gc GCLock, node: &'gc Node<'gc>) -> Result<(), ValidationError> {
     match node {
         Node::MemberExpression(MemberExpression {
             metadata: _,
@@ -213,16 +213,16 @@ fn validate_custom<'gc>(ctx: &'gc GCContext, node: &'gc Node<'gc>) -> Result<(),
 /// An AST validation error.
 pub struct ValidationError {
     /// The AST node which failed to validate.
-    pub node: NodePtr,
+    pub node: NodeRc,
 
     /// A description of the invalid state encountered.
     pub message: String,
 }
 
 impl ValidationError {
-    pub fn new<'gc>(gc: &'gc GCContext, node: &'gc Node<'gc>, message: String) -> ValidationError {
+    pub fn new<'gc>(gc: &'gc GCLock, node: &'gc Node<'gc>, message: String) -> ValidationError {
         ValidationError {
-            node: NodePtr::from_node(gc, node),
+            node: NodeRc::from_node(gc, node),
             message,
         }
     }
@@ -241,12 +241,12 @@ impl Validator {
     }
 
     /// Run validation recursively starting at the `root`.
-    pub fn validate_root<'gc>(&mut self, ctx: &'gc GCContext, root: &'gc Node<'gc>) {
+    pub fn validate_root<'gc>(&mut self, ctx: &'gc GCLock, root: &'gc Node<'gc>) {
         self.validate_node(ctx, root);
     }
 
     /// Validate `node` and recursively validate its children.
-    fn validate_node<'gc>(&mut self, ctx: &'gc GCContext, node: &'gc Node<'gc>) {
+    fn validate_node<'gc>(&mut self, ctx: &'gc GCLock, node: &'gc Node<'gc>) {
         if let Err(e) = validate_node(ctx, node) {
             self.errors.push(e);
         }
@@ -255,16 +255,16 @@ impl Validator {
 }
 
 impl<'gc> Visitor<'gc> for Validator {
-    fn call(&mut self, ctx: &'gc GCContext, node: &'gc Node<'gc>, _parent: Option<&'gc Node<'gc>>) {
+    fn call(&mut self, ctx: &'gc GCLock, node: &'gc Node<'gc>, _parent: Option<&'gc Node<'gc>>) {
         self.validate_node(ctx, node);
     }
 }
 
 /// Validate the full AST tree.
 /// If it fails, return all the errors encountered along the way.
-pub fn validate_tree_pure(ctx: &mut Context, root: &NodePtr) -> Result<(), Vec<ValidationError>> {
+pub fn validate_tree_pure(ctx: &mut Context, root: &NodeRc) -> Result<(), Vec<ValidationError>> {
     let mut validator = Validator::new();
-    let gc = GCContext::new(ctx);
+    let gc = GCLock::new(ctx);
     validator.validate_root(&gc, root.node(&gc));
     if validator.errors.is_empty() {
         Ok(())
@@ -279,11 +279,11 @@ pub struct TreeValidationError(usize);
 
 /// Validate the full AST tree.
 /// If it fails, reports all errors to the source manager.
-pub fn validate_tree(ctx: &mut Context, root: &NodePtr) -> Result<(), TreeValidationError> {
+pub fn validate_tree(ctx: &mut Context, root: &NodeRc) -> Result<(), TreeValidationError> {
     match validate_tree_pure(ctx, root) {
         Ok(_) => Ok(()),
         Err(errors) => {
-            let lock = GCContext::new(ctx);
+            let lock = GCLock::new(ctx);
             for e in &errors {
                 lock.sm()
                     .error(*e.node.node(&lock).range(), e.message.as_str());

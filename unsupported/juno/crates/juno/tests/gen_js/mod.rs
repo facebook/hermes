@@ -10,7 +10,7 @@ use juno::gen_js;
 use juno::hparser;
 use juno::sourcemap::merge_sourcemaps;
 
-fn do_gen<'ast>(ctx: &mut Context<'ast>, node: &NodePtr, pretty: gen_js::Pretty) -> String {
+fn do_gen<'ast>(ctx: &mut Context<'ast>, node: &NodeRc, pretty: gen_js::Pretty) -> String {
     use juno::gen_js::*;
     let mut out: Vec<u8> = vec![];
     generate(&mut out, ctx, node, pretty).unwrap();
@@ -77,8 +77,8 @@ fn test_roundtrip_jsx(src1: &str) {
 fn test_literals() {
     let mut ctx = Context::new();
     let string = {
-        let gc = GCContext::new(&mut ctx);
-        NodePtr::from_node(
+        let gc = GCLock::new(&mut ctx);
+        NodeRc::from_node(
             &gc,
             builder::StringLiteral::build_template(
                 &gc,
@@ -492,7 +492,7 @@ fn test_jsx() {
 fn test_sourcemap() {
     use juno::gen_js::*;
     let mut ctx = Context::new();
-    let ast1: NodePtr = hparser::parse(&mut ctx, "function foo() { return 1 }").unwrap();
+    let ast1: NodeRc = hparser::parse(&mut ctx, "function foo() { return 1 }").unwrap();
     let mut out: Vec<u8> = vec![];
     let sourcemap = generate(&mut out, &mut ctx, &ast1, Pretty::Yes).unwrap();
     let string = String::from_utf8(out).expect("Invalid UTF-8 output in test");

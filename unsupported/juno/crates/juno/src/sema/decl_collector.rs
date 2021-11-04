@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::ast::{self, GCContext, Node, NodeRef, VariableDeclarationKind, Visitor};
+use crate::ast::{self, GCLock, Node, NodePtr, VariableDeclarationKind, Visitor};
 use crate::node_isa;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -20,7 +20,7 @@ pub(super) struct DeclCollector<'gc> {
     /// Associate a [ScopeDecls] struct with nodes.
     /// We need Rc<> to enable the consumer to reference the data without
     /// keeping a reference to DeclCollector.
-    scopes: HashMap<NodeRef<'gc>, Rc<ScopeDecls<'gc>>>,
+    scopes: HashMap<NodePtr<'gc>, Rc<ScopeDecls<'gc>>>,
 
     /// Function declarations in a block scope. They have special rules described
     /// in Annex B 3.3.
@@ -32,7 +32,7 @@ pub(super) struct DeclCollector<'gc> {
 
 impl<'gc> DeclCollector<'gc> {
     /// Collect all declarations in a function.
-    pub fn run(ctx: &'gc GCContext, root: &'gc Node<'gc>) -> DeclCollector<'gc> {
+    pub fn run(ctx: &'gc GCLock, root: &'gc Node<'gc>) -> DeclCollector<'gc> {
         let mut dc = DeclCollector {
             scopes: Default::default(),
             scope_stack: Vec::with_capacity(4),
@@ -46,7 +46,7 @@ impl<'gc> DeclCollector<'gc> {
 
     /// Return the optional ScopeDecls for an AST node.
     pub fn scope_decls_for_node(&self, node: &Node) -> Option<Rc<ScopeDecls<'gc>>> {
-        self.scopes.get(&NodeRef::from(node)).cloned()
+        self.scopes.get(&NodePtr::from(node)).cloned()
     }
 
     /// Return a list of all scoped function declarations in the function.
@@ -75,11 +75,11 @@ impl<'gc> DeclCollector<'gc> {
     fn close_scope(&mut self, ptr: &'gc Node<'gc>) {
         let decls = self.scope_stack.pop().unwrap();
         if !decls.is_empty() {
-            self.scopes.insert(NodeRef::from_node(ptr), Rc::new(decls));
+            self.scopes.insert(NodePtr::from_node(ptr), Rc::new(decls));
         }
     }
 
-    fn run_impl(&mut self, lock: &'gc GCContext, root: &'gc Node<'gc>) {
+    fn run_impl(&mut self, lock: &'gc GCLock, root: &'gc Node<'gc>) {
         match root {
             Node::FunctionDeclaration(ast::FunctionDeclaration { body, .. })
             | Node::FunctionExpression(ast::FunctionExpression { body, .. }) => {
@@ -110,7 +110,7 @@ impl<'gc> DeclCollector<'gc> {
 }
 
 impl<'gc> Visitor<'gc> for DeclCollector<'gc> {
-    fn call(&mut self, ctx: &'gc GCContext, node: &'gc Node<'gc>, _parent: Option<&'gc Node<'gc>>) {
+    fn call(&mut self, ctx: &'gc GCLock, node: &'gc Node<'gc>, _parent: Option<&'gc Node<'gc>>) {
         match node {
             Node::VariableDeclaration(ast::VariableDeclaration {
                 kind: VariableDeclarationKind::Var,

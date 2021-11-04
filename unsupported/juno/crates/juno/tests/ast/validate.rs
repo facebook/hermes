@@ -11,8 +11,8 @@ use juno::ast::*;
 fn test_valid() {
     let mut ctx = Context::new();
     let return_stmt = {
-        let gc = GCContext::new(&mut ctx);
-        NodePtr::from_node(
+        let gc = GCLock::new(&mut ctx);
+        NodeRc::from_node(
             &gc,
             builder::ReturnStatement::build_template(
                 &gc,
@@ -26,8 +26,8 @@ fn test_valid() {
     assert!(validate_tree_pure(&mut ctx, &return_stmt).is_ok());
 
     let return_stmt = {
-        let gc = GCContext::new(&mut ctx);
-        NodePtr::from_node(
+        let gc = GCLock::new(&mut ctx);
+        NodeRc::from_node(
             &gc,
             builder::ReturnStatement::build_template(
                 &gc,
@@ -47,8 +47,8 @@ fn test_valid() {
     assert!(validate_tree_pure(&mut ctx, &return_stmt).is_ok());
 
     let return_stmt = {
-        let gc = GCContext::new(&mut ctx);
-        NodePtr::from_node(
+        let gc = GCLock::new(&mut ctx);
+        NodeRc::from_node(
             &gc,
             builder::ReturnStatement::build_template(
                 &gc,
@@ -72,9 +72,9 @@ fn test_valid() {
 fn test_error() {
     let mut ctx = Context::new();
 
-    let ast: NodePtr = {
-        let gc = GCContext::new(&mut ctx);
-        NodePtr::from_node(
+    let ast: NodeRc = {
+        let gc = GCLock::new(&mut ctx);
+        NodeRc::from_node(
             &gc,
             builder::BlockStatement::build_template(
                 &gc,
@@ -98,10 +98,10 @@ fn test_error() {
         )
     };
 
-    let bad_ret: NodePtr = {
-        let gc = GCContext::new(&mut ctx);
+    let bad_ret: NodeRc = {
+        let gc = GCLock::new(&mut ctx);
         match ast.node(&gc) {
-            Node::BlockStatement(BlockStatement { body, .. }) => NodePtr::from_node(&gc, body[0]),
+            Node::BlockStatement(BlockStatement { body, .. }) => NodeRc::from_node(&gc, body[0]),
             _ => {
                 unreachable!("bad match");
             }

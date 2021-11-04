@@ -6,7 +6,7 @@
  */
 
 use anyhow::{self, ensure, Context, Error};
-use juno::ast::{self, validate_tree, NodePtr, SourceRange};
+use juno::ast::{self, validate_tree, NodeRc, SourceRange};
 use juno::gen_js;
 use juno::hparser::{self, MagicCommentKind, ParsedJS};
 use juno::sema;
@@ -150,7 +150,7 @@ fn load_source_map(url: Url) -> anyhow::Result<SourceMap> {
 fn gen_output(
     opt: &Opt,
     ctx: &mut ast::Context,
-    root: NodePtr,
+    root: NodeRc,
     input_map: &Option<SourceMap>,
 ) -> anyhow::Result<bool> {
     let out: Box<dyn Write> = if opt.output_path == Path::new("-") {
@@ -270,8 +270,8 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
 
     let ast = {
         // Convert to Juno AST.
-        let gc = ast::GCContext::new(&mut ctx);
-        NodePtr::from_node(&gc, parsed.to_ast(&gc, file_id).unwrap())
+        let gc = ast::GCLock::new(&mut ctx);
+        NodeRc::from_node(&gc, parsed.to_ast(&gc, file_id).unwrap())
     };
     // We don't need the original parser anymore.
     drop(parsed);
@@ -284,7 +284,7 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     let source_map = sm_url.map(load_source_map).transpose()?;
 
     {
-        let lock = ast::GCContext::new(&mut ctx);
+        let lock = ast::GCLock::new(&mut ctx);
         let sem = sema::resolve_program(&lock, ast.node(&lock));
         println!(
             "{} error(s), {} warning(s)",

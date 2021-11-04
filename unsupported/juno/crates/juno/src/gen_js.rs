@@ -27,10 +27,10 @@ pub enum Pretty {
 pub fn generate<W: Write>(
     out: W,
     ctx: &mut Context,
-    root: &NodePtr,
+    root: &NodeRc,
     pretty: Pretty,
 ) -> io::Result<SourceMap> {
-    let gc = GCContext::new(ctx);
+    let gc = GCLock::new(ctx);
     GenJS::gen_root(out, &gc, root.node(&gc), pretty)
 }
 
@@ -198,7 +198,7 @@ impl<W: Write> GenJS<W> {
     /// otherwise return `Ok(())`.
     fn gen_root<'gc>(
         writer: W,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         root: &'gc Node<'gc>,
         pretty: Pretty,
     ) -> io::Result<SourceMap> {
@@ -274,7 +274,7 @@ impl<W: Write> GenJS<W> {
     /// Generate the JS for each node kind.
     fn gen_node<'gc>(
         &mut self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         node: &'gc Node<'gc>,
         parent: Option<&'gc Node<'gc>>,
     ) {
@@ -2679,7 +2679,7 @@ impl<W: Write> GenJS<W> {
     /// Print the child of a `parent` node at the position `child_pos`.
     fn print_child<'gc>(
         &mut self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         child: Option<&'gc Node<'gc>>,
         parent: &'gc Node<'gc>,
         child_pos: ChildPos,
@@ -2698,7 +2698,7 @@ impl<W: Write> GenJS<W> {
     /// if its precedence is <= comma.
     fn print_comma_expression<'gc>(
         &mut self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         child: &'gc Node<'gc>,
         parent: &'gc Node<'gc>,
     ) {
@@ -2712,7 +2712,7 @@ impl<W: Write> GenJS<W> {
 
     fn print_parens<'gc>(
         &mut self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         child: &'gc Node<'gc>,
         parent: &'gc Node<'gc>,
         need_parens: NeedParens,
@@ -2777,7 +2777,7 @@ impl<W: Write> GenJS<W> {
 
     fn visit_props<'gc>(
         &mut self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         props: &[&'gc Node<'gc>],
         parent: &'gc Node<'gc>,
     ) {
@@ -2793,7 +2793,7 @@ impl<W: Write> GenJS<W> {
 
     fn visit_func_params_body<'gc>(
         &mut self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         params: &[&'gc Node<'gc>],
         return_type: Option<&'gc Node<'gc>>,
         predicate: Option<&'gc Node<'gc>>,
@@ -2823,7 +2823,7 @@ impl<W: Write> GenJS<W> {
 
     fn visit_func_type_params<'gc>(
         &mut self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         params: &[&'gc Node<'gc>],
         this: Option<&'gc Node<'gc>>,
         rest: Option<&'gc Node<'gc>>,
@@ -2873,7 +2873,7 @@ impl<W: Write> GenJS<W> {
     #[allow(clippy::too_many_arguments)]
     fn visit_interface<'gc>(
         &mut self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         decl: &str,
         id: &'gc Node<'gc>,
         type_parameters: Option<&'gc Node<'gc>>,
@@ -2903,7 +2903,7 @@ impl<W: Write> GenJS<W> {
     /// Generate the body of a Flow enum with type `kind`.
     fn visit_enum_body<'gc>(
         &mut self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         kind: &str,
         members: &[&'gc Node<'gc>],
         explicit_type: bool,
@@ -2945,7 +2945,7 @@ impl<W: Write> GenJS<W> {
     /// Return true if block
     fn visit_stmt_or_block<'gc>(
         &mut self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         node: &'gc Node<'gc>,
         force_block: ForceBlock,
         parent: &'gc Node<'gc>,
@@ -2989,7 +2989,7 @@ impl<W: Write> GenJS<W> {
 
     fn visit_stmt_list<'gc>(
         &mut self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         list: &[&'gc Node<'gc>],
         parent: &'gc Node<'gc>,
     ) {
@@ -3003,7 +3003,7 @@ impl<W: Write> GenJS<W> {
 
     fn visit_stmt_in_block<'gc>(
         &mut self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         stmt: &'gc Node<'gc>,
         parent: &'gc Node<'gc>,
     ) {
@@ -3106,7 +3106,7 @@ impl<W: Write> GenJS<W> {
     /// which is situated at `child_pos` position in relation to its `parent`.
     fn need_parens<'gc>(
         &self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         parent: &'gc Node<'gc>,
         child: &'gc Node<'gc>,
         child_pos: ChildPos,
@@ -3223,7 +3223,7 @@ impl<W: Write> GenJS<W> {
 
     fn root_starts_with<'gc, F: Fn(&'gc Node<'gc>) -> bool>(
         &self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         expr: &'gc Node<'gc>,
         pred: F,
     ) -> bool {
@@ -3232,7 +3232,7 @@ impl<W: Write> GenJS<W> {
 
     fn expr_starts_with<'gc, F: Fn(&'gc Node<'gc>) -> bool>(
         &self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         expr: &'gc Node<'gc>,
         parent: Option<&'gc Node<'gc>>,
         pred: F,
@@ -3343,7 +3343,7 @@ impl<W: Write> GenJS<W> {
 }
 
 impl<'gc, W: Write> Visitor<'gc> for GenJS<W> {
-    fn call(&mut self, ctx: &'gc GCContext, node: &'gc Node<'gc>, parent: Option<&'gc Node<'gc>>) {
+    fn call(&mut self, ctx: &'gc GCLock, node: &'gc Node<'gc>, parent: Option<&'gc Node<'gc>>) {
         self.gen_node(ctx, node, parent);
     }
 }
@@ -3447,7 +3447,7 @@ impl Node<'_> {
 /// ```
 /// The semicolon will be emitted as part of emitting `y()`, which is an `ExpressionStatement`,
 /// so the `IfStatement` does not need to emit a semicolon.
-fn stmt_skip_semi<'gc>(ctx: &'gc GCContext, node: Option<&'gc Node<'gc>>) -> bool {
+fn stmt_skip_semi<'gc>(ctx: &'gc GCLock, node: Option<&'gc Node<'gc>>) -> bool {
     match node {
         Some(node) => match &node {
             Node::BlockStatement(_)
@@ -3486,17 +3486,12 @@ fn stmt_skip_semi<'gc>(ctx: &'gc GCContext, node: Option<&'gc Node<'gc>>) -> boo
 }
 
 /// Return true if `node` contains a `CallExpression`.
-fn contains_call<'gc>(gc: &'gc GCContext, node: &'gc Node<'gc>) -> bool {
+fn contains_call<'gc>(gc: &'gc GCLock, node: &'gc Node<'gc>) -> bool {
     struct CallFinder {
         found: bool,
     }
     impl<'gc> Visitor<'gc> for CallFinder {
-        fn call(
-            &mut self,
-            gc: &'gc GCContext,
-            node: &'gc Node<'gc>,
-            _parent: Option<&'gc Node<'gc>>,
-        ) {
+        fn call(&mut self, gc: &'gc GCLock, node: &'gc Node<'gc>, _parent: Option<&'gc Node<'gc>>) {
             match node {
                 Node::CallExpression(_)
                 | Node::OptionalCallExpression(OptionalCallExpression {

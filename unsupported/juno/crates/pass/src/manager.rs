@@ -6,7 +6,7 @@
  */
 
 use crate::passes::*;
-use juno::ast::{Context, GCContext, Node, NodePtr, TransformResult};
+use juno::ast::{Context, GCLock, Node, NodeRc, TransformResult};
 
 /// Manager to create pipelines of multiple passes over the AST.
 #[derive(Default)]
@@ -36,14 +36,14 @@ impl PassManager {
     }
 
     /// Run the pipeline on `node`, consuming it in the process.
-    pub fn run(mut self, ctx: &mut Context, node: NodePtr) -> NodePtr {
+    pub fn run(mut self, ctx: &mut Context, node: NodeRc) -> NodeRc {
         let mut result = node;
         for pass in &mut self.passes {
             {
-                let gc = GCContext::new(ctx);
+                let gc = GCLock::new(ctx);
                 result = match pass.run(&gc, result.node(&gc)) {
                     TransformResult::Unchanged => result,
-                    TransformResult::Changed(new_node) => NodePtr::from_node(&gc, new_node),
+                    TransformResult::Changed(new_node) => NodeRc::from_node(&gc, new_node),
                 };
             }
             ctx.gc();
@@ -63,7 +63,7 @@ pub trait Pass {
     /// Execute the pass on the root `node` and return a `TransformResult`.
     fn run<'gc>(
         &mut self,
-        gc: &'gc GCContext,
+        gc: &'gc GCLock,
         node: &'gc Node<'gc>,
     ) -> TransformResult<&'gc Node<'gc>>;
 }
