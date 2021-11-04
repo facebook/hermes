@@ -789,6 +789,25 @@ impl<'gc> Visitor<'gc> for Resolver<'gc> {
 
             Node::BlockStatement(_) => self.visit_block_statement(lock, node, parent.unwrap()),
 
+            Node::MetaProperty(ast::MetaProperty {
+                meta: Node::Identifier(meta),
+                property: Node::Identifier(prop),
+                ..
+            }) => {
+                // Validate "new.target"
+                if meta.name == self.kw.ident_new
+                    && prop.name == self.kw.ident_target
+                    && self.function_context().func_id.is_global()
+                {
+                    // ES9.0 15.1.1:
+                    // It is a Syntax Error if StatementList Contains NewTarget unless the
+                    // source code containing NewTarget is eval code that is being processed
+                    // by a direct eval.
+                    lock.sm()
+                        .error(*node.range(), "'new.target' outside of a function");
+                }
+            }
+
             _ => {
                 node.visit_children(lock, self);
             }
