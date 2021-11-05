@@ -165,8 +165,240 @@ impl<'gc> VisitorMut<'gc> for StripFlow {
                 builder.type_arguments(None);
                 return node.replace_with_new(builder::Builder::NewExpression(builder), gc, self);
             }
+
+            Node::EnumDeclaration(n) => {
+                return node.replace_with_existing(transform_enum(gc, n), gc, self);
+            }
+            Node::Program(n) => {
+                let mut builder = builder::Program::from_node(n);
+                let mut body = n.body.clone();
+                for i in (0..body.len()).rev() {
+                    if let Some(Node::ExportDefaultDeclaration(ExportDefaultDeclaration {
+                        metadata,
+                        declaration: enum_node @ Node::EnumDeclaration(e),
+                    })) = body.get(i)
+                    {
+                        body[i] = enum_node;
+                        body.insert(
+                            i + 1,
+                            builder::ExportDefaultDeclaration::build_template(
+                                gc,
+                                template::ExportDefaultDeclaration {
+                                    metadata: TemplateMetadata {
+                                        range: metadata.range,
+                                        ..Default::default()
+                                    },
+                                    declaration: e.id,
+                                },
+                            ),
+                        )
+                    }
+                }
+                builder.body(body);
+                return node.replace_with_new(builder::Builder::Program(builder), gc, self);
+            }
+
             _ => {}
         }
         node.visit_children_mut(gc, self)
     }
+}
+
+fn transform_enum<'gc>(gc: &'gc GCLock<'_, '_>, n: &'gc EnumDeclaration) -> &'gc Node<'gc> {
+    let (method, args) = match n.body {
+        Node::EnumStringBody(body)
+            if matches!(body.members.get(0), Some(Node::EnumDefaultedMember(_))) =>
+        {
+            let elements: Vec<&Node> = body
+                .members
+                .iter()
+                .map(|m| match m {
+                    Node::EnumDefaultedMember(m) => builder::StringLiteral::build_template(
+                        gc,
+                        template::StringLiteral {
+                            metadata: Default::default(),
+                            value: NodeString {
+                                str: (match m.id {
+                                    Node::Identifier(id) => {
+                                        gc.str(id.name).encode_utf16().collect()
+                                    }
+                                    _ => unreachable!(),
+                                }),
+                            },
+                        },
+                    ),
+                    _ => unreachable!(),
+                })
+                .collect();
+
+            (
+                Some("Mirrored"),
+                vec![builder::ArrayExpression::build_template(
+                    gc,
+                    template::ArrayExpression {
+                        metadata: Default::default(),
+                        trailing_comma: false,
+                        elements,
+                    },
+                )],
+            )
+        }
+        Node::EnumSymbolBody(EnumSymbolBody { members, .. })
+        | Node::EnumStringBody(EnumStringBody { members, .. })
+        | Node::EnumBooleanBody(EnumBooleanBody { members, .. })
+        | Node::EnumNumberBody(EnumNumberBody { members, .. }) => (
+            None,
+            vec![builder::ObjectExpression::build_template(
+                gc,
+                template::ObjectExpression {
+                    metadata: Default::default(),
+                    properties: members
+                        .iter()
+                        .map(|m| match m {
+                            Node::EnumStringMember(EnumStringMember { metadata, id, init })
+                            | Node::EnumNumberMember(EnumNumberMember { metadata, id, init })
+                            | Node::EnumBooleanMember(EnumBooleanMember { metadata, id, init }) => {
+                                builder::Property::build_template(
+                                    gc,
+                                    template::Property {
+                                        metadata: TemplateMetadata {
+                                            range: metadata.range,
+                                            ..Default::default()
+                                        },
+                                        kind: PropertyKind::Init,
+                                        computed: false,
+                                        method: false,
+                                        shorthand: false,
+                                        key: id,
+                                        value: init,
+                                    },
+                                )
+                            }
+
+                            // Has to be contained in a EnumSymbolBody
+                            Node::EnumDefaultedMember(m) => builder::Property::build_template(
+                                gc,
+                                template::Property {
+                                    metadata: TemplateMetadata {
+                                        range: m.metadata.range,
+                                        ..Default::default()
+                                    },
+                                    kind: PropertyKind::Init,
+                                    computed: false,
+                                    method: false,
+                                    shorthand: false,
+                                    key: m.id,
+                                    value: builder::CallExpression::build_template(
+                                        gc,
+                                        template::CallExpression {
+                                            metadata: Default::default(),
+                                            type_arguments: None,
+                                            callee: builder::Identifier::build_template(
+                                                gc,
+                                                template::Identifier {
+                                                    metadata: Default::default(),
+                                                    name: gc.atom("Symbol"),
+                                                    optional: false,
+                                                    type_annotation: None,
+                                                },
+                                            ),
+                                            arguments: vec![
+                                                builder::StringLiteral::build_template(
+                                                    gc,
+                                                    template::StringLiteral {
+                                                        metadata: Default::default(),
+                                                        value: NodeString {
+                                                            str: (match m.id {
+                                                                Node::Identifier(id) => gc
+                                                                    .str(id.name)
+                                                                    .encode_utf16()
+                                                                    .collect(),
+                                                                _ => unreachable!(),
+                                                            }),
+                                                        },
+                                                    },
+                                                ),
+                                            ],
+                                        },
+                                    ),
+                                },
+                            ),
+                            _ => unreachable!(),
+                        })
+                        .collect(),
+                },
+            )],
+        ),
+        _ => unreachable!(),
+    };
+    let runtime = builder::CallExpression::build_template(
+        gc,
+        template::CallExpression {
+            metadata: Default::default(),
+            type_arguments: None,
+            callee: builder::Identifier::build_template(
+                gc,
+                template::Identifier {
+                    metadata: Default::default(),
+                    name: gc.atom("require"),
+                    optional: false,
+                    type_annotation: None,
+                },
+            ),
+            arguments: vec![builder::StringLiteral::build_template(
+                gc,
+                template::StringLiteral {
+                    metadata: Default::default(),
+                    value: NodeString {
+                        str: "flow-enums-runtime".encode_utf16().collect(),
+                    },
+                },
+            )],
+        },
+    );
+    return builder::VariableDeclaration::build_template(
+        gc,
+        template::VariableDeclaration {
+            metadata: TemplateMetadata {
+                range: n.metadata.range,
+                ..Default::default()
+            },
+            kind: VariableDeclarationKind::Const,
+            declarations: vec![builder::VariableDeclarator::build_template(
+                gc,
+                template::VariableDeclarator {
+                    metadata: Default::default(),
+                    id: n.id,
+                    init: Some(builder::CallExpression::build_template(
+                        gc,
+                        template::CallExpression {
+                            metadata: Default::default(),
+                            type_arguments: None,
+                            callee: match method {
+                                Some(m) => builder::MemberExpression::build_template(
+                                    gc,
+                                    template::MemberExpression {
+                                        metadata: Default::default(),
+                                        computed: false,
+                                        object: runtime,
+                                        property: builder::Identifier::build_template(
+                                            gc,
+                                            template::Identifier {
+                                                metadata: Default::default(),
+                                                name: gc.atom(m),
+                                                optional: false,
+                                                type_annotation: None,
+                                            },
+                                        ),
+                                    },
+                                ),
+                                None => runtime,
+                            },
+                            arguments: args,
+                        },
+                    )),
+                },
+            )],
+        },
+    );
 }

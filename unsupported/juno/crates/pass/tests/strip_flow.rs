@@ -299,17 +299,47 @@ fn comments() {
     )
 }
 
-// #[test]
-// fn enums() {
-//     assert_strip(
-//         r#"
-//             enum Status { Active, Paused, Off }
-//         "#,
-//         r#"
-//             // TODO they need to be transformed rather than stripped
-//         "#,
-//     );
-// }
+#[test]
+fn enums() {
+    assert_strip(
+        r#"enum E {A, B}"#,
+        r#"const E = require("flow-enums-runtime").Mirrored(["A", "B"]);"#,
+    );
+    assert_strip(
+        r#"enum E {A = "X", B = "Y"}"#,
+        r#"const E = require("flow-enums-runtime")({A: "X", B: "Y"});"#,
+    );
+    assert_strip(
+        r#"enum E {A = 1, B = 2}"#,
+        r#"const E = require("flow-enums-runtime")({A: 1, B: 2});"#,
+    );
+    assert_strip(
+        r#"enum E {A = true, B = false}"#,
+        r#"const E = require("flow-enums-runtime")({A: true, B: false});"#,
+    );
+    assert_strip(
+        r#"enum E of symbol {A, B}"#,
+        r#"const E = require("flow-enums-runtime")({A: Symbol("A"), B: Symbol("B")});"#,
+    );
+
+    assert_strip(
+        r#"enum E {}"#,
+        r#"const E = require("flow-enums-runtime")({});"#,
+    );
+    assert_strip(
+        r#"enum E of symbol {}"#,
+        r#"const E = require("flow-enums-runtime")({});"#,
+    );
+
+    assert_strip(
+        r#"export enum E {A, B}"#,
+        r#"export const E = require("flow-enums-runtime").Mirrored(["A", "B"]);"#,
+    );
+    assert_strip(
+        r#"export default enum E {A, B}"#,
+        r#"const E = require("flow-enums-runtime").Mirrored(["A", "B"]); export default E;"#,
+    );
+}
 
 #[test]
 fn this_params() {
