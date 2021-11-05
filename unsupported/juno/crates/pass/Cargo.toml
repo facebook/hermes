@@ -7,3 +7,6 @@ license = "MIT"
 
 [dependencies]
 juno = { path = "../juno" }
+
+[dev-dependencies]
+support = { path = "../support" }
