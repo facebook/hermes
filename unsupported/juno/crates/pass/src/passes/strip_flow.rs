@@ -79,6 +79,16 @@ impl<'gc> VisitorMut<'gc> for StripFlow {
 
             Node::FunctionDeclaration(n) => {
                 let mut builder = builder::FunctionDeclaration::from_node(n);
+                builder.params(
+                    n.params
+                        .iter()
+                        .filter(|p| match p {
+                            Node::Identifier(Identifier { name, .. }) => gc.str(*name) != "this",
+                            _ => true,
+                        })
+                        .copied()
+                        .collect(),
+                );
                 builder.type_parameters(None);
                 builder.return_type(None);
                 builder.predicate(None);
@@ -90,6 +100,16 @@ impl<'gc> VisitorMut<'gc> for StripFlow {
             }
             Node::FunctionExpression(n) => {
                 let mut builder = builder::FunctionExpression::from_node(n);
+                builder.params(
+                    n.params
+                        .iter()
+                        .filter(|p| match p {
+                            Node::Identifier(Identifier { name, .. }) => gc.str(*name) != "this",
+                            _ => true,
+                        })
+                        .copied()
+                        .collect(),
+                );
                 builder.type_parameters(None);
                 builder.return_type(None);
                 builder.predicate(None);

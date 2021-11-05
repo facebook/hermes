@@ -345,28 +345,36 @@ fn enums() {
 fn this_params() {
     assert_strip(
         r#"
-        declare function y (this : string) : void
-        type T = (this : string) : void
-        function z (this : string) {}
-        function u (this : string, ...a) {}
+            declare function y (this : string) : void
+            function z (this : string) {}
+            function u (this : string, ...a) {}
 
-        function v (this : string
-            , ...a) {}
+            function v (this : string
+                , ...a) {}
 
-        function w (this
-          : string
+            function w (this
+            : string
 
-            ,
+                ,
+                ...a) {}
+
+            const f = function(this: string) {}
+            const g = function(this: string, ...a) {}
+            const h = function(this
+            : string,
             ...a) {}
-
-        const f = function(this: string) {}
-        const g = function(this: string, ...a) {}
-        const h = function(this
-        : string,
-        ...a) {}
-
         "#,
-        r#"function z(){}"#,
+        r#"
+            function z() {}
+            function u(...a) {}
+            function v(...a) {}
+
+            function w(...a) {}
+
+            const f = function () {};
+            const g = function (...a) {};
+            const h = function (...a) {};
+        "#,
     );
 }
 
