@@ -469,6 +469,12 @@ fn test_types() {
 }
 
 #[test]
+fn test_typecast() {
+    test_roundtrip_flow("async function foo() { return (x: any); }");
+    test_roundtrip_flow("var x = (y: number | number => string)");
+}
+
+#[test]
 fn test_jsx() {
     test_roundtrip_jsx("<foo />");
     test_roundtrip_jsx("<foo></foo>");

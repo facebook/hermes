@@ -2516,6 +2516,7 @@ impl<W: Write> GenJS<W> {
                 out!(self, ":");
                 self.space(ForceSpace::No);
                 self.print_child(ctx, Some(*type_annotation), node, ChildPos::Right);
+                out!(self, ")");
             }
             Node::InferredPredicate(_) => {
                 out_token!(self, node, "%checks");
@@ -3031,7 +3032,10 @@ impl<W: Write> GenJS<W> {
             | Node::ObjectPattern(_)
             | Node::FunctionExpression(_)
             | Node::ClassExpression(_)
-            | Node::TemplateLiteral(_) => (PRIMARY, Assoc::Ltr),
+            | Node::TemplateLiteral(_)
+            | Node::JSXElement(_)
+            | Node::JSXFragment(_)
+            | Node::TypeCastExpression(_) => (PRIMARY, Assoc::Ltr),
             Node::MemberExpression(_)
             | Node::OptionalMemberExpression(_)
             | Node::MetaProperty(_)
