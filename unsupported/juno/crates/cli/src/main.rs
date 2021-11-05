@@ -316,7 +316,7 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     timer.mark("Cvt");
 
     // TODO throws for flow type nodes
-    if (opt.dialect == Dialect::JavaScript) {
+    if opt.dialect == Dialect::JavaScript {
         validate_tree(&mut ctx, &ast).with_context(|| input.display().to_string())?;
         timer.mark("Validate AST");
     }

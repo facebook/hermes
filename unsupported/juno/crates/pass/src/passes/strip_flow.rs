@@ -137,6 +137,7 @@ impl<'gc> VisitorMut<'gc> for StripFlow {
 
                 let mut builder = builder::ClassProperty::from_node(n);
                 builder.type_annotation(None);
+                builder.variance(None);
                 return node.replace_with_new(builder::Builder::ClassProperty(builder), gc, self);
             }
             Node::ClassPrivateProperty(n) => {
@@ -146,6 +147,7 @@ impl<'gc> VisitorMut<'gc> for StripFlow {
 
                 let mut builder = builder::ClassPrivateProperty::from_node(n);
                 builder.type_annotation(None);
+                builder.variance(None);
                 return node.replace_with_new(
                     builder::Builder::ClassPrivateProperty(builder),
                     gc,
