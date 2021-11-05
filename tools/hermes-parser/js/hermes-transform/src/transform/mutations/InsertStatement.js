@@ -20,6 +20,7 @@ import type {
 import type {MutationContext} from '../MutationContext';
 import type {DetachedNode} from '../../detachedNode';
 
+import {getStatementParent} from './utils/getStatementParent';
 import {InvalidInsertionError, UnexpectedTransformationState} from '../Errors';
 import {asESNode} from '../../detachedNode';
 import * as t from '../../generated/node-types';
@@ -48,7 +49,7 @@ export function performInsertStatementMutation(
   mutationContext: MutationContext,
   mutation: InsertStatementMutation,
 ): void {
-  const insertionParent = getInsertionParent(mutation.target);
+  const insertionParent = getStatementParent(mutation.target);
 
   // enforce that if we are inserting module declarations - they are being inserted in a valid location
   assertValidModuleDeclarationParent(
@@ -117,112 +118,6 @@ export function performInsertStatementMutation(
 
   (insertionParent.parent: interface {[string]: mixed})[insertionParent.key] =
     blockStatement;
-}
-
-function getInsertionParent(target: ModuleDeclaration | Statement): $ReadOnly<
-  | {
-      type: 'single',
-      parent: StatementParentSingle,
-      key: string,
-    }
-  | {
-      type: 'array',
-      parent: StatementParentArray,
-      key: string,
-      targetIndex: number,
-    },
-> {
-  function assertValidStatementInsertion<
-    T: $ReadOnly<interface {type: string}>,
-  >(parentWithType: T, ...invalidKeys: $ReadOnlyArray<$Keys<T>>): void {
-    for (const key of invalidKeys) {
-      // $FlowExpectedError[prop-missing]
-      const value = parentWithType[key];
-
-      if (
-        value === target ||
-        (Array.isArray(value) && value.includes(target))
-      ) {
-        throw new InvalidInsertionError(
-          `Attempted to insert a statement into \`${parentWithType.type}.${key}\`.`,
-        );
-      }
-    }
-  }
-  function getAssertedIndex(key: string, arr: $ReadOnlyArray<mixed>): number {
-    const idx = arr.indexOf(target);
-    if (idx == null) {
-      throw new InvalidInsertionError(
-        `Could not find target in array of \`${parent.type}.${key}\`.`,
-      );
-    }
-    return idx;
-  }
-
-  const parent = target.parent;
-  switch (parent.type) {
-    case 'IfStatement': {
-      assertValidStatementInsertion(parent, 'test');
-      const key = parent.consequent === target ? 'consequent' : 'alternate';
-      return {type: 'single', parent, key};
-    }
-
-    case 'LabeledStatement': {
-      assertValidStatementInsertion(parent, 'label');
-      return {type: 'single', parent, key: 'body'};
-    }
-
-    case 'WithStatement': {
-      assertValidStatementInsertion(parent, 'object');
-      return {type: 'single', parent, key: 'body'};
-    }
-
-    case 'DoWhileStatement':
-    case 'WhileStatement': {
-      assertValidStatementInsertion(parent, 'test');
-      return {type: 'single', parent, key: 'body'};
-    }
-
-    case 'ForStatement': {
-      assertValidStatementInsertion(parent, 'init', 'test', 'update');
-      return {type: 'single', parent, key: 'body'};
-    }
-
-    case 'ForInStatement':
-    case 'ForOfStatement': {
-      assertValidStatementInsertion(
-        // $FlowExpectedError[prop-missing] - flow does not track properties from parent interface
-        parent,
-        'left',
-        'right',
-      );
-      return {type: 'single', parent, key: 'body'};
-    }
-
-    case 'SwitchCase': {
-      assertValidStatementInsertion(parent, 'test');
-      return {
-        type: 'array',
-        parent,
-        key: 'consequent',
-        targetIndex: getAssertedIndex('consequent', parent.consequent),
-      };
-    }
-
-    case 'BlockStatement':
-    case 'Program': {
-      return {
-        type: 'array',
-        parent,
-        key: 'body',
-        targetIndex: getAssertedIndex('body', parent.body),
-      };
-    }
-  }
-
-  throw new InvalidInsertionError(
-    `Expected to find a valid statement parent, but found a parent of type "${parent.type}".`,
-  );
 }
 
 function isModuleDeclaration(node: ESNode): boolean %checks {

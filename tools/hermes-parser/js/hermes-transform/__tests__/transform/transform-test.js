@@ -112,5 +112,78 @@ const x = 1;
 const y = 1;
 `);
     });
+
+    it('wraps statements in a BlockStatement if they were in a bodyless parent', () => {
+      const code = 'if (condition) return true;';
+      const result = transform(code, context => ({
+        ReturnStatement(node) {
+          if (node.type !== 'ReturnStatement') {
+            return;
+          }
+
+          context.insertBeforeStatement(
+            node,
+            t.VariableDeclaration({
+              kind: 'const',
+              declarations: [
+                t.VariableDeclarator({
+                  id: t.Identifier({
+                    name: 'y',
+                  }),
+                  init: t.NumericLiteral({
+                    value: 1,
+                    raw: '1',
+                  }),
+                }),
+              ],
+            }),
+          );
+        },
+      }));
+
+      expect(result).toBe(`\
+if (condition) {
+  const y = 1;
+  return true;
+}
+`);
+    });
+  });
+
+  describe('remove', () => {
+    it('works with the removeStatement mutation', () => {
+      const code = 'const x = 1; console.log("I will survive");';
+      const result = transform(code, context => ({
+        VariableDeclaration(node) {
+          if (node.type !== 'VariableDeclaration') {
+            return;
+          }
+
+          context.removeStatement(node);
+        },
+      }));
+
+      expect(result).toBe(`\
+console.log("I will survive");
+`);
+    });
+
+    it('wraps statements in a BlockStatement if they were in a bodyless parent', () => {
+      const code = 'if (condition) return true;';
+      const result = transform(code, context => ({
+        ReturnStatement(node) {
+          if (node.type !== 'ReturnStatement') {
+            return;
+          }
+
+          context.removeStatement(node);
+        },
+      }));
+
+      expect(result).toBe(`\
+if (condition) {
+}
+`);
+    });
   });
 });

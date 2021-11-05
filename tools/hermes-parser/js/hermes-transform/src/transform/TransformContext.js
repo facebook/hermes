@@ -15,7 +15,7 @@ import type {
   StatementParentArray,
 } from 'hermes-estree';
 import type {InsertStatementMutation} from './mutations/InsertStatement';
-import type {RemoveNodeMutation} from './mutations/RemoveNode';
+import type {RemoveStatementMutation} from './mutations/RemoveStatement';
 import type {ReplaceNodeMutation} from './mutations/ReplaceNode';
 import type {ReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
 import type {DetachedNode} from '../detachedNode';
@@ -24,7 +24,7 @@ import {getVisitorKeys} from '../getVisitorKeys';
 import {createInsertStatementMutation} from './mutations/InsertStatement';
 import {createReplaceNodeMutation} from './mutations/ReplaceNode';
 import {createReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
-import {createRemoveNodeMutation} from './mutations/RemoveNode';
+import {createRemoveStatementMutation} from './mutations/RemoveStatement';
 import {SimpleTraverser} from '../traverse/SimpleTraverser';
 import {deepCloneNode, shallowCloneNode} from '../detachedNode';
 
@@ -32,7 +32,7 @@ type Mutation = $ReadOnly<
   | InsertStatementMutation
   | ReplaceNodeMutation
   | ReplaceStatementWithManyMutation
-  | RemoveNodeMutation,
+  | RemoveStatementMutation,
 >;
 
 type SingleOrArray<T> = T | $ReadOnlyArray<T>;
@@ -107,7 +107,7 @@ export type TransformContext = $ReadOnly<{
   /**
    * Removes a given node from the AST.
    */
-  removeNode: {
+  removeStatement: {
     (node: ModuleDeclaration | Statement): void,
   },
 }>;
@@ -147,9 +147,9 @@ export function getTransformContext(): TransformContext {
       );
     }: TransformContext['replaceStatementWithMany']),
 
-    removeNode: ((node): void => {
-      mutations.push(createRemoveNodeMutation(node));
-    }: TransformContext['removeNode']),
+    removeStatement: ((node): void => {
+      mutations.push(createRemoveStatementMutation(node));
+    }: TransformContext['removeStatement']),
   };
 }
 

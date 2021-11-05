@@ -27,7 +27,7 @@ import {getVisitorKeys} from '../getVisitorKeys';
 import {MutationContext} from './MutationContext';
 import {getTransformContext} from './TransformContext';
 import {performInsertStatementMutation} from './mutations/InsertStatement';
-import {performRemoveNodeMutation} from './mutations/RemoveNode';
+import {performRemoveStatementMutation} from './mutations/RemoveStatement';
 import {performReplaceNodeMutation} from './mutations/ReplaceNode';
 import {performReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
 
@@ -65,8 +65,8 @@ export function getTransformedAST(
         break;
       }
 
-      case 'removeNode': {
-        performRemoveNodeMutation(mutationContext, mutation);
+      case 'removeStatement': {
+        performRemoveStatementMutation(mutationContext, mutation);
         break;
       }
     }

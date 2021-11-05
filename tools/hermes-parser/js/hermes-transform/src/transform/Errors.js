@@ -14,3 +14,5 @@ export class NodeIsDeletedError extends Error {}
 export class NodeIsMutatedError extends Error {}
 export class InvalidInsertionError extends Error {}
 export class UnexpectedTransformationState extends Error {}
+export class InvalidStatementError extends Error {}
+export class InvalidRemovalError extends Error {}

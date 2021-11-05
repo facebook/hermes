@@ -20,9 +20,9 @@ import type {StatementTypes} from './test-utils';
 
 import * as t from '../../../src/generated/node-types';
 import {
-  createInsertStatementMutation,
-  performInsertStatementMutation,
-} from '../../../src/transform/mutations/InsertStatement';
+  createRemoveStatementMutation,
+  performRemoveStatementMutation,
+} from '../../../src/transform/mutations/RemoveStatement';
 import {MutationContext} from '../../../src/transform/MutationContext';
 import {
   CODE_SAMPLES,
@@ -38,7 +38,7 @@ function test({
   skipTypes,
 }: {
   wrapCode: (code: string) => string,
-  getAssertionObject: (nodes: [mixed, mixed]) => mixed,
+  getAssertionObject: () => mixed,
   skipTypes?: $ReadOnlyArray<StatementTypes>,
 }) {
   function loopSamples(side: 'before' | 'after') {
@@ -46,22 +46,9 @@ function test({
       testStatementMutation({
         wrapCode,
         mutateAndAssert: (ast, target) => {
-          const nodeToInsert = t.ExpressionStatement({
-            expression: t.Identifier({
-              name: 'inserted',
-            }),
-          });
-          const mutation = createInsertStatementMutation(side, target, [
-            nodeToInsert,
-          ]);
-          performInsertStatementMutation(new MutationContext(), mutation);
-          expect(ast).toMatchObject(
-            getAssertionObject(
-              side === 'before'
-                ? [nodeToInsert, target]
-                : [target, nodeToInsert],
-            ),
-          );
+          const mutation = createRemoveStatementMutation(target);
+          performRemoveStatementMutation(new MutationContext(), mutation);
+          expect(ast).toMatchObject(getAssertionObject());
         },
         skipTypes,
       });
@@ -73,13 +60,13 @@ function test({
   loopSamples('after');
 }
 
-describe('InsertStatement', () => {
+describe('RemoveStatement', () => {
   describe('Parent: Program', () => {
     test({
       wrapCode: c => c,
-      getAssertionObject: body => ({
+      getAssertionObject: () => ({
         type: 'Program',
-        body,
+        body: [],
       }),
       // we are allowed to have ModuleDeclarations here
       skipTypes: LOOP_ONLY_STATEMENTS,
@@ -90,14 +77,14 @@ describe('InsertStatement', () => {
     describe('BlockStatement body', () => {
       test({
         wrapCode: c => `if (cond) { ${c} }`,
-        getAssertionObject: body => ({
+        getAssertionObject: () => ({
           type: 'Program',
           body: [
             {
               type: 'IfStatement',
               consequent: {
                 type: 'BlockStatement',
-                body,
+                body: [],
               },
             },
           ],
@@ -108,14 +95,14 @@ describe('InsertStatement', () => {
     describe('Statement body', () => {
       test({
         wrapCode: c => `if (cond) ${c}`,
-        getAssertionObject: body => ({
+        getAssertionObject: () => ({
           type: 'Program',
           body: [
             {
               type: 'IfStatement',
               consequent: {
                 type: 'BlockStatement',
-                body,
+                body: [],
               },
             },
           ],
@@ -143,14 +130,14 @@ describe('InsertStatement', () => {
     describe('BlockStatement body', () => {
       test({
         wrapCode: c => `for (;;) { ${c} }`,
-        getAssertionObject: body => ({
+        getAssertionObject: () => ({
           type: 'Program',
           body: [
             {
               type: 'ForStatement',
               body: {
                 type: 'BlockStatement',
-                body,
+                body: [],
               },
             },
           ],
@@ -162,14 +149,14 @@ describe('InsertStatement', () => {
     describe('Statement body', () => {
       test({
         wrapCode: c => `for (;;) ${c}`,
-        getAssertionObject: body => ({
+        getAssertionObject: () => ({
           type: 'Program',
           body: [
             {
               type: 'ForStatement',
               body: {
                 type: 'BlockStatement',
-                body,
+                body: [],
               },
             },
           ],
@@ -196,7 +183,7 @@ describe('InsertStatement', () => {
   describe('Parent: SwitchCase', () => {
     test({
       wrapCode: c => `switch (thing) { case c: ${c} }`,
-      getAssertionObject: body => ({
+      getAssertionObject: () => ({
         type: 'Program',
         body: [
           {
@@ -204,7 +191,7 @@ describe('InsertStatement', () => {
             cases: [
               {
                 type: 'SwitchCase',
-                consequent: body,
+                consequent: [],
               },
             ],
           },
@@ -218,14 +205,14 @@ describe('InsertStatement', () => {
   describe('Parent: DeclareModule', () => {
     test({
       wrapCode: c => `declare module foo { ${c} }`,
-      getAssertionObject: body => ({
+      getAssertionObject: () => ({
         type: 'Program',
         body: [
           {
             type: 'DeclareModule',
             body: {
               type: 'BlockStatement',
-              body,
+              body: [],
             },
           },
         ],
