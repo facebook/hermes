@@ -315,8 +315,11 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     drop(parsed);
     timer.mark("Cvt");
 
-    validate_tree(&mut ctx, &ast).with_context(|| input.display().to_string())?;
-    timer.mark("Validate AST");
+    // TODO throws for flow type nodes
+    if (opt.dialect == Dialect::JavaScript) {
+        validate_tree(&mut ctx, &ast).with_context(|| input.display().to_string())?;
+        timer.mark("Validate AST");
+    }
 
     // Fetch and parse the source map before we generate the output.
     let source_map = sm_url.map(load_source_map).transpose()?;
