@@ -16,3 +16,4 @@ export class InvalidInsertionError extends Error {}
 export class UnexpectedTransformationState extends Error {}
 export class InvalidStatementError extends Error {}
 export class InvalidRemovalError extends Error {}
+export class InvalidReplacementError extends Error {}

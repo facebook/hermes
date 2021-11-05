@@ -21,6 +21,7 @@ import type {MutationContext} from '../MutationContext';
 import type {DetachedNode} from '../../detachedNode';
 
 import {getStatementParent} from './utils/getStatementParent';
+import {isValidModuleDeclarationParent} from './utils/isValidModuleDeclarationParent';
 import {InvalidInsertionError, UnexpectedTransformationState} from '../Errors';
 import {asESNode} from '../../detachedNode';
 import * as t from '../../generated/node-types';
@@ -52,10 +53,16 @@ export function performInsertStatementMutation(
   const insertionParent = getStatementParent(mutation.target);
 
   // enforce that if we are inserting module declarations - they are being inserted in a valid location
-  assertValidModuleDeclarationParent(
-    insertionParent.parent,
-    mutation.nodesToInsert,
-  );
+  if (
+    !isValidModuleDeclarationParent(
+      insertionParent.parent,
+      mutation.nodesToInsert,
+    )
+  ) {
+    throw new InvalidInsertionError(
+      `import/export cannot be inserted into a ${insertionParent.parent.type}.`,
+    );
+  }
 
   mutationContext.markMutation(insertionParent.parent, insertionParent.key);
 
@@ -92,20 +99,12 @@ export function performInsertStatementMutation(
   }
 
   const statementsToInsert =
-    // $FlowExpectedError[incompatible-cast] -- this is enforced by assertValidModuleDeclarationParent above
+    // $FlowExpectedError[incompatible-cast] -- this is enforced by isValidModuleDeclarationParent above
     (mutation.nodesToInsert: $ReadOnlyArray<DetachedNode<Statement>>);
 
   const {parent, key} = insertionParent;
 
   // $FlowExpectedError[prop-missing]
-  if (parent[key].type === 'BlockStatement') {
-    // This should be impossible because the direct parent is either a `BlockStatement` or is something else.
-    // If it's a `BlockStatement` then it is handled above
-    throw new UnexpectedTransformationState(
-      `Found a \`BlockStatement\` on \`${parent.type}.${key}\` when it should have been anything else.`,
-    );
-  }
-
   const statementToWrap = parent[key];
   // we need to wrap this key in a BlockStatement so we can insert the new statement
   const blockStatement = t.BlockStatement({
@@ -118,38 +117,6 @@ export function performInsertStatementMutation(
 
   (insertionParent.parent: interface {[string]: mixed})[insertionParent.key] =
     blockStatement;
-}
-
-function isModuleDeclaration(node: ESNode): boolean %checks {
-  return (
-    node.type === 'ImportDeclaration' ||
-    node.type === 'ExportNamedDeclaration' ||
-    node.type === 'ExportDefaultDeclaration' ||
-    node.type === 'ExportAllDeclaration'
-  );
-}
-
-function assertValidModuleDeclarationParent(
-  target: ESNode,
-  nodesToInsert: $ReadOnlyArray<DetachedNode<ModuleDeclaration | Statement>>,
-): void {
-  if (
-    target.type === 'Program' ||
-    (target.type === 'BlockStatement' && target.parent.type === 'DeclareModule')
-  ) {
-    return;
-  }
-
-  for (const node of nodesToInsert) {
-    const esnode = asESNode(node);
-    if (!isModuleDeclaration(esnode)) {
-      continue;
-    }
-
-    throw new InvalidInsertionError(
-      `${esnode.type} cannot be inserted into a ${target.type}.`,
-    );
-  }
 }
 
 function insertInArray<T>(

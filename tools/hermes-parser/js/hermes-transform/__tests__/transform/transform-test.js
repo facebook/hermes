@@ -21,26 +21,31 @@ describe('transform', () => {
     expect(result).toBe(code);
   });
 
-  // TODO - turn this on when we have the replaceNode mutation
-  it.skip('should format the code as well as mutate it', () => {
-    const code = 'const x = 1'; // no semi to ensure no formatting
+  it('should format the code as well as mutate it', () => {
+    const code = 'const x = 1';
     const result = transform(code, context => ({
-      Identifier(node) {
-        if (node.type !== 'Identifier') {
+      VariableDeclaration(node) {
+        if (node.type !== 'VariableDeclaration') {
           return;
         }
 
-        context.replaceNode(
-          node,
-          t.Identifier({
-            name: 'y',
+        context.replaceStatementWithMany(node, [
+          t.VariableDeclaration({
+            kind: 'const',
+            declarations: [
+              t.VariableDeclarator({
+                id: t.Identifier({name: 'y'}),
+                init: t.NullLiteral(),
+              }),
+            ],
           }),
-        );
+        ]);
       },
     }));
 
+    // note that it should have a semicolon
     expect(result).toBe(`\
-const y = 1;
+const y = null;
 `);
   });
 
@@ -132,7 +137,6 @@ const y = 1;
                   }),
                   init: t.NumericLiteral({
                     value: 1,
-                    raw: '1',
                   }),
                 }),
               ],
@@ -184,6 +188,94 @@ console.log("I will survive");
 if (condition) {
 }
 `);
+    });
+  });
+
+  describe('replace', () => {
+    describe('with many', () => {
+      it('works with array parents', () => {
+        const code = 'const x = 1;';
+        const result = transform(code, context => ({
+          VariableDeclaration(node) {
+            if (node.type !== 'VariableDeclaration') {
+              return;
+            }
+
+            context.replaceStatementWithMany(node, [
+              t.VariableDeclaration({
+                kind: 'const',
+                declarations: [
+                  t.VariableDeclarator({
+                    id: t.Identifier({name: 'y'}),
+                    init: t.NullLiteral(),
+                  }),
+                ],
+              }),
+              t.VariableDeclaration({
+                kind: 'const',
+                declarations: [
+                  t.VariableDeclarator({
+                    id: t.Identifier({name: 'z'}),
+                    init: t.BooleanLiteral({value: true}),
+                  }),
+                ],
+              }),
+            ]);
+          },
+        }));
+
+        expect(result).toBe(`\
+const y = null;
+const z = true;
+`);
+      });
+
+      it('wraps statements in a BlockStatement if they were in a bodyless parent', () => {
+        const code = 'if (condition) return true;';
+        const result = transform(code, context => ({
+          ReturnStatement(node) {
+            if (node.type !== 'ReturnStatement') {
+              return;
+            }
+
+            context.replaceStatementWithMany(node, [
+              t.VariableDeclaration({
+                kind: 'const',
+                declarations: [
+                  t.VariableDeclarator({
+                    id: t.Identifier({
+                      name: 'y',
+                    }),
+                    init: t.NumericLiteral({
+                      value: 1,
+                    }),
+                  }),
+                ],
+              }),
+              t.VariableDeclaration({
+                kind: 'const',
+                declarations: [
+                  t.VariableDeclarator({
+                    id: t.Identifier({
+                      name: 'z',
+                    }),
+                    init: t.NumericLiteral({
+                      value: 2,
+                    }),
+                  }),
+                ],
+              }),
+            ]);
+          },
+        }));
+
+        expect(result).toBe(`\
+if (condition) {
+  const y = 1;
+  const z = 2;
+}
+`);
+      });
     });
   });
 });
