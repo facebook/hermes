@@ -25,18 +25,22 @@ std::u16string nsStringToU16String(NSString *src) {
   return result;
 }
 
-class ParsedLanguageIdentifier : public vm::DecoratedObject::Decoration {
+class LocaleIdTokenizer : public vm::DecoratedObject::Decoration {
  public:
-  ParsedLanguageIdentifier();
-  ~ParsedLanguageIdentifier();
+  LocaleIdTokenizer();
+  ~LocaleIdTokenizer();
   // public function declaration
+  static LocaleIdTokenizer parseLocaleId(const std::u16string &localeId);
 
  private:
   struct Impl;
   std::unique_ptr<Impl> impl_;
 };
 
-struct ParsedLanguageIdentifier::Impl {
+struct LocaleIdTokenizer::Impl {
+};
+
+struct ParsedLanguageIdentifier {
   std::u16string languageSubtag;
   std::u16string scriptSubtag;
   std::u16string regionSubtag;
@@ -48,6 +52,7 @@ class ParsedLocaleIdentifier : public vm::DecoratedObject::Decoration {
   ParsedLocaleIdentifier();
   ~ParsedLocaleIdentifier();
   // public function declaration
+  static ParsedLocaleIdentifier parseLocaleId(const std::u16string &localeId);
 
  private:
   struct Impl;
@@ -57,6 +62,12 @@ class ParsedLocaleIdentifier : public vm::DecoratedObject::Decoration {
 struct ParsedLocaleIdentifier::Impl {
   ParsedLanguageIdentifier languageIdentifier;
   // Other extensions
+
+  // Function implementation
+  static ParsedLocaleIdentifier parseLocaleId(const std::u16string &localeId) {
+
+    return;
+  }
 };
 }
 
