@@ -24,12 +24,6 @@ export class MutationContext {
    */
   markDeletion(node: ESNode): void {
     this._deletedNodes.add(node);
-    SimpleTraverser.traverse(node, {
-      enter: node => {
-        this._deletedNodes.add(node);
-      },
-      leave() {},
-    });
   }
 
   /**

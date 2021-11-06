@@ -20,6 +20,7 @@ import type {
 import type {MutationContext} from '../MutationContext';
 import type {DetachedNode} from '../../detachedNode';
 
+import {insertInArray} from './utils/arrayUtils';
 import {getStatementParent} from './utils/getStatementParent';
 import {isValidModuleDeclarationParent} from './utils/isValidModuleDeclarationParent';
 import {InvalidInsertionError, UnexpectedTransformationState} from '../Errors';
@@ -117,12 +118,4 @@ export function performInsertStatementMutation(
 
   (insertionParent.parent: interface {[string]: mixed})[insertionParent.key] =
     blockStatement;
-}
-
-function insertInArray<T>(
-  array: $ReadOnlyArray<T>,
-  index: number,
-  elements: $ReadOnlyArray<T>,
-): Array<T> {
-  return array.slice(0, index).concat(elements).concat(array.slice(index));
 }

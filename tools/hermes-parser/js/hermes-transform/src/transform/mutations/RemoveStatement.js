@@ -12,6 +12,7 @@ import type {ModuleDeclaration, Statement} from 'hermes-estree';
 import type {MutationContext} from '../MutationContext';
 import type {DetachedNode} from '../../detachedNode';
 
+import {removeFromArray} from './utils/arrayUtils';
 import {getStatementParent} from './utils/getStatementParent';
 import {InvalidRemovalError} from '../Errors';
 import * as t from '../../generated/node-types';
@@ -63,8 +64,4 @@ export function performRemoveStatementMutation(
 
   (removalParent.parent: interface {[string]: mixed})[removalParent.key] =
     blockStatement;
-}
-
-function removeFromArray<T>(array: $ReadOnlyArray<T>, index: number): Array<T> {
-  return [...array.slice(0, index), ...array.slice(index + 1)];
 }

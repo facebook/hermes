@@ -73,18 +73,18 @@ export const DEFAULT_SKIP_STATEMENTS: $ReadOnlyArray<StatementTypes> = [
   ...LOOP_ONLY_STATEMENTS,
 ];
 
-function parseAndGetAstAndNode(
-  type: StatementTypes,
+export function parseAndGetAstAndNode<T: ESNode = ESNode>(
+  type: ESNode['type'],
   code: string,
 ): {
   ast: Program,
-  target: Statement | ModuleDeclaration,
+  target: T,
 } {
   const {ast, scopeManager} = parseForESLint(code, {
     sourceType: 'module',
   });
 
-  let target: Statement | ModuleDeclaration | null = null;
+  let target: T | null = null;
   traverse(ast, scopeManager, () => ({
     // $FlowExpectedError[invalid-computed-prop] - this is guaranteed safe
     [type](node) {
@@ -116,10 +116,9 @@ export function testStatementMutation({
     }
 
     it(type, () => {
-      const {ast, target} = parseAndGetAstAndNode(
-        type,
-        wrapCode(CODE_SAMPLES[type]),
-      );
+      const {ast, target} = parseAndGetAstAndNode<
+        Statement | ModuleDeclaration,
+      >(type, wrapCode(CODE_SAMPLES[type]));
       mutateAndAssert(ast, target);
     });
   }

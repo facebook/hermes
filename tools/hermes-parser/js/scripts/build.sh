@@ -60,6 +60,7 @@ yarn babel-node "$THIS_DIR/genParserVisitorKeys.js"
 yarn babel-node "$THIS_DIR/genESLintVisitorKeys.js"
 yarn babel-node "$THIS_DIR/genSelectorTypes.js"
 yarn babel-node "$THIS_DIR/genTransformNodeTypes.js"
+yarn babel-node "$THIS_DIR/getTransformReplaceNodeTypes.js"
 
 for package in "${PACKAGES[@]}"; do
   PACKAGE_DIST_DIR="$THIS_DIR/../$package/dist"

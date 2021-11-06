@@ -18,12 +18,9 @@
 
 import type {
   ESNode,
-  SourceLocation,
-  Range,
   BlockStatement as BlockStatementType,
   ExpressionStatement as ExpressionStatementType,
-  Identifier as IdentifierType,
-  NumericLiteral as NumericLiteralType,
+  NumberTypeAnnotation as NumberTypeAnnotationType,
   VariableDeclaration as VariableDeclarationType,
   VariableDeclarator as VariableDeclaratorType,
 } from 'hermes-estree';
@@ -65,6 +62,16 @@ export function ExpressionStatement({
   });
   setParentPointersInDirectChildren(node);
   return node;
+}
+
+export function NumberTypeAnnotation({
+  parent,
+}: {
+  +parent?: ESNode,
+} = {}): DetachedNode<NumberTypeAnnotationType> {
+  return detachedProps<NumberTypeAnnotationType>(parent, {
+    type: 'NumberTypeAnnotation',
+  });
 }
 
 export function VariableDeclaration({

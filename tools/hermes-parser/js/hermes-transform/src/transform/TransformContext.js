@@ -10,9 +10,11 @@
 
 import type {
   ESNode,
+  Expression,
   ModuleDeclaration,
   Statement,
   StatementParentArray,
+  TypeAnnotationType,
 } from 'hermes-estree';
 import type {InsertStatementMutation} from './mutations/InsertStatement';
 import type {RemoveStatementMutation} from './mutations/RemoveStatement';
@@ -27,6 +29,7 @@ import {createReplaceStatementWithManyMutation} from './mutations/ReplaceStateme
 import {createRemoveStatementMutation} from './mutations/RemoveStatement';
 import {SimpleTraverser} from '../traverse/SimpleTraverser';
 import {deepCloneNode, shallowCloneNode} from '../detachedNode';
+import type {TransformReplaceSignatures} from '../generated/TransformReplaceSignatures';
 
 type Mutation = $ReadOnly<
   | InsertStatementMutation
@@ -88,10 +91,25 @@ export type TransformContext = $ReadOnly<{
    * Replace the `target` node with the `nodeToReplaceWith` node.
    * This simply does an in-place replacement in the AST.
    */
-  replaceNode: (
-    target: ESNode,
-    nodeToReplaceWith: DetachedNode<ESNode>,
-  ) => void,
+  replaceNode: {
+    // expressions must be replaced with other expressions
+    (target: Expression, nodeToReplaceWith: DetachedNode<Expression>): void,
+    // module declarations must be replaced with statements or other module declarations
+    (
+      target: ModuleDeclaration,
+      nodeToReplaceWith: DetachedNode<ModuleDeclaration | Statement>,
+    ): void,
+    // Statement must be replaced with statements or module declarations
+    (
+      target: Statement,
+      nodeToReplaceWith: DetachedNode<ModuleDeclaration | Statement>,
+    ): void,
+    // Types must be replaced with types
+    (
+      target: TypeAnnotationType,
+      nodeToReplaceWith: DetachedNode<TypeAnnotationType>,
+    ): void,
+  } & TransformReplaceSignatures, // allow like-for-like replacements as well
 
   /**
    * Replaces the `target` node with all of the `nodesToReplaceWith` nodes.
@@ -137,7 +155,10 @@ export function getTransformContext(): TransformContext {
       );
     }: TransformContext['insertBeforeStatement']),
 
-    replaceNode: ((target, nodeToReplaceWith): void => {
+    replaceNode: ((
+      target: ESNode,
+      nodeToReplaceWith: DetachedNode<ESNode>,
+    ): void => {
       mutations.push(createReplaceNodeMutation(target, nodeToReplaceWith));
     }: TransformContext['replaceNode']),
 

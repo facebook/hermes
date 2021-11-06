@@ -192,6 +192,70 @@ if (condition) {
   });
 
   describe('replace', () => {
+    describe('single', () => {
+      it('expression', () => {
+        const code = 'const x = 1;';
+        const result = transform(code, context => ({
+          Literal(node) {
+            if (node.type !== 'Literal') {
+              return;
+            }
+
+            context.replaceNode(node, t.BooleanLiteral({value: true}));
+          },
+        }));
+
+        expect(result).toBe(`\
+const x = true;
+`);
+      });
+
+      it('statement', () => {
+        const code = 'const x = 1;';
+        const result = transform(code, context => ({
+          VariableDeclaration(node) {
+            if (node.type !== 'VariableDeclaration') {
+              return;
+            }
+
+            context.replaceNode(
+              node,
+              t.VariableDeclaration({
+                declarations: [
+                  t.VariableDeclarator({
+                    id: t.Identifier({name: 'y'}),
+                    init: t.NullLiteral(),
+                  }),
+                ],
+                kind: 'let',
+              }),
+            );
+          },
+        }));
+
+        expect(result).toBe(`\
+let y = null;
+`);
+      });
+
+      it('type', () => {
+        const code = 'const x: any = 1;';
+        const result = transform(code, context => ({
+          AnyTypeAnnotation(node) {
+            if (node.type !== 'AnyTypeAnnotation') {
+              return;
+            }
+
+            context.replaceNode(node, t.NumberTypeAnnotation());
+          },
+        }));
+
+        expect(result).toBe(`\
+const x: number = 1;
+`);
+      });
+    });
+
     describe('with many', () => {
       it('works with array parents', () => {
         const code = 'const x = 1;';

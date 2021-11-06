@@ -10,7 +10,7 @@
 
 import type {BaseNode, ESNode, SourceLocation} from 'hermes-estree';
 
-import {getVisitorKeys} from './getVisitorKeys';
+import {getVisitorKeys, isNode} from './getVisitorKeys';
 import {SimpleTraverser} from './traverse/SimpleTraverser';
 
 export opaque type DetachedNode<+T> = T;
@@ -82,12 +82,6 @@ export function deepCloneNode<T: ESNode>(
 
   // $FlowExpectedError[class-object-subtyping]
   return detachedProps(null, clone);
-}
-
-function isNode(thing: mixed): boolean %checks {
-  return (
-    typeof thing === 'object' && thing != null && typeof thing.type === 'string'
-  );
 }
 
 /**

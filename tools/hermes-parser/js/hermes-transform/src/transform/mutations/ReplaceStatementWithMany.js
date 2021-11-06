@@ -16,6 +16,7 @@ import type {
 import type {MutationContext} from '../MutationContext';
 import type {DetachedNode} from '../../detachedNode';
 
+import {replaceInArray} from './utils/arrayUtils';
 import {getStatementParent} from './utils/getStatementParent';
 import {isValidModuleDeclarationParent} from './utils/isValidModuleDeclarationParent';
 import {InvalidReplacementError} from '../Errors';
@@ -94,15 +95,4 @@ export function performReplaceStatementWithManyMutation(
   (replacementParent.parent: interface {[string]: mixed})[
     replacementParent.key
   ] = blockStatement;
-}
-
-function replaceInArray<T>(
-  array: $ReadOnlyArray<T>,
-  index: number,
-  elements: $ReadOnlyArray<T>,
-): Array<T> {
-  return array
-    .slice(0, index)
-    .concat(elements)
-    .concat(array.slice(index + 1));
 }
