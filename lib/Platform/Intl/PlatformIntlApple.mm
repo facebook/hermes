@@ -60,43 +60,65 @@ bool isCharType(std::u16string str, int start, int end, int min, int max, bool(*
 
 // tag type functions
 bool isUnicodeLanguageSubtag(std::u16string str, int start, int end) {
+  // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
+  // = alpha{2,3} | alpha{5,8};
   // root case?
   return isCharType(str, start, end, 2, 3, &isASCIILetter) ||
     isCharType(str, start, end, 5, 8, &isASCIILetter);
 }
 bool isUnicodeScriptSubtag(std::u16string str, int start, int end) {
+  // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
+  // = alpha{4};
   return isCharType(str, start, end, 4, 4, &isASCIILetter);
 }
 bool isUnicodeRegionSubtag(std::u16string str, int start, int end) {
+  // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
+  // = (alpha{2} | digit{3});
   return isCharType(str, start, end, 2, 2, &isASCIILetter) ||
     isCharType(str, start, end, 3, 3, &isASCIIDigit);
 }
 bool isUnicodeVariantSubtag(std::u16string str, int start, int end) {
+  // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
+  // = (alphanum{5,8} | digit alphanum{3});
   return isCharType(str, start, end, 5, 8, &isASCIILetterOrDigit) ||
     isCharType(str, start, end, 3, 3, &isASCIILetterOrDigit);
 }
 bool isUnicodeExtensionAttribute(std::u16string str, int start, int end) {
-  return false;
+  // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
+  // = alphanum{3,8};
+  return isCharType(str, start, end, 3, 8, &isASCIILetterOrDigit);
 }
 bool isUnicodeExtensionKey(std::u16string str, int start, int end) {
+  // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
+  // = alphanum alpha;
   return false;
 }
 bool isUnicodeExtensionType(std::u16string str, int start, int end) {
+  // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
+  // = alphanum alpha;
   return false;
 }
 bool isExtensionSingleton(std::u16string str, int start, int end) {
   return false;
 }
 bool isTransformedExtensionKey(std::u16string str, int start, int end) {
+  // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
+  // = alpha digit;
   return false;
 }
 bool isTransformedExtensionTValueItem(std::u16string str, int start, int end) {
+  // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
+  // = (sep alphanum{3,8})+;
   return false;
 }
 bool isPrivateUseExtension(std::u16string str, int start, int end) {
+  // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
+  // = (sep alphanum{1,8})+;
   return false;
 }
 bool isOtherExtension(std::u16string str, int start, int end) {
+  // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
+  // = (sep alphanum{2,8})+;
   return false;
 }
 
