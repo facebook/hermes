@@ -157,6 +157,21 @@ vm::CallResult<Option> getOptionString(
   return value->second;
 }
 // Implementation of
+// https://402.ecma-international.org/8.0/#sec-getnumberoption
+vm::CallResult<Option> getOptionNumber(
+    const Options &options,
+    const std::u16string property,
+    const std::uint8_t minimum,
+    const std::uint8_t maximum,
+    const Option &fallback) {
+//  1. Assert: Type(options) is Object.
+//  2. Let value be ? Get(options, property).
+  auto value = options.find(property);
+//  3. Return ? DefaultNumberOption(value, minimum, maximum, fallback).
+  return value->second;
+}
+
+// Implementation of
 // https://tc39.es/ecma402/#sec-lookupsupportedlocales
 std::vector<std::u16string> lookupSupportedLocales(
     const std::vector<std::u16string> &availableLocales,
@@ -465,17 +480,53 @@ struct DateTimeFormat::Impl {
   std::u16string TimeZone;
   std::u16string DateStyle;
   std::u16string TimeStyle;
-  
-  // For r in initialize
-  std::u16string resolveLocale;
-  std::u16string locale;
-  std::u16string dataLocale;
+  std::u16string Hour;
 };
 
 DateTimeFormat::DateTimeFormat() : impl_(std::make_unique<Impl>()) {}
 DateTimeFormat::~DateTimeFormat() {}
 
+// Implementation of
+// https://tc39.es/ecma402/#sec-resolvelocale
+struct ResolveLocale {
+  std::u16string dataLocale;
+  std::u16string value;
+  
+  std::u16string resolveLocale;
+  std::u16string locale;
+  std::u16string ca;
+  std::u16string nu;
+  std::u16string hc;
+};
+ResolveLocale resolveLocale(
+    vm::CallResult<std::vector<std::u16string>> &requestedLocales,
+    const Options &options,
+    const std::vector<std::u16string> &relevantExtensionKeys
+//  In line with Java, haven't included availableLocales or LocaleData
+    ){
+//  1. Let matcher be options.[[localeMatcher]].
+    auto matcher = options.find(u"localeMatcher");
+//  2. If matcher is "lookup", then
+      if (matcher->second.getString() == u"lookup") {
+//  a. Let r be LookupMatcher(availableLocales, requestedLocales).
+//  Call function to get availableLocales once merged?
+        auto localeMatchResult = lookupMatcher(availableLocales, requestedLocales);
+      }
+//  3. Else,
+      else {
+//  TODO: Will bestFitMatcher also be needed?
+//  a. Let r be BestFitMatcher(availableLocales, requestedLocales).
+        auto localeMatchResult = bestFitMatcher(availableLocales, requestedLocales);
+      }
+//  5. Let result be a new Record.
+    ResolveLocale result;
 
+//  9. For each element key of relevantExtensionKeys, do
+  for (std::u16string key : relevantExtensionKeys) {
+    result.value = u"null";
+   
+  }
+}
 
 // Implementation of
 // https://tc39.es/ecma402/#sec-intl.datetimeformat.supportedlocalesof
@@ -630,12 +681,11 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   opt.hc = hourCycle->getString();
         
 //  16. Let localeData be %DateTimeFormat%.[[LocaleData]].
-    auto localeData = locales;
     Impl dateTimeFormat;
 //  TODO: resolveLocale? https://tc39.es/ecma402/#sec-resolvelocale
-    Impl r;
 //  17. Let r be ResolveLocale(%DateTimeFormat%.[[AvailableLocales]], requestedLocales, opt, %DateTimeFormat%.[[RelevantExtensionKeys]], localeData).
-    r.resolveLocale = locales;
+    std::vector<std::u16string> relevantExtensionKeys = {u"ca", u"nu", u"hc"};
+    auto r = resolveLocale(requestedLocales, options, relevantExtensionKeys);
 //  18. Set dateTimeFormat.[[Locale]] to r.[[locale]].
     dateTimeFormat.Locale = r.locale;
 //  19. Let calendar be r.[[ca]].
@@ -650,46 +700,45 @@ vm::ExecutionStatus DateTimeFormat::initialize(
     auto dataLocale = r.dataLocale;
 //  24. Let timeZone be ? Get(options, "timeZone").
     auto timeZone = options.find(u"timeZone");
+    std::u16string timeZoneValue;
 //  25. If timeZone is undefined, then
     if (timeZone == options.end()) {
 //  a. Let timeZone be DefaultTimeZone().
       NSString *nstrTime = (NSString*)[NSTimeZone defaultTimeZone];
       std::u16string defaultTime = nsStringToU16String(nstrTime);
-      timeZone->second.push(defaultTime); // How do you add to this?
+      timeZoneValue = defaultTime;
     }
 //  26. Else,
     else {
 //  a. Let timeZone be ? ToString(timeZone).
-      timeZone = timeZone->second.getString();
+      timeZoneValue = timeZone->second.getString();
 //  TODO: Find a way to get timezone validity
 //  b. If the result of IsValidTimeZoneName(timeZone) is false, then
 //  i. Throw a RangeError exception.
 //  c. Let timeZone be CanonicalizeTimeZoneName(timeZone).
     }
 //  27. Set dateTimeFormat.[[TimeZone]] to timeZone.
-    dateTimeFormat.TimeZone = timeZone;
+    dateTimeFormat.TimeZone = timeZoneValue;
 //  28. Let opt be a new Record.
-    Impl formatMatcher;
 //  29. For each row of Table 4, except the header row, in table order, do
 //  a. Let prop be the name given in the Property column of the row.
-      for (std::u16string prop : {u"Weekday", u"Era", u"Year", u"Month", u"Day", u"DayPeriod", u"Hour", u"Minute", u"Second", u"FractionalSecondDigits", u"TimeZoneName"}) {
+      std::vector<std::u16string> tableFourProps = {u"Weekday", u"Era", u"Year", u"Month", u"Day", u"DayPeriod", u"Hour", u"Minute", u"Second", u"FractionalSecondDigits", u"TimeZoneName"};
+      for (std::u16string prop : tableFourProps) {
         //  b. If prop is "fractionalSecondDigits", then
         if (prop == u"FractionalSecondDigits") {
-        //  TODO: i. Let value be ? GetNumberOption(options, "fractionalSecondDigits", 1, 3, undefined).
+        //  i. Let value be ? GetNumberOption(options, "fractionalSecondDigits", 1, 3, undefined).
+          auto value = getOptionNumber(options, u"fractionalSecondDigits", 1, 3, undefinedFallback);
         }
         else {
         //  c. Else,
         //  i. Let value be ? GetOption(options, prop, "string", « the strings given in the Values column of the row », undefined).
         // Not sure if this should be string every time....
-          const std::vector<std::u16string> valuesVector = prop.find({});
-          auto value = getOptionString(options, prop, u"string", valuesVector, undefinedFallback);
+          auto value = getOptionString(options, prop, u"string", tableFourProps, undefinedFallback);
         }
       //  d. Set opt.[[<prop>]] to value.
-        formatMatcher.prop = value->getString();
+          opt.prop = value->getString();
       }
 //   30. Let dataLocaleData be localeData.[[<dataLocale>]].
-      auto dataLocaleData = localeData.dataLocale;
-      
 //   31. Let matcher be ? GetOption(options, "formatMatcher", "string", « "basic", "best fit" », "best fit").
       const std::vector<std::u16string> matcherVector = {u"basic", u"best fit"};
       auto mformatMatcher = getOptionString(options, u"formatMatcher", u"string", matcherVector, undefinedFallback);
@@ -709,56 +758,36 @@ vm::ExecutionStatus DateTimeFormat::initialize(
 //  i. Let prop be the name given in the Property column of the row.
         for (std::u16string prop : {u"Weekday", u"Era", u"Year", u"Month", u"Day", u"DayPeriod", u"Hour", u"Minute", u"Second", u"FractionalSecondDigits", u"TimeZoneName"}) {
 //  ii. Let p be opt.[[<prop>]].
-          auto p = formatMatcher.prop;
+          auto p = opt.prop;
 //  iii. If p is not undefined, then
           if (p != u"und") {
 //  1. Throw a TypeError exception.
             return vm::ExecutionStatus::EXCEPTION;
           }
-//  b. Let styles be dataLocaleData.[[styles]].[[<calendar>]].
-
-//  c. Let bestFormat be DateTimeStyleFormat(dateStyle, timeStyle, styles).
-          
-        }
-        else {
 //  Else,
 //  a. Let formats be dataLocaleData.[[formats]].[[<calendar>]].
 //  b. If matcher is "basic", then
-          if (matcher == u"basic") {
 //  i. Let bestFormat be BasicFormatMatcher(opt, formats).
 // TODO: BasicFormatMatcher? https://tc39.es/ecma402/#sec-basicformatmatcher
-          }
-          else {
+
 //  c. Else,
 //  i. Let bestFormat be BestFitFormatMatcher(opt, formats).
-          }
+
         }
       }
-//  38. For each row in Table 4, except the header row, in table order, do
-//  a. Let prop be the name given in the Property column of the row.
-      for (std::u16string prop : {u"Weekday", u"Era", u"Year", u"Month", u"Day", u"DayPeriod", u"Hour", u"Minute", u"Second", u"FractionalSecondDigits", u"TimeZoneName"}){
-//  b. If bestFormat has a field [[<prop>]], then
-        if (bestFormat.find(prop)) {
-//  i. Let p be bestFormat.[[<prop>]].
-          auto p = bestFormat.prop;
-//  ii. Set dateTimeFormat's internal slot whose name is the Internal Slot column of the row to p.
-          dateTimeFormat.prop = p;
-        }
-      }
+//  Skip 38?
 //  39. If dateTimeFormat.[[Hour]] is undefined, then
-      if (dateTimeFormat.hour == u"und") {
+      if (dateTimeFormat.Hour == u"und") {
 //  a. Set dateTimeFormat.[[HourCycle]] to undefined.
-        dateTimeFormat.hourCycle = u"und";
-//  b. Let pattern be bestFormat.[[pattern]].
-      
-//  c. Let rangePatterns be bestFormat.[[rangePatterns]].
-        
+        dateTimeFormat.HourCycle = u"und";
       }
       else {
-//  a. Let hcDefault be dataLocaleData.[[hourCycle]].
 //  b. Let hc be dateTimeFormat.[[HourCycle]].
+        auto hc = dateTimeFormat.HourCycle;
 //  c. If hc is null, then
+        if (hc == u"") {
 //  i. Set hc to hcDefault.
+        }
 //  d. If hour12 is not undefined, then
 //  i. If hour12 is true, then
 //  1. If hcDefault is "h11" or "h23", then
@@ -772,16 +801,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
 //  3. Else,
 //  a. Set hc to "h24".
 //  e. Set dateTimeFormat.[[HourCycle]] to hc.
-//  f. If dateTimeformat.[[HourCycle]] is "h11" or "h12", then
-//  i. Let pattern be bestFormat.[[pattern12]].
-//  ii. Let rangePatterns be bestFormat.[[rangePatterns12]].
-//  g. Else,
-//  i. Let pattern be bestFormat.[[pattern]].
-//  ii. Let rangePatterns be bestFormat.[[rangePatterns]].
       }
-//  41. Set dateTimeFormat.[[Pattern]] to pattern.
-//  42. Set dateTimeFormat.[[RangePatterns]] to rangePatterns.
-      
 //  43. Return dateTimeFormat.
   return dateTimeFormat;
 }
