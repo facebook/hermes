@@ -25,20 +25,80 @@ std::u16string nsStringToU16String(NSString *src) {
   return result;
 }
 
-class LocaleIdTokenizer : public vm::DecoratedObject::Decoration {
- public:
-  LocaleIdTokenizer();
-  ~LocaleIdTokenizer();
-  // public function declaration
-  static LocaleIdTokenizer parseLocaleId(const std::u16string &localeId);
+// character type functions
+bool isASCIILetter(char16_t c) {
+  return ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'));
+}
+bool isASCIIDigit(char16_t c) {
+  return (c >= '0' && c <= '9');
+}
 
- private:
-  struct Impl;
-  std::unique_ptr<Impl> impl_;
-};
+bool isASCIILetterOrDigit(char16_t c) {
+  return isASCIILetter(c) || isASCIIDigit(c);
+}
+bool isSubtagSeparator(char16_t c) {
+  return c == '-';
+}
+bool isCharType(std::u16string str, int start, int end, int min, int max, bool(*charType)(char16_t)) {
+  if (end >= str.length()) {
+    return false;
+  }
+  
+  int length = end - start + 1;
+  if (length < min || length > max) {
+    return false;
+  }
+  
+  for (int i = start; i < end; i++) {
+    if (!charType(str[i])) {
+      return false;
+    }
+  }
+  
+  return true;
+}
 
-struct LocaleIdTokenizer::Impl {
-};
+// tag type functions
+bool isUnicodeLanguageSubtag(std::u16string str, int start, int end) {
+  // root case?
+  return isCharType(str, start, end, 2, 3, &isASCIILetter) ||
+    isCharType(str, start, end, 5, 8, &isASCIILetter);
+}
+bool isUnicodeScriptSubtag(std::u16string str, int start, int end) {
+  return isCharType(str, start, end, 4, 4, &isASCIILetter);
+}
+bool isUnicodeRegionSubtag(std::u16string str, int start, int end) {
+  return isCharType(str, start, end, 2, 2, &isASCIILetter) ||
+    isCharType(str, start, end, 3, 3, &isASCIIDigit);
+}
+bool isUnicodeVariantSubtag(std::u16string str, int start, int end) {
+  return isCharType(str, start, end, 5, 8, &isASCIILetterOrDigit) ||
+    isCharType(str, start, end, 3, 3, &isASCIILetterOrDigit);
+}
+bool isUnicodeExtensionAttribute(std::u16string str, int start, int end) {
+  return false;
+}
+bool isUnicodeExtensionKey(std::u16string str, int start, int end) {
+  return false;
+}
+bool isUnicodeExtensionType(std::u16string str, int start, int end) {
+  return false;
+}
+bool isExtensionSingleton(std::u16string str, int start, int end) {
+  return false;
+}
+bool isTransformedExtensionKey(std::u16string str, int start, int end) {
+  return false;
+}
+bool isTransformedExtensionTValueItem(std::u16string str, int start, int end) {
+  return false;
+}
+bool isPrivateUseExtension(std::u16string str, int start, int end) {
+  return false;
+}
+bool isOtherExtension(std::u16string str, int start, int end) {
+  return false;
+}
 
 struct ParsedLanguageIdentifier {
   std::u16string languageSubtag;
@@ -58,17 +118,79 @@ class ParsedLocaleIdentifier : public vm::DecoratedObject::Decoration {
   struct Impl;
   std::unique_ptr<Impl> impl_;
 };
-
 struct ParsedLocaleIdentifier::Impl {
   ParsedLanguageIdentifier languageIdentifier;
   // Other extensions
 
   // Function implementation
   static ParsedLocaleIdentifier parseLocaleId(const std::u16string &localeId) {
-
-    return;
+    return {};
   }
 };
+class LanguageTagParser : public vm::DecoratedObject::Decoration {
+ public:
+  LanguageTagParser(std::u16string localeId);
+  ~LanguageTagParser();
+    
+  // public function declaration
+  ParsedLocaleIdentifier parseLocaleId();
+  std::u16string toString();
+  std::u16string getCurrentTag();
+  bool hasMoreSubtags();
+  bool nextSubtag();
+
+ private:
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
+};
+struct LanguageTagParser::Impl {
+  std::u16string mLocaleId;
+  size_t mSubtagStart;
+  size_t mSubtagEnd;
+};
+LanguageTagParser::LanguageTagParser(std::u16string localeId) : impl_(std::make_unique<Impl>()) {
+  mLocaleId = localeId;
+  mSubtagStart = 0;
+  mSubtagEnd = -1;
+}
+LanguageTagParser::~LanguageTagParser();
+bool LanguageTagParser::hasMoreSubtags() {
+  return mLocaleId.length();
+}
+
+bool LanguageTagParser::nextSubtag() {
+  if (!hasMoreSubtags()) {
+    return false; // throw error?
+  }
+  
+  auto length = mLocaleId.length();
+  
+  if (mSubtagEnd >= mSubtagStart) {
+    if (!isSubtagSeparator(mLocaleId[mSubtagEnd+1])) {
+      return false;
+    }
+    if (mSubtagEnd + 2 == length) {
+      return false;
+    }
+    mSubtagStart = mSubtagEnd + 2;
+  }
+  
+  for (mSubtagEnd = mSubtagStart; mSubtagEnd < length && !isSubtagSeparator(mLocaleId[mSubtagEnd]); mSubtagEnd++)
+    ;
+  
+  if (mSubtagEnd > mSubtagStart) {
+    mSubtagEnd--;
+    return true;
+  } else {
+    return false;
+  }
+}
+std::u16string LanguageTagParser::toString() {
+  return localeId;
+}
+std::u16string LanguageTagParser::getCurrentTag() {
+  return localeId.substr(mSubtagStart, mSubtagEnd - mSubtagStart + 1);
+}
 }
 
 // Implementation of https://tc39.es/ecma402/#sec-canonicalizelocalelist
