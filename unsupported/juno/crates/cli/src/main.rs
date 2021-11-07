@@ -6,10 +6,12 @@
  */
 
 use anyhow::{self, ensure, Context, Error};
-use juno::ast::{self, validate_tree, NodePtr, SourceRange};
+use juno::ast::{self, validate_tree, NodeRc, SourceRange};
 use juno::gen_js;
 use juno::hparser::{self, MagicCommentKind, ParsedJS};
+use juno::sema;
 use juno::sourcemap::merge_sourcemaps;
+use pass::PassManager;
 use sourcemap::SourceMap;
 use std::fs::File;
 use std::io::Write;
@@ -74,6 +76,18 @@ struct Opt {
                 case_insensitive = true, default_value="Auto")]
     input_source_map: InputSourceMap,
 
+    /// Whether to run optimization passes.
+    #[structopt(short = "O")]
+    optimize: bool,
+
+    /// Enable strict mode.
+    #[structopt(long)]
+    strict_mode: bool,
+
+    /// Warn about undefined variables in strict mode functions.
+    #[structopt(long)]
+    warn_undefined: bool,
+
     /// Measure and print times.
     #[structopt(long = "Xtime")]
     xtime: bool,
@@ -136,7 +150,7 @@ fn load_source_map(url: Url) -> anyhow::Result<SourceMap> {
 fn gen_output(
     opt: &Opt,
     ctx: &mut ast::Context,
-    root: NodePtr,
+    root: NodeRc,
     input_map: &Option<SourceMap>,
 ) -> anyhow::Result<bool> {
     let out: Box<dyn Write> = if opt.output_path == Path::new("-") {
@@ -148,11 +162,18 @@ fn gen_output(
         )
     };
 
+    let final_ast = if opt.optimize {
+        let pm = PassManager::standard();
+        pm.run(ctx, root)
+    } else {
+        root
+    };
+
     if opt.gen.ast {
         ast::dump_json(
             out,
             ctx,
-            &root,
+            &final_ast,
             if opt.no_pretty {
                 ast::Pretty::No
             } else {
@@ -164,7 +185,7 @@ fn gen_output(
         let generated_map = gen_js::generate(
             out,
             ctx,
-            &root,
+            &final_ast,
             if opt.no_pretty {
                 gen_js::Pretty::No
             } else {
@@ -210,6 +231,12 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
 
     let mut ctx = ast::Context::new();
 
+    // Propagate flags.
+    if opt.strict_mode {
+        ctx.enable_strict_mode();
+    }
+    ctx.warn_undefined = opt.warn_undefined;
+
     // Read the input into memory.
     let input = opt.input_path.as_path();
     let file_id = ctx
@@ -221,7 +248,13 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     let mut timer = Timer::new();
 
     // Parse.
-    let parsed = hparser::ParsedJS::parse(Default::default(), &buf);
+    let parsed = hparser::ParsedJS::parse(
+        hparser::ParserFlags {
+            strict_mode: ctx.strict_mode(),
+            ..Default::default()
+        },
+        &buf,
+    );
     timer.mark("Parse");
     if let Some(e) = parsed.first_error() {
         ctx.sm().error(SourceRange::from_loc(file_id, e.0), e.1);
@@ -237,8 +270,8 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
 
     let ast = {
         // Convert to Juno AST.
-        let gc = ast::GCContext::new(&mut ctx);
-        NodePtr::from_node(&gc, parsed.to_ast(&gc, file_id).unwrap())
+        let gc = ast::GCLock::new(&mut ctx);
+        NodeRc::from_node(&gc, parsed.to_ast(&gc, file_id).unwrap())
     };
     // We don't need the original parser anymore.
     drop(parsed);
@@ -249,6 +282,28 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
 
     // Fetch and parse the source map before we generate the output.
     let source_map = sm_url.map(load_source_map).transpose()?;
+
+    {
+        let lock = ast::GCLock::new(&mut ctx);
+        let sem = sema::resolve_program(&lock, ast.node(&lock));
+        println!(
+            "{} error(s), {} warning(s)",
+            lock.sm().num_errors(),
+            lock.sm().num_warnings()
+        );
+        if lock.sm().num_errors() != 0 {
+            return Ok(TransformStatus::Error);
+        }
+
+        println!("{:7} functions", sem.all_functions().len());
+        println!("{:7} lexical scopes", sem.all_scopes().len());
+        println!("{:7} declarations", sem.all_decls().len());
+        println!("{:7} ident resolutions", sem.all_ident_decls().len());
+        println!();
+        timer.mark("Sema");
+        drop(sem);
+        timer.mark("Drop Sema");
+    }
 
     // Generate output.
     if gen_output(opt, &mut ctx, ast, &source_map)? {

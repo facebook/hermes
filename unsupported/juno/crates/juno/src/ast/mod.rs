@@ -11,12 +11,12 @@
 //! All nodes are stored in [`Context`], which handles memory management of the nodes
 //! and exposes a safe API.
 //!
-//! Allocation and viewing of nodes must be done via the use of a [`GCContext`],
+//! Allocation and viewing of nodes must be done via the use of a [`GCLock`],
 //! **of which there must be only one active per thread at any time**,
 //! to avoid accidentally mixing `Node`s between `Context`.
-//! The `GCContext` will provide `&'gc Node<'gc>`,
-//! i.e. a `Node` that does not outlive the `GCContext` and which references other `Node`s which
-//! also do not outlive the `GCContext`.
+//! The `GCLock` will provide `&'gc Node<'gc>`,
+//! i.e. a `Node` that does not outlive the `GCLock` and which references other `Node`s which
+//! also do not outlive the `GCLock`.
 //!
 //! Nodes are allocated and cloned/modified by using the various `Builder` structs,
 //! for example [`NumericLiteralBuilder`].
@@ -68,7 +68,7 @@ struct StorageEntry<'ctx> {
     /// If this field is `0`, then this entry is free.
     ctx_id_markbit: Cell<u32>,
 
-    /// Refcount of how many [`NodePtr`] point to this node.
+    /// Refcount of how many [`NodeRc`] point to this node.
     /// Entry may only be freed if this number is `0` and no other entries reference this entry
     /// directly.
     count: Cell<u32>,
@@ -104,14 +104,14 @@ impl<'ctx> StorageEntry<'ctx> {
     }
 }
 
-/// Structure pointed to by `Context` and `NodePtr` to facilitate panicking if there are
-/// outstanding `NodePtr` when the `Context` is dropped.
+/// Structure pointed to by `Context` and `NodeRc` to facilitate panicking if there are
+/// outstanding `NodeRc` when the `Context` is dropped.
 #[derive(Debug)]
-struct NodePtrCounter {
+struct NodeRcCounter {
     /// ID of the context owning the counter.
     ctx_id: u32,
 
-    /// Number of [`NodePtr`]s allocated in this `Context`.
+    /// Number of [`NodeRc`]s allocated in this `Context`.
     /// Must be `0` when `Context` is dropped.
     count: Cell<usize>,
 }
@@ -133,11 +133,11 @@ pub struct Context<'ast> {
     /// First element of the free list if there is one.
     free: UnsafeCell<Vec<NonNull<StorageEntry<'ast>>>>,
 
-    /// `NodePtr` count stored in a `Box` to ensure that `NodePtr`s can also point to it
+    /// `NodeRc` count stored in a `Box` to ensure that `NodeRc`s can also point to it
     /// and decrement the count on drop.
     /// Placed separately to guard against `Context` moving, though relying on that behavior is
     /// technically unsafe.
-    nodeptr_count: Pin<Box<NodePtrCounter>>,
+    noderc_count: Pin<Box<NodeRcCounter>>,
 
     /// Capacity at which to allocate the next chunk.
     /// Doubles every chunk until reaching [`MAX_CHUNK_CAPACITY`].
@@ -155,6 +155,9 @@ pub struct Context<'ast> {
 
     /// Whether strict mode has been forced.
     strict_mode: bool,
+
+    /// Whether to warn about undefined variables in strict mode functions.
+    pub warn_undefined: bool,
 }
 
 const MIN_CHUNK_CAPACITY: usize = 1 << 10;
@@ -175,7 +178,7 @@ impl<'ast> Context<'ast> {
             id,
             nodes: Default::default(),
             free: Default::default(),
-            nodeptr_count: Pin::new(Box::new(NodePtrCounter {
+            noderc_count: Pin::new(Box::new(NodeRcCounter {
                 ctx_id: id,
                 count: Cell::new(0),
             })),
@@ -184,6 +187,7 @@ impl<'ast> Context<'ast> {
             next_chunk_capacity: Cell::new(MIN_CHUNK_CAPACITY),
             markbit_marked: true,
             strict_mode: false,
+            warn_undefined: false,
         };
         result.new_chunk();
         result
@@ -194,7 +198,7 @@ impl<'ast> Context<'ast> {
         let free = unsafe { &mut *self.free.get() };
         let nodes: &mut Vec<Vec<StorageEntry>> = unsafe { &mut *self.nodes.get() };
         // Transmutation is safe here, because `Node`s can only be allocated through
-        // this path and only one GCContext can be made available at a time per thread.
+        // this path and only one GCLock can be made available at a time per thread.
         let node: Node<'ast> = unsafe { std::mem::transmute(n) };
         let entry = if let Some(mut entry) = free.pop() {
             let entry = unsafe { entry.as_mut() };
@@ -282,13 +286,16 @@ impl<'ast> Context<'ast> {
         let mut roots: Vec<&StorageEntry> = vec![];
         for chunk in nodes.iter() {
             for entry in chunk.iter() {
-                debug_assert!(
-                    entry.markbit() != self.markbit_marked,
-                    "Entry marked before start of GC"
-                );
                 if entry.is_free() {
                     continue;
                 }
+                debug_assert!(
+                    entry.markbit() != self.markbit_marked,
+                    "Entry marked before start of GC: {:?}\nentry.markbit()={}\nmarkbit_marked={}",
+                    &entry,
+                    entry.markbit(),
+                    self.markbit_marked,
+                );
                 if entry.count.get() > 0 {
                     roots.push(entry);
                 }
@@ -302,7 +309,7 @@ impl<'ast> Context<'ast> {
         impl<'gc> Visitor<'gc> for Marker {
             fn call(
                 &mut self,
-                gc: &'gc GCContext,
+                gc: &'gc GCLock,
                 node: &'gc Node<'gc>,
                 _parent: Option<&'gc Node<'gc>>,
             ) {
@@ -322,7 +329,7 @@ impl<'ast> Context<'ast> {
             markbit_marked: self.markbit_marked,
         };
         {
-            let gc = GCContext::new(self);
+            let gc = GCLock::new(self);
             for root in &roots {
                 root.inner.visit(&gc, &mut marker, None);
             }
@@ -353,14 +360,14 @@ impl<'ast> Context<'ast> {
 }
 
 impl Drop for Context<'_> {
-    /// Ensure that there are no outstanding `NodePtr`s into this `Context` which will be
+    /// Ensure that there are no outstanding `NodeRc`s into this `Context` which will be
     /// invalidated once it is dropped.
     ///
     /// # Panics
     ///
-    /// Will panic if there are any `NodePtr`s stored when this `Context` is dropped.
+    /// Will panic if there are any `NodeRc`s stored when this `Context` is dropped.
     fn drop(&mut self) {
-        if self.nodeptr_count.count.get() > 0 {
+        if self.noderc_count.count.get() > 0 {
             #[cfg(debug_assertions)]
             {
                 // In debug mode, provide more information on which node was leaked.
@@ -369,53 +376,53 @@ impl Drop for Context<'_> {
                     for entry in chunk {
                         assert!(
                             entry.count.get() == 0,
-                            "NodePtr must not outlive Context: {:#?}\n",
+                            "NodeRc must not outlive Context: {:#?}\n",
                             &entry.inner
                         );
                     }
                 }
             }
             // In release mode, just panic immediately.
-            panic!("NodePtr must not outlive Context");
+            panic!("NodeRc must not outlive Context");
         }
     }
 }
 
 thread_local! {
-    /// Whether there exists a `GCContext` on the current thread.
-    static GCCONTEXT_IN_USE: Cell<bool> = Cell::new(false);
+    /// Whether there exists a `GCLock` on the current thread.
+    static GCLOCK_IN_USE: Cell<bool> = Cell::new(false);
 }
 
 /// A way to view the [`Context`].
 ///
-/// Provides the user the ability to create new nodes and dereference [`NodePtr`].
+/// Provides the user the ability to create new nodes and dereference [`NodeRc`].
 ///
 /// **At most one is allowed to be active in any thread at any time.**
 /// This is to ensure no `&Node` can be shared between `Context`s.
-pub struct GCContext<'ast, 'ctx> {
+pub struct GCLock<'ast, 'ctx> {
     ctx: &'ctx mut Context<'ast>,
 }
 
-impl Drop for GCContext<'_, '_> {
+impl Drop for GCLock<'_, '_> {
     fn drop(&mut self) {
-        GCCONTEXT_IN_USE.with(|flag| {
+        GCLOCK_IN_USE.with(|flag| {
             flag.set(false);
         });
     }
 }
 
-impl<'ast, 'ctx> GCContext<'ast, 'ctx> {
+impl<'ast, 'ctx> GCLock<'ast, 'ctx> {
     /// # Panics
     ///
-    /// Will panic if there is already an active `GCContext` on this thread.
+    /// Will panic if there is already an active `GCLock` on this thread.
     pub fn new(ctx: &'ctx mut Context<'ast>) -> Self {
-        GCCONTEXT_IN_USE.with(|flag| {
+        GCLOCK_IN_USE.with(|flag| {
             if flag.get() {
-                panic!("Attempt to create multiple GCContexts in a single thread");
+                panic!("Attempt to create multiple GCLocks in a single thread");
             }
             flag.set(true);
         });
-        GCContext { ctx }
+        GCLock { ctx }
     }
 
     /// Allocate a node in the `ctx`.
@@ -456,108 +463,108 @@ impl<'ast, 'ctx> GCContext<'ast, 'ctx> {
 
 /// A wrapper around Node&, with "shallow" hashing and equality, suitable for
 /// hash tables.
-#[derive(Debug)]
-pub struct NodeRef<'gc>(pub &'gc Node<'gc>);
+#[derive(Debug, Copy, Clone)]
+pub struct NodePtr<'gc>(pub &'gc Node<'gc>);
 
-impl<'gc> NodeRef<'gc> {
+impl<'gc> NodePtr<'gc> {
     pub fn from_node(node: &'gc Node<'gc>) -> Self {
         Self(node)
     }
 }
 
-impl<'gc> PartialEq for NodeRef<'gc> {
+impl<'gc> PartialEq for NodePtr<'gc> {
     fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(self, other)
+        std::ptr::eq(self.0, other.0)
     }
 }
 
-impl Eq for NodeRef<'_> {}
+impl Eq for NodePtr<'_> {}
 
-impl Hash for NodeRef<'_> {
+impl Hash for NodePtr<'_> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (self.0 as *const Node).hash(state)
     }
 }
 
-impl<'gc> Deref for NodeRef<'gc> {
+impl<'gc> Deref for NodePtr<'gc> {
     type Target = Node<'gc>;
     fn deref(&self) -> &'gc Self::Target {
         self.0
     }
 }
 
-impl<'gc> AsRef<Node<'gc>> for NodeRef<'gc> {
+impl<'gc> AsRef<Node<'gc>> for NodePtr<'gc> {
     fn as_ref(&self) -> &'gc Node<'gc> {
         self.0
     }
 }
 
-impl<'gc> From<&'gc Node<'gc>> for NodeRef<'gc> {
+impl<'gc> From<&'gc Node<'gc>> for NodePtr<'gc> {
     fn from(node: &'gc Node<'gc>) -> Self {
-        NodeRef(node)
+        NodePtr(node)
     }
 }
 
 /// Reference counted pointer to a [`Node`] in any [`Context`].
 ///
-/// It can be used to keep references to `Node`s outside of the lifetime of a [`GCContext`],
-/// but the only way to derefence and inspect the `Node` is to use a `GCContext`.
+/// It can be used to keep references to `Node`s outside of the lifetime of a [`GCLock`],
+/// but the only way to derefence and inspect the `Node` is to use a `GCLock`.
 #[derive(Debug, Eq)]
-pub struct NodePtr {
-    /// The `NodePtrCounter` counting for the `Context` to which this belongs.
-    counter: NonNull<NodePtrCounter>,
+pub struct NodeRc {
+    /// The `NodeRcCounter` counting for the `Context` to which this belongs.
+    counter: NonNull<NodeRcCounter>,
 
     /// Pointer to the `StorageEntry` containing the `Node`.
     /// Stored as `c_void` to avoid specifying lifetimes, as dereferencing is checked manually.
     entry: NonNull<c_void>,
 }
 
-impl Hash for NodePtr {
+impl Hash for NodeRc {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.entry.hash(state)
     }
 }
 
-impl PartialEq for NodePtr {
+impl PartialEq for NodeRc {
     fn eq(&self, other: &Self) -> bool {
         self.entry == other.entry
     }
 }
 
-impl Drop for NodePtr {
+impl Drop for NodeRc {
     fn drop(&mut self) {
         let entry = unsafe { self.entry().as_mut() };
         let c = entry.count.get();
         debug_assert!(c > 0);
         entry.count.set(c - 1);
 
-        let nodeptr_count = unsafe { self.counter.as_mut() };
-        let c = nodeptr_count.count.get();
+        let noderc_count = unsafe { self.counter.as_mut() };
+        let c = noderc_count.count.get();
         debug_assert!(c > 0);
-        nodeptr_count.count.set(c - 1);
+        noderc_count.count.set(c - 1);
     }
 }
 
-impl Clone for NodePtr {
-    /// Cloning a `NodePtr` increments refcounts on the entry and the context.
+impl Clone for NodeRc {
+    /// Cloning a `NodeRc` increments refcounts on the entry and the context.
     fn clone(&self) -> Self {
-        let mut cloned = NodePtr { ..*self };
+        let mut cloned = NodeRc { ..*self };
 
         let entry = unsafe { cloned.entry().as_mut() };
         let c = entry.count.get();
         entry.count.set(c + 1);
 
-        let nodeptr_count = unsafe { cloned.counter.as_mut() };
-        let c = nodeptr_count.count.get();
-        nodeptr_count.count.set(c + 1);
+        let noderc_count = unsafe { cloned.counter.as_mut() };
+        let c = noderc_count.count.get();
+        noderc_count.count.set(c + 1);
 
         cloned
     }
 }
 
-impl NodePtr {
-    /// Turn a node reference into a `NodePtr` for storage outside `GCContext`.
-    pub fn from_node<'gc>(gc: &'gc GCContext, node: &'gc Node<'gc>) -> NodePtr {
+impl NodeRc {
+    /// Turn a node reference into a `NodeRc` for storage outside `GCLock`.
+    pub fn from_node<'gc>(gc: &'gc GCLock, node: &'gc Node<'gc>) -> NodeRc {
         let inner_offset = offset_of!(StorageEntry, inner) as isize;
         let inner = node as *const Node<'gc>;
         unsafe {
@@ -570,13 +577,13 @@ impl NodePtr {
     ///
     /// # Panics
     ///
-    /// Will panic if `gc` is not for the same context as this `NodePtr` was created in.
-    pub fn node<'gc>(&'_ self, gc: &'gc GCContext<'_, '_>) -> &'gc Node {
+    /// Will panic if `gc` is not for the same context as this `NodeRc` was created in.
+    pub fn node<'gc>(&'_ self, gc: &'gc GCLock<'_, '_>) -> &'gc Node {
         unsafe {
             assert_eq!(
                 self.counter.as_ref().ctx_id,
                 gc.ctx.id,
-                "Attempt to derefence NodePtr allocated context {} in context {}",
+                "Attempt to derefence NodeRc allocated context {} in context {}",
                 self.counter.as_ref().ctx_id,
                 gc.ctx.id
             );
@@ -590,17 +597,17 @@ impl NodePtr {
         NonNull::new_unchecked(outer)
     }
 
-    unsafe fn from_entry(gc: &GCContext, entry: &StorageEntry<'_>) -> NodePtr {
+    unsafe fn from_entry(gc: &GCLock, entry: &StorageEntry<'_>) -> NodeRc {
         let c = entry.count.get();
         entry.count.set(c + 1);
 
-        let c = gc.ctx.nodeptr_count.count.get();
-        gc.ctx.nodeptr_count.count.set(c + 1);
+        let c = gc.ctx.noderc_count.count.get();
+        gc.ctx.noderc_count.count.set(c + 1);
 
-        NodePtr {
-            counter: NonNull::new_unchecked(gc.ctx.nodeptr_count.as_ref().get_ref()
-                as *const NodePtrCounter
-                as *mut NodePtrCounter),
+        NodeRc {
+            counter: NonNull::new_unchecked(gc.ctx.noderc_count.as_ref().get_ref()
+                as *const NodeRcCounter
+                as *mut NodeRcCounter),
             entry: NonNull::new_unchecked(entry as *const StorageEntry as *mut c_void),
         }
     }
@@ -609,20 +616,30 @@ impl NodePtr {
 /// Trait implemented by those who call the visit functionality.
 pub trait Visitor<'gc> {
     /// Visit the Node `node` with the given `parent`.
-    fn call(&mut self, ctx: &'gc GCContext, node: &'gc Node<'gc>, parent: Option<&'gc Node<'gc>>);
+    fn call(&mut self, ctx: &'gc GCLock, node: &'gc Node<'gc>, parent: Option<&'gc Node<'gc>>);
 }
 
+/// Indicates what mutation occurred to an element of the AST during [`VisitorMut`] use.
 #[derive(Debug)]
 pub enum TransformResult<T> {
+    /// No change to the element.
     Unchanged,
+
+    /// Element must be removed, if possible.
+    /// If the element cannot be removed, it will be replaced with EmptyStatement.
+    /// **Only statements may be removed from non-optional fields,
+    /// as removing expressions would result in an invalid AST.**
+    Removed,
+
+    /// Element should be swapped out for the wrapped element.
     Changed(T),
 }
 
 impl<T> TransformResult<T> {
     pub fn unwrap(self) -> T {
         match self {
-            Self::Unchanged => {
-                panic!("called `TransformResult::unwrap()` on a `None` value");
+            Self::Unchanged | Self::Removed => {
+                panic!("called `TransformResult::unwrap()` without a changed value");
             }
             Self::Changed(t) => t,
         }
@@ -630,7 +647,7 @@ impl<T> TransformResult<T> {
 
     pub fn unwrap_or(self, default: T) -> T {
         match self {
-            Self::Unchanged => default,
+            Self::Unchanged | Self::Removed => default,
             Self::Changed(t) => t,
         }
     }
@@ -641,7 +658,7 @@ pub trait VisitorMut<'gc> {
     /// Visit the Node `node` with the given `parent`.
     fn call(
         &mut self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         node: &'gc Node<'gc>,
         parent: Option<&'gc Node<'gc>>,
     ) -> TransformResult<&'gc Node<'gc>>;
@@ -876,22 +893,25 @@ define_str_enum!(
 impl<'gc> Node<'gc> {
     pub fn visit<V: Visitor<'gc>>(
         &'gc self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         visitor: &mut V,
         parent: Option<&'gc Node<'gc>>,
     ) {
         visitor.call(ctx, self, parent);
     }
 
+    /// Visit this node with `visitor` and return the modified root node.
+    /// If the root node is to be removed, return `None`.
     pub fn visit_mut<V: VisitorMut<'gc>>(
         &'gc self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         visitor: &mut V,
         parent: Option<&'gc Node<'gc>>,
-    ) -> &'gc Node<'gc> {
+    ) -> Option<&'gc Node<'gc>> {
         match visitor.call(ctx, self, parent) {
-            TransformResult::Unchanged => self,
-            TransformResult::Changed(new_node) => new_node,
+            TransformResult::Unchanged => Some(self),
+            TransformResult::Removed => None,
+            TransformResult::Changed(new_node) => Some(new_node),
         }
     }
 }
@@ -908,7 +928,7 @@ where
     /// `Node`s.
     fn visit_child<V: Visitor<'gc>>(
         self,
-        _ctx: &'gc GCContext,
+        _ctx: &'gc GCLock,
         _visitor: &mut V,
         _parent: &'gc Node<'gc>,
     ) {
@@ -919,7 +939,7 @@ where
     /// `Node`s.
     fn visit_child_mut<V: VisitorMut<'gc>>(
         self,
-        _ctx: &'gc GCContext,
+        _ctx: &'gc GCLock,
         _visitor: &mut V,
         _parent: &'gc Node<'gc>,
     ) -> TransformResult<Self::Out> {
@@ -1034,12 +1054,7 @@ impl NodeChild<'_> for &Option<NodeString> {
 impl<'gc, T: NodeChild<'gc> + NodeChild<'gc, Out = T>> NodeChild<'gc> for Option<T> {
     type Out = Self;
 
-    fn visit_child<V: Visitor<'gc>>(
-        self,
-        ctx: &'gc GCContext,
-        visitor: &mut V,
-        node: &'gc Node<'gc>,
-    ) {
+    fn visit_child<V: Visitor<'gc>>(self, ctx: &'gc GCLock, visitor: &mut V, node: &'gc Node<'gc>) {
         if let Some(t) = self {
             t.visit_child(ctx, visitor, node);
         }
@@ -1050,7 +1065,7 @@ impl<'gc, T: NodeChild<'gc> + NodeChild<'gc, Out = T>> NodeChild<'gc> for Option
     /// `Node`s.
     fn visit_child_mut<V: VisitorMut<'gc>>(
         self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         visitor: &mut V,
         parent: &'gc Node<'gc>,
     ) -> TransformResult<Self::Out> {
@@ -1059,6 +1074,7 @@ impl<'gc, T: NodeChild<'gc> + NodeChild<'gc, Out = T>> NodeChild<'gc> for Option
             None => Unchanged,
             Some(inner) => match inner.visit_child_mut(ctx, visitor, parent) {
                 Unchanged => Unchanged,
+                Removed => Changed(None),
                 Changed(new_node) => Changed(Some(new_node)),
             },
         }
@@ -1072,12 +1088,7 @@ impl<'gc, T: NodeChild<'gc> + NodeChild<'gc, Out = T>> NodeChild<'gc> for Option
 impl<'gc> NodeChild<'gc> for &Option<&'gc Node<'gc>> {
     type Out = Option<&'gc Node<'gc>>;
 
-    fn visit_child<V: Visitor<'gc>>(
-        self,
-        ctx: &'gc GCContext,
-        visitor: &mut V,
-        node: &'gc Node<'gc>,
-    ) {
+    fn visit_child<V: Visitor<'gc>>(self, ctx: &'gc GCLock, visitor: &mut V, node: &'gc Node<'gc>) {
         if let Some(t) = *self {
             t.visit_child(ctx, visitor, node);
         }
@@ -1088,7 +1099,7 @@ impl<'gc> NodeChild<'gc> for &Option<&'gc Node<'gc>> {
     /// `Node`s.
     fn visit_child_mut<V: VisitorMut<'gc>>(
         self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         visitor: &mut V,
         parent: &'gc Node<'gc>,
     ) -> TransformResult<Self::Out> {
@@ -1097,6 +1108,7 @@ impl<'gc> NodeChild<'gc> for &Option<&'gc Node<'gc>> {
             None => Unchanged,
             Some(inner) => match inner.visit_child_mut(ctx, visitor, parent) {
                 Unchanged => Unchanged,
+                Removed => Changed(None),
                 Changed(new_node) => Changed(Some(new_node)),
             },
         }
@@ -1110,12 +1122,7 @@ impl<'gc> NodeChild<'gc> for &Option<&'gc Node<'gc>> {
 impl<'gc> NodeChild<'gc> for &'gc Node<'gc> {
     type Out = Self;
 
-    fn visit_child<V: Visitor<'gc>>(
-        self,
-        ctx: &'gc GCContext,
-        visitor: &mut V,
-        node: &'gc Node<'gc>,
-    ) {
+    fn visit_child<V: Visitor<'gc>>(self, ctx: &'gc GCLock, visitor: &mut V, node: &'gc Node<'gc>) {
         visitor.call(ctx, self, Some(node));
     }
 
@@ -1124,11 +1131,28 @@ impl<'gc> NodeChild<'gc> for &'gc Node<'gc> {
     /// `Node`s.
     fn visit_child_mut<V: VisitorMut<'gc>>(
         self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         visitor: &mut V,
         parent: &'gc Node<'gc>,
     ) -> TransformResult<Self::Out> {
-        visitor.call(ctx, self, Some(parent))
+        match visitor.call(ctx, self, Some(parent)) {
+            TransformResult::Removed => {
+                TransformResult::Changed(builder::EmptyStatement::build_template(
+                    ctx,
+                    template::EmptyStatement {
+                        metadata: TemplateMetadata {
+                            phantom: Default::default(),
+                            range: SourceRange {
+                                file: self.range().file,
+                                start: self.range().start,
+                                end: self.range().start,
+                            },
+                        },
+                    },
+                ))
+            }
+            result => result,
+        }
     }
 
     fn duplicate(self) -> Self::Out {
@@ -1139,12 +1163,7 @@ impl<'gc> NodeChild<'gc> for &'gc Node<'gc> {
 impl<'gc> NodeChild<'gc> for &NodeList<'gc> {
     type Out = NodeList<'gc>;
 
-    fn visit_child<V: Visitor<'gc>>(
-        self,
-        ctx: &'gc GCContext,
-        visitor: &mut V,
-        node: &'gc Node<'gc>,
-    ) {
+    fn visit_child<V: Visitor<'gc>>(self, ctx: &'gc GCLock, visitor: &mut V, node: &'gc Node<'gc>) {
         for child in self {
             visitor.call(ctx, *child, Some(node));
         }
@@ -1152,7 +1171,7 @@ impl<'gc> NodeChild<'gc> for &NodeList<'gc> {
 
     fn visit_child_mut<V: VisitorMut<'gc>>(
         self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         visitor: &mut V,
         parent: &'gc Node<'gc>,
     ) -> TransformResult<Self::Out> {
@@ -1162,26 +1181,31 @@ impl<'gc> NodeChild<'gc> for &NodeList<'gc> {
         // Assume no copies to start.
         while index < len {
             let node = visitor.call(ctx, self[index], Some(parent));
-            // First change found.
-            if let Changed(new_node) = node {
-                let mut result: Self::Out = vec![];
-                // Fill in the elements we skippped.
-                for elem in self.iter().take(index) {
-                    result.push(elem);
-                }
-                result.push(new_node);
+            if let Unchanged = node {
                 index += 1;
-                // Fill the rest of the elements.
-                while index < len {
-                    match visitor.call(ctx, self[index], Some(parent)) {
-                        Unchanged => result.push(self[index]),
-                        Changed(new_node) => result.push(new_node),
-                    }
-                    index += 1;
-                }
-                return Changed(result);
+                continue;
             }
+            // First change found, either removed or changed node.
+            let mut result: Self::Out = vec![];
+            // Fill in the elements we skippped.
+            for elem in self.iter().take(index) {
+                result.push(elem);
+            }
+            // If the node was changed, push it. Otherwise it's removed, so just skip it.
+            if let Changed(new_node) = node {
+                result.push(new_node);
+            };
             index += 1;
+            // Fill the rest of the elements.
+            while index < len {
+                match visitor.call(ctx, self[index], Some(parent)) {
+                    Unchanged => result.push(self[index]),
+                    Removed => {}
+                    Changed(new_node) => result.push(new_node),
+                }
+                index += 1;
+            }
+            return Changed(result);
         }
         Unchanged
     }
@@ -1194,12 +1218,7 @@ impl<'gc> NodeChild<'gc> for &NodeList<'gc> {
 impl<'gc> NodeChild<'gc> for &Option<NodeList<'gc>> {
     type Out = Option<NodeList<'gc>>;
 
-    fn visit_child<V: Visitor<'gc>>(
-        self,
-        ctx: &'gc GCContext,
-        visitor: &mut V,
-        node: &'gc Node<'gc>,
-    ) {
+    fn visit_child<V: Visitor<'gc>>(self, ctx: &'gc GCLock, visitor: &mut V, node: &'gc Node<'gc>) {
         if let Some(list) = self {
             for child in list {
                 visitor.call(ctx, *child, Some(node));
@@ -1209,7 +1228,7 @@ impl<'gc> NodeChild<'gc> for &Option<NodeList<'gc>> {
 
     fn visit_child_mut<V: VisitorMut<'gc>>(
         self,
-        ctx: &'gc GCContext,
+        ctx: &'gc GCLock,
         visitor: &mut V,
         parent: &'gc Node<'gc>,
     ) -> TransformResult<Self::Out> {
@@ -1218,6 +1237,7 @@ impl<'gc> NodeChild<'gc> for &Option<NodeList<'gc>> {
             None => Unchanged,
             Some(inner) => match inner.visit_child_mut(ctx, visitor, parent) {
                 Unchanged => Unchanged,
+                Removed => Changed(None),
                 Changed(new_node) => Changed(Some(new_node)),
             },
         }
@@ -1231,6 +1251,7 @@ impl<'gc> NodeChild<'gc> for &Option<NodeList<'gc>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
 
     #[test]
     fn test_string_literal() {
@@ -1243,5 +1264,37 @@ mod tests {
                 }
             )
         );
+    }
+
+    #[test]
+    fn test_node_ref() {
+        let mut ctx = Context::new();
+        let lock = GCLock::new(&mut ctx);
+
+        let mut m = HashMap::new();
+
+        let n1 = NodePtr::from(builder::NumericLiteral::build_template(
+            &lock,
+            template::NumericLiteral {
+                metadata: Default::default(),
+                value: 10.0,
+            },
+        ));
+        let n2 = NodePtr::from(builder::NumericLiteral::build_template(
+            &lock,
+            template::NumericLiteral {
+                metadata: Default::default(),
+                value: 20.0,
+            },
+        ));
+        let n25 = Box::new(n2);
+        assert_ne!(n1, n2);
+        assert_eq!(n2, *n25);
+        m.insert(n1, 10);
+        m.insert(n2, 20);
+
+        assert_eq!(10, *m.get(&n1).unwrap());
+        assert_eq!(20, *m.get(&n2).unwrap());
+        assert_eq!(20, *m.get(&*n25).unwrap());
     }
 }

@@ -13,15 +13,7 @@
 import type {ESNode} from 'hermes-estree';
 
 import {VisitorKeys} from 'hermes-eslint';
-
-/**
- * Check whether the given value is an ASTNode or not.
- * @param x The value to check.
- * @returns `true` if the value is an ASTNode.
- */
-function isNode(x: mixed): boolean {
-  return x !== null && typeof x === 'object' && typeof x.type === 'string';
-}
+import {getVisitorKeys, isNode} from '../getVisitorKeys';
 
 export type TraverserCallback = (node: ESNode, parent: ?ESNode) => void;
 export type TraverserOptions = $ReadOnly<{
@@ -83,23 +75,17 @@ export class SimpleTraverser {
       throw ex;
     }
 
-    const keys = VisitorKeys[node.type];
-    if (keys == null) {
-      throw new Error(`No visitor keys found for node type "${node.type}".`);
-    }
+    const keys = getVisitorKeys(node);
+    for (const key of keys) {
+      // $FlowExpectedError[prop-missing]
+      const child = node[key];
 
-    if (keys.length >= 1) {
-      for (let i = 0; i < keys.length; ++i) {
-        // $FlowExpectedError[prop-missing]
-        const child = node[keys[i]];
-
-        if (Array.isArray(child)) {
-          for (let j = 0; j < child.length; ++j) {
-            this._traverse(child[j], node, options);
-          }
-        } else {
-          this._traverse(child, node, options);
+      if (Array.isArray(child)) {
+        for (let j = 0; j < child.length; ++j) {
+          this._traverse(child[j], node, options);
         }
+      } else {
+        this._traverse(child, node, options);
       }
     }
 

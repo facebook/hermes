@@ -11,12 +11,12 @@ use juno::ast::*;
 fn test_valid() {
     let mut ctx = Context::new();
     let return_stmt = {
-        let gc = GCContext::new(&mut ctx);
-        NodePtr::from_node(
+        let gc = GCLock::new(&mut ctx);
+        NodeRc::from_node(
             &gc,
-            ReturnStatementBuilder::build_template(
+            builder::ReturnStatement::build_template(
                 &gc,
-                ReturnStatementTemplate {
+                template::ReturnStatement {
                     metadata: Default::default(),
                     argument: None,
                 },
@@ -26,16 +26,16 @@ fn test_valid() {
     assert!(validate_tree_pure(&mut ctx, &return_stmt).is_ok());
 
     let return_stmt = {
-        let gc = GCContext::new(&mut ctx);
-        NodePtr::from_node(
+        let gc = GCLock::new(&mut ctx);
+        NodeRc::from_node(
             &gc,
-            ReturnStatementBuilder::build_template(
+            builder::ReturnStatement::build_template(
                 &gc,
-                ReturnStatementTemplate {
+                template::ReturnStatement {
                     metadata: Default::default(),
-                    argument: Some(NumericLiteralBuilder::build_template(
+                    argument: Some(builder::NumericLiteral::build_template(
                         &gc,
-                        NumericLiteralTemplate {
+                        template::NumericLiteral {
                             metadata: Default::default(),
                             value: 1.0,
                         },
@@ -47,16 +47,16 @@ fn test_valid() {
     assert!(validate_tree_pure(&mut ctx, &return_stmt).is_ok());
 
     let return_stmt = {
-        let gc = GCContext::new(&mut ctx);
-        NodePtr::from_node(
+        let gc = GCLock::new(&mut ctx);
+        NodeRc::from_node(
             &gc,
-            ReturnStatementBuilder::build_template(
+            builder::ReturnStatement::build_template(
                 &gc,
-                ReturnStatementTemplate {
+                template::ReturnStatement {
                     metadata: Default::default(),
-                    argument: Some(ReturnStatementBuilder::build_template(
+                    argument: Some(builder::ReturnStatement::build_template(
                         &gc,
-                        ReturnStatementTemplate {
+                        template::ReturnStatement {
                             metadata: Default::default(),
                             argument: None,
                         },
@@ -72,21 +72,21 @@ fn test_valid() {
 fn test_error() {
     let mut ctx = Context::new();
 
-    let ast: NodePtr = {
-        let gc = GCContext::new(&mut ctx);
-        NodePtr::from_node(
+    let ast: NodeRc = {
+        let gc = GCLock::new(&mut ctx);
+        NodeRc::from_node(
             &gc,
-            BlockStatementBuilder::build_template(
+            builder::BlockStatement::build_template(
                 &gc,
-                BlockStatementTemplate {
+                template::BlockStatement {
                     metadata: Default::default(),
-                    body: vec![ReturnStatementBuilder::build_template(
+                    body: vec![builder::ReturnStatement::build_template(
                         &gc,
-                        ReturnStatementTemplate {
+                        template::ReturnStatement {
                             metadata: Default::default(),
-                            argument: Some(ReturnStatementBuilder::build_template(
+                            argument: Some(builder::ReturnStatement::build_template(
                                 &gc,
-                                ReturnStatementTemplate {
+                                template::ReturnStatement {
                                     metadata: Default::default(),
                                     argument: None,
                                 },
@@ -98,10 +98,10 @@ fn test_error() {
         )
     };
 
-    let bad_ret: NodePtr = {
-        let gc = GCContext::new(&mut ctx);
+    let bad_ret: NodeRc = {
+        let gc = GCLock::new(&mut ctx);
         match ast.node(&gc) {
-            Node::BlockStatement(BlockStatement { body, .. }) => NodePtr::from_node(&gc, body[0]),
+            Node::BlockStatement(BlockStatement { body, .. }) => NodeRc::from_node(&gc, body[0]),
             _ => {
                 unreachable!("bad match");
             }

@@ -161,17 +161,15 @@ export type ESNode =
   | DeclareClass
   | DeclareVariable
   | DeclareFunction
+  | DeclaredPredicate
   | DeclareModule
+  | ObjectTypeInternalSlot
   // JSX
   | JSXNode;
 
 interface BaseFunction extends BaseNode {
   +params: $ReadOnlyArray<Pattern>;
   +async: boolean;
-  // The body is either BlockStatement or Expression because arrow functions
-  // can have a body that's either. FunctionDeclarations and
-  // FunctionExpressions have only BlockStatement bodies.
-  +body: BlockStatement | Expression;
 
   +predicate: null | InferredPredicate;
   +returnType: null | TypeAnnotation;
@@ -209,9 +207,21 @@ export type Statement =
   | DeclareTypeAlias
   | DeclareOpaqueType
   | DeclareInterface
-  | DeclareExportAllDeclaration
-  | DeclareExportDeclaration
-  | DeclareModuleExports;
+  | DeclareModule;
+
+// nodes that can be the direct parent of a statement
+export type StatementParentSingle =
+  | IfStatement
+  | LabeledStatement
+  | WithStatement
+  | WhileStatement
+  | DoWhileStatement
+  | ForStatement
+  | ForInStatement
+  | ForOfStatement;
+// nodes that can be the parent of a statement that store the statements in an array
+export type StatementParentArray = SwitchCase | Program | BlockStatement;
+export type StatementParent = StatementParentSingle | StatementParentArray;
 
 export interface EmptyStatement extends BaseNode {
   +type: 'EmptyStatement';
@@ -220,7 +230,6 @@ export interface EmptyStatement extends BaseNode {
 export interface BlockStatement extends BaseNode {
   +type: 'BlockStatement';
   +body: $ReadOnlyArray<Statement>;
-  +innerComments?: $ReadOnlyArray<Comment>;
 }
 
 export interface ExpressionStatement extends BaseNode {
@@ -311,6 +320,11 @@ export interface ForInStatement extends BaseForXStatement {
   +type: 'ForInStatement';
 }
 
+export interface ForOfStatement extends BaseForXStatement {
+  +type: 'ForOfStatement';
+  +await: boolean;
+}
+
 export interface DebuggerStatement extends BaseNode {
   +type: 'DebuggerStatement';
 }
@@ -340,7 +354,7 @@ export interface VariableDeclarator extends BaseNode {
   +init?: Expression | null;
 }
 
-type Expression =
+export type Expression =
   | ThisExpression
   | ArrayExpression
   | ObjectExpression
@@ -540,16 +554,19 @@ export interface BigIntLiteral extends BaseNode {
 export interface BooleanLiteral extends BaseNode {
   +type: 'Literal';
   +value: boolean;
+  +raw: 'true' | 'false';
 }
 
 export interface NullLiteral extends BaseNode {
   +type: 'Literal';
   +value: null;
+  +raw: 'null';
 }
 
 export interface NumericLiteral extends BaseNode {
   +type: 'Literal';
   +value: number;
+  +raw: string;
 }
 
 export interface RegExpLiteral extends BaseNode {
@@ -565,6 +582,7 @@ export interface RegExpLiteral extends BaseNode {
 export interface StringLiteral extends BaseNode {
   +type: 'Literal';
   +value: string;
+  +raw: string;
 }
 
 export type UnaryOperator =
@@ -618,11 +636,6 @@ export type AssignmentOperator =
   | '&=';
 
 export type UpdateOperator = '++' | '--';
-
-export interface ForOfStatement extends BaseForXStatement {
-  +type: 'ForOfStatement';
-  +await: boolean;
-}
 
 export interface Super extends BaseNode {
   +type: 'Super';
@@ -686,8 +699,7 @@ export interface ArrayPattern extends BaseNode {
 export interface RestElement extends BaseNode {
   +type: 'RestElement';
   +argument: Pattern;
-
-  +typeAnnotation: TypeAnnotation | null;
+  // the Pattern owns the typeAnnotation
 }
 
 export interface AssignmentPattern extends BaseNode {
@@ -744,7 +756,10 @@ export type ModuleDeclaration =
   | ImportDeclaration
   | ExportNamedDeclaration
   | ExportDefaultDeclaration
-  | ExportAllDeclaration;
+  | ExportAllDeclaration
+  | DeclareExportDeclaration
+  | DeclareExportAllDeclaration
+  | DeclareModuleExports;
 
 export type ModuleSpecifier =
   | ImportSpecifier
@@ -815,7 +830,8 @@ export interface ExportAllDeclaration extends BaseNode {
   +type: 'ExportAllDeclaration';
   +source: Literal;
   +exportKind: 'value' | 'type';
-  +exported: Identifier;
+  // uncomment this when hermes stops using ExportNamespaceSpecifier
+  // +exported: Identifier;
 }
 
 export interface AwaitExpression extends BaseNode {
@@ -919,7 +935,6 @@ export interface VoidTypeAnnotation extends BaseNode {
 export interface StringLiteralTypeAnnotation extends BaseNode {
   +type: 'StringLiteralTypeAnnotation';
   +value: string;
-  +raw: string;
 }
 export interface NumberLiteralTypeAnnotation extends BaseNode {
   +type: 'NumberLiteralTypeAnnotation';
@@ -1122,17 +1137,26 @@ export interface EnumDeclaration extends BaseNode {
 }
 
 interface BaseEnumBody extends BaseNode {
-  +explicitType: boolean;
   +hasUnknownMembers: boolean;
 }
+interface BaseInferrableEnumBody extends BaseEnumBody {
+  +explicitType: boolean;
+}
 
-export interface EnumNumberBody extends BaseEnumBody {
+export interface EnumNumberBody extends BaseInferrableEnumBody {
   +type: 'EnumNumberBody';
   // enum number members cannot be defaulted
   +members: $ReadOnlyArray<EnumNumberMember>;
+  +explicitType: boolean;
 }
 
-export interface EnumStringBody extends BaseEnumBody {
+export interface EnumNumberMember extends BaseNode {
+  +type: 'EnumNumberMember';
+  +id: Identifier;
+  +init: NumericLiteral;
+}
+
+export interface EnumStringBody extends BaseInferrableEnumBody {
   +type: 'EnumStringBody';
   +members: $ReadOnlyArray<EnumStringMember | EnumDefaultedMember>;
 }
@@ -1143,8 +1167,9 @@ export interface EnumStringMember extends BaseNode {
   +init: StringLiteral;
 }
 
-export interface EnumBooleanBody extends BaseEnumBody {
+export interface EnumBooleanBody extends BaseInferrableEnumBody {
   +type: 'EnumBooleanBody';
+  // enum boolean members cannot be defaulted
   +members: $ReadOnlyArray<EnumBooleanMember>;
 }
 
@@ -1156,18 +1181,13 @@ export interface EnumBooleanMember extends BaseNode {
 
 export interface EnumSymbolBody extends BaseEnumBody {
   +type: 'EnumSymbolBody';
+  // enum symbol members can only be defaulted
   +members: $ReadOnlyArray<EnumDefaultedMember>;
 }
 
 export interface EnumDefaultedMember extends BaseNode {
   +type: 'EnumDefaultedMember';
   +id: Identifier;
-}
-
-export interface EnumNumberMember extends BaseNode {
-  +type: 'EnumNumberMember';
-  +id: Identifier;
-  +init: NumericLiteral;
 }
 
 /*****************

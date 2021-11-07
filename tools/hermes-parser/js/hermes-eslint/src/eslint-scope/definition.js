@@ -144,7 +144,7 @@ class DefinitionBase {
 }
 
 class CatchClauseDefinition extends DefinitionBase {
-  declare +type: typeof DefinitionType['CatchClause'];
+  declare +type: (typeof DefinitionType)['CatchClause'];
   declare +parent: null;
 
   constructor(idNode: Identifier, catchNode: CatchClause) {
@@ -157,7 +157,7 @@ class CatchClauseDefinition extends DefinitionBase {
 }
 
 class ClassNameDefinition extends DefinitionBase {
-  declare +type: typeof DefinitionType['ClassName'];
+  declare +type: (typeof DefinitionType)['ClassName'];
   declare +parent: null;
 
   constructor(
@@ -173,7 +173,7 @@ class ClassNameDefinition extends DefinitionBase {
 }
 
 class EnumDefinition extends DefinitionBase {
-  declare +type: typeof DefinitionType['Enum'];
+  declare +type: (typeof DefinitionType)['Enum'];
   declare +parent: null;
 
   constructor(idNode: Identifier, enumDeclarationNode: EnumDeclaration) {
@@ -186,7 +186,7 @@ class EnumDefinition extends DefinitionBase {
 }
 
 class FunctionNameDefinition extends DefinitionBase {
-  declare +type: typeof DefinitionType['FunctionName'];
+  declare +type: (typeof DefinitionType)['FunctionName'];
   declare +parent: null;
 
   constructor(
@@ -202,7 +202,7 @@ class FunctionNameDefinition extends DefinitionBase {
 }
 
 class ImplicitGlobalVariableDefinition extends DefinitionBase {
-  declare +type: typeof DefinitionType['ImplicitGlobalVariable'];
+  declare +type: (typeof DefinitionType)['ImplicitGlobalVariable'];
   declare +parent: null;
 
   constructor(idNode: Identifier, node: Node) {
@@ -215,7 +215,7 @@ class ImplicitGlobalVariableDefinition extends DefinitionBase {
 }
 
 class ImportBindingDefinition extends DefinitionBase {
-  declare +type: typeof DefinitionType['ImportBinding'];
+  declare +type: (typeof DefinitionType)['ImportBinding'];
   declare +parent: ImportDeclaration;
 
   constructor(
@@ -236,7 +236,7 @@ class ImportBindingDefinition extends DefinitionBase {
 }
 
 class ParameterDefinition extends DefinitionBase {
-  declare +type: typeof DefinitionType['Parameter'];
+  declare +type: (typeof DefinitionType)['Parameter'];
   declare +parent: null;
 
   /**
@@ -262,7 +262,7 @@ class ParameterDefinition extends DefinitionBase {
 }
 
 class TypeDefinition extends DefinitionBase {
-  declare +type: typeof DefinitionType['Type'];
+  declare +type: (typeof DefinitionType)['Type'];
   declare +parent: null;
 
   constructor(
@@ -284,7 +284,7 @@ class TypeDefinition extends DefinitionBase {
 }
 
 class TypeParameterDefinition extends DefinitionBase {
-  declare +type: typeof DefinitionType['TypeParameter'];
+  declare +type: (typeof DefinitionType)['TypeParameter'];
   declare +parent: null;
 
   constructor(typeParamNode: TypeParameter) {
@@ -310,7 +310,7 @@ class TypeParameterDefinition extends DefinitionBase {
 }
 
 class VariableDefinition extends DefinitionBase {
-  declare +type: typeof DefinitionType['Variable'];
+  declare +type: (typeof DefinitionType)['Variable'];
   declare +parent: DeclareVariable | VariableDeclaration;
 
   constructor(

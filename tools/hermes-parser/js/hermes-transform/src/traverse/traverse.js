@@ -15,7 +15,7 @@ import {NodeEventGenerator} from './NodeEventGenerator';
 import {SafeEmitter} from './SafeEmitter';
 import {SimpleTraverser} from './SimpleTraverser';
 
-export type TraversalContext = $ReadOnly<{
+export type TraversalContext<T = void> = $ReadOnly<{
   /**
    * Gets the variables that were declared by the given node.
    */
@@ -30,14 +30,25 @@ export type TraversalContext = $ReadOnly<{
    * Defaults to the currently traversed node.
    */
   getScope: (node?: ESNode) => Scope,
+
+  ...T,
 }>;
 
-export type Visitor = (context: TraversalContext) => ESQueryNodeSelectors;
+export type Visitor<T = void> = (
+  context: TraversalContext<T>,
+) => ESQueryNodeSelectors;
 
-export function traverse(
+/**
+ * Traverse the AST with additional context members provided by `additionalContext`.
+ * @param ast the ESTree AST to traverse
+ * @param scopeManager the eslint-scope compatible scope manager instance calculated using the ast
+ * @param additionalContext a callback function which returns additional context members to add to the context provided to the visitor
+ */
+export function traverseWithContext<T = void>(
   ast: Program,
   scopeManager: ScopeManager,
-  visitor: Visitor,
+  additionalContext: (TraversalContext<void>) => T,
+  visitor: Visitor<T>,
 ): void {
   const emitter = new SafeEmitter();
   const nodeQueue: Array<{isEntering: boolean, node: ESNode}> = [];
@@ -74,7 +85,7 @@ export function traverse(
     return scopeManager.scopes[0];
   };
 
-  const traversalContext: TraversalContext = Object.freeze({
+  const traversalContextBase: TraversalContext<void> = Object.freeze({
     getDeclaredVariables: (node: ESNode) =>
       scopeManager.getDeclaredVariables(node),
     getBinding: (name: string) => {
@@ -92,6 +103,10 @@ export function traverse(
       return null;
     },
     getScope,
+  });
+  const traversalContext: TraversalContext<T> = Object.freeze({
+    ...traversalContextBase,
+    ...additionalContext(traversalContextBase),
   });
 
   const selectors = visitor(traversalContext);
@@ -119,4 +134,12 @@ export function traverse(
       throw err;
     }
   });
+}
+
+export function traverse(
+  ast: Program,
+  scopeManager: ScopeManager,
+  visitor: Visitor<void>,
+): void {
+  traverseWithContext(ast, scopeManager, () => {}, visitor);
 }

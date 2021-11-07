@@ -13,6 +13,9 @@
     "hermes-eslint": "0.4.8",
     "hermes-estree": "0.4.8"
   },
+  "peerDependencies": {
+    "prettier": "^2.4.1"
+  },
   "files": [
     "dist"
   ]

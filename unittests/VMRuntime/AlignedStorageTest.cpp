@@ -7,7 +7,7 @@
 
 // This test requires files that are only linked in if either NCGen or Hades is
 // used.
-#if defined(HERMESVM_GC_NONCONTIG_GENERATIONAL) || defined(HERMESVM_GC_HADES)
+#if defined(HERMESVM_GC_HADES)
 
 #include "gtest/gtest.h"
 
@@ -100,11 +100,9 @@ TEST_F(AlignedStorageTest, Offset) {
 
 TEST_F(AlignedStorageTest, AdviseUnused) {
 // TODO(T40416012) Re-enable this test on Windows when vm_unused is fixed.
-// TODO(T88109145) Re-enable this test on GenGC when it's no longer flaky.
 // Skip this test in Windows because vm_unused has a no-op implementation. Skip
 // it when huge pages are on because we do not return memory to the OS.
-#if !defined(_WINDOWS) && !defined(HERMESVM_ALLOW_HUGE_PAGES) && \
-    !defined(HERMESVM_GC_NONCONTIG_GENERATIONAL)
+#if !defined(_WINDOWS) && !defined(HERMESVM_ALLOW_HUGE_PAGES)
   const size_t PG_SIZE = oscompat::page_size();
 
   AlignedStorage storage{

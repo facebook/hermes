@@ -162,10 +162,6 @@ class PatternVisitor extends Visitor {
     this.restElements.push(pattern);
     this.visit(pattern.argument);
     this.restElements.pop();
-
-    if (pattern.typeAnnotation != null) {
-      this.extraNodesToVisit.push(pattern.typeAnnotation);
-    }
   }
 
   MemberExpression(node: MemberExpression) {

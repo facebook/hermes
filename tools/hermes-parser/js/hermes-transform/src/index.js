@@ -11,3 +11,4 @@
 'use strict';
 
 export {traverse} from './traverse/traverse';
+export {transform} from './transform/transform';

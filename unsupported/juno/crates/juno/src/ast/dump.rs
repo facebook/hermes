@@ -6,9 +6,9 @@
  */
 
 use super::{
-    AssignmentExpressionOperator, BinaryExpressionOperator, Context, ExportKind, GCContext,
-    ImportKind, LogicalExpressionOperator, MethodDefinitionKind, Node, NodeLabel, NodeList,
-    NodePtr, NodeString, PropertyKind, UnaryExpressionOperator, UpdateExpressionOperator,
+    AssignmentExpressionOperator, BinaryExpressionOperator, Context, ExportKind, GCLock,
+    ImportKind, LogicalExpressionOperator, MethodDefinitionKind, Node, NodeLabel, NodeList, NodeRc,
+    NodeString, PropertyKind, UnaryExpressionOperator, UpdateExpressionOperator,
     VariableDeclarationKind,
 };
 use std::io::{self, Write};
@@ -31,7 +31,7 @@ macro_rules! gen_dumper {
         $(,)?
     }) => {
         fn dump_node<'gc, W: Write>(
-            ctx: &'gc GCContext,
+            ctx: &'gc GCLock,
             node: &'gc Node<'gc>,
             emitter: &mut JSONEmitter<W>,
         ) {
@@ -57,95 +57,95 @@ macro_rules! gen_dumper {
 nodekind_defs! { gen_dumper }
 
 trait DumpChild<'gc> {
-    fn dump<W: Write>(&self, ctx: &'gc GCContext, emitter: &mut JSONEmitter<W>);
+    fn dump<W: Write>(&self, ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>);
 }
 
 impl<'gc> DumpChild<'gc> for f64 {
-    fn dump<W: Write>(&self, _ctx: &'gc GCContext, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>) {
         emitter.emit_number(*self);
     }
 }
 
 impl<'gc> DumpChild<'gc> for bool {
-    fn dump<W: Write>(&self, _ctx: &'gc GCContext, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>) {
         emitter.emit_bool(*self);
     }
 }
 
 impl<'gc> DumpChild<'gc> for NodeLabel {
-    fn dump<W: Write>(&self, ctx: &'gc GCContext, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(ctx.str(*self));
     }
 }
 
 impl<'gc> DumpChild<'gc> for UnaryExpressionOperator {
-    fn dump<W: Write>(&self, _ctx: &'gc GCContext, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(self.as_str());
     }
 }
 
 impl<'gc> DumpChild<'gc> for BinaryExpressionOperator {
-    fn dump<W: Write>(&self, _ctx: &'gc GCContext, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(self.as_str());
     }
 }
 
 impl<'gc> DumpChild<'gc> for LogicalExpressionOperator {
-    fn dump<W: Write>(&self, _ctx: &'gc GCContext, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(self.as_str());
     }
 }
 
 impl<'gc> DumpChild<'gc> for UpdateExpressionOperator {
-    fn dump<W: Write>(&self, _ctx: &'gc GCContext, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(self.as_str());
     }
 }
 
 impl<'gc> DumpChild<'gc> for AssignmentExpressionOperator {
-    fn dump<W: Write>(&self, _ctx: &'gc GCContext, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(self.as_str());
     }
 }
 
 impl<'gc> DumpChild<'gc> for VariableDeclarationKind {
-    fn dump<W: Write>(&self, _ctx: &'gc GCContext, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(self.as_str());
     }
 }
 
 impl<'gc> DumpChild<'gc> for PropertyKind {
-    fn dump<W: Write>(&self, _ctx: &'gc GCContext, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(self.as_str());
     }
 }
 
 impl<'gc> DumpChild<'gc> for MethodDefinitionKind {
-    fn dump<W: Write>(&self, _ctx: &'gc GCContext, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(self.as_str());
     }
 }
 
 impl<'gc> DumpChild<'gc> for ImportKind {
-    fn dump<W: Write>(&self, _ctx: &'gc GCContext, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(self.as_str());
     }
 }
 
 impl<'gc> DumpChild<'gc> for ExportKind {
-    fn dump<W: Write>(&self, _ctx: &'gc GCContext, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string(self.as_str());
     }
 }
 
 impl<'gc> DumpChild<'gc> for NodeString {
-    fn dump<W: Write>(&self, _ctx: &'gc GCContext, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, _ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>) {
         emitter.emit_string_literal(&self.str);
     }
 }
 
 impl<'gc, T: DumpChild<'gc>> DumpChild<'gc> for Option<T> {
-    fn dump<W: Write>(&self, ctx: &'gc GCContext, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>) {
         match self {
             None => emitter.emit_null(),
             Some(t) => t.dump(ctx, emitter),
@@ -154,13 +154,13 @@ impl<'gc, T: DumpChild<'gc>> DumpChild<'gc> for Option<T> {
 }
 
 impl<'gc> DumpChild<'gc> for &'gc Node<'gc> {
-    fn dump<W: Write>(&self, ctx: &'gc GCContext, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>) {
         dump_node(ctx, self, emitter);
     }
 }
 
 impl<'gc> DumpChild<'gc> for NodeList<'gc> {
-    fn dump<W: Write>(&self, ctx: &'gc GCContext, emitter: &mut JSONEmitter<W>) {
+    fn dump<W: Write>(&self, ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>) {
         emitter.open_array();
         for &elem in self {
             dump_node(ctx, elem, emitter);
@@ -172,10 +172,10 @@ impl<'gc> DumpChild<'gc> for NodeList<'gc> {
 pub fn dump_json<W: Write>(
     writer: W,
     ctx: &mut Context,
-    root: &NodePtr,
+    root: &NodeRc,
     pretty: Pretty,
 ) -> io::Result<()> {
-    let gc = GCContext::new(ctx);
+    let gc = GCLock::new(ctx);
     let mut emitter = JSONEmitter::new(writer, pretty);
     dump_node(&gc, root.node(&gc), &mut emitter);
     emitter.end()

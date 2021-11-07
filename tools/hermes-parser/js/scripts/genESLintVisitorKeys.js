@@ -14,7 +14,7 @@ import {
   HermesESTreeJSON,
   formatAndWriteDistArtifact,
   LITERAL_TYPES,
-} from './scriptUtils';
+} from './utils/scriptUtils';
 
 const ALLOWED_ARG_TYPES = new Set(['NodePtr', 'NodeList']);
 

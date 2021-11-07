@@ -14,15 +14,14 @@ import {
   HermesESTreeJSON,
   formatAndWriteDistArtifact,
   LITERAL_TYPES,
-} from './scriptUtils';
-import tempCustomASTDefs from '../hermes-parser/src/types/definitions/tempCustomASTDefs';
+} from './utils/scriptUtils';
+import tempCustomASTDefs from './utils/tempCustomASTDefs';
 
 const ALLOWED_ARG_TYPES = new Set(['NodePtr', 'NodeList']);
 
-// $FlowExpectedError[incompatible-type]
-const visitorKeys: {[string]: {[string]: 'Node' | 'NodeList'}} = Object.create(
-  null,
-);
+const visitorKeys: {[string]: {[string]: 'Node' | 'NodeList'}} =
+  // $FlowExpectedError[incompatible-type]
+  Object.create(null);
 for (const node of HermesESTreeJSON) {
   const nodeVisitorKeys = {};
   for (const arg of node.arguments) {
@@ -58,5 +57,5 @@ formatAndWriteDistArtifact({
   code: visitorKeysFileContents,
   package: 'hermes-parser',
   filename: 'visitor-keys.js',
-  subdirSegments: ['types', 'generated'],
+  subdirSegments: ['generated'],
 });

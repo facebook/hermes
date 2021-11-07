@@ -14,7 +14,7 @@ import {
   HermesESTreeJSON,
   formatAndWriteDistArtifact,
   LITERAL_TYPES,
-} from './scriptUtils';
+} from './utils/scriptUtils';
 
 const imports: Array<string> = ['ESNode'];
 const enterSelectors: Array<string> = [];

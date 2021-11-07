@@ -10,7 +10,7 @@ use juno::gen_js;
 use juno::hparser;
 use juno::sourcemap::merge_sourcemaps;
 
-fn do_gen<'ast>(ctx: &mut Context<'ast>, node: &NodePtr, pretty: gen_js::Pretty) -> String {
+fn do_gen<'ast>(ctx: &mut Context<'ast>, node: &NodeRc, pretty: gen_js::Pretty) -> String {
     use juno::gen_js::*;
     let mut out: Vec<u8> = vec![];
     generate(&mut out, ctx, node, pretty).unwrap();
@@ -77,12 +77,12 @@ fn test_roundtrip_jsx(src1: &str) {
 fn test_literals() {
     let mut ctx = Context::new();
     let string = {
-        let gc = GCContext::new(&mut ctx);
-        NodePtr::from_node(
+        let gc = GCLock::new(&mut ctx);
+        NodeRc::from_node(
             &gc,
-            StringLiteralBuilder::build_template(
+            builder::StringLiteral::build_template(
                 &gc,
-                StringLiteralTemplate {
+                template::StringLiteral {
                     metadata: Default::default(),
                     value: juno::ast::NodeString {
                         str: vec!['A' as u16, 0x1234u16, '\t' as u16],
@@ -100,6 +100,7 @@ fn test_literals() {
     test_roundtrip("\"abc\"");
     test_roundtrip(r#" "\ud800" "#);
     test_roundtrip(r#" "\ud83d\udcd5" "#);
+    test_roundtrip(r#" "\u060b" "#);
     test_roundtrip("true");
     test_roundtrip("false");
     test_roundtrip("null");
@@ -200,6 +201,16 @@ fn test_calls() {
     test_roundtrip("f?.(1, 2)?.(3)(5);");
     test_roundtrip("new f();");
     test_roundtrip("new f(1);");
+    test_roundtrip("new(a.b);");
+    test_roundtrip("new(a.b());");
+    test_roundtrip("new(a.b())();");
+    test_roundtrip("new(a.b())(c);");
+    test_roundtrip("new(a?.b())(c);");
+    test_roundtrip("new(1 + 2);");
+    test_roundtrip("new(fn(foo)[bar])()");
+    test_roundtrip("new(fn(foo)[bar])(c)");
+    test_roundtrip("new(fn(foo).bar)()");
+    test_roundtrip("new(fn(foo).bar)(c)");
     test_roundtrip("import('foo')");
 }
 
@@ -208,6 +219,7 @@ fn test_statements() {
     test_roundtrip("while (1) {}");
     test_roundtrip("while (1) { fn(); }");
     test_roundtrip("while (1) fn();");
+    test_roundtrip("while (1) fn()");
     test_roundtrip("for (;;) { fn(); }");
     test_roundtrip("for (;;) fn();");
     test_roundtrip("for (x;;) { fn(); }");
@@ -266,6 +278,12 @@ fn test_statements() {
     test_roundtrip("if (x) {fn();}");
     test_roundtrip("if (x) {fn();} else {fn();}");
     test_roundtrip("if (x) fn(); else fn();");
+    test_roundtrip(
+        "if (x)
+          try { } catch (e) { }
+        else
+          fn();",
+    );
 }
 
 #[test]
@@ -318,6 +336,10 @@ fn test_assignment() {
     test_roundtrip("x &&= 1");
     test_roundtrip("x ??= 1");
     test_roundtrip("foo()[1] = 1");
+    test_roundtrip("a = b && c");
+    test_roundtrip("(a = b) && c");
+    test_roundtrip("a && b = c");
+    test_roundtrip("a && (b = c)");
 }
 
 #[test]
@@ -364,6 +386,11 @@ fn test_members() {
     test_roundtrip("(a?.b?.c?.())(d)");
     test_roundtrip("(a?.b?.c?.())?.(d)");
     test_roundtrip("class C { constructor() { new.target; } }");
+    test_roundtrip("50..toString()");
+    test_roundtrip("1.5.toString()");
+    test_roundtrip("1e100.toString()");
+    test_roundtrip("-1e100.toString()");
+    test_roundtrip("0x10293.toString()");
 }
 
 #[test]
@@ -442,6 +469,12 @@ fn test_types() {
 }
 
 #[test]
+fn test_typecast() {
+    test_roundtrip_flow("async function foo() { return (x: any); }");
+    test_roundtrip_flow("var x = (y: number | number => string)");
+}
+
+#[test]
 fn test_jsx() {
     test_roundtrip_jsx("<foo />");
     test_roundtrip_jsx("<foo></foo>");
@@ -465,7 +498,7 @@ fn test_jsx() {
 fn test_sourcemap() {
     use juno::gen_js::*;
     let mut ctx = Context::new();
-    let ast1: NodePtr = hparser::parse(&mut ctx, "function foo() { return 1 }").unwrap();
+    let ast1: NodeRc = hparser::parse(&mut ctx, "function foo() { return 1 }").unwrap();
     let mut out: Vec<u8> = vec![];
     let sourcemap = generate(&mut out, &mut ctx, &ast1, Pretty::Yes).unwrap();
     let string = String::from_utf8(out).expect("Invalid UTF-8 output in test");

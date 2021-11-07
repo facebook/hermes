@@ -1460,9 +1460,10 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   llvh::SmallSet<uint32_t, 8> nonConfigurable;
   MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   // 16. For each element key of targetKeys, do
-  auto marker2 = runtime->getTopGCScope()->createMarker();
+  GCScopeMarkerRAII marker{runtime};
   for (uint32_t i = 0, len = JSArray::getLength(*targetKeys, runtime); i < len;
        ++i) {
+    marker.flush();
     //   a. Let desc be ? target.[[GetOwnProperty]](key).
     ComputedPropertyDescriptor desc;
     CallResult<bool> descRes = JSObject::getOwnComputedDescriptor(
@@ -1481,7 +1482,6 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
     if (*descRes && !desc.flags.configurable) {
       nonConfigurable.insert(i);
     }
-    runtime->getTopGCScope()->flushToMarker(marker2);
   }
   // 17. If extensibleTarget is true and targetNonconfigurableKeys is empty,
   // then

@@ -11,7 +11,7 @@ import java.util.HashSet;
 import java.util.Set;
 import org.junit.Test;
 
-// Run "./gradlew :intltest:prepareTests" from the root to download and copy the test files to the
+// Run "./gradlew :intltest:prepareTests" from the root to copy the test files to the
 // APK assets.
 public class HermesIntlCollatorTest extends HermesIntlTest262Base {
 

@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
@@ -16,7 +16,6 @@ import type {ParserOptions} from './ParserOptions';
 import * as HermesParser from './HermesParser';
 import HermesToBabelAdapter from './HermesToBabelAdapter';
 import HermesToESTreeAdapter from './HermesToESTreeAdapter';
-import {transformFromAstSync} from './HermesTransformer';
 
 const DEFAULTS = {
   flow: 'detect',
@@ -65,7 +64,9 @@ declare function parse(
 ): BabelProgram;
 declare function parse(
   code: string,
-  opts?: {...ParserOptions, babel?: false},
+  opts?:
+    | {...ParserOptions, babel?: false | void}
+    | {...ParserOptions, babel: false},
 ): ESTreeProgram;
 
 export function parse(
@@ -79,5 +80,4 @@ export function parse(
   return adapter.transform(ast);
 }
 
-export {transformFromAstSync} from './HermesTransformer';
-export * as types from './types';
+export type {ParserOptions} from './ParserOptions';

@@ -62,7 +62,7 @@ impl<'parser> ParsedJS<'parser> {
     /// Create and return an external representation of the AST, or None if there were parse errors.
     pub fn to_ast<'gc, 'ast: 'gc>(
         &'parser self,
-        ctx: &'gc ast::GCContext<'ast, '_>,
+        ctx: &'gc ast::GCLock<'ast, '_>,
         file_id: SourceId,
     ) -> Option<&'gc ast::Node<'gc>> {
         let mut cvt: Converter<'parser> = Converter::new(&self.parser, file_id);
@@ -76,7 +76,7 @@ impl<'parser> ParsedJS<'parser> {
 
 fn convert_ast<'parser, 'gc, 'ast: 'gc>(
     cvt: &mut Converter<'parser>,
-    ctx: &'gc ast::GCContext<'ast, '_>,
+    ctx: &'gc ast::GCLock<'ast, '_>,
     n: NodePtr,
 ) -> &'gc ast::Node<'gc> {
     unsafe { cvt_node_ptr(cvt, ctx, n) }
@@ -102,15 +102,15 @@ pub fn parse_with_flags(
     flags: ParserFlags,
     source: &str,
     ctx: &mut ast::Context,
-) -> Result<ast::NodePtr, ParseError> {
+) -> Result<ast::NodeRc, ParseError> {
     let file_id = ctx
         .sm_mut()
         .add_source("<input>", NullTerminatedBuf::from_str_check(source));
     let buf = ctx.sm().source_buffer_rc(file_id);
     let parsed = ParsedJS::parse(flags, &buf);
-    let gc = ast::GCContext::new(ctx);
+    let gc = ast::GCLock::new(ctx);
     if let Some(ast) = parsed.to_ast(&gc, file_id) {
-        Ok(ast::NodePtr::from_node(&gc, ast))
+        Ok(ast::NodeRc::from_node(&gc, ast))
     } else {
         let (loc, msg) = parsed.first_error().unwrap();
         Err(ParseError { loc, msg })
@@ -120,7 +120,7 @@ pub fn parse_with_flags(
 /// This is a simple function that is intended to be used mostly for testing.
 /// It automatically imports the source string into the source manager.
 /// When there are errors, it returns only the first error.
-pub fn parse(ctx: &mut ast::Context, source: &str) -> Result<ast::NodePtr, ParseError> {
+pub fn parse(ctx: &mut ast::Context, source: &str) -> Result<ast::NodeRc, ParseError> {
     parse_with_flags(Default::default(), source, ctx)
 }
 

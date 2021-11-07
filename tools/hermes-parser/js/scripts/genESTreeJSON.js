@@ -10,7 +10,7 @@
 
 'use strict';
 
-import type {ESTreeJSON} from './scriptUtils';
+import type {ESTreeJSON} from './utils/scriptUtils';
 
 import {execSync} from 'child_process';
 import fs from 'fs';
