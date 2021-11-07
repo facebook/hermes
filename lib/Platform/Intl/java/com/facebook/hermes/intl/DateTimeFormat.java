@@ -19,7 +19,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
-import java.util.regex.Pattern;
 
 /**
  * This class represents the Java part of the Android Intl.DateTimeFormat implementation. The
@@ -140,13 +139,27 @@ public class DateTimeFormat {
     return options;
   }
 
-  public String normalizeTimeZone(final String timeZone) throws JSRangeErrorException {
+  public String normalizeTimeZoneName(String timeZoneName) {
+    StringBuilder normalized = new StringBuilder(timeZoneName.length());
+    int offset = 'a' - 'A';
+    for (int idx = 0; idx < timeZoneName.length(); idx++) {
+      char c = timeZoneName.charAt(idx);
+      if (c >= 'A' && c <= 'Z') {
+        normalized.append((char) (c + offset));
+      } else {
+        normalized.append(c);
+      }
+    }
+    return normalized.toString();
+  }
+
+  public String normalizeTimeZone(String timeZone) throws JSRangeErrorException {
     for (String id : TimeZone.getAvailableIDs()){
-      if(id.compareToIgnoreCase(timeZone) == 0){
+      if(normalizeTimeZoneName(id).equals(normalizeTimeZoneName(timeZone))){
         return id;
       }
     }
-    throw new JSRangeErrorException(timeZone + " is an invalid timeZone");
+    throw new JSRangeErrorException("Invalid timezone name!");
   }
 
   private Object DefaultTimeZone() throws JSRangeErrorException {
@@ -255,9 +268,6 @@ public class DateTimeFormat {
     if (JSObjects.isUndefined(timeZone)) {
       timeZone = DefaultTimeZone();
     } else {
-      if (!isValidTimeZoneName(timeZone.toString())) {
-        throw new JSRangeErrorException("Invalid timezone name!");
-      }
       timeZone = normalizeTimeZone(timeZone.toString());
     }
     mTimeZone = timeZone;
@@ -388,10 +398,6 @@ public class DateTimeFormat {
 
       mHourCycle = hc;
     }
-  }
-
-  private boolean isValidTimeZoneName(String timeZone) {
-    return Pattern.compile("^[\\x00-\\x7F]+[a-zA-Z]+$").matcher(timeZone).find();
   }
 
   @DoNotStrip
