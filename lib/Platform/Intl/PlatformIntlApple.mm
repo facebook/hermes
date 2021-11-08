@@ -56,7 +56,7 @@ llvh::Optional<std::u16string> bestAvailableLocale(
 
     // ...If that character does not occur, return undefined.
     if (pos == std::string::npos) {
-      return u"und";
+      return llvh::None;
     }
 
     // c. If pos ≥ 2 and the character "-" occurs at index pos-2 of candidate,
@@ -85,11 +85,11 @@ std::u16string toNoUnicodeExtensionsLocale(const std::u16string &locale) {
   std::u16string result;
   size_t size = subtags.size();
   for (size_t s = 0; s < size;) {
-    s++;
     if (s > 0) {
       result.append(u"-");
     }
     result.append(subtags[s]);
+    s++;
     // If next tag is a private marker and there are remaining tags
     if (subtags[s] == u"u" && s < size - 1)
       // Skip those tags until you reach end or another singleton subtag
