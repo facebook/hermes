@@ -14,19 +14,19 @@ public class HermesIntlStringPrototypeTest extends HermesIntlTest262Base {
 
   @Test
   public void testIntlStringToLocaleLowerCase() throws IOException {
-    String basePath = "test262/test/intl402/String/prototype/toLocaleLowerCase";
-    runTests(basePath);
+    runTests("test262/test/intl402/String/prototype/toLocaleLowerCase");
+    runTests("test262/test/built-ins/String/prototype/toLocaleLowerCase");
   }
 
   @Test
   public void testIntlStringToLocaleUpperCase() throws IOException {
-    String basePath = "test262/test/intl402/String/prototype/toLocaleUpperCase";
-    runTests(basePath);
+    runTests("test262/test/intl402/String/prototype/toLocaleUpperCase");
+    runTests("test262/test/built-ins/String/prototype/toLocaleUpperCase");
   }
 
   @Test
   public void testIntlStringLocaleCompare() throws IOException {
-    String basePath = "test262/test/intl402/String/prototype/localeCompare";
-    runTests(basePath);
+    runTests("test262/test/intl402/String/prototype/localeCompare");
+    runTests("test262/test/built-ins/String/prototype/localeCompare");
   }
 }

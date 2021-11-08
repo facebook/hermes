@@ -33,5 +33,6 @@ public class HermesIntlNumberPrototypeTest extends HermesIntlTest262Base {
                 ));
 
     runTests(basePath, skipList);
+    runTests("test262/test/built-ins/Number/prototype/toLocaleString");
   }
 }
