@@ -20,19 +20,19 @@ public class HermesIntlDatePrototypeTest extends HermesIntlTest262Base {
 
   @Test
   public void testIntlDatePrototypeToLocaleString() throws IOException {
-    String basePath = "test262/test/intl402/Date/prototype/toLocaleString";
-    runTests(basePath);
+    runTests("test262/test/intl402/Date/prototype/toLocaleString");
+    runTests("test262/test/built-ins/Date/prototype/toLocaleString");
   }
 
   @Test
   public void testIntlDatePrototypeToLocaleDateString() throws IOException {
-    String basePath = "test262/test/intl402/Date/prototype/toLocaleDateString";
-    runTests(basePath);
+    runTests("test262/test/intl402/Date/prototype/toLocaleDateString");
+    runTests("test262/test/built-ins/Date/prototype/toLocaleDateString");
   }
 
   @Test
   public void testIntlDatePrototypeToLocaleTimeString() throws IOException {
-    String basePath = "test262/test/intl402/Date/prototype/toLocaleTimeString";
-    runTests(basePath);
+    runTests("test262/test/intl402/Date/prototype/toLocaleTimeString");
+    runTests("test262/test/built-ins/Date/prototype/toLocaleTimeString");
   }
 }
