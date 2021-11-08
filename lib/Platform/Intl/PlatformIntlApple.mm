@@ -110,7 +110,7 @@ LocaleMatch lookupMatcher(
   // 1. Let result be a new Record.
   LocaleMatch result;
   // 2. For each element locale of requestedLocales, do
-  for (const std::u16string locale : requestedLocales) {
+  for (const std::u16string &locale : requestedLocales) {
     // a. Let noExtensionsLocale be the String value that is locale with
     // any Unicode locale extension sequences removed.
     std::u16string noExtensionsLocale = toNoUnicodeExtensionsLocale(locale);
