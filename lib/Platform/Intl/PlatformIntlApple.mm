@@ -40,7 +40,7 @@ bool isSubtagSeparator(char16_t c) {
   return c == '-';
 }
 bool isCharType(std::u16string str, int start, int end, int min, int max, bool(*charType)(char16_t)) {
-  if (end >= str.length()) {
+  if ((unsigned)end >= str.length()) {
     return false;
   }
   
@@ -127,7 +127,7 @@ struct ParsedLocaleIdentifier::Impl {
     return {};
   }
 };
-class LanguageTagParser : public vm::DecoratedObject::Decoration {
+class LanguageTagParser {
  public:
   LanguageTagParser(std::u16string localeId);
   ~LanguageTagParser();
@@ -144,18 +144,22 @@ class LanguageTagParser : public vm::DecoratedObject::Decoration {
   std::unique_ptr<Impl> impl_;
 };
 struct LanguageTagParser::Impl {
+  Impl(std::u16string localeId)
+    : mLocaleId(localeId){};
+  ~Impl();
+  
   std::u16string mLocaleId;
   size_t mSubtagStart;
   size_t mSubtagEnd;
 };
 LanguageTagParser::LanguageTagParser(std::u16string localeId) : impl_(std::make_unique<Impl>()) {
-  mLocaleId = localeId;
-  mSubtagStart = 0;
-  mSubtagEnd = -1;
+  impl_->mLocaleId = localeId;
+  impl_->mSubtagStart = 0;
+  impl_->mSubtagEnd = -1;
 }
-LanguageTagParser::~LanguageTagParser();
-bool LanguageTagParser::hasMoreSubtags() {
-  return mLocaleId.length();
+LanguageTagParser::~LanguageTagParser() = default;
+bool LanguageTagParser::hasMoreSubtags(){
+  return impl_->mLocaleId.length();
 }
 
 bool LanguageTagParser::nextSubtag() {
@@ -163,33 +167,33 @@ bool LanguageTagParser::nextSubtag() {
     return false; // throw error?
   }
   
-  auto length = mLocaleId.length();
+  auto length = impl_->mLocaleId.length();
   
-  if (mSubtagEnd >= mSubtagStart) {
-    if (!isSubtagSeparator(mLocaleId[mSubtagEnd+1])) {
+  if (impl_->mSubtagEnd >= impl_->mSubtagStart) {
+    if (!isSubtagSeparator(impl_->mLocaleId[impl_->mSubtagEnd+1])) {
       return false;
     }
-    if (mSubtagEnd + 2 == length) {
+    if (impl_->mSubtagEnd + 2 == length) {
       return false;
     }
-    mSubtagStart = mSubtagEnd + 2;
+    impl_->mSubtagStart = impl_->mSubtagEnd + 2;
   }
   
-  for (mSubtagEnd = mSubtagStart; mSubtagEnd < length && !isSubtagSeparator(mLocaleId[mSubtagEnd]); mSubtagEnd++)
+  for (impl_->mSubtagEnd = impl_->mSubtagStart; impl_->mSubtagEnd < length && !isSubtagSeparator(impl_->mLocaleId[impl_->mSubtagEnd]); impl_->mSubtagEnd++)
     ;
   
-  if (mSubtagEnd > mSubtagStart) {
-    mSubtagEnd--;
+  if (impl_->mSubtagEnd > impl_->mSubtagStart) {
+    impl_->mSubtagEnd--;
     return true;
   } else {
     return false;
   }
 }
 std::u16string LanguageTagParser::toString() {
-  return localeId;
+  return impl_->mLocaleId;
 }
 std::u16string LanguageTagParser::getCurrentTag() {
-  return localeId.substr(mSubtagStart, mSubtagEnd - mSubtagStart + 1);
+  return impl_->mLocaleId.substr(impl_->mSubtagStart, impl_->mSubtagEnd - impl_->mSubtagStart + 1);
 }
 }
 
