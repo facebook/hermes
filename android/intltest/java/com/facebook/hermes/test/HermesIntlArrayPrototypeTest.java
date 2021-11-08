@@ -15,14 +15,12 @@ import org.junit.Test;
 // APK assets.
 public class HermesIntlArrayPrototypeTest extends HermesIntlTest262Base {
 
-  private static final String LOG_TAG = "HermesIntlArrayPrototypeTest";
-
   @Test
   public void testIntlArrayToLocaleString() throws IOException {
 
     String basePath = "test262/test/intl402/Array/prototype/toLocaleString";
-    Set<String> whilteList = new HashSet<>();
-    Set<String> blackList =
+
+    Set<String> skipList =
         new HashSet<>(
             Arrays.asList(
                 "throws-same-exceptions-as-NumberFormat.js" // Number.prototype.toLocaleString
@@ -34,6 +32,6 @@ public class HermesIntlArrayPrototypeTest extends HermesIntlTest262Base {
                 // TypeError from java code yet.
                 ));
 
-    runTests(basePath, blackList, whilteList);
+    runTests(basePath, skipList);
   }
 }
