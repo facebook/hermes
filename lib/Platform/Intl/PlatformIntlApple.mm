@@ -41,6 +41,28 @@ NSArray<NSString *> *u16StringArrayToNSStringArray(const std::vector<std::u16str
   }
   return result;
 }
+// Implementation of https://tc39.es/ecma402/#sec-bestfitmatcher
+struct LocaleMatchBestFit {
+  std::u16string locale;
+  std::u16string extension;
+};
+LocaleMatchBestFit bestFitMatcher(
+  const std::vector<std::u16string> &requestedLocales,
+  const std::vector<std::u16string> &availableLocales){
+  LocaleMatchBestFit result;
+  for (const std::u16string &locale : requestedLocales) {
+    std::u16string noExtensionLocale = toNoUnicodeExtensionsLocale(locale);
+    std::u16string availableLocale = bestAvailableLocale(availableLocales, noExtensionsLocale);
+    if (availableLocale != u"") {
+      result.locale = std::move(*availableLocale);
+      result.extension = noExtensionLocale.locale.substr(noExtensionsLocale.length(), locale.length());
+      return result;
+    }
+  }
+  result.locale = getDefaultLocale();
+  // 5. Return result.
+  return result;
+}
 }
 
 // Implementation of https://tc39.es/ecma402/#sec-canonicalizelocalelist
@@ -470,6 +492,8 @@ struct DateTimeFormat::Impl {
   std::u16string ca;
   std::u16string nu;
   std::u16string hc;
+  std::u16string locale; // Needed for resolvedOptions
+  std::u16string prop; // Wrong
   
   // For dateTimeFormat in initialize
   std::vector<std::u16string> localeData;
@@ -728,15 +752,17 @@ vm::ExecutionStatus DateTimeFormat::initialize(
         if (prop == u"FractionalSecondDigits") {
         //  i. Let value be ? GetNumberOption(options, "fractionalSecondDigits", 1, 3, undefined).
           auto value = getOptionNumber(options, u"fractionalSecondDigits", 1, 3, undefinedFallback);
+          //  d. Set opt.[[<prop>]] to value.
+              opt.prop = value->getString();
         }
         else {
         //  c. Else,
         //  i. Let value be ? GetOption(options, prop, "string", « the strings given in the Values column of the row », undefined).
         // Not sure if this should be string every time....
           auto value = getOptionString(options, prop, u"string", tableFourProps, undefinedFallback);
+          //  d. Set opt.[[<prop>]] to value.
+              opt.prop = value->getString();
         }
-      //  d. Set opt.[[<prop>]] to value.
-          opt.prop = value->getString();
       }
 //   30. Let dataLocaleData be localeData.[[<dataLocale>]].
 //   31. Let matcher be ? GetOption(options, "formatMatcher", "string", « "basic", "best fit" », "best fit").
@@ -787,6 +813,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
 //  c. If hc is null, then
         if (hc == u"") {
 //  i. Set hc to hcDefault.
+          
         }
 //  d. If hour12 is not undefined, then
 //  i. If hour12 is true, then
@@ -802,8 +829,6 @@ vm::ExecutionStatus DateTimeFormat::initialize(
 //  a. Set hc to "h24".
 //  e. Set dateTimeFormat.[[HourCycle]] to hc.
       }
-//  43. Return dateTimeFormat.
-  return dateTimeFormat;
 }
 
 Options DateTimeFormat::resolvedOptions() noexcept {
