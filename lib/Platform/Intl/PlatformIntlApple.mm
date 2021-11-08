@@ -24,6 +24,122 @@ std::u16string nsStringToU16String(NSString *src) {
   [src getCharacters:(unichar *)&result[0] range:NSMakeRange(0, size)];
   return result;
 }
+std::u16string getDefaultLocale() {
+  // Environment variable used for testing only
+  const char* testLocale = std::getenv("_HERMES_TEST_LOCALE");
+  if (testLocale) {
+    NSString *nsTestLocale = [NSString stringWithUTF8String: testLocale];
+    return nsStringToU16String(nsTestLocale);
+  }
+  NSString *defLocale = [[NSLocale currentLocale] localeIdentifier];
+  return nsStringToU16String(defLocale);
+}
+// Implementer note: This method corresponds roughly to
+// https://tc39.es/ecma402/#sec-bestavailablelocale
+std::u16string bestAvailableLocale(
+    const std::vector<std::u16string> &availableLocales,
+    const std::u16string &locale) {
+  // 1. Let candidate be locale
+  std::u16string candidate = locale;
+
+  // 2. Repeat
+  while (true) {
+    // a. If availableLocales contains an element equal to candidate, return
+    // candidate.
+    if (llvh::find(availableLocales, candidate) != availableLocales.end()) {
+      return candidate;
+    }
+
+    // b. Let pos be the character index of the last occurrence of "-" (U+002D)
+    // within candidate.
+    size_t pos = candidate.rfind(u'-');
+
+    // ...If that character does not occur, return undefined.
+    if (pos == std::string::npos) {
+      return u"und";
+    }
+
+    // c. If pos ≥ 2 and the character "-" occurs at index pos-2 of candidate,
+    // decrease pos by 2.
+    if (pos >= 2 && candidate[pos - 2] == '-') {
+      pos -= 2;
+    }
+    // d. Let candidate be the substring of candidate from position 0,
+    // inclusive, to position pos, exclusive.
+    candidate.resize(pos);
+  }
+}
+
+// Implementer note: For more information review
+// https://402.ecma-international.org/7.0/#sec-unicode-locale-extension-sequences
+std::u16string toNoUnicodeExtensionsLocale(const std::u16string &locale) {
+  std::vector<std::u16string> subtags;
+  auto s = locale.begin(), e = locale.end();
+  while (true) {
+    auto tagEnd = std::find(s, e, u'-');
+    subtags.emplace_back(s, tagEnd);
+    if (tagEnd == e)
+      break;
+    s = tagEnd + 1;
+  }
+  std::u16string result;
+  size_t size = subtags.size();
+  for (size_t s = 0; s < size;) {
+    result.append(subtags[s]);
+    s++;
+    if (s < size) {
+      result.append(u"-");
+    }
+    // If next tag is a private marker and there are remaining tags
+    if (subtags[s] == u"u" && s < size - 1)
+      // Skip those tags until you reach end or another singleton subtag
+      while (s < size && subtags[s].size() > 1)
+        s++;
+  }
+  return result;
+}
+// Implementer note: This method corresponds roughly to
+// https://tc39.es/ecma402/#sec-lookupmatcher
+struct LocaleMatch {
+  std::u16string locale;
+  std::u16string extension;
+};
+LocaleMatch lookupMatcher(
+    std::vector<std::u16string> &requestedLocales,
+    std::vector<std::u16string> &availableLocales) {
+  // 1. Let result be a new Record.
+  LocaleMatch result;
+  // 2. For each element locale of requestedLocales, do
+  for (std::u16string locale : requestedLocales) {
+    // a. Let noExtensionsLocale be the String value that is locale with
+    // any Unicode locale extension sequences removed.
+    std::u16string noExtensionsLocale = toNoUnicodeExtensionsLocale(locale);
+    // b. Let availableLocale be BestAvailableLocale(availableLocales,
+    // noExtensionsLocale).
+    llvh::Optional<std::u16string> availableLocale =
+        bestAvailableLocale(availableLocales, noExtensionsLocale);
+    // c. If availableLocale is not undefined, then
+    if (availableLocale) {
+      // i. Set result.[[locale]] to availableLocale.
+      result.locale = std::move(*availableLocale);
+      // ii. If locale and noExtensionsLocale are not the same String value,
+      if (locale != noExtensionsLocale) {
+        // then
+        // 1. Let extension be the String value consisting of the substring of
+        // the Unicode locale extension sequence within locale.
+        // 2. Set result.[[extension]] to extension.
+        result.extension =
+            result.locale.substr(noExtensionsLocale.length(), locale.length());
+      }
+      // iii. Return result.
+      return result;
+    }
+  }
+  // availableLocale was undefined, so set result.[[locale]] to defLocale.
+  result.locale = getDefaultLocale();
+  // 5. Return result.
+  return result;
+}
 }
 
 // Implementation of https://tc39.es/ecma402/#sec-canonicalizelocalelist
