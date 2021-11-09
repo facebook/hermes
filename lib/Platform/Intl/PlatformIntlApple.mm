@@ -253,6 +253,10 @@ llvh::Optional<std::u16string> localeListToLocaleString(
       getAvailableLocalesVector();
   llvh::Optional<std::u16string> locale =
       bestAvailableLocale(availableLocalesVector, noExtensionsLocale);
+  // 9. If locale is undefined, let locale be "und".
+  if (!locale) {
+    locale = u"und";
+  }
   return locale;
 }
 // Implementer note: This method corresponds roughly to
