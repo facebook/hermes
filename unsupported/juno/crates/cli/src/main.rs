@@ -63,7 +63,8 @@ impl From<Dialect> for hparser::ParserDialect {
 }
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "juno", about = "A JavaScript Compiler", setting = AppSettings::DeriveDisplayOrder)]
+#[structopt(name = "juno", about = "A JavaScript Compiler", setting = AppSettings::DeriveDisplayOrder,
+            set_term_width = 100)]
 struct Opt {
     /// Disable pretty printing.
     #[structopt(long)]
@@ -72,6 +73,14 @@ struct Opt {
     /// Select what to emit.
     #[structopt(flatten)]
     gen: Gen,
+
+    /// Do not perform AST validation.
+    #[structopt(long)]
+    no_validate_ast: bool,
+
+    /// Do not perform semantic analysis.
+    #[structopt(long)]
+    no_sema: bool,
 
     /// Input file to parse.
     #[structopt(parse(from_os_str))]
@@ -109,6 +118,10 @@ struct Opt {
     #[structopt(long, possible_values = &Dialect::variants(),
         case_insensitive = true, default_value="JavaScript")]
     dialect: Dialect,
+
+    /// Enable JSX parsing.
+    #[structopt(long)]
+    jsx: bool,
 
     /// Enable strict mode.
     #[structopt(long)]
@@ -288,6 +301,7 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     let parsed = hparser::ParsedJS::parse(
         hparser::ParserFlags {
             strict_mode: ctx.strict_mode(),
+            enable_jsx: opt.jsx,
             dialect: opt.dialect.into(),
             ..Default::default()
         },
@@ -315,8 +329,7 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     drop(parsed);
     timer.mark("Cvt");
 
-    // TODO throws for flow type nodes
-    if opt.dialect == Dialect::JavaScript {
+    if !opt.no_validate_ast {
         validate_tree(&mut ctx, &ast).with_context(|| input.display().to_string())?;
         timer.mark("Validate AST");
     }
@@ -324,7 +337,7 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     // Fetch and parse the source map before we generate the output.
     let source_map = sm_url.map(load_source_map).transpose()?;
 
-    {
+    if !opt.no_sema {
         let lock = ast::GCLock::new(&mut ctx);
         let sem = sema::resolve_program(&lock, ast.node(&lock));
         println!(
