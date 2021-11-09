@@ -134,6 +134,7 @@ class LanguageTagParser {
     
   // public function declaration
   ParsedLocaleIdentifier parseLocaleId();
+  // tokenizer functions
   std::u16string toString();
   std::u16string getCurrentTag();
   bool hasMoreSubtags();
@@ -142,6 +143,15 @@ class LanguageTagParser {
  private:
   struct Impl;
   std::unique_ptr<Impl> impl_;
+  
+  // private function declaration
+  bool parseUnicodeLocaleId();
+  bool parseUnicodeLanguageId();
+  bool parseExtensionsAndPUExtensions();
+  bool parseUnicodeExtensionAfterPrefix();
+  bool parseTransformedExtensionAfterPrefix();
+  bool parseOtherExtensionAfterPrefix();
+  bool parsePUExtensionAfterPrefix();
 };
 struct LanguageTagParser::Impl {
   Impl(std::u16string localeId)
@@ -153,12 +163,76 @@ struct LanguageTagParser::Impl {
   size_t mSubtagEnd;
 };
 LanguageTagParser::LanguageTagParser(std::u16string localeId) : impl_(std::make_unique<Impl>()) {
-  impl_->mLocaleId = localeId;
+  impl_->mLocaleId = localeId; // tolowercase?
   impl_->mSubtagStart = 0;
   impl_->mSubtagEnd = -1;
 }
 LanguageTagParser::~LanguageTagParser() = default;
-bool LanguageTagParser::hasMoreSubtags(){
+
+bool LanguageTagParser::parseUnicodeLocaleId() {
+  if (!parseUnicodeLanguageId())  {
+    return false;
+  }
+  if (!hasMoreSubtags()) {
+    return false;
+  }
+  if (!parseExtensionsAndPUExtensions()) {
+    return false;
+  }
+  
+  return false;
+}
+
+bool LanguageTagParser::parseUnicodeLanguageId() {
+  ParsedLanguageIdentifier parsedLanguageIdentifier;
+  
+  if (!hasMoreSubtags() || !isUnicodeLanguageSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
+    return false;
+  }
+  
+  parsedLanguageIdentifier.languageSubtag = getCurrentTag();
+  
+  if (!nextSubtag()) {
+    return true;
+  }
+  
+  // handle extensions?
+  
+  if (isUnicodeScriptSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
+    parsedLanguageIdentifier.scriptSubtag = getCurrentTag(); // to title case?
+    if (!nextSubtag()) {
+      return true;
+    }
+  }
+  
+  if (isUnicodeRegionSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
+    parsedLanguageIdentifier.regionSubtag = getCurrentTag(); // to upper case?
+    if (!nextSubtag()) {
+      return true;
+    }
+  }
+  
+  while (true) {
+    // handle extension
+    if (!isUnicodeVariantSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
+      return false;
+    } else {
+      // add variant subtag to list
+    }
+    
+    if (!nextSubtag()) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+bool LanguageTagParser::parseExtensionsAndPUExtensions() {
+  return false;
+}
+
+bool LanguageTagParser::hasMoreSubtags() {
   return impl_->mLocaleId.length();
 }
 
