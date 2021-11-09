@@ -41,6 +41,27 @@ arg_enum! {
     }
 }
 
+arg_enum! {
+    #[derive(Debug, Copy, Clone, PartialEq)]
+    enum Dialect {
+        JavaScript,
+        Flow,
+        FlowUnambiguous,
+        TypeScript
+    }
+}
+
+impl From<Dialect> for hparser::ParserDialect {
+    fn from(d: Dialect) -> Self {
+        match d {
+            Dialect::JavaScript => hparser::ParserDialect::JavaScript,
+            Dialect::Flow => hparser::ParserDialect::Flow,
+            Dialect::FlowUnambiguous => hparser::ParserDialect::FlowUnambiguous,
+            Dialect::TypeScript => hparser::ParserDialect::TypeScript,
+        }
+    }
+}
+
 #[derive(Debug, StructOpt)]
 #[structopt(name = "juno", about = "A JavaScript Compiler", setting = AppSettings::DeriveDisplayOrder)]
 struct Opt {
@@ -79,6 +100,15 @@ struct Opt {
     /// Whether to run optimization passes.
     #[structopt(short = "O")]
     optimize: bool,
+
+    /// Whether to run strip flow types.
+    #[structopt(long)]
+    strip_flow: bool,
+
+    /// How to handle the source map directives.
+    #[structopt(long, possible_values = &Dialect::variants(),
+        case_insensitive = true, default_value="JavaScript")]
+    dialect: Dialect,
 
     /// Enable strict mode.
     #[structopt(long)]
@@ -162,11 +192,18 @@ fn gen_output(
         )
     };
 
-    let final_ast = if opt.optimize {
-        let pm = PassManager::standard();
+    let final_ast = if opt.strip_flow {
+        let pm = PassManager::strip_flow();
         pm.run(ctx, root)
     } else {
         root
+    };
+
+    let final_ast = if opt.optimize {
+        let pm = PassManager::standard();
+        pm.run(ctx, final_ast)
+    } else {
+        final_ast
     };
 
     if opt.gen.ast {
@@ -251,6 +288,7 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     let parsed = hparser::ParsedJS::parse(
         hparser::ParserFlags {
             strict_mode: ctx.strict_mode(),
+            dialect: opt.dialect.into(),
             ..Default::default()
         },
         &buf,
@@ -277,8 +315,11 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     drop(parsed);
     timer.mark("Cvt");
 
-    validate_tree(&mut ctx, &ast).with_context(|| input.display().to_string())?;
-    timer.mark("Validate AST");
+    // TODO throws for flow type nodes
+    if opt.dialect == Dialect::JavaScript {
+        validate_tree(&mut ctx, &ast).with_context(|| input.display().to_string())?;
+        timer.mark("Validate AST");
+    }
 
     // Fetch and parse the source map before we generate the output.
     let source_map = sm_url.map(load_source_map).transpose()?;

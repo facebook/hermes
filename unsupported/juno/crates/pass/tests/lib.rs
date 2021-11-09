@@ -5,6 +5,5 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-pub mod add_negative;
-pub mod reduce_conditional;
-pub mod strip_flow;
+#[macro_use]
+mod strip_flow;

@@ -263,6 +263,7 @@ name = "pass"
 version = "0.1.0"
 dependencies = [
  "juno",
+ "support",
 ]
 
 [[package]]
