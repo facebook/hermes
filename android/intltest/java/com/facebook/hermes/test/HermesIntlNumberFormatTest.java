@@ -15,13 +15,9 @@ import org.junit.Test;
 // APK assets.
 public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
 
-  private static final String LOG_TAG = "HermesIntlNumberFormatTest";
-
   public void testIntlNumberFormat() throws IOException {
 
     String basePath = "test262/test/intl402/NumberFormat";
-
-    Set<String> whiteList = new HashSet<>();
 
     Set<String> deviations =
         new HashSet<>(
@@ -71,43 +67,29 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
               ));
     }
 
-    Set<String> blackList = testIssues;
-    blackList.addAll(deviations);
-    blackList.addAll(icuIssues);
+    Set<String> skipList = testIssues;
+    skipList.addAll(deviations);
+    skipList.addAll(icuIssues);
 
-    runTests(basePath, blackList, whiteList);
+    runTests(basePath, skipList);
   }
 
   @Test
   public void testIntlNumberFormat_prototype() throws IOException {
-
     String basePath = "test262/test/intl402/NumberFormat/prototype";
-
-    Set<String> whiteList = new HashSet<>();
-    Set<String> blackList = new HashSet<>();
-
-    runTests(basePath, blackList, whiteList);
+    runTests(basePath);
   }
 
   @Test
   public void testIntlNumberFormat_supportedLocalesOf() throws IOException {
-
     String basePath = "test262/test/intl402/NumberFormat/supportedLocalesOf";
-
-    Set<String> whiteList = new HashSet<>();
-    Set<String> blackList = new HashSet<>();
-    runTests(basePath, blackList, whiteList);
+    runTests(basePath);
   }
 
   @Test
   public void testIntlNumberFormat_prototype_constructor() throws IOException {
-
     String basePath = "test262/test/intl402/NumberFormat/prototype/constructor";
-
-    Set<String> whiteList = new HashSet<>();
-    Set<String> blackList = new HashSet<>();
-
-    runTests(basePath, blackList, whiteList);
+    runTests(basePath);
   }
 
   @Test
@@ -115,7 +97,6 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
 
     String basePath = "test262/test/intl402/NumberFormat/prototype/toStringTag";
 
-    Set<String> whiteList = new HashSet<>();
     Set<String> deviations =
         new HashSet<>(
             Arrays.asList(
@@ -128,9 +109,9 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
                 // (and Chrome) returns "[object Object]:
                 ));
 
-    Set<String> blackList = deviations;
+    Set<String> skipList = deviations;
 
-    runTests(basePath, blackList, whiteList);
+    runTests(basePath, skipList);
   }
 
   @Test
@@ -138,7 +119,6 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
 
     String basePath = "test262/test/intl402/NumberFormat/prototype/resolvedOptions";
 
-    Set<String> whiteList = new HashSet<>();
     Set<String> deviations =
         new HashSet<>(
             Arrays.asList(
@@ -148,17 +128,15 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
                 // returns "[object Object]:
                 ));
 
-    Set<String> blackList = deviations;
+    Set<String> skipList = deviations;
 
-    runTests(basePath, blackList, whiteList);
+    runTests(basePath, skipList);
   }
 
   @Test
   public void testIntlNumberFormat_prototype_format() throws IOException {
 
     String basePath = "test262/test/intl402/NumberFormat/prototype/format";
-
-    Set<String> whiteList = new HashSet<>();
 
     // Our implementation doesn't support signDisplay as implementing with ICU APIs available in
     // Android before API 30 is very involved and tricky (Requires explicit manipulation of patterns
@@ -257,21 +235,19 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
               ));
     }
 
-    Set<String> blackList = new HashSet<>();
-    blackList.addAll(signDisplayList);
-    blackList.addAll(unitIssues);
-    blackList.addAll(icuIssues);
-    blackList.addAll(pre24Issues);
+    Set<String> skipList = new HashSet<>();
+    skipList.addAll(signDisplayList);
+    skipList.addAll(unitIssues);
+    skipList.addAll(icuIssues);
+    skipList.addAll(pre24Issues);
 
-    runTests(basePath, blackList, whiteList);
+    runTests(basePath, skipList);
   }
 
   @Test
   public void testIntlNumberFormat_prototype_formatToParts() throws IOException {
 
     String basePath = "test262/test/intl402/NumberFormat/prototype/formatToParts";
-
-    Set<String> whiteList = new HashSet<>();
 
     // Our implementation doesn't support signDisplay as implementing with ICU APIs available in
     // Android before API 30 is very involved and tricky (Requires explicit manipulation of patterns
@@ -358,13 +334,13 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
               ));
     }
 
-    Set<String> blackList = new HashSet<>();
+    Set<String> skipList = new HashSet<>();
 
-    blackList.addAll(signDisplayList);
-    blackList.addAll(unitList);
-    blackList.addAll(icuIssues);
-    blackList.addAll(pre24Issues);
+    skipList.addAll(signDisplayList);
+    skipList.addAll(unitList);
+    skipList.addAll(icuIssues);
+    skipList.addAll(pre24Issues);
 
-    runTests(basePath, blackList, whiteList);
+    runTests(basePath, skipList);
   }
 }

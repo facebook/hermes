@@ -35,6 +35,13 @@ impl PassManager {
         }
     }
 
+    /// Pipeline containing a list of standard passes.
+    pub fn strip_flow() -> Self {
+        Self {
+            passes: vec![Box::new(strip_flow::StripFlow::new())],
+        }
+    }
+
     /// Run the pipeline on `node`, consuming it in the process.
     pub fn run(mut self, ctx: &mut Context, node: NodeRc) -> NodeRc {
         let mut result = node;
