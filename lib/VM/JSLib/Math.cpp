@@ -245,43 +245,54 @@ CallResult<HermesValue> mathFround(void *, Runtime *runtime, NativeArgs args) {
       static_cast<double>(static_cast<float>(x)));
 }
 
-// ES6.0 20.2.2.18
+// ES2022 21.3.2.18
 CallResult<HermesValue> mathHypot(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
-  llvh::SmallVector<double, 4> values{};
-  values.reserve(args.getArgCount());
+  // 1. Let coerced be a new empty List.
+  llvh::SmallVector<double, 4> coerced{};
+  coerced.reserve(args.getArgCount());
 
   // Store the max abs(arg), since every argument will be squared anyway.
   // We scale down every argument by max while doing addition and sqrt,
   // and then multiply by max at the end.
   double max = 0;
 
-  // Prepopulate the values vector and check if any values are infinite,
-  // since we are required to return early in that case.
-  // Compute the maximum absolute value as well.
+  bool hasNaN = false, hasInf = false;
   auto marker = gcScope.createMarker();
+  // 2. For each element arg of args, do
   for (const Handle<> arg : args.handles()) {
     gcScope.flushToMarker(marker);
+    // a. Let n be ? ToNumber(arg).
     auto res = toNumber_RJS(runtime, arg);
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     double value = res->getNumber();
-    if (std::isinf(value)) {
-      // Early return if any value is Infinity or -Infinity.
-      // Both should return Infinity.
-      return HermesValue::encodeNumberValue(
-          std::numeric_limits<double>::infinity());
-    }
-    values.push_back(value);
+    hasInf = std::isinf(value) || hasInf;
+    hasNaN = std::isnan(value) || hasNaN;
+    // b. Append n to coerced.
+    coerced.push_back(value);
     max = std::max(std::fabs(value), max);
   }
+  // 3. For each element number of coerced, do
+  //   a. If number is +∞𝔽 or number is -∞𝔽, return +∞𝔽.
+  if (hasInf)
+    return HermesValue::encodeNumberValue(
+        std::numeric_limits<double>::infinity());
+  // 5. For each element number of coerced, do
+  //   a. If number is NaN, return NaN.
+  if (hasNaN)
+    return HermesValue::encodeNaNValue();
 
   assert(!(max < 0) && "max must not be negative (max(abs(value))");
+  // 6. If onlyZero is true, return +0𝔽.
   if (max == 0) {
-    // There were no numbers with absolute value greater than 0, return +0.
     return HermesValue::encodeNumberValue(+0);
   }
+
+  // 7. Return an implementation-approximated Number value representing the
+  // square root of the sum of squares of the mathematical values of the
+  // elements of coerced.
 
   // We use the Kahan summation algorithm, since we are supposed to
   // "take care to avoid the loss of precision from overflows and underflows".
@@ -290,7 +301,7 @@ CallResult<HermesValue> mathHypot(void *, Runtime *runtime, NativeArgs args) {
   // its effects. This normalizes the values to allow more accurate summation.
   double sum = 0;
   double c = 0;
-  for (const double value : values) {
+  for (const double value : coerced) {
     double addend = (value / max) * (value / max);
     // Perform Kahan summation and put the result and compensation in sum and c.
     double y = addend - c;
