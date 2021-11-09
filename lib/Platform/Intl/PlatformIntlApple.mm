@@ -321,18 +321,10 @@ vm::CallResult<std::vector<std::u16string>> supportedLocales(
   if (LLVM_UNLIKELY(matcher == vm::ExecutionStatus::EXCEPTION)) {
     return vm::ExecutionStatus::EXCEPTION;
   }
-  
   std::vector<std::u16string> supportedLocales;
-  // 3. If matcher is "best fit", then
-  if (matcher.getValue() == u"best fit") {
-    // a. Let supportedLocales be BestFitSupportedLocales(availableLocales, requestedLocales).
-    // TODO: Is bestFitSupportedLocales required?
-    supportedLocales = lookupSupportedLocales(availableLocales, requestedLocales);
-  } else { // 4. Else,
+  // Skip 3/4, as don't need to have independant implementations for best fit
     // a. Let supportedLocales be LookupSupportedLocales(availableLocales, requestedLocales).
     supportedLocales = lookupSupportedLocales(availableLocales, requestedLocales);
-  }
-  
   // 5. Return CreateArrayFromList(supportedLocales).
   return supportedLocales;
 }
@@ -616,36 +608,48 @@ struct ResolveLocale {
   std::u16string nu;
   std::u16string hc;
 };
+// https://tc39.es/ecma402/#sec-resolvelocale
 ResolveLocale resolveLocale(
-    vm::CallResult<std::vector<std::u16string>> &requestedLocales,
+    const std::vector<std::u16string> &availableLocales,
+    const std::vector<std::u16string> &requestedLocales,
     const Options &options,
     const std::vector<std::u16string> &relevantExtensionKeys
-//  In line with Java, haven't included availableLocales or LocaleData
+//  In line with Java, haven't included LocaleData
     ){
-//  1. Let matcher be options.[[localeMatcher]].
-    auto matcher = options.find(u"localeMatcher");
-//  2. If matcher is "lookup", then
-      if (matcher->second.getString() == u"lookup") {
-//  a. Let r be LookupMatcher(availableLocales, requestedLocales).
-//  Call function to get availableLocales once merged?
-        auto localeMatchResult = lookupMatcher(availableLocales, requestedLocales);
-      }
-//  3. Else,
-      else {
-//  TODO: Will bestFitMatcher also be needed?
-//  a. Let r be BestFitMatcher(availableLocales, requestedLocales).
-        auto localeMatchResult = bestFitMatcher(availableLocales, requestedLocales);
-      }
+//  Skip 1/2/3, as we don't need to have independant implementations for best fit
+    auto localeMatchResult = lookupMatcher(availableLocales, requestedLocales);
 //  5. Let result be a new Record.
     ResolveLocale result;
-
+      std::u16string value = NULL;
+      std::vector<std::u16string> supportedExtensionAdditionKeys;
 //  9. For each element key of relevantExtensionKeys, do
   for (std::u16string key : relevantExtensionKeys) {
     result.value = u"null";
-   
+    if (localeMatchResult.extension != u"und" ) { // 9.h.
+      if (localeMatchResult.extension.find(key)) { // 9.h.i.
+        std::u16string requestedValue = localeMatchResult.extension.find(key).getString();
+        if (requestedValue == u"und") {
+          value = requestedValue;
+        } else {
+          value = u"true";
+        }
+        supportedExtensionAdditionKeys.push_back(key);
+    }
   }
+    if (options.find(key) != options.end()) { // 9.i.
+      Option optionsValue = new Option(key);
+      if (optionsValue.getString() == u"string") { // Looks wrong
+        if (optionsValue.getString() == u"") {
+          optionsValue = u"true";
+        }
+        if (optionsValue.getString() != u"und" && optionsValue.getString() != value) {
+          supportedExtensionAdditionKeys.erase(key);
+          value = optionsValue.getString();
+        }
+        }
+      }
+    }
 }
-
 // Implementation of
 // https://tc39.es/ecma402/#sec-intl.datetimeformat.supportedlocalesof
 vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
