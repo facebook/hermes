@@ -169,11 +169,13 @@ class LanguageTagParser {
   // private function declaration
   bool parseUnicodeLocaleId();
   bool parseUnicodeLanguageId();
-  bool parseExtensionsAndPUExtensions();
+  bool parseExtensions();
   bool parseUnicodeExtensionAfterPrefix();
   bool parseTransformedExtensionAfterPrefix();
   bool parseOtherExtensionAfterPrefix();
   bool parsePUExtensionAfterPrefix();
+
+  size_t convertToSingletonSetIndex();
 };
 struct LanguageTagParser::Impl {
   Impl(std::u16string localeId)
@@ -183,9 +185,11 @@ struct LanguageTagParser::Impl {
   std::u16string mLocaleId;
   size_t mSubtagStart;
   size_t mSubtagEnd;
+
+  static const size_t numberOfUnicodeSingletons = 36; // [a-b|0-9]
 };
 LanguageTagParser::LanguageTagParser(std::u16string localeId) : impl_(std::make_unique<Impl>()) {
-  impl_->mLocaleId = localeId; // tolowercase?
+  impl_->mLocaleId = localeId.tolower(); // tolowercase?
   impl_->mSubtagStart = 0;
   impl_->mSubtagEnd = -1;
 }
@@ -198,7 +202,7 @@ bool LanguageTagParser::parseUnicodeLocaleId() {
   if (!hasMoreSubtags()) {
     return false;
   }
-  if (!parseExtensionsAndPUExtensions()) {
+  if (!parseExtensions()) {
     return false;
   }
   
@@ -218,7 +222,7 @@ bool LanguageTagParser::parseUnicodeLanguageId() {
     return true;
   }
   
-  // handle extensions?
+  // handle extensions here? is this most common path?
   
   if (isUnicodeScriptSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
     parsedLanguageIdentifier.scriptSubtag = getCurrentTag(); // to title case?
@@ -235,7 +239,6 @@ bool LanguageTagParser::parseUnicodeLanguageId() {
   }
   
   while (true) {
-    // handle extension
     if (!isUnicodeVariantSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
       return false;
     } else {
@@ -250,14 +253,44 @@ bool LanguageTagParser::parseUnicodeLanguageId() {
   return false;
 }
 
-bool LanguageTagParser::parseExtensionsAndPUExtensions() {
+bool LanguageTagParser::parseExtensions() {
+  // if transformed extensions and next subtag is transformed extension
+  // parse transformed extensons
+
+  if (isExtensionSingleton()) {
+    // throw if transformed extensions
+  }
+
+  constexpr std::bitset<numberOfUnicodeSingletons> singletonSet {};
+  while (true) {
+    char16_t singleton = getCurrentTag()[0];
+    if (!isASCIILetterOrDigit(singleton)) {
+      return true;
+    }
+
+    // No duplicate subtags
+    size_t singletonIndex = convertToSingletonSetIndex(singleton);
+    if (singletonSet[singletonIndex]) {
+      return false;
+    }
+    singletonSet[singletonIndex] = true;
+
+    switch ()
+  }
+
   return false;
 }
 
-bool LanguageTagParser::hasMoreSubtags() {
-  return impl_->mLocaleId.length();
+size_t LanguageTagParser::convertToSingletonSetIndex(char16_t c) {
+  // assert is alphanumeric and is lower case
+  if (isASCIIDigit(c)) {
+    return c - '0';
+  } 
+  return c - 'a' + 10;
 }
-
+bool LanguageTagParser::hasMoreSubtags() {
+  return impl_->mLocaleId.length() > 0 && mSubtagEnd < mLocaleId.length() - 1;
+}
 bool LanguageTagParser::nextSubtag() {
   if (!hasMoreSubtags()) {
     return false; // throw error?
