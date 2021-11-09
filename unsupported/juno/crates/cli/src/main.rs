@@ -6,9 +6,10 @@
  */
 
 use anyhow::{self, ensure, Context, Error};
+use command_line::{CommandLine, Hidden, Opt, OptDesc};
 use juno::ast::{self, validate_tree, NodeRc, SourceRange};
 use juno::gen_js;
-use juno::hparser::{self, MagicCommentKind, ParsedJS};
+use juno::hparser::{self, MagicCommentKind, ParsedJS, ParserDialect};
 use juno::sema;
 use juno::sourcemap::merge_sourcemaps;
 use pass::PassManager;
@@ -17,135 +18,265 @@ use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::exit;
-use structopt::{clap::arg_enum, clap::AppSettings, clap::ArgGroup, StructOpt};
+use std::str::FromStr;
 use support::NullTerminatedBuf;
 use support::{fetchurl, Timer};
 use url::{self, Url};
 
-#[derive(StructOpt, Debug)]
-#[structopt(group = ArgGroup::with_name("gen"))]
-struct Gen {
+#[derive(Debug, Copy, Clone, PartialEq)]
+enum Gen {
     /// Dump the AST as JSON.
-    #[structopt(long = "gen-ast", group = "gen")]
-    ast: bool,
+    Ast,
     /// Generate JavaScript source.
-    #[structopt(long = "gen-js", group = "gen")]
-    js: bool,
+    Js,
 }
 
-arg_enum! {
-    #[derive(Debug, Copy, Clone, PartialEq)]
-    enum InputSourceMap {
-        Ignore,
-        Auto,
-    }
+#[derive(Debug, Copy, Clone, PartialEq)]
+enum InputSourceMap {
+    Ignore,
+    Auto,
 }
 
-arg_enum! {
-    #[derive(Debug, Copy, Clone, PartialEq)]
-    enum Dialect {
-        JavaScript,
-        Flow,
-        FlowUnambiguous,
-        TypeScript
-    }
-}
-
-impl From<Dialect> for hparser::ParserDialect {
-    fn from(d: Dialect) -> Self {
-        match d {
-            Dialect::JavaScript => hparser::ParserDialect::JavaScript,
-            Dialect::Flow => hparser::ParserDialect::Flow,
-            Dialect::FlowUnambiguous => hparser::ParserDialect::FlowUnambiguous,
-            Dialect::TypeScript => hparser::ParserDialect::TypeScript,
-        }
-    }
-}
-
-#[derive(Debug, StructOpt)]
-#[structopt(name = "juno", about = "A JavaScript Compiler", setting = AppSettings::DeriveDisplayOrder,
-            set_term_width = 100)]
-struct Opt {
-    /// Disable pretty printing.
-    #[structopt(long)]
-    no_pretty: bool,
+struct Options {
+    /// Enable pretty printing.
+    pretty: Opt<bool>,
 
     /// Select what to emit.
-    #[structopt(flatten)]
-    gen: Gen,
+    gen: Opt<Gen>,
 
-    /// Do not perform AST validation.
-    #[structopt(long)]
-    no_validate_ast: bool,
+    /// Perform AST validation.
+    validate_ast: Opt<bool>,
 
-    /// Do not perform semantic analysis.
-    #[structopt(long)]
-    no_sema: bool,
+    /// Perform semantic analysis.
+    sema: Opt<bool>,
 
     /// Input file to parse.
-    #[structopt(parse(from_os_str))]
-    input_path: PathBuf,
+    input_path: Opt<PathBuf>,
 
     /// Path to output to.
     /// Defaults to `-`, which is `stdout`.
-    #[structopt(long = "out", short = "o", default_value = "-", parse(from_os_str))]
-    output_path: PathBuf,
+    // #[structopt(long = "out", short = "o", default_value = "-", parse(from_os_str))]
+    output_path: Opt<PathBuf>,
 
     /// Whether to output a source map.
     /// The source map will be merged with an input source map if provided.
     /// Can only be used when generating JS.
-    #[structopt(long)]
-    sourcemap: bool,
+    sourcemap: Opt<bool>,
 
     /// Base URL to prepend to relative URLs.
-    #[structopt(long)]
-    base_url: Option<Url>,
+    base_url: Opt<Option<Url>>,
 
     /// How to handle the source map directives.
-    #[structopt(long, possible_values = &InputSourceMap::variants(),
-                case_insensitive = true, default_value="Auto")]
-    input_source_map: InputSourceMap,
+    input_source_map: Opt<InputSourceMap>,
 
     /// Whether to run optimization passes.
-    #[structopt(short = "O")]
-    optimize: bool,
+    optimize: Opt<bool>,
 
     /// Whether to run strip flow types.
-    #[structopt(long)]
-    strip_flow: bool,
+    strip_flow: Opt<bool>,
 
-    /// How to handle the source map directives.
-    #[structopt(long, possible_values = &Dialect::variants(),
-        case_insensitive = true, default_value="JavaScript")]
-    dialect: Dialect,
+    /// Control the recognized JavaScript dialect.
+    dialect: Opt<ParserDialect>,
 
     /// Enable JSX parsing.
-    #[structopt(long)]
-    jsx: bool,
+    jsx: Opt<bool>,
 
     /// Enable strict mode.
-    #[structopt(long)]
-    strict_mode: bool,
+    strict_mode: Opt<bool>,
 
     /// Warn about undefined variables in strict mode functions.
-    #[structopt(long)]
-    warn_undefined: bool,
+    warn_undefined: Opt<bool>,
 
     /// Measure and print times.
-    #[structopt(long = "Xtime")]
-    xtime: bool,
+    xtime: Opt<bool>,
 }
 
-impl Opt {
+impl Options {
+    pub fn new(cl: &mut CommandLine) -> Options {
+        let input_cat = cl.add_category("Input Options", None);
+        let output_cat = cl.add_category("Output Options", None);
+
+        Options {
+            pretty: Opt::new_bool(
+                cl,
+                OptDesc {
+                    long: Some("pretty"),
+                    desc: Some("Enable pretty printing (default: on)."),
+                    init: Some(true),
+                    category: output_cat,
+                    ..Default::default()
+                },
+            ),
+            gen: Opt::new_enum(
+                cl,
+                OptDesc {
+                    desc: Some("Choose generated output:"),
+                    values: Some(&[
+                        ("gen-ast", Gen::Ast, "Dump the AST as JSON."),
+                        ("gen-js", Gen::Js, "Generate JavaScript source."),
+                    ]),
+                    category: output_cat,
+                    ..Default::default()
+                },
+            ),
+            validate_ast: Opt::new_bool(
+                cl,
+                OptDesc {
+                    long: Some("validate-ast"),
+                    desc: Some("Perform AST validation (default: on)."),
+                    init: Some(true),
+                    ..Default::default()
+                },
+            ),
+            sema: Opt::new_bool(
+                cl,
+                OptDesc {
+                    long: Some("sema"),
+                    desc: Some("Perform semantic analysis (default: on)."),
+                    init: Some(true),
+                    ..Default::default()
+                },
+            ),
+            input_path: Opt::<PathBuf>::new(
+                cl,
+                OptDesc {
+                    desc: Some("'input-path'"),
+                    min_count: 1,
+                    ..Default::default()
+                },
+            ),
+            output_path: Opt::<PathBuf>::new(
+                cl,
+                OptDesc {
+                    long: Some("out"),
+                    short: Some("o"),
+                    desc: Some("Path to output to. Defaults to `-`, which is `stdout`"),
+                    init: Some(PathBuf::from_str("-").unwrap()),
+                    value_desc: Some("output path"),
+                    category: output_cat,
+                    ..Default::default()
+                },
+            ),
+            sourcemap: Opt::new_bool(
+                cl,
+                OptDesc {
+                    long: Some("sourcemap"),
+                    desc: Some("Whether to generate a source map."),
+                    category: output_cat,
+                    ..Default::default()
+                },
+            ),
+            base_url: Opt::<Option<Url>>::new_optional(
+                cl,
+                OptDesc {
+                    long: Some("base-url"),
+                    desc: Some("Base URL to prepend to relative URLs."),
+                    value_desc: Some("URL"),
+                    category: input_cat,
+                    ..Default::default()
+                },
+            ),
+            input_source_map: Opt::new_enum(
+                cl,
+                OptDesc {
+                    long: Some("input-source-map"),
+                    desc: Some("How to handle the source map directives (default: auto)."),
+                    values: Some(&[
+                        (
+                            "ignore",
+                            InputSourceMap::Ignore,
+                            "Ignore //# sourceMappingURL directives",
+                        ),
+                        (
+                            "auto",
+                            InputSourceMap::Auto,
+                            "Recognize //# sourceMappingURL directives",
+                        ),
+                    ]),
+                    category: input_cat,
+                    ..Default::default()
+                },
+            ),
+            optimize: Opt::new_flag(
+                cl,
+                OptDesc {
+                    short: Some("O"),
+                    desc: Some("Run optimization passes."),
+                    ..Default::default()
+                },
+            ),
+            strip_flow: Opt::new_bool(
+                cl,
+                OptDesc {
+                    long: Some("strip-flow"),
+                    desc: Some("Strip flow types"),
+                    ..Default::default()
+                },
+            ),
+            dialect: Opt::new_enum(
+                cl,
+                OptDesc {
+                    long: Some("dialect"),
+                    desc: Some("Control the recognized JavaScript dialect (default: js)."),
+                    values: Some(&[
+                        ("js", ParserDialect::JavaScript, "JavaScript"),
+                        ("flow", ParserDialect::Flow, "Flow"),
+                        ("flow-unambiguous", ParserDialect::Flow, "Flow unambiguous"),
+                        ("ts", ParserDialect::Flow, "TypeScript"),
+                    ]),
+                    init: Some(ParserDialect::JavaScript),
+                    category: input_cat,
+                    ..Default::default()
+                },
+            ),
+            jsx: Opt::new_bool(
+                cl,
+                OptDesc {
+                    long: Some("jsx"),
+                    desc: Some("Enable JSX parsing."),
+                    category: input_cat,
+                    ..Default::default()
+                },
+            ),
+            strict_mode: Opt::new_bool(
+                cl,
+                OptDesc {
+                    long: Some("strict-mode"),
+                    desc: Some("Enable strict mode."),
+                    category: input_cat,
+                    ..Default::default()
+                },
+            ),
+            warn_undefined: Opt::new_bool(
+                cl,
+                OptDesc {
+                    long: Some("warn-undefined"),
+                    desc: Some("Warn about undefined variables in strict mode functions."),
+                    ..Default::default()
+                },
+            ),
+            xtime: Opt::new_bool(
+                cl,
+                OptDesc {
+                    long: Some("Xtime"),
+                    desc: Some("Measure and print times."),
+                    hidden: Hidden::Yes,
+                    ..Default::default()
+                },
+            ),
+        }
+    }
+
+
     /// Ensure the arguments are valid.
     /// Return `Err` if there are any conflicts.
     fn validate(&self) -> anyhow::Result<()> {
-        if self.sourcemap {
+        if *self.sourcemap {
             ensure!(
-                self.output_path != Path::new("-"),
+                *self.output_path != Path::new("-"),
                 "Source map requires an output path",
             );
-            ensure!(self.gen.js, "Source map requires JS output",);
+            ensure!(*self.gen == Gen::Js, "Source map requires JS output");
         }
         Ok(())
     }
@@ -167,7 +298,7 @@ fn read_file_or_stdin(input: &Path) -> anyhow::Result<NullTerminatedBuf> {
 fn parse_magic_url(
     parsed: &ParsedJS,
     kind: MagicCommentKind,
-    opt: &Opt,
+    opt: &Options,
 ) -> Result<Option<Url>, Error> {
     parsed
         .magic_comment(kind)
@@ -191,61 +322,57 @@ fn load_source_map(url: Url) -> anyhow::Result<SourceMap> {
 /// Generate the specified output, if any.
 /// Returns whether any output was generated.
 fn gen_output(
-    opt: &Opt,
+    opt: &Options,
     ctx: &mut ast::Context,
     root: NodeRc,
     input_map: &Option<SourceMap>,
 ) -> anyhow::Result<bool> {
-    let out: Box<dyn Write> = if opt.output_path == Path::new("-") {
+    let output_path = &*opt.output_path;
+    let out: Box<dyn Write> = if output_path == Path::new("-") {
         Box::new(std::io::stdout())
     } else {
-        Box::new(
-            File::create(&opt.output_path)
-                .with_context(|| opt.output_path.display().to_string())?,
-        )
+        Box::new(File::create(output_path).with_context(|| output_path.display().to_string())?)
     };
 
-    let final_ast = if opt.strip_flow {
-        let pm = PassManager::strip_flow();
-        pm.run(ctx, root)
+    let final_ast = if *opt.strip_flow {
+        PassManager::strip_flow().run(ctx, root)
     } else {
         root
     };
 
-    let final_ast = if opt.optimize {
-        let pm = PassManager::standard();
-        pm.run(ctx, final_ast)
+    let final_ast = if *opt.optimize {
+        PassManager::standard().run(ctx, final_ast)
     } else {
         final_ast
     };
 
-    if opt.gen.ast {
+    if *opt.gen == Gen::Ast {
         ast::dump_json(
             out,
             ctx,
             &final_ast,
-            if opt.no_pretty {
+            if !*opt.pretty {
                 ast::Pretty::No
             } else {
                 ast::Pretty::Yes
             },
         )?;
         Ok(true)
-    } else if opt.gen.js {
+    } else if *opt.gen == Gen::Js {
         let generated_map = gen_js::generate(
             out,
             ctx,
             &final_ast,
-            if opt.no_pretty {
+            if !*opt.pretty {
                 gen_js::Pretty::No
             } else {
                 gen_js::Pretty::Yes
             },
         )?;
-        if opt.sourcemap {
+        if *opt.sourcemap {
             // Workaround because `PathBuf` doesn't have a way to append an extension,
             // only to replace the existing one.
-            let mut path = opt.output_path.clone().into_os_string();
+            let mut path = output_path.clone().into_os_string();
             path.push(".map");
             let sourcemap_file = File::create(PathBuf::from(path))?;
             let merged_map = match input_map {
@@ -276,16 +403,16 @@ enum TransformStatus {
     Error,
 }
 
-fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
+fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
     opt.validate()?;
 
     let mut ctx = ast::Context::new();
 
     // Propagate flags.
-    if opt.strict_mode {
+    if *opt.strict_mode {
         ctx.enable_strict_mode();
     }
-    ctx.warn_undefined = opt.warn_undefined;
+    ctx.warn_undefined = *opt.warn_undefined;
 
     // Read the input into memory.
     let input = opt.input_path.as_path();
@@ -301,9 +428,8 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     let parsed = hparser::ParsedJS::parse(
         hparser::ParserFlags {
             strict_mode: ctx.strict_mode(),
-            enable_jsx: opt.jsx,
-            dialect: opt.dialect.into(),
-            ..Default::default()
+            enable_jsx: *opt.jsx,
+            dialect: *opt.dialect,
         },
         &buf,
     );
@@ -314,7 +440,7 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     }
 
     // Extract the optional source mapping URL.
-    let sm_url = if opt.input_source_map != InputSourceMap::Ignore {
+    let sm_url = if *opt.input_source_map != InputSourceMap::Ignore {
         parse_magic_url(&parsed, MagicCommentKind::SourceMappingUrl, opt)?
     } else {
         None
@@ -329,7 +455,7 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     drop(parsed);
     timer.mark("Cvt");
 
-    if !opt.no_validate_ast {
+    if *opt.validate_ast {
         validate_tree(&mut ctx, &ast).with_context(|| input.display().to_string())?;
         timer.mark("Validate AST");
     }
@@ -337,7 +463,7 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     // Fetch and parse the source map before we generate the output.
     let source_map = sm_url.map(load_source_map).transpose()?;
 
-    if !opt.no_sema {
+    if *opt.sema {
         let lock = ast::GCLock::new(&mut ctx);
         let sem = sema::resolve_program(&lock, ast.node(&lock));
         println!(
@@ -369,7 +495,7 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
     timer.mark("Drop");
 
     // Optionally print elapsed times.
-    if opt.xtime {
+    if *opt.xtime {
         print!("{:#}", timer);
     }
 
@@ -377,7 +503,9 @@ fn run(opt: &Opt) -> anyhow::Result<TransformStatus> {
 }
 
 fn main() {
-    let opt: Opt = Opt::from_args();
+    let mut cl = CommandLine::new("A JavaScript compiler");
+    let opt = Options::new(&mut cl);
+    cl.parse_env_args();
 
     match run(&opt) {
         Ok(TransformStatus::Success) => {}
