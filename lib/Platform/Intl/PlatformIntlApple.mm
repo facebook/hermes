@@ -227,8 +227,8 @@ llvh::Optional<std::u16string> localeListToLocaleString(
   // 3. Let requestedLocales be ? CanonicalizeLocaleList(locales).
   vm::CallResult<std::vector<std::u16string>> requestedLocales =
       canonicalizeLocaleList(runtime, locales);
-  if (LLVM_UNLIKELY(requestedLocales == llvh::ExecutionStatus::EXCEPTION)) {
-    //return llvh::ExecutionStatus::EXCEPTION;
+  if (LLVM_UNLIKELY(requestedLocales == vm::ExecutionStatus::EXCEPTION)) {
+    //return vm::ExecutionStatus::EXCEPTION;
   }
 
   // 4. If requestedLocales is not an empty List, then
@@ -254,10 +254,7 @@ llvh::Optional<std::u16string> localeListToLocaleString(
   llvh::Optional<std::u16string> locale =
       bestAvailableLocale(availableLocalesVector, noExtensionsLocale);
   // 9. If locale is undefined, let locale be "und".
-  if (!locale) {
-    locale = u"und";
-  }
-  return locale;
+  return locale.getValueOr(u"und");
 }
 // Implementer note: This method corresponds roughly to
 // https://tc39.es/ecma402/#sup-string.prototype.tolocalelowercase
