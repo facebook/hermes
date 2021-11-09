@@ -221,14 +221,14 @@ vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
   return canonicalizeLocaleList(runtime, locales);
 }
 
-llvh::Optional<std::u16string> localeListToLocaleString(
+vm::CallResult<std::u16string> localeListToLocaleString(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales) {
   // 3. Let requestedLocales be ? CanonicalizeLocaleList(locales).
   vm::CallResult<std::vector<std::u16string>> requestedLocales =
       canonicalizeLocaleList(runtime, locales);
   if (LLVM_UNLIKELY(requestedLocales == vm::ExecutionStatus::EXCEPTION)) {
-    //return vm::ExecutionStatus::EXCEPTION;
+      return vm::ExecutionStatus::EXCEPTION;
   }
 
   // 4. If requestedLocales is not an empty List, then
@@ -264,7 +264,7 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
     const std::u16string &str) {
   NSString *nsStr = u16StringToNSString(str);
   // Steps 3-9 in localeListToLocaleString()
-  llvh::Optional<std::u16string> locale =
+  vm::CallResult<std::u16string> locale =
       localeListToLocaleString(runtime, locales);
   // 10. Let cpList be a List containing in order the code points of S as
   // defined in es2022, 6.1.4, starting at the first element of S.
@@ -290,7 +290,7 @@ vm::CallResult<std::u16string> toLocaleUpperCase(
     const std::u16string &str) {
   NSString *nsStr = u16StringToNSString(str);
   // Steps 3-9 in localeListToLocaleString()
-  llvh::Optional<std::u16string> locale =
+  vm::CallResult<std::u16string> locale =
       localeListToLocaleString(runtime, locales);
   // 10. Let cpList be a List containing in order the code points of S as
   // defined in es2022, 6.1.4, starting at the first element of S.
