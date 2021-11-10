@@ -971,7 +971,11 @@ def run(
             print("Invalid path: " + path)
             sys.exit(1)
 
-    onlyfiles = [f for f in onlyfiles if f.endswith(".js") if not match or match in f]
+    def isTest(f):
+        isFixture = "test262" in f and f.endswith("_FIXTURE.js")
+        return f.endswith(".js") and not isFixture
+
+    onlyfiles = [f for f in onlyfiles if isTest(f) if not match or match in f]
 
     # Generates the source for the single provided file,
     # without an extra "use strict" directive prepended to the file.

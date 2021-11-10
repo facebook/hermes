@@ -12,7 +12,7 @@ use hermes::parser::*;
 use super::convert::*;
 use crate::ast;
 
-pub unsafe fn cvt_node_ptr<'parser, 'gc, 'ast: 'gc>(
+pub unsafe fn cvt_node_ptr<'parser, 'gc>(
   cvt: &mut Converter<'parser>, 
   gc: &'gc ast::GCLock, 
   n: NodePtr) -> &'gc ast::Node<'gc> {

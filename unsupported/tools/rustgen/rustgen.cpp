@@ -372,7 +372,7 @@ static void genGetters() {
 }
 
 static void genConvert() {
-  llvh::outs() << "pub unsafe fn cvt_node_ptr<'parser, 'gc, 'ast: 'gc>(\n"
+  llvh::outs() << "pub unsafe fn cvt_node_ptr<'parser, 'gc>(\n"
                   "  cvt: &mut Converter<'parser>, \n"
                   "  gc: &'gc ast::GCLock, \n"
                   "  n: NodePtr) -> &'gc ast::Node<'gc> {\n";

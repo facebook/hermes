@@ -5,7 +5,29 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use juno::ast::*;
+use juno::{
+    ast::*,
+    hparser::{self, ParserDialect, ParserFlags},
+};
+
+fn validate_src_with_flags(
+    flags: hparser::ParserFlags,
+    src: &str,
+) -> Result<(), TreeValidationError> {
+    let mut ctx = Context::new();
+    let ast = hparser::parse_with_flags(flags, src, &mut ctx).unwrap();
+    validate_tree(&mut ctx, &ast)
+}
+
+fn validate_src_flow(src: &str) -> Result<(), TreeValidationError> {
+    validate_src_with_flags(
+        ParserFlags {
+            dialect: ParserDialect::Flow,
+            ..Default::default()
+        },
+        src,
+    )
+}
 
 #[test]
 fn test_valid() {
@@ -116,4 +138,16 @@ fn test_error() {
             assert_eq!(e[0].node, bad_ret);
         }
     }
+}
+
+#[test]
+fn test_flow() {
+    validate_src_flow("function foo(a: number): number { return a; }").unwrap();
+    validate_src_flow(
+        "class A extends B {
+            foo: number;
+            +bar: string;
+    }",
+    )
+    .unwrap();
 }

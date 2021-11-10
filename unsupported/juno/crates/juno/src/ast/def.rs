@@ -439,254 +439,254 @@ macro_rules! nodekind_defs {
             JSXOpeningFragment,
             JSXClosingFragment,
 
-            ExistsTypeAnnotation,
-            EmptyTypeAnnotation,
-            StringTypeAnnotation,
-            NumberTypeAnnotation,
-            StringLiteralTypeAnnotation {
+            ExistsTypeAnnotation[FlowType],
+            EmptyTypeAnnotation[FlowType],
+            StringTypeAnnotation[FlowType],
+            NumberTypeAnnotation[FlowType],
+            StringLiteralTypeAnnotation[FlowType] {
                 value: NodeString,
             },
-            NumberLiteralTypeAnnotation {
+            NumberLiteralTypeAnnotation[FlowType] {
                 value: f64,
                 raw: NodeLabel,
             },
-            BooleanTypeAnnotation,
-            BooleanLiteralTypeAnnotation {
+            BooleanTypeAnnotation[FlowType],
+            BooleanLiteralTypeAnnotation[FlowType] {
                 value: bool,
                 raw: NodeLabel,
             },
-            NullLiteralTypeAnnotation,
-            SymbolTypeAnnotation,
-            AnyTypeAnnotation,
-            MixedTypeAnnotation,
-            VoidTypeAnnotation,
-            FunctionTypeAnnotation {
-                params: NodeList<'a>,
-                this: Option<&'a Node<'a>>,
-                return_type: &'a Node<'a>,
-                rest: Option<&'a Node<'a>>,
+            NullLiteralTypeAnnotation[FlowType],
+            SymbolTypeAnnotation[FlowType],
+            AnyTypeAnnotation[FlowType],
+            MixedTypeAnnotation[FlowType],
+            VoidTypeAnnotation[FlowType],
+            FunctionTypeAnnotation[FlowType] {
+                params: NodeList<'a>[FunctionTypeParam],
+                this: Option<&'a Node<'a>>[FunctionTypeParam],
+                return_type: &'a Node<'a>[FlowType],
+                rest: Option<&'a Node<'a>>[FunctionTypeParam],
                 type_parameters: Option<&'a Node<'a>>,
             },
-            FunctionTypeParam {
-                name: Option<&'a Node<'a>>,
-                type_annotation: &'a Node<'a>,
+            FunctionTypeParam[FlowType] {
+                name: Option<&'a Node<'a>>[Identifier],
+                type_annotation: &'a Node<'a>[FlowType],
                 optional: bool,
             },
-            NullableTypeAnnotation {
-                type_annotation: &'a Node<'a>,
+            NullableTypeAnnotation[FlowType] {
+                type_annotation: &'a Node<'a>[FlowType],
             },
-            QualifiedTypeIdentifier {
-                qualification: &'a Node<'a>,
-                id: &'a Node<'a>,
+            QualifiedTypeIdentifier[Flow] {
+                qualification: &'a Node<'a>[Identifier, QualifiedTypeIdentifier],
+                id: &'a Node<'a>[Identifier],
             },
-            TypeofTypeAnnotation {
-                argument: &'a Node<'a>,
+            TypeofTypeAnnotation[FlowType] {
+                argument: &'a Node<'a>[FlowType],
             },
-            TupleTypeAnnotation {
-                types: NodeList<'a>,
+            TupleTypeAnnotation[FlowType] {
+                types: NodeList<'a>[FlowType],
             },
-            ArrayTypeAnnotation {
-                element_type: &'a Node<'a>,
+            ArrayTypeAnnotation[FlowType] {
+                element_type: &'a Node<'a>[FlowType],
             },
-            UnionTypeAnnotation {
-                types: NodeList<'a>,
+            UnionTypeAnnotation[FlowType] {
+                types: NodeList<'a>[FlowType],
             },
-            IntersectionTypeAnnotation {
-                types: NodeList<'a>,
+            IntersectionTypeAnnotation[FlowType] {
+                types: NodeList<'a>[FlowType],
             },
-            GenericTypeAnnotation {
-                id: &'a Node<'a>,
-                type_parameters: Option<&'a Node<'a>>,
+            GenericTypeAnnotation[FlowType] {
+                id: &'a Node<'a>[Identifier, QualifiedTypeIdentifier],
+                type_parameters: Option<&'a Node<'a>>[TypeParameterInstantiation],
             },
-            IndexedAccessType {
-                object_type: &'a Node<'a>,
-                index_type: &'a Node<'a>,
+            IndexedAccessType[FlowType] {
+                object_type: &'a Node<'a>[FlowType],
+                index_type: &'a Node<'a>[FlowType],
             },
-            OptionalIndexedAccessType {
-                object_type: &'a Node<'a>,
-                index_type: &'a Node<'a>,
+            OptionalIndexedAccessType[FlowType] {
+                object_type: &'a Node<'a>[FlowType],
+                index_type: &'a Node<'a>[FlowType],
                 optional: bool,
             },
-            InterfaceTypeAnnotation {
-                extends: NodeList<'a>,
-                body: Option<&'a Node<'a>>,
+            InterfaceTypeAnnotation[FlowType] {
+                extends: NodeList<'a>[InterfaceExtends],
+                body: Option<&'a Node<'a>>[ObjectTypeAnnotation],
             },
-            TypeAlias {
-                id: &'a Node<'a>,
-                type_parameters: Option<&'a Node<'a>>,
-                right: &'a Node<'a>,
+            TypeAlias[FlowDeclaration] {
+                id: &'a Node<'a>[Identifier],
+                type_parameters: Option<&'a Node<'a>>[TypeParameterDeclaration],
+                right: &'a Node<'a>[FlowType],
             },
-            OpaqueType {
-                id: &'a Node<'a>,
-                type_parameters: Option<&'a Node<'a>>,
-                impltype: &'a Node<'a>,
-                supertype: Option<&'a Node<'a>>,
+            OpaqueType[FlowDeclaration] {
+                id: &'a Node<'a>[Identifier],
+                type_parameters: Option<&'a Node<'a>>[TypeParameterDeclaration],
+                impltype: &'a Node<'a>[FlowType],
+                supertype: Option<&'a Node<'a>>[FlowType],
             },
-            InterfaceDeclaration {
-                id: &'a Node<'a>,
-                type_parameters: Option<&'a Node<'a>>,
-                extends: NodeList<'a>,
-                body: &'a Node<'a>,
+            InterfaceDeclaration[FlowDeclaration] {
+                id: &'a Node<'a>[Identifier],
+                type_parameters: Option<&'a Node<'a>>[TypeParameterDeclaration],
+                extends: NodeList<'a>[InterfaceExtends],
+                body: &'a Node<'a>[ObjectTypeAnnotation],
             },
-            DeclareTypeAlias {
-                id: &'a Node<'a>,
-                type_parameters: Option<&'a Node<'a>>,
-                right: &'a Node<'a>,
+            DeclareTypeAlias[FlowDeclaration] {
+                id: &'a Node<'a>[Identifier],
+                type_parameters: Option<&'a Node<'a>>[TypeParameterDeclaration],
+                right: &'a Node<'a>[FlowType],
             },
-            DeclareOpaqueType {
-                id: &'a Node<'a>,
-                type_parameters: Option<&'a Node<'a>>,
-                impltype: Option<&'a Node<'a>>,
-                supertype: Option<&'a Node<'a>>,
+            DeclareOpaqueType[FlowDeclaration] {
+                id: &'a Node<'a>[Identifier],
+                type_parameters: Option<&'a Node<'a>>[TypeParameterDeclaration],
+                impltype: Option<&'a Node<'a>>[FlowType],
+                supertype: Option<&'a Node<'a>>[FlowType],
             },
-            DeclareInterface {
-                id: &'a Node<'a>,
-                type_parameters: Option<&'a Node<'a>>,
-                extends: NodeList<'a>,
-                body: &'a Node<'a>,
+            DeclareInterface[FlowDeclaration] {
+                id: &'a Node<'a>[Identifier],
+                type_parameters: Option<&'a Node<'a>>[TypeParameterDeclaration],
+                extends: NodeList<'a>[InterfaceExtends],
+                body: &'a Node<'a>[ObjectTypeAnnotation],
             },
-            DeclareClass {
-                id: &'a Node<'a>,
-                type_parameters: Option<&'a Node<'a>>,
-                extends: NodeList<'a>,
-                implements: NodeList<'a>,
-                mixins: NodeList<'a>,
-                body: &'a Node<'a>,
+            DeclareClass[FlowDeclaration] {
+                id: &'a Node<'a>[Identifier],
+                type_parameters: Option<&'a Node<'a>>[TypeParameterDeclaration],
+                extends: NodeList<'a>[InterfaceExtends],
+                implements: NodeList<'a>[ClassImplements],
+                mixins: NodeList<'a>[InterfaceExtends],
+                body: &'a Node<'a>[ObjectTypeAnnotation],
             },
-            DeclareFunction {
-                id: &'a Node<'a>,
-                predicate: Option<&'a Node<'a>>,
+            DeclareFunction[FlowDeclaration] {
+                id: &'a Node<'a>[Identifier],
+                predicate: Option<&'a Node<'a>>[DeclaredPredicate],
             },
-            DeclareVariable {
-                id: &'a Node<'a>,
+            DeclareVariable[FlowDeclaration] {
+                id: &'a Node<'a>[Identifier],
             },
-            DeclareExportDeclaration {
-                declaration: Option<&'a Node<'a>>,
-                specifiers: NodeList<'a>,
-                source: Option<&'a Node<'a>>,
+            DeclareExportDeclaration[FlowDeclaration] {
+                declaration: Option<&'a Node<'a>>[Flow, FlowDeclaration],
+                specifiers: NodeList<'a>[ExportSpecifier, ExportNamespaceSpecifier],
+                source: Option<&'a Node<'a>>[StringLiteral],
                 default: bool,
             },
-            DeclareExportAllDeclaration {
-                source: &'a Node<'a>,
+            DeclareExportAllDeclaration[FlowDeclaration] {
+                source: &'a Node<'a>[StringLiteral],
             },
-            DeclareModule {
-                id: &'a Node<'a>,
-                body: &'a Node<'a>,
+            DeclareModule[FlowDeclaration] {
+                id: &'a Node<'a>[Identifier, StringLiteral],
+                body: &'a Node<'a>[BlockStatement],
                 kind: NodeLabel,
             },
-            DeclareModuleExports {
-                type_annotation: &'a Node<'a>,
+            DeclareModuleExports[FlowDeclaration] {
+                type_annotation: &'a Node<'a>[TypeAnnotation],
             },
-            InterfaceExtends {
-                id: &'a Node<'a>,
-                type_parameters: Option<&'a Node<'a>>,
+            InterfaceExtends[Flow] {
+                id: &'a Node<'a>[Identifier, QualifiedTypeIdentifier],
+                type_parameters: Option<&'a Node<'a>>[TypeParameterInstantiation],
             },
-            ClassImplements {
-                id: &'a Node<'a>,
-                type_parameters: Option<&'a Node<'a>>,
+            ClassImplements[Flow] {
+                id: &'a Node<'a>[Identifier],
+                type_parameters: Option<&'a Node<'a>>[TypeParameterInstantiation],
             },
-            TypeAnnotation {
-                type_annotation: &'a Node<'a>,
+            TypeAnnotation[Flow] {
+                type_annotation: &'a Node<'a>[FlowType],
             },
-            ObjectTypeAnnotation {
-                properties: NodeList<'a>,
-                indexers: NodeList<'a>,
-                call_properties: NodeList<'a>,
-                internal_slots: NodeList<'a>,
+            ObjectTypeAnnotation[FlowType] {
+                properties: NodeList<'a>[ObjectTypeProperty, ObjectTypeSpreadProperty],
+                indexers: NodeList<'a>[ObjectTypeIndexer],
+                call_properties: NodeList<'a>[ObjectTypeCallProperty],
+                internal_slots: NodeList<'a>[ObjectTypeInternalSlot],
                 inexact: bool,
                 exact: bool,
             },
-            ObjectTypeProperty {
-                key: &'a Node<'a>,
-                value: &'a Node<'a>,
+            ObjectTypeProperty[Flow] {
+                key: &'a Node<'a>[Identifier, StringLiteral],
+                value: &'a Node<'a>[FlowType],
                 method: bool,
                 optional: bool,
                 is_static: bool,
                 proto: bool,
-                variance: Option<&'a Node<'a>>,
+                variance: Option<&'a Node<'a>>[Variance],
                 kind: NodeLabel,
             },
-            ObjectTypeSpreadProperty {
-                argument: &'a Node<'a>,
+            ObjectTypeSpreadProperty[Flow] {
+                argument: &'a Node<'a>[FlowType],
             },
-            ObjectTypeInternalSlot {
-                id: &'a Node<'a>,
-                value: &'a Node<'a>,
+            ObjectTypeInternalSlot[Flow] {
+                id: &'a Node<'a>[Identifier],
+                value: &'a Node<'a>[FlowType],
                 optional: bool,
                 is_static: bool,
                 method: bool,
             },
-            ObjectTypeCallProperty {
-                value: &'a Node<'a>,
+            ObjectTypeCallProperty[Flow] {
+                value: &'a Node<'a>[FlowType],
                 is_static: bool,
             },
-            ObjectTypeIndexer {
-                id: Option<&'a Node<'a>>,
-                key: &'a Node<'a>,
-                value: &'a Node<'a>,
+            ObjectTypeIndexer[Flow] {
+                id: Option<&'a Node<'a>>[Identifier],
+                key: &'a Node<'a>[FlowType],
+                value: &'a Node<'a>[FlowType],
                 is_static: bool,
-                variance: Option<&'a Node<'a>>,
+                variance: Option<&'a Node<'a>>[Variance],
             },
-            Variance {
+            Variance[Flow] {
                 kind: NodeLabel,
             },
-            TypeParameterDeclaration {
-                params: NodeList<'a>,
+            TypeParameterDeclaration[Flow] {
+                params: NodeList<'a>[TypeParameter],
             },
-            TypeParameter {
+            TypeParameter[Flow] {
                 name: NodeLabel,
-                bound: Option<&'a Node<'a>>,
-                variance: Option<&'a Node<'a>>,
-                default: Option<&'a Node<'a>>,
+                bound: Option<&'a Node<'a>>[TypeAnnotation],
+                variance: Option<&'a Node<'a>>[Variance],
+                default: Option<&'a Node<'a>>[FlowType],
             },
-            TypeParameterInstantiation {
-                params: NodeList<'a>,
+            TypeParameterInstantiation[Flow] {
+                params: NodeList<'a>[FlowType],
             },
-            TypeCastExpression {
-                expression: &'a Node<'a>,
-                type_annotation: &'a Node<'a>,
+            TypeCastExpression[FlowExpression] {
+                expression: &'a Node<'a>[Expression],
+                type_annotation: &'a Node<'a>[TypeAnnotation],
             },
-            InferredPredicate,
-            DeclaredPredicate {
-                value: &'a Node<'a>,
+            InferredPredicate[FlowPredicate],
+            DeclaredPredicate[FlowPredicate] {
+                value: &'a Node<'a>[Flow],
             },
-            EnumDeclaration {
-                id: &'a Node<'a>,
-                body: &'a Node<'a>,
+            EnumDeclaration[Declaration] {
+                id: &'a Node<'a>[Identifier],
+                body: &'a Node<'a>[FlowEnumBody],
             },
-            EnumStringBody {
-                members: NodeList<'a>,
+            EnumStringBody[FlowEnumBody] {
+                members: NodeList<'a>[EnumStringMember],
                 explicit_type: bool,
                 has_unknown_members: bool,
             },
-            EnumNumberBody {
-                members: NodeList<'a>,
+            EnumNumberBody[FlowEnumBody] {
+                members: NodeList<'a>[EnumNumberMember],
                 explicit_type: bool,
                 has_unknown_members: bool,
             },
-            EnumBooleanBody {
-                members: NodeList<'a>,
+            EnumBooleanBody[FlowEnumBody] {
+                members: NodeList<'a>[EnumBooleanMember],
                 explicit_type: bool,
                 has_unknown_members: bool,
             },
-            EnumSymbolBody {
-                members: NodeList<'a>,
+            EnumSymbolBody[FlowEnumBody] {
+                members: NodeList<'a>[EnumDefaultedMember],
                 has_unknown_members: bool,
             },
             EnumDefaultedMember {
-                id: &'a Node<'a>,
+                id: &'a Node<'a>[Identifier],
             },
             EnumStringMember {
-                id: &'a Node<'a>,
-                init: &'a Node<'a>,
+                id: &'a Node<'a>[Identifier],
+                init: &'a Node<'a>[StringLiteral],
             },
             EnumNumberMember {
-                id: &'a Node<'a>,
-                init: &'a Node<'a>,
+                id: &'a Node<'a>[Identifier],
+                init: &'a Node<'a>[NumericLiteral],
             },
             EnumBooleanMember {
-                id: &'a Node<'a>,
-                init: &'a Node<'a>,
+                id: &'a Node<'a>[Identifier],
+                init: &'a Node<'a>[BooleanLiteral],
             },
 
             TSTypeAnnotation {

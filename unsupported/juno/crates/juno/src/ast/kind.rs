@@ -213,6 +213,12 @@ macro_rules! gen_nodekind_enum {
             Literal,
             Pattern,
             LVal,
+            Flow,
+            FlowType,
+            FlowDeclaration,
+            FlowExpression,
+            FlowPredicate,
+            FlowEnumBody,
             $($kind),*
         }
 
@@ -227,6 +233,12 @@ macro_rules! gen_nodekind_enum {
                     Self::Literal => Some(Self::Expression),
                     Self::Pattern => Some(Self::LVal),
                     Self::LVal => Some(Self::Expression),
+                    Self::Flow => None,
+                    Self::FlowType => Some(Self::Flow),
+                    Self::FlowDeclaration => Some(Self::Declaration),
+                    Self::FlowExpression => Some(Self::Expression),
+                    Self::FlowPredicate => Some(Self::Flow),
+                    Self::FlowEnumBody => None,
                     $(
                         Self::$kind => {
                             None$(.or(Some(Self::$parent)))?
