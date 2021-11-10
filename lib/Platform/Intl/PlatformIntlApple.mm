@@ -122,12 +122,12 @@ struct LocaleMatch {
   std::u16string extension;
 };
 LocaleMatch lookupMatcher(
-    const std::vector<std::u16string> &requestedLocales,
+    const vm::CallResult<std::vector<std::u16string>> &requestedLocales,
     const std::vector<std::u16string> &availableLocales) {
   // 1. Let result be a new Record.
   LocaleMatch result;
   // 2. For each element locale of requestedLocales, do
-  for (const std::u16string &locale : requestedLocales) {
+  for (const std::u16string &locale : *requestedLocales) {
     // a. Let noExtensionsLocale be the String value that is locale with
     // any Unicode locale extension sequences removed.
     std::u16string noExtensionsLocale = toNoUnicodeExtensionsLocale(locale);
@@ -240,7 +240,7 @@ vm::CallResult<Option> getOptionBool(
     }
   }
   // 7. If values is not undefined and values does not contain an element equal to value, throw a RangeError exception.
-  if (!values.empty() && llvh::find(values, value->second) == values.end()) {
+  if (!values.empty() && llvh::find(values, value->second.getString()) == values.end()) {
     return vm::ExecutionStatus::EXCEPTION;
   }
   // 8. Return value.
@@ -265,7 +265,7 @@ vm::CallResult<Option> getOptionString(
       return vm::ExecutionStatus::EXCEPTION;
     }
     // 7. If values is not undefined and values does not contain an element equal to value, throw a RangeError exception.
-    if (!values.empty() && llvh::find(values, value->second) == values.end()) {
+    if (!values.empty() && llvh::find(values, value->second.getString()) == values.end()) {
       return vm::ExecutionStatus::EXCEPTION;
     }
   }
@@ -297,11 +297,11 @@ std::vector<std::u16string> lookupSupportedLocales(
   // 2. For each element locale of requestedLocales, do
   for (const std::u16string &locale: requestedLocales) {
     // a. Let noExtensionsLocale be the String value that is locale with any Unicode locale extension sequences removed.
-    //std::u16string noExtensionsLocale = toNoExtensionsLocale(locale);
+    std::u16string noExtensionsLocale = toNoUnicodeExtensionsLocale(locale);
     // b. Let availableLocale be BestAvailableLocale(availableLocales, noExtensionsLocale).
-    //std::u16string availableLocale = bestAvailableLocale(availableLocales, noExtensionsLocale);
+    llvh::Optional<std::u16string> availableLocale = bestAvailableLocale(availableLocales, noExtensionsLocale);
     // c. If availableLocale is not undefined, append locale to the end of subset.
-    // if (!availableLocale.empty()) { subset.push_back(locale); }
+    if (!availableLocale) { subset.push_back(locale); }
   }
 
   // 3. Return subset.
@@ -599,9 +599,9 @@ DateTimeFormat::~DateTimeFormat() {}
 // Implementation of
 // https://tc39.es/ecma402/#sec-resolvelocale
 struct ResolveLocale {
-  std::u16string dataLocale;
+  std::u16string key;
   std::u16string value;
-  
+  std::u16string dataLocale;
   std::u16string resolveLocale;
   std::u16string locale;
   std::u16string ca;
@@ -611,23 +611,23 @@ struct ResolveLocale {
 // https://tc39.es/ecma402/#sec-resolvelocale
 ResolveLocale resolveLocale(
     const std::vector<std::u16string> &availableLocales,
-    const std::vector<std::u16string> &requestedLocales,
+    const vm::CallResult<std::vector<std::u16string>> &requestedLocales,
     const Options &options,
     const std::vector<std::u16string> &relevantExtensionKeys
 //  In line with Java, haven't included LocaleData
     ){
 //  Skip 1/2/3, as we don't need to have independant implementations for best fit
-    auto localeMatchResult = lookupMatcher(availableLocales, requestedLocales);
+    auto localeMatchResult = lookupMatcher(requestedLocales, availableLocales);
 //  5. Let result be a new Record.
     ResolveLocale result;
-      std::u16string value = NULL;
-      std::vector<std::u16string> supportedExtensionAdditionKeys;
+    std::u16string value = NULL;
+    std::vector<std::u16string> supportedExtensionAdditionKeys;
 //  9. For each element key of relevantExtensionKeys, do
   for (std::u16string key : relevantExtensionKeys) {
     result.value = u"null";
     if (localeMatchResult.extension != u"und" ) { // 9.h.
       if (localeMatchResult.extension.find(key)) { // 9.h.i.
-        std::u16string requestedValue = localeMatchResult.extension.find(key).getString();
+        std::u16string requestedValue = localeMatchResult.extension;
         if (requestedValue == u"und") {
           value = requestedValue;
         } else {
@@ -638,17 +638,41 @@ ResolveLocale resolveLocale(
   }
     if (options.find(key) != options.end()) { // 9.i.
       Option optionsValue = new Option(key);
-      if (optionsValue.getString() == u"string") { // Looks wrong
+      if (optionsValue.isString()) {
         if (optionsValue.getString() == u"") {
           optionsValue = u"true";
         }
         if (optionsValue.getString() != u"und" && optionsValue.getString() != value) {
-          supportedExtensionAdditionKeys.erase(key);
+          supportedExtensionAdditionKeys.pop_back(); // Hope this removes key
           value = optionsValue.getString();
         }
-        }
       }
-    }
+      // Do we need to call a parser here on unicodeExtensionKeys? There's three calls,
+      // resolveKnownAliases, isValidKeyword and setUnicodeExtensions in Java
+      // 1. Let optionsValue be the string optionsValue after performing the algorithm steps to transform
+      // Unicode extension values to canonical syntax per Unicode Technical Standard #35 LDML § 3.2.1
+      // Canonical Unicode Locale Identifiers, treating key as ukey and optionsValue as uvalue productions.
+      //if (resolveKnownAliases) {
+        if (value == u"string"/* && isValidKeyword */) {
+          result.key = u"und";
+          continue;
+        }
+        result.key = value;
+      //}
+      for (std::u16string supportedExtendionKey : supportedExtensionAdditionKeys) {
+        std::vector<std::u16string> valueList;
+        std::u16string keyValue = localeMatchResult.extension;
+        //keyValue = resolveKnownAliases;
+        if (keyValue == u"string" /*&& !isValidKeyword*/) {
+          continue;
+        }
+        valueList.push_back(keyValue);
+        //localeMatchResult.setUnicodeExtensions
+      }
+      //result.locale = localeMatchResult.matchedLocale;
+}
+}
+    return result;
 }
 // Implementation of
 // https://tc39.es/ecma402/#sec-intl.datetimeformat.supportedlocalesof
@@ -732,7 +756,22 @@ vm::CallResult<Options> toDateTimeOptions(const Options &options, std::u16string
   // 13. return options
   return options;
 }
-
+// https://tc39.es/ecma402/#sec-case-sensitivity-and-case-mapping
+std::u16string normalizeTimeZoneName(
+    std::u16string timeZoneName) {
+    std::u16string normalized;
+    std::uint8_t offset = 'a' - 'A';
+    for (std::uint8_t idx = 0; idx < timeZoneName.length(); idx++) {
+      unsigned char c = timeZoneName[idx];
+      if (c >= 'a' && c <= 'z') {
+        normalized.push_back((char) c - offset);
+      }
+      else {
+        normalized.push_back(c);
+      }
+      }
+    return normalized;
+  }
 // Implementation of
 // https://tc39.es/ecma402/#sec-initializedatetimeformat
 vm::ExecutionStatus DateTimeFormat::initialize(
@@ -740,7 +779,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   // 1. Let requestedLocales be ? CanonicalizeLocaleList(locales).
-  vm::CallResult<std::vector<std::u16string>> requestedLocales =
+  const vm::CallResult<std::vector<std::u16string>> requestedLocales =
       getCanonicalLocales(runtime, locales);
   if (LLVM_UNLIKELY(requestedLocales == vm::ExecutionStatus::EXCEPTION)) {
     return vm::ExecutionStatus::EXCEPTION;
@@ -804,10 +843,9 @@ vm::ExecutionStatus DateTimeFormat::initialize(
         
 //  16. Let localeData be %DateTimeFormat%.[[LocaleData]].
     Impl dateTimeFormat;
-//  TODO: resolveLocale? https://tc39.es/ecma402/#sec-resolvelocale
 //  17. Let r be ResolveLocale(%DateTimeFormat%.[[AvailableLocales]], requestedLocales, opt, %DateTimeFormat%.[[RelevantExtensionKeys]], localeData).
-    std::vector<std::u16string> relevantExtensionKeys = {u"ca", u"nu", u"hc"};
-    auto r = resolveLocale(requestedLocales, options, relevantExtensionKeys);
+    const std::vector<std::u16string> relevantExtensionKeys = {u"ca", u"nu", u"hc"};
+    auto r = resolveLocale(locales, requestedLocales, options, relevantExtensionKeys);
 //  18. Set dateTimeFormat.[[Locale]] to r.[[locale]].
     dateTimeFormat.Locale = r.locale;
 //  19. Let calendar be r.[[ca]].
@@ -833,7 +871,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
 //  26. Else,
     else {
 //  a. Let timeZone be ? ToString(timeZone).
-      timeZoneValue = timeZone->second.getString();
+      timeZoneValue = normalizeTimeZoneName(timeZone->second.getString());
 //  TODO: Find a way to get timezone validity
 //  b. If the result of IsValidTimeZoneName(timeZone) is false, then
 //  i. Throw a RangeError exception.
@@ -911,7 +949,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
 //  c. If hc is null, then
         if (hc == u"") {
 //  i. Set hc to hcDefault.
-          
+          hc = Impl::HourCycle::Undefined;
         }
 //  d. If hour12 is not undefined, then
 //  i. If hour12 is true, then
@@ -933,9 +971,6 @@ Options DateTimeFormat::resolvedOptions() noexcept {
   Options options;
   options.emplace(u"locale", Option(impl_->locale));
   options.emplace(u"numeric", Option(false));
-  // Implementation of
-  // https://tc39.es/ecma402/#sec-todatetimeoptions
-  //        2. Let options be ? ToDateTimeOptions(options, "any", "date").
   return options;
 }
 
