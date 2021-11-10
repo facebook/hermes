@@ -565,7 +565,7 @@ jobs:
             npm install --global yarn
             git clone https://github.com/facebook/react-native
             cd react-native
-            yarn install
+            yarn install --ignore-engines
             npm install /tmp/input/hermes-engine-v*.tgz
             echo "console.log('Using Hermes: ' + (global.HermesInternal != null));" >> packages/rn-tester/js/RNTesterApp.android.js
       - android/start-emulator-and-run-tests:
