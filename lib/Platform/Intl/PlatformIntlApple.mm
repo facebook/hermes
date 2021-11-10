@@ -249,7 +249,7 @@ vm::CallResult<std::u16string> localeListToLocaleString(
   // if they support case mapping for additional locales.
   // 8. Let locale be BestAvailableLocale(availableLocales, noExtensionsLocale).
   // Convert to C++ array for bestAvailableLocale function
-  const std::vector<std::u16string> availableLocalesVector =
+  const std::vector<std::u16string> &availableLocalesVector =
       getAvailableLocalesVector();
   llvh::Optional<std::u16string> locale =
       bestAvailableLocale(availableLocalesVector, noExtensionsLocale);
