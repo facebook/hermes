@@ -39,9 +39,9 @@ workflows:
             - windows
       - test-emscripten
       - test-linux
-      - test-e2e
-          # requires:
-          #   - npm
+      - test-e2e:
+          requires:
+            - npm
       - test-e2e-intl
 
 # Default settings for Apple jobs (apple-runtime, test-apple-runtime)
@@ -565,7 +565,6 @@ jobs:
       - run:
           name: Prepare RNTester
           command: |
-            node --version
             git clone https://github.com/facebook/react-native
             cd react-native
             yarn install
