@@ -562,6 +562,7 @@ jobs:
           at: /tmp/input
       - node/install:
           install-yarn: true
+          lts: true
       - run:
           name: Prepare RNTester
           command: |
