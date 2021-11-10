@@ -301,7 +301,7 @@ class Referencer extends Visitor {
 
       // Forward future defines in type scope to parent scope
       // $FlowExpectedError[cannot-write]
-      typeScope.__define = function(node, def) {
+      typeScope.__define = function (node, def) {
         return parentScope.__define(node, def);
       };
     }

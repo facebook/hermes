@@ -8,10 +8,9 @@
 use juno::ast::*;
 use juno::gen_js;
 use juno::hparser;
-use juno::source_manager::SourceId;
 use juno::sourcemap::merge_sourcemaps;
 
-fn do_gen(ctx: &Context, node: NodePtr, pretty: gen_js::Pretty) -> String {
+fn do_gen<'ast>(ctx: &mut Context<'ast>, node: &NodeRc, pretty: gen_js::Pretty) -> String {
     use juno::gen_js::*;
     let mut out: Vec<u8> = vec![];
     generate(&mut out, ctx, node, pretty).unwrap();
@@ -21,24 +20,23 @@ fn do_gen(ctx: &Context, node: NodePtr, pretty: gen_js::Pretty) -> String {
 fn test_roundtrip_with_flags(flags: hparser::ParserFlags, src1: &str) {
     use juno::ast::*;
 
-    let mut context = Context::new();
-    let ctx = &mut context;
+    let mut ctx = Context::new();
 
     for pretty in &[gen_js::Pretty::Yes, gen_js::Pretty::No] {
-        let ast1 = hparser::parse_with_flags(flags, src1, ctx).unwrap();
+        let ast1 = hparser::parse_with_flags(flags, src1, &mut ctx).unwrap();
         let mut dump: Vec<u8> = vec![];
-        dump_json(&mut dump, ctx, ast1, juno::ast::Pretty::Yes).unwrap();
+        dump_json(&mut dump, &mut ctx, &ast1, juno::ast::Pretty::Yes).unwrap();
         let ast1_json = String::from_utf8(dump).expect("Invalid UTF-8 output in test");
 
-        let src2 = do_gen(ctx, ast1, *pretty);
-        let ast2 = hparser::parse_with_flags(flags, &src2, ctx).unwrap_or_else(|_| {
+        let src2 = do_gen(&mut ctx, &ast1, *pretty);
+        let ast2 = hparser::parse_with_flags(flags, &src2, &mut ctx).unwrap_or_else(|_| {
             panic!(
                 "Invalid JS generated: Pretty={:?}\nOriginal Source:\n{}\nGenerated Source:\n{}",
                 pretty, &src1, &src2,
             )
         });
         let mut dump: Vec<u8> = vec![];
-        dump_json(&mut dump, ctx, ast2, juno::ast::Pretty::Yes).unwrap();
+        dump_json(&mut dump, &mut ctx, &ast2, juno::ast::Pretty::Yes).unwrap();
         let ast2_json = String::from_utf8(dump).expect("Invalid UTF-8 output in test");
 
         assert_eq!(
@@ -78,22 +76,23 @@ fn test_roundtrip_jsx(src1: &str) {
 #[test]
 fn test_literals() {
     let mut ctx = Context::new();
-    let range = SourceRange {
-        file: SourceId::INVALID,
-        start: SourceLoc { line: 1, col: 1 },
-        end: SourceLoc { line: 1, col: 1 },
+    let string = {
+        let gc = GCLock::new(&mut ctx);
+        NodeRc::from_node(
+            &gc,
+            builder::StringLiteral::build_template(
+                &gc,
+                template::StringLiteral {
+                    metadata: Default::default(),
+                    value: juno::ast::NodeString {
+                        str: vec!['A' as u16, 0x1234u16, '\t' as u16],
+                    },
+                },
+            ),
+        )
     };
-    let string = make_node!(
-        ctx,
-        Node::StringLiteral(StringLiteral {
-            range,
-            value: juno::ast::NodeString {
-                str: vec!['A' as u16, 0x1234u16, '\t' as u16],
-            }
-        }),
-    );
     assert_eq!(
-        do_gen(&ctx, string, gen_js::Pretty::Yes).trim(),
+        do_gen(&mut ctx, &string, gen_js::Pretty::Yes).trim(),
         r#""A\u1234\t""#,
     );
 
@@ -101,6 +100,7 @@ fn test_literals() {
     test_roundtrip("\"abc\"");
     test_roundtrip(r#" "\ud800" "#);
     test_roundtrip(r#" "\ud83d\udcd5" "#);
+    test_roundtrip(r#" "\u060b" "#);
     test_roundtrip("true");
     test_roundtrip("false");
     test_roundtrip("null");
@@ -133,28 +133,7 @@ fn test_identifier() {
 
 #[test]
 fn test_binop() {
-    let mut ctx = Context::new();
-    let range = SourceRange {
-        file: SourceId::INVALID,
-        start: SourceLoc { line: 1, col: 1 },
-        end: SourceLoc { line: 1, col: 1 },
-    };
-    let left = make_node!(ctx, Node::NullLiteral(NullLiteral { range }));
-    let right = make_node!(ctx, Node::NullLiteral(NullLiteral { range }));
-    let binary = make_node!(
-        ctx,
-        Node::BinaryExpression(BinaryExpression {
-            range,
-            left,
-            operator: BinaryExpressionOperator::Plus,
-            right,
-        }),
-    );
-    assert_eq!(
-        do_gen(&ctx, binary, gen_js::Pretty::Yes).trim(),
-        "null + null"
-    );
-
+    test_roundtrip("null + null");
     test_roundtrip("1 + 1");
     test_roundtrip("1 * 2 + (3 + 4)");
     test_roundtrip("1 ** 2 ** 3 ** 4");
@@ -222,6 +201,16 @@ fn test_calls() {
     test_roundtrip("f?.(1, 2)?.(3)(5);");
     test_roundtrip("new f();");
     test_roundtrip("new f(1);");
+    test_roundtrip("new(a.b);");
+    test_roundtrip("new(a.b());");
+    test_roundtrip("new(a.b())();");
+    test_roundtrip("new(a.b())(c);");
+    test_roundtrip("new(a?.b())(c);");
+    test_roundtrip("new(1 + 2);");
+    test_roundtrip("new(fn(foo)[bar])()");
+    test_roundtrip("new(fn(foo)[bar])(c)");
+    test_roundtrip("new(fn(foo).bar)()");
+    test_roundtrip("new(fn(foo).bar)(c)");
     test_roundtrip("import('foo')");
 }
 
@@ -230,6 +219,7 @@ fn test_statements() {
     test_roundtrip("while (1) {}");
     test_roundtrip("while (1) { fn(); }");
     test_roundtrip("while (1) fn();");
+    test_roundtrip("while (1) fn()");
     test_roundtrip("for (;;) { fn(); }");
     test_roundtrip("for (;;) fn();");
     test_roundtrip("for (x;;) { fn(); }");
@@ -288,6 +278,12 @@ fn test_statements() {
     test_roundtrip("if (x) {fn();}");
     test_roundtrip("if (x) {fn();} else {fn();}");
     test_roundtrip("if (x) fn(); else fn();");
+    test_roundtrip(
+        "if (x)
+          try { } catch (e) { }
+        else
+          fn();",
+    );
 }
 
 #[test]
@@ -340,6 +336,10 @@ fn test_assignment() {
     test_roundtrip("x &&= 1");
     test_roundtrip("x ??= 1");
     test_roundtrip("foo()[1] = 1");
+    test_roundtrip("a = b && c");
+    test_roundtrip("(a = b) && c");
+    test_roundtrip("a && b = c");
+    test_roundtrip("a && (b = c)");
 }
 
 #[test]
@@ -386,6 +386,11 @@ fn test_members() {
     test_roundtrip("(a?.b?.c?.())(d)");
     test_roundtrip("(a?.b?.c?.())?.(d)");
     test_roundtrip("class C { constructor() { new.target; } }");
+    test_roundtrip("50..toString()");
+    test_roundtrip("1.5.toString()");
+    test_roundtrip("1e100.toString()");
+    test_roundtrip("-1e100.toString()");
+    test_roundtrip("0x10293.toString()");
 }
 
 #[test]
@@ -447,45 +452,7 @@ fn test_export() {
 
 #[test]
 fn test_types() {
-    let mut ctx = Context::new();
-    let range = SourceRange {
-        file: SourceId::INVALID,
-        start: SourceLoc { line: 1, col: 1 },
-        end: SourceLoc { line: 1, col: 1 },
-    };
-    let union_ty = make_node!(
-        ctx,
-        Node::UnionTypeAnnotation(UnionTypeAnnotation {
-            range,
-            types: vec![
-                make_node!(
-                    ctx,
-                    Node::NumberTypeAnnotation(NumberTypeAnnotation { range })
-                ),
-                make_node!(
-                    ctx,
-                    Node::IntersectionTypeAnnotation(IntersectionTypeAnnotation {
-                        range,
-                        types: vec![
-                            make_node!(
-                                ctx,
-                                Node::BooleanTypeAnnotation(BooleanTypeAnnotation { range })
-                            ),
-                            make_node!(
-                                ctx,
-                                Node::StringTypeAnnotation(StringTypeAnnotation { range })
-                            )
-                        ],
-                    }),
-                )
-            ],
-        }),
-    );
-    assert_eq!(
-        do_gen(&ctx, union_ty, gen_js::Pretty::Yes).trim(),
-        "number | boolean & string"
-    );
-
+    test_roundtrip_flow("number | boolean & string");
     test_roundtrip_flow("type A = number");
     test_roundtrip_flow("type A = ?number");
     test_roundtrip_flow("type A = string");
@@ -499,6 +466,12 @@ fn test_types() {
     test_roundtrip_flow("type A = void");
     test_roundtrip_flow("type A = number => number");
     test_roundtrip_flow("type A = (number, string) => number");
+}
+
+#[test]
+fn test_typecast() {
+    test_roundtrip_flow("async function foo() { return (x: any); }");
+    test_roundtrip_flow("var x = (y: number | number => string)");
 }
 
 #[test]
@@ -525,9 +498,9 @@ fn test_jsx() {
 fn test_sourcemap() {
     use juno::gen_js::*;
     let mut ctx = Context::new();
-    let ast1 = hparser::parse(&mut ctx, "function foo() { return 1 }").unwrap();
+    let ast1: NodeRc = hparser::parse(&mut ctx, "function foo() { return 1 }").unwrap();
     let mut out: Vec<u8> = vec![];
-    let sourcemap = generate(&mut out, &ctx, ast1, Pretty::Yes).unwrap();
+    let sourcemap = generate(&mut out, &mut ctx, &ast1, Pretty::Yes).unwrap();
     let string = String::from_utf8(out).expect("Invalid UTF-8 output in test");
     assert_eq!(
         string,
@@ -609,7 +582,7 @@ fn test_sourcemap_merged() {
     .unwrap();
     let mut out: Vec<u8> = vec![];
     let node = hparser::parse_with_flags(Default::default(), input_src, ctx).unwrap();
-    let output_map = generate(&mut out, ctx, node, Pretty::Yes).unwrap();
+    let output_map = generate(&mut out, ctx, &node, Pretty::Yes).unwrap();
     let output = String::from_utf8(out).expect("Invalid UTF-8 output in test");
     assert_eq!(output, "function foo() {\n  1;\n}\n",);
 

@@ -11,17 +11,15 @@ import java.util.HashSet;
 import java.util.Set;
 import org.junit.Test;
 
-// Run "./gradlew :intltest:prepareTests" from the root to download and copy the test files to the
+// Run "./gradlew :intltest:prepareTests" from the root to copy the test files to the
 // APK assets.
 public class HermesIntlGetCanonicalLocalesTest extends HermesIntlTest262Base {
-
-  private static final String LOG_TAG = "HermesIntlGetCanonicalLocalesTest";
 
   @Test
   public void testIntlGetCanonicalLocales() throws IOException {
     String basePath = "test262/test/intl402/Intl/getCanonicalLocales";
-    Set<String> whiteList = new HashSet<>();
-    Set<String> blackList =
+
+    Set<String> skipList =
         new HashSet<>(
             Arrays.asList(
                 "Locale-object.js",
@@ -135,11 +133,11 @@ public class HermesIntlGetCanonicalLocalesTest extends HermesIntlTest262Base {
               ));
     }
 
-    blackList.addAll(icuIssues);
-    blackList.addAll(testIssuesList);
-    blackList.addAll(pre24Issues);
+    skipList.addAll(icuIssues);
+    skipList.addAll(testIssuesList);
+    skipList.addAll(pre24Issues);
 
-    runTests(basePath, blackList, whiteList);
+    runTests(basePath, skipList);
 
     // Passed Tests:
     //       descriptor.js

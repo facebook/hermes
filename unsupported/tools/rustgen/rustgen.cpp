@@ -372,8 +372,10 @@ static void genGetters() {
 }
 
 static void genConvert() {
-  llvh::outs()
-      << "pub unsafe fn cvt_node_ptr(cvt: &mut Converter, n: NodePtr) -> ast::NodePtr {\n";
+  llvh::outs() << "pub unsafe fn cvt_node_ptr<'parser, 'gc>(\n"
+                  "  cvt: &mut Converter<'parser>, \n"
+                  "  gc: &'gc ast::GCLock, \n"
+                  "  n: NodePtr) -> &'gc ast::Node<'gc> {\n";
   llvh::outs() << "    let nr = n.as_ref();\n"
                   "    let range = ast::SourceRange {\n"
                   "        file: cvt.file_id,\n"
@@ -419,7 +421,7 @@ static void genConvert() {
             llvh::outs() << "cvt_enum(";
           else
             llvh::outs() << "cvt.cvt_label" << (fld.optional ? "_opt" : "")
-                         << "(";
+                         << "(gc, ";
           break;
         case FieldType::Boolean:
         case FieldType::Number:
@@ -428,11 +430,11 @@ static void genConvert() {
           break;
         case FieldType::NodePtr:
           llvh::outs() << "cvt_node_ptr" << (fld.optional ? "_opt" : "")
-                       << "(cvt, ";
+                       << "(cvt, gc, ";
           break;
         case FieldType::NodeList:
           llvh::outs() << "cvt_node_list" << (fld.optional ? "_opt" : "")
-                       << "(cvt, ";
+                       << "(cvt, gc, ";
           break;
       }
       llvh::outs() << "hermes_get_" << cls.name << "_" << fld.name << "(n)";
@@ -441,19 +443,21 @@ static void genConvert() {
       llvh::outs() << ";\n";
     }
 
-    llvh::outs() << "          cvt.ast_context.alloc(\n"
-                    "            ast::Node::"
-                 << cls.name << "(ast::" << cls.name << " {\n"
-                 << "                range,\n";
+    llvh::outs()
+        << "          let mut template = ast::template::" << cls.name << " {\n"
+        << "              metadata: ast::TemplateMetadata {range, ..Default::default()},\n";
 
     for (const auto &fld : cls.fields) {
       // Shorthand initialization of each field.
-      llvh::outs() << "                    " << fld.rustName() << ",\n";
+      llvh::outs() << "                  " << fld.rustName() << ",\n";
     }
 
-    llvh::outs() << "            }),\n" // kind
-                    "          )\n" // NodePtr
-                    "        }\n"; // match block
+    llvh::outs()
+        << "          };\n" // kind
+           "          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());\n"
+        << "          ast::builder::" << cls.name
+        << "::build_template(gc, template)\n"
+        << "        }\n"; // match block
   };
 
   for (const auto &cls : treeClasses_) {
@@ -464,10 +468,7 @@ static void genConvert() {
 
   llvh::outs() << "        _ => panic!(\"Invalid node kind\")\n"
                   "    };\n\n";
-  llvh::outs()
-      << "    cvt.ast_context.node_mut(res).range_mut().end = cvt.cvt_smloc(nr.source_range.end.pred());\n"
-         "\n"
-         "    res";
+  llvh::outs() << "    res\n";
   llvh::outs() << "}\n";
 }
 

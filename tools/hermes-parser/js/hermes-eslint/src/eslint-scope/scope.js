@@ -193,7 +193,9 @@ function shouldBeStaticallyClosed(def: Definition): boolean {
     def.type === DefinitionType.ClassName ||
     def.type === DefinitionType.Enum ||
     def.type === DefinitionType.Type ||
-    (def.type === DefinitionType.Variable && def.parent.type !== 'DeclareVariable' && def.parent.kind !== 'var')
+    (def.type === DefinitionType.Variable &&
+      def.parent.type !== 'DeclareVariable' &&
+      def.parent.kind !== 'var')
   );
 }
 
@@ -660,7 +662,11 @@ class ModuleScope extends ScopeBase {
   declare +type: (typeof ScopeType)['Module'];
   declare +block: Program;
 
-  constructor(scopeManager: ScopeManager, upperScope: ?Scope, block: ModuleScope['block']) {
+  constructor(
+    scopeManager: ScopeManager,
+    upperScope: ?Scope,
+    block: ModuleScope['block'],
+  ) {
     super(scopeManager, ScopeType.Module, upperScope, block, false);
   }
 }

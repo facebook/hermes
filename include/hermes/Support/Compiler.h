@@ -8,8 +8,6 @@
 #ifndef HERMES_SUPPORT_COMPILER_H
 #define HERMES_SUPPORT_COMPILER_H
 
-#include "hermes/Support/Config.h"
-
 #include "llvh/Support/Compiler.h"
 
 #include <type_traits>
@@ -103,18 +101,6 @@ void AnnotateThreadName(const char *file, int line, const char *name);
 #endif
 
 namespace hermes {
-
-/// Some compiler versions don't support \c std::is_trivially_copyable<>, so
-/// we are forced to abstract it away. A conservative default value must be
-/// provided for the case when the compiler doesn't support it.
-template <typename T, bool defaultValue>
-struct IsTriviallyCopyable {
-#ifdef HAVE_IS_TRIVIALLY_COPYABLE
-  static constexpr bool value = std::is_trivially_copyable<T>::value;
-#else
-  static constexpr bool value = defaultValue;
-#endif
-};
 
 /// Convert from an l-value to an r-value. This is needed when we want to pass
 /// a member constant to something that takes a const & - for example

@@ -27,7 +27,7 @@ enum {
   VerifyBytecodeChecksum = 1 << 7,
   IgnoreMemoryWarnings = 1 << 9,
   // HadesCompaction = 1 << 10,
-  GenGC = 1 << 11,
+  // GenGC = 1 << 11,
   // HadesTimedIncremental = 1 << 12,
   CrashTrace = 1 << 13,
   JobQueue = 1 << 14,
