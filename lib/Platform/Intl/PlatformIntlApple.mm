@@ -91,34 +91,49 @@ bool isUnicodeExtensionAttribute(std::u16string str, int start, int end) {
 bool isUnicodeExtensionKey(std::u16string str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = alphanum alpha;
-  return false;
+  
+  if (end - start != 1) {
+    return false;
+  }
+  
+  return isASCIILetterOrDigit(str[start]) && isASCIILetter(str[end]);
 }
 bool isUnicodeExtensionType(std::u16string str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = alphanum alpha;
-  return false;
+  if (end - start != 1) {
+    return false;
+  }
+  
+  return isASCIILetterOrDigit(str[start]) && isASCIILetter(str[end]);
 }
 bool isExtensionSingleton(std::u16string str, int start, int end) {
-  return false;
+  return (unsigned)start < str.length() && end - start == 1 && str[start] == '-';
 }
 bool isTransformedExtensionKey(std::u16string str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = alpha digit;
-  return false;
+  if (end - start != 1) {
+    return false;
+  }
+  
+  return isASCIILetter(str[start]) && isASCIIDigit(str[end]);
 }
 bool isTransformedExtensionTValueItem(std::u16string str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = (sep alphanum{3,8})+;
-  return false;
+  
+  return isCharType(str, start, end, 3, 8, &isASCIILetterOrDigit);
 }
 bool isPrivateUseExtension(std::u16string str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = (sep alphanum{1,8})+;
-  return false;
+  return isCharType(str, start, end, 1, 8, &isASCIILetterOrDigit);
 }
 bool isOtherExtension(std::u16string str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = (sep alphanum{2,8})+;
+  return isCharType(str, start, end, 2, 8, &isASCIILetterOrDigit);
   return false;
 }
 
@@ -129,39 +144,40 @@ struct ParsedLanguageIdentifier {
   std::vector<std::u16string> variantSubtagList;
 };
 
-class ParsedLocaleIdentifier : public vm::DecoratedObject::Decoration {
+class ParsedLocaleIdentifier {
  public:
   ParsedLocaleIdentifier();
   ~ParsedLocaleIdentifier();
-  // public function declaration
-  static ParsedLocaleIdentifier parseLocaleId(const std::u16string &localeId);
-
+  
+  // public fields
+  ParsedLanguageIdentifier languageIdentifier;
+  
+  std::vector<std::u16string> unicodeExtensionAttributes;
+  std::unordered_map<std::u16string, std::vector<std::u16string>> unicodeExtensionKeywords;
+  
+  ParsedLanguageIdentifier transformedLanguageIdentifier;
+  std::unordered_map<std::u16string, std::vector<std::u16string>> transformedExtensionFields;
+  
+  std::unordered_map<char16_t, std::vector<std::u16string>> otherExtensionMap;
+  std::vector<std::u16string> puExtensions;
  private:
   struct Impl;
   std::unique_ptr<Impl> impl_;
 };
-struct ParsedLocaleIdentifier::Impl {
-  ParsedLanguageIdentifier languageIdentifier;
-  // Other extensions
+struct ParsedLocaleIdentifier::Impl { };
 
-  // Function implementation
-  static ParsedLocaleIdentifier parseLocaleId(const std::u16string &localeId) {
-    return {};
-  }
-};
 class LanguageTagParser {
  public:
-  LanguageTagParser(std::u16string localeId);
+  LanguageTagParser(const std::u16string &localeId);
   ~LanguageTagParser();
     
   // public function declaration
   ParsedLocaleIdentifier parseLocaleId();
   // tokenizer functions
   std::u16string toString();
-  std::u16string getCurrentTag();
-  bool hasMoreSubtags();
-  bool nextSubtag();
 
+  static const size_t numberOfUnicodeSingletons = 36; // [a-b|0-9]
+  
  private:
   struct Impl;
   std::unique_ptr<Impl> impl_;
@@ -170,30 +186,41 @@ class LanguageTagParser {
   bool parseUnicodeLocaleId();
   bool parseUnicodeLanguageId();
   bool parseExtensions();
-  bool parseUnicodeExtensionAfterPrefix();
-  bool parseTransformedExtensionAfterPrefix();
-  bool parseOtherExtensionAfterPrefix();
-  bool parsePUExtensionAfterPrefix();
+  bool parseUnicodeExtension();
+  bool parseTransformedExtension();
+  bool parseOtherExtension();
+  bool parsePUExtension();
 
-  size_t convertToSingletonSetIndex();
+  // tokenizer functions
+  std::u16string getCurrentSubtag();
+  bool hasMoreSubtags();
+  bool nextSubtag();
+  
+  size_t convertToSingletonSetIndex(char16_t c);
 };
 struct LanguageTagParser::Impl {
-  Impl(std::u16string localeId)
-    : mLocaleId(localeId){};
+  Impl(const std::u16string &localeId)
+    : mLocaleId(localeId) {};
   ~Impl();
   
+  ParsedLocaleIdentifier parsedLocaleIdentifier;
   std::u16string mLocaleId;
   size_t mSubtagStart;
   size_t mSubtagEnd;
-
-  static const size_t numberOfUnicodeSingletons = 36; // [a-b|0-9]
 };
-LanguageTagParser::LanguageTagParser(std::u16string localeId) : impl_(std::make_unique<Impl>()) {
-  impl_->mLocaleId = localeId.tolower(); // tolowercase?
+LanguageTagParser::LanguageTagParser(const std::u16string &localeId) : impl_(std::make_unique<Impl>()) {
+  impl_->mLocaleId = localeId; // tolowercase? this should just be ascii right?
   impl_->mSubtagStart = 0;
   impl_->mSubtagEnd = -1;
 }
 LanguageTagParser::~LanguageTagParser() = default;
+
+ParsedLocaleIdentifier LanguageTagParser::parseLocaleId() {
+  if (!parseUnicodeLocaleId()) {
+    // throw
+  }
+  //return impl->parsedLocaleIdentifier;
+}
 
 bool LanguageTagParser::parseUnicodeLocaleId() {
   if (!parseUnicodeLanguageId())  {
@@ -216,7 +243,7 @@ bool LanguageTagParser::parseUnicodeLanguageId() {
     return false;
   }
   
-  parsedLanguageIdentifier.languageSubtag = getCurrentTag();
+  parsedLanguageIdentifier.languageSubtag = getCurrentSubtag();
   
   if (!nextSubtag()) {
     return true;
@@ -225,14 +252,14 @@ bool LanguageTagParser::parseUnicodeLanguageId() {
   // handle extensions here? is this most common path?
   
   if (isUnicodeScriptSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
-    parsedLanguageIdentifier.scriptSubtag = getCurrentTag(); // to title case?
+    parsedLanguageIdentifier.scriptSubtag = getCurrentSubtag(); // to title case?
     if (!nextSubtag()) {
       return true;
     }
   }
   
   if (isUnicodeRegionSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
-    parsedLanguageIdentifier.regionSubtag = getCurrentTag(); // to upper case?
+    parsedLanguageIdentifier.regionSubtag = getCurrentSubtag(); // to upper case?
     if (!nextSubtag()) {
       return true;
     }
@@ -255,29 +282,100 @@ bool LanguageTagParser::parseUnicodeLanguageId() {
 
 bool LanguageTagParser::parseExtensions() {
   // if transformed extensions and next subtag is transformed extension
-  // parse transformed extensons
+  // parse transformed extensions
 
-  if (isExtensionSingleton()) {
-    // throw if transformed extensions
-  }
-
-  constexpr std::bitset<numberOfUnicodeSingletons> singletonSet {};
   while (true) {
-    char16_t singleton = getCurrentTag()[0];
+    // check if current subtag isExtensionSingleton
+    if (impl_->mSubtagEnd - impl_->mSubtagStart != 1) {
+      return true;
+    }
+    char16_t singleton = getCurrentSubtag()[0];
     if (!isASCIILetterOrDigit(singleton)) {
       return true;
     }
-
-    // No duplicate subtags
-    size_t singletonIndex = convertToSingletonSetIndex(singleton);
-    if (singletonSet[singletonIndex]) {
+    
+    if (!nextSubtag()) {
       return false;
     }
-    singletonSet[singletonIndex] = true;
-
-    switch ()
+    
+    // duplicate subtags handled in parse functions
+    switch (singleton) {
+      case 'u': {
+        // unicode extension
+        if (!parseUnicodeExtension()) {
+          return false;
+        }
+        break;
+      }
+      case 't': {
+        // transformed extension
+        if (!parseTransformedExtension()) {
+          return false;
+        }
+        break;
+      }
+      case 'x': {
+        // private use extension
+        if (!parsePUExtension()) {
+          return false;
+        }
+        return true;
+      }
+      default: {
+        // other extension
+        if (!parseOtherExtension()) {
+          return false;
+        }
+        break;
+      }
+    }
   }
 
+  return false;
+}
+
+bool LanguageTagParser::parseUnicodeExtension() {
+  if (!impl_->parsedLocaleIdentifier.unicodeExtensionAttributes.empty() ||
+      !impl_->parsedLocaleIdentifier.unicodeExtensionKeywords.empty()) {
+    return false;
+  }
+  
+  while (isUnicodeExtensionAttribute(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
+    impl_->parsedLocaleIdentifier.unicodeExtensionAttributes.push_back(getCurrentSubtag());
+    if (!nextSubtag()) {
+      return true;
+    }
+  }
+  
+  while (isUnicodeExtensionKey(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
+    std::u16string key = getCurrentSubtag();
+    std::vector<std::u16string> extensionKeyTypes;
+    impl_->parsedLocaleIdentifier.unicodeExtensionKeywords.insert({key, extensionKeyTypes});
+    
+    if (!nextSubtag()) {
+      return true;
+    } else {
+      while (isUnicodeExtensionType(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
+        extensionKeyTypes.push_back(getCurrentSubtag());
+        if (!nextSubtag()) {
+          return true;
+        }
+      }
+    }
+  }
+  
+  return true;
+}
+
+bool LanguageTagParser::parseTransformedExtension() {
+  return false;
+}
+
+bool LanguageTagParser::parseOtherExtension() {
+  return false;
+}
+
+bool LanguageTagParser::parsePUExtension() {
   return false;
 }
 
@@ -289,7 +387,7 @@ size_t LanguageTagParser::convertToSingletonSetIndex(char16_t c) {
   return c - 'a' + 10;
 }
 bool LanguageTagParser::hasMoreSubtags() {
-  return impl_->mLocaleId.length() > 0 && mSubtagEnd < mLocaleId.length() - 1;
+  return impl_->mLocaleId.length() > 0 && impl_->mSubtagEnd < impl_->mLocaleId.length() - 1;
 }
 bool LanguageTagParser::nextSubtag() {
   if (!hasMoreSubtags()) {
@@ -321,7 +419,7 @@ bool LanguageTagParser::nextSubtag() {
 std::u16string LanguageTagParser::toString() {
   return impl_->mLocaleId;
 }
-std::u16string LanguageTagParser::getCurrentTag() {
+std::u16string LanguageTagParser::getCurrentSubtag() {
   return impl_->mLocaleId.substr(impl_->mSubtagStart, impl_->mSubtagEnd - impl_->mSubtagStart + 1);
 }
 }
