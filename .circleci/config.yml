@@ -13,6 +13,7 @@ version: 2.1
 orbs:
   win: circleci/windows@2.4.0
   android: circleci/android@1.0.3
+  node: circleci/node@4.7.0
 
 workflows:
   version: 2
@@ -559,10 +560,12 @@ jobs:
     steps:
       - attach_workspace:
           at: /tmp/input
+      - node/install:
+          install-yarn: true
+          lts: true
       - run:
           name: Prepare RNTester
           command: |
-            npm install --global yarn
             git clone https://github.com/facebook/react-native
             cd react-native
             yarn install
