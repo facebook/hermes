@@ -370,193 +370,79 @@ struct DateTimeFormat::Impl {
   // Enum declaration for DateTimeFormat internal slots
   // https://tc39.es/ecma402/#datetimeformat-objects
   enum class FormatMatcher : size_t {Undefined = 0, Bestfit, Basic};
+  static std::vector<std::u16string> formatMatcherVector = {u"Undefined", u"Bestfit", u"Basic"};
   enum class HourCycle : size_t {Undefined = 0, H11, H12, H23, H24};
+  static std::vector<std::u16string> hourCycleVector = {u"Undefined", u"H11", u"H12", u"H23", u"H24"};
   enum class Weekday : size_t {Undefined = 0, Narrow, Short, Long};
+  static std::vector<std::u16string> weekdayVector = {"Undefined", u"Narrow", u"Short", u"Long"};
   enum class Era : size_t {Undefined = 0, Narrow, Short, Long};
+  static std::vector<std::u16string> eraVector = {u"Undefined", u"Narrow", u"Short", u"Long"};
   enum class Year : size_t {Undefined = 0, TwoDigit, Numeric};
+  static std::vector<std::u16string> yearVector = {u"Undefined", u"TwoDigit", u"Numeric"};
   enum class Month : size_t {Undefined = 0, TwoDigit, Numeric, Narrow, Short, Long};
+  static std::vector<std::u16string> monthVector = {u"Undefined", u"TwoDigit", u"Numeric", u"Narrow", u"Short", u"Long"};
   enum class Day : size_t {Undefined = 0, TwoDigit, Numeric};
+  static std::vector<std::u16string> dayVector = {u"Undefined", u"TwoDigit", u"Numeric"};
   enum class DayPeriod : size_t {Undefined = 0, Narrow, Short, Long};
+  static std::vector<std::u16string> dayPeriodVector = {u"Undefined", u"Narrow", u"Short", u"Long"};
   enum class Hour : size_t {Undefined = 0, TwoDigit, Numeric};
+  static std::vector<std::u16string> hourVector = {u"Undefined", u"TwoDigit", u"Numeric"};
   enum class Minute : size_t {Undefined = 0, TwoDigit, Numeric};
+  static std::vector<std::u16string> minuteVector = {u"Undefined", u"TwoDigit", u"Numeric"};
   enum class Second : size_t {Undefined = 0, TwoDigit, Numeric};
+  static std::vector<std::u16string> secondVector = {u"Undefined", u"TwoDigit", u"Numeric"};
   enum class TimeZoneName : size_t {Undefined = 0, Short, Long};
+  static std::vector<std::u16string> timeZoneNameVector = {u"Undefined", u"Short", u"Long"};
   enum class DateTimeStyle : size_t {Undefined = 0, Full, Long, Medium, Short};
+  static std::vector<std::u16string> dateTimeStyleVector = {u"Undefined", u"Full", u"Long", u"Medium", u"Short"};
 
   static std::u16string formatMatcherString(const FormatMatcher &formatMatcher) {
-    switch (formatMatcher) {
-      case FormatMatcher::Bestfit:
-        return u"best fit";
-      case FormatMatcher::Basic:
-        return u"basic";
-      case FormatMatcher::Undefined:
-        return u"";
-      default:
-        return u"";
-    }
+    return formatMatcherVector[static_cast<size_t>(formatMatcher)];
   }
-  
   static std::u16string hourCycleString(const HourCycle &hourCycle) {
-    switch (hourCycle) {
-      case HourCycle::H11:
-        return u"h11";
-      case HourCycle::H12:
-        return u"h12";
-      case HourCycle::H23:
-        return u"h23";
-      case HourCycle::H24:
-        return u"h24";
-      case HourCycle::Undefined:
-        return u"";
-      default:
-        return u"";
-    }
+    return hourCycleVector[static_cast<size_t>(hourCycle)];
   }
-  
   static std::u16string weekdayString(const Weekday &weekday) {
-    switch (weekday) {
-      case Weekday::Narrow:
-        return u"narrow";
-      case Weekday::Short:
-        return u"short";
-      case Weekday::Long:
-        return u"long";
-      case Weekday::Undefined:
-        return u"";
-      default:
-        return u"";
-    }
+    return weekdayVector[static_cast<size_t>(weekday)];
   }
-  
   static std::u16string eraString(const Era &era) {
-    switch (era) {
-      case Era::Narrow:
-        return u"narrow";
-      case Era::Short:
-        return u"short";
-      case Era::Long:
-        return u"long";
-      case Era::Undefined:
-        return u"";
-      default:
-        return u"";
-    }
+    return eraVector[static_cast<size_t>(era)];
   }
-  
   static std::u16string yearString(const Year &year) {
-    switch (year) {
-      case Year::Numeric:
-        return u"numeric";
-      case Year::TwoDigit:
-        return u"2-digit";
-      case Year::Undefined:
-        return u"";
-      default:
-        return u"";
-    }
+    return yearVector[static_cast<size_t>(year)];
   }
-  
   static std::u16string monthString(const Month &month) {
-    switch (month) {
-      case Month::Numeric:
-        return u"numeric";
-      case Month::TwoDigit:
-        return u"2-digit";
-      case Month::Narrow:
-        return u"narrow";
-      case Month::Short:
-        return u"short";
-      case Month::Long:
-        return u"long";
-      case Month::Undefined:
-        return u"";
-      default:
-        return u"";
-    }
+    return monthVector[static_cast<size_t>(month)];
   }
-  
   static std::u16string dayString(const Day &day) {
-    switch (day) {
-      case Day::Numeric:
-        return u"numeric";
-      case Day::TwoDigit:
-        return u"2-digit";
-      case Day::Undefined:
-        return u"";
-      default:
-        return u"";
-    }
+    return dayVector[static_cast<size_t>(day)];
   }
-  
   static std::u16string hourString(const Hour &hour) {
-    switch (hour) {
-      case Hour::Numeric:
-        return u"numeric";
-      case Hour::TwoDigit:
-        return u"2-digit";
-      case Hour::Undefined:
-        return u"";
-      default:
-        return u"";
-    }
+    return hourVector[static_cast<size_t>(hour)];
   }
-  
   static std::u16string minuteString(const Minute &minute) {
-    switch (minute) {
-      case Minute::Numeric:
-        return u"numeric";
-      case Minute::TwoDigit:
-        return u"2-digit";
-      case Minute::Undefined:
-        return u"";
-      default:
-        return u"";
-    }
+    return minuteVector[static_cast<size_t>(minute)];
   }
-  
   static std::u16string secondString(const Second &second) {
-    switch (second) {
-      case Second::Numeric:
-        return u"numeric";
-      case Second::TwoDigit:
-        return u"2-digit";
-      case Second::Undefined:
-        return u"";
-      default:
-        return u"";
-    }
+    return secondVector[static_cast<size_t>(second)];
   }
-  
   static std::u16string timeZoneNameString(const TimeZoneName &timeZoneName) {
-    switch (timeZoneName) {
-      case TimeZoneName::Short:
-        return u"short";
-      case TimeZoneName::Long:
-        return u"long";
-      case TimeZoneName::Undefined:
-        return u"";
-      default:
-        return u"";
-    }
+    return timeZoneNameVector[static_cast<size_t>(timeZoneName)];
   }
-  
   // https://tc39.es/ecma402/#sec-date-time-style-format
   static std::u16string dateTimeStyleString(const DateTimeStyle &dateTimeStyle) {
-    switch (dateTimeStyle) {
-      case DateTimeStyle::Short:
-        return u"short";
-      case DateTimeStyle::Long:
-        return u"long";
-      case DateTimeStyle::Full:
-        return u"full";
-      case DateTimeStyle::Medium:
-        return u"medium";
-      case DateTimeStyle::Undefined:
-        return u"";
-      default:
-        return u"";
-    }
+    return dateTimeStyleVector[static_cast<size_t>(dateTimeStyle)];
   }
+
+  vm::CallResult<size_t> enumMatcher(std::u16string enumStr, std::vector<std::u16string> enums) {
+    for (size_t i = 0; i < enums.length(); i++) {
+      if (enumStr == enums) {
+        return i;
+      }
+    }
+    return vm::ExecutionStatus::EXCEPTION;
+  }
+
   // Table 4 from https://tc39.es/ecma402/#table-datetimeformat-components
   FormatMatcher mFormatMatcher {FormatMatcher::Undefined};
   HourCycle mHourCycle {HourCycle::Undefined};
