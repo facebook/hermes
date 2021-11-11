@@ -574,23 +574,14 @@ struct DateTimeFormat::Impl {
   DateTimeStyle mTimeStyle {DateTimeStyle::Undefined};
   
   // For opt in initialize
-  std::u16string localeMatcher;
-  std::u16string ca;
-  std::u16string nu;
-  std::u16string hc;
+  std::u16string localeMatcher, ca, nu, hc, hcDefault;
+  bool hour12;
   std::u16string locale; // Needed for resolvedOptions
   std::u16string prop; // Wrong
   
   // For dateTimeFormat in initialize
   std::vector<std::u16string> localeData;
-  std::u16string Locale;
-  std::u16string Calendar;
-  std::u16string HourCycle;
-  std::u16string NumberingSystem;
-  std::u16string TimeZone;
-  std::u16string DateStyle;
-  std::u16string TimeStyle;
-  std::u16string Hour;
+  std::u16string Locale, Calendar, HourCycle, NumberingSystem, TimeZone, DateStyle, TimeStyle, Hour;
 };
 
 DateTimeFormat::DateTimeFormat() : impl_(std::make_unique<Impl>()) {}
@@ -599,14 +590,7 @@ DateTimeFormat::~DateTimeFormat() {}
 // Implementation of
 // https://tc39.es/ecma402/#sec-resolvelocale
 struct ResolveLocale {
-  std::u16string key;
-  std::u16string value;
-  std::u16string dataLocale;
-  std::u16string resolveLocale;
-  std::u16string locale;
-  std::u16string ca;
-  std::u16string nu;
-  std::u16string hc;
+  std::u16string key, value, dataLocale, resolveLocale, locale, ca, nu, hc;
 };
 // https://tc39.es/ecma402/#sec-resolvelocale
 ResolveLocale resolveLocale(
@@ -915,7 +899,8 @@ vm::ExecutionStatus DateTimeFormat::initialize(
 //   35. Set dateTimeFormat.[[TimeStyle]] to timeStyle.
       dateTimeFormat.TimeStyle = mtimeStyle->getString();
 //  36. If dateStyle is not undefined or timeStyle is not undefined, then
-      if (mdateStyle->getString() != u"und" || mtimeStyle->getString() != u"und") {
+//  Skip 37/38 on formatMatcher so cancel this if?
+      //if (mdateStyle->getString() != u"und" || mtimeStyle->getString() != u"und") {
 //  a. For each row in Table 4, except the header row, do
 //  i. Let prop be the name given in the Property column of the row.
         for (std::u16string prop : {u"Weekday", u"Era", u"Year", u"Month", u"Day", u"DayPeriod", u"Hour", u"Minute", u"Second", u"FractionalSecondDigits", u"TimeZoneName"}) {
@@ -925,45 +910,56 @@ vm::ExecutionStatus DateTimeFormat::initialize(
           if (p != u"und") {
 //  1. Throw a TypeError exception.
             return vm::ExecutionStatus::EXCEPTION;
-          }
-//  Else,
-//  a. Let formats be dataLocaleData.[[formats]].[[<calendar>]].
-//  b. If matcher is "basic", then
-//  i. Let bestFormat be BasicFormatMatcher(opt, formats).
-// TODO: BasicFormatMatcher? https://tc39.es/ecma402/#sec-basicformatmatcher
-
-//  c. Else,
-//  i. Let bestFormat be BestFitFormatMatcher(opt, formats).
-
+          //}
         }
       }
-//  Skip 38?
 //  39. If dateTimeFormat.[[Hour]] is undefined, then
-      if (dateTimeFormat.Hour == u"und") {
 //  a. Set dateTimeFormat.[[HourCycle]] to undefined.
+      if (dateTimeFormat.Hour == u"und") {
         dateTimeFormat.HourCycle = u"und";
       }
       else {
 //  b. Let hc be dateTimeFormat.[[HourCycle]].
         auto hc = dateTimeFormat.HourCycle;
 //  c. If hc is null, then
-        if (hc == u"") {
 //  i. Set hc to hcDefault.
-          hc = Impl::HourCycle::Undefined;
+        if (hc.empty()) {
+          hc = u"";
         }
 //  d. If hour12 is not undefined, then
+        if (opt.hour12) {
 //  i. If hour12 is true, then
+          if (opt.hour12 == true)
+          {
 //  1. If hcDefault is "h11" or "h23", then
 //  a. Set hc to "h11".
+            if (opt.hcDefault == u"h11" || opt.hcDefault == u"h23") {
+              hc = u"h11";
+            }
 //  2. Else,
 //  a. Set hc to "h12".
+            else {
+              hc = u"h12";
+            }
+          }
+        }
 //  ii. Else,
 //  1. Assert: hour12 is false.
+            else {
+              opt.hour12 = false;
+            }
 //  2. If hcDefault is "h11" or "h23", then
 //  a. Set hc to "h23".
+            if (opt.hcDefault == u"h11" || opt.hcDefault == u"h23") {
+              hc = u"h23";
+            }
 //  3. Else,
 //  a. Set hc to "h24".
+            else {
+              hc = u"h24";
+            }
 //  e. Set dateTimeFormat.[[HourCycle]] to hc.
+    dateTimeFormat.HourCycle = hc;
       }
 }
 
