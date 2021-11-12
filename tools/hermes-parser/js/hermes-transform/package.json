@@ -9,7 +9,7 @@
     "url": "git@github.com:facebook/hermes.git"
   },
   "dependencies": {
-    "esquery": "1.4.0",
+    "esquery": "^1.4.0",
     "hermes-eslint": "0.4.8",
     "hermes-estree": "0.4.8"
   },
