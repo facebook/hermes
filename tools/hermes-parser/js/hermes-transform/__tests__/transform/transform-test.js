@@ -429,4 +429,199 @@ if (true) {
 `);
     });
   });
+
+  describe('comments', () => {
+    it('should attach comments so they are maintained during an insertion', () => {
+      const code = `
+// leading comment
+statement(); // inline comment
+`;
+
+      const result = transform(code, context => ({
+        ExpressionStatement(node) {
+          context.insertBeforeStatement(
+            node,
+            t.ExpressionStatement({
+              expression: t.StringLiteral({
+                value: 'before',
+              }),
+            }),
+          );
+          context.insertAfterStatement(
+            node,
+            t.ExpressionStatement({
+              expression: t.StringLiteral({
+                value: 'after',
+              }),
+            }),
+          );
+        },
+      }));
+
+      expect(result).toBe(`\
+('before');
+// leading comment
+statement(); // inline comment
+('after');
+`);
+    });
+
+    it('should attach comments so they are removed when the associated node is removed', () => {
+      const code = `
+// this should remain leading #1
+const x = 1; // this should remain inline #1
+// leading comment to be deleted
+statement(); // inline comment to be deleted
+// this should remain leading #2
+const y = 1; // this should remain inline #2
+`;
+
+      const result = transform(code, context => ({
+        ExpressionStatement(node) {
+          context.removeStatement(node);
+        },
+      }));
+
+      expect(result).toBe(`\
+// this should remain leading #1
+const x = 1; // this should remain inline #1
+// this should remain leading #2
+const y = 1; // this should remain inline #2
+`);
+    });
+
+    it('should clone comments when nodes are cloned', () => {
+      const code = `
+// leading comment to be duplicated
+statement(); // inline comment to be duplicated
+`;
+
+      const result = transform(code, context => ({
+        ExpressionStatement(node) {
+          context.insertBeforeStatement(node, context.shallowCloneNode(node));
+        },
+      }));
+
+      expect(result).toBe(`\
+// leading comment to be duplicated
+statement(); // inline comment to be duplicated
+// leading comment to be duplicated
+statement(); // inline comment to be duplicated
+`);
+    });
+
+    it('should attach comments so they are removed when the associated node is replaced (by default)', () => {
+      const code = `
+// this should remain leading #1
+const x = 1; // this should remain inline #1
+// leading comment to be deleted
+statement(); // inline comment to be deleted
+// this should remain leading #2
+const y = 1; // this should remain inline #2
+`;
+
+      const result = transform(code, context => ({
+        ExpressionStatement(node) {
+          context.replaceNode(
+            node,
+            t.ExpressionStatement({
+              expression: t.StringLiteral({
+                value: 'inserted',
+              }),
+            }),
+          );
+        },
+      }));
+
+      expect(result).toBe(`\
+// this should remain leading #1
+const x = 1; // this should remain inline #1
+('inserted');
+// this should remain leading #2
+const y = 1; // this should remain inline #2
+`);
+    });
+
+    it('should optionally attach comments so they are kept when the associated statement is replaced', () => {
+      const code = `
+// this should remain leading #1
+const x = 1; // this should remain inline #1
+// leading comment to be deleted
+statement(); // inline comment to be deleted
+// this should remain leading #2
+const y = 1; // this should remain inline #2
+`;
+
+      const result = transform(code, context => ({
+        ExpressionStatement(node) {
+          context.replaceStatementWithMany(
+            node,
+            [
+              t.ExpressionStatement({
+                expression: t.StringLiteral({
+                  value: 'inserted1',
+                }),
+              }),
+              t.ExpressionStatement({
+                expression: t.StringLiteral({
+                  value: 'inserted2',
+                }),
+              }),
+              t.ExpressionStatement({
+                expression: t.StringLiteral({
+                  value: 'inserted3',
+                }),
+              }),
+            ],
+            {keepComments: true},
+          );
+        },
+      }));
+
+      expect(result).toBe(`\
+// this should remain leading #1
+const x = 1; // this should remain inline #1
+// leading comment to be deleted
+('inserted1'); // inline comment to be deleted
+('inserted2');
+('inserted3');
+// this should remain leading #2
+const y = 1; // this should remain inline #2
+`);
+    });
+
+    it('should optionally attach comments so they are kept when the associated node is replaced', () => {
+      const code = `
+// this should remain leading #1
+const x = 1; // this should remain inline #1
+// leading comment to be deleted
+statement(); // inline comment to be deleted
+// this should remain leading #2
+const y = 1; // this should remain inline #2
+`;
+
+      const result = transform(code, context => ({
+        ExpressionStatement(node) {
+          context.replaceNode(
+            node,
+            t.ExpressionStatement({
+              expression: t.StringLiteral({
+                value: 'inserted1',
+              }),
+            }),
+            {keepComments: true},
+          );
+        },
+      }));
+
+      expect(result).toBe(`\
+// this should remain leading #1
+const x = 1; // this should remain inline #1
+// leading comment to be deleted
+('inserted1'); // inline comment to be deleted
+// this should remain leading #2
+const y = 1; // this should remain inline #2
+`);
+    });
+  });
 });

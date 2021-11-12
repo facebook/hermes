@@ -101,21 +101,28 @@ export type TransformContext = $ReadOnly<{
    */
   replaceNode: {
     // expressions must be replaced with other expressions
-    (target: Expression, nodeToReplaceWith: DetachedNode<Expression>): void,
+    (
+      target: Expression,
+      nodeToReplaceWith: DetachedNode<Expression>,
+      options?: $ReadOnly<{keepComments?: boolean}>,
+    ): void,
     // module declarations must be replaced with statements or other module declarations
     (
       target: ModuleDeclaration,
       nodeToReplaceWith: DetachedNode<ModuleDeclaration | Statement>,
+      options?: $ReadOnly<{keepComments?: boolean}>,
     ): void,
     // Statement must be replaced with statements or module declarations
     (
       target: Statement,
       nodeToReplaceWith: DetachedNode<ModuleDeclaration | Statement>,
+      options?: $ReadOnly<{keepComments?: boolean}>,
     ): void,
     // Types must be replaced with types
     (
       target: TypeAnnotationType,
       nodeToReplaceWith: DetachedNode<TypeAnnotationType>,
+      options?: $ReadOnly<{keepComments?: boolean}>,
     ): void,
   } & TransformReplaceSignatures, // allow like-for-like replacements as well
 
@@ -128,6 +135,7 @@ export type TransformContext = $ReadOnly<{
     nodesToReplaceWith: $ReadOnlyArray<
       DetachedNode<ModuleDeclaration | Statement>,
     >,
+    options?: {keepComments?: boolean},
   ) => void,
 
   /**
@@ -143,6 +151,11 @@ export function getTransformContext(): TransformContext {
    * The mutations in order of collection.
    */
   const mutations: Array<Mutation> = [];
+  function pushMutation(mutation: ?Mutation): void {
+    if (mutation != null) {
+      mutations.push(mutation);
+    }
+  }
 
   return {
     mutations,
@@ -174,13 +187,13 @@ export function getTransformContext(): TransformContext {
     deepCloneNode: (deepCloneNode: TransformContext['deepCloneNode']),
 
     insertAfterStatement: ((target, nodesToInsert): void => {
-      mutations.push(
+      pushMutation(
         createInsertStatementMutation('after', target, toArray(nodesToInsert)),
       );
     }: TransformContext['insertBeforeStatement']),
 
     insertBeforeStatement: ((target, nodesToInsert): void => {
-      mutations.push(
+      pushMutation(
         createInsertStatementMutation('before', target, toArray(nodesToInsert)),
       );
     }: TransformContext['insertBeforeStatement']),
@@ -188,18 +201,29 @@ export function getTransformContext(): TransformContext {
     replaceNode: ((
       target: ESNode,
       nodeToReplaceWith: DetachedNode<ESNode>,
+      options?: $ReadOnly<{keepComments?: boolean}>,
     ): void => {
-      mutations.push(createReplaceNodeMutation(target, nodeToReplaceWith));
+      pushMutation(
+        createReplaceNodeMutation(target, nodeToReplaceWith, options),
+      );
     }: TransformContext['replaceNode']),
 
-    replaceStatementWithMany: ((target, nodesToReplaceWith): void => {
-      mutations.push(
-        createReplaceStatementWithManyMutation(target, nodesToReplaceWith),
+    replaceStatementWithMany: ((
+      target,
+      nodesToReplaceWith,
+      options?: $ReadOnly<{keepComments?: boolean}>,
+    ): void => {
+      pushMutation(
+        createReplaceStatementWithManyMutation(
+          target,
+          nodesToReplaceWith,
+          options,
+        ),
       );
     }: TransformContext['replaceStatementWithMany']),
 
     removeStatement: ((node): void => {
-      mutations.push(createRemoveStatementMutation(node));
+      pushMutation(createRemoveStatementMutation(node));
     }: TransformContext['removeStatement']),
   };
 }

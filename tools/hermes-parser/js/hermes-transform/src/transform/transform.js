@@ -40,6 +40,12 @@ export function transform(
     leave() {},
   });
 
+  // we need to delete the comments prop or else prettier will do
+  // its own attachment pass after the mutation and duplicate the
+  // comments on each node, borking the output
+  // $FlowExpectedError[cannot-write]
+  delete ast.comments;
+
   return prettier.format(code, {
     ...prettierOptions,
     parser() {

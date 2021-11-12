@@ -52,6 +52,9 @@ function test({
         target,
         nodesToInsert,
       );
+      if (mutation == null) {
+        throw new Error('this is impossible!?');
+      }
       performReplaceStatementWithManyMutation(new MutationContext(), mutation);
       expect(ast).toMatchObject(getAssertionObject(nodesToInsert));
     },

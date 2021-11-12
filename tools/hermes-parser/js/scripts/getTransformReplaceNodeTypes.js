@@ -35,7 +35,11 @@ for (const node of HermesESTreeJSON.concat({name: 'Literal', arguments: []})) {
   imports.push(node.name);
 
   replaceSignatures.push(
-    `(target: ${node.name}, nodeToReplaceWith: DetachedNode<${node.name}>): void`,
+    `(
+      target: ${node.name},
+      nodeToReplaceWith: DetachedNode<${node.name}>,
+      options?: $ReadOnly<{keepComments?: boolean}>,
+    ): void`,
   );
 }
 

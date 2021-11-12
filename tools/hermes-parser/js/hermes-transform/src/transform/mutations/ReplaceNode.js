@@ -13,6 +13,7 @@ import type {MutationContext} from '../MutationContext';
 import type {DetachedNode} from '../../detachedNode';
 
 import {replaceInArray} from './utils/arrayUtils';
+import {attachCommentsToNewNode} from '../comments/comments';
 import {InvalidReplacementError} from '../Errors';
 import {getVisitorKeys, isNode} from '../../getVisitorKeys';
 
@@ -20,16 +21,19 @@ export type ReplaceNodeMutation = $ReadOnly<{
   type: 'replaceNode',
   target: ESNode,
   nodeToReplaceWith: DetachedNode<ESNode>,
+  keepComments: boolean,
 }>;
 
 export function createReplaceNodeMutation(
   target: ReplaceNodeMutation['target'],
   nodeToReplaceWith: ReplaceNodeMutation['nodeToReplaceWith'],
+  options?: $ReadOnly<{keepComments?: boolean}>,
 ): ReplaceNodeMutation {
   return {
     type: 'replaceNode',
     target,
     nodeToReplaceWith,
+    keepComments: options?.keepComments ?? false,
   };
 }
 
@@ -60,6 +64,10 @@ export function performReplaceNodeMutation(
     (replacementParent.parent: interface {[string]: mixed})[
       replacementParent.key
     ] = mutation.nodeToReplaceWith;
+  }
+
+  if (mutation.keepComments) {
+    attachCommentsToNewNode(mutation.target, mutation.nodeToReplaceWith);
   }
 
   return replacementParent.parent;

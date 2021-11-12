@@ -29,7 +29,11 @@ export function createInsertStatementMutation(
   side: InsertStatementMutation['side'],
   target: InsertStatementMutation['target'],
   nodesToInsert: InsertStatementMutation['nodesToInsert'],
-): InsertStatementMutation {
+): ?InsertStatementMutation {
+  if (nodesToInsert.length === 0) {
+    return null;
+  }
+
   return {
     type: 'insertStatement',
     side,

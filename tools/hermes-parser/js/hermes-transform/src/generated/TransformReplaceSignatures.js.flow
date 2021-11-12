@@ -23,5 +23,6 @@ export type TransformReplaceSignatures = {
   (
     target: VariableDeclaration,
     nodeToReplaceWith: DetachedNode<VariableDeclaration>,
+    options?: $ReadOnly<{keepComments?: boolean}>,
   ): void,
 };

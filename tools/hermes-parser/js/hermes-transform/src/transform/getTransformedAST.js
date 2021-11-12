@@ -15,14 +15,15 @@ import type {TransformContext} from './TransformContext';
 import type {Visitor} from '../traverse/traverse';
 
 import {parseForESLint} from 'hermes-eslint';
+import {updateAllParentPointers} from '../detachedNode';
 import {traverseWithContext} from '../traverse/traverse';
 import {MutationContext} from './MutationContext';
 import {getTransformContext} from './TransformContext';
+import {attachComments} from './comments/comments';
 import {performInsertStatementMutation} from './mutations/InsertStatement';
 import {performRemoveStatementMutation} from './mutations/RemoveStatement';
 import {performReplaceNodeMutation} from './mutations/ReplaceNode';
 import {performReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
-import {updateAllParentPointers} from '../detachedNode';
 
 export function getTransformedAST(
   code: string,
@@ -34,6 +35,10 @@ export function getTransformedAST(
   const {ast, scopeManager} = parseForESLint(code, {
     sourceType: 'module',
   });
+
+  // attach comments before mutation. this will ensure that as nodes are
+  // cloned / moved around - comments remain in the correct place with respect to the node
+  attachComments(ast.comments, ast, code);
 
   // traverse the AST and colllect the mutations
   const transformContext = getTransformContext();

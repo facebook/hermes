@@ -15,6 +15,7 @@ import type {DetachedNode} from '../../detachedNode';
 import {replaceInArray} from './utils/arrayUtils';
 import {getStatementParent} from './utils/getStatementParent';
 import {isValidModuleDeclarationParent} from './utils/isValidModuleDeclarationParent';
+import {attachCommentsToNewNode} from '../comments/comments';
 import {InvalidReplacementError} from '../Errors';
 import * as t from '../../generated/node-types';
 
@@ -24,16 +25,23 @@ export type ReplaceStatementWithManyMutation = $ReadOnly<{
   nodesToReplaceWith: $ReadOnlyArray<
     DetachedNode<ModuleDeclaration | Statement>,
   >,
+  keepComments: boolean,
 }>;
 
 export function createReplaceStatementWithManyMutation(
   target: ReplaceStatementWithManyMutation['target'],
   nodesToReplaceWith: ReplaceStatementWithManyMutation['nodesToReplaceWith'],
-): ReplaceStatementWithManyMutation {
+  options?: $ReadOnly<{keepComments?: boolean}>,
+): ?ReplaceStatementWithManyMutation {
+  if (nodesToReplaceWith.length === 0) {
+    return null;
+  }
+
   return {
     type: 'replaceStatementWithMany',
     target,
     nodesToReplaceWith,
+    keepComments: options?.keepComments ?? false,
   };
 }
 
@@ -57,6 +65,11 @@ export function performReplaceStatementWithManyMutation(
 
   mutationContext.markDeletion(mutation.target);
   mutationContext.markMutation(replacementParent.parent, replacementParent.key);
+
+  if (mutation.keepComments) {
+    // attach comments to the very first replacement node
+    attachCommentsToNewNode(mutation.target, mutation.nodesToReplaceWith[0]);
+  }
 
   if (replacementParent.type === 'array') {
     const parent: interface {

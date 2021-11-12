@@ -4,11 +4,12 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @flow strict
+ * @flow strict-local
  * @format
  */
 
-import type {Comment, Program} from 'hermes-estree';
+import type {Comment, ESNode, Program} from 'hermes-estree';
+import type {DetachedNode} from '../../detachedNode';
 
 // $FlowExpectedError[untyped-import]
 import {attach as untypedAttach} from './prettier/main/comments';
@@ -29,4 +30,15 @@ export function attachComments(
     locEnd,
     printer,
   });
+}
+
+export function attachCommentsToNewNode(
+  oldNode: ESNode,
+  newNode: DetachedNode<ESNode>,
+): void {
+  /*
+  $FlowExpectedError - this property is secretly added by prettier.
+  It is an array of the comment nodes.
+  */
+  newNode.comments = oldNode.comments;
 }
