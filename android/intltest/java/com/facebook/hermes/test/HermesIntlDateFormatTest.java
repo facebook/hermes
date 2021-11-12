@@ -120,9 +120,9 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
                 // timeStyle: "" }) throws RangeError
                 // Expected a RangeError to be thrown
                 // but no exception was thrown at all
-                "constructor-options-timeStyle-valid.js" // Expected SameValue(«undefined», «full»)
+                "constructor-options-timeStyle-valid.js", // Expected SameValue(«undefined», «full»)
                 // to be true
-                ));
+                "constructor-options-timeZoneName-valid.js"));
 
     Set<String> testIssuesList =
         new HashSet<>(
@@ -192,9 +192,9 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
                 // night») to be true
                 "dayPeriod-long-en.js", // 00:00, long format Expected SameValue(«12/12/2017», «at
                 // night») to be true
-                "fractionalSecondDigits.js" // 1 fractionalSecondDigits round down Expected
+                "fractionalSecondDigits.js", // 1 fractionalSecondDigits round down Expected
                 // SameValue(«02:03», «02:03.2») to be true
-                ));
+                "temporal-objects-resolved-time-zone.js"));
 
     // ICU APIs not available prior to 24.
     Set<String> pre24Issues = new HashSet<>();
@@ -228,9 +228,9 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
                 // SameValue(«5», «1») to be true
                 "dayPeriod-long-en.js", // length should be 1, 00:00, long format Expected
                 // SameValue(«5», «1») to be true
-                "dayPeriod-short-en.js" // length should be 1, 00:00, short format Expected
+                "dayPeriod-short-en.js", // length should be 1, 00:00, short format Expected
                 // SameValue(«5», «1») to be true
-                ));
+                "temporal-objects-resolved-time-zone.js"));
 
     // ICU APIs not available prior to 24.
     Set<String> pre24Issues = new HashSet<>();

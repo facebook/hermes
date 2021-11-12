@@ -39,12 +39,13 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
                 // thrown.
                 "currency-digits.js", // Didn't get correct minimumFractionDigts for currency AFN.
                 // Expected SameValue(«0», «2») to be true
-                "constructor-unit.js" // com.facebook.hermes.intl.JSRangeErrorException: Unknown
+                "constructor-unit.js", // com.facebook.hermes.intl.JSRangeErrorException: Unknown
                 // unit: acre-per-acre .. We support only units directly known
                 // to
                 // https://developer.android.com/reference/android/icu/util/MeasureUnit ..
                 // MeasureFormat.format requires an instance of MeasureUnit.
-                ));
+                "constructor-options-roundingMode-invalid.js",
+                "constructor-options-throwing-getters-rounding-mode.js"));
 
     Set<String> testIssues =
         new HashSet<>(
@@ -122,10 +123,11 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
     Set<String> deviations =
         new HashSet<>(
             Arrays.asList(
-                "order.js" // // Expected SameValue(«Object», «Intl.NumberFormat») to be true ..
+                "order.js", // Expected SameValue(«Object», «Intl.NumberFormat») to be true ..
                 // Test expects new Intl.NumberFormat().toString() to return "[object
                 // Intl.NumberFormat]" which Firefox does.. but hermes (and Chrome)
                 // returns "[object Object]:
+                "roundingMode.js" // Not implemented
                 ));
 
     Set<String> skipList = deviations;
@@ -176,7 +178,6 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
       icuIssues.addAll(
           Arrays.asList(
               "engineering-scientific-de-DE.js", // Expected SameValue(«-∞E0», «-∞») to be true
-              "engineering-scientific-zh-TW.js", // Expected SameValue(«-∞E0», «-∞») to be true
               "engineering-scientific-ja-JP.js", // Expected SameValue(«-∞E0», «-∞») to be true
               "numbering-systems.js", // numberingSystem: diak, digit: 0 Expected SameValue(«0»,
               // «𑥐») to be true
@@ -209,8 +210,7 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
           Arrays.asList(
               "notation-compact-ko-KR.js", // Expected SameValue(«9,900만», «9877만») to be true
               "notation-compact-en-US.js", // Expected SameValue(«990M», «988M») to be true
-              "notation-compact-ja-JP.js", // Expected SameValue(«9,900万», «9877万») to be true
-              "notation-compact-zh-TW.js" // Expected SameValue(«9,900萬», «9877萬») to be true
+              "notation-compact-ja-JP.js" // Expected SameValue(«9,900万», «9877万») to be true
               ));
     }
 
@@ -221,7 +221,6 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
           Arrays.asList(
               "unit-ko-KR.js", // : Expected SameValue(«-987», «-987km/h») to be true
               "unit-de-DE.js", // : Expected SameValue(«-987», «-987 km/h») to be true
-              "unit-zh-TW.js", // : Expected SameValue(«-987», «-987 公里/小時») to be true
               "format-fraction-digits-precision.js", // : Unexpected formatted 1.1 for
               // en-US-u-nu-hanidec and options
               // {"useGrouping":false,"minimumIntegerDigits":3,"minimumFractionDigits":1,"maximumFractionDigits":3}: 〇〇〈.〈
@@ -235,11 +234,32 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
               ));
     }
 
+    Set<String> roundingMode = new HashSet<>();
+    roundingMode.addAll(
+        Arrays.asList(
+            "format-rounding-mode-trunc.js",
+            "format-rounding-mode-ceil.js",
+            "format-rounding-mode-floor.js",
+            "format-rounding-mode-half-floor.js",
+            "format-rounding-mode-half-even.js",
+            "format-rounding-mode-half-trunc.js",
+            "format-rounding-mode-half-ceil.js",
+            "format-rounding-mode-expand.js"));
+
+    // There seem to be significant gaps in the implementation for zh-TW, even
+    // with the latest API.
+    Set<String> zh_TW = new HashSet<>();
+    zh_TW.addAll(
+        Arrays.asList(
+            "engineering-scientific-zh-TW.js", "unit-zh-TW.js", "notation-compact-zh-TW.js"));
+
     Set<String> skipList = new HashSet<>();
     skipList.addAll(signDisplayList);
     skipList.addAll(unitIssues);
     skipList.addAll(icuIssues);
     skipList.addAll(pre24Issues);
+    skipList.addAll(roundingMode);
+    skipList.addAll(zh_TW);
 
     runTests(basePath, skipList);
   }
@@ -313,8 +333,6 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
               // SameValue(«4», «2») to be true
               "notation-compact-en-US.js", // Compact short: 987654321: parts[1].type Expected
               // SameValue(«literal», «compact») to be true
-              "engineering-scientific-zh-TW.js", // -Infinity - engineering: length Expected
-              // SameValue(«4», «2») to be true
               "engineering-scientific-ja-JP.js", // -Infinity - engineering: length Expected
               // SameValue(«4», «2») to be true
               "notation-compact-ja-JP.js", // Compact short: 987654321: parts[3].type Expected
@@ -334,12 +352,16 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
               ));
     }
 
+    Set<String> zh_TW = new HashSet<>();
+    zh_TW.addAll(Arrays.asList("engineering-scientific-zh-TW.js", "notation-compact-zh-TW.js"));
+
     Set<String> skipList = new HashSet<>();
 
     skipList.addAll(signDisplayList);
     skipList.addAll(unitList);
     skipList.addAll(icuIssues);
     skipList.addAll(pre24Issues);
+    skipList.addAll(zh_TW);
 
     runTests(basePath, skipList);
   }
