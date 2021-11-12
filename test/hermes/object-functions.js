@@ -175,6 +175,39 @@ try {
 }
 //CHECK: to_prim
 
+print('hasOwn');
+// CHECK-LABEL: hasOwn
+var obj = new Object();
+obj.prop = 'exists';
+
+function changeO() {
+  obj.newprop = obj.prop;
+  delete obj.prop;
+}
+
+print(Object.hasOwn(obj, 'prop'));
+//CHECK: true
+changeO();
+print(Object.hasOwn(obj, 'prop'));
+//CHECK: false
+print(Object.hasOwn(obj, 'newprop'));
+//CHECK: true
+print(Object.hasOwn(obj, 'new' + 'prop'));
+//CHECK: true
+obj[5] = 'exists';
+print(Object.hasOwn(obj, 5));
+//CHECK: true
+print(Object.hasOwn([1, 2], 0));
+//CHECK: true
+print(Object.hasOwn([1, 2], 2));
+//CHECK: false
+
+var child = Object.create(obj);
+print(Object.hasOwn(child, 'newprop'));
+//CHECK: false
+print(Object.hasOwn(child, 5));
+//CHECK: false
+
 print('defineProperties');
 // CHECK-LABEL: defineProperties
 var a = [];
