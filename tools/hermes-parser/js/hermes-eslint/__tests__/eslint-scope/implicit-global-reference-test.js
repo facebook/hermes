@@ -36,7 +36,7 @@ const {parseForESLint} = require('./eslint-scope-test-utils');
 
 describe('implicit global reference', () => {
   it('assignments global scope', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             var x = 20;
             x = 300;
         `);
@@ -55,7 +55,7 @@ describe('implicit global reference', () => {
   });
 
   it('assignments global scope without definition', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             x = 300;
             x = 300;
         `);
@@ -74,7 +74,7 @@ describe('implicit global reference', () => {
   });
 
   it('assignment leaks', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             function outer() {
                 x = 20;
             }
@@ -92,7 +92,7 @@ describe('implicit global reference', () => {
   });
 
   it("assignment doesn't leak", () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             function outer() {
                 function inner() {
                     x = 20;
@@ -113,7 +113,7 @@ describe('implicit global reference', () => {
   });
 
   it('for-in-statement leaks', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             function outer() {
                 for (x in y) { }
             }`);
@@ -130,7 +130,7 @@ describe('implicit global reference', () => {
   });
 
   it("for-in-statement doesn't leaks", () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             function outer() {
                 function inner() {
                     for (x in y) { }

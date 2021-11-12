@@ -10,8 +10,6 @@
 
 'use strict';
 
-import type {ParserOptions} from 'hermes-parser';
-
 import {parse} from 'hermes-parser';
 
 /**
@@ -71,15 +69,14 @@ const = 1
   });
 
   test('Has error location', () => {
-    try {
-      parse('const = 1');
-      throw new Error('Expected parse error to be thrown');
-    } catch (e) {
-      expect(e.loc).toMatchObject({
-        line: 1,
-        column: 6,
-      });
-    }
+    expect(() => parse('const = 1')).toThrowError(
+      expect.objectContaining({
+        loc: {
+          line: 1,
+          column: 6,
+        },
+      }),
+    );
   });
 
   test('Source line with non-ASCII characters', () => {

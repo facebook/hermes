@@ -32,7 +32,7 @@ interface BinarySelectorAtom extends SubjectSelectorAtom {
   right: SubjectSelector;
 }
 interface MultiSelectorAtom extends SubjectSelectorAtom {
-  selectors: SubjectSelector[];
+  selectors: Array<SubjectSelector>;
 }
 interface LiteralAtom extends Atom {
   type: 'literal';

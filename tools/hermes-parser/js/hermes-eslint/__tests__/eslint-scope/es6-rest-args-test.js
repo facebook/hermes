@@ -8,8 +8,7 @@
  */
 
 /*
- Copyright JS Foundation and other contributors, https://js.foundation
- Copyright (C) 2012-2013 Yusuke Suzuki (twitter: @Constellation) and other contributors.
+ Copyright (C) 2014 Yusuke Suzuki <utatane.tea@gmail.com>
 
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -31,35 +30,33 @@
  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-
 'use strict';
 
 const {parseForESLint} = require('./eslint-scope-test-utils');
 
-describe("export * as ns from 'source'", () => {
-  let scopes;
+describe('ES6 rest arguments', () => {
+  it('materialize rest argument in scope', () => {
+    const {scopeManager} = parseForESLint(`
+            function foo(...bar) {
+                return bar;
+            }
+        `);
 
-  beforeEach(() => {
-    const {ast, scopeManager} = parseForESLint("export * as ns from 'source'", {
-      sourceType: 'module',
-    });
+    expect(scopeManager.scopes).toHaveLength(2);
 
-    scopes = [
-      scopeManager.globalScope,
-      ...scopeManager.globalScope.childScopes,
-    ];
-  });
+    let scope = scopeManager.scopes[0];
 
-  it('should not have any references', () => {
-    for (const scope of scopes) {
-      expect(scope.references).toHaveLength(0);
-      expect(scope.through).toHaveLength(0);
-    }
-  });
+    expect(scope.type).toEqual('global');
+    expect(scope.block.type).toEqual('Program');
+    expect(scope.isStrict).toBe(false);
+    expect(scope.variables).toHaveLength(1);
 
-  it('should not have any variables', () => {
-    for (const scope of scopes) {
-      expect(scope.variables).toHaveLength(0);
-    }
+    scope = scopeManager.scopes[1];
+    expect(scope.type).toEqual('function');
+    expect(scope.variables).toHaveLength(2);
+    expect(scope.variables[0].name).toEqual('arguments');
+    expect(scope.variables[1].name).toEqual('bar');
+    expect(scope.variables[1].defs[0].name.name).toEqual('bar');
+    expect(scope.variables[1].defs[0].rest).toBe(true);
   });
 });

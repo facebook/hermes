@@ -36,7 +36,7 @@ const {parseForESLint} = require('./eslint-scope-test-utils');
 
 describe('ES6 block scope', () => {
   it('let is materialized in ES6 block scope#1', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             {
                 let i = 20;
                 i;
@@ -60,7 +60,7 @@ describe('ES6 block scope', () => {
   });
 
   it('function delaration is materialized in ES6 block scope', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             {
                 function test() {
                 }
@@ -90,7 +90,7 @@ describe('ES6 block scope', () => {
   });
 
   it('let is not hoistable#1', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             var i = 42; (1)
             {
                 i;  // (2) ReferenceError at runtime.
@@ -120,7 +120,7 @@ describe('ES6 block scope', () => {
   });
 
   it('let is not hoistable#2', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             (function () {
                 var i = 42; // (1)
                 i;  // (1)

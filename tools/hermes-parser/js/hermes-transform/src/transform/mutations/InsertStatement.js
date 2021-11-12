@@ -8,22 +8,14 @@
  * @format
  */
 
-import type {
-  BaseNode,
-  BlockStatement,
-  ESNode,
-  ModuleDeclaration,
-  Statement,
-  StatementParentArray,
-  StatementParentSingle,
-} from 'hermes-estree';
+import type {ModuleDeclaration, Statement} from 'hermes-estree';
 import type {MutationContext} from '../MutationContext';
 import type {DetachedNode} from '../../detachedNode';
 
 import {insertInArray} from './utils/arrayUtils';
 import {getStatementParent} from './utils/getStatementParent';
 import {isValidModuleDeclarationParent} from './utils/isValidModuleDeclarationParent';
-import {InvalidInsertionError, UnexpectedTransformationState} from '../Errors';
+import {InvalidInsertionError} from '../Errors';
 import {asESNode} from '../../detachedNode';
 import * as t from '../../generated/node-types';
 

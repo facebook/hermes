@@ -37,7 +37,7 @@ const {parseForESLint} = require('./eslint-scope-test-utils');
 describe('export declaration', () => {
   // http://people.mozilla.org/~jorendorff/es6-draft.html#sec-static-and-runtme-semantics-module-records
   it('should create variable bindings', () => {
-    const {ast, scopeManager} = parseForESLint('export var v;', {
+    const {scopeManager} = parseForESLint('export var v;', {
       sourceType: 'module',
     });
 
@@ -58,10 +58,9 @@ describe('export declaration', () => {
   });
 
   it('should create function declaration bindings', () => {
-    const {ast, scopeManager} = parseForESLint(
-      'export default function f(){};',
-      {sourceType: 'module'},
-    );
+    const {scopeManager} = parseForESLint('export default function f(){};', {
+      sourceType: 'module',
+    });
 
     expect(scopeManager.scopes).toHaveLength(3);
     const globalScope = scopeManager.scopes[0];
@@ -86,7 +85,7 @@ describe('export declaration', () => {
   });
 
   it('should export function expression', () => {
-    const {ast, scopeManager} = parseForESLint('export default function(){};', {
+    const {scopeManager} = parseForESLint('export default function(){};', {
       sourceType: 'module',
     });
 
@@ -111,7 +110,7 @@ describe('export declaration', () => {
   });
 
   it('should export literal', () => {
-    const {ast, scopeManager} = parseForESLint('export default 42;', {
+    const {scopeManager} = parseForESLint('export default 42;', {
       sourceType: 'module',
     });
 
@@ -130,7 +129,7 @@ describe('export declaration', () => {
   });
 
   it('should refer exported references#1', () => {
-    const {ast, scopeManager} = parseForESLint('const x = 1; export {x};', {
+    const {scopeManager} = parseForESLint('const x = 1; export {x};', {
       sourceType: 'module',
     });
 
@@ -151,10 +150,9 @@ describe('export declaration', () => {
   });
 
   it('should refer exported references#2', () => {
-    const {ast, scopeManager} = parseForESLint(
-      'const v = 1; export {v as x};',
-      {sourceType: 'module'},
-    );
+    const {scopeManager} = parseForESLint('const v = 1; export {v as x};', {
+      sourceType: 'module',
+    });
 
     expect(scopeManager.scopes).toHaveLength(2);
     const globalScope = scopeManager.scopes[0];
@@ -173,7 +171,7 @@ describe('export declaration', () => {
   });
 
   it('should not refer exported references from other source#1', () => {
-    const {ast, scopeManager} = parseForESLint('export {x} from "mod";', {
+    const {scopeManager} = parseForESLint('export {x} from "mod";', {
       sourceType: 'module',
     });
 
@@ -192,7 +190,7 @@ describe('export declaration', () => {
   });
 
   it('should not refer exported references from other source#2', () => {
-    const {ast, scopeManager} = parseForESLint('export {v as x} from "mod";', {
+    const {scopeManager} = parseForESLint('export {v as x} from "mod";', {
       sourceType: 'module',
     });
 
@@ -211,7 +209,7 @@ describe('export declaration', () => {
   });
 
   it('should not refer exported references from other source#3', () => {
-    const {ast, scopeManager} = parseForESLint('export * from "mod";', {
+    const {scopeManager} = parseForESLint('export * from "mod";', {
       sourceType: 'module',
     });
 

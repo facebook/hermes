@@ -12,7 +12,6 @@
 
 import type {ESNode} from 'hermes-estree';
 
-import {VisitorKeys} from 'hermes-eslint';
 import {getVisitorKeys, isNode} from '../getVisitorKeys';
 
 export type TraverserCallback = (node: ESNode, parent: ?ESNode) => void;

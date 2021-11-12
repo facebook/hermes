@@ -10,20 +10,12 @@
 
 'use strict';
 
-import type {
-  ESNode,
-  BlockStatement,
-  Expression,
-  Program,
-  Statement,
-  ReturnStatement,
-} from 'hermes-estree';
+import type {Program} from 'hermes-estree';
 import type {TransformContext} from './TransformContext';
 import type {Visitor} from '../traverse/traverse';
 
 import {parseForESLint} from 'hermes-eslint';
 import {traverseWithContext} from '../traverse/traverse';
-import {getVisitorKeys} from '../getVisitorKeys';
 import {MutationContext} from './MutationContext';
 import {getTransformContext} from './TransformContext';
 import {performInsertStatementMutation} from './mutations/InsertStatement';

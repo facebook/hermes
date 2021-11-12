@@ -16,15 +16,10 @@
 
 import {formatAndWriteDistArtifact} from './utils/scriptUtils';
 
-const fs = require('fs');
 const path = require('path');
 
 const {execSync} = require('child_process');
 
-const OUTPUT_FILE = path.resolve(
-  __dirname,
-  '../hermes-parser/dist/HermesParserNodeDeserializers.js',
-);
 const TEMPLATE_FILE = path.resolve(
   __dirname,
   'templates/HermesParserNodeDeserializers.template',

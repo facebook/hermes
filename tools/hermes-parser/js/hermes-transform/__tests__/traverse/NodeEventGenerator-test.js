@@ -37,8 +37,6 @@ describe('NodeEventGenerator', () => {
     });
 
     it('throws on invalid selectors', () => {
-      const emitter = new SafeEmitter();
-
       for (const selector of [
         'Foo',
         'Bar',
@@ -148,7 +146,7 @@ describe('NodeEventGenerator', () => {
       const generator = new NodeEventGenerator(emitter);
 
       SimpleTraverser.traverse(ast, {
-        enter(node, parent) {
+        enter(node) {
           generator.enterNode(node);
         },
         leave(node) {

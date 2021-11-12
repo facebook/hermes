@@ -36,7 +36,7 @@ const {parseForESLint} = require('./eslint-scope-test-utils');
 
 describe('label', () => {
   it('should not create variables', () => {
-    const {ast, scopeManager} = parseForESLint(
+    const {scopeManager} = parseForESLint(
       'function bar() { q: for(;;) { break q; } }',
     );
 
@@ -62,7 +62,7 @@ describe('label', () => {
   });
 
   it('should count child node references', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             var foo = 5;
 
             label: while (true) {

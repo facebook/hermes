@@ -27,7 +27,7 @@ export function transform(
   }
 
   return prettier.format(code, {
-    parser(code, _, options) {
+    parser() {
       return ast;
     },
   });

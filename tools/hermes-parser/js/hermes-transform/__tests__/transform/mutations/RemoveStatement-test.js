@@ -8,17 +8,8 @@
  * @format
  */
 
-import type {
-  ESNode,
-  ExpressionStatement,
-  Identifier,
-  ModuleDeclaration,
-  Program,
-  Statement,
-} from 'hermes-estree';
 import type {StatementTypes} from './test-utils';
 
-import * as t from '../../../src/generated/node-types';
 import {
   createRemoveStatementMutation,
   performRemoveStatementMutation,

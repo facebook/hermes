@@ -10,8 +10,6 @@
 
 'use strict';
 
-import type {Identifier} from 'hermes-estree';
-
 import {parseForESLint} from 'hermes-eslint';
 import {traverse} from '../../src/traverse/traverse';
 
@@ -62,8 +60,10 @@ describe('traverse', () => {
       '*'(node) {
         expect(node).toHaveProperty('parent');
         if (node.type === 'Program') {
+          // eslint-disable-next-line jest/no-conditional-expect
           expect(node.parent).toBeNull();
         } else {
+          // eslint-disable-next-line jest/no-conditional-expect
           expect(node.parent).toHaveProperty('type');
         }
       },
@@ -116,6 +116,7 @@ describe('traverse', () => {
         const variable = context.getBinding(node.name);
         expect(variable).not.toBeNull();
         if (variable != null) {
+          // eslint-disable-next-line jest/no-conditional-expect
           expect(variable.name).toBe(node.name);
         }
       },

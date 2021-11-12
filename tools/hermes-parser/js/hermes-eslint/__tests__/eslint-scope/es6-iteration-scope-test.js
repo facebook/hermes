@@ -36,7 +36,7 @@ const {parseForESLint} = require('./eslint-scope-test-utils');
 
 describe('ES6 iteration scope', () => {
   it('let materialize iteration scope for ForInStatement#1', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             (function () {
                 let i = 20;
                 for (let i in i) {
@@ -83,7 +83,7 @@ describe('ES6 iteration scope', () => {
   });
 
   it('let materialize iteration scope for ForInStatement#2', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             (function () {
                 let i = 20;
                 for (let { i, j, k } in i) {
@@ -136,7 +136,7 @@ describe('ES6 iteration scope', () => {
   });
 
   it('let materialize iteration scope for ForStatement#2', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             (function () {
                 let i = 20;
                 let obj = {};

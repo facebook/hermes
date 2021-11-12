@@ -57,17 +57,3 @@ formatAndWriteDistArtifact({
   subdirSegments: ['generated'],
   flow: 'strict',
 });
-
-function getNodeNamesThatEndWith(name: string): Array<string> {
-  const names = [];
-  for (const node of HermesESTreeJSON) {
-    if (LITERAL_TYPES.has(node.name)) {
-      continue;
-    }
-
-    if (node.name.endsWith(name)) {
-      names.push(node.name);
-    }
-  }
-  return names;
-}

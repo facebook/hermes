@@ -8,7 +8,7 @@
  */
 
 /*
- Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>
+ Copyright (C) 2014 Yusuke Suzuki <utatane.tea@gmail.com>
 
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -34,18 +34,43 @@
 
 const {parseForESLint} = require('./eslint-scope-test-utils');
 
-describe('ES6 super', () => {
-  it('is not handled as reference', () => {
-    const {ast, scopeManager} = parseForESLint(`
-            class Foo extends Bar {
+describe('ES6 object', () => {
+  it('method definition', () => {
+    const {scopeManager} = parseForESLint(`
+            ({
                 constructor() {
-                    super();
                 }
+            })`);
 
-                method() {
-                    super.method();
-                }
-            }
+    expect(scopeManager.scopes).toHaveLength(2);
+
+    let scope = scopeManager.scopes[0];
+
+    expect(scope.type).toEqual('global');
+    expect(scope.block.type).toEqual('Program');
+    expect(scope.isStrict).toBe(false);
+
+    scope = scopeManager.scopes[1];
+    expect(scope.type).toEqual('function');
+    expect(scope.block.type).toEqual('FunctionExpression');
+    expect(scope.isStrict).toBe(false);
+    expect(scope.variables).toHaveLength(1);
+    expect(scope.variables[0].name).toEqual('arguments');
+    expect(scope.references).toHaveLength(0);
+  });
+
+  it('computed property key may refer variables', () => {
+    const {scopeManager} = parseForESLint(`
+            (function () {
+                var yuyushiki = 42;
+                ({
+                    [yuyushiki]() {
+                    },
+
+                    [yuyushiki + 40]() {
+                    }
+                })
+            }());
         `);
 
     expect(scopeManager.scopes).toHaveLength(4);
@@ -53,27 +78,19 @@ describe('ES6 super', () => {
     let scope = scopeManager.scopes[0];
 
     expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(1);
-    expect(scope.variables[0].name).toEqual('Foo');
-    expect(scope.references).toHaveLength(1);
-    expect(scope.references[0].identifier.name).toEqual('Bar');
+    expect(scope.block.type).toEqual('Program');
+    expect(scope.isStrict).toBe(false);
 
     scope = scopeManager.scopes[1];
-    expect(scope.type).toEqual('class');
-    expect(scope.variables).toHaveLength(1);
-    expect(scope.variables[0].name).toEqual('Foo');
-    expect(scope.references).toHaveLength(0);
-
-    scope = scopeManager.scopes[2];
     expect(scope.type).toEqual('function');
-    expect(scope.variables).toHaveLength(1);
+    expect(scope.block.type).toEqual('FunctionExpression');
+    expect(scope.isStrict).toBe(false);
+    expect(scope.variables).toHaveLength(2);
     expect(scope.variables[0].name).toEqual('arguments');
-    expect(scope.references).toHaveLength(0); // super is specially handled like `this`.
-
-    scope = scopeManager.scopes[3];
-    expect(scope.type).toEqual('function');
-    expect(scope.variables).toHaveLength(1);
-    expect(scope.variables[0].name).toEqual('arguments');
-    expect(scope.references).toHaveLength(0); // super is specially handled like `this`.
+    expect(scope.variables[1].name).toEqual('yuyushiki');
+    expect(scope.references).toHaveLength(3);
+    expect(scope.references[0].identifier.name).toEqual('yuyushiki');
+    expect(scope.references[1].identifier.name).toEqual('yuyushiki');
+    expect(scope.references[2].identifier.name).toEqual('yuyushiki');
   });
 });

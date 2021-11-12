@@ -34,13 +34,20 @@
 
 const {parseForESLint} = require('./eslint-scope-test-utils');
 
-describe('ES6 object', () => {
-  it('method definition', () => {
-    const {ast, scopeManager} = parseForESLint(`
-            ({
-                constructor() {
-                }
-            })`);
+describe('ES6 switch', () => {
+  it('materialize scope', () => {
+    const {scopeManager} = parseForESLint(`
+            switch (ok) {
+                case hello:
+                    let i = 20;
+                    i;
+                    break;
+
+                default:
+                    let test = 30;
+                    test;
+            }
+        `);
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -49,48 +56,22 @@ describe('ES6 object', () => {
     expect(scope.type).toEqual('global');
     expect(scope.block.type).toEqual('Program');
     expect(scope.isStrict).toBe(false);
+    expect(scope.variables).toHaveLength(0);
+    expect(scope.references).toHaveLength(1);
+    expect(scope.references[0].identifier.name).toEqual('ok');
 
     scope = scopeManager.scopes[1];
-    expect(scope.type).toEqual('function');
-    expect(scope.block.type).toEqual('FunctionExpression');
-    expect(scope.isStrict).toBe(false);
-    expect(scope.variables).toHaveLength(1);
-    expect(scope.variables[0].name).toEqual('arguments');
-    expect(scope.references).toHaveLength(0);
-  });
-
-  it('computed property key may refer variables', () => {
-    const {ast, scopeManager} = parseForESLint(`
-            (function () {
-                var yuyushiki = 42;
-                ({
-                    [yuyushiki]() {
-                    },
-
-                    [yuyushiki + 40]() {
-                    }
-                })
-            }());
-        `);
-
-    expect(scopeManager.scopes).toHaveLength(4);
-
-    let scope = scopeManager.scopes[0];
-
-    expect(scope.type).toEqual('global');
-    expect(scope.block.type).toEqual('Program');
-    expect(scope.isStrict).toBe(false);
-
-    scope = scopeManager.scopes[1];
-    expect(scope.type).toEqual('function');
-    expect(scope.block.type).toEqual('FunctionExpression');
+    expect(scope.type).toEqual('switch');
+    expect(scope.block.type).toEqual('SwitchStatement');
     expect(scope.isStrict).toBe(false);
     expect(scope.variables).toHaveLength(2);
-    expect(scope.variables[0].name).toEqual('arguments');
-    expect(scope.variables[1].name).toEqual('yuyushiki');
-    expect(scope.references).toHaveLength(3);
-    expect(scope.references[0].identifier.name).toEqual('yuyushiki');
-    expect(scope.references[1].identifier.name).toEqual('yuyushiki');
-    expect(scope.references[2].identifier.name).toEqual('yuyushiki');
+    expect(scope.variables[0].name).toEqual('i');
+    expect(scope.variables[1].name).toEqual('test');
+    expect(scope.references).toHaveLength(5);
+    expect(scope.references[0].identifier.name).toEqual('hello');
+    expect(scope.references[1].identifier.name).toEqual('i');
+    expect(scope.references[2].identifier.name).toEqual('i');
+    expect(scope.references[3].identifier.name).toEqual('test');
+    expect(scope.references[4].identifier.name).toEqual('test');
   });
 });

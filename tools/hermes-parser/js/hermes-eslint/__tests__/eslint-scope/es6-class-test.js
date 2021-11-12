@@ -36,7 +36,7 @@ const {parseForESLint} = require('./eslint-scope-test-utils');
 
 describe('ES6 class', () => {
   it('declaration name creates class scope', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             class Derived extends Base {
                 constructor() {
                 }
@@ -75,7 +75,7 @@ describe('ES6 class', () => {
   });
 
   it('expression name creates class scope#1', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             (class Derived extends Base {
                 constructor() {
                 }
@@ -107,7 +107,7 @@ describe('ES6 class', () => {
   });
 
   it('expression name creates class scope#2', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             (class extends Base {
                 constructor() {
                 }
@@ -135,7 +135,7 @@ describe('ES6 class', () => {
   });
 
   it('computed property key may refer variables', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             (function () {
                 var yuyushiki = 42;
                 (class {
@@ -177,7 +177,7 @@ describe('ES6 class', () => {
   });
 
   it('regression #49', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             class Shoe {
                 constructor() {
                     //Shoe.x = true;

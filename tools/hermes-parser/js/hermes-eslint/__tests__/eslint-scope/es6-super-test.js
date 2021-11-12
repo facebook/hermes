@@ -8,7 +8,7 @@
  */
 
 /*
- Copyright (C) 2014 Yusuke Suzuki <utatane.tea@gmail.com>
+ Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>
 
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -34,29 +34,46 @@
 
 const {parseForESLint} = require('./eslint-scope-test-utils');
 
-describe('ES6 rest arguments', () => {
-  it('materialize rest argument in scope', () => {
-    const {ast, scopeManager} = parseForESLint(`
-            function foo(...bar) {
-                return bar;
+describe('ES6 super', () => {
+  it('is not handled as reference', () => {
+    const {scopeManager} = parseForESLint(`
+            class Foo extends Bar {
+                constructor() {
+                    super();
+                }
+
+                method() {
+                    super.method();
+                }
             }
         `);
 
-    expect(scopeManager.scopes).toHaveLength(2);
+    expect(scopeManager.scopes).toHaveLength(4);
 
     let scope = scopeManager.scopes[0];
 
     expect(scope.type).toEqual('global');
-    expect(scope.block.type).toEqual('Program');
-    expect(scope.isStrict).toBe(false);
     expect(scope.variables).toHaveLength(1);
+    expect(scope.variables[0].name).toEqual('Foo');
+    expect(scope.references).toHaveLength(1);
+    expect(scope.references[0].identifier.name).toEqual('Bar');
 
     scope = scopeManager.scopes[1];
+    expect(scope.type).toEqual('class');
+    expect(scope.variables).toHaveLength(1);
+    expect(scope.variables[0].name).toEqual('Foo');
+    expect(scope.references).toHaveLength(0);
+
+    scope = scopeManager.scopes[2];
     expect(scope.type).toEqual('function');
-    expect(scope.variables).toHaveLength(2);
+    expect(scope.variables).toHaveLength(1);
     expect(scope.variables[0].name).toEqual('arguments');
-    expect(scope.variables[1].name).toEqual('bar');
-    expect(scope.variables[1].defs[0].name.name).toEqual('bar');
-    expect(scope.variables[1].defs[0].rest).toBe(true);
+    expect(scope.references).toHaveLength(0); // super is specially handled like `this`.
+
+    scope = scopeManager.scopes[3];
+    expect(scope.type).toEqual('function');
+    expect(scope.variables).toHaveLength(1);
+    expect(scope.variables[0].name).toEqual('arguments');
+    expect(scope.references).toHaveLength(0); // super is specially handled like `this`.
   });
 });

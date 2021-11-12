@@ -34,22 +34,18 @@
 
 const {parseForESLint} = require('./eslint-scope-test-utils');
 
-describe('ES6 switch', () => {
-  it('materialize scope', () => {
-    const {ast, scopeManager} = parseForESLint(`
-            switch (ok) {
-                case hello:
-                    let i = 20;
-                    i;
-                    break;
-
-                default:
-                    let test = 30;
-                    test;
-            }
+describe('ES6 template literal', () => {
+  it('refer variables', () => {
+    const {scopeManager} = parseForESLint(`
+            (function () {
+                let i, j, k;
+                function testing() { }
+                let template = testing\`testing \${i} and \${j}\`
+                return template;
+            }());
         `);
 
-    expect(scopeManager.scopes).toHaveLength(2);
+    expect(scopeManager.scopes).toHaveLength(3);
 
     let scope = scopeManager.scopes[0];
 
@@ -57,21 +53,23 @@ describe('ES6 switch', () => {
     expect(scope.block.type).toEqual('Program');
     expect(scope.isStrict).toBe(false);
     expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(1);
-    expect(scope.references[0].identifier.name).toEqual('ok');
 
     scope = scopeManager.scopes[1];
-    expect(scope.type).toEqual('switch');
-    expect(scope.block.type).toEqual('SwitchStatement');
+    expect(scope.type).toEqual('function');
+    expect(scope.block.type).toEqual('FunctionExpression');
     expect(scope.isStrict).toBe(false);
-    expect(scope.variables).toHaveLength(2);
-    expect(scope.variables[0].name).toEqual('i');
-    expect(scope.variables[1].name).toEqual('test');
+    expect(scope.variables).toHaveLength(6);
+    expect(scope.variables[0].name).toEqual('arguments');
+    expect(scope.variables[1].name).toEqual('i');
+    expect(scope.variables[2].name).toEqual('j');
+    expect(scope.variables[3].name).toEqual('k');
+    expect(scope.variables[4].name).toEqual('testing');
+    expect(scope.variables[5].name).toEqual('template');
     expect(scope.references).toHaveLength(5);
-    expect(scope.references[0].identifier.name).toEqual('hello');
-    expect(scope.references[1].identifier.name).toEqual('i');
+    expect(scope.references[0].identifier.name).toEqual('template');
+    expect(scope.references[1].identifier.name).toEqual('testing');
     expect(scope.references[2].identifier.name).toEqual('i');
-    expect(scope.references[3].identifier.name).toEqual('test');
-    expect(scope.references[4].identifier.name).toEqual('test');
+    expect(scope.references[3].identifier.name).toEqual('j');
+    expect(scope.references[4].identifier.name).toEqual('template');
   });
 });

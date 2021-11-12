@@ -8,8 +8,6 @@
  * @format
  */
 
-import type {Identifier} from 'hermes-estree';
-
 import {transform} from '../../src/transform/transform';
 import * as t from '../../src/generated/node-types';
 

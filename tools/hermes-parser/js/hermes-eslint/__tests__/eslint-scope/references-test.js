@@ -37,7 +37,7 @@ const {parseForESLint} = require('./eslint-scope-test-utils');
 describe('References:', () => {
   describe('When there is a `let` declaration on global,', () => {
     it('the reference on global should be resolved.', () => {
-      const {ast, scopeManager} = parseForESLint('let a = 0;');
+      const {scopeManager} = parseForESLint('let a = 0;');
 
       expect(scopeManager.scopes).toHaveLength(1);
 
@@ -57,7 +57,7 @@ describe('References:', () => {
     });
 
     it('the reference in functions should be resolved.', () => {
-      const {ast, scopeManager} = parseForESLint(`
+      const {scopeManager} = parseForESLint(`
                 let a = 0;
                 function foo() {
                     let b = a;
@@ -82,7 +82,7 @@ describe('References:', () => {
     });
 
     it('the reference in default parameters should be resolved.', () => {
-      const {ast, scopeManager} = parseForESLint(`
+      const {scopeManager} = parseForESLint(`
                 let a = 0;
                 function foo(b = a) {
                 }
@@ -108,7 +108,7 @@ describe('References:', () => {
 
   describe('When there is a `const` declaration on global,', () => {
     it('the reference on global should be resolved.', () => {
-      const {ast, scopeManager} = parseForESLint('const a = 0;');
+      const {scopeManager} = parseForESLint('const a = 0;');
 
       expect(scopeManager.scopes).toHaveLength(1);
 
@@ -128,7 +128,7 @@ describe('References:', () => {
     });
 
     it('the reference in functions should be resolved.', () => {
-      const {ast, scopeManager} = parseForESLint(`
+      const {scopeManager} = parseForESLint(`
                 const a = 0;
                 function foo() {
                     const b = a;
@@ -155,7 +155,7 @@ describe('References:', () => {
 
   describe('When there is a `var` declaration on global,', () => {
     it('the reference on global should NOT be resolved.', () => {
-      const {ast, scopeManager} = parseForESLint('var a = 0;');
+      const {scopeManager} = parseForESLint('var a = 0;');
 
       expect(scopeManager.scopes).toHaveLength(1);
 
@@ -175,7 +175,7 @@ describe('References:', () => {
     });
 
     it('the reference in functions should NOT be resolved.', () => {
-      const {ast, scopeManager} = parseForESLint(`
+      const {scopeManager} = parseForESLint(`
                 var a = 0;
                 function foo() {
                     var b = a;
@@ -202,7 +202,7 @@ describe('References:', () => {
 
   describe('When there is a `function` declaration on global,', () => {
     it('the reference on global should NOT be resolved.', () => {
-      const {ast, scopeManager} = parseForESLint(`
+      const {scopeManager} = parseForESLint(`
                 function a() {}
                 a();
             `);
@@ -225,7 +225,7 @@ describe('References:', () => {
     });
 
     it('the reference in functions should NOT be resolved.', () => {
-      const {ast, scopeManager} = parseForESLint(`
+      const {scopeManager} = parseForESLint(`
                 function a() {}
                 function foo() {
                     let b = a();
@@ -252,7 +252,7 @@ describe('References:', () => {
 
   describe('When there is a `class` declaration on global,', () => {
     it('the reference on global should be resolved.', () => {
-      const {ast, scopeManager} = parseForESLint(`
+      const {scopeManager} = parseForESLint(`
                 class A {}
                 let b = new A();
             `);
@@ -275,7 +275,7 @@ describe('References:', () => {
     });
 
     it('the reference in functions should be resolved.', () => {
-      const {ast, scopeManager} = parseForESLint(`
+      const {scopeManager} = parseForESLint(`
                 class A {}
                 function foo() {
                     let b = new A();
@@ -302,7 +302,7 @@ describe('References:', () => {
 
   describe('When there is a `let` declaration in functions,', () => {
     it('the reference on the function should be resolved.', () => {
-      const {ast, scopeManager} = parseForESLint(`
+      const {scopeManager} = parseForESLint(`
                 function foo() {
                     let a = 0;
                 }
@@ -326,7 +326,7 @@ describe('References:', () => {
     });
 
     it('the reference in nested functions should be resolved.', () => {
-      const {ast, scopeManager} = parseForESLint(`
+      const {scopeManager} = parseForESLint(`
                 function foo() {
                     let a = 0;
                     function bar() {
@@ -355,7 +355,7 @@ describe('References:', () => {
 
   describe('When there is a `var` declaration in functions,', () => {
     it('the reference on the function should be resolved.', () => {
-      const {ast, scopeManager} = parseForESLint(`
+      const {scopeManager} = parseForESLint(`
                 function foo() {
                     var a = 0;
                 }
@@ -379,7 +379,7 @@ describe('References:', () => {
     });
 
     it('the reference in nested functions should be resolved.', () => {
-      const {ast, scopeManager} = parseForESLint(`
+      const {scopeManager} = parseForESLint(`
                 function foo() {
                     var a = 0;
                     function bar() {
@@ -408,7 +408,7 @@ describe('References:', () => {
 
   describe('When there is a `let` declaration with destructuring assignment', () => {
     it('"let [a] = [1];", the reference should be resolved.', () => {
-      const {ast, scopeManager} = parseForESLint('let [a] = [1];');
+      const {scopeManager} = parseForESLint('let [a] = [1];');
 
       expect(scopeManager.scopes).toHaveLength(1);
 
@@ -428,7 +428,7 @@ describe('References:', () => {
     });
 
     it('"let {a} = {a: 1};", the reference should be resolved.', () => {
-      const {ast, scopeManager} = parseForESLint('let {a} = {a: 1};');
+      const {scopeManager} = parseForESLint('let {a} = {a: 1};');
 
       expect(scopeManager.scopes).toHaveLength(1);
 
@@ -448,7 +448,7 @@ describe('References:', () => {
     });
 
     it('"let {a: {a}} = {a: {a: 1}};", the reference should be resolved.', () => {
-      const {ast, scopeManager} = parseForESLint('let {a: {a}} = {a: {a: 1}};');
+      const {scopeManager} = parseForESLint('let {a: {a}} = {a: {a: 1}};');
 
       expect(scopeManager.scopes).toHaveLength(1);
 
@@ -505,7 +505,7 @@ describe('References:', () => {
 
     trueCodes.forEach(code =>
       it(`"${code}", all references should be true.`, () => {
-        const {ast, scopeManager} = parseForESLint(code);
+        const {scopeManager} = parseForESLint(code);
 
         expect(scopeManager.scopes.length).toBeGreaterThanOrEqual(1);
 
@@ -538,7 +538,7 @@ describe('References:', () => {
 
     falseCodes.forEach(code =>
       it(`"${code}", all references should be false.`, () => {
-        const {ast, scopeManager} = parseForESLint(code);
+        const {scopeManager} = parseForESLint(code);
 
         expect(scopeManager.scopes.length).toBeGreaterThanOrEqual(1);
 
@@ -573,7 +573,7 @@ describe('References:', () => {
     ];
     falseCodes.forEach(code =>
       it(`"${code}", readonly references of "a" should be undefined.`, () => {
-        const {ast, scopeManager} = parseForESLint(code);
+        const {scopeManager} = parseForESLint(code);
 
         expect(scopeManager.scopes.length).toBeGreaterThanOrEqual(1);
 

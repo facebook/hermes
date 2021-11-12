@@ -13,7 +13,6 @@ import type {
   Expression,
   ModuleDeclaration,
   Statement,
-  StatementParentArray,
   TypeAnnotationType,
 } from 'hermes-estree';
 import type {InsertStatementMutation} from './mutations/InsertStatement';
@@ -22,12 +21,10 @@ import type {ReplaceNodeMutation} from './mutations/ReplaceNode';
 import type {ReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
 import type {DetachedNode} from '../detachedNode';
 
-import {getVisitorKeys} from '../getVisitorKeys';
 import {createInsertStatementMutation} from './mutations/InsertStatement';
 import {createReplaceNodeMutation} from './mutations/ReplaceNode';
 import {createReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
 import {createRemoveStatementMutation} from './mutations/RemoveStatement';
-import {SimpleTraverser} from '../traverse/SimpleTraverser';
 import {deepCloneNode, shallowCloneNode} from '../detachedNode';
 import type {TransformReplaceSignatures} from '../generated/TransformReplaceSignatures';
 

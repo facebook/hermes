@@ -8,9 +8,8 @@
  * @format
  */
 
-import type {ESNode, Program} from 'hermes-estree';
+import type {ESNode} from 'hermes-estree';
 
-import {SimpleTraverser} from '../traverse/SimpleTraverser';
 import {NodeIsDeletedError, NodeIsMutatedError} from './Errors';
 
 export class MutationContext {

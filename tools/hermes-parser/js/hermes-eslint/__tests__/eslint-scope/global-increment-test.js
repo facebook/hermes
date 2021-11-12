@@ -8,7 +8,7 @@
  */
 
 /*
- Copyright (C) 2014 Yusuke Suzuki <utatane.tea@gmail.com>
+ Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>
 
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -34,28 +34,16 @@
 
 const {parseForESLint} = require('./eslint-scope-test-utils');
 
-describe('arguments', () => {
-  it('arguments are correctly materialized', () => {
-    const {ast, scopeManager} = parseForESLint(`
-            (function () {
-                arguments;
-            }());
-        `);
+describe('global increment', () => {
+  it('becomes read/write', () => {
+    const {scopeManager} = parseForESLint('b++;');
 
-    expect(scopeManager.scopes).toHaveLength(2);
+    expect(scopeManager.scopes).toHaveLength(1);
     const globalScope = scopeManager.scopes[0];
 
     expect(globalScope.type).toEqual('global');
     expect(globalScope.variables).toHaveLength(0);
-    expect(globalScope.references).toHaveLength(0);
-
-    const scope = scopeManager.scopes[1];
-
-    expect(scope.type).toEqual('function');
-    expect(scope.variables).toHaveLength(1);
-    expect(scope.variables[0].name).toEqual('arguments');
-    expect(scope.isArgumentsMaterialized()).toBe(true);
-    expect(scope.references).toHaveLength(1);
-    expect(scope.references[0].resolved).toEqual(scope.variables[0]);
+    expect(globalScope.references).toHaveLength(1);
+    expect(globalScope.references[0].isReadWrite()).toBe(true);
   });
 });

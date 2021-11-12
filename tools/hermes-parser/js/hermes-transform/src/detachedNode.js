@@ -8,7 +8,7 @@
  * @format
  */
 
-import type {BaseNode, ESNode, SourceLocation} from 'hermes-estree';
+import type {BaseNode, ESNode} from 'hermes-estree';
 
 import {getVisitorKeys, isNode} from './getVisitorKeys';
 import {SimpleTraverser} from './traverse/SimpleTraverser';

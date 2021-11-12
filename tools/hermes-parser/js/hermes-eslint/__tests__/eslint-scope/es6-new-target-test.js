@@ -8,7 +8,7 @@
  */
 
 /*
- Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>
+ Copyright (C) 2014 Yusuke Suzuki <utatane.tea@gmail.com>
 
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -34,16 +34,25 @@
 
 const {parseForESLint} = require('./eslint-scope-test-utils');
 
-describe('global increment', () => {
-  it('becomes read/write', () => {
-    const {ast, scopeManager} = parseForESLint('b++;');
+describe('ES6 new.target', () => {
+  it('should not make references of new.target', () => {
+    const {scopeManager} = parseForESLint(`
+            class A {
+                constructor() {
+                    new.target;
+                }
+            }
+        `);
 
-    expect(scopeManager.scopes).toHaveLength(1);
-    const globalScope = scopeManager.scopes[0];
+    expect(scopeManager.scopes).toHaveLength(3);
 
-    expect(globalScope.type).toEqual('global');
-    expect(globalScope.variables).toHaveLength(0);
-    expect(globalScope.references).toHaveLength(1);
-    expect(globalScope.references[0].isReadWrite()).toBe(true);
+    const scope = scopeManager.scopes[2];
+
+    expect(scope.type).toEqual('function');
+    expect(scope.block.type).toEqual('FunctionExpression');
+    expect(scope.isStrict).toBe(true);
+    expect(scope.variables).toHaveLength(1);
+    expect(scope.variables[0].name).toEqual('arguments');
+    expect(scope.references).toHaveLength(0);
   });
 });

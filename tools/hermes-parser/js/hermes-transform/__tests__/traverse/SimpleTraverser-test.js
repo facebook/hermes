@@ -10,8 +10,6 @@
 
 'use strict';
 
-import type {Program} from 'hermes-estree';
-
 import {SimpleTraverser} from '../../src/traverse/SimpleTraverser';
 
 describe('SimpleTraverser', () => {

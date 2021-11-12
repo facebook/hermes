@@ -8,7 +8,8 @@
  */
 
 /*
- Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>
+ Copyright JS Foundation and other contributors, https://js.foundation
+ Copyright (C) 2012-2013 Yusuke Suzuki (twitter: @Constellation) and other contributors.
 
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -30,49 +31,35 @@
  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
 'use strict';
 
 const {parseForESLint} = require('./eslint-scope-test-utils');
 
-describe('with', () => {
-  it('creates scope', () => {
-    const {scopeManager} = parseForESLint(
-      `
-            (function () {
-                with (obj) {
-                    testing;
-                }
-            }());
-        `,
-    );
+describe("export * as ns from 'source'", () => {
+  let scopes;
 
-    expect(scopeManager.scopes).toHaveLength(4);
-    const globalScope = scopeManager.scopes[0];
+  beforeEach(() => {
+    const {scopeManager} = parseForESLint("export * as ns from 'source'", {
+      sourceType: 'module',
+    });
 
-    expect(globalScope.type).toEqual('global');
-    expect(globalScope.variables).toHaveLength(0);
-    expect(globalScope.references).toHaveLength(0);
+    scopes = [
+      scopeManager.globalScope,
+      ...scopeManager.globalScope.childScopes,
+    ];
+  });
 
-    let scope = scopeManager.scopes[1];
+  it('should not have any references', () => {
+    for (const scope of scopes) {
+      expect(scope.references).toHaveLength(0);
+      expect(scope.through).toHaveLength(0);
+    }
+  });
 
-    expect(scope.type).toEqual('function');
-    expect(scope.variables).toHaveLength(1);
-    expect(scope.variables[0].name).toEqual('arguments');
-    expect(scope.isArgumentsMaterialized()).toBe(false);
-    expect(scope.references).toHaveLength(1);
-    expect(scope.references[0].resolved).toBeNull();
-
-    scope = scopeManager.scopes[2];
-    expect(scope.type).toEqual('with');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.isArgumentsMaterialized()).toBe(true);
-    expect(scope.references).toHaveLength(0);
-
-    scope = scopeManager.scopes[3];
-    expect(scope.type).toEqual('block');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.isArgumentsMaterialized()).toBe(true);
-    expect(scope.references).toHaveLength(1);
-    expect(scope.references[0].resolved).toBeNull();
+  it('should not have any variables', () => {
+    for (const scope of scopes) {
+      expect(scope.variables).toHaveLength(0);
+    }
   });
 });

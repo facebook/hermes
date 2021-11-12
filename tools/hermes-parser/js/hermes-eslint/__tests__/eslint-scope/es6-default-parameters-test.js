@@ -47,7 +47,7 @@ describe('ES6 default parameters:', () => {
 
       it(name, () => {
         const numVars = name === 'ArrowExpression' ? 2 : 3;
-        const {ast, scopeManager} = parseForESLint(code);
+        const {scopeManager} = parseForESLint(code);
 
         expect(scopeManager.scopes).toHaveLength(2); // [global, foo]
 
@@ -89,7 +89,7 @@ describe('ES6 default parameters:', () => {
 
       it(name, () => {
         const numVars = name === 'ArrowExpression' ? 1 : 2;
-        const {ast, scopeManager} = parseForESLint(code);
+        const {scopeManager} = parseForESLint(code);
 
         expect(scopeManager.scopes).toHaveLength(2); // [global, foo]
 
@@ -131,7 +131,7 @@ describe('ES6 default parameters:', () => {
 
       it(name, () => {
         const numVars = name === 'ArrowExpression' ? 1 : 2;
-        const {ast, scopeManager} = parseForESLint(code);
+        const {scopeManager} = parseForESLint(code);
 
         expect(scopeManager.scopes).toHaveLength(2); // [global, foo]
 
@@ -173,7 +173,7 @@ describe('ES6 default parameters:', () => {
 
       it(name, () => {
         const numVars = name === 'ArrowExpression' ? 1 : 2;
-        const {ast, scopeManager} = parseForESLint(code);
+        const {scopeManager} = parseForESLint(code);
 
         expect(scopeManager.scopes).toHaveLength(2); // [global, foo]
 
@@ -214,7 +214,7 @@ describe('ES6 default parameters:', () => {
       const code = patterns[name];
 
       it(name, () => {
-        const {ast, scopeManager} = parseForESLint(code);
+        const {scopeManager} = parseForESLint(code);
 
         expect(scopeManager.scopes).toHaveLength(3); // [global, foo, anonymous]
 
@@ -256,7 +256,7 @@ describe('ES6 default parameters:', () => {
 
       it(name, () => {
         const numVars = name === 'ArrowExpression' ? 2 : 3;
-        const {ast, scopeManager} = parseForESLint(code);
+        const {scopeManager} = parseForESLint(code);
 
         expect(scopeManager.scopes).toHaveLength(2); // [global, foo]
 
@@ -298,7 +298,7 @@ describe('ES6 default parameters:', () => {
 
       it(name, () => {
         const numVars = name === 'ArrowExpression' ? 2 : 3;
-        const {ast, scopeManager} = parseForESLint(code);
+        const {scopeManager} = parseForESLint(code);
 
         expect(scopeManager.scopes).toHaveLength(2); // [global, foo]
 
@@ -341,7 +341,7 @@ describe('ES6 default parameters:', () => {
       const code = patterns[name];
 
       it(name, () => {
-        const {ast, scopeManager} = parseForESLint(code);
+        const {scopeManager} = parseForESLint(code);
 
         expect(scopeManager.scopes).toHaveLength(3); // [global, foo, anonymous function]
 

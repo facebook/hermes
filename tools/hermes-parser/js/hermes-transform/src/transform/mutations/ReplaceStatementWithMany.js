@@ -8,11 +8,7 @@
  * @format
  */
 
-import type {
-  ModuleDeclaration,
-  Statement,
-  StatementParentArray,
-} from 'hermes-estree';
+import type {ModuleDeclaration, Statement} from 'hermes-estree';
 import type {MutationContext} from '../MutationContext';
 import type {DetachedNode} from '../../detachedNode';
 
@@ -83,8 +79,6 @@ export function performReplaceStatementWithManyMutation(
   const statementsToReplaceWith =
     // $FlowExpectedError[incompatible-cast] -- this is enforced by isValidModuleDeclarationParent above
     (mutation.nodesToReplaceWith: $ReadOnlyArray<DetachedNode<Statement>>);
-
-  const {parent, key} = replacementParent;
 
   // we need to wrap the nodes in a BlockStatement as before there was only 1 node
   const blockStatement = t.BlockStatement({

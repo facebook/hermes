@@ -14,7 +14,6 @@ import type {DetachedNode} from '../../detachedNode';
 
 import {removeFromArray} from './utils/arrayUtils';
 import {getStatementParent} from './utils/getStatementParent';
-import {InvalidRemovalError} from '../Errors';
 import * as t from '../../generated/node-types';
 
 export type RemoveStatementMutation = $ReadOnly<{

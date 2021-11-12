@@ -58,7 +58,6 @@ export function performReplaceNodeMutation(
     );
     return;
   } else {
-    const {parent, key} = replacementParent;
     (replacementParent.parent: interface {[string]: mixed})[
       replacementParent.key
     ] = mutation.nodeToReplaceWith;

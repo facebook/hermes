@@ -10,7 +10,7 @@
 
 'use strict';
 
-import type {AnyTypeAnnotation, TypeAnnotation} from 'hermes-estree';
+import type {AnyTypeAnnotation} from 'hermes-estree';
 
 import {SafeEmitter} from '../../src/traverse/SafeEmitter';
 

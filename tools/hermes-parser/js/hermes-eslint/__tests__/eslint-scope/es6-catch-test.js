@@ -36,7 +36,7 @@ const {parseForESLint} = require('./eslint-scope-test-utils');
 
 describe('ES6 catch', () => {
   it('takes binding pattern', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             try {
             } catch ({ a, b, c, d }) {
                 let e = 20;

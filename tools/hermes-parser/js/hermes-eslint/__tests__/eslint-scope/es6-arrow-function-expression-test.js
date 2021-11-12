@@ -36,7 +36,7 @@ const {parseForESLint} = require('./eslint-scope-test-utils');
 
 describe('ES6 arrow function expression', () => {
   it('materialize scope for arrow function expression', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             var arrow = () => {
                 let i = 0;
                 var j = 20;
@@ -65,9 +65,7 @@ describe('ES6 arrow function expression', () => {
   });
 
   it('generate bindings for parameters', () => {
-    const {ast, scopeManager} = parseForESLint(
-      'var arrow = (a, b, c, d) => {}',
-    );
+    const {scopeManager} = parseForESLint('var arrow = (a, b, c, d) => {}');
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -92,7 +90,7 @@ describe('ES6 arrow function expression', () => {
   });
 
   it('inherits upper scope strictness', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             "use strict";
             var arrow = () => {};
         `);
@@ -115,7 +113,7 @@ describe('ES6 arrow function expression', () => {
   });
 
   it('is strict when a strictness directive is used', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const {scopeManager} = parseForESLint(`
             var arrow = () => {
                 "use strict";
             };
@@ -139,7 +137,7 @@ describe('ES6 arrow function expression', () => {
   });
 
   it('works with no body', () => {
-    const {ast, scopeManager} = parseForESLint('var arrow = a => a;');
+    const {scopeManager} = parseForESLint('var arrow = a => a;');
 
     expect(scopeManager.scopes).toHaveLength(2);
 

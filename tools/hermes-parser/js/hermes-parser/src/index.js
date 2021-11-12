@@ -62,6 +62,7 @@ declare function parse(
   code: string,
   opts: {...ParserOptions, babel: true},
 ): BabelProgram;
+// eslint-disable-next-line no-redeclare
 declare function parse(
   code: string,
   opts?:
@@ -69,6 +70,7 @@ declare function parse(
     | {...ParserOptions, babel: false},
 ): ESTreeProgram;
 
+// eslint-disable-next-line no-redeclare
 export function parse(
   code: string,
   opts?: ParserOptions,

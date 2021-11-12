@@ -34,38 +34,46 @@
 
 const {parseForESLint} = require('./eslint-scope-test-utils');
 
-describe('function name', () => {
-  it('should create its special scope', () => {
-    const {ast, scopeManager} = parseForESLint(`
-            (function name() {
+describe('catch', () => {
+  it('creates scope', () => {
+    const {scopeManager} = parseForESLint(`
+            (function () {
+                try {
+                } catch (e) {
+                }
             }());
         `);
 
-    expect(scopeManager.scopes).toHaveLength(3);
+    expect(scopeManager.scopes).toHaveLength(5);
     const globalScope = scopeManager.scopes[0];
 
     expect(globalScope.type).toEqual('global');
     expect(globalScope.variables).toHaveLength(0);
     expect(globalScope.references).toHaveLength(0);
-    expect(globalScope.isArgumentsMaterialized()).toBe(true);
 
-    // Function expression name scope
     let scope = scopeManager.scopes[1];
 
-    expect(scope.type).toEqual('function-expression-name');
-    expect(scope.variables).toHaveLength(1);
-    expect(scope.variables[0].name).toEqual('name');
-    expect(scope.isArgumentsMaterialized()).toBe(true);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.upper === globalScope).toBe(true);
-
-    // Function scope
-    scope = scopeManager.scopes[2];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(1);
     expect(scope.variables[0].name).toEqual('arguments');
     expect(scope.isArgumentsMaterialized()).toBe(false);
     expect(scope.references).toHaveLength(0);
-    expect(scope.upper === scopeManager.scopes[1]).toBe(true);
+
+    scope = scopeManager.scopes[2];
+    expect(scope.type).toEqual('block');
+    expect(scope.variables).toHaveLength(0);
+    expect(scope.references).toHaveLength(0);
+
+    scope = scopeManager.scopes[3];
+    expect(scope.type).toEqual('catch');
+    expect(scope.variables).toHaveLength(1);
+    expect(scope.variables[0].name).toEqual('e');
+    expect(scope.isArgumentsMaterialized()).toBe(true);
+    expect(scope.references).toHaveLength(0);
+
+    scope = scopeManager.scopes[4];
+    expect(scope.type).toEqual('block');
+    expect(scope.variables).toHaveLength(0);
+    expect(scope.references).toHaveLength(0);
   });
 });

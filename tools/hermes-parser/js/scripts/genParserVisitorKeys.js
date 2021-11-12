@@ -13,11 +13,8 @@
 import {
   HermesESTreeJSON,
   formatAndWriteDistArtifact,
-  LITERAL_TYPES,
 } from './utils/scriptUtils';
 import tempCustomASTDefs from './utils/tempCustomASTDefs';
-
-const ALLOWED_ARG_TYPES = new Set(['NodePtr', 'NodeList']);
 
 const visitorKeys: {[string]: {[string]: 'Node' | 'NodeList'}} =
   // $FlowExpectedError[incompatible-type]

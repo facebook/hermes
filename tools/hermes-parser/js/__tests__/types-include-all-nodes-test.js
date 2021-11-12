@@ -8,12 +8,7 @@
  * @format
  */
 
-import type {
-  InterfaceDeclaration,
-  ObjectTypeProperty,
-  TypeAnnotationType,
-  UnionTypeAnnotation,
-} from 'hermes-estree';
+import type {TypeAnnotationType} from 'hermes-estree';
 
 import fs from 'fs';
 import path from 'path';
@@ -175,7 +170,6 @@ describe('All nodes declared by hermes should have an interface in hermes-estree
         return;
       }
 
-      const propertyNames = [...iface.properties.keys()];
       for (const {name, optional} of node.arguments) {
         // property is known to be incorrect
         if (propertiesThatShouldBeSkipped.get(node.name)?.has(name)) {

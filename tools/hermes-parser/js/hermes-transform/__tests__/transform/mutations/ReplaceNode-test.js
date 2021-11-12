@@ -11,7 +11,6 @@
 import type {
   AnyTypeAnnotation,
   Identifier,
-  NumberTypeAnnotation,
   VariableDeclaration,
 } from 'hermes-estree';
 
@@ -22,12 +21,6 @@ import {
 } from '../../../src/transform/mutations/ReplaceNode';
 import {MutationContext} from '../../../src/transform/MutationContext';
 import {parseAndGetAstAndNode} from './test-utils';
-
-const SAMPLES = {
-  Identifier: 'const x = 1;',
-  AnyTypeAnnotation: 'const x: any = 1;',
-  VariableDeclaration: 'const x = 1;',
-};
 
 describe('ReplaceNode', () => {
   it('Identifier', () => {

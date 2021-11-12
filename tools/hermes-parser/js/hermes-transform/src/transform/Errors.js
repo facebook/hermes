@@ -8,8 +8,6 @@
  * @format
  */
 
-import type {ESNode} from 'hermes-estree';
-
 export class NodeIsDeletedError extends Error {}
 export class NodeIsMutatedError extends Error {}
 export class InvalidInsertionError extends Error {}

@@ -34,25 +34,28 @@
 
 const {parseForESLint} = require('./eslint-scope-test-utils');
 
-describe('ES6 new.target', () => {
-  it('should not make references of new.target', () => {
-    const {ast, scopeManager} = parseForESLint(`
-            class A {
-                constructor() {
-                    new.target;
-                }
-            }
+describe('arguments', () => {
+  it('arguments are correctly materialized', () => {
+    const {scopeManager} = parseForESLint(`
+            (function () {
+                arguments;
+            }());
         `);
 
-    expect(scopeManager.scopes).toHaveLength(3);
+    expect(scopeManager.scopes).toHaveLength(2);
+    const globalScope = scopeManager.scopes[0];
 
-    const scope = scopeManager.scopes[2];
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
+
+    const scope = scopeManager.scopes[1];
 
     expect(scope.type).toEqual('function');
-    expect(scope.block.type).toEqual('FunctionExpression');
-    expect(scope.isStrict).toBe(true);
     expect(scope.variables).toHaveLength(1);
     expect(scope.variables[0].name).toEqual('arguments');
-    expect(scope.references).toHaveLength(0);
+    expect(scope.isArgumentsMaterialized()).toBe(true);
+    expect(scope.references).toHaveLength(1);
+    expect(scope.references[0].resolved).toEqual(scope.variables[0]);
   });
 });
