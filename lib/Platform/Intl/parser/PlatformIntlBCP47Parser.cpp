@@ -7,6 +7,9 @@
 
 #include "hermes/Platform/Intl/PlatformIntlBCP47Parser.h"
 
+namespace hermes {
+namespace platform_intl_parser {
+
 // character type functions
 bool isASCIILetter(char16_t c) {
   return ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'));
@@ -117,7 +120,7 @@ bool isOtherExtension(std::u16string str, int start, int end) {
   return false;
 }
 
-struct ParsedLocaleIdentifier::Impl { };
+struct ParsedLocaleIdentifier::Impl {};
 
 std::u16string ParsedLocaleIdentifier::toString() {
   std::u16string res;
@@ -188,7 +191,17 @@ std::u16string ParsedLocaleIdentifier::toString() {
   return res;
 }
 
-LanguageTagParser::LanguageTagParser(const std::u16string &localeId) : impl_(std::make_unique<Impl>()) {
+struct LanguageTagParser::Impl {
+  Impl(const std::u16string &localeId) : mLocaleId(localeId){};
+  ~Impl();
+
+  ParsedLocaleIdentifier parsedLocaleIdentifier;
+  std::u16string mLocaleId;
+  size_t mSubtagStart;
+  size_t mSubtagEnd;
+};
+
+LanguageTagParser::LanguageTagParser(const std::u16string &localeId) : impl_(std::make_unique<Impl>(localeId)) {
   impl_->mLocaleId = localeId; // tolowercase? this should just be ascii right?
   impl_->mSubtagStart = 0;
   impl_->mSubtagEnd = -1;
@@ -399,3 +412,6 @@ std::u16string LanguageTagParser::toParsedString() {
 std::u16string LanguageTagParser::getCurrentSubtag() {
   return impl_->mLocaleId.substr(impl_->mSubtagStart, impl_->mSubtagEnd - impl_->mSubtagStart + 1);
 }
+
+} // hermes
+} // platform intl parser

@@ -7,7 +7,6 @@ set(source_files
    PlatformIntlBCP47Parser.cpp
 )
 
-
 add_hermes_library(hermesPlatformIntlParser STATIC ${source_files})
 
 hermes_link_icu(hermesPlatformIntlParser)

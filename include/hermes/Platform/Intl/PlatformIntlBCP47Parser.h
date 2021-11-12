@@ -7,14 +7,13 @@
 
 #ifdef HERMES_ENABLE_INTL
 #include "hermes/VM/CallResult.h"
-#include "hermes/VM/DecoratedObject.h"
 
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 namespace hermes {
-namespace platform_intl {
+namespace platform_intl_parser {
 
 struct ParsedLanguageIdentifier {
   std::u16string languageSubtag;
@@ -53,6 +52,7 @@ class ParsedLocaleIdentifier {
 class LanguageTagParser {
  public:
   LanguageTagParser(const std::u16string &localeId);
+  LanguageTagParser();
   ~LanguageTagParser();
 
   // public function declaration
@@ -79,16 +79,7 @@ class LanguageTagParser {
   bool hasMoreSubtags();
   bool nextSubtag();
 };
-struct LanguageTagParser::Impl {
-  Impl(const std::u16string &localeId) : mLocaleId(localeId){};
-  ~Impl();
 
-  ParsedLocaleIdentifier parsedLocaleIdentifier;
-  std::u16string mLocaleId;
-  size_t mSubtagStart;
-  size_t mSubtagEnd;
-};
-
-} // namespace platform_intl
+} // namespace platform_intl_parser
 } // namespace hermes
 #endif
