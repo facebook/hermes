@@ -48,17 +48,15 @@ export function BlockStatement({
 
 export function ExpressionStatement({
   parent,
-  expression,
-  directive = null,
+  ...props
 }: {
   +expression: DetachedNode<ExpressionStatementType['expression']>,
-  +directive?: ExpressionStatementType['directive'],
+  +directive?: ?ExpressionStatementType['directive'],
   +parent?: ESNode,
 }): DetachedNode<ExpressionStatementType> {
   const node = detachedProps<ExpressionStatementType>(parent, {
     type: 'ExpressionStatement',
-    expression,
-    directive,
+    ...props,
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -96,7 +94,7 @@ export function VariableDeclarator({
   parent,
   ...props
 }: {
-  +init: DetachedNode<VariableDeclaratorType['init']>,
+  +init?: ?DetachedNode<VariableDeclaratorType['init']>,
   +id: DetachedNode<VariableDeclaratorType['id']>,
   +parent?: ESNode,
 }): DetachedNode<VariableDeclaratorType> {

@@ -21,7 +21,6 @@ const NODES_WITH_SPECIAL_HANDLING = new Set([
   'RegExpLiteral',
   'TemplateElement',
   'Identifier',
-  'ExpressionStatement',
   'BooleanLiteral',
   'NumericLiteral',
   'NullLiteral',
@@ -69,6 +68,10 @@ export function ${node.name}({parent, ...props}: {
         type = `DetachedNode<${type}>`;
       } else if (arg.type === 'NodeList') {
         type = `$ReadOnlyArray<DetachedNode<${type}[number]>>`;
+      }
+
+      if (arg.optional) {
+        return `+${arg.name}?: ?${type}`;
       }
       return `+${arg.name}: ${type}`;
     })

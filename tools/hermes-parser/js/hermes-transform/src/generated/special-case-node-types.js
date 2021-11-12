@@ -19,7 +19,6 @@ import type {
   RegExpLiteral as RegExpLiteralType,
   TemplateElement as TemplateElementType,
   Identifier as IdentifierType,
-  ExpressionStatement as ExpressionStatementType,
   BooleanLiteral as BooleanLiteralType,
   NumericLiteral as NumericLiteralType,
   NullLiteral as NullLiteralType,
@@ -91,26 +90,6 @@ export function Identifier({
     optional,
     typeAnnotation,
     ...props,
-  });
-  setParentPointersInDirectChildren(node);
-  return node;
-}
-
-// hermes always emits the directive prop, but nobody should ever want to use it
-// so we default it to `null` here
-export function ExpressionStatement({
-  parent,
-  expression,
-  directive = null,
-}: {
-  +expression: DetachedNode<ExpressionStatementType['expression']>,
-  +directive?: ExpressionStatementType['directive'],
-  +parent?: ESNode,
-}): DetachedNode<ExpressionStatementType> {
-  const node = detachedProps<ExpressionStatementType>(parent, {
-    type: 'ExpressionStatement',
-    expression,
-    directive,
   });
   setParentPointersInDirectChildren(node);
   return node;
