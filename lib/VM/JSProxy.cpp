@@ -40,13 +40,16 @@ findTrap(Handle<JSObject> selfHandle, Runtime *runtime, Predefined::Str name) {
   if (!handlerPtr) {
     return runtime->raiseTypeError("Proxy handler is null");
   }
-  GCScope gcScope(runtime);
   // 4. Assert: Type(handler) is Object.
   // 5. Let target be O.[[ProxyTarget]].
   // 6. Let trap be ? GetMethod(handler, « name »).
-  Handle<JSObject> handler = runtime->makeHandle(handlerPtr);
-  CallResult<PseudoHandle<>> trapVal =
-      JSObject::getNamed_RJS(handler, runtime, Predefined::getSymbolID(name));
+  CallResult<PseudoHandle<>> trapVal = [&]() {
+    GCScope gcScope(runtime);
+    Handle<JSObject> handler = runtime->makeHandle(handlerPtr);
+    return JSObject::getNamed_RJS(
+        handler, runtime, Predefined::getSymbolID(name));
+  }();
+
   if (trapVal == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -59,7 +62,7 @@ findTrap(Handle<JSObject> selfHandle, Runtime *runtime, Predefined::Str name) {
         runtime->makeHandle(std::move(*trapVal)),
         " is not a Proxy trap function");
   }
-  return runtime->makeHandleInParentScope<Callable>(std::move(trapVal->get()));
+  return runtime->makeHandle<Callable>(std::move(trapVal->get()));
 }
 
 } // namespace detail
