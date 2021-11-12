@@ -8,7 +8,7 @@
  * @format
  */
 
-import type {ModuleDeclaration, Statement} from 'hermes-estree';
+import type {ESNode, ModuleDeclaration, Statement} from 'hermes-estree';
 import type {MutationContext} from '../MutationContext';
 import type {DetachedNode} from '../../detachedNode';
 
@@ -16,7 +16,6 @@ import {insertInArray} from './utils/arrayUtils';
 import {getStatementParent} from './utils/getStatementParent';
 import {isValidModuleDeclarationParent} from './utils/isValidModuleDeclarationParent';
 import {InvalidInsertionError} from '../Errors';
-import {asESNode} from '../../detachedNode';
 import * as t from '../../generated/node-types';
 
 export type InsertStatementMutation = $ReadOnly<{
@@ -42,7 +41,7 @@ export function createInsertStatementMutation(
 export function performInsertStatementMutation(
   mutationContext: MutationContext,
   mutation: InsertStatementMutation,
-): void {
+): ESNode {
   const insertionParent = getStatementParent(mutation.target);
 
   // enforce that if we are inserting module declarations - they are being inserted in a valid location
@@ -83,12 +82,7 @@ export function performInsertStatementMutation(
       }
     }
 
-    // ensure the parent pointers are correctly set to the new parent
-    for (const statement of mutation.nodesToInsert) {
-      // $FlowExpectedError[cannot-write] - intentionally mutating the AST
-      asESNode(statement).parent = parent;
-    }
-    return;
+    return insertionParent.parent;
   }
 
   const statementsToInsert =
@@ -110,4 +104,6 @@ export function performInsertStatementMutation(
 
   (insertionParent.parent: interface {[string]: mixed})[insertionParent.key] =
     blockStatement;
+
+  return insertionParent.parent;
 }

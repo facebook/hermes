@@ -46,7 +46,7 @@ export function detachedProps<T: BaseNode>(
  */
 export function shallowCloneNode<T: ESNode>(
   node: T,
-  newProps: $Shape<T>,
+  newProps: $Shape<T> = {},
 ): DetachedNode<T> {
   return detachedProps(null, (Object.assign({}, node, newProps): $FlowFixMe));
 }
@@ -71,14 +71,7 @@ export function deepCloneNode<T: ESNode>(
     newProps,
   );
 
-  // set the parent pointers
-  SimpleTraverser.traverse(clone, {
-    enter(node, parent) {
-      // $FlowExpectedError[cannot-write]
-      node.parent = parent;
-    },
-    leave() {},
-  });
+  updateAllParentPointers(clone);
 
   // $FlowExpectedError[class-object-subtyping]
   return detachedProps(null, clone);
@@ -87,8 +80,8 @@ export function deepCloneNode<T: ESNode>(
 /**
  * Corrects the parent pointers in direct children of the given node
  */
-export function setParentPointersInDirectChildren<T: ESNode>(
-  node: DetachedNode<T>,
+export function setParentPointersInDirectChildren(
+  node: DetachedNode<ESNode>,
 ): void {
   for (const key of getVisitorKeys(node)) {
     if (
@@ -107,8 +100,14 @@ export function setParentPointersInDirectChildren<T: ESNode>(
 }
 
 /**
- * Convert from the opaque type
+ * Traverses the entire subtree to ensure the parent pointers are set correctly
  */
-export function asESNode<T: ESNode>(node: DetachedNode<T>): T {
-  return node;
+export function updateAllParentPointers(node: ESNode | DetachedNode<ESNode>) {
+  SimpleTraverser.traverse(node, {
+    enter(node, parent) {
+      // $FlowExpectedError[cannot-write]
+      node.parent = parent;
+    },
+    leave() {},
+  });
 }

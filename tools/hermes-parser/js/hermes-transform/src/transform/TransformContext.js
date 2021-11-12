@@ -55,7 +55,18 @@ export type TransformContext = $ReadOnly<{
    * If you want to literally duplicate a node to place somewhere else
    * in the AST, then use `deepCloneNode` instead.
    */
-  shallowCloneNode: typeof shallowCloneNode,
+  shallowCloneNode: {
+    <T: ESNode>(node: T, newProps?: $Shape<T>): DetachedNode<T>,
+    <T: ESNode>(node: ?T, newProps?: $Shape<T>): ?DetachedNode<T>,
+  },
+
+  /**
+   * {@see shallowCloneNode}
+   */
+  shallowCloneArray: {
+    <T: ESNode>(node: $ReadOnlyArray<T>): $ReadOnlyArray<DetachedNode<T>>,
+    <T: ESNode>(node: ?$ReadOnlyArray<T>): ?$ReadOnlyArray<DetachedNode<T>>,
+  },
 
   /**
    * Deeply clones the node and all its children, then applies the
@@ -136,7 +147,29 @@ export function getTransformContext(): TransformContext {
   return {
     mutations,
 
-    shallowCloneNode: (shallowCloneNode: TransformContext['shallowCloneNode']),
+    // $FlowExpectedError[class-object-subtyping]
+    shallowCloneNode: ((
+      node: ?ESNode,
+      newProps?: $ReadOnly<{...}>,
+    ): // $FlowExpectedError[incompatible-cast]
+    ?DetachedNode<ESNode> => {
+      if (node == null) {
+        return null;
+      }
+
+      return shallowCloneNode(node, newProps);
+    }: TransformContext['shallowCloneNode']),
+
+    shallowCloneArray: (<T: ESNode>(
+      nodes: ?$ReadOnlyArray<T>,
+    ): // $FlowExpectedError[incompatible-cast]
+    ?$ReadOnlyArray<DetachedNode<ESNode>> => {
+      if (nodes == null) {
+        return null;
+      }
+
+      return nodes.map(node => shallowCloneNode<T>(node));
+    }: TransformContext['shallowCloneArray']),
 
     deepCloneNode: (deepCloneNode: TransformContext['deepCloneNode']),
 

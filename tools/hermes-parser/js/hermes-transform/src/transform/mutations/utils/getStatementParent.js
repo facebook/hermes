@@ -61,67 +61,83 @@ export function getStatementParent(
   }
 
   const parent = target.parent;
-  switch (parent.type) {
-    case 'IfStatement': {
-      assertValidStatementLocation(parent, 'test');
-      const key = parent.consequent === target ? 'consequent' : 'alternate';
-      return {type: 'single', parent, key};
+  const result = (() => {
+    switch (parent.type) {
+      case 'IfStatement': {
+        assertValidStatementLocation(parent, 'test');
+        const key = parent.consequent === target ? 'consequent' : 'alternate';
+        return {type: 'single', parent, key};
+      }
+
+      case 'LabeledStatement': {
+        assertValidStatementLocation(parent, 'label');
+        return {type: 'single', parent, key: 'body'};
+      }
+
+      case 'WithStatement': {
+        assertValidStatementLocation(parent, 'object');
+        return {type: 'single', parent, key: 'body'};
+      }
+
+      case 'DoWhileStatement':
+      case 'WhileStatement': {
+        assertValidStatementLocation(parent, 'test');
+        return {type: 'single', parent, key: 'body'};
+      }
+
+      case 'ForStatement': {
+        assertValidStatementLocation(parent, 'init', 'test', 'update');
+        return {type: 'single', parent, key: 'body'};
+      }
+
+      case 'ForInStatement':
+      case 'ForOfStatement': {
+        assertValidStatementLocation(
+          // $FlowExpectedError[prop-missing] - flow does not track properties from parent interface
+          parent,
+          'left',
+          'right',
+        );
+        return {type: 'single', parent, key: 'body'};
+      }
+
+      case 'SwitchCase': {
+        assertValidStatementLocation(parent, 'test');
+        return {
+          type: 'array',
+          parent,
+          key: 'consequent',
+          targetIndex: getAssertedIndex('consequent', parent.consequent),
+        };
+      }
+
+      case 'BlockStatement':
+      case 'Program': {
+        return {
+          type: 'array',
+          parent,
+          key: 'body',
+          targetIndex: getAssertedIndex('body', parent.body),
+        };
+      }
     }
 
-    case 'LabeledStatement': {
-      assertValidStatementLocation(parent, 'label');
-      return {type: 'single', parent, key: 'body'};
-    }
+    throw new InvalidStatementError(
+      `Expected to find a valid statement parent, but found a parent of type "${parent.type}".`,
+    );
+  })();
 
-    case 'WithStatement': {
-      assertValidStatementLocation(parent, 'object');
-      return {type: 'single', parent, key: 'body'};
-    }
-
-    case 'DoWhileStatement':
-    case 'WhileStatement': {
-      assertValidStatementLocation(parent, 'test');
-      return {type: 'single', parent, key: 'body'};
-    }
-
-    case 'ForStatement': {
-      assertValidStatementLocation(parent, 'init', 'test', 'update');
-      return {type: 'single', parent, key: 'body'};
-    }
-
-    case 'ForInStatement':
-    case 'ForOfStatement': {
-      assertValidStatementLocation(
-        // $FlowExpectedError[prop-missing] - flow does not track properties from parent interface
-        parent,
-        'left',
-        'right',
-      );
-      return {type: 'single', parent, key: 'body'};
-    }
-
-    case 'SwitchCase': {
-      assertValidStatementLocation(parent, 'test');
-      return {
-        type: 'array',
-        parent,
-        key: 'consequent',
-        targetIndex: getAssertedIndex('consequent', parent.consequent),
-      };
-    }
-
-    case 'BlockStatement':
-    case 'Program': {
-      return {
-        type: 'array',
-        parent,
-        key: 'body',
-        targetIndex: getAssertedIndex('body', parent.body),
-      };
-    }
+  if (
+    // array insertions are already validated by the getAssertedIndex function
+    result.targetIndex == null &&
+    // $FlowExpectedError[prop-missing]
+    result.parent[result.key] !== target
+  ) {
+    throw new InvalidStatementError(
+      `Expected to find the target "${target.type}" on the "${result.parent.type}.${result.key}", but found a different node. ` +
+        'This likely means that you attempted to mutate around the target after it was deleted/replaced.',
+    );
   }
 
-  throw new InvalidStatementError(
-    `Expected to find a valid statement parent, but found a parent of type "${parent.type}".`,
-  );
+  return result;
 }

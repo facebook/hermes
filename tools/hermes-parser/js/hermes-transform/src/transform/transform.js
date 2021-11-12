@@ -15,10 +15,12 @@ import type {TransformContext} from './TransformContext';
 
 import * as prettier from 'prettier';
 import {getTransformedAST} from './getTransformedAST';
+import {SimpleTraverser} from '../traverse/SimpleTraverser';
 
 export function transform(
   code: string,
   visitors: Visitor<TransformContext>,
+  prettierOptions: {...} = {},
 ): string {
   const {ast, astWasMutated} = getTransformedAST(code, visitors);
 
@@ -26,7 +28,20 @@ export function transform(
     return code;
   }
 
+  // prettier fully expects the parent pointers are NOT set and
+  // certain cases can crash due to prettier infinite-looping
+  // whilst naively traversing the parent property
+  // https://github.com/prettier/prettier/issues/11793
+  SimpleTraverser.traverse(ast, {
+    enter(node) {
+      // $FlowExpectedError[cannot-write]
+      delete node.parent;
+    },
+    leave() {},
+  });
+
   return prettier.format(code, {
+    ...prettierOptions,
     parser() {
       return ast;
     },

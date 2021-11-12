@@ -8,8 +8,14 @@
  * @format
  */
 
-import {transform} from '../../src/transform/transform';
+import {transform as transformOriginal} from '../../src/transform/transform';
 import * as t from '../../src/generated/node-types';
+// $FlowExpectedError[cannot-resolve-module]
+import prettierConfig from '../../../.prettierrc.json';
+
+function transform(code, visitors) {
+  return transformOriginal(code, visitors, prettierConfig);
+}
 
 describe('transform', () => {
   it('should do nothing (including no formatting) if no mutations are applied', () => {
@@ -23,10 +29,6 @@ describe('transform', () => {
     const code = 'const x = 1';
     const result = transform(code, context => ({
       VariableDeclaration(node) {
-        if (node.type !== 'VariableDeclaration') {
-          return;
-        }
-
         context.replaceStatementWithMany(node, [
           t.VariableDeclaration({
             kind: 'const',
@@ -52,10 +54,6 @@ const y = null;
       const code = 'const x = 1;';
       const result = transform(code, context => ({
         VariableDeclaration(node) {
-          if (node.type !== 'VariableDeclaration') {
-            return;
-          }
-
           context.insertBeforeStatement(
             node,
             t.VariableDeclaration({
@@ -86,10 +84,6 @@ const x = 1;
       const code = 'const x = 1;';
       const result = transform(code, context => ({
         VariableDeclaration(node) {
-          if (node.type !== 'VariableDeclaration') {
-            return;
-          }
-
           context.insertAfterStatement(
             node,
             t.VariableDeclaration({
@@ -120,10 +114,6 @@ const y = 1;
       const code = 'if (condition) return true;';
       const result = transform(code, context => ({
         ReturnStatement(node) {
-          if (node.type !== 'ReturnStatement') {
-            return;
-          }
-
           context.insertBeforeStatement(
             node,
             t.VariableDeclaration({
@@ -157,16 +147,12 @@ if (condition) {
       const code = 'const x = 1; console.log("I will survive");';
       const result = transform(code, context => ({
         VariableDeclaration(node) {
-          if (node.type !== 'VariableDeclaration') {
-            return;
-          }
-
           context.removeStatement(node);
         },
       }));
 
       expect(result).toBe(`\
-console.log("I will survive");
+console.log('I will survive');
 `);
     });
 
@@ -174,10 +160,6 @@ console.log("I will survive");
       const code = 'if (condition) return true;';
       const result = transform(code, context => ({
         ReturnStatement(node) {
-          if (node.type !== 'ReturnStatement') {
-            return;
-          }
-
           context.removeStatement(node);
         },
       }));
@@ -195,10 +177,6 @@ if (condition) {
         const code = 'const x = 1;';
         const result = transform(code, context => ({
           Literal(node) {
-            if (node.type !== 'Literal') {
-              return;
-            }
-
             context.replaceNode(node, t.BooleanLiteral({value: true}));
           },
         }));
@@ -212,10 +190,6 @@ const x = true;
         const code = 'const x = 1;';
         const result = transform(code, context => ({
           VariableDeclaration(node) {
-            if (node.type !== 'VariableDeclaration') {
-              return;
-            }
-
             context.replaceNode(
               node,
               t.VariableDeclaration({
@@ -240,10 +214,6 @@ let y = null;
         const code = 'const x: any = 1;';
         const result = transform(code, context => ({
           AnyTypeAnnotation(node) {
-            if (node.type !== 'AnyTypeAnnotation') {
-              return;
-            }
-
             context.replaceNode(node, t.NumberTypeAnnotation());
           },
         }));
@@ -259,10 +229,6 @@ const x: number = 1;
         const code = 'const x = 1;';
         const result = transform(code, context => ({
           VariableDeclaration(node) {
-            if (node.type !== 'VariableDeclaration') {
-              return;
-            }
-
             context.replaceStatementWithMany(node, [
               t.VariableDeclaration({
                 kind: 'const',
@@ -296,10 +262,6 @@ const z = true;
         const code = 'if (condition) return true;';
         const result = transform(code, context => ({
           ReturnStatement(node) {
-            if (node.type !== 'ReturnStatement') {
-              return;
-            }
-
             context.replaceStatementWithMany(node, [
               t.VariableDeclaration({
                 kind: 'const',
@@ -338,6 +300,133 @@ if (condition) {
 }
 `);
       });
+    });
+  });
+
+  describe('complex transforms', () => {
+    it('should support transforms on the same subtree', () => {
+      const code = `\
+class Foo {
+  method(): () => () => Foo {
+    function bar(): () => Foo {
+      function baz(): Foo {
+        return this;
+      }
+      return baz;
+    }
+    return bar;
+  }
+}
+      `;
+
+      // transform which replaces all function declarations with arrow functions
+      const result = transform(code, context => ({
+        'FunctionDeclaration[id]'(node) {
+          context.replaceNode(
+            node,
+            t.VariableDeclaration({
+              kind: 'const',
+              declarations: [
+                t.VariableDeclarator({
+                  id: context.shallowCloneNode(node.id),
+                  init: t.ArrowFunctionExpression({
+                    async: node.async,
+                    body: context.shallowCloneNode(node.body),
+                    expression: false,
+                    params: context.shallowCloneArray(node.params),
+                    predicate: context.shallowCloneNode(node.predicate),
+                    returnType: context.shallowCloneNode(node.returnType),
+                    typeParameters: context.shallowCloneNode(
+                      node.typeParameters,
+                    ),
+                  }),
+                }),
+              ],
+            }),
+          );
+        },
+      }));
+
+      expect(result).toBe(`\
+class Foo {
+  method(): () => () => Foo {
+    const bar = (): (() => Foo) => {
+      const baz = (): Foo => {
+        return this;
+      };
+      return baz;
+    };
+    return bar;
+  }
+}
+`);
+    });
+
+    it('should fail if you attempt to insert before a removed node', () => {
+      const code = `\
+if (true) call();
+      `;
+
+      expect(() =>
+        transform(code, context => ({
+          ExpressionStatement(node) {
+            context.replaceNode(
+              node,
+              t.ExpressionStatement({
+                expression: t.StringLiteral({
+                  value: 'removed',
+                }),
+              }),
+            );
+
+            context.insertBeforeStatement(
+              node,
+              t.ExpressionStatement({
+                expression: t.StringLiteral({
+                  value: 'inserted',
+                }),
+              }),
+            );
+          },
+        })),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `"Expected to find the target \\"ExpressionStatement\\" on the \\"IfStatement.alternate\\", but found a different node. This likely means that you attempted to mutate around the target after it was deleted/replaced."`,
+      );
+    });
+
+    it('should allow insertion before removal', () => {
+      const code = `\
+if (true) call();
+      `;
+
+      const result = transform(code, context => ({
+        ExpressionStatement(node) {
+          context.insertBeforeStatement(
+            node,
+            t.ExpressionStatement({
+              expression: t.StringLiteral({
+                value: 'inserted',
+              }),
+            }),
+          );
+
+          context.replaceNode(
+            node,
+            t.ExpressionStatement({
+              expression: t.StringLiteral({
+                value: 'removed',
+              }),
+            }),
+          );
+        },
+      }));
+
+      expect(result).toBe(`\
+if (true) {
+  ('inserted');
+  ('removed');
+}
+`);
     });
   });
 });

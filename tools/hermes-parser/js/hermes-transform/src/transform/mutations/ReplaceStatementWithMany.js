@@ -8,7 +8,7 @@
  * @format
  */
 
-import type {ModuleDeclaration, Statement} from 'hermes-estree';
+import type {ESNode, ModuleDeclaration, Statement} from 'hermes-estree';
 import type {MutationContext} from '../MutationContext';
 import type {DetachedNode} from '../../detachedNode';
 
@@ -16,7 +16,6 @@ import {replaceInArray} from './utils/arrayUtils';
 import {getStatementParent} from './utils/getStatementParent';
 import {isValidModuleDeclarationParent} from './utils/isValidModuleDeclarationParent';
 import {InvalidReplacementError} from '../Errors';
-import {asESNode} from '../../detachedNode';
 import * as t from '../../generated/node-types';
 
 export type ReplaceStatementWithManyMutation = $ReadOnly<{
@@ -41,7 +40,7 @@ export function createReplaceStatementWithManyMutation(
 export function performReplaceStatementWithManyMutation(
   mutationContext: MutationContext,
   mutation: ReplaceStatementWithManyMutation,
-): void {
+): ESNode {
   const replacementParent = getStatementParent(mutation.target);
 
   // enforce that if we are replacing with module declarations - they are being inserted in a valid location
@@ -57,6 +56,7 @@ export function performReplaceStatementWithManyMutation(
   }
 
   mutationContext.markDeletion(mutation.target);
+  mutationContext.markMutation(replacementParent.parent, replacementParent.key);
 
   if (replacementParent.type === 'array') {
     const parent: interface {
@@ -68,12 +68,7 @@ export function performReplaceStatementWithManyMutation(
       mutation.nodesToReplaceWith,
     );
 
-    // ensure the parent pointers are correctly set to the new parent
-    for (const statement of mutation.nodesToReplaceWith) {
-      // $FlowExpectedError[cannot-write] - intentionally mutating the AST
-      asESNode(statement).parent = parent;
-    }
-    return;
+    return replacementParent.parent;
   }
 
   const statementsToReplaceWith =
@@ -89,4 +84,6 @@ export function performReplaceStatementWithManyMutation(
   (replacementParent.parent: interface {[string]: mixed})[
     replacementParent.key
   ] = blockStatement;
+
+  return replacementParent.parent;
 }

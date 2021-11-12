@@ -8,7 +8,7 @@
  * @format
  */
 
-import type {ModuleDeclaration, Statement} from 'hermes-estree';
+import type {ESNode, ModuleDeclaration, Statement} from 'hermes-estree';
 import type {MutationContext} from '../MutationContext';
 import type {DetachedNode} from '../../detachedNode';
 
@@ -33,10 +33,11 @@ export function createRemoveStatementMutation(
 export function performRemoveStatementMutation(
   mutationContext: MutationContext,
   mutation: RemoveStatementMutation,
-): void {
+): ESNode {
   const removalParent = getStatementParent(mutation.node);
 
   mutationContext.markDeletion(mutation.node);
+  mutationContext.markMutation(removalParent.parent, removalParent.key);
 
   if (removalParent.type === 'array') {
     const parent: interface {
@@ -46,21 +47,22 @@ export function performRemoveStatementMutation(
       parent[removalParent.key],
       removalParent.targetIndex,
     );
-    return;
+  } else {
+    // The parent has a 1:1 relationship on this key, so we can't just
+    // remove the node. Instead we replace it with an empty block statement.
+    // We COULD throw an error here and make the codemodder write a stricter
+    // codemod - but we decided to add this bit of magic to make it easier
+    // to write codemods.
+    // Worst case it creates some dead code that can be easily detected
+    // and cleaned up later.
+    const blockStatement = t.BlockStatement({
+      body: [],
+      parent: removalParent.parent,
+    });
+
+    (removalParent.parent: interface {[string]: mixed})[removalParent.key] =
+      blockStatement;
   }
 
-  // The parent has a 1:1 relationship on this key, so we can't just
-  // remove the node. Instead we replace it with an empty block statement.
-  // We COULD throw an error here and make the codemodder write a stricter
-  // codemod - but we decided to add this bit of magic to make it easier
-  // to write codemods.
-  // Worst case it creates some dead code that can be easily detected
-  // and cleaned up later.
-  const blockStatement = t.BlockStatement({
-    body: [],
-    parent: removalParent.parent,
-  });
-
-  (removalParent.parent: interface {[string]: mixed})[removalParent.key] =
-    blockStatement;
+  return removalParent.parent;
 }

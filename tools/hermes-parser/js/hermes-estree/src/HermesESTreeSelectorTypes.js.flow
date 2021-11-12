@@ -10,11 +10,38 @@
 
 'use strict';
 
-import type {ESNode} from './types';
+import type {
+  AnyTypeAnnotation,
+  CallExpression,
+  ESNode,
+  ExpressionStatement,
+  FunctionDeclaration,
+  Literal,
+  ReturnStatement,
+  VariableDeclaration,
+  VariableDeclarator,
+} from './types';
 
-// This file is overridden in the output by codegen wherein
-// we add an individual property sig for each and every node.
+/*
+ * !!! THIS FILE WILL BE OVERWRITTEN BY CODEGEN !!!
+ *
+ * Statically it should only contain the minimal set of
+ * definitions required to typecheck the local code.
+ */
+
+interface FunctionDeclaration_With_id extends FunctionDeclaration {
+  +id: $NonMaybeType<FunctionDeclaration['id']>;
+}
 
 export type ESQueryNodeSelectors = $ReadOnly<{
-  [selector: string]: (node: ESNode) => void,
+  +AnyTypeAnnotation?: (node: AnyTypeAnnotation) => void,
+  +CallExpression?: (node: CallExpression) => void,
+  +ExpressionStatement?: (node: ExpressionStatement) => void,
+  +FunctionDeclaration?: (node: FunctionDeclaration) => void,
+  +'FunctionDeclaration[id]'?: (node: FunctionDeclaration_With_id) => void,
+  +Literal?: (node: Literal) => void,
+  +ReturnStatement?: (node: ReturnStatement) => void,
+  +VariableDeclaration?: (node: VariableDeclaration) => void,
+  +VariableDeclarator?: (node: VariableDeclarator) => void,
+  +[selector: string]: (node: ESNode) => void,
 }>;

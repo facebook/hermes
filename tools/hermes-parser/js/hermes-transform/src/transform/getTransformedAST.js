@@ -22,6 +22,7 @@ import {performInsertStatementMutation} from './mutations/InsertStatement';
 import {performRemoveStatementMutation} from './mutations/RemoveStatement';
 import {performReplaceNodeMutation} from './mutations/ReplaceNode';
 import {performReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
+import {updateAllParentPointers} from '../detachedNode';
 
 export function getTransformedAST(
   code: string,
@@ -41,27 +42,43 @@ export function getTransformedAST(
   // apply the mutations to the AST
   const mutationContext = new MutationContext();
   for (const mutation of transformContext.mutations) {
-    switch (mutation.type) {
-      case 'insertStatement': {
-        performInsertStatementMutation(mutationContext, mutation);
-        break;
-      }
+    const mutationRoot = (() => {
+      switch (mutation.type) {
+        case 'insertStatement': {
+          return performInsertStatementMutation(mutationContext, mutation);
+        }
 
-      case 'replaceNode': {
-        performReplaceNodeMutation(mutationContext, mutation);
-        break;
-      }
+        case 'replaceNode': {
+          return performReplaceNodeMutation(mutationContext, mutation);
+        }
 
-      case 'replaceStatementWithMany': {
-        performReplaceStatementWithManyMutation(mutationContext, mutation);
-        break;
-      }
+        case 'replaceStatementWithMany': {
+          return performReplaceStatementWithManyMutation(
+            mutationContext,
+            mutation,
+          );
+        }
 
-      case 'removeStatement': {
-        performRemoveStatementMutation(mutationContext, mutation);
-        break;
+        case 'removeStatement': {
+          return performRemoveStatementMutation(mutationContext, mutation);
+        }
       }
-    }
+    })();
+
+    // ensure the subtree's parent pointers are correct
+    // this is required for two reasons:
+    // 1) The userland transform is just JS - so there's nothing stopping them
+    //    from doing anything dodgy. The flow types have some enforcement, but
+    //    ofc that can just be ignored with a suppression.
+    // 2) Shallow clones are a necessary evil in the transform because they
+    //    allow codemods to do simple changes to just one node without the
+    //    weight that comes with deeply cloning the entire AST.
+    //    However we can't update the parent pointers of the cloned node's
+    //    children until the mutation step or else we would be mutating
+    //    real AST nodes and potentially break the traverse step.
+    //
+    // Being strict here just helps us ensure we keep everything in sync
+    updateAllParentPointers(mutationRoot);
   }
 
   return {

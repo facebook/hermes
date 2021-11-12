@@ -14,7 +14,6 @@ import type {DetachedNode} from '../../detachedNode';
 
 import {replaceInArray} from './utils/arrayUtils';
 import {InvalidReplacementError} from '../Errors';
-import {asESNode} from '../../detachedNode';
 import {getVisitorKeys, isNode} from '../../getVisitorKeys';
 
 export type ReplaceNodeMutation = $ReadOnly<{
@@ -37,10 +36,11 @@ export function createReplaceNodeMutation(
 export function performReplaceNodeMutation(
   mutationContext: MutationContext,
   mutation: ReplaceNodeMutation,
-): void {
+): ESNode {
   const replacementParent = getParentKey(mutation.target);
 
   mutationContext.markDeletion(mutation.target);
+  mutationContext.markMutation(replacementParent.parent, replacementParent.key);
 
   // NOTE: currently this mutation assumes you're doing the right thing.
   // it does no runtime checks and provides no guarantees about the
@@ -56,16 +56,13 @@ export function performReplaceNodeMutation(
       replacementParent.targetIndex,
       [mutation.nodeToReplaceWith],
     );
-    return;
   } else {
     (replacementParent.parent: interface {[string]: mixed})[
       replacementParent.key
     ] = mutation.nodeToReplaceWith;
   }
 
-  // update the parent pointer
-  // $FlowExpectedError[cannot-write] - intentionally mutating the AST
-  asESNode(mutation.nodeToReplaceWith).parent = replacementParent.parent;
+  return replacementParent.parent;
 }
 
 function getParentKey(target: ESNode): $ReadOnly<

@@ -109,7 +109,6 @@ describe('traverse', () => {
       },
       'BinaryExpression > Identifier.left'(node) {
         if (node.type !== 'Identifier') {
-          // TODO - improve the types
           return;
         }
 

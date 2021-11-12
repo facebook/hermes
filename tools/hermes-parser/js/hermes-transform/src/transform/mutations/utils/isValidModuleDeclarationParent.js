@@ -11,8 +11,6 @@
 import type {ESNode, ModuleDeclaration, Statement} from 'hermes-estree';
 import type {DetachedNode} from '../../../detachedNode';
 
-import {asESNode} from '../../../detachedNode';
-
 function isModuleDeclaration(node: ESNode): boolean %checks {
   return (
     node.type === 'ImportDeclaration' ||
@@ -36,8 +34,12 @@ export function isValidModuleDeclarationParent(
   }
 
   for (const node of nodesToInsertOrReplace) {
-    const esnode = asESNode(node);
-    if (!isModuleDeclaration(esnode)) {
+    if (
+      !isModuleDeclaration(
+        // $FlowExpectedError[incompatible-cast]
+        (node: ESNode),
+      )
+    ) {
       continue;
     }
 

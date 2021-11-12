@@ -15,8 +15,10 @@
 import fs from 'fs';
 import mkdirp from 'mkdirp';
 import path from 'path';
-import aliasDefs from './aliases';
 import * as prettier from 'prettier';
+import aliasDefs from './aliases';
+// $FlowExpectedError[cannot-resolve-module]
+import prettierConfig from '../../.prettierrc.json';
 
 export type ESTreeJSON = $ReadOnlyArray<
   $ReadOnly<{
@@ -95,7 +97,10 @@ export function formatAndWriteDistArtifact({
   const code = code_.slice(0, 3) === '/**' ? code_ : HEADER(flow) + code_;
 
   // Format the file
-  const formattedContents = prettier.format(code, {parser: 'flow'});
+  const formattedContents = prettier.format(code, {
+    ...prettierConfig,
+    parser: 'flow',
+  });
 
   // make sure the folder exists first
   const folder = path.resolve(

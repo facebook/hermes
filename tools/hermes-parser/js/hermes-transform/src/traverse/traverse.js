@@ -10,6 +10,7 @@
 
 import type {ESNode, ESQueryNodeSelectors, Program} from 'hermes-estree';
 import type {ScopeManager, Scope, Variable} from 'hermes-eslint';
+import type {EmitterListener} from './SafeEmitter';
 
 import {NodeEventGenerator} from './NodeEventGenerator';
 import {SafeEmitter} from './SafeEmitter';
@@ -113,7 +114,10 @@ export function traverseWithContext<T = void>(
 
   // add all the selectors from the visitor as listeners
   Object.keys(selectors).forEach(selector => {
-    const listener = selectors[selector];
+    // flow doesn't want us to be general here - but it's safe
+    // $FlowExpectedError[incompatible-type]
+    // $FlowExpectedError[prop-missing]
+    const listener: ?EmitterListener = selectors[selector];
     if (listener) {
       emitter.on(selector, listener);
     }

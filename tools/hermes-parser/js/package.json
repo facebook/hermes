@@ -24,7 +24,7 @@
     "build": "./scripts/build.sh",
     "lint": "eslint .",
     "flow": "flow",
-    "format": "prettier --write \"**/*.js\"",
+    "format": "prettier --config ./.prettierrc.json --write \"**/*.js\"",
     "test": "jest"
   },
   "workspaces": [
