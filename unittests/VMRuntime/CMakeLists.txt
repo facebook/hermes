@@ -25,7 +25,6 @@ set(RTSources
   DateUtilTest.cpp
   DecoratedObjectTest.cpp
   DictPropertyMapTest.cpp
-  ExternalMemAccountingTest.cpp
   GCBasicsTest.cpp
   GCFinalizerTest.cpp
   GCFragmentationTest.cpp
@@ -37,9 +36,6 @@ set(RTSources
   GCOOMTest.cpp
   GCReturnUnusedMemoryTest.cpp
   GCSanitizeHandlesTest.cpp
-  GCSegmentAddressIndexTest.cpp
-  GCSegmentRangeTest.cpp
-  GCSizingTest.cpp
   HeapSnapshotTest.cpp
   HermesValueTest.cpp
   HiddenClassTest.cpp

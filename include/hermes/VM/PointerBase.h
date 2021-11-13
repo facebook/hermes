@@ -18,14 +18,10 @@
 namespace hermes {
 namespace vm {
 
+#ifdef HERMESVM_COMPRESSED_POINTERS
 class BasedPointer final {
  public:
-  using StorageType =
-#ifdef HERMESVM_COMPRESSED_POINTERS
-      uint32_t;
-#else
-      uintptr_t;
-#endif
+  using StorageType = uint32_t;
   explicit operator bool() const;
 
   inline bool operator==(BasedPointer other) const;
@@ -39,20 +35,16 @@ class BasedPointer final {
   explicit BasedPointer(StorageType raw);
 
   BasedPointer &operator=(std::nullptr_t);
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  inline uint32_t getSegmentIndex() const;
-
-  inline uint32_t getOffset() const;
-#endif // HERMESVM_COMPRESSED_POINTERS
 
   inline StorageType getRawValue() const;
 
  private:
-#ifdef HERMESVM_COMPRESSED_POINTERS
+  inline uint32_t getSegmentIndex() const;
+  inline uint32_t getOffset() const;
+
   // The low AlignedStorage::kLogSize bits are the offset, and the
   // remaining upper bits are the segment index.
   static inline uint32_t computeSegmentAndOffset(const void *heapAddr);
-#endif // HERMESVM_COMPRESSED_POINTERS
 
   StorageType raw_;
 
@@ -63,6 +55,7 @@ class BasedPointer final {
   // translations for.
   friend class PointerBase;
 };
+#endif
 
 /// PointerBase is an opaque type meant to be used as a base pointer.
 /// This is used to implement a mechanism where 32-bit offsets are used as
@@ -71,6 +64,13 @@ class PointerBase {
  public:
   /// Initialize the PointerBase.
   inline PointerBase();
+
+  /// Record \p segStart as the start address for the given segment index.
+  inline void setSegment(unsigned idx, void *segStart);
+
+#ifdef HERMESVM_COMPRESSED_POINTERS
+ private:
+  friend class CompressedPointer;
 
   /// Convert a pointer to an offset from this.
   /// \param ptr A pointer to convert.
@@ -89,15 +89,7 @@ class PointerBase {
   /// \pre ptr is not null.
   inline void *basedToPointerNonNull(BasedPointer ptr) const;
 
-  /// Record \p segStart as the start address for the given segment index.
-  inline void setSegment(unsigned idx, void *segStart);
-
   static constexpr unsigned kNullPtrSegmentIndex = 0;
-  static constexpr unsigned kYGSegmentIndex = 1;
-  static constexpr unsigned kFirstOGSegmentIndex = 2;
-
- private:
-#ifdef HERMESVM_COMPRESSED_POINTERS
   /// To support 32-bit GC pointers in segmentIdx:offset form,
   /// segmentMap_ maps segment indices to "biased segment starts."
   /// This "bias" speeds up the decoding of a BasedPointer.  If the segmentMap_
@@ -139,6 +131,7 @@ class PointerBase {
 /// @name Inline implementations.
 /// @{
 
+#ifdef HERMESVM_COMPRESSED_POINTERS
 inline BasedPointer::BasedPointer(std::nullptr_t) : raw_(0) {}
 inline BasedPointer::BasedPointer(StorageType raw) : raw_(raw) {}
 
@@ -174,7 +167,6 @@ inline void *PointerBase::basedToPointerNonNull(BasedPointer ptr) const {
   return basedToPointer(ptr);
 }
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
 inline PointerBase::PointerBase() {
   segmentMap_[kNullPtrSegmentIndex] = nullptr;
 }
@@ -232,18 +224,7 @@ inline void PointerBase::setSegment(unsigned idx, void *segStart) {
 }
 
 #else
-inline BasedPointer::BasedPointer(const void *heapAddr)
-    : raw_(reinterpret_cast<uintptr_t>(heapAddr)) {}
-
 inline PointerBase::PointerBase() {}
-
-inline void *PointerBase::basedToPointer(BasedPointer ptr) const {
-  return reinterpret_cast<void *>(ptr.getRawValue());
-}
-
-inline BasedPointer PointerBase::pointerToBased(const void *ptr) const {
-  return BasedPointer{ptr};
-}
 
 inline void PointerBase::setSegment(unsigned idx, void *segStart) {
   assert(segStart == AlignedStorage::start(segStart) && "Precondition");

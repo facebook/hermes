@@ -36,7 +36,7 @@ const {parseForESLint} = require('./eslint-scope-test-utils');
 
 describe('with', () => {
   it('creates scope', () => {
-    const {ast, scopeManager} = parseForESLint(
+    const {scopeManager} = parseForESLint(
       `
             (function () {
                 with (obj) {

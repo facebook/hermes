@@ -67,7 +67,13 @@ static llvh::DenseMap<const void *, const char *> funcNames() {
     map[functionPointers[i]] = curStr;
     curStr += nameLengths[i];
   }
+
+#ifndef _MSC_VER
+  // TODO(T57439543): Currently, under Windows, this will cause a crash due to
+  // how multiple functions will be collapsed into this one.
   assert(map.size() == numFuncs && "A function should only be mapped once");
+#endif
+
   return map;
 }
 

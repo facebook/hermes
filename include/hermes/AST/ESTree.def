@@ -1109,6 +1109,8 @@ ESTREE_NODE_2_ARGS(
 
 // ================================================
 
+#ifndef ESTREE_DEFINE_COVER_NODES
+
 ESTREE_FIRST(Cover, Base)
 
 // CoverParenthesizedExpressionAndArrowParameterList: "(" ")"
@@ -1149,6 +1151,8 @@ ESTREE_NODE_3_ARGS(
     NodeBoolean, optional, false)
 
 ESTREE_LAST(Cover)
+
+#endif
 
 #undef ESTREE_FIRST
 #undef ESTREE_LAST

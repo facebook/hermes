@@ -61,6 +61,10 @@ using JSWeakMap = JSWeakMapImpl<CellKind::WeakMapKind>;
 
 class GCCell;
 
+#ifdef HERMESVM_GC_RUNTIME
+#define RUNTIME_GC_KINDS GC_KIND(HadesGC)
+#endif
+
 /// This is a single slot in the weak reference table. It contains a pointer to
 /// a GC managed object. The GC will make sure it is updated when the object is
 /// moved; if the object is garbage-collected, the pointer will be cleared.
@@ -103,9 +107,9 @@ class WeakRefSlot {
   }
 
   /// Return the pointer to a GCCell, whether or not this slot is marked.
-  void *getPointer() const {
+  GCCell *getPointer() const {
     // Cannot check state() here because it can race with marking code.
-    return value_.getPointer();
+    return static_cast<GCCell *>(value_.getPointer());
   }
 
   /// Update the stored pointer (because the object moved).
@@ -163,8 +167,6 @@ class WeakRefSlot {
   // synchronization.
   PinnedHermesValue value_;
   State state_;
-
-  // End of split between tagged pointer/HermesValue implementations.
 };
 using WeakSlotState = WeakRefSlot::State;
 
@@ -248,22 +250,59 @@ using WeakSlotState = WeakRefSlot::State;
 ///
 ///   The given value is being written at the given loc (required to
 ///   be in the heap).  If value is a pointer, execute a write barrier.
-///      void writeBarrier(void *loc, HermesValue value);
+///     void writeBarrier(GCHermesValue *loc, HermesValue value);
+///     void writeBarrier(
+///         const GCSmallHermesValue *loc,
+///         SmallHermesValue value);
 ///
 ///   The given pointer value is being written at the given loc (required to
 ///   be in the heap).  The value is may be null.  Execute a write barrier.
-///      void writeBarrier(void *loc, void *value);
+///     void writeBarrier(const GCPointerBase *loc, const GCCell *value);
+///
+///   The given value/pointer is being written at a previously uninitialised loc
+///   (required to be in the heap).
+///     void constructorWriteBarrier(
+///         const GCHermesValue *loc,
+///         HermesValue value);
+///     void constructorWriteBarrier(
+///         const GCSmallHermesValue *loc,
+///         SmallHermesValue value);
+///     void constructorWriteBarrier(
+///         const GCPointerBase *loc,
+///         const GCCell *value);
 ///
 ///   A weak ref is about to be read. Executes a read barrier so the GC can
 ///   take action such as extending the lifetime of the reference. The
 ///   HermesValue version does nothing if the value isn't a pointer.
-///      void weakRefReadBarrier(void *value);
-///      void weakRefReadBarrier(HermesValue value);
+///     void weakRefReadBarrier(void *value);
+///     void weakRefReadBarrier(HermesValue value);
 ///
 ///   We copied HermesValues into the given region.  Note that \p numHVs is
 ///   the number of HermesValues in the the range, not the char length.
 ///   Do any necessary barriers.
-///      void writeBarrierRange(GCHermesValue* start, uint32_t numHVs);
+///     void writeBarrierRange(GCHermesValue* start, uint32_t numHVs);
+///     void writeBarrierRange(
+///         const GCSmallHermesValue *start, uint32_t
+///         numHVs);
+///     void constructorWriteBarrierRange(
+///         const GCHermesValue *start,
+///         uint32_t numHVs);
+///     void constructorWriteBarrierRange(
+///         const GCSmallHermesValue *start,
+///         uint32_t numHVs);
+///
+///   The given loc or region is about to be overwritten, but the new value is
+///   not important. Perform any necessary barriers.
+///     void snapshotWriteBarrier(const GCHermesValue *loc);
+///     void snapshotWriteBarrier(const GCSmallHermesValue *loc);
+///     void snapshotWriteBarrier(const GCPointerBase *loc);
+///     void snapshotWriteBarrier(const GCSymboldID *symbol);
+///     void snapshotWriteBarrierRange(
+///         const GCHermesValue *start,
+///         uint32_t numHVs);
+///     void snapshotWriteBarrierRange(
+///         const GCSmallHermesValue *start,
+///         uint32_t numHVs);
 ///
 ///   In debug builds: is a write barrier necessary for a write of the given
 ///   GC pointer \p value to the given \p loc?
@@ -486,13 +525,13 @@ class GCBase {
     /// Returns true if tracking is enabled for new allocations.
     bool isEnabled() const;
     /// Must be called by GC implementations whenever a new allocation is made.
-    void newAlloc(const void *ptr, uint32_t sz);
+    void newAlloc(const GCCell *ptr, uint32_t sz);
 
     /// If an object's size changes, update the entry here.
-    void updateSize(const void *ptr, uint32_t oldSize, uint32_t newSize);
+    void updateSize(const GCCell *ptr, uint32_t oldSize, uint32_t newSize);
 
     /// Must be called by GC implementations whenever an allocation is freed.
-    void freeAlloc(const void *ptr, uint32_t sz);
+    void freeAlloc(const GCCell *ptr, uint32_t sz);
     /// Returns data needed to reconstruct the JS stack used to create the
     /// specified allocation.
     StackTracesTreeNode *getStackTracesTreeNodeForAlloc(
@@ -579,13 +618,13 @@ class GCBase {
     }
 
     /// Must be called by GC implementations whenever a new allocation is made.
-    void newAlloc(const void *ptr, uint32_t sz);
+    void newAlloc(const GCCell *ptr, uint32_t sz);
 
     /// Must be called by GC implementations whenever an allocation is freed.
-    void freeAlloc(const void *ptr, uint32_t sz);
+    void freeAlloc(const GCCell *ptr, uint32_t sz);
 
     /// If an object's size changes, update the entry here.
-    void updateSize(const void *ptr, uint32_t oldSize, uint32_t newSize);
+    void updateSize(const GCCell *ptr, uint32_t oldSize, uint32_t newSize);
 
     /// Turn the sampling memory profiler on. About once every
     /// \p samplingInterval bytes are allocated, sample the allocation by
@@ -698,15 +737,15 @@ class GCBase {
 
     /// Get the unique object id of the given object.
     /// If one does not yet exist, start tracking it.
-    HeapSnapshot::NodeID getObjectID(BasedPointer cell);
+    HeapSnapshot::NodeID getObjectID(CompressedPointer cell);
 
     /// \return true if the cell has an object ID associated with it, false if
     ///   there is none.
-    bool hasObjectID(BasedPointer cell);
+    bool hasObjectID(CompressedPointer cell);
 
     /// Same as \c getObjectID, except it asserts if the cell doesn't have an
     /// ID.
-    HeapSnapshot::NodeID getObjectIDMustExist(BasedPointer cell);
+    HeapSnapshot::NodeID getObjectIDMustExist(CompressedPointer cell);
 
     /// Get the unique object id of the symbol with the given symbol \p sym. If
     /// one does not yet exist, start tracking it.
@@ -731,16 +770,18 @@ class GCBase {
     /// Get the object pointer for the given ID. This is the inverse of \c
     /// getObjectID.
     /// Returns none if there is no object for that ID.
-    llvh::Optional<BasedPointer> getObjectForID(HeapSnapshot::NodeID id);
+    llvh::Optional<CompressedPointer> getObjectForID(HeapSnapshot::NodeID id);
 
     /// Tell the tracker that an object has moved locations.
     /// This must be called in a safe order, if A moves to B, and C moves to A,
     /// the first move must be recorded before the second.
-    void moveObject(BasedPointer oldLocation, BasedPointer newLocation);
+    void moveObject(
+        CompressedPointer oldLocation,
+        CompressedPointer newLocation);
 
     /// Remove the object from being tracked. This should be done to keep the
     /// tracking working set small.
-    void untrackObject(BasedPointer cell);
+    void untrackObject(CompressedPointer cell);
 
     /// Remove the symbol from being tracked. This needs to be done to allow
     /// symbols to be re-used.
@@ -792,14 +833,14 @@ class GCBase {
     /// on, or if JSI tracing is in effect.
     /// This map's size is O(number of cells in the heap), which can grow quite
     /// large. Using compressed pointers keeps the size small.
-    llvh::DenseMap<BasedPointer::StorageType, HeapSnapshot::NodeID>
+    llvh::DenseMap<CompressedPointer::RawType, HeapSnapshot::NodeID>
         objectIDMap_;
 
     /// The inverse of \c objectIDMap_. Only used for debugging views on heap
     /// snapshots. To avoid wasting memory in the case where the debugger hasn't
     /// requested any, it is populated lazily as each entry is requested. We
     /// expect the vast majority of objects aren't inspected in the snapshot.
-    llvh::DenseMap<HeapSnapshot::NodeID, BasedPointer::StorageType>
+    llvh::DenseMap<HeapSnapshot::NodeID, CompressedPointer::RawType>
         idObjectMap_;
 
     /// Map of native pointers to IDs. Populated according to
@@ -831,7 +872,7 @@ class GCBase {
   enum class FixedSizeValue { Yes, No, Unknown };
 #endif
 
-  enum class HeapKind { NCGEN, HADES, MALLOC };
+  enum class HeapKind { HadesGC, MallocGC };
 
   GCBase(
       GCCallbacks *gcCallbacks,
@@ -1086,11 +1127,11 @@ class GCBase {
   virtual void creditExternalMemory(GCCell *alloc, uint32_t size) {}
   virtual void debitExternalMemory(GCCell *alloc, uint32_t size) {}
 
+#ifdef HERMESVM_GC_RUNTIME
   /// Default implementations for read and write barriers: do nothing.
   void writeBarrier(const GCHermesValue *loc, HermesValue value);
   void writeBarrier(const GCSmallHermesValue *loc, SmallHermesValue value);
   void writeBarrier(const GCPointerBase *loc, const GCCell *value);
-  void writeBarrier(SymbolID symbol);
   void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value);
   void constructorWriteBarrier(
       const GCSmallHermesValue *loc,
@@ -1107,12 +1148,14 @@ class GCBase {
   void snapshotWriteBarrier(const GCHermesValue *loc);
   void snapshotWriteBarrier(const GCSmallHermesValue *loc);
   void snapshotWriteBarrier(const GCPointerBase *loc);
+  void snapshotWriteBarrier(const GCSymbolID *symbol);
   void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs);
   void snapshotWriteBarrierRange(
       const GCSmallHermesValue *start,
       uint32_t numHVs);
   void weakRefReadBarrier(GCCell *value);
   void weakRefReadBarrier(HermesValue value);
+#endif
 
 #ifndef NDEBUG
   virtual bool needsWriteBarrier(void *loc, GCCell *value) {
@@ -1308,10 +1351,9 @@ class GCBase {
   /// \{
   // This set of methods are all mirrors of IDTracker, except with pointer
   // compression done automatically.
-  HeapSnapshot::NodeID getObjectID(const void *cell);
-  HeapSnapshot::NodeID getObjectIDMustExist(const void *cell);
-  HeapSnapshot::NodeID getObjectID(BasedPointer cell);
-  HeapSnapshot::NodeID getObjectID(const GCPointerBase &cell);
+  HeapSnapshot::NodeID getObjectID(const GCCell *cell);
+  HeapSnapshot::NodeID getObjectIDMustExist(const GCCell *cell);
+  HeapSnapshot::NodeID getObjectID(CompressedPointer cell);
   HeapSnapshot::NodeID getObjectID(SymbolID sym);
   HeapSnapshot::NodeID getNativeID(const void *mem);
   /// \return The ID for the given value. If the value cannot be represented
@@ -1323,17 +1365,17 @@ class GCBase {
   void *getObjectForID(HeapSnapshot::NodeID id);
 
   /// \return True if the given cell has an ID associated with it.
-  bool hasObjectID(const void *cell);
+  bool hasObjectID(const GCCell *cell);
   /// Records that a new allocation has occurred.
-  void newAlloc(const void *ptr, uint32_t sz);
+  void newAlloc(const GCCell *ptr, uint32_t sz);
   /// Moves an object to a new address and a new size for all trackers.
   void moveObject(
-      const void *oldPtr,
+      const GCCell *oldPtr,
       uint32_t oldSize,
-      const void *newPtr,
+      const GCCell *newPtr,
       uint32_t newSize);
   /// Untracks a freed object from all trackers.
-  void untrackObject(const void *cell, uint32_t sz);
+  void untrackObject(const GCCell *cell, uint32_t sz);
   /// \}
 
 #ifndef NDEBUG
@@ -1614,7 +1656,25 @@ class GCBase {
 #endif
 
  private:
-  /// Callback called if it's not null when the Live Data Tripwire is triggered.
+#ifdef HERMESVM_GC_RUNTIME
+  /// Use the kind tag of the GC to statically call a function with one of the
+  /// available runtime GCs.
+  template <typename Func>
+  auto runtimeGCDispatch(Func f) {
+    switch (getKind()) {
+#define GC_KIND(kind)          \
+  case GCBase::HeapKind::kind: \
+    return f(llvh::cast<kind>(this));
+      RUNTIME_GC_KINDS
+#undef GC_KIND
+      default:
+        llvm_unreachable("No other valid GC for RuntimeGC");
+    }
+  }
+#endif
+
+  /// Callback called if it's not null when the Live Data Tripwire is
+  /// triggered.
   std::function<void(GCTripwireContext &)> tripwireCallback_;
 
   /// Maximum size limit before the heap size tripwire will trigger.

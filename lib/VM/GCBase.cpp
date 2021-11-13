@@ -447,7 +447,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
   unsigned nextEdge_{0};
   Section currentSection_{Section::InvalidSection};
 
-  void pointerAccept(void *ptr, const char *name, bool weak) {
+  void pointerAccept(GCCell *ptr, const char *name, bool weak) {
     assert(
         currentSection_ != Section::InvalidSection &&
         "accept called outside of begin/end root section pair");
@@ -922,48 +922,19 @@ bool GCBase::shouldSanitizeHandles() {
 
 #ifdef HERMESVM_GC_RUNTIME
 
-#define GCBASE_BARRIER_1(name, type1)                                       \
-  void GCBase::name(type1 arg1) {                                           \
-    switch (getKind()) {                                                    \
-      case GCBase::HeapKind::HADES:                                         \
-        llvh::cast<HadesGC>(this)->name(arg1);                              \
-        break;                                                              \
-      case GCBase::HeapKind::NCGEN:                                         \
-        llvh::cast<GenGC>(this)->name(arg1);                                \
-        break;                                                              \
-      case GCBase::HeapKind::MALLOC:                                        \
-        llvm_unreachable(                                                   \
-            "MallocGC should not be used with the RuntimeGC build config"); \
-        break;                                                              \
-    }                                                                       \
+#define GCBASE_BARRIER_1(name, type1)                     \
+  void GCBase::name(type1 arg1) {                         \
+    runtimeGCDispatch([&](auto *gc) { gc->name(arg1); }); \
   }
 
-#define GCBASE_BARRIER_2(name, type1, type2)                                \
-  void GCBase::name(type1 arg1, type2 arg2) {                               \
-    switch (getKind()) {                                                    \
-      case GCBase::HeapKind::HADES:                                         \
-        llvh::cast<HadesGC>(this)->name(arg1, arg2);                        \
-        break;                                                              \
-      case GCBase::HeapKind::NCGEN:                                         \
-        llvh::cast<GenGC>(this)->name(arg1, arg2);                          \
-        break;                                                              \
-      case GCBase::HeapKind::MALLOC:                                        \
-        llvm_unreachable(                                                   \
-            "MallocGC should not be used with the RuntimeGC build config"); \
-        break;                                                              \
-    }                                                                       \
+#define GCBASE_BARRIER_2(name, type1, type2)                    \
+  void GCBase::name(type1 arg1, type2 arg2) {                   \
+    runtimeGCDispatch([&](auto *gc) { gc->name(arg1, arg2); }); \
   }
-#else
-#define GCBASE_BARRIER_1(name, type1) \
-  void GCBase::name(type1 arg1) {}
-#define GCBASE_BARRIER_2(name, type1, type2) \
-  void GCBase::name(type1 arg1, type2 arg2) {}
-#endif
 
 GCBASE_BARRIER_2(writeBarrier, const GCHermesValue *, HermesValue);
 GCBASE_BARRIER_2(writeBarrier, const GCSmallHermesValue *, SmallHermesValue);
 GCBASE_BARRIER_2(writeBarrier, const GCPointerBase *, const GCCell *);
-GCBASE_BARRIER_1(writeBarrier, SymbolID);
 GCBASE_BARRIER_2(constructorWriteBarrier, const GCHermesValue *, HermesValue);
 GCBASE_BARRIER_2(
     constructorWriteBarrier,
@@ -983,6 +954,7 @@ GCBASE_BARRIER_2(
 GCBASE_BARRIER_1(snapshotWriteBarrier, const GCHermesValue *);
 GCBASE_BARRIER_1(snapshotWriteBarrier, const GCSmallHermesValue *);
 GCBASE_BARRIER_1(snapshotWriteBarrier, const GCPointerBase *);
+GCBASE_BARRIER_1(snapshotWriteBarrier, const GCSymbolID *);
 GCBASE_BARRIER_2(snapshotWriteBarrierRange, const GCHermesValue *, uint32_t);
 GCBASE_BARRIER_2(
     snapshotWriteBarrierRange,
@@ -993,6 +965,7 @@ GCBASE_BARRIER_1(weakRefReadBarrier, HermesValue);
 
 #undef GCBASE_BARRIER_1
 #undef GCBASE_BARRIER_2
+#endif
 
 /*static*/
 std::vector<detail::WeakRefKey *> GCBase::buildKeyList(
@@ -1009,24 +982,21 @@ std::vector<detail::WeakRefKey *> GCBase::buildKeyList(
   return res;
 }
 
-HeapSnapshot::NodeID GCBase::getObjectID(const void *cell) {
+HeapSnapshot::NodeID GCBase::getObjectID(const GCCell *cell) {
   assert(cell && "Called getObjectID on a null pointer");
-  return idTracker_.getObjectID(pointerBase_->pointerToBasedNonNull(cell));
+  return getObjectID(
+      CompressedPointer{pointerBase_, const_cast<GCCell *>(cell)});
 }
 
-HeapSnapshot::NodeID GCBase::getObjectIDMustExist(const void *cell) {
+HeapSnapshot::NodeID GCBase::getObjectIDMustExist(const GCCell *cell) {
   assert(cell && "Called getObjectID on a null pointer");
   return idTracker_.getObjectIDMustExist(
-      pointerBase_->pointerToBasedNonNull(cell));
+      CompressedPointer{pointerBase_, const_cast<GCCell *>(cell)});
 }
 
-HeapSnapshot::NodeID GCBase::getObjectID(BasedPointer cell) {
+HeapSnapshot::NodeID GCBase::getObjectID(CompressedPointer cell) {
   assert(cell && "Called getObjectID on a null pointer");
   return idTracker_.getObjectID(cell);
-}
-
-HeapSnapshot::NodeID GCBase::getObjectID(const GCPointerBase &cell) {
-  return getObjectID(cell.getStorageType());
 }
 
 HeapSnapshot::NodeID GCBase::getObjectID(SymbolID sym) {
@@ -1038,36 +1008,38 @@ HeapSnapshot::NodeID GCBase::getNativeID(const void *mem) {
   return idTracker_.getNativeID(mem);
 }
 
-bool GCBase::hasObjectID(const void *cell) {
+bool GCBase::hasObjectID(const GCCell *cell) {
   assert(cell && "Called hasObjectID on a null pointer");
-  return idTracker_.hasObjectID(pointerBase_->pointerToBasedNonNull(cell));
+  return idTracker_.hasObjectID(
+      CompressedPointer{pointerBase_, const_cast<GCCell *>(cell)});
 }
 
-void GCBase::newAlloc(const void *ptr, uint32_t sz) {
+void GCBase::newAlloc(const GCCell *ptr, uint32_t sz) {
   allocationLocationTracker_.newAlloc(ptr, sz);
   samplingAllocationTracker_.newAlloc(ptr, sz);
 }
 
 void GCBase::moveObject(
-    const void *oldPtr,
+    const GCCell *oldPtr,
     uint32_t oldSize,
-    const void *newPtr,
+    const GCCell *newPtr,
     uint32_t newSize) {
   idTracker_.moveObject(
-      pointerBase_->pointerToBasedNonNull(oldPtr),
-      pointerBase_->pointerToBasedNonNull(newPtr));
+      CompressedPointer{pointerBase_, const_cast<GCCell *>(oldPtr)},
+      CompressedPointer{pointerBase_, const_cast<GCCell *>(newPtr)});
   // Use newPtr here because the idTracker_ just moved it.
   allocationLocationTracker_.updateSize(newPtr, oldSize, newSize);
   samplingAllocationTracker_.updateSize(newPtr, oldSize, newSize);
 }
 
-void GCBase::untrackObject(const void *cell, uint32_t sz) {
+void GCBase::untrackObject(const GCCell *cell, uint32_t sz) {
   assert(cell && "Called untrackObject on a null pointer");
   // The allocation tracker needs to use the ID, so this needs to come
   // before untrackObject.
   getAllocationLocationTracker().freeAlloc(cell, sz);
   getSamplingAllocationTracker().freeAlloc(cell, sz);
-  idTracker_.untrackObject(pointerBase_->pointerToBasedNonNull(cell));
+  idTracker_.untrackObject(
+      CompressedPointer{pointerBase_, const_cast<GCCell *>(cell)});
 }
 
 #ifndef NDEBUG
@@ -1131,33 +1103,33 @@ GCBase::IDTracker::IDTracker() {
 }
 
 void GCBase::IDTracker::moveObject(
-    BasedPointer oldLocation,
-    BasedPointer newLocation) {
+    CompressedPointer oldLocation,
+    CompressedPointer newLocation) {
   if (oldLocation == newLocation) {
     // Don't need to do anything if the object isn't moving anywhere. This can
     // happen in old generations where it is compacted to the same location.
     return;
   }
   std::lock_guard<Mutex> lk{mtx_};
-  auto old = objectIDMap_.find(oldLocation.getRawValue());
+  auto old = objectIDMap_.find(oldLocation.getRaw());
   if (old == objectIDMap_.end()) {
     // Avoid making new keys for objects that don't need to be tracked.
     return;
   }
   const auto oldID = old->second;
   assert(
-      objectIDMap_.count(newLocation.getRawValue()) == 0 &&
+      objectIDMap_.count(newLocation.getRaw()) == 0 &&
       "Moving to a location that is already tracked");
   // Have to erase first, because any other access can invalidate the iterator.
   objectIDMap_.erase(old);
-  objectIDMap_[newLocation.getRawValue()] = oldID;
+  objectIDMap_[newLocation.getRaw()] = oldID;
   // Update the reverse map entry if it exists.
   auto reverseMappingIt = idObjectMap_.find(oldID);
   if (reverseMappingIt != idObjectMap_.end()) {
     assert(
-        reverseMappingIt->second == oldLocation.getRawValue() &&
+        reverseMappingIt->second == oldLocation.getRaw() &&
         "The reverse mapping should have the old address");
-    reverseMappingIt->second = newLocation.getRawValue();
+    reverseMappingIt->second = newLocation.getRaw();
   }
 }
 
@@ -1180,12 +1152,12 @@ HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
   return numberRef = nextNumberID();
 }
 
-llvh::Optional<BasedPointer> GCBase::IDTracker::getObjectForID(
+llvh::Optional<CompressedPointer> GCBase::IDTracker::getObjectForID(
     HeapSnapshot::NodeID id) {
   std::lock_guard<Mutex> lk{mtx_};
   auto it = idObjectMap_.find(id);
   if (it != idObjectMap_.end()) {
-    return BasedPointer{it->second};
+    return CompressedPointer::fromRaw(it->second);
   }
   // Do an O(N) search through the map, then cache the result.
   // This trades time for memory, since this is a rare operation.
@@ -1196,7 +1168,7 @@ llvh::Optional<BasedPointer> GCBase::IDTracker::getObjectForID(
       // every single object in a snapshot in Chrome.
       auto itAndDidInsert = idObjectMap_.try_emplace(p.second, p.first);
       assert(itAndDidInsert.second);
-      return BasedPointer{itAndDidInsert.first->second};
+      return CompressedPointer::fromRaw(itAndDidInsert.first->second);
     }
   }
   // ID not found in the map, wasn't an object to begin with.
@@ -1212,27 +1184,27 @@ bool GCBase::IDTracker::isTrackingIDs() const {
   return !objectIDMap_.empty();
 }
 
-HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(BasedPointer cell) {
+HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(CompressedPointer cell) {
   std::lock_guard<Mutex> lk{mtx_};
-  auto iter = objectIDMap_.find(cell.getRawValue());
+  auto iter = objectIDMap_.find(cell.getRaw());
   if (iter != objectIDMap_.end()) {
     return iter->second;
   }
   // Else, assume it is an object that needs to be tracked and give it a new ID.
   const auto objID = nextObjectID();
-  objectIDMap_[cell.getRawValue()] = objID;
+  objectIDMap_[cell.getRaw()] = objID;
   return objID;
 }
 
-bool GCBase::IDTracker::hasObjectID(BasedPointer cell) {
+bool GCBase::IDTracker::hasObjectID(CompressedPointer cell) {
   std::lock_guard<Mutex> lk{mtx_};
-  return objectIDMap_.count(cell.getRawValue());
+  return objectIDMap_.count(cell.getRaw());
 }
 
 HeapSnapshot::NodeID GCBase::IDTracker::getObjectIDMustExist(
-    BasedPointer cell) {
+    CompressedPointer cell) {
   std::lock_guard<Mutex> lk{mtx_};
-  auto iter = objectIDMap_.find(cell.getRawValue());
+  auto iter = objectIDMap_.find(cell.getRaw());
   assert(iter != objectIDMap_.end() && "cell must already have an ID");
   return iter->second;
 }
@@ -1262,12 +1234,12 @@ HeapSnapshot::NodeID GCBase::IDTracker::getNativeID(const void *mem) {
   return objID;
 }
 
-void GCBase::IDTracker::untrackObject(BasedPointer cell) {
+void GCBase::IDTracker::untrackObject(CompressedPointer cell) {
   std::lock_guard<Mutex> lk{mtx_};
   // It's ok if this didn't exist before, since erase will remove it anyway, and
   // the default constructed zero ID won't be present in extraNativeIDs_.
-  const auto id = objectIDMap_[cell.getRawValue()];
-  objectIDMap_.erase(cell.getRawValue());
+  const auto id = objectIDMap_[cell.getRaw()];
+  objectIDMap_.erase(cell.getRaw());
   extraNativeIDs_.erase(id);
   // Erase the reverse mapping entry if it exists.
   idObjectMap_.erase(id);
@@ -1367,7 +1339,9 @@ void GCBase::AllocationLocationTracker::disable() {
   fragmentCallback_ = nullptr;
 }
 
-void GCBase::AllocationLocationTracker::newAlloc(const void *ptr, uint32_t sz) {
+void GCBase::AllocationLocationTracker::newAlloc(
+    const GCCell *ptr,
+    uint32_t sz) {
   // Note we always get the current IP even if allocation tracking is not
   // enabled as it allows us to assert this feature works across many tests.
   // Note it's not very slow, it's slower than the non-virtual version
@@ -1400,7 +1374,7 @@ void GCBase::AllocationLocationTracker::newAlloc(const void *ptr, uint32_t sz) {
 }
 
 void GCBase::AllocationLocationTracker::updateSize(
-    const void *ptr,
+    const GCCell *ptr,
     uint32_t oldSize,
     uint32_t newSize) {
   int32_t delta = static_cast<int32_t>(newSize) - static_cast<int32_t>(oldSize);
@@ -1416,7 +1390,7 @@ void GCBase::AllocationLocationTracker::updateSize(
 }
 
 void GCBase::AllocationLocationTracker::freeAlloc(
-    const void *ptr,
+    const GCCell *ptr,
     uint32_t sz) {
   if (!enabled_) {
     // Fragments won't exist if the heap profiler isn't enabled.
@@ -1541,7 +1515,7 @@ void GCBase::SamplingAllocationLocationTracker::disable(llvh::raw_ostream &os) {
 }
 
 void GCBase::SamplingAllocationLocationTracker::newAlloc(
-    const void *ptr,
+    const GCCell *ptr,
     uint32_t sz) {
   // If the sampling profiler isn't enabled, don't check anything else.
   if (!isEnabled()) {
@@ -1569,7 +1543,7 @@ void GCBase::SamplingAllocationLocationTracker::newAlloc(
 }
 
 void GCBase::SamplingAllocationLocationTracker::freeAlloc(
-    const void *ptr,
+    const GCCell *ptr,
     uint32_t sz) {
   // If the sampling profiler isn't enabled, don't check anything else.
   if (!isEnabled()) {
@@ -1586,7 +1560,7 @@ void GCBase::SamplingAllocationLocationTracker::freeAlloc(
 }
 
 void GCBase::SamplingAllocationLocationTracker::updateSize(
-    const void *ptr,
+    const GCCell *ptr,
     uint32_t oldSize,
     uint32_t newSize) {
   int32_t delta = static_cast<int32_t>(newSize) - static_cast<int32_t>(oldSize);
@@ -1615,7 +1589,7 @@ llvh::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
     // Make nullptr HermesValue look like a JS null.
     // This should be rare, but is occasionally used by some parts of the VM.
     return val.getPointer()
-        ? getObjectID(val.getPointer())
+        ? getObjectID(static_cast<GCCell *>(val.getPointer()))
         : IDTracker::reserved(IDTracker::ReservedObjectID::Null);
   } else if (val.isNumber()) {
     return idTracker_.getNumberID(val.getNumber());
@@ -1637,8 +1611,8 @@ llvh::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
 }
 
 void *GCBase::getObjectForID(HeapSnapshot::NodeID id) {
-  if (llvh::Optional<BasedPointer> ptr = idTracker_.getObjectForID(id)) {
-    return pointerBase_->basedToPointer(ptr.getValue());
+  if (llvh::Optional<CompressedPointer> ptr = idTracker_.getObjectForID(id)) {
+    return ptr->get(pointerBase_);
   }
   return nullptr;
 }

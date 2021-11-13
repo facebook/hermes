@@ -220,6 +220,25 @@ class MallocGC final : public GCBase {
   /// Same as in superclass GCBase.
   virtual void createSnapshot(llvh::raw_ostream &os) override;
 
+  void writeBarrier(const GCHermesValue *, HermesValue) {}
+  void writeBarrier(const GCSmallHermesValue *, SmallHermesValue) {}
+  void writeBarrier(const GCPointerBase *, const GCCell *) {}
+  void constructorWriteBarrier(const GCHermesValue *, HermesValue) {}
+  void constructorWriteBarrier(const GCSmallHermesValue *, SmallHermesValue) {}
+  void constructorWriteBarrier(const GCPointerBase *, const GCCell *) {}
+  void writeBarrierRange(const GCHermesValue *, uint32_t) {}
+  void writeBarrierRange(const GCSmallHermesValue *, uint32_t) {}
+  void constructorWriteBarrierRange(const GCHermesValue *, uint32_t) {}
+  void constructorWriteBarrierRange(const GCSmallHermesValue *, uint32_t) {}
+  void snapshotWriteBarrier(const GCHermesValue *) {}
+  void snapshotWriteBarrier(const GCSmallHermesValue *) {}
+  void snapshotWriteBarrier(const GCPointerBase *) {}
+  void snapshotWriteBarrier(const GCSymbolID *) {}
+  void snapshotWriteBarrierRange(const GCHermesValue *, uint32_t) {}
+  void snapshotWriteBarrierRange(const GCSmallHermesValue *, uint32_t) {}
+  void weakRefReadBarrier(GCCell *) {}
+  void weakRefReadBarrier(HermesValue) {}
+
   void getHeapInfo(HeapInfo &info) override;
   void getHeapInfoWithMallocSize(HeapInfo &info) override;
   void getCrashManagerHeapInfo(CrashManager::HeapInformation &info) override;
@@ -242,7 +261,7 @@ class MallocGC final : public GCBase {
   void forAllObjs(const std::function<void(GCCell *)> &callback) override;
 
   static bool classof(const GCBase *gc) {
-    return gc->getKind() == HeapKind::MALLOC;
+    return gc->getKind() == HeapKind::MallocGC;
   }
 
   /// @}

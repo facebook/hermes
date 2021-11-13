@@ -6,6 +6,7 @@
  */
 
 use crate::ast::SourceRange;
+use std::cell::UnsafeCell;
 use std::rc::Rc;
 use support::NullTerminatedBuf;
 
@@ -25,11 +26,19 @@ impl SourceId {
     }
 }
 
+#[derive(Debug, Default)]
+struct Inner {
+    num_errors: usize,
+    num_warnings: usize,
+    num_notes: usize,
+}
+
 /// SourceManager owns a collection of source buffers and their names and handles
 /// reporting errors.
 #[derive(Debug, Default)]
 pub struct SourceManager {
     sources: Vec<(String, Rc<NullTerminatedBuf>)>,
+    inner: UnsafeCell<Inner>,
 }
 
 impl SourceManager {
@@ -62,13 +71,64 @@ impl SourceManager {
         Rc::clone(&self.sources[source_id.as_usize()].1)
     }
 
+    /// Gain mutable access to the mutable inner object.
+    ///
+    /// # Safety
+    /// The result reference must never escape.
+    #[allow(clippy::mut_from_ref)]
+    unsafe fn inner_mut(&self) -> &mut Inner {
+        &mut *self.inner.get()
+    }
+
+    /// Gain access to the inner object.
+    ///
+    /// # Safety
+    /// The result reference must never escape.
+    unsafe fn inner(&self) -> &Inner {
+        &mut *self.inner.get()
+    }
+
+    /// Number of errors that have been reported.
+    pub fn num_errors(&self) -> usize {
+        unsafe { self.inner() }.num_errors
+    }
+    /// Number of warnings that have been reported.
+    pub fn num_warnings(&self) -> usize {
+        unsafe { self.inner() }.num_warnings
+    }
+
     /// Report an error at the specified range in the specified source buffer.
     pub fn error<S: Into<String>>(&self, range: SourceRange, msg: S) {
-        // NOTE: this method deliberately takes immutable `self`. A SourceManager
-        // should be easily shareable. It will be implemented using interior
-        // mutability.
+        let inner = unsafe { self.inner_mut() };
+        inner.num_errors += 1;
+
         eprintln!(
             "{}:{}:{}: error: {}",
+            self.source_name(range.file),
+            range.start.line,
+            range.start.col,
+            msg.into()
+        );
+    }
+    pub fn note<S: Into<String>>(&self, range: SourceRange, msg: S) {
+        let inner = unsafe { self.inner_mut() };
+        inner.num_notes += 1;
+
+        eprintln!(
+            "{}:{}:{}: note: {}",
+            self.source_name(range.file),
+            range.start.line,
+            range.start.col,
+            msg.into()
+        );
+    }
+    /// Report a warning at the specified range in the specified source buffer.
+    pub fn warning<S: Into<String>>(&self, range: SourceRange, msg: S) {
+        let inner = unsafe { self.inner_mut() };
+        inner.num_warnings += 1;
+
+        eprintln!(
+            "{}:{}:{}: warning: {}",
             self.source_name(range.file),
             range.start.line,
             range.start.col,

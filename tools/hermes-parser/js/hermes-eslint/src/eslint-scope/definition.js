@@ -1,5 +1,5 @@
 /**
- * Portions Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -7,30 +7,6 @@
  * @flow strict
  * @format
  */
-
-/*
-  Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>
-
-  Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in the
-      documentation and/or other materials provided with the distribution.
-
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-  ARE DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
-  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
-  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
 
 'use strict';
 
@@ -61,8 +37,6 @@ import type {
   VariableDeclaration,
   VariableDeclarator,
 } from 'hermes-estree';
-
-const Variable = require('./variable');
 
 const DefinitionType = ({
   CatchClause: 'CatchClause',
@@ -144,7 +118,7 @@ class DefinitionBase {
 }
 
 class CatchClauseDefinition extends DefinitionBase {
-  declare +type: typeof DefinitionType['CatchClause'];
+  declare +type: (typeof DefinitionType)['CatchClause'];
   declare +parent: null;
 
   constructor(idNode: Identifier, catchNode: CatchClause) {
@@ -157,7 +131,7 @@ class CatchClauseDefinition extends DefinitionBase {
 }
 
 class ClassNameDefinition extends DefinitionBase {
-  declare +type: typeof DefinitionType['ClassName'];
+  declare +type: (typeof DefinitionType)['ClassName'];
   declare +parent: null;
 
   constructor(
@@ -173,7 +147,7 @@ class ClassNameDefinition extends DefinitionBase {
 }
 
 class EnumDefinition extends DefinitionBase {
-  declare +type: typeof DefinitionType['Enum'];
+  declare +type: (typeof DefinitionType)['Enum'];
   declare +parent: null;
 
   constructor(idNode: Identifier, enumDeclarationNode: EnumDeclaration) {
@@ -186,7 +160,7 @@ class EnumDefinition extends DefinitionBase {
 }
 
 class FunctionNameDefinition extends DefinitionBase {
-  declare +type: typeof DefinitionType['FunctionName'];
+  declare +type: (typeof DefinitionType)['FunctionName'];
   declare +parent: null;
 
   constructor(
@@ -202,7 +176,7 @@ class FunctionNameDefinition extends DefinitionBase {
 }
 
 class ImplicitGlobalVariableDefinition extends DefinitionBase {
-  declare +type: typeof DefinitionType['ImplicitGlobalVariable'];
+  declare +type: (typeof DefinitionType)['ImplicitGlobalVariable'];
   declare +parent: null;
 
   constructor(idNode: Identifier, node: Node) {
@@ -215,7 +189,7 @@ class ImplicitGlobalVariableDefinition extends DefinitionBase {
 }
 
 class ImportBindingDefinition extends DefinitionBase {
-  declare +type: typeof DefinitionType['ImportBinding'];
+  declare +type: (typeof DefinitionType)['ImportBinding'];
   declare +parent: ImportDeclaration;
 
   constructor(
@@ -236,7 +210,7 @@ class ImportBindingDefinition extends DefinitionBase {
 }
 
 class ParameterDefinition extends DefinitionBase {
-  declare +type: typeof DefinitionType['Parameter'];
+  declare +type: (typeof DefinitionType)['Parameter'];
   declare +parent: null;
 
   /**
@@ -262,7 +236,7 @@ class ParameterDefinition extends DefinitionBase {
 }
 
 class TypeDefinition extends DefinitionBase {
-  declare +type: typeof DefinitionType['Type'];
+  declare +type: (typeof DefinitionType)['Type'];
   declare +parent: null;
 
   constructor(
@@ -284,7 +258,7 @@ class TypeDefinition extends DefinitionBase {
 }
 
 class TypeParameterDefinition extends DefinitionBase {
-  declare +type: typeof DefinitionType['TypeParameter'];
+  declare +type: (typeof DefinitionType)['TypeParameter'];
   declare +parent: null;
 
   constructor(typeParamNode: TypeParameter) {
@@ -310,7 +284,7 @@ class TypeParameterDefinition extends DefinitionBase {
 }
 
 class VariableDefinition extends DefinitionBase {
-  declare +type: typeof DefinitionType['Variable'];
+  declare +type: (typeof DefinitionType)['Variable'];
   declare +parent: DeclareVariable | VariableDeclaration;
 
   constructor(
