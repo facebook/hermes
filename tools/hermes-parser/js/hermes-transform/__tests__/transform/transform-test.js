@@ -431,43 +431,44 @@ if (true) {
   });
 
   describe('comments', () => {
-    it('should attach comments so they are maintained during an insertion', () => {
-      const code = `
+    describe('attachment', () => {
+      it('should attach comments so they are maintained during an insertion', () => {
+        const code = `
 // leading comment
 statement(); // inline comment
 `;
 
-      const result = transform(code, context => ({
-        ExpressionStatement(node) {
-          context.insertBeforeStatement(
-            node,
-            t.ExpressionStatement({
-              expression: t.StringLiteral({
-                value: 'before',
+        const result = transform(code, context => ({
+          ExpressionStatement(node) {
+            context.insertBeforeStatement(
+              node,
+              t.ExpressionStatement({
+                expression: t.StringLiteral({
+                  value: 'before',
+                }),
               }),
-            }),
-          );
-          context.insertAfterStatement(
-            node,
-            t.ExpressionStatement({
-              expression: t.StringLiteral({
-                value: 'after',
+            );
+            context.insertAfterStatement(
+              node,
+              t.ExpressionStatement({
+                expression: t.StringLiteral({
+                  value: 'after',
+                }),
               }),
-            }),
-          );
-        },
-      }));
+            );
+          },
+        }));
 
-      expect(result).toBe(`\
+        expect(result).toBe(`\
 ('before');
 // leading comment
 statement(); // inline comment
 ('after');
 `);
-    });
+      });
 
-    it('should attach comments so they are removed when the associated node is removed', () => {
-      const code = `
+      it('should attach comments so they are removed when the associated node is removed', () => {
+        const code = `
 // this should remain leading #1
 const x = 1; // this should remain inline #1
 // leading comment to be deleted
@@ -476,42 +477,42 @@ statement(); // inline comment to be deleted
 const y = 1; // this should remain inline #2
 `;
 
-      const result = transform(code, context => ({
-        ExpressionStatement(node) {
-          context.removeStatement(node);
-        },
-      }));
+        const result = transform(code, context => ({
+          ExpressionStatement(node) {
+            context.removeStatement(node);
+          },
+        }));
 
-      expect(result).toBe(`\
+        expect(result).toBe(`\
 // this should remain leading #1
 const x = 1; // this should remain inline #1
 // this should remain leading #2
 const y = 1; // this should remain inline #2
 `);
-    });
+      });
 
-    it('should clone comments when nodes are cloned', () => {
-      const code = `
+      it('should clone comments when nodes are cloned', () => {
+        const code = `
 // leading comment to be duplicated
 statement(); // inline comment to be duplicated
 `;
 
-      const result = transform(code, context => ({
-        ExpressionStatement(node) {
-          context.insertBeforeStatement(node, context.shallowCloneNode(node));
-        },
-      }));
+        const result = transform(code, context => ({
+          ExpressionStatement(node) {
+            context.insertBeforeStatement(node, context.shallowCloneNode(node));
+          },
+        }));
 
-      expect(result).toBe(`\
+        expect(result).toBe(`\
 // leading comment to be duplicated
 statement(); // inline comment to be duplicated
 // leading comment to be duplicated
 statement(); // inline comment to be duplicated
 `);
-    });
+      });
 
-    it('should attach comments so they are removed when the associated node is replaced (by default)', () => {
-      const code = `
+      it('should attach comments so they are removed when the associated node is replaced (by default)', () => {
+        const code = `
 // this should remain leading #1
 const x = 1; // this should remain inline #1
 // leading comment to be deleted
@@ -520,30 +521,30 @@ statement(); // inline comment to be deleted
 const y = 1; // this should remain inline #2
 `;
 
-      const result = transform(code, context => ({
-        ExpressionStatement(node) {
-          context.replaceNode(
-            node,
-            t.ExpressionStatement({
-              expression: t.StringLiteral({
-                value: 'inserted',
+        const result = transform(code, context => ({
+          ExpressionStatement(node) {
+            context.replaceNode(
+              node,
+              t.ExpressionStatement({
+                expression: t.StringLiteral({
+                  value: 'inserted',
+                }),
               }),
-            }),
-          );
-        },
-      }));
+            );
+          },
+        }));
 
-      expect(result).toBe(`\
+        expect(result).toBe(`\
 // this should remain leading #1
 const x = 1; // this should remain inline #1
 ('inserted');
 // this should remain leading #2
 const y = 1; // this should remain inline #2
 `);
-    });
+      });
 
-    it('should optionally attach comments so they are kept when the associated statement is replaced', () => {
-      const code = `
+      it('should optionally attach comments so they are kept when the associated statement is replaced', () => {
+        const code = `
 // this should remain leading #1
 const x = 1; // this should remain inline #1
 // leading comment to be deleted
@@ -552,33 +553,33 @@ statement(); // inline comment to be deleted
 const y = 1; // this should remain inline #2
 `;
 
-      const result = transform(code, context => ({
-        ExpressionStatement(node) {
-          context.replaceStatementWithMany(
-            node,
-            [
-              t.ExpressionStatement({
-                expression: t.StringLiteral({
-                  value: 'inserted1',
+        const result = transform(code, context => ({
+          ExpressionStatement(node) {
+            context.replaceStatementWithMany(
+              node,
+              [
+                t.ExpressionStatement({
+                  expression: t.StringLiteral({
+                    value: 'inserted1',
+                  }),
                 }),
-              }),
-              t.ExpressionStatement({
-                expression: t.StringLiteral({
-                  value: 'inserted2',
+                t.ExpressionStatement({
+                  expression: t.StringLiteral({
+                    value: 'inserted2',
+                  }),
                 }),
-              }),
-              t.ExpressionStatement({
-                expression: t.StringLiteral({
-                  value: 'inserted3',
+                t.ExpressionStatement({
+                  expression: t.StringLiteral({
+                    value: 'inserted3',
+                  }),
                 }),
-              }),
-            ],
-            {keepComments: true},
-          );
-        },
-      }));
+              ],
+              {keepComments: true},
+            );
+          },
+        }));
 
-      expect(result).toBe(`\
+        expect(result).toBe(`\
 // this should remain leading #1
 const x = 1; // this should remain inline #1
 // leading comment to be deleted
@@ -588,10 +589,10 @@ const x = 1; // this should remain inline #1
 // this should remain leading #2
 const y = 1; // this should remain inline #2
 `);
-    });
+      });
 
-    it('should optionally attach comments so they are kept when the associated node is replaced', () => {
-      const code = `
+      it('should optionally attach comments so they are kept when the associated node is replaced', () => {
+        const code = `
 // this should remain leading #1
 const x = 1; // this should remain inline #1
 // leading comment to be deleted
@@ -600,21 +601,21 @@ statement(); // inline comment to be deleted
 const y = 1; // this should remain inline #2
 `;
 
-      const result = transform(code, context => ({
-        ExpressionStatement(node) {
-          context.replaceNode(
-            node,
-            t.ExpressionStatement({
-              expression: t.StringLiteral({
-                value: 'inserted1',
+        const result = transform(code, context => ({
+          ExpressionStatement(node) {
+            context.replaceNode(
+              node,
+              t.ExpressionStatement({
+                expression: t.StringLiteral({
+                  value: 'inserted1',
+                }),
               }),
-            }),
-            {keepComments: true},
-          );
-        },
-      }));
+              {keepComments: true},
+            );
+          },
+        }));
 
-      expect(result).toBe(`\
+        expect(result).toBe(`\
 // this should remain leading #1
 const x = 1; // this should remain inline #1
 // leading comment to be deleted
@@ -622,6 +623,128 @@ const x = 1; // this should remain inline #1
 // this should remain leading #2
 const y = 1; // this should remain inline #2
 `);
+      });
+    });
+
+    describe('addition', () => {
+      it('should allow leading comment addition', () => {
+        const code = `\
+const x = 1;
+const y = 2;`;
+        const result = transform(code, context => ({
+          Identifier(node) {
+            if (node.name === 'x') {
+              context.addLeadingComments(node.parent.parent, [
+                t.LineComment({value: 'line'}),
+              ]);
+            } else if (node.name === 'y') {
+              context.addLeadingComments(node.parent.parent, [
+                t.BlockComment({value: 'block'}),
+              ]);
+            }
+          },
+        }));
+
+        expect(result).toBe(`\
+//line
+const x = 1;
+/*block*/ const y = 2;
+`);
+      });
+
+      it('should allow trailing comment addition', () => {
+        const code = `\
+const x = 1;
+const y = 2;`;
+        const result = transform(code, context => ({
+          Identifier(node) {
+            if (node.name === 'x') {
+              context.addTrailingComments(node.parent.parent, [
+                t.LineComment({value: 'line'}),
+              ]);
+            } else if (node.name === 'y') {
+              context.addTrailingComments(node.parent.parent, [
+                t.BlockComment({value: 'block'}),
+              ]);
+            }
+          },
+        }));
+
+        expect(result).toBe(`\
+const x = 1;
+//line
+const y = 2;
+/*block*/
+`);
+      });
+
+      it('should allow comment addition to new, detached nodes', () => {
+        const code = 'const x = 1;';
+        const result = transform(code, context => ({
+          VariableDeclaration(node) {
+            const newNode = t.ExpressionStatement({
+              expression: t.StringLiteral({value: 'inserted'}),
+            });
+            context.insertBeforeStatement(node, newNode);
+
+            context.addLeadingComments(newNode, [
+              t.LineComment({value: 'leading line'}),
+              t.BlockComment({value: 'leading block'}),
+            ]);
+            context.addTrailingComments(newNode, [
+              t.LineComment({value: 'trailing line'}),
+              t.BlockComment({value: 'trailing block'}),
+            ]);
+          },
+        }));
+
+        expect(result).toBe(`\
+//leading line
+/*leading block*/
+('inserted');
+//trailing line
+/*trailing block*/
+const x = 1;
+`);
+      });
+    });
+
+    describe('removal', () => {
+      it('shoud allow removal of leading comments', () => {
+        const code = `\
+/*block*/
+const x = 1;
+//line
+const y = 2;`;
+        const result = transform(code, context => ({
+          VariableDeclaration(node) {
+            const coment = context.getComments(node)[0];
+            context.removeComments(coment);
+          },
+        }));
+
+        expect(result).toBe(`\
+const x = 1;
+const y = 2;
+`);
+      });
+
+      it('shoud allow removal of trailing comments', () => {
+        const code = `\
+const x = 1; /*block*/
+const y = 2; //line`;
+        const result = transform(code, context => ({
+          VariableDeclaration(node) {
+            const coment = context.getComments(node)[0];
+            context.removeComments(coment);
+          },
+        }));
+
+        expect(result).toBe(`\
+const x = 1;
+const y = 2;
+`);
+      });
     });
   });
 });

@@ -32,7 +32,7 @@ describe('ReplaceNode', () => {
       target,
       t.Identifier({name: 'y'}),
     );
-    performReplaceNodeMutation(new MutationContext(), mutation);
+    performReplaceNodeMutation(new MutationContext(''), mutation);
     expect(ast).toMatchObject({
       type: 'Program',
       body: [
@@ -61,7 +61,7 @@ describe('ReplaceNode', () => {
       target,
       t.NumberTypeAnnotation(),
     );
-    performReplaceNodeMutation(new MutationContext(), mutation);
+    performReplaceNodeMutation(new MutationContext(''), mutation);
     expect(ast).toMatchObject({
       type: 'Program',
       body: [
@@ -96,7 +96,7 @@ describe('ReplaceNode', () => {
       target,
       t.ExpressionStatement({expression: t.BooleanLiteral({value: true})}),
     );
-    performReplaceNodeMutation(new MutationContext(), mutation);
+    performReplaceNodeMutation(new MutationContext(''), mutation);
     expect(ast).toMatchObject({
       type: 'Program',
       body: [

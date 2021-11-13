@@ -23,6 +23,8 @@ import type {
   NumericLiteral as NumericLiteralType,
   NullLiteral as NullLiteralType,
   StringLiteral as StringLiteralType,
+  LineComment as LineCommentType,
+  BlockComment as BlockCommentType,
 } from 'hermes-estree';
 import type {DetachedNode} from '../detachedNode';
 
@@ -168,6 +170,24 @@ export function StringLiteral({
   return detachedProps<StringLiteralType>(parent, {
     type: 'Literal',
     raw,
+    value,
+  });
+}
+
+export function LineComment({value}: {+value: string}): LineCommentType {
+  // $FlowExpectedError[prop-missing]
+  // $FlowExpectedError[incompatible-return]
+  return detachedProps<LineCommentType>(undefined, {
+    type: 'Line',
+    value,
+  });
+}
+
+export function BlockComment({value}: {+value: string}): BlockCommentType {
+  // $FlowExpectedError[prop-missing]
+  // $FlowExpectedError[incompatible-return]
+  return detachedProps<BlockCommentType>(undefined, {
+    type: 'Block',
     value,
   });
 }

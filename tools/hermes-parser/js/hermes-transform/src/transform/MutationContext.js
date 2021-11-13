@@ -8,15 +8,22 @@
  * @format
  */
 
-import type {ESNode} from 'hermes-estree';
+import type {Comment, ESNode} from 'hermes-estree';
 
 import {NodeIsDeletedError, NodeIsMutatedError} from './Errors';
+import {appendCommentToSource} from './comments/comments';
 
 export class MutationContext {
   +_deletedNodes: Set<ESNode> = new Set();
   +_mutatedKeys: Map<ESNode, Set<string>> = new Map();
   // TODO - do we care about this? Arrays are pretty safe to concurrently mutate
   +_mutatedArrays: Map<ESNode, Set<string>> = new Map();
+
+  code: string;
+
+  constructor(code: string) {
+    this.code = code;
+  }
 
   /**
    * Marks a node and its entire subtree as deleted.
@@ -65,5 +72,9 @@ export class MutationContext {
     if (this._mutatedKeys.get(node)?.has(key) === true) {
       throw new NodeIsMutatedError(message);
     }
+  }
+
+  appendCommentToSource(comment: Comment): void {
+    this.code = appendCommentToSource(this.code, comment);
   }
 }

@@ -15,7 +15,7 @@ import type {DetachedNode} from '../../detachedNode';
 import {replaceInArray} from './utils/arrayUtils';
 import {getStatementParent} from './utils/getStatementParent';
 import {isValidModuleDeclarationParent} from './utils/isValidModuleDeclarationParent';
-import {attachCommentsToNewNode} from '../comments/comments';
+import {moveCommentsToNewNode} from '../comments/comments';
 import {InvalidReplacementError} from '../Errors';
 import * as t from '../../generated/node-types';
 
@@ -68,7 +68,7 @@ export function performReplaceStatementWithManyMutation(
 
   if (mutation.keepComments) {
     // attach comments to the very first replacement node
-    attachCommentsToNewNode(mutation.target, mutation.nodesToReplaceWith[0]);
+    moveCommentsToNewNode(mutation.target, mutation.nodesToReplaceWith[0]);
   }
 
   if (replacementParent.type === 'array') {

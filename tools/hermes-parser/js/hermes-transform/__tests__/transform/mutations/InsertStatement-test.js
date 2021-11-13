@@ -49,7 +49,7 @@ function test({
           if (mutation == null) {
             throw new Error('this is impossible!?');
           }
-          performInsertStatementMutation(new MutationContext(), mutation);
+          performInsertStatementMutation(new MutationContext(''), mutation);
           expect(ast).toMatchObject(
             getAssertionObject(
               side === 'before'

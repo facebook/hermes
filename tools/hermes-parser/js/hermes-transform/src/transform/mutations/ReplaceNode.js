@@ -13,7 +13,7 @@ import type {MutationContext} from '../MutationContext';
 import type {DetachedNode} from '../../detachedNode';
 
 import {replaceInArray} from './utils/arrayUtils';
-import {attachCommentsToNewNode} from '../comments/comments';
+import {moveCommentsToNewNode} from '../comments/comments';
 import {InvalidReplacementError} from '../Errors';
 import {getVisitorKeys, isNode} from '../../getVisitorKeys';
 
@@ -67,7 +67,7 @@ export function performReplaceNodeMutation(
   }
 
   if (mutation.keepComments) {
-    attachCommentsToNewNode(mutation.target, mutation.nodeToReplaceWith);
+    moveCommentsToNewNode(mutation.target, mutation.nodeToReplaceWith);
   }
 
   return replacementParent.parent;

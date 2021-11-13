@@ -38,7 +38,7 @@ function test({
         wrapCode,
         mutateAndAssert: (ast, target) => {
           const mutation = createRemoveStatementMutation(target);
-          performRemoveStatementMutation(new MutationContext(), mutation);
+          performRemoveStatementMutation(new MutationContext(''), mutation);
           expect(ast).toMatchObject(getAssertionObject());
         },
         skipTypes,

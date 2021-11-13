@@ -38,9 +38,11 @@
 
 export type Range = [number, number];
 
-export interface BaseNode {
+export interface BaseToken {
   +loc: SourceLocation;
   +range: Range;
+}
+export interface BaseNode extends BaseToken {
   // this is added by ESLint and is not part of the ESTree spec
   +parent: ESNode;
 }
@@ -53,7 +55,7 @@ export interface BaseNode {
  * are not ever included as part of the standard AST tree.
  */
 
-export interface MostTokens extends BaseNode {
+export interface MostTokens extends BaseToken {
   +type:
     | 'Boolean'
     | 'Identifier'
@@ -71,7 +73,7 @@ export interface MostTokens extends BaseNode {
     | 'Line';
   +value: string;
 }
-export interface RegexToken extends BaseNode {
+export interface RegexToken extends BaseToken {
   +type: 'RegularExpression';
   +value: string;
   +regex: {
@@ -79,10 +81,15 @@ export interface RegexToken extends BaseNode {
     +flags: string,
   };
 }
-export interface Comment extends BaseNode {
-  +type: 'Line' | 'Block';
+export interface LineComment extends BaseToken {
+  +type: 'Line';
   +value: string;
 }
+export interface BlockComment extends BaseToken {
+  +type: 'Block';
+  +value: string;
+}
+export type Comment = LineComment | BlockComment;
 export type Token = MostTokens | RegexToken | Comment;
 
 export interface SourceLocation {

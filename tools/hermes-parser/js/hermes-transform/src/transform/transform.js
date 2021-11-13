@@ -18,14 +18,17 @@ import {getTransformedAST} from './getTransformedAST';
 import {SimpleTraverser} from '../traverse/SimpleTraverser';
 
 export function transform(
-  code: string,
+  originalCode: string,
   visitors: Visitor<TransformContext>,
   prettierOptions: {...} = {},
 ): string {
-  const {ast, astWasMutated} = getTransformedAST(code, visitors);
+  const {ast, astWasMutated, mutatedCode} = getTransformedAST(
+    originalCode,
+    visitors,
+  );
 
   if (!astWasMutated) {
-    return code;
+    return originalCode;
   }
 
   // prettier fully expects the parent pointers are NOT set and
@@ -46,7 +49,7 @@ export function transform(
   // $FlowExpectedError[cannot-write]
   delete ast.comments;
 
-  return prettier.format(code, {
+  return prettier.format(mutatedCode, {
     ...prettierOptions,
     parser() {
       return ast;

@@ -9,36 +9,64 @@
  */
 
 import type {
+  Comment,
   ESNode,
   Expression,
   ModuleDeclaration,
   Statement,
   TypeAnnotationType,
 } from 'hermes-estree';
+import type {DetachedNode} from '../detachedNode';
+import type {TransformReplaceSignatures} from '../generated/TransformReplaceSignatures';
+import type {AddLeadingCommentsMutation} from './mutations/AddLeadingComments';
+import type {AddTrailingCommentsMutation} from './mutations/AddTrailingComments';
+import type {CloneCommentsToMutation} from './mutations/CloneCommentsTo';
 import type {InsertStatementMutation} from './mutations/InsertStatement';
+import type {RemoveCommentMutation} from './mutations/RemoveComment';
 import type {RemoveStatementMutation} from './mutations/RemoveStatement';
 import type {ReplaceNodeMutation} from './mutations/ReplaceNode';
 import type {ReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
-import type {DetachedNode} from '../detachedNode';
 
+import {deepCloneNode, shallowCloneNode} from '../detachedNode';
+import {
+  getCommentsForNode,
+  isLeadingComment,
+  isTrailingComment,
+} from './comments/comments';
+import {createAddLeadingCommentsMutation} from './mutations/AddLeadingComments';
+import {createAddTrailingCommentsMutation} from './mutations/AddTrailingComments';
+import {createCloneCommentsToMutation} from './mutations/CloneCommentsTo';
 import {createInsertStatementMutation} from './mutations/InsertStatement';
+import {createRemoveCommentMutation} from './mutations/RemoveComment';
+import {createRemoveStatementMutation} from './mutations/RemoveStatement';
 import {createReplaceNodeMutation} from './mutations/ReplaceNode';
 import {createReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
-import {createRemoveStatementMutation} from './mutations/RemoveStatement';
-import {deepCloneNode, shallowCloneNode} from '../detachedNode';
-import type {TransformReplaceSignatures} from '../generated/TransformReplaceSignatures';
 
 type Mutation = $ReadOnly<
+  | AddLeadingCommentsMutation
+  | AddTrailingCommentsMutation
+  | CloneCommentsToMutation
   | InsertStatementMutation
+  | RemoveCommentMutation
+  | RemoveStatementMutation
   | ReplaceNodeMutation
-  | ReplaceStatementWithManyMutation
-  | RemoveStatementMutation,
+  | ReplaceStatementWithManyMutation,
 >;
 
-type SingleOrArray<T> = T | $ReadOnlyArray<T>;
+type SingleOrArray<+T> = T | $ReadOnlyArray<T>;
+
+type ReplaceNodeOptions = $ReadOnly<{
+  /**
+   * Moves the comments from the target node to the nodetoReplaceWith.
+   * Note that this does not *clone* comments, it moves them and clears out
+   * the target node's comments afterward.
+   */
+  keepComments?: boolean,
+}>;
 
 export type TransformContext = $ReadOnly<{
   mutations: $ReadOnlyArray<Mutation>,
+  astWasMutated: boolean,
 
   /**
    * Shallowly clones the given node and applies the given overrides.
@@ -104,25 +132,25 @@ export type TransformContext = $ReadOnly<{
     (
       target: Expression,
       nodeToReplaceWith: DetachedNode<Expression>,
-      options?: $ReadOnly<{keepComments?: boolean}>,
+      options?: ReplaceNodeOptions,
     ): void,
     // module declarations must be replaced with statements or other module declarations
     (
       target: ModuleDeclaration,
       nodeToReplaceWith: DetachedNode<ModuleDeclaration | Statement>,
-      options?: $ReadOnly<{keepComments?: boolean}>,
+      options?: ReplaceNodeOptions,
     ): void,
     // Statement must be replaced with statements or module declarations
     (
       target: Statement,
       nodeToReplaceWith: DetachedNode<ModuleDeclaration | Statement>,
-      options?: $ReadOnly<{keepComments?: boolean}>,
+      options?: ReplaceNodeOptions,
     ): void,
     // Types must be replaced with types
     (
       target: TypeAnnotationType,
       nodeToReplaceWith: DetachedNode<TypeAnnotationType>,
-      options?: $ReadOnly<{keepComments?: boolean}>,
+      options?: ReplaceNodeOptions,
     ): void,
   } & TransformReplaceSignatures, // allow like-for-like replacements as well
 
@@ -135,15 +163,70 @@ export type TransformContext = $ReadOnly<{
     nodesToReplaceWith: $ReadOnlyArray<
       DetachedNode<ModuleDeclaration | Statement>,
     >,
-    options?: {keepComments?: boolean},
+    options?: {
+      /**
+       * Moves the comments from the target node to the first node in the array.
+       * Note that this does not *clone* comments, it moves them and clears out
+       * the target node's comments afterward.
+       */
+      keepComments?: boolean,
+    },
   ) => void,
 
   /**
    * Removes a given node from the AST.
    */
-  removeStatement: {
-    (node: ModuleDeclaration | Statement): void,
-  },
+  removeStatement: (node: ModuleDeclaration | Statement) => void,
+
+  //
+  // Comment APIs
+  //
+
+  /**
+   * Gets all of the comments attached to the given node.
+   */
+  getComments: (node: ESNode) => Array<Comment>,
+
+  /**
+   * Gets the leading comments attached to the given node.
+   */
+  getLeadingComments: (node: ESNode) => Array<Comment>,
+
+  /**
+   * Gets the trailing comments attached to the given node.
+   */
+  getTrailingComments: (node: ESNode) => Array<Comment>,
+
+  /**
+   * Clones all of the comments from the target node to the destination node.
+   * As its name suggest - this will clone the comments, duplicating them
+   * entirely. It will not remove the comments from the target node afterward.
+   */
+  cloneCommentsTo: (
+    target: ESNode,
+    destination: ESNode | DetachedNode<ESNode>,
+  ) => void,
+
+  /**
+   * Add leading comments to the specified node.
+   */
+  addLeadingComments: (
+    node: ESNode | DetachedNode<ESNode>,
+    comments: SingleOrArray<Comment>,
+  ) => void,
+
+  /**
+   * Add trailing comments to the specified node.
+   */
+  addTrailingComments: (
+    node: ESNode | DetachedNode<ESNode>,
+    comments: SingleOrArray<Comment>,
+  ) => void,
+
+  /**
+   * Removes the specified comments
+   */
+  removeComments: (comments: SingleOrArray<Comment>) => void,
 }>;
 
 export function getTransformContext(): TransformContext {
@@ -159,6 +242,11 @@ export function getTransformContext(): TransformContext {
 
   return {
     mutations,
+
+    // $FlowExpectedError[unsafe-getters-setters]
+    get astWasMutated(): boolean {
+      return mutations.length > 0;
+    },
 
     // $FlowExpectedError[class-object-subtyping]
     shallowCloneNode: ((
@@ -225,13 +313,46 @@ export function getTransformContext(): TransformContext {
     removeStatement: ((node): void => {
       pushMutation(createRemoveStatementMutation(node));
     }: TransformContext['removeStatement']),
+
+    //
+    // Comment APIs
+    //
+
+    getComments: ((node): Array<Comment> => {
+      return [...getCommentsForNode(node)];
+    }: TransformContext['getComments']),
+
+    getLeadingComments: ((node): Array<Comment> => {
+      return getCommentsForNode(node).filter(isLeadingComment);
+    }: TransformContext['getLeadingComments']),
+
+    getTrailingComments: ((node): Array<Comment> => {
+      return getCommentsForNode(node).filter(isTrailingComment);
+    }: TransformContext['getTrailingComments']),
+
+    cloneCommentsTo: ((target, destination): void => {
+      pushMutation(createCloneCommentsToMutation(target, destination));
+    }: TransformContext['cloneCommentsTo']),
+
+    addLeadingComments: ((node, comments): void => {
+      pushMutation(createAddLeadingCommentsMutation(node, toArray(comments)));
+    }: TransformContext['addLeadingComments']),
+
+    addTrailingComments: ((node, comments): void => {
+      pushMutation(createAddTrailingCommentsMutation(node, toArray(comments)));
+    }: TransformContext['addTrailingComments']),
+
+    removeComments: ((comments): void => {
+      toArray(comments).forEach(comment => {
+        pushMutation(createRemoveCommentMutation(comment));
+      });
+    }: TransformContext['removeComments']),
   };
 }
 
-function toArray<T: ESNode>(
-  thing: SingleOrArray<DetachedNode<T>>,
-): $ReadOnlyArray<DetachedNode<T>> {
+function toArray<T>(thing: SingleOrArray<T>): $ReadOnlyArray<T> {
   if (Array.isArray(thing)) {
+    // $FlowExpectedError[incompatible-return]
     return thing;
   }
   return [thing];
