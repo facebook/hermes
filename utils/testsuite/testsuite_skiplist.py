@@ -1900,7 +1900,6 @@ UNSUPPORTED_FEATURES = [
     "json-superset",
     "let",
     "new.target",
-    "Object.hasOwn",
     "regexp-match-indices",
     "regexp-named-groups",
     "regexp-unicode-property-escapes",

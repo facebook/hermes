@@ -166,7 +166,7 @@ Handle<JSObject> createObjectConstructor(Runtime *runtime) {
       Predefined::getSymbolID(Predefined::hasOwn),
       ctx,
       objectHasOwn,
-      1);
+      2);
   defineMethod(
       runtime,
       cons,
