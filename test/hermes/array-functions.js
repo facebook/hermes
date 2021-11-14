@@ -560,6 +560,28 @@ print(Array.prototype.join.call(Array.prototype.sort.call(a, function(x,y) {
   return x - y;
 })));
 // CHECK-NEXT: 2,13
+var a = [
+    { "idx": 0, "key": 1 },
+    { "idx": 1, "key": 2 },
+    { "idx": 2, "key": 1 },
+    { "idx": 3, "key": 2 },
+    { "idx": 4, "key": 1 },
+    { "idx": 5, "key": 2 },
+    { "idx": 6, "key": 1 },
+    { "idx": 7, "key": 2 }];
+a.sort((item1, item2) => item1.key - item2.key);
+print(JSON.stringify(a));
+// CHECK-NEXT: [{"idx":0,"key":1},{"idx":2,"key":1},{"idx":4,"key":1},{"idx":6,"key":1},{"idx":1,"key":2},{"idx":3,"key":2},{"idx":5,"key":2},{"idx":7,"key":2}]
+a.sort((item1, item2) => item1.key - item2.key);
+print(JSON.stringify(a));
+// CHECK-NEXT: [{"idx":0,"key":1},{"idx":2,"key":1},{"idx":4,"key":1},{"idx":6,"key":1},{"idx":1,"key":2},{"idx":3,"key":2},{"idx":5,"key":2},{"idx":7,"key":2}]
+a.sort((item1, item2) => item2.key - item1.key);
+print(JSON.stringify(a));
+// CHECK-NEXT: [{"idx":1,"key":2},{"idx":3,"key":2},{"idx":5,"key":2},{"idx":7,"key":2},{"idx":0,"key":1},{"idx":2,"key":1},{"idx":4,"key":1},{"idx":6,"key":1}]
+print(['1', '111', '11', '222', '22', '2', '33', '3', '333'].sort(
+  function(x,y) {return x.length - y.length})
+);
+// CHECK-NEXT: 1,2,3,11,22,33,111,222,333
 try { [1,2,3].sort(null); } catch(e) { print('caught', e.name); }
 // CHECK-NEXT: caught TypeError
 var badobj = {

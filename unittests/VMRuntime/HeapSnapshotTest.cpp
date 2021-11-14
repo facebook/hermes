@@ -1092,11 +1092,9 @@ static std::string functionInfoToString(
   auto line = llvh::cast<JSONNumber>(traceFunctionInfos[base + 4])->getValue();
   auto col = llvh::cast<JSONNumber>(traceFunctionInfos[base + 5])->getValue();
 
-  return std::string(name) + "(" + oscompat::to_string((int)functionID) +
-      ") @ " + std::string(scriptName) + "(" +
-      oscompat::to_string((int)scriptID) +
-      "):" + oscompat::to_string((int)line) + ":" +
-      oscompat::to_string((int)col);
+  return std::string(name) + "(" + std::to_string((int)functionID) + ") @ " +
+      std::string(scriptName) + "(" + std::to_string((int)scriptID) +
+      "):" + std::to_string((int)line) + ":" + std::to_string((int)col);
 }
 
 struct ChromeStackTreeNode {
@@ -1182,8 +1180,10 @@ baz();
   }
   auto fooObj = JSObject::getNamed_RJS(resObj, runtime, fooSym);
   auto barObj = JSObject::getNamed_RJS(resObj, runtime, barSym);
-  auto fooObjID = runtime->getHeap().getObjectID((*fooObj)->getPointer());
-  auto barObjID = runtime->getHeap().getObjectID((*barObj)->getPointer());
+  auto fooObjID =
+      runtime->getHeap().getObjectID(vmcast<JSObject>(fooObj->get()));
+  auto barObjID =
+      runtime->getHeap().getObjectID(vmcast<JSObject>(barObj->get()));
 
   JSONObject *root = TAKE_SNAPSHOT(runtime->getHeap(), jsonFactory);
   ASSERT_NE(root, nullptr);

@@ -46,32 +46,6 @@ void ErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("domains", &self->domains_);
 }
 
-#ifdef HERMESVM_SERIALIZE
-void ErrorSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSError>());
-  // TODO: Finish serialize/deserialize stacktrace if we want to
-  // serialize/deserialize after user code.
-
-  auto *self = vmcast<const JSError>(cell);
-  s.writeRelocation(self->domains_.get(s.getRuntime()));
-  s.writeRelocation(self->funcNames_.get(s.getRuntime()));
-  s.writeInt<uint8_t>(self->catchable_);
-  s.endObject(cell);
-}
-
-void ErrorDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::ErrorKind && "Expected JSError");
-  auto *cell = d.getRuntime()->makeAFixed<JSError, HasFinalizer::Yes>(d);
-  d.endObject(cell);
-}
-
-JSError::JSError(Deserializer &d) : JSObject(d, &vt.base) {
-  d.readRelocation(&domains_, RelocationKind::GCPointer);
-  d.readRelocation(&funcNames_, RelocationKind::GCPointer);
-  catchable_ = d.readInt<uint8_t>();
-}
-#endif
-
 CallResult<HermesValue>
 errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSError>();

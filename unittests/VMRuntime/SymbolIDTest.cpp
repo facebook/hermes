@@ -8,7 +8,6 @@
 #include "gtest/gtest.h"
 
 #include "TestHelpers.h"
-#include "hermes/Support/OSCompat.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/SymbolID.h"
 
@@ -47,7 +46,7 @@ TEST_F(SymbolIDRuntimeTest, WriteBarrier) {
   MutableHandle<StringPrimitive> str{runtime};
   for (JSArray::size_type i = 0; i < 100; i++) {
     GCScopeMarkerRAII marker{runtime};
-    std::string iAsStr = oscompat::to_string(i);
+    std::string iAsStr = std::to_string(i);
     auto strRes = StringPrimitive::create(
         runtime, ASCIIRef{iAsStr.c_str(), iAsStr.length()});
     ASSERT_FALSE(isException(strRes));

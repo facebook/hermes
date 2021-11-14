@@ -70,7 +70,7 @@ CallResult<HermesValue> runRequireCall(
         runtime,
         Handle<Callable>::vmcast(&runtime->requireFunction),
         1,
-        context.unsafeGetPinnedHermesValue());
+        ConstArgIterator(context.unsafeGetPinnedHermesValue() + 1));
     if (LLVM_UNLIKELY(funcRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

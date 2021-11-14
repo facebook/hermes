@@ -103,10 +103,9 @@ proxyConstructor(void *, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue>
 proxyRevocationSteps(void *, Runtime *runtime, NativeArgs args) {
   // 1. Let p be F.[[RevocableProxy]].
-  auto cc = runtime->getCurrentFrame()->getCalleeClosure();
-  auto revoker = vmcast<NativeFunction>(cc);
-  HermesValue proxyVal =
-      getRevocableProxySlot(revoker, runtime).unboxToHV(runtime);
+  auto revoker = vmcast<NativeFunction>(
+      runtime->getCurrentFrame()->getCalleeClosureUnsafe());
+  SmallHermesValue proxyVal = getRevocableProxySlot(revoker, runtime);
   // 2. If p is null, return undefined.
   if (proxyVal.isNull()) {
     return HermesValue::encodeUndefinedValue();
@@ -114,9 +113,8 @@ proxyRevocationSteps(void *, Runtime *runtime, NativeArgs args) {
   // 3. Set F.[[RevocableProxy]] to null.
   setRevocableProxySlot(revoker, runtime, SmallHermesValue::encodeNullValue());
   // 4. Assert: p is a Proxy object.
-  JSObject *proxy = dyn_vmcast<JSObject>(proxyVal);
-  assert(
-      proxy && proxy->isProxyObject() && "[[RevocableProxy]] is not a Proxy");
+  JSObject *proxy = vmcast<JSObject>(proxyVal.getObject(runtime));
+  assert(proxy->isProxyObject() && "[[RevocableProxy]] is not a Proxy");
   // 5. Set p.[[ProxyTarget]] to null.
   // 6. Set p.[[ProxyHandler]] to null.
   JSProxy::setTargetAndHandler(

@@ -19,27 +19,27 @@ namespace hermes {
 namespace hbc {
 
 /// Layout of a function stack frame from the point of view of the callee. Every
-/// row is a HermesValue. Stack grows from high addresses (bottom of the table)
-/// to low addresses (top of the table).
+/// row is a HermesValue. Stack grows from low addresses (bottom of the table)
+/// to high addresses (top of the table).
 ///
 /// \verbatim
 ///   -----------------------------------------------
-///   -3-N  callee localN    : HermesValue               -- stackPtr
+///    2+N  callee localN    : HermesValue               -- stackPtr
 ///    ...
-///   -3    callee local0    : HermesValue
-///   -2    scratch          : HermesValue
-///   -1    debugEnvironment : Environment*
+///    2    callee local0    : HermesValue
+///    1    scratch          : HermesValue
+///    0    debugEnvironment : Environment*
 ///    ----------------------------------------------
-///    0    previousFrame    : NativeValue(HermesValue*) -- calleeFramePtr
-///    1    savedIP          : NativeValue(void*)
-///    2    savedCodeBlock   : NativeValue(CodeBlock*)
-///    3    argCount         : NativeValue(uint32_t)
-///    4    newTarget        : Callable* | undefined
-///    5    calleeClosureOrCB: Callable* | NativeValue(CodeBlock*)
-///    6    this             : HermesValue
-///    7    arg0             : HermesValue
+///   -1    previousFrame    : NativeValue(HermesValue*) -- calleeFramePtr
+///   -2    savedIP          : NativeValue(void*)
+///   -3    savedCodeBlock   : NativeValue(CodeBlock*)
+///   -4    argCount         : NativeValue(uint32_t)
+///   -5    newTarget        : Callable* | undefined
+///   -6    calleeClosureOrCB: Callable* | NativeValue(CodeBlock*)
+///   -7    this             : HermesValue
+///   -8    arg0             : HermesValue
 ///    ...
-///    7+N  argN             : HermesValue
+///   -8-N  argN             : HermesValue
 ///    ...
 ///    ...
 ///         caller local 0   : HermesValue
@@ -83,9 +83,9 @@ namespace hbc {
 struct StackFrameLayout {
   enum {
     /// Offset of the first local register.
-    FirstLocal = -3,
+    FirstLocal = 2,
     /// A scratch register for use by the VM.
-    Scratch = -2,
+    Scratch = 1,
     /// The environment associated with the callee's stack frame, that is, the
     /// Environment created by the last CreateEnvironment instruction to execute
     /// in the callee's stack frame. It is null if debugging support is not
@@ -93,42 +93,42 @@ struct StackFrameLayout {
     /// possible if we are early in the code block, or with optimized code. This
     /// is stored in the call frame so that the debugger can gain access to the
     /// Environment at arbitrary frames. Note this is managed by the GC.
-    DebugEnvironment = -1,
+    DebugEnvironment = 0,
     /// Saved value of the caller's "frame" register, which points to the first
     /// register of the caller's stack frame.
-    PreviousFrame = 0,
+    PreviousFrame = -1,
     /// Saved caller instruction pointer.
-    SavedIP = 1,
+    SavedIP = -2,
     /// Saved caller CodeBlock.
     /// NOTE: If SavedCodeBlock is null but SavedIP is non-null, the current
     /// frame is the result of a bound function call - the SavedCodeBlock can be
     /// found using CalleeClosureOrCB on the previous call frame, but the
     /// SavedIP should have been saved by the bound call in the current frame.
-    SavedCodeBlock = 2,
+    SavedCodeBlock = -3,
     /// Number of JavaScript arguments passed to the callee excluding "this".
-    ArgCount = 3,
+    ArgCount = -4,
     /// The value of `new.target`. If constructing, it contains the callable of
     /// the constructor invoked by `new`, otherwise `undefined`.
-    NewTarget = 4,
+    NewTarget = -5,
     /// The JavaScript Function object representing the callee, or a CodeBlock *
     /// representing the callee when CallDirect is used. The latter is ONLY
     /// valid if it is known at compile time that the callee doesn't need to
     /// access its closure (i.e. no non-strict Arguments.callee, etc).
-    CalleeClosureOrCB = 5,
+    CalleeClosureOrCB = -6,
     /// The "this" argument.
-    ThisArg = 6,
+    ThisArg = -7,
     /// The first explicit argument.
-    FirstArg = 7,
+    FirstArg = -8,
 
     /// The number of registers the caller needs to allocate at the end of its
     /// frame in addition to its locals and the explicit argument registers. In
     /// other words, this includes all registers starting from \c
     /// CalleeClosureorCB up to the top of the frame.
-    CallerExtraRegistersAtEnd = CalleeClosureOrCB - PreviousFrame + 1,
+    CallerExtraRegistersAtEnd = PreviousFrame - CalleeClosureOrCB + 1,
 
     /// The number of additional registers the callee needs to allocate in the
     /// beginning of its frame.
-    CalleeExtraRegistersAtStart = DebugEnvironment - Scratch + 1,
+    CalleeExtraRegistersAtStart = Scratch - DebugEnvironment + 1,
   };
 
   /// Calculate the number of register slots needed for an outgoing call: it
@@ -143,7 +143,7 @@ struct StackFrameLayout {
   /// would overflow.
   static uint32_t callerOutgoingRegisters(uint32_t numArgsExcludingThis) {
     // The >= pattern is specially recognized as an overflow check.
-    uint32_t totalCount = FirstArg + numArgsExcludingThis;
+    uint32_t totalCount = CallerExtraRegistersAtEnd + numArgsExcludingThis + 1;
     return totalCount >= numArgsExcludingThis ? totalCount : UINT32_MAX;
   }
 };

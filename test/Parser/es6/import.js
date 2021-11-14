@@ -19,7 +19,7 @@ import 'foo.js';
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo.js"
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "attributes": [],
+// CHECK-NEXT:         "assertions": [],
 // CHECK-NEXT:         "importKind": "value"
 // CHECK-NEXT:       },
 
@@ -39,7 +39,7 @@ import * as Foo from 'foo.js';
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo.js"
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "attributes": [],
+// CHECK-NEXT:         "assertions": [],
 // CHECK-NEXT:         "importKind": "value"
 // CHECK-NEXT:       },
 
@@ -64,7 +64,7 @@ import { x as y } from 'foo.js';
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo.js"
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "attributes": [],
+// CHECK-NEXT:         "assertions": [],
 // CHECK-NEXT:         "importKind": "value"
 // CHECK-NEXT:       },
 
@@ -89,7 +89,7 @@ import { x } from 'foo.js';
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo.js"
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "attributes": [],
+// CHECK-NEXT:         "assertions": [],
 // CHECK-NEXT:         "importKind": "value"
 // CHECK-NEXT:       },
 
@@ -138,7 +138,7 @@ import { abc, xyz as def, ghi , } from 'foo.js';
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo.js"
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "attributes": [],
+// CHECK-NEXT:         "assertions": [],
 // CHECK-NEXT:         "importKind": "value"
 // CHECK-NEXT:       },
 
@@ -163,7 +163,7 @@ import { catch as valid } from 'foo.js';
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo.js"
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "attributes": [],
+// CHECK-NEXT:         "assertions": [],
 // CHECK-NEXT:         "importKind": "value"
 // CHECK-NEXT:       },
 
@@ -183,7 +183,7 @@ import defaultFoo from 'foo.js';
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo.js"
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "attributes": [],
+// CHECK-NEXT:         "assertions": [],
 // CHECK-NEXT:         "importKind": "value"
 // CHECK-NEXT:       },
 
@@ -210,7 +210,7 @@ import defaultBar, * as Bar from 'bar.js';
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "bar.js"
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "attributes": [],
+// CHECK-NEXT:         "assertions": [],
 // CHECK-NEXT:         "importKind": "value"
 // CHECK-NEXT:       }
 

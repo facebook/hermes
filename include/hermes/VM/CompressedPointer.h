@@ -37,23 +37,16 @@ class CompressedPointer {
   }
 
   GCCell *get(PointerBase *base) const {
-    return storageTypeToPointer(getStorageType(), base);
+    return storageTypeToPointer(ptr_, base);
   }
 
   GCCell *getNonNull(PointerBase *base) const {
 #ifdef HERMESVM_COMPRESSED_POINTERS
-    return reinterpret_cast<GCCell *>(
-        base->basedToPointerNonNull(getStorageType()));
+    return reinterpret_cast<GCCell *>(base->basedToPointerNonNull(ptr_));
 #else
     (void)base;
-    return getStorageType();
-#endif
-  }
-
-  /// Get the underlying StorageType representation. Should only be used by the
-  /// garbage collector.
-  StorageType getStorageType() const {
     return ptr_;
+#endif
   }
 
   void setInGC(CompressedPointer cp) {

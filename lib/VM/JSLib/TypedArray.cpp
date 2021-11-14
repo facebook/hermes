@@ -10,8 +10,8 @@
 /// ES7 22.2 TypedArray
 //===----------------------------------------------------------------------===//
 #include "JSLibInternal.h"
-#include "Sorting.h"
 #include "hermes/VM/JSArrayBuffer.h"
+#include "hermes/VM/JSLib/Sorting.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StringBuilder.h"
@@ -220,6 +220,77 @@ CallResult<HermesValue> typedArrayConstructorFromObject(
   return self.getHermesValue();
 }
 
+template <typename T, CellKind C>
+CallResult<HermesValue>
+typedArrayConstructor(void *, Runtime *runtime, NativeArgs args) {
+  // 1. If NewTarget is undefined, throw a TypeError exception.
+  if (!args.isConstructorCall()) {
+    return runtime->raiseTypeError(
+        "JSTypedArray() called in function context instead of constructor");
+  }
+  auto self = args.vmcastThis<JSTypedArray<T, C>>();
+  if (args.getArgCount() == 0) {
+    // ES6 22.2.1.1
+    if (JSTypedArray<T, C>::createBuffer(runtime, self, 0) ==
+        ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return self.getHermesValue();
+  }
+  auto firstArg = args.getArgHandle(0);
+  if (!firstArg->isObject()) {
+    return typedArrayConstructorFromLength<T, C>(runtime, self, firstArg);
+  }
+  if (auto otherTA = Handle<JSTypedArrayBase>::dyn_vmcast(firstArg)) {
+    return typedArrayConstructorFromTypedArray<T, C>(runtime, self, otherTA);
+  }
+  if (auto buffer = Handle<JSArrayBuffer>::dyn_vmcast(firstArg)) {
+    return typedArrayConstructorFromArrayBuffer<T, C>(
+        runtime, self, buffer, args.getArgHandle(1), args.getArgHandle(2));
+  }
+  return typedArrayConstructorFromObject<T, C>(runtime, self, firstArg);
+}
+
+template <typename T, CellKind C, NativeFunctionPtr Ctor>
+Handle<JSObject> createTypedArrayConstructor(Runtime *runtime) {
+  using TA = JSTypedArray<T, C>;
+  auto proto = TA::getPrototype(runtime);
+
+  auto cons = defineSystemConstructor(
+      runtime,
+      TA::getName(runtime),
+      Ctor,
+      proto,
+      Handle<JSObject>::vmcast(&runtime->typedArrayBaseConstructor),
+      3,
+      NativeConstructor::creatorFunction<TA>,
+      C);
+
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+  dpf.enumerable = 0;
+  dpf.configurable = 0;
+  dpf.writable = 0;
+
+  auto bytesPerElement =
+      runtime->makeHandle(HermesValue::encodeNumberValue(sizeof(T)));
+  // %TypedArray%.prototype.xxx.
+  defineProperty(
+      runtime,
+      proto,
+      Predefined::getSymbolID(Predefined::BYTES_PER_ELEMENT),
+      bytesPerElement,
+      dpf);
+
+  // %TypedArray%.xxx.
+  defineProperty(
+      runtime,
+      cons,
+      Predefined::getSymbolID(Predefined::BYTES_PER_ELEMENT),
+      bytesPerElement,
+      dpf);
+  return cons;
+}
+
 /// Implements the loop for map and filter. Template parameter \p MapOrFilter
 /// should be true for map, and false for filter.
 template <bool MapOrFilter>
@@ -318,7 +389,7 @@ class TypedArraySortModel : public SortModel {
   }
 
   // Compare elements at index a and at index b.
-  virtual CallResult<bool> less(uint32_t a, uint32_t b) override {
+  virtual CallResult<int> compare(uint32_t a, uint32_t b) override {
     GCScopeMarkerRAII gcMarker{gcScope_, gcMarker_};
     HermesValue aVal = JSObject::getOwnIndexed(*self_, runtime_, a);
     HermesValue bVal = JSObject::getOwnIndexed(*self_, runtime_, b);
@@ -328,9 +399,9 @@ class TypedArraySortModel : public SortModel {
       if (LLVM_UNLIKELY(a == 0) && LLVM_UNLIKELY(b == 0) &&
           LLVM_UNLIKELY(std::signbit(a)) && LLVM_UNLIKELY(!std::signbit(b))) {
         // -0 < +0, according to the spec.
-        return true;
+        return -1;
       }
-      return a < b;
+      return (a < b) ? -1 : (a > b ? 1 : 0);
     }
     assert(compareFn_ && "Cannot use this version if the compareFn is null");
     // ES7 22.2.3.26 2a.
@@ -350,7 +421,9 @@ class TypedArraySortModel : public SortModel {
     if (LLVM_UNLIKELY(!self_->attached(runtime_))) {
       return runtime_->raiseTypeError("Callback to sort() detached the array");
     }
-    return intRes->getNumber() < 0;
+    // Cannot return intRes's value directly because it can be NaN
+    auto res = intRes->getNumber();
+    return (res < 0) ? -1 : (res > 0 ? 1 : 0);
   }
 };
 
@@ -478,36 +551,14 @@ typedArrayBaseConstructor(void *, Runtime *runtime, NativeArgs) {
 
 /// @}
 
-template <typename T, CellKind C>
-CallResult<HermesValue>
-typedArrayConstructor(void *, Runtime *runtime, NativeArgs args) {
-  // 1. If NewTarget is undefined, throw a TypeError exception.
-  if (!args.isConstructorCall()) {
-    return runtime->raiseTypeError(
-        "JSTypedArray() called in function context instead of constructor");
+#define TYPED_ARRAY(name, type)                                    \
+  CallResult<HermesValue> name##ArrayConstructor(                  \
+      void *ctx, Runtime *rt, NativeArgs args) {                   \
+    return typedArrayConstructor<type, CellKind::name##ArrayKind>( \
+        ctx, rt, args);                                            \
   }
-  auto self = args.vmcastThis<JSTypedArray<T, C>>();
-  if (args.getArgCount() == 0) {
-    // ES6 22.2.1.1
-    if (JSTypedArray<T, C>::createBuffer(runtime, self, 0) ==
-        ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    return self.getHermesValue();
-  }
-  auto firstArg = args.getArgHandle(0);
-  if (!firstArg->isObject()) {
-    return typedArrayConstructorFromLength<T, C>(runtime, self, firstArg);
-  }
-  if (auto otherTA = Handle<JSTypedArrayBase>::dyn_vmcast(firstArg)) {
-    return typedArrayConstructorFromTypedArray<T, C>(runtime, self, otherTA);
-  }
-  if (auto buffer = Handle<JSArrayBuffer>::dyn_vmcast(firstArg)) {
-    return typedArrayConstructorFromArrayBuffer<T, C>(
-        runtime, self, buffer, args.getArgHandle(1), args.getArgHandle(2));
-  }
-  return typedArrayConstructorFromObject<T, C>(runtime, self, firstArg);
-}
+#include "hermes/VM/TypedArrays.def"
+#undef TYPED_ARRAY
 
 /// ES7 22.2.2.1
 CallResult<HermesValue>
@@ -1858,52 +1909,15 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
   return cons;
 }
 
-template <typename T, CellKind C>
-Handle<JSObject> createTypedArrayConstructor(Runtime *runtime) {
-  using TA = JSTypedArray<T, C>;
-  auto proto = TA::getPrototype(runtime);
-
-  auto cons = defineSystemConstructor(
-      runtime,
-      TA::getName(runtime),
-      typedArrayConstructor<T, C>,
-      proto,
-      Handle<JSObject>::vmcast(&runtime->typedArrayBaseConstructor),
-      3,
-      NativeConstructor::creatorFunction<TA>,
-      C);
-
-  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
-  dpf.enumerable = 0;
-  dpf.configurable = 0;
-  dpf.writable = 0;
-
-  auto bytesPerElement =
-      runtime->makeHandle(HermesValue::encodeNumberValue(sizeof(T)));
-  // %TypedArray%.prototype.xxx.
-  defineProperty(
-      runtime,
-      proto,
-      Predefined::getSymbolID(Predefined::BYTES_PER_ELEMENT),
-      bytesPerElement,
-      dpf);
-
-  // %TypedArray%.xxx.
-  defineProperty(
-      runtime,
-      cons,
-      Predefined::getSymbolID(Predefined::BYTES_PER_ELEMENT),
-      bytesPerElement,
-      dpf);
-  return cons;
-}
-
-/// Forward instantiations
-/// These prevent the implementations from needing to be in the header file
-#define TYPED_ARRAY(name, type) \
-  template Handle<JSObject>     \
-  createTypedArrayConstructor<type, CellKind::name##ArrayKind>(Runtime *);
+#define TYPED_ARRAY(name, type)                                       \
+  Handle<JSObject> create##name##ArrayConstructor(Runtime *runtime) { \
+    return createTypedArrayConstructor<                               \
+        type,                                                         \
+        CellKind::name##ArrayKind,                                    \
+        name##ArrayConstructor>(runtime);                             \
+  }
 #include "hermes/VM/TypedArrays.def"
+#undef TYPED_ARRAY
 
 } // namespace vm
 } // namespace hermes

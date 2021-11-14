@@ -7,7 +7,6 @@
 
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
 #include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
-#include "hermes/Support/OSCompat.h"
 #include "hermes/Support/RegExpSerialization.h"
 #include "hermes/VM/Predefined.h"
 
@@ -19,7 +18,6 @@
 
 using namespace hermes;
 
-using hermes::oscompat::to_string;
 using llvh::StringRef;
 
 namespace {
@@ -106,7 +104,7 @@ static void test1OptimizingStringStorage(
     llvh::ArrayRef<llvh::StringRef> strings,
     int line,
     bool expectSmaller = true) {
-  std::string info = " from test on line " + to_string(line);
+  std::string info = " from test on line " + std::to_string(line);
   std::unique_ptr<hbc::ConsecutiveStringStorage> baseConsecutiveStrStorage;
   hbc::ConsecutiveStringStorage storage(strings, true /* optimize */);
   auto index = storage.acquireStringTable();

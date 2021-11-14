@@ -18,6 +18,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 
 /**
  * This class represents the Java part of the Android Intl.DateTimeFormat implementation. The
@@ -138,6 +139,29 @@ public class DateTimeFormat {
     return options;
   }
 
+  public String normalizeTimeZoneName(String timeZoneName) {
+    StringBuilder normalized = new StringBuilder(timeZoneName.length());
+    int offset = 'a' - 'A';
+    for (int idx = 0; idx < timeZoneName.length(); idx++) {
+      char c = timeZoneName.charAt(idx);
+      if (c >= 'A' && c <= 'Z') {
+        normalized.append((char) (c + offset));
+      } else {
+        normalized.append(c);
+      }
+    }
+    return normalized.toString();
+  }
+
+  public String normalizeTimeZone(String timeZone) throws JSRangeErrorException {
+    for (String id : TimeZone.getAvailableIDs()) {
+      if (normalizeTimeZoneName(id).equals(normalizeTimeZoneName(timeZone))) {
+        return id;
+      }
+    }
+    throw new JSRangeErrorException("Invalid timezone name!");
+  }
+
   private Object DefaultTimeZone() throws JSRangeErrorException {
     return mPlatformDateTimeFormatter.getDefaultTimeZone(mResolvedLocaleObject);
   }
@@ -244,10 +268,7 @@ public class DateTimeFormat {
     if (JSObjects.isUndefined(timeZone)) {
       timeZone = DefaultTimeZone();
     } else {
-      String normalizedTimeZone = normalizeTimeZoneName(JSObjects.getJavaString(timeZone));
-      if (!isValidTimeZoneName(normalizedTimeZone)) {
-        throw new JSRangeErrorException("Invalid timezone name!");
-      }
+      timeZone = normalizeTimeZone(timeZone.toString());
     }
     mTimeZone = timeZone;
 
@@ -377,27 +398,6 @@ public class DateTimeFormat {
 
       mHourCycle = hc;
     }
-  }
-
-  private String normalizeTimeZoneName(String timeZoneName) {
-    // https://tc39.es/ecma402/#sec-case-sensitivity-and-case-mapping
-    // Note that we should convert only upper case translation in ASCII range.
-    StringBuilder normalized = new StringBuilder(timeZoneName.length());
-    int offset = 'a' - 'A';
-    for (int idx = 0; idx < timeZoneName.length(); idx++) {
-      char c = timeZoneName.charAt(idx);
-      if (c >= 'a' && c <= 'z') {
-        normalized.append((char) (c - offset));
-      } else {
-        normalized.append(c);
-      }
-    }
-
-    return normalized.toString();
-  }
-
-  private boolean isValidTimeZoneName(String timeZone) {
-    return mPlatformDateTimeFormatter.isValidTimeZone(timeZone);
   }
 
   @DoNotStrip

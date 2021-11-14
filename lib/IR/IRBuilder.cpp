@@ -11,11 +11,9 @@
 #include "hermes/AST/Context.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
-#include "hermes/Support/OSCompat.h"
 
 using namespace hermes;
 
-using hermes::oscompat::to_string;
 using llvh::cast;
 using llvh::dyn_cast;
 using llvh::isa;

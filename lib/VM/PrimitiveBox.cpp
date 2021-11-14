@@ -11,9 +11,6 @@
 #include "hermes/VM/Runtime-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 
-#include "llvh/Support/Debug.h"
-#define DEBUG_TYPE "serialize"
-
 namespace hermes {
 namespace vm {
 
@@ -38,25 +35,6 @@ void StringObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.setVTable(&JSString::vt.base);
   mb.addField(&self->primitiveValue_);
 }
-
-#ifdef HERMESVM_SERIALIZE
-JSString::JSString(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
-  d.readRelocation(&primitiveValue_, RelocationKind::GCPointer);
-}
-
-void StringObjectSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSString>());
-  const auto *self = static_cast<const JSString *>(cell);
-  s.writeRelocation(JSString::getPrimitiveString(self, s.getRuntime()));
-  s.endObject(cell);
-}
-
-void StringObjectDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::StringObjectKind && "Expected StringObject");
-  auto *cell = d.getRuntime()->makeAFixed<JSString>(d, &JSString::vt.base);
-  d.endObject(cell);
-}
-#endif
 
 CallResult<Handle<JSString>> JSString::create(
     Runtime *runtime,
@@ -207,28 +185,6 @@ void StringIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("iteratedString", &self->iteratedString_);
 }
 
-#ifdef HERMESVM_SERIALIZE
-JSStringIterator::JSStringIterator(Deserializer &d) : JSObject(d, &vt.base) {
-  d.readRelocation(&iteratedString_, RelocationKind::GCPointer);
-  nextIndex_ = d.readInt<uint32_t>();
-}
-
-void StringIteratorSerialize(Serializer &s, const GCCell *cell) {
-  auto *self = vmcast<const JSStringIterator>(cell);
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<JSStringIterator>());
-  s.writeRelocation(self->iteratedString_.get(s.getRuntime()));
-  s.writeInt<uint32_t>(self->nextIndex_);
-  s.endObject(cell);
-}
-
-void StringIteratorDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::StringIteratorKind && "Expected StringIterator");
-  auto *cell = d.getRuntime()->makeAFixed<JSStringIterator>(d);
-  d.endObject(cell);
-}
-#endif
-
 /// ES6.0 21.1.5.1 CreateStringIterator Abstract Operation
 PseudoHandle<JSStringIterator> JSStringIterator::create(
     Runtime *runtime,
@@ -323,28 +279,6 @@ void NumberObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.setVTable(&JSNumber::vt.base);
 }
 
-#ifdef HERMESVM_SERIALIZE
-JSNumber::JSNumber(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
-  HermesValue hv;
-  d.readHermesValue(&hv);
-  setPrimitiveNumber(hv.getNumber());
-}
-
-void NumberObjectSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSNumber>());
-  const auto *self = static_cast<const JSNumber *>(cell);
-  s.writeHermesValue(
-      HermesValue::encodeNumberValue(self->getPrimitiveNumber()));
-  s.endObject(cell);
-}
-
-void NumberObjectDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::NumberObjectKind && "Expected NumberObject");
-  auto *cell = d.getRuntime()->makeAFixed<JSNumber>(d, &JSNumber::vt.base);
-  d.endObject(cell);
-}
-#endif
-
 PseudoHandle<JSNumber> JSNumber::create(
     Runtime *runtime,
     double value,
@@ -375,26 +309,6 @@ void BooleanObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
   mb.setVTable(&JSBoolean::vt.base);
 }
-
-#ifdef HERMESVM_SERIALIZE
-JSBoolean::JSBoolean(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
-  setPrimitiveBoolean(d.readInt<bool>());
-}
-
-void BooleanObjectSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<JSBoolean>());
-  const auto *self = static_cast<const JSBoolean *>(cell);
-  s.writeInt(self->getPrimitiveBoolean());
-  s.endObject(cell);
-}
-
-void BooleanObjectDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::BooleanObjectKind && "Expected BooleanObject");
-  auto *cell = d.getRuntime()->makeAFixed<JSBoolean>(d, &JSBoolean::vt.base);
-  d.endObject(cell);
-}
-#endif
 
 PseudoHandle<JSBoolean>
 JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
@@ -427,25 +341,6 @@ void SymbolObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField(&self->primitiveValue_);
 }
 
-#ifdef HERMESVM_SERIALIZE
-JSSymbol::JSSymbol(Deserializer &d)
-    : JSObject(d, &vt.base),
-      primitiveValue_(SymbolID::unsafeCreate(d.readInt<SymbolID::RawType>())) {}
-
-void SymbolObjectSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSSymbol>());
-  const auto *self = static_cast<const JSSymbol *>(cell);
-  s.writeInt<uint32_t>(self->getPrimitiveSymbol().get().unsafeGetRaw());
-  s.endObject(cell);
-}
-
-void SymbolObjectDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::SymbolObjectKind && "Expected SymbolObject");
-  auto *cell = d.getRuntime()->makeAFixed<JSSymbol>(d);
-  d.endObject(cell);
-}
-#endif
-
 PseudoHandle<JSSymbol> JSSymbol::create(
     Runtime *runtime,
     SymbolID value,
@@ -459,5 +354,3 @@ PseudoHandle<JSSymbol> JSSymbol::create(
 
 } // namespace vm
 } // namespace hermes
-
-#undef DEBUG_TYPE

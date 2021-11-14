@@ -19,7 +19,7 @@ import 'foo.js' assert {};
 // CHECK-NEXT:         "type": "StringLiteral",
 // CHECK-NEXT:         "value": "foo.js"
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "attributes": [],
+// CHECK-NEXT:       "assertions": [],
 // CHECK-NEXT:       "importKind": "value"
 // CHECK-NEXT:     },
 
@@ -31,7 +31,7 @@ import 'foo.js' assert {type: 'json'};
 // CHECK-NEXT:         "type": "StringLiteral",
 // CHECK-NEXT:         "value": "foo.js"
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "attributes": [
+// CHECK-NEXT:       "assertions": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "type": "ImportAttribute",
 // CHECK-NEXT:           "key": {
@@ -55,7 +55,7 @@ import 'foo.js' assert {'type': 'json'};
 // CHECK-NEXT:         "type": "StringLiteral",
 // CHECK-NEXT:         "value": "foo.js"
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "attributes": [
+// CHECK-NEXT:       "assertions": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "type": "ImportAttribute",
 // CHECK-NEXT:           "key": {
@@ -79,7 +79,7 @@ import 'foo.js' assert {'type': 'json',};
 // CHECK-NEXT:         "type": "StringLiteral",
 // CHECK-NEXT:         "value": "foo.js"
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "attributes": [
+// CHECK-NEXT:       "assertions": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "type": "ImportAttribute",
 // CHECK-NEXT:           "key": {
@@ -103,7 +103,7 @@ import 'foo.js' assert {'type': 'json', 'foo': 'bar', };
 // CHECK-NEXT:         "type": "StringLiteral",
 // CHECK-NEXT:         "value": "foo.js"
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "attributes": [
+// CHECK-NEXT:       "assertions": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "type": "ImportAttribute",
 // CHECK-NEXT:           "key": {
@@ -138,7 +138,7 @@ import 'foo.js' assert {'type': 'json', 'foo': 'bar', };
 // CHECK-NEXT:         "type": "StringLiteral",
 // CHECK-NEXT:         "value": "foo.js"
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "attributes": [
+// CHECK-NEXT:       "assertions": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "type": "ImportAttribute",
 // CHECK-NEXT:           "key": {

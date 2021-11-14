@@ -107,7 +107,7 @@ Literal *hermes::evalUnaryOperator(
         case ValueKind::LiteralStringKind:
           return builder.getLiteralString("string");
         default:
-          llvm_unreachable("Invalid literal kind.");
+          break;
       }
       break;
 

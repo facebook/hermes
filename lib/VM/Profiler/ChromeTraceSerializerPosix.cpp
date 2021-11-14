@@ -101,7 +101,7 @@ void ChromeTraceSerializer::serializeThreads(JSONEmitter &json) const {
       json.emitKeyValue("pid", static_cast<double>(pid));
       // Use first event time for thread_name time.
       json.emitKeyValue("ts", getSerializedTimeStamp(firstEventTimeStamp_));
-      json.emitKeyValue("tid", oscompat::to_string(tid));
+      json.emitKeyValue("tid", std::to_string(tid));
 
       json.emitKey("args");
       json.openDict();
@@ -122,7 +122,7 @@ void ChromeTraceSerializer::serializeThreads(JSONEmitter &json) const {
       json.emitKeyValue("dur", 0.0);
       json.emitKeyValue("pid", static_cast<double>(pid));
       json.emitKeyValue("ts", getSerializedTimeStamp(firstEventTimeStamp_));
-      json.emitKeyValue("tid", oscompat::to_string(tid));
+      json.emitKeyValue("tid", std::to_string(tid));
 
       json.emitKey("args");
       json.openDict();
@@ -137,12 +137,12 @@ void ChromeTraceSerializer::serializeSampledEvents(JSONEmitter &json) const {
   const auto &sampledEvents = trace_.getSampledEvents();
   for (const ChromeSampleEvent &sample : sampledEvents) {
     json.openDict();
-    json.emitKeyValue("cpu", oscompat::to_string(sample.getCpu()));
+    json.emitKeyValue("cpu", std::to_string(sample.getCpu()));
     json.emitKeyValue("name", "");
     json.emitKeyValue("ts", getSerializedTimeStamp(sample.getTimeStamp()));
     json.emitKeyValue("pid", static_cast<double>(pid));
-    json.emitKeyValue("tid", oscompat::to_string(sample.getTid()));
-    json.emitKeyValue("weight", oscompat::to_string(sample.getWeight()));
+    json.emitKeyValue("tid", std::to_string(sample.getTid()));
+    json.emitKeyValue("weight", std::to_string(sample.getWeight()));
 
     double stackId = sample.getLeafNode()->getId();
     assert(stackId > 0 && "Invalid stack id");
@@ -155,7 +155,7 @@ void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
   trace_.getRoot().dfsWalk([&json](
                                const ChromeStackFrameNode &node,
                                const ChromeStackFrameNode *parent) {
-    json.emitKey(oscompat::to_string(node.getId()));
+    json.emitKey(std::to_string(node.getId()));
 
     if (!parent) {
       json.openDict();
@@ -212,8 +212,8 @@ void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
           os << "(" << fileNameStr << ":" << line << ":" << column << ")";
           // Still emit line/column entries for babel/metro/prepack
           // source map symbolication.
-          json.emitKeyValue("line", oscompat::to_string(line));
-          json.emitKeyValue("column", oscompat::to_string(column));
+          json.emitKeyValue("line", std::to_string(line));
+          json.emitKeyValue("column", std::to_string(column));
 
           // Emit function's start line/column so that can we symbolicate
           // name correctly.
@@ -222,19 +222,18 @@ void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
           if (funcStartSourceLocOpt.hasValue()) {
             json.emitKeyValue(
                 "funcLine",
-                oscompat::to_string(funcStartSourceLocOpt.getValue().line));
+                std::to_string(funcStartSourceLocOpt.getValue().line));
             json.emitKeyValue(
                 "funcColumn",
-                oscompat::to_string(funcStartSourceLocOpt.getValue().column));
+                std::to_string(funcStartSourceLocOpt.getValue().column));
           }
         } else {
           // Without debug info, emit virtual address for source map
           // symbolication.
           uint32_t funcVirtAddr =
               bcProvider->getVirtualOffsetForFunction(frame.jsFrame.functionId);
-          json.emitKeyValue("funcVirtAddr", oscompat::to_string(funcVirtAddr));
-          json.emitKeyValue(
-              "offset", oscompat::to_string(frame.jsFrame.offset));
+          json.emitKeyValue("funcVirtAddr", std::to_string(funcVirtAddr));
+          json.emitKeyValue("offset", std::to_string(frame.jsFrame.offset));
         }
         break;
       }
@@ -316,10 +315,9 @@ void ChromeTraceSerializer::serialize(llvh::raw_ostream &OS) const {
 
 /*static*/ std::string ChromeTraceSerializer::getSerializedTimeStamp(
     SamplingProfiler::TimeStampType timeStamp) {
-  return oscompat::to_string(
-      std::chrono::duration_cast<std::chrono::microseconds>(
-          timeStamp.time_since_epoch())
-          .count());
+  return std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(
+                            timeStamp.time_since_epoch())
+                            .count());
 }
 
 } // namespace vm

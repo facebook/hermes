@@ -79,67 +79,6 @@ CallResult<PseudoHandle<DictPropertyMap>> DictPropertyMap::create(
   return createPseudoHandle(cell);
 }
 
-#ifdef HERMESVM_SERIALIZE
-void DictPropertyMapSerialize(Serializer &s, const GCCell *cell) {
-  auto *self = vmcast<const DictPropertyMap>(cell);
-  s.writeInt<uint32_t>(self->descriptorCapacity_);
-  s.writeInt<uint32_t>(self->hashCapacity_);
-
-  s.writeInt<uint32_t>(self->numDescriptors_.load(std::memory_order_relaxed));
-  s.writeInt<uint32_t>(self->numProperties_);
-  s.writeInt<uint32_t>(self->deletedListHead_);
-  s.writeInt<uint32_t>(self->deletedListSize_);
-
-  // No pointer in any of the arrays. let's do a memcpy of the storage
-  // and write a size here for sanity check
-  size_t size = DictPropertyMap::allocationSize(
-                    self->descriptorCapacity_, self->hashCapacity_) -
-      sizeof(DictPropertyMap);
-  s.writeInt<uint32_t>(size);
-  s.writeData(self->getDescriptorPairs(), size);
-  s.endObject(cell);
-}
-
-void DictPropertyMapDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::DictPropertyMapKind && "Expected DictPropertyMap");
-  uint32_t descriptorCapacity = d.readInt<uint32_t>();
-  uint32_t hashCapacity = d.readInt<uint32_t>();
-
-  if (LLVM_UNLIKELY(
-          descriptorCapacity > DictPropertyMap::detail::kMaxCapacity)) {
-    hermes_fatal("deserialized descriptorCapacity exceeds limit");
-  }
-
-#ifndef NDEBUG
-  assert(
-      DictPropertyMap::calcHashCapacity(descriptorCapacity) == hashCapacity &&
-      "deserialized hash capacity does not match with calculated hashCapacity");
-#endif
-
-  auto *cell = d.getRuntime()->makeAVariable<DictPropertyMap>(
-      DictPropertyMap::allocationSize(descriptorCapacity, hashCapacity),
-      d.getRuntime(),
-      descriptorCapacity,
-      hashCapacity);
-
-  cell->numDescriptors_.store(d.readInt<uint32_t>(), std::memory_order_release);
-  cell->numProperties_ = d.readInt<uint32_t>();
-  cell->deletedListHead_ = d.readInt<uint32_t>();
-  cell->deletedListSize_ = d.readInt<uint32_t>();
-
-  // Read the whole storage into the trailing objects.
-  size_t size = d.readInt<uint32_t>();
-  assert(
-      DictPropertyMap::allocationSize(
-          cell->descriptorCapacity_, cell->hashCapacity_) ==
-          size + sizeof(DictPropertyMap) &&
-      "allocation size doesn't match");
-  d.readData(cell->getDescriptorPairs(), size);
-
-  d.endObject(cell);
-}
-#endif
-
 std::pair<bool, DictPropertyMap::HashPair *> DictPropertyMap::lookupEntryFor(
     DictPropertyMap *self,
     SymbolID symbolID) {

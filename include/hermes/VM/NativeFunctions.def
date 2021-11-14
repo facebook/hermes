@@ -16,18 +16,6 @@
 #define NATIVE_CONSTRUCTOR(func)
 #endif
 
-#ifndef NATIVE_FUNCTION_TYPED
-#define NATIVE_FUNCTION_TYPED(func, type)
-#endif
-
-#ifndef NATIVE_FUNCTION_TYPED_2
-#define NATIVE_FUNCTION_TYPED_2(func, type, type2)
-#endif
-
-#ifndef NATIVE_CONSTRUCTOR_TYPED
-#define NATIVE_CONSTRUCTOR_TYPED(classname, type, type2, func)
-#endif
-
 NATIVE_FUNCTION(arrayBufferConstructor)
 NATIVE_FUNCTION(arrayBufferIsView)
 
@@ -77,19 +65,15 @@ NATIVE_FUNCTION(dataViewPrototypeBuffer)
 NATIVE_FUNCTION(dataViewPrototypeByteLength)
 NATIVE_FUNCTION(dataViewPrototypeByteOffset)
 
-// NATIVE_FUNCTION_TYPED for template with one type.
-// NATIVE_FUNCTION_TYPED_2 for template with two types.
-#define TYPED_ARRAY(name, type)                     \
-  NATIVE_FUNCTION_TYPED(dataViewPrototypeGet, type) \
-  NATIVE_FUNCTION_TYPED_2(dataViewPrototypeSet, type, CellKind::name##ArrayKind)
+#define TYPED_ARRAY(name, type)               \
+  NATIVE_FUNCTION(dataViewPrototypeGet##name) \
+  NATIVE_FUNCTION(dataViewPrototypeSet##name)
 #define TYPED_ARRAY_NO_CLAMP
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY
 #undef TYPED_ARRAY_NO_CLAMP
 
-#define TYPED_ARRAY(name, type) \
-  NATIVE_FUNCTION_TYPED_2(      \
-      typedArrayConstructor, type, CellKind::name##ArrayKind)
+#define TYPED_ARRAY(name, type) NATIVE_FUNCTION(name##ArrayConstructor)
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY
 
@@ -219,6 +203,7 @@ NATIVE_FUNCTION(objectGetOwnPropertyDescriptors)
 NATIVE_FUNCTION(objectGetOwnPropertyNames)
 NATIVE_FUNCTION(objectGetOwnPropertySymbols)
 NATIVE_FUNCTION(objectGetPrototypeOf)
+NATIVE_FUNCTION(objectHasOwn)
 NATIVE_FUNCTION(objectIs)
 NATIVE_FUNCTION(objectIsExtensible)
 NATIVE_FUNCTION(objectIsFrozen)
@@ -404,16 +389,12 @@ NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSWeakSet>)
 NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSGeneratorFunction>)
 NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSAsyncFunction>)
 
-#define TYPED_ARRAY(name, type)  \
-  NATIVE_CONSTRUCTOR_TYPED(      \
-      JSTypedArray,              \
-      type,                      \
-      CellKind::name##ArrayKind, \
-      NativeConstructor::creatorFunction)
+#define TYPED_ARRAY(name, type) \
+  NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<name##Array>)
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY
 
-#ifdef HERMES_PLATFORM_INTL
+#ifdef HERMES_ENABLE_INTL
 // TODO T65916424: Consider how we can move these somewhere more modular.
 // I would prefer these be in the ::hermes::intl namespace, but the current
 // macros make that difficult.
@@ -448,6 +429,3 @@ NATIVE_FUNCTION(intlStringPrototypeToLocaleUpperCase)
 
 #undef NATIVE_FUNCTION
 #undef NATIVE_CONSTRUCTOR
-#undef NATIVE_FUNCTION_TYPED
-#undef NATIVE_FUNCTION_TYPED_2
-#undef NATIVE_CONSTRUCTOR_TYPED

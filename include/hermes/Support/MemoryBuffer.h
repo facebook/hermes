@@ -25,29 +25,6 @@ class MemoryBuffer : public Buffer {
   const llvh::MemoryBuffer *buffer_;
 };
 
-#ifdef HERMESVM_SERIALIZE
-// A Buffer which is a part of a shared MemoryBuffer. Maintains a shared_ptr to
-// the MemoryBuffer that holds the data. Used by deserialziation.
-class BufferFromSharedBuffer : public Buffer {
- public:
-  /// \param buffer underlying MemoryBuffer that holds the data.
-  BufferFromSharedBuffer(
-      const uint8_t *data,
-      size_t size,
-      std::shared_ptr<const llvh::MemoryBuffer> buffer)
-      : Buffer(data, size), buffer_(std::move(buffer)) {
-    assert(
-        data >= reinterpret_cast<const uint8_t *>(buffer_->getBufferStart()) &&
-        (data + size <
-         reinterpret_cast<const uint8_t *>(buffer_->getBufferEnd())) &&
-        "Not a valid subbuffer");
-  }
-
- private:
-  std::shared_ptr<const llvh::MemoryBuffer> buffer_;
-};
-#endif
-
 // Like MemoryBuffer, but owns the underlying llvh::MemoryBuffer
 class OwnedMemoryBuffer : public MemoryBuffer {
  public:

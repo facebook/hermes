@@ -14,7 +14,6 @@
 #include "hermes/AST/Context.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/Instrs.h"
-#include "hermes/Support/OSCompat.h"
 #include "hermes/Utils/Dumper.h"
 
 #include <set>
@@ -24,7 +23,6 @@
 
 using namespace hermes;
 
-using hermes::oscompat::to_string;
 using llvh::cast;
 using llvh::dyn_cast;
 
@@ -271,7 +269,7 @@ void BasicBlock::dump() {
 void BasicBlock::printAsOperand(llvh::raw_ostream &OS, bool) const {
   // Use the address of the basic block when LLVM prints the CFG.
   size_t Num = (size_t)this;
-  OS << "BB#" << to_string(Num);
+  OS << "BB#" << std::to_string(Num);
 }
 
 void Instruction::dump(llvh::raw_ostream &os) {

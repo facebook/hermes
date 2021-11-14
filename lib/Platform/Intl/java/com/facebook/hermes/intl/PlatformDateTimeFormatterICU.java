@@ -269,12 +269,6 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
 
   @RequiresApi(api = Build.VERSION_CODES.N)
   @Override
-  public boolean isValidTimeZone(String timeZone) {
-    return TimeZone.getTimeZone(timeZone).getID().equals(timeZone);
-  }
-
-  @RequiresApi(api = Build.VERSION_CODES.N)
-  @Override
   public String[] getAvailableLocales() {
     ArrayList<String> availableLocaleIds = new ArrayList<>();
 

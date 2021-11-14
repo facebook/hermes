@@ -15,8 +15,10 @@ namespace hermes {
 namespace vm {
 
 template <bool isConst>
-using ArgIteratorT = typename std::
-    conditional<isConst, const PinnedHermesValue *, PinnedHermesValue *>::type;
+using ArgIteratorT = std::reverse_iterator<typename std::conditional<
+    isConst,
+    const PinnedHermesValue *,
+    PinnedHermesValue *>::type>;
 using ArgIterator = ArgIteratorT<false>;
 using ConstArgIterator = ArgIteratorT<true>;
 

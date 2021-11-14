@@ -437,30 +437,6 @@ void CodeBlock::uninstallBreakpointAtOffset(
 
 #endif
 
-#ifdef HERMESVM_SERIALIZE
-void CodeBlock::serialize(Serializer &s) const {
-  // The identity of a CodeBlock is its functionId. Note: We don't
-  // serialize/deserialize PropertyCache as of now.
-  // TODO: serialize/deserialize PropertyCacheEntry.
-  s.writeInt<uint32_t>(getFunctionID());
-  s.endObject(this);
-}
-
-CodeBlock *CodeBlock::deserialize(
-    Deserializer &d,
-    RuntimeModule *runtimeModule) {
-  uint32_t index = d.readInt<uint32_t>();
-  auto *res = CodeBlock::createCodeBlock(
-      runtimeModule,
-      runtimeModule->getBytecode()->getFunctionHeader(index),
-      runtimeModule->getBytecode()->getBytecode(index),
-      index);
-  d.endObject(res);
-  return res;
-}
-
-#endif
-
 } // namespace vm
 } // namespace hermes
 

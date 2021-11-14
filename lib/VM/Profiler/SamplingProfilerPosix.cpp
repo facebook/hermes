@@ -255,7 +255,7 @@ uint32_t SamplingProfiler::walkRuntimeStack(
         registerDomain(module->getDomainForSamplingProfiler());
     } else if (
         auto *nativeFunction =
-            dyn_vmcast_or_null<NativeFunction>(frame.getCalleeClosure())) {
+            dyn_vmcast<NativeFunction>(frame.getCalleeClosureUnsafe())) {
       frameStorage.kind = vmisa<FinalizableNativeFunction>(nativeFunction)
           ? StackFrame::FrameKind::FinalizableNativeFunction
           : StackFrame::FrameKind::NativeFunction;

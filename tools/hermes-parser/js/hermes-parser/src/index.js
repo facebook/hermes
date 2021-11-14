@@ -4,33 +4,28 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
 'use strict';
 
+import type {Program as ESTreeProgram} from 'hermes-estree';
+import type {ParserOptions} from './ParserOptions';
+
 import * as HermesParser from './HermesParser';
 import HermesToBabelAdapter from './HermesToBabelAdapter';
 import HermesToESTreeAdapter from './HermesToESTreeAdapter';
-import {transformFromAstSync} from './HermesTransformer';
 
-type Options = {
-  allowReturnOutsideFunction?: boolean,
-  babel?: boolean,
-  flow?: 'all' | 'detect',
-  sourceFilename?: string,
-  sourceType?: 'module' | 'script' | 'unambiguous',
-  tokens?: boolean,
+const DEFAULTS = {
+  flow: 'detect',
 };
 
-type Program = Object;
-
-function getOptions(options: Options) {
+function getOptions(options?: ParserOptions = {...DEFAULTS}) {
   // Default to detecting whether to parse Flow syntax by the presence
   // of an @flow pragma.
   if (options.flow == null) {
-    options.flow = 'detect';
+    options.flow = DEFAULTS.flow;
   } else if (options.flow != 'all' && options.flow != 'detect') {
     throw new Error('flow option must be "all" or "detect"');
   }
@@ -55,13 +50,31 @@ function getOptions(options: Options) {
   return options;
 }
 
-function getAdapter(options: Options, code: string) {
+function getAdapter(options: ParserOptions, code: string) {
   return options.babel === true
     ? new HermesToBabelAdapter(options)
     : new HermesToESTreeAdapter(options, code);
 }
 
-export function parse(code: string, opts: Options = {}): Program {
+// $FlowExpectedError[unclear-type]
+type BabelProgram = Object;
+declare function parse(
+  code: string,
+  opts: {...ParserOptions, babel: true},
+): BabelProgram;
+// eslint-disable-next-line no-redeclare
+declare function parse(
+  code: string,
+  opts?:
+    | {...ParserOptions, babel?: false | void}
+    | {...ParserOptions, babel: false},
+): ESTreeProgram;
+
+// eslint-disable-next-line no-redeclare
+export function parse(
+  code: string,
+  opts?: ParserOptions,
+): BabelProgram | ESTreeProgram {
   const options = getOptions(opts);
   const ast = HermesParser.parse(code, options);
   const adapter = getAdapter(options, code);
@@ -69,5 +82,4 @@ export function parse(code: string, opts: Options = {}): Program {
   return adapter.transform(ast);
 }
 
-export {transformFromAstSync} from './HermesTransformer';
-export * as types from './types';
+export type {ParserOptions} from './ParserOptions';
