@@ -21,10 +21,6 @@ namespace vm {
 class IdentifierTable;
 
 class StringPrimitive;
-#ifdef HERMESVM_SERIALIZE
-class Serializer;
-class Deserializer;
-#endif
 
 namespace detail {
 
@@ -194,12 +190,6 @@ class IdentifierHashTable {
   /// as argument. This function can only be called when removing an
   /// exisiting identifier, and hence the str must not be a rope.
   void remove(const StringPrimitive *str);
-
-#ifdef HERMESVM_SERIALIZE
-  void serialize(Serializer &s);
-
-  void deserialize(Deserializer &d);
-#endif
 };
 
 } // namespace detail

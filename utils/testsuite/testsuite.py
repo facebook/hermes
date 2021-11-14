@@ -27,6 +27,7 @@ try:
         PERMANENT_SKIP_LIST,
         UNSUPPORTED_FEATURES,
         PERMANENT_UNSUPPORTED_FEATURES,
+        INTL_TESTS,
     )
 except ImportError:
     import esprima_test_runner as esprima
@@ -39,6 +40,7 @@ except ImportError:
         PERMANENT_SKIP_LIST,
         UNSUPPORTED_FEATURES,
         PERMANENT_UNSUPPORTED_FEATURES,
+        INTL_TESTS,
     )
 
 
@@ -491,7 +493,9 @@ ESPRIMA_TEST_STATUS_MAP = {
 }
 
 
-def runTest(filename, test_skiplist, keep_tmp, binary_path, hvm, esprima_runner, lazy):
+def runTest(
+    filename, test_skiplist, keep_tmp, binary_path, hvm, esprima_runner, lazy, test_intl
+):
     """
     Runs a single js test pointed by filename
     """
@@ -501,6 +505,9 @@ def runTest(filename, test_skiplist, keep_tmp, binary_path, hvm, esprima_runner,
 
     if lazy:
         skiplisted = skiplisted or fileInSkiplist(filename, LAZY_SKIP_LIST)
+
+    if not test_intl:
+        skiplisted = skiplisted or fileInSkiplist(filename, INTL_TESTS)
 
     skippedType = (
         TestFlag.TEST_PERMANENTLY_SKIPPED
@@ -920,6 +927,13 @@ def get_arg_parser():
         action="store_true",
         help="Force lazy evaluation",
     )
+    parser.add_argument(
+        "--test-intl",
+        dest="test_intl",
+        default=False,
+        action="store_true",
+        help="Run supported Intl tests.",
+    )
     return parser
 
 
@@ -938,6 +952,7 @@ def run(
     keep_tmp,
     show_all,
     lazy,
+    test_intl,
 ):
     global count
     global verbose
@@ -956,7 +971,11 @@ def run(
             print("Invalid path: " + path)
             sys.exit(1)
 
-    onlyfiles = [f for f in onlyfiles if f.endswith(".js") if not match or match in f]
+    def isTest(f):
+        isFixture = "test262" in f and f.endswith("_FIXTURE.js")
+        return f.endswith(".js") and not isFixture
+
+    onlyfiles = [f for f in onlyfiles if isTest(f) if not match or match in f]
 
     # Generates the source for the single provided file,
     # without an extra "use strict" directive prepended to the file.
@@ -1005,7 +1024,7 @@ def run(
     esprima_runner = esprima.EsprimaTestRunner(verbose)
 
     calls = makeCalls(
-        (test_skiplist, keep_tmp, binary_path, hvm, esprima_runner, lazy),
+        (test_skiplist, keep_tmp, binary_path, hvm, esprima_runner, lazy, test_intl),
         onlyfiles,
         rangeLeft,
         rangeRight,

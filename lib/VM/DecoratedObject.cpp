@@ -40,22 +40,6 @@ void DecoratedObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.setVTable(&DecoratedObject::vt.base);
 }
 
-#ifdef HERMESVM_SERIALIZE
-DecoratedObject::DecoratedObject(Deserializer &d) : JSObject(d, &vt.base) {}
-
-void DecoratedObjectSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<DecoratedObject>());
-  s.endObject(cell);
-}
-
-void DecoratedObjectDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::DecoratedObjectKind && "Expected DecoratedObject");
-  auto *cell = d.getRuntime()->makeAFixed<DecoratedObject>(d);
-  d.endObject(cell);
-}
-#endif
-
 // static
 PseudoHandle<DecoratedObject> DecoratedObject::create(
     Runtime *runtime,

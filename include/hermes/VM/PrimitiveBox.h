@@ -20,10 +20,6 @@ class JSString final : public JSObject {
 
   friend void StringObjectBuildMeta(const GCCell *, Metadata::Builder &);
 
-#ifdef HERMESVM_SERIALIZE
-  JSString(Deserializer &d, const VTable *vt);
-#endif
-
   // We need one more slot for the length property.
   static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
       Super::NAMED_PROPERTY_SLOTS + 1;
@@ -146,13 +142,6 @@ class JSStringIterator : public JSObject {
       Handle<JSStringIterator> self,
       Runtime *runtime);
 
-#ifdef HERMESVM_SERIALIZE
-  explicit JSStringIterator(Deserializer &d);
-
-  friend void StringIteratorSerialize(Serializer &s, const GCCell *cell);
-  friend void StringIteratorDeserialize(Deserializer &d, CellKind kind);
-#endif
-
   JSStringIterator(
       Runtime *runtime,
       Handle<JSObject> parent,
@@ -174,10 +163,6 @@ class JSStringIterator : public JSObject {
 class JSNumber final : public JSObject {
  public:
   static const ObjectVTable vt;
-
-#ifdef HERMESVM_SERIALIZE
-  JSNumber(Deserializer &d, const VTable *vt);
-#endif
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::NumberObjectKind;
@@ -215,10 +200,6 @@ class JSNumber final : public JSObject {
 class JSBoolean final : public JSObject {
  public:
   static const ObjectVTable vt;
-
-#ifdef HERMESVM_SERIALIZE
-  JSBoolean(Deserializer &d, const VTable *vt);
-#endif
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::BooleanObjectKind;
@@ -276,10 +257,6 @@ class JSSymbol final : public JSObject {
   PseudoHandle<SymbolID> getPrimitiveSymbol() const {
     return PseudoHandle<SymbolID>::create(primitiveValue_);
   }
-
-#ifdef HERMESVM_SERIALIZE
-  explicit JSSymbol(Deserializer &d);
-#endif
 
   JSSymbol(
       Runtime *runtime,

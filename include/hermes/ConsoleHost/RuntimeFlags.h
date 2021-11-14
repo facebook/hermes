@@ -103,26 +103,6 @@ static opt<bool> SampleProfiling(
     desc("Enable sampling profiler"),
     cat(RuntimeCategory));
 
-#ifdef HERMESVM_SERIALIZE
-static opt<std::string> SerializeAfterInitFile(
-    "serialize-after-init-file",
-    desc("Serialize vm status after initialization, output to file"),
-    init(""),
-    cat(RuntimeCategory));
-
-static opt<std::string> DeserializeFile(
-    "deserialize-file",
-    desc("Deserialize vm from a previous serialized file"),
-    init(""),
-    cat(RuntimeCategory));
-
-static opt<std::string> SerializeVMPath(
-    "serializevm-path",
-    desc("Path to serialize VM state to when serializeVM() is called"),
-    init(""),
-    cat(RuntimeCategory));
-#endif // HERMESVM_SERIALIZE
-
 static opt<MemorySize, false, MemorySizeParser> MaxHeapSize(
     "gc-max-heap",
     desc("Max heap size.  Format: <unsigned>{K,M,G}{iB}"),

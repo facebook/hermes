@@ -172,13 +172,6 @@ class JSProxy : public JSObject {
       OwnKeysFlags okFlags);
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  explicit JSProxy(Deserializer &d);
-
-  friend void ProxySerialize(Serializer &s, const GCCell *cell);
-  friend void ProxyDeserialize(Deserializer &d, CellKind kind);
-#endif
-
   JSProxy(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
       : JSObject(runtime, &vt.base, *parent, *clazz) {}
 

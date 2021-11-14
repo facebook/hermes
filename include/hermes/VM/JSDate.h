@@ -44,13 +44,6 @@ class JSDate final : public JSObject {
     primitiveValue_ = value;
   }
 
-#ifdef HERMESVM_SERIALIZE
-  explicit JSDate(Deserializer &d);
-
-  friend void DateSerialize(Serializer &s, const GCCell *cell);
-  friend void DateDeserialize(Deserializer &d, CellKind kind);
-#endif
-
   JSDate(
       Runtime *runtime,
       double value,

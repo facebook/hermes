@@ -101,6 +101,17 @@ class SourceErrorManager {
     }
   };
 
+  /// Result from looking for a line in an input buffer. Contains the buffer
+  /// id, 1-based line number and a reference to the line itself in the buffer.
+  struct LineCoord {
+    /// 1-based buffer id.
+    unsigned bufId = 0;
+    /// 1-based line number.
+    unsigned lineNo = 0;
+    /// A reference to the line itself, including the EOL, if present.
+    llvh::StringRef lineRef;
+  };
+
   struct ICoordTranslator {
     virtual ~ICoordTranslator() = 0;
     virtual void translate(SourceCoords &coords) = 0;
@@ -112,6 +123,29 @@ class SourceErrorManager {
   llvh::SourceMgr sm_{};
   SourceErrorOutputOptions outputOptions_;
   std::shared_ptr<ICoordTranslator> translator_{};
+
+  /// A cache to speed up finding locations. The assumption is that most lookups
+  /// happen either in the current or the next source line, which would happen
+  /// naturally if we are scanning the source left to right.
+  /// If there is a cache hit in the current line, there is no lookup at all -
+  /// just quick arithmetic to calculate the column offset. If the hit is in
+  /// the next line, we "slide" the cache - the next line becomes the current
+  /// one, and we fetch a reference to the next line, which is also an O(1)
+  /// operation.
+  struct FindLineCache {
+    /// 1-based buffer ID. 0 means cache is invalid.
+    unsigned bufferId = 0;
+    /// 1-based line number.
+    unsigned lineNo = 0;
+    /// The last found line.
+    llvh::StringRef lineRef{};
+    /// The following line.
+    llvh::StringRef nextLineRef{};
+
+    /// Fill a SourceCoords instance under the assumption that it is a verified
+    /// cache hit.
+    void fillCoords(SMLoc loc, SourceCoords &result);
+  } findLineCache_;
 
   /// Virtual buffers are tagged with the higest bit.
   static constexpr unsigned kVirtualBufIdTag = 1u
@@ -362,6 +396,17 @@ class SourceErrorManager {
 
   /// Find the bufferId of the specified location \p loc.
   uint32_t findBufferIdForLoc(SMLoc loc) const;
+
+  /// Find the buffer ID and line of the specified location \p loc.
+  /// \return the buffer ID and line of the location, or None on error.
+  llvh::Optional<LineCoord> findBufferAndLine(SMLoc loc) const;
+
+  /// Return a reference to the specified (1-based) line.
+  /// If the line is greater than the last line in the buffer, an empty
+  /// reference is returned.
+  llvh::StringRef getLineRef(unsigned bufId, unsigned line) const {
+    return sm_.getLineRef(line, bufId);
+  }
 
   /// Find the bufferId, line and column of the specified location \p loc.
   /// \return true on success, false if could not be found, in which case

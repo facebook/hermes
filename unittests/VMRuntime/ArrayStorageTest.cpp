@@ -129,7 +129,7 @@ TEST_F(ArrayStorageTest, AllowTrimming) {
 
 using ArrayStorageBigHeapTest = LargeHeapRuntimeTestFixture;
 
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
+#ifndef HERMESVM_GC_MALLOC
 // The following test allocates gigantic arrays on non-NCGen GCs.
 TEST_F(ArrayStorageBigHeapTest, AllocMaxSizeArray) {
   // Should succeed, allocations up to maxElements are allowed.

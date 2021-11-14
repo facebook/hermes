@@ -11,10 +11,8 @@
 #include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Support/JenkinsHash.h"
-#include "hermes/Support/OSCompat.h"
 #include "hermes/Support/RegExpSerialization.h"
 #include "hermes/Support/SHA1.h"
-#include "hermes/Support/UTF8.h"
 
 #include <cstdint>
 #include <iomanip>
@@ -25,7 +23,6 @@
 #include "llvh/Support/ErrorHandling.h"
 
 using namespace hermes::inst;
-using hermes::oscompat::to_string;
 using SLG = hermes::hbc::SerializedLiteralGenerator;
 
 namespace hermes {
@@ -63,31 +60,31 @@ std::string SLPToString(SLG::TagType tag, const unsigned char *buff, int *ind) {
       uint8_t val = llvh::support::endian::read<uint8_t, 1>(
           buff + *ind, llvh::support::endianness::little);
       *ind += 1;
-      return std::string("[String ") + to_string(val) + rBracket;
+      return std::string("[String ") + std::to_string(val) + rBracket;
     }
     case SLG::ShortStringTag: {
       uint16_t val = llvh::support::endian::read<uint16_t, 1>(
           buff + *ind, llvh::support::endianness::little);
       *ind += 2;
-      return std::string("[String ") + to_string(val) + rBracket;
+      return std::string("[String ") + std::to_string(val) + rBracket;
     }
     case SLG::LongStringTag: {
       uint32_t val = llvh::support::endian::read<uint32_t, 1>(
           buff + *ind, llvh::support::endianness::little);
       *ind += 4;
-      return std::string("[String ") + to_string(val) + rBracket;
+      return std::string("[String ") + std::to_string(val) + rBracket;
     }
     case SLG::NumberTag: {
       double val = llvh::support::endian::read<double, 1>(
           buff + *ind, llvh::support::endianness::little);
       *ind += 8;
-      return std::string("[double ") + to_string(val) + rBracket;
+      return std::string("[double ") + std::to_string(val) + rBracket;
     }
     case SLG::IntegerTag: {
       uint32_t val = llvh::support::endian::read<uint32_t, 1>(
           buff + *ind, llvh::support::endianness::little);
       *ind += 4;
-      return std::string("[int ") + to_string(val) + rBracket;
+      return std::string("[int ") + std::to_string(val) + rBracket;
     }
     case SLG::NullTag:
       return "null";

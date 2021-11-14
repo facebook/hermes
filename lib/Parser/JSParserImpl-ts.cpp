@@ -271,10 +271,8 @@ Optional<ESTree::Node *> JSParserImpl::parseTSFunctionOrParenthesizedType(
     auto optParam = parseTSFunctionTypeParam();
     if (!optParam)
       return None;
-    ESTree::IdentifierNode *ident = nullptr;
     if (auto *param =
             llvh::dyn_cast<ESTree::TSParameterPropertyNode>(*optParam)) {
-      ident = llvh::cast<ESTree::IdentifierNode>(param->_parameter);
       if (param &&
           (param->_accessibility || param->_export || param->_readonly ||
            param->_static)) {

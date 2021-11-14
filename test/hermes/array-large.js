@@ -13,7 +13,7 @@ print("Array.prototype.join with a large array should throw RangeError")
 
 var v = [];
 // This number is chosen carefully to be 1 more than the max elements that
-// JSArray supports with GenGC and MallocGC (NCGen has a smaller max).
+// JSArray supports with MallocGC.
 v.length = 4294966272 + 1;
 
 try {

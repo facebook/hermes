@@ -443,9 +443,9 @@ double makeTime(double hour, double min, double sec, double ms) {
       !std::isfinite(ms)) {
     return std::numeric_limits<double>::quiet_NaN();
   }
-  double h = oscompat::trunc(hour);
-  double m = oscompat::trunc(min);
-  double s = oscompat::trunc(sec);
+  double h = std::trunc(hour);
+  double m = std::trunc(min);
+  double s = std::trunc(sec);
   double milli = trunc(ms);
   return h * MS_PER_HOUR + m * MS_PER_MINUTE + s * MS_PER_SECOND + milli;
 }
@@ -457,9 +457,9 @@ double makeDay(double year, double month, double date) {
   if (!std::isfinite(year) || !std::isfinite(month) || !std::isfinite(date)) {
     return std::numeric_limits<double>::quiet_NaN();
   }
-  double y = oscompat::trunc(year);
-  double m = oscompat::trunc(month);
-  double dt = oscompat::trunc(date);
+  double y = std::trunc(year);
+  double m = std::trunc(month);
+  double dt = std::trunc(date);
 
   // Actual year and month, accounting for the month being greater than 11.
   // Need to do this because it changes the leap year calculations.
@@ -498,7 +498,7 @@ double timeClip(double t) {
   }
 
   // Truncate and make -0 into +0.
-  return oscompat::trunc(t) + 0;
+  return std::trunc(t) + 0;
 }
 
 //===----------------------------------------------------------------------===//

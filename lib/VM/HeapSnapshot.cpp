@@ -9,13 +9,11 @@
 
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/JSONEmitter.h"
-#include "hermes/Support/OSCompat.h"
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/StackTracesTree.h"
 #include "hermes/VM/StringPrimitive.h"
 
-#include <sstream>
 #include <type_traits>
 
 namespace hermes {
@@ -465,7 +463,7 @@ void ChromeSamplingMemoryProfile::emitNode(
   json_.emitKey("callFrame");
   json_.openDict();
   json_.emitKeyValue("functionName", strings[node->name]);
-  json_.emitKeyValue("scriptId", oscompat::to_string(node->sourceLoc.scriptID));
+  json_.emitKeyValue("scriptId", std::to_string(node->sourceLoc.scriptID));
   json_.emitKeyValue("url", strings[node->sourceLoc.scriptName]);
   // For the sampling memory profiler, lines should be 0-based. The source
   // location is 1-based, so subtract 1 here.
@@ -514,10 +512,10 @@ std::string converter(const char *name) {
   return std::string(name);
 }
 std::string converter(unsigned index) {
-  return oscompat::to_string(index);
+  return std::to_string(index);
 }
 std::string converter(int index) {
-  return oscompat::to_string(index);
+  return std::to_string(index);
 }
 std::string converter(const StringPrimitive *str) {
   llvh::SmallVector<char16_t, 16> buf;

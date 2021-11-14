@@ -39,6 +39,12 @@ The build system has now been generated in the `build` directory. To perform the
 
     cd build && ninja
 
+Note that you can also pass an argument to specify a customized directory:
+
+    hermes/utils/build/configure.py ~/out_of_tree_build
+    cd out_of_tree_build && ninja
+
+
 ## Release Build
 
 The above instructions create an unoptimized debug build. The `--distribute` flag will enable a release build, in the `build_release` directory. Example:
@@ -72,6 +78,21 @@ The primary binary is the `hermes` tool, which will be found at `build/bin/herme
 To run the Hermes test suite:
 
     ninja check-hermes
+
+To run Hermes against the test262 suite, you need to have a Hermes binary built
+already and a clone of the [test262 repo](https://github.com/tc39/test262/):
+
+    hermes/utils/testsuite/run_testsuite.py -b <hermes_build> <test262>
+
+E.g. if we configured at `~/hermes_build` (i.e. `~/hermes_build/bin/hermes` is
+an executable) and cloned test262 at `~/test262`, then perform:
+
+    hermes/utils/testsuite/run_testsuite.py -b ~/hermes_build ~/test262/test
+
+Note that you can also only test against part of a test suite, e.g. to run the
+Intl402 subset of the test262, you can specifiy a subdir:
+
+    hermes/utils/testsuite/run_testsuite.py -b ~/hermes_build ~/test262/test/intl402
 
 ## Formatting Code
 

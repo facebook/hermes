@@ -18,12 +18,6 @@
 #include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/SimpleDiagHandler.h"
 
-#ifdef HERMESVM_SERIALIZE
-#include "hermes/VM/Serializer.h"
-
-using hermes::vm::Serializer;
-#endif
-
 namespace hermes {
 namespace hbc {
 
@@ -244,37 +238,6 @@ BCProviderLazy::BCProviderLazy(hbc::BytecodeFunction *bytecodeFunction)
   // Lazy module should always contain one function to begin with.
   functionCount_ = 1;
 }
-
-#ifdef HERMESVM_SERIALIZE
-void BCProviderFromSrc::serialize(Serializer &s) const {
-  // Serialize/deserialize can't handle lazy compilation as of now. Do a
-  // check to make sure there is no lazy BytecodeFunction in module_.
-  for (uint32_t i = 0; i < module_->getNumFunctions(); i++) {
-    if (isFunctionLazy(i)) {
-      hermes_fatal("Cannot serialize lazy functions");
-    }
-  }
-  // Serialize the bytecode. Call BytecodeSerializer to do the heavy lifting.
-  // Write to a SmallVector first, so we can know the total bytes and write it
-  // first and make life easier for Deserializer. This is going to be slower
-  // than writing to Serializer directly but it's OK to slow down
-  // serialization if it speeds up Deserializer.
-  auto bytecodeGenOpts = BytecodeGenerationOptions::defaults();
-  llvh::SmallVector<char, 0> bytecodeVector;
-  llvh::raw_svector_ostream OS(bytecodeVector);
-  BytecodeSerializer BS{OS, bytecodeGenOpts};
-  BS.serialize(*module_, getSourceHash());
-  size_t size = bytecodeVector.size();
-  s.writeInt<size_t>(size);
-  s.pad();
-  s.writeData(bytecodeVector.data(), size);
-  s.endObject(this);
-}
-
-void BCProviderLazy::serialize(Serializer &s) const {
-  hermes_fatal("Cannot serialize lazy BCProvider");
-}
-#endif // HERMESVM_SERIALIZE
 
 } // namespace hbc
 } // namespace hermes

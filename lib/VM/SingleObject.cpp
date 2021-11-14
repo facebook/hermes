@@ -24,35 +24,5 @@ void JSONBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.setVTable(&JSJSON::vt.base);
 }
 
-#ifdef HERMESVM_SERIALIZE
-template <CellKind kind>
-SingleObject<kind>::SingleObject(Deserializer &d, const VTable *vt)
-    : JSObject(d, vt) {}
-
-void MathSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<SingleObject<CellKind::MathKind>>());
-  s.endObject(cell);
-}
-
-void JSONSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<SingleObject<CellKind::JSONKind>>());
-  s.endObject(cell);
-}
-
-void JSONDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::JSONKind && "Expected JSON");
-  auto *cell = d.getRuntime()->makeAFixed<JSJSON>(d, &JSJSON::vt.base);
-  d.endObject(cell);
-}
-
-void MathDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::MathKind && "Expected Math");
-  auto *cell = d.getRuntime()->makeAFixed<JSMath>(d, &JSMath::vt.base);
-  d.endObject(cell);
-}
-#endif
-
 } // namespace vm
 } // namespace hermes

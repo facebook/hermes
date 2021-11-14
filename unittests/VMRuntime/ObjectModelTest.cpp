@@ -898,7 +898,7 @@ TEST_F(ObjectModelTest, UpdatePropertyFlagsWithoutTransitionsTest) {
   EXPECT_PROPERTY_FLAG(FALSE, obj, *cHnd, configurable);
 }
 
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
+#ifndef HERMESVM_GC_MALLOC
 struct ObjectModelLargeHeapTest : public RuntimeTestFixtureBase {
   ObjectModelLargeHeapTest()
       : RuntimeTestFixtureBase(

@@ -162,7 +162,6 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
   StringID resultID = 2;
 
   const unsigned FRAME_SIZE = 16;
-  const unsigned LAST_REG = FRAME_SIZE - 1;
   BytecodeModuleGenerator BMG;
   auto BFG = BytecodeFunctionGenerator::create(BMG, FRAME_SIZE);
 
@@ -172,9 +171,9 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
   BFG->emitGetGlobalObject(0);
   BFG->emitGetById(1, 0, 1, printID);
   BFG->emitLoadConstUndefined(3);
-  BFG->emitMov(LAST_REG - StackFrameLayout::ThisArg, 3);
-  BFG->emitLoadConstString(LAST_REG - StackFrameLayout::FirstArg, resultID);
-  BFG->emitMov(LAST_REG - StackFrameLayout::FirstArg - 1, 2);
+  BFG->emitMov(FRAME_SIZE + StackFrameLayout::ThisArg, 3);
+  BFG->emitLoadConstString(FRAME_SIZE + StackFrameLayout::FirstArg, resultID);
+  BFG->emitMov(FRAME_SIZE + StackFrameLayout::FirstArg - 1, 2);
   BFG->emitCall(3, 1, 3);
   BFG->emitRet(2);
   BFG->setHighestReadCacheIndex(1);
@@ -305,7 +304,6 @@ L1:
   std::map<int, int> labels{};
   std::map<int, int> jmps{};
   const unsigned FRAME_SIZE = 16;
-  const unsigned LAST_REG = FRAME_SIZE - 1;
 
   auto emit = [&](BytecodeFunctionGenerator &builder, int pass) {
     builder.emitLoadParam(0, 1);
@@ -313,8 +311,8 @@ L1:
     JCOND(builder.emitJGreater, L(1), 0, 1);
     builder.emitRet(0);
     LABEL(L(1), builder.emitLoadConstDoubleDirect(1, 1));
-    builder.emitLoadConstUndefined(LAST_REG - StackFrameLayout::ThisArg);
-    builder.emitSub(LAST_REG - StackFrameLayout::FirstArg, 0, 1);
+    builder.emitLoadConstUndefined(FRAME_SIZE + StackFrameLayout::ThisArg);
+    builder.emitSub(FRAME_SIZE + StackFrameLayout::FirstArg, 0, 1);
     builder.emitGetGlobalObject(1);
     builder.emitGetById(1, 1, 0, factID);
     builder.emitCall(1, 1, 2);

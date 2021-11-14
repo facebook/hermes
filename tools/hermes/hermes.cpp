@@ -127,11 +127,6 @@ static int executeHBCBytecodeFromCL(
   options.forceGCBeforeStats = cl::GCBeforeStats;
   options.stabilizeInstructionCount = cl::StableInstructionCount;
   options.sampleProfiling = cl::SampleProfiling;
-#ifdef HERMESVM_SERIALIZE
-  options.SerializeAfterInitFile = cl::SerializeAfterInitFile;
-  options.DeserializeFile = cl::DeserializeFile;
-  options.SerializeVMPath = cl::SerializeVMPath;
-#endif
   options.heapTimeline = cl::HeapTimeline;
 
   bool success;

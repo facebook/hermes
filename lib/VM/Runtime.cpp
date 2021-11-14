@@ -204,11 +204,11 @@ Runtime::Runtime(
   registerStackEnd_ = registerStackStart_ + maxNumRegisters;
   if (shouldRandomizeMemoryLayout_) {
     const unsigned bytesOff = std::random_device()() % oscompat::page_size();
-    registerStackEnd_ -= bytesOff / sizeof(PinnedHermesValue);
+    registerStackStart_ += bytesOff / sizeof(PinnedHermesValue);
     assert(
         registerStackEnd_ >= registerStackStart_ && "register stack too small");
   }
-  stackPointer_ = registerStackEnd_;
+  stackPointer_ = registerStackStart_;
 
   // Setup the "root" stack frame.
   setCurrentFrameToTopOfStack();
@@ -216,28 +216,6 @@ Runtime::Runtime(
   allocStack(
       StackFrameLayout::CalleeExtraRegistersAtStart,
       HermesValue::encodeUndefinedValue());
-
-#ifdef HERMESVM_SERIALIZE
-  if (runtimeConfig.getDeserializeFile()) {
-    assert(
-        runtimeConfig.getExternalPointersVectorCallBack() &&
-        "missing function pointer to map external pointers.");
-    // If there is a serialized heap file available, use that to initialize
-    // Runtime instead of re-creating the Runtime.
-    Deserializer d(
-        runtimeConfig.getDeserializeFile(),
-        this,
-        runtimeConfig.getExternalPointersVectorCallBack());
-    deserializeImpl(d, runtimeConfig.getGCConfig().getAllocInYoung());
-
-    LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
-
-    if (runtimeConfig.getEnableSampleProfiling())
-      samplingProfiler = std::make_unique<SamplingProfiler>(this);
-
-    return;
-  }
-#endif // HERMESVM_SERIALIZE
 
   // Initialize Predefined Strings.
   // This function does not do any allocations.
@@ -309,19 +287,6 @@ Runtime::Runtime(
       PropOpFlags().plusThrowOnError()));
 
   symbolRegistry_.init(this);
-
-#ifdef HERMESVM_SERIALIZE
-  if (runtimeConfig.getSerializeAfterInitFile()) {
-    assert(
-        runtimeConfig.getExternalPointersVectorCallBack() &&
-        "missing function pointer to map external pointers.");
-    Serializer s(
-        *runtimeConfig.getSerializeAfterInitFile(),
-        this,
-        runtimeConfig.getExternalPointersVectorCallBack());
-    serialize(s);
-  }
-#endif // HERMESVM_SERIALIZE
 
   // BB Profiler need to be ready before running internal bytecode.
 #ifdef HERMESVM_PROFILER_BB
@@ -414,7 +379,7 @@ void Runtime::markRoots(
   {
     MarkRootsPhaseTimer timer(this, RootAcceptor::Section::Registers);
     acceptor.beginRootSection(RootAcceptor::Section::Registers);
-    for (auto *p = stackPointer_, *e = registerStackEnd_; p != e; ++p)
+    for (auto *p = registerStackStart_, *e = stackPointer_; p != e; ++p)
       acceptor.accept(*p);
     acceptor.endRootSection();
   }
@@ -892,26 +857,6 @@ CallResult<HermesValue> Runtime::runBytecode(
     Handle<> thisArg) {
   clearThrownValue();
 
-#ifdef HERMESVM_SERIALIZE
-  // If we are constructed from serialize data with a ClosureFunction, execute
-  // the function.
-  if (!serializeClosure.isUndefined()) {
-    ScopedNativeCallFrame newFrame{
-        this,
-        0,
-        serializeClosure,
-        HermesValue::encodeUndefinedValue(),
-        *thisArg};
-    if (LLVM_UNLIKELY(newFrame.overflowed()))
-      return raiseStackOverflow(StackOverflowKind::NativeStack);
-    return shouldRandomizeMemoryLayout_
-        ? interpretFunctionWithRandomStack(
-              this, vmcast<JSFunction>(serializeClosure)->getCodeBlock())
-        : interpretFunction(
-              vmcast<JSFunction>(serializeClosure)->getCodeBlock());
-  }
-#endif
-
   auto globalFunctionIndex = bytecode->getGlobalFunctionIndex();
 
   if (bytecode->getBytecodeOptions().staticBuiltins && !builtinsFrozen_) {
@@ -1156,7 +1101,7 @@ llvh::Optional<Runtime::StackFrameInfo> Runtime::stackFrameInfoByIndex(
 /// call.
 uint32_t Runtime::calcFrameOffset(ConstStackFrameIterator it) const {
   assert(it != getStackFrames().end() && "invalid frame");
-  return registerStackEnd_ - it->ptr();
+  return it->ptr() - registerStackStart_;
 }
 
 /// \return the offset between the location of the current frame and the
@@ -1721,9 +1666,10 @@ void Runtime::allocStack(uint32_t count, HermesValue initValue) {
   // constants are propagated into initValue, which enables clang to use
   // memset_pattern_16. This ends up being a significant loss as it is an
   // indirect call.
+  auto *oldStackPointer = stackPointer_;
   allocUninitializedStack(count);
   // Initialize the new registers.
-  std::uninitialized_fill_n(stackPointer_, count, initValue);
+  std::uninitialized_fill_n(oldStackPointer, count, initValue);
 }
 
 void Runtime::dumpCallFrames(llvh::raw_ostream &OS) {
@@ -1732,7 +1678,7 @@ void Runtime::dumpCallFrames(llvh::raw_ostream &OS) {
   unsigned i = 0;
   for (StackFramePtr sf : getStackFrames()) {
     OS << i++ << " ";
-    if (auto *closure = sf.getCalleeClosure()) {
+    if (auto *closure = dyn_vmcast<Callable>(sf.getCalleeClosureOrCBRef())) {
       OS << cellKindStr(closure->getKind()) << " ";
     }
     if (auto *cb = sf.getCalleeCodeBlock()) {
@@ -1827,7 +1773,7 @@ void Runtime::crashWriteCallStack(JSONEmitter &json) {
   for (auto frame : getStackFrames()) {
     json.openDict();
     json.emitKeyValue(
-        "StackFrameRegOffs", (uint32_t)(registerStackEnd_ - frame.ptr()));
+        "StackFrameRegOffs", (uint32_t)(frame.ptr() - registerStackStart_));
     auto codeBlock = frame.getSavedCodeBlock();
     if (codeBlock) {
       json.emitKeyValue("FunctionID", codeBlock->getFunctionID());
@@ -1883,8 +1829,8 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
             blockSourceCode.getValue(), bytecodeOffs);
         if (sourceLocation) {
           auto file = debugInfo->getFilenameByID(sourceLocation->filenameId);
-          res += ": " + file + ":" + oscompat::to_string(sourceLocation->line) +
-              ":" + oscompat::to_string(sourceLocation->column);
+          res += ": " + file + ":" + std::to_string(sourceLocation->line) +
+              ":" + std::to_string(sourceLocation->column);
         }
       }
       res += "\n";
@@ -1986,285 +1932,6 @@ HiddenClass *Runtime::resolveHiddenClassId(ClassId classId) {
   return vmcast<HiddenClass>(hcHermesVal);
 }
 
-#endif
-
-#ifdef HERMESVM_SERIALIZE
-void Runtime::serialize(Serializer &s) {
-  // Full GC here.
-  getHeap().collect("serialize");
-
-  s.writeCurrentOffset();
-  getHeap().serializeWeakRefs(s);
-
-  s.writeCurrentOffset();
-  serializeIdentifierTable(s);
-
-  s.writeCurrentOffset();
-  symbolRegistry_.serialize(s);
-
-  s.writeCurrentOffset();
-  serializeRuntimeFields(s);
-
-  s.writeCurrentOffset();
-  getHeap().serializeHeap(s);
-
-  s.writeCurrentOffset();
-  getHeap().getIDTracker().serialize(s);
-
-  s.writeCurrentOffset();
-  getHeap().getAllocationLocationTracker().serialize(s);
-
-  // In the end record the size of the object table and flush the string
-  // buffers, so the deserializer can read it. TODO: perhaps seek to the
-  // beginning and record there.
-  s.writeCurrentOffset();
-  s.writeEpilogue();
-}
-
-void Runtime::serializeIdentifierTable(Serializer &s) {
-  identifierTable_.serialize(s);
-}
-
-void Runtime::serializeRuntimeFields(Serializer &s) {
-// Serialize all HermesValue
-#define RUNTIME_HV_FIELD(name) s.writeHermesValue(name);
-#define RUNTIME_HV_FIELD_PROTOTYPE(name) RUNTIME_HV_FIELD(name)
-#define RUNTIME_HV_FIELD_INSTANCE(name) RUNTIME_HV_FIELD(name)
-#define RUNTIME_HV_FIELD_RUNTIMEMODULE(name) RUNTIME_HV_FIELD(name)
-#include "hermes/VM/RuntimeHermesValueFields.def"
-#undef RUNTIME_HV_FIELD
-
-  // Do not Serialize any raw pointers of HermesValue fields. Get those pointers
-  // after relocation finishes.
-
-  // RegExpMatch regExpLastMatch{};
-  // Ignore for now since we only serialize/deserialize after global object
-  // initialization.
-  // TODO: serialize/deserialize this to be able to serialize/deserialize after
-  // user code.
-
-  // TODO: ignore all fields from runtimeConfig, about frames, stacks etc.
-  // come back later to check again from heap_ to nativeCallFrameDepth_.
-
-  s.writeRelocation(emptyCodeBlock_);
-  s.writeRelocation(returnThisCodeBlock_);
-
-  /// Field specialCodeBlockRuntimeModule_;
-  /// Field RuntimeModuleList runtimeModuleList_{}. We don't S/D the list of
-  /// Runtimemodules now because Runtime doesn't own them, Domain owns them, so
-  /// they will be Serialized/Deserialized with Domain. When new RuntimeModules
-  /// are deserialized, they will add themselves to this list.
-  s.writeRelocation(specialCodeBlockRuntimeModule_);
-
-  // Field rootClazzes_[];
-  for (const auto &clazz : rootClazzes_)
-    s.writeHermesValue(clazz);
-
-  // Field PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
-  // Ignore for now.
-  // TODO: come back later.
-
-  // Field std::vector<PinnedHermesValue> charStrings_{};
-  s.writeInt<uint32_t>(charStrings_.size());
-  for (auto &str : charStrings_) {
-    s.writeHermesValue(str);
-  }
-
-  // Field std::vector<JSObject *> stringCycleCheckVisited_{};
-  // This should not be serialized, since it is populated/cleared by a set of
-  // RAII guards in the current call stack. As a result, items in the
-  // deserialized vector would never be cleared.
-
-  // Field std::vector<NativeFunction *> builtins_{};
-  s.writeInt<uint32_t>(builtins_.size());
-  for (auto *nativeFunction : builtins_) {
-    s.writeRelocation(nativeFunction);
-  }
-
-  s.writeInt<uint8_t>(builtinsFrozen_);
-
-  // TODO: Come back later. serialize/deserialize this to be able to
-  // serialize/deserialize after user code.
-  // Field const CrashManager::CallbackKey crashCallbackKey_;
-  // Field std::shared_ptr<SamplingProfiler> samplingProfiler;
-
-#ifdef HERMES_ENABLE_DEBUGGER
-  // TODO: serialize/deserialize this to be able to serialize/deserialize after
-  // user code.
-  // Field Debugger debugger_{this};
-  // Field std::atomic<uint8_t> debuggerRequestedFlag_{0};
-#endif
-  // TODO: serialize/deserialize this to be able to serialize/deserialize after
-  // user code.
-  // Field std::vector<std::shared_ptr<hbc::BCProvider>> persistentBCProviders_;
-
-#ifdef HERMES_ENABLE_DEBUGGER
-  // Field const inst::Inst *savedIP_{nullptr};
-  // TODO: serialize/deserialize this to be able to serialize/deserialize after
-  // user code.
-#else
-#endif // HERMES_ENABLE_DEBUGGER
-}
-
-void Runtime::deserializeRuntimeFields(Deserializer &d) {
-// Deserialize all HermesValue
-#define RUNTIME_HV_FIELD(name) d.readHermesValue(&name);
-#define RUNTIME_HV_FIELD_PROTOTYPE(name) RUNTIME_HV_FIELD(name)
-#define RUNTIME_HV_FIELD_INSTANCE(name) RUNTIME_HV_FIELD(name)
-#define RUNTIME_HV_FIELD_RUNTIMEMODULE(name) RUNTIME_HV_FIELD(name)
-#include "hermes/VM/RuntimeHermesValueFields.def"
-#undef RUNTIME_HV_FIELD
-
-  // Do not Deserialize any raw pointers of HermesValue fields. Get those
-  // pointers after relocation finishes.
-
-  // Field RegExpMatch regExpLastMatch{};
-  // Ignore for now since we only serialize/deserialize after global object
-  // initialization.
-  // TODO: serialize/deserialize this to be able to serialize/deserialize after
-  // user code.
-
-  // TODO: Ignore all fields from runtimeConfig, about frames, stacks etc for
-  // now. Come back later to check again from heap_ to nativeCallFrameDepth_.
-
-  d.readRelocation(&emptyCodeBlock_, RelocationKind::NativePointer);
-  d.readRelocation(&returnThisCodeBlock_, RelocationKind::NativePointer);
-
-  /// Field specialCodeBlockRuntimeModule_;
-  /// Field RuntimeModuleList runtimeModuleList_{}. We don't S/D the list of
-  /// Runtimemodules now because Runtime doesn't own them, Domain owns them, so
-  /// they will be Serialized/Deserialized with Domain. When new RuntimeModules
-  /// are deserialized, they will add themselves to this list.
-  d.readRelocation(
-      &specialCodeBlockRuntimeModule_, RelocationKind::NativePointer);
-
-  // Field rootClazzes_[];
-  for (auto &clazz : rootClazzes_)
-    d.readHermesValue(&clazz);
-
-  // Field PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
-  // Ignore for now.
-  // TODO: come back later.
-
-  // Field std::vector<PinnedHermesValue> charStrings_{};
-  size_t size = d.readInt<uint32_t>();
-  charStrings_.resize(size);
-  for (auto &str : charStrings_) {
-    d.readHermesValue(&str);
-  }
-
-  // Field std::vector<NativeFunction *> builtins_{};
-  size = d.readInt<uint32_t>();
-  builtins_.resize(size);
-  for (auto *&nativeFunction : builtins_) {
-    d.readRelocation(&nativeFunction, RelocationKind::NativePointer);
-  }
-
-  builtinsFrozen_ = d.readInt<uint8_t>();
-
-  // TODO: Come back later. Serialize/deserialize this to be able to
-  // serialize/deserialize after user code.
-  // Field const CrashManager::CallbackKey crashCallbackKey_;
-  // Field std::shared_ptr<SamplingProfiler> samplingProfiler;
-
-#ifdef HERMES_ENABLE_DEBUGGER
-  // TODO: serialize/deserialize this to be able to serialize/deserialize after
-  // user code.
-  // Field Debugger debugger_{this}; Field std::atomic<uint8_t>
-  // debuggerRequestedFlag_{0};
-#endif
-  // TODO: serialize/deserialize this to be able to serialize/deserialize after
-  // user code.
-  // Field std::vector<std::shared_ptr<hbc::BCProvider>> persistentBCProviders_;
-
-#ifdef HERMES_ENABLE_DEBUGGER
-  // Field const inst::Inst *savedIP_{nullptr};
-  // TODO: serialize/deserialize this to be able to serialize/deserialize after
-  // user code.
-#else
-#endif // HERMES_ENABLE_DEBUGGER
-}
-
-void Runtime::deserializeImpl(Deserializer &d, bool currentlyInYoung) {
-  if (currentlyInYoung) {
-    getHeap().deserializeStart();
-  }
-
-  GCScope scope(this);
-
-  d.readAndCheckOffset();
-  getHeap().deserializeWeakRefs(d);
-
-  d.readAndCheckOffset();
-  identifierTable_.deserialize(d);
-
-  d.readAndCheckOffset();
-  symbolRegistry_.deserialize(d);
-
-  d.readAndCheckOffset();
-  deserializeRuntimeFields(d);
-
-  d.readAndCheckOffset();
-  getHeap().deserializeHeap(d);
-
-  d.readAndCheckOffset();
-  getHeap().getIDTracker().deserialize(d);
-
-  d.readAndCheckOffset();
-  getHeap().getAllocationLocationTracker().deserialize(d);
-
-  d.readAndCheckOffset();
-  d.flushRelocationQueue();
-
-  // Now update the runtime pointer to prototypes.
-  // JSObject *objectPrototypeRawPtr{};
-  objectPrototypeRawPtr = vmcast<JSObject>(objectPrototype);
-  // JSObject *functionPrototypeRawPtr{};
-  functionPrototypeRawPtr = vmcast<NativeFunction>(functionPrototype);
-
-  LLVM_DEBUG(llvh::dbgs() << "Finish deserializing\n");
-
-  if (currentlyInYoung) {
-    // Only switch back now if the config says allocInYoung. Otherwise
-    // wait until tti.
-    getHeap().deserializeEnd();
-  }
-}
-
-void Runtime::populateHeaderRuntimeConfig(SerializeHeader &header) {
-  header.enableEval = enableEval;
-  header.hasES6Promise = hasES6Promise_;
-  header.hasES6Proxy = hasES6Proxy_;
-  header.hasIntl = hasIntl_;
-  header.bytecodeWarmupPercent = bytecodeWarmupPercent_;
-  header.trackIO = trackIO_;
-}
-
-void Runtime::checkHeaderRuntimeConfig(SerializeHeader &header) const {
-  if (header.enableEval != enableEval) {
-    hermes_fatal(
-        "serialize/deserialize Runtime Configs don't match (enableEval)");
-  }
-  if (header.hasES6Promise != hasES6Promise_) {
-    hermes_fatal(
-        "serialize/deserialize Runtime Configs don't match (es6Promise)");
-  }
-  if (header.hasES6Proxy != hasES6Proxy_) {
-    hermes_fatal(
-        "serialize/deserialize Runtime Configs don't match (es6Proxy)");
-  }
-  if (header.hasIntl != hasIntl_) {
-    hermes_fatal("serialize/deserialize Runtime Configs don't match (intl)");
-  }
-
-  if (header.bytecodeWarmupPercent != bytecodeWarmupPercent_) {
-    hermes_fatal(
-        "serialize/deserialize Runtime Configs don't match (bytecodeWarmupPercent)");
-  }
-  if (header.trackIO != trackIO_) {
-    hermes_fatal("serialize/deserialize Runtime Configs don't match (trackIO)");
-  }
-}
 #endif
 
 ExecutionStatus Runtime::notifyTimeout() {

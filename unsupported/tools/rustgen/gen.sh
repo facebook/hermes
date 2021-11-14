@@ -6,6 +6,6 @@ THIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 rustgen=$HERMES_BUILD/bin/rustgen
 
-$rustgen ffi > "$THIS_DIR/../../juno/hermes/src/parser/generated_ffi.rs"
-$rustgen cvt > "$THIS_DIR/../../juno/src/hparser/generated_cvt.rs"
+$rustgen ffi > "$THIS_DIR/../../juno/crates/hermes/src/parser/generated_ffi.rs"
+$rustgen cvt > "$THIS_DIR/../../juno/crates/juno/src/hparser/generated_cvt.rs"
 

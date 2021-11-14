@@ -60,7 +60,7 @@ import typeof Foo, {bar} from 'foo';
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "attributes": [],
+// CHECK-NEXT:         "assertions": [],
 // CHECK-NEXT:         "importKind": "type",
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {
@@ -161,7 +161,7 @@ import typeof Foo, {bar} from 'foo';
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "attributes": [],
+// CHECK-NEXT:         "assertions": [],
 // CHECK-NEXT:         "importKind": "typeof",
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {

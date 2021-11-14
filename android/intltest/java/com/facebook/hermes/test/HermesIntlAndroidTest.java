@@ -7,6 +7,8 @@
 
 package com.facebook.hermes.test;
 
+import static org.fest.assertions.api.Assertions.assertThat;
+
 import android.content.res.AssetManager;
 import android.test.InstrumentationTestCase;
 import java.io.BufferedReader;
@@ -25,6 +27,46 @@ public class HermesIntlAndroidTest extends InstrumentationTestCase {
         new BufferedReader(new InputStreamReader(is)).lines().collect(Collectors.joining("\n"));
     try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
       rt.evaluateJavaScript(script);
+    }
+  }
+
+  @Test
+  public void testDateTimeFormat() {
+    try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
+      rt.evaluateJavaScript(
+          new StringBuilder()
+              .append("var date = new Date('2021-08-13T14:00:00Z');\n")
+              .append("var formattedDate = Intl.DateTimeFormat('en-US', {\n")
+              .append("timeZone: 'America/New_York',\n")
+              .append("day: 'numeric',\n")
+              .append("month: 'numeric',\n")
+              .append("hour: 'numeric',\n")
+              .append("minute: 'numeric'\n")
+              .append("}).format(date);\n")
+              .toString());
+
+      String result = rt.getGlobalStringProperty("formattedDate");
+      assertThat(result).isEqualTo("8/13, 10:00 AM");
+    }
+  }
+
+  @Test
+  public void testDateTimeFormatCaseInsensitivity() {
+    try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
+      rt.evaluateJavaScript(
+          new StringBuilder()
+              .append("var date = new Date('2021-09-24T22:00:00Z');\n")
+              .append("var formattedDate = Intl.DateTimeFormat('en-US', {\n")
+              .append("timeZone: 'AmeRiCa/new_YORK',\n")
+              .append("day: 'numeric',\n")
+              .append("month: 'numeric',\n")
+              .append("hour: 'numeric',\n")
+              .append("minute: 'numeric'\n")
+              .append("}).format(date);\n")
+              .toString());
+
+      String result = rt.getGlobalStringProperty("formattedDate");
+      assertThat(result).isEqualTo("9/24, 6:00 PM");
     }
   }
 }

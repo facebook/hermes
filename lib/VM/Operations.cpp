@@ -62,33 +62,25 @@ HermesValue typeOf(Runtime *runtime, Handle<> valueHandle) {
       return HermesValue::encodeStringValue(runtime->getPredefinedString(
           valueHandle->isUndefined() ? Predefined::undefined
                                      : Predefined::object));
-      break;
     case StrTag:
       return HermesValue::encodeStringValue(
           runtime->getPredefinedString(Predefined::string));
-      break;
     case BoolTag:
       return HermesValue::encodeStringValue(
           runtime->getPredefinedString(Predefined::boolean));
-      break;
     case SymbolTag:
       return HermesValue::encodeStringValue(
           runtime->getPredefinedString(Predefined::symbol));
-      break;
     case ObjectTag:
-      if (vmisa<Callable>(*valueHandle)) {
+      if (vmisa<Callable>(*valueHandle))
         return HermesValue::encodeStringValue(
             runtime->getPredefinedString(Predefined::function));
-      } else {
-        return HermesValue::encodeStringValue(
-            runtime->getPredefinedString(Predefined::object));
-      }
-      break;
+      return HermesValue::encodeStringValue(
+          runtime->getPredefinedString(Predefined::object));
     default:
       assert(valueHandle->isNumber() && "Invalid type.");
       return HermesValue::encodeStringValue(
           runtime->getPredefinedString(Predefined::number));
-      break;
   }
 }
 
@@ -570,7 +562,7 @@ CallResult<HermesValue> toInteger(Runtime *runtime, Handle<> valueHandle) {
   if (std::isnan(num)) {
     result = 0;
   } else {
-    result = oscompat::trunc(num);
+    result = std::trunc(num);
   }
 
   return HermesValue::encodeDoubleValue(result);
@@ -1009,9 +1001,9 @@ numberToStringWithRadix(Runtime *runtime, double number, unsigned radix) {
   if (fPart != 0) {
     // Distance to the next double value.
     double next =
-        oscompat::nextafter(number, std::numeric_limits<double>::infinity());
+        std::nextafter(number, std::numeric_limits<double>::infinity());
     double minDenorm =
-        oscompat::nextafter(0.0, std::numeric_limits<double>::infinity());
+        std::nextafter(0.0, std::numeric_limits<double>::infinity());
 
     // Precision of the input (half the distance to the next double).
     // We only compute digits up to that precision.

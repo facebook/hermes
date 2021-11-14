@@ -40,13 +40,16 @@ findTrap(Handle<JSObject> selfHandle, Runtime *runtime, Predefined::Str name) {
   if (!handlerPtr) {
     return runtime->raiseTypeError("Proxy handler is null");
   }
-  GCScope gcScope(runtime);
   // 4. Assert: Type(handler) is Object.
   // 5. Let target be O.[[ProxyTarget]].
   // 6. Let trap be ? GetMethod(handler, « name »).
-  Handle<JSObject> handler = runtime->makeHandle(handlerPtr);
-  CallResult<PseudoHandle<>> trapVal =
-      JSObject::getNamed_RJS(handler, runtime, Predefined::getSymbolID(name));
+  CallResult<PseudoHandle<>> trapVal = [&]() {
+    GCScope gcScope(runtime);
+    Handle<JSObject> handler = runtime->makeHandle(handlerPtr);
+    return JSObject::getNamed_RJS(
+        handler, runtime, Predefined::getSymbolID(name));
+  }();
+
   if (trapVal == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -59,7 +62,7 @@ findTrap(Handle<JSObject> selfHandle, Runtime *runtime, Predefined::Str name) {
         runtime->makeHandle(std::move(*trapVal)),
         " is not a Proxy trap function");
   }
-  return runtime->makeHandleInParentScope<Callable>(std::move(trapVal->get()));
+  return runtime->makeHandle<Callable>(std::move(trapVal->get()));
 }
 
 } // namespace detail
@@ -86,27 +89,6 @@ void ProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@target", &self->slots_.target);
   mb.addField("@handler", &self->slots_.handler);
 }
-
-#ifdef HERMESVM_SERIALIZE
-JSProxy::JSProxy(Deserializer &d) : JSObject(d, &vt.base) {
-  d.readRelocation(&slots_.target, RelocationKind::GCPointer);
-  d.readRelocation(&slots_.handler, RelocationKind::GCPointer);
-}
-
-void ProxySerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSProxy>());
-  auto *self = vmcast<const JSProxy>(cell);
-  s.writeRelocation(self->slots_.target.get(s.getRuntime()));
-  s.writeRelocation(self->slots_.handler.get(s.getRuntime()));
-  s.endObject(cell);
-}
-
-void ProxyDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::ProxyKind && "Expected Proxy");
-  auto *cell = d.getRuntime()->makeAFixed<JSProxy>(d);
-  d.endObject(cell);
-}
-#endif
 
 PseudoHandle<JSProxy> JSProxy::create(Runtime *runtime) {
   JSProxy *proxy = runtime->makeAFixed<JSProxy>(
@@ -1481,9 +1463,10 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   llvh::SmallSet<uint32_t, 8> nonConfigurable;
   MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   // 16. For each element key of targetKeys, do
-  auto marker2 = runtime->getTopGCScope()->createMarker();
+  GCScopeMarkerRAII marker{runtime};
   for (uint32_t i = 0, len = JSArray::getLength(*targetKeys, runtime); i < len;
        ++i) {
+    marker.flush();
     //   a. Let desc be ? target.[[GetOwnProperty]](key).
     ComputedPropertyDescriptor desc;
     CallResult<bool> descRes = JSObject::getOwnComputedDescriptor(
@@ -1502,7 +1485,6 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
     if (*descRes && !desc.flags.configurable) {
       nonConfigurable.insert(i);
     }
-    runtime->getTopGCScope()->flushToMarker(marker2);
   }
   // 17. If extensibleTarget is true and targetNonconfigurableKeys is empty,
   // then

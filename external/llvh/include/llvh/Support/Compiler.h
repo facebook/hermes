@@ -519,58 +519,6 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #define LLVM_ENABLE_EXCEPTIONS 1
 #endif
 
-namespace std {
-  enum class align_val_t : size_t;
-}
-
-namespace llvh {
-namespace _detail {
-enum class NoSizedDeallocation : size_t;
-enum class NoAlignedNew : size_t;
-
-template <
-    class AlignValT = std::align_val_t,
-    class = decltype(::operator new(0u, AlignValT(1u)))>
-std::align_val_t _select_align_val_t(int);
-NoAlignedNew _select_align_val_t(long);
-
-using AlignValT = decltype(_detail::_select_align_val_t(0));
-
-template <
-    class SizeT = size_t,
-    class = decltype(::operator delete((void *)0, SizeT(1u)))>
-size_t _select_size_t(int);
-NoSizedDeallocation _select_size_t(long);
-
-using SizeT = decltype(_detail::_select_size_t(0));
-} // End namespace _detail
-} // End namespace llvh
-
-inline void *operator new(size_t Size, llvh::_detail::NoAlignedNew) {
-  return ::operator new(Size);
-}
-
-inline void operator delete(
-    void *Ptr,
-    llvh::_detail::NoSizedDeallocation,
-    llvh::_detail::NoAlignedNew) {
-  ::operator delete(Ptr);
-}
-
-template <class SizeT = size_t>
-inline void
-operator delete(void *Ptr, size_t Size, llvh::_detail::NoAlignedNew) {
-  ::operator delete(Ptr, SizeT(Size));
-}
-
-template <class AlignValT = std::align_val_t>
-inline void operator delete(
-    void *Ptr,
-    llvh::_detail::NoSizedDeallocation,
-    std::align_val_t Alignment) {
-  ::operator delete(Ptr, AlignValT(Alignment));
-}
-
 namespace llvh {
 
 /// Allocate a buffer of memory with the given size and alignment.
@@ -583,7 +531,12 @@ namespace llvh {
 /// compatibility with platforms that, after aligned allocation was added, use
 /// reduced default alignment.
 inline void *allocate_buffer(size_t Size, size_t Alignment) {
-  return ::operator new(Size, _detail::AlignValT(Alignment));
+  return ::operator new(Size
+#ifdef __cpp_aligned_new
+                        ,
+                        std::align_val_t(Alignment)
+#endif
+  );
 }
 
 /// Deallocate a buffer of memory with the given size and alignment.
@@ -594,7 +547,16 @@ inline void *allocate_buffer(size_t Size, size_t Alignment) {
 /// The pointer must have been allocated with the corresponding new operator,
 /// most likely using the above helper.
 inline void deallocate_buffer(void *Ptr, size_t Size, size_t Alignment) {
-  ::operator delete(Ptr, _detail::SizeT(Size), _detail::AlignValT(Alignment));
+  ::operator delete(Ptr
+#ifdef __cpp_sized_deallocation
+                    ,
+                    Size
+#endif
+#ifdef __cpp_aligned_new
+                    ,
+                    std::align_val_t(Alignment)
+#endif
+  );
 }
 
 } // End namespace llvh

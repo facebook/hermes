@@ -59,12 +59,6 @@ class HashMapEntry final : public GCCell {
   }
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  explicit HashMapEntry(Deserializer &d);
-
-  friend void HashMapEntryDeserialize(Deserializer &d, CellKind kind);
-#endif
-
   HashMapEntry(Runtime *runtime) : GCCell(&runtime->getHeap(), &vt) {}
 }; // HashMapEntry
 
@@ -90,12 +84,6 @@ class OrderedHashMap final : public GCCell {
 
  public:
   static const VTable vt;
-
-#ifdef HERMESVM_SERIALIZE
-  OrderedHashMap(Deserializer &d);
-
-  friend void OrderedHashMapSerialize(Serializer &s, const GCCell *cell);
-#endif
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::OrderedHashMapKind;

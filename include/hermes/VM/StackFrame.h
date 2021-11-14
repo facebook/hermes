@@ -179,10 +179,6 @@ class StackFramePtrT {
   /// CodeBlock *.
   inline Handle<Callable> getCalleeClosureHandleUnsafe() const;
 
-  /// \return a pointer to the callee closure, if we have it, or nullptr
-  ///   if it is a CodeBlock.
-  Callable *getCalleeClosure() const;
-
   /// \return the callee's CodeBlock, i.e. the CodeBlock that is executing in
   ///   this frame. It could be nullptr if calleeClosure is a Callable but not
   ///   a JSFunction.
@@ -195,7 +191,7 @@ class StackFramePtrT {
 
   /// \return an iterator pointing to the first explicit argument.
   ArgIteratorT<isConst> argsBegin() const {
-    return ArgIteratorT<isConst>(&getFirstArgRef());
+    return ArgIteratorT<isConst>(&getThisArgRef());
   }
 
   /// \return a reference to the register containing the N-th argument to the
@@ -288,10 +284,10 @@ void dumpStackFrame(ConstStackFramePtr frame);
 void dumpStackFrame(StackFramePtr frame);
 
 static_assert(
-    IsTriviallyCopyable<StackFramePtr, true>::value,
+    std::is_trivially_copyable<StackFramePtr>::value,
     "StackFramePtr must be trivially copyable");
 static_assert(
-    IsTriviallyCopyable<ConstStackFramePtr, true>::value,
+    std::is_trivially_copyable<ConstStackFramePtr>::value,
     "ConstStackFramePtr must be trivially copyable");
 
 /// Unidirectional iterator over stack frames, starting from the top-most
@@ -358,10 +354,10 @@ using StackFrameIterator = StackFrameIteratorT<false>;
 using ConstStackFrameIterator = StackFrameIteratorT<true>;
 
 static_assert(
-    IsTriviallyCopyable<StackFrameIterator, true>::value,
+    std::is_trivially_copyable<StackFrameIterator>::value,
     "StackFrameIterator must be trivially copyable");
 static_assert(
-    IsTriviallyCopyable<ConstStackFrameIterator, true>::value,
+    std::is_trivially_copyable<ConstStackFrameIterator>::value,
     "ConstStackFrameIterator must be trivially copyable");
 
 } // namespace vm

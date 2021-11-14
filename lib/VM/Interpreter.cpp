@@ -156,7 +156,7 @@ CallResult<PseudoHandle<JSGenerator>> Interpreter::createGenerator_RJS(
   }
 
   auto generatorFunction = runtime->makeHandle(vmcast<JSGeneratorFunction>(
-      runtime->getCurrentFrame().getCalleeClosure()));
+      runtime->getCurrentFrame().getCalleeClosureUnsafe()));
 
   auto prototypeProp = JSObject::getNamed_RJS(
       generatorFunction,
@@ -719,7 +719,8 @@ static void printDebugInfo(
     if (operandType == OperandType::Reg8 || operandType == OperandType::Reg32) {
       // Print the register value, if source.
       if (i != 0 || decoded.meta.numOperands == 1)
-        dbgs() << "=" << DumpHermesValue(REG(value.integer));
+        dbgs() << "="
+               << DumpHermesValue(REG(static_cast<uint32_t>(value.integer)));
     }
   }
 
@@ -748,34 +749,49 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE
 static inline const Inst *nextInstCall(const Inst *ip) {
   HERMES_SLOW_ASSERT(isCallType(ip->opCode) && "ip is not of call type");
 
-  // The following is written to elicit compares instead of table lookup.
-  // The idea is to present code like so:
-  //   if (opcode <= 70) return ip + 4;
-  //   if (opcode <= 71) return ip + 4;
-  //   if (opcode <= 72) return ip + 4;
-  //   if (opcode <= 73) return ip + 5;
-  //   if (opcode <= 74) return ip + 5;
-  //   ...
-  // and the compiler will retain only compares where the result changes (here,
-  // 72 and 74). This allows us to compute the next instruction using three
-  // compares, instead of a naive compare-per-call type (or lookup table).
-  //
-  // Statically verify that increasing call opcodes correspond to monotone
-  // instruction sizes; this enables the compiler to do a better job optimizing.
-  constexpr bool callSizesMonotoneIncreasing = monotoneIncreasing(
+  // To avoid needing a large lookup table or switchcase, the following packs
+  // information about the size of each call opcode into a uint32_t. Each call
+  // type is represented with two bits, representing how much larger it is than
+  // the smallest call instruction.
+  // If we used 64 bits, we could fit the actual size of each call, without
+  // needing the offset, and this may be necessary if new call instructions are
+  // added in the future. For now however, due to limitations on loading large
+  // immediates in ARM, it is significantly more efficient to use a uint32_t
+  // than a uint64_t.
+  constexpr auto firstCall = std::min({
+#define DEFINE_RET_TARGET(name) static_cast<uint8_t>(OpCode::name),
+#include "hermes/BCGen/HBC/BytecodeList.def"
+  });
+  constexpr auto lastCall = std::max({
+#define DEFINE_RET_TARGET(name) static_cast<uint8_t>(OpCode::name),
+#include "hermes/BCGen/HBC/BytecodeList.def"
+  });
+  constexpr auto minSize = std::min({
 #define DEFINE_RET_TARGET(name) sizeof(inst::name##Inst),
 #include "hermes/BCGen/HBC/BytecodeList.def"
-      SIZE_MAX // sentinel avoiding a trailing comma.
-  );
-  static_assert(
-      callSizesMonotoneIncreasing,
-      "Call instruction sizes are not monotone increasing");
-
-#define DEFINE_RET_TARGET(name)   \
-  if (ip->opCode <= OpCode::name) \
-    return NEXTINST(name);
+  });
+  constexpr auto maxSize = std::max({
+#define DEFINE_RET_TARGET(name) sizeof(inst::name##Inst),
 #include "hermes/BCGen/HBC/BytecodeList.def"
-  llvm_unreachable("Not a call type");
+  });
+
+  constexpr uint32_t W = 2;
+  constexpr uint32_t mask = (1 << W) - 1;
+
+  static_assert(llvh::isUInt<W>(maxSize - minSize), "Size range too large.");
+  static_assert((lastCall - firstCall + 1) * W <= 32, "Too many call opcodes.");
+
+  constexpr uint32_t callSizes = 0
+#define DEFINE_RET_TARGET(name)             \
+  |                                         \
+      ((sizeof(inst::name##Inst) - minSize) \
+       << (((uint8_t)OpCode::name - firstCall) * W))
+#include "hermes/BCGen/HBC/BytecodeList.def"
+      ;
+#undef DEFINE_RET_TARGET
+
+  const uint8_t offset = static_cast<uint8_t>(ip->opCode) - firstCall;
+  return IPADD(((callSizes >> (offset * W)) & mask) + minSize);
 }
 
 CallResult<HermesValue> Runtime::interpretFunctionImpl(
@@ -1729,7 +1745,7 @@ tailCall:
 
       CASE(CompleteGenerator) {
         auto *innerFn = vmcast<GeneratorInnerFunction>(
-            runtime->getCurrentFrame().getCalleeClosure());
+            runtime->getCurrentFrame().getCalleeClosureUnsafe());
         innerFn->setState(GeneratorInnerFunction::State::Completed);
         ip = NEXTINST(CompleteGenerator);
         DISPATCH;
@@ -1750,7 +1766,7 @@ tailCall:
 
       CASE(StartGenerator) {
         auto *innerFn = vmcast<GeneratorInnerFunction>(
-            runtime->getCurrentFrame().getCalleeClosure());
+            runtime->getCurrentFrame().getCalleeClosureUnsafe());
         if (innerFn->getState() ==
             GeneratorInnerFunction::State::SuspendedStart) {
           nextIP = NEXTINST(StartGenerator);
@@ -1765,7 +1781,7 @@ tailCall:
 
       CASE(ResumeGenerator) {
         auto *innerFn = vmcast<GeneratorInnerFunction>(
-            runtime->getCurrentFrame().getCalleeClosure());
+            runtime->getCurrentFrame().getCalleeClosureUnsafe());
         O1REG(ResumeGenerator) = innerFn->getResult().unboxToHV(runtime);
         O2REG(ResumeGenerator) = HermesValue::encodeBoolValue(
             innerFn->getAction() == GeneratorInnerFunction::Action::Return);
