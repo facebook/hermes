@@ -10,7 +10,6 @@
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/JSONEmitter.h"
-#include "hermes/Support/OSCompat.h"
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/MockedEnvironment.h"
 #include "hermes/VM/StringPrimitive.h"
@@ -236,14 +235,11 @@ std::string SynthTrace::encode(TraceValue value) {
   } else if (value.isNull()) {
     return "null:";
   } else if (value.isObject()) {
-    return std::string("object:") +
-        ::hermes::oscompat::to_string(value.getUID());
+    return std::string("object:") + std::to_string(value.getUID());
   } else if (value.isString()) {
-    return std::string("string:") +
-        ::hermes::oscompat::to_string(value.getUID());
+    return std::string("string:") + std::to_string(value.getUID());
   } else if (value.isPropNameID()) {
-    return std::string("propNameID:") +
-        ::hermes::oscompat::to_string(value.getUID());
+    return std::string("propNameID:") + std::to_string(value.getUID());
   } else if (value.isNumber()) {
     return std::string("number:") + doublePrinter(value.getNumber());
   } else if (value.isBool()) {

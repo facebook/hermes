@@ -10,13 +10,10 @@
 #include "hermes/VM/CodeBlock.h"
 
 #include "hermes/BCGen/HBC/Bytecode.h"
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Support/Conversions.h"
-#include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
-#include "hermes/VM/Debugger/Debugger.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule.h"
@@ -24,7 +21,6 @@
 
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/ErrorHandling.h"
-#include "llvh/Support/MathExtras.h"
 
 namespace hermes {
 namespace vm {
@@ -172,17 +168,20 @@ SLP CodeBlock::getArrayBufferIter(uint32_t idx, unsigned int numLiterals)
       runtimeModule_};
 }
 
-std::pair<SLP, SLP> CodeBlock::getObjectBufferIter(
-    uint32_t keyIdx,
-    uint32_t valIdx,
-    unsigned int numLiterals) const {
-  return std::pair<SLP, SLP>{
-      SLP{runtimeModule_->getBytecode()->getObjectKeyBuffer().slice(keyIdx),
-          numLiterals,
-          nullptr},
-      SLP{runtimeModule_->getBytecode()->getObjectValueBuffer().slice(valIdx),
-          numLiterals,
-          runtimeModule_}};
+SLP CodeBlock::getObjectBufferKeyIter(uint32_t idx, unsigned int numLiterals)
+    const {
+  return SLP{
+      runtimeModule_->getBytecode()->getObjectKeyBuffer().slice(idx),
+      numLiterals,
+      nullptr};
+}
+
+SLP CodeBlock::getObjectBufferValueIter(uint32_t idx, unsigned int numLiterals)
+    const {
+  return SLP{
+      runtimeModule_->getBytecode()->getObjectValueBuffer().slice(idx),
+      numLiterals,
+      runtimeModule_};
 }
 
 SymbolID CodeBlock::getNameMayAllocate() const {
@@ -434,30 +433,6 @@ void CodeBlock::uninstallBreakpointAtOffset(
   // This is valid because we can only uninstall breakpoints that we installed.
   // Therefore, the page here must be writable.
   *address = opCode;
-}
-
-#endif
-
-#ifdef HERMESVM_SERIALIZE
-void CodeBlock::serialize(Serializer &s) const {
-  // The identity of a CodeBlock is its functionId. Note: We don't
-  // serialize/deserialize PropertyCache as of now.
-  // TODO: serialize/deserialize PropertyCacheEntry.
-  s.writeInt<uint32_t>(getFunctionID());
-  s.endObject(this);
-}
-
-CodeBlock *CodeBlock::deserialize(
-    Deserializer &d,
-    RuntimeModule *runtimeModule) {
-  uint32_t index = d.readInt<uint32_t>();
-  auto *res = CodeBlock::createCodeBlock(
-      runtimeModule,
-      runtimeModule->getBytecode()->getFunctionHeader(index),
-      runtimeModule->getBytecode()->getBytecode(index),
-      index);
-  d.endObject(res);
-  return res;
 }
 
 #endif

@@ -366,14 +366,6 @@ class JSObject : public GCCell {
   // has justified doing this.
   struct Helper;
 
-#ifdef HERMESVM_SERIALIZE
-  /// A constructor used by deserializeion which performs no GC allocation.
-  JSObject(Deserializer &d, const VTable *vtp);
-
-  static void
-  serializeObjectImpl(Serializer &s, const GCCell *cell, unsigned overlapSlots);
-#endif
-
   static const ObjectVTable vt;
 
   /// Default capacity of indirect property storage.

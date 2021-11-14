@@ -74,7 +74,7 @@ class HadesGC final : public GCBase {
   ~HadesGC();
 
   static bool classof(const GCBase *gc) {
-    return gc->getKind() == HeapKind::HADES;
+    return gc->getKind() == HeapKind::HadesGC;
   }
 
   static constexpr uint32_t maxAllocationSizeImpl() {
@@ -85,7 +85,7 @@ class HadesGC final : public GCBase {
 
   static constexpr uint32_t minAllocationSizeImpl() {
     return heapAlignSize(
-        max(sizeof(OldGen::FreelistCell), sizeof(CopyListCell)));
+        std::max(sizeof(OldGen::FreelistCell), sizeof(CopyListCell)));
   }
 
   /// \name GCBase overrides
@@ -154,38 +154,120 @@ class HadesGC final : public GCBase {
   /// be in the heap). If value is a pointer, execute a write barrier.
   /// NOTE: The write barrier call must be placed *before* the write to the
   /// pointer, so that the current value can be fetched.
-  void writeBarrier(const GCHermesValue *loc, HermesValue value);
-  void writeBarrier(const GCSmallHermesValue *loc, SmallHermesValue value);
+  void writeBarrier(const GCHermesValue *loc, HermesValue value) {
+    assert(
+        !calledByBackgroundThread() &&
+        "Write barrier invoked by background thread.");
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(loc)))
+      writeBarrierSlow(loc, value);
+  }
+  void writeBarrierSlow(const GCHermesValue *loc, HermesValue value);
+
+  void writeBarrier(const GCSmallHermesValue *loc, SmallHermesValue value) {
+    assert(
+        !calledByBackgroundThread() &&
+        "Write barrier invoked by background thread.");
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(loc)))
+      writeBarrierSlow(loc, value);
+  }
+  void writeBarrierSlow(const GCSmallHermesValue *loc, SmallHermesValue value);
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap). The value may be null. Execute a write barrier.
   /// NOTE: The write barrier call must be placed *before* the write to the
   /// pointer, so that the current value can be fetched.
-  void writeBarrier(const GCPointerBase *loc, const GCCell *value);
-
-  /// The given symbol is being written at the given loc (required to be in the
-  /// heap).
-  void writeBarrier(SymbolID symbol);
+  void writeBarrier(const GCPointerBase *loc, const GCCell *value) {
+    assert(
+        !calledByBackgroundThread() &&
+        "Write barrier invoked by background thread.");
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(loc)))
+      writeBarrierSlow(loc, value);
+  }
+  void writeBarrierSlow(const GCPointerBase *loc, const GCCell *value);
 
   /// Special versions of \p writeBarrier for when there was no previous value
   /// initialized into the space.
-  void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value);
+  void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value) {
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(loc)))
+      constructorWriteBarrierSlow(loc, value);
+  }
+  void constructorWriteBarrierSlow(const GCHermesValue *loc, HermesValue value);
+
   void constructorWriteBarrier(
       const GCSmallHermesValue *loc,
+      SmallHermesValue value) {
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(loc)))
+      constructorWriteBarrierSlow(loc, value);
+  }
+  void constructorWriteBarrierSlow(
+      const GCSmallHermesValue *loc,
       SmallHermesValue value);
-  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
+
+  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value) {
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(loc)))
+      relocationWriteBarrier(loc, value);
+  }
+
   void constructorWriteBarrierRange(
       const GCHermesValue *start,
+      uint32_t numHVs) {
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(start)))
+      constructorWriteBarrierRangeSlow(start, numHVs);
+  }
+  void constructorWriteBarrierRangeSlow(
+      const GCHermesValue *start,
       uint32_t numHVs);
+
   void constructorWriteBarrierRange(
+      const GCSmallHermesValue *start,
+      uint32_t numHVs) {
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(start)))
+      constructorWriteBarrierRangeSlow(start, numHVs);
+  }
+  void constructorWriteBarrierRangeSlow(
       const GCSmallHermesValue *start,
       uint32_t numHVs);
 
-  void snapshotWriteBarrier(const GCHermesValue *loc);
-  void snapshotWriteBarrier(const GCSmallHermesValue *loc);
-  void snapshotWriteBarrier(const GCPointerBase *loc);
-  void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs);
+  void snapshotWriteBarrier(const GCHermesValue *loc) {
+    if (LLVM_UNLIKELY(!inYoungGen(loc) && ogMarkingBarriers_))
+      snapshotWriteBarrierInternal(*loc);
+  }
+  void snapshotWriteBarrier(const GCSmallHermesValue *loc) {
+    if (LLVM_UNLIKELY(!inYoungGen(loc) && ogMarkingBarriers_))
+      snapshotWriteBarrierInternal(*loc);
+  }
+  void snapshotWriteBarrier(const GCPointerBase *loc) {
+    if (LLVM_UNLIKELY(!inYoungGen(loc) && ogMarkingBarriers_))
+      snapshotWriteBarrierInternal(*loc);
+  }
+  void snapshotWriteBarrier(const GCSymbolID *loc) {
+    if (LLVM_UNLIKELY(!inYoungGen(loc) && ogMarkingBarriers_))
+      snapshotWriteBarrierInternal(*loc);
+  }
+
+  void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs) {
+    if (LLVM_UNLIKELY(!inYoungGen(start) && ogMarkingBarriers_))
+      snapshotWriteBarrierRangeSlow(start, numHVs);
+  }
+  void snapshotWriteBarrierRangeSlow(
+      const GCHermesValue *start,
+      uint32_t numHVs);
+
   void snapshotWriteBarrierRange(
+      const GCSmallHermesValue *start,
+      uint32_t numHVs) {
+    if (LLVM_UNLIKELY(!inYoungGen(start) && ogMarkingBarriers_))
+      snapshotWriteBarrierRangeSlow(start, numHVs);
+  }
+  void snapshotWriteBarrierRangeSlow(
       const GCSmallHermesValue *start,
       uint32_t numHVs);
 
@@ -214,7 +296,12 @@ class HadesGC final : public GCBase {
   /// \}
 
   /// \return true if the pointer lives in the young generation.
-  bool inYoungGen(const void *p) const override;
+  bool inYoungGen(const void *p) const override {
+    return youngGen_.lowLim() == AlignedStorage::start(p);
+  }
+  bool inYoungGen(CompressedPointer p) const {
+    return p.getSegmentStart() == youngGenCP_;
+  }
 
   /// Approximate the dirty memory footprint of the GC's heap. Note that this
   /// does not return the number of dirty pages in the heap, but instead returns
@@ -275,7 +362,9 @@ class HadesGC final : public GCBase {
     HeapSegment() = default;
 
     /// Allocate space by bumping a level.
-    AllocResult bumpAlloc(uint32_t sz);
+    AllocResult bumpAlloc(uint32_t sz) {
+      return AlignedHeapSegment::alloc(sz);
+    }
 
     /// Record the head of this cell so it can be found by the card scanner.
     static void setCellHead(const GCCell *start, const size_t sz);
@@ -318,8 +407,8 @@ class HadesGC final : public GCBase {
     /// \return the segment previously at segmentIdx
     HeapSegment removeSegment(size_t segmentIdx);
 
-    /// Indicate that OG should target having \p targetSegments segments.
-    void setTargetSegments(size_t targetSegments);
+    /// Indicate that OG should target having a size of \p targetSizeBytes.
+    void setTargetSizeBytes(size_t targetSizeBytes);
 
     /// Allocate into OG. Returns a pointer to the newly allocated space. That
     /// space must be filled before releasing the gcMutex_.
@@ -362,7 +451,9 @@ class HadesGC final : public GCBase {
 
     /// \return the total number of bytes that we aim to use in the OG
     /// section of the JS heap, including free list entries. This may be smaller
-    /// or greater than size().
+    /// or greater than size(). It is rounded up to the nearest segment to make
+    /// to reflect the fact that in practice, the heap size will be an integer
+    /// multiple of segment size.
     uint64_t targetSizeBytes() const;
 
     /// Add some external memory cost to the OG.
@@ -467,10 +558,11 @@ class HadesGC final : public GCBase {
     /// remain valid across a push_back.
     std::deque<HeapSegment> segments_;
 
-    /// This is the target number of segments in the OG JS heap. It does not
+    /// This is the target size in bytes for the OG JS heap. It does not
     /// include external memory and may be larger or smaller than the actual
-    /// number of segments allocated.
-    size_t targetSegments_{0};
+    /// capacity of the heap. Should be initialised using setTargetSizeBytes
+    /// before use.
+    ExponentialMovingAverage targetSizeBytes_{0, 0};
 
     /// This is the sum of all bytes currently allocated in the heap, excluding
     /// bump-allocated segments. Use \c allocatedBytes() to include
@@ -583,6 +675,7 @@ class HadesGC final : public GCBase {
   /// youngGen is a bump-pointer space, so it can re-use AlignedHeapSegment.
   /// Protected by gcMutex_.
   HeapSegment youngGen_;
+  AssignableCompressedPointer youngGenCP_;
 
   /// List of cells in YG that have finalizers. Iterate through this to clean
   /// them out.
@@ -605,6 +698,14 @@ class HadesGC final : public GCBase {
   /// Whoever holds this lock is permitted to modify data structures around the
   /// GC. This includes mark bits, free lists, etc.
   Mutex gcMutex_;
+
+  /// Flag used to signal to the background thread that it should stop and yield
+  /// the gcMutex_ to the mutator as soon as possible.
+  AtomicIfConcurrentGC<bool> ogPaused_{false};
+
+  /// Condition variable that the background thread should wait on when
+  /// ogPaused_ is set to true, until the mutator has acquired gcMutex_.
+  std::condition_variable_any ogPauseCondVar_;
 
   enum class Phase : uint8_t {
     None,
@@ -654,6 +755,10 @@ class HadesGC final : public GCBase {
   /// Target OG occupancy ratio at the end of an OG collection.
   const double occupancyTarget_;
 
+  /// The threshold, expressed as the occupied fraction of the target OG size,
+  /// at which we should start an OG collection.
+  ExponentialMovingAverage ogThreshold_{0.5, 0.75};
+
   /// A collection section used to track the size of YG before and after a YG
   /// collection, as well as the time a YG collection takes.
   std::unique_ptr<CollectionStats> ygCollectionStats_;
@@ -679,11 +784,17 @@ class HadesGC final : public GCBase {
     bool contains(const void *p) const {
       return start == AlignedStorage::start(p);
     }
+    bool contains(CompressedPointer p) const {
+      return p.getSegmentStart() == startCP;
+    }
 
     /// \return true if the pointer lives in the segment that is currently being
     /// evacuated for compaction.
     bool evacContains(const void *p) const {
       return evacStart == AlignedStorage::start(p);
+    }
+    bool evacContains(CompressedPointer p) const {
+      return p.getSegmentStart() == evacStartCP;
     }
 
     /// \return true if the compactee is ready to be evacuated.
@@ -715,11 +826,15 @@ class HadesGC final : public GCBase {
     /// used during marking and by write barriers to determine whether a pointer
     /// is in the compactee segment.
     void *start{reinterpret_cast<void *>(kInvalidCompacteeStart)};
+    AssignableCompressedPointer startCP{
+        CompressedPointer::fromRaw(kInvalidCompacteeStart)};
 
     /// The start address of the segment that is currently being compacted. When
     /// this is set, the next YG will evacuate objects in this segment. This is
     /// always going to be equal to "start" or nullptr.
     void *evacStart{reinterpret_cast<void *>(kInvalidCompacteeStart)};
+    AssignableCompressedPointer evacStartCP{
+        CompressedPointer::fromRaw(kInvalidCompacteeStart)};
 
     /// The segment being compacted. This should be removed from the OG right
     /// after it is identified, and freed entirely once the compaction is
@@ -819,6 +934,13 @@ class HadesGC final : public GCBase {
   /// thread, to perform it concurrently with the mutator.
   void collectOGInBackground();
 
+  /// Forces work on the background thread to be suspended and returns a lock
+  /// holding gcMutex_. This is used to ensure that the mutator receives
+  /// priority in acquiring gcMutex_, and does not remain blocked on the
+  /// background thread for an extended period of time. The background thread
+  /// will resume once the lock is released.
+  std::unique_lock<Mutex> pauseBackgroundTask();
+
   /// Perform a single step of an OG collection. \p backgroundThread indicates
   /// whether this call was made from the background thread.
   void incrementalCollect(bool backgroundThread);
@@ -827,6 +949,11 @@ class HadesGC final : public GCBase {
   /// final marking worklist drain, and to update weak roots. It must be invoked
   /// from the mutator.
   void completeMarking();
+
+  /// Update the OG collection threshold by estimating the mark rate and using
+  /// that to estimate how late we can start a collection without going over the
+  /// heap limit. Should be called at the start of completeMarking.
+  void updateOldGenThreshold();
 
   /// Select a segment to compact and initialise any state needed for
   /// compaction.
@@ -850,6 +977,7 @@ class HadesGC final : public GCBase {
 
   /// Common logic for doing the Snapshot At The Beginning (SATB) write barrier.
   void snapshotWriteBarrierInternal(GCCell *oldValue);
+  void snapshotWriteBarrierInternal(CompressedPointer oldValue);
 
   /// Common logic for doing the Snapshot At The Beginning (SATB) write barrier.
   /// Forwards to \c snapshotWriteBarrierInternal(GCCell*) if oldValue is a
@@ -906,8 +1034,12 @@ class HadesGC final : public GCBase {
   uint64_t heapFootprint() const;
 
   /// Accessor for the YG.
-  HeapSegment &youngGen();
-  const HeapSegment &youngGen() const;
+  HeapSegment &youngGen() {
+    return youngGen_;
+  }
+  const HadesGC::HeapSegment &youngGen() const {
+    return youngGen_;
+  }
 
   /// Create a new segment (to be used by either YG or OG).
   llvh::ErrorOr<HeapSegment> createSegment();
@@ -972,7 +1104,7 @@ inline T *HadesGC::makeA(uint32_t size, Args &&...args) {
       "Call to makeA must use a size aligned to HeapAlign");
   assert(noAllocLevel_ == 0 && "No allocs allowed right now.");
   if (longLived == LongLived::Yes) {
-    std::lock_guard<Mutex> lk{gcMutex_};
+    auto lk = kConcurrentGC ? pauseBackgroundTask() : std::unique_lock<Mutex>();
     return new (allocLongLived(size)) T(std::forward<Args>(args)...);
   }
 

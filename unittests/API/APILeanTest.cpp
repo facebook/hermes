@@ -27,4 +27,16 @@ TEST_F(HermesLeanRuntimeTest, PropertyTest) {
   EXPECT_EQ(rt->global().getProperty(*rt, "answer").getNumber(), 42);
 }
 
+TEST_F(HermesLeanRuntimeTest, EvalTest) {
+  auto evalFn = rt->global().getPropertyAsFunction(*rt, "eval");
+  ASSERT_THROW(evalFn.call(*rt, "var x = 0;"), JSIException);
+}
+
+TEST_F(HermesLeanRuntimeTest, ArrayTest) {
+  auto array = Array::createWithElements(*rt, 5, 3, 1, 0, 2, 4);
+  array.getPropertyAsFunction(*rt, "sort").callWithThis(*rt, array);
+  for (size_t i = 0; i < 6; ++i)
+    EXPECT_EQ(array.getValueAtIndex(*rt, i).asNumber(), i);
+}
+
 } // namespace

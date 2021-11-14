@@ -113,12 +113,6 @@ class StackFramePtrT {
 
 #undef _HERMESVM_DEFINE_STACKFRAME_REF
 
-  /// Return a reference to a local variable (the index must be valid).
-  LLVM_ATTRIBUTE_ALWAYS_INLINE
-  QualifiedHV &getLocalVarRef(int32_t n) const {
-    return frame_[StackFrameLayout::localOffset(n)];
-  }
-
   /// \return a pointer to the register at the start of the previous stack
   /// frame.
   QualifiedHV *getPreviousFramePointer() const {
@@ -185,10 +179,6 @@ class StackFramePtrT {
   /// CodeBlock *.
   inline Handle<Callable> getCalleeClosureHandleUnsafe() const;
 
-  /// \return a pointer to the callee closure, if we have it, or nullptr
-  ///   if it is a CodeBlock.
-  Callable *getCalleeClosure() const;
-
   /// \return the callee's CodeBlock, i.e. the CodeBlock that is executing in
   ///   this frame. It could be nullptr if calleeClosure is a Callable but not
   ///   a JSFunction.
@@ -199,19 +189,23 @@ class StackFramePtrT {
     return !getNewTargetRef().isUndefined();
   }
 
+  /// \return an iterator pointing to the first explicit argument.
+  ArgIteratorT<isConst> argsBegin() const {
+    return ArgIteratorT<isConst>(&getThisArgRef());
+  }
+
   /// \return a reference to the register containing the N-th argument to the
   /// callee. -1 is this, 0 is the first explicit argument. It is an error to
   /// use a number greater or equal to \c getArgCount().
   QualifiedHV &getArgRef(int32_t n) const {
-    assert(
-        (n == -1 || (uint32_t)n < getArgCount()) && "invalid argument index");
-    return frame_[StackFrameLayout::argOffset(n)];
+    assert(n >= -1 && n < (int64_t)getArgCount() && "invalid argument index");
+    return argsBegin()[n];
   }
 
   /// Same as \c getArgRef() but allows to obtain a reference to one past the
   /// last argument.
   QualifiedHV &getArgRefUnsafe(int32_t n) const {
-    return frame_[StackFrameLayout::argOffset(n)];
+    return argsBegin()[n];
   }
 
   /// Initialize a new frame with the supplied values.
@@ -268,7 +262,7 @@ class StackFramePtrT {
   /// Create an instance of NativeArgs pointing to the arguments in this
   /// frame.
   NativeArgs getNativeArgs() const {
-    return NativeArgs{&getThisArgRef(), getArgCount(), &getNewTargetRef()};
+    return NativeArgs{argsBegin(), getArgCount(), &getNewTargetRef()};
   }
 };
 
@@ -290,10 +284,10 @@ void dumpStackFrame(ConstStackFramePtr frame);
 void dumpStackFrame(StackFramePtr frame);
 
 static_assert(
-    IsTriviallyCopyable<StackFramePtr, true>::value,
+    std::is_trivially_copyable<StackFramePtr>::value,
     "StackFramePtr must be trivially copyable");
 static_assert(
-    IsTriviallyCopyable<ConstStackFramePtr, true>::value,
+    std::is_trivially_copyable<ConstStackFramePtr>::value,
     "ConstStackFramePtr must be trivially copyable");
 
 /// Unidirectional iterator over stack frames, starting from the top-most
@@ -360,10 +354,10 @@ using StackFrameIterator = StackFrameIteratorT<false>;
 using ConstStackFrameIterator = StackFrameIteratorT<true>;
 
 static_assert(
-    IsTriviallyCopyable<StackFrameIterator, true>::value,
+    std::is_trivially_copyable<StackFrameIterator>::value,
     "StackFrameIterator must be trivially copyable");
 static_assert(
-    IsTriviallyCopyable<ConstStackFrameIterator, true>::value,
+    std::is_trivially_copyable<ConstStackFrameIterator>::value,
     "ConstStackFrameIterator must be trivially copyable");
 
 } // namespace vm

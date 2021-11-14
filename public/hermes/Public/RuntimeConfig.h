@@ -14,15 +14,6 @@
 
 #include <memory>
 
-#ifdef HERMESVM_SERIALIZE
-#include <vector>
-
-namespace llvh {
-class MemoryBuffer;
-class raw_ostream;
-} // namespace llvh
-#endif
-
 namespace hermes {
 namespace vm {
 
@@ -33,14 +24,10 @@ enum CompilationMode {
 };
 
 class PinnedHermesValue;
-#ifdef HERMESVM_SERIALIZE
-class Serializer;
-class Deserializer;
-#endif
 
 // Parameters for Runtime initialisation.  Check documentation in README.md
 // constexpr indicates that the default value is constexpr.
-#define RUNTIME_FIELDS_BASE(F)                                         \
+#define RUNTIME_FIELDS(F)                                              \
   /* Parameters to be passed on to the GC. */                          \
   F(HERMES_NON_CONSTEXPR, vm::GCConfig, GCConfig)                      \
                                                                        \
@@ -130,33 +117,6 @@ class Deserializer;
   /* The flags passed from a VM experiment */                          \
   F(constexpr, uint32_t, VMExperimentFlags, 0)                         \
   /* RUNTIME_FIELDS END */
-
-#ifdef HERMESVM_SERIALIZE
-using ExternalPointersVectorFunction = std::vector<void *>();
-#define RUNTIME_FIELDS_SD(F)                                       \
-  /* Should serialize after initialization */                      \
-  F(HERMES_NON_CONSTEXPR,                                          \
-    std::shared_ptr<llvh::raw_ostream>,                            \
-    SerializeAfterInitFile,                                        \
-    nullptr)                                                       \
-  /* Should deserialize instead of initialization */               \
-  F(HERMES_NON_CONSTEXPR,                                          \
-    std::shared_ptr<llvh::MemoryBuffer>,                           \
-    DeserializeFile,                                               \
-    nullptr)                                                       \
-  /* A function to get pointer values not visible to Runtime. e.g. \
-   * function pointers defined in ConsoleHost*/                    \
-  F(constexpr,                                                     \
-    ExternalPointersVectorFunction *,                              \
-    ExternalPointersVectorCallBack,                                \
-    nullptr)
-
-#define RUNTIME_FIELDS(F) \
-  RUNTIME_FIELDS_BASE(F)  \
-  RUNTIME_FIELDS_SD(F)
-#else // ifndef HERMESVM_SERIALIZE
-#define RUNTIME_FIELDS(F) RUNTIME_FIELDS_BASE(F)
-#endif // HERMESVM_SERIALIZE
 
 _HERMES_CTORCONFIG_STRUCT(RuntimeConfig, RUNTIME_FIELDS, {});
 

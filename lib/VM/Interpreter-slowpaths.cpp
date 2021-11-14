@@ -25,7 +25,8 @@ void Interpreter::saveGenerator(
     Runtime *runtime,
     PinnedHermesValue *frameRegs,
     const Inst *resumeIP) {
-  auto *innerFn = vmcast<GeneratorInnerFunction>(FRAME.getCalleeClosure());
+  auto *innerFn =
+      vmcast<GeneratorInnerFunction>(FRAME.getCalleeClosureUnsafe());
   innerFn->saveStack(runtime);
   innerFn->setNextIP(resumeIP);
   innerFn->setState(GeneratorInnerFunction::State::SuspendedYield);

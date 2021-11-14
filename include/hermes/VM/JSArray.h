@@ -21,13 +21,6 @@ class ArrayImpl : public JSObject {
   friend void ArrayImplBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  ArrayImpl(Deserializer &d, const VTable *vt);
-
-  friend void
-  serializeArrayImpl(Serializer &s, const GCCell *cell, unsigned overlapSlots);
-#endif
-
   static bool classof(const GCCell *cell) {
     return kindInRange(
         cell->getKind(),
@@ -256,12 +249,6 @@ class Arguments final : public ArrayImpl {
       Handle<Callable> curFunction,
       bool strictMode);
 
-#ifdef HERMESVM_SERIALIZE
-  explicit Arguments(Deserializer &d);
-
-  friend void ArgumentsDeserialize(Deserializer &d, CellKind kind);
-#endif
-
   Arguments(
       Runtime *runtime,
       Handle<JSObject> parent,
@@ -284,12 +271,6 @@ class JSArray final : public ArrayImpl {
   }
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  JSArray(Deserializer &d, const VTable *vt);
-
-  friend void ArraySerialize(Serializer &s, const GCCell *cell);
-#endif
-
   static const ObjectVTable vt;
 
   // We need one more slot for the '.length' property.
@@ -420,13 +401,6 @@ class JSArrayIterator : public JSObject {
       Runtime *runtime);
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  explicit JSArrayIterator(Deserializer &d);
-
-  friend void ArrayIteratorSerialize(Serializer &s, const GCCell *cell);
-  friend void ArrayIteratorDeserialize(Deserializer &d, CellKind kind);
-#endif
-
   JSArrayIterator(
       Runtime *runtime,
       Handle<JSObject> parent,

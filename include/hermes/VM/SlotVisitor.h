@@ -33,22 +33,13 @@ class BaseVisitor {
                             ->load(std::memory_order_acquire);
     const auto stride = array.stride;
     switch (array.type) {
-      case ArrayType::Pointer:
-        visitArrayObject<Acceptor, GCPointerBase, WithNames>(
-            acceptor, start, length, stride);
-        break;
-      case ArrayType::HermesValue:
-        visitArrayObject<Acceptor, GCHermesValue, WithNames>(
-            acceptor, start, length, stride);
-        break;
-      case ArrayType::SmallHermesValue:
-        visitArrayObject<Acceptor, GCSmallHermesValue, WithNames>(
-            acceptor, start, length, stride);
-        break;
-      case ArrayType::Symbol:
-        visitArrayObject<Acceptor, GCSymbolID, WithNames>(
-            acceptor, start, length, stride);
-        break;
+#define SLOT_TYPE(type)                          \
+  case ArrayType::type:                          \
+    visitArrayObject<Acceptor, type, WithNames>( \
+        acceptor, start, length, stride);        \
+    break;
+#include "hermes/VM/SlotKinds.def"
+#undef SLOT_TYPE
     }
   }
 
@@ -63,7 +54,7 @@ class BaseVisitor {
   template <typename Acceptor, typename ElementType>
   struct ArrayElementAccept<Acceptor, ElementType, true> final {
     static void impl(Acceptor &acceptor, ElementType &elem, uint32_t num) {
-      auto name = oscompat::to_string(num);
+      auto name = std::to_string(num);
       // It's fine to use the raw string since it is not stored, only copied.
       acceptor.accept(elem, name.c_str());
     }
@@ -122,11 +113,11 @@ struct SlotVisitor final : BaseVisitor {
   /// It also visits all of the fields in variable sized objects like arrays.
   /// \p cell The cell to be marked, any object in the GC heap.
   /// \p meta The metadata about the cell.
-  void visit(GCCell *cell, const Metadata &meta) {
+  void visit(GCCell *cell, const Metadata::SlotOffsets &offsets) {
     auto *ptr = reinterpret_cast<char *>(cell);
-    visitFields(ptr, meta);
-    if (meta.array_) {
-      visitArray<Acceptor, /*WithNames*/ false>(acceptor_, ptr, *meta.array_);
+    visitFields(ptr, offsets);
+    if (offsets.array) {
+      visitArray<Acceptor, /*WithNames*/ false>(acceptor_, ptr, *offsets.array);
     }
   }
 
@@ -134,13 +125,13 @@ struct SlotVisitor final : BaseVisitor {
   /// [begin, end)
   void visitWithinRange(
       GCCell *cell,
-      const Metadata &meta,
+      const Metadata::SlotOffsets &offsets,
       const char *begin,
       const char *end) {
     auto *ptr = reinterpret_cast<char *>(cell);
-    visitFieldsWithinRange(ptr, meta, begin, end);
-    if (meta.array_) {
-      visitArrayWithinRange(ptr, *meta.array_, begin, end);
+    visitFieldsWithinRange(ptr, offsets, begin, end);
+    if (offsets.array) {
+      visitArrayWithinRange(ptr, *offsets.array, begin, end);
     }
   }
 
@@ -148,59 +139,45 @@ struct SlotVisitor final : BaseVisitor {
   /// Visit each individual slot within the object that starts at \p base.
   /// \p offsets A list of offsets at which fields of type T can be found.
   template <typename T>
-  void visitSlots(
-      char *const base,
-      llvh::ArrayRef<Metadata::offset_t> offsets) {
-    for (const auto offset : offsets) {
-      assert(
-          reinterpret_cast<uintptr_t>(base + offset) % alignof(T) == 0 &&
-          "Should be aligned to the same alignment as T");
-      acceptor_.accept(*reinterpret_cast<T *>(base + offset));
-    }
-  }
-
-  /// Same as \c visitSlots, except it only visits slots that are between
-  /// [begin, end).
-  template <typename T>
-  void visitSlotsWithinRange(
-      char *base,
-      llvh::ArrayRef<Metadata::offset_t> offsets,
-      const char *begin,
-      const char *end) {
-    for (const auto offset : offsets) {
-      char *curr = base + offset;
-      assert(
-          reinterpret_cast<uintptr_t>(curr) % alignof(T) == 0 &&
-          "Should be aligned to the same alignment as T");
-      if (curr >= begin && curr < end) {
-        acceptor_.accept(*reinterpret_cast<T *>(curr));
-      }
-    }
+  void visitSlot(char *const slot) {
+    assert(
+        reinterpret_cast<uintptr_t>(slot) % alignof(T) == 0 &&
+        "Should be aligned to the same alignment as T");
+    acceptor_.accept(*reinterpret_cast<T *>(slot));
   }
 
   /// Visits the fields of an object that starts at \p base, using \p meta to
   /// find the fields, and calls \c acceptor_.accept() on them.
-  void visitFields(char *base, const Metadata &meta) {
-    visitSlots<GCPointerBase>(base, meta.pointers_.offsets);
-    visitSlots<GCHermesValue>(base, meta.values_.offsets);
-    visitSlots<GCSmallHermesValue>(base, meta.smallValues_.offsets);
-    visitSlots<GCSymbolID>(base, meta.symbols_.offsets);
+  void visitFields(char *base, const Metadata::SlotOffsets &offsets) {
+    size_t i = 0;
+#define SLOT_TYPE(type)              \
+  for (; i < offsets.end##type; ++i) \
+    visitSlot<type>(base + offsets.fields[i]);
+#include "hermes/VM/SlotKinds.def"
+#undef SLOT_TYPE
   }
 
   /// Same as \c visitFields, except any pointer field inside \p base that is
   /// not between \p begin and \p end is skipped.
   void visitFieldsWithinRange(
       char *base,
-      const Metadata &meta,
+      const Metadata::SlotOffsets &offsets,
       const char *begin,
       const char *end) {
-    visitSlotsWithinRange<GCPointerBase>(
-        base, meta.pointers_.offsets, begin, end);
-    visitSlotsWithinRange<GCHermesValue>(
-        base, meta.values_.offsets, begin, end);
-    visitSlotsWithinRange<GCSmallHermesValue>(
-        base, meta.smallValues_.offsets, begin, end);
-    visitSlotsWithinRange<GCSymbolID>(base, meta.symbols_.offsets, begin, end);
+    size_t i = 0;
+#define SLOT_TYPE(type)                    \
+  for (; i < offsets.end##type; ++i) {     \
+    char *slot = base + offsets.fields[i]; \
+    if (slot < begin)                      \
+      continue;                            \
+    if (slot >= end) {                     \
+      i = offsets.end##type;               \
+      break;                               \
+    }                                      \
+    visitSlot<type>(slot);                 \
+  }
+#include "hermes/VM/SlotKinds.def"
+#undef SLOT_TYPE
   }
 
   /// Same as \c visitArrayObject, except it does not accept fields between
@@ -238,22 +215,12 @@ struct SlotVisitor final : BaseVisitor {
         *reinterpret_cast<std::uint32_t *>(base + array.lengthOffset);
     const auto stride = array.stride;
     switch (array.type) {
-      case ArrayType::Pointer:
-        visitArrayObjectWithinRange<GCPointerBase>(
-            start, length, stride, begin, end);
-        break;
-      case ArrayType::HermesValue:
-        visitArrayObjectWithinRange<GCHermesValue>(
-            start, length, stride, begin, end);
-        break;
-      case ArrayType::SmallHermesValue:
-        visitArrayObjectWithinRange<GCSmallHermesValue>(
-            start, length, stride, begin, end);
-        break;
-      case ArrayType::Symbol:
-        visitArrayObjectWithinRange<GCSymbolID>(
-            start, length, stride, begin, end);
-        break;
+#define SLOT_TYPE(type)                                                   \
+  case ArrayType::type:                                                   \
+    visitArrayObjectWithinRange<type>(start, length, stride, begin, end); \
+    break;
+#include "hermes/VM/SlotKinds.def"
+#undef SLOT_TYPE
     }
   }
 };
@@ -264,40 +231,40 @@ struct SlotVisitorWithNames final : BaseVisitor {
 
   SlotVisitorWithNames(Acceptor &acceptor) : acceptor_(acceptor) {}
 
-  void visit(GCCell *cell, const Metadata &meta) {
+  void visit(
+      GCCell *cell,
+      const Metadata::SlotOffsets &offsets,
+      const Metadata::SlotNames &names) {
     auto *ptr = reinterpret_cast<char *>(cell);
-    visitFields(ptr, meta);
-    if (meta.array_) {
-      visitArray<Acceptor, /*WithNames*/ true>(acceptor_, ptr, *meta.array_);
+    visitFields(ptr, offsets, names);
+    if (offsets.array) {
+      visitArray<Acceptor, /*WithNames*/ true>(acceptor_, ptr, *offsets.array);
     }
   }
 
  private:
   /// Visits the fields of an object that starts at \p base, using \p meta to
   /// find the fields, and calls \c acceptor_.accept() on them.
-  void visitFields(char *base, const Metadata &meta) {
+  void visitFields(
+      char *base,
+      const Metadata::SlotOffsets &offsets,
+      const Metadata::SlotNames &names) {
     // Ignore sizes for special fields, since these are known types with known
     // sizes.
-    visitSlots<GCPointerBase>(
-        base, meta.pointers_.offsets, meta.pointers_.names);
-    visitSlots<GCHermesValue>(base, meta.values_.offsets, meta.values_.names);
-    visitSlots<GCSmallHermesValue>(
-        base, meta.smallValues_.offsets, meta.smallValues_.names);
-    visitSlots<GCSymbolID>(base, meta.symbols_.offsets, meta.symbols_.names);
+    size_t i = 0;
+#define SLOT_TYPE(type)              \
+  for (; i < offsets.end##type; ++i) \
+    visitSlot<type>(base + offsets.fields[i], names[i]);
+#include "hermes/VM/SlotKinds.def"
+#undef SLOT_TYPE
   }
 
   template <typename T>
-  void visitSlots(
-      char *base,
-      llvh::ArrayRef<Metadata::offset_t> offsets,
-      llvh::ArrayRef<const char *> names) {
-    for (decltype(offsets.size()) i = 0; i < offsets.size(); ++i) {
-      char *curr = base + offsets[i];
-      assert(
-          reinterpret_cast<uintptr_t>(curr) % alignof(T) == 0 &&
-          "Should be aligned to the same alignment as T");
-      acceptor_.accept(*reinterpret_cast<T *>(curr), names[i]);
-    }
+  void visitSlot(char *slot, const char *name) {
+    assert(
+        reinterpret_cast<uintptr_t>(slot) % alignof(T) == 0 &&
+        "Should be aligned to the same alignment as T");
+    acceptor_.accept(*reinterpret_cast<T *>(slot), name);
   }
 };
 

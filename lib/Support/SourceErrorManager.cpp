@@ -28,9 +28,8 @@ void SourceErrorManager::BufferedMessage::addNote(
     DiagKind dk,
     SMLoc loc,
     SMRange sm,
-    std::string &&msg,
-    const SourceCoords &coords) {
-  bufferedNotes.emplace_back(dk, loc, sm, std::move(msg), coords);
+    std::string &&msg) {
+  bufferedNotes.emplace_back(dk, loc, sm, std::move(msg));
 
   if (!noteCount_)
     firstNote_ = bufferedNotes.size() - 1;
@@ -64,11 +63,11 @@ void SourceErrorManager::disableBuffering() {
       bufferedMessages_.end(),
       [](const BufferedMessage &a, const BufferedMessage &b) {
         // Make sure the "too many errors" message is always last.
-        if (a.dk == DK_Error && !a.coords.isValid() && a.msg == sTooManyErrors)
+        if (a.dk == DK_Error && !a.loc.isValid() && a.msg == sTooManyErrors)
           return false;
-        if (b.dk == DK_Error && !b.coords.isValid() && b.msg == sTooManyErrors)
+        if (b.dk == DK_Error && !b.loc.isValid() && b.msg == sTooManyErrors)
           return true;
-        return a.coords.less(b.coords);
+        return a.loc.getPointer() < b.loc.getPointer();
       });
 
   // Print them.
@@ -142,17 +141,13 @@ void SourceErrorManager::doGenMessage(
     llvh::SMRange sm,
     llvh::Twine const &msg) {
   if (bufferingEnabled_) {
-    SourceCoords coords;
-    findBufferLineAndLoc(loc, coords);
-
     // If this message is a note, try to associate it with the last message.
     // Note that theoretically the first buffered message could be a note, so
     // we play it safe here (even though it should never happen).
     if (dk == DK_Note && !bufferedMessages_.empty()) {
-      bufferedMessages_.back().addNote(
-          bufferedNotes_, dk, loc, sm, msg.str(), coords);
+      bufferedMessages_.back().addNote(bufferedNotes_, dk, loc, sm, msg.str());
     } else {
-      bufferedMessages_.emplace_back(dk, loc, sm, msg.str(), coords);
+      bufferedMessages_.emplace_back(dk, loc, sm, msg.str());
     }
   } else {
     doPrintMessage(dk, loc, sm, msg);
@@ -241,18 +236,29 @@ void SourceErrorManager::message(
   message(dk, loc, SMRange{}, msg, subsystem);
 }
 
-/// Make sure the location doesn't point to \r or in the middle of a utf-8
-/// sequence.
-static inline SMLoc adjustSourceLocation(
-    const llvh::MemoryBuffer *buf,
-    SMLoc loc) {
+auto SourceErrorManager::findBufferAndLine(SMLoc loc) const
+    -> llvh::Optional<LineCoord> {
+  if (!loc.isValid())
+    return llvh::None;
+
+  auto bufId = sm_.FindBufferContainingLoc(loc);
+  if (!bufId)
+    return llvh::None;
+
+  auto lineRefAndNo = sm_.FindLine(loc, bufId);
+
+  return LineCoord{bufId, lineRefAndNo.second, lineRefAndNo.first};
+}
+
+/// Adjust the source location backwards making sure it doesn't point to \r or
+/// in the middle of a utf-8 sequence.
+static inline SMLoc adjustSourceLocation(const char *bufStart, SMLoc loc) {
   const char *ptr = loc.getPointer();
   // In the very unlikely case that `loc` points to a '\r', we skip backwards
   // until we find another character, while being careful not to fall off the
   // beginning of the buffer.
   if (LLVM_UNLIKELY(*ptr == '\r') ||
       LLVM_UNLIKELY(isUTF8ContinuationByte(*ptr))) {
-    const char *bufStart = buf->getBufferStart();
     do {
       if (LLVM_UNLIKELY(ptr == bufStart)) {
         // This is highly unlikely but theoretically possible. There were only
@@ -265,23 +271,60 @@ static inline SMLoc adjustSourceLocation(
   return SMLoc::getFromPointer(ptr);
 }
 
+static bool locInside(llvh::StringRef str, SMLoc loc) {
+  const char *ptr = loc.getPointer();
+  return ptr >= str.begin() && ptr < str.end();
+}
+
+inline void SourceErrorManager::FindLineCache::fillCoords(
+    SMLoc loc,
+    SourceCoords &result) {
+  loc = adjustSourceLocation(lineRef.data(), loc);
+  result.bufId = bufferId;
+  result.line = lineNo;
+  result.col = loc.getPointer() - lineRef.data() + 1;
+}
+
 bool SourceErrorManager::findBufferLineAndLoc(SMLoc loc, SourceCoords &result) {
   if (!loc.isValid()) {
     result.bufId = 0;
     return false;
   }
 
-  result.bufId = sm_.FindBufferContainingLoc(loc);
-  if (!result.bufId)
+  if (findLineCache_.bufferId) {
+    // Check the cache with the hope that the lookup is within the last line or
+    // the next line.
+    if (locInside(findLineCache_.lineRef, loc)) {
+      findLineCache_.fillCoords(loc, result);
+      return true;
+    }
+    if (locInside(findLineCache_.nextLineRef, loc)) {
+      ++findLineCache_.lineNo;
+      findLineCache_.lineRef = findLineCache_.nextLineRef;
+      findLineCache_.nextLineRef =
+          sm_.getLineRef(findLineCache_.lineNo + 1, findLineCache_.bufferId);
+
+      findLineCache_.fillCoords(loc, result);
+      return true;
+    }
+
+    findLineCache_.bufferId = 0;
+  }
+
+  auto lineCoord = findBufferAndLine(loc);
+  if (!lineCoord) {
+    result.bufId = 0;
     return false;
+  }
 
-  // Adjust the source location if necessary.
-  loc = adjustSourceLocation(sm_.getMemoryBuffer(result.bufId), loc);
+  // Populate the cache.
+  findLineCache_.bufferId = lineCoord->bufId;
+  findLineCache_.lineNo = lineCoord->lineNo;
+  findLineCache_.lineRef = lineCoord->lineRef;
+  findLineCache_.nextLineRef =
+      sm_.getLineRef(findLineCache_.lineNo + 1, lineCoord->bufId);
 
-  auto lineCol = sm_.getLineAndColumn(loc, result.bufId);
-  result.line = lineCol.first;
-  result.col = lineCol.second;
-
+  findLineCache_.fillCoords(loc, result);
   return true;
 }
 

@@ -18,7 +18,6 @@
 #include "hermes/VM/CallResult.h"
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/Debugger/Debugger.h"
-#include "hermes/VM/Deserializer.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCStorage.h"
@@ -35,7 +34,6 @@
 #include "hermes/VM/RegExpMatch.h"
 #include "hermes/VM/RuntimeModule.h"
 #include "hermes/VM/RuntimeStats.h"
-#include "hermes/VM/Serializer.h"
 #include "hermes/VM/StackFrame.h"
 #include "hermes/VM/StackTracesTree-NoRuntime.h"
 #include "hermes/VM/SymbolRegistry.h"
@@ -728,7 +726,8 @@ class Runtime : public HandleRootOwner,
   ExecutionStatus stepFunction(InterpreterState &state);
 #endif
 
-  /// Inserts an object into the string cycle checking stack.
+  /// Inserts an object into the string cycle checking stack if it does not
+  /// already exist.
   /// \return true if a cycle was found
   bool insertVisitedObject(JSObject *obj);
 
@@ -742,8 +741,10 @@ class Runtime : public HandleRootOwner,
 
   /// Like calling JSObject::putNamed with the ThrowOnError flag, but uses this
   /// runtime's property cache.
-  ExecutionStatus
-  putNamedThrowOnError(Handle<JSObject> obj, PropCacheID id, HermesValue hv);
+  ExecutionStatus putNamedThrowOnError(
+      Handle<JSObject> obj,
+      PropCacheID id,
+      SmallHermesValue hv);
 
   /// @}
 
@@ -907,27 +908,6 @@ class Runtime : public HandleRootOwner,
 
   /// Called when various GC events(e.g. collection start/end) happen.
   void onGCEvent(GCEventKind kind, const std::string &extraInfo) override;
-
-#ifdef HERMESVM_SERIALIZE
-  /// Fill the header with current Runtime config
-  void populateHeaderRuntimeConfig(SerializeHeader &header);
-
-  /// Check if the SerializeHeader read from the file matches Runtime config of
-  /// current run.
-  void checkHeaderRuntimeConfig(SerializeHeader &header) const;
-
-  /// Serialize the VM state.
-  void serialize(Serializer &s);
-
-  /// Set the closure function to execute after deserialization.
-  void setSerializeClosure(Handle<JSFunction> function) {
-    serializeClosure = function.getHermesValue();
-  }
-
-  HermesValue getSerializeClosure() {
-    return serializeClosure;
-  }
-#endif
 
 #ifdef HERMESVM_PROFILER_BB
   using ClassId = InlineCacheProfiler::ClassId;
@@ -1108,23 +1088,6 @@ class Runtime : public HandleRootOwner,
   /// Write a JS stack trace as part of a \c crashCallback() run.
   void crashWriteCallStack(JSONEmitter &json);
 
-#ifdef HERMESVM_SERIALIZE
-  void serializeIdentifierTable(Serializer &s);
-
-  /// Serialize Runtime fields.
-  void serializeRuntimeFields(Serializer &s);
-
-  /// Deserialize Runtime fields.
-  void deserializeRuntimeFields(Deserializer &d);
-
-  /// Deserialize the VM state.
-  /// \param inputFile MemoryBuffer to read from.
-  /// \param currentlyInYoung Whether we are allocating from the young gen
-  /// before deserialization starts and should we go back to allocating from the
-  /// young gen after deserialziation.
-  void deserializeImpl(Deserializer &d, bool currentlyInYoung);
-#endif
-
  private:
   GCStorage heapStorage_;
 
@@ -1219,13 +1182,12 @@ class Runtime : public HandleRootOwner,
   /// @name Private VM State
   /// @{
 
-  PinnedHermesValue *registerStack_;
+  /// If the register stack is allocated by the runtime, then this stores its
+  /// location and size.
+  llvh::MutableArrayRef<PinnedHermesValue> registerStackAllocation_;
+  PinnedHermesValue *registerStackStart_;
   PinnedHermesValue *registerStackEnd_;
   PinnedHermesValue *stackPointer_;
-  /// Bytes of register stack to unmap on destruction.
-  /// When set to zero, the register stack is not allocated
-  /// by the runtime itself.
-  uint32_t registerStackBytesToUnmap_{0};
   /// Manages data to be used in the case of a crash.
   std::shared_ptr<CrashManager> crashMgr_;
   /// Points to the last register in the callers frame. The current frame (the
@@ -1698,7 +1660,7 @@ class ScopedNativeCallFrame {
   void fillArguments(uint32_t argCount, HermesValue fillValue) {
     assert(overflowHasBeenChecked_ && "ScopedNativeCallFrame could overflow");
     assert(argCount == frame_.getArgCount() && "Arg count mismatch.");
-    std::uninitialized_fill_n(&frame_.getArgRefUnsafe(0), argCount, fillValue);
+    std::uninitialized_fill_n(frame_.argsBegin(), argCount, fillValue);
   }
 
   /// \return whether the stack frame overflowed.
@@ -1872,17 +1834,17 @@ inline Runtime::FormatSymbolID Runtime::formatSymbolID(SymbolID id) {
 
 inline void Runtime::popToSavedStackPointer(PinnedHermesValue *stackPointer) {
   assert(
-      stackPointer >= stackPointer_ &&
+      stackPointer <= stackPointer_ &&
       "attempting to pop the stack to a higher level");
   stackPointer_ = stackPointer;
 }
 
 inline uint32_t Runtime::getStackLevel() const {
-  return (uint32_t)(registerStackEnd_ - stackPointer_);
+  return (uint32_t)(stackPointer_ - registerStackStart_);
 }
 
 inline uint32_t Runtime::availableStackSize() const {
-  return (uint32_t)(stackPointer_ - registerStack_);
+  return (uint32_t)(registerStackEnd_ - stackPointer_);
 }
 
 inline bool Runtime::checkAvailableStack(uint32_t count) {
@@ -1893,7 +1855,7 @@ inline bool Runtime::checkAvailableStack(uint32_t count) {
 
 inline PinnedHermesValue *Runtime::allocUninitializedStack(uint32_t count) {
   assert(availableStackSize() >= count && "register stack overflow");
-  return stackPointer_ -= count;
+  return stackPointer_ += count;
 }
 
 inline bool Runtime::checkAndAllocStack(uint32_t count, HermesValue initValue) {
@@ -1937,14 +1899,15 @@ inline StackFramePtr Runtime::restoreStackAndPreviousFrame() {
 
 inline llvh::iterator_range<StackFrameIterator> Runtime::getStackFrames() {
   return {
-      StackFrameIterator{currentFrame_}, StackFrameIterator{registerStackEnd_}};
+      StackFrameIterator{currentFrame_},
+      StackFrameIterator{registerStackStart_}};
 };
 
 inline llvh::iterator_range<ConstStackFrameIterator> Runtime::getStackFrames()
     const {
   return {
       ConstStackFrameIterator{currentFrame_},
-      ConstStackFrameIterator{registerStackEnd_}};
+      ConstStackFrameIterator{registerStackStart_}};
 };
 
 inline ExecutionStatus Runtime::setThrownValue(HermesValue value) {

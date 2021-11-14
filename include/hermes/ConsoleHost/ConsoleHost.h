@@ -111,9 +111,6 @@ void installConsoleBindings(
     vm::Runtime *runtime,
     ConsoleHostContext &ctx,
     vm::StatSamplingThread *statSampler = nullptr,
-#ifdef HERMESVM_SERIALIZE
-    const std::string *serializePath = nullptr,
-#endif
     const std::string *filename = nullptr);
 
 /// Options for executing an HBC bundle.
@@ -147,17 +144,6 @@ struct ExecuteOptions {
 
   /// Run the sampling profiler.
   bool sampleProfiling{false};
-
-#ifdef HERMESVM_SERIALIZE
-  /// Serialize VM state after global object initialization to file.
-  std::string SerializeAfterInitFile;
-
-  /// Deserialize VM state from file.
-  std::string DeserializeFile;
-
-  /// File to serialize VM state to when serializeVM is called.
-  std::string SerializeVMPath;
-#endif // HERMESVM_SERIALIZE
 
   /// Start tracking heap objects before executing bytecode.
   bool heapTimeline{false};

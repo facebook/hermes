@@ -8,7 +8,6 @@
 #include <cctype>
 #include <string>
 
-#include "llvh/ADT/DenseMap.h"
 #include "llvh/ADT/DenseSet.h"
 #include "llvh/ADT/SmallVector.h"
 #include "llvh/Support/Casting.h"
@@ -23,13 +22,11 @@
 #include "hermes/IR/IRVisitor.h"
 #include "hermes/IR/Instrs.h"
 #include "hermes/Optimizer/Wasm/WasmIntrinsics.h"
-#include "hermes/Support/OSCompat.h"
 #include "hermes/Support/Statistic.h"
 #include "hermes/Utils/Dumper.h"
 
 using namespace hermes;
 
-using hermes::oscompat::to_string;
 using llvh::cast;
 using llvh::dyn_cast;
 using llvh::isa;
@@ -387,7 +384,7 @@ struct DottyPrinter : public IRVisitor<DottyPrinter, void> {
   /// Convert pointers into unique textual ids.
   static std::string toString(BasicBlock *ptr) {
     auto Num = (size_t)ptr;
-    return to_string(Num);
+    return std::to_string(Num);
   }
 
   /// Reimplement the visitFunction in IRVisitor.
@@ -437,7 +434,7 @@ struct DottyPrinter : public IRVisitor<DottyPrinter, void> {
     }
 
     for (auto I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
-      auto From = toString(BB) + ":L" + to_string(counter);
+      auto From = toString(BB) + ":L" + std::to_string(counter);
       Edges.push_back({From, toString(*I) + (*I == BB ? ":self" : ":head")});
     }
 

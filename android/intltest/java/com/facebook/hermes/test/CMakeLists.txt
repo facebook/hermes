@@ -32,10 +32,8 @@ if(HERMES_IS_ANDROID)
       compileJS
       fbjni::fbjni
       jsi
-      ${CORE_FOUNDATION}
   )
   target_compile_options(jsijni PRIVATE -frtti -fexceptions)
-  hermes_link_icu(jsijni)
 
   add_hermes_library(jsijniepi SHARED
       ${epi_source_files}
@@ -45,8 +43,6 @@ if(HERMES_IS_ANDROID)
       compileJS
       fbjni::fbjni
       jsi
-      ${CORE_FOUNDATION}
   )
   target_compile_options(jsijniepi PRIVATE -frtti -fexceptions)
-  hermes_link_icu(jsijniepi)
 endif()

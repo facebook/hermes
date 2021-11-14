@@ -110,7 +110,8 @@ struct VTable {
   /// isn't.
   using FinalizeCallback = void(GCCell *, GC *gc);
   FinalizeCallback *const finalize_;
-  /// Call gc functions on weak-reference-holding objects.
+  /// Call GC functions on weak-reference-holding objects. In a concurrent GC,
+  /// guaranteed to be called while the weak ref mutex is held.
   using MarkWeakCallback = void(GCCell *, WeakRefAcceptor &);
   MarkWeakCallback *const markWeak_;
   /// Report if there is any size contribution from an object beyond the GC.
@@ -129,7 +130,7 @@ struct VTable {
   const HeapSnapshotMetadata snapshotMetaData;
 
   /// Static array storing the VTable corresponding to each CellKind. This is
-  /// initialized by getMetadataTable.
+  /// initialized by buildMetadataTable.
   static std::array<const VTable *, kNumCellKinds> vtableArray;
 
   constexpr explicit VTable(
@@ -175,11 +176,9 @@ struct VTable {
     finalize_(cell, gc);
   }
 
-  void markWeakIfExists(GCCell *cell, WeakRefAcceptor &acceptor) const {
+  MarkWeakCallback *getMarkWeakCallback() const {
     assert(isValid());
-    if (markWeak_) {
-      markWeak_(cell, acceptor);
-    }
+    return markWeak_;
   }
 
   size_t getMallocSize(GCCell *cell) const {

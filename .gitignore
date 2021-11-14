@@ -24,3 +24,6 @@ test/ApplePlatformsIntegrationTestApp/Podfile.lock
 test/ApplePlatformsIntegrationTestApp/Pods
 test/ApplePlatformsIntegrationTestApp/**/xcuserdata
 test/ApplePlatformsIntegrationTestApp/ApplePlatformsIntegrationTestApp.xcworkspace
+
+# Intl testing
+android/intltest/java/com/facebook/hermes/test/assets/**

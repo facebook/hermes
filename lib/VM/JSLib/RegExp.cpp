@@ -1183,8 +1183,7 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
 
   // c. Let setStatus be Set(rx, "lastIndex", 0, true).
   // d. ReturnIfAbrupt(setStatus).
-  Handle<> zeroHandle = HandleRootOwner::getZeroValue();
-  if (setLastIndex(rx, runtime, *zeroHandle) == ExecutionStatus::EXCEPTION) {
+  if (setLastIndex(rx, runtime, 0) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   // e. Let A be ArrayCreate(0).
@@ -1226,7 +1225,8 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
     auto resultObj = Handle<JSObject>::vmcast(result);
     // 1. Let matchStr be ToString(Get(result, "0")).
     // 2. ReturnIfAbrupt(matchStr).
-    auto propRes2 = JSObject::getComputed_RJS(resultObj, runtime, zeroHandle);
+    auto propRes2 = JSObject::getComputed_RJS(
+        resultObj, runtime, HandleRootOwner::getZeroValue());
     if (propRes2 == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1310,7 +1310,9 @@ regExpPrototypeSymbolSearch(void *, Runtime *runtime, NativeArgs args) {
   }
   Handle<> result = runtime->makeHandle(execRes.getValue());
   // 11. Let status be Set(rx, "lastIndex", previousLastIndex, true).
-  status = setLastIndex(rx, runtime, *previousLastIndex);
+  auto previousLastIndexSHV =
+      SmallHermesValue::encodeHermesValue(*previousLastIndex, runtime);
+  status = setLastIndex(rx, runtime, previousLastIndexSHV);
   // 12. ReturnIfAbrupt(status).
   if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1377,7 +1379,6 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
   bool fullUnicode = false;
 
   // 10. If global is true, then
-  Handle<> zeroHandle = HandleRootOwner::getZeroValue();
   if (global) {
     //   a. Let fullUnicode be ToBoolean(Get(rx, "unicode")).
     //   b. ReturnIfAbrupt(fullUnicode).
@@ -1389,7 +1390,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
     fullUnicode = toBoolean(unicodePropRes->get());
 
     //   c. Let setStatus be Set(rx, "lastIndex", 0, true).
-    auto setStatus = setLastIndex(rx, runtime, *zeroHandle);
+    auto setStatus = setLastIndex(rx, runtime, 0);
     //   d. ReturnIfAbrupt(setStatus).
     if (LLVM_UNLIKELY(setStatus == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1409,7 +1410,6 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
   // 13. Repeat, while done is false
   MutableHandle<> propValue{runtime};
   MutableHandle<StringPrimitive> matchStr{runtime};
-  MutableHandle<HermesValue> nextIndex{runtime};
   MutableHandle<JSObject> result{runtime};
   auto stringView = StringPrimitive::createStringView(runtime, S);
   while (!done) {
@@ -1445,7 +1445,8 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
       // iii. Else,
       // 1. Let matchStr be ToString(Get(result, "0")).
       // 2. ReturnIfAbrupt(matchStr).
-      propRes = JSObject::getComputed_RJS(result, runtime, zeroHandle);
+      propRes = JSObject::getComputed_RJS(
+          result, runtime, HandleRootOwner::getZeroValue());
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1469,10 +1470,10 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
           return ExecutionStatus::EXCEPTION;
         }
         // c. Let nextIndex be AdvanceStringIndex(S, thisIndex, fullUnicode).
-        nextIndex = HermesValue::encodeDoubleValue(advanceStringIndex(
-            S.get(), thisIndex->getNumberAs<uint64_t>(), fullUnicode));
+        double nextIndex = advanceStringIndex(
+            S.get(), thisIndex->getNumberAs<uint64_t>(), fullUnicode);
         // d. Let setStatus be Set(rx, "lastIndex", nextIndex, true).
-        auto setStatus = setLastIndex(rx, runtime, *nextIndex);
+        auto setStatus = setLastIndex(rx, runtime, nextIndex);
         // e. ReturnIfAbrupt(setStatus).
         if (setStatus == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
@@ -1509,7 +1510,8 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
     nCaptures = nCaptures > 0 ? nCaptures - 1 : 0;
     // d. Let matched be ToString(Get(result, "0")).
     // e. ReturnIfAbrupt(matched).
-    propRes = JSObject::getComputed_RJS(result, runtime, zeroHandle);
+    propRes = JSObject::getComputed_RJS(
+        result, runtime, HandleRootOwner::getZeroValue());
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

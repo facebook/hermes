@@ -253,6 +253,44 @@ class C {
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+class C {
+  declare +foo: string;
+}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ClassDeclaration",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "C"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "superClass": null,
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "ClassBody",
+// CHECK-NEXT:         "body": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "ClassProperty",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "foo"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "value": null,
+// CHECK-NEXT:             "computed": false,
+// CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "declare": true,
+// CHECK-NEXT:             "variance": {
+// CHECK-NEXT:               "type": "Variance",
+// CHECK-NEXT:               "kind": "plus"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "StringTypeAnnotation"
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ]
+// CHECK-NEXT:       }
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

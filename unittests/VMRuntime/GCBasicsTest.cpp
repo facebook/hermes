@@ -22,10 +22,6 @@ using namespace hermes::vm;
 
 namespace {
 
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
-using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
-#endif
-
 using testhelpers::DummyObject;
 
 struct GCBasicsTest : public ::testing::Test {
@@ -277,99 +273,6 @@ TEST_F(GCBasicsTest, WeakRefTest) {
 #undef LOCK
 #undef UNLOCK
 }
-
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
-TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
-  // This should match the one used by the GC.
-  // TODO This should be shared in GCBase, since all GCs use the same format.
-  enum WeakSlotState {
-    Unmarked,
-    Marked,
-    Free,
-  };
-  GenGC &gc = rt.getHeap();
-  GCBase::DebugHeapInfo debugInfo;
-  GCScope scope{&rt};
-
-  gc.getDebugHeapInfo(debugInfo);
-  EXPECT_EQ(0u, debugInfo.numAllocatedObjects);
-
-  // Create a handle for d0.  We'll only be doing young-gen collections, so
-  // we don't have one for dOld.
-  auto d0 = rt.makeHandle(DummyObject::create(&rt.getHeap()));
-  auto *d1 = DummyObject::create(&rt.getHeap());
-  auto *dOld = DummyObject::createLongLived(&rt.getHeap());
-
-  gc.getDebugHeapInfo(debugInfo);
-  EXPECT_EQ(3u, debugInfo.numAllocatedObjects);
-
-  WeakRefMutex &mtx = gc.weakRefMutex();
-  WeakRefLock lk{mtx};
-  WeakRef<DummyObject> wr0{&gc, *d0};
-  WeakRef<DummyObject> wr1{&gc, d1};
-  WeakRef<DummyObject> wrOld{&gc, dOld};
-
-  ASSERT_TRUE(wr0.isValid());
-  ASSERT_TRUE(wr1.isValid());
-  ASSERT_TRUE(wrOld.isValid());
-
-  ASSERT_EQ(*d0, getNoHandle(wr0, &gc));
-  ASSERT_EQ(d1, getNoHandle(wr1, &gc));
-  ASSERT_EQ(dOld, getNoHandle(wrOld, &gc));
-
-  /// Use the MarkWeakCallback of DummyObject as a hack to update these
-  /// WeakRefs.
-  d0->markWeakCallback = std::make_unique<DummyObject::MarkWeakCallback>(
-      [&](GCCell *, WeakRefAcceptor &acceptor) {
-        acceptor.accept(wr0);
-        acceptor.accept(wr1);
-        acceptor.accept(wrOld);
-      });
-
-  // d1 is supposed to be freed during the following collection, so clear
-  // the pointer to avoid mistakes.
-  d1 = nullptr;
-
-  gc.youngGenCollect();
-  gc.getDebugHeapInfo(debugInfo);
-  EXPECT_EQ(2u, debugInfo.numAllocatedObjects);
-  ASSERT_TRUE(wr0.isValid());
-  ASSERT_FALSE(wr1.isValid());
-  ASSERT_TRUE(wrOld.isValid());
-  ASSERT_EQ(*d0, getNoHandle(wr0, &gc));
-  ASSERT_EQ(dOld, getNoHandle(wrOld, &gc));
-}
-
-TEST_F(GCBasicsTest, TestYoungGenStats) {
-  GenGC &gc = rt.getHeap();
-  GCScope scope{&rt};
-
-  GCBase::DebugHeapInfo debugInfo;
-
-  gc.getDebugHeapInfo(debugInfo);
-  ASSERT_EQ(0u, gc.numGCs());
-  ASSERT_EQ(0u, debugInfo.numAllocatedObjects);
-  ASSERT_EQ(0u, debugInfo.numReachableObjects);
-  ASSERT_EQ(0u, debugInfo.numCollectedObjects);
-
-  rt.makeHandle(DummyObject::create(&rt.getHeap()));
-
-  DummyObject::create(&rt.getHeap());
-
-  gc.getDebugHeapInfo(debugInfo);
-  ASSERT_EQ(0u, gc.numGCs());
-  EXPECT_EQ(2u, debugInfo.numAllocatedObjects);
-
-  gc.youngGenCollect();
-
-  gc.getDebugHeapInfo(debugInfo);
-  EXPECT_EQ(1u, gc.numGCs());
-  EXPECT_EQ(1u, debugInfo.numAllocatedObjects);
-  EXPECT_EQ(1u, debugInfo.numReachableObjects);
-  EXPECT_EQ(1u, debugInfo.numCollectedObjects);
-}
-
-#endif // HERMES_GC_GENERATIONAL || HERMES_GC_NONCONTIG_GENERATIONAL
 #endif // !NDEBUG && !HERMESVM_GC_HADES && !HERMESVM_GC_RUNTIME
 
 TEST_F(GCBasicsTest, WeakRootTest) {
@@ -475,10 +378,10 @@ TEST(GCCallbackTest, TestCallbackInvoked) {
   }
 }
 
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
+#ifndef HERMESVM_GC_MALLOC
+using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
 TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
-  constexpr size_t kHeapSizeHint =
-      AlignedHeapSegment::maxSize() * GenGC::kYoungGenFractionDenom;
+  constexpr size_t kHeapSizeHint = AlignedHeapSegment::maxSize() * 10;
 
   const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
   auto runtime = DummyRuntime::create(kGCConfig);
@@ -487,21 +390,20 @@ TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
   GCScope scope{&rt};
   auto handle = rt.makeHandle<SegmentCell>(SegmentCell::create(rt));
   const auto originalID = rt.getHeap().getObjectID(*handle);
-  GC::HeapInfo originalHeapInfo;
-  rt.getHeap().getHeapInfo(originalHeapInfo);
+  GC::HeapInfo oldHeapInfo;
+  rt.getHeap().getHeapInfo(oldHeapInfo);
   // A second allocation should put the first object into the old gen.
   auto handle2 = rt.makeHandle<SegmentCell>(SegmentCell::create(rt));
   (void)handle2;
   auto idAfter = rt.getHeap().getObjectID(*handle);
-  GC::HeapInfo afterHeapInfo;
-  rt.getHeap().getHeapInfo(afterHeapInfo);
+  GC::HeapInfo newHeapInfo;
+  rt.getHeap().getHeapInfo(newHeapInfo);
   EXPECT_EQ(originalID, idAfter);
   // There should have been one young gen collection.
-  EXPECT_EQ(
-      afterHeapInfo.youngGenStats.numCollections,
-      originalHeapInfo.youngGenStats.numCollections + 1);
+  EXPECT_GT(newHeapInfo.numCollections, oldHeapInfo.numCollections);
+  oldHeapInfo = newHeapInfo;
   // Fill the old gen to force a collection.
-  auto N = rt.getHeap().maxSize() / SegmentCell::size() - 1;
+  auto N = kHeapSizeHint / SegmentCell::size() - 1;
   {
     GCScopeMarkerRAII marker{&rt};
     for (size_t i = 0; i < N - 1; ++i) {
@@ -510,12 +412,10 @@ TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
   }
   SegmentCell::create(rt);
   idAfter = rt.getHeap().getObjectID(*handle);
-  rt.getHeap().getHeapInfo(afterHeapInfo);
+  rt.getHeap().getHeapInfo(newHeapInfo);
   EXPECT_EQ(originalID, idAfter);
   // There should have been one old gen collection.
-  EXPECT_EQ(
-      afterHeapInfo.fullStats.numCollections,
-      originalHeapInfo.fullStats.numCollections + 1);
+  EXPECT_GT(newHeapInfo.numCollections, oldHeapInfo.numCollections);
 }
 #endif
 

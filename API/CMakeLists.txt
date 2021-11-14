@@ -6,7 +6,4 @@
 set(HERMES_ENABLE_EH ON)
 set(HERMES_ENABLE_RTTI ON)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${HERMES_JSI_DIR})
-
 add_subdirectory(hermes)

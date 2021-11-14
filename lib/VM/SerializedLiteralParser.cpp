@@ -21,28 +21,8 @@ using SLG = hermes::hbc::SerializedLiteralGenerator;
 HermesValue SerializedLiteralParser::get(Runtime *) {
   assert(hasNext() && "Object buffer doesn't have any more values");
 
-  if (leftInSeq_ == 0) {
+  if (leftInSeq_ == 0)
     parseTagAndSeqLength();
-    // We set lastValues for types which don't require reading from the buffer
-    // in the if clause, to avoid unnecessarily creating new HermesValues later
-    switch (lastTag_) {
-      case SLG::ByteStringTag:
-      case SLG::ShortStringTag:
-      case SLG::LongStringTag:
-      case SLG::NumberTag:
-      case SLG::IntegerTag:
-        break;
-      case SLG::NullTag:
-        lastValue_ = HermesValue::encodeNullValue();
-        break;
-      case SLG::TrueTag:
-        lastValue_ = HermesValue::encodeBoolValue(true);
-        break;
-      case SLG::FalseTag:
-        lastValue_ = HermesValue::encodeBoolValue(false);
-        break;
-    }
-  }
   leftInSeq_--;
   elemsLeft_--;
 
@@ -53,51 +33,50 @@ HermesValue SerializedLiteralParser::get(Runtime *) {
     case SLG::ByteStringTag: {
       uint8_t val = llvh::support::endian::read<uint8_t, 1>(
           buffer_.data() + currIdx_, llvh::support::endianness::little);
-      lastValue_ = runtimeModule_ == nullptr
+      currIdx_ += 1;
+      return runtimeModule_ == nullptr
           ? HermesValue::encodeSymbolValue(SymbolID::unsafeCreate(val))
           : HermesValue::encodeStringValue(
                 runtimeModule_->getStringPrimFromStringIDMayAllocate(val));
-      currIdx_ += 1;
-      break;
     }
     case SLG::ShortStringTag: {
       uint16_t val = llvh::support::endian::read<uint16_t, 1>(
           buffer_.data() + currIdx_, llvh::support::endianness::little);
-      lastValue_ = runtimeModule_ == nullptr
+      currIdx_ += 2;
+      return runtimeModule_ == nullptr
           ? HermesValue::encodeSymbolValue(SymbolID::unsafeCreate(val))
           : HermesValue::encodeStringValue(
                 runtimeModule_->getStringPrimFromStringIDMayAllocate(val));
-      currIdx_ += 2;
-      break;
     }
     case SLG::LongStringTag: {
       uint32_t val = llvh::support::endian::read<uint32_t, 1>(
           buffer_.data() + currIdx_, llvh::support::endianness::little);
-      lastValue_ = runtimeModule_ == nullptr
+      currIdx_ += 4;
+      return runtimeModule_ == nullptr
           ? HermesValue::encodeSymbolValue(SymbolID::unsafeCreate(val))
           : HermesValue::encodeStringValue(
                 runtimeModule_->getStringPrimFromStringIDMayAllocate(val));
-      currIdx_ += 4;
-      break;
     }
     case SLG::NumberTag: {
       double val = llvh::support::endian::read<double, 1>(
           buffer_.data() + currIdx_, llvh::support::endianness::little);
-      lastValue_ = HermesValue::encodeNumberValue(val);
       currIdx_ += 8;
-      break;
+      return HermesValue::encodeNumberValue(val);
     }
     case SLG::IntegerTag: {
       int32_t val = llvh::support::endian::read<int32_t, 1>(
           buffer_.data() + currIdx_, llvh::support::endianness::little);
-      lastValue_ = HermesValue::encodeNumberValue((double)val);
       currIdx_ += 4;
-      break;
+      return HermesValue::encodeNumberValue(val);
     }
-    default:
-      break;
+    case SLG::NullTag:
+      return HermesValue::encodeNullValue();
+    case SLG::TrueTag:
+      return HermesValue::encodeBoolValue(true);
+    case SLG::FalseTag:
+      return HermesValue::encodeBoolValue(false);
   }
-  return lastValue_;
+  llvm_unreachable("No other valid tag");
 }
 
 } // namespace vm

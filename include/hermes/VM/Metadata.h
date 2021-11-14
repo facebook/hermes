@@ -8,7 +8,6 @@
 #ifndef HERMES_VM_METADATA_H
 #define HERMES_VM_METADATA_H
 
-#include "hermes/ADT/OwningArray.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/HermesValue.h"
@@ -31,33 +30,14 @@ class GCSymbolID;
 struct Metadata final {
   using offset_t = std::uint8_t;
 
-  /// Fields is a group of both offsets and names that describe a field within
-  /// an object.
-  struct Fields {
-    Fields() = default;
-    explicit Fields(size_t numFields) : offsets(numFields), names(numFields) {}
-
-    size_t size() const {
-      return offsets.size();
-    }
-
-    bool empty() const {
-      return offsets.empty();
-    }
-
-    // Invariant: these arrays are all of the same size N, and the ith elements
-    // describe the ith field.
-
-    /// The offset location of the field within the object.
-    OwningArray<offset_t> offsets;
-    /// The names of the fields, only used in snapshots.
-    OwningArray<const char *> names;
-  };
-
   /// The information about an array for an object.
   struct ArrayData {
     /// Which type of element the array holds.
-    enum class ArrayType { Pointer, HermesValue, SmallHermesValue, Symbol };
+    enum class ArrayType : uint8_t {
+#define SLOT_TYPE(type) type,
+#include "hermes/VM/SlotKinds.def"
+#undef SLOT_TYPE
+    };
     ArrayType type;
     /// The offset of where the array starts.
     offset_t startOffset;
@@ -65,14 +45,14 @@ struct Metadata final {
     offset_t lengthOffset;
     /// The width of each element. For example, a pointer has a stride of
     /// sizeof(void *).
-    std::uint16_t stride;
+    uint8_t stride;
 
     explicit ArrayData() = default;
     explicit constexpr ArrayData(
         ArrayType type,
         offset_t startOffset,
         offset_t lengthOffset,
-        std::uint16_t stride)
+        uint8_t stride)
         : type(type),
           startOffset(startOffset),
           lengthOffset(lengthOffset),
@@ -97,122 +77,45 @@ struct Metadata final {
     /// The version without a \p name parameter means that field will not appear
     /// in snapshots.
 
-    /// Adds a pointer field.
-    void addField(const GCPointerBase *fieldLocation);
-    void addField(const char *name, const GCPointerBase *fieldLocation);
-    /// Adds a \c HermesValue field.
-    void addField(const GCHermesValue *fieldLocation);
-    void addField(const char *name, const GCHermesValue *fieldLocation);
-    void addField(const GCSmallHermesValue *fieldLocation);
-    void addField(const char *name, const GCSmallHermesValue *fieldLocation);
-    /// Adds a \c Symbol field.
-    void addField(const GCSymbolID *fieldLocation);
-    void addField(const char *name, const GCSymbolID *fieldLocation);
+    /// Add a field for a certain slot type at the given \p fieldLocation.
+#define SLOT_TYPE(type)                     \
+  void addField(const type *fieldLocation); \
+  void addField(const char *name, const type *fieldLocation);
+#include "hermes/VM/SlotKinds.def"
+#undef SLOT_TYPE
 
     /// @}
 
     /// Adds an array to this class's metadata.
     /// \p startLocation The location of the first element in the array.
     /// \p lengthLocation The location of the size of the array.
-    void addArray(
-        const GCHermesValue *startLocation,
-        const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
-        std::size_t stride) {
-      addArray(
-          nullptr,
-          ArrayData::ArrayType::HermesValue,
-          startLocation,
-          lengthLocation,
-          stride);
-    }
-
-    void addArray(
-        const char *name,
-        const GCHermesValue *startLocation,
-        const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
-        std::size_t stride) {
-      addArray(
-          name,
-          ArrayData::ArrayType::HermesValue,
-          startLocation,
-          lengthLocation,
-          stride);
-    }
-
-    void addArray(
-        const GCSmallHermesValue *startLocation,
-        const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
-        std::size_t stride) {
-      addArray(
-          nullptr,
-          ArrayData::ArrayType::SmallHermesValue,
-          startLocation,
-          lengthLocation,
-          stride);
-    }
-
-    void addArray(
-        const char *name,
-        const GCSmallHermesValue *startLocation,
-        const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
-        std::size_t stride) {
-      addArray(
-          name,
-          ArrayData::ArrayType::SmallHermesValue,
-          startLocation,
-          lengthLocation,
-          stride);
-    }
-
-    void addArray(
-        const GCPointerBase *startLocation,
-        const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
-        std::size_t stride) {
-      addArray(
-          nullptr,
-          ArrayData::ArrayType::Pointer,
-          startLocation,
-          lengthLocation,
-          stride);
-    }
-
-    void addArray(
-        const char *name,
-        const GCPointerBase *startLocation,
-        const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
-        std::size_t stride) {
-      addArray(
-          name,
-          ArrayData::ArrayType::Pointer,
-          startLocation,
-          lengthLocation,
-          stride);
-    }
-
-    void addArray(
-        const GCSymbolID *startLocation,
-        const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
-        std::size_t stride) {
-      addArray(
-          nullptr,
-          ArrayData::ArrayType::Symbol,
-          startLocation,
-          lengthLocation,
-          stride);
-    }
-
-    void addArray(
-        const char *name,
-        const GCSymbolID *startLocation,
-        const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
-        std::size_t stride) {
-      addArray(
-          name,
-          ArrayData::ArrayType::Symbol,
-          startLocation,
-          lengthLocation,
-          stride);
-    }
+#define SLOT_TYPE(type)                                     \
+  void addArray(                                            \
+      const type *startLocation,                            \
+      const AtomicIfConcurrentGC<uint32_t> *lengthLocation, \
+      std::size_t stride) {                                 \
+    addArray(                                               \
+        nullptr,                                            \
+        ArrayData::ArrayType::type,                         \
+        startLocation,                                      \
+        lengthLocation,                                     \
+        stride);                                            \
+  }                                                         \
+                                                            \
+  void addArray(                                            \
+      const char *name,                                     \
+      const type *startLocation,                            \
+      const AtomicIfConcurrentGC<uint32_t> *lengthLocation, \
+      std::size_t stride) {                                 \
+    addArray(                                               \
+        name,                                               \
+        ArrayData::ArrayType::type,                         \
+        startLocation,                                      \
+        lengthLocation,                                     \
+        stride);                                            \
+  }
+#include "hermes/VM/SlotKinds.def"
+#undef SLOT_TYPE
 
     void addArray(
         const char *name,
@@ -256,10 +159,10 @@ struct Metadata final {
     /// The base of the object, used to calculate offsets.
     const char *base_;
     /// A list of offsets and within the object to its field type and name.
-    std::map<offset_t, const char *> pointers_;
-    std::map<offset_t, const char *> values_;
-    std::map<offset_t, const char *> smallValues_;
-    std::map<offset_t, const char *> symbols_;
+#define SLOT_TYPE(type) std::map<offset_t, const char *> map##type##_;
+#include "hermes/VM/SlotKinds.def"
+#undef SLOT_TYPE
+
 #ifndef NDEBUG
     /// True if [offset, offset + size) overlaps any previously added field.
     bool fieldConflicts(offset_t offset, size_t size);
@@ -277,22 +180,49 @@ struct Metadata final {
     friend Metadata;
   };
 
+  constexpr Metadata() = default;
   /// Construct from a builder.
   Metadata(Builder &&mb);
 
-  /// A mapping from an offset to a name for that field
-  Fields pointers_;
-  Fields values_;
-  Fields smallValues_;
-  Fields symbols_;
+  /// The maximum number of offsets we can store for a cell. Bump this if
+  /// asserts start failing and more fields are needed.
+  static constexpr size_t kMaxNumFields = 8;
 
-  /// The optional array for this object to hold.
-  /// NOTE: this format currently does not support multiple arrays.
-  OptValue<ArrayData> array_;
+  struct SlotOffsets {
+    /// The offset of each field for a given cell type is stored contiguously in
+    /// fields. It is grouped by the slot type, and slots for a given type are
+    /// in ascending order.
+
+    /// Record one past the last value in offsets that corresponds to a given
+    /// slot type.
+#define SLOT_TYPE(type) uint8_t end##type{};
+#include "hermes/VM/SlotKinds.def"
+#undef SLOT_TYPE
+
+    std::array<offset_t, kMaxNumFields> fields{};
+
+    /// The optional array for this object to hold.
+    /// NOTE: this format currently does not support multiple arrays.
+    OptValue<ArrayData> array{};
+  } offsets;
+
+  using SlotNames = std::array<const char *, kMaxNumFields>;
+
+  /// The names of the fields, only used in snapshots. This is placed after the
+  /// ArrayData so that all the hot fields above are adjacent in memory.
+  SlotNames names{};
 
   /// The VTable pointer for the cell that this metadata describes.
-  const VTable *vtp_;
+  const VTable *vtp{};
+
+  /// Static array storing the Metadata corresponding to each CellKind. This is
+  /// initialized by buildMetadataTable.
+  static std::array<Metadata, kNumCellKinds> metadataTable;
 };
+
+static_assert(
+    std::is_trivially_destructible<Metadata>::value,
+    "Metadata must not have a destructor.");
 
 /// @name Formatters
 /// @{

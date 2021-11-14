@@ -13,9 +13,6 @@
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PropertyAccessor.h"
 
-#include "llvh/Support/Debug.h"
-#define DEBUG_TYPE "serialize"
-
 namespace hermes {
 namespace vm {
 
@@ -60,25 +57,6 @@ void ArrayImpl::_snapshotAddEdgesImpl(
     snap.addIndexedEdge(HeapSnapshot::EdgeType::Element, i, elemID.getValue());
   }
 }
-
-#ifdef HERMESVM_SERIALIZE
-ArrayImpl::ArrayImpl(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
-  beginIndex_ = d.readInt<uint32_t>();
-  endIndex_ = d.readInt<uint32_t>();
-  d.readRelocation(&indexedStorage_, RelocationKind::GCPointer);
-}
-
-void serializeArrayImpl(
-    Serializer &s,
-    const GCCell *cell,
-    unsigned overlapSlots) {
-  auto *self = vmcast<const ArrayImpl>(cell);
-  JSObject::serializeObjectImpl(s, cell, overlapSlots);
-  s.writeInt<uint32_t>(self->beginIndex_);
-  s.writeInt<uint32_t>(self->endIndex_);
-  s.writeRelocation(self->indexedStorage_.get(s.getRuntime()));
-}
-#endif
 
 bool ArrayImpl::_haveOwnIndexedImpl(
     JSObject *selfObj,
@@ -397,21 +375,6 @@ void ArgumentsBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.setVTable(&Arguments::vt.base);
 }
 
-#ifdef HERMESVM_SERIALIZE
-Arguments::Arguments(Deserializer &d) : ArrayImpl(d, &vt.base) {}
-
-void ArgumentsSerialize(Serializer &s, const GCCell *cell) {
-  serializeArrayImpl(s, cell, JSObject::numOverlapSlots<Arguments>());
-  s.endObject(cell);
-}
-
-void ArgumentsDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::ArgumentsKind && "Expected Arguments");
-  auto *cell = d.getRuntime()->makeAFixed<Arguments>(d);
-  d.endObject(cell);
-}
-#endif
-
 CallResult<Handle<Arguments>> Arguments::create(
     Runtime *runtime,
     size_type length,
@@ -525,21 +488,6 @@ void ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ArrayImplBuildMeta(cell, mb);
   mb.setVTable(&JSArray::vt.base);
 }
-
-#ifdef HERMESVM_SERIALIZE
-JSArray::JSArray(Deserializer &d, const VTable *vt) : ArrayImpl(d, vt) {}
-
-void ArraySerialize(Serializer &s, const GCCell *cell) {
-  serializeArrayImpl(s, cell, JSObject::numOverlapSlots<JSArray>());
-  s.endObject(cell);
-}
-
-void ArrayDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::ArrayKind && "Expected Array");
-  auto *cell = d.getRuntime()->makeAFixed<JSArray>(d, &JSArray::vt.base);
-  d.endObject(cell);
-}
-#endif
 
 Handle<HiddenClass> JSArray::createClass(
     Runtime *runtime,
@@ -783,30 +731,6 @@ void ArrayIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("iteratedObject", &self->iteratedObject_);
 }
 
-#ifdef HERMESVM_SERIALIZE
-JSArrayIterator::JSArrayIterator(Deserializer &d) : JSObject(d, &vt.base) {
-  d.readRelocation(&iteratedObject_, RelocationKind::GCPointer);
-  nextIndex_ = d.readInt<uint64_t>();
-  iterationKind_ = (IterationKind)d.readInt<uint8_t>();
-}
-
-void ArrayIteratorSerialize(Serializer &s, const GCCell *cell) {
-  auto *self = vmcast<const JSArrayIterator>(cell);
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<JSArrayIterator>());
-  s.writeRelocation(self->iteratedObject_.get(s.getRuntime()));
-  s.writeInt<uint64_t>(self->nextIndex_);
-  s.writeInt<uint8_t>((uint8_t)self->iterationKind_);
-  s.endObject(cell);
-}
-
-void ArrayIteratorDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::ArrayIteratorKind && "Expected ArrayIterator");
-  auto *cell = d.getRuntime()->makeAFixed<JSArrayIterator>(d);
-  d.endObject(cell);
-}
-#endif
-
 PseudoHandle<JSArrayIterator> JSArrayIterator::create(
     Runtime *runtime,
     Handle<JSObject> array,
@@ -921,5 +845,3 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
 
 } // namespace vm
 } // namespace hermes
-
-#undef DEBUG_TYPE

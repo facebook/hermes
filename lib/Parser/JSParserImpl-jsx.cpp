@@ -334,9 +334,16 @@ Optional<ESTree::Node *> JSParserImpl::parseJSXAttribute() {
         tok_,
         new (context_) ESTree::StringLiteralNode(tok_->getStringLiteral()));
     advance(JSLexer::GrammarContext::AllowJSXIdentifier);
-  } else if (check(TokenKind::l_brace)) {
+  } else {
     // { AssignmentExpression }
     // ^
+    if (!need(
+            TokenKind::l_brace,
+            "in JSX attribute",
+            "location of attribute",
+            start))
+      return None;
+
     SMLoc valueStart = advance().Start;
 
     auto optAssign = parseAssignmentExpression();

@@ -10,6 +10,8 @@
 
 #include "hermes/VM/PointerBase.h"
 
+#include "llvh/Support/MathExtras.h"
+
 namespace hermes {
 namespace vm {
 
@@ -35,23 +37,16 @@ class CompressedPointer {
   }
 
   GCCell *get(PointerBase *base) const {
-    return storageTypeToPointer(getStorageType(), base);
+    return storageTypeToPointer(ptr_, base);
   }
 
   GCCell *getNonNull(PointerBase *base) const {
 #ifdef HERMESVM_COMPRESSED_POINTERS
-    return reinterpret_cast<GCCell *>(
-        base->basedToPointerNonNull(getStorageType()));
+    return reinterpret_cast<GCCell *>(base->basedToPointerNonNull(ptr_));
 #else
     (void)base;
-    return getStorageType();
-#endif
-  }
-
-  /// Get the underlying StorageType representation. Should only be used by the
-  /// garbage collector.
-  StorageType getStorageType() const {
     return ptr_;
+#endif
   }
 
   void setInGC(CompressedPointer cp) {
@@ -72,6 +67,11 @@ class CompressedPointer {
 
   RawType getRaw() const {
     return storageTypeToRaw(ptr_);
+  }
+
+  CompressedPointer getSegmentStart() const {
+    return fromRaw(
+        getRaw() & llvh::maskTrailingZeros<RawType>(AlignedStorage::kLogSize));
   }
 
   CompressedPointer(const CompressedPointer &) = default;
@@ -137,6 +137,8 @@ class AssignableCompressedPointer : public CompressedPointer {
 
   constexpr explicit AssignableCompressedPointer(std::nullptr_t)
       : CompressedPointer(nullptr) {}
+  constexpr explicit AssignableCompressedPointer(CompressedPointer cp)
+      : CompressedPointer(cp) {}
 
   AssignableCompressedPointer &operator=(CompressedPointer ptr) {
     setNoBarrier(ptr);

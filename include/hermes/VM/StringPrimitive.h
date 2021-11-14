@@ -133,10 +133,8 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// Concatenation resulting in this size or larger will use
   /// BufferedStringPrimitive. We want to ensure that they satisfy the
   /// requirements for external strings.
-  /// NOTE: we want to use std::max(256, EXTERNAL_STRING_MIN_SIZE) here, but it
-  /// is not constexpr yet in C++11.
   static constexpr uint32_t CONCAT_STRING_MIN_SIZE =
-      256 > EXTERNAL_STRING_MIN_SIZE ? 256 : EXTERNAL_STRING_MIN_SIZE;
+      std::max(256u, EXTERNAL_STRING_MIN_SIZE);
 
   static bool classof(const GCCell *cell) {
     return kindInRange(
@@ -450,14 +448,6 @@ class DynamicStringPrimitive final
   }
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  template <typename, bool>
-  friend void serializeDynamicStringImpl(Serializer &s, const GCCell *cell);
-
-  template <typename, bool>
-  friend void deserializeDynamicStringImpl(Deserializer &d);
-#endif
-
   static bool classof(const GCCell *cell) {
     return cell->getKind() == DynamicStringPrimitive::getCellKind();
   }
@@ -556,14 +546,6 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   }
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  template <typename>
-  friend void serializeExternalStringImpl(Serializer &s, const GCCell *cell);
-
-  template <typename>
-  friend void deserializeExternalStringImpl(Deserializer &d);
-#endif
-
   static bool classof(const GCCell *cell) {
     return cell->getKind() == ExternalStringPrimitive::getCellKind();
   }
@@ -683,14 +665,6 @@ class BufferedStringPrimitive final : public StringPrimitive {
   }
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  template <typename>
-  friend void serializeConcatStringImpl(Serializer &s, const GCCell *cell);
-
-  template <typename>
-  friend void deserializeConcatStringImpl(Deserializer &d);
-#endif
-
   static bool classof(const GCCell *cell) {
     return cell->getKind() == BufferedStringPrimitive::getCellKind();
   }

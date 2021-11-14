@@ -37,5 +37,3 @@ add_hermes_library(hermesSupport
         LEB128.cpp
         LINK_LIBS ${link_libs}
 )
-
-hermes_link_icu(hermesSupport)

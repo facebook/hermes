@@ -507,13 +507,6 @@ static opt<bool> ReusePropCache(
 static CLFlag
     Inline('f', "inline", true, "inlining of functions", CompilerCategory);
 
-static CLFlag Outline(
-    'f',
-    "outline",
-    false,
-    "IR outlining to reduce code size",
-    CompilerCategory);
-
 static CLFlag StripFunctionNames(
     'f',
     "strip-function-names",
@@ -521,12 +514,12 @@ static CLFlag StripFunctionNames(
     "Strip function names to reduce string table size",
     CompilerCategory);
 
-static CLFlag EnableTDZ(
-    'f',
-    "enable-tdz",
-    true,
-    "Enable TDZ checks for let/const",
-    CompilerCategory);
+static opt<bool> EnableTDZ(
+    "Xenable-tdz",
+    init(false),
+    Hidden,
+    desc("UNSUPPORTED: Enable TDZ checks for let/const"),
+    cat(CompilerCategory));
 
 #define WARNING_CATEGORY(name, specifier, description) \
   static CLFlag name##Warning(                         \
@@ -1050,8 +1043,6 @@ std::shared_ptr<Context> createContext(
 
   optimizationOpts.inlining = cl::OptimizationLevel != cl::OptLevel::O0 &&
       cl::BytecodeFormat == cl::BytecodeFormatKind::HBC && cl::Inline;
-  optimizationOpts.outlining =
-      cl::OptimizationLevel != cl::OptLevel::O0 && cl::Outline;
 
   optimizationOpts.reusePropCache = cl::ReusePropCache;
 
@@ -2007,9 +1998,9 @@ CompileResult processSourceFiles(
     for (const auto segment : context->getSegments()) {
       std::string filename = base.str();
       if (segment != 0) {
-        filename += "." + oscompat::to_string(segment);
+        filename += "." + std::to_string(segment);
       }
-      std::string flavor = "hbc-seg-" + oscompat::to_string(segment);
+      std::string flavor = "hbc-seg-" + std::to_string(segment);
 
       OutputStream fileOS{llvh::outs()};
       if (!base.empty() && !fileOS.open(filename, F_None)) {

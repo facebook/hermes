@@ -187,16 +187,14 @@ bool SamplingProfiler::GlobalProfiler::sampleStack() {
         localProfiler->domains_.capacity() == domainCapacityBefore &&
         "Must not dynamically allocate in signal handler");
 
-    if (sampledStackDepth_ > 0) {
-      assert(
-          sampledStackDepth_ <= sampleStorage_.stack.size() &&
-          "How can we sample more frames than storage?");
-      localProfiler->sampledStacks_.emplace_back(
-          sampleStorage_.tid,
-          sampleStorage_.timeStamp,
-          sampleStorage_.stack.begin(),
-          sampleStorage_.stack.begin() + sampledStackDepth_);
-    }
+    assert(
+        sampledStackDepth_ <= sampleStorage_.stack.size() &&
+        "How can we sample more frames than storage?");
+    localProfiler->sampledStacks_.emplace_back(
+        sampleStorage_.tid,
+        sampleStorage_.timeStamp,
+        sampleStorage_.stack.begin(),
+        sampleStorage_.stack.begin() + sampledStackDepth_);
   }
   return true;
 }
@@ -257,7 +255,7 @@ uint32_t SamplingProfiler::walkRuntimeStack(
         registerDomain(module->getDomainForSamplingProfiler());
     } else if (
         auto *nativeFunction =
-            dyn_vmcast_or_null<NativeFunction>(frame.getCalleeClosure())) {
+            dyn_vmcast<NativeFunction>(frame.getCalleeClosureUnsafe())) {
       frameStorage.kind = vmisa<FinalizableNativeFunction>(nativeFunction)
           ? StackFrame::FrameKind::FinalizableNativeFunction
           : StackFrame::FrameKind::NativeFunction;

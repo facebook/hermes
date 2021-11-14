@@ -10,9 +10,6 @@
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Callable.h"
 
-#include "llvh/Support/Debug.h"
-#define DEBUG_TYPE "serialize"
-
 namespace hermes {
 namespace vm {
 
@@ -45,24 +42,6 @@ std::pair<uint32_t, uint32_t> JSTypedArrayBase::_getOwnIndexedRangeImpl(
   auto *self = vmcast<JSTypedArrayBase>(selfObj);
   return {0, self->getLength()};
 }
-
-#ifdef HERMESVM_SERIALIZE
-JSTypedArrayBase::JSTypedArrayBase(Deserializer &d, const VTable *vt)
-    : JSObject(d, vt) {
-  d.readRelocation(&buffer_, RelocationKind::GCPointer);
-  length_ = d.readInt<JSTypedArrayBase::size_type>();
-  offset_ = d.readInt<size_type>();
-}
-
-void serializeTypedArrayBase(Serializer &s, const GCCell *cell) {
-  auto *self = vmcast<const JSTypedArrayBase>(cell);
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<JSTypedArrayBase>());
-  s.writeRelocation(self->buffer_.get(s.getRuntime()));
-  s.writeInt<JSTypedArrayBase::size_type>(self->length_);
-  s.writeInt<JSTypedArrayBase::size_type>(self->offset_);
-}
-#endif
 
 bool JSTypedArrayBase::_haveOwnIndexedImpl(
     JSObject *selfObj,
@@ -146,6 +125,21 @@ uint8_t JSTypedArrayBase::getByteWidth() const {
   return widths[static_cast<size_t>(getKind()) - firstKind];
 }
 
+CallResult<Handle<JSTypedArrayBase>> JSTypedArrayBase::allocate(
+    Runtime *runtime,
+    size_type length) {
+  using AllocateFn = CallResult<Handle<JSTypedArrayBase>>(Runtime *, size_type);
+  static constexpr AllocateFn *allocateFns[] = {
+#define TYPED_ARRAY(name, type) name##Array::allocate,
+#include "hermes/VM/TypedArrays.def"
+#undef TYPED_ARRAY
+  };
+  static constexpr size_t firstKind =
+      static_cast<size_t>(CellKind::TypedArrayBaseKind_first);
+  return allocateFns[static_cast<size_t>(getKind()) - firstKind](
+      runtime, length);
+}
+
 CallResult<Handle<JSTypedArrayBase>> JSTypedArrayBase::allocateToSameBuffer(
     Runtime *runtime,
     Handle<JSTypedArrayBase> src,
@@ -171,6 +165,23 @@ CallResult<Handle<JSTypedArrayBase>> JSTypedArrayBase::allocateToSameBuffer(
       endScaled - beginScaled,
       src->getByteWidth());
   return Handle<JSTypedArrayBase>::vmcast(newArr);
+}
+
+CallResult<Handle<JSTypedArrayBase>> JSTypedArrayBase::allocateSpecies(
+    Runtime *runtime,
+    Handle<JSTypedArrayBase> self,
+    size_type length) {
+  using AllocateSpeciesFn = CallResult<Handle<JSTypedArrayBase>>(
+      Handle<JSTypedArrayBase>, Runtime *, size_type);
+  static constexpr AllocateSpeciesFn *allocateFns[] = {
+#define TYPED_ARRAY(name, type) name##Array::allocateSpecies,
+#include "hermes/VM/TypedArrays.def"
+#undef TYPED_ARRAY
+  };
+  static constexpr size_t firstKind =
+      static_cast<size_t>(CellKind::TypedArrayBaseKind_first);
+  return allocateFns[static_cast<size_t>(self->getKind()) - firstKind](
+      self, runtime, length);
 }
 
 ExecutionStatus JSTypedArrayBase::createBuffer(
@@ -302,70 +313,40 @@ void JSTypedArrayBase::setBuffer(
 /// @}
 
 template <typename T, CellKind C>
-JSTypedArrayBase::JSTypedArrayVTable JSTypedArray<T, C>::vt{
-    {
-        VTable(C, cellSize<JSTypedArray<T, C>>()),
-        _getOwnIndexedRangeImpl,
-        _haveOwnIndexedImpl,
-        _getOwnIndexedPropertyFlagsImpl,
-        _getOwnIndexedImpl,
-        _setOwnIndexedImpl,
-        _deleteOwnIndexedImpl,
-        _checkAllOwnIndexedImpl,
-    },
-    allocate,
-    _allocateSpeciesImpl};
-
-#ifdef HERMESVM_SERIALIZE
-template <typename T, CellKind C>
-JSTypedArray<T, C>::JSTypedArray(Deserializer &d)
-    : JSTypedArrayBase(d, &vt.base.base) {}
-
-template <typename T, CellKind C>
-void deserializeTypedArray(Deserializer &d, CellKind kind) {
-  auto *cell = d.getRuntime()->makeAFixed<JSTypedArray<T, C>>(d);
-  d.endObject(cell);
-}
+const ObjectVTable JSTypedArray<T, C>::vt{
+    VTable(C, cellSize<JSTypedArray<T, C>>()),
+    _getOwnIndexedRangeImpl,
+    _haveOwnIndexedImpl,
+    _getOwnIndexedPropertyFlagsImpl,
+    _getOwnIndexedImpl,
+    _setOwnIndexedImpl,
+    _deleteOwnIndexedImpl,
+    _checkAllOwnIndexedImpl,
+};
 
 #define TYPED_ARRAY(name, type)                                          \
   void name##ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) { \
     TypedArrayBaseBuildMeta(cell, mb);                                   \
-    mb.setVTable(                                                        \
-        &JSTypedArray<type, CellKind::name##ArrayKind>::vt.base.base);   \
-  }                                                                      \
-  void name##ArraySerialize(Serializer &s, const GCCell *cell) {         \
-    serializeTypedArrayBase(s, cell);                                    \
-    s.endObject(cell);                                                   \
-  }                                                                      \
-  void name##ArrayDeserialize(Deserializer &d, CellKind kind) {          \
-    deserializeTypedArray<type, CellKind::name##ArrayKind>(d, kind);     \
+    mb.setVTable(&name##Array::vt.base);                                 \
   }
-#else
-#define TYPED_ARRAY(name, type)                                          \
-  void name##ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) { \
-    TypedArrayBaseBuildMeta(cell, mb);                                   \
-    mb.setVTable(                                                        \
-        &JSTypedArray<type, CellKind::name##ArrayKind>::vt.base.base);   \
-  }
-#endif // HERMESVM_SERIALIZE
 #include "hermes/VM/TypedArrays.def"
+#undef TYPED_ARRAY
 
 template <typename T, CellKind C>
 CallResult<Handle<JSTypedArrayBase>> JSTypedArray<T, C>::allocate(
     Runtime *runtime,
     size_type length) {
-  Handle<JSTypedArray<T, C>> ta =
-      runtime->makeHandle<JSTypedArray<T, C>>(JSTypedArray<T, C>::create(
-          runtime, JSTypedArray<T, C>::getPrototype(runtime)));
+  Handle<JSTypedArrayBase> ta = runtime->makeHandle(JSTypedArray<T, C>::create(
+      runtime, JSTypedArray<T, C>::getPrototype(runtime)));
   if (JSTypedArrayBase::createBuffer(runtime, ta, length) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  return Handle<JSTypedArrayBase>::vmcast(ta);
+  return ta;
 }
 
 template <typename T, CellKind C>
-CallResult<Handle<JSTypedArrayBase>> JSTypedArray<T, C>::_allocateSpeciesImpl(
+CallResult<Handle<JSTypedArrayBase>> JSTypedArray<T, C>::allocateSpecies(
     Handle<JSTypedArrayBase> self,
     Runtime *runtime,
     size_type length) {
@@ -443,7 +424,7 @@ JSTypedArray<T, C>::JSTypedArray(
     Runtime *runtime,
     Handle<JSObject> parent,
     Handle<HiddenClass> clazz)
-    : JSTypedArrayBase(runtime, &vt.base.base, parent, clazz) {}
+    : JSTypedArrayBase(runtime, &vt.base, parent, clazz) {}
 
 template <typename T, CellKind C>
 HermesValue JSTypedArray<T, C>::_getOwnIndexedImpl(
@@ -496,5 +477,3 @@ CallResult<bool> JSTypedArray<T, C>::_setOwnIndexedImpl(
 
 } // namespace vm
 } // namespace hermes
-
-#undef DEBUG_TYPE

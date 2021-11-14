@@ -163,6 +163,13 @@ Handle<JSObject> createObjectConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       cons,
+      Predefined::getSymbolID(Predefined::hasOwn),
+      ctx,
+      objectHasOwn,
+      2);
+  defineMethod(
+      runtime,
+      cons,
       Predefined::getSymbolID(Predefined::seal),
       ctx,
       objectSeal,
@@ -1262,24 +1269,8 @@ objectPrototypeValueOf(void *, Runtime *runtime, NativeArgs args) {
   return res;
 }
 
-/// ES11.0 19.1.3.2
-CallResult<HermesValue>
-objectPrototypeHasOwnProperty(void *, Runtime *runtime, NativeArgs args) {
-  /// 1. Let P be ? ToPropertyKey(V).
-  auto PRes = toPropertyKey(runtime, args.getArgHandle(0));
-  if (LLVM_UNLIKELY(PRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  Handle<> P = *PRes;
-
-  /// 2. Let O be ? ToObject(this value).
-  auto ORes = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(ORes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  Handle<JSObject> O = runtime->makeHandle<JSObject>(ORes.getValue());
-
-  /// 3. Return ? HasOwnProperty(O, P).
+static CallResult<HermesValue>
+objectHasOwnHelper(Runtime *runtime, Handle<JSObject> O, Handle<> P) {
   ComputedPropertyDescriptor desc;
   MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   CallResult<bool> hasProp = JSObject::getOwnComputedDescriptor(
@@ -1304,6 +1295,43 @@ objectPrototypeHasOwnProperty(void *, Runtime *runtime, NativeArgs args) {
     return HermesValue::encodeBoolValue(true);
   }
   return HermesValue::encodeBoolValue(false);
+}
+
+/// ES11.0 19.1.3.2
+CallResult<HermesValue>
+objectPrototypeHasOwnProperty(void *, Runtime *runtime, NativeArgs args) {
+  /// 1. Let P be ? ToPropertyKey(V).
+  auto PRes = toPropertyKey(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(PRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  /// 2. Let O be ? ToObject(this value).
+  auto ORes = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(ORes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  /// 3. Return ? HasOwnProperty(O, P).
+  Handle<JSObject> O = runtime->makeHandle<JSObject>(ORes.getValue());
+  return objectHasOwnHelper(runtime, O, *PRes);
+}
+
+CallResult<HermesValue>
+objectHasOwn(void *, Runtime *runtime, NativeArgs args) {
+  /// 1. Let O be ? ToObject(O).
+  auto ORes = toObject(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(ORes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  Handle<JSObject> O = runtime->makeHandle<JSObject>(ORes.getValue());
+
+  /// 2. Let P be ? ToPropertyKey(P).
+  auto PRes = toPropertyKey(runtime, args.getArgHandle(1));
+  if (LLVM_UNLIKELY(PRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  /// 3. Return ? HasOwnProperty(O, P).
+  return objectHasOwnHelper(runtime, O, *PRes);
 }
 
 CallResult<HermesValue>

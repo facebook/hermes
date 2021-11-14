@@ -204,11 +204,6 @@ public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormat
   }
 
   @Override
-  public boolean isValidTimeZone(String timeZone) {
-    return TimeZone.getTimeZone(timeZone).getID().equals(timeZone);
-  }
-
-  @Override
   public String[] getAvailableLocales() {
 
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {

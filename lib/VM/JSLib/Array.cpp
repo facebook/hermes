@@ -10,13 +10,15 @@
 /// ES5.1 15.4 Initialize the Array constructor.
 //===----------------------------------------------------------------------===//
 #include "JSLibInternal.h"
-#include "Sorting.h"
 
 #include "hermes/VM/HandleRootOwner-inline.h"
+#include "hermes/VM/JSLib/Sorting.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/StringView.h"
+
+#include "llvh/ADT/ScopeExit.h"
 
 namespace hermes {
 namespace vm {
@@ -359,35 +361,6 @@ arrayIsArray(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(*res);
 }
 
-namespace {
-/// Used to detect cyclic string conversions, and should be allocated on the
-/// stack. On construction, inserts an object into the runtime string cycle
-/// check stack, and removes it when destroyed.
-/// Use the foundCycle method to know if the object has already been visited.
-class StringCycleChecker {
- public:
-  /// FIXME: Handle error on inserting the visited object.
-  StringCycleChecker(Runtime *runtime, Handle<JSObject> obj)
-      : runtime_(runtime),
-        obj_(obj),
-        foundCycle_(runtime->insertVisitedObject(*obj)) {}
-
-  ~StringCycleChecker() {
-    runtime_->removeVisitedObject(*obj_);
-  }
-
-  bool foundCycle() const {
-    return foundCycle_;
-  }
-
- private:
-  Runtime *runtime_;
-  Handle<JSObject> obj_;
-
-  bool foundCycle_;
-};
-} // namespace
-
 /// ES5.1 15.4.4.5.
 CallResult<HermesValue>
 arrayPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
@@ -425,10 +398,10 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   auto emptyString =
       runtime->getPredefinedStringHandle(Predefined::emptyString);
 
-  StringCycleChecker checker{runtime, array};
-  if (checker.foundCycle()) {
+  if (runtime->insertVisitedObject(*array))
     return emptyString.getHermesValue();
-  }
+  auto cycleScope =
+      llvh::make_scope_exit([&] { runtime->removeVisitedObject(*array); });
 
   auto propRes = JSObject::getNamed_RJS(
       array, runtime, Predefined::getSymbolID(Predefined::length));
@@ -499,7 +472,7 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
         // passed on from this function to the element's
         // "toLocaleString" method.
         auto callRes =
-#ifdef HERMES_PLATFORM_INTL
+#ifdef HERMES_ENABLE_INTL
             Callable::executeCall2(
                 func, runtime, elementObj, args.getArg(0), args.getArg(1));
 #else
@@ -752,10 +725,10 @@ arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
   auto emptyString =
       runtime->getPredefinedStringHandle(Predefined::emptyString);
 
-  StringCycleChecker checker{runtime, O};
-  if (checker.foundCycle()) {
+  if (runtime->insertVisitedObject(*O))
     return emptyString.getHermesValue();
-  }
+  auto cycleScope =
+      llvh::make_scope_exit([&] { runtime->removeVisitedObject(*O); });
 
   auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
@@ -1139,9 +1112,10 @@ class StandardSortModel : public SortModel {
     return ExecutionStatus::RETURNED;
   }
 
-  /// If compareFn isn't null, return compareFn(obj[a], obj[b]) < 0.
-  /// If compareFn is null, return obj[a] < obj[b].
-  CallResult<bool> less(uint32_t a, uint32_t b) override {
+  /// If compareFn isn't null, return compareFn(obj[a], obj[b])
+  /// If compareFn is null, return -1 if obj[a] < obj[b], 1 if obj[a] > obj[b],
+  /// 0 otherwise
+  CallResult<int> compare(uint32_t a, uint32_t b) override {
     // Ensure that we don't leave here with any new handles.
     GCScopeMarkerRAII gcMarker{gcScope_, gcMarker_};
 
@@ -1158,7 +1132,7 @@ class StandardSortModel : public SortModel {
     }
     if ((*propRes)->isEmpty()) {
       // Spec defines empty as greater than everything.
-      return false;
+      return 1;
     }
     aValue_ = std::move(*propRes);
     assert(!aValue_->isEmpty());
@@ -1177,18 +1151,18 @@ class StandardSortModel : public SortModel {
     }
     if ((*propRes)->isEmpty()) {
       // Spec defines empty as greater than everything.
-      return true;
+      return -1;
     }
     bValue_ = std::move(*propRes);
     assert(!bValue_->isEmpty());
 
     if (aValue_->isUndefined()) {
       // Spec defines undefined as greater than everything.
-      return false;
+      return 1;
     }
     if (bValue_->isUndefined()) {
       // Spec defines undefined as greater than everything.
-      return true;
+      return -1;
     }
 
     if (compareFn_) {
@@ -1207,9 +1181,11 @@ class StandardSortModel : public SortModel {
       if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      return intRes->getNumber() < 0;
+      // Cannot return intRes's value directly because it can be NaN
+      auto res = intRes->getNumber();
+      return (res < 0) ? -1 : (res > 0 ? 1 : 0);
     } else {
-      // Convert both arguments to strings and use the lessOp on them.
+      // Convert both arguments to strings and compare
       auto aValueRes = toString_RJS(runtime_, aValue_);
       if (LLVM_UNLIKELY(aValueRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -1222,7 +1198,7 @@ class StandardSortModel : public SortModel {
       }
       bValue_ = bValueRes->getHermesValue();
 
-      return lessOp_RJS(runtime_, aValue_, bValue_).getValue();
+      return aValue_->getString()->compare(bValue_->getString());
     }
   }
 };

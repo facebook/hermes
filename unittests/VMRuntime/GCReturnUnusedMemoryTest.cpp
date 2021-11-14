@@ -5,10 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#if (                                              \
-    defined(HERMESVM_GC_NONCONTIG_GENERATIONAL) || \
-    defined(HERMESVM_GC_HADES)) &&                 \
-    defined(NDEBUG) && !defined(HERMESVM_ALLOW_HUGE_PAGES)
+#if defined(HERMESVM_GC_HADES) && defined(NDEBUG) && \
+    !defined(HERMESVM_ALLOW_HUGE_PAGES)
 
 #include "gtest/gtest.h"
 
@@ -57,14 +55,12 @@ TEST(GCReturnUnusedMemoryTest, CollectReturnsFreeMemory) {
 
   // Collect should return the unused memory back to the OS.
   rt.collect();
-#ifdef HERMESVM_GC_HADES
-  // Hades can only return memory after a compaction. The very first collection
-  // will just free up the originally allocated memory.
-  // This collection will identify the segment to compact and prepare it.
+  // Hades can only return memory after a compaction. The very first
+  // collection will just free up the originally allocated memory. This
+  // collection will identify the segment to compact and prepare it.
   rt.collect();
   // This collection will actually compact the segment.
   rt.collect();
-#endif
 
   auto collected = gc.getVMFootprintForTest();
   ASSERT_TRUE(collected);

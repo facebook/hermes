@@ -335,17 +335,18 @@ CallResult<HermesValue> splitInternal(
     Handle<> limit,
     Handle<> separator);
 
-/// Set the lastIndex property of \p regexp to \p value.
+/// Set the lastIndex property of \p regexp to \p shv.
 inline ExecutionStatus
-setLastIndex(Handle<JSObject> regexp, Runtime *runtime, HermesValue hv) {
+setLastIndex(Handle<JSObject> regexp, Runtime *runtime, SmallHermesValue shv) {
   return runtime->putNamedThrowOnError(
-      regexp, PropCacheID::RegExpLastIndex, hv);
+      regexp, PropCacheID::RegExpLastIndex, shv);
 }
 
 /// Set the lastIndex property of \p regexp to \p value.
 inline ExecutionStatus
 setLastIndex(Handle<JSObject> regexp, Runtime *runtime, double value) {
-  return setLastIndex(regexp, runtime, HermesValue::encodeNumberValue(value));
+  auto shv = SmallHermesValue::encodeNumberValue(value, runtime);
+  return setLastIndex(regexp, runtime, shv);
 }
 
 /// ES6.0 21.2.5.2.3
@@ -366,8 +367,10 @@ Handle<JSObject> createDataViewConstructor(Runtime *runtime);
 
 Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime);
 
-template <typename T, CellKind C>
-Handle<JSObject> createTypedArrayConstructor(Runtime *runtime);
+#define TYPED_ARRAY(name, type) \
+  Handle<JSObject> create##name##ArrayConstructor(Runtime *runtime);
+#include "hermes/VM/TypedArrays.def"
+#undef TYPED_ARRAY
 
 /// Create and initialize the global Set constructor. Populate the methods
 /// of Set.prototype.
@@ -527,7 +530,7 @@ Handle<JSObject> createInstrumentObject(Runtime *runtime);
 
 } // namespace vm
 
-#ifdef HERMES_PLATFORM_INTL
+#ifdef HERMES_ENABLE_INTL
 namespace intl {
 
 // TODO T65916424: Consider how we can move this somewhere more modular.

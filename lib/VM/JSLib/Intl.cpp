@@ -9,7 +9,7 @@
 
 #include "hermes/Platform/Intl/PlatformIntl.h"
 
-#ifdef HERMES_PLATFORM_INTL
+#ifdef HERMES_ENABLE_INTL
 
 #include "hermes/VM/ArrayLike.h"
 #include "hermes/VM/JSLib/DateUtil.h"
@@ -168,7 +168,9 @@ CallResult<HermesValue> partsToJS(
   }
   Handle<JSArray> array = *arrayRes;
   uint64_t index = 0;
+  GCScopeMarkerRAII marker{runtime};
   for (auto &part : *result) {
+    marker.flush();
     CallResult<Handle<JSObject>> partRes = partToJS(runtime, std::move(part));
     if (LLVM_UNLIKELY(partRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -679,10 +681,10 @@ intlCollatorSupportedLocalesOf(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 intlCollatorCompare(void *, Runtime *runtime, NativeArgs args) {
-  PseudoHandle<Callable> cc =
-      createPseudoHandle(runtime->getCurrentFrame()->getCalleeClosure());
+  auto *nf = vmcast<NativeFunction>(
+      runtime->getCurrentFrame()->getCalleeClosureUnsafe());
   PseudoHandle<DecoratedObject> collatorHandle =
-      getCollator(PseudoHandle<NativeFunction>::vmcast(std::move(cc)), runtime);
+      getCollator(createPseudoHandle(nf), runtime);
 
   // Since collatorHandle came out of an internal slot, it's an
   // assertable failure if it has the wrong type.
@@ -956,7 +958,7 @@ CallResult<double> dateNowValue(Runtime *runtime, NativeArgs args) {
   // 1. Let x be TimeClip(x).
   double x = timeClip(xRes->getNumber());
   // 2. If x is NaN, throw a RangeError exception.
-  if (isnan(x)) {
+  if (std::isnan(x)) {
     return runtime->raiseRangeError("Invalid time value");
   }
 
@@ -967,10 +969,10 @@ CallResult<double> dateNowValue(Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 intlDateTimeFormatFormat(void *, Runtime *runtime, NativeArgs args) {
-  PseudoHandle<Callable> cc =
-      createPseudoHandle(runtime->getCurrentFrame()->getCalleeClosure());
-  PseudoHandle<DecoratedObject> dateTimeFormatHandle = getDateTimeFormat(
-      PseudoHandle<NativeFunction>::vmcast(std::move(cc)), runtime);
+  auto *nf = vmcast<NativeFunction>(
+      runtime->getCurrentFrame()->getCalleeClosureUnsafe());
+  PseudoHandle<DecoratedObject> dateTimeFormatHandle =
+      getDateTimeFormat(createPseudoHandle(nf), runtime);
 
   // Since dateTimeFormatHandle came out of an internal slot, it's an
   // assertable failure if it has the wrong type.
@@ -1247,10 +1249,10 @@ intlNumberFormatSupportedLocalesOf(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 intlNumberFormatFormat(void *, Runtime *runtime, NativeArgs args) {
-  PseudoHandle<Callable> cc =
-      createPseudoHandle(runtime->getCurrentFrame()->getCalleeClosure());
-  PseudoHandle<DecoratedObject> numberFormatHandle = getNumberFormat(
-      PseudoHandle<NativeFunction>::vmcast(std::move(cc)), runtime);
+  auto *nf = vmcast<NativeFunction>(
+      runtime->getCurrentFrame()->getCalleeClosureUnsafe());
+  PseudoHandle<DecoratedObject> numberFormatHandle =
+      getNumberFormat(createPseudoHandle(nf), runtime);
 
   // Since numberFormatHandle came out of an internal slot, it's an
   // assertable failure if it has the wrong type.
@@ -1399,7 +1401,7 @@ CallResult<HermesValue> intlDatePrototypeToSomeLocaleString(
     int dtoFlags) {
   double x = date->getPrimitiveValue();
   std::u16string str;
-  if (isnan(x)) {
+  if (std::isnan(x)) {
     str = u"Invalid Date";
   } else {
     CallResult<std::vector<std::u16string>> localesRes =
@@ -1550,7 +1552,7 @@ CallResult<HermesValue> intlStringPrototypeToLocaleLowerCase(
     void *,
     Runtime *runtime,
     NativeArgs args) {
-  if (args.getThisArg().isUndefined() || args.getThisArg().isNumber()) {
+  if (args.getThisArg().isUndefined() || args.getThisArg().isNull()) {
     return runtime->raiseTypeError(
         "String.prototype.localeCompare called on null or undefined");
   }
@@ -1578,7 +1580,7 @@ CallResult<HermesValue> intlStringPrototypeToLocaleUpperCase(
     void *,
     Runtime *runtime,
     NativeArgs args) {
-  if (args.getThisArg().isUndefined() || args.getThisArg().isNumber()) {
+  if (args.getThisArg().isUndefined() || args.getThisArg().isNull()) {
     return runtime->raiseTypeError(
         "String.prototype.localeCompare called on null or undefined");
   }

@@ -34,6 +34,7 @@ def main():
         args.keep_tmp,
         args.show_all,
         args.lazy,
+        args.test_intl,
     )
 
 

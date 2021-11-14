@@ -15,5 +15,3 @@ target_link_libraries(hbc-deltaprep
   hermesHBCBackend
   hermesSupport
 )
-
-hermes_link_icu(hbc-deltaprep)

@@ -9,8 +9,9 @@
 
 #include "hermes/Parser/JSLexer.h"
 #include "hermes/Parser/JSONParser.h"
-#include "hermes/Support/OSCompat.h"
 #include "hermes/Support/SourceErrorManager.h"
+
+#include <sstream>
 
 namespace facebook {
 namespace hermes {
@@ -549,10 +550,8 @@ parseSynthTrace(std::unique_ptr<llvh::MemoryBuffer> trace) {
       if (version != SynthTrace::synthVersion()) {
         throw std::invalid_argument(
             "Trace version mismatch, expected " +
-            ::hermes::oscompat::to_string(SynthTrace::synthVersion()) +
-            ", actual: " +
-            ::hermes::oscompat::to_string(
-                static_cast<uint32_t>(verNum->getValue())));
+            std::to_string(SynthTrace::synthVersion()) + ", actual: " +
+            std::to_string(static_cast<uint32_t>(verNum->getValue())));
       }
     } else {
       throw std::invalid_argument(

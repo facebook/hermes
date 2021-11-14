@@ -25,7 +25,7 @@ class EmitWasmIntrinsicsContext;
 
 struct CodeGenerationSettings {
   /// Whether we should emit TDZ checks.
-  bool enableTDZ{true};
+  bool enableTDZ{false};
   /// Whether we can assume there are unlimited number of registers.
   /// This affects how we generate the IR, as we can decide whether
   /// to hold as many temporary values as we like.
@@ -51,9 +51,6 @@ struct OptimizationSettings {
 
   /// Enable any inlining of functions.
   bool inlining{true};
-
-  /// Enable IR outlining.
-  bool outlining{false};
 
   /// Reuse property cache entries for same property name.
   bool reusePropCache{true};
@@ -267,6 +264,10 @@ class Context {
   }
 
   SourceErrorManager &getSourceErrorManager() {
+    return sm_;
+  }
+
+  const SourceErrorManager &getSourceErrorManager() const {
     return sm_;
   }
 

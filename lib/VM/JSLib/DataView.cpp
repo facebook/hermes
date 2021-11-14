@@ -51,6 +51,7 @@ dataViewPrototypeByteOffset(void *, Runtime *runtime, NativeArgs args) {
 }
 
 // ES6 24.2.4.5 - 22.2.4.20 && ES 2018 24.3.1.1
+namespace {
 template <typename T>
 CallResult<HermesValue>
 dataViewPrototypeGet(void *, Runtime *runtime, NativeArgs args) {
@@ -109,6 +110,22 @@ dataViewPrototypeSet(void *, Runtime *runtime, NativeArgs args) {
   self->set<T>(runtime, byteOffset, value, littleEndian);
   return HermesValue::encodeUndefinedValue();
 }
+} // namespace
+
+#define TYPED_ARRAY(name, type)                                   \
+  CallResult<HermesValue> dataViewPrototypeGet##name(             \
+      void *ctx, Runtime *rt, NativeArgs args) {                  \
+    return dataViewPrototypeGet<type>(ctx, rt, args);             \
+  }                                                               \
+  CallResult<HermesValue> dataViewPrototypeSet##name(             \
+      void *ctx, Runtime *rt, NativeArgs args) {                  \
+    return dataViewPrototypeSet<type, CellKind::name##ArrayKind>( \
+        ctx, rt, args);                                           \
+  }
+#define TYPED_ARRAY_NO_CLAMP
+#include "hermes/VM/TypedArrays.def"
+#undef TYPED_ARRAY_NO_CLAMP
+#undef TYPED_ARRAY
 
 /// @}
 
@@ -211,20 +228,20 @@ Handle<JSObject> createDataViewConstructor(Runtime *runtime) {
       false,
       true);
 
-#define TYPED_ARRAY(name, type)                              \
-  defineMethod(                                              \
-      runtime,                                               \
-      proto,                                                 \
-      Predefined::getSymbolID(Predefined::get##name),        \
-      nullptr,                                               \
-      dataViewPrototypeGet<type>,                            \
-      1);                                                    \
-  defineMethod(                                              \
-      runtime,                                               \
-      proto,                                                 \
-      Predefined::getSymbolID(Predefined::set##name),        \
-      nullptr,                                               \
-      dataViewPrototypeSet<type, CellKind::name##ArrayKind>, \
+#define TYPED_ARRAY(name, type)                       \
+  defineMethod(                                       \
+      runtime,                                        \
+      proto,                                          \
+      Predefined::getSymbolID(Predefined::get##name), \
+      nullptr,                                        \
+      dataViewPrototypeGet##name,                     \
+      1);                                             \
+  defineMethod(                                       \
+      runtime,                                        \
+      proto,                                          \
+      Predefined::getSymbolID(Predefined::set##name), \
+      nullptr,                                        \
+      dataViewPrototypeSet##name,                     \
       2);
 #define TYPED_ARRAY_NO_CLAMP
 #include "hermes/VM/TypedArrays.def"

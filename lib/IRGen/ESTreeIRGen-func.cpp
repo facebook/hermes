@@ -173,7 +173,6 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
   return Builder.createCreateFunctionInst(newFunc);
 }
 
-#ifndef HERMESVM_LEAN
 namespace {
 ESTree::NodeKind getLazyFunctionKind(ESTree::FunctionLikeNode *node) {
   if (node->isMethodDefinition) {
@@ -285,7 +284,6 @@ Function *ESTreeIRGen::genES5Function(
 
   return curFunction()->function;
 }
-#endif
 
 Function *ESTreeIRGen::genGeneratorFunction(
     Identifier originalName,

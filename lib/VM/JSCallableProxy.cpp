@@ -39,33 +39,6 @@ void CallableProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@handler", &self->slots_.handler);
 }
 
-#ifdef HERMESVM_SERIALIZE
-JSCallableProxy::JSCallableProxy(Deserializer &d)
-    : NativeFunction(
-          d,
-          &vt.base.base,
-          nullptr,
-          &JSCallableProxy::_proxyNativeCall) {
-  d.readRelocation(&slots_.target, RelocationKind::GCPointer);
-  d.readRelocation(&slots_.handler, RelocationKind::GCPointer);
-}
-
-void CallableProxySerialize(Serializer &s, const GCCell *cell) {
-  NativeFunction::serializeNativeFunctionImpl(
-      s, cell, JSObject::numOverlapSlots<JSCallableProxy>());
-  auto *self = vmcast<const JSCallableProxy>(cell);
-  s.writeRelocation(self->slots_.target.get(s.getRuntime()));
-  s.writeRelocation(self->slots_.handler.get(s.getRuntime()));
-  s.endObject(cell);
-}
-
-void CallableProxyDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::CallableProxyKind && "Expected CallableProxy");
-  auto *cell = d.getRuntime()->makeAFixed<JSCallableProxy>(d);
-  d.endObject(cell);
-}
-#endif
-
 PseudoHandle<JSCallableProxy> JSCallableProxy::create(Runtime *runtime) {
   auto *cproxy = runtime->makeAFixed<JSCallableProxy>(
       runtime,
@@ -132,22 +105,19 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
     // OR
     //   a. Assert: IsConstructor(target) is true.
     //   b. Return ? Construct(target, argumentsList, newTarget).
-    HermesValue newTarget = callerFrame->isConstructorCall()
-        ? callerFrame.getNewTargetRef()
-        : HermesValue::encodeUndefinedValue();
     ScopedNativeCallFrame newFrame{
         runtime,
         callerFrame.getArgCount(),
         target.getHermesValue(),
-        newTarget,
+        callerFrame.getNewTargetRef(),
         callerFrame.getThisArgRef()};
     if (LLVM_UNLIKELY(newFrame.overflowed()))
       return runtime->raiseStackOverflow(
           Runtime::StackOverflowKind::NativeStack);
     std::uninitialized_copy_n(
-        &(callerFrame->getArgRefUnsafe(0)),
+        callerFrame.argsBegin(),
         callerFrame.getArgCount(),
-        &(newFrame->getArgRefUnsafe(0)));
+        newFrame->argsBegin());
     // I know statically that target is a Callable, but storing it as
     // a Callable makes it much harder to share all the JSProxy code,
     // so we cast here.

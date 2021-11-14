@@ -39,11 +39,6 @@ StackFramePtrT<isConst>::getCalleeCodeBlock() const {
 }
 
 template <bool isConst>
-inline Callable *StackFramePtrT<isConst>::getCalleeClosure() const {
-  return dyn_vmcast<Callable>(getCalleeClosureOrCBRef());
-}
-
-template <bool isConst>
 inline Handle<Environment> StackFramePtrT<isConst>::getDebugEnvironmentHandle()
     const {
   return getDebugEnvironmentRef().isUndefined()

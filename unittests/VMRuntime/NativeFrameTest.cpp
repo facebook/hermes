@@ -21,7 +21,7 @@ static unsigned makeFramesUntilOverflow(
       runtime, 0, nullptr, false, HermesValue::encodeUndefinedValue()};
   if (frame.overflowed())
     return 0;
-  EXPECT_TRUE(!prev || (*prev)->ptr() > frame->ptr());
+  EXPECT_TRUE(!prev || (*prev)->ptr() < frame->ptr());
   return 1 + makeFramesUntilOverflow(runtime, &frame);
 }
 

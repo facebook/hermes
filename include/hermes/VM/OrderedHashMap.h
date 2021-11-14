@@ -59,12 +59,6 @@ class HashMapEntry final : public GCCell {
   }
 
  public:
-#ifdef HERMESVM_SERIALIZE
-  explicit HashMapEntry(Deserializer &d);
-
-  friend void HashMapEntryDeserialize(Deserializer &d, CellKind kind);
-#endif
-
   HashMapEntry(Runtime *runtime) : GCCell(&runtime->getHeap(), &vt) {}
 }; // HashMapEntry
 
@@ -90,12 +84,6 @@ class OrderedHashMap final : public GCCell {
 
  public:
   static const VTable vt;
-
-#ifdef HERMESVM_SERIALIZE
-  OrderedHashMap(Deserializer &d);
-
-  friend void OrderedHashMapSerialize(Serializer &s, const GCCell *cell);
-#endif
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::OrderedHashMapKind;
@@ -164,7 +152,7 @@ class OrderedHashMap final : public GCCell {
   // It needs to be less than 1/4th the max 32-bit integer in order to use an
   // integer-based load factor check of 0.75.
   static constexpr uint32_t MAX_CAPACITY =
-      min(ArrayStorageSmall::maxElements(), UINT32_MAX / 4);
+      std::min(ArrayStorageSmall::maxElements(), UINT32_MAX / 4);
 
   /// Capacity of the hash table.
   uint32_t capacity_{INITIAL_CAPACITY};

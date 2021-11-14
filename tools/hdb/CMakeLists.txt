@@ -3,8 +3,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-include_directories(${HERMES_SOURCE_DIR}/API)
-include_directories(${HERMES_JSI_DIR})
 set(HERMES_ENABLE_EH ON)
 set(HERMES_ENABLE_RTTI ON)
 add_hermes_tool(hdb
@@ -20,8 +18,6 @@ set_target_properties(hdb PROPERTIES
 target_link_libraries(hdb
   hermesapi
 )
-
-hermes_link_icu(hdb)
 
 install(TARGETS hdb
   RUNTIME DESTINATION bin

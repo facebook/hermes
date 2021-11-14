@@ -66,33 +66,32 @@ void DummyArrayCell::buildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 TEST(MetadataTest, TestNormalFields) {
-  const auto meta =
+  static const auto meta =
       buildMetadata(CellKind::UninitializedKind, DummyCell::buildMeta);
-  ASSERT_FALSE(meta.array_);
+  ASSERT_FALSE(meta.offsets.array);
 
-  auto &fields = meta.pointers_;
-  ASSERT_EQ(fields.size(), 3u);
-  EXPECT_STREQ(fields.names[0], "x");
-  EXPECT_STREQ(fields.names[1], "y");
-  EXPECT_STREQ(fields.names[2], "z");
-  EXPECT_EQ(fields.offsets[0], offsetof(DummyCell, x_));
-  EXPECT_EQ(fields.offsets[1], offsetof(DummyCell, y_));
-  EXPECT_EQ(fields.offsets[2], offsetof(DummyCell, z_));
+  EXPECT_EQ(meta.offsets.endGCPointerBase, 3u);
+  EXPECT_STREQ(meta.names[0], "x");
+  EXPECT_STREQ(meta.names[1], "y");
+  EXPECT_STREQ(meta.names[2], "z");
+  EXPECT_EQ(meta.offsets.fields[0], offsetof(DummyCell, x_));
+  EXPECT_EQ(meta.offsets.fields[1], offsetof(DummyCell, y_));
+  EXPECT_EQ(meta.offsets.fields[2], offsetof(DummyCell, z_));
 
-  EXPECT_EQ(meta.pointers_.size(), 3u);
-  EXPECT_EQ(meta.values_.size(), 0u);
+  EXPECT_EQ(meta.offsets.endGCHermesValue, 3u);
+  EXPECT_EQ(meta.offsets.endGCSmallHermesValue, 3u);
 
-  EXPECT_EQ(meta.symbols_.size(), 1u);
-  EXPECT_STREQ(meta.symbols_.names[0], "sym");
-  EXPECT_EQ(meta.symbols_.offsets[0], offsetof(DummyCell, sym_));
+  EXPECT_EQ(meta.offsets.endGCSymbolID, 4u);
+  EXPECT_STREQ(meta.names[3], "sym");
+  EXPECT_EQ(meta.offsets.fields[3], offsetof(DummyCell, sym_));
 }
 
 TEST(MetadataTest, TestArray) {
-  const auto meta =
+  static const auto meta =
       buildMetadata(CellKind::UninitializedKind, DummyArrayCell::buildMeta);
-  ASSERT_TRUE(meta.array_);
-  auto &array = *(meta.array_);
-  EXPECT_EQ(array.type, Metadata::ArrayData::ArrayType::Pointer);
+  ASSERT_TRUE(meta.offsets.array);
+  auto &array = *(meta.offsets.array);
+  EXPECT_EQ(array.type, Metadata::ArrayData::ArrayType::GCPointerBase);
 
   EXPECT_EQ(array.lengthOffset, offsetof(DummyArrayCell, length_));
   EXPECT_EQ(array.startOffset, offsetof(DummyArrayCell, data_));

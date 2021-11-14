@@ -44,65 +44,6 @@ void ArrayStorageSmallBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       "storage", self->data(), &self->size_, sizeof(GCSmallHermesValue));
 }
 
-#ifdef HERMESVM_SERIALIZE
-void ArrayStorageSerialize(Serializer &s, const GCCell *cell) {
-  auto self = vmcast<const ArrayStorage>(cell);
-  s.writeInt<ArrayStorage::size_type>(self->capacity());
-  s.writeInt<ArrayStorage::size_type>(self->size());
-
-  for (ArrayStorage::size_type i = 0; i < self->size(); i++) {
-    s.writeHermesValue(self->at(i));
-  }
-  s.endObject(cell);
-}
-
-void ArrayStorageDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::ArrayStorageKind && "Expected ArrayStorage");
-  const uint32_t capacity = d.readInt<ArrayStorage::size_type>();
-  assert(capacity <= ArrayStorage::maxElements() && "invalid capacity");
-  const auto allocSize = ArrayStorage::allocationSize(capacity);
-  auto *cell = d.getRuntime()->makeAVariable<ArrayStorage>(
-      allocSize, &d.getRuntime()->getHeap(), allocSize);
-  assert(cell->size() <= capacity && "size cannot be greater than capacity");
-  cell->size_.store(
-      d.readInt<ArrayStorage::size_type>(), std::memory_order_release);
-
-  for (ArrayStorage::size_type i = 0; i < cell->size(); i++)
-    d.readHermesValue(&cell->data()[i]);
-
-  d.endObject(cell);
-}
-
-void ArrayStorageSmallSerialize(Serializer &s, const GCCell *cell) {
-  auto self = vmcast<const ArrayStorageSmall>(cell);
-  s.writeInt<ArrayStorageSmall::size_type>(self->capacity());
-  s.writeInt<ArrayStorageSmall::size_type>(self->size());
-
-  for (ArrayStorageSmall::size_type i = 0; i < self->size(); i++)
-    s.writeSmallHermesValue(self->at(i));
-
-  s.endObject(cell);
-}
-
-void ArrayStorageSmallDeserialize(Deserializer &d, CellKind kind) {
-  assert(
-      kind == CellKind::ArrayStorageSmallKind && "Expected ArrayStorageSmall");
-  const uint32_t capacity = d.readInt<ArrayStorageSmall::size_type>();
-  assert(capacity <= ArrayStorageSmall::maxElements() && "invalid capacity");
-  const auto allocSize = ArrayStorageSmall::allocationSize(capacity);
-  auto *cell = d.getRuntime()->makeAVariable<ArrayStorageSmall>(
-      allocSize, &d.getRuntime()->getHeap(), allocSize);
-  assert(cell->size() <= capacity && "size cannot be greater than capacity");
-  cell->size_.store(
-      d.readInt<ArrayStorageSmall::size_type>(), std::memory_order_release);
-
-  for (ArrayStorageSmall::size_type i = 0; i < cell->size(); i++)
-    d.readSmallHermesValue(&cell->data()[i]);
-
-  d.endObject(cell);
-}
-#endif
-
 template <typename HVType>
 ArrayStorageBase<HVType>::ArrayStorageBase(GC *gc, uint32_t allocSize)
     : VariableSizeRuntimeCell(gc, &vt, allocSize) {}
