@@ -223,7 +223,7 @@ vm::CallResult<bool> getOptionBool(
   auto value = options.find(property);
   // 3. If value is undefined, return fallback.
   if (value == options.end()) {
-    bool fallback = vm::Predefined::undefined;
+    bool fallback = true; // Should a fallback be true???
     return fallback;
   }
   if(!value->second.isBool()) {
@@ -248,7 +248,7 @@ vm::CallResult<std::u16string> getOptionString(
   auto value = options.find(property);
   // 3. If value is undefined, return fallback.
   if (value == options.end()) {
-    std::u16string fallback;
+    std::u16string fallback = u"und";
     return fallback;
   }
   if(!value->second.isString()) {
@@ -687,7 +687,7 @@ ResolveLocale resolveLocale(
     auto localeMatchResult = lookupMatcher(requestedLocales, availableLocales);
 //  5. Let result be a new Record.
     ResolveLocale result;
-    std::u16string value = NULL;
+    std::u16string value;
     std::vector<std::u16string> supportedExtensionAdditionKeys;
 //  9. For each element key of relevantExtensionKeys, do
   for (std::u16string key : relevantExtensionKeys) {
@@ -876,7 +876,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   // 6. Let calendar be ? GetOption(options, "calendar", "string",
   //    undefined, undefined).
   std::vector<std::u16string> emptyVector;
-  Option undefinedFallback = new Option(u"und"); // TODO: Pass undefined.
+  Option undefinedFallback = new Option(u"und"); // TODO: Might not be needed if returns string.
   auto calendar = getOptionString(options, u"calendar", u"string", emptyVector, undefinedFallback);
   // 7. If calendar is not undefined, then
   //    a. If calendar does not match the Unicode Locale Identifier type
@@ -886,7 +886,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
       opt.ca = calendar.getValue();
   }
   else {
-    return vm::ExecutionStatus::EXCEPTION;
+    return runtime->raiseRangeError("Incorrect calendar information provided");
   }
         
   // 9. Let numberingSystem be ? GetOption(options, "numberingSystem",
@@ -900,7 +900,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
       opt.nu = numberingSystem.getValue();
   }
   else {
-    return vm::ExecutionStatus::EXCEPTION;
+    return runtime->raiseRangeError("Incorrect numberingSystem information provided");
   }
         
   // 12. Let hour12 be ? GetOption(options, "hour12", "boolean",
@@ -950,10 +950,14 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   
 // 24-27
 //  24. Let timeZone be ? Get(options, "timeZone").
-  Option timeZone = options.find(u"timeZone")->second.getString();
+  std::u16string timeZone;
   std::u16string timeZoneValue;
+// Check find first to avoid error
+  if (options.find(u"timeZone") != options.end()) {
+    timeZone = options.find(u"timeZone")->second.getString();
+  }
 //  25. If timeZone is undefined, then
-  if (timeZone.getString() == u"") {
+  if (timeZone == u"") {
 //  a. Let timeZone be DefaultTimeZone(), i.e. CST.
     NSTimeZone* defaultTimeZone = [NSTimeZone defaultTimeZone];
     NSString* nstrTime = [defaultTimeZone localizedName:NSTimeZoneNameStyleShortStandard
@@ -964,7 +968,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
 //  26. Else,
   else {
 //  a. Let timeZone be ? ToString(timeZone).
-    timeZoneValue = normalizeTimeZoneName(timeZone.getString());
+    timeZoneValue = normalizeTimeZoneName(timeZone);
     bool validateTimeZone = isTimeZoneValid(timeZoneValue);
 //  b. If the result of IsValidTimeZoneName(timeZone) is false, then
     if (!validateTimeZone) {
