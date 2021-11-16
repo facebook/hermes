@@ -9,5 +9,3 @@
 mod ast;
 
 mod gen_js;
-
-mod lit;
