@@ -468,7 +468,7 @@ jobs:
             cp *.tgz /tmp/hermes/output
             # Also copy the other packages for the sole purpose of not having
             # to visit multiple jobs pages to download all release artifacts
-            cp /tmp/hermes/input/hermes-runtime-darwin-v*.tar.gz /tmp/hermes/output
+            cp /tmp/hermes/input/*.tar.gz /tmp/hermes/output
 
       - run:
           name: Checksum artifacts
