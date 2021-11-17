@@ -139,6 +139,36 @@ macro_rules! gen_nodekind_enum {
                 }
             }
 
+            /// Replace `self` in the AST with the result of the `builders`.
+            /// Always allocates new nodes.
+            /// `self` is the *original* parent of the children to visit,
+            /// but the children which will be visited are determined via `builders`.
+            pub fn replace_with_multiple<V: VisitorMut<'gc>>(
+                &'gc self,
+                builders: Vec<builder::Builder<'gc>>,
+                ctx: &'gc GCLock,
+                visitor: &mut V,
+            ) -> TransformResult<&'gc Node<'gc>> {
+                let mut expanded = Vec::new();
+                for builder in builders {
+                    #[allow(unused_mut)]
+                    match builder {
+                        $(
+                            builder::Builder::$kind(mut builder) => {
+                                $($(
+                                        if let TransformResult::Changed($field) = (&builder.inner.$field)
+                                        .visit_child_mut(ctx, visitor, self) {
+                                            builder.$field($field);
+                                        }
+                                )*)?
+                                expanded.push(builder.build_forced(ctx));
+                            }
+                        ),*
+                    }
+                }
+                TransformResult::Expanded(expanded)
+            }
+
             /// Replace `self` in the AST with the `existing` node.
             /// `self` is the *original* parent of the children to visit,
             /// but the children which will be visited are determined via `existing`.
@@ -162,8 +192,8 @@ macro_rules! gen_nodekind_enum {
                             )*)?
                             match builder.build(ctx) {
                                 TransformResult::Unchanged => TransformResult::Changed(existing),
-                                TransformResult::Removed => {
-                                    unreachable!("Builder can't remove a node");
+                                TransformResult::Removed | TransformResult::Expanded(_)=> {
+                                    unreachable!("Builder can't remove or expand a node");
                                 }
                                 TransformResult::Changed(n) => TransformResult::Changed(n),
                             }
@@ -345,9 +375,32 @@ macro_rules! gen_nodekind_enum {
                 /// Return Changed(node) with a new node if it was changed.
                 pub fn build(self, gc: &'a GCLock) -> TransformResult<&'a Node<'a>> {
                     if self.is_changed {
-                        TransformResult::Changed(gc.alloc(super::Node::$kind(self.inner)))
+                        TransformResult::Changed(self.build_forced(gc))
                     } else {
                         TransformResult::Unchanged
+                    }
+                }
+
+                /// Return the new node.
+                pub fn build_forced(self, gc: &'a GCLock) -> &'a Node<'a> {
+                    gc.alloc(super::Node::$kind(self.inner))
+                }
+
+                /// Make a builder from a template.
+                pub fn from_template(
+                    node: super::template::$kind<'a>,
+                ) -> Self {
+                    Self {
+                        is_changed: true,
+                        inner: super::$kind {
+                            metadata: NodeMetadata {
+                                phantom: node.metadata.phantom,
+                                range: node.metadata.range,
+                            },
+                            $($(
+                                $field: (&node.$field).duplicate(),
+                            )*)?
+                        }
                     }
                 }
 

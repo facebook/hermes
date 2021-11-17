@@ -633,24 +633,9 @@ pub enum TransformResult<T> {
 
     /// Element should be swapped out for the wrapped element.
     Changed(T),
-}
 
-impl<T> TransformResult<T> {
-    pub fn unwrap(self) -> T {
-        match self {
-            Self::Unchanged | Self::Removed => {
-                panic!("called `TransformResult::unwrap()` without a changed value");
-            }
-            Self::Changed(t) => t,
-        }
-    }
-
-    pub fn unwrap_or(self, default: T) -> T {
-        match self {
-            Self::Unchanged | Self::Removed => default,
-            Self::Changed(t) => t,
-        }
-    }
+    /// Element should be swapped out for multiple wrapped elements.
+    Expanded(Vec<T>),
 }
 
 /// Trait implemented by those who call the visit functionality.
@@ -912,6 +897,9 @@ impl<'gc> Node<'gc> {
             TransformResult::Unchanged => Some(self),
             TransformResult::Removed => None,
             TransformResult::Changed(new_node) => Some(new_node),
+            TransformResult::Expanded(_) => {
+                panic!("Attempt to replace a single node with multiple");
+            }
         }
     }
 }
@@ -1076,6 +1064,9 @@ impl<'gc, T: NodeChild<'gc> + NodeChild<'gc, Out = T>> NodeChild<'gc> for Option
                 Unchanged => Unchanged,
                 Removed => Changed(None),
                 Changed(new_node) => Changed(Some(new_node)),
+                Expanded(_) => {
+                    panic!("Attempt to replace a single optional node with multiple");
+                }
             },
         }
     }
@@ -1110,6 +1101,9 @@ impl<'gc> NodeChild<'gc> for &Option<&'gc Node<'gc>> {
                 Unchanged => Unchanged,
                 Removed => Changed(None),
                 Changed(new_node) => Changed(Some(new_node)),
+                Expanded(_) => {
+                    panic!("Attempt to replace a single optional node with multiple");
+                }
             },
         }
     }
@@ -1191,9 +1185,18 @@ impl<'gc> NodeChild<'gc> for &NodeList<'gc> {
             for elem in self.iter().take(index) {
                 result.push(elem);
             }
-            // If the node was changed, push it. Otherwise it's removed, so just skip it.
-            if let Changed(new_node) = node {
-                result.push(new_node);
+            // If the node was changed or expanded, push it.
+            match node {
+                Changed(new_node) => result.push(new_node),
+                Expanded(new_nodes) => {
+                    for node in new_nodes {
+                        result.push(node);
+                    }
+                }
+                Removed => {}
+                Unchanged => {
+                    unreachable!("checked for unchanged above")
+                }
             };
             index += 1;
             // Fill the rest of the elements.
@@ -1202,6 +1205,11 @@ impl<'gc> NodeChild<'gc> for &NodeList<'gc> {
                     Unchanged => result.push(self[index]),
                     Removed => {}
                     Changed(new_node) => result.push(new_node),
+                    Expanded(new_nodes) => {
+                        for node in new_nodes {
+                            result.push(node);
+                        }
+                    }
                 }
                 index += 1;
             }
@@ -1239,6 +1247,9 @@ impl<'gc> NodeChild<'gc> for &Option<NodeList<'gc>> {
                 Unchanged => Unchanged,
                 Removed => Changed(None),
                 Changed(new_node) => Changed(Some(new_node)),
+                Expanded(_) => {
+                    unreachable!("NodeList::visit_child_mut cannot return Expanded");
+                }
             },
         }
     }

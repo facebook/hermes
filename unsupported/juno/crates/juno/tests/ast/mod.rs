@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use juno::ast::*;
+use juno::{ast::*, hparser, node_cast};
 
 mod validate;
 
@@ -254,6 +254,99 @@ fn test_visit_mut() {
 
     {
         ctx.gc();
+    }
+}
+
+#[test]
+fn test_replace_var_decls() {
+    let mut ctx = Context::new();
+    let ast = hparser::parse_with_flags(Default::default(), "var x, y;", &mut ctx).unwrap();
+
+    {
+        let gc = GCLock::new(&mut ctx);
+        match ast.node(&gc) {
+            Node::Program(Program { body, .. }) => {
+                assert_eq!(body.len(), 1, "Program is {:#?}", ast.node(&gc));
+            }
+            _ => panic!("Parse failed: {:#?}", ast.node(&gc)),
+        };
+    }
+
+    struct Pass {}
+    impl<'gc> VisitorMut<'gc> for Pass {
+        fn call(
+            &mut self,
+            lock: &'gc GCLock,
+            node: &'gc Node<'gc>,
+            _parent: Option<&'gc Node<'gc>>,
+        ) -> TransformResult<&'gc Node<'gc>> {
+            match node {
+                Node::VariableDeclaration(VariableDeclaration {
+                    metadata: _,
+                    kind,
+                    declarations,
+                }) if declarations.len() > 1 => {
+                    let mut result: Vec<builder::Builder> = Vec::new();
+                    for decl in declarations {
+                        result.push(builder::Builder::VariableDeclaration(
+                            builder::VariableDeclaration::from_template(
+                                template::VariableDeclaration {
+                                    metadata: Default::default(),
+                                    kind: *kind,
+                                    declarations: vec![decl],
+                                },
+                            ),
+                        ));
+                    }
+                    node.replace_with_multiple(result, lock, self)
+                }
+                _ => node.visit_children_mut(lock, self),
+            }
+        }
+    }
+    let mut pass = Pass {};
+
+    let transformed = {
+        let gc = GCLock::new(&mut ctx);
+        NodeRc::from_node(&gc, ast.node(&gc).visit_mut(&gc, &mut pass, None).unwrap())
+    };
+
+    {
+        let gc = GCLock::new(&mut ctx);
+        match transformed.node(&gc) {
+            Node::Program(Program { body, .. }) => {
+                assert_eq!(body.len(), 2, "Program is {:#?}", transformed.node(&gc));
+                assert_eq!(
+                    gc.ctx().str(
+                        node_cast!(
+                            Node::Identifier,
+                            node_cast!(
+                                Node::VariableDeclarator,
+                                node_cast!(Node::VariableDeclaration, body[0]).declarations[0]
+                            )
+                            .id
+                        )
+                        .name
+                    ),
+                    "x"
+                );
+                assert_eq!(
+                    gc.ctx().str(
+                        node_cast!(
+                            Node::Identifier,
+                            node_cast!(
+                                Node::VariableDeclarator,
+                                node_cast!(Node::VariableDeclaration, body[1]).declarations[0]
+                            )
+                            .id
+                        )
+                        .name
+                    ),
+                    "y"
+                );
+            }
+            _ => panic!("Transformation failed: {:#?}", transformed.node(&gc)),
+        };
     }
 }
 
