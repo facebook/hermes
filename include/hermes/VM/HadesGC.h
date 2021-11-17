@@ -74,7 +74,7 @@ class HadesGC final : public GCBase {
   ~HadesGC();
 
   static bool classof(const GCBase *gc) {
-    return gc->getKind() == HeapKind::HADES;
+    return gc->getKind() == HeapKind::HadesGC;
   }
 
   static constexpr uint32_t maxAllocationSizeImpl() {
@@ -188,10 +188,6 @@ class HadesGC final : public GCBase {
   }
   void writeBarrierSlow(const GCPointerBase *loc, const GCCell *value);
 
-  /// The given symbol is being written at the given loc (required to be in the
-  /// heap).
-  void writeBarrier(SymbolID symbol);
-
   /// Special versions of \p writeBarrier for when there was no previous value
   /// initialized into the space.
   void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value) {
@@ -249,6 +245,10 @@ class HadesGC final : public GCBase {
       snapshotWriteBarrierInternal(*loc);
   }
   void snapshotWriteBarrier(const GCPointerBase *loc) {
+    if (LLVM_UNLIKELY(!inYoungGen(loc) && ogMarkingBarriers_))
+      snapshotWriteBarrierInternal(*loc);
+  }
+  void snapshotWriteBarrier(const GCSymbolID *loc) {
     if (LLVM_UNLIKELY(!inYoungGen(loc) && ogMarkingBarriers_))
       snapshotWriteBarrierInternal(*loc);
   }
@@ -407,8 +407,8 @@ class HadesGC final : public GCBase {
     /// \return the segment previously at segmentIdx
     HeapSegment removeSegment(size_t segmentIdx);
 
-    /// Indicate that OG should target having \p targetSegments segments.
-    void setTargetSegments(size_t targetSegments);
+    /// Indicate that OG should target having a size of \p targetSizeBytes.
+    void setTargetSizeBytes(size_t targetSizeBytes);
 
     /// Allocate into OG. Returns a pointer to the newly allocated space. That
     /// space must be filled before releasing the gcMutex_.
@@ -451,7 +451,9 @@ class HadesGC final : public GCBase {
 
     /// \return the total number of bytes that we aim to use in the OG
     /// section of the JS heap, including free list entries. This may be smaller
-    /// or greater than size().
+    /// or greater than size(). It is rounded up to the nearest segment to make
+    /// to reflect the fact that in practice, the heap size will be an integer
+    /// multiple of segment size.
     uint64_t targetSizeBytes() const;
 
     /// Add some external memory cost to the OG.
@@ -556,10 +558,11 @@ class HadesGC final : public GCBase {
     /// remain valid across a push_back.
     std::deque<HeapSegment> segments_;
 
-    /// This is the target number of segments in the OG JS heap. It does not
+    /// This is the target size in bytes for the OG JS heap. It does not
     /// include external memory and may be larger or smaller than the actual
-    /// number of segments allocated.
-    size_t targetSegments_{0};
+    /// capacity of the heap. Should be initialised using setTargetSizeBytes
+    /// before use.
+    ExponentialMovingAverage targetSizeBytes_{0, 0};
 
     /// This is the sum of all bytes currently allocated in the heap, excluding
     /// bump-allocated segments. Use \c allocatedBytes() to include
@@ -752,6 +755,10 @@ class HadesGC final : public GCBase {
   /// Target OG occupancy ratio at the end of an OG collection.
   const double occupancyTarget_;
 
+  /// The threshold, expressed as the occupied fraction of the target OG size,
+  /// at which we should start an OG collection.
+  ExponentialMovingAverage ogThreshold_{0.5, 0.75};
+
   /// A collection section used to track the size of YG before and after a YG
   /// collection, as well as the time a YG collection takes.
   std::unique_ptr<CollectionStats> ygCollectionStats_;
@@ -942,6 +949,11 @@ class HadesGC final : public GCBase {
   /// final marking worklist drain, and to update weak roots. It must be invoked
   /// from the mutator.
   void completeMarking();
+
+  /// Update the OG collection threshold by estimating the mark rate and using
+  /// that to estimate how late we can start a collection without going over the
+  /// heap limit. Should be called at the start of completeMarking.
+  void updateOldGenThreshold();
 
   /// Select a segment to compact and initialise any state needed for
   /// compaction.

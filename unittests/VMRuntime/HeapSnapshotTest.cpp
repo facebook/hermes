@@ -1180,8 +1180,10 @@ baz();
   }
   auto fooObj = JSObject::getNamed_RJS(resObj, runtime, fooSym);
   auto barObj = JSObject::getNamed_RJS(resObj, runtime, barSym);
-  auto fooObjID = runtime->getHeap().getObjectID((*fooObj)->getPointer());
-  auto barObjID = runtime->getHeap().getObjectID((*barObj)->getPointer());
+  auto fooObjID =
+      runtime->getHeap().getObjectID(vmcast<JSObject>(fooObj->get()));
+  auto barObjID =
+      runtime->getHeap().getObjectID(vmcast<JSObject>(barObj->get()));
 
   JSONObject *root = TAKE_SNAPSHOT(runtime->getHeap(), jsonFactory);
   ASSERT_NE(root, nullptr);

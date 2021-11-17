@@ -4442,7 +4442,8 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
       auto optNext = lexer_.lookahead1(llvh::None);
       if (optNext.hasValue() &&
           (*optNext == TokenKind::rw_static ||
-           *optNext == TokenKind::identifier)) {
+           *optNext == TokenKind::identifier || *optNext == TokenKind::plus ||
+           *optNext == TokenKind::minus)) {
         declare = true;
         advance();
       }

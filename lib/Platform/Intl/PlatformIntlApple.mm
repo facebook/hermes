@@ -58,24 +58,22 @@ llvh::Optional<std::u16string> bestAvailableLocale(
   while (true) {
     // a. If availableLocales contains an element equal to candidate, return
     // candidate.
-    if (llvh::find(availableLocales, candidate) != availableLocales.end()) {
+    if (llvh::find(availableLocales, candidate) != availableLocales.end())
       return candidate;
-    }
 
     // b. Let pos be the character index of the last occurrence of "-" (U+002D)
     // within candidate.
     size_t pos = candidate.rfind(u'-');
 
     // ...If that character does not occur, return undefined.
-    if (pos == std::string::npos) {
+    if (pos == std::u16string::npos)
       return llvh::None;
-    }
 
     // c. If pos ≥ 2 and the character "-" occurs at index pos-2 of candidate,
     // decrease pos by 2.
-    if (pos >= 2 && candidate[pos - 2] == '-') {
+    if (pos >= 2 && candidate[pos - 2] == '-')
       pos -= 2;
-    }
+
     // d. Let candidate be the substring of candidate from position 0,
     // inclusive, to position pos, exclusive.
     candidate.resize(pos);
@@ -86,7 +84,8 @@ llvh::Optional<std::u16string> bestAvailableLocale(
 // https://402.ecma-international.org/7.0/#sec-unicode-locale-extension-sequences
 std::u16string toNoUnicodeExtensionsLocale(const std::u16string &locale) {
   std::vector<std::u16string> subtags;
-  auto s = locale.begin(), e = locale.end();
+  auto s = locale.begin();
+  const auto e = locale.end();
   while (true) {
     auto tagEnd = std::find(s, e, u'-');
     subtags.emplace_back(s, tagEnd);
@@ -96,17 +95,16 @@ std::u16string toNoUnicodeExtensionsLocale(const std::u16string &locale) {
   }
   std::u16string result;
   size_t size = subtags.size();
-  for (size_t s = 0; s < size;) {
-    if (s > 0) {
+  for (size_t i = 0; i < size;) {
+    if (i > 0)
       result.append(u"-");
-    }
-    result.append(subtags[s]);
-    s++;
+    result.append(subtags[i]);
+    i++;
     // If next tag is a private marker and there are remaining tags
-    if (subtags[s] == u"u" && s < size - 1)
+    if (subtags[i] == u"u" && i < size - 1)
       // Skip those tags until you reach end or another singleton subtag
-      while (s < size && subtags[s].size() > 1)
-        s++;
+      while (i < size && subtags[i].size() > 1)
+        i++;
   }
   return result;
 }
@@ -135,14 +133,11 @@ LocaleMatch lookupMatcher(
       // i. Set result.[[locale]] to availableLocale.
       result.locale = std::move(*availableLocale);
       // ii. If locale and noExtensionsLocale are not the same String value,
-      if (locale != noExtensionsLocale) {
-        // then
-        // 1. Let extension be the String value consisting of the substring of
-        // the Unicode locale extension sequence within locale.
-        // 2. Set result.[[extension]] to extension.
-        result.extension =
-            result.locale.substr(noExtensionsLocale.length(), locale.length());
-      }
+      // then
+      // 1. Let extension be the String value consisting of the substring of
+      // the Unicode locale extension sequence within locale.
+      // 2. Set result.[[extension]] to extension.
+      result.extension = locale.substr(noExtensionsLocale.length());
       // iii. Return result.
       return result;
     }

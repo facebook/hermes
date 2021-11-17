@@ -5,8 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::cell::UnsafeCell;
+use std::cell::{Cell, UnsafeCell};
 use std::collections::HashMap;
+use std::fmt::Formatter;
+use std::ptr::null;
 
 /// Type used to hold a string index internally.
 type NumIndex = u32;
@@ -24,15 +26,40 @@ pub struct AtomTable(UnsafeCell<Inner>);
 struct Inner {
     /// Strings are added here and never removed or mutated.
     strings: Vec<String>,
-    /// Maps from a reference inside [`AtomTable::strings`] to the index in [`AtomTable::strings`].
+    /// Maps from a reference inside [`Inner::strings`] to the index in [`Inner::strings`].
     /// Since strings are never removed or modified, the lifetime of the key
     /// is effectively static.
     map: HashMap<&'static str, NumIndex>,
 }
 
 /// This represents a unique string index in the table.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Atom(NumIndex);
+
+thread_local! {
+    /// Stores the active table used for debug formatting.
+    static DEBUG_TABLE: Cell<* const AtomTable> = Cell::new(null());
+}
+
+// An implementation of Debug which optionally obtains the Atom value from the
+// active debug map.
+impl std::fmt::Debug for Atom {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut t = f.debug_tuple("Atom");
+        t.field(&self.0);
+
+        // If the debug table is set and the atom is valid in it, add the value
+        DEBUG_TABLE.with(|debug_table| {
+            let p = debug_table.get();
+            if let Some(r) = unsafe { p.as_ref() } {
+                if let Some(value) = r.try_str(*self) {
+                    t.field(&value);
+                }
+            }
+        });
+        t.finish()
+    }
+}
 
 /// A special value reserved for the invalid atom.
 pub const INVALID_ATOM: Atom = Atom(NumIndex::MAX);
@@ -69,6 +96,14 @@ impl Inner {
     fn str(&self, ident: Atom) -> &str {
         self.strings[ident.0 as usize].as_str()
     }
+
+    fn try_str(&self, ident: Atom) -> Option<&str> {
+        if (ident.0 as usize) < self.strings.len() {
+            Some(self.str(ident))
+        } else {
+            None
+        }
+    }
 }
 
 impl AtomTable {
@@ -87,6 +122,35 @@ impl AtomTable {
     #[inline]
     pub fn str(&self, ident: Atom) -> &str {
         unsafe { &*self.0.get() }.str(ident)
+    }
+
+    #[inline]
+    pub fn try_str(&self, ident: Atom) -> Option<&str> {
+        unsafe { &*self.0.get() }.try_str(ident)
+    }
+
+    /// Execute the callback in a context where this table is used for debug
+    /// printing of atoms.
+    pub fn in_debug_context<R, F: FnOnce() -> R>(&self, f: F) -> R {
+        DEBUG_TABLE.with(|debug_table| {
+            let prev_table = debug_table.replace(self);
+            let res = f();
+            debug_assert!(
+                debug_table.get() == self,
+                "debug context unexpectedly changed"
+            );
+            debug_table.set(prev_table);
+            res
+        })
+    }
+
+    /// Set a table or nullptr as the Atom debug context. If non-null, debug
+    /// printing of atoms will use it. Return the previous debug context.
+    ///
+    /// # Safety
+    /// The table must not be destroyed or moved while it is set.
+    pub unsafe fn unsafe_set_debug_context(ptr: *const Self) -> *const Self {
+        DEBUG_TABLE.with(|debug_table| debug_table.replace(ptr))
     }
 }
 

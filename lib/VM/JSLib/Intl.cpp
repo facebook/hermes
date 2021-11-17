@@ -1552,7 +1552,7 @@ CallResult<HermesValue> intlStringPrototypeToLocaleLowerCase(
     void *,
     Runtime *runtime,
     NativeArgs args) {
-  if (args.getThisArg().isUndefined() || args.getThisArg().isNumber()) {
+  if (args.getThisArg().isUndefined() || args.getThisArg().isNull()) {
     return runtime->raiseTypeError(
         "String.prototype.localeCompare called on null or undefined");
   }
@@ -1580,7 +1580,7 @@ CallResult<HermesValue> intlStringPrototypeToLocaleUpperCase(
     void *,
     Runtime *runtime,
     NativeArgs args) {
-  if (args.getThisArg().isUndefined() || args.getThisArg().isNumber()) {
+  if (args.getThisArg().isUndefined() || args.getThisArg().isNull()) {
     return runtime->raiseTypeError(
         "String.prototype.localeCompare called on null or undefined");
   }

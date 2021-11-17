@@ -25,7 +25,7 @@ namespace vm {
 
 /// The card table optimises young gen collections by restricting the amount of
 /// heap belonging to the old gen that must be scanned.  The card table expects
-/// to be constructed inside an GenGCHeapSegment's storage, at some position
+/// to be constructed inside an AlignedHeapSegment's storage, at some position
 /// before the allocation region, and covers the extent of that storage's
 /// memory.
 ///

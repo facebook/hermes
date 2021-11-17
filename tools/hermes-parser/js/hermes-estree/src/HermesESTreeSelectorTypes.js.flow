@@ -1,0 +1,47 @@
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @flow strict
+ * @format
+ */
+
+'use strict';
+
+import type {
+  AnyTypeAnnotation,
+  CallExpression,
+  ESNode,
+  ExpressionStatement,
+  FunctionDeclaration,
+  Literal,
+  ReturnStatement,
+  VariableDeclaration,
+  VariableDeclarator,
+} from './types';
+
+/*
+ * !!! THIS FILE WILL BE OVERWRITTEN BY CODEGEN !!!
+ *
+ * Statically it should only contain the minimal set of
+ * definitions required to typecheck the local code.
+ */
+
+interface FunctionDeclaration_With_id extends FunctionDeclaration {
+  +id: $NonMaybeType<FunctionDeclaration['id']>;
+}
+
+export type ESQueryNodeSelectors = $ReadOnly<{
+  +AnyTypeAnnotation?: (node: AnyTypeAnnotation) => void,
+  +CallExpression?: (node: CallExpression) => void,
+  +ExpressionStatement?: (node: ExpressionStatement) => void,
+  +FunctionDeclaration?: (node: FunctionDeclaration) => void,
+  +'FunctionDeclaration[id]'?: (node: FunctionDeclaration_With_id) => void,
+  +Literal?: (node: Literal) => void,
+  +ReturnStatement?: (node: ReturnStatement) => void,
+  +VariableDeclaration?: (node: VariableDeclaration) => void,
+  +VariableDeclarator?: (node: VariableDeclarator) => void,
+  +[selector: string]: (node: ESNode) => void,
+}>;

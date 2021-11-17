@@ -10,6 +10,8 @@
 
 'use strict';
 
-export type VisitorKeys = $ReadOnly<{[string]: $ReadOnlyArray<string>}>;
+import type {ESNode} from 'hermes-estree';
+
+export type VisitorKeys = $ReadOnly<{[ESNode['type']]: $ReadOnlyArray<string>}>;
 
 declare module.exports: VisitorKeys;

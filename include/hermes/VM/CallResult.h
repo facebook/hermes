@@ -360,7 +360,7 @@ class CallResult<
 
 #if defined(NDEBUG) && !defined(_WINDOWS)
   static_assert(
-      hermes::IsTriviallyCopyable<PseudoHandle<T>, true>::value,
+      std::is_trivially_copyable<PseudoHandle<T>>::value,
       "PseudoHandle<T> must be trivially copyable");
 #endif
 

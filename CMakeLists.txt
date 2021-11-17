@@ -71,7 +71,7 @@ endif()
 # - npm/package.json
 # - hermes-engine.podspec
 project(Hermes
-        VERSION 0.9.0
+        VERSION 0.10.0
         LANGUAGES C CXX)
 # Optional suffix like "-rc3"
 set(VERSION_SUFFIX "")
@@ -101,7 +101,7 @@ set(HERMES_IS_MOBILE_BUILD ${HERMES_IS_ANDROID} CACHE BOOL
 
 set(HERMESVM_GCKIND HADES
   CACHE STRING
-  "HermesVM GC type: either NONCONTIG_GENERATIONAL, MALLOC, or HADES")
+  "HermesVM GC type: either MALLOC or HADES")
 
 # Hermes VM opcode stats profiling
 set(HERMESVM_PROFILER_OPCODE OFF CACHE BOOL
@@ -596,7 +596,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_subdirectory(external/llvh)
 add_subdirectory(utils/hermes-lit)
-add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(public)
 add_subdirectory(external)

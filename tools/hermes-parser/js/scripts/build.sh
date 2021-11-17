@@ -8,7 +8,7 @@ set -xe -o pipefail
 
 THIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-PACKAGES=(hermes-estree hermes-parser hermes-eslint)
+PACKAGES=(hermes-estree hermes-parser hermes-eslint hermes-transform)
 
 # Yarn install all packages
 yarn install
@@ -50,15 +50,19 @@ for package in "${PACKAGES[@]}"; do
   (cd "$PACKAGE_DIR/src" && find . -type f -name '*.js' -exec cp --parents -t ../dist {} +)
 done
 
+# Generate the JSON blob used to drive the rest of the JS codegen
+yarn babel-node "$THIS_DIR/genESTreeJSON.js" "$INCLUDE_PATH"
+
 # Generate code, written into package dist directories
-node "$THIS_DIR/genWasmParser.js" "$WASM_PARSER"
-node "$THIS_DIR/genParserVisitorKeys.js" "$INCLUDE_PATH"
-node "$THIS_DIR/genParserNodeTypes.js" "$INCLUDE_PATH"
-node "$THIS_DIR/genParserAsserts.js" "$INCLUDE_PATH"
-node "$THIS_DIR/genESLintVisitorKeys.js" "$INCLUDE_PATH"
-node "$THIS_DIR/genNodeDeserializers.js" "$INCLUDE_PATH"
+yarn babel-node "$THIS_DIR/genWasmParser.js" "$WASM_PARSER"
+yarn babel-node "$THIS_DIR/genNodeDeserializers.js" "$INCLUDE_PATH"
+yarn babel-node "$THIS_DIR/genParserVisitorKeys.js"
+yarn babel-node "$THIS_DIR/genESLintVisitorKeys.js"
+yarn babel-node "$THIS_DIR/genSelectorTypes.js"
+yarn babel-node "$THIS_DIR/genTransformNodeTypes.js"
+yarn babel-node "$THIS_DIR/getTransformReplaceNodeTypes.js"
 
 for package in "${PACKAGES[@]}"; do
   PACKAGE_DIST_DIR="$THIS_DIR/../$package/dist"
-  babel --config-file="$THIS_DIR/../babel.config.js" "$PACKAGE_DIST_DIR" --out-dir="$PACKAGE_DIST_DIR"
+  yarn babel --config-file="$THIS_DIR/../babel.config.js" "$PACKAGE_DIST_DIR" --out-dir="$PACKAGE_DIST_DIR"
 done

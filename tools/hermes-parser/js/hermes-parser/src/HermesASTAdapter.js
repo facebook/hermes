@@ -4,23 +4,37 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @flow
  * @format
  */
 
-'use strict';
+/*
+This class does some very "javascripty" things in the name of
+performance which are ultimately impossible to soundly type.
+
+So instead of adding strict types and a large number of suppression
+comments, instead it is left untyped and subclasses are strictly
+typed via a separate flow declaration file.
+*/
+
+import type {HermesNode} from './HermesAST';
+import type {ParserOptions} from './ParserOptions';
 
 import {
   HERMES_AST_VISITOR_KEYS,
   NODE_CHILD,
   NODE_LIST_CHILD,
-} from './types/generated/visitor-keys';
+} from './generated/visitor-keys';
 
 /**
  * The base class for transforming the Hermes AST to the desired output format.
  * Extended by concrete adapters which output an ESTree or Babel AST.
  */
 export default class HermesASTAdapter {
-  constructor(options, code) {
+  sourceFilename: ParserOptions['sourceFilename'];
+  sourceType: ParserOptions['sourceType'];
+
+  constructor(options: ParserOptions) {
     this.sourceFilename = options.sourceFilename;
     this.sourceType = options.sourceType;
   }
@@ -29,7 +43,7 @@ export default class HermesASTAdapter {
    * Transform the input Hermes AST to the desired output format.
    * This modifies the input AST in place instead of constructing a new AST.
    */
-  transform(program) {
+  transform(program: HermesNode): ?HermesNode {
     // Comments are not traversed via visitor keys
     const comments = program.comments;
     for (let i = 0; i < comments.length; i++) {
@@ -61,12 +75,11 @@ export default class HermesASTAdapter {
    * This may modify the input node in-place and return that same node, or a completely
    * new node may be constructed and returned. Overriden in child classes.
    */
-  mapNode(node) {
-    this.fixSourceLocation(node);
-    return this.mapNodeDefault(node);
+  mapNode(_node: HermesNode): HermesNode {
+    throw new Error('Implemented in subclasses');
   }
 
-  mapNodeDefault(node) {
+  mapNodeDefault(node: HermesNode): HermesNode {
     const visitorKeys = HERMES_AST_VISITOR_KEYS[node.type];
     for (const key in visitorKeys) {
       const childType = visitorKeys[key];
@@ -93,29 +106,30 @@ export default class HermesASTAdapter {
    * Update the source location for this node depending on the output AST format.
    * This can modify the input node in-place. Overriden in child classes.
    */
-  fixSourceLocation(node) {
+  fixSourceLocation(_node: HermesNode): void {
     throw new Error('Implemented in subclasses');
   }
 
-  getSourceType() {
+  getSourceType(): ParserOptions['sourceType'] {
     return this.sourceType ?? 'script';
   }
 
-  setModuleSourceType() {
+  setModuleSourceType(): void {
     if (this.sourceType == null) {
       this.sourceType = 'module';
     }
   }
 
-  mapComment(node) {
+  mapComment(node: HermesNode): HermesNode {
     return node;
   }
 
-  mapEmpty(node) {
+  mapEmpty(_node: HermesNode): HermesNode {
+    // $FlowExpectedError
     return null;
   }
 
-  mapImportDeclaration(node) {
+  mapImportDeclaration(node: HermesNode): HermesNode {
     if (node.importKind === 'value') {
       this.setModuleSourceType();
     }
@@ -123,7 +137,7 @@ export default class HermesASTAdapter {
     return this.mapNodeDefault(node);
   }
 
-  mapImportSpecifier(node) {
+  mapImportSpecifier(node: HermesNode): HermesNode {
     if (node.importKind === 'value') {
       node.importKind = null;
     }
@@ -131,12 +145,12 @@ export default class HermesASTAdapter {
     return this.mapNodeDefault(node);
   }
 
-  mapExportDefaultDeclaration(node) {
+  mapExportDefaultDeclaration(node: HermesNode): HermesNode {
     this.setModuleSourceType();
     return this.mapNodeDefault(node);
   }
 
-  mapExportNamedDeclaration(node) {
+  mapExportNamedDeclaration(node: HermesNode): HermesNode {
     if (node.exportKind === 'value') {
       this.setModuleSourceType();
     }
@@ -144,7 +158,7 @@ export default class HermesASTAdapter {
     return this.mapNodeDefault(node);
   }
 
-  mapExportAllDeclaration(node) {
+  mapExportAllDeclaration(node: HermesNode): HermesNode {
     if (node.exportKind === 'value') {
       this.setModuleSourceType();
     }
@@ -152,13 +166,13 @@ export default class HermesASTAdapter {
     return this.mapNodeDefault(node);
   }
 
-  mapPrivateProperty(node) {
+  mapPrivateProperty(node: HermesNode): HermesNode {
     throw new SyntaxError(
       this.formatError(node, 'Private properties are not supported'),
     );
   }
 
-  formatError(node, message) {
+  formatError(node: HermesNode, message: string): string {
     return `${message} (${node.loc.start.line}:${node.loc.start.column})`;
   }
 }

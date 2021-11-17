@@ -2,28 +2,35 @@
   "name": "hermes-parser-packages",
   "private": true,
   "devDependencies": {
-    "@babel/core": "7.15.8",
     "@babel/cli": "7.15.7",
-    "@babel/preset-env": "7.15.8",
+    "@babel/core": "7.15.8",
+    "@babel/node": "^7.15.8",
     "@babel/plugin-proposal-class-properties": "7.14.5",
     "@babel/plugin-transform-flow-strip-types": "7.14.5",
-    "flow-bin": "0.154.0",
-    "jest": "^26.4.2"
+    "@babel/preset-env": "7.15.8",
+    "eslint": "^7.32.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-eslint-comments": "^3.2.0",
+    "eslint-plugin-fb-flow": "^0.0.4",
+    "eslint-plugin-flowtype": "^8.0.3",
+    "eslint-plugin-jest": "^25.2.4",
+    "eslint-plugin-prettier": "^4.0.0",
+    "flow-bin": "0.162.1",
+    "jest": "^27.3.1",
+    "mkdirp": "^1.0.4",
+    "prettier": "2.4.1"
   },
   "scripts": {
     "build": "./scripts/build.sh",
+    "lint": "eslint .",
     "flow": "flow",
+    "format": "prettier --config ./.prettierrc.json --write \"**/*.js\"",
     "test": "jest"
   },
   "workspaces": [
     "hermes-eslint",
     "hermes-estree",
+    "hermes-transform",
     "hermes-parser"
-  ],
-  "jest": {
-    "transformIgnorePatterns": [
-      "/node_modules/",
-      "/dist/"
-    ]
-  }
+  ]
 }

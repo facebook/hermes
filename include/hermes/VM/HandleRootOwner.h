@@ -129,9 +129,6 @@ class HandleRootOwner {
   /// An efficient way to pass -1 to a function accepting Handle.
   static Handle<HermesValue> getNegOneValue();
 
-  /// Return the top-most \c GCScope.
-  GCScope *getTopGCScope();
-
   /// Return the parent of the top-most \c GCScope.
   GCScope *getTopGCScopesParent();
 
@@ -159,8 +156,12 @@ class HandleRootOwner {
   /// Mark the WeakRefs in the weakRefs_ list.
   void markWeakRefs(WeakRefAcceptor &acceptor);
 
+  /// Return the top-most \c GCScope.
+  GCScope *getTopGCScope();
+
  private:
   friend class GCScope;
+  friend class GCScopeMarkerRAII;
   friend class HandleBase;
 
   /// The top-most GC scope.

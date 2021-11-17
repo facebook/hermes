@@ -4,10 +4,14 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @flow strict
  * @format
  */
 
 'use strict';
+
+import type {HermesNode} from './HermesAST';
+import type {ParserOptions} from './ParserOptions';
 
 import HermesParserDeserializer from './HermesParserDeserializer';
 import HermesParserWASM from './HermesParserWASM';
@@ -68,7 +72,7 @@ function copyToHeap(buffer, addr) {
   HermesParserWASM.HEAP8[addr + buffer.length] = 0;
 }
 
-export function parse(source, options) {
+export function parse(source: string, options: ParserOptions): HermesNode {
   // Allocate space on heap for source text
   const sourceBuffer = Buffer.from(source, 'utf8');
   const sourceAddr = HermesParserWASM._malloc(sourceBuffer.length + 1);
@@ -93,6 +97,7 @@ export function parse(source, options) {
       const err = hermesParseResult_getError(parseResult);
       if (err) {
         const syntaxError = new SyntaxError(err);
+        // $FlowExpectedError[prop-missing]
         syntaxError.loc = {
           line: hermesParseResult_getErrorLine(parseResult),
           column: hermesParseResult_getErrorColumn(parseResult),

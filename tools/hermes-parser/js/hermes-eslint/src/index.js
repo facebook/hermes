@@ -61,4 +61,5 @@ function parseForESLint(
   };
 }
 
-module.exports = {parse, parseForESLint};
+export type * from './eslint-scope/types';
+module.exports = {parse, parseForESLint, VisitorKeys};
