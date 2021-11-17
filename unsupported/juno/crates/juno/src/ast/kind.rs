@@ -81,7 +81,11 @@ macro_rules! gen_nodekind_enum {
                             ..
                         }) => {
                             $($(
-                                $field.visit_child(ctx, visitor, self);
+                                $field.visit_child(
+                                    ctx,
+                                    visitor,
+                                    Path::new(self, NodeField::$field),
+                                );
                             )*)?
                         }
                     ),*
@@ -103,7 +107,10 @@ macro_rules! gen_nodekind_enum {
                         builder::Builder::$kind(mut builder) => {
                             $($(
                                 if let TransformResult::Changed($field) = (&builder.inner.$field)
-                                    .visit_child_mut(ctx, visitor, self) {
+                                    .visit_child_mut(
+                                        ctx,
+                                        visitor,
+                                        Path::new(self, NodeField::$field)) {
                                     builder.$field($field);
                                 }
                             )*)?
@@ -129,7 +136,10 @@ macro_rules! gen_nodekind_enum {
                         builder::Builder::$kind(mut builder) => {
                             $($(
                                 if let TransformResult::Changed($field) = (&builder.inner.$field)
-                                    .visit_child_mut(ctx, visitor, self) {
+                                    .visit_child_mut(
+                                        ctx,
+                                        visitor,
+                                        Path::new(self, NodeField::$field)) {
                                     builder.$field($field);
                                 }
                             )*)?
@@ -157,7 +167,10 @@ macro_rules! gen_nodekind_enum {
                             builder::Builder::$kind(mut builder) => {
                                 $($(
                                         if let TransformResult::Changed($field) = (&builder.inner.$field)
-                                        .visit_child_mut(ctx, visitor, self) {
+                                        .visit_child_mut(
+                                            ctx,
+                                            visitor,
+                                            Path::new(self, NodeField::$field)) {
                                             builder.$field($field);
                                         }
                                 )*)?
@@ -186,7 +199,10 @@ macro_rules! gen_nodekind_enum {
                         builder::Builder::$kind(mut builder) => {
                             $($(
                                 if let TransformResult::Changed($field) = (&builder.inner.$field)
-                                    .visit_child_mut(ctx, visitor, self) {
+                                    .visit_child_mut(
+                                        ctx,
+                                        visitor,
+                                        Path::new(self, NodeField::$field)) {
                                     builder.$field($field);
                                 }
                             )*)?

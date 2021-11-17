@@ -115,10 +115,10 @@ fn test_visit() {
 
     impl<'gc> Visitor<'gc> for NumberFinder {
         /// Visit the Node `node` with the given `parent`.
-        fn call(&mut self, ctx: &'gc GCLock, node: &'gc Node<'gc>, parent: Option<&'gc Node<'gc>>) {
+        fn call(&mut self, ctx: &'gc GCLock, node: &'gc Node<'gc>, path: Option<Path<'gc>>) {
             if let Node::NumericLiteral(NumericLiteral { value, .. }) = node {
                 assert!(matches!(
-                    parent.unwrap(),
+                    path.unwrap().parent,
                     Node::ExpressionStatement(ExpressionStatement { .. })
                 ));
                 self.acc.push(*value);
@@ -188,7 +188,7 @@ fn test_visit_mut() {
             &mut self,
             ctx: &'gc GCLock,
             node: &'gc Node<'gc>,
-            _parent: Option<&'gc Node<'gc>>,
+            _path: Option<Path<'gc>>,
         ) -> TransformResult<&'gc Node<'gc>> {
             if let Node::BinaryExpression(
                 e1 @ BinaryExpression {
@@ -278,7 +278,7 @@ fn test_replace_var_decls() {
             &mut self,
             lock: &'gc GCLock,
             node: &'gc Node<'gc>,
-            _parent: Option<&'gc Node<'gc>>,
+            path: Option<Path<'gc>>,
         ) -> TransformResult<&'gc Node<'gc>> {
             match node {
                 Node::VariableDeclaration(VariableDeclaration {
@@ -286,6 +286,7 @@ fn test_replace_var_decls() {
                     kind,
                     declarations,
                 }) if declarations.len() > 1 => {
+                    assert_eq!(path.unwrap().field, NodeField::body);
                     let mut result: Vec<builder::Builder> = Vec::new();
                     for decl in declarations {
                         result.push(builder::Builder::VariableDeclaration(
@@ -405,7 +406,7 @@ fn test_store_node() {
     }
 
     impl<'gc> Visitor<'gc> for Foo<'gc> {
-        fn call(&mut self, gc: &'gc GCLock, node: &'gc Node<'gc>, _parent: Option<&'gc Node<'gc>>) {
+        fn call(&mut self, gc: &'gc GCLock, node: &'gc Node<'gc>, _path: Option<Path<'gc>>) {
             self.set_n(node);
             node.visit_children(gc, self)
         }

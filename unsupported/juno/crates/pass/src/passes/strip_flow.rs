@@ -39,7 +39,7 @@ impl<'gc> VisitorMut<'gc> for StripFlow {
         &mut self,
         gc: &'gc GCLock<'_, '_>,
         node: &'gc Node<'gc>,
-        _parent: Option<&'gc Node<'gc>>,
+        _parent: Option<Path<'gc>>,
     ) -> TransformResult<&'gc Node<'gc>> {
         match node {
             Node::TypeCastExpression(TypeCastExpression { expression, .. }) => {

@@ -44,9 +44,11 @@ use thiserror::Error;
 mod def;
 mod atom_table;
 mod dump;
+mod field;
 mod kind;
 mod validate;
 
+pub use field::NodeField;
 pub use kind::NodeVariant;
 
 pub use dump::{dump_json, Pretty};
@@ -307,12 +309,7 @@ impl<'ast> Context<'ast> {
         }
 
         impl<'gc> Visitor<'gc> for Marker {
-            fn call(
-                &mut self,
-                gc: &'gc GCLock,
-                node: &'gc Node<'gc>,
-                _parent: Option<&'gc Node<'gc>>,
-            ) {
+            fn call(&mut self, gc: &'gc GCLock, node: &'gc Node<'gc>, _path: Option<Path<'gc>>) {
                 let entry = unsafe { StorageEntry::from_node(node) };
                 if entry.markbit() == self.markbit_marked {
                     // Stop visiting early if we've already marked this part,
@@ -613,10 +610,26 @@ impl NodeRc {
     }
 }
 
+/// Indicates the path to the current node.
+#[derive(Debug, Copy, Clone)]
+pub struct Path<'a> {
+    /// Parent node.
+    pub parent: &'a Node<'a>,
+
+    /// Field name in the path node.
+    pub field: NodeField,
+}
+
+impl<'a> Path<'a> {
+    pub fn new(parent: &'a Node<'a>, field: NodeField) -> Path<'a> {
+        Path { parent, field }
+    }
+}
+
 /// Trait implemented by those who call the visit functionality.
 pub trait Visitor<'gc> {
-    /// Visit the Node `node` with the given `parent`.
-    fn call(&mut self, ctx: &'gc GCLock, node: &'gc Node<'gc>, parent: Option<&'gc Node<'gc>>);
+    /// Visit the Node `node` with the given `path`.
+    fn call(&mut self, ctx: &'gc GCLock, node: &'gc Node<'gc>, path: Option<Path<'gc>>);
 }
 
 /// Indicates what mutation occurred to an element of the AST during [`VisitorMut`] use.
@@ -640,12 +653,12 @@ pub enum TransformResult<T> {
 
 /// Trait implemented by those who call the visit functionality.
 pub trait VisitorMut<'gc> {
-    /// Visit the Node `node` with the given `parent`.
+    /// Visit the Node `node` with the given `path`.
     fn call(
         &mut self,
         ctx: &'gc GCLock,
         node: &'gc Node<'gc>,
-        parent: Option<&'gc Node<'gc>>,
+        path: Option<Path<'gc>>,
     ) -> TransformResult<&'gc Node<'gc>>;
 }
 
@@ -737,7 +750,7 @@ impl SourceLoc {
 /// JS identifier represented as valid UTF-8.
 pub type NodeLabel = Atom;
 
-/// A list of nodes owned by a parent.
+/// A list of nodes owned by a path.
 pub type NodeList<'a> = Vec<&'a Node<'a>>;
 
 /// JS string literals don't have to contain valid UTF-8,
@@ -880,9 +893,9 @@ impl<'gc> Node<'gc> {
         &'gc self,
         ctx: &'gc GCLock,
         visitor: &mut V,
-        parent: Option<&'gc Node<'gc>>,
+        path: Option<Path<'gc>>,
     ) {
-        visitor.call(ctx, self, parent);
+        visitor.call(ctx, self, path);
     }
 
     /// Visit this node with `visitor` and return the modified root node.
@@ -891,9 +904,9 @@ impl<'gc> Node<'gc> {
         &'gc self,
         ctx: &'gc GCLock,
         visitor: &mut V,
-        parent: Option<&'gc Node<'gc>>,
+        path: Option<Path<'gc>>,
     ) -> Option<&'gc Node<'gc>> {
-        match visitor.call(ctx, self, parent) {
+        match visitor.call(ctx, self, path) {
             TransformResult::Unchanged => Some(self),
             TransformResult::Removed => None,
             TransformResult::Changed(new_node) => Some(new_node),
@@ -914,13 +927,7 @@ where
     /// Visit this child of the given `node`.
     /// Should be no-op for any type that doesn't contain pointers to other
     /// `Node`s.
-    fn visit_child<V: Visitor<'gc>>(
-        self,
-        _ctx: &'gc GCLock,
-        _visitor: &mut V,
-        _parent: &'gc Node<'gc>,
-    ) {
-    }
+    fn visit_child<V: Visitor<'gc>>(self, _ctx: &'gc GCLock, _visitor: &mut V, _path: Path<'gc>) {}
 
     /// Visit this child of the given `node`.
     /// Should be no-op for any type that doesn't contain pointers to other
@@ -929,7 +936,7 @@ where
         self,
         _ctx: &'gc GCLock,
         _visitor: &mut V,
-        _parent: &'gc Node<'gc>,
+        _path: Path<'gc>,
     ) -> TransformResult<Self::Out> {
         TransformResult::Unchanged
     }
@@ -1042,9 +1049,9 @@ impl NodeChild<'_> for &Option<NodeString> {
 impl<'gc, T: NodeChild<'gc> + NodeChild<'gc, Out = T>> NodeChild<'gc> for Option<T> {
     type Out = Self;
 
-    fn visit_child<V: Visitor<'gc>>(self, ctx: &'gc GCLock, visitor: &mut V, node: &'gc Node<'gc>) {
+    fn visit_child<V: Visitor<'gc>>(self, ctx: &'gc GCLock, visitor: &mut V, path: Path<'gc>) {
         if let Some(t) = self {
-            t.visit_child(ctx, visitor, node);
+            t.visit_child(ctx, visitor, path);
         }
     }
 
@@ -1055,12 +1062,12 @@ impl<'gc, T: NodeChild<'gc> + NodeChild<'gc, Out = T>> NodeChild<'gc> for Option
         self,
         ctx: &'gc GCLock,
         visitor: &mut V,
-        parent: &'gc Node<'gc>,
+        path: Path<'gc>,
     ) -> TransformResult<Self::Out> {
         use TransformResult::*;
         match self {
             None => Unchanged,
-            Some(inner) => match inner.visit_child_mut(ctx, visitor, parent) {
+            Some(inner) => match inner.visit_child_mut(ctx, visitor, path) {
                 Unchanged => Unchanged,
                 Removed => Changed(None),
                 Changed(new_node) => Changed(Some(new_node)),
@@ -1079,9 +1086,9 @@ impl<'gc, T: NodeChild<'gc> + NodeChild<'gc, Out = T>> NodeChild<'gc> for Option
 impl<'gc> NodeChild<'gc> for &Option<&'gc Node<'gc>> {
     type Out = Option<&'gc Node<'gc>>;
 
-    fn visit_child<V: Visitor<'gc>>(self, ctx: &'gc GCLock, visitor: &mut V, node: &'gc Node<'gc>) {
+    fn visit_child<V: Visitor<'gc>>(self, ctx: &'gc GCLock, visitor: &mut V, path: Path<'gc>) {
         if let Some(t) = *self {
-            t.visit_child(ctx, visitor, node);
+            t.visit_child(ctx, visitor, path);
         }
     }
 
@@ -1092,12 +1099,12 @@ impl<'gc> NodeChild<'gc> for &Option<&'gc Node<'gc>> {
         self,
         ctx: &'gc GCLock,
         visitor: &mut V,
-        parent: &'gc Node<'gc>,
+        path: Path<'gc>,
     ) -> TransformResult<Self::Out> {
         use TransformResult::*;
         match self {
             None => Unchanged,
-            Some(inner) => match inner.visit_child_mut(ctx, visitor, parent) {
+            Some(inner) => match inner.visit_child_mut(ctx, visitor, path) {
                 Unchanged => Unchanged,
                 Removed => Changed(None),
                 Changed(new_node) => Changed(Some(new_node)),
@@ -1116,8 +1123,8 @@ impl<'gc> NodeChild<'gc> for &Option<&'gc Node<'gc>> {
 impl<'gc> NodeChild<'gc> for &'gc Node<'gc> {
     type Out = Self;
 
-    fn visit_child<V: Visitor<'gc>>(self, ctx: &'gc GCLock, visitor: &mut V, node: &'gc Node<'gc>) {
-        visitor.call(ctx, self, Some(node));
+    fn visit_child<V: Visitor<'gc>>(self, ctx: &'gc GCLock, visitor: &mut V, path: Path<'gc>) {
+        visitor.call(ctx, self, Some(path));
     }
 
     /// Visit this child of the given `node`.
@@ -1127,9 +1134,9 @@ impl<'gc> NodeChild<'gc> for &'gc Node<'gc> {
         self,
         ctx: &'gc GCLock,
         visitor: &mut V,
-        parent: &'gc Node<'gc>,
+        path: Path<'gc>,
     ) -> TransformResult<Self::Out> {
-        match visitor.call(ctx, self, Some(parent)) {
+        match visitor.call(ctx, self, Some(path)) {
             TransformResult::Removed => {
                 TransformResult::Changed(builder::EmptyStatement::build_template(
                     ctx,
@@ -1157,9 +1164,9 @@ impl<'gc> NodeChild<'gc> for &'gc Node<'gc> {
 impl<'gc> NodeChild<'gc> for &NodeList<'gc> {
     type Out = NodeList<'gc>;
 
-    fn visit_child<V: Visitor<'gc>>(self, ctx: &'gc GCLock, visitor: &mut V, node: &'gc Node<'gc>) {
+    fn visit_child<V: Visitor<'gc>>(self, ctx: &'gc GCLock, visitor: &mut V, path: Path<'gc>) {
         for child in self {
-            visitor.call(ctx, *child, Some(node));
+            visitor.call(ctx, *child, Some(path));
         }
     }
 
@@ -1167,14 +1174,14 @@ impl<'gc> NodeChild<'gc> for &NodeList<'gc> {
         self,
         ctx: &'gc GCLock,
         visitor: &mut V,
-        parent: &'gc Node<'gc>,
+        path: Path<'gc>,
     ) -> TransformResult<Self::Out> {
         use TransformResult::*;
         let mut index = 0;
         let len = self.len();
         // Assume no copies to start.
         while index < len {
-            let node = visitor.call(ctx, self[index], Some(parent));
+            let node = visitor.call(ctx, self[index], Some(path));
             if let Unchanged = node {
                 index += 1;
                 continue;
@@ -1201,7 +1208,7 @@ impl<'gc> NodeChild<'gc> for &NodeList<'gc> {
             index += 1;
             // Fill the rest of the elements.
             while index < len {
-                match visitor.call(ctx, self[index], Some(parent)) {
+                match visitor.call(ctx, self[index], Some(path)) {
                     Unchanged => result.push(self[index]),
                     Removed => {}
                     Changed(new_node) => result.push(new_node),
@@ -1226,10 +1233,10 @@ impl<'gc> NodeChild<'gc> for &NodeList<'gc> {
 impl<'gc> NodeChild<'gc> for &Option<NodeList<'gc>> {
     type Out = Option<NodeList<'gc>>;
 
-    fn visit_child<V: Visitor<'gc>>(self, ctx: &'gc GCLock, visitor: &mut V, node: &'gc Node<'gc>) {
+    fn visit_child<V: Visitor<'gc>>(self, ctx: &'gc GCLock, visitor: &mut V, path: Path<'gc>) {
         if let Some(list) = self {
             for child in list {
-                visitor.call(ctx, *child, Some(node));
+                visitor.call(ctx, *child, Some(path));
             }
         }
     }
@@ -1238,12 +1245,12 @@ impl<'gc> NodeChild<'gc> for &Option<NodeList<'gc>> {
         self,
         ctx: &'gc GCLock,
         visitor: &mut V,
-        parent: &'gc Node<'gc>,
+        path: Path<'gc>,
     ) -> TransformResult<Self::Out> {
         use TransformResult::*;
         match self.as_ref() {
             None => Unchanged,
-            Some(inner) => match inner.visit_child_mut(ctx, visitor, parent) {
+            Some(inner) => match inner.visit_child_mut(ctx, visitor, path) {
                 Unchanged => Unchanged,
                 Removed => Changed(None),
                 Changed(new_node) => Changed(Some(new_node)),

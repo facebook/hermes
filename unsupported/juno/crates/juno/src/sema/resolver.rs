@@ -7,8 +7,9 @@
 
 use super::sem_context::*;
 use crate::ast::{
-    self, builder, template, Atom, GCLock, Identifier, Node, NodeList, NodeRc, NodeVariant,
-    SourceRange, TemplateMetadata, UnaryExpressionOperator, VariableDeclarationKind, Visitor,
+    self, builder, template, Atom, GCLock, Identifier, Node, NodeField, NodeList, NodeRc,
+    NodeVariant, Path, SourceRange, TemplateMetadata, UnaryExpressionOperator,
+    VariableDeclarationKind, Visitor,
 };
 use crate::sema::decl_collector::DeclCollector;
 use crate::sema::keywords::Keywords;
@@ -365,7 +366,7 @@ impl<'gc> Resolver<'gc> {
                 {
                     pself.validating_formal_params = true;
                     for &param in node.function_like_params() {
-                        param.visit(lock, pself, Some(node));
+                        param.visit(lock, pself, Some(Path::new(node, NodeField::param)));
                     }
                     pself.validating_formal_params = false;
                 }
@@ -378,7 +379,7 @@ impl<'gc> Resolver<'gc> {
                 pself.process_collected_declarations(lock, node);
 
                 // Finally visit the body.
-                body.visit(lock, pself, Some(node));
+                body.visit(lock, pself, Some(Path::new(node, NodeField::body)));
             });
         });
     }
@@ -412,14 +413,8 @@ impl<'gc> Resolver<'gc> {
         }
     }
 
-    fn visit_identifier(
-        &mut self,
-        lock: &GCLock,
-        ident: &'gc Identifier,
-        node: &Node,
-        parent: &Node,
-    ) {
-        match parent {
+    fn visit_identifier(&mut self, lock: &GCLock, ident: &'gc Identifier, node: &Node, path: Path) {
+        match path.parent {
             // { identifier: ... }
             Node::Property(ast::Property {
                 computed: false,
@@ -449,13 +444,13 @@ impl<'gc> Resolver<'gc> {
         self.resolve_identifier(lock, ident, node, false);
     }
 
-    fn visit_block_statement(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>, parent: &Node) {
+    fn visit_block_statement(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>, path: Path) {
         // Some nodes with attached BlockStatement have already dealt with the scope.
         if let Node::FunctionDeclaration(_)
         | Node::FunctionExpression(_)
         | Node::ArrowFunctionExpression(_)
         | Node::CatchClause(_)
-        | Node::Program(_) = parent
+        | Node::Program(_) = path.parent
         {
             return node.visit_children(lock, self);
         }
@@ -849,7 +844,7 @@ impl<'gc> Resolver<'gc> {
 }
 
 impl<'gc> Visitor<'gc> for Resolver<'gc> {
-    fn call(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>, parent: Option<&'gc Node<'gc>>) {
+    fn call(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>, path: Option<Path<'gc>>) {
         match node {
             Node::Program(_) => {
                 panic!("visited unexpected {}", node.name())
@@ -866,9 +861,9 @@ impl<'gc> Visitor<'gc> for Resolver<'gc> {
 
             Node::FunctionExpression(fe) => self.visit_function_expression(lock, fe, node),
 
-            Node::Identifier(ident) => self.visit_identifier(lock, ident, node, parent.unwrap()),
+            Node::Identifier(ident) => self.visit_identifier(lock, ident, node, path.unwrap()),
 
-            Node::BlockStatement(_) => self.visit_block_statement(lock, node, parent.unwrap()),
+            Node::BlockStatement(_) => self.visit_block_statement(lock, node, path.unwrap()),
 
             Node::CatchClause(ast::CatchClause { param, body, .. }) => {
                 self.in_new_scope(lock, node, |pself| {
