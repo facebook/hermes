@@ -10,6 +10,8 @@
 #include "gtest/gtest.h"
 
 namespace {
-
-
+using namespace hermes::platform_intl_parser;
+TEST(PlatformIntlBCP47Parser, TestTest) {
+	ASSERT_EQ(0, 1);
+}
 } // namespace
