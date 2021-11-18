@@ -121,6 +121,8 @@ bool isOtherExtension(std::u16string str, int start, int end) {
 }
 
 struct ParsedLocaleIdentifier::Impl {};
+ParsedLocaleIdentifier::ParsedLocaleIdentifier() : impl_(std::make_unique<Impl>()) {}
+ParsedLocaleIdentifier::~ParsedLocaleIdentifier() {}
 
 std::u16string ParsedLocaleIdentifier::toString() {
   std::u16string res;
@@ -193,7 +195,7 @@ std::u16string ParsedLocaleIdentifier::toString() {
 
 struct LanguageTagParser::Impl {
   Impl(const std::u16string &localeId) : mLocaleId(localeId){};
-  ~Impl();
+  //~Impl();
 
   ParsedLocaleIdentifier parsedLocaleIdentifier;
   std::u16string mLocaleId;

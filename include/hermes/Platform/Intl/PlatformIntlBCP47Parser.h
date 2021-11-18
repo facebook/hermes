@@ -15,6 +15,23 @@
 namespace hermes {
 namespace platform_intl_parser {
 
+bool isASCIILetter(char16_t c);
+bool isASCIIDigit(char16_t c);
+bool isASCIILetterOrDigit(char16_t c);
+bool isSubtagSeparator(char16_t c);
+bool isUnicodeLanguageSubtag(std::u16string str, int start, int end);
+bool isUnicodeScriptSubtag(std::u16string str, int start, int end);
+bool isUnicodeRegionSubtag(std::u16string str, int start, int end);
+bool isUnicodeVariantSubtag(std::u16string str, int start, int end);
+bool isUnicodeExtensionAttribute(std::u16string str, int start, int end);
+bool isUnicodeExtensionKey(std::u16string str, int start, int end);
+bool isUnicodeExtensionType(std::u16string str, int start, int end);
+bool isExtensionSingleton(std::u16string str, int start, int end);
+bool isTransformedExtensionKey(std::u16string str, int start, int end);
+bool isTransformedExtensionTValueItem(std::u16string str, int start, int end);
+bool isPrivateUseExtension(std::u16string str, int start, int end);
+bool isOtherExtension(std::u16string str, int start, int end);
+
 struct ParsedLanguageIdentifier {
   std::u16string languageSubtag;
   std::u16string scriptSubtag;
