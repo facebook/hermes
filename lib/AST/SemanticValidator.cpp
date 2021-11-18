@@ -44,7 +44,10 @@ Keywords::Keywords(Context &astContext)
           astContext.getIdentifier("sensitive").getUnderlyingPointer()),
       identVar(astContext.getIdentifier("var").getUnderlyingPointer()),
       identLet(astContext.getIdentifier("let").getUnderlyingPointer()),
-      identConst(astContext.getIdentifier("const").getUnderlyingPointer()) {}
+      identConst(astContext.getIdentifier("const").getUnderlyingPointer()),
+      identPlus(astContext.getIdentifier("+").getUnderlyingPointer()),
+      identMinus(astContext.getIdentifier("-").getUnderlyingPointer()),
+      identAssign(astContext.getIdentifier("=").getUnderlyingPointer()) {}
 
 //===----------------------------------------------------------------------===//
 // SemanticValidator
@@ -215,8 +218,43 @@ void SemanticValidator::visitForInOf(LoopStatementNode *loopNode, Node *left) {
   visitESTreeChildren(*this, loopNode);
 }
 
+void SemanticValidator::visit(BinaryExpressionNode *bin) {
+  // Handle nested +/- non-recursively.
+  if (bin->_operator == kw_.identPlus || bin->_operator == kw_.identMinus) {
+    auto list = linearizeLeft(bin, {"+", "-"});
+    if (list.size() > MAX_NESTED_BINARY) {
+      recursionDepthExceeded(bin);
+      return;
+    }
+
+    visitESTreeNode(*this, list[0]->_left, list[0]);
+    for (auto *e : list) {
+      visitESTreeNode(*this, e->_right, e);
+    }
+    return;
+  }
+
+  visitESTreeChildren(*this, bin);
+}
+
 /// Ensure that the left side of assgnments is an l-value.
 void SemanticValidator::visit(AssignmentExpressionNode *assignment) {
+  // Handle nested "=" non-recursively.
+  if (assignment->_operator == kw_.identAssign) {
+    auto list = linearizeRight(assignment, {"="});
+    if (list.size() > MAX_NESTED_ASSIGNMENTS) {
+      recursionDepthExceeded(assignment);
+      return;
+    }
+
+    for (auto *e : list) {
+      validateAssignmentTarget(e->_left);
+      visitESTreeNode(*this, e->_left, e);
+    }
+    visitESTreeNode(*this, list.back()->_right, list.back());
+    return;
+  }
+
   validateAssignmentTarget(assignment->_left);
   visitESTreeChildren(*this, assignment);
 }
@@ -224,10 +262,11 @@ void SemanticValidator::visit(AssignmentExpressionNode *assignment) {
 /// Ensure that the operand of ++/-- is an l-value.
 void SemanticValidator::visit(UpdateExpressionNode *update) {
   // Check if the left-hand side is valid.
-  if (!isLValue(update->_argument))
+  if (!isLValue(update->_argument)) {
     sm_.error(
         update->_argument->getSourceRange(),
         "invalid operand in update operation");
+  }
   visitESTreeChildren(*this, update);
 }
 
