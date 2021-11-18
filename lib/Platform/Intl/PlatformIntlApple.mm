@@ -209,57 +209,47 @@ vm::CallResult<std::u16string> toLocaleUpperCase(
     const std::u16string &str) {
   return std::u16string(u"uppered");
 }
-
 // Implementation of
 // https://tc39.es/ecma402/#sec-getoption
-// Funcion split into three depending on which data type is needed
-vm::CallResult<bool> getOptionBool(
-    const Options &options,
+vm::CallResult<Option> getOption(
+    Options &options,
     const std::u16string property,
     const std::u16string type,
-    const std::vector<std::u16string> values) {
+    const std::vector<std::u16string> values,
+    const Options &fallback) {
   // 1. Assert type(options) is object
   // 2. Let value be ? Get(options, property).
   auto value = options.find(property);
   // 3. If value is undefined, return fallback.
   if (value == options.end()) {
-    bool fallback = true; // Should a fallback be true???
-    return fallback;
+    auto fallbackIter = fallback.find(u"fallback");
+    // Make sure fallback exists
+    if (fallbackIter == options.end()) {
+      return vm::ExecutionStatus::EXCEPTION;
+    }
+    return fallback.find(u"fallback")->second;
   }
-  if(!value->second.isBool()) {
-    return vm::ExecutionStatus::EXCEPTION;
-  }
+  // 4. Assert: type is "boolean" or "string".
+  // 5. If type is "boolean", then
+  // a. Set value to ! ToBoolean(value).
+  // 6. If type is "string", then
+  // a. Set value to ? ToString(value).
+    if(!value->second.isBool() && !value->second.isString()) {
+      return vm::ExecutionStatus::EXCEPTION;
+    }
   // 7. If values is not undefined and values does not contain an element equal to value, throw a RangeError exception.
-  // llvh::find isn't compatible with getBool()?
-//  if (!values.empty() && llvh::find(values, value->second.getBool()) == values.end()) {
-//    return vm::ExecutionStatus::EXCEPTION;
-//  }
-  // 8. Return value.
-  return value->second.getBool();
-}
-vm::CallResult<std::u16string> getOptionString(
-     const Options &options,
-     const std::u16string property,
-     const std::u16string type,
-     const std::vector<std::u16string> values,
-     const Option &fallback) {
-  // 1. Assert type(options) is object
-  // 2. Let value be ? Get(options, property).
-  auto value = options.find(property);
-  // 3. If value is undefined, return fallback.
-  if (value == options.end()) {
-    std::u16string fallback = u"und";
-    return fallback;
-  }
-  if(!value->second.isString()) {
-    return vm::ExecutionStatus::EXCEPTION;
-  }
-    // 7. If values is not undefined and values does not contain an element equal to value, throw a RangeError exception.
+  if (value->second.isString()) {
     if (!values.empty() && llvh::find(values, value->second.getString()) == values.end()) {
       return vm::ExecutionStatus::EXCEPTION;
     }
+  } else {
+    // How can find work with a bool?
+//    if (!values.empty() && llvh::find(values, value->second.getBool()) == values.end()) {
+//      return vm::ExecutionStatus::EXCEPTION;
+//    }
+  }
   // 8. Return value.
-  return value->second.getString();
+  return value->second;
 }
 // Implementation of
 // https://402.ecma-international.org/8.0/#sec-getnumberoption
@@ -305,11 +295,14 @@ std::vector<std::u16string> lookupSupportedLocales(
 vm::CallResult<std::vector<std::u16string>> supportedLocales(
     const std::vector<std::u16string> availableLocales,
     const std::vector<std::u16string> requestedLocales,
-    const Options &options) {
+    Options &options) {
   // 1. Set options to ? CoerceOptionsToObject(options).
   // 2. Let matcher be ? GetOption(options, "localeMatcher", "string", « "lookup", "best fit" », "best fit").
+  Options matcherFallback;
+  std::u16string bestFit = u"best fit"; // If not declared, it will not work
+  matcherFallback.emplace(std::u16string(u"fallback"), Option(bestFit));
   std::vector<std::u16string> vectorForMatcher = {u"lookup", u"best fit"};
-  vm::CallResult<std::u16string> matcher = getOptionString(options, u"localeMatcher", u"string", vectorForMatcher, u"best fit").getValue();
+  vm::CallResult<std::u16string> matcher = getOption(options, u"localeMatcher", u"string", vectorForMatcher, matcherFallback)->getString();
   if (LLVM_UNLIKELY(matcher == vm::ExecutionStatus::EXCEPTION)) {
     return vm::ExecutionStatus::EXCEPTION;
   }
@@ -753,12 +746,14 @@ vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
   std::vector<std::u16string> availableLocales = nsStringArrayToU16StringArray(nsAvailableLocales);
   
   // 3. Return ? (availableLocales, requestedLocales, options).
-  return supportedLocales(availableLocales, requestedLocales.getValue(), options);
+  // Get a non-const copy of options
+  Options copyOptions = options;
+  return supportedLocales(availableLocales, requestedLocales.getValue(), copyOptions);
 }
 
 // Implementation of 
 // https://tc39.es/ecma402/#sec-todatetimeoptions
-vm::CallResult<Options> toDateTimeOptions(const Options &options, std::u16string required, std::u16string defaults) {
+vm::CallResult<Options> toDateTimeOptions(Options &options, std::u16string required, std::u16string defaults) {
   // 1. If options is undefined, let options be null; otherwise let options be ? ToObject(options).
   // 2. Let options be OrdinaryObjectCreate(options).
   // 3. Let needDefaults be true.
@@ -803,12 +798,13 @@ vm::CallResult<Options> toDateTimeOptions(const Options &options, std::u16string
     // a. Throw a TypeError exception.
     return vm::ExecutionStatus::EXCEPTION;
   }
+  std::u16string numeric = u"numeric";
   // 11. If needDefaults is true and defaults is either "date" or "all", then
   if (needDefaults && (defaults == u"date" || defaults == u"all")) {
     // a. For each property name prop of « "year", "month", "day" », do
     for (std::u16string prop : {u"year", u"month", u"day"}) {
-      // TODO: implement createDataPropertyOrThrow
       // i. Perform ? CreateDataPropertyOrThrow(options, prop, "numeric").
+      options.emplace(std::u16string(prop), Option(numeric));
     }
   }
   // 12. If needDefaults is true and defaults is either "time" or "all", then
@@ -816,6 +812,7 @@ vm::CallResult<Options> toDateTimeOptions(const Options &options, std::u16string
     // a. For each property name prop of « "hour", "minute", "second" », do
     for (std::u16string prop : {u"hour", u"minute", u"second"}) {
       // i. Perform ? CreateDataPropertyOrThrow(options, prop, "numeric").
+      options.emplace(std::u16string(prop), Option(numeric));
     }
   }
   // 13. return options
@@ -862,28 +859,34 @@ vm::ExecutionStatus DateTimeFormat::initialize(
     return vm::ExecutionStatus::EXCEPTION;
   }
   // 2. Let options be ? ToDateTimeOptions(options, "any", "date").
-  auto o = toDateTimeOptions(options, u"any", u"date");
+  // Create a copy of the unordered map &options
+  Options copyOptions = options;
+  auto optionsToUse = toDateTimeOptions(copyOptions, u"any", u"date").getValue();
   // 3. Let opt be a new Record.
   Impl opt;
   // 4. Let matcher be ? GetOption(options, "localeMatcher", "string", «
   //   "lookup", "best fit" », "best fit").
   std::vector<std::u16string> values = {u"lookup", u"best fit"};
-  Option matcherFallback = new Option(u"best fit");
-  auto matcher = getOptionString(options, u"localeMatcher", u"string", values, matcherFallback);
+  Options matcherFallback;
+  std::u16string bestFit = u"best fit"; // If not declared, it will not work
+  matcherFallback.emplace(std::u16string(u"fallback"), Option(bestFit));
+  auto matcher = getOption(optionsToUse, u"localeMatcher", u"string", values, matcherFallback);
   // 5. Set opt.[[localeMatcher]] to matcher.
-  opt.localeMatcher = matcher.getValue();
+  opt.localeMatcher = matcher->getString();
 
   // 6. Let calendar be ? GetOption(options, "calendar", "string",
   //    undefined, undefined).
   std::vector<std::u16string> emptyVector;
-  Option undefinedFallback = new Option(u"und"); // TODO: Might not be needed if returns string.
-  auto calendar = getOptionString(options, u"calendar", u"string", emptyVector, undefinedFallback);
+  Options undefinedFallback;
+  std::u16string undefined = u"und"; // If this is truly undefined it will error throw?
+  undefinedFallback.emplace(std::u16string(u"fallback"), Option(undefined));
+  auto calendar = getOption(optionsToUse, u"calendar", u"string", emptyVector, undefinedFallback);
   // 7. If calendar is not undefined, then
   //    a. If calendar does not match the Unicode Locale Identifier type
   //       nonterminal, throw a RangeError exception.
   // 8. Set opt.[[ca]] to calendar.
-  if (calendar.getValue() != u"") {
-      opt.ca = calendar.getValue();
+  if (calendar->getString() != u"") {
+      opt.ca = calendar->getString();
   }
   else {
     return runtime->raiseRangeError("Incorrect calendar information provided");
@@ -891,13 +894,13 @@ vm::ExecutionStatus DateTimeFormat::initialize(
         
   // 9. Let numberingSystem be ? GetOption(options, "numberingSystem",
   //    "string", undefined, undefined).
-  auto numberingSystem = getOptionString(options, u"numberingSystem", u"string", emptyVector, undefinedFallback);
+  auto numberingSystem = getOption(optionsToUse, u"numberingSystem", u"string", emptyVector, undefinedFallback);
   // 10. If numberingSystem is not undefined, then
   //     a. If numberingSystem does not match the Unicode Locale Identifier
   //        type nonterminal, throw a RangeError exception.
   // 11. Set opt.[[nu]] to numberingSystem.
-  if (numberingSystem.getValue() != u"") {
-      opt.nu = numberingSystem.getValue();
+  if (numberingSystem->getString() != u"") {
+      opt.nu = numberingSystem->getString();
   }
   else {
     return runtime->raiseRangeError("Incorrect numberingSystem information provided");
@@ -905,18 +908,18 @@ vm::ExecutionStatus DateTimeFormat::initialize(
         
   // 12. Let hour12 be ? GetOption(options, "hour12", "boolean",
   //     undefined, undefined).
-  auto hour12 = getOptionBool(options, u"hour12", u"boolean", emptyVector);
+  auto hour12 = getOption(optionsToUse, u"hour12", u"boolean", emptyVector, undefinedFallback);
   // 13. Let hourCycle be ? GetOption(options, "hourCycle", "string", «
   //     "h11", "h12", "h23", "h24" », undefined).
   std::vector<std::u16string> hourCycleVector = {u"h11", u"h12", u"h23", u"h24"};
-  auto hourCycle = getOptionString(options, u"hourCycle", u"string", hourCycleVector, undefinedFallback);
+  auto hourCycle = getOption(optionsToUse, u"hourCycle", u"string", hourCycleVector, undefinedFallback);
   // 14. If hour12 is not undefined, then
   //     a. Let hourCycle be null.
-      if (hour12.getValue()) {
-      hourCycle.getValue() = u"null";
+      if (hour12->isBool()) {
+      hourCycle->getString() = u"null";
   }
   // 15. Set opt.[[hc]] to hourCycle.
-  opt.hc = hourCycle.getValue();
+  opt.hc = hourCycle->getString();
   
   // 16 - 23
   const std::vector<std::u16string> relevantExtensionKeys = {u"ca", u"nu", u"hc"};
@@ -952,12 +955,10 @@ vm::ExecutionStatus DateTimeFormat::initialize(
 //  24. Let timeZone be ? Get(options, "timeZone").
   std::u16string timeZone;
   std::u16string timeZoneValue;
-// Check find first to avoid error
-  if (options.find(u"timeZone") != options.end()) {
-    timeZone = options.find(u"timeZone")->second.getString();
-  }
+//  Check find first to avoid error
 //  25. If timeZone is undefined, then
-  if (timeZone == u"") {
+  auto timeZoneIter = options.find(u"timeZone");
+  if (timeZoneIter == options.end()) {
 //  a. Let timeZone be DefaultTimeZone(), i.e. CST.
     NSTimeZone* defaultTimeZone = [NSTimeZone defaultTimeZone];
     NSString* nstrTime = [defaultTimeZone localizedName:NSTimeZoneNameStyleShortStandard
@@ -984,34 +985,38 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   const std::vector<std::u16string> numberVector = {u"numeric", u"2-digit"};
   const std::vector<std::u16string> monthVector = {u"numeric", u"2-digit", u"long", u"short", u"narrow"};
   const std::vector<std::u16string> timeZoneNameVector = {u"long", u"short"};
+  const std::vector<std::u16string> styleVector = {u"full", u"long", u"medium", u"short"};
 //  // String the enum
 //  auto strngEnum = Impl::formatMatcherString(Impl::FormatMatcher());
 //  // Get the index ERROR
 //  size_t inx = Impl::enumMatcher(strngEnum, Impl::formatMatchers);
 //  // Switch case to get correct string from the index
 //  auto fmSwitch = Impl::formatMatcherSwitch(Impl::FormatMatcher(inx));
-  opt.mFormatMatcher = getOptionString(options, u"formatMatcher", u"string", matcherVector, undefinedFallback).getValue();
+  opt.mFormatMatcher = getOption(optionsToUse, u"formatMatcher", u"string", matcherVector, undefinedFallback)->getString();
 
-  opt.mWeekday = getOptionString(options, u"weekday", u"string", sizeVector, undefinedFallback).getValue();
+  opt.mWeekday = getOption(optionsToUse, u"weekday", u"string", sizeVector, undefinedFallback)->getString();
 
-  opt.mEra = getOptionString(options, u"era", u"string", sizeVector, undefinedFallback).getValue();
+  opt.mEra = getOption(optionsToUse, u"era", u"string", sizeVector, undefinedFallback)->getString();
   
-  opt.mYear = getOptionString(options, u"year", u"string", numberVector, undefinedFallback).getValue();
+  opt.mYear = getOption(optionsToUse, u"year", u"string", numberVector, undefinedFallback)->getString();
       
-  opt.mMonth = getOptionString(options, u"month", u"string", monthVector, undefinedFallback).getValue();
+  opt.mMonth = getOption(optionsToUse, u"month", u"string", monthVector, undefinedFallback)->getString();
       
-  opt.mDay = getOptionString(options, u"day", u"string", numberVector, undefinedFallback).getValue();
+  opt.mDay = getOption(optionsToUse, u"day", u"string", numberVector, undefinedFallback)->getString();
   
-  opt.mHour = getOptionString(options, u"hour", u"string", numberVector, undefinedFallback).getValue();
+  opt.mHour = getOption(optionsToUse, u"hour", u"string", numberVector, undefinedFallback)->getString();
       
-  opt.mMinute = getOptionString(options, u"minute", u"string", numberVector, undefinedFallback).getValue();
+  opt.mMinute = getOption(optionsToUse, u"minute", u"string", numberVector, undefinedFallback)->getString();
       
-  opt.mSecond = getOptionString(options, u"second", u"string", numberVector, undefinedFallback).getValue();
+  opt.mSecond = getOption(optionsToUse, u"second", u"string", numberVector, undefinedFallback)->getString();
       
-  opt.mTimeZoneName = getOptionString(options, u"timeZoneName", u"string", timeZoneNameVector, undefinedFallback).getValue();
+  opt.mTimeZoneName = getOption(optionsToUse, u"timeZoneName", u"string", timeZoneNameVector, undefinedFallback)->getString();
       
+  opt.mDateStyle = getOption(optionsToUse, u"dateStyle", u"string", styleVector, undefinedFallback)->getString();
+  
+  opt.mTimeStyle = getOption(optionsToUse, u"timeStyle", u"string", styleVector, undefinedFallback)->getString();
   // 36
-  if (opt.mHour == u"") {
+  if (opt.mHour == u"und") {
     opt.mHourCycle = u"und";
   } else {
 // TODO: get default hour cycle
@@ -1021,7 +1026,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
     } else {
       opt.hc = hourCycleResolved.getString();
     }
-    if (hour12.getValue()) {// true
+    if (hour12->isBool()) {// true
       if (hcDefault == u"H11" || hcDefault == u"H23") {
         opt.hc = u"H11";
       }
@@ -1086,6 +1091,12 @@ Options DateTimeFormat::resolvedOptions() noexcept {
   }
   if (impl_->mTimeZoneName != u"") {
     options.emplace(u"timeZoneName", Option(impl_->mTimeZoneName));
+  }
+  if (impl_->mDateStyle != u"") {
+    options.emplace(u"timeZoneName", Option(impl_->mDateStyle));
+  }
+  if (impl_->mTimeStyle != u"") {
+    options.emplace(u"timeZoneName", Option(impl_->mTimeStyle));
   }
   return options;
 }
