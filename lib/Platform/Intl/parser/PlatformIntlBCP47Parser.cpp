@@ -33,7 +33,7 @@ bool isCharType(std::u16string str, int start, int end, int min, int max, bool(*
     return false;
   }
   
-  for (int i = start; i < end; i++) {
+  for (int i = start; i <= end; i++) {
     if (!charType(str[i])) {
       return false;
     }
@@ -75,24 +75,15 @@ bool isUnicodeExtensionAttribute(std::u16string str, int start, int end) {
 bool isUnicodeExtensionKey(std::u16string str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = alphanum alpha;
-  
   if (end - start != 1) {
     return false;
   }
-  
   return isASCIILetterOrDigit(str[start]) && isASCIILetter(str[end]);
 }
-bool isUnicodeExtensionType(std::u16string str, int start, int end) {
+bool isUnicodeExtensionKeyTypeItem(std::u16string str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
-  // = alphanum alpha;
-  if (end - start != 1) {
-    return false;
-  }
-  
-  return isASCIILetterOrDigit(str[start]) && isASCIILetter(str[end]);
-}
-bool isExtensionSingleton(std::u16string str, int start, int end) {
-  return (unsigned)start < str.length() && end - start == 1 && str[start] == '-';
+  // = alphanum{3,8};
+  return isCharType(str, start, end, 3, 8, &isASCIILetterOrDigit);
 }
 bool isTransformedExtensionKey(std::u16string str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
@@ -100,7 +91,6 @@ bool isTransformedExtensionKey(std::u16string str, int start, int end) {
   if (end - start != 1) {
     return false;
   }
-  
   return isASCIILetter(str[start]) && isASCIIDigit(str[end]);
 }
 bool isTransformedExtensionTValueItem(std::u16string str, int start, int end) {
@@ -117,7 +107,6 @@ bool isOtherExtension(std::u16string str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = (sep alphanum{2,8})+;
   return isCharType(str, start, end, 2, 8, &isASCIILetterOrDigit);
-  return false;
 }
 
 struct ParsedLocaleIdentifier::Impl {};
@@ -199,8 +188,8 @@ struct LanguageTagParser::Impl {
 
   ParsedLocaleIdentifier parsedLocaleIdentifier;
   std::u16string mLocaleId;
-  size_t mSubtagStart;
-  size_t mSubtagEnd;
+  int mSubtagStart;
+  int mSubtagEnd;
 };
 
 LanguageTagParser::LanguageTagParser(const std::u16string &localeId) : impl_(std::make_unique<Impl>(localeId)) {
@@ -235,7 +224,7 @@ bool LanguageTagParser::parseUnicodeLocaleId() {
 bool LanguageTagParser::parseUnicodeLanguageId() {
   ParsedLanguageIdentifier parsedLanguageIdentifier;
   
-  if (!hasMoreSubtags() || !isUnicodeLanguageSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
+  if (!nextSubtag() || !isUnicodeLanguageSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
     return false;
   }
   
@@ -282,7 +271,7 @@ bool LanguageTagParser::parseExtensions() {
 
   while (true) {
     // check if current subtag isExtensionSingleton
-    if (impl_->mSubtagEnd - impl_->mSubtagStart != 1) {
+    if (impl_->mSubtagEnd != impl_->mSubtagStart) {
       return true;
     }
     char16_t singleton = getCurrentSubtag()[0];
@@ -351,7 +340,7 @@ bool LanguageTagParser::parseUnicodeExtension() {
     if (!nextSubtag()) {
       return true;
     } else {
-      while (isUnicodeExtensionType(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
+      while (isUnicodeExtensionKeyTypeItem(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
         extensionKeyTypes.push_back(getCurrentSubtag());
         if (!nextSubtag()) {
           return true;
@@ -376,14 +365,14 @@ bool LanguageTagParser::parsePUExtension() {
 }
 
 bool LanguageTagParser::hasMoreSubtags() {
-  return impl_->mLocaleId.length() > 0 && impl_->mSubtagEnd < impl_->mLocaleId.length() - 1;
+  return impl_->mLocaleId.length() > 0 && impl_->mSubtagEnd < (int)impl_->mLocaleId.length() - 1;
 }
 bool LanguageTagParser::nextSubtag() {
   if (!hasMoreSubtags()) {
     return false; // throw error?
   }
   
-  auto length = impl_->mLocaleId.length();
+  int length = impl_->mLocaleId.length();
   
   if (impl_->mSubtagEnd >= impl_->mSubtagStart) {
     if (!isSubtagSeparator(impl_->mLocaleId[impl_->mSubtagEnd+1])) {
