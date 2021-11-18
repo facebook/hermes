@@ -16,6 +16,7 @@ list in `scripts/genTransformNodeTypes` to ensure there's no duplicates
 
 import type {
   ESNode,
+  ArrowFunctionExpression as ArrowFunctionExpressionType,
   RegExpLiteral as RegExpLiteralType,
   TemplateElement as TemplateElementType,
   Identifier as IdentifierType,
@@ -32,6 +33,36 @@ import {
   detachedProps,
   setParentPointersInDirectChildren,
 } from '../detachedNode';
+
+// hermes adds an `id` prop which is always null, and it adds an `expression`
+// boolean which is true when the body isn't a BlockStatement.
+// No need to make consumers set these
+export function ArrowFunctionExpression({
+  parent,
+  ...props
+}: {
+  +params: $ReadOnlyArray<
+    DetachedNode<ArrowFunctionExpressionType['params'][number]>,
+  >,
+  +body: DetachedNode<ArrowFunctionExpressionType['body']>,
+  +typeParameters?: ?DetachedNode<
+    ArrowFunctionExpressionType['typeParameters'],
+  >,
+  +returnType?: ?DetachedNode<ArrowFunctionExpressionType['returnType']>,
+  +predicate?: ?DetachedNode<ArrowFunctionExpressionType['predicate']>,
+  +async: ArrowFunctionExpressionType['async'],
+  +parent?: ESNode,
+}): DetachedNode<ArrowFunctionExpressionType> {
+  const node = detachedProps<ArrowFunctionExpressionType>(parent, {
+    type: 'ArrowFunctionExpression',
+    id: null,
+    // $FlowExpectedError[incompatible-use]
+    expression: props.body.type !== 'BlockStatement',
+    ...props,
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
 
 // pattern/flags are on a subobject in the estree spec, but are flat on the hermes types
 // also the value is supposed to be a RegExp instance

@@ -18,6 +18,7 @@ const imports: Array<string> = [];
 const nodeTypeFunctions: Array<string> = [];
 
 const NODES_WITH_SPECIAL_HANDLING = new Set([
+  'ArrowFunctionExpression',
   'RegExpLiteral',
   'TemplateElement',
   'Identifier',

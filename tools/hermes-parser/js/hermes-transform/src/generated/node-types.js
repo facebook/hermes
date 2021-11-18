@@ -18,7 +18,6 @@
 
 import type {
   ESNode,
-  ArrowFunctionExpression as ArrowFunctionExpressionType,
   BlockStatement as BlockStatementType,
   ExpressionStatement as ExpressionStatementType,
   NumberTypeAnnotation as NumberTypeAnnotationType,
@@ -31,32 +30,6 @@ import {
   detachedProps,
   setParentPointersInDirectChildren,
 } from '../detachedNode';
-
-export function ArrowFunctionExpression({
-  parent,
-  ...props
-}: {
-  +id?: ?DetachedNode<ArrowFunctionExpressionType['id']>,
-  +params: $ReadOnlyArray<
-    DetachedNode<ArrowFunctionExpressionType['params'][number]>,
-  >,
-  +body: DetachedNode<ArrowFunctionExpressionType['body']>,
-  +typeParameters?: ?DetachedNode<
-    ArrowFunctionExpressionType['typeParameters'],
-  >,
-  +returnType?: ?DetachedNode<ArrowFunctionExpressionType['returnType']>,
-  +predicate?: ?DetachedNode<ArrowFunctionExpressionType['predicate']>,
-  +expression: ArrowFunctionExpressionType['expression'],
-  +async: ArrowFunctionExpressionType['async'],
-  +parent?: ESNode,
-}): DetachedNode<ArrowFunctionExpressionType> {
-  const node = detachedProps<ArrowFunctionExpressionType>(parent, {
-    type: 'ArrowFunctionExpression',
-    ...props,
-  });
-  setParentPointersInDirectChildren(node);
-  return node;
-}
 
 export function BlockStatement({
   parent,
