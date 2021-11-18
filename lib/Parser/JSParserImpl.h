@@ -593,8 +593,7 @@ class JSParserImpl {
     return recursionDepthExceeded();
   }
 
-  /// Assert that the recursion depth has been exceeded, generate an error
-  /// and return true.
+  /// Generate an error and return true.
   bool recursionDepthExceeded();
 
   // Parser functions. All of these correspond more or less directly to grammar

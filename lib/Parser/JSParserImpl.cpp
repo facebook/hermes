@@ -306,9 +306,6 @@ void JSParserImpl::processDirective(UniqueString *directive) {
 }
 
 bool JSParserImpl::recursionDepthExceeded() {
-  assert(
-      recursionDepth_ >= MAX_RECURSION_DEPTH &&
-      "recursionDepthExceeded called without recursionDepthCheck");
   error(
       tok_->getStartLoc(),
       "Too many nested expressions/statements/declarations");
@@ -5405,135 +5402,197 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
     AllowTypedArrowFunction allowTypedArrowFunction,
     CoverTypedParameters coverTypedParameters,
     ESTree::Node *typeParams) {
-  // Check for yield, which may be lexed as a reserved word, but only in strict
-  // mode.
-  if (paramYield_ && check(TokenKind::rw_yield, TokenKind::identifier) &&
-      tok_->getResWordOrIdentifier() == yieldIdent_) {
-    auto optYieldExpr = parseYieldExpression(param.get(ParamIn));
-    if (!optYieldExpr)
-      return None;
-    ESTree::YieldExpressionNode *yieldExpr = *optYieldExpr;
-    if (yieldExpr->_argument && !checkEndAssignmentExpression()) {
-      error(tok_->getStartLoc(), "unexpected token after yield expression");
-      return None;
-    }
-    return yieldExpr;
-  }
+  struct State {
+    SMLoc leftStartLoc = {};
+    Optional<ESTree::Node *> optLeftExpr = llvh::None;
+    UniqueString *op = nullptr;
+    SMLoc debugLoc = {};
 
-  SMLoc startLoc = tok_->getStartLoc();
-  bool forceAsync = false;
-  if (check(asyncIdent_)) {
-    OptValue<TokenKind> optNext = lexer_.lookahead1(TokenKind::identifier);
-    if (optNext.hasValue() && *optNext == TokenKind::identifier) {
-      forceAsync = true;
-    }
-#if HERMES_PARSE_FLOW
-    if (context_.getParseFlow() && optNext.hasValue() &&
-        (*optNext == TokenKind::less || *optNext == TokenKind::l_paren)) {
-      auto optAsyncArrow = tryParseTypedAsyncArrowFunction(param);
-      if (optAsyncArrow.hasValue()) {
-        return *optAsyncArrow;
+    explicit State() {}
+  };
+
+  auto parseHelper = [this](
+                         State &state,
+                         Param param,
+                         AllowTypedArrowFunction allowTypedArrowFunction,
+                         CoverTypedParameters coverTypedParameters,
+                         ESTree::Node *typeParams) -> Optional<ESTree::Node *> {
+    // Check for yield, which may be lexed as a reserved word, but only in
+    // strict mode.
+    if (paramYield_ && check(TokenKind::rw_yield, TokenKind::identifier) &&
+        tok_->getResWordOrIdentifier() == yieldIdent_) {
+      auto optYieldExpr = parseYieldExpression(param.get(ParamIn));
+      if (!optYieldExpr)
+        return None;
+      ESTree::YieldExpressionNode *yieldExpr = *optYieldExpr;
+      if (yieldExpr->_argument && !checkEndAssignmentExpression()) {
+        error(tok_->getStartLoc(), "unexpected token after yield expression");
+        return None;
       }
+      return yieldExpr;
     }
-#endif
-  }
 
+    SMLoc startLoc = tok_->getStartLoc();
+    bool forceAsync = false;
+    if (check(asyncIdent_)) {
+      OptValue<TokenKind> optNext = lexer_.lookahead1(TokenKind::identifier);
+      if (optNext.hasValue() && *optNext == TokenKind::identifier) {
+        forceAsync = true;
+      }
 #if HERMES_PARSE_FLOW
-  if (context_.getParseFlow() &&
-      allowTypedArrowFunction == AllowTypedArrowFunction::Yes && !typeParams &&
-      check(TokenKind::less)) {
-    JSLexer::SavePoint savePoint{&lexer_};
-    // Suppress messages from the parser while still displaying lexer
-    // messages.
-    CollectMessagesRAII collect{&sm_, true};
-    // Do as the flow parser does due to JSX ambiguities.
-    // First we try and parse as an assignment expression disallowing
-    // typed arrow functions. If that fails, then try again while allowing
-    // typed arrow functions and attach the type parameters after the fact.
-    auto optAssign = parseAssignmentExpression(
-        param, AllowTypedArrowFunction::No, CoverTypedParameters::No, nullptr);
-    if (optAssign) {
-      // That worked, so just return it directly.
-      collect.setDiscardMessages(false);
-      return *optAssign;
-    } else {
-      // Consume the type parameters and try again.
-      savePoint.restore();
-      auto optTypeParams = parseTypeParamsFlow();
-      // Type parameters must be followed by a '(' to be meaningful.
-      if (optTypeParams && check(TokenKind::l_paren)) {
-        typeParams = *optTypeParams;
-        optAssign = parseAssignmentExpression(
-            param,
-            AllowTypedArrowFunction::Yes,
-            CoverTypedParameters::No,
-            typeParams);
-        if (optAssign) {
-          // We've got the arrow function now, return it directly.
-          return *optAssign;
-        } else {
-          // That's everything we can try.
-          error(
-              typeParams->getSourceRange(),
-              "type parameters must be used in an arrow function expression");
-          return None;
+      if (context_.getParseFlow() && optNext.hasValue() &&
+          (*optNext == TokenKind::less || *optNext == TokenKind::l_paren)) {
+        auto optAsyncArrow = tryParseTypedAsyncArrowFunction(param);
+        if (optAsyncArrow.hasValue()) {
+          return *optAsyncArrow;
         }
+      }
+#endif
+    }
+
+#if HERMES_PARSE_FLOW
+    if (context_.getParseFlow() &&
+        allowTypedArrowFunction == AllowTypedArrowFunction::Yes &&
+        !typeParams && check(TokenKind::less)) {
+      JSLexer::SavePoint savePoint{&lexer_};
+      // Suppress messages from the parser while still displaying lexer
+      // messages.
+      CollectMessagesRAII collect{&sm_, true};
+      // Do as the flow parser does due to JSX ambiguities.
+      // First we try and parse as an assignment expression disallowing
+      // typed arrow functions. If that fails, then try again while allowing
+      // typed arrow functions and attach the type parameters after the fact.
+      auto optAssign = parseAssignmentExpression(
+          param,
+          AllowTypedArrowFunction::No,
+          CoverTypedParameters::No,
+          nullptr);
+      if (optAssign) {
+        // That worked, so just return it directly.
+        collect.setDiscardMessages(false);
+        return *optAssign;
       } else {
-        // Invalid type params, and also invalid JSX. Bail.
+        // Consume the type parameters and try again.
         savePoint.restore();
+        auto optTypeParams = parseTypeParamsFlow();
+        // Type parameters must be followed by a '(' to be meaningful.
+        if (optTypeParams && check(TokenKind::l_paren)) {
+          typeParams = *optTypeParams;
+          optAssign = parseAssignmentExpression(
+              param,
+              AllowTypedArrowFunction::Yes,
+              CoverTypedParameters::No,
+              typeParams);
+          if (optAssign) {
+            // We've got the arrow function now, return it directly.
+            return *optAssign;
+          } else {
+            // That's everything we can try.
+            error(
+                typeParams->getSourceRange(),
+                "type parameters must be used in an arrow function expression");
+            return None;
+          }
+        } else {
+          // Invalid type params, and also invalid JSX. Bail.
+          savePoint.restore();
+        }
       }
     }
-  }
 #endif
 
-  SMLoc leftStartLoc = tok_->getStartLoc();
-  auto optLeftExpr = parseConditionalExpression(param, coverTypedParameters);
-  if (!optLeftExpr)
-    return None;
+    state.leftStartLoc = tok_->getStartLoc();
+    state.optLeftExpr = parseConditionalExpression(param, coverTypedParameters);
+    if (!state.optLeftExpr)
+      return None;
 
-  ESTree::Node *returnType = nullptr;
-  ESTree::Node *predicate = nullptr;
+    ESTree::Node *returnType = nullptr;
+    ESTree::Node *predicate = nullptr;
 #if HERMES_PARSE_FLOW
-  if (context_.getParseFlow()) {
-    if (allowTypedArrowFunction == AllowTypedArrowFunction::Yes &&
-        ((*optLeftExpr)->getParens() != 0 ||
-         isa<ESTree::CoverEmptyArgsNode>(*optLeftExpr)) &&
-        check(TokenKind::colon)) {
-      JSLexer::SavePoint savePoint{&lexer_};
-      // Defer our decision on whether to show or suppress messages for this
-      // next section.
-      // If we are unsuccessful during the parse, it can mean that we need to
-      // start parsing JSX children inside tags, instead of function type
-      // parameters. We need to suppress lexer messages because the lexing rules
-      // inside JSX are quite different from JS/Flow.
-      // For example:
-      // x ? (1) : <tag>#{foo}</tag>;
-      //         ^
-      // and
-      // x ? (1) : <tag>"</tag>;
-      //         ^
-      // must be able to handle the lexer errors that would occur if we lexed
-      // the inside of the JSX tags as JS.
-      CollectMessagesRAII collect{&sm_, true};
-      SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-      bool startsWithPredicate = check(checksIdent_);
-      auto optType = startsWithPredicate
-          ? llvh::None
-          : parseTypeAnnotationFlow(annotStart, AllowAnonFunctionType::No);
-      if (optType)
-        returnType = *optType;
-      if (optType || startsWithPredicate) {
-        if (check(TokenKind::equalgreater)) {
-          assert(
-              !startsWithPredicate && "no returnType if startsWithPredicate");
-          // Done parsing the return type and predicate.
-          // Successful parse, show any messages that the lexer emitted.
-          collect.setDiscardMessages(false);
-        } else if (check(checksIdent_)) {
-          auto optPred = parsePredicateFlow();
-          if (optPred && check(TokenKind::equalgreater)) {
+    if (context_.getParseFlow()) {
+      if (allowTypedArrowFunction == AllowTypedArrowFunction::Yes &&
+          ((*state.optLeftExpr)->getParens() != 0 ||
+           isa<ESTree::CoverEmptyArgsNode>(*state.optLeftExpr)) &&
+          check(TokenKind::colon)) {
+        JSLexer::SavePoint savePoint{&lexer_};
+        // Defer our decision on whether to show or suppress messages for this
+        // next section.
+        // If we are unsuccessful during the parse, it can mean that we need to
+        // start parsing JSX children inside tags, instead of function type
+        // parameters. We need to suppress lexer messages because the lexing
+        // rules inside JSX are quite different from JS/Flow. For example: x ?
+        // (1) : <tag>#{foo}</tag>;
+        //         ^
+        // and
+        // x ? (1) : <tag>"</tag>;
+        //         ^
+        // must be able to handle the lexer errors that would occur if we lexed
+        // the inside of the JSX tags as JS.
+        CollectMessagesRAII collect{&sm_, true};
+        SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
+        bool startsWithPredicate = check(checksIdent_);
+        auto optType = startsWithPredicate
+            ? llvh::None
+            : parseTypeAnnotationFlow(annotStart, AllowAnonFunctionType::No);
+        if (optType)
+          returnType = *optType;
+        if (optType || startsWithPredicate) {
+          if (check(TokenKind::equalgreater)) {
+            assert(
+                !startsWithPredicate && "no returnType if startsWithPredicate");
             // Done parsing the return type and predicate.
-            predicate = *optPred;
+            // Successful parse, show any messages that the lexer emitted.
+            collect.setDiscardMessages(false);
+          } else if (check(checksIdent_)) {
+            auto optPred = parsePredicateFlow();
+            if (optPred && check(TokenKind::equalgreater)) {
+              // Done parsing the return type and predicate.
+              predicate = *optPred;
+              // Successful parse, show any messages that the lexer emitted.
+              collect.setDiscardMessages(false);
+            } else {
+              savePoint.restore();
+            }
+          } else {
+            savePoint.restore();
+          }
+        } else {
+          savePoint.restore();
+        }
+      }
+    }
+#endif
+
+#if HERMES_PARSE_TS
+    if (context_.getParseTS()) {
+      // Separate logic for TS parsing here, because the semantics don't
+      // require as much complexity as Flow due to a lack of predicates.
+      if (allowTypedArrowFunction == AllowTypedArrowFunction::Yes &&
+          ((*state.optLeftExpr)->getParens() != 0 ||
+           isa<ESTree::CoverEmptyArgsNode>(*state.optLeftExpr)) &&
+          check(TokenKind::colon)) {
+        JSLexer::SavePoint savePoint{&lexer_};
+        // Defer our decision on whether to show or suppress messages for this
+        // next section.
+        // If we are unsuccessful during the parse, it can mean that we need to
+        // start parsing JSX children inside tags, instead of function type
+        // parameters. We need to suppress lexer messages because the lexing
+        // rules inside JSX are quite different from TS. For example: x ? (1) :
+        // <tag>#{foo}</tag>;
+        //         ^
+        // and
+        // x ? (1) : <tag>"</tag>;
+        //         ^
+        // must be able to handle the lexer errors that would occur if we lexed
+        // the inside of the JSX tags as JS.
+        CollectMessagesRAII collect{&sm_, true};
+        SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
+        auto optType = parseTypeAnnotationTS(annotStart);
+        if (optType)
+          returnType = *optType;
+        if (optType) {
+          if (check(TokenKind::equalgreater)) {
+            // Done parsing the return type.
             // Successful parse, show any messages that the lexer emitted.
             collect.setDiscardMessages(false);
           } else {
@@ -5542,123 +5601,111 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
         } else {
           savePoint.restore();
         }
-      } else {
-        savePoint.restore();
       }
     }
-  }
-#endif
-
-#if HERMES_PARSE_TS
-  if (context_.getParseTS()) {
-    // Separate logic for TS parsing here, because the semantics don't
-    // require as much complexity as Flow due to a lack of predicates.
-    if (allowTypedArrowFunction == AllowTypedArrowFunction::Yes &&
-        ((*optLeftExpr)->getParens() != 0 ||
-         isa<ESTree::CoverEmptyArgsNode>(*optLeftExpr)) &&
-        check(TokenKind::colon)) {
-      JSLexer::SavePoint savePoint{&lexer_};
-      // Defer our decision on whether to show or suppress messages for this
-      // next section.
-      // If we are unsuccessful during the parse, it can mean that we need to
-      // start parsing JSX children inside tags, instead of function type
-      // parameters. We need to suppress lexer messages because the lexing rules
-      // inside JSX are quite different from TS.
-      // For example:
-      // x ? (1) : <tag>#{foo}</tag>;
-      //         ^
-      // and
-      // x ? (1) : <tag>"</tag>;
-      //         ^
-      // must be able to handle the lexer errors that would occur if we lexed
-      // the inside of the JSX tags as JS.
-      CollectMessagesRAII collect{&sm_, true};
-      SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-      auto optType = parseTypeAnnotationTS(annotStart);
-      if (optType)
-        returnType = *optType;
-      if (optType) {
-        if (check(TokenKind::equalgreater)) {
-          // Done parsing the return type.
-          // Successful parse, show any messages that the lexer emitted.
-          collect.setDiscardMessages(false);
-        } else {
-          savePoint.restore();
-        }
-      } else {
-        savePoint.restore();
-      }
-    }
-  }
 
 #endif
 
-  // Check for ArrowFunction.
-  //   ArrowFunction : ArrowParameters [no line terminator] => ConciseBody.
-  //   AsyncArrowFunction :
-  //   async [no line terminator] ArrowParameters [no line terminator] =>
-  //   ConciseBody.
-  if (check(TokenKind::equalgreater) && !lexer_.isNewLineBeforeCurrentToken()) {
-    return parseArrowFunctionExpression(
-        param,
-        *optLeftExpr,
-        typeParams,
-        returnType,
-        predicate,
-        typeParams ? typeParams->getStartLoc() : startLoc,
-        allowTypedArrowFunction,
-        forceAsync);
-  }
+    // Check for ArrowFunction.
+    //   ArrowFunction : ArrowParameters [no line terminator] => ConciseBody.
+    //   AsyncArrowFunction :
+    //   async [no line terminator] ArrowParameters [no line terminator] =>
+    //   ConciseBody.
+    if (check(TokenKind::equalgreater) &&
+        !lexer_.isNewLineBeforeCurrentToken()) {
+      return parseArrowFunctionExpression(
+          param,
+          *state.optLeftExpr,
+          typeParams,
+          returnType,
+          predicate,
+          typeParams ? typeParams->getStartLoc() : startLoc,
+          allowTypedArrowFunction,
+          forceAsync);
+    }
 
 #if HERMES_PARSE_FLOW
-  if (typeParams) {
-    errorExpected(
-        TokenKind::equalgreater,
-        "in generic arrow function",
-        "start of function",
-        typeParams->getStartLoc());
-    return None;
-  }
+    if (typeParams) {
+      errorExpected(
+          TokenKind::equalgreater,
+          "in generic arrow function",
+          "start of function",
+          typeParams->getStartLoc());
+      return None;
+    }
 #endif
 
-  if (!checkAssign())
-    return *optLeftExpr;
+    if (!checkAssign())
+      return *state.optLeftExpr;
 
-  // Check for destructuring assignment.
-  if (check(TokenKind::equal) &&
-      (isa<ESTree::ArrayExpressionNode>(*optLeftExpr) ||
-       isa<ESTree::ObjectExpressionNode>(*optLeftExpr))) {
-    optLeftExpr = reparseAssignmentPattern(*optLeftExpr, false);
-    if (!optLeftExpr)
+    // Check for destructuring assignment.
+    if (check(TokenKind::equal) &&
+        (isa<ESTree::ArrayExpressionNode>(*state.optLeftExpr) ||
+         isa<ESTree::ObjectExpressionNode>(*state.optLeftExpr))) {
+      state.optLeftExpr = reparseAssignmentPattern(*state.optLeftExpr, false);
+      if (!state.optLeftExpr)
+        return None;
+    }
+
+    state.op = getTokenIdent(tok_->getKind());
+    state.debugLoc = advance().Start;
+    return nullptr;
+  };
+
+  llvh::SmallVector<State, 2> stack;
+
+  stack.emplace_back();
+  auto optRes = parseHelper(
+      stack.back(),
+      param,
+      allowTypedArrowFunction,
+      coverTypedParameters,
+      typeParams);
+
+  for (;;) {
+    if (!optRes)
       return None;
+    if (!stack.back().op) {
+      stack.pop_back();
+      break;
+    }
+    if (stack.size() > ESTree::MAX_NESTED_ASSIGNMENTS) {
+      recursionDepthExceeded();
+      return None;
+    }
+    stack.emplace_back();
+    optRes = parseHelper(
+        stack.back(),
+        param,
+        AllowTypedArrowFunction::Yes,
+        CoverTypedParameters::No,
+        nullptr);
   }
 
-  UniqueString *op = getTokenIdent(tok_->getKind());
-  auto debugLoc = advance().Start;
+  assert(optRes.getValue() != nullptr);
 
-  // We are directly recursing on parseAssignmentExpression.
-  // That can overflow the stack, so check recursion here.
-  CHECK_RECURSION;
-  auto optRightExpr = parseAssignmentExpression(
-      param, AllowTypedArrowFunction::Yes, CoverTypedParameters::No, nullptr);
-  if (!optRightExpr)
-    return None;
-
-  if (!checkEndAssignmentExpression()) {
-    // Note: We don't assert the valid end of an AssignmentExpression here
-    // because we do not know yet whether the entire file is well-formed.
-    // This check errors here to ensure that we still catch missing elements
-    // in `checkEndAssignmentExpression` while allowing us to avoid actually
-    // asserting and crashing.
-    error(tok_->getStartLoc(), "unexpected token after assignment expression");
-    return None;
+  while (!stack.empty()) {
+    if (!checkEndAssignmentExpression()) {
+      // Note: We don't assert the valid end of an AssignmentExpression here
+      // because we do not know yet whether the entire file is well-formed.
+      // This check errors here to ensure that we still catch missing elements
+      // in `checkEndAssignmentExpression` while allowing us to avoid actually
+      // asserting and crashing.
+      error(
+          tok_->getStartLoc(), "unexpected token after assignment expression");
+      return None;
+    }
+    auto &top = stack.back();
+    optRes = setLocation(
+        top.leftStartLoc,
+        getPrevTokenEndLoc(),
+        top.debugLoc,
+        new (context_) ESTree::AssignmentExpressionNode(
+            top.op, top.optLeftExpr.getValue(), optRes.getValue()));
+    stack.pop_back();
   }
-  return setLocation(
-      leftStartLoc,
-      getPrevTokenEndLoc(),
-      debugLoc,
-      new (context_) ESTree::AssignmentExpressionNode(
-          op, optLeftExpr.getValue(), optRightExpr.getValue()));
+
+  return optRes.getValue();
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseExpression(

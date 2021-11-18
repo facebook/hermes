@@ -940,6 +940,10 @@ struct NodeKindInfo : llvh::DenseMapInfo<NodeKind> {
 
 using NodeKindSet = llvh::DenseSet<ESTree::NodeKind, NodeKindInfo>;
 
+/// An arbitrary limit to nested assignments. We handle them non-recursively, so
+/// this can be very large, but we don't want to let it consume all our memory.
+constexpr unsigned MAX_NESTED_ASSIGNMENTS = 30000;
+
 } // namespace ESTree
 } // namespace hermes
 
