@@ -13,7 +13,6 @@
 import type {
   AnyTypeAnnotation,
   CallExpression,
-  ESNode,
   ExpressionStatement,
   FunctionDeclaration,
   ImportDeclaration,
@@ -21,7 +20,7 @@ import type {
   ReturnStatement,
   VariableDeclaration,
   VariableDeclarator,
-} from './types';
+} from '../types';
 
 /*
  * !!! THIS FILE WILL BE OVERWRITTEN BY CODEGEN !!!
@@ -34,7 +33,7 @@ interface FunctionDeclaration_With_id extends FunctionDeclaration {
   +id: $NonMaybeType<FunctionDeclaration['id']>;
 }
 
-export type ESQueryNodeSelectors = $ReadOnly<{
+export type ESQueryNodeSelectorsWithoutFallback = $ReadOnly<{
   +AnyTypeAnnotation?: (node: AnyTypeAnnotation) => void,
   +CallExpression?: (node: CallExpression) => void,
   +ExpressionStatement?: (node: ExpressionStatement) => void,
@@ -45,5 +44,4 @@ export type ESQueryNodeSelectors = $ReadOnly<{
   +ReturnStatement?: (node: ReturnStatement) => void,
   +VariableDeclaration?: (node: VariableDeclaration) => void,
   +VariableDeclarator?: (node: VariableDeclarator) => void,
-  +[selector: string]: (node: ESNode) => void,
 }>;
