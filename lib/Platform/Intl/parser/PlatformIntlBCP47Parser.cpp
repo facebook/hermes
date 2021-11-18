@@ -199,12 +199,8 @@ LanguageTagParser::LanguageTagParser(const std::u16string &localeId) : impl_(std
 }
 LanguageTagParser::~LanguageTagParser() = default;
 
-ParsedLocaleIdentifier LanguageTagParser::parseLocaleId() {
-  if (!parseUnicodeLocaleId()) {
-    // throw
-  }
-  //return impl->parsedLocaleIdentifier;
-  return {};
+ParsedLocaleIdentifier LanguageTagParser::getParsedLocaleId(){
+  return impl_->parsedLocaleIdentifier;
 }
 
 bool LanguageTagParser::parseUnicodeLocaleId() {

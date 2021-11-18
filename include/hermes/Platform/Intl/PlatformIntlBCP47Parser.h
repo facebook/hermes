@@ -72,15 +72,14 @@ class LanguageTagParser {
   ~LanguageTagParser();
 
   // public function declaration
-  ParsedLocaleIdentifier parseLocaleId();
+  ParsedLocaleIdentifier getParsedLocaleId();
+  bool isStructurallyValidLanguageTag();
+  std::u16string getCanonicalizedLocale();
   // tokenizer functions
   std::u16string toString();
   std::u16string toParsedString();
 
- private:
-  struct Impl;
-  std::unique_ptr<Impl> impl_;
-
+  // TODO: make these private again
   // private function declaration
   bool parseUnicodeLocaleId();
   bool parseUnicodeLanguageId();
@@ -89,11 +88,14 @@ class LanguageTagParser {
   bool parseTransformedExtension();
   bool parseOtherExtension();
   bool parsePUExtension();
-
   // tokenizer functions
   std::u16string getCurrentSubtag();
   bool hasMoreSubtags();
   bool nextSubtag();
+  
+ private:
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
 };
 
 } // namespace platform_intl_parser

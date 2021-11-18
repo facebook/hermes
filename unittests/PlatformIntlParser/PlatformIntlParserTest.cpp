@@ -110,7 +110,58 @@ TEST(PlatformIntlBCP47Parser, ExtensionTypeTest) {
   EXPECT_TRUE(isOtherExtension(testString, 23, 24));
 }
 
+// TODO: These tests rely on private functions
+// TODO: exposed for the purpose of testing
+TEST(PlatformIntlBCP47Parser, TagTokenizerTest) {
+  std::u16string str1 = u"en-US-u-phonebk";
+  LanguageTagParser parser(str1);
+  EXPECT_EQ(str1, parser.toString());
+  EXPECT_TRUE(parser.hasMoreSubtags());
+  EXPECT_TRUE(parser.nextSubtag());
+  EXPECT_EQ(parser.getCurrentSubtag(), u"en");
+  EXPECT_TRUE(parser.nextSubtag());
+  EXPECT_EQ(parser.getCurrentSubtag(), u"US");
+  EXPECT_TRUE(parser.nextSubtag());
+  EXPECT_EQ(parser.getCurrentSubtag(), u"u");
+  EXPECT_TRUE(parser.nextSubtag());
+  EXPECT_EQ(parser.getCurrentSubtag(), u"phonebk");
+  EXPECT_FALSE(parser.nextSubtag());
+  EXPECT_FALSE(parser.hasMoreSubtags());
+  
+  std::u16string str2 = u"und--";
+  LanguageTagParser badParser(str2);
+  EXPECT_EQ(str2, badParser.toString());
+  EXPECT_TRUE(badParser.hasMoreSubtags());
+  EXPECT_TRUE(badParser.nextSubtag());
+  EXPECT_EQ(badParser.getCurrentSubtag(), u"und");
+  EXPECT_FALSE(badParser.nextSubtag());
+}
+
 TEST(PlatformIntlBCP47Parser, LanguageIdTest) {
+  LanguageTagParser parser1(u"en-US"); // language + county code
+  parser1.parseUnicodeLanguageId();
+  EXPECT_EQ(u"en-US", parser1.toString());
+  ParsedLanguageIdentifier lang1 = parser1.getParsedLocaleId().languageIdentifier;
+  EXPECT_EQ(u"en", lang1.languageSubtag);
+  EXPECT_EQ(u"US", lang1.regionSubtag);
+  
+  LanguageTagParser parser2(u"cmn-Arab-dE"); // language + script + country code
+  EXPECT_EQ(u"cmn-Arab-dE", parser2.toString());
+  ParsedLanguageIdentifier lang2 = parser2.getParsedLocaleId().languageIdentifier;
+  EXPECT_EQ(u"cmn", lang2.languageSubtag);
+  EXPECT_EQ(u"Arab", lang2.scriptSubtag);
+  EXPECT_EQ(u"dE", lang2.regionSubtag);
+  
+  LanguageTagParser parser3(u"zh-319"); // language + region code
+  ParsedLanguageIdentifier lang3 = parser3.getParsedLocaleId().languageIdentifier;
+  EXPECT_EQ(u"zh", lang3.languageSubtag);
+  EXPECT_EQ(u"319", lang3.regionSubtag);
+  
+  LanguageTagParser parser4(u"zh-319-u-abc-test"); // language + region code + extension
+  ParsedLanguageIdentifier lang4 = parser4.getParsedLocaleId().languageIdentifier;
+  EXPECT_EQ(u"zh", lang4.languageSubtag);
+  EXPECT_EQ(u"319", lang4.regionSubtag);
+  
   EXPECT_TRUE(1);
 }
 
