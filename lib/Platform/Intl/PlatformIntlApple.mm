@@ -352,98 +352,13 @@ double Collator::compare(
 // Implementation of
 // https://tc39.es/ecma402/#datetimeformat-objects
 struct DateTimeFormat::Impl {
-  // Enum declaration for DateTimeFormat internal slots
-  // https://tc39.es/ecma402/#datetimeformat-objects
-  enum class FormatMatcher : size_t {Undefined = 0, Bestfit, Basic};
-  static constexpr const char16_t* formatMatchers[] = {u"Undefined", u"Bestfit", u"Basic"};
-
-  enum class HourCycle : size_t {Undefined = 0, H11, H12, H23, H24};
-  static constexpr const char16_t*  hourCycleVector[] = {u"Undefined", u"H11", u"H12", u"H23", u"H24"};
-  
-  enum class Weekday : size_t {Undefined = 0, Narrow, Short, Long};
-  static constexpr const char16_t*  weekdayVector[] = {u"Undefined", u"Narrow", u"Short", u"Long"};
-  
-  enum class Era : size_t {Undefined = 0, Narrow, Short, Long};
-  static constexpr const char16_t*  eraVector[] = {u"Undefined", u"Narrow", u"Short", u"Long"};
-  
-  enum class Year : size_t {Undefined = 0, TwoDigit, Numeric};
-  static constexpr const char16_t*  yearVector[] = {u"Undefined", u"TwoDigit", u"Numeric"};
-  
-  enum class Month : size_t {Undefined = 0, TwoDigit, Numeric, Narrow, Short, Long};
-  static constexpr const char16_t*  monthVector[] = {u"Undefined", u"TwoDigit", u"Numeric", u"Narrow", u"Short", u"Long"};
-  enum class Day : size_t {Undefined = 0, TwoDigit, Numeric};
-  static constexpr const char16_t*  dayVector[] = {u"Undefined", u"TwoDigit", u"Numeric"};
-  
-  enum class DayPeriod : size_t {Undefined = 0, Narrow, Short, Long};
-  static constexpr const char16_t*  dayPeriodVector[] = {u"Undefined", u"Narrow", u"Short", u"Long"};
-  
-  enum class Hour : size_t {Undefined = 0, TwoDigit, Numeric};
-  static constexpr const char16_t*  hourVector[] = {u"Undefined", u"TwoDigit", u"Numeric"};
-  
-  enum class Minute : size_t {Undefined = 0, TwoDigit, Numeric};
-  static constexpr const char16_t*  minuteVector[] = {u"Undefined", u"TwoDigit", u"Numeric"};
-  
-  enum class Second : size_t {Undefined = 0, TwoDigit, Numeric};
-  static constexpr const char16_t*  secondVector[] = {u"Undefined", u"TwoDigit", u"Numeric"};
-  
-  enum class TimeZoneName : size_t {Undefined = 0, Short, Long};
-  static constexpr const char16_t*  timeZoneNameVector[] = {u"Undefined", u"Short", u"Long"};
-  
-  enum class DateTimeStyle : size_t {Undefined = 0, Full, Long, Medium, Short};
-  static constexpr const char16_t* dateTimeStyleVector[] = {u"Undefined", u"Full", u"Long", u"Medium", u"Short"};
-
-  static std::u16string formatMatcherString(const FormatMatcher &formatMatcher) {
-    return formatMatchers[static_cast<size_t>(formatMatcher)];
-  }
-  static std::u16string hourCycleString(const HourCycle &hourCycle) {
-    return hourCycleVector[static_cast<size_t>(hourCycle)];
-  }
-  static std::u16string weekdayString(const Weekday &weekday) {
-    return weekdayVector[static_cast<size_t>(weekday)];
-  }
-  static std::u16string eraString(const Era &era) {
-    return eraVector[static_cast<size_t>(era)];
-  }
-  static std::u16string yearString(const Year &year) {
-    return yearVector[static_cast<size_t>(year)];
-  }
-  static std::u16string monthString(const Month &month) {
-    return monthVector[static_cast<size_t>(month)];
-  }
-  static std::u16string dayString(const Day &day) {
-    return dayVector[static_cast<size_t>(day)];
-  }
-  static std::u16string hourString(const Hour &hour) {
-    return hourVector[static_cast<size_t>(hour)];
-  }
-  static std::u16string minuteString(const Minute &minute) {
-    return minuteVector[static_cast<size_t>(minute)];
-  }
-  static std::u16string secondString(const Second &second) {
-    return secondVector[static_cast<size_t>(second)];
-  }
-  static std::u16string timeZoneNameString(const TimeZoneName &timeZoneName) {
-    return timeZoneNameVector[static_cast<size_t>(timeZoneName)];
-  }
-  // https://tc39.es/ecma402/#sec-date-time-style-format
-  static std::u16string dateTimeStyleString(const DateTimeStyle &dateTimeStyle) {
-    return dateTimeStyleVector[static_cast<size_t>(dateTimeStyle)];
-  }
-  static size_t enumMatcher(std::u16string enumStr, const char16_t* const enums[]) {
-    for (size_t i = 0; i < 4; i++) {// vector not larger than 4
-      if (enumStr == enums[i]) {
-        return i;
-      }
-    }
-    size_t fallback = 0;
-    return fallback;
-  }
+  struct newRecord {
+    std::u16string localeMatcher, ca, nu, hc, hcDefault;// For opt
+  };
 // Table 7 https://tc39.es/ecma402/#table-datetimeformat-resolvedoptions-properties
-  // For opt in initialize
-  std::u16string mFormatMatcher, mHourCycle, mWeekday, mEra, mYear, mMonth, mDay, mDayPeriod, mHour, mMinute, mSecond, mTimeZone, mTimeZoneName, mDateStyle, mTimeStyle, mCalendar;
-  std::u16string localeMatcher, ca, nu, hc, hcDefault;
+  // For DateTimeFormat::impl_ in initialize
+  std::u16string mFormatMatcher, mHourCycle, mWeekday, mEra, mYear, mMonth, mDay, mDayPeriod, mHour, mMinute, mSecond, mTimeZone, mTimeZoneName, mDateStyle, mTimeStyle, mCalendar, locale;
   bool hour12;
-  std::u16string locale; // Needed for resolvedOptions
 };
 
 DateTimeFormat::DateTimeFormat() : impl_(std::make_unique<Impl>()) {}
@@ -482,7 +397,8 @@ std::u16string resolveCalendarAlias(
     return value;
   } else {
     // Found, so return it from vector?
-    return s_calendarAliasMappings.at(0);// Should still return value?
+    int pos = find(s_calendarAliasMappings.begin(), s_calendarAliasMappings.end(), value) - s_calendarAliasMappings.begin();;// Should still return value?
+    return s_calendarAliasMappings.at(pos);
   }
 }
 std::u16string resolveNumberSystemAlias(
@@ -494,7 +410,8 @@ std::u16string resolveNumberSystemAlias(
     return value;
   } else {
     // Found, so return it from vector?
-    return s_numberAliasMappings.at(0);// Should still return value?
+    int pos = find(s_numberAliasMappings.begin(), s_numberAliasMappings.end(), value) - s_numberAliasMappings.begin();
+    return s_numberAliasMappings.at(pos);// Should still return value?
   }
 }
 std::u16string resolveCollationAlias(
@@ -511,7 +428,7 @@ std::u16string resolveCollationAlias(
     return value;
   } else {
     // Found, so return it from vector?
-    return s_collationAliasMappings.at(0);// Should still return value?
+    return s_collationAliasMappings.at(value);// Should still return value?
   }
 }
 std::u16string resolveKnownAliases(
@@ -665,7 +582,7 @@ void setUnicodeExtensions(
     std::u16string supportedExtendionKey,
     std::vector<std::u16string> valueList){
   std::vector<std::u16string> unicodeExtensionKeywords;
-  // Not sure what to do here
+  // TODO: From BCP Parser
   //https://github.com/facebook/hermes/blob/17d7583650e5f4b59645e0607e24c7ccb15404ee/lib/Platform/Intl/java/com/facebook/hermes/intl/LocaleObjectAndroid.java#L247
 };
 // https://tc39.es/ecma402/#sec-resolvelocale
@@ -729,7 +646,7 @@ ResolveLocale resolveLocale(
       }
 }
 }
-      result.locale = localeMatchResult.matchedLocale;
+      result.locale = localeMatchResult.locale;
       return result;
 }
 // Implementation of
@@ -863,7 +780,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   Options copyOptions = options;
   auto optionsToUse = toDateTimeOptions(copyOptions, u"any", u"date").getValue();
   // 3. Let opt be a new Record.
-  Impl opt;
+  Impl::newRecord opt;
   // 4. Let matcher be ? GetOption(options, "localeMatcher", "string", «
   //   "lookup", "best fit" », "best fit").
   std::vector<std::u16string> values = {u"lookup", u"best fit"};
@@ -878,7 +795,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   //    undefined, undefined).
   std::vector<std::u16string> emptyVector;
   Options undefinedFallback;
-  std::u16string undefined = u"und"; // If this is truly undefined it will error throw?
+  std::u16string undefined; // If this is truly undefined it will error throw?
   undefinedFallback.emplace(std::u16string(u"fallback"), Option(undefined));
   auto calendar = getOption(optionsToUse, u"calendar", u"string", emptyVector, undefinedFallback);
   // 7. If calendar is not undefined, then
@@ -886,12 +803,13 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   //       nonterminal, throw a RangeError exception.
   // 8. Set opt.[[ca]] to calendar.
   if (calendar->getString() != u"") {
+      if (calendar->isString()) {
       opt.ca = calendar->getString();
   }
   else {
     return runtime->raiseRangeError("Incorrect calendar information provided");
   }
-        
+  }
   // 9. Let numberingSystem be ? GetOption(options, "numberingSystem",
   //    "string", undefined, undefined).
   auto numberingSystem = getOption(optionsToUse, u"numberingSystem", u"string", emptyVector, undefinedFallback);
@@ -899,7 +817,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   //     a. If numberingSystem does not match the Unicode Locale Identifier
   //        type nonterminal, throw a RangeError exception.
   // 11. Set opt.[[nu]] to numberingSystem.
-  if (numberingSystem->getString() != u"") {
+  if (numberingSystem->isString()) {
       opt.nu = numberingSystem->getString();
   }
   else {
@@ -924,25 +842,24 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   // 16 - 23
   const std::vector<std::u16string> relevantExtensionKeys = {u"ca", u"nu", u"hc"};
   auto r = resolveLocale(locales, requestedLocales, options, relevantExtensionKeys);
-      
+  impl_->locale = r.locale; //needs fixing
   bool useDefaultCalendar;
   auto mResolvedLocaleObjectForResolvedOptions = r.locale;
   Option calendarResolved = r.ca;
-  if (calendarResolved.getString() != u"") {
+  if (calendarResolved.isString()) {
         useDefaultCalendar = false;
-        opt.mCalendar = calendarResolved.getString();
-      } else {
+        impl_->mCalendar = calendarResolved.getString();
+  } else {
         useDefaultCalendar = true;
         // Get default calendar name i.e. gregorian
 //        NSString *nstrCalendar = (NSString*)[NSCalendar id];
 //        std::u16string defaultCalendar = nsStringToU16String(nstrCalendar);
-        opt.mCalendar = u"gregorian"; // Placeholder for now, needs fixing
-      }
-      
+    impl_->mCalendar = u"gregorian";// Placeholder for now, needs fixing
+  }
   bool useDefaultNumberSystem;
   std::u16string mNumberingSystem;
   Option numberingSystemResolved = r.nu;
-  if (numberingSystemResolved.getString() != u"") {
+  if (numberingSystemResolved.isString()) {
         useDefaultNumberSystem = false;
         mNumberingSystem = numberingSystemResolved.getString();
       } else {
@@ -977,8 +894,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
       return runtime->raiseRangeError("Incorrect timeZone information provided");
     }
   }
-  opt.mTimeZone = timeZoneValue;
-      
+  impl_->mTimeZone = timeZoneValue;
   // 28 - 34
   const std::vector<std::u16string> matcherVector = {u"basic", u"best fit"};
   const std::vector<std::u16string> sizeVector = {u"long", u"short", u"narrow"};
@@ -986,42 +902,29 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   const std::vector<std::u16string> monthVector = {u"numeric", u"2-digit", u"long", u"short", u"narrow"};
   const std::vector<std::u16string> timeZoneNameVector = {u"long", u"short"};
   const std::vector<std::u16string> styleVector = {u"full", u"long", u"medium", u"short"};
-//  // String the enum
-//  auto strngEnum = Impl::formatMatcherString(Impl::FormatMatcher());
-//  // Get the index ERROR
-//  size_t inx = Impl::enumMatcher(strngEnum, Impl::formatMatchers);
-//  // Switch case to get correct string from the index
-//  auto fmSwitch = Impl::formatMatcherSwitch(Impl::FormatMatcher(inx));
-  opt.mFormatMatcher = getOption(optionsToUse, u"formatMatcher", u"string", matcherVector, undefinedFallback)->getString();
 
-  opt.mWeekday = getOption(optionsToUse, u"weekday", u"string", sizeVector, undefinedFallback)->getString();
+  impl_->mFormatMatcher = getOption(optionsToUse, u"formatMatcher", u"string", matcherVector, undefinedFallback)->getString();
+  impl_->mWeekday = getOption(optionsToUse, u"weekday", u"string", sizeVector, undefinedFallback)->getString();
+  impl_->mEra = getOption(optionsToUse, u"era", u"string", sizeVector, undefinedFallback)->getString();
+  impl_->mYear = getOption(optionsToUse, u"year", u"string", numberVector, undefinedFallback)->getString();
+  impl_->mMonth = getOption(optionsToUse, u"month", u"string", monthVector, undefinedFallback)->getString();
+  impl_->mDay = getOption(optionsToUse, u"day", u"string", numberVector, undefinedFallback)->getString();
+  impl_->mHour = getOption(optionsToUse, u"hour", u"string", numberVector, undefinedFallback)->getString();
+  impl_->mMinute = getOption(optionsToUse, u"minute", u"string", numberVector, undefinedFallback)->getString();
+  impl_->mSecond = getOption(optionsToUse, u"second", u"string", numberVector, undefinedFallback)->getString();
+  impl_->mTimeZoneName = getOption(optionsToUse, u"timeZoneName", u"string", timeZoneNameVector, undefinedFallback)->getString();
+  impl_->mDateStyle = getOption(optionsToUse, u"dateStyle", u"string", styleVector, undefinedFallback)->getString();
+  impl_->mTimeStyle = getOption(optionsToUse, u"timeStyle", u"string", styleVector, undefinedFallback)->getString();
+  impl_->mDayPeriod = getOption(optionsToUse, u"dayPeriod", u"string", sizeVector, undefinedFallback)->getString();
 
-  opt.mEra = getOption(optionsToUse, u"era", u"string", sizeVector, undefinedFallback)->getString();
-  
-  opt.mYear = getOption(optionsToUse, u"year", u"string", numberVector, undefinedFallback)->getString();
-      
-  opt.mMonth = getOption(optionsToUse, u"month", u"string", monthVector, undefinedFallback)->getString();
-      
-  opt.mDay = getOption(optionsToUse, u"day", u"string", numberVector, undefinedFallback)->getString();
-  
-  opt.mHour = getOption(optionsToUse, u"hour", u"string", numberVector, undefinedFallback)->getString();
-      
-  opt.mMinute = getOption(optionsToUse, u"minute", u"string", numberVector, undefinedFallback)->getString();
-      
-  opt.mSecond = getOption(optionsToUse, u"second", u"string", numberVector, undefinedFallback)->getString();
-      
-  opt.mTimeZoneName = getOption(optionsToUse, u"timeZoneName", u"string", timeZoneNameVector, undefinedFallback)->getString();
-      
-  opt.mDateStyle = getOption(optionsToUse, u"dateStyle", u"string", styleVector, undefinedFallback)->getString();
-  
-  opt.mTimeStyle = getOption(optionsToUse, u"timeStyle", u"string", styleVector, undefinedFallback)->getString();
   // 36
-  if (opt.mHour == u"und") {
-    opt.mHourCycle = u"und";
+  if (impl_->mHour == u"") {
+    impl_->mHourCycle = u"";
   } else {
 // TODO: get default hour cycle
     std::u16string hcDefault = u"H24";
-    if (hourCycleResolved.getString() == u"") {
+    opt.hcDefault = u"H24";
+    if (hourCycleResolved.isString()) {
       opt.hc = hcDefault;
     } else {
       opt.hc = hourCycleResolved.getString();
@@ -1042,7 +945,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
         opt.hc = u"H24";
       }
     }
-    opt.mHourCycle = opt.hc;
+    impl_->mHourCycle = opt.hc;
   }
 }
 // Implementer note: This method corresponds roughly to
