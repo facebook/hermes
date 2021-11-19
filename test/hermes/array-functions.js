@@ -912,6 +912,56 @@ print(Array.prototype.findIndex.call(
 ));
 // CHECK-NEXT: 1
 
+print('findLast');
+// CHECK-LABEL: findLast
+print(Array.prototype.findLast.length);
+// CHECK-NEXT: 1
+print([].findLast(function(){}));
+// CHECK-NEXT: undefined
+print([1,2,3].findLast(function(v){ return v === 4 }));
+// CHECK-NEXT: undefined
+print([0,1,2].findLast(function(v){ return v }));
+// CHECK-NEXT: 2
+print(['a','b','c'].findLast(function(v, k, obj) {
+  print(this, v, k, obj);
+  return v === 'b';
+}, 'thisarg'));
+// CHECK-NEXT: thisarg c 2 a,b,c
+// CHECK-NEXT: thisarg b 1 a,b,c
+// CHECK-NEXT: b
+print(Array.prototype.findLast.call(
+  {0:'a',1:'b',length:3},
+  function(v) { return v === 'b'; }
+));
+// CHECK-NEXT: b
+print([3,3,3].findLast(function(v){ return v === 3 }));
+// CHECK-NEXT: 3
+
+print('findLastIndex');
+// CHECK-LABEL: findLastIndex
+print(Array.prototype.findLastIndex.length);
+// CHECK-NEXT: 1
+print([].findLastIndex(function(){}));
+// CHECK-NEXT: -1
+print([1,2,3].findLastIndex(function(v){ return v === 4 }));
+// CHECK-NEXT: -1
+print([0,1,2].findLastIndex(function(v){ return v }));
+// CHECK-NEXT: 2
+print(['a','b','c'].findLastIndex(function(v, k, obj) {
+  print(this, v, k, obj);
+  return v === 'b';
+}, 'thisarg'));
+// CHECK-NEXT: thisarg c 2 a,b,c
+// CHECK-NEXT: thisarg b 1 a,b,c
+// CHECK-NEXT: 1
+print(Array.prototype.findLastIndex.call(
+  {0:'a',1:'b',length:3},
+  function(v) { return v === 'b'; }
+));
+// CHECK-NEXT: 1
+print([3,3,3].findLastIndex(function(v){ return v === 3 }));
+// CHECK-NEXT: 2
+
 print('reduce');
 // CHECK-LABEL: reduce
 var a = [1,2,3,4];

@@ -1872,7 +1872,6 @@ HANDLESAN_SKIP_LIST = [
 
 UNSUPPORTED_FEATURES = [
     "AggregateError",
-    "array-find-from-last",
     "Promise.prototype.finally",
     "Symbol.asyncIterator",
     "Symbol.species",
