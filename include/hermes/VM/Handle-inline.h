@@ -32,18 +32,14 @@ inline PseudoHandle<T> PseudoHandle<T>::dyn_vmcast(PseudoHandle<U> &&other) {
   return result;
 }
 
-/// Allocate a new handle in the specified GCScope
-inline HandleBase::HandleBase(GCScope *inScope, HermesValue value)
-    : handle_(HandleRootOwner::newPinnedHermesValue(inScope, value)) {
+/// Allocate a new handle in the current GCScope
+inline HandleBase::HandleBase(HandleRootOwner *runtime, HermesValue value)
+    : handle_(runtime->newPinnedHermesValue(value)) {
 #ifndef NDEBUG
-  gcScope_ = inScope;
+  gcScope_ = runtime->getTopGCScope();
   ++gcScope_->numActiveHandles_;
 #endif
 }
-
-/// Allocate a new handle in the current GCScope
-inline HandleBase::HandleBase(HandleRootOwner *runtime, HermesValue value)
-    : HandleBase(runtime->getTopGCScope(), value) {}
 
 #ifndef NDEBUG
 inline HandleBase::HandleBase(const HandleBase &sc) : handle_(sc.handle_) {
