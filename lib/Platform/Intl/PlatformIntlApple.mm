@@ -27,9 +27,8 @@ std::u16string nsStringToU16String(NSString *src) {
 std::vector<std::u16string> nsStringArrayToU16StringArray(const NSArray<NSString *> *array) {
   auto size = [array count];
   std::vector<std::u16string> result;
-  result.reserve(size);
   for (size_t i = 0; i < size; i++) {
-    result[i] = nsStringToU16String(array[i]);
+    result.push_back(nsStringToU16String(array[i]));
   }
   return result;
 }
@@ -234,7 +233,7 @@ vm::CallResult<Option> getOption(
   // a. Set value to ! ToBoolean(value).
   // 6. If type is "string", then
   // a. Set value to ? ToString(value).
-    if(!value->second.isBool() && !value->second.isString()) {
+    if(type != u"string" && type != u"boolean") {
       return vm::ExecutionStatus::EXCEPTION;
     }
   // 7. If values is not undefined and values does not contain an element equal to value, throw a RangeError exception.
@@ -763,6 +762,25 @@ bool isTimeZoneValid(
   }
   return false;
 }
+//https://github.com/facebook/hermes/blob/33cf15ab318694423926c3762e001465b399ef38/lib/Platform/Intl/java/com/facebook/hermes/intl/PlatformDateTimeFormatterAndroid.java#L121
+std::u16string getDefaultHourCycle(std::u16string locale) {
+  NSString *l = u16StringToNSString(locale);
+  NSLocale *strToLocale = [[NSLocale alloc] initWithLocaleIdentifier:l];
+  NSString *formatStringForHours = [NSDateFormatter dateFormatFromTemplate:@"j" options:0 locale:strToLocale];
+  std::u16string dateFormatPattern = nsStringToU16String(formatStringForHours);
+  if (dateFormatPattern.find(u"h") < dateFormatPattern.length()) {
+    return u"h12";
+  }
+  else if (dateFormatPattern.find(u"K") < dateFormatPattern.length()) {
+    return u"h11";
+  }
+  else if (dateFormatPattern.find(u"H") < dateFormatPattern.length()) {
+    return u"h23";
+  }
+  else {
+    return u"h24";
+  }
+}
 // Implementation of
 // https://tc39.es/ecma402/#sec-initializedatetimeformat
 vm::ExecutionStatus DateTimeFormat::initialize(
@@ -778,7 +796,11 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   // 2. Let options be ? ToDateTimeOptions(options, "any", "date").
   // Create a copy of the unordered map &options
   Options copyOptions = options;
-  auto optionsToUse = toDateTimeOptions(copyOptions, u"any", u"date").getValue();
+  auto optionsTo = toDateTimeOptions(copyOptions, u"any", u"date");
+      if (optionsTo.getStatus() == vm::ExecutionStatus::EXCEPTION){
+        return runtime->raiseTypeError("timeStyle or dateStyle is not defined");
+      }
+  auto optionsToUse = optionsTo.getValue();
   // 3. Let opt be a new Record.
   Impl::newRecord opt;
   // 4. Let matcher be ? GetOption(options, "localeMatcher", "string", «
@@ -886,7 +908,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
 //  26. Else,
   else {
 //  a. Let timeZone be ? ToString(timeZone).
-    timeZoneValue = normalizeTimeZoneName(timeZone);
+    timeZoneValue = normalizeTimeZoneName(timeZoneIter->second.getString());
     bool validateTimeZone = isTimeZoneValid(timeZoneValue);
 //  b. If the result of IsValidTimeZoneName(timeZone) is false, then
     if (!validateTimeZone) {
@@ -900,53 +922,119 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   const std::vector<std::u16string> sizeVector = {u"long", u"short", u"narrow"};
   const std::vector<std::u16string> numberVector = {u"numeric", u"2-digit"};
   const std::vector<std::u16string> monthVector = {u"numeric", u"2-digit", u"long", u"short", u"narrow"};
-  const std::vector<std::u16string> timeZoneNameVector = {u"long", u"short"};
+  const std::vector<std::u16string> timeZoneNameVector = {u"long", u"short", u"shortOffset", u"longOffset", u"shortGeneric", u"longGeneric"};
   const std::vector<std::u16string> styleVector = {u"full", u"long", u"medium", u"short"};
-
-  impl_->mFormatMatcher = getOption(optionsToUse, u"formatMatcher", u"string", matcherVector, undefinedFallback)->getString();
-  impl_->mWeekday = getOption(optionsToUse, u"weekday", u"string", sizeVector, undefinedFallback)->getString();
-  impl_->mEra = getOption(optionsToUse, u"era", u"string", sizeVector, undefinedFallback)->getString();
-  impl_->mYear = getOption(optionsToUse, u"year", u"string", numberVector, undefinedFallback)->getString();
-  impl_->mMonth = getOption(optionsToUse, u"month", u"string", monthVector, undefinedFallback)->getString();
-  impl_->mDay = getOption(optionsToUse, u"day", u"string", numberVector, undefinedFallback)->getString();
-  impl_->mHour = getOption(optionsToUse, u"hour", u"string", numberVector, undefinedFallback)->getString();
-  impl_->mMinute = getOption(optionsToUse, u"minute", u"string", numberVector, undefinedFallback)->getString();
-  impl_->mSecond = getOption(optionsToUse, u"second", u"string", numberVector, undefinedFallback)->getString();
-  impl_->mTimeZoneName = getOption(optionsToUse, u"timeZoneName", u"string", timeZoneNameVector, undefinedFallback)->getString();
-  impl_->mDateStyle = getOption(optionsToUse, u"dateStyle", u"string", styleVector, undefinedFallback)->getString();
-  impl_->mTimeStyle = getOption(optionsToUse, u"timeStyle", u"string", styleVector, undefinedFallback)->getString();
-  impl_->mDayPeriod = getOption(optionsToUse, u"dayPeriod", u"string", sizeVector, undefinedFallback)->getString();
+  
+  auto formatMatcherOption = getOption(optionsToUse, u"formatMatcher", u"string", matcherVector, undefinedFallback);
+  if (formatMatcherOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid formatMatcher");
+  }
+  impl_->mFormatMatcher = formatMatcherOption->getString();
+      
+  auto weekdayOption = getOption(optionsToUse, u"weekday", u"string", sizeVector, undefinedFallback);
+  if (weekdayOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid weekday");
+  }
+  impl_->mWeekday = weekdayOption->getString();
+  
+  auto eraOption = getOption(optionsToUse, u"era", u"string", sizeVector, undefinedFallback);
+  if (eraOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid era");
+  }
+  impl_->mEra = eraOption->getString();
+      
+  auto yearOption = getOption(optionsToUse, u"year", u"string", numberVector, undefinedFallback);
+  if (yearOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid year");
+  }
+  impl_->mYear = yearOption->getString();
+  
+  auto monthOption = getOption(optionsToUse, u"month", u"string", monthVector, undefinedFallback);
+  if (monthOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid month");
+  }
+  impl_->mMonth = monthOption->getString();
+      
+  auto dayOption = getOption(optionsToUse, u"day", u"string", numberVector, undefinedFallback);
+  if (dayOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid day");
+  }
+  impl_->mDay = dayOption->getString();
+      
+  auto hourOption = getOption(optionsToUse, u"hour", u"string", numberVector, undefinedFallback);
+  if (hourOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid hour");
+  }
+  impl_->mHour = hourOption->getString();
+      
+  auto minuteOption = getOption(optionsToUse, u"minute", u"string", numberVector, undefinedFallback);
+  if (minuteOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid minute");
+  }
+  impl_->mMinute = minuteOption->getString();
+      
+  auto secondOption = getOption(optionsToUse, u"second", u"string", numberVector, undefinedFallback);
+  if (secondOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid second");
+  }
+  impl_->mSecond = secondOption->getString();
+      
+  auto timeZoneNameOption = getOption(optionsToUse, u"timeZoneName", u"string", timeZoneNameVector, undefinedFallback);
+  if (timeZoneNameOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid timeZoneName");
+  }
+  impl_->mTimeZoneName = timeZoneNameOption ->getString();
+      
+  auto dateStyleOption = getOption(optionsToUse, u"dateStyle", u"string", styleVector, undefinedFallback);
+  if (dateStyleOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid dateStyle");
+  }
+  impl_->mDateStyle = dateStyleOption->getString();
+      
+  auto timeStyleOption = getOption(optionsToUse, u"timeStyle", u"string", styleVector, undefinedFallback);
+  if (timeStyleOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid timeStyle");
+  }
+  impl_->mTimeStyle = timeStyleOption->getString();
+      
+  auto dayPeriodOption = getOption(optionsToUse, u"dayPeriod", u"string", sizeVector, undefinedFallback);
+  if (dayPeriodOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid dayPeriod");
+  }
+  impl_->mDayPeriod = dayPeriodOption->getString();
 
   // 36
   if (impl_->mHour == u"") {
     impl_->mHourCycle = u"";
   } else {
-// TODO: get default hour cycle
-    std::u16string hcDefault = u"H24";
-    opt.hcDefault = u"H24";
+    std::u16string hcDefaultNS = getDefaultHourCycle(impl_->locale);
+    opt.hcDefault = hcDefaultNS;
     if (hourCycleResolved.isString()) {
-      opt.hc = hcDefault;
+      opt.hc = hcDefaultNS;
     } else {
       opt.hc = hourCycleResolved.getString();
     }
-    if (hour12->isBool()) {// true
-      if (hcDefault == u"H11" || hcDefault == u"H23") {
-        opt.hc = u"H11";
+    if (hour12->isBool()) {
+      if (hour12->getBool()) {// true
+      if (hcDefaultNS == u"h11" || hcDefaultNS == u"h23") {
+        opt.hc = u"h11";
       }
       else {
-        opt.hc = u"H12";
+        opt.hc = u"h12";
+      }
+      }
+    else {
+      if (hcDefaultNS == u"h11" || hcDefaultNS == u"h23") {
+        opt.hc = u"h23";
+      }
+      else {
+        opt.hc = u"h24";
       }
     }
-    else {
-      if (hcDefault == u"H11" || hcDefault == u"H23") {
-        opt.hc = u"H23";
-      }
-      else {
-        opt.hc = u"H24";
-      }
     }
     impl_->mHourCycle = opt.hc;
   }
+  return vm::ExecutionStatus::RETURNED;
 }
 // Implementer note: This method corresponds roughly to
 // https://tc39.es/ecma402/#sec-intl.datetimeformat.prototype.resolvedoptions
@@ -978,7 +1066,7 @@ Options DateTimeFormat::resolvedOptions() noexcept {
     options.emplace(u"year", Option(impl_->mYear));
   }
   if (impl_->mMonth != u"") {
-    options.emplace(u"mMonth", Option(impl_->mMonth));
+    options.emplace(u"month", Option(impl_->mMonth));
   }
   if (impl_->mDay != u"") {
     options.emplace(u"day", Option(impl_->mDay));
@@ -996,10 +1084,10 @@ Options DateTimeFormat::resolvedOptions() noexcept {
     options.emplace(u"timeZoneName", Option(impl_->mTimeZoneName));
   }
   if (impl_->mDateStyle != u"") {
-    options.emplace(u"timeZoneName", Option(impl_->mDateStyle));
+    options.emplace(u"dateStyle", Option(impl_->mDateStyle));
   }
   if (impl_->mTimeStyle != u"") {
-    options.emplace(u"timeZoneName", Option(impl_->mTimeStyle));
+    options.emplace(u"timeStyle", Option(impl_->mTimeStyle));
   }
   return options;
 }
