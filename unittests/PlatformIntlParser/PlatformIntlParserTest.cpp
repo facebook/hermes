@@ -146,18 +146,21 @@ TEST(PlatformIntlBCP47Parser, LanguageIdTest) {
   EXPECT_EQ(u"US", lang1.regionSubtag);
   
   LanguageTagParser parser2(u"cmn-Arab-dE"); // language + script + country code
+  parser2.parseUnicodeLanguageId();
   EXPECT_EQ(u"cmn-Arab-dE", parser2.toString());
   ParsedLanguageIdentifier lang2 = parser2.getParsedLocaleId().languageIdentifier;
   EXPECT_EQ(u"cmn", lang2.languageSubtag);
   EXPECT_EQ(u"Arab", lang2.scriptSubtag);
   EXPECT_EQ(u"dE", lang2.regionSubtag);
-  
+
   LanguageTagParser parser3(u"zh-319"); // language + region code
+  parser3.parseUnicodeLanguageId();
   ParsedLanguageIdentifier lang3 = parser3.getParsedLocaleId().languageIdentifier;
   EXPECT_EQ(u"zh", lang3.languageSubtag);
   EXPECT_EQ(u"319", lang3.regionSubtag);
-  
+
   LanguageTagParser parser4(u"zh-319-u-abc-test"); // language + region code + extension
+  parser4.parseUnicodeLanguageId();
   ParsedLanguageIdentifier lang4 = parser4.getParsedLocaleId().languageIdentifier;
   EXPECT_EQ(u"zh", lang4.languageSubtag);
   EXPECT_EQ(u"319", lang4.regionSubtag);

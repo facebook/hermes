@@ -38,31 +38,19 @@ struct ParsedLanguageIdentifier {
   std::vector<std::u16string> variantSubtagList;
 };
 
-class ParsedLocaleIdentifier {
- public:
-  ParsedLocaleIdentifier();
-  ~ParsedLocaleIdentifier();
-
-  // public methods
-  std::u16string toString();
-
-  // public fields
+struct ParsedLocaleIdentifier {
   ParsedLanguageIdentifier languageIdentifier;
-
   std::vector<std::u16string> unicodeExtensionAttributes;
+  
   std::unordered_map<std::u16string, std::vector<std::u16string>>
       unicodeExtensionKeywords;
-
   ParsedLanguageIdentifier transformedLanguageIdentifier;
+  
   std::unordered_map<std::u16string, std::vector<std::u16string>>
       transformedExtensionFields;
 
   std::unordered_map<char16_t, std::vector<std::u16string>> otherExtensionMap;
   std::vector<std::u16string> puExtensions;
-
- private:
-  struct Impl;
-  std::unique_ptr<Impl> impl_;
 };
 
 class LanguageTagParser {
@@ -75,9 +63,8 @@ class LanguageTagParser {
   ParsedLocaleIdentifier getParsedLocaleId();
   bool isStructurallyValidLanguageTag();
   std::u16string getCanonicalizedLocale();
-  // tokenizer functions
+  
   std::u16string toString();
-  std::u16string toParsedString();
 
   // TODO: make these private again
   // private function declaration
@@ -96,6 +83,8 @@ class LanguageTagParser {
  private:
   struct Impl;
   std::unique_ptr<Impl> impl_;
+  
+  bool addVariantSubtag();
 };
 
 } // namespace platform_intl_parser
