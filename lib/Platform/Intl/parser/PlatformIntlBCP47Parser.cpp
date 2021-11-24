@@ -135,13 +135,13 @@ bool LanguageTagParser::parseUnicodeLocaleId() {
     return false;
   }
   if (!hasMoreSubtags()) {
-    return false;
+    return false; //true?
   }
   if (!parseExtensions()) {
     return false;
   }
   
-  return false;
+  return true;
 }
 
 bool LanguageTagParser::parseUnicodeLanguageId() {
@@ -173,9 +173,11 @@ bool LanguageTagParser::parseUnicodeLanguageId() {
   
   while (true) {
     if (!isUnicodeVariantSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
-      return false;
+      return true;
     } else {
-      // add variant subtag to list
+      if (!addVariantSubtag()) {
+        return false;
+      }
     }
     
     if (!nextSubtag()) {
@@ -191,7 +193,12 @@ bool LanguageTagParser::addVariantSubtag() {
     impl_->parsedLocaleIdentifier.languageIdentifier.variantSubtagList.push_back(getCurrentSubtag());
   } else {
     auto subtag = getCurrentSubtag();
-    auto position = std::upper_bound(impl_->parsedLocaleIdentifier.languageIdentifier.variantSubtagList.begin(), impl_->parsedLocaleIdentifier.languageIdentifier.variantSubtagList.end(), subtag);
+    auto begin = impl_->parsedLocaleIdentifier.languageIdentifier.variantSubtagList.begin();
+    auto end = impl_->parsedLocaleIdentifier.languageIdentifier.variantSubtagList.end();
+    auto position = std::upper_bound(begin, end, subtag);
+    if (position != std::upper_bound(begin, end, subtag)) {
+      return false;
+    }
     impl_->parsedLocaleIdentifier.languageIdentifier.variantSubtagList.insert(position, subtag);
   }
   return true;
@@ -200,9 +207,9 @@ bool LanguageTagParser::addVariantSubtag() {
 bool LanguageTagParser::parseExtensions() {
   // if transformed extensions and next subtag is transformed extension
   // parse transformed extensions
-
   while (true) {
     // check if current subtag isExtensionSingleton
+
     if (impl_->mSubtagEnd != impl_->mSubtagStart) {
       return true;
     }
@@ -266,14 +273,14 @@ bool LanguageTagParser::parseUnicodeExtension() {
   
   while (isUnicodeExtensionKey(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
     std::u16string key = getCurrentSubtag();
-    std::vector<std::u16string> extensionKeyTypes;
+    std::vector<std::u16string> *extensionKeyTypes = new std::vector<std::u16string>();
     impl_->parsedLocaleIdentifier.unicodeExtensionKeywords.insert({key, extensionKeyTypes});
     
     if (!nextSubtag()) {
       return true;
     } else {
       while (isUnicodeExtensionKeyTypeItem(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
-        extensionKeyTypes.push_back(getCurrentSubtag());
+        extensionKeyTypes->push_back(getCurrentSubtag());
         if (!nextSubtag()) {
           return true;
         }

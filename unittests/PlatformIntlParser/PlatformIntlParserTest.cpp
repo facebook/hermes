@@ -110,33 +110,6 @@ TEST(PlatformIntlBCP47Parser, ExtensionTypeTest) {
   EXPECT_TRUE(isOtherExtension(testString, 23, 24));
 }
 
-// TODO: These tests rely on private functions
-// TODO: exposed for the purpose of testing
-TEST(PlatformIntlBCP47Parser, TagTokenizerTest) {
-  std::u16string str1 = u"en-US-u-phonebk";
-  LanguageTagParser parser(str1);
-  EXPECT_EQ(str1, parser.toString());
-  EXPECT_TRUE(parser.hasMoreSubtags());
-  EXPECT_TRUE(parser.nextSubtag());
-  EXPECT_EQ(parser.getCurrentSubtag(), u"en");
-  EXPECT_TRUE(parser.nextSubtag());
-  EXPECT_EQ(parser.getCurrentSubtag(), u"US");
-  EXPECT_TRUE(parser.nextSubtag());
-  EXPECT_EQ(parser.getCurrentSubtag(), u"u");
-  EXPECT_TRUE(parser.nextSubtag());
-  EXPECT_EQ(parser.getCurrentSubtag(), u"phonebk");
-  EXPECT_FALSE(parser.nextSubtag());
-  EXPECT_FALSE(parser.hasMoreSubtags());
-  
-  std::u16string str2 = u"und--";
-  LanguageTagParser badParser(str2);
-  EXPECT_EQ(str2, badParser.toString());
-  EXPECT_TRUE(badParser.hasMoreSubtags());
-  EXPECT_TRUE(badParser.nextSubtag());
-  EXPECT_EQ(badParser.getCurrentSubtag(), u"und");
-  EXPECT_FALSE(badParser.nextSubtag());
-}
-
 TEST(PlatformIntlBCP47Parser, LanguageIdTest) {
   LanguageTagParser parser1(u"en-US"); // language + county code
   parser1.parseUnicodeLanguageId();
@@ -165,7 +138,29 @@ TEST(PlatformIntlBCP47Parser, LanguageIdTest) {
   EXPECT_EQ(u"zh", lang4.languageSubtag);
   EXPECT_EQ(u"319", lang4.regionSubtag);
   
-  EXPECT_TRUE(1);
+  LanguageTagParser parser5(u"und-variant-alphabet-subtag"); // language + variant list
+  parser5.parseUnicodeLanguageId();
+  ParsedLanguageIdentifier lang5 = parser5.getParsedLocaleId().languageIdentifier;
+  EXPECT_EQ(u"und", lang5.languageSubtag);
+  EXPECT_EQ(u"variant", lang5.variantSubtagList.back());
+  EXPECT_EQ(u"alphabet", lang5.variantSubtagList.front());
+}
+
+TEST(PlatformIntlBCP47Parser, ExtensionText) {
+  LanguageTagParser parser1(u"und-u-att-attr-nu-xx-latn-bob");
+  parser1.parseUnicodeLocaleId();
+  EXPECT_EQ(u"und-u-att-attr-nu-xx-latn-bob", parser1.toString());
+  auto locale1 = parser1.getParsedLocaleId();
+  EXPECT_EQ(u"und", locale1.languageIdentifier.languageSubtag);
+  EXPECT_EQ(u"att", locale1.unicodeExtensionAttributes.front());
+  EXPECT_EQ(u"attr", locale1.unicodeExtensionAttributes.back());
+  auto it = locale1.unicodeExtensionKeywords.begin();
+  EXPECT_EQ(u"nu", it->first);
+  EXPECT_EQ(0, it->second->size());
+  it++;
+  EXPECT_EQ(u"xx", it->first);
+  EXPECT_EQ(u"latn", it->second->front());
+  EXPECT_EQ(u"bob", it->second->back());
 }
 
 } // namespace

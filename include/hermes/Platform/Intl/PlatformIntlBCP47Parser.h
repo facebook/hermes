@@ -40,12 +40,12 @@ struct ParsedLanguageIdentifier {
 
 struct ParsedLocaleIdentifier {
   ParsedLanguageIdentifier languageIdentifier;
+  
   std::vector<std::u16string> unicodeExtensionAttributes;
-  
-  std::unordered_map<std::u16string, std::vector<std::u16string>>
+  std::unordered_map<std::u16string, std::vector<std::u16string>*>
       unicodeExtensionKeywords;
-  ParsedLanguageIdentifier transformedLanguageIdentifier;
   
+  ParsedLanguageIdentifier transformedLanguageIdentifier;
   std::unordered_map<std::u16string, std::vector<std::u16string>>
       transformedExtensionFields;
 
@@ -60,16 +60,21 @@ class LanguageTagParser {
   ~LanguageTagParser();
 
   // public function declaration
+  bool parseUnicodeLocaleId();
+  bool parseUnicodeLanguageId();
   ParsedLocaleIdentifier getParsedLocaleId();
+  
+  // ecma 402 functions
   bool isStructurallyValidLanguageTag();
   std::u16string getCanonicalizedLocale();
   
   std::u16string toString();
-
-  // TODO: make these private again
+ private:
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
+  
   // private function declaration
-  bool parseUnicodeLocaleId();
-  bool parseUnicodeLanguageId();
+  bool addVariantSubtag();
   bool parseExtensions();
   bool parseUnicodeExtension();
   bool parseTransformedExtension();
@@ -79,12 +84,6 @@ class LanguageTagParser {
   std::u16string getCurrentSubtag();
   bool hasMoreSubtags();
   bool nextSubtag();
-  
- private:
-  struct Impl;
-  std::unique_ptr<Impl> impl_;
-  
-  bool addVariantSubtag();
 };
 
 } // namespace platform_intl_parser
