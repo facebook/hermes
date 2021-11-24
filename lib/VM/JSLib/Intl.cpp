@@ -293,6 +293,9 @@ const OptionData kDTFOptions[] = {
      platform_intl::Option::Kind::String,
      kTimeRequired | kTimeDefault},
     {u"timeZoneName", platform_intl::Option::Kind::String, 0},
+    {u"dateStyle", platform_intl::Option::Kind::String, 0},
+    {u"timeStyle", platform_intl::Option::Kind::String, 0},
+    {u"fractionalSecondDigits", platform_intl::Option::Kind::Number, 0},
     {nullptr, platform_intl::Option::Kind::Bool, 0},
 };
 

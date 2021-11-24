@@ -252,20 +252,30 @@ vm::CallResult<Option> getOption(
 }
 // Implementation of
 // https://402.ecma-international.org/8.0/#sec-getnumberoption
-vm::CallResult<int> getOptionNumber(
+vm::CallResult<Option> getOptionNumber(
     const Options &options,
     const std::u16string property,
     const std::uint8_t minimum,
     const std::uint8_t maximum,
-    const Option &fallback) {
+    const Options &fallback) {
 //  1. Assert: Type(options) is Object.
 //  2. Let value be ? Get(options, property).
   auto value = options.find(property);
-  if(!value->second.isNumber()) {
+  if (value == options.end()) {
+    // Return fallback
+    auto fallbackIter = fallback.find(u"fallback");
+    // Make sure fallback exists
+    if (fallbackIter == options.end()) {
+      return vm::ExecutionStatus::EXCEPTION;
+    }
+    return fallback.find(u"fallback")->second;
+  }
+  // Check if it is in the allowed range
+  if (value->second.getNumber() > maximum || value->second.getNumber() < minimum) {
     return vm::ExecutionStatus::EXCEPTION;
   }
 //  3. Return ? DefaultNumberOption(value, minimum, maximum, fallback).
-  return value->second.getNumber();
+  return value->second;
 }
 
 // Implementation of
@@ -357,6 +367,7 @@ struct DateTimeFormat::Impl {
 // Table 7 https://tc39.es/ecma402/#table-datetimeformat-resolvedoptions-properties
   // For DateTimeFormat::impl_ in initialize
   std::u16string mFormatMatcher, mHourCycle, mWeekday, mEra, mYear, mMonth, mDay, mDayPeriod, mHour, mMinute, mSecond, mTimeZone, mTimeZoneName, mDateStyle, mTimeStyle, mCalendar, locale;
+  uint8_t mFractionalSecondDigits;
   bool hour12;
 };
 
@@ -925,7 +936,16 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   const std::vector<std::u16string> timeZoneNameVector = {u"long", u"short", u"shortOffset", u"longOffset", u"shortGeneric", u"longGeneric"};
   const std::vector<std::u16string> styleVector = {u"full", u"long", u"medium", u"short"};
   
-  auto formatMatcherOption = getOption(optionsToUse, u"formatMatcher", u"string", matcherVector, undefinedFallback);
+  // 29b
+  auto fractionalSecondDigitsOption = getOptionNumber(optionsToUse, u"fractionalSecondDigits", 1, 3, undefinedFallback);
+  if (fractionalSecondDigitsOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid fractionalSecondDigits");
+  }
+  if (fractionalSecondDigitsOption->isNumber()) {
+      impl_->mFractionalSecondDigits = fractionalSecondDigitsOption->getNumber();
+  }
+      
+  auto formatMatcherOption = getOption(optionsToUse, u"formatMatcher", u"string", matcherVector, matcherFallback);
   if (formatMatcherOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
     return runtime->raiseRangeError("Invalid formatMatcher");
   }
@@ -983,7 +1003,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   if (timeZoneNameOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
     return runtime->raiseRangeError("Invalid timeZoneName");
   }
-  impl_->mTimeZoneName = timeZoneNameOption ->getString();
+  impl_->mTimeZoneName = timeZoneNameOption->getString();
       
   auto dateStyleOption = getOption(optionsToUse, u"dateStyle", u"string", styleVector, undefinedFallback);
   if (dateStyleOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
@@ -1049,7 +1069,7 @@ Options DateTimeFormat::resolvedOptions() noexcept {
   
   if (impl_->mHourCycle != u"") {
     options.emplace(u"hourCycle", Option(impl_->mHourCycle));
-    if (impl_->mHourCycle == u"H11" || impl_->mHourCycle == u"H12" ) {
+    if (impl_->mHourCycle == u"h11" || impl_->mHourCycle == u"h12" ) {
       options.emplace(u"hour12", true);
     }
     else {
@@ -1092,9 +1112,319 @@ Options DateTimeFormat::resolvedOptions() noexcept {
   return options;
 }
 
+enum enum_string {
+  eLong,
+  eShort,
+  eNarrow,
+  eMedium,
+  eFull,
+  eBasic,
+  eBestFit,
+  eNumeric,
+  eTwoDigit,
+  eShortOffset,
+  eLongOffset,
+  eShortGeneric,
+  eLongGeneric
+};
+enum_string formatDate (std::u16string const& inString) {
+  if (inString == u"long") return eLong;
+  if (inString == u"short") return eShort;
+  if (inString == u"narrow") return eNarrow;
+  if (inString == u"medium") return eMedium;
+  if (inString == u"full") return eFull;
+  if (inString == u"basic") return eBasic;
+  if (inString == u"best fit") return eBestFit;
+  if (inString == u"numeric") return eNumeric;
+  if (inString == u"2-digit") return eTwoDigit;
+  if (inString == u"shortOffset") return eShortOffset;
+  if (inString == u"longOffset") return eLongOffset;
+  if (inString == u"shortGeneric") return eShortGeneric;
+  if (inString == u"longGeneric") return eLongGeneric;
+  // Should something else just be returned by default to silence warning?
+};
 std::u16string DateTimeFormat::format(double jsTimeValue) noexcept {
-  auto s = std::to_string(jsTimeValue);
-  return std::u16string(s.begin(), s.end());
+  // Last 3 digits of jsTimeValue need to be removed for this to work?
+  auto timeInSeconds = jsTimeValue / 1000;
+  NSDate *date = [NSDate dateWithTimeIntervalSince1970:timeInSeconds];
+  NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+
+  if (impl_->mTimeStyle != u"") {
+    std::u16string timeStyle = impl_->mTimeStyle;
+    switch(formatDate(timeStyle)) {
+      case eFull:
+        dateFormatter.timeStyle = NSDateFormatterFullStyle;
+        break;
+      case eLong:
+        dateFormatter.timeStyle = NSDateFormatterLongStyle;
+        break;
+      case eMedium:
+        dateFormatter.timeStyle = NSDateFormatterMediumStyle;
+        break;
+      case eShort:
+        dateFormatter.timeStyle = NSDateFormatterShortStyle;
+        break;
+      default:
+        dateFormatter.timeStyle = NSDateFormatterShortStyle;
+    }
+  }
+  if (impl_->mDateStyle != u"") {
+    std::u16string dateStyle = impl_->mDateStyle;
+    switch(formatDate(dateStyle)) {
+      case eFull:
+        dateFormatter.dateStyle = NSDateFormatterFullStyle;
+        break;
+      case eLong:
+        dateFormatter.dateStyle = NSDateFormatterLongStyle;
+        break;
+      case eMedium:
+        dateFormatter.dateStyle = NSDateFormatterMediumStyle;
+        break;
+      case eShort:
+        dateFormatter.dateStyle = NSDateFormatterShortStyle;
+        break;
+      default:
+        dateFormatter.dateStyle = NSDateFormatterShortStyle;
+    }
+  }
+  if (impl_->mTimeZone != u"") {
+    dateFormatter.timeZone = [[NSTimeZone alloc] initWithName:u16StringToNSString(impl_->mTimeZone)];
+  }
+  if (impl_->locale != u"") {
+    dateFormatter.locale = [[NSLocale alloc] initWithLocaleIdentifier:u16StringToNSString(impl_->locale)];
+  }
+  if (impl_->mCalendar != u"") {
+    dateFormatter.calendar = [[NSCalendar alloc] initWithCalendarIdentifier:u16StringToNSString(impl_->mCalendar)];
+  }
+  
+  // The following options cannot be used in conjunction with timeStyle or dateStyle
+  // TODO: Where is best to error throw if the wrong options combination have been used?
+  // Form a custom format string
+  // It will be reordered according to locale later
+  NSMutableString *customFormattedDate = [[NSMutableString alloc] init];
+  if (impl_->mTimeZoneName != u"") {
+    switch(formatDate(impl_->mTimeZoneName)) {
+      case eShort: {
+        [customFormattedDate appendString:@"z"];
+        break; }
+      case eLong: {
+        [customFormattedDate appendString:@"zzzz"];
+        break; }
+      case eShortOffset: {
+        [customFormattedDate appendString:@"O"];
+        break; }
+      case eLongOffset: {
+        [customFormattedDate appendString:@"OOOO"];
+        break; }
+      case eShortGeneric: {
+        [customFormattedDate appendString:@"v"];
+        break; }
+      case eLongGeneric: {
+        [customFormattedDate appendString:@"vvvv"];
+        break; }
+      default: {
+        [customFormattedDate appendString:@"z"];
+      }
+    }
+  }
+  if (impl_->mEra != u"") {
+    switch(formatDate(impl_->mEra)) {
+      case eNarrow: {
+        [customFormattedDate appendString:@"GGGGG"];
+        break; }
+      case eShort: {
+        [customFormattedDate appendString:@"G"];
+        break; }
+      case eLong: {
+        [customFormattedDate appendString:@"GGGG"];
+        break; }
+      default: {
+        [customFormattedDate appendString:@"G"];
+      }
+    }
+  }
+  if (impl_->mYear != u"") {
+    switch(formatDate(impl_->mYear)) {
+      case eNumeric: {
+        [customFormattedDate appendString:@"yyyy"];
+        break; }
+      case eTwoDigit: {
+        [customFormattedDate appendString:@"yy"];
+        break; }
+      default: {
+        [customFormattedDate appendString:@"yyyy"];
+      }
+    }
+  }
+  if (impl_->mMonth != u"") {
+    switch(formatDate(impl_->mMonth)) {
+      case eNarrow: {
+        [customFormattedDate appendString:@"MMMMM"];
+        break; }
+      case eNumeric: {
+        [customFormattedDate appendString:@"M"];
+        break; }
+      case eTwoDigit: {
+        [customFormattedDate appendString:@"MM"];
+        break; }
+      case eShort: {
+        [customFormattedDate appendString:@"MMM"];
+        break; }
+      case eLong: {
+        [customFormattedDate appendString:@"MMMM"];
+        break; }
+      default: {
+        [customFormattedDate appendString:@"MMM"];
+      }
+    }
+  }
+  if (impl_->mWeekday != u"") {
+    switch(formatDate(impl_->mWeekday)) {
+      case eNarrow: {
+        [customFormattedDate appendString:@"EEEEE"];
+        break; }
+      case eShort: {
+        [customFormattedDate appendString:@"E"];
+        break; }
+      case eLong: {
+        [customFormattedDate appendString:@"EEEE"];
+        break; }
+      default: {
+        [customFormattedDate appendString:@"E"];
+      }
+    }
+  }
+  if (impl_->mDay != u"") {
+    switch(formatDate(impl_->mDay)) {
+      case eNumeric: {
+        [customFormattedDate appendString:@"d"];
+        break; }
+      case eTwoDigit: {
+        [customFormattedDate appendString:@"dd"];
+        break; }
+      default: {
+        [customFormattedDate appendString:@"dd"];
+      }
+    }
+  }
+  // Hour/minute/second options temperamental, may stay one type, depending on locale and other custom options selected
+  if (impl_->mHour != u"") {
+  // Ignore the hour12 bool in the impl_ struct
+  // a = AM/PM for 12 hr clocks, automatically added depending on locale
+  // AM/PM not multilingual, de-DE should be "03 Uhr" not "3 AM"
+  // K = h11 = 0-11
+  // h = h12 = 1-12
+  // H = h23 = 0-23
+  // k = h24 = 1-24
+    if (impl_->mHourCycle == u"h12") {
+    switch(formatDate(impl_->mHour)) {
+      case eNumeric: {
+        [customFormattedDate appendString:@"h"];
+        break; }
+      case eTwoDigit: {
+        [customFormattedDate appendString:@"hh"];
+        break; }
+      default: {
+        [customFormattedDate appendString:@"hh"];
+      }
+    }
+    }
+    else if (impl_->mHourCycle == u"h24") {
+      switch(formatDate(impl_->mHour)) {
+        case eNumeric: {
+          [customFormattedDate appendString:@"k"];
+          break; }
+        case eTwoDigit: {
+          [customFormattedDate appendString:@"kk"];
+          break; }
+        default: {
+          [customFormattedDate appendString:@"kk"];
+        }
+      }
+      }
+    else if (impl_->mHourCycle == u"h11") {
+      switch(formatDate(impl_->mHour)) {
+        case eNumeric: {
+          [customFormattedDate appendString:@"K"];
+          break; }
+        case eTwoDigit: {
+          [customFormattedDate appendString:@"KK"];
+          break; }
+        default: {
+          [customFormattedDate appendString:@"KK"];
+        }
+      }
+      }
+    else { // h23
+      switch(formatDate(impl_->mHour)) {
+        case eNumeric: {
+          [customFormattedDate appendString:@"H"];
+          break; }
+        case eTwoDigit: {
+          [customFormattedDate appendString:@"HH"];
+          break; }
+        default: {
+          [customFormattedDate appendString:@"HH"];
+        }
+      }
+    }
+}
+  if (impl_->mMinute != u"") {
+    switch(formatDate(impl_->mMinute)) {
+      case eNumeric: {
+        [customFormattedDate appendString:@"m"];
+        break; }
+      case eTwoDigit: {
+        [customFormattedDate appendString:@"mm"];
+        break; }
+      default: {
+        [customFormattedDate appendString:@"m"];
+      }
+    }
+  }
+  if (impl_->mSecond != u"") {
+    switch(formatDate(impl_->mSecond)) {
+      case eNumeric: {
+        [customFormattedDate appendString:@"s"];
+        break; }
+      case eTwoDigit: {
+        [customFormattedDate appendString:@"ss"];
+        break; }
+      default: {
+        [customFormattedDate appendString:@"s"];
+      }
+    }
+  }
+  // How should this be checked?
+  uint8_t fractionalSecondsRange = impl_->mFractionalSecondDigits;
+  if (fractionalSecondsRange == 1 ||
+      fractionalSecondsRange == 2 ||
+      fractionalSecondsRange == 3 ) {
+    // This currently outputs to 3 digits only with the date?
+    switch(fractionalSecondsRange) {
+      case 1: {
+        [customFormattedDate appendString:@".S"];
+      }
+      case 2: {
+        [customFormattedDate appendString:@".SS"];
+      }
+      case 3: {
+        [customFormattedDate appendString:@".SSS"];
+      }
+    }
+  }
+  // Not supported - dayPeriod (at night/in the morning)
+  // Set the custom date from all the concatonated NSStrings (locale will automatically seperate the order)
+  // Only set a template format if it isn't empty
+  if (![customFormattedDate  isEqual: @""]) {
+    [dateFormatter setLocalizedDateFormatFromTemplate:customFormattedDate];
+  }
+  
+  // If no options have been set, date will be empty, so set a format for default
+  if ([[dateFormatter stringFromDate:date]  isEqual: @""]) {
+    dateFormatter.dateStyle = NSDateFormatterShortStyle;
+  }
+  return nsStringToU16String([dateFormatter stringFromDate:date]);
 }
 
 // Implementer note: This method corresponds roughly to

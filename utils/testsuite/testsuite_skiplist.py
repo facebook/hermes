@@ -1804,7 +1804,6 @@ PERMANENT_SKIP_LIST = [
     "test262/test/built-ins/intl402/",
     "test262/test/intl402/Collator/",
     "test262/test/intl402/Date/",
-    "test262/test/intl402/DateTimeFormat/",
     "test262/test/intl402/DisplayNames/",
     "test262/test/intl402/Intl/supportedValuesOf/",
     "test262/test/intl402/Intl/toStringTag/",
