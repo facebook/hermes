@@ -109,79 +109,6 @@ bool isOtherExtension(std::u16string str, int start, int end) {
   return isCharType(str, start, end, 2, 8, &isASCIILetterOrDigit);
 }
 
-struct ParsedLocaleIdentifier::Impl {};
-ParsedLocaleIdentifier::ParsedLocaleIdentifier() : impl_(std::make_unique<Impl>()) {}
-ParsedLocaleIdentifier::~ParsedLocaleIdentifier() {}
-
-std::u16string ParsedLocaleIdentifier::toString() {
-  std::u16string res;
-  
-  // Append unicode_language_id
-  if (!languageIdentifier.languageSubtag.empty()) {
-    res += u"unicode_language_subtag: " + languageIdentifier.languageSubtag + u"\n";
-  }
-  if (!languageIdentifier.scriptSubtag.empty()) {
-    res += u"unicode_script_subtag: " + languageIdentifier.scriptSubtag + u"\n";
-  }
-  if (!languageIdentifier.regionSubtag.empty()) {
-    res += u"unicode_region_subtag: " + languageIdentifier.regionSubtag + u"\n";
-  }
-  if (!languageIdentifier.variantSubtagList.empty()) {
-    res += u"unicode_variant_subtags: ";
-    for (const auto &subtag : languageIdentifier.variantSubtagList) {
-      res += subtag;
-    }
-    res += u"\n";
-  }
-  
-  if (!unicodeExtensionAttributes.empty() ||
-      !unicodeExtensionKeywords.empty()) {
-    res += u"unicode_locale_extensions\n";
-  }
-  if (!unicodeExtensionAttributes.empty()) {
-    res += u"\tattributes: ";
-    for (const auto &attribute : unicodeExtensionAttributes) {
-      res += attribute;
-    }
-    res += u"\n";
-  }
-  if (!unicodeExtensionKeywords.empty()) {
-    res += u"\tkeywords:\n";
-    for (const auto &keyword : unicodeExtensionKeywords) {
-      res += u"\t\t" + keyword.first;
-      for (const auto &word : keyword.second) {
-        res += word;
-      }
-      res += u"\n";
-    }
-    res += u"\n";
-  }
-  
-  // currently skipping transformed extensions
-  if (!otherExtensionMap.empty()) {
-    res += u"other_extensions:\n";
-    for (const auto &ext : otherExtensionMap) {
-      res += u"\t";
-      res += ext.first; // cheap cast
-      for (const auto &extVal : ext.second) {
-        res += extVal;
-      }
-      res += u"\n";
-    }
-    res += u"\n";
-  }
-  
-  if (!puExtensions.empty()) {
-    res += u"pu_extensions: ";
-    for (const auto &ext : puExtensions) {
-      res += ext;
-    }
-    res += u"\n";
-  }
-  
-  return res;
-}
-
 struct LanguageTagParser::Impl {
   Impl(const std::u16string &localeId) : mLocaleId(localeId){};
   //~Impl();
@@ -209,23 +136,21 @@ bool LanguageTagParser::parseUnicodeLocaleId() {
     return false;
   }
   if (!hasMoreSubtags()) {
-    return false;
+    return false; //true?
   }
   if (!parseExtensions()) {
     return false;
   }
   
-  return false;
+  return true;
 }
 
 bool LanguageTagParser::parseUnicodeLanguageId() {
-  ParsedLanguageIdentifier parsedLanguageIdentifier;
-  
   if (!nextSubtag() || !isUnicodeLanguageSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
     return false;
   }
   
-  parsedLanguageIdentifier.languageSubtag = getCurrentSubtag();
+  impl_->parsedLocaleIdentifier.languageIdentifier.languageSubtag = getCurrentSubtag();
   
   if (!nextSubtag()) {
     return true;
@@ -234,14 +159,14 @@ bool LanguageTagParser::parseUnicodeLanguageId() {
   // handle extensions here? is this most common path?
   
   if (isUnicodeScriptSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
-    parsedLanguageIdentifier.scriptSubtag = getCurrentSubtag(); // to title case?
+    impl_->parsedLocaleIdentifier.languageIdentifier.scriptSubtag = getCurrentSubtag(); // to title case?
     if (!nextSubtag()) {
       return true;
     }
   }
   
   if (isUnicodeRegionSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
-    parsedLanguageIdentifier.regionSubtag = getCurrentSubtag(); // to upper case?
+    impl_->parsedLocaleIdentifier.languageIdentifier.regionSubtag = getCurrentSubtag(); // to upper case?
     if (!nextSubtag()) {
       return true;
     }
@@ -249,9 +174,11 @@ bool LanguageTagParser::parseUnicodeLanguageId() {
   
   while (true) {
     if (!isUnicodeVariantSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
-      return false;
+      return true;
     } else {
-      // add variant subtag to list
+      if (!addVariantSubtag()) {
+        return false;
+      }
     }
     
     if (!nextSubtag()) {
@@ -262,12 +189,28 @@ bool LanguageTagParser::parseUnicodeLanguageId() {
   return false;
 }
 
+bool LanguageTagParser::addVariantSubtag() {
+  if (impl_->parsedLocaleIdentifier.languageIdentifier.variantSubtagList.empty()) {
+    impl_->parsedLocaleIdentifier.languageIdentifier.variantSubtagList.push_back(getCurrentSubtag());
+  } else {
+    auto subtag = getCurrentSubtag();
+    auto begin = impl_->parsedLocaleIdentifier.languageIdentifier.variantSubtagList.begin();
+    auto end = impl_->parsedLocaleIdentifier.languageIdentifier.variantSubtagList.end();
+    auto position = std::upper_bound(begin, end, subtag);
+    if (position != std::upper_bound(begin, end, subtag)) {
+      return false;
+    }
+    impl_->parsedLocaleIdentifier.languageIdentifier.variantSubtagList.insert(position, subtag);
+  }
+  return true;
+}
+
 bool LanguageTagParser::parseExtensions() {
   // if transformed extensions and next subtag is transformed extension
   // parse transformed extensions
-
   while (true) {
     // check if current subtag isExtensionSingleton
+
     if (impl_->mSubtagEnd != impl_->mSubtagStart) {
       return true;
     }
@@ -331,14 +274,14 @@ bool LanguageTagParser::parseUnicodeExtension() {
   
   while (isUnicodeExtensionKey(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
     std::u16string key = getCurrentSubtag();
-    std::vector<std::u16string> extensionKeyTypes;
+    std::vector<std::u16string> *extensionKeyTypes = new std::vector<std::u16string>();
     impl_->parsedLocaleIdentifier.unicodeExtensionKeywords.insert({key, extensionKeyTypes});
     
     if (!nextSubtag()) {
       return true;
     } else {
       while (isUnicodeExtensionKeyTypeItem(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
-        extensionKeyTypes.push_back(getCurrentSubtag());
+        extensionKeyTypes->push_back(getCurrentSubtag());
         if (!nextSubtag()) {
           return true;
         }
@@ -414,9 +357,6 @@ bool LanguageTagParser::nextSubtag() {
 }
 std::u16string LanguageTagParser::toString() {
   return impl_->mLocaleId;
-}
-std::u16string LanguageTagParser::toParsedString() {
-  return impl_->parsedLocaleIdentifier.toString();
 }
 std::u16string LanguageTagParser::getCurrentSubtag() {
   return impl_->mLocaleId.substr(impl_->mSubtagStart, impl_->mSubtagEnd - impl_->mSubtagStart + 1);
