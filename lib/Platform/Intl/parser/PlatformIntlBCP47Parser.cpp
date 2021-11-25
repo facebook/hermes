@@ -197,6 +197,7 @@ LanguageTagParser::LanguageTagParser(const std::u16string &localeId) : impl_(std
   impl_->mSubtagStart = 0;
   impl_->mSubtagEnd = -1;
 }
+// New is used 2 places
 LanguageTagParser::~LanguageTagParser() = default;
 
 ParsedLocaleIdentifier LanguageTagParser::getParsedLocaleId(){
@@ -348,7 +349,28 @@ bool LanguageTagParser::parseUnicodeExtension() {
   return true;
 }
 
-bool LanguageTagParser::parseTransformedExtension() {
+bool LanguageTagParser::parseTransformedExtension() { 
+  if (isUnicodeLanguageSubtag()) {
+    // parseUnicodeLanguageId(true);
+    // tricky
+    if (!hasMoreSubtags()) {
+      return true;
+    }
+  } 
+
+  if (isTransformedExtensionTKey()) {
+    if (!impl_->parsedLocaleIdentifier.transformedExtensionFields.empty()) {
+      return false;
+    }
+
+    while (true) {
+      std::u16string tkey = getCurrentSubtag();
+      std::vector<std::u16string> *tvalues = new std::vector<std::u16string>();
+      impl_->parsedLocaleIdentifier.transformedExtensionFields.insert({tkey, tvalues});
+    }
+
+  } 
+
   return false;
 }
 

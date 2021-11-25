@@ -54,7 +54,7 @@ class ParsedLocaleIdentifier {
       unicodeExtensionKeywords;
 
   ParsedLanguageIdentifier transformedLanguageIdentifier;
-  std::unordered_map<std::u16string, std::vector<std::u16string>>
+  std::unordered_map<std::u16string, std::vector<std::u16string>*>
       transformedExtensionFields;
 
   std::unordered_map<char16_t, std::vector<std::u16string>> otherExtensionMap;
