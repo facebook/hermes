@@ -124,7 +124,7 @@ LanguageTagParser::LanguageTagParser(const std::u16string &localeId) : impl_(std
   impl_->mSubtagStart = 0;
   impl_->mSubtagEnd = -1;
 }
-// New is used 2 places
+// New is used 2 places: unicode extension keys and transformed extension tvalues
 LanguageTagParser::~LanguageTagParser() = default;
 
 ParsedLocaleIdentifier LanguageTagParser::getParsedLocaleId(){
@@ -248,7 +248,7 @@ bool LanguageTagParser::parseExtensions() {
       }
       default: {
         // other extension
-        if (!parseOtherExtension()) {
+        if (!parseOtherExtension(singleton)) {
           return false;
         }
         break;
@@ -293,7 +293,9 @@ bool LanguageTagParser::parseUnicodeExtension() {
 }
 
 bool LanguageTagParser::parseTransformedExtension() { 
+  bool hasExtension = false;
   if (isUnicodeLanguageSubtag()) {
+    hasExtension = true;
     // parseUnicodeLanguageId(true);
     // tricky
     if (!hasMoreSubtags()) {
@@ -302,26 +304,89 @@ bool LanguageTagParser::parseTransformedExtension() {
   } 
 
   if (isTransformedExtensionTKey()) {
+    hasExtension = true;
     if (!impl_->parsedLocaleIdentifier.transformedExtensionFields.empty()) {
       return false;
     }
 
     while (true) {
+      if (!isTransformedExtensionTKey()) {
+        break;
+      }
       std::u16string tkey = getCurrentSubtag();
       std::vector<std::u16string> *tvalues = new std::vector<std::u16string>();
       impl_->parsedLocaleIdentifier.transformedExtensionFields.insert({tkey, tvalues});
+      
+      // read key then one or more values
+      if (!nextSubtag()) {
+        return false;
+      }
+      if (!isTransformedExtensionTValueItem()) {
+        return false;
+      }
+      tvalues->push_back(getCurrentSubtag());
+      if (!nextSubtag()) {
+        return true;
+      }
+      while (true) {
+        if (!isTransformedExtensionTValueItem()) {
+          break;
+        }
+        tvalues->push_back(getCurrentSubtag());
+        if (!nextSubtag()) {
+          return true;
+        }
+      }
     }
-
   } 
 
-  return false;
-}
-
-bool LanguageTagParser::parseOtherExtension() {
-  return false;
+  return hasExtension;
 }
 
 bool LanguageTagParser::parsePUExtension() {
+  if (!isPrivateUseExtension()) {
+    return false;
+  }
+  impl_->parsedLocaleIdentifier.puExtensions.push_back(getCurrentSubtag());
+
+  if (!nextSubtag()) {
+    return true;
+  }
+
+  while (isPrivateUseExtension()) {
+    impl_->parsedLocaleIdentifier.puExtensions.push_back(getCurrentSubtag());
+    if (!nextSubtag()) {
+      return true;
+    }
+  }
+
+  // Tokens are not expected after pu extension
+  return false;
+}
+
+bool LanguageTagParser::parseOtherExtension(uchar16_t singleton) {
+  std::unordered_map<char16_t, std::vector<std::u16string>*> extMap = impl_->parsedLocaleIdentifier.otherExtensionMap;
+  if (extMap.find(singleton) != extMap.end()) {
+    return false;
+  }
+
+  std::vector<std::u16string> *otherExtensions = new std::vector<std::u16string>();
+  extMap.insert({singleton, otherExtensions});
+
+  if (!isOtherExtension()) {
+    return false;
+  }
+  otherExtensions->push_back(getCurrentSubtag());
+  if (!nextSubtag()) {
+    return true;
+  }
+
+  while (isOtherExtension()) {
+    otherExtensions->push_back(getCurrentSubtag());
+    if (!nextSubtag()) {
+      return true;
+    }
+  }
   return false;
 }
 

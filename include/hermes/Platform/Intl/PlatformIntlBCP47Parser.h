@@ -49,7 +49,8 @@ struct ParsedLocaleIdentifier {
   std::unordered_map<std::u16string, std::vector<std::u16string>*>
       transformedExtensionFields;
 
-  std::unordered_map<char16_t, std::vector<std::u16string>> otherExtensionMap;
+  std::unordered_map<char16_t, std::vector<std::u16string>*> otherExtensionMap;
+  
   std::vector<std::u16string> puExtensions;
 };
 
@@ -69,6 +70,7 @@ class LanguageTagParser {
   std::u16string getCanonicalizedLocale();
   
   std::u16string toString();
+
  private:
   struct Impl;
   std::unique_ptr<Impl> impl_;
@@ -78,7 +80,7 @@ class LanguageTagParser {
   bool parseExtensions();
   bool parseUnicodeExtension();
   bool parseTransformedExtension();
-  bool parseOtherExtension();
+  bool parseOtherExtension(uchar16_t singleton);
   bool parsePUExtension();
   // tokenizer functions
   std::u16string getCurrentSubtag();
