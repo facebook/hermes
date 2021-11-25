@@ -147,6 +147,7 @@ TEST(PlatformIntlBCP47Parser, LanguageIdTest) {
 }
 
 TEST(PlatformIntlBCP47Parser, ExtensionText) {
+  // Unicode extension test
   LanguageTagParser parser1(u"und-u-att-attr-nu-xx-latn-bob");
   parser1.parseUnicodeLocaleId();
   EXPECT_EQ(u"und-u-att-attr-nu-xx-latn-bob", parser1.toString());
@@ -161,6 +162,26 @@ TEST(PlatformIntlBCP47Parser, ExtensionText) {
   EXPECT_EQ(u"xx", it->first);
   EXPECT_EQ(u"latn", it->second->front());
   EXPECT_EQ(u"bob", it->second->back());
+
+  // Transformed extension test
+  LanguageTagParser parser2(u"und");
+
+  // Other extension test
+  LanguageTagParser parser3(u"und-o-first-second-q-1o1");
+  auto locale3 = parser3.getParsedLocaleId();
+  auto it = locale3.otherExtensionMap.begin();
+  EXPECT_EQ('o', it->first);
+  EXPECT_EQ(u"first", it->second.front());
+  EXPECT_EQ(u"second", it->second.back());
+  it++;
+  EXPECT_EQ('q', it->first);
+  EXPECT_EQ(u"1o1", it->second.front());
+
+  // PU extension test
+  LanguageTagParser parser4(u"und-x-u-132");
+  auto locale4 = parser4.getParsedLocaleId();
+  EXPECT_EQ(u"u", locale4.puExtensions.front());
+  EXPECT_EQ(u"123", locale4.puExtensions.back());
 }
 
 } // namespace

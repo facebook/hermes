@@ -18,6 +18,9 @@ namespace platform_intl_parser {
 bool isASCIILetter(char16_t c);
 bool isASCIIDigit(char16_t c);
 bool isASCIILetterOrDigit(char16_t c);
+void toASCIILowerCase(std::u16string str);
+void toASCIIUpperCase(std::u16string str);
+void toASCIITitleCase(std::u16string str);
 bool isSubtagSeparator(char16_t c);
 bool isUnicodeLanguageSubtag(std::u16string str, int start, int end);
 bool isUnicodeScriptSubtag(std::u16string str, int start, int end);

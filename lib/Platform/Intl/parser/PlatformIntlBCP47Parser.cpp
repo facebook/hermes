@@ -20,6 +20,32 @@ bool isASCIIDigit(char16_t c) {
 bool isASCIILetterOrDigit(char16_t c) {
   return isASCIILetter(c) || isASCIIDigit(c);
 }
+void toASCIILowerCase(std::u16string str) {
+  for (size_t i = 0; i < str.length(); i++) {
+    if (str[i] <= 'Z' && str[i] >= 'A') {
+      str[i] -= 'Z' - 'z';
+    }
+  }
+  return;
+}
+void toASCIIUpperCase(std::u16string str) {
+  for (size_t i = 0; i < str.length(); i++) {
+    if (str[i] <= 'z' && str[i] >= 'a') {
+      str[i] -= 'z' - 'Z';
+    }
+  }
+  return;
+}
+void toASCIITitleCase(std::u16string str) {
+  for (size_t i = 0; i < str.length(); i++) {
+    if (i == 0 && str[i] <= 'z' && str[i] >= 'a') {
+      str[i] -= 'z' - 'Z';
+    } else if (str[i] <= 'Z' && str[i] >= 'A') {
+      str[i] -= 'Z' - 'z';
+    }
+  }
+  return;
+}
 bool isSubtagSeparator(char16_t c) {
   return c == '-';
 }
@@ -120,7 +146,8 @@ struct LanguageTagParser::Impl {
 };
 
 LanguageTagParser::LanguageTagParser(const std::u16string &localeId) : impl_(std::make_unique<Impl>(localeId)) {
-  impl_->mLocaleId = localeId; // tolowercase? this should just be ascii right?
+  impl_->mLocaleId = localeId;
+  toASCIILowerCase(impl_->mLocaleId);
   impl_->mSubtagStart = 0;
   impl_->mSubtagEnd = -1;
 }
@@ -159,14 +186,16 @@ bool LanguageTagParser::parseUnicodeLanguageId() {
   // handle extensions here? is this most common path?
   
   if (isUnicodeScriptSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
-    impl_->parsedLocaleIdentifier.languageIdentifier.scriptSubtag = getCurrentSubtag(); // to title case?
+    impl_->parsedLocaleIdentifier.languageIdentifier.scriptSubtag = getCurrentSubtag();
+    toASCIITitleCase(impl_->parsedLocaleIdentifier.languageIdentifier.scriptSubtag);
     if (!nextSubtag()) {
       return true;
     }
   }
   
   if (isUnicodeRegionSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
-    impl_->parsedLocaleIdentifier.languageIdentifier.regionSubtag = getCurrentSubtag(); // to upper case?
+    impl_->parsedLocaleIdentifier.languageIdentifier.regionSubtag = getCurrentSubtag();
+    toASCIIUpperCase(impl_->parsedLocaleIdentifier.languageIdentifier.regionSubtag);
     if (!nextSubtag()) {
       return true;
     }
@@ -259,6 +288,18 @@ bool LanguageTagParser::parseExtensions() {
   return false;
 }
 
+// unicode_locale_extensions = sep [uU]
+// ((sep keyword)+
+// |(sep attribute)+ (sep keyword)*) ;
+//
+// keyword = = key (sep type)? ;
+//
+// key = = alphanum alpha ;
+//
+// type = = alphanum{3,8}
+//  (sep alphanum{3,8})* ;
+//
+// attribute = alphanum{3,8} ;
 bool LanguageTagParser::parseUnicodeExtension() {
   if (!impl_->parsedLocaleIdentifier.unicodeExtensionAttributes.empty() ||
       !impl_->parsedLocaleIdentifier.unicodeExtensionKeywords.empty()) {
@@ -292,6 +333,20 @@ bool LanguageTagParser::parseUnicodeExtension() {
   return true;
 }
 
+// transformed_extensions= sep [tT]
+// ((sep tlang (sep tfield)*)
+// | (sep tfield)+) ;
+//
+// tlang = unicode_language_subtag
+//  (sep unicode_script_subtag)?
+//  (sep unicode_region_subtag)?
+//  (sep unicode_variant_subtag)* ;
+//
+//  tfield = tkey tvalue;
+//
+// tkey =  	= alpha digit ;
+//
+// tvalue = (sep alphanum{3,8})+ ;
 bool LanguageTagParser::parseTransformedExtension() { 
   bool hasExtension = false;
   if (isUnicodeLanguageSubtag()) {
@@ -343,6 +398,10 @@ bool LanguageTagParser::parseTransformedExtension() {
   return hasExtension;
 }
 
+// pu_extensions= sep [xX]
+// (sep alphanum{1,8})+ ;
+//
+// No tokens may appear after pu_extensions
 bool LanguageTagParser::parsePUExtension() {
   if (!isPrivateUseExtension()) {
     return false;
@@ -364,6 +423,8 @@ bool LanguageTagParser::parsePUExtension() {
   return false;
 }
 
+// other_extensions= sep [alphanum-[tTuUxX]]
+// (sep alphanum{2,8})+ ;
 bool LanguageTagParser::parseOtherExtension(uchar16_t singleton) {
   std::unordered_map<char16_t, std::vector<std::u16string>*> extMap = impl_->parsedLocaleIdentifier.otherExtensionMap;
   if (extMap.find(singleton) != extMap.end()) {
@@ -395,7 +456,7 @@ bool LanguageTagParser::hasMoreSubtags() {
 }
 bool LanguageTagParser::nextSubtag() {
   if (!hasMoreSubtags()) {
-    return false; // throw error?
+    return false;
   }
   
   int length = impl_->mLocaleId.length();
