@@ -172,12 +172,19 @@ bool LanguageTagParser::parseUnicodeLocaleId() {
   return true;
 }
 
-bool LanguageTagParser::parseUnicodeLanguageId() {
+bool LanguageTagParser::parseUnicodeLanguageId(bool transformedExtensionId) {
   if (!nextSubtag() || !isUnicodeLanguageSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
     return false;
   }
-  
-  impl_->parsedLocaleIdentifier.languageIdentifier.languageSubtag = getCurrentSubtag();
+ 
+  ParsedLanguageIdentifier languageId;
+  languageId.languageSubtag = getCurrentSubtag();
+
+  if (transformedExtensionId) {
+    impl_->parsedLocaleIdentifier.transformedLanguageIdentifier = languageId;
+  } else {
+    impl_->parsedLocaleIdentifier.languageIdentifier = languageId;
+  }
   
   if (!nextSubtag()) {
     return true;
@@ -186,16 +193,16 @@ bool LanguageTagParser::parseUnicodeLanguageId() {
   // handle extensions here? is this most common path?
   
   if (isUnicodeScriptSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
-    impl_->parsedLocaleIdentifier.languageIdentifier.scriptSubtag = getCurrentSubtag();
-    toASCIITitleCase(impl_->parsedLocaleIdentifier.languageIdentifier.scriptSubtag);
+    languageId.scriptSubtag = getCurrentSubtag();
+    toASCIITitleCase(languageId.scriptSubtag);
     if (!nextSubtag()) {
       return true;
     }
   }
   
   if (isUnicodeRegionSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
-    impl_->parsedLocaleIdentifier.languageIdentifier.regionSubtag = getCurrentSubtag();
-    toASCIIUpperCase(impl_->parsedLocaleIdentifier.languageIdentifier.regionSubtag);
+    languageId.regionSubtag = getCurrentSubtag();
+    toASCIIUpperCase(languageId.regionSubtag);
     if (!nextSubtag()) {
       return true;
     }
@@ -205,7 +212,7 @@ bool LanguageTagParser::parseUnicodeLanguageId() {
     if (!isUnicodeVariantSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
       return true;
     } else {
-      if (!addVariantSubtag()) {
+      if (!addVariantSubtag(transformedExtensionId)) {
         return false;
       }
     }
@@ -218,18 +225,25 @@ bool LanguageTagParser::parseUnicodeLanguageId() {
   return false;
 }
 
-bool LanguageTagParser::addVariantSubtag() {
-  if (impl_->parsedLocaleIdentifier.languageIdentifier.variantSubtagList.empty()) {
-    impl_->parsedLocaleIdentifier.languageIdentifier.variantSubtagList.push_back(getCurrentSubtag());
+bool LanguageTagParser::addVariantSubtag(bool transformedExtensionId) {
+  ParsedLanguageIdentifier languageId;
+  if (transformedExtensionId) {
+    languageId = impl_->parsedLocaleIdentifier.transformedLanguageIdentifier;
+  } else {
+    languageId = impl_->parsedLocaleIdentifier.languageIdentifier;
+  }
+
+  if (languageId.variantSubtagList.empty()) {
+    languageId.variantSubtagList.push_back(getCurrentSubtag());
   } else {
     auto subtag = getCurrentSubtag();
-    auto begin = impl_->parsedLocaleIdentifier.languageIdentifier.variantSubtagList.begin();
-    auto end = impl_->parsedLocaleIdentifier.languageIdentifier.variantSubtagList.end();
+    auto begin = languageId.variantSubtagList.begin();
+    auto end = languageId.variantSubtagList.end();
     auto position = std::upper_bound(begin, end, subtag);
     if (position != std::upper_bound(begin, end, subtag)) {
       return false;
     }
-    impl_->parsedLocaleIdentifier.languageIdentifier.variantSubtagList.insert(position, subtag);
+    languageId.variantSubtagList.insert(position, subtag);
   }
   return true;
 }
