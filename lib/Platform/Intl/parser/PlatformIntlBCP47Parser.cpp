@@ -151,7 +151,7 @@ LanguageTagParser::LanguageTagParser(const std::u16string &localeId) : impl_(std
   impl_->mSubtagStart = 0;
   impl_->mSubtagEnd = -1;
 }
-// New is used 2 places: unicode extension keys and transformed extension tvalues
+// New is used 3 places: unicode, transformed, and other extension values
 LanguageTagParser::~LanguageTagParser() = default;
 
 ParsedLocaleIdentifier LanguageTagParser::getParsedLocaleId(){
@@ -163,7 +163,7 @@ bool LanguageTagParser::parseUnicodeLocaleId() {
     return false;
   }
   if (!hasMoreSubtags()) {
-    return false; //true?
+    return true;
   }
   if (!parseExtensions()) {
     return false;
@@ -194,7 +194,9 @@ bool LanguageTagParser::parseUnicodeLanguageId(bool transformedExtensionId) {
   
   if (isUnicodeScriptSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
     languageId.scriptSubtag = getCurrentSubtag();
-    toASCIITitleCase(languageId.scriptSubtag);
+    if (!transformedExtensionId) {
+      toASCIITitleCase(languageId.scriptSubtag);
+    }
     if (!nextSubtag()) {
       return true;
     }
@@ -202,7 +204,9 @@ bool LanguageTagParser::parseUnicodeLanguageId(bool transformedExtensionId) {
   
   if (isUnicodeRegionSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
     languageId.regionSubtag = getCurrentSubtag();
-    toASCIIUpperCase(languageId.regionSubtag);
+    if (!transformedExtensionId) {
+      toASCIIUpperCase(languageId.regionSubtag);
+    }
     if (!nextSubtag()) {
       return true;
     }
@@ -240,7 +244,7 @@ bool LanguageTagParser::addVariantSubtag(bool transformedExtensionId) {
     auto begin = languageId.variantSubtagList.begin();
     auto end = languageId.variantSubtagList.end();
     auto position = std::upper_bound(begin, end, subtag);
-    if (position != std::upper_bound(begin, end, subtag)) {
+    if (position != std::lower_bound(begin, end, subtag)) {
       return false;
     }
     languageId.variantSubtagList.insert(position, subtag);
@@ -321,7 +325,17 @@ bool LanguageTagParser::parseUnicodeExtension() {
   }
   
   while (isUnicodeExtensionAttribute(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
-    impl_->parsedLocaleIdentifier.unicodeExtensionAttributes.push_back(getCurrentSubtag());
+    // Insert in sorted order
+    if (impl_->parsedLocaleIdentifier.unicodeExtensionAttributes.empty()) {
+      impl_->parsedLocaleIdentifier.unicodeExtensionAttributes.push_back(getCurrentSubtag());
+    } else {
+      auto subtag = getCurrentSubtag();
+      auto begin = impl_->parsedLocaleIdentifier.unicodeExtensionAttributes.begin();
+      auto end = impl_->parsedLocaleIdentifier.unicodeExtensionAttributes.end();
+      auto position = std::upper_bound(begin, end, subtag);
+      impl_->parsedLocaleIdentifier.unicodeExtensionAttributes.insert(position, subtag);
+    }
+
     if (!nextSubtag()) {
       return true;
     }
@@ -500,6 +514,132 @@ std::u16string LanguageTagParser::toString() {
 }
 std::u16string LanguageTagParser::getCurrentSubtag() {
   return impl_->mLocaleId.substr(impl_->mSubtagStart, impl_->mSubtagEnd - impl_->mSubtagStart + 1);
+}
+
+// https://unicode.org/reports/tr35/#Canonical_Unicode_Locale_Identifiers
+// https://tc39.es/ecma402/#sec-canonicalizeunicodelocaleid
+std::u16string canonicalizeLocaleId(std::u16string inLocaleId) {
+  LanguageTagParser parser(inLocaleId);
+  if (!parser.parseUnicodeLocaleId()) {
+    //return false; // throw?
+  }
+
+  std::u16string canoLocaleId;
+  canoLocaleId.reserve(parser.toString().length());
+
+  // Casing, variant, and attribute sorting are handled in parsing
+  ParsedLocaleIdentifier parsedId = parser.parsedLocaleIdentifier;
+  
+  // Append unicode_language_id
+  if (!parsedId.languageIdentifier.languageSubtag.empty()) {
+    canoLocaleId += !parsedId.languageIdentifier.languageSubtag;
+  }
+  if (!parsedId.languageIdentifier.scriptSubtag.empty()) {
+    canoLocaleId += !parsedId.languageIdentifier.scriptSubtag;
+  }
+  if (!parsedId.languageIdentifier.regionSubtag.empty()) {
+    canoLocaleId += !parsedId.languageIdentifier.regionSubtag;
+  }
+  for (const auto &subtag : parsedId.languageIdentifier.variantSubtagList) {
+    canoLocaleId += subtag;
+  }
+
+  // Any extensions are in alphabetical order by their singleton (eg, en-t-xxx-u-yyy, not en-u-yyy-t-xxx).
+
+  // Sort other extensions by singleton
+  std::vector<std::u16string> otherExtensions;
+  for (auto it = parsedId.otherExtensionMap.begin(); it < parsedId.otherExtensionMap.end(); it++) {
+    std::u16string oExt;
+    oExt += it->first;
+    for (const auto &ext : it->second) {
+      oExt += ext;  
+    }
+    otherExtensions.push_back(oExt);
+  }
+  std::sort(otherExtensions.begin(), otherExtensions.end());
+
+  // Append other extensions from a-s
+  for (const auto &oExt : otherExtensions) {
+    if (oExt[0] > 's') {
+      break;
+    }
+    canoLocaleId += oExt;
+  }
+
+  // Append tlang
+  if (parsedId.transformedLanguageIdentifier != NULL) {
+    if (!parsedId.transformedLanguageIdentifier.languageSubtag.empty()) {
+      canoLocaleId += parsedId.transformedLanguageIdentifier.languageSubtag;
+    }
+    if (!parsedId.languageIdentifier.scriptSubtag.empty()) {
+      canoLocaleId += parsedId.transformedLanguageIdentifier.scriptSubtag;
+    }
+    if (!parsedId.languageIdentifier.regionSubtag.empty()) {
+      canoLocaleId += parsedId.transformedLanguageIdentifier.regionSubtag;
+    }
+    for (const auto &subtag : parsedId.transformedLanguageIdentifier.variantSubtagList) {
+      canoLocaleId += subtag;
+    }
+  }
+
+  // Sort tfields by the alphabetical order of its keys
+  std::vector<std::u16string> tFields;
+  for (auto it = parsedId.transformedExtensionFields.begin(); it < parsedId.transformedExtensionFields.end(); it++) {
+    std::u16string tField;
+    tField += it->first;
+    for (const auto &tValue : it->second) {
+      tField += tValue;  
+    }
+    tFields.push_back(tField);
+  }
+  std::sort(tFields.begin(), tFields.end());
+
+  // Append tfields
+  for (const auto &tField : tFields) {
+    canoLocaleId += tField;
+  }
+
+  // Append sorted Unicode attributes
+  for (const auto &attribute : parsedId.unicodeExtensionAttributes) {
+    canoLocaleId += attribute;
+  }
+
+  // Sort Unicode keywords  by the alphabetical order of its keys
+  std::vector<std::u16string> keywords;
+  for (auto it = parsedId.unicodeExtensionKeywords.begin(); it < parsedId.unicodeExtensionKeywords.end(); it++) {
+    std::u16string keyword;
+    keyword += it->first;
+    for (const auto &value : it->second) {
+      keyword += value;  
+    }
+    keywords.push_back(keyword);
+  }
+  std::sort(keywords.begin(), keywords.end());
+
+  // Append Unicode keywords
+  for (const auto &keyword : keywords) {
+    canoLocaleId += keyword;
+  }
+
+  // Append remaining other extensions
+  for (const auto &oExt : otherExtensions) {
+    canoLocaleId += oExt;
+  }
+
+  // Append private use extensions
+
+  // Any type or tfield value "true" is removed.
+}
+
+bool isStructurallyValidLanguageTag(std::u16string inLocaleId) {
+    LanguageTagParser parser(inLocaleId);
+    if (!parser.parseUnicodeLocaleId()) {
+      return false;
+    }
+    if (!parser.hasMoreSubtags()) {
+      return false;
+    }
+    return true;
 }
 
 } // hermes

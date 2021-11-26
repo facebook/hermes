@@ -34,6 +34,9 @@ bool isTransformedExtensionTValueItem(std::u16string str, int start, int end);
 bool isPrivateUseExtension(std::u16string str, int start, int end);
 bool isOtherExtension(std::u16string str, int start, int end);
 
+std::u16string canonicalizeLocaleId(std::u16string inLocaleId);
+bool isStructurallyValidLanguageTag(std::u16string inLocaleId);
+
 struct ParsedLanguageIdentifier {
   std::u16string languageSubtag;
   std::u16string scriptSubtag;
@@ -45,12 +48,10 @@ struct ParsedLocaleIdentifier {
   ParsedLanguageIdentifier languageIdentifier;
   
   std::vector<std::u16string> unicodeExtensionAttributes;
-  std::unordered_map<std::u16string, std::vector<std::u16string>*>
-      unicodeExtensionKeywords;
+  std::unordered_map<std::u16string, std::vector<std::u16string>*> unicodeExtensionKeywords;
   
   ParsedLanguageIdentifier transformedLanguageIdentifier;
-  std::unordered_map<std::u16string, std::vector<std::u16string>*>
-      transformedExtensionFields;
+  std::unordered_map<std::u16string, std::vector<std::u16string>* transformedExtensionFields;
 
   std::unordered_map<char16_t, std::vector<std::u16string>*> otherExtensionMap;
   
@@ -67,12 +68,9 @@ class LanguageTagParser {
   bool parseUnicodeLocaleId();
   bool parseUnicodeLanguageId();
   ParsedLocaleIdentifier getParsedLocaleId();
-  
-  // ecma 402 functions
-  bool isStructurallyValidLanguageTag();
-  std::u16string getCanonicalizedLocale();
-  
+    
   std::u16string toString();
+  bool hasMoreSubtags();
 
  private:
   struct Impl;
@@ -87,7 +85,6 @@ class LanguageTagParser {
   bool parsePUExtension();
   // tokenizer functions
   std::u16string getCurrentSubtag();
-  bool hasMoreSubtags();
   bool nextSubtag();
 };
 
