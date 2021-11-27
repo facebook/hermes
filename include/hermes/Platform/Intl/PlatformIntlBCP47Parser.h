@@ -45,13 +45,13 @@ struct ParsedLanguageIdentifier {
 };
 
 struct ParsedLocaleIdentifier {
-  ParsedLanguageIdentifier languageIdentifier;
+  ParsedLanguageIdentifier *languageIdentifier;
   
   std::vector<std::u16string> unicodeExtensionAttributes;
   std::unordered_map<std::u16string, std::vector<std::u16string>*> unicodeExtensionKeywords;
   
-  ParsedLanguageIdentifier transformedLanguageIdentifier;
-  std::unordered_map<std::u16string, std::vector<std::u16string>* transformedExtensionFields;
+  ParsedLanguageIdentifier *transformedLanguageIdentifier;
+  std::unordered_map<std::u16string, std::vector<std::u16string>*> transformedExtensionFields;
 
   std::unordered_map<char16_t, std::vector<std::u16string>*> otherExtensionMap;
   
@@ -66,7 +66,6 @@ class LanguageTagParser {
 
   // public function declaration
   bool parseUnicodeLocaleId();
-  bool parseUnicodeLanguageId();
   ParsedLocaleIdentifier getParsedLocaleId();
     
   std::u16string toString();
@@ -77,11 +76,12 @@ class LanguageTagParser {
   std::unique_ptr<Impl> impl_;
   
   // private function declaration
-  bool addVariantSubtag();
+  bool parseUnicodeLanguageId(bool transformedExtensionId);
+  bool addVariantSubtag(bool transformedExtensionId);
   bool parseExtensions();
   bool parseUnicodeExtension();
   bool parseTransformedExtension();
-  bool parseOtherExtension(uchar16_t singleton);
+  bool parseOtherExtension(char16_t singleton);
   bool parsePUExtension();
   // tokenizer functions
   std::u16string getCurrentSubtag();
