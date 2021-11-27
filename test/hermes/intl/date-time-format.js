@@ -32,6 +32,20 @@ print(new Intl.DateTimeFormat('en-GB').format(oldDate));
 print(new Intl.DateTimeFormat('de-DE').format(oldDate));
 // CHECK-NEXT: 9.1.1952
 
+print(new Intl.DateTimeFormat('en-US', { timeStyle: 'long', timeZone: 'PST'}).format(date));
+// CHECK-NEXT: 7:45:00 PM PST
+
+print(new Intl.DateTimeFormat('en-US', { timeStyle: 'long', timeZone: 'EET'}).format(date));
+// CHECK-NEXT: 5:45:00 AM GMT+2
+
+try {
+  print(new Intl.DateTimeFormat('en-US', { timeStyle: 'long', timeZone: 'XXX'}).format(date));
+    print("Succeeded");
+  } catch (e) {
+    print("Caught", e.name, e.message);
+  }
+// CHECK-NEXT: Caught{{.*}}
+
 print(new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'long' }).format(date));
 // CHECK-NEXT: Thursday, 2 January 2020 at 03:45:00 GMT
 
