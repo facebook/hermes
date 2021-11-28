@@ -15,25 +15,6 @@
 namespace hermes {
 namespace platform_intl_parser {
 
-bool isASCIILetter(char16_t c);
-bool isASCIIDigit(char16_t c);
-bool isASCIILetterOrDigit(char16_t c);
-void toASCIILowerCase(std::u16string str);
-void toASCIIUpperCase(std::u16string str);
-void toASCIITitleCase(std::u16string str);
-bool isSubtagSeparator(char16_t c);
-bool isUnicodeLanguageSubtag(std::u16string str, int start, int end);
-bool isUnicodeScriptSubtag(std::u16string str, int start, int end);
-bool isUnicodeRegionSubtag(std::u16string str, int start, int end);
-bool isUnicodeVariantSubtag(std::u16string str, int start, int end);
-bool isUnicodeExtensionAttribute(std::u16string str, int start, int end);
-bool isUnicodeExtensionKey(std::u16string str, int start, int end);
-bool isUnicodeExtensionKeyTypeItem(std::u16string str, int start, int end);
-bool isTransformedExtensionKey(std::u16string str, int start, int end);
-bool isTransformedExtensionTValueItem(std::u16string str, int start, int end);
-bool isPrivateUseExtension(std::u16string str, int start, int end);
-bool isOtherExtension(std::u16string str, int start, int end);
-
 std::u16string canonicalizeLocaleId(std::u16string inLocaleId);
 bool isStructurallyValidLanguageTag(std::u16string inLocaleId);
 

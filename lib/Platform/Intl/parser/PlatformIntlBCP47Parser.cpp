@@ -9,7 +9,7 @@
 
 namespace hermes {
 namespace platform_intl_parser {
-
+namespace {
 // character type functions
 bool isASCIILetter(char16_t c) {
   return ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'));
@@ -20,7 +20,7 @@ bool isASCIIDigit(char16_t c) {
 bool isASCIILetterOrDigit(char16_t c) {
   return isASCIILetter(c) || isASCIIDigit(c);
 }
-void toASCIILowerCase(std::u16string str) {
+void toASCIILowerCase(std::u16string &str) {
   for (size_t i = 0; i < str.length(); i++) {
     if (str[i] <= 'Z' && str[i] >= 'A') {
       str[i] -= 'Z' - 'z';
@@ -28,7 +28,7 @@ void toASCIILowerCase(std::u16string str) {
   }
   return;
 }
-void toASCIIUpperCase(std::u16string str) {
+void toASCIIUpperCase(std::u16string &str) {
   for (size_t i = 0; i < str.length(); i++) {
     if (str[i] <= 'z' && str[i] >= 'a') {
       str[i] -= 'z' - 'Z';
@@ -36,7 +36,7 @@ void toASCIIUpperCase(std::u16string str) {
   }
   return;
 }
-void toASCIITitleCase(std::u16string str) {
+void toASCIITitleCase(std::u16string &str) {
   for (size_t i = 0; i < str.length(); i++) {
     if (i == 0 && str[i] <= 'z' && str[i] >= 'a') {
       str[i] -= 'z' - 'Z';
@@ -134,6 +134,7 @@ bool isOtherExtension(std::u16string str, int start, int end) {
   // = (sep alphanum{2,8})+;
   return isCharType(str, start, end, 2, 8, &isASCIILetterOrDigit);
 }
+}
 
 struct LanguageTagParser::Impl {
   Impl(const std::u16string &localeId) : mLocaleId(localeId){};
@@ -141,12 +142,14 @@ struct LanguageTagParser::Impl {
 
   ParsedLocaleIdentifier parsedLocaleIdentifier;
   std::u16string mLocaleId;
+  std::u16string mOriginalLocaleId;
   int mSubtagStart;
   int mSubtagEnd;
 };
 
 LanguageTagParser::LanguageTagParser(const std::u16string &localeId) : impl_(std::make_unique<Impl>(localeId)) {
   impl_->mLocaleId = localeId;
+  impl_->mOriginalLocaleId = localeId;
   toASCIILowerCase(impl_->mLocaleId);
   impl_->mSubtagStart = 0;
   impl_->mSubtagEnd = -1;
@@ -512,7 +515,7 @@ bool LanguageTagParser::nextSubtag() {
   }
 }
 std::u16string LanguageTagParser::toString() {
-  return impl_->mLocaleId;
+  return impl_->mOriginalLocaleId;
 }
 std::u16string LanguageTagParser::getCurrentSubtag() {
   return impl_->mLocaleId.substr(impl_->mSubtagStart, impl_->mSubtagEnd - impl_->mSubtagStart + 1);
@@ -523,7 +526,7 @@ std::u16string LanguageTagParser::getCurrentSubtag() {
 std::u16string canonicalizeLocaleId(std::u16string inLocaleId) {
   LanguageTagParser parser(inLocaleId);
   if (!parser.parseUnicodeLocaleId()) {
-    //return false; // throw?
+    return u"";
   }
 
   std::u16string canoLocaleId;
@@ -582,16 +585,24 @@ std::u16string canonicalizeLocaleId(std::u16string inLocaleId) {
     canoLocaleId += subtag;
   }
   
-
   // Sort tfields by the alphabetical order of its keys
   std::vector<std::u16string> tFields;
   for (auto it = parsedId.transformedExtensionFields.begin(); it != parsedId.transformedExtensionFields.end(); it++) {
     std::u16string tField;
     tField += it->first;
+    
+    bool isTrue = false;
     for (const auto &tValue : *it->second) {
+      if (tValue == u"true") {
+        isTrue = true;
+        break;
+      }
       tField += tValue;  
     }
-    tFields.push_back(tField);
+    // Any type or tfield value "true" is removed.
+    if (!isTrue) {
+      tFields.push_back(tField);
+    }
   }
   std::sort(tFields.begin(), tFields.end());
 
@@ -610,10 +621,19 @@ std::u16string canonicalizeLocaleId(std::u16string inLocaleId) {
   for (auto it = parsedId.unicodeExtensionKeywords.begin(); it != parsedId.unicodeExtensionKeywords.end(); it++) {
     std::u16string keyword;
     keyword += it->first;
+    
+    bool isTrue = false;
     for (const auto &value : *it->second) {
-      keyword += value;  
+      if (value == u"true") {
+        isTrue = true;
+        break;
+      }
+      keyword += value;
     }
-    keywords.push_back(keyword);
+    // Any type or tfield value "true" is removed.
+    if (!isTrue) {
+      keywords.push_back(keyword);
+    }
   }
   std::sort(keywords.begin(), keywords.end());
 
@@ -628,9 +648,12 @@ std::u16string canonicalizeLocaleId(std::u16string inLocaleId) {
   }
 
   // Append private use extensions
-
-  // Any type or tfield value "true" is removed.
-  
+  if (!parsedId.puExtensions.empty()) {
+    canoLocaleId += u"x";
+    for (const auto &puExt : parsedId.puExtensions) {
+      canoLocaleId += puExt;
+    }
+  }
   
   return canoLocaleId;
 }
