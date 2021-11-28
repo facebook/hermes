@@ -284,11 +284,26 @@ struct NumberFormat::Impl {
 NumberFormat::NumberFormat() : impl_(std::make_unique<Impl>()) {}
 NumberFormat::~NumberFormat() {}
 
+// https://tc39.es/ecma402/#sec-intl.numberformat.supportedlocalesof
 vm::CallResult<std::vector<std::u16string>> NumberFormat::supportedLocalesOf(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
-  return std::vector<std::u16string>{u"en-CA", u"de-DE"};
+    //  1. Let availableLocales be %NumberFormat%.[[AvailableLocales]].
+    NSArray<NSString *> *nsAvailableLocales =
+        [NSLocale availableLocaleIdentifiers];
+
+    // 2. Let requestedLocales be ? CanonicalizeLocaleList(locales).
+    vm::CallResult<std::vector<std::u16string>> requestedLocales =
+        getCanonicalLocales(runtime, locales);
+    std::vector<std::u16string> availableLocales =
+        nsStringArrayToU16StringArray(nsAvailableLocales);
+
+    // 3. Return ? SupportedLocales(availableLocales, requestedLocales, options).
+    // Get a non-const copy of options
+    Options copyOptions = options;
+    return supportedLocales(
+        availableLocales, requestedLocales.getValue(), copyOptions);
 }
 
 // https://tc39.es/ecma402/#sec-defaultnumberoption
@@ -307,8 +322,91 @@ vm::CallResult<std::uint8_t> defaultNumberOption(const std::uint8_t value,
 //  4. Return floor(value).
   return std::floor(value);
 }
-// TODO: isWellFormedUnitIdentifier
-
+// https://tc39.es/ecma402/#sec-issanctionedsimpleunitidentifier
+bool isSanctionedSimpleUnitIdentifier(std::u16string unitIdentifier) {
+  // This vector should be kept alphabetically ordered so that we can binary search in it (Table 2)
+  static std::vector<std::u16string> s_sanctionedSimpleUnitIdentifiers = {
+    u"acre",
+    u"bit",
+    u"byte",
+    u"celsius",
+    u"centimeter",
+    u"day",
+    u"degree",
+    u"fahrenheit",
+    u"fluid-ounce",
+    u"foot",
+    u"gallon",
+    u"gigabit",
+    u"gigabyte",
+    u"gram",
+    u"hectare",
+    u"hour",
+    u"inch",
+    u"kilobit",
+    u"kilobyte",
+    u"kilogram",
+    u"kilometer",
+    u"liter",
+    u"megabit",
+    u"megabyte",
+    u"meter",
+    u"mile",
+    u"mile-scandinavian",
+    u"milliliter",
+    u"millimeter",
+    u"millisecond",
+    u"minute",
+    u"month",
+    u"ounce",
+    u"percent",
+    u"petabyte",
+    u"pound",
+    u"second",
+    u"stone",
+    u"terabit",
+    u"terabyte",
+    u"week",
+    u"yard",
+    u"year"
+  };
+//  1. If unitIdentifier is listed in Table 2 below, return true.
+//  2. Else, return false.
+  if (std::binary_search(s_sanctionedSimpleUnitIdentifiers.begin(), s_sanctionedSimpleUnitIdentifiers.end(), unitIdentifier)) {
+    return true;
+  }
+  return false;
+};
+// https://tc39.es/ecma402/#sec-iswellformedunitidentifier
+bool isWellFormedUnitIdentifier(std::u16string unitIdentifier) {
+  //  1. If the result of IsSanctionedSimpleUnitIdentifier(unitIdentifier) is true, then
+  //  a. Return true.
+  if (isSanctionedSimpleUnitIdentifier(unitIdentifier)) {
+    return true;
+  }
+  //  2. If the substring "-per-" does not occur exactly once in unitIdentifier, then
+  //  a. Return false.
+  auto found = unitIdentifier.find(u"-per-");
+  if (found == std::string::npos) {// Not found
+    return false;
+  }
+  //  3. Let numerator be the substring of unitIdentifier from the beginning to just before "-per-".
+  //  4. If the result of IsSanctionedSimpleUnitIdentifier(numerator) is false, then
+  //  a. Return false.
+  std::u16string numerator = unitIdentifier.substr(0, found);
+  if (!isSanctionedSimpleUnitIdentifier(numerator)) {
+    return false;
+  }
+  //  5. Let denominator be the substring of unitIdentifier from just after "-per-" to the end.
+  //  6. If the result of IsSanctionedSimpleUnitIdentifier(denominator) is false, then
+  //  a. Return false.
+  std::u16string demoninator = unitIdentifier.substr((found+5), unitIdentifier.length());
+  if (!isSanctionedSimpleUnitIdentifier(numerator)) {
+    return false;
+  }
+  //  7. Return true.
+  return true;
+}
 // https://tc39.es/ecma402/#sec-case-sensitivity-and-case-mapping
 // Note that we should convert only upper case translation in ASCII range.
 std::u16string normalizeCurrencyCode(std::u16string currencyCode) {
@@ -400,7 +498,7 @@ vm::CallResult<Options> setNumberFormatUnitOptions(Options &options) {
 //  12. Else,
     else {
 //  a. If the result of IsWellFormedUnitIdentifier(unit) is false, throw a RangeError exception.
-      if (!isWellFormedCurrencyCode(unit->getString())) {
+      if (!isWellFormedUnitIdentifier(unit->getString())) {
         return vm::ExecutionStatus::EXCEPTION;
       }
     }
@@ -494,7 +592,11 @@ vm::CallResult<Options> setNumberFormatDigitOptions(Options &options) {
 }
 // TODO: Add isLocaleIdType
 // TODO: Add CurrencyDigits https://tc39.es/ecma402/#sec-currencydigits
-
+uint8_t getCurrencyDigits(std::u16string currency) {
+//  1. If the ISO 4217 currency and funds code list contains currency as an alphabetic code, return the minor unit value corresponding to the currency from the list; otherwise, return 2.
+// I think NSNumberFormatter takes a locale, not currency code. Could we make a list to check the currency string against the 40 currencies that don't use 2?
+  return 2;
+};
 // https://tc39.es/ecma402/#sec-initializenumberformat
 vm::ExecutionStatus NumberFormat::initialize(
     vm::Runtime *runtime,
@@ -551,7 +653,7 @@ vm::ExecutionStatus NumberFormat::initialize(
 // a. Let currency be numberFormat.[[Currency]].
     std::u16string currency = impl_->currency;
 // b. Let cDigits be CurrencyDigits(currency).
-    cDigits = CurrencyDigits(currency);
+    cDigits = getCurrencyDigits(currency);
 // c. Let mnfdDefault be cDigits.
     mnfdDefault = cDigits;
 // d. Let mxfdDefault be cDigits.
