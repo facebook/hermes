@@ -15,9 +15,6 @@
 namespace hermes {
 namespace platform_intl_parser {
 
-std::u16string canonicalizeLocaleId(std::u16string inLocaleId);
-bool isStructurallyValidLanguageTag(std::u16string inLocaleId);
-
 struct ParsedLanguageIdentifier {
   std::u16string languageSubtag;
   std::u16string scriptSubtag;
@@ -26,15 +23,15 @@ struct ParsedLanguageIdentifier {
 };
 
 struct ParsedLocaleIdentifier {
-  ParsedLanguageIdentifier *languageIdentifier;
+  ParsedLanguageIdentifier languageIdentifier;
   
   std::vector<std::u16string> unicodeExtensionAttributes;
-  std::unordered_map<std::u16string, std::vector<std::u16string>*> unicodeExtensionKeywords;
+  std::unordered_map<std::u16string, std::vector<std::u16string>> unicodeExtensionKeywords;
   
-  ParsedLanguageIdentifier *transformedLanguageIdentifier;
-  std::unordered_map<std::u16string, std::vector<std::u16string>*> transformedExtensionFields;
+  ParsedLanguageIdentifier transformedLanguageIdentifier;
+  std::unordered_map<std::u16string, std::vector<std::u16string>> transformedExtensionFields;
 
-  std::unordered_map<char16_t, std::vector<std::u16string>*> otherExtensionMap;
+  std::unordered_map<char16_t, std::vector<std::u16string>> otherExtensionMap;
   
   std::vector<std::u16string> puExtensions;
 };
@@ -68,6 +65,8 @@ class LanguageTagParser {
   std::u16string getCurrentSubtag();
   bool nextSubtag();
 };
+
+llvh::Optional<ParsedLocaleIdentifier> parseLocaleId(const std::u16string&);
 
 } // namespace platform_intl_parser
 } // namespace hermes
