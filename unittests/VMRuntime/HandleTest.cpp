@@ -154,32 +154,6 @@ TEST_F(HandleTest, ScopedPointerConstructorTest) {
   ASSERT_EQ(function.get(), obj.get());
 }
 
-/// Make sure that we can create handles one scope up in the scope chain.
-TEST_F(HandleTest, CreateInParentScope) {
-  GCScope theParent{runtime};
-  auto h1 = runtime->makeHandle(HermesValue::encodeBoolValue(true));
-  (void)h1;
-#ifndef NDEBUG
-  ASSERT_EQ(1, theParent.getHandleCountDbg());
-#endif
-
-  auto func = [this, &theParent]() -> Handle<> {
-    GCScope theChild{runtime};
-    EXPECT_EQ(&theParent, runtime->getTopGCScopesParent());
-    auto h2 = runtime->makeHandle(HermesValue::encodeBoolValue(true));
-    (void)h2;
-    auto h3 =
-        runtime->makeHandleInParentScope(HermesValue::encodeBoolValue(true));
-    return h3;
-  };
-
-  auto h3 = func();
-  (void)h3;
-#ifndef NDEBUG
-  ASSERT_EQ(2, theParent.getHandleCountDbg());
-#endif
-}
-
 #ifdef HERMES_SLOW_DEBUG
 TEST_F(HandleDeathTest, UseFlushedHandle) {
   auto marker = gcScope.createMarker();

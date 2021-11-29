@@ -3,14 +3,6 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
- * @flow strict
- * @format
  */
 
-'use strict';
-
-export type * from './selectors';
-export type * from './types';
-
-export {};
+// RUN: ( echo "0" "+"{1..29999} | %hermesc -O0 -dump-ir - >/dev/null )

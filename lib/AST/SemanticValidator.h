@@ -48,6 +48,12 @@ class Keywords {
   const UniqueString *const identLet;
   /// Identifier for "const".
   const UniqueString *const identConst;
+  /// "+".
+  const UniqueString *const identPlus;
+  /// "-".
+  const UniqueString *const identMinus;
+  /// "=".
+  const UniqueString *const identAssign;
 
   Keywords(Context &astContext);
 };
@@ -159,6 +165,7 @@ class SemanticValidator {
   void visit(ForOfStatementNode *forOf);
   void visitForInOf(LoopStatementNode *loopNode, Node *left);
 
+  void visit(BinaryExpressionNode *bin);
   void visit(AssignmentExpressionNode *assignment);
   void visit(UpdateExpressionNode *update);
 
