@@ -36,8 +36,8 @@ struct ParsedLocaleIdentifier {
   std::vector<std::u16string> puExtensions;
 };
 
-llvh::Optional<ParsedLocaleIdentifier> parseLocaleId(const std::u16string& inLocaleId);
+llvh::Optional<ParsedLocaleIdentifier> parseLocaleId(const std::u16string &localeId);
 
-} // namespace platform_intl_parser
+} // namespace bcp47_parser
 } // namespace hermes
 #endif
