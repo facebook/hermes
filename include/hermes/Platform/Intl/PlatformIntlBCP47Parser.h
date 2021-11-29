@@ -13,7 +13,7 @@
 #include <vector>
 
 namespace hermes {
-namespace platform_intl_parser {
+namespace bcp47_parser {
 
 struct ParsedLanguageIdentifier {
   std::u16string languageSubtag;
@@ -36,37 +36,7 @@ struct ParsedLocaleIdentifier {
   std::vector<std::u16string> puExtensions;
 };
 
-class LanguageTagParser {
- public:
-  LanguageTagParser(const std::u16string &localeId);
-  LanguageTagParser();
-  ~LanguageTagParser();
-
-  // public function declaration
-  bool parseUnicodeLocaleId();
-  ParsedLocaleIdentifier getParsedLocaleId();
-    
-  std::u16string toString();
-  bool hasMoreSubtags();
-
- private:
-  struct Impl;
-  std::unique_ptr<Impl> impl_;
-  
-  // private function declaration
-  bool parseUnicodeLanguageId(bool transformedExtensionId);
-  bool addVariantSubtag(bool transformedExtensionId);
-  bool parseExtensions();
-  bool parseUnicodeExtension();
-  bool parseTransformedExtension();
-  bool parseOtherExtension(char16_t singleton);
-  bool parsePUExtension();
-  // tokenizer functions
-  std::u16string getCurrentSubtag();
-  bool nextSubtag();
-};
-
-llvh::Optional<ParsedLocaleIdentifier> parseLocaleId(const std::u16string&);
+llvh::Optional<ParsedLocaleIdentifier> parseLocaleId(const std::u16string& inLocaleId);
 
 } // namespace platform_intl_parser
 } // namespace hermes

@@ -8,7 +8,7 @@
 #include "hermes/Platform/Intl/PlatformIntlBCP47Parser.h"
 
 namespace hermes {
-namespace platform_intl_parser {
+namespace bcp47_parser {
 namespace {
 // character type functions
 bool isASCIILetter(char16_t c) {
@@ -135,6 +135,36 @@ bool isOtherExtension(std::u16string str, int start, int end) {
   return isCharType(str, start, end, 2, 8, &isASCIILetterOrDigit);
 }
 }
+
+class LanguageTagParser {
+ public:
+  LanguageTagParser(const std::u16string &localeId);
+  LanguageTagParser();
+  ~LanguageTagParser();
+
+  // public function declaration
+  bool parseUnicodeLocaleId();
+  ParsedLocaleIdentifier getParsedLocaleId();
+    
+  std::u16string toString();
+  bool hasMoreSubtags();
+
+ private:
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
+  
+  // private function declaration
+  bool parseUnicodeLanguageId(bool transformedExtensionId);
+  bool addVariantSubtag(bool transformedExtensionId);
+  bool parseExtensions();
+  bool parseUnicodeExtension();
+  bool parseTransformedExtension();
+  bool parseOtherExtension(char16_t singleton);
+  bool parsePUExtension();
+  // tokenizer functions
+  std::u16string getCurrentSubtag();
+  bool nextSubtag();
+};
 
 struct LanguageTagParser::Impl {
   Impl(const std::u16string &localeId) : mLocaleId(localeId){};
@@ -660,15 +690,15 @@ std::u16string canonicalizeLocaleId(std::u16string inLocaleId) {
   return canoLocaleId;
 }
 
-bool isStructurallyValidLanguageTag(std::u16string inLocaleId) {
-    LanguageTagParser parser(inLocaleId);
-    if (!parser.parseUnicodeLocaleId()) {
-      return false;
-    }
-    if (!parser.hasMoreSubtags()) {
-      return false;
-    }
-    return true;
+llvh::Optional<ParsedLocaleIdentifier> parseLocaleId(const std::u16string& inLocaleId) {
+  LanguageTagParser parser(inLocaleId);
+  if (!parser.parseUnicodeLocaleId()) {
+    return {};
+  }
+  if (parser.hasMoreSubtags()) {
+    return {};
+  }
+  return parser.getParsedLocaleId();
 }
 
 } // hermes
