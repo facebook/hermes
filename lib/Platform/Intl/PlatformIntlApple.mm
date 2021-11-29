@@ -213,10 +213,10 @@ vm::CallResult<std::u16string> toLocaleUpperCase(
 // Implementation of
 // https://tc39.es/ecma402/#sec-getoption
 vm::CallResult<Option> getOption(
-    Options &options,
-    const std::u16string property,
-    const std::u16string type,
-    const std::vector<std::u16string> values,
+    const Options &options,
+    const std::u16string &property,
+    const std::u16string &type,
+    const std::vector<std::u16string> &values,
     const Options &fallback) {
   // 1. Assert type(options) is object
   // 2. Let value be ? Get(options, property).
@@ -259,9 +259,9 @@ vm::CallResult<Option> getOption(
 // https://402.ecma-international.org/8.0/#sec-getnumberoption
 vm::CallResult<Option> getOptionNumber(
     const Options &options,
-    const std::u16string property,
-    const std::uint8_t minimum,
-    const std::uint8_t maximum,
+    const std::u16string &property,
+    const std::uint8_t &minimum,
+    const std::uint8_t &maximum,
     const Options &fallback) {
   //  1. Assert: Type(options) is Object.
   //  2. Let value be ? Get(options, property).
@@ -315,15 +315,14 @@ std::vector<std::u16string> lookupSupportedLocales(
 // Implementation of
 // https://tc39.es/ecma402/#sec-supportedlocales
 vm::CallResult<std::vector<std::u16string>> supportedLocales(
-    const std::vector<std::u16string> availableLocales,
-    const std::vector<std::u16string> requestedLocales,
-    Options &options) {
+    const std::vector<std::u16string> &availableLocales,
+    const std::vector<std::u16string> &requestedLocales,
+    const Options &options) {
   // 1. Set options to ? CoerceOptionsToObject(options).
   // 2. Let matcher be ? GetOption(options, "localeMatcher", "string", «
   // "lookup", "best fit" », "best fit").
   Options matcherFallback;
-  std::u16string bestFit = u"best fit"; // If not declared, it will not work
-  matcherFallback.emplace(std::u16string(u"fallback"), Option(bestFit));
+  matcherFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"best fit")));
   std::vector<std::u16string> vectorForMatcher = {u"lookup", u"best fit"};
   vm::CallResult<std::u16string> matcher = getOption(
                                                options,
@@ -390,7 +389,7 @@ struct DateTimeFormat::Impl {
   // For DateTimeFormat::impl_ in initialize
   std::u16string mFormatMatcher, mHourCycle, mWeekday, mEra, mYear, mMonth,
       mDay, mDayPeriod, mHour, mMinute, mSecond, mTimeZone, mTimeZoneName,
-      mDateStyle, mTimeStyle, mCalendar, locale;
+      mDateStyle, mTimeStyle, mCalendar, mNumberingSystem, locale;
   uint8_t mFractionalSecondDigits;
   bool hour12;
 };
@@ -732,13 +731,12 @@ vm::CallResult<Options> toDateTimeOptions(
     // a. Throw a TypeError exception.
     return vm::ExecutionStatus::EXCEPTION;
   }
-  std::u16string numeric = u"numeric";
   // 11. If needDefaults is true and defaults is either "date" or "all", then
   if (needDefaults && (defaults == u"date" || defaults == u"all")) {
     // a. For each property name prop of « "year", "month", "day" », do
     for (std::u16string prop : {u"year", u"month", u"day"}) {
       // i. Perform ? CreateDataPropertyOrThrow(options, prop, "numeric").
-      options.emplace(std::u16string(prop), Option(numeric));
+      options.emplace(std::u16string(prop), Option(std::u16string(u"numeric")));
     }
   }
   // 12. If needDefaults is true and defaults is either "time" or "all", then
@@ -746,7 +744,7 @@ vm::CallResult<Options> toDateTimeOptions(
     // a. For each property name prop of « "hour", "minute", "second" », do
     for (std::u16string prop : {u"hour", u"minute", u"second"}) {
       // i. Perform ? CreateDataPropertyOrThrow(options, prop, "numeric").
-      options.emplace(std::u16string(prop), Option(numeric));
+      options.emplace(std::u16string(prop), Option(std::u16string(u"numeric")));
     }
   }
   // 13. return options
@@ -820,8 +818,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   // 4. Let matcher be ? GetOption(options, "localeMatcher", "string", «
   //   "lookup", "best fit" », "best fit").
   Options matcherFallback;
-  std::u16string bestFit = u"best fit"; // If not declared, it will not work
-  matcherFallback.emplace(std::u16string(u"fallback"), Option(bestFit));
+  matcherFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"best fit")));
   auto matcher = getOption(
       optionsToUse,
       u"localeMatcher",
@@ -834,8 +831,8 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   // 6. Let calendar be ? GetOption(options, "calendar", "string",
   //    undefined, undefined).
   Options undefinedFallback;
-  std::u16string undefined; // If this is truly undefined it will error throw?
-  undefinedFallback.emplace(std::u16string(u"fallback"), Option(undefined));
+  // If this is truly undefined it will error throw?
+  undefinedFallback.emplace(std::u16string(u"fallback"), Option(std::u16string()));
   auto calendar =
       getOption(optionsToUse, u"calendar", u"string", {}, undefinedFallback);
   // 7. If calendar is not undefined, then
@@ -894,7 +891,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   bool useDefaultCalendar;
   auto mResolvedLocaleObjectForResolvedOptions = r.locale;
   Option calendarResolved = r.ca;
-  if (calendarResolved.isString()) {
+  if (calendarResolved.getString() != u"") {
     useDefaultCalendar = false;
     impl_->mCalendar = calendarResolved.getString();
   } else {
@@ -906,20 +903,18 @@ vm::ExecutionStatus DateTimeFormat::initialize(
     impl_->mCalendar = u"gregorian"; // Placeholder for now, needs fixing
   }
   bool useDefaultNumberSystem;
-  std::u16string mNumberingSystem;
   Option numberingSystemResolved = r.nu;
-  if (numberingSystemResolved.isString()) {
+  if (numberingSystemResolved.getString() != u"") {
     useDefaultNumberSystem = false;
-    mNumberingSystem = numberingSystemResolved.getString();
+    impl_->mNumberingSystem = numberingSystemResolved.getString();
   } else {
     useDefaultNumberSystem = true;
-    mNumberingSystem = u"latn";
+    impl_->mNumberingSystem = u"latn";
   }
   Option hourCycleResolved = r.hc;
 
   // 24-27
   //  24. Let timeZone be ? Get(options, "timeZone").
-  std::u16string timeZone;
   std::u16string timeZoneValue;
   //  Check find first to avoid error
   //  25. If timeZone is undefined, then
@@ -930,8 +925,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
     NSString *nstrTime =
         [defaultTimeZone localizedName:NSTimeZoneNameStyleShortStandard
                                 locale:[NSLocale currentLocale]];
-    std::u16string defaultTime = nsStringToU16String(nstrTime);
-    timeZoneValue = defaultTime;
+    timeZoneValue = nsStringToU16String(nstrTime);
   }
   //  26. Else,
   else {
@@ -947,17 +941,6 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   }
   impl_->mTimeZone = timeZoneValue;
   // 28 - 34
-  // 29b
-  auto fractionalSecondDigitsOption = getOptionNumber(
-      optionsToUse, u"fractionalSecondDigits", 1, 3, undefinedFallback);
-  if (fractionalSecondDigitsOption.getStatus() ==
-      vm::ExecutionStatus::EXCEPTION) {
-    return runtime->raiseRangeError("Invalid fractionalSecondDigits");
-  }
-  if (fractionalSecondDigitsOption->isNumber()) {
-    impl_->mFractionalSecondDigits = fractionalSecondDigitsOption->getNumber();
-  }
-
   auto formatMatcherOption = getOption(
       optionsToUse,
       u"formatMatcher",
@@ -968,111 +951,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
     return runtime->raiseRangeError("Invalid formatMatcher");
   }
   impl_->mFormatMatcher = formatMatcherOption->getString();
-
-  auto weekdayOption = getOption(
-      optionsToUse,
-      u"weekday",
-      u"string",
-      {u"long", u"short", u"narrow"},
-      undefinedFallback);
-  if (weekdayOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-    return runtime->raiseRangeError("Invalid weekday");
-  }
-  impl_->mWeekday = weekdayOption->getString();
-
-  auto eraOption = getOption(
-      optionsToUse,
-      u"era",
-      u"string",
-      {u"long", u"short", u"narrow"},
-      undefinedFallback);
-  if (eraOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-    return runtime->raiseRangeError("Invalid era");
-  }
-  impl_->mEra = eraOption->getString();
-
-  auto yearOption = getOption(
-      optionsToUse,
-      u"year",
-      u"string",
-      {u"numeric", u"2-digit"},
-      undefinedFallback);
-  if (yearOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-    return runtime->raiseRangeError("Invalid year");
-  }
-  impl_->mYear = yearOption->getString();
-
-  auto monthOption = getOption(
-      optionsToUse,
-      u"month",
-      u"string",
-      {u"numeric", u"2-digit", u"long", u"short", u"narrow"},
-      undefinedFallback);
-  if (monthOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-    return runtime->raiseRangeError("Invalid month");
-  }
-  impl_->mMonth = monthOption->getString();
-
-  auto dayOption = getOption(
-      optionsToUse,
-      u"day",
-      u"string",
-      {u"numeric", u"2-digit"},
-      undefinedFallback);
-  if (dayOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-    return runtime->raiseRangeError("Invalid day");
-  }
-  impl_->mDay = dayOption->getString();
-
-  auto hourOption = getOption(
-      optionsToUse,
-      u"hour",
-      u"string",
-      {u"numeric", u"2-digit"},
-      undefinedFallback);
-  if (hourOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-    return runtime->raiseRangeError("Invalid hour");
-  }
-  impl_->mHour = hourOption->getString();
-
-  auto minuteOption = getOption(
-      optionsToUse,
-      u"minute",
-      u"string",
-      {u"numeric", u"2-digit"},
-      undefinedFallback);
-  if (minuteOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-    return runtime->raiseRangeError("Invalid minute");
-  }
-  impl_->mMinute = minuteOption->getString();
-
-  auto secondOption = getOption(
-      optionsToUse,
-      u"second",
-      u"string",
-      {u"numeric", u"2-digit"},
-      undefinedFallback);
-  if (secondOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-    return runtime->raiseRangeError("Invalid second");
-  }
-  impl_->mSecond = secondOption->getString();
-
-  auto timeZoneNameOption = getOption(
-      optionsToUse,
-      u"timeZoneName",
-      u"string",
-      {u"long",
-       u"short",
-       u"shortOffset",
-       u"longOffset",
-       u"shortGeneric",
-       u"longGeneric"},
-      undefinedFallback);
-  if (timeZoneNameOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-    return runtime->raiseRangeError("Invalid timeZoneName");
-  }
-  impl_->mTimeZoneName = timeZoneNameOption->getString();
-
+      
   auto dateStyleOption = getOption(
       optionsToUse,
       u"dateStyle",
@@ -1094,19 +973,179 @@ vm::ExecutionStatus DateTimeFormat::initialize(
     return runtime->raiseRangeError("Invalid timeStyle");
   }
   impl_->mTimeStyle = timeStyleOption->getString();
-
+  
+  auto fractionalSecondDigitsOption = getOptionNumber(
+      optionsToUse, u"fractionalSecondDigits", 1, 3, undefinedFallback);
+  auto weekdayOption = getOption(
+      optionsToUse,
+      u"weekday",
+      u"string",
+      {u"long", u"short", u"narrow"},
+      undefinedFallback);
+  auto eraOption = getOption(
+      optionsToUse,
+      u"era",
+      u"string",
+      {u"long", u"short", u"narrow"},
+      undefinedFallback);
+  auto yearOption = getOption(
+      optionsToUse,
+      u"year",
+      u"string",
+      {u"numeric", u"2-digit"},
+      undefinedFallback);
+  auto monthOption = getOption(
+      optionsToUse,
+      u"month",
+      u"string",
+      {u"numeric", u"2-digit", u"long", u"short", u"narrow"},
+      undefinedFallback);
+  auto dayOption = getOption(
+      optionsToUse,
+      u"day",
+      u"string",
+      {u"numeric", u"2-digit"},
+      undefinedFallback);
+  auto hourOption = getOption(
+      optionsToUse,
+      u"hour",
+      u"string",
+      {u"numeric", u"2-digit"},
+      undefinedFallback);
+  auto minuteOption = getOption(
+      optionsToUse,
+      u"minute",
+      u"string",
+      {u"numeric", u"2-digit"},
+      undefinedFallback);
+  auto secondOption = getOption(
+      optionsToUse,
+      u"second",
+      u"string",
+      {u"numeric", u"2-digit"},
+      undefinedFallback);
+  auto timeZoneNameOption = getOption(
+      optionsToUse,
+      u"timeZoneName",
+      u"string",
+      {u"long",
+       u"short",
+       u"shortOffset",
+       u"longOffset",
+       u"shortGeneric",
+       u"longGeneric"},
+      undefinedFallback);
   auto dayPeriodOption = getOption(
       optionsToUse,
       u"dayPeriod",
       u"string",
       {u"long", u"short", u"narrow"},
       undefinedFallback);
+// 36. If dateStyle is not undefined or timeStyle is not undefined, then
+if (timeStyleOption->getString() != u"" || dateStyleOption->getString() != u"") {
+// a. For each row in Table 4, except the header row, do
+// i. Let prop be the name given in the Property column of the row.
+// ii. Let p be opt.[[<prop>]].
+// iii. If p is not undefined, then
+// 1. Throw a TypeError exception. (timeStyle/dateStyle can't be used with table 4 options)
+  if (fractionalSecondDigitsOption->isNumber()) {
+    return runtime->raiseTypeError("Invalid options");
+  }
+  if (weekdayOption->getString() != u"") {
+    return runtime->raiseTypeError("Invalid options");
+  }
+  if (eraOption->getString() != u"") {
+    return runtime->raiseTypeError("Invalid options");
+  }
+  if (yearOption->getString() != u"") {
+    return runtime->raiseTypeError("Invalid options");
+  }
+  if (monthOption->getString() != u"") {
+    return runtime->raiseTypeError("Invalid options");
+  }
+  if (dayOption->getString() != u"") {
+    return runtime->raiseTypeError("Invalid options");
+  }
+  if (hourOption->getString() != u"") {
+    return runtime->raiseTypeError("Invalid options");
+  }
+  if (minuteOption->getString() != u"") {
+    return runtime->raiseTypeError("Invalid options");
+  }
+  if (secondOption->getString() != u"") {
+    return runtime->raiseTypeError("Invalid options");
+  }
+  if (timeZoneNameOption->getString() != u"") {
+    return runtime->raiseTypeError("Invalid options");
+  }
+  if (dayPeriodOption->getString() != u"") {
+    return runtime->raiseTypeError("Invalid options");
+  }
+}
+// 38. For each row in Table 4, except the header row, in table order, do
+// a. Let prop be the name given in the Property column of the row.
+// b. If bestFormat has a field [[<prop>]], then
+// i. Let p be bestFormat.[[<prop>]].
+// ii. Set dateTimeFormat's internal slot whose name is the Internal Slot column of the row to p
+  if (fractionalSecondDigitsOption.getStatus() ==
+      vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid fractionalSecondDigits");
+  }
+  if (fractionalSecondDigitsOption->isNumber()) {
+    impl_->mFractionalSecondDigits = fractionalSecondDigitsOption->getNumber();
+  }
+      
+  if (weekdayOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid weekday");
+  }
+  impl_->mWeekday = weekdayOption->getString();
+
+  if (eraOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid era");
+  }
+  impl_->mEra = eraOption->getString();
+  
+  if (yearOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid year");
+  }
+  impl_->mYear = yearOption->getString();
+  
+  if (monthOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid month");
+  }
+  impl_->mMonth = monthOption->getString();
+  
+  if (dayOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid day");
+  }
+  impl_->mDay = dayOption->getString();
+  
+  if (hourOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid hour");
+  }
+  impl_->mHour = hourOption->getString();
+  
+  if (minuteOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid minute");
+  }
+  impl_->mMinute = minuteOption->getString();
+  
+  if (secondOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid second");
+  }
+  impl_->mSecond = secondOption->getString();
+  
+  if (timeZoneNameOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError("Invalid timeZoneName");
+  }
+  impl_->mTimeZoneName = timeZoneNameOption->getString();
+  
   if (dayPeriodOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
     return runtime->raiseRangeError("Invalid dayPeriod");
   }
   impl_->mDayPeriod = dayPeriodOption->getString();
-
-  // 36
+      
+  // 39
   if (impl_->mHour == u"") {
     impl_->mHourCycle = u"";
   } else {
@@ -1289,11 +1328,11 @@ std::u16string DateTimeFormat::format(double jsTimeValue) noexcept {
     dateFormatter.calendar = [[NSCalendar alloc]
         initWithCalendarIdentifier:u16StringToNSString(impl_->mCalendar)];
   }
+  // TODO: Set numberingSystem if not default latn(0-9)
 
   // The following options cannot be used in conjunction with timeStyle or
   // dateStyle
-  // TODO: Where is best to error throw if the wrong options combination have
-  // been used? Form a custom format string It will be reordered according to
+  // Form a custom format string It will be reordered according to
   // locale later
   NSMutableString *customFormattedDate = [[NSMutableString alloc] init];
   if (impl_->mTimeZoneName != u"") {
