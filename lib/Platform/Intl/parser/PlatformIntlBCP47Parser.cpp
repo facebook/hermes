@@ -205,7 +205,7 @@ bool LanguageTagParser::parseUnicodeLocaleId() {
 }
 
 bool LanguageTagParser::parseUnicodeLanguageId(bool transformedExtensionId) {
-  if (!nextSubtag() || !isUnicodeLanguageSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
+  if (!transformedExtensionId && (!nextSubtag() || !isUnicodeLanguageSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd))) {
     return false;
   }
  
@@ -414,7 +414,7 @@ bool LanguageTagParser::parseTransformedExtension() {
   bool hasExtension = false;
   if (isUnicodeLanguageSubtag(impl_->mLocaleId, impl_->mSubtagStart, impl_->mSubtagEnd)) {
     hasExtension = true;
-    // parseUnicodeLanguageId(true);
+    parseUnicodeLanguageId(true);
     // tricky
     if (!hasMoreSubtags()) {
       return true;

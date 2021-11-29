@@ -16,35 +16,35 @@ using namespace hermes::bcp47_parser;
 TEST(PlatformIntlBCP47Parser, LanguageIdTest) {
   // language + county code
   llvh::Optional<ParsedLocaleIdentifier> parserOpt = parseLocaleId(u"en-US");
-  ParsedLocaleIdentifier parser1 = parserOpt.getValue();
-  EXPECT_EQ(u"en", parser1.languageIdentifier.languageSubtag);
-  EXPECT_EQ(u"US", parser1.languageIdentifier.regionSubtag);
+  ParsedLocaleIdentifier locale1 = parserOpt.getValue();
+  EXPECT_EQ(u"en", locale1.languageIdentifier.languageSubtag);
+  EXPECT_EQ(u"US", locale1.languageIdentifier.regionSubtag);
   
   // language + script + country code
   parserOpt = parseLocaleId(u"CMn-aRab-dE");
-  ParsedLocaleIdentifier parser2 = parserOpt.getValue();
-  EXPECT_EQ(u"cmn", parser2.languageIdentifier.languageSubtag);
-  EXPECT_EQ(u"Arab", parser2.languageIdentifier.scriptSubtag);
-  EXPECT_EQ(u"DE", parser2.languageIdentifier.regionSubtag);
+  ParsedLocaleIdentifier locale2 = parserOpt.getValue();
+  EXPECT_EQ(u"cmn", locale2.languageIdentifier.languageSubtag);
+  EXPECT_EQ(u"Arab", locale2.languageIdentifier.scriptSubtag);
+  EXPECT_EQ(u"DE", locale2.languageIdentifier.regionSubtag);
 
   // language + region code
   parserOpt = parseLocaleId(u"zh-319");
-  ParsedLocaleIdentifier parser3 = parserOpt.getValue();
-  EXPECT_EQ(u"zh", parser3.languageIdentifier.languageSubtag);
-  EXPECT_EQ(u"319", parser3.languageIdentifier.regionSubtag);
+  ParsedLocaleIdentifier locale3 = parserOpt.getValue();
+  EXPECT_EQ(u"zh", locale3.languageIdentifier.languageSubtag);
+  EXPECT_EQ(u"319", locale3.languageIdentifier.regionSubtag);
 
   // language + region code + extension
   parserOpt = parseLocaleId(u"zh-319-u-abc-test");
-  ParsedLocaleIdentifier parser4 = parserOpt.getValue();
-  EXPECT_EQ(u"zh", parser4.languageIdentifier.languageSubtag);
-  EXPECT_EQ(u"319", parser4.languageIdentifier.regionSubtag);
+  ParsedLocaleIdentifier locale4 = parserOpt.getValue();
+  EXPECT_EQ(u"zh", locale4.languageIdentifier.languageSubtag);
+  EXPECT_EQ(u"319", locale4.languageIdentifier.regionSubtag);
   
   // language + variant list
   parserOpt = parseLocaleId(u"und-variant-alphabet-subtag");
-  ParsedLocaleIdentifier parser5 = parserOpt.getValue();
-  EXPECT_EQ(u"und", parser5.languageIdentifier.languageSubtag);
-  EXPECT_EQ(u"variant", parser5.languageIdentifier.variantSubtagList.back());
-  EXPECT_EQ(u"alphabet", parser5.languageIdentifier.variantSubtagList.front());
+  ParsedLocaleIdentifier locale5 = parserOpt.getValue();
+  EXPECT_EQ(u"und", locale5.languageIdentifier.languageSubtag);
+  EXPECT_EQ(u"variant", locale5.languageIdentifier.variantSubtagList.back());
+  EXPECT_EQ(u"alphabet", locale5.languageIdentifier.variantSubtagList.front());
 }
 
 TEST(PlatformIntlBCP47Parser, ExtensionText) {
@@ -63,7 +63,15 @@ TEST(PlatformIntlBCP47Parser, ExtensionText) {
   EXPECT_EQ(0, keywordsIt->second.size());
 
   // Transformed extension test
-  parserOpt = parseLocaleId(u"und-t-en-US");
+  parserOpt = parseLocaleId(u"und-t-en-test-US-a9-ecma402-262test");
+  ParsedLocaleIdentifier locale2 = parserOpt.getValue();
+  EXPECT_EQ(u"en", locale2.transformedLanguageIdentifier.languageSubtag);
+  EXPECT_EQ(u"test", locale2.transformedLanguageIdentifier.scriptSubtag);
+  EXPECT_EQ(u"us", locale2.transformedLanguageIdentifier.regionSubtag);
+  auto transformedIt = locale2.transformedExtensionFields.begin();
+  EXPECT_EQ(u"a9", transformedIt->first);
+  EXPECT_EQ(u"ecma402", transformedIt->second.front());
+  EXPECT_EQ(u"262test", transformedIt->second.back());
 
   // Other extension test
   parserOpt = parseLocaleId(u"und-o-first-second-q-1o1");
