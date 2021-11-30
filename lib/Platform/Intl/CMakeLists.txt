@@ -14,6 +14,7 @@ if(HERMES_ENABLE_INTL)
     add_hermes_library(hermesPlatformIntl STATIC PlatformIntlApple.mm
         LINK_LIBS
         ${FOUNDATION}
+        hermesPlatformIntlParser
     )
     # Work around a bug in unity builds where it tries to build Obj-C as C++.
     set_target_properties(hermesPlatformIntl PROPERTIES UNITY_BUILD false)

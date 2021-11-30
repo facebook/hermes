@@ -26,41 +26,6 @@ std::u16string nsStringToU16String(NSString *src) {
 }
 }
 
-// Implementation of https://tc39.es/ecma402/#sec-canonicalizelocalelist
-vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
-    vm::Runtime *runtime,
-    const std::vector<std::u16string> &locales) {
-  // 1. If locales is undefined, then
-  //   a. Return a new empty List
-  // Not needed, this validation occurs closer to VM in 'normalizeLocales'.
-  // 2. Let seen be a new empty List.
-  std::vector<std::u16string> seen;
-  // 3. If Type(locales) is String or Type(locales) is Object and locales has an
-  // [[InitializedLocale]] internal slot, then
-  // 4. Else
-  // We don't yet support Locale object -
-  // https://tc39.es/ecma402/#locale-objects As of now, 'locales' can only be a
-  // string list/array. Validation occurs in normalizeLocaleList, so this
-  // function just takes a vector of strings.
-  // 5. Let len be ? ToLength(? Get(O, "length")).
-  // 6. Let k be 0.
-  // 7. Repeat, while k < len
-  for (std::u16string locale : locales) {
-    // TODO - BCP 47 tag validation
-    // 7.c.vi. Let canonicalizedTag be CanonicalizeUnicodeLocaleId(tag).
-    auto *localeNSString = u16StringToNSString(locale);
-    NSString *canonicalizedTagNSString =
-        [NSLocale canonicalLocaleIdentifierFromString:localeNSString];
-    auto canonicalizedTag = nsStringToU16String(canonicalizedTagNSString);
-    // 7.c.vii. If canonicalizedTag is not an element of seen, append
-    // canonicalizedTag as the last element of seen.
-    if (std::find(seen.begin(), seen.end(), canonicalizedTag) == seen.end()) {
-      seen.push_back(std::move(canonicalizedTag));
-    }
-  }
-  return seen;
-}
-
 // https://unicode.org/reports/tr35/#Canonical_Unicode_Locale_Identifiers
 // https://tc39.es/ecma402/#sec-canonicalizeunicodelocaleid
 std::u16string canonicalizeLocaleId(const std::u16string &localeId) {
@@ -113,18 +78,21 @@ std::u16string canonicalizeLocaleId(const std::u16string &localeId) {
     canoLocaleId += oExt;
   }
 
+  // Build transformed extension
+  std::u16string transformedExtension;
+
   // Append tlang
   if (!parsedId.transformedLanguageIdentifier.languageSubtag.empty()) {
-    canoLocaleId += parsedId.transformedLanguageIdentifier.languageSubtag;
+    transformedExtension += parsedId.transformedLanguageIdentifier.languageSubtag;
   }
   if (!parsedId.languageIdentifier.scriptSubtag.empty()) {
-    canoLocaleId += parsedId.transformedLanguageIdentifier.scriptSubtag;
+    transformedExtension += parsedId.transformedLanguageIdentifier.scriptSubtag;
   }
   if (!parsedId.languageIdentifier.regionSubtag.empty()) {
-    canoLocaleId += parsedId.transformedLanguageIdentifier.regionSubtag;
+    transformedExtension += parsedId.transformedLanguageIdentifier.regionSubtag;
   }
   for (const auto &subtag : parsedId.transformedLanguageIdentifier.variantSubtagList) {
-    canoLocaleId += subtag;
+    transformedExtension += subtag;
   }
   
   // Sort tfields by the alphabetical order of its keys
@@ -150,12 +118,20 @@ std::u16string canonicalizeLocaleId(const std::u16string &localeId) {
 
   // Append tfields
   for (const auto &tField : tFields) {
-    canoLocaleId += tField;
+    transformedExtension += tField;
   }
 
+  // Append transformed extension singleton
+  if (transformedExtension.length() > 0) {
+    canoLocaleId += u"t" + transformedExtension;
+  }
+  
+  // Build Unicode extension
+  std::u16string unicodeExtension;
+  
   // Append sorted Unicode attributes
   for (const auto &attribute : parsedId.unicodeExtensionAttributes) {
-    canoLocaleId += attribute;
+    unicodeExtension += attribute;
   }
 
   // Sort Unicode keywords  by the alphabetical order of its keys
@@ -181,7 +157,12 @@ std::u16string canonicalizeLocaleId(const std::u16string &localeId) {
 
   // Append Unicode keywords
   for (const auto &keyword : keywords) {
-    canoLocaleId += keyword;
+    unicodeExtension += keyword;
+  }
+  
+  // Append Unicode singleton
+  if (unicodeExtension.length() > 0) {
+    canoLocaleId += u"u" + unicodeExtension;
   }
 
   // Append remaining other extensions
@@ -198,6 +179,39 @@ std::u16string canonicalizeLocaleId(const std::u16string &localeId) {
   }
   
   return canoLocaleId;
+}
+
+// Implementation of https://tc39.es/ecma402/#sec-canonicalizelocalelist
+vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
+    vm::Runtime *runtime,
+    const std::vector<std::u16string> &locales) {
+  // 1. If locales is undefined, then
+  //   a. Return a new empty List
+  // Not needed, this validation occurs closer to VM in 'normalizeLocales'.
+  // 2. Let seen be a new empty List.
+  std::vector<std::u16string> seen;
+  // 3. If Type(locales) is String or Type(locales) is Object and locales has an
+  // [[InitializedLocale]] internal slot, then
+  // 4. Else
+  // We don't yet support Locale object -
+  // https://tc39.es/ecma402/#locale-objects As of now, 'locales' can only be a
+  // string list/array. Validation occurs in normalizeLocaleList, so this
+  // function just takes a vector of strings.
+  // 5. Let len be ? ToLength(? Get(O, "length")).
+  // 6. Let k be 0.
+  // 7. Repeat, while k < len
+  for (std::u16string locale : locales) {
+    // TODO - BCP 47 tag validation
+    // 7.c.vi. Let canonicalizedTag be CanonicalizeUnicodeLocaleId(tag).
+
+    auto canonicalizedTag = canonicalizeLocaleId(locale);
+    // 7.c.vii. If canonicalizedTag is not an element of seen, append
+    // canonicalizedTag as the last element of seen.
+    if (std::find(seen.begin(), seen.end(), canonicalizedTag) == seen.end()) {
+      seen.push_back(std::move(canonicalizedTag));
+    }
+  }
+  return seen;
 }
 
 // https://tc39.es/ecma402/#sec-canonicalizelocalelist

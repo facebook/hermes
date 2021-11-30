@@ -5,6 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#ifndef HERMES_BCP47_PARSER_H
+#define HERMES_BCP47_PARSER_H
+
 #ifdef HERMES_ENABLE_INTL
 #include "hermes/VM/CallResult.h"
 
@@ -40,4 +43,6 @@ llvh::Optional<ParsedLocaleIdentifier> parseLocaleId(const std::u16string &local
 
 } // namespace bcp47_parser
 } // namespace hermes
+#endif
+
 #endif

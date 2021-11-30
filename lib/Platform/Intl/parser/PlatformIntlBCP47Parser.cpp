@@ -553,6 +553,7 @@ std::u16string LanguageTagParser::getCurrentSubtag() {
   return impl_->mLocaleId.substr(impl_->mSubtagStart, impl_->mSubtagEnd - impl_->mSubtagStart + 1);
 }
 
+// Parses and returns locale id if it is a structurally valid language tag
 llvh::Optional<ParsedLocaleIdentifier> parseLocaleId(const std::u16string &localeId) {
   LanguageTagParser parser(localeId);
   if (!parser.parseUnicodeLocaleId()) {
@@ -564,5 +565,5 @@ llvh::Optional<ParsedLocaleIdentifier> parseLocaleId(const std::u16string &local
   return parser.getParsedLocaleId();
 }
 
-} // hermes
-} // platform intl parser
+} // namespace bcp47_parser
+} // namespace hermes
