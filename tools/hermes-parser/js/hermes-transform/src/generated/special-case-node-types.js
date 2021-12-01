@@ -37,10 +37,7 @@ import {
 // hermes adds an `id` prop which is always null, and it adds an `expression`
 // boolean which is true when the body isn't a BlockStatement.
 // No need to make consumers set these
-export function ArrowFunctionExpression({
-  parent,
-  ...props
-}: {
+export type ArrowFunctionExpressionProps = {
   +params: $ReadOnlyArray<
     DetachedNode<ArrowFunctionExpressionType['params'][number]>,
   >,
@@ -51,6 +48,12 @@ export function ArrowFunctionExpression({
   +returnType?: ?DetachedNode<ArrowFunctionExpressionType['returnType']>,
   +predicate?: ?DetachedNode<ArrowFunctionExpressionType['predicate']>,
   +async: ArrowFunctionExpressionType['async'],
+};
+export function ArrowFunctionExpression({
+  parent,
+  ...props
+}: {
+  ...$ReadOnly<ArrowFunctionExpressionProps>,
   +parent?: ESNode,
 }): DetachedNode<ArrowFunctionExpressionType> {
   const node = detachedProps<ArrowFunctionExpressionType>(parent, {
@@ -66,13 +69,16 @@ export function ArrowFunctionExpression({
 
 // pattern/flags are on a subobject in the estree spec, but are flat on the hermes types
 // also the value is supposed to be a RegExp instance
+export type RegExpLiteralProps = {
+  +pattern: RegExpLiteralType['regex']['pattern'],
+  +flags: RegExpLiteralType['regex']['flags'],
+};
 export function RegExpLiteral({
   pattern,
   flags,
   parent,
 }: {
-  +pattern: RegExpLiteralType['regex']['pattern'],
-  +flags: RegExpLiteralType['regex']['flags'],
+  ...$ReadOnly<RegExpLiteralProps>,
   +parent?: ESNode,
 }): DetachedNode<RegExpLiteralType> {
   const value = new RegExp(pattern, flags);
@@ -88,14 +94,17 @@ export function RegExpLiteral({
 }
 
 // raw/cooked are on a subobject in the estree spec, but are flat on the hermes types
+export type TemplateElementProps = {
+  +tail: TemplateElementType['tail'],
+  +cooked: TemplateElementType['value']['cooked'],
+  +raw: TemplateElementType['value']['raw'],
+};
 export function TemplateElement({
   tail,
   parent,
   ...value
 }: {
-  +tail: TemplateElementType['tail'],
-  +cooked: TemplateElementType['value']['cooked'],
-  +raw: TemplateElementType['value']['raw'],
+  ...$ReadOnly<TemplateElementProps>,
   +parent?: ESNode,
 }): DetachedNode<TemplateElementType> {
   return detachedProps<TemplateElementType>(parent, {
@@ -107,15 +116,18 @@ export function TemplateElement({
 
 // Identifier has a bunch of stuff that usually you don't want to provide - so we have
 // this manual def to allow us to default some values
+export type IdentifierProps = {
+  +name: IdentifierType['name'],
+  +typeAnnotation?: ?DetachedNode<IdentifierType['typeAnnotation']>,
+  +optional?: IdentifierType['optional'],
+};
 export function Identifier({
   parent,
   optional = false,
   typeAnnotation = null,
   ...props
 }: {
-  +name: IdentifierType['name'],
-  +typeAnnotation?: ?DetachedNode<IdentifierType['typeAnnotation']>,
-  +optional?: IdentifierType['optional'],
+  ...$ReadOnly<IdentifierProps>,
   +parent?: ESNode,
 }): DetachedNode<IdentifierType> {
   const node = detachedProps<IdentifierType>(parent, {
@@ -132,11 +144,14 @@ export function Identifier({
 // Literals require a "raw" which is added by the estree transform, not hermes.
 //
 
+export type BooleanLiteralProps = {
+  +value: BooleanLiteralType['value'],
+};
 export function BooleanLiteral({
   parent,
   value,
 }: {
-  +value: BooleanLiteralType['value'],
+  ...$ReadOnly<BooleanLiteralProps>,
   +parent?: ESNode,
 }): DetachedNode<BooleanLiteralType> {
   return detachedProps<BooleanLiteralType>(parent, {
@@ -146,16 +161,19 @@ export function BooleanLiteral({
   });
 }
 
-export function NumericLiteral({
-  parent,
-  ...props
-}: {
+export type NumericLiteralProps = {
   +value: NumericLiteralType['value'],
   /**
    * Only set this if you want to use a source-code representation like 1e100, 0x11, etc.
    * By default "raw" will just be the exact number you've given.
    */
   +raw?: NumericLiteralType['raw'],
+};
+export function NumericLiteral({
+  parent,
+  ...props
+}: {
+  ...$ReadOnly<NumericLiteralProps>,
   +parent?: ESNode,
 }): DetachedNode<NumericLiteralType> {
   return detachedProps<NumericLiteralType>(parent, {
@@ -165,6 +183,7 @@ export function NumericLiteral({
   });
 }
 
+export type NullLiteralProps = {};
 export function NullLiteral({
   parent,
 }: {
@@ -177,13 +196,16 @@ export function NullLiteral({
   });
 }
 
+export type StringLiteralProps = {
+  +value: StringLiteralType['value'],
+  +raw?: StringLiteralType['raw'],
+};
 export function StringLiteral({
   parent,
   raw: rawIn,
   value,
 }: {
-  +value: StringLiteralType['value'],
-  +raw?: StringLiteralType['raw'],
+  ...$ReadOnly<StringLiteralProps>,
   +parent?: ESNode,
 }): DetachedNode<StringLiteralType> {
   const hasSingleQuote = value.includes('"');
@@ -205,7 +227,8 @@ export function StringLiteral({
   });
 }
 
-export function LineComment({value}: {+value: string}): LineCommentType {
+export type LineCommentProps = {+value: string};
+export function LineComment({value}: LineCommentProps): LineCommentType {
   // $FlowExpectedError[prop-missing]
   // $FlowExpectedError[incompatible-return]
   return detachedProps<LineCommentType>(undefined, {
@@ -214,7 +237,8 @@ export function LineComment({value}: {+value: string}): LineCommentType {
   });
 }
 
-export function BlockComment({value}: {+value: string}): BlockCommentType {
+export type BlockCommentProps = {+value: string};
+export function BlockComment({value}: BlockCommentProps): BlockCommentType {
   // $FlowExpectedError[prop-missing]
   // $FlowExpectedError[incompatible-return]
   return detachedProps<BlockCommentType>(undefined, {

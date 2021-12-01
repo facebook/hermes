@@ -16,6 +16,7 @@ import {
 
 const imports: Array<string> = [];
 const nodeTypeFunctions: Array<string> = [];
+const nodePropTypes: Array<string> = [];
 
 const NODES_WITH_SPECIAL_HANDLING = new Set([
   'ArrowFunctionExpression',
@@ -44,6 +45,9 @@ for (const node of HermesESTreeJSON) {
   const type = LITERAL_TYPES.has(node.name) ? 'Literal' : node.name;
 
   if (node.arguments.length === 0) {
+    nodePropTypes.push(`\
+export type ${node.name}Props = {};
+`);
     nodeTypeFunctions.push(
       `\
 export function ${node.name}({
@@ -58,9 +62,9 @@ export function ${node.name}({
 `,
     );
   } else {
-    nodeTypeFunctions.push(
+    nodePropTypes.push(
       `\
-export function ${node.name}({parent, ...props}: {
+export type ${node.name}Props = {
   ${node.arguments
     .map(arg => {
       const baseType = `${node.name}Type['${arg.name}']`;
@@ -77,6 +81,13 @@ export function ${node.name}({parent, ...props}: {
       return `+${arg.name}: ${type}`;
     })
     .join(',\n')},
+};
+`,
+    );
+    nodeTypeFunctions.push(
+      `\
+export function ${node.name}({parent, ...props}: {
+  ...$ReadOnly<${node.name}Props>,
   +parent?: ESNode,
 }): DetachedNode<${node.name}Type> {
   const node = detachedProps<${node.name}Type>(parent, {
@@ -86,7 +97,7 @@ export function ${node.name}({parent, ...props}: {
   setParentPointersInDirectChildren(node);
   return node;
 }
-  `,
+`,
     );
   }
 }
@@ -102,6 +113,8 @@ import {
   detachedProps,
   setParentPointersInDirectChildren,
 } from '../detachedNode';
+
+${nodePropTypes.join('\n')}
 
 ${nodeTypeFunctions.join('\n')}
 
