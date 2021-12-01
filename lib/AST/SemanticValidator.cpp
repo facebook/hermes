@@ -476,7 +476,8 @@ void SemanticValidator::visit(ReturnStatementNode *returnStmt) {
 }
 
 void SemanticValidator::visit(YieldExpressionNode *yieldExpr) {
-  if (curFunction()->isGlobalScope())
+  if (curFunction()->isGlobalScope() ||
+      (curFunction()->node && !ESTree::isGenerator(curFunction()->node)))
     sm_.error(
         yieldExpr->getSourceRange(), "'yield' not in a generator function");
 
@@ -490,6 +491,14 @@ void SemanticValidator::visit(YieldExpressionNode *yieldExpr) {
   }
 
   visitESTreeChildren(*this, yieldExpr);
+}
+
+void SemanticValidator::visit(AwaitExpressionNode *awaitExpr) {
+  if (curFunction()->isGlobalScope() ||
+      (curFunction()->node && !ESTree::isAsync(curFunction()->node)))
+    sm_.error(awaitExpr->getSourceRange(), "'await' not in an async function");
+
+  visitESTreeChildren(*this, awaitExpr);
 }
 
 void SemanticValidator::visit(UnaryExpressionNode *unaryExpr) {
@@ -995,6 +1004,7 @@ FunctionContext::FunctionContext(
     SourceVisibility sourceVisibility)
     : validator_(validator),
       oldContextValue_(validator->funcCtx_),
+      node(node),
       semInfo(validator->semCtx_.createFunction()),
       strictMode(strictMode),
       sourceVisibility(sourceVisibility) {

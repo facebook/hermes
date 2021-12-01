@@ -185,6 +185,7 @@ class SemanticValidator {
 
   void visit(ReturnStatementNode *returnStmt);
   void visit(YieldExpressionNode *yieldExpr);
+  void visit(AwaitExpressionNode *awaitExpr);
 
   void visit(UnaryExpressionNode *unaryExpr);
 
@@ -306,6 +307,9 @@ class FunctionContext {
     /// LabeledStatement.
     StatementNode *targetStatement;
   };
+
+  /// The AST node for the function.
+  FunctionLikeNode *node;
 
   /// The associated seminfo object
   sem::FunctionInfo *const semInfo;
