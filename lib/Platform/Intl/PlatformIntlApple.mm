@@ -272,10 +272,10 @@ DateTimeFormat::formatToParts(double jsTimeValue) noexcept {
 }
 
 struct NumberFormat::Impl {
-  uint8_t mResolvedMinimumIntegerDigits, mResolvedMinimumFractionDigits, mResolvedMaximumFractionDigits;
   // impl_->
-  std::u16string currency, notation, CompactDisplay, numberFormat, style, locale;
-  bool UseGrouping;
+  uint8_t minimumIntegerDigits, minimumFractionDigits, maximumFractionDigits, minimumSignificantDigits, maximumSignificantDigits;
+  std::u16string numberingSystem, currency, currencyDisplay, currencySign, notation, compactDisplay, signDisplay, unit, unitDisplay, style, locale;
+  bool useGrouping;
   struct newRecord {
       std::u16string localeMatcher, ca, nu;// For opt
     };
@@ -309,7 +309,7 @@ vm::CallResult<std::vector<std::u16string>> NumberFormat::supportedLocalesOf(
 // https://tc39.es/ecma402/#sec-defaultnumberoption
 vm::CallResult<std::uint8_t> defaultNumberOption(const std::uint8_t value,
   const std::uint8_t minimum, const std::uint8_t maximum,
-  const std::uint8_t fallback) {
+  const std::uint8_t fallback, vm::Runtime *runtime) {
 //  1. If value is undefined, return fallback.
   if (!value) {
     return fallback;
@@ -317,13 +317,13 @@ vm::CallResult<std::uint8_t> defaultNumberOption(const std::uint8_t value,
 //  2. Set value to ? ToNumber(value).
 //  3. If value is NaN or less than minimum or greater than maximum, throw a RangeError exception.
   if (value == NAN || value < minimum || value > maximum) {
-    return vm::ExecutionStatus::EXCEPTION;
+    return runtime->raiseRangeError("Number is invalid");
   }
 //  4. Return floor(value).
   return std::floor(value);
 }
 // https://tc39.es/ecma402/#sec-issanctionedsimpleunitidentifier
-bool isSanctionedSimpleUnitIdentifier(std::u16string unitIdentifier) {
+bool isSanctionedSimpleUnitIdentifier(const std::u16string &unitIdentifier) {
   // This vector should be kept alphabetically ordered so that we can binary search in it (Table 2)
   static std::vector<std::u16string> s_sanctionedSimpleUnitIdentifiers = {
     u"acre",
@@ -378,7 +378,7 @@ bool isSanctionedSimpleUnitIdentifier(std::u16string unitIdentifier) {
   return false;
 };
 // https://tc39.es/ecma402/#sec-iswellformedunitidentifier
-bool isWellFormedUnitIdentifier(std::u16string unitIdentifier) {
+bool isWellFormedUnitIdentifier(const std::u16string &unitIdentifier) {
   //  1. If the result of IsSanctionedSimpleUnitIdentifier(unitIdentifier) is true, then
   //  a. Return true.
   if (isSanctionedSimpleUnitIdentifier(unitIdentifier)) {
@@ -409,7 +409,7 @@ bool isWellFormedUnitIdentifier(std::u16string unitIdentifier) {
 }
 // https://tc39.es/ecma402/#sec-case-sensitivity-and-case-mapping
 // Note that we should convert only upper case translation in ASCII range.
-std::u16string normalizeCurrencyCode(std::u16string currencyCode) {
+std::u16string normalizeCurrencyCode(const std::u16string &currencyCode) {
   std::u16string normalized;
   std::uint8_t offset = 'a' - 'A';
   for (std::uint8_t idx = 0; idx < currencyCode.length(); idx++) {
@@ -425,7 +425,7 @@ std::u16string normalizeCurrencyCode(std::u16string currencyCode) {
 }
 
 // https://tc39.es/ecma402/#sec-iswellformedcurrencycode
-bool isWellFormedCurrencyCode(std::u16string currencyCode) {
+bool isWellFormedCurrencyCode(const std::u16string &currencyCode) {
 //  1. Let normalized be the result of mapping currency to upper case as described in 6.1.
   std::u16string normalized = normalizeCurrencyCode(currencyCode);
 //  2. If the number of elements in normalized is not 3, return false.
@@ -441,73 +441,61 @@ bool isWellFormedCurrencyCode(std::u16string currencyCode) {
   return true;
 }
 // https://tc39.es/ecma402/#sec-setnumberformatunitoptions
-vm::CallResult<Options> setNumberFormatUnitOptions(Options &options) {
+vm::CallResult<Options> setNumberFormatUnitOptions(Options &options, vm::Runtime *runtime) {
 //  1. Assert: Type(intlObj) is Object.
 //  2. Assert: Type(options) is Object.
 //  3. Let style be ? GetOption(options, "style", "string", « "decimal", "percent", "currency", "unit" », "decimal").
 //  4. Set intlObj.[[Style]] to style.
-  const std::vector<std::u16string> styleVector = {u"decimal", u"percent", u"currency", u"unit"};
   Options decimalFallback;
-  std::u16string decimal = u"decimal"; // If not declared, it will not work
-  decimalFallback.emplace(std::u16string(u"fallback"), Option(decimal));
-  auto style = getOption(options, u"style", u"string", styleVector, decimalFallback);
-  // Want to use impl_ but it can't be accessed here?
-  // impl_->mResolvedStyle = style;
+  decimalFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"decimal")));
+  auto style = getOption(options, u"style", u"string", {u"decimal", u"percent", u"currency", u"unit"}, decimalFallback, runtime);
   options.emplace(std::u16string(u"style"), Option(style->getString()));
 //  Let currency be ? GetOption(options, "currency", "string", undefined, undefined).
-  std::vector<std::u16string> undefinedVector;
   Options undefinedFallback;
-  std::u16string undefined; // If this is truly undefined it will error throw?
-  undefinedFallback.emplace(std::u16string(u"fallback"), Option(undefined));
-  auto currency = getOption(options, u"currency", u"string", undefinedVector, undefinedFallback);
+  undefinedFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"")));
+  auto currency = getOption(options, u"currency", u"string", {}, undefinedFallback, runtime);
 //  6. If currency is undefined, then
   if (currency->getString() == u"") {
 //  a. If style is "currency", throw a TypeError exception.
     if (style->getString() == u"currency") {
-      // Throw typeError through initialize?
-      return vm::ExecutionStatus::EXCEPTION;
+      return runtime->raiseTypeError("Currency is undefined");
     }
     //  7. Else,
     else {
     //  a. If the result of IsWellFormedCurrencyCode(currency) is false, throw a RangeError exception.
       if (!isWellFormedCurrencyCode(currency->getString())) {
-        return vm::ExecutionStatus::EXCEPTION;
+        return runtime->raiseRangeError("Currency is invalid");
       }
     }
   }
 //  8. Let currencyDisplay be ? GetOption(options, "currencyDisplay", "string", « "code", "symbol", "narrowSymbol", "name" », "symbol").
-  std::vector<std::u16string> currencyDisplayVector = {u"code", u"symbol", u"narrowSymbol", u"name"};
   Options symbolFallback;
-  std::u16string symbol = u"symbol"; // If not declared, it will not work
-  symbolFallback.emplace(std::u16string(u"fallback"), Option(symbol));
-  auto currencyDisplay = getOption(options, u"currencyDisplay", u"string", currencyDisplayVector, symbolFallback);
+  symbolFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"symbol")));
+  auto currencyDisplay = getOption(options, u"currencyDisplay", u"string", {u"code", u"symbol", u"narrowSymbol", u"name"}, symbolFallback, runtime);
 //  9. Let currencySign be ? GetOption(options, "currencySign", "string", « "standard", "accounting" », "standard").
-  std::vector<std::u16string> currencySignVector = {u"standard", u"accounting"};
   Options standardFallback;
-  std::u16string standard = u"standard"; // If not declared, it will not work
-  standardFallback.emplace(std::u16string(u"fallback"), Option(standard));
-  auto currencySign = getOption(options, u"currencySign", u"string", currencySignVector, standardFallback);
+  standardFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"standard")));
+  auto currencySign = getOption(options, u"currencySign", u"string", {u"standard", u"accounting"}, standardFallback, runtime);
 //  10. Let unit be ? GetOption(options, "unit", "string", undefined, undefined).
-  auto unit = getOption(options, u"unit", u"string", undefinedVector, undefinedFallback);
+  auto unit = getOption(options, u"unit", u"string", {}, undefinedFallback, runtime);
 //  11. If unit is undefined, then
   if (unit->getString() == u"") {
 //  a. If style is "unit", throw a TypeError exception.
     if (style->getString() == u"unit") {
-      return vm::ExecutionStatus::EXCEPTION;
+      return runtime->raiseTypeError("Unit is undefined");
     }
 //  12. Else,
     else {
 //  a. If the result of IsWellFormedUnitIdentifier(unit) is false, throw a RangeError exception.
       if (!isWellFormedUnitIdentifier(unit->getString())) {
-        return vm::ExecutionStatus::EXCEPTION;
+        return runtime->raiseRangeError("Unit is invalid");
       }
     }
   }
 //  13. Let unitDisplay be ? GetOption(options, "unitDisplay", "string", « "short", "narrow", "long" », "short").
   Options shortFallback;
-  std::u16string shortfb = u"short"; // If not declared, it will not work
-  symbolFallback.emplace(std::u16string(u"fallback"), Option(shortfb));
-  auto unitDisplay = getOption(options, u"unitDisplay", u"string", {u"short", u"narrow", u"long"}, shortFallback);
+  symbolFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"short")));
+  auto unitDisplay = getOption(options, u"unitDisplay", u"string", {u"short", u"narrow", u"long"}, shortFallback, runtime);
 //  14. If style is "currency", then
   if (style->getString() == u"currency") {
 //  a. Let currency be the result of converting currency to upper case as specified in 6.1.
@@ -529,13 +517,10 @@ vm::CallResult<Options> setNumberFormatUnitOptions(Options &options) {
 }
 
 // https://tc39.es/ecma402/#sec-setnfdigitoptions
-vm::CallResult<Options> setNumberFormatDigitOptions(Options &options) {
-  uint8_t mnfdDefault = 0;
-  uint8_t mxfdDefault = 0; // placeholders, need changing
+vm::CallResult<Options> setNumberFormatDigitOptions(Options &options, uint8_t mnfdDefault, uint8_t mxfdDefault, std::u16string &notation, vm::Runtime *runtime) {
   //  1. Let mnid be ? GetNumberOption(options, "minimumIntegerDigits,", 1, 21, 1).
   Options oneFallback;
-  std::u16string one = u"1"; // If not declared, it will not work
-  oneFallback.emplace(std::u16string(u"fallback"), Option(one));
+  oneFallback.emplace(std::u16string(u"fallback"), 1);
   auto mnid = getOptionNumber(options, u"minimumIntegerDigits", 1, 21, oneFallback);
 //  2. Let mnfd be ? Get(options, "minimumFractionDigits").
   auto mnfd = options.find(u"minimumFractionDigits");
@@ -548,53 +533,110 @@ vm::CallResult<Options> setNumberFormatDigitOptions(Options &options) {
 //  6. Set intlObj.[[MinimumIntegerDigits]] to mnid.
 //  May need to be rounded?
   options.emplace(std::u16string(u"minimumIntegerDigits"), Option(mnid->getString()));
-  bool hasSd, hasFd, needSd;
+  bool hasSd, hasFd, needSd, needFd;
 //  If mnsd is not undefined or mxsd is not undefined, then
   if (mnsd->second.getNumber() != NAN || mxsd->second.getNumber() != NAN) {
-    // mRoundingType = SIGNIFICANT_DIGITS?
-    uint8_t dmnsd = defaultNumberOption(mnsd->second.getNumber(), 1, 21, 1).getValue();
-    uint8_t dmxsd = defaultNumberOption(mxsd->second.getNumber(), mnsd->second.getNumber(), 21, 21).getValue();
-    options.emplace(std::u16string(u"minimumSignificantDigits"), Option(std::floor(dmnsd)));
-    options.emplace(std::u16string(u"maximumSignificantDigits"), Option(std::floor(dmxsd)));
-  } else if (mnfd != options.end() || mxfd != options.end()) {
-    // mRoundingType = FRACTION_DIGITS?
-    // TODO: Find out what mnfdDefault/mxfdDefault is, currently going on 0
-    
-    auto dmnfd = defaultNumberOption(mnfd->second.getNumber(), 0, 20, mnfdDefault);
-    //  Object mxfdActualDefault = JSObjects.newNumber(Math.max(JSObjects.getJavaDouble(mnfd), JSObjects.getJavaDouble(mxfdDefault)));
-    uint8_t mxfdActualDefault = std::max(mnfd->second.getNumber(), mxfdDefault);
-    auto dmxfd = defaultNumberOption(mxfd->second.getNumber(), mnfd->second.getNumber(), 20, mxfdActualDefault);
-    options.emplace(std::u16string(u"minimumFractionDigits"), Option(std::floor(dmnfd.getValue())));
-    options.emplace(std::u16string(u"maximumFractionDigits"), Option(std::floor(dmxfd.getValue())));
-  } else if (options.find(u"notation")->second.getString() == u"compact") {
-    // mRoundingType = COMPACT_ROUNDING;
-  } else if (options.find(u"notation")->second.getString() == u"engineering") {
-// The default setting for engineering notation.
-// This is not based on the spec, but is required by our implementation of engineering
-// notation.
-// From
-// https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/classicu_1_1DecimalFormat.html
-// If areSignificantDigitsUsed() returns false, then the minimum number of significant digits
-// shown is one,
-// and the maximum number of significant digits shown is the sum of the minimum integer and
-// maximum fraction digits,
-// and is unaffected by the maximum integer digits.
-//
-// In short, the minimum integer will be set to 1 and hence to achieve maximum default
-// fraction digits of "3" (as in spec), we should set the maximum fraction digits to "5"
-    // mRoundingType = FRACTION_DIGITS;
-    // mResolvedMaximumFractionDigits = 5;
+//    a. Let hasSd be true.
+    hasSd = true;
+//    8. Else,
+//    a. Let hasSd be false.
   } else {
-    // mRoundingType = FRACTION_DIGITS;
-    options.emplace(std::u16string(u"minimumFractionDigits"), Option(std::floor(mnfdDefault)));
-    options.emplace(std::u16string(u"maximumFractionDigits"), Option(std::floor(mxfdDefault)));
+    hasSd = false;
+  }
+//    9. If mnfd is not undefined or mxfd is not undefined, then
+  if (mnfd->second.getNumber() != NAN || mxfd->second.getNumber() != NAN) {
+//    a. Let hasFd be true.
+    hasFd = true;
+//    10. Else,
+//    a. Let hasFd be false.
+  } else {
+    hasFd = false;
+  }
+//  11. Let needSd be hasSd.
+  needSd = hasSd;
+//  12. If hasSd is true, or hasFd is false and notation is "compact", then
+  if (hasSd == true || (hasFd == false && notation == u"compact")) {
+    //  a. Let needFd be false.
+    needFd = false;
+  } else {
+//  13. Else,
+//  a. Let needFd be true.
+    needFd = true;
+  }
+//  14. If needSd is true, then
+    if (needSd == true) {
+//  a. Assert: hasSd is true.
+//  b. Set mnsd to ? DefaultNumberOption(mnsd, 1, 21, 1).
+    auto rmnsd = defaultNumberOption(mnsd->second.getNumber(), 1, 21, 1, runtime);
+//  c. Set mxsd to ? DefaultNumberOption(mxsd, mnsd, 21, 21).
+    auto rmxsd = defaultNumberOption(mxsd->second.getNumber(), mnsd->second.getNumber(), 21, 21, runtime);
+//  d. Set intlObj.[[MinimumSignificantDigits]] to mnsd.
+      options.emplace(std::u16string(u"minimumSignificantDigits"), (rmnsd));
+//  e. Set intlObj.[[MaximumSignificantDigits]] to mxsd.
+      options.emplace(std::u16string(u"maximumSignificantDigits"), (rmxsd));
+  }
+//  15. If needFd is true, then
+    if (needFd == true) {
+//  a. If hasFd is true, then
+    if (hasFd == true) {
+//  i. Set mnfd to ? DefaultNumberOption(mnfd, 0, 20, undefined).
+      auto rmnfd = defaultNumberOption(mnfd->second.getNumber(), 0, 20, NAN, runtime);
+//  ii. Set mxfd to ? DefaultNumberOption(mxfd, 0, 20, undefined).
+      auto rmxfd = defaultNumberOption(mxfd->second.getNumber(), 0, 20, NAN, runtime);
+//  iii. If mnfd is undefined, set mnfd to min(mnfdDefault, mxfd).
+      if (rmnfd.getValue() == NAN) {
+        rmnfd = std::min(mnfdDefault, rmxfd.getValue());
+      }
+//  iv. Else if mxfd is undefined, set mxfd to max(mxfdDefault, mnfd).
+      else if (rmxfd.getValue() == NAN) {
+        rmxfd = std::max(mxfdDefault, rmnfd.getValue());
+      }
+//  v. Else if mnfd is greater than mxfd, throw a RangeError exception.
+      else if (rmnfd.getValue() > rmxfd.getValue()) {
+        return runtime->raiseRangeError("minimumFractionDigits is greater than maximumFractionDigits");
+      }
+//  vi. Set intlObj.[[MinimumFractionDigits]] to mnfd.
+      options.emplace(std::u16string(u"minimumFractionDigits"), (rmnfd));
+//  vii. Set intlObj.[[MaximumFractionDigits]] to mxfd.
+      options.emplace(std::u16string(u"maximumFractionDigits"), (rmxfd));
+    }
+//  b. Else,
+    else {
+//  i. Set intlObj.[[MinimumFractionDigits]] to mnfdDefault.
+      options.emplace(std::u16string(u"minimumFractionDigits"), (mnfdDefault));
+//  ii. Set intlObj.[[MaximumFractionDigits]] to mxfdDefault.
+      options.emplace(std::u16string(u"maximumFractionDigits"), (mxfdDefault));
+    }
+//    16. If needSd is false and needFd is false, then
+    if (needSd == false && needFd == false) {
+//    a. Set intlObj.[[RoundingType]] to compactRounding.
+      options.emplace(std::u16string(u"roundingType"), std::u16string(u"compactRounding"));
+    }
+//    17. Else if hasSd is true, then
+    else if (hasSd == true) {
+//    a. Set intlObj.[[RoundingType]] to significantDigits.
+      options.emplace(std::u16string(u"roundingType"), std::u16string(u"significantDigits"));
+    }
+//    18. Else,
+    else {
+//    a. Set intlObj.[[RoundingType]] to fractionDigits.
+      options.emplace(std::u16string(u"roundingType"), std::u16string(u"fractionDigits"));
+    }
   }
 }
 // TODO: Add isLocaleIdType
-// TODO: Add CurrencyDigits https://tc39.es/ecma402/#sec-currencydigits
-uint8_t getCurrencyDigits(std::u16string currency) {
+uint8_t getCurrencyDigits(const std::u16string &currency) {
 //  1. If the ISO 4217 currency and funds code list contains currency as an alphabetic code, return the minor unit value corresponding to the currency from the list; otherwise, return 2.
-// I think NSNumberFormatter takes a locale, not currency code. Could we make a list to check the currency string against the 40 currencies that don't use 2?
+// https://en.wikipedia.org/wiki/ISO_4217#Active_codes
+  static std::vector<std::u16string> currencyCodes = {u"BHD", u"BIF", u"CLF", u"CLP", u"DJF", u"GNF", u"IQD", u"ISK", u"JOD", u"JPY", u"KMF", u"KRW", u"KWD", u"LYD", u"OMR", u"PYG", u"RWF", u"TND", u"UGX", u"UYI", u"UYW", u"VND", u"VUV", u"XAF", u"XOF", u"XPF"};
+  if (std::binary_search(currencyCodes.begin(), currencyCodes.end(), currency)) {
+    uint8_t pos = find(currencyCodes.begin(), currencyCodes.end(), currency) -
+    currencyCodes.begin();
+    if (pos < currencyCodes.size()) {// Not out of bounds
+      static std::vector<uint8_t> currencyDigits = {3, 0, 4, 0, 0, 0, 3, 0, 3, 0, 0, 0, 3, 3, 3, 0, 0, 3, 0, 0, 4, 0, 0, 0, 0, 0};
+      return currencyDigits.at(pos);
+    }
+  }
   return 2;
 };
 // https://tc39.es/ecma402/#sec-initializenumberformat
@@ -616,18 +658,15 @@ vm::ExecutionStatus NumberFormat::initialize(
 // 4. Let matcher be ? GetOption(options, "localeMatcher", "string", « "lookup", "best fit" », "best fit").
     std::vector<std::u16string> values = {u"lookup", u"best fit"};
     Options matcherFallback;
-    std::u16string bestFit = u"best fit"; // If not declared, it will not work
-    matcherFallback.emplace(std::u16string(u"fallback"), Option(bestFit));
-    auto matcher = getOption(copyOptions, u"localeMatcher", u"string", values, matcherFallback);
+    matcherFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"best fit")));
+    auto matcher = getOption(copyOptions, u"localeMatcher", u"string", values, matcherFallback, runtime);
 // 5. Set opt.[[localeMatcher]] to matcher.
     opt.localeMatcher = matcher->getString();
     
-    std::vector<std::u16string> emptyVector;
     Options undefinedFallback;
-    std::u16string undefined; // If this is truly undefined it will error throw?
-    undefinedFallback.emplace(std::u16string(u"fallback"), Option(undefined));
+    undefinedFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"")));
 // 6. Let numberingSystem be ? GetOption(options, "numberingSystem", "string", undefined, undefined).
-    auto numberingSystem = getOption(copyOptions, u"numberingSystem", u"string", emptyVector, undefinedFallback);
+      auto numberingSystem = getOption(copyOptions, u"numberingSystem", u"string", {}, undefinedFallback, runtime);
 // 7. If numberingSystem is not undefined, then
 //   a. If numberingSystem does not match the Unicode Locale Identifier type nonterminal, throw a RangeError exception.
 // 8. Set opt.[[nu]] to numberingSystem.
@@ -644,7 +683,7 @@ vm::ExecutionStatus NumberFormat::initialize(
 // 13. Set numberFormat.[[NumberingSystem]] to r.[[nu]].
       
 // Perform ? SetNumberFormatUnitOptions(numberFormat, options).
-  setNumberFormatUnitOptions(copyOptions);
+  setNumberFormatUnitOptions(copyOptions, runtime);
 // 15. Let style be numberFormat.[[Style]].
   auto style = options.find(u"style");
   uint8_t mnfdDefault, mxfdDefault, cDigits;
@@ -675,46 +714,95 @@ vm::ExecutionStatus NumberFormat::initialize(
   }
 // 18. Let notation be ? GetOption(options, "notation", "string", « "standard", "scientific", "engineering", "compact" », "standard").
   Options standardFallback;
-  std::u16string standard = u"standard"; // If not declared, it will not work
-  standardFallback.emplace(std::u16string(u"fallback"), Option(standard));
-  auto notation = getOption(copyOptions, u"notation", u"string", {u"standard", u"scientific", u"engineering", u"compact"}, standardFallback);
+  standardFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"standard")));
+  auto notation = getOption(copyOptions, u"notation", u"string", {u"standard", u"scientific", u"engineering", u"compact"}, standardFallback, runtime);
 // 19. Set numberFormat.[[Notation]] to notation.
   impl_->notation = notation->getString();
 
 // Perform ? SetNumberFormatDigitOptions(numberFormat, options, mnfdDefault, mxfdDefault, notation).
-  setNumberFormatDigitOptions(copyOptions);
+  setNumberFormatDigitOptions(copyOptions, mnfdDefault, mxfdDefault, impl_->notation, runtime);
 // 21. Let compactDisplay be ? GetOption(options, "compactDisplay", "string", « "short", "long" », "short").
   Options shortFallback;
-  std::u16string shortfb = u"short"; // If not declared, it will not work
-  shortFallback.emplace(std::u16string(u"fallback"), Option(shortfb));
-  auto compactDisplay = getOption(copyOptions, u"compactDisplay", u"string", {u"short", u"long"}, shortFallback);
+  shortFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"short")));
+  auto compactDisplay = getOption(copyOptions, u"compactDisplay", u"string", {u"short", u"long"}, shortFallback, runtime);
 // 22. If notation is "compact", then
     if (notation->getString() == u"compact") {
 //   a. Set numberFormat.[[CompactDisplay]] to compactDisplay.
-      impl_->CompactDisplay = compactDisplay->getString();
+      impl_->compactDisplay = compactDisplay->getString();
     }
 // 23. Let useGrouping be ? GetOption(options, "useGrouping", "boolean", undefined, true).
   Options trueFallback;
-  std::vector<std::u16string> undefinedVector;
-  std::u16string truefb = u"true"; // If not declared, it will not work
-  trueFallback.emplace(std::u16string(u"fallback"), Option(truefb));
-  auto useGrouping = getOption(copyOptions, u"useGrouping", u"boolean", undefinedVector, trueFallback);
+  trueFallback.emplace(std::u16string(u"fallback"), true);
+      auto useGrouping = getOption(copyOptions, u"useGrouping", u"boolean", {}, trueFallback, runtime);
 // 24. Set numberFormat.[[UseGrouping]] to useGrouping.
-  impl_->UseGrouping = useGrouping->getBool();
+  impl_->useGrouping = useGrouping->getBool();
 // 25. Let signDisplay be ? GetOption(options, "signDisplay", "string", « "auto", "never", "always", "exceptZero" », "auto").
   Options autoFallback;
-  std::u16string autofb = u"auto"; // If not declared, it will not work
-  autoFallback.emplace(std::u16string(u"fallback"), Option(autofb));
-  auto signDisplay = getOption(copyOptions, u"signDisplay", u"string", {u"auto", u"never", u"always", u"exceptZero"}, autoFallback);
+  autoFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"auto")));
+  auto signDisplay = getOption(copyOptions, u"signDisplay", u"string", {u"auto", u"never", u"always", u"exceptZero"}, autoFallback, runtime);
 // 26. Set numberFormat.[[SignDisplay]] to signDisplay.
-  impl_->numberFormat = signDisplay->getString();
+  impl_->signDisplay = signDisplay->getString();
   return vm::ExecutionStatus::RETURNED;
 }
 
+// https://tc39.es/ecma402/#sec-intl.numberformat.prototype.resolvedoptions
 Options NumberFormat::resolvedOptions() noexcept {
   Options options;
+//  5. For each row of Table 11, except the header row, in table order, do
+//  a. Let p be the Property value of the current row.
+//  b. Let v be the value of nf's internal slot whose name is the Internal Slot value of the current row.
+//  c. If v is not undefined, then
+//  i. Perform ! CreateDataPropertyOrThrow(options, p, v).
   options.emplace(u"locale", Option(impl_->locale));
   options.emplace(u"numeric", Option(false));
+  if (impl_->numberingSystem != u"") {
+      options.emplace(u"numberingSystem", Option(impl_->numberingSystem));
+  }
+  if (impl_->style != u"") {
+      options.emplace(u"style", Option(impl_->style));
+  }
+  if (impl_->currency != u"") {
+      options.emplace(u"currency", Option(impl_->currency));
+  }
+  if (impl_->currencyDisplay != u"") {
+  options.emplace(u"currencyDisplay", Option(impl_->currencyDisplay));
+  }
+  if (impl_->currencySign != u"") {
+      options.emplace(u"currencySign", Option(impl_->currencySign));
+  }
+  if (impl_->unit != u"") {
+  options.emplace(u"unit", Option(impl_->unit));
+  }
+  if (impl_->unitDisplay != u"") {
+      options.emplace(u"unitDisplay", Option(impl_->unitDisplay));
+  }
+  if (impl_->minimumIntegerDigits != NAN) {
+  options.emplace(u"minimumIntegerDigits", impl_->minimumIntegerDigits);
+  }
+  if (impl_->minimumFractionDigits != NAN) {
+      options.emplace(u"minimumFractionDigits", impl_->minimumFractionDigits);
+  }
+  if (impl_->maximumFractionDigits != NAN) {
+  options.emplace(u"maximumFractionDigits", impl_->maximumFractionDigits);
+  }
+  if (impl_->minimumSignificantDigits != NAN) {
+  options.emplace(u"minimumSignificantDigits", impl_->minimumSignificantDigits);
+  }
+  if (impl_->maximumSignificantDigits != NAN) {
+      options.emplace(u"maximumSignificantDigits", impl_->maximumSignificantDigits);
+  }
+  if (impl_->useGrouping == true || impl_->useGrouping == false) {
+      options.emplace(u"useGrouping", Option(impl_->useGrouping));
+  }
+  if (impl_->notation != u"") {
+      options.emplace(u"notation", Option(impl_->notation));
+  }
+  if (impl_->compactDisplay != u"") {
+      options.emplace(u"compactDisplay", Option(impl_->compactDisplay));
+  }
+  if (impl_->signDisplay != u"") {
+    options.emplace(u"signDisplay", Option(impl_->signDisplay));
+}
   return options;
 }
 
