@@ -666,10 +666,16 @@ class JSParserImpl {
 
   /// Parse a function body. This is a wrapper around parseBlock for the
   /// purposes of lazy parsing.
+  /// \param paramYield the value of paramYield at the start of the function,
+  ///   used for lazy compilation.
+  /// \param paramAwait the value of paramAwait at the start of the function,
+  ///   used for lazy compilation.
   /// \param param [Yield]
   Optional<ESTree::BlockStatementNode *> parseFunctionBody(
       Param param,
       bool eagerly,
+      bool paramYield,
+      bool paramAwait,
       JSLexer::GrammarContext grammarContext = JSLexer::AllowRegExp,
       bool parseDirectives = false);
 

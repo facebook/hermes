@@ -506,15 +506,26 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
     }
 
     AllocationScope scope(context_.getAllocator());
-    auto body = parseFunctionBody(Param{}, false, grammarContext, true);
+    auto body = parseFunctionBody(
+        Param{},
+        false,
+        saveArgsAndBodyParamYield.get(),
+        saveArgsAndBodyParamAwait.get(),
+        grammarContext,
+        true);
     if (!body)
       return None;
 
     return setLocation(startLoc, body.getValue(), node);
   }
 
-  auto parsedBody =
-      parseFunctionBody(Param{}, forceEagerly, grammarContext, true);
+  auto parsedBody = parseFunctionBody(
+      Param{},
+      forceEagerly,
+      saveArgsAndBodyParamYield.get(),
+      saveArgsAndBodyParamAwait.get(),
+      grammarContext,
+      true);
   if (!parsedBody)
     return None;
   auto *body = parsedBody.getValue();
@@ -675,6 +686,8 @@ llvh::SmallVector<llvh::SmallString<24>, 1> JSParserImpl::copySeenDirectives()
 Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
     Param param,
     bool eagerly,
+    bool paramYield,
+    bool paramAwait,
     JSLexer::GrammarContext grammarContext,
     bool parseDirectives) {
   if (pass_ == LazyParse && !eagerly) {
@@ -707,8 +720,14 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
       auto *body =
           new (context_) ESTree::BlockStatementNode(std::move(stmtList));
       body->isLazyFunctionBody = true;
-      body->paramYield = paramYield_;
-      body->paramAwait = paramAwait_;
+      // Set params based on what they were at the _start_ of the function's
+      // source, not what they are now, because they might have changed.
+      // For example,
+      // get [yield]() {}
+      // means different things based on the value of paramYield at `get`,
+      // not at the `{`.
+      body->paramYield = paramYield;
+      body->paramAwait = paramAwait;
       body->bufferId = lexer_.getBufferId();
       return setLocation(startLoc, endLoc, body);
     }
@@ -2612,14 +2631,21 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       }
 #endif
 
+      llvh::SaveAndRestore<bool> oldParamYield(paramYield_, false);
+      llvh::SaveAndRestore<bool> oldParamAwait(paramAwait_, false);
       if (!need(
               TokenKind::l_brace,
               "in getter declaration",
               "start of getter declaration",
               startLoc))
         return None;
-      auto block =
-          parseFunctionBody(ParamReturn, eagerly, JSLexer::AllowRegExp, true);
+      auto block = parseFunctionBody(
+          ParamReturn,
+          eagerly,
+          oldParamYield.get(),
+          oldParamAwait.get(),
+          JSLexer::AllowRegExp,
+          true);
       if (!block)
         return None;
 
@@ -2683,6 +2709,9 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       if (!optKey)
         return None;
 
+      llvh::SaveAndRestore<bool> oldParamYield(paramYield_, false);
+      llvh::SaveAndRestore<bool> oldParamAwait(paramAwait_, false);
+
       ESTree::NodeList params;
       eat(TokenKind::l_paren,
           JSLexer::AllowRegExp,
@@ -2721,8 +2750,13 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
               "start of setter declaration",
               startLoc))
         return None;
-      auto block =
-          parseFunctionBody(ParamReturn, eagerly, JSLexer::AllowRegExp, true);
+      auto block = parseFunctionBody(
+          ParamReturn,
+          eagerly,
+          oldParamYield.get(),
+          oldParamAwait.get(),
+          JSLexer::AllowRegExp,
+          true);
       if (!block)
         return None;
 
@@ -2901,8 +2935,13 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
             "start of method definition",
             startLoc))
       return None;
-    auto optBody =
-        parseFunctionBody(ParamReturn, eagerly, JSLexer::AllowRegExp, true);
+    auto optBody = parseFunctionBody(
+        ParamReturn,
+        eagerly,
+        oldParamYield.get(),
+        oldParamAwait.get(),
+        JSLexer::AllowRegExp,
+        true);
     if (!optBody)
       return None;
 
@@ -4793,8 +4832,13 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
           startLoc))
     return None;
 
-  auto optBody =
-      parseFunctionBody(ParamReturn, eagerly, JSLexer::AllowRegExp, true);
+  auto optBody = parseFunctionBody(
+      ParamReturn,
+      eagerly,
+      saveArgsAndBodyParamYield.get(),
+      saveArgsAndBodyParamAwait.get(),
+      JSLexer::AllowRegExp,
+      true);
   if (!optBody)
     return None;
 
@@ -5051,7 +5095,13 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
   llvh::SaveAndRestore<bool> oldParamYield(paramYield_, false);
   llvh::SaveAndRestore<bool> bodyParamAwait(paramAwait_, isAsync);
   if (check(TokenKind::l_brace)) {
-    auto optBody = parseFunctionBody(Param{}, true, JSLexer::AllowDiv, true);
+    auto optBody = parseFunctionBody(
+        Param{},
+        true,
+        oldParamYield.get(),
+        argsParamAwait.get(),
+        JSLexer::AllowDiv,
+        true);
     if (!optBody)
       return None;
     body = *optBody;
