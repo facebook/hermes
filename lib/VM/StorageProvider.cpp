@@ -100,6 +100,10 @@ void MallocStorageProvider::deleteStorageImpl(void *storage) {
 
 } // namespace
 
+StorageProvider::~StorageProvider() {
+  assert(numLiveAllocs() == 0);
+}
+
 /* static */
 std::unique_ptr<StorageProvider> StorageProvider::mmapProvider() {
   return std::unique_ptr<StorageProvider>(new VMAllocateStorageProvider);
