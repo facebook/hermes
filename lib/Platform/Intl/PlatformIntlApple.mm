@@ -47,12 +47,21 @@ std::u16string canonicalizeLocaleId(const std::u16string &localeId) {
     canoLocaleId += parsedId.languageIdentifier.languageSubtag;
   }
   if (!parsedId.languageIdentifier.scriptSubtag.empty()) {
+    if (!canoLocaleId.empty()) {
+      canoLocaleId += u"-";
+    }
     canoLocaleId += parsedId.languageIdentifier.scriptSubtag;
   }
   if (!parsedId.languageIdentifier.regionSubtag.empty()) {
+    if (!canoLocaleId.empty()) {
+      canoLocaleId += u"-";
+    }
     canoLocaleId += parsedId.languageIdentifier.regionSubtag;
   }
   for (const auto &subtag : parsedId.languageIdentifier.variantSubtagList) {
+    if (!canoLocaleId.empty()) {
+      canoLocaleId += u"-";
+    }
     canoLocaleId += subtag;
   }
 
@@ -66,7 +75,7 @@ std::u16string canonicalizeLocaleId(const std::u16string &localeId) {
     for (const auto &ext : it->second) {
       oExt += ext;
     }
-    otherExtensions.push_back(oExt);
+    otherExtensions.push_back(u"-" + oExt);
   }
   std::sort(otherExtensions.begin(), otherExtensions.end());
 
@@ -83,47 +92,46 @@ std::u16string canonicalizeLocaleId(const std::u16string &localeId) {
 
   // Append tlang
   if (!parsedId.transformedLanguageIdentifier.languageSubtag.empty()) {
-    transformedExtension += parsedId.transformedLanguageIdentifier.languageSubtag;
+    transformedExtension += u"-" + parsedId.transformedLanguageIdentifier.languageSubtag;
   }
-  if (!parsedId.languageIdentifier.scriptSubtag.empty()) {
-    transformedExtension += parsedId.transformedLanguageIdentifier.scriptSubtag;
+
+  if (!parsedId.transformedLanguageIdentifier.scriptSubtag.empty()) {
+    transformedExtension += u"-" + parsedId.transformedLanguageIdentifier.scriptSubtag;
   }
-  if (!parsedId.languageIdentifier.regionSubtag.empty()) {
-    transformedExtension += parsedId.transformedLanguageIdentifier.regionSubtag;
+  if (!parsedId.transformedLanguageIdentifier.regionSubtag.empty()){
+    transformedExtension += u"-" + parsedId.transformedLanguageIdentifier.regionSubtag;
   }
   for (const auto &subtag : parsedId.transformedLanguageIdentifier.variantSubtagList) {
-    transformedExtension += subtag;
+    transformedExtension += u"-" + subtag;
   }
   
   // Sort tfields by the alphabetical order of its keys
   std::vector<std::u16string> tFields;
   for (auto it = parsedId.transformedExtensionFields.begin(); it != parsedId.transformedExtensionFields.end(); it++) {
+    // Any type or tfield value "true" is removed.
+    if (it->second.size() == 1 && it->second[0] == u"true") {
+      continue;
+    }
+    
     std::u16string tField;
     tField += it->first;
     
-    bool isTrue = false;
     for (const auto &tValue : it->second) {
-      if (tValue == u"true") {
-        isTrue = true;
-        break;
-      }
-      tField += tValue;
+      tField += u"-" + tValue;
     }
-    // Any type or tfield value "true" is removed.
-    if (!isTrue) {
-      tFields.push_back(tField);
-    }
+    
+    tFields.push_back(tField);
   }
   std::sort(tFields.begin(), tFields.end());
 
   // Append tfields
   for (const auto &tField : tFields) {
-    transformedExtension += tField;
+    transformedExtension += u"-" + tField;
   }
 
   // Append transformed extension singleton
   if (transformedExtension.length() > 0) {
-    canoLocaleId += u"t" + transformedExtension;
+    canoLocaleId += u"-t" + transformedExtension;
   }
   
   // Build Unicode extension
@@ -131,38 +139,35 @@ std::u16string canonicalizeLocaleId(const std::u16string &localeId) {
   
   // Append sorted Unicode attributes
   for (const auto &attribute : parsedId.unicodeExtensionAttributes) {
-    unicodeExtension += attribute;
+    unicodeExtension += u"-" + attribute;
   }
 
   // Sort Unicode keywords  by the alphabetical order of its keys
   std::vector<std::u16string> keywords;
   for (auto it = parsedId.unicodeExtensionKeywords.begin(); it != parsedId.unicodeExtensionKeywords.end(); it++) {
+    // Any type or tfield value "true" is removed.
+    if (it->second.size() == 1 && it->second[0] == u"true") {
+      continue;
+    }
+    
     std::u16string keyword;
     keyword += it->first;
-    
-    bool isTrue = false;
     for (const auto &value : it->second) {
-      if (value == u"true") {
-        isTrue = true;
-        break;
-      }
-      keyword += value;
+      keyword += u"-" + value;
     }
-    // Any type or tfield value "true" is removed.
-    if (!isTrue) {
-      keywords.push_back(keyword);
-    }
+
+    keywords.push_back(keyword);
   }
   std::sort(keywords.begin(), keywords.end());
 
   // Append Unicode keywords
   for (const auto &keyword : keywords) {
-    unicodeExtension += keyword;
+    unicodeExtension += u"-" + keyword;
   }
   
   // Append Unicode singleton
   if (unicodeExtension.length() > 0) {
-    canoLocaleId += u"u" + unicodeExtension;
+    canoLocaleId += u"-u" + unicodeExtension;
   }
 
   // Append remaining other extensions
@@ -172,9 +177,9 @@ std::u16string canonicalizeLocaleId(const std::u16string &localeId) {
 
   // Append private use extensions
   if (!parsedId.puExtensions.empty()) {
-    canoLocaleId += u"x";
+    canoLocaleId += u"-x";
     for (const auto &puExt : parsedId.puExtensions) {
-      canoLocaleId += puExt;
+      canoLocaleId +=  u"-" + puExt;
     }
   }
   
