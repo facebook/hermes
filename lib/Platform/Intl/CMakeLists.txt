@@ -11,6 +11,9 @@ if(HERMES_ENABLE_INTL)
     )
     target_compile_options(hermesPlatformIntl PRIVATE -frtti -fexceptions)
   elseif(APPLE)
+    add_hermes_library(hermesBCP47Parser STATIC ${source_files})
+    hermes_link_icu(hermesBCP47Parser)
+
     add_hermes_library(hermesPlatformIntl STATIC PlatformIntlApple.mm
         LINK_LIBS
         ${FOUNDATION}
@@ -23,3 +26,5 @@ if(HERMES_ENABLE_INTL)
   endif()
   add_subdirectory(parser)
 endif()
+
+
