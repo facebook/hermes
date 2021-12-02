@@ -73,14 +73,16 @@ std::u16string canonicalizeLocaleId(const std::u16string &localeId) {
     std::u16string oExt;
     oExt += it->first;
     for (const auto &ext : it->second) {
-      oExt += ext;
+      oExt += u"-" + ext;
     }
     otherExtensions.push_back(u"-" + oExt);
   }
   std::sort(otherExtensions.begin(), otherExtensions.end());
 
   // Append other extensions from a-s
-  for (const auto &oExt : otherExtensions) {
+  size_t oExtIndex;
+  for (oExtIndex = 0; oExtIndex < otherExtensions.size(); oExtIndex++) {
+    const auto &oExt = otherExtensions[oExtIndex];
     if (oExt[0] > 's') {
       break;
     }
@@ -171,8 +173,8 @@ std::u16string canonicalizeLocaleId(const std::u16string &localeId) {
   }
 
   // Append remaining other extensions
-  for (const auto &oExt : otherExtensions) {
-    canoLocaleId += oExt;
+  for (; oExtIndex < otherExtensions.size(); oExtIndex++) {
+    canoLocaleId += otherExtensions[oExtIndex];
   }
 
   // Append private use extensions

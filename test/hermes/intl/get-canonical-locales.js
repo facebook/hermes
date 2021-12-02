@@ -20,5 +20,8 @@ print(Intl.getCanonicalLocales(["zh-zh", "ZH"]));
 print(Intl.getCanonicalLocales(["cmn-hans-cn-t-ca-u-ca-x-t-u"]));
 // CHECK-NEXT: cmn-Hans-CN-t-ca-u-ca-x-t-u
 
+print(Intl.getCanonicalLocales(["en-us-u-asd-a-tbd"]);
+// CHECK-NEXT: en-US-a-tbd-u-asd
+
 print(Intl.getCanonicalLocales([]).length);
 //CHECK-NEXT: 0
