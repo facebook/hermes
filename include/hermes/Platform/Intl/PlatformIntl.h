@@ -15,7 +15,7 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/StringPrimitive.h"
-#include "hermes/Platform/Intl/PlatformIntlBCP47Parser.h"
+#include "hermes/Platform/Intl/BCP47Parser.h"
 
 #include <string>
 #include <unordered_map>

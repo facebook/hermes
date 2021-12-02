@@ -13,7 +13,7 @@ namespace {
   
 using namespace hermes::bcp47_parser;
 
-TEST(PlatformIntlBCP47Parser, LanguageIdTest) {
+TEST(BCP47Parser, LanguageIdTest) {
   // language + county code
   llvh::Optional<ParsedLocaleIdentifier> parserOpt = parseLocaleId(u"en-US");
   ParsedLocaleIdentifier locale1 = parserOpt.getValue();
@@ -47,7 +47,7 @@ TEST(PlatformIntlBCP47Parser, LanguageIdTest) {
   EXPECT_EQ(u"alphabet", locale5.languageIdentifier.variantSubtagList.front());
 }
 
-TEST(PlatformIntlBCP47Parser, ExtensionText) {
+TEST(BCP47Parser, ExtensionText) {
   // Unicode extension test
   llvh::Optional<ParsedLocaleIdentifier> parserOpt = parseLocaleId(u"und-u-att-attr-nu-xx-latn-bob");
   ParsedLocaleIdentifier locale1 = parserOpt.getValue();
