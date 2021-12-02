@@ -132,6 +132,7 @@ class DateTimeFormat : public vm::DecoratedObject::Decoration {
       const Options &options) noexcept;
   Options resolvedOptions() noexcept;
 
+  std::u16string getNSDateFormat() noexcept;
   std::u16string format(double jsTimeValue) noexcept;
   std::vector<Part> formatToParts(double jsTimeValue) noexcept;
 

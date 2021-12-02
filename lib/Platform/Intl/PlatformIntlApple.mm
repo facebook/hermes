@@ -1332,10 +1332,7 @@ enum_string formatDate(std::u16string const &inString) {
     return eLongGeneric;
   return eNull;
 };
-std::u16string DateTimeFormat::format(double jsTimeValue) noexcept {
-  // Last 3 digits of jsTimeValue need to be removed for this to work?
-  auto timeInSeconds = jsTimeValue / 1000;
-  NSDate *date = [NSDate dateWithTimeIntervalSince1970:timeInSeconds];
+std::u16string DateTimeFormat::getNSDateFormat() noexcept {
   NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
 
   if (impl_->TimeStyle != u"") {
@@ -1637,12 +1634,80 @@ std::u16string DateTimeFormat::format(double jsTimeValue) noexcept {
     [dateFormatter setLocalizedDateFormatFromTemplate:customFormattedDate];
   }
 
+  NSString *df = dateFormatter.dateFormat;
+  return nsStringToU16String(df);
+}
+std::u16string DateTimeFormat::format(double jsTimeValue) noexcept {
+  auto timeInSeconds = jsTimeValue / 1000;
+  NSDate *date = [NSDate dateWithTimeIntervalSince1970:timeInSeconds];
+  NSString *df = u16StringToNSString(getNSDateFormat());
+  NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+  dateFormatter.dateFormat = df;
+  // Resetting these as it wouldn't pass through getNSDateFormat
+  if (impl_->TimeZone != u"") {
+    dateFormatter.timeZone =
+        [[NSTimeZone alloc] initWithName:u16StringToNSString(impl_->TimeZone)];
+  }
+  if (impl_->locale != u"") {
+    dateFormatter.locale = [[NSLocale alloc]
+        initWithLocaleIdentifier:u16StringToNSString(impl_->locale)];
+  }
+  if (impl_->Calendar != u"") {
+    dateFormatter.calendar = [[NSCalendar alloc]
+        initWithCalendarIdentifier:u16StringToNSString(impl_->Calendar)];
+  }
   // If no options have been set, date will be empty, so set a format for
   // default
   if ([[dateFormatter stringFromDate:date] isEqual:@""]) {
     dateFormatter.dateStyle = NSDateFormatterShortStyle;
   }
   return nsStringToU16String([dateFormatter stringFromDate:date]);
+}
+std::u16string returnTypeOfDate(const char &formatter) {
+  if (formatter == 'a') {
+    return u"dayPeriod";
+  }
+  if (formatter == 'z' || formatter == 'v' || formatter == 'O') {
+    return u"timeZoneName";
+  }
+  if (formatter == 'G') {
+    return u"era";
+  }
+  if (formatter == 'y') {
+    return u"year";
+  }
+  if (formatter == 'M') {
+    return u"month";
+  }
+  if (formatter == 'E') {
+    return u"weekday";
+  }
+  if (formatter == 'd') {
+    return u"day";
+  }
+  if (formatter == 'h' || formatter == 'k' || formatter == 'K' || formatter == 'H') {
+    return u"hour";
+  }
+  if (formatter == 'm') {
+    return u"minute";
+  }
+  if (formatter == 's') {
+    return u"second";
+  }
+  if (formatter == 'S') {
+    return u"fractionalSecond";
+  }
+  return u"literal";
+}
+std::u16string removeDuplicatesFromString(const std::u16string &s){
+  std::u16string arr;
+  std::unordered_map<char, char> exists;
+  for(const auto&el:s) {
+    if(exists.insert({el, 0}).second){
+      arr+=el;
+    }
+  }
+  return arr;
 }
 
 // Implementer note: This method corresponds roughly to
@@ -1651,36 +1716,46 @@ std::vector<std::unordered_map<std::u16string, std::u16string>>
 DateTimeFormat::formatToParts(double jsTimeValue) noexcept {
   std::vector<std::unordered_map<std::u16string, std::u16string>> formatMap;
   std::unordered_map<std::u16string, std::u16string> part;
-  std::u16string formattedAnswer = format(jsTimeValue);
   std::vector<std::u16string> splitAnswer;
-  std::u16string s;
-  // How can you differentiate literal from hour/weekday/month etc.?
-  // Is there a way to reverse an NSDate string into @"yyyy-mm"?
-  int i = -1;
-  for (char const &c : formattedAnswer) {
-    s.push_back(c);
-    i++;
-    if (!isalnum(s[i])) {
-      s.pop_back();
-      splitAnswer.push_back(s);
-      part[u"type"] = u"literal";
-      part[u"value"] = {s.begin(), s.end()};
+  // Get custom formatted string i.e. dd-mm-yyyy
+  std::u16string formatter = getNSDateFormat();
+  // Remove punctuation and make elements unique
+  std::remove_if(formatter.begin (), formatter.end (), ispunct);
+  std::remove_if(formatter.begin (), formatter.end (), isspace);
+  std::u16string uniqueFormat = removeDuplicatesFromString(formatter);
+  // Get the answer in string form i.e. 01/02/2020
+  std::u16string formattedAnswer = format(jsTimeValue);
+  // Does not work for complex cases i.e. o'clock/in the morning
+  std::u16string currentPart;
+  std::u16string punctualPart;
+  std::string::size_type sz = formattedAnswer.length() - 1;
+  int dateTypeCounter = 0;
+  for (std::string::size_type i = 0; i < formattedAnswer.size(); ++i) {
+    if (isalnum(formattedAnswer[i])) {
+      currentPart += formattedAnswer[i];
+    } else {
+      if (currentPart != u"") {
+      splitAnswer.push_back(currentPart);
+      part[u"type"] = returnTypeOfDate(uniqueFormat[dateTypeCounter]);
+      dateTypeCounter++;
+      part[u"value"] = {currentPart.begin(), currentPart.end()};
       formatMap.push_back(part);
-      s = u"";
-      s.push_back(c);
-      splitAnswer.push_back(s);
+      currentPart = u"";
+      }
+      punctualPart += formattedAnswer[i];
+      splitAnswer.push_back(punctualPart);
       part[u"type"] = u"literal";
-      part[u"value"] = {s.begin(), s.end()};
+      part[u"value"] = {punctualPart.begin(), punctualPart.end()};
       formatMap.push_back(part);
-      s = u"";
-      i = -1;
+      punctualPart = u"";
+      }
+    if (i == sz) {// last index
+      splitAnswer.push_back(currentPart);
+      part[u"type"] = returnTypeOfDate(uniqueFormat[dateTypeCounter]);
+      part[u"value"] = {currentPart.begin(), currentPart.end()};
+      formatMap.push_back(part);
     }
   }
-  // Add last element
-  splitAnswer.push_back(s);
-  part[u"type"] = u"literal";
-  part[u"value"] = {s.begin(), s.end()};
-  formatMap.push_back(part);
   return formatMap;
 }
 
