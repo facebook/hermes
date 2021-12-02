@@ -3,10 +3,14 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-set(source_files
-   BCP47Parser.cpp
-)
+set(BCP47ParserSources
+  BCP47Parser.cpp
+  )
 
-add_hermes_library(hermesBCP47Parser STATIC ${source_files})
+add_hermes_unittest(BCP47ParserTests
+  ${BCP47ParserSources}
+  )
 
-hermes_link_icu(hermesBCP47Parser)
+target_link_libraries(BCP47ParserTests
+  hermesBCP47Parser
+  )

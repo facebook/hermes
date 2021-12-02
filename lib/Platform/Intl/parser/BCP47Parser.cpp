@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/Platform/Intl/PlatformIntlBCP47Parser.h"
+#include "hermes/Platform/Intl/BCP47Parser.h"
 
 namespace hermes {
 namespace bcp47_parser {
@@ -49,7 +49,7 @@ void toASCIITitleCase(std::u16string &str) {
 bool isSubtagSeparator(char16_t c) {
   return c == u'-';
 }
-bool isCharType(std::u16string str, int start, int end, int min, int max, bool(*charType)(char16_t)) {
+bool isCharType(const std::u16string &str, int start, int end, int min, int max, bool(*charType)(char16_t)) {
   if ((unsigned)end >= str.length()) {
     return false;
   }
@@ -69,36 +69,36 @@ bool isCharType(std::u16string str, int start, int end, int min, int max, bool(*
 }
 
 // tag type functions
-bool isUnicodeLanguageSubtag(std::u16string str, int start, int end) {
+bool isUnicodeLanguageSubtag(const std::u16string &str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = alpha{2,3} | alpha{5,8};
   // root case?
   return isCharType(str, start, end, 2, 3, &isASCIILetter) ||
     isCharType(str, start, end, 5, 8, &isASCIILetter);
 }
-bool isUnicodeScriptSubtag(std::u16string str, int start, int end) {
+bool isUnicodeScriptSubtag(const std::u16string &str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = alpha{4};
   return isCharType(str, start, end, 4, 4, &isASCIILetter);
 }
-bool isUnicodeRegionSubtag(std::u16string str, int start, int end) {
+bool isUnicodeRegionSubtag(const std::u16string &str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = (alpha{2} | digit{3});
   return isCharType(str, start, end, 2, 2, &isASCIILetter) ||
     isCharType(str, start, end, 3, 3, &isASCIIDigit);
 }
-bool isUnicodeVariantSubtag(std::u16string str, int start, int end) {
+bool isUnicodeVariantSubtag(const std::u16string &str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = (alphanum{5,8} | digit alphanum{3});
   return isCharType(str, start, end, 5, 8, &isASCIILetterOrDigit) ||
     isCharType(str, start, end, 3, 3, &isASCIILetterOrDigit);
 }
-bool isUnicodeExtensionAttribute(std::u16string str, int start, int end) {
+bool isUnicodeExtensionAttribute(const std::u16string &str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = alphanum{3,8};
   return isCharType(str, start, end, 3, 8, &isASCIILetterOrDigit);
 }
-bool isUnicodeExtensionKey(std::u16string str, int start, int end) {
+bool isUnicodeExtensionKey(const std::u16string &str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = alphanum alpha;
   if (end - start != 1) {
@@ -106,12 +106,12 @@ bool isUnicodeExtensionKey(std::u16string str, int start, int end) {
   }
   return isASCIILetterOrDigit(str[start]) && isASCIILetter(str[end]);
 }
-bool isUnicodeExtensionKeyTypeItem(std::u16string str, int start, int end) {
+bool isUnicodeExtensionKeyTypeItem(const std::u16string &str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = alphanum{3,8};
   return isCharType(str, start, end, 3, 8, &isASCIILetterOrDigit);
 }
-bool isTransformedExtensionKey(std::u16string str, int start, int end) {
+bool isTransformedExtensionKey(const std::u16string &str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = alpha digit;
   if (end - start != 1) {
@@ -119,17 +119,17 @@ bool isTransformedExtensionKey(std::u16string str, int start, int end) {
   }
   return isASCIILetter(str[start]) && isASCIIDigit(str[end]);
 }
-bool isTransformedExtensionTValueItem(std::u16string str, int start, int end) {
+bool isTransformedExtensionTValueItem(const std::u16string &str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = (sep alphanum{3,8})+;
   return isCharType(str, start, end, 3, 8, &isASCIILetterOrDigit);
 }
-bool isPrivateUseExtension(std::u16string str, int start, int end) {
+bool isPrivateUseExtension(const std::u16string &str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = (sep alphanum{1,8})+;
   return isCharType(str, start, end, 1, 8, &isASCIILetterOrDigit);
 }
-bool isOtherExtension(std::u16string str, int start, int end) {
+bool isOtherExtension(const std::u16string &str, int start, int end) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = (sep alphanum{2,8})+;
   return isCharType(str, start, end, 2, 8, &isASCIILetterOrDigit);

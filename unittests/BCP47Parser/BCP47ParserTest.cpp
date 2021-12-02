@@ -5,12 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/Platform/Intl/PlatformIntlBCP47Parser.h"
+#include "hermes/Platform/Intl/BCP47Parser.h"
 
 #include "gtest/gtest.h"
 
 namespace {
-
+  
 using namespace hermes::bcp47_parser;
 
 TEST(PlatformIntlBCP47Parser, LanguageIdTest) {
