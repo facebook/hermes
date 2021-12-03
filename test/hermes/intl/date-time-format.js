@@ -113,3 +113,34 @@ lengthOptions.slice(1).forEach(element => print(new Intl.DateTimeFormat('en-GB',
 numericOptions.forEach(element => print(new Intl.DateTimeFormat('jp-JP', {hour: element, minute: element}).format(date)));
 // CHECK-NEXT: 03:45
 // CHECK-NEXT: 03:45
+
+print(new Intl.DateTimeFormat('en-US').resolvedOptions().locale);
+// CHECK-NEXT: en-US
+
+print(new Intl.DateTimeFormat('zh-CN').resolvedOptions().locale);
+// CHECK-NEXT: zh-CN
+
+print(new Intl.DateTimeFormat('en-US').resolvedOptions().numberingSystem);
+// CHECK-NEXT: latn
+
+print(new Intl.DateTimeFormat('en-US', { timeZone: 'SGT'}).resolvedOptions().timeZone);
+// CHECK-NEXT: SGT
+
+print(new Intl.DateTimeFormat('en-US').formatToParts(date));
+// CHECK-NEXT: [ { type: "month", value: "1" }, { type: "literal", value: "/" }, { type: "day", value: "2" }, { type: "literal", value: "/" }, { type: "year", value: "2020" }, [length]: 5 ]
+
+print(new Intl.DateTimeFormat('en-GB').formatToParts(date));
+// CHECK-NEXT: [ { type: "day", value: "02" }, { type: "literal", value: "/" }, { type: "month", value: "01" }, { type: "literal", value: "/" }, { type: "year", value: "2020" }, [length]: 5 ]
+
+print(new Intl.DateTimeFormat('en-US', {weekday: 'long',
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: 'numeric',
+  second: 'numeric',
+  fractionalSecondDigits: 3,
+  hour12: true,
+  timeZone: 'UTC'
+}).formatToParts(new Date(Date.UTC(2020, 0, 2, 3, 45, 00, 30))));
+// CHECK-NEXT: [ { type: "weekday", value: "Thursday" }, { type: "literal", value: "," }, { type: "literal", value: " " }, { type: "month", value: "1" }, { type: "literal", value: "/" }, { type: "day", value: "2" }, { type: "literal", value: "/" }, { type: "year", value: "2020" }, { type: "literal", value: "," }, { type: "literal", value: " " }, { type: "hour", value: "3" }, { type: "literal", value: ":" }, { type: "minute", value: "45" }, { type: "literal", value: ":" }, { type: "second", value: "00" }, { type: "literal", value: "." }, { type: "fractionalSecond", value: "030" }, { type: "literal", value: " " }, { type: "dayPeriod", value: "AM" }, [length]: 19 ]

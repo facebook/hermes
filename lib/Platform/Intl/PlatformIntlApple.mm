@@ -1239,7 +1239,7 @@ Options DateTimeFormat::resolvedOptions() noexcept {
   options.emplace(u"locale", Option(impl_->locale));
   options.emplace(u"numeric", Option(false));
 
-  options.emplace(u"numberingSystem", Option(impl_->FormatMatcher));
+  options.emplace(u"numberingSystem", Option(impl_->NumberingSystem));
   options.emplace(u"calendar", Option(impl_->Calendar));
   options.emplace(u"timeZone", Option(impl_->TimeZone));
 
@@ -1685,7 +1685,8 @@ std::u16string returnTypeOfDate(const char &formatter) {
   if (formatter == 'd') {
     return u"day";
   }
-  if (formatter == 'h' || formatter == 'k' || formatter == 'K' || formatter == 'H') {
+  if (formatter == 'h' || formatter == 'k' || formatter == 'K' ||
+      formatter == 'H') {
     return u"hour";
   }
   if (formatter == 'm') {
@@ -1699,12 +1700,12 @@ std::u16string returnTypeOfDate(const char &formatter) {
   }
   return u"literal";
 }
-std::u16string removeDuplicatesFromString(const std::u16string &s){
+std::u16string removeDuplicatesFromString(const std::u16string &s) {
   std::u16string arr;
   std::unordered_map<char, char> exists;
-  for(const auto&el:s) {
-    if(exists.insert({el, 0}).second){
-      arr+=el;
+  for (const auto &el : s) {
+    if (exists.insert({el, 0}).second) {
+      arr += el;
     }
   }
   return arr;
@@ -1720,14 +1721,13 @@ DateTimeFormat::formatToParts(double jsTimeValue) noexcept {
   // Get custom formatted string i.e. dd-mm-yyyy
   std::u16string formatter = getNSDateFormat();
   // Remove punctuation and make elements unique
-  std::remove_if(formatter.begin (), formatter.end (), ispunct);
-  std::remove_if(formatter.begin (), formatter.end (), isspace);
+  std::remove_if(formatter.begin(), formatter.end(), ispunct);
+  std::remove_if(formatter.begin(), formatter.end(), isspace);
   std::u16string uniqueFormat = removeDuplicatesFromString(formatter);
   // Get the answer in string form i.e. 01/02/2020
   std::u16string formattedAnswer = format(jsTimeValue);
   // Does not work for complex cases i.e. o'clock/in the morning
   std::u16string currentPart;
-  std::u16string punctualPart;
   std::string::size_type sz = formattedAnswer.length() - 1;
   int dateTypeCounter = 0;
   for (std::string::size_type i = 0; i < formattedAnswer.size(); ++i) {
@@ -1735,28 +1735,29 @@ DateTimeFormat::formatToParts(double jsTimeValue) noexcept {
       currentPart += formattedAnswer[i];
     } else {
       if (currentPart != u"") {
+        splitAnswer.push_back(currentPart);
+        part[u"type"] = returnTypeOfDate(uniqueFormat[dateTypeCounter]);
+        dateTypeCounter++;
+        part[u"value"] = {currentPart.begin(), currentPart.end()};
+        formatMap.push_back(part);
+        currentPart = u"";
+      }
+      currentPart += formattedAnswer[i];
       splitAnswer.push_back(currentPart);
-      part[u"type"] = returnTypeOfDate(uniqueFormat[dateTypeCounter]);
-      dateTypeCounter++;
+      part[u"type"] = u"literal";
       part[u"value"] = {currentPart.begin(), currentPart.end()};
       formatMap.push_back(part);
       currentPart = u"";
-      }
-      punctualPart += formattedAnswer[i];
-      splitAnswer.push_back(punctualPart);
-      part[u"type"] = u"literal";
-      part[u"value"] = {punctualPart.begin(), punctualPart.end()};
-      formatMap.push_back(part);
-      punctualPart = u"";
-      }
-    if (i == sz) {// last index
+    }
+    if (i == sz) { // last index
       splitAnswer.push_back(currentPart);
       part[u"type"] = returnTypeOfDate(uniqueFormat[dateTypeCounter]);
       part[u"value"] = {currentPart.begin(), currentPart.end()};
       formatMap.push_back(part);
     }
   }
-  return formatMap;
+  return std::vector<std::unordered_map<std::u16string, std::u16string>>{
+      formatMap};
 }
 
 struct NumberFormat::Impl {
