@@ -237,21 +237,19 @@ vm::CallResult<Option> getOption(
   // 6. If type is "string", then
   // a. Set value to ? ToString(value).
   if (type != u"string" && type != u"boolean") {
-    return runtime->raiseTypeError("Option type incorrect");
+    return runtime->raiseTypeError(vm::TwineChar16("Type ") + vm::TwineChar16(type.c_str()) + vm::TwineChar16(" is incorrect"));
   }
   // 7. If values is not undefined and values does not contain an element equal
   // to value, throw a RangeError exception.
   if (value->second.isString()) {
     if (!values.empty() &&
         llvh::find(values, value->second.getString()) == values.end()) {
-      return runtime->raiseRangeError(
-          "String value out of range for Intl.DateTimeFormat options property");
+      return runtime->raiseTypeError(vm::TwineChar16("Value ") + vm::TwineChar16(value->second.getString().c_str()) + vm::TwineChar16(" out of range for Intl.DateTimeFormat options property " + vm::TwineChar16(property.c_str())));
     }
   } else {
     if (!values.empty() &&
         (value->second.getBool() != true && value->second.getBool() != false)) {
-      return runtime->raiseRangeError(
-          "Bool value out of range for Intl.DateTimeFormat options property");
+      return runtime->raiseTypeError(vm::TwineChar16("Value ") + vm::TwineChar16(value->second.getString().c_str()) + vm::TwineChar16("  out of range for Intl.DateTimeFormat options property " + vm::TwineChar16(property.c_str())));
     }
   }
   // 8. Return value.
@@ -264,7 +262,8 @@ vm::CallResult<Option> getOptionNumber(
     const std::u16string &property,
     const std::uint8_t minimum,
     const std::uint8_t maximum,
-    const Options &fallback) {
+    const Options &fallback,
+    vm::Runtime *runtime) {
   //  1. Assert: Type(options) is Object.
   //  2. Let value be ? Get(options, property).
   auto value = options.find(property);
@@ -273,7 +272,7 @@ vm::CallResult<Option> getOptionNumber(
     auto fallbackIter = fallback.find(u"fallback");
     // Make sure fallback exists
     if (fallbackIter == options.end()) {
-      return vm::ExecutionStatus::EXCEPTION;
+      return runtime->raiseTypeError("Fallback does not exist");
     }
     return fallback.find(u"fallback")->second;
   }
@@ -281,7 +280,7 @@ vm::CallResult<Option> getOptionNumber(
   if (value->second.getNumber() > maximum ||
       value->second.getNumber() < minimum ||
       std::isnan(value->second.getNumber())) {
-    return vm::ExecutionStatus::EXCEPTION;
+    return runtime->raiseTypeError(vm::TwineChar16(property.c_str()) + vm::TwineChar16(" value is out of range"));
   }
   //  3. Return ? DefaultNumberOption(value, minimum, maximum, fallback).
   return value->second;
@@ -1019,7 +1018,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   impl_->TimeStyle = timeStyleOption->getString();
 
   auto fractionalSecondDigitsOption = getOptionNumber(
-      optionsToUse, u"fractionalSecondDigits", 1, 3, undefinedFallback);
+      optionsToUse, u"fractionalSecondDigits", 1, 3, undefinedFallback, runtime);
   auto weekdayOption = getOption(
       optionsToUse,
       u"weekday",
