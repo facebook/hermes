@@ -225,12 +225,12 @@ vm::CallResult<Option> getOption(
   if (value->second.isString()) {
     if (!values.empty() &&
         llvh::find(values, value->second.getString()) == values.end()) {
-      return runtime->raiseTypeError(vm::TwineChar16("Value ") + vm::TwineChar16(value->second.getString().c_str()) + vm::TwineChar16(" out of range for Intl.DateTimeFormat options property " + vm::TwineChar16(property.c_str())));
+      return runtime->raiseRangeError(vm::TwineChar16("Value ") + vm::TwineChar16(value->second.getString().c_str()) + vm::TwineChar16(" out of range for Intl.DateTimeFormat options property " + vm::TwineChar16(property.c_str())));
     }
   } else {
     if (!values.empty() &&
         (value->second.getBool() != true && value->second.getBool() != false)) {
-      return runtime->raiseTypeError(vm::TwineChar16("Value ") + vm::TwineChar16(value->second.getString().c_str()) + vm::TwineChar16("  out of range for Intl.DateTimeFormat options property " + vm::TwineChar16(property.c_str())));
+      return runtime->raiseRangeError(vm::TwineChar16("Value ") + vm::TwineChar16(value->second.getString().c_str()) + vm::TwineChar16("  out of range for Intl.DateTimeFormat options property " + vm::TwineChar16(property.c_str())));
     }
   }
   // 8. Return value.
@@ -259,9 +259,11 @@ vm::CallResult<Option> getOptionNumber(
   }
   // Check if it is in the allowed range and is a number
   if (value->second.getNumber() > maximum ||
-      value->second.getNumber() < minimum ||
-      std::isnan(value->second.getNumber())) {
-    return runtime->raiseTypeError(vm::TwineChar16(property.c_str()) + vm::TwineChar16(" value is out of range"));
+      value->second.getNumber() < minimum) {
+    return runtime->raiseRangeError(vm::TwineChar16(property.c_str()) + vm::TwineChar16(" value is out of range"));
+  }
+  if (std::isnan(value->second.getNumber())) {
+    return runtime->raiseTypeError(vm::TwineChar16(property.c_str()) + vm::TwineChar16(" value is not a number"));
   }
   //  3. Return ? DefaultNumberOption(value, minimum, maximum, fallback).
   return value->second;
