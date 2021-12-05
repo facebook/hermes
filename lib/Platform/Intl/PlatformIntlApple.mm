@@ -244,12 +244,12 @@ vm::CallResult<Option> getOption(
   if (value->second.isString()) {
     if (!values.empty() &&
         llvh::find(values, value->second.getString()) == values.end()) {
-      return runtime->raiseTypeError(vm::TwineChar16("Value ") + vm::TwineChar16(value->second.getString().c_str()) + vm::TwineChar16(" out of range for Intl.DateTimeFormat options property " + vm::TwineChar16(property.c_str())));
+      return runtime->raiseRangeError(vm::TwineChar16("Value ") + vm::TwineChar16(value->second.getString().c_str()) + vm::TwineChar16(" out of range for Intl.DateTimeFormat options property " + vm::TwineChar16(property.c_str())));
     }
   } else {
     if (!values.empty() &&
         (value->second.getBool() != true && value->second.getBool() != false)) {
-      return runtime->raiseTypeError(vm::TwineChar16("Value ") + vm::TwineChar16(value->second.getString().c_str()) + vm::TwineChar16("  out of range for Intl.DateTimeFormat options property " + vm::TwineChar16(property.c_str())));
+      return runtime->raiseRangeError(vm::TwineChar16("Value ") + vm::TwineChar16(value->second.getString().c_str()) + vm::TwineChar16("  out of range for Intl.DateTimeFormat options property " + vm::TwineChar16(property.c_str())));
     }
   }
   // 8. Return value.
@@ -278,9 +278,11 @@ vm::CallResult<Option> getOptionNumber(
   }
   // Check if it is in the allowed range and is a number
   if (value->second.getNumber() > maximum ||
-      value->second.getNumber() < minimum ||
-      std::isnan(value->second.getNumber())) {
-    return runtime->raiseTypeError(vm::TwineChar16(property.c_str()) + vm::TwineChar16(" value is out of range"));
+      value->second.getNumber() < minimum) {
+    return runtime->raiseRangeError(vm::TwineChar16(property.c_str()) + vm::TwineChar16(" value is out of range"));
+  }
+  if (std::isnan(value->second.getNumber())) {
+    return runtime->raiseTypeError(vm::TwineChar16(property.c_str()) + vm::TwineChar16(" value is not a number"));
   }
   //  3. Return ? DefaultNumberOption(value, minimum, maximum, fallback).
   return value->second;
@@ -393,7 +395,7 @@ struct DateTimeFormat::Impl {
   // For DateTimeFormat::impl_ in initialize
   std::u16string FormatMatcher, HourCycle, Weekday, Era, Year, Month, Day,
       DayPeriod, Hour, Minute, Second, TimeZone, TimeZoneName, DateStyle,
-      TimeStyle, Calendar, NumberingSystem, locale;
+  TimeStyle, Calendar, NumberingSystem, locale;
   uint8_t FractionalSecondDigits;
   bool hour12;
 };
@@ -869,22 +871,20 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   // 6. Let calendar be ? GetOption(options, "calendar", "string",
   //    undefined, undefined).
   Options undefinedFallback;
-  // If this is truly undefined it will error throw?
   undefinedFallback.emplace(
-      std::u16string(u"fallback"), Option(std::u16string()));
+      std::u16string(u"fallback"), Option(nullptr));
   auto calendar = getOption(
       optionsToUse, u"calendar", u"string", {}, undefinedFallback, runtime);
   // 7. If calendar is not undefined, then
   //    a. If calendar does not match the Unicode Locale Identifier type
   //       nonterminal, throw a RangeError exception.
   // 8. Set opt.[[ca]] to calendar.
-  if (calendar->getString() != u"") {
-    if (calendar->isString()) {
-      opt.ca = calendar->getString();
-    } else {
-      return runtime->raiseRangeError(
-          "Incorrect calendar information provided");
-    }
+  if (calendar == vm::ExecutionStatus::EXCEPTION) {
+    return runtime->raiseRangeError(
+        "Incorrect calendar information provided");
+  }
+  if (calendar->isString()) {
+    opt.ca = calendar->getString();
   }
   // 9. Let numberingSystem be ? GetOption(options, "numberingSystem",
   //    "string", undefined, undefined).
@@ -899,13 +899,13 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   //     a. If numberingSystem does not match the Unicode Locale Identifier
   //        type nonterminal, throw a RangeError exception.
   // 11. Set opt.[[nu]] to numberingSystem.
-  if (numberingSystem->isString()) {
-    opt.nu = numberingSystem->getString();
-  } else {
+  if (numberingSystem == vm::ExecutionStatus::EXCEPTION) {
     return runtime->raiseRangeError(
         "Incorrect numberingSystem information provided");
   }
-
+  if (numberingSystem->isString()) {
+    opt.nu = numberingSystem->getString();
+  }
   // 12. Let hour12 be ? GetOption(options, "hour12", "boolean",
   //     undefined, undefined).
   auto hour12 = getOption(
@@ -922,10 +922,13 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   // 14. If hour12 is not undefined, then
   //     a. Let hourCycle be null.
   if (hour12->isBool()) {
-    hourCycle->getString() = u"null";
+    if (hourCycle->isString()) {
+      hourCycle->getString() = u"";
+      // 15. Set opt.[[hc]] to hourCycle.
+      opt.hc = hourCycle->getString();
   }
-  // 15. Set opt.[[hc]] to hourCycle.
-  opt.hc = hourCycle->getString();
+  }
+  
 
   // 16 - 23
   static const std::vector<std::u16string> relevantExtensionKeys = {
@@ -944,7 +947,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
     impl_->Calendar = calendarResolved.getString();
   } else {
     useDefaultCalendar = true;
-    impl_->Calendar = u"gregorian"; // Placeholder for now, needs checking
+    impl_->Calendar = u"gregorian"; // Placeholder for now
   }
   bool useDefaultNumberSystem;
   Option numberingSystemResolved = r.nu;
@@ -1003,8 +1006,9 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   if (dateStyleOption == vm::ExecutionStatus::EXCEPTION) {
     return vm::ExecutionStatus::EXCEPTION;
   }
-  impl_->DateStyle = dateStyleOption->getString();
-
+  if (dateStyleOption->isString()) {
+    impl_->DateStyle = dateStyleOption->getString();
+  }
   auto timeStyleOption = getOption(
       optionsToUse,
       u"timeStyle",
@@ -1015,8 +1019,9 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   if (timeStyleOption == vm::ExecutionStatus::EXCEPTION) {
     return vm::ExecutionStatus::EXCEPTION;
   }
-  impl_->TimeStyle = timeStyleOption->getString();
-
+  if (timeStyleOption->isString()) {
+    impl_->TimeStyle = timeStyleOption->getString();
+  }
   auto fractionalSecondDigitsOption = getOptionNumber(
       optionsToUse, u"fractionalSecondDigits", 1, 3, undefinedFallback, runtime);
   auto weekdayOption = getOption(
@@ -1094,9 +1099,9 @@ vm::ExecutionStatus DateTimeFormat::initialize(
       {u"long", u"short", u"narrow"},
       undefinedFallback,
       runtime);
+  std::vector<vm::CallResult<Option>> optionsVector = {weekdayOption, eraOption, yearOption, monthOption, dayOption, hourOption, minuteOption, secondOption, timeZoneNameOption, dayPeriodOption};
   // 36. If dateStyle is not undefined or timeStyle is not undefined, then
-  if (timeStyleOption->getString() != u"" ||
-      dateStyleOption->getString() != u"") {
+  if (timeStyleOption->isString() || dateStyleOption->isString()) {
     // a. For each row in Table 4, except the header row, do
     // i. Let prop be the name given in the Property column of the row.
     // ii. Let p be opt.[[<prop>]].
@@ -1104,37 +1109,12 @@ vm::ExecutionStatus DateTimeFormat::initialize(
     // 1. Throw a TypeError exception. (timeStyle/dateStyle can't be used with
     // table 4 options)
     if (fractionalSecondDigitsOption->isNumber()) {
-      return runtime->raiseTypeError("Invalid options");
+      return runtime->raiseTypeError("Invalid option of fractionalSecondDigits with timeStyle/dateStyle option");
     }
-    if (weekdayOption->getString() != u"") {
-      return runtime->raiseTypeError("Invalid options");
-    }
-    if (eraOption->getString() != u"") {
-      return runtime->raiseTypeError("Invalid options");
-    }
-    if (yearOption->getString() != u"") {
-      return runtime->raiseTypeError("Invalid options");
-    }
-    if (monthOption->getString() != u"") {
-      return runtime->raiseTypeError("Invalid options");
-    }
-    if (dayOption->getString() != u"") {
-      return runtime->raiseTypeError("Invalid options");
-    }
-    if (hourOption->getString() != u"") {
-      return runtime->raiseTypeError("Invalid options");
-    }
-    if (minuteOption->getString() != u"") {
-      return runtime->raiseTypeError("Invalid options");
-    }
-    if (secondOption->getString() != u"") {
-      return runtime->raiseTypeError("Invalid options");
-    }
-    if (timeZoneNameOption->getString() != u"") {
-      return runtime->raiseTypeError("Invalid options");
-    }
-    if (dayPeriodOption->getString() != u"") {
-      return runtime->raiseTypeError("Invalid options");
+    for (auto const& value : optionsVector) {
+      if (value->isString()) {
+        return runtime->raiseTypeError(vm::TwineChar16("Invalid option of ") + vm::TwineChar16(value->getString().c_str()) + vm::TwineChar16(" with timeStyle/dateStyle option"));
+      }
     }
   }
   // 38. For each row in Table 4, except the header row, in table order, do
@@ -1150,56 +1130,41 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   if (fractionalSecondDigitsOption->isNumber()) {
     impl_->FractionalSecondDigits = fractionalSecondDigitsOption->getNumber();
   }
-
-  if (weekdayOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-    return vm::ExecutionStatus::EXCEPTION;
+  for (auto const& value : optionsVector) {
+    if (value.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+      return vm::ExecutionStatus::EXCEPTION;
+    }
   }
-  impl_->Weekday = weekdayOption->getString();
-
-  if (eraOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-    return vm::ExecutionStatus::EXCEPTION;
+  if (weekdayOption->isString()) {
+    impl_->Weekday = weekdayOption->getString();
   }
-  impl_->Era = eraOption->getString();
-
-  if (yearOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-    return vm::ExecutionStatus::EXCEPTION;
+  if (eraOption->isString()) {
+    impl_->Era = eraOption->getString();
   }
-  impl_->Year = yearOption->getString();
-
-  if (monthOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-    return vm::ExecutionStatus::EXCEPTION;
+  if (yearOption->isString()) {
+    impl_->Year = yearOption->getString();
   }
-  impl_->Month = monthOption->getString();
-
-  if (dayOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-    return vm::ExecutionStatus::EXCEPTION;
+  if (monthOption->isString()) {
+    impl_->Month = monthOption->getString();
   }
-  impl_->Day = dayOption->getString();
-
-  if (hourOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-    return vm::ExecutionStatus::EXCEPTION;
+  if (dayOption->isString()) {
+    impl_->Day = dayOption->getString();
   }
-  impl_->Hour = hourOption->getString();
-
-  if (minuteOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-    return vm::ExecutionStatus::EXCEPTION;
+  if (hourOption->isString()) {
+    impl_->Hour = hourOption->getString();
   }
-  impl_->Minute = minuteOption->getString();
-
-  if (secondOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-    return vm::ExecutionStatus::EXCEPTION;
+  if (minuteOption->isString()) {
+    impl_->Minute = minuteOption->getString();
   }
-  impl_->Second = secondOption->getString();
-
-  if (timeZoneNameOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-    return vm::ExecutionStatus::EXCEPTION;
+  if (secondOption->isString()) {
+    impl_->Second = secondOption->getString();
   }
-  impl_->TimeZoneName = timeZoneNameOption->getString();
-
-  if (dayPeriodOption.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-    return vm::ExecutionStatus::EXCEPTION;
+  if (timeZoneNameOption->isString()) {
+    impl_->TimeZoneName = timeZoneNameOption->getString();
   }
-  impl_->DayPeriod = dayPeriodOption->getString();
+  if (dayPeriodOption->isString()) {
+    impl_->DayPeriod = dayPeriodOption->getString();
+  }
 
   // 39
   if (impl_->Hour == u"") {
