@@ -212,80 +212,101 @@ vm::CallResult<std::u16string> toLocaleUpperCase(
 }
 // Implementation of
 // https://tc39.es/ecma402/#sec-getoption
-vm::CallResult<Option> getOption(
+// Split into getOptionString and getOptionBool to help readability
+vm::CallResult<Option> getOptionString(
     const Options &options,
     const std::u16string &property,
-    const std::u16string &type,
-    const std::vector<std::u16string> &values,
-    const Options &fallback,
+    llvh::ArrayRef<std::u16string> values,
+    const Option &fallback,
     vm::Runtime *runtime) {
   // 1. Assert type(options) is object
   // 2. Let value be ? Get(options, property).
   auto value = options.find(property);
   // 3. If value is undefined, return fallback.
   if (value == options.end()) {
-    auto fallbackIter = fallback.find(u"fallback");
-    // Make sure fallback exists
-    if (fallbackIter == options.end()) {
-      return runtime->raiseTypeError("Fallback does not exist");
-    }
-    return fallback.find(u"fallback")->second;
+    return Option(fallback);
   }
   // 4. Assert: type is "boolean" or "string".
   // 5. If type is "boolean", then
   // a. Set value to ! ToBoolean(value).
   // 6. If type is "string", then
   // a. Set value to ? ToString(value).
-  if (type != u"string" && type != u"boolean") {
-    return runtime->raiseTypeError(vm::TwineChar16("Type ") + vm::TwineChar16(type.c_str()) + vm::TwineChar16(" is incorrect"));
-  }
   // 7. If values is not undefined and values does not contain an element equal
   // to value, throw a RangeError exception.
-  if (value->second.isString()) {
-    if (!values.empty() &&
-        llvh::find(values, value->second.getString()) == values.end()) {
-      return runtime->raiseRangeError(vm::TwineChar16("Value ") + vm::TwineChar16(value->second.getString().c_str()) + vm::TwineChar16(" out of range for Intl.DateTimeFormat options property " + vm::TwineChar16(property.c_str())));
-    }
-  } else {
-    if (!values.empty() &&
-        (value->second.getBool() != true && value->second.getBool() != false)) {
-      return runtime->raiseRangeError(vm::TwineChar16("Value ") + vm::TwineChar16(value->second.getString().c_str()) + vm::TwineChar16("  out of range for Intl.DateTimeFormat options property " + vm::TwineChar16(property.c_str())));
-    }
+  if (!values.empty() &&
+      llvh::find(values, value->second.getString()) == values.end()) {
+    return runtime->raiseRangeError(
+        vm::TwineChar16("Value ") +
+        vm::TwineChar16(value->second.getString().c_str()) +
+        vm::TwineChar16(
+            " out of range for Intl.DateTimeFormat options property " +
+            vm::TwineChar16(property.c_str())));
   }
   // 8. Return value.
   return value->second;
 }
+vm::CallResult<Option> getOptionBool(
+    const Options &options,
+    const std::u16string &property,
+    const Option &fallback,
+    vm::Runtime *runtime) {
+  //  1. Assert: Type(options) is Object.
+  //  2. Let value be ? Get(options, property).
+  auto value = options.find(property);
+  //  3. If value is undefined, return fallback.
+  if (value == options.end()) {
+    return Option(fallback);
+  }
+  //  8. Return value.
+  return value->second;
+}
+// https://tc39.es/ecma402/#sec-defaultnumberoption
+vm::CallResult<double> defaultNumberOption(
+    const double value,
+    const uint8_t minimum,
+    const std::uint8_t maximum,
+    llvh::Optional<uint8_t> fallback,
+    vm::Runtime *runtime) {
+  //  1. If value is undefined, return fallback.
+  if (!value) {
+    return fallback.getValue();
+  }
+  //  2. Set value to ? ToNumber(value).
+  //  3. If value is NaN or less than minimum or greater than maximum, throw a
+  //  RangeError exception.
+  if (std::isnan(value) || value < minimum || value > maximum) {
+    return runtime->raiseRangeError("Number is invalid");
+  }
+  //  4. Return floor(value).
+  return std::floor(value);
+}
 // Implementation of
 // https://402.ecma-international.org/8.0/#sec-getnumberoption
-vm::CallResult<Option> getOptionNumber(
+vm::CallResult<Option> getNumberOption(
     const Options &options,
     const std::u16string &property,
     const std::uint8_t minimum,
     const std::uint8_t maximum,
-    const Options &fallback,
+    vm::CallResult<uint8_t> fallback,
     vm::Runtime *runtime) {
   //  1. Assert: Type(options) is Object.
   //  2. Let value be ? Get(options, property).
   auto value = options.find(property);
   if (value == options.end()) {
-    // Return fallback
-    auto fallbackIter = fallback.find(u"fallback");
-    // Make sure fallback exists
-    if (fallbackIter == options.end()) {
-      return runtime->raiseTypeError("Fallback does not exist");
-    }
-    return fallback.find(u"fallback")->second;
-  }
-  // Check if it is in the allowed range and is a number
-  if (value->second.getNumber() > maximum ||
-      value->second.getNumber() < minimum) {
-    return runtime->raiseRangeError(vm::TwineChar16(property.c_str()) + vm::TwineChar16(" value is out of range"));
-  }
-  if (std::isnan(value->second.getNumber())) {
-    return runtime->raiseTypeError(vm::TwineChar16(property.c_str()) + vm::TwineChar16(" value is not a number"));
+    return Option(double(fallback.getValue()));
   }
   //  3. Return ? DefaultNumberOption(value, minimum, maximum, fallback).
-  return value->second;
+  auto defaultNumber = defaultNumberOption(
+      value->second.getNumber(),
+      minimum,
+      maximum,
+      fallback.getValue(),
+      runtime);
+  if (defaultNumber == vm::ExecutionStatus::EXCEPTION) {
+    return vm::ExecutionStatus::EXCEPTION;
+  } else {
+    return Option(defaultNumber.getValue());
+  }
 }
 
 // Implementation of
@@ -325,18 +346,14 @@ vm::CallResult<std::vector<std::u16string>> supportedLocales(
   // 1. Set options to ? CoerceOptionsToObject(options).
   // 2. Let matcher be ? GetOption(options, "localeMatcher", "string", «
   // "lookup", "best fit" », "best fit").
-  Options matcherFallback;
-  matcherFallback.emplace(
-      std::u16string(u"fallback"), Option(std::u16string(u"best fit")));
-  std::vector<std::u16string> vectorForMatcher = {u"lookup", u"best fit"};
-  vm::CallResult<std::u16string> matcher = getOption(
-                                               options,
-                                               u"localeMatcher",
-                                               u"string",
-                                               vectorForMatcher,
-                                               matcherFallback,
-                                               runtime)
-                                               ->getString();
+  vm::CallResult<std::u16string> matcher =
+      getOptionString(
+          options,
+          u"localeMatcher",
+          {u"lookup", u"best fit"},
+          Option(std::u16string(u"best fit")),
+          runtime)
+          ->getString();
   if (LLVM_UNLIKELY(matcher == vm::ExecutionStatus::EXCEPTION)) {
     return vm::ExecutionStatus::EXCEPTION;
   }
@@ -395,7 +412,7 @@ struct DateTimeFormat::Impl {
   // For DateTimeFormat::impl_ in initialize
   std::u16string FormatMatcher, HourCycle, Weekday, Era, Year, Month, Day,
       DayPeriod, Hour, Minute, Second, TimeZone, TimeZoneName, DateStyle,
-  TimeStyle, Calendar, NumberingSystem, locale;
+      TimeStyle, Calendar, NumberingSystem, locale;
   uint8_t FractionalSecondDigits;
   bool hour12;
 };
@@ -855,46 +872,33 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   Impl::newRecord opt;
   // 4. Let matcher be ? GetOption(options, "localeMatcher", "string", «
   //   "lookup", "best fit" », "best fit").
-  Options matcherFallback;
-  matcherFallback.emplace(
-      std::u16string(u"fallback"), Option(std::u16string(u"best fit")));
-  auto matcher = getOption(
+  auto matcher = getOptionString(
       optionsToUse,
       u"localeMatcher",
-      u"string",
       {u"lookup", u"best fit"},
-      matcherFallback,
+      Option(std::u16string(u"best fit")),
       runtime);
   // 5. Set opt.[[localeMatcher]] to matcher.
   opt.localeMatcher = matcher->getString();
 
   // 6. Let calendar be ? GetOption(options, "calendar", "string",
   //    undefined, undefined).
-  Options undefinedFallback;
-  undefinedFallback.emplace(
-      std::u16string(u"fallback"), Option(nullptr));
-  auto calendar = getOption(
-      optionsToUse, u"calendar", u"string", {}, undefinedFallback, runtime);
+  auto calendar =
+      getOptionString(optionsToUse, u"calendar", {}, Option(nullptr), runtime);
   // 7. If calendar is not undefined, then
   //    a. If calendar does not match the Unicode Locale Identifier type
   //       nonterminal, throw a RangeError exception.
   // 8. Set opt.[[ca]] to calendar.
   if (calendar == vm::ExecutionStatus::EXCEPTION) {
-    return runtime->raiseRangeError(
-        "Incorrect calendar information provided");
+    return runtime->raiseRangeError("Incorrect calendar information provided");
   }
   if (calendar->isString()) {
     opt.ca = calendar->getString();
   }
   // 9. Let numberingSystem be ? GetOption(options, "numberingSystem",
   //    "string", undefined, undefined).
-  auto numberingSystem = getOption(
-      optionsToUse,
-      u"numberingSystem",
-      u"string",
-      {},
-      undefinedFallback,
-      runtime);
+  auto numberingSystem = getOptionString(
+      optionsToUse, u"numberingSystem", {}, Option(nullptr), runtime);
   // 10. If numberingSystem is not undefined, then
   //     a. If numberingSystem does not match the Unicode Locale Identifier
   //        type nonterminal, throw a RangeError exception.
@@ -908,16 +912,18 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   }
   // 12. Let hour12 be ? GetOption(options, "hour12", "boolean",
   //     undefined, undefined).
-  auto hour12 = getOption(
-      optionsToUse, u"hour12", u"boolean", {}, undefinedFallback, runtime);
+  auto hour12 =
+      getOptionBool(optionsToUse, u"hour12", Option(nullptr), runtime);
+  if (hour12 == vm::ExecutionStatus::EXCEPTION) {
+    return vm::ExecutionStatus::EXCEPTION;
+  }
   // 13. Let hourCycle be ? GetOption(options, "hourCycle", "string", «
   //     "h11", "h12", "h23", "h24" », undefined).
-  auto hourCycle = getOption(
+  auto hourCycle = getOptionString(
       optionsToUse,
       u"hourCycle",
-      u"string",
       {u"h11", u"h12", u"h23", u"h24"},
-      undefinedFallback,
+      Option(nullptr),
       runtime);
   // 14. If hour12 is not undefined, then
   //     a. Let hourCycle be null.
@@ -926,9 +932,8 @@ vm::ExecutionStatus DateTimeFormat::initialize(
       hourCycle->getString() = u"";
       // 15. Set opt.[[hc]] to hourCycle.
       opt.hc = hourCycle->getString();
+    }
   }
-  }
-  
 
   // 16 - 23
   static const std::vector<std::u16string> relevantExtensionKeys = {
@@ -984,24 +989,23 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   }
   impl_->TimeZone = timeZoneValue;
   // 28 - 34
-  auto formatMatcherOption = getOption(
+  auto formatMatcherOption = getOptionString(
       optionsToUse,
       u"formatMatcher",
-      u"string",
       {u"basic", u"best fit"},
-      matcherFallback,
+      Option(std::u16string(u"best fit")),
       runtime);
   if (formatMatcherOption == vm::ExecutionStatus::EXCEPTION) {
     return vm::ExecutionStatus::EXCEPTION;
   }
+  // Expected to be a string 'best fit' by default
   impl_->FormatMatcher = formatMatcherOption->getString();
 
-  auto dateStyleOption = getOption(
+  auto dateStyleOption = getOptionString(
       optionsToUse,
       u"dateStyle",
-      u"string",
       {u"full", u"long", u"medium", u"short"},
-      undefinedFallback,
+      Option(nullptr),
       runtime);
   if (dateStyleOption == vm::ExecutionStatus::EXCEPTION) {
     return vm::ExecutionStatus::EXCEPTION;
@@ -1009,12 +1013,11 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   if (dateStyleOption->isString()) {
     impl_->DateStyle = dateStyleOption->getString();
   }
-  auto timeStyleOption = getOption(
+  auto timeStyleOption = getOptionString(
       optionsToUse,
       u"timeStyle",
-      u"string",
       {u"full", u"long", u"medium", u"short"},
-      undefinedFallback,
+      Option(nullptr),
       runtime);
   if (timeStyleOption == vm::ExecutionStatus::EXCEPTION) {
     return vm::ExecutionStatus::EXCEPTION;
@@ -1022,84 +1025,80 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   if (timeStyleOption->isString()) {
     impl_->TimeStyle = timeStyleOption->getString();
   }
-  auto fractionalSecondDigitsOption = getOptionNumber(
-      optionsToUse, u"fractionalSecondDigits", 1, 3, undefinedFallback, runtime);
-  auto weekdayOption = getOption(
+  auto fractionalSecondDigitsOption = getNumberOption(
+      optionsToUse, u"fractionalSecondDigits", 1, 3, NULL, runtime);
+  auto weekdayOption = getOptionString(
       optionsToUse,
       u"weekday",
-      u"string",
       {u"long", u"short", u"narrow"},
-      undefinedFallback,
+      Option(nullptr),
       runtime);
-  auto eraOption = getOption(
+  auto eraOption = getOptionString(
       optionsToUse,
       u"era",
-      u"string",
       {u"long", u"short", u"narrow"},
-      undefinedFallback,
+      Option(nullptr),
       runtime);
-  auto yearOption = getOption(
+  auto yearOption = getOptionString(
       optionsToUse,
       u"year",
-      u"string",
       {u"numeric", u"2-digit"},
-      undefinedFallback,
+      Option(nullptr),
       runtime);
-  auto monthOption = getOption(
+  auto monthOption = getOptionString(
       optionsToUse,
       u"month",
-      u"string",
       {u"numeric", u"2-digit", u"long", u"short", u"narrow"},
-      undefinedFallback,
+      Option(nullptr),
       runtime);
-  auto dayOption = getOption(
-      optionsToUse,
-      u"day",
-      u"string",
-      {u"numeric", u"2-digit"},
-      undefinedFallback,
-      runtime);
-  auto hourOption = getOption(
+  auto dayOption = getOptionString(
+      optionsToUse, u"day", {u"numeric", u"2-digit"}, Option(nullptr), runtime);
+  auto hourOption = getOptionString(
       optionsToUse,
       u"hour",
-      u"string",
       {u"numeric", u"2-digit"},
-      undefinedFallback,
+      Option(nullptr),
       runtime);
-  auto minuteOption = getOption(
+  auto minuteOption = getOptionString(
       optionsToUse,
       u"minute",
-      u"string",
       {u"numeric", u"2-digit"},
-      undefinedFallback,
+      Option(nullptr),
       runtime);
-  auto secondOption = getOption(
+  auto secondOption = getOptionString(
       optionsToUse,
       u"second",
-      u"string",
       {u"numeric", u"2-digit"},
-      undefinedFallback,
+      Option(nullptr),
       runtime);
-  auto timeZoneNameOption = getOption(
+  auto timeZoneNameOption = getOptionString(
       optionsToUse,
       u"timeZoneName",
-      u"string",
       {u"long",
        u"short",
        u"shortOffset",
        u"longOffset",
        u"shortGeneric",
        u"longGeneric"},
-      undefinedFallback,
+      Option(nullptr),
       runtime);
-  auto dayPeriodOption = getOption(
+  auto dayPeriodOption = getOptionString(
       optionsToUse,
       u"dayPeriod",
-      u"string",
       {u"long", u"short", u"narrow"},
-      undefinedFallback,
+      Option(nullptr),
       runtime);
-  std::vector<vm::CallResult<Option>> optionsVector = {weekdayOption, eraOption, yearOption, monthOption, dayOption, hourOption, minuteOption, secondOption, timeZoneNameOption, dayPeriodOption};
+  std::vector<vm::CallResult<Option>> optionsVector = {
+      weekdayOption,
+      eraOption,
+      yearOption,
+      monthOption,
+      dayOption,
+      hourOption,
+      minuteOption,
+      secondOption,
+      timeZoneNameOption,
+      dayPeriodOption};
   // 36. If dateStyle is not undefined or timeStyle is not undefined, then
   if (timeStyleOption->isString() || dateStyleOption->isString()) {
     // a. For each row in Table 4, except the header row, do
@@ -1108,12 +1107,18 @@ vm::ExecutionStatus DateTimeFormat::initialize(
     // iii. If p is not undefined, then
     // 1. Throw a TypeError exception. (timeStyle/dateStyle can't be used with
     // table 4 options)
-    if (fractionalSecondDigitsOption->isNumber()) {
-      return runtime->raiseTypeError("Invalid option of fractionalSecondDigits with timeStyle/dateStyle option");
+    if (fractionalSecondDigitsOption->isNumber() &&
+        fractionalSecondDigitsOption->getNumber() !=
+            0) { // 0 is the NULL fallback
+      return runtime->raiseTypeError(
+          "Invalid option of fractionalSecondDigits with timeStyle/dateStyle option");
     }
-    for (auto const& value : optionsVector) {
+    for (auto const &value : optionsVector) {
       if (value->isString()) {
-        return runtime->raiseTypeError(vm::TwineChar16("Invalid option of ") + vm::TwineChar16(value->getString().c_str()) + vm::TwineChar16(" with timeStyle/dateStyle option"));
+        return runtime->raiseTypeError(
+            vm::TwineChar16("Invalid option of ") +
+            vm::TwineChar16(value->getString().c_str()) +
+            vm::TwineChar16(" with timeStyle/dateStyle option"));
       }
     }
   }
@@ -1130,7 +1135,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   if (fractionalSecondDigitsOption->isNumber()) {
     impl_->FractionalSecondDigits = fractionalSecondDigitsOption->getNumber();
   }
-  for (auto const& value : optionsVector) {
+  for (auto const &value : optionsVector) {
     if (value.getStatus() == vm::ExecutionStatus::EXCEPTION) {
       return vm::ExecutionStatus::EXCEPTION;
     }
