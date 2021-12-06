@@ -195,18 +195,18 @@ vm::CallResult<std::u16string> toLocaleUpperCase(
 // Implementation of
 // https://tc39.es/ecma402/#sec-getoption
 // Split into getOptionString and getOptionBool to help readability
-vm::CallResult<Option> getOptionString(
+vm::CallResult<llvh::Optional<std::u16string>> getOptionString(
     const Options &options,
     const std::u16string &property,
     llvh::ArrayRef<std::u16string> values,
-    const Option &fallback,
+    llvh::Optional<std::u16string> fallback,
     vm::Runtime *runtime) {
   // 1. Assert type(options) is object
   // 2. Let value be ? Get(options, property).
   auto value = options.find(property);
   // 3. If value is undefined, return fallback.
   if (value == options.end()) {
-    return Option(fallback);
+    return fallback;
   }
   // 4. Assert: type is "boolean" or "string".
   // 5. If type is "boolean", then
@@ -215,8 +215,9 @@ vm::CallResult<Option> getOptionString(
   // a. Set value to ? ToString(value).
   // 7. If values is not undefined and values does not contain an element equal
   // to value, throw a RangeError exception.
-  if (!values.empty() &&
-      llvh::find(values, value->second.getString()) == values.end()) {
+  if (!value->second.isString() ||
+      (!values.empty() &&
+       llvh::find(values, value->second.getString()) == values.end())) {
     return runtime->raiseRangeError(
         vm::TwineChar16("Value ") +
         vm::TwineChar16(value->second.getString().c_str()) +
@@ -225,33 +226,36 @@ vm::CallResult<Option> getOptionString(
             vm::TwineChar16(property.c_str())));
   }
   // 8. Return value.
-  return value->second;
+  return llvh::Optional<std::u16string>(value->second.getString());
 }
-vm::CallResult<Option> getOptionBool(
+vm::CallResult<llvh::Optional<bool>> getOptionBool(
     const Options &options,
     const std::u16string &property,
-    const Option &fallback,
+    llvh::Optional<bool> fallback,
     vm::Runtime *runtime) {
   //  1. Assert: Type(options) is Object.
   //  2. Let value be ? Get(options, property).
   auto value = options.find(property);
   //  3. If value is undefined, return fallback.
   if (value == options.end()) {
-    return Option(fallback);
+    return fallback;
+  }
+  if (!value->second.isBool()) {
+    return runtime->raiseTypeError("Option is not a bool");
   }
   //  8. Return value.
-  return value->second;
+  return llvh::Optional<bool>(value->second.getBool());
 }
 // https://tc39.es/ecma402/#sec-defaultnumberoption
-vm::CallResult<double> defaultNumberOption(
+vm::CallResult<llvh::Optional<uint8_t>> defaultNumberOption(
     const double value,
-    const uint8_t minimum,
+    const std::uint8_t minimum,
     const std::uint8_t maximum,
     llvh::Optional<uint8_t> fallback,
     vm::Runtime *runtime) {
   //  1. If value is undefined, return fallback.
-  if (!value) {
-    return fallback.getValue();
+  if (!value && value != 0) {
+    return fallback;
   }
   //  2. Set value to ? ToNumber(value).
   //  3. If value is NaN or less than minimum or greater than maximum, throw a
@@ -260,34 +264,34 @@ vm::CallResult<double> defaultNumberOption(
     return runtime->raiseRangeError("Number is invalid");
   }
   //  4. Return floor(value).
-  return std::floor(value);
+  return llvh::Optional<uint8_t>(std::floor(value));
 }
 // Implementation of
 // https://402.ecma-international.org/8.0/#sec-getnumberoption
-vm::CallResult<Option> getNumberOption(
+vm::CallResult<llvh::Optional<uint8_t>> getNumberOption(
     const Options &options,
     const std::u16string &property,
     const std::uint8_t minimum,
     const std::uint8_t maximum,
-    vm::CallResult<uint8_t> fallback,
+    llvh::Optional<uint8_t> fallback,
     vm::Runtime *runtime) {
   //  1. Assert: Type(options) is Object.
   //  2. Let value be ? Get(options, property).
   auto value = options.find(property);
   if (value == options.end()) {
-    return Option(double(fallback.getValue()));
+    return fallback;
   }
   //  3. Return ? DefaultNumberOption(value, minimum, maximum, fallback).
   auto defaultNumber = defaultNumberOption(
       value->second.getNumber(),
       minimum,
       maximum,
-      fallback.getValue(),
+      llvh::Optional<uint8_t>(fallback),
       runtime);
   if (defaultNumber == vm::ExecutionStatus::EXCEPTION) {
     return vm::ExecutionStatus::EXCEPTION;
   } else {
-    return Option(defaultNumber.getValue());
+    return llvh::Optional<uint8_t>(defaultNumber.getValue());
   }
 }
 struct Collator::Impl {
