@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#ifdef HERMES_ENABLE_INTL
 #include "hermes/Platform/Intl/BCP47Parser.h"
 
 #include "gtest/gtest.h"
@@ -92,3 +93,5 @@ TEST(BCP47Parser, ExtensionText) {
 }
 
 } // namespace
+
+#endif

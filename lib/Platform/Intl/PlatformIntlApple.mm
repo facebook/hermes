@@ -28,12 +28,12 @@ std::u16string nsStringToU16String(NSString *src) {
 
 // https://unicode.org/reports/tr35/#Canonical_Unicode_Locale_Identifiers
 // https://tc39.es/ecma402/#sec-canonicalizeunicodelocaleid
-std::u16string canonicalizeLocaleId(const std::u16string &localeId) {
+vm::CallResult<std::u16string> canonicalizeLocaleId(const std::u16string &localeId, vm::Runtime *runtime) {
   llvh::Optional<bcp47_parser::ParsedLocaleIdentifier> parserOpt = bcp47_parser::parseLocaleId(localeId);
 
   if (!parserOpt.hasValue()) {
     // Not structurally valid language tag
-    return localeId;
+    return runtime->raiseRangeError(vm::TwineChar16("Unicode locale id ") + vm::TwineChar16(localeId.c_str()) +vm::TwineChar16(" is not. structurally valid."));
   }
 
   std::u16string canoLocaleId;
@@ -211,7 +211,12 @@ vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
     // TODO - BCP 47 tag validation
     // 7.c.vi. Let canonicalizedTag be CanonicalizeUnicodeLocaleId(tag).
 
-    auto canonicalizedTag = canonicalizeLocaleId(locale);
+    auto errorTag = canonicalizeLocaleId(locale, runtime);
+    if (LLVM_UNLIKELY(errorTag == vm::ExecutionStatus::EXCEPTION)) {
+      return vm::ExecutionStatus::EXCEPTION;
+    }
+    auto canonicalizedTag = *errorTag;
+    
     // 7.c.vii. If canonicalizedTag is not an element of seen, append
     // canonicalizedTag as the last element of seen.
     if (std::find(seen.begin(), seen.end(), canonicalizedTag) == seen.end()) {

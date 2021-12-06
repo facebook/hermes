@@ -17,10 +17,10 @@ print(Intl.getCanonicalLocales(["EN-us", "Fr"]));
 print(Intl.getCanonicalLocales(["zh-zh", "ZH"]));
 // CHECK-NEXT: zh-ZH,zh
 
-print(Intl.getCanonicalLocales(["cmn-hans-cn-t-ca-u-ca-x-t-u"]));
-// CHECK-NEXT: cmn-Hans-CN-t-ca-u-ca-x-t-u
+print(Intl.getCanonicalLocales(["cmn-hans-cn-t-ca-u-ca-a-blt-x-t-u"]));
+// CHECK-NEXT: cmn-Hans-CN-a-blt-t-ca-u-ca-x-t-u
 
-print(Intl.getCanonicalLocales(["en-us-u-asd-a-tbd"]);
+print(Intl.getCanonicalLocales(["en-us-u-asd-a-tbd"]));
 // CHECK-NEXT: en-US-a-tbd-u-asd
 
 print(Intl.getCanonicalLocales([]).length);
