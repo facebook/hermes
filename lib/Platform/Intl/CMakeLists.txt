@@ -5,7 +5,6 @@
 
 if(HERMES_ENABLE_INTL)
   add_hermes_library(hermesBCP47Parser STATIC BCP47Parser.cpp)
-  hermes_link_icu(hermesBCP47Parser)
   if(HERMES_IS_ANDROID)
     add_hermes_library(hermesPlatformIntl STATIC PlatformIntlAndroid.cpp
         LINK_LIBS

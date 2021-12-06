@@ -33,7 +33,7 @@ vm::CallResult<std::u16string> canonicalizeLocaleId(const std::u16string &locale
 
   if (!parserOpt.hasValue()) {
     // Not structurally valid language tag
-    return runtime->raiseRangeError(vm::TwineChar16("Unicode locale id ") + vm::TwineChar16(localeId.c_str()) +vm::TwineChar16(" is not. structurally valid."));
+    return runtime->raiseRangeError(vm::TwineChar16("Unicode locale id ") + vm::TwineChar16(localeId.c_str()) +vm::TwineChar16(" is not structurally valid."));
   }
 
   std::u16string canoLocaleId;

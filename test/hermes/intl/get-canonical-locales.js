@@ -23,5 +23,12 @@ print(Intl.getCanonicalLocales(["cmn-hans-cn-t-ca-u-ca-a-blt-x-t-u"]));
 print(Intl.getCanonicalLocales(["en-us-u-asd-a-tbd"]));
 // CHECK-NEXT: en-US-a-tbd-u-asd
 
+try {
+  Intl.getCanonicalLocales('en_uk');
+} catch (exception) {
+  print(exception);
+}
+// CHECK-NEXT: RangeError: Unicode locale id en_uk is not structurally valid.
+
 print(Intl.getCanonicalLocales([]).length);
 //CHECK-NEXT: 0
