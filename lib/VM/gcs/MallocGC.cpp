@@ -195,7 +195,7 @@ MallocGC::MallocGC(
           pointerBase,
           gcConfig,
           std::move(crashMgr),
-          HeapKind::MALLOC),
+          HeapKind::MallocGC),
       pointers_(),
       maxSize_(Size(gcConfig).max()),
       sizeLimit_(gcConfig.getInitHeapSize()) {

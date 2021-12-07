@@ -60,31 +60,6 @@
 #endif
 #endif
 
-#ifdef __EMSCRIPTEN__
-int posix_spawn_file_actions_addclose(posix_spawn_file_actions_t *file_actions, int filedes) {
-    errno = ENOSYS;
-    return 1;
-}
-int posix_spawn_file_actions_addopen(posix_spawn_file_actions_t *file_actions, int filedes,
-         const char *path, int oflag, mode_t mode) {
-    errno = ENOSYS;
-    return 1;
-}
-int posix_spawn_file_actions_init(posix_spawn_file_actions_t *file_actions) {
-    errno = ENOSYS;
-    return 1;
-}
-int posix_spawn_file_actions_destroy(posix_spawn_file_actions_t *file_actions) {
-    errno = ENOSYS;
-    return 1;
-}
-int posix_spawn_file_actions_adddup2(posix_spawn_file_actions_t *file_actions, int filedes, int
-    newfiledes) {
-    errno = ENOSYS;
-    return 1;
-}
-#endif
-
 namespace llvh {
 
 using namespace sys;

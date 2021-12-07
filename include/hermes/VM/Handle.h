@@ -201,11 +201,6 @@ class HandleBase {
   }
 
  public:
-  /// Allocate a new handle in the specified GCScope.
-  explicit HandleBase(
-      GCScope *inScope,
-      HermesValue value = HermesValue::encodeUndefinedValue());
-
   /// Allocate a new handle in the current GCScope
   explicit HandleBase(
       HandleRootOwner *runtime,
@@ -264,7 +259,7 @@ class HandleBase {
 
 #ifdef NDEBUG
 static_assert(
-    hermes::IsTriviallyCopyable<HandleBase, true>::value &&
+    std::is_trivially_copyable<HandleBase>::value &&
         sizeof(HandleBase) == sizeof(void *),
     "Handle must fit in a register and be trivially copyable");
 #endif
@@ -430,7 +425,7 @@ class Handle : public HandleBase {
 
 #ifdef NDEBUG
 static_assert(
-    hermes::IsTriviallyCopyable<Handle<>, true>::value &&
+    std::is_trivially_copyable<Handle<>>::value &&
         sizeof(Handle<>) == sizeof(void *),
     "Handle must fit in a register and be trivially copyable");
 #endif

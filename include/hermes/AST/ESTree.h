@@ -940,6 +940,78 @@ struct NodeKindInfo : llvh::DenseMapInfo<NodeKind> {
 
 using NodeKindSet = llvh::DenseSet<ESTree::NodeKind, NodeKindInfo>;
 
+/// An arbitrary limit to nested assignments. We handle them non-recursively, so
+/// this can be very large, but we don't want to let it consume all our memory.
+constexpr unsigned MAX_NESTED_ASSIGNMENTS = 30000;
+
+/// An arbitrary limit to nested "+/-" binary expressions. We handle them
+/// non-recursively, so this can be very large, but we don't want to let it
+/// consume all our memory.
+constexpr unsigned MAX_NESTED_BINARY = 30000;
+
+/// Check if an AST node is of the specified type and its `_operator`
+/// attribute is within the set of allowed operators.
+template <class N>
+static N *checkExprOperator(ESTree::Node *e, llvh::ArrayRef<StringRef> ops) {
+  if (auto *n = llvh::dyn_cast<N>(e)) {
+    if (std::find(ops.begin(), ops.end(), n->_operator->str()) != ops.end())
+      return n;
+  }
+  return nullptr;
+}
+
+/// Convert a recursive expression of the form ((a + b) + c) + d) into a list
+/// `a, b, c, d`. This description of the list is for exposition purposes, but
+/// the actual list contains pointers to each binop node:
+///    `list = [(a + b), (list[0] + c), (list[1] + d)`.
+/// Note that the list is only three elements long and the first element is
+/// accessible through the `_left` pointer of `list[0]`.
+///
+/// \param ops - the acceptable values for the `_operator` attribute of the
+///     expression. Ideally it should contain all operators with the same
+///     precedence: ["+", "-"] or ["*", "/", "%"], etc.
+template <class N>
+static llvh::SmallVector<N *, 1> linearizeLeft(
+    N *e,
+    llvh::ArrayRef<StringRef> ops) {
+  llvh::SmallVector<N *, 1> vec;
+
+  vec.push_back(e);
+  while (auto *left = checkExprOperator<N>(e->_left, ops)) {
+    e = left;
+    vec.push_back(e);
+  }
+
+  std::reverse(vec.begin(), vec.end());
+  return vec;
+}
+
+/// Convert a recursive expression of the form (a = (b = (c = d))) into a list
+/// `a, b, c, d`. This description of the list is for exposition purposes, but
+/// the actual list contains pointers to each node:
+///    `list = [(a = list[1]), (b = list[2]), (c = d)]`.
+/// Note that the list is only three elements long and the last element is
+/// accessible through the `_right` pointer of `list[2]`.
+///
+/// \param ops - the acceptable values for the `_operator` attribute of the
+///     expression. Ideally it should contain all operators with the same
+///     precedence, but can also be a single operator like ["="], if the caller
+///     doesn't want to deal with the complexity.
+template <class N>
+static llvh::SmallVector<N *, 1> linearizeRight(
+    N *e,
+    llvh::ArrayRef<StringRef> ops) {
+  llvh::SmallVector<N *, 1> vec;
+
+  vec.push_back(e);
+  while (auto *right = checkExprOperator<N>(e->_right, ops)) {
+    e = right;
+    vec.push_back(e);
+  }
+
+  return vec;
+}
+
 } // namespace ESTree
 } // namespace hermes
 

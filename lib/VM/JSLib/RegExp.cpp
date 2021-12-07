@@ -1535,10 +1535,13 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    // position could potentially be negative here, so use int64_t.
-    auto position = intRes->getNumberAs<int64_t>();
+    // position could potentially be negative or Infinity here, so use double.
+    double positionDouble = intRes->getNumber();
     // i. Let position be max(min(position, lengthS), 0).
-    position = std::max(std::min(position, (int64_t)lengthS), (int64_t)0);
+    // Now we can clamp to uint32_t because we've bounds checked
+    // and `lengthS` is `uint32_t`.
+    uint32_t position = (int64_t)std::fmax(
+        std::fmin(positionDouble, (double)lengthS), (double)0);
     // j. Let n be 1.
     // Match the type of nCaptures.
     uint64_t n = 1;

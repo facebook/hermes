@@ -230,6 +230,10 @@ uint64_t thread_id() {
   return 0;
 }
 
+void set_thread_name(const char *name) {
+  // Intentionally does nothing
+}
+
 // Platform-specific implementations of thread_cpu_time
 
 std::chrono::microseconds thread_cpu_time() {

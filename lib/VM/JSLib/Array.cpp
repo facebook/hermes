@@ -254,6 +254,21 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       arrayPrototype,
+      Predefined::getSymbolID(Predefined::findLast),
+      nullptr,
+      arrayPrototypeFindLast,
+      1);
+  defineMethod(
+      runtime,
+      arrayPrototype,
+      Predefined::getSymbolID(Predefined::findLastIndex),
+      // Pass a non-null pointer here to indicate we're finding the index.
+      (void *)true,
+      arrayPrototypeFindLast,
+      1);
+  defineMethod(
+      runtime,
+      arrayPrototype,
       Predefined::getSymbolID(Predefined::reduce),
       nullptr,
       arrayPrototypeReduce,
@@ -2971,8 +2986,8 @@ arrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
   return O.getHermesValue();
 }
 
-CallResult<HermesValue>
-arrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
+static CallResult<HermesValue>
+findHelper(void *ctx, bool reverse, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
   bool findIndex = ctx != nullptr;
   auto objRes = toObject(runtime, args.getThisHandle());
@@ -3000,11 +3015,11 @@ arrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
 
   // "this" argument to the callback function.
   auto T = args.getArgHandle(1);
-
-  MutableHandle<> kHandle{runtime, HermesValue::encodeNumberValue(0)};
+  MutableHandle<> kHandle{runtime};
   MutableHandle<> kValue{runtime};
   auto marker = gcScope.createMarker();
-  while (kHandle->getNumber() < len) {
+  for (size_t i = 0; i < len; ++i) {
+    kHandle = HermesValue::encodeNumberValue(reverse ? (len - i - 1) : i);
     gcScope.flushToMarker(marker);
     if (LLVM_UNLIKELY(
             (propRes = JSObject::getComputed_RJS(O, runtime, kHandle)) ==
@@ -3024,17 +3039,27 @@ arrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
     }
     bool testResult = toBoolean(callRes->get());
     if (testResult) {
-      // If this is Array.prototype.findIndex, then return the index k.
+      // If this is index find variant, then return the index k.
       // Else, return the value at the index k.
       return findIndex ? kHandle.getHermesValue() : kValue.getHermesValue();
     }
-    kHandle = HermesValue::encodeNumberValue(kHandle->getNumber() + 1);
   }
 
   // Failure case for Array.prototype.findIndex is -1.
   // Failure case for Array.prototype.find is undefined.
+  // The last variants share the same failure case values.
   return findIndex ? HermesValue::encodeNumberValue(-1)
                    : HermesValue::encodeUndefinedValue();
+}
+
+CallResult<HermesValue>
+arrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
+  return findHelper(ctx, false, runtime, args);
+}
+
+CallResult<HermesValue>
+arrayPrototypeFindLast(void *ctx, Runtime *runtime, NativeArgs args) {
+  return findHelper(ctx, true, runtime, args);
 }
 
 /// Helper for reduce and reduceRight.

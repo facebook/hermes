@@ -38,10 +38,8 @@ struct FindLineCache<'a> {
 }
 
 /// Converts from Hermes AST to Juno AST
-pub struct Converter<'parser, 'ctx> {
+pub struct Converter<'parser> {
     pub hparser: &'parser HermesParser<'parser>,
-    /// Rust AST context for allocation.
-    pub ast_context: &'ctx mut ast::Context,
     /// The file id to use for the converted coordinates.
     pub file_id: SourceId,
 
@@ -88,15 +86,10 @@ impl FindLineCache<'_> {
     }
 }
 
-impl Converter<'_, '_> {
-    pub fn new<'parser, 'ctx>(
-        hparser: &'parser HermesParser<'parser>,
-        ast_context: &'ctx mut ast::Context,
-        file_id: SourceId,
-    ) -> Converter<'parser, 'ctx> {
+impl<'parser> Converter<'parser> {
+    pub fn new(hparser: &'parser HermesParser<'parser>, file_id: SourceId) -> Self {
         Converter {
             hparser,
-            ast_context,
             file_id,
             line_cache: Default::default(),
             atom_tab: Default::default(),
@@ -141,36 +134,52 @@ impl Converter<'_, '_> {
             .make_source_loc(line_coord.line_ref.try_offset_from(loc.as_ptr()).unwrap())
     }
 
-    pub fn cvt_label(&mut self, u: NodeLabel) -> ast::NodeLabel {
-        let ctx = &mut *self.ast_context;
+    pub fn cvt_label(&mut self, ctx: &ast::GCLock<'_, '_>, u: NodeLabel) -> ast::NodeLabel {
         *self
             .atom_tab
             .entry(u)
             .or_insert_with(move || ctx.atom(utf8_with_surrogates_to_string(u.as_slice()).unwrap()))
     }
 
-    pub fn cvt_label_opt(&mut self, u: NodeLabelOpt) -> Option<ast::NodeLabel> {
-        u.as_node_label().map(|u| self.cvt_label(u))
+    pub fn cvt_label_opt(
+        &mut self,
+        ctx: &ast::GCLock<'_, '_>,
+        u: NodeLabelOpt,
+    ) -> Option<ast::NodeLabel> {
+        u.as_node_label().map(|u| self.cvt_label(ctx, u))
     }
 }
 
 /// # Safety
 /// `n` must be valid.
-pub unsafe fn cvt_node_ptr_opt(cvt: &mut Converter, n: NodePtrOpt) -> Option<ast::NodePtr> {
-    n.as_node_ptr().map(|n| unsafe { cvt_node_ptr(cvt, n) })
+pub unsafe fn cvt_node_ptr_opt<'gc, 'ast: 'gc>(
+    cvt: &mut Converter<'_>,
+    ctx: &'gc ast::GCLock<'ast, '_>,
+    n: NodePtrOpt,
+) -> Option<&'gc ast::Node<'gc>> {
+    n.as_node_ptr()
+        .map(|n| unsafe { cvt_node_ptr(cvt, ctx, n) })
 }
 
-pub unsafe fn cvt_node_list(cvt: &mut Converter, n: NodeListRef) -> ast::NodeList {
-    let mut res = Vec::<ast::NodePtr>::new();
+pub unsafe fn cvt_node_list<'gc, 'ast: 'gc>(
+    cvt: &mut Converter<'_>,
+    ctx: &'gc ast::GCLock<'ast, '_>,
+    n: NodeListRef,
+) -> ast::NodeList<'gc> {
+    let mut res = ast::NodeList::new();
     for node in n.iter() {
-        res.push(cvt_node_ptr(cvt, NodePtr::new(node)));
+        res.push(cvt_node_ptr(cvt, ctx, NodePtr::new(node)));
     }
     res
 }
 
-pub unsafe fn cvt_node_list_opt(cvt: &mut Converter, n: NodeListOptRef) -> Option<ast::NodeList> {
+pub unsafe fn cvt_node_list_opt<'gc, 'ast: 'gc>(
+    cvt: &mut Converter<'_>,
+    ctx: &'gc ast::GCLock<'ast, '_>,
+    n: NodeListOptRef,
+) -> Option<ast::NodeList<'gc>> {
     n.as_node_list_ref()
-        .map(|n| unsafe { cvt_node_list(cvt, n) })
+        .map(|n| unsafe { cvt_node_list(cvt, ctx, n) })
 }
 
 pub fn cvt_string(l: NodeString) -> ast::NodeString {

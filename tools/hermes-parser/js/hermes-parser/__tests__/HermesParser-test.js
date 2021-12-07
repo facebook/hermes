@@ -4,6 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @flow strict-local
  * @format
  */
 
@@ -27,9 +28,8 @@ function loc(startLine, startColumn, endLine, endColumn) {
   };
 }
 
-function parseAsFlow(source, options = {}) {
-  options.flow = 'all';
-  return parse(source, options);
+function parseAsFlow(source, options?: {babel: true}) {
+  return parse(source, {...options, flow: 'all'});
 }
 
 test('Can parse simple file', () => {
@@ -69,15 +69,14 @@ const = 1
   });
 
   test('Has error location', () => {
-    try {
-      parse('const = 1');
-      fail('Expected parse error to be thrown');
-    } catch (e) {
-      expect(e.loc).toMatchObject({
-        line: 1,
-        column: 6,
-      });
-    }
+    expect(() => parse('const = 1')).toThrowError(
+      expect.objectContaining({
+        loc: {
+          line: 1,
+          column: 6,
+        },
+      }),
+    );
   });
 
   test('Source line with non-ASCII characters', () => {

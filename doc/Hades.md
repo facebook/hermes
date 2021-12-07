@@ -13,10 +13,9 @@ with the interpreter.
 # Enabling Hades
 
 In local builds on the command line using CMake or `configure.py` (which
-forwards to CMake), Hades is the default GC used.
+forwards to CMake), Hades is the default GC used, and currently the only GC
+supported for production use.
 The GC being used is controlled by the CMake variable `-DHERMESVM_GCKIND=value`.
-Set it to `HADES` to request Hades, and `NONCONTIG_GENERATIONAL` to request
-GenGC.
 
 To use a pre-built package of Hermes with Hades enabled, check the
 [Releases page on Github](https://github.com/facebook/hermes/releases).
@@ -41,7 +40,6 @@ This will print one of:
 
 - `"hades (concurrent)"`: You're using Hades in concurrent mode
 - `"hades (incremental)"`: You're using Hades in [incremental mode](#incremental-mode)
-- `"gengc"`: You're using GenGC, not Hades
 
 # Basics
 

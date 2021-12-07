@@ -23,7 +23,7 @@ TEST(GCObjectIterationTest, ForAllObjsGetsAllObjects) {
   DummyRuntime &rt = *runtime;
   auto &gc = rt.getHeap();
   GCScope scope{&rt};
-  // For Hades and GenGC, ensure that we iterate across multiple segments.
+  // For Hades, ensure that we iterate across multiple segments.
   constexpr size_t kLargeSize =
 #ifdef HERMESVM_GC_MALLOC
       1024 * 1024

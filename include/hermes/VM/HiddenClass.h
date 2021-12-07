@@ -24,11 +24,11 @@ namespace vm {
 
 /// The storage type used for properties. Its size may be restricted depending
 /// on the current configuration, for example because it must fit in a single
-/// GenGCNC segment.
+/// heap segment.
 using PropStorage = ArrayStorageSmall;
 
 /// The storage type used for large arrays that don't necessarily fit in a
-/// single GenGCNC segment.
+/// single heap segment.
 using BigStorage = SegmentedArray;
 
 /// Flags associated with a hidden class.

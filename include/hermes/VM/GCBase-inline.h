@@ -53,24 +53,10 @@ T *GCBase::makeA(uint32_t size, Args &&...args) {
   assert(
       isSizeHeapAligned(size) && "Size must be aligned before reaching here");
 #ifdef HERMESVM_GC_RUNTIME
-  T *ptr;
-  // Use static_cast below because we know the actual type of the heap.
-  switch (getKind()) {
-    case GCBase::HeapKind::HADES:
-      ptr = llvh::cast<HadesGC>(this)
-                ->makeA<T, fixedSize, hasFinalizer, longLived>(
-                    size, std::forward<Args>(args)...);
-      break;
-    case GCBase::HeapKind::NCGEN:
-      ptr =
-          llvh::cast<GenGC>(this)->makeA<T, fixedSize, hasFinalizer, longLived>(
-              size, std::forward<Args>(args)...);
-      break;
-    case GCBase::HeapKind::MALLOC:
-      llvm_unreachable(
-          "MallocGC should not be used with the RuntimeGC build config");
-      break;
-  }
+  T *ptr = runtimeGCDispatch([&](auto *gc) {
+    return gc->template makeA<T, fixedSize, hasFinalizer, longLived>(
+        size, std::forward<Args>(args)...);
+  });
 #else
   T *ptr =
       static_cast<GC *>(this)->makeA<T, fixedSize, hasFinalizer, longLived>(
@@ -85,14 +71,20 @@ T *GCBase::makeA(uint32_t size, Args &&...args) {
 #ifdef HERMESVM_GC_RUNTIME
 constexpr uint32_t GCBase::maxAllocationSizeImpl() {
   // Return the lesser of the two GC options' max allowed sizes.
-  return std::min(
-      HadesGC::maxAllocationSizeImpl(), GenGC::maxAllocationSizeImpl());
+  return std::min({
+#define GC_KIND(kind) kind::maxAllocationSizeImpl(),
+      RUNTIME_GC_KINDS
+#undef GC_KIND
+  });
 }
 
 constexpr uint32_t GCBase::minAllocationSizeImpl() {
   // Return the greater of the two GC options' min allowed sizes.
-  return std::max(
-      HadesGC::minAllocationSizeImpl(), GenGC::minAllocationSizeImpl());
+  return std::max({
+#define GC_KIND(kind) kind::minAllocationSizeImpl(),
+      RUNTIME_GC_KINDS
+#undef GC_KIND
+  });
 }
 #endif
 

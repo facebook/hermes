@@ -1,9 +1,12 @@
+[libs]
+./flow-typed
+
 [ignore]
 <PROJECT_ROOT>/.*/dist
-<PROJECT_ROOT>/scripts
 
 [options]
 emoji=true
+file_watcher=watchman
 exact_by_default=true
 module.system=node
 indexed_access=true
@@ -11,9 +14,11 @@ indexed_access=true
 ; we do not specify where each package's type definitions can be found.
 module.name_mapper='^hermes-parser$' -> '<PROJECT_ROOT>/hermes-parser/src/index.js'
 module.name_mapper='^hermes-estree$' -> '<PROJECT_ROOT>/hermes-estree/src/index.js'
+module.name_mapper='^hermes-eslint$' -> '<PROJECT_ROOT>/hermes-eslint/src/index.js'
+module.name_mapper='^hermes-transform$' -> '<PROJECT_ROOT>/hermes-transform/src/index.js'
 
 [version]
-0.154.0
+0.162.1
 
 [lints]
 untyped-type-import=error

@@ -10,17 +10,13 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-// Run "./gradlew :intltest:prepareTests" from the root to download and copy the test files to the
+// Run "./gradlew :intltest:prepareTests" from the root to copy the test files to the
 // APK assets.
 public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
-
-  private static final String LOG_TAG = "HermesIntDaterFormatTest";
 
   public void testIntlDateTimeFormat() throws IOException {
 
     String basePath = "test262/test/intl402/DateTimeFormat";
-
-    Set<String> whilteList = new HashSet<>();
 
     Set<String> securityList =
         new HashSet<>(
@@ -124,9 +120,9 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
                 // timeStyle: "" }) throws RangeError
                 // Expected a RangeError to be thrown
                 // but no exception was thrown at all
-                "constructor-options-timeStyle-valid.js" // Expected SameValue(«undefined», «full»)
+                "constructor-options-timeStyle-valid.js", // Expected SameValue(«undefined», «full»)
                 // to be true
-                ));
+                "constructor-options-timeZoneName-valid.js"));
 
     Set<String> testIssuesList =
         new HashSet<>(
@@ -149,41 +145,29 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
               ));
     }
 
-    Set<String> blackList = new HashSet<>();
-    blackList.addAll(unSupportedList);
-    blackList.addAll(testIssuesList);
-    blackList.addAll(deviationList);
-    blackList.addAll(securityList);
-    blackList.addAll(pre24Issues);
+    Set<String> skipList = new HashSet<>();
+    skipList.addAll(unSupportedList);
+    skipList.addAll(testIssuesList);
+    skipList.addAll(deviationList);
+    skipList.addAll(securityList);
+    skipList.addAll(pre24Issues);
 
-    runTests(basePath, blackList, whilteList);
+    runTests(basePath, skipList);
   }
 
   public void testIntlDateTimeFormat_supportedLocalesOf() throws IOException {
-
     String basePath = "test262/test/intl402/DateTimeFormat/supportedLocalesOf";
-
-    Set<String> whilteList = new HashSet<>();
-    Set<String> testIssueList = new HashSet<>();
-
-    runTests(basePath, testIssueList, whilteList);
+    runTests(basePath);
   }
 
   public void testIntlDateTimeFormat_prototype_constructor() throws IOException {
-
     String basePath = "test262/test/intl402/DateTimeFormat/prototype/constructor";
-
-    Set<String> whilteList = new HashSet<>();
-    Set<String> blackList = new HashSet<>();
-
-    runTests(basePath, blackList, whilteList);
+    runTests(basePath);
   }
 
   public void testIntlDateTimeFormat_prototype_format() throws IOException {
 
     String basePath = "test262/test/intl402/DateTimeFormat/prototype/format";
-
-    Set<String> whiteList = new HashSet<>();
 
     Set<String> deviations =
         new HashSet<>(
@@ -208,9 +192,9 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
                 // night») to be true
                 "dayPeriod-long-en.js", // 00:00, long format Expected SameValue(«12/12/2017», «at
                 // night») to be true
-                "fractionalSecondDigits.js" // 1 fractionalSecondDigits round down Expected
+                "fractionalSecondDigits.js", // 1 fractionalSecondDigits round down Expected
                 // SameValue(«02:03», «02:03.2») to be true
-                ));
+                "temporal-objects-resolved-time-zone.js"));
 
     // ICU APIs not available prior to 24.
     Set<String> pre24Issues = new HashSet<>();
@@ -221,19 +205,17 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
               ));
     }
 
-    Set<String> blackList = new HashSet<>();
-    blackList.addAll(deviations);
-    blackList.addAll(unSupportedList);
-    blackList.addAll(pre24Issues);
+    Set<String> skipList = new HashSet<>();
+    skipList.addAll(deviations);
+    skipList.addAll(unSupportedList);
+    skipList.addAll(pre24Issues);
 
-    runTests(basePath, blackList, whiteList);
+    runTests(basePath, skipList);
   }
 
   public void testIntlDateTimeFormat_prototype_formatToParts() throws IOException {
 
     String basePath = "test262/test/intl402/DateTimeFormat/prototype/formatToParts";
-
-    Set<String> whilteList = new HashSet<>();
 
     // timeStyle, dateStyle, dayPeriod, fractionalSecondDigits properties are not supported. Please
     // find details above.
@@ -246,9 +228,9 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
                 // SameValue(«5», «1») to be true
                 "dayPeriod-long-en.js", // length should be 1, 00:00, long format Expected
                 // SameValue(«5», «1») to be true
-                "dayPeriod-short-en.js" // length should be 1, 00:00, short format Expected
+                "dayPeriod-short-en.js", // length should be 1, 00:00, short format Expected
                 // SameValue(«5», «1») to be true
-                ));
+                "temporal-objects-resolved-time-zone.js"));
 
     // ICU APIs not available prior to 24.
     Set<String> pre24Issues = new HashSet<>();
@@ -262,18 +244,16 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
               ));
     }
 
-    Set<String> blackList = new HashSet<>();
-    blackList.addAll(unSupportedList);
-    blackList.addAll(pre24Issues);
+    Set<String> skipList = new HashSet<>();
+    skipList.addAll(unSupportedList);
+    skipList.addAll(pre24Issues);
 
-    runTests(basePath, blackList, whilteList);
+    runTests(basePath, skipList);
   }
 
   public void testIntlDateTimeFormat_prototype_resolvedOptions() throws IOException {
 
     String basePath = "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions";
-
-    Set<String> whilteList = new HashSet<>();
 
     Set<String> deviations =
         new HashSet<>(
@@ -308,19 +288,17 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
               ));
     }
 
-    Set<String> blackList = new HashSet<>();
-    blackList.addAll(deviations);
-    blackList.addAll(unSupportedList);
-    blackList.addAll(pre24Issues);
+    Set<String> skipList = new HashSet<>();
+    skipList.addAll(deviations);
+    skipList.addAll(unSupportedList);
+    skipList.addAll(pre24Issues);
 
-    runTests(basePath, blackList, whilteList);
+    runTests(basePath, skipList);
   }
 
   public void testIntlDateTimeFormat_prototype_toStringTag() throws IOException {
 
     String basePath = "test262/test/intl402/DateTimeFormat/prototype/toStringTag";
-
-    Set<String> whilteList = new HashSet<>();
 
     Set<String> deviations =
         new HashSet<>(
@@ -330,19 +308,14 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
                 "toStringTag.js" // descriptor value should be Intl.DateTimeFormat
                 ));
 
-    Set<String> blackList = new HashSet<>();
-    blackList.addAll(deviations);
+    Set<String> skipList = new HashSet<>();
+    skipList.addAll(deviations);
 
-    runTests(basePath, blackList, whilteList);
+    runTests(basePath, skipList);
   }
 
   public void testIntlDateTimeFormat_prototype() throws IOException {
-
     String basePath = "test262/test/intl402/DateTimeFormat/prototype";
-
-    Set<String> whilteList = new HashSet<>();
-    Set<String> blackList = new HashSet<>();
-
-    runTests(basePath, blackList, whilteList);
+    runTests(basePath);
   }
 }

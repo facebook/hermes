@@ -7,6 +7,10 @@
 
 mod nullbuf;
 pub use nullbuf::NullTerminatedBuf;
+mod timer;
+pub use timer::Timer;
+mod scoped_hashmap;
+pub use scoped_hashmap::ScopedHashMap;
 
 #[macro_use]
 #[allow(unused_macros)]

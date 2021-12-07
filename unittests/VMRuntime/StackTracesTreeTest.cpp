@@ -72,7 +72,8 @@ struct StackTracesTreeTest : public RuntimeTestFixtureBase {
     auto &allocationLocationTracker =
         runtime->getHeap().getAllocationLocationTracker();
     auto node = allocationLocationTracker.getStackTracesTreeNodeForAlloc(
-        runtime->getHeap().getObjectID(runRes->getPointer()));
+        runtime->getHeap().getObjectID(
+            static_cast<GCCell *>(runRes->getPointer())));
     while (node) {
       resStream << (*stringTable)[node->name] << " "
                 << (*stringTable)[node->sourceLoc.scriptName] << ":"

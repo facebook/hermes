@@ -20,15 +20,16 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-// Run "./gradlew :intltest:prepareTests" from the root to download and copy the test files to the
+// Run "./gradlew :intltest:prepareTests" from the root to copy the test files to the
 // APK assets.
 public class HermesIntlTest262Base extends InstrumentationTestCase {
 
-  private static final String LOG_TAG = "HermesIntlNumberFormatTest";
+  private static final String LOG_TAG = "HermesIntlTest";
 
   protected void evalScriptFromAsset(JSRuntime rt, String filename) throws IOException {
     AssetManager assets = getInstrumentation().getContext().getAssets();
@@ -53,19 +54,16 @@ public class HermesIntlTest262Base extends InstrumentationTestCase {
     evalScriptFromAsset(rt, "test262/harness/compareArray.js");
     evalScriptFromAsset(rt, "test262/harness/dateConstants.js");
     evalScriptFromAsset(rt, "test262/harness/isConstructor.js");
-    evalScriptFromAsset(rt, "test262/harness/arrayContains.js");
   }
 
-  protected void runTests(String basePath, Set<String> blackList, Set<String> whiteList)
-      throws IOException {
+  protected void runTests(String basePath) throws IOException {
+    runTests(basePath, new HashSet<String>());
+  }
 
-    List<String> testFileList;
-    if (whiteList.isEmpty()) {
-      testFileList = Arrays.asList(getInstrumentation().getContext().getAssets().list(basePath));
-    } else {
-      testFileList = new ArrayList<String>();
-      testFileList.addAll(whiteList);
-    }
+  protected void runTests(String basePath, Set<String> skipList) throws IOException {
+
+    List<String> testFileList =
+        Arrays.asList(getInstrumentation().getContext().getAssets().list(basePath));
 
     ArrayList<String> ranTests = new ArrayList<>();
     HashMap<String, String> failedTests = new HashMap<>();
@@ -88,9 +86,9 @@ public class HermesIntlTest262Base extends InstrumentationTestCase {
           if (testFilePath.endsWith(".js")) throw ex;
           // Skip, they are likely subdirectories or non-javascript files.
         } catch (com.facebook.jni.CppException ex) {
-          if (!blackList.contains(testFileName)) failedTests.put(testFilePath, ex.getMessage());
+          if (!skipList.contains(testFileName)) failedTests.put(testFilePath, ex.getMessage());
         } catch (Exception ex) {
-          if (!blackList.contains(testFileName)) failedTests.put(testFilePath, ex.getMessage());
+          if (!skipList.contains(testFileName)) failedTests.put(testFilePath, ex.getMessage());
         }
       }
     }
