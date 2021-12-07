@@ -20,8 +20,8 @@ print(Intl.getCanonicalLocales(["zh-zh", "ZH"]));
 print(Intl.getCanonicalLocales(["cmn-hans-cn-t-ca-u-ca-a-blt-x-t-u"]));
 // CHECK-NEXT: cmn-Hans-CN-a-blt-t-ca-u-ca-x-t-u
 
-print(Intl.getCanonicalLocales(["en-us-u-asd-a-tbd"]));
-// CHECK-NEXT: en-US-a-tbd-u-asd
+print(Intl.getCanonicalLocales(["en-us-u-asd-a-tbd-0-abc"]));
+// CHECK-NEXT: en-US-0-abc-a-tbd-u-asd
 
 try {
   Intl.getCanonicalLocales("en_uk");
@@ -30,8 +30,15 @@ try {
 }
 // CHECK-NEXT: RangeError: Unicode locale id en_uk is not structurally valid.
 
+try {
+  Intl.getCanonicalLocales("und-t-en-us-t-en-us");
+} catch (exception) {
+  print(exception);
+}
+// CHECK-NEXT: RangeError: Unicode locale id und-t-en-us-t-en-us is not structurally valid.
+
 print(Intl.getCanonicalLocales("und-T-en-arab-us-z1-100-a1-101-zebra"));
-// CHECK-NEXT: und-t-en-arab-us-a1-1o1-zebra-z1-100
+// CHECK-NEXT: und-t-en-arab-us-a1-101-zebra-z1-100
 
 print(Intl.getCanonicalLocales([]).length);
 //CHECK-NEXT: 0

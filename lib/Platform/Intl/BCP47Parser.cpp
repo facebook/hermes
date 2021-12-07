@@ -259,14 +259,11 @@ bool LanguageTagParser::addVariantSubtag(bool transformedExtensionId) {
 }
 
 bool LanguageTagParser::parseExtensions() {
-  // if transformed extensions and next subtag is transformed extension
-  // parse transformed extensions
   while (true) {
-    // check if current subtag isExtensionSingleton
-
     if (subtagEnd_ != subtagStart_) {
       return true;
     }
+    
     char16_t singleton = getCurrentSubtag()[0];
     if (!isASCIILetterOrDigit(singleton)) {
       return true;
@@ -379,10 +376,15 @@ bool LanguageTagParser::parseUnicodeExtension() {
 //
 //  tfield = tkey tvalue;
 //
-// tkey =  	= alpha digit ;
+//  tkey = alpha digit ;
 //
 // tvalue = (sep alphanum{3,8})+ ;
-bool LanguageTagParser::parseTransformedExtension() { 
+bool LanguageTagParser::parseTransformedExtension() {
+  if (!parsedLocaleIdentifier.transformedLanguageIdentifier.languageSubtag.empty() ||
+      !parsedLocaleIdentifier.transformedExtensionFields.empty()) {
+    return false;
+  }
+  
   bool hasExtension = false;
   if (isUnicodeLanguageSubtag(getCurrentSubtagRef())) {
     hasExtension = true;
@@ -394,9 +396,6 @@ bool LanguageTagParser::parseTransformedExtension() {
 
   if (isTransformedExtensionKey(getCurrentSubtagRef())) {
     hasExtension = true;
-    if (!parsedLocaleIdentifier.transformedExtensionFields.empty()) {
-      return false;
-    }
 
     while (true) {
       if (!isTransformedExtensionKey(getCurrentSubtagRef())) {
@@ -405,7 +404,7 @@ bool LanguageTagParser::parseTransformedExtension() {
       
       std::u16string tkey = getCurrentSubtag();
       
-      std::vector<std::u16string> *tvalues = &parsedLocaleIdentifier.transformedExtensionFields.insert({tkey, {}}).first->second;
+      std::vector<std::u16string> &tvalues = parsedLocaleIdentifier.transformedExtensionFields.insert({tkey, {}}).first->second;
       
       // read key then one or more values
       if (!nextSubtag()) {
@@ -414,7 +413,7 @@ bool LanguageTagParser::parseTransformedExtension() {
       if (!isTransformedExtensionTValueItem(getCurrentSubtagRef())) {
         return false;
       }
-      tvalues->push_back(getCurrentSubtag());
+      tvalues.push_back(getCurrentSubtag());
       if (!nextSubtag()) {
         return true;
       }
@@ -422,7 +421,7 @@ bool LanguageTagParser::parseTransformedExtension() {
         if (!isTransformedExtensionTValueItem(getCurrentSubtagRef())) {
           break;
         }
-        tvalues->push_back(getCurrentSubtag());
+        tvalues.push_back(getCurrentSubtag());
         if (!nextSubtag()) {
           return true;
         }
