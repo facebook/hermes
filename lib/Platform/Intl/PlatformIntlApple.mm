@@ -134,12 +134,12 @@ struct LocaleMatch {
   std::u16string matchedLocale;
 };
 LocaleMatch lookupMatcher(
-    const vm::CallResult<std::vector<std::u16string>> &requestedLocales,
+    const std::vector<std::u16string> &requestedLocales,
     const std::vector<std::u16string> &availableLocales) {
   // 1. Let result be a new Record.
   LocaleMatch result;
   // 2. For each element locale of requestedLocales, do
-  for (const std::u16string &locale : *requestedLocales) {
+  for (const std::u16string &locale : requestedLocales) {
     // a. Let noExtensionsLocale be the String value that is locale with
     // any Unicode locale extension sequences removed.
     std::u16string noExtensionsLocale = toNoUnicodeExtensionsLocale(locale);
@@ -537,76 +537,35 @@ struct UnicodeExtensionKeys {
       u"colcasefirst"; // TODO:: double check this
   std::u16string COLLATION_CASEFIRST_CANON = u"kf";
 };
-std::u16string resolveCalendarAlias(const std::u16string &value) {
-  // https://github.com/unicode-org/cldr/blob/master/common/bcp47/calendar.xml
-  static std::vector<std::u16string> s_calendarAliasMappings = {
-      u"gregorian", u"gregory"};
+std::u16string resolveAlias (const std::u16string &value, const std::map<std::u16string, std::u16string> &mappings) {
   if (std::find(
-          s_calendarAliasMappings.begin(),
-          s_calendarAliasMappings.end(),
-          value) == s_calendarAliasMappings.end()) {
+          mappings.begin(),
+          mappings.end(),
+          value) == mappings.end()) {
     return value;
   } else {
-    int pos = find(
-                  s_calendarAliasMappings.begin(),
-                  s_calendarAliasMappings.end(),
-                  value) -
-        s_calendarAliasMappings.begin();
-    return s_calendarAliasMappings.at(pos);
-  }
-}
-std::u16string resolveNumberSystemAlias(const std::u16string &value) {
-  // https://github.com/unicode-org/cldr/blob/master/common/bcp47/number.xml
-  static std::vector<std::u16string> s_numberAliasMappings = {
-      u"traditional", u"traditio"};
-  if (std::find(
-          s_numberAliasMappings.begin(), s_numberAliasMappings.end(), value) ==
-      s_numberAliasMappings.end()) {
-    return value;
-  } else {
-    int pos =
-        find(
-            s_numberAliasMappings.begin(), s_numberAliasMappings.end(), value) -
-        s_numberAliasMappings.begin();
-    return s_numberAliasMappings.at(pos);
-  }
-}
-std::u16string resolveCollationAlias(const std::u16string &value) {
-  // https://github.com/unicode-org/cldr/blob/release-37/common/bcp47/collation.xml#L12
-  static std::vector<std::u16string> s_collationAliasMappings = {
-      u"dictionary",
-      u"dict",
-      u"phonebook",
-      u"phonebk",
-      u"traditional",
-      u"trad",
-      u"gb2312han",
-      u"gb2312"};
-  if (std::find(
-          s_collationAliasMappings.begin(),
-          s_collationAliasMappings.end(),
-          value) == s_collationAliasMappings.end()) {
-    return value;
-  } else {
-    int pos = find(
-                  s_collationAliasMappings.begin(),
-                  s_collationAliasMappings.end(),
-                  value) -
-        s_collationAliasMappings.begin();
-    return s_collationAliasMappings.at(pos);
+    return mappings.at(value);
   }
 }
 std::u16string resolveKnownAliases(
     const std::u16string &key,
     const std::u16string &value) {
   if (key == u"ca") {
-    return resolveCalendarAlias(value);
+    return resolveAlias(value, {u"gregorian", u"gregory"});
   }
   if (key == u"nu") {
-    return resolveNumberSystemAlias(value);
+    return resolveAlias(value, {u"traditional", u"traditio"});
   }
   if (key == u"co") {
-    return resolveCollationAlias(value);
+    return resolveAlias(value, {{
+      u"dictionary",
+      u"dict"},
+      {u"phonebook",
+      u"phonebk"},
+      {u"traditional",
+      u"trad"},
+      {u"gb2312han",
+        u"gb2312"}});
   }
   if (key == u"kn" && value == u"yes") {
     return std::u16string(u"true");
@@ -617,7 +576,7 @@ std::u16string resolveKnownAliases(
     }
   }
 }
-bool binarySeachForValidKeyword(
+bool containsValidKeyword(
     const std::vector<std::u16string> &values,
     const std::u16string &value) {
   if (std::binary_search(values.begin(), values.end(), value)) {
@@ -691,14 +650,14 @@ bool isValidKeyword(const std::u16string &key, const std::u16string &value) {
       u"japanese",
       u"persian",
       u"roc"};
-  uint8_t pos = iter - keys.begin();
+  auto pos = iter - keys.begin();
   switch (pos) {
     case 0:
-      return binarySeachForValidKeyword(nuVector, value);
+      return containsValidKeyword(nuVector, value);
     case 1:
-      return binarySeachForValidKeyword(coVector, value);
+      return containsValidKeyword(coVector, value);
     case 2:
-      return binarySeachForValidKeyword(caVector, value);
+      return containsValidKeyword(caVector, value);
     default:
       return false;
   }
@@ -713,7 +672,7 @@ void setUnicodeExtensions(
 // https://tc39.es/ecma402/#sec-resolvelocale
 ResolveLocale resolveLocale(
     const std::vector<std::u16string> &availableLocales,
-    const vm::CallResult<std::vector<std::u16string>> &requestedLocales,
+    const std::vector<std::u16string> &requestedLocales,
     const Options &options,
     const std::vector<std::u16string> &relevantExtensionKeys
     //  In line with Java, haven't included LocaleData
@@ -790,7 +749,7 @@ vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
     const Options &options) noexcept {
   // 1. Let availableLocales be %DateTimeFormat%.[[AvailableLocales]].
   // 2. Let requestedLocales be ? CanonicalizeLocaleList(locales).
-  vm::CallResult<std::vector<std::u16string>> requestedLocales =
+  auto requestedLocales =
       getCanonicalLocales(runtime, locales);
   std::vector<std::u16string> availableLocales = getAvailableLocales();
   // 3. Return ? (availableLocales, requestedLocales, options).
@@ -1030,7 +989,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   static const std::vector<std::u16string> relevantExtensionKeys = {
       u"ca", u"nu", u"hc"};
   auto r =
-      resolveLocale(locales, requestedLocales, options, relevantExtensionKeys);
+      resolveLocale(locales, requestedLocales.getValue(), options, relevantExtensionKeys);
   impl_->locale = r.locale; // needs fixing
   // Get default locale as NS for future defaults
   NSLocale *defaultNSLocale = [[NSLocale alloc]
