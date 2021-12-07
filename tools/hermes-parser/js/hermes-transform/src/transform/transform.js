@@ -17,6 +17,8 @@ import * as prettier from 'prettier';
 import {getTransformedAST} from './getTransformedAST';
 import {SimpleTraverser} from '../traverse/SimpleTraverser';
 
+export type Visitors = Visitor<TransformContext>;
+
 export function transform(
   originalCode: string,
   visitors: Visitor<TransformContext>,

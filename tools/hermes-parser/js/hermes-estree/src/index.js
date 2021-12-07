@@ -10,7 +10,7 @@
 
 'use strict';
 
-export type * from './HermesESTreeSelectorTypes';
+export type * from './selectors';
 export type * from './types';
 
 export {};

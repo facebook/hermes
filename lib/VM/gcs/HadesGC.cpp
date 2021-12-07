@@ -129,7 +129,7 @@ HadesGC::OldGen::FreelistCell *HadesGC::OldGen::removeCellFromFreelist(
     size_t bucket,
     size_t segmentIdx) {
   FreelistCell *cell =
-      vmcast<FreelistCell>(prevLoc->get(gc_->getPointerBase()));
+      vmcast<FreelistCell>(prevLoc->getNonNull(gc_->getPointerBase()));
   assert(cell && "Cannot get a null cell from freelist");
 
   // Update whatever was pointing to the cell we are removing.
@@ -2350,13 +2350,14 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
           freelistSegmentsBuckets_[segmentIdx][bucket];
 
       while (cellCP) {
-        auto *cell = vmcast<FreelistCell>(cellCP.get(gc_->getPointerBase()));
+        auto *cell =
+            vmcast<FreelistCell>(cellCP.getNonNull(gc_->getPointerBase()));
         assert(
             cellCP == *prevLoc &&
             "prevLoc should be updated in each iteration");
         assert(
             (!cell->next_ ||
-             cell->next_.get(gc_->getPointerBase())->isValid()) &&
+             cell->next_.getNonNull(gc_->getPointerBase())->isValid()) &&
             "Next pointer points to an invalid cell");
         const auto cellSize = cell->getAllocatedSize();
         assert(

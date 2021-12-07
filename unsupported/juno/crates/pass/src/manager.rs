@@ -54,6 +54,9 @@ impl PassManager {
                         panic!("Program node removed");
                     }
                     TransformResult::Changed(new_node) => NodeRc::from_node(&gc, new_node),
+                    TransformResult::Expanded(..) => {
+                        panic!("Program node cannot be expanded");
+                    }
                 };
             }
             ctx.gc();

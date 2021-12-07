@@ -48,6 +48,12 @@ class Keywords {
   const UniqueString *const identLet;
   /// Identifier for "const".
   const UniqueString *const identConst;
+  /// "+".
+  const UniqueString *const identPlus;
+  /// "-".
+  const UniqueString *const identMinus;
+  /// "=".
+  const UniqueString *const identAssign;
 
   Keywords(Context &astContext);
 };
@@ -159,6 +165,7 @@ class SemanticValidator {
   void visit(ForOfStatementNode *forOf);
   void visitForInOf(LoopStatementNode *loopNode, Node *left);
 
+  void visit(BinaryExpressionNode *bin);
   void visit(AssignmentExpressionNode *assignment);
   void visit(UpdateExpressionNode *update);
 
@@ -178,6 +185,7 @@ class SemanticValidator {
 
   void visit(ReturnStatementNode *returnStmt);
   void visit(YieldExpressionNode *yieldExpr);
+  void visit(AwaitExpressionNode *awaitExpr);
 
   void visit(UnaryExpressionNode *unaryExpr);
 
@@ -299,6 +307,9 @@ class FunctionContext {
     /// LabeledStatement.
     StatementNode *targetStatement;
   };
+
+  /// The AST node for the function.
+  FunctionLikeNode *node;
 
   /// The associated seminfo object
   sem::FunctionInfo *const semInfo;

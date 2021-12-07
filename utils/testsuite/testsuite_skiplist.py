@@ -1819,7 +1819,10 @@ PERMANENT_SKIP_LIST = [
     "test262/test/intl402/NumberFormat/",
     "test262/test/intl402/PluralRules/",
     "test262/test/intl402/Segmenter/",
-    "test262/test/intl402/String/",
+    "test262/test/intl402/String/prototype/toLocaleLowerCase/special_casing_Lithuanian.js",
+    "test262/test/intl402/String/prototype/toLocaleLowerCase/special_casing_Azeri.js",
+    "test262/test/intl402/String/prototype/toLocaleLowerCase/special_casing_Turkish.js",
+    "test262/test/intl402/String/prototype/toLocaleUpperCase/special_casing_Lithuanian.js",
     "test262/test/intl402/RelativeTimeFormat/",
     "mjsunit/asm/",
     "mjsunit/regress/wasm/",
@@ -1871,7 +1874,6 @@ HANDLESAN_SKIP_LIST = [
 
 UNSUPPORTED_FEATURES = [
     "AggregateError",
-    "array-find-from-last",
     "Promise.prototype.finally",
     "Symbol.asyncIterator",
     "Symbol.species",

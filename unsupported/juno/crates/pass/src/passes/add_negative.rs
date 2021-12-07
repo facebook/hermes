@@ -51,7 +51,7 @@ impl<'gc> VisitorMut<'gc> for AddNegative {
         &mut self,
         gc: &'gc GCLock<'_, '_>,
         node: &'gc Node<'gc>,
-        _parent: Option<&'gc Node<'gc>>,
+        _parent: Option<Path<'gc>>,
     ) -> TransformResult<&'gc Node<'gc>> {
         if let Node::BinaryExpression(
             e1 @ BinaryExpression {

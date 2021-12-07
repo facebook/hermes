@@ -39,21 +39,13 @@ class BasedPointer final {
   inline StorageType getRawValue() const;
 
  private:
+  // Only PointerBase needs these functions. To every other part of the system
+  // this is an opaque type that PointerBase handles translations for.
+  friend class PointerBase;
   inline uint32_t getSegmentIndex() const;
   inline uint32_t getOffset() const;
 
-  // The low AlignedStorage::kLogSize bits are the offset, and the
-  // remaining upper bits are the segment index.
-  static inline uint32_t computeSegmentAndOffset(const void *heapAddr);
-
   StorageType raw_;
-
-  inline explicit BasedPointer(const void *heapAddr);
-
-  // Only PointerBase needs to access this field and the constructor. To every
-  // other part of the system this is an opaque type that PointerBase handles
-  // translations for.
-  friend class PointerBase;
 };
 #endif
 
@@ -144,11 +136,6 @@ inline BasedPointer::StorageType BasedPointer::getRawValue() const {
   return raw_;
 }
 
-inline BasedPointer PointerBase::pointerToBasedNonNull(const void *ptr) const {
-  assert(ptr && "Null pointer given to pointerToBasedNonNull");
-  return BasedPointer{ptr};
-}
-
 inline BasedPointer::operator bool() const {
   return raw_ != 0;
 }
@@ -170,9 +157,6 @@ inline void *PointerBase::basedToPointerNonNull(BasedPointer ptr) const {
 inline PointerBase::PointerBase() {
   segmentMap_[kNullPtrSegmentIndex] = nullptr;
 }
-
-inline BasedPointer::BasedPointer(const void *heapAddr)
-    : raw_(computeSegmentAndOffset(heapAddr)) {}
 
 inline uint32_t BasedPointer::getSegmentIndex() const {
   return raw_ >> AlignedStorage::kLogSize;
@@ -196,21 +180,21 @@ inline BasedPointer PointerBase::pointerToBased(const void *ptr) const {
   return pointerToBasedNonNull(ptr);
 }
 
-/*static*/
-inline uint32_t BasedPointer::computeSegmentAndOffset(const void *heapAddr) {
-  assert(heapAddr != nullptr);
-  uintptr_t addrAsInt = reinterpret_cast<uintptr_t>(heapAddr);
-  void *segStart = AlignedStorage::start(heapAddr);
+inline BasedPointer PointerBase::pointerToBasedNonNull(const void *ptr) const {
+  assert(ptr && "Null pointer given to pointerToBasedNonNull");
+  uintptr_t addrAsInt = reinterpret_cast<uintptr_t>(ptr);
+  void *segStart = AlignedStorage::start(ptr);
   /// segStart is the start of the AlignedStorage containing
-  /// heapAddr, so its low AlignedStorage::kLogSize are zeros.
-  /// Thus, offset, below, will be the offset of heapAddr within the
+  /// ptr, so its low AlignedStorage::kLogSize are zeros.
+  /// Thus, offset, below, will be the offset of ptr within the
   /// segment; bits above AlignedStorage::kLogSize will be zero.
   uintptr_t offset = addrAsInt - reinterpret_cast<uintptr_t>(segStart);
-  /// Now get the segment index, and shift it so that it's bits do not
+  /// Now get the segment index, and shift it so that its bits do not
   /// overlap with those of offset.
-  return (SegmentInfo::segmentIndexFromStart(segStart)
-          << AlignedStorage::kLogSize) |
+  uint32_t raw = (SegmentInfo::segmentIndexFromStart(segStart)
+                  << AlignedStorage::kLogSize) |
       offset;
+  return BasedPointer{raw};
 }
 
 inline void PointerBase::setSegment(unsigned idx, void *segStart) {

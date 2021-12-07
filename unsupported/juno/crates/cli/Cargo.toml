@@ -17,3 +17,7 @@ command_line = { path = "../command_line" }
 anyhow = "1.0"
 url = "2.2.2"
 sourcemap = "6.0"
+
+[dev-dependencies]
+assert_cmd = "0.12"
+toml = "=0.5.7"

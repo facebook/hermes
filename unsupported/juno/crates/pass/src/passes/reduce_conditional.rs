@@ -50,7 +50,7 @@ impl<'gc> VisitorMut<'gc> for ReduceConditional {
         &mut self,
         lock: &'gc GCLock,
         node: &'gc Node<'gc>,
-        _parent: Option<&'gc Node<'gc>>,
+        _parent: Option<Path<'gc>>,
     ) -> TransformResult<&'gc Node<'gc>> {
         match node {
             Node::ConditionalExpression(ConditionalExpression {

@@ -60,11 +60,13 @@ name = "cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "assert_cmd",
  "command_line",
  "juno",
  "pass",
  "sourcemap",
  "support",
+ "toml",
  "url",
 ]
 
@@ -143,7 +145,6 @@ checksum = "b71991ff56294aa922b450139ee08b3bfc70982c6b2c7562771375cf73542dd4"
 name = "juno"
 version = "0.1.0"
 dependencies = [
- "assert_cmd",
  "hermes",
  "libc",
  "memoffset",
@@ -152,7 +153,6 @@ dependencies = [
  "sourcemap",
  "support",
  "thiserror",
- "toml",
 ]
 
 [[package]]

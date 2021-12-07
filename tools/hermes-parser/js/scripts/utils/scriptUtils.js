@@ -81,7 +81,7 @@ type Package =
   | 'hermes-transform';
 export function formatAndWriteDistArtifact({
   code: code_,
-  flow = false,
+  flow = 'loose',
   package: pkg,
   filename,
   subdirSegments = [],
