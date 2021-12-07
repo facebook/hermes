@@ -26,8 +26,6 @@
 #include "hermes/VM/SmallXString.h"
 #include "hermes/VM/StringView.h"
 
-#include "ReplConfig.h"
-
 #if HAVE_LIBREADLINE
 #include <readline/history.h>
 #include <readline/readline.h>

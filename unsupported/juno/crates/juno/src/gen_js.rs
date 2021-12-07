@@ -7,7 +7,6 @@
 
 use crate::ast::*;
 use sourcemap::{RawToken, SourceMap, SourceMapBuilder};
-
 use std::{
     fmt,
     io::{self, BufWriter, Write},
@@ -27,11 +26,12 @@ pub enum Pretty {
 /// FIXME: This currently only returns an empty SourceMap.
 pub fn generate<W: Write>(
     out: W,
-    ctx: &Context,
-    root: NodePtr,
+    ctx: &mut Context,
+    root: &NodeRc,
     pretty: Pretty,
 ) -> io::Result<SourceMap> {
-    GenJS::gen_root(out, ctx, root, pretty)
+    let gc = GCLock::new(ctx);
+    GenJS::gen_root(out, &gc, root.node(&gc), pretty)
 }
 
 /// Associativity direction.
@@ -69,7 +69,7 @@ mod precedence {
 
     pub fn get_binary_precedence(op: BinaryExpressionOperator) -> Precedence {
         use BinaryExpressionOperator::*;
-        match op {
+        (match op {
             Exp => 12,
             Mult => 11,
             Mod => 11,
@@ -90,18 +90,18 @@ mod precedence {
             BitAnd => 6,
             BitXor => 5,
             BitOr => 4,
-            In => 8 + BIN_START,
-            Instanceof => 8 + BIN_START,
-        }
+            In => 8,
+            Instanceof => 8,
+        }) + BIN_START
     }
 
     pub fn get_logical_precedence(op: LogicalExpressionOperator) -> Precedence {
         use LogicalExpressionOperator::*;
-        match op {
+        (match op {
             And => 3,
             Or => 2,
             NullishCoalesce => 1,
-        }
+        }) + BIN_START
     }
 }
 
@@ -116,9 +116,9 @@ enum ChildPos {
 /// Whether parens are needed around something.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 enum NeedParens {
-    /// No parentheses needed.
+    /// No pathheses needed.
     No,
-    /// Parentheses required.
+    /// Pathheses required.
     Yes,
     /// A space character is sufficient to distinguish.
     /// Used in unary operations, e.g.
@@ -196,7 +196,12 @@ impl<W: Write> GenJS<W> {
     /// Generate JS for `root` and flush the output.
     /// If at any point, JS generation resulted in an error, return `Err(err)`,
     /// otherwise return `Ok(())`.
-    fn gen_root(writer: W, ctx: &Context, root: NodePtr, pretty: Pretty) -> io::Result<SourceMap> {
+    fn gen_root<'gc>(
+        writer: W,
+        ctx: &'gc GCLock,
+        root: &'gc Node<'gc>,
+        pretty: Pretty,
+    ) -> io::Result<SourceMap> {
         let mut gen_js = GenJS {
             out: BufWriter::new(writer),
             pretty,
@@ -267,17 +272,17 @@ impl<W: Write> GenJS<W> {
     }
 
     /// Generate the JS for each node kind.
-    fn gen_node(&mut self, ctx: &Context, node: NodePtr, parent: Option<NodePtr>) {
-        match &node.get(ctx) {
+    fn gen_node<'gc>(&mut self, ctx: &'gc GCLock, node: &'gc Node<'gc>, path: Option<Path<'gc>>) {
+        match node {
             Node::Empty(_) => {}
             Node::Metadata(_) => {}
 
-            Node::Program(Program { range: _, body }) => {
-                self.visit_stmt_list(ctx, body, node);
+            Node::Program(Program { metadata: _, body }) => {
+                self.visit_stmt_list(ctx, body, Path::new(node, NodeField::body));
             }
 
             Node::FunctionExpression(FunctionExpression {
-                range: _,
+                metadata: _,
                 id,
                 params,
                 body,
@@ -288,7 +293,7 @@ impl<W: Write> GenJS<W> {
                 is_async,
             })
             | Node::FunctionDeclaration(FunctionDeclaration {
-                range: _,
+                metadata: _,
                 id,
                 params,
                 body,
@@ -299,9 +304,9 @@ impl<W: Write> GenJS<W> {
                 is_async,
             }) => {
                 if *is_async {
-                    out_token!(self, node.get(ctx), "async function");
+                    out_token!(self, node, "async function");
                 } else {
-                    out_token!(self, node.get(ctx), "function");
+                    out_token!(self, node, "function");
                 }
                 if *generator {
                     out!(self, "*");
@@ -312,16 +317,20 @@ impl<W: Write> GenJS<W> {
                     self.space(ForceSpace::Yes);
                 }
                 if let Some(id) = id {
-                    id.visit(ctx, self, Some(node));
+                    id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
                 }
                 if let Some(type_parameters) = type_parameters {
-                    type_parameters.visit(ctx, self, Some(node));
+                    type_parameters.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::type_parameters)),
+                    );
                 }
                 self.visit_func_params_body(ctx, params, *return_type, *predicate, *body, node);
             }
 
             Node::ArrowFunctionExpression(ArrowFunctionExpression {
-                range: _,
+                metadata: _,
                 id: _,
                 params,
                 body,
@@ -337,7 +346,11 @@ impl<W: Write> GenJS<W> {
                     need_sep = true;
                 }
                 if let Some(type_parameters) = type_parameters {
-                    type_parameters.visit(ctx, self, Some(node));
+                    type_parameters.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::type_parameters)),
+                    );
                     need_sep = false;
                 }
                 // Single parameter without type info doesn't need parens.
@@ -351,58 +364,73 @@ impl<W: Write> GenJS<W> {
                     if need_sep {
                         out!(self, " ");
                     }
-                    params[0].visit(ctx, self, Some(node));
+                    params[0].visit(ctx, self, Some(Path::new(node, NodeField::params)));
                 } else {
                     out!(self, "(");
                     for (i, param) in params.iter().enumerate() {
                         if i > 0 {
                             self.comma();
                         }
-                        param.visit(ctx, self, Some(node));
+                        param.visit(ctx, self, Some(Path::new(node, NodeField::params)));
                     }
                     out!(self, ")");
                 }
                 if let Some(return_type) = return_type {
                     out!(self, ":");
                     self.space(ForceSpace::No);
-                    return_type.visit(ctx, self, Some(node));
+                    return_type.visit(ctx, self, Some(Path::new(node, NodeField::return_type)));
                 }
                 if let Some(predicate) = predicate {
                     self.space(ForceSpace::Yes);
-                    predicate.visit(ctx, self, Some(node));
+                    predicate.visit(ctx, self, Some(Path::new(node, NodeField::predicate)));
                 }
                 self.space(ForceSpace::No);
                 out!(self, "=>");
                 self.space(ForceSpace::No);
-                match &body.get(ctx) {
+                match &body {
                     Node::BlockStatement(_) => {
-                        body.visit(ctx, self, Some(node));
+                        body.visit(ctx, self, Some(Path::new(node, NodeField::body)));
                     }
                     _ => {
-                        self.print_child(ctx, Some(*body), node, ChildPos::Right);
+                        self.print_child(
+                            ctx,
+                            Some(*body),
+                            Path::new(node, NodeField::body),
+                            ChildPos::Right,
+                        );
                     }
                 }
             }
 
             Node::WhileStatement(WhileStatement {
-                range: _,
+                metadata: _,
                 body,
                 test,
             }) => {
                 out!(self, "while");
                 self.space(ForceSpace::No);
                 out!(self, "(");
-                test.visit(ctx, self, Some(node));
+                test.visit(ctx, self, Some(Path::new(node, NodeField::test)));
                 out!(self, ")");
-                self.visit_stmt_or_block(ctx, *body, ForceBlock::No, node);
+                self.visit_stmt_or_block(
+                    ctx,
+                    *body,
+                    ForceBlock::No,
+                    Path::new(node, NodeField::body),
+                );
             }
             Node::DoWhileStatement(DoWhileStatement {
-                range: _,
+                metadata: _,
                 body,
                 test,
             }) => {
                 out!(self, "do");
-                let block = self.visit_stmt_or_block(ctx, *body, ForceBlock::No, node);
+                let block = self.visit_stmt_or_block(
+                    ctx,
+                    *body,
+                    ForceBlock::No,
+                    Path::new(node, NodeField::body),
+                );
                 if block {
                     self.space(ForceSpace::No);
                 } else {
@@ -412,58 +440,73 @@ impl<W: Write> GenJS<W> {
                 out!(self, "while");
                 self.space(ForceSpace::No);
                 out!(self, "(");
-                test.visit(ctx, self, Some(node));
+                test.visit(ctx, self, Some(Path::new(node, NodeField::test)));
                 out!(self, ")");
             }
 
             Node::ForInStatement(ForInStatement {
-                range: _,
+                metadata: _,
                 left,
                 right,
                 body,
             }) => {
                 out!(self, "for(");
-                left.visit(ctx, self, Some(node));
+                left.visit(ctx, self, Some(Path::new(node, NodeField::left)));
                 out!(self, " in ");
-                right.visit(ctx, self, Some(node));
+                right.visit(ctx, self, Some(Path::new(node, NodeField::right)));
                 out!(self, ")");
-                self.visit_stmt_or_block(ctx, *body, ForceBlock::No, node);
+                self.visit_stmt_or_block(
+                    ctx,
+                    *body,
+                    ForceBlock::No,
+                    Path::new(node, NodeField::body),
+                );
             }
             Node::ForOfStatement(ForOfStatement {
-                range: _,
+                metadata: _,
                 left,
                 right,
                 body,
                 is_await,
             }) => {
                 out!(self, "for{}(", if *is_await { " await" } else { "" });
-                left.visit(ctx, self, Some(node));
+                left.visit(ctx, self, Some(Path::new(node, NodeField::left)));
                 out!(self, " of ");
-                right.visit(ctx, self, Some(node));
+                right.visit(ctx, self, Some(Path::new(node, NodeField::right)));
                 out!(self, ")");
-                self.visit_stmt_or_block(ctx, *body, ForceBlock::No, node);
+                self.visit_stmt_or_block(
+                    ctx,
+                    *body,
+                    ForceBlock::No,
+                    Path::new(node, NodeField::body),
+                );
             }
             Node::ForStatement(ForStatement {
-                range: _,
+                metadata: _,
                 init,
                 test,
                 update,
                 body,
             }) => {
                 out!(self, "for(");
-                self.print_child(ctx, *init, node, ChildPos::Left);
+                self.print_child(ctx, *init, Path::new(node, NodeField::init), ChildPos::Left);
                 out!(self, ";");
                 if let Some(test) = test {
                     self.space(ForceSpace::No);
-                    test.visit(ctx, self, Some(node));
+                    test.visit(ctx, self, Some(Path::new(node, NodeField::test)));
                 }
                 out!(self, ";");
                 if let Some(update) = update {
                     self.space(ForceSpace::No);
-                    update.visit(ctx, self, Some(node));
+                    update.visit(ctx, self, Some(Path::new(node, NodeField::update)));
                 }
                 out!(self, ")");
-                self.visit_stmt_or_block(ctx, *body, ForceBlock::No, node);
+                self.visit_stmt_or_block(
+                    ctx,
+                    *body,
+                    ForceBlock::No,
+                    Path::new(node, NodeField::body),
+                );
             }
 
             Node::DebuggerStatement(_) => {
@@ -471,198 +514,222 @@ impl<W: Write> GenJS<W> {
             }
             Node::EmptyStatement(_) => {}
 
-            Node::BlockStatement(BlockStatement { range: _, body }) => {
+            Node::BlockStatement(BlockStatement { metadata: _, body }) => {
                 if body.is_empty() {
                     out!(self, "{{}}");
                 } else {
                     out!(self, "{{");
                     self.inc_indent();
                     self.newline();
-                    self.visit_stmt_list(ctx, body, node);
+                    self.visit_stmt_list(ctx, body, Path::new(node, NodeField::body));
                     self.dec_indent();
                     self.newline();
                     out!(self, "}}");
                 }
             }
 
-            Node::BreakStatement(BreakStatement { range: _, label }) => {
+            Node::BreakStatement(BreakStatement { metadata: _, label }) => {
                 out!(self, "break");
                 if let Some(label) = label {
                     self.space(ForceSpace::Yes);
-                    label.visit(ctx, self, Some(node));
+                    label.visit(ctx, self, Some(Path::new(node, NodeField::label)));
                 }
             }
-            Node::ContinueStatement(ContinueStatement { range: _, label }) => {
+            Node::ContinueStatement(ContinueStatement { metadata: _, label }) => {
                 out!(self, "continue");
                 if let Some(label) = label {
                     self.space(ForceSpace::Yes);
-                    label.visit(ctx, self, Some(node));
+                    label.visit(ctx, self, Some(Path::new(node, NodeField::label)));
                 }
             }
 
-            Node::ThrowStatement(ThrowStatement { range: _, argument }) => {
-                out_token!(self, node.get(ctx), "throw ");
-                argument.visit(ctx, self, Some(node));
+            Node::ThrowStatement(ThrowStatement {
+                metadata: _,
+                argument,
+            }) => {
+                out_token!(self, node, "throw ");
+                argument.visit(ctx, self, Some(Path::new(node, NodeField::argument)));
             }
-            Node::ReturnStatement(ReturnStatement { range: _, argument }) => {
-                out_token!(self, node.get(ctx), "return");
+            Node::ReturnStatement(ReturnStatement {
+                metadata: _,
+                argument,
+            }) => {
+                out_token!(self, node, "return");
                 if let Some(argument) = argument {
                     out!(self, " ");
-                    argument.visit(ctx, self, Some(node));
+                    argument.visit(ctx, self, Some(Path::new(node, NodeField::argument)));
                 }
             }
             Node::WithStatement(WithStatement {
-                range: _,
+                metadata: _,
                 object,
                 body,
             }) => {
-                out_token!(self, node.get(ctx), "with");
+                out_token!(self, node, "with");
                 self.space(ForceSpace::No);
                 out!(self, "(");
-                object.visit(ctx, self, Some(node));
+                object.visit(ctx, self, Some(Path::new(node, NodeField::object)));
                 out!(self, ")");
-                self.visit_stmt_or_block(ctx, *body, ForceBlock::No, node);
+                self.visit_stmt_or_block(
+                    ctx,
+                    *body,
+                    ForceBlock::No,
+                    Path::new(node, NodeField::body),
+                );
             }
 
             Node::SwitchStatement(SwitchStatement {
-                range: _,
+                metadata: _,
                 discriminant,
                 cases,
             }) => {
-                out_token!(self, node.get(ctx), "switch");
+                out_token!(self, node, "switch");
                 self.space(ForceSpace::No);
                 out!(self, "(");
-                discriminant.visit(ctx, self, Some(node));
+                discriminant.visit(ctx, self, Some(Path::new(node, NodeField::discriminant)));
                 out!(self, ")");
                 self.space(ForceSpace::No);
                 out!(self, "{{");
                 self.newline();
                 for case in cases {
-                    case.visit(ctx, self, Some(node));
+                    case.visit(ctx, self, Some(Path::new(node, NodeField::cases)));
                     self.newline();
                 }
                 out!(self, "}}");
             }
             Node::SwitchCase(SwitchCase {
-                range: _,
+                metadata: _,
                 test,
                 consequent,
             }) => {
                 match test {
                     Some(test) => {
-                        out_token!(self, node.get(ctx), "case ");
-                        test.visit(ctx, self, Some(node));
+                        out_token!(self, node, "case ");
+                        test.visit(ctx, self, Some(Path::new(node, NodeField::test)));
                     }
                     None => {
-                        out_token!(self, node.get(ctx), "default");
+                        out_token!(self, node, "default");
                     }
                 };
                 out!(self, ":");
                 if !consequent.is_empty() {
                     self.inc_indent();
                     self.newline();
-                    self.visit_stmt_list(ctx, consequent, node);
+                    self.visit_stmt_list(ctx, consequent, Path::new(node, NodeField::consequent));
                     self.dec_indent();
                 }
             }
 
             Node::LabeledStatement(LabeledStatement {
-                range: _,
+                metadata: _,
                 label,
                 body,
             }) => {
-                label.visit(ctx, self, Some(node));
+                label.visit(ctx, self, Some(Path::new(node, NodeField::label)));
                 out!(self, ":");
                 self.newline();
-                body.visit(ctx, self, Some(node));
+                body.visit(ctx, self, Some(Path::new(node, NodeField::body)));
             }
 
             Node::ExpressionStatement(ExpressionStatement {
-                range: _,
+                metadata: _,
                 expression,
                 directive: _,
             }) => {
-                self.print_child(ctx, Some(*expression), node, ChildPos::Anywhere);
+                self.print_child(
+                    ctx,
+                    Some(*expression),
+                    Path::new(node, NodeField::expression),
+                    ChildPos::Anywhere,
+                );
             }
 
             Node::TryStatement(TryStatement {
-                range: _,
+                metadata: _,
                 block,
                 handler,
                 finalizer,
             }) => {
-                out_token!(self, node.get(ctx), "try");
-                self.visit_stmt_or_block(ctx, *block, ForceBlock::Yes, node);
+                out_token!(self, node, "try");
+                self.visit_stmt_or_block(
+                    ctx,
+                    *block,
+                    ForceBlock::Yes,
+                    Path::new(node, NodeField::block),
+                );
                 if let Some(handler) = handler {
-                    handler.visit(ctx, self, Some(node));
+                    handler.visit(ctx, self, Some(Path::new(node, NodeField::handler)));
                 }
                 if let Some(finalizer) = finalizer {
                     out!(self, "finally");
                     self.space(ForceSpace::No);
-                    self.visit_stmt_or_block(ctx, *finalizer, ForceBlock::Yes, node);
+                    self.visit_stmt_or_block(
+                        ctx,
+                        *finalizer,
+                        ForceBlock::Yes,
+                        Path::new(node, NodeField::finalizer),
+                    );
                 }
             }
 
             Node::IfStatement(IfStatement {
-                range: _,
+                metadata: _,
                 test,
                 consequent,
                 alternate,
             }) => {
-                out_token!(self, node.get(ctx), "if");
+                out_token!(self, node, "if");
                 self.space(ForceSpace::No);
                 out!(self, "(");
-                test.visit(ctx, self, Some(node));
+                test.visit(ctx, self, Some(Path::new(node, NodeField::test)));
                 out!(self, ")");
-                let force_block = if alternate.is_some() && consequent.get(ctx).is_if_without_else()
-                {
+                let force_block = if alternate.is_some() && consequent.is_if_without_else() {
                     ForceBlock::Yes
                 } else {
                     ForceBlock::No
                 };
-                let block = self.visit_stmt_or_block(ctx, *consequent, force_block, node);
+                self.visit_stmt_or_block(
+                    ctx,
+                    *consequent,
+                    force_block,
+                    Path::new(node, NodeField::consequent),
+                );
                 if let Some(alternate) = alternate {
-                    if !block {
-                        out!(self, ";");
-                        self.newline();
-                    } else {
-                        self.space(ForceSpace::No);
-                    }
                     out!(self, "else");
-                    self.space(if matches!(&alternate.get(ctx), Node::BlockStatement(_)) {
+                    self.space(if matches!(alternate, Node::BlockStatement(_)) {
                         ForceSpace::No
                     } else {
                         ForceSpace::Yes
                     });
-                    self.visit_stmt_or_block(ctx, *alternate, ForceBlock::No, node);
+                    self.visit_stmt_or_block(
+                        ctx,
+                        *alternate,
+                        ForceBlock::No,
+                        Path::new(node, NodeField::alternate),
+                    );
                 }
             }
 
-            Node::BooleanLiteral(BooleanLiteral { range: _, value }) => {
-                out_token!(
-                    self,
-                    node.get(ctx),
-                    "{}",
-                    if *value { "true" } else { "false" }
-                );
+            Node::BooleanLiteral(BooleanLiteral { metadata: _, value }) => {
+                out_token!(self, node, "{}", if *value { "true" } else { "false" });
             }
             Node::NullLiteral(_) => {
-                out_token!(self, node.get(ctx), "null");
+                out_token!(self, node, "null");
             }
-            Node::StringLiteral(StringLiteral { range: _, value }) => {
-                out_token!(self, node.get(ctx), "\"");
+            Node::StringLiteral(StringLiteral { metadata: _, value }) => {
+                out_token!(self, node, "\"");
                 self.print_escaped_string_literal(value, '"');
                 out!(self, "\"");
             }
-            Node::NumericLiteral(NumericLiteral { range: _, value }) => {
-                out_token!(self, node.get(ctx), "{}", convert::number_to_string(*value));
+            Node::NumericLiteral(NumericLiteral { metadata: _, value }) => {
+                out_token!(self, node, "{}", convert::number_to_string(*value));
             }
             Node::RegExpLiteral(RegExpLiteral {
-                range: _,
+                metadata: _,
                 pattern,
                 flags,
             }) => {
-                out_token!(self, node.get(ctx), "/");
+                out_token!(self, node, "/");
                 // Parser doesn't handle escapes when lexing RegExp,
                 // so we don't need to do any manual escaping here.
                 self.write_utf8(ctx.str(*pattern));
@@ -670,14 +737,14 @@ impl<W: Write> GenJS<W> {
                 self.write_utf8(ctx.str(*flags));
             }
             Node::ThisExpression(_) => {
-                out_token!(self, node.get(ctx), "this");
+                out_token!(self, node, "this");
             }
             Node::Super(_) => {
-                out_token!(self, node.get(ctx), "super");
+                out_token!(self, node, "super");
             }
 
             Node::SequenceExpression(SequenceExpression {
-                range: _,
+                metadata: _,
                 expressions,
             }) => {
                 out!(self, "(");
@@ -688,7 +755,7 @@ impl<W: Write> GenJS<W> {
                     self.print_child(
                         ctx,
                         Some(*expr),
-                        node,
+                        Path::new(node, NodeField::expressions),
                         if i == 1 {
                             ChildPos::Left
                         } else {
@@ -700,25 +767,29 @@ impl<W: Write> GenJS<W> {
             }
 
             Node::ObjectExpression(ObjectExpression {
-                range: _,
+                metadata: _,
                 properties,
             }) => {
-                self.visit_props(ctx, properties, node);
+                self.visit_props(ctx, properties, Path::new(node, NodeField::properties));
             }
             Node::ArrayExpression(ArrayExpression {
-                range: _,
+                metadata: _,
                 elements,
                 trailing_comma,
             }) => {
-                out_token!(self, node.get(ctx), "[");
+                out_token!(self, node, "[");
                 for (i, elem) in elements.iter().enumerate() {
                     if i > 0 {
                         self.comma();
                     }
-                    if let Node::SpreadElement(_) = &elem.get(ctx) {
-                        elem.visit(ctx, self, Some(node));
+                    if let Node::SpreadElement(_) = elem {
+                        elem.visit(ctx, self, Some(Path::new(node, NodeField::elements)));
                     } else {
-                        self.print_comma_expression(ctx, *elem, node);
+                        self.print_comma_expression(
+                            ctx,
+                            *elem,
+                            Path::new(node, NodeField::elements),
+                        );
                     }
                 }
                 if *trailing_comma {
@@ -727,119 +798,172 @@ impl<W: Write> GenJS<W> {
                 out!(self, "]");
             }
 
-            Node::SpreadElement(SpreadElement { range: _, argument }) => {
-                out_token!(self, node.get(ctx), "...");
-                argument.visit(ctx, self, Some(node));
+            Node::SpreadElement(SpreadElement {
+                metadata: _,
+                argument,
+            }) => {
+                out_token!(self, node, "...");
+                argument.visit(ctx, self, Some(Path::new(node, NodeField::argument)));
             }
 
             Node::NewExpression(NewExpression {
-                range: _,
+                metadata: _,
                 callee,
                 type_arguments,
                 arguments,
             }) => {
-                out_token!(self, node.get(ctx), "new ");
-                self.print_child(ctx, Some(*callee), node, ChildPos::Left);
+                out_token!(self, node, "new ");
+                self.print_child(
+                    ctx,
+                    Some(*callee),
+                    Path::new(node, NodeField::callee),
+                    ChildPos::Left,
+                );
                 if let Some(type_arguments) = type_arguments {
-                    type_arguments.visit(ctx, self, Some(node));
+                    type_arguments.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::type_arguments)),
+                    );
                 }
                 out!(self, "(");
                 for (i, arg) in arguments.iter().enumerate() {
                     if i > 0 {
                         self.comma();
                     }
-                    self.print_comma_expression(ctx, *arg, node);
+                    self.print_comma_expression(ctx, *arg, Path::new(node, NodeField::arguments));
                 }
                 out!(self, ")");
             }
             Node::YieldExpression(YieldExpression {
-                range: _,
+                metadata: _,
                 argument,
                 delegate,
             }) => {
-                out_token!(self, node.get(ctx), "yield");
+                out_token!(self, node, "yield");
                 if *delegate {
                     out!(self, "*");
                     self.space(ForceSpace::No);
                 } else if argument.is_some() {
                     out!(self, " ");
                 }
-                self.print_child(ctx, *argument, node, ChildPos::Right);
+                self.print_child(
+                    ctx,
+                    *argument,
+                    Path::new(node, NodeField::argument),
+                    ChildPos::Right,
+                );
             }
-            Node::AwaitExpression(AwaitExpression { range: _, argument }) => {
+            Node::AwaitExpression(AwaitExpression {
+                metadata: _,
+                argument,
+            }) => {
                 out!(self, "await ");
-                self.print_child(ctx, Some(*argument), node, ChildPos::Right);
+                self.print_child(
+                    ctx,
+                    Some(*argument),
+                    Path::new(node, NodeField::argument),
+                    ChildPos::Right,
+                );
             }
 
             Node::ImportExpression(ImportExpression {
-                range: _,
+                metadata: _,
                 source,
                 attributes,
             }) => {
-                out_token!(self, node.get(ctx), "import(");
-                source.visit(ctx, self, Some(node));
+                out_token!(self, node, "import(");
+                source.visit(ctx, self, Some(Path::new(node, NodeField::source)));
                 if let Some(attributes) = attributes {
                     out!(self, ",");
                     self.space(ForceSpace::No);
-                    attributes.visit(ctx, self, Some(node));
+                    attributes.visit(ctx, self, Some(Path::new(node, NodeField::attributes)));
                 }
                 out!(self, ")");
             }
 
             Node::CallExpression(CallExpression {
-                range: _,
+                metadata: _,
                 callee,
                 type_arguments,
                 arguments,
             }) => {
-                self.print_child(ctx, Some(*callee), node, ChildPos::Left);
+                self.print_child(
+                    ctx,
+                    Some(*callee),
+                    Path::new(node, NodeField::callee),
+                    ChildPos::Left,
+                );
                 if let Some(type_arguments) = type_arguments {
-                    type_arguments.visit(ctx, self, Some(node));
+                    type_arguments.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::type_arguments)),
+                    );
                 }
                 out!(self, "(");
                 for (i, arg) in arguments.iter().enumerate() {
                     if i > 0 {
                         self.comma();
                     }
-                    self.print_comma_expression(ctx, *arg, node);
+                    self.print_comma_expression(ctx, *arg, Path::new(node, NodeField::arguments));
                 }
                 out!(self, ")");
             }
             Node::OptionalCallExpression(OptionalCallExpression {
-                range: _,
+                metadata: _,
                 callee,
                 type_arguments,
                 arguments,
                 optional,
             }) => {
-                self.print_child(ctx, Some(*callee), node, ChildPos::Left);
+                self.print_child(
+                    ctx,
+                    Some(*callee),
+                    Path::new(node, NodeField::callee),
+                    ChildPos::Left,
+                );
                 if let Some(type_arguments) = type_arguments {
-                    type_arguments.visit(ctx, self, Some(node));
+                    type_arguments.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::type_arguments)),
+                    );
                 }
                 out!(self, "{}(", if *optional { "?." } else { "" });
                 for (i, arg) in arguments.iter().enumerate() {
                     if i > 0 {
                         self.comma();
                     }
-                    self.print_comma_expression(ctx, *arg, node);
+                    self.print_comma_expression(ctx, *arg, Path::new(node, NodeField::arguments));
                 }
                 out!(self, ")");
             }
 
             Node::AssignmentExpression(AssignmentExpression {
-                range: _,
+                metadata: _,
                 operator,
                 left,
                 right,
             }) => {
-                self.print_child(ctx, Some(*left), node, ChildPos::Left);
+                self.print_child(
+                    ctx,
+                    Some(*left),
+                    Path::new(node, NodeField::left),
+                    ChildPos::Left,
+                );
                 self.space(ForceSpace::No);
                 out!(self, "{}", operator.as_str());
                 self.space(ForceSpace::No);
-                self.print_child(ctx, Some(*right), node, ChildPos::Right);
+                self.print_child(
+                    ctx,
+                    Some(*right),
+                    Path::new(node, NodeField::right),
+                    ChildPos::Right,
+                );
             }
             Node::UnaryExpression(UnaryExpression {
-                range: _,
+                metadata: _,
                 operator,
                 argument,
                 prefix,
@@ -850,9 +974,19 @@ impl<W: Write> GenJS<W> {
                     if ident {
                         out!(self, " ");
                     }
-                    self.print_child(ctx, Some(*argument), node, ChildPos::Right);
+                    self.print_child(
+                        ctx,
+                        Some(*argument),
+                        Path::new(node, NodeField::argument),
+                        ChildPos::Right,
+                    );
                 } else {
-                    self.print_child(ctx, Some(*argument), node, ChildPos::Left);
+                    self.print_child(
+                        ctx,
+                        Some(*argument),
+                        Path::new(node, NodeField::argument),
+                        ChildPos::Left,
+                    );
                     if ident {
                         out!(self, " ");
                     }
@@ -860,63 +994,109 @@ impl<W: Write> GenJS<W> {
                 }
             }
             Node::UpdateExpression(UpdateExpression {
-                range: _,
+                metadata: _,
                 operator,
                 argument,
                 prefix,
             }) => {
                 if *prefix {
                     out!(self, "{}", operator.as_str());
-                    self.print_child(ctx, Some(*argument), node, ChildPos::Right);
+                    self.print_child(
+                        ctx,
+                        Some(*argument),
+                        Path::new(node, NodeField::argument),
+                        ChildPos::Right,
+                    );
                 } else {
-                    self.print_child(ctx, Some(*argument), node, ChildPos::Left);
+                    self.print_child(
+                        ctx,
+                        Some(*argument),
+                        Path::new(node, NodeField::argument),
+                        ChildPos::Left,
+                    );
                     out!(self, "{}", operator.as_str());
                 }
             }
             Node::MemberExpression(MemberExpression {
-                range: _,
+                metadata: _,
                 object,
                 property,
                 computed,
             }) => {
-                self.print_child(ctx, Some(*object), node, ChildPos::Left);
+                match object {
+                    Node::NumericLiteral(NumericLiteral { value, .. }) => {
+                        // Account for possible `50..toString()`.
+                        let string = convert::number_to_string(*value);
+                        // If there is an `e` or a decimal point, no need for an extra `.`.
+                        let suffix = string.find::<&[char]>(&['E', 'e', '.']).map_or(".", |_| "");
+                        out_token!(self, node, "{}{}", string, suffix);
+                    }
+                    _ => {
+                        self.print_child(
+                            ctx,
+                            Some(*object),
+                            Path::new(node, NodeField::object),
+                            ChildPos::Left,
+                        );
+                    }
+                }
                 if *computed {
                     out!(self, "[");
                 } else {
                     out!(self, ".");
                 }
-                self.print_child(ctx, Some(*property), node, ChildPos::Right);
+                self.print_child(
+                    ctx,
+                    Some(*property),
+                    Path::new(node, NodeField::property),
+                    ChildPos::Right,
+                );
                 if *computed {
                     out!(self, "]");
                 }
             }
             Node::OptionalMemberExpression(OptionalMemberExpression {
-                range: _,
+                metadata: _,
                 object,
                 property,
                 computed,
                 optional,
             }) => {
-                self.print_child(ctx, Some(*object), node, ChildPos::Left);
+                self.print_child(
+                    ctx,
+                    Some(*object),
+                    Path::new(node, NodeField::object),
+                    ChildPos::Left,
+                );
                 if *computed {
                     out!(self, "{}[", if *optional { "?." } else { "" });
                 } else {
                     out!(self, "{}.", if *optional { "?" } else { "" });
                 }
-                self.print_child(ctx, Some(*property), node, ChildPos::Right);
+                self.print_child(
+                    ctx,
+                    Some(*property),
+                    Path::new(node, NodeField::property),
+                    ChildPos::Right,
+                );
                 if *computed {
                     out!(self, "]");
                 }
             }
 
             Node::BinaryExpression(BinaryExpression {
-                range: _,
+                metadata: _,
                 left,
                 right,
                 operator,
             }) => {
                 let ident = operator.as_str().chars().next().unwrap().is_alphabetic();
-                self.print_child(ctx, Some(*left), node, ChildPos::Left);
+                self.print_child(
+                    ctx,
+                    Some(*left),
+                    Path::new(node, NodeField::left),
+                    ChildPos::Left,
+                );
                 self.space(if ident {
                     ForceSpace::Yes
                 } else {
@@ -928,40 +1108,60 @@ impl<W: Write> GenJS<W> {
                 } else {
                     ForceSpace::No
                 });
-                self.print_child(ctx, Some(*right), node, ChildPos::Right);
+                self.print_child(
+                    ctx,
+                    Some(*right),
+                    Path::new(node, NodeField::right),
+                    ChildPos::Right,
+                );
             }
 
-            Node::Directive(Directive { range: _, value }) => {
-                value.visit(ctx, self, Some(node));
+            Node::Directive(Directive { metadata: _, value }) => {
+                value.visit(ctx, self, Some(Path::new(node, NodeField::value)));
             }
-            Node::DirectiveLiteral(DirectiveLiteral { range: _, .. }) => {
+            Node::DirectiveLiteral(DirectiveLiteral { metadata: _, .. }) => {
                 unimplemented!("No escaping for directive literals");
             }
 
             Node::ConditionalExpression(ConditionalExpression {
-                range: _,
+                metadata: _,
                 test,
                 consequent,
                 alternate,
             }) => {
-                self.print_child(ctx, Some(*test), node, ChildPos::Left);
+                self.print_child(
+                    ctx,
+                    Some(*test),
+                    Path::new(node, NodeField::test),
+                    ChildPos::Left,
+                );
                 self.space(ForceSpace::No);
                 out!(self, "?");
                 self.space(ForceSpace::No);
-                self.print_child(ctx, Some(*consequent), node, ChildPos::Anywhere);
+                self.print_child(
+                    ctx,
+                    Some(*consequent),
+                    Path::new(node, NodeField::consequent),
+                    ChildPos::Anywhere,
+                );
                 self.space(ForceSpace::No);
                 out!(self, ":");
                 self.space(ForceSpace::No);
-                self.print_child(ctx, Some(*alternate), node, ChildPos::Right);
+                self.print_child(
+                    ctx,
+                    Some(*alternate),
+                    Path::new(node, NodeField::alternate),
+                    ChildPos::Right,
+                );
             }
 
             Node::Identifier(Identifier {
-                range: _,
+                metadata: _,
                 name,
                 type_annotation,
                 optional,
             }) => {
-                self.add_segment(node.get(ctx));
+                self.add_segment(node);
                 self.write_utf8(ctx.str(*name).as_ref());
                 if *optional {
                     out!(self, "?");
@@ -969,54 +1169,67 @@ impl<W: Write> GenJS<W> {
                 if let Some(type_annotation) = type_annotation {
                     out!(self, ":");
                     self.space(ForceSpace::No);
-                    type_annotation.visit(ctx, self, Some(node));
+                    type_annotation.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::type_annotation)),
+                    );
                 }
             }
-            Node::PrivateName(PrivateName { range: _, id }) => {
-                out_token!(self, node.get(ctx), "#");
-                id.visit(ctx, self, Some(node));
+            Node::PrivateName(PrivateName { metadata: _, id }) => {
+                out_token!(self, node, "#");
+                id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
             }
             Node::MetaProperty(MetaProperty {
-                range: _,
+                metadata: _,
                 meta,
                 property,
             }) => {
-                meta.visit(ctx, self, Some(node));
+                meta.visit(ctx, self, Some(Path::new(node, NodeField::meta)));
                 out!(self, ".");
-                property.visit(ctx, self, Some(node));
+                property.visit(ctx, self, Some(Path::new(node, NodeField::property)));
             }
 
             Node::CatchClause(CatchClause {
-                range: _,
+                metadata: _,
                 param,
                 body,
             }) => {
                 self.space(ForceSpace::No);
-                out_token!(self, node.get(ctx), "catch");
+                out_token!(self, node, "catch");
                 if let Some(param) = param {
                     self.space(ForceSpace::No);
                     out!(self, "(");
-                    param.visit(ctx, self, Some(node));
+                    param.visit(ctx, self, Some(Path::new(node, NodeField::param)));
                     out!(self, ")");
                 }
-                self.visit_stmt_or_block(ctx, *body, ForceBlock::Yes, node);
+                self.visit_stmt_or_block(
+                    ctx,
+                    *body,
+                    ForceBlock::Yes,
+                    Path::new(node, NodeField::body),
+                );
             }
 
             Node::VariableDeclaration(VariableDeclaration {
-                range: _,
+                metadata: _,
                 kind,
                 declarations,
             }) => {
-                out_token!(self, node.get(ctx), "{} ", kind.as_str());
+                out_token!(self, node, "{} ", kind.as_str());
                 for (i, decl) in declarations.iter().enumerate() {
                     if i > 0 {
                         self.comma();
                     }
-                    decl.visit(ctx, self, Some(node));
+                    decl.visit(ctx, self, Some(Path::new(node, NodeField::declarations)));
                 }
             }
-            Node::VariableDeclarator(VariableDeclarator { range: _, init, id }) => {
-                id.visit(ctx, self, Some(node));
+            Node::VariableDeclarator(VariableDeclarator {
+                metadata: _,
+                init,
+                id,
+            }) => {
+                id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
                 if let Some(init) = init {
                     out!(
                         self,
@@ -1026,24 +1239,24 @@ impl<W: Write> GenJS<W> {
                             Pretty::No => "=",
                         }
                     );
-                    init.visit(ctx, self, Some(node));
+                    init.visit(ctx, self, Some(Path::new(node, NodeField::init)));
                 }
             }
 
             Node::TemplateLiteral(TemplateLiteral {
-                range: _,
+                metadata: _,
                 quasis,
                 expressions,
             }) => {
-                out_token!(self, node.get(ctx), "`");
+                out_token!(self, node, "`");
                 let mut it_expr = expressions.iter();
                 for quasi in quasis {
                     if let Node::TemplateElement(TemplateElement {
-                        range: _,
+                        metadata: _,
                         raw,
                         tail: _,
                         cooked: _,
-                    }) = &quasi.get(ctx)
+                    }) = quasi
                     {
                         let mut buf = [0u8; 4];
                         for char in ctx.str(*raw).chars() {
@@ -1055,7 +1268,7 @@ impl<W: Write> GenJS<W> {
                         }
                         if let Some(expr) = it_expr.next() {
                             out!(self, "${{");
-                            expr.visit(ctx, self, Some(node));
+                            expr.visit(ctx, self, Some(Path::new(node, NodeField::expressions)));
                             out!(self, "}}");
                         }
                     }
@@ -1063,19 +1276,29 @@ impl<W: Write> GenJS<W> {
                 out!(self, "`");
             }
             Node::TaggedTemplateExpression(TaggedTemplateExpression {
-                range: _,
+                metadata: _,
                 tag,
                 quasi,
             }) => {
-                self.print_child(ctx, Some(*tag), node, ChildPos::Left);
-                self.print_child(ctx, Some(*quasi), node, ChildPos::Right);
+                self.print_child(
+                    ctx,
+                    Some(*tag),
+                    Path::new(node, NodeField::tag),
+                    ChildPos::Left,
+                );
+                self.print_child(
+                    ctx,
+                    Some(*quasi),
+                    Path::new(node, NodeField::quasi),
+                    ChildPos::Right,
+                );
             }
             Node::TemplateElement(_) => {
                 unreachable!("TemplateElement is handled in TemplateLiteral case");
             }
 
             Node::Property(Property {
-                range: _,
+                metadata: _,
                 key,
                 value,
                 kind,
@@ -1085,12 +1308,12 @@ impl<W: Write> GenJS<W> {
             }) => {
                 let mut need_sep = false;
                 if *kind != PropertyKind::Init {
-                    out_token!(self, node.get(ctx), "{}", kind.as_str());
+                    out_token!(self, node, "{}", kind.as_str());
                     need_sep = true;
                 } else if *method {
-                    match &value.get(ctx) {
+                    match value {
                         Node::FunctionExpression(FunctionExpression {
-                            range: _,
+                            metadata: _,
                             generator,
                             is_async,
                             ..
@@ -1126,9 +1349,9 @@ impl<W: Write> GenJS<W> {
                     return;
                 }
                 if *kind != PropertyKind::Init || *method {
-                    match &value.get(ctx) {
+                    match value {
                         Node::FunctionExpression(FunctionExpression {
-                            range: _,
+                            metadata: _,
                             params,
                             body,
                             return_type,
@@ -1149,25 +1372,35 @@ impl<W: Write> GenJS<W> {
                 } else {
                     out!(self, ":");
                     self.space(ForceSpace::No);
-                    self.print_comma_expression(ctx, *value, node);
+                    self.print_comma_expression(ctx, *value, Path::new(node, NodeField::value));
                 }
             }
 
             Node::LogicalExpression(LogicalExpression {
-                range: _,
+                metadata: _,
                 left,
                 right,
                 operator,
             }) => {
-                self.print_child(ctx, Some(*left), node, ChildPos::Left);
+                self.print_child(
+                    ctx,
+                    Some(*left),
+                    Path::new(node, NodeField::left),
+                    ChildPos::Left,
+                );
                 self.space(ForceSpace::No);
                 out!(self, "{}", operator.as_str());
                 self.space(ForceSpace::No);
-                self.print_child(ctx, Some(*right), node, ChildPos::Right);
+                self.print_child(
+                    ctx,
+                    Some(*right),
+                    Path::new(node, NodeField::right),
+                    ChildPos::Right,
+                );
             }
 
             Node::ClassExpression(ClassExpression {
-                range: _,
+                metadata: _,
                 id,
                 type_parameters,
                 super_class,
@@ -1177,7 +1410,7 @@ impl<W: Write> GenJS<W> {
                 body,
             })
             | Node::ClassDeclaration(ClassDeclaration {
-                range: _,
+                metadata: _,
                 id,
                 type_parameters,
                 super_class,
@@ -1188,26 +1421,34 @@ impl<W: Write> GenJS<W> {
             }) => {
                 if !decorators.is_empty() {
                     for decorator in decorators {
-                        decorator.visit(ctx, self, Some(node));
+                        decorator.visit(ctx, self, Some(Path::new(node, NodeField::decorators)));
                         self.force_newline();
                     }
                     out!(self, "class");
                 } else {
-                    out_token!(self, node.get(ctx), "class");
+                    out_token!(self, node, "class");
                 }
                 if let Some(id) = id {
                     self.space(ForceSpace::Yes);
-                    id.visit(ctx, self, Some(node));
+                    id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
                 }
                 if let Some(type_parameters) = type_parameters {
-                    type_parameters.visit(ctx, self, Some(node));
+                    type_parameters.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::type_parameters)),
+                    );
                 }
                 if let Some(super_class) = super_class {
                     out!(self, " extends ");
-                    super_class.visit(ctx, self, Some(node));
+                    super_class.visit(ctx, self, Some(Path::new(node, NodeField::super_class)));
                 }
                 if let Some(super_type_parameters) = super_type_parameters {
-                    super_type_parameters.visit(ctx, self, Some(node));
+                    super_type_parameters.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::super_type_parameters)),
+                    );
                 }
                 if !implements.is_empty() {
                     out!(self, " implements ");
@@ -1215,15 +1456,15 @@ impl<W: Write> GenJS<W> {
                         if i > 0 {
                             self.comma();
                         }
-                        implement.visit(ctx, self, Some(node));
+                        implement.visit(ctx, self, Some(Path::new(node, NodeField::implements)));
                     }
                 }
 
                 self.space(ForceSpace::No);
-                body.visit(ctx, self, Some(node));
+                body.visit(ctx, self, Some(Path::new(node, NodeField::body)));
             }
 
-            Node::ClassBody(ClassBody { range: _, body }) => {
+            Node::ClassBody(ClassBody { metadata: _, body }) => {
                 if body.is_empty() {
                     out!(self, "{{}}");
                 } else {
@@ -1231,7 +1472,7 @@ impl<W: Write> GenJS<W> {
                     self.inc_indent();
                     self.newline();
                     for prop in body {
-                        prop.visit(ctx, self, Some(node));
+                        prop.visit(ctx, self, Some(Path::new(node, NodeField::body)));
                         self.newline();
                     }
                     out!(self, "}}");
@@ -1240,7 +1481,7 @@ impl<W: Write> GenJS<W> {
                 }
             }
             Node::ClassProperty(ClassProperty {
-                range: _,
+                metadata: _,
                 key,
                 value,
                 computed,
@@ -1256,7 +1497,7 @@ impl<W: Write> GenJS<W> {
                 if *computed {
                     out!(self, "[");
                 }
-                key.visit(ctx, self, Some(node));
+                key.visit(ctx, self, Some(Path::new(node, NodeField::key)));
                 if *computed {
                     out!(self, "]");
                 }
@@ -1264,12 +1505,12 @@ impl<W: Write> GenJS<W> {
                 if let Some(value) = value {
                     out!(self, "=");
                     self.space(ForceSpace::No);
-                    value.visit(ctx, self, Some(node));
+                    value.visit(ctx, self, Some(Path::new(node, NodeField::value)));
                 }
                 out!(self, ";");
             }
             Node::ClassPrivateProperty(ClassPrivateProperty {
-                range: _,
+                metadata: _,
                 key,
                 value,
                 is_static,
@@ -1282,39 +1523,38 @@ impl<W: Write> GenJS<W> {
                     out!(self, "static ");
                 }
                 out!(self, "#");
-                key.visit(ctx, self, Some(node));
+                key.visit(ctx, self, Some(Path::new(node, NodeField::key)));
                 self.space(ForceSpace::No);
                 if let Some(value) = value {
                     out!(self, "=");
                     self.space(ForceSpace::No);
-                    value.visit(ctx, self, Some(node));
+                    value.visit(ctx, self, Some(Path::new(node, NodeField::value)));
                 }
                 out!(self, ";");
             }
             Node::MethodDefinition(MethodDefinition {
-                range: _,
+                metadata: _,
                 key,
                 value,
                 kind,
                 computed,
                 is_static,
             }) => {
-                let (is_async, generator, params, body, return_type, predicate) =
-                    match &value.get(ctx) {
-                        Node::FunctionExpression(FunctionExpression {
-                            range: _,
-                            generator,
-                            is_async,
-                            params,
-                            body,
-                            return_type,
-                            predicate,
-                            ..
-                        }) => (*is_async, *generator, params, body, return_type, predicate),
-                        _ => {
-                            unreachable!("Invalid method value");
-                        }
-                    };
+                let (is_async, generator, params, body, return_type, predicate) = match value {
+                    Node::FunctionExpression(FunctionExpression {
+                        metadata: _,
+                        generator,
+                        is_async,
+                        params,
+                        body,
+                        return_type,
+                        predicate,
+                        ..
+                    }) => (*is_async, *generator, params, body, return_type, predicate),
+                    _ => {
+                        unreachable!("Invalid method value");
+                    }
+                };
                 if *is_static {
                     out!(self, "static ");
                 }
@@ -1339,7 +1579,7 @@ impl<W: Write> GenJS<W> {
                 if *computed {
                     out!(self, "[");
                 }
-                key.visit(ctx, self, Some(node));
+                key.visit(ctx, self, Some(Path::new(node, NodeField::key)));
                 if *computed {
                     out!(self, "]");
                 }
@@ -1347,13 +1587,13 @@ impl<W: Write> GenJS<W> {
             }
 
             Node::ImportDeclaration(ImportDeclaration {
-                range: _,
+                metadata: _,
                 specifiers,
                 source,
                 assertions,
                 import_kind,
             }) => {
-                out_token!(self, node.get(ctx), "import ");
+                out_token!(self, node, "import ");
                 if *import_kind != ImportKind::Value {
                     out!(self, "{} ", import_kind.as_str());
                 }
@@ -1362,13 +1602,13 @@ impl<W: Write> GenJS<W> {
                     if i > 0 {
                         self.comma();
                     }
-                    if let Node::ImportSpecifier(_) = &spec.get(ctx) {
+                    if let Node::ImportSpecifier(_) = spec {
                         if !has_named_specs {
                             has_named_specs = true;
                             out!(self, "{{");
                         }
                     }
-                    spec.visit(ctx, self, Some(node));
+                    spec.visit(ctx, self, Some(Path::new(node, NodeField::specifiers)));
                 }
                 if !specifiers.is_empty() {
                     if has_named_specs {
@@ -1379,7 +1619,7 @@ impl<W: Write> GenJS<W> {
                     }
                     out!(self, "from ");
                 }
-                source.visit(ctx, self, Some(node));
+                source.visit(ctx, self, Some(Path::new(node, NodeField::source)));
                 if let Some(assertions) = assertions {
                     if !assertions.is_empty() {
                         out!(self, " assert {{");
@@ -1387,7 +1627,11 @@ impl<W: Write> GenJS<W> {
                             if i > 0 {
                                 self.comma();
                             }
-                            attribute.visit(ctx, self, Some(node));
+                            attribute.visit(
+                                ctx,
+                                self,
+                                Some(Path::new(node, NodeField::assertions)),
+                            );
                         }
                         out!(self, "}}");
                     }
@@ -1395,7 +1639,7 @@ impl<W: Write> GenJS<W> {
                 self.newline();
             }
             Node::ImportSpecifier(ImportSpecifier {
-                range: _,
+                metadata: _,
                 imported,
                 local,
                 import_kind,
@@ -1403,105 +1647,112 @@ impl<W: Write> GenJS<W> {
                 if *import_kind != ImportKind::Value {
                     out!(self, "{} ", import_kind.as_str());
                 }
-                imported.visit(ctx, self, Some(node));
+                imported.visit(ctx, self, Some(Path::new(node, NodeField::imported)));
                 out!(self, " as ");
-                local.visit(ctx, self, Some(node));
+                local.visit(ctx, self, Some(Path::new(node, NodeField::local)));
             }
-            Node::ImportDefaultSpecifier(ImportDefaultSpecifier { range: _, local }) => {
-                local.visit(ctx, self, Some(node));
+            Node::ImportDefaultSpecifier(ImportDefaultSpecifier { metadata: _, local }) => {
+                local.visit(ctx, self, Some(Path::new(node, NodeField::local)));
             }
-            Node::ImportNamespaceSpecifier(ImportNamespaceSpecifier { range: _, local }) => {
+            Node::ImportNamespaceSpecifier(ImportNamespaceSpecifier { metadata: _, local }) => {
                 out!(self, "* as ");
-                local.visit(ctx, self, Some(node));
+                local.visit(ctx, self, Some(Path::new(node, NodeField::local)));
             }
             Node::ImportAttribute(ImportAttribute {
-                range: _,
+                metadata: _,
                 key,
                 value,
             }) => {
-                key.visit(ctx, self, Some(node));
+                key.visit(ctx, self, Some(Path::new(node, NodeField::key)));
                 out!(self, ":");
                 self.space(ForceSpace::No);
-                value.visit(ctx, self, Some(node));
+                value.visit(ctx, self, Some(Path::new(node, NodeField::value)));
             }
 
             Node::ExportNamedDeclaration(ExportNamedDeclaration {
-                range: _,
+                metadata: _,
                 declaration,
                 specifiers,
                 source,
                 export_kind,
             }) => {
-                out_token!(self, node.get(ctx), "export ");
+                out_token!(self, node, "export ");
                 if *export_kind != ExportKind::Value {
                     out!(self, "{} ", export_kind.as_str());
                 }
                 if let Some(declaration) = declaration {
-                    declaration.visit(ctx, self, Some(node));
+                    declaration.visit(ctx, self, Some(Path::new(node, NodeField::declaration)));
                 } else {
                     out!(self, "{{");
                     for (i, spec) in specifiers.iter().enumerate() {
                         if i > 0 {
                             self.comma();
                         }
-                        spec.visit(ctx, self, Some(node));
+                        spec.visit(ctx, self, Some(Path::new(node, NodeField::specifiers)));
                     }
                     out!(self, "}}");
                     if let Some(source) = source {
                         out!(self, " from ");
-                        source.visit(ctx, self, Some(node));
+                        source.visit(ctx, self, Some(Path::new(node, NodeField::source)));
                     }
                 }
                 self.newline();
             }
             Node::ExportSpecifier(ExportSpecifier {
-                range: _,
+                metadata: _,
                 exported,
                 local,
             }) => {
-                local.visit(ctx, self, Some(node));
+                local.visit(ctx, self, Some(Path::new(node, NodeField::local)));
                 out!(self, " as ");
-                exported.visit(ctx, self, Some(node));
+                exported.visit(ctx, self, Some(Path::new(node, NodeField::exported)));
             }
-            Node::ExportNamespaceSpecifier(ExportNamespaceSpecifier { range: _, exported }) => {
+            Node::ExportNamespaceSpecifier(ExportNamespaceSpecifier {
+                metadata: _,
+                exported,
+            }) => {
                 out!(self, "* as ");
-                exported.visit(ctx, self, Some(node));
+                exported.visit(ctx, self, Some(Path::new(node, NodeField::exported)));
             }
             Node::ExportDefaultDeclaration(ExportDefaultDeclaration {
-                range: _,
+                metadata: _,
                 declaration,
             }) => {
-                out_token!(self, node.get(ctx), "export default ");
-                declaration.visit(ctx, self, Some(node));
+                out_token!(self, node, "export default ");
+                declaration.visit(ctx, self, Some(Path::new(node, NodeField::declaration)));
                 self.newline();
             }
             Node::ExportAllDeclaration(ExportAllDeclaration {
-                range: _,
+                metadata: _,
                 source,
                 export_kind,
             }) => {
-                out_token!(self, node.get(ctx), "export ");
+                out_token!(self, node, "export ");
                 if *export_kind != ExportKind::Value {
                     out!(self, "{} ", export_kind.as_str());
                 }
                 out!(self, "* from ");
-                source.visit(ctx, self, Some(node));
+                source.visit(ctx, self, Some(Path::new(node, NodeField::source)));
             }
 
             Node::ObjectPattern(ObjectPattern {
-                range: _,
+                metadata: _,
                 properties,
                 type_annotation,
             }) => {
-                self.visit_props(ctx, properties, node);
+                self.visit_props(ctx, properties, Path::new(node, NodeField::properties));
                 if let Some(type_annotation) = type_annotation {
                     out!(self, ":");
                     self.space(ForceSpace::No);
-                    type_annotation.visit(ctx, self, Some(node));
+                    type_annotation.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::type_annotation)),
+                    );
                 }
             }
             Node::ArrayPattern(ArrayPattern {
-                range: _,
+                metadata: _,
                 elements,
                 type_annotation,
             }) => {
@@ -1510,80 +1761,87 @@ impl<W: Write> GenJS<W> {
                     if i > 0 {
                         self.comma();
                     }
-                    elem.visit(ctx, self, Some(node));
+                    elem.visit(ctx, self, Some(Path::new(node, NodeField::elements)));
                 }
                 out!(self, "]");
                 if let Some(type_annotation) = type_annotation {
                     out!(self, ":");
                     self.space(ForceSpace::No);
-                    type_annotation.visit(ctx, self, Some(node));
+                    type_annotation.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::type_annotation)),
+                    );
                 }
             }
-            Node::RestElement(RestElement { range: _, argument }) => {
+            Node::RestElement(RestElement {
+                metadata: _,
+                argument,
+            }) => {
                 out!(self, "...");
-                argument.visit(ctx, self, Some(node));
+                argument.visit(ctx, self, Some(Path::new(node, NodeField::argument)));
             }
             Node::AssignmentPattern(AssignmentPattern {
-                range: _,
+                metadata: _,
                 left,
                 right,
             }) => {
-                left.visit(ctx, self, Some(node));
+                left.visit(ctx, self, Some(Path::new(node, NodeField::left)));
                 self.space(ForceSpace::No);
                 out!(self, "=");
                 self.space(ForceSpace::No);
-                right.visit(ctx, self, Some(node));
+                right.visit(ctx, self, Some(Path::new(node, NodeField::right)));
             }
 
-            Node::JSXIdentifier(JSXIdentifier { range: _, name }) => {
-                out_token!(self, node.get(ctx), "{}", ctx.str(*name));
+            Node::JSXIdentifier(JSXIdentifier { metadata: _, name }) => {
+                out_token!(self, node, "{}", ctx.str(*name));
             }
             Node::JSXMemberExpression(JSXMemberExpression {
-                range: _,
+                metadata: _,
                 object,
                 property,
             }) => {
-                object.visit(ctx, self, Some(node));
+                object.visit(ctx, self, Some(Path::new(node, NodeField::object)));
                 out!(self, ".");
-                property.visit(ctx, self, Some(node));
+                property.visit(ctx, self, Some(Path::new(node, NodeField::property)));
             }
             Node::JSXNamespacedName(JSXNamespacedName {
-                range: _,
+                metadata: _,
                 namespace,
                 name,
             }) => {
-                namespace.visit(ctx, self, Some(node));
+                namespace.visit(ctx, self, Some(Path::new(node, NodeField::namespace)));
                 out!(self, ":");
-                name.visit(ctx, self, Some(node));
+                name.visit(ctx, self, Some(Path::new(node, NodeField::name)));
             }
             Node::JSXEmptyExpression(_) => {}
             Node::JSXExpressionContainer(JSXExpressionContainer {
-                range: _,
+                metadata: _,
                 expression,
             }) => {
                 out!(self, "{{");
-                expression.visit(ctx, self, Some(node));
+                expression.visit(ctx, self, Some(Path::new(node, NodeField::expression)));
                 out!(self, "}}");
             }
             Node::JSXSpreadChild(JSXSpreadChild {
-                range: _,
+                metadata: _,
                 expression,
             }) => {
                 out!(self, "{{...");
-                expression.visit(ctx, self, Some(node));
+                expression.visit(ctx, self, Some(Path::new(node, NodeField::expression)));
                 out!(self, "}}");
             }
             Node::JSXOpeningElement(JSXOpeningElement {
-                range: _,
+                metadata: _,
                 name,
                 attributes,
                 self_closing,
             }) => {
                 out!(self, "<");
-                name.visit(ctx, self, Some(node));
+                name.visit(ctx, self, Some(Path::new(node, NodeField::name)));
                 for attr in attributes {
                     self.space(ForceSpace::Yes);
-                    attr.visit(ctx, self, Some(node));
+                    attr.visit(ctx, self, Some(Path::new(node, NodeField::attributes)));
                 }
                 if *self_closing {
                     out!(self, " />");
@@ -1591,29 +1849,32 @@ impl<W: Write> GenJS<W> {
                     out!(self, ">");
                 }
             }
-            Node::JSXClosingElement(JSXClosingElement { range: _, name }) => {
+            Node::JSXClosingElement(JSXClosingElement { metadata: _, name }) => {
                 out!(self, "</");
-                name.visit(ctx, self, Some(node));
+                name.visit(ctx, self, Some(Path::new(node, NodeField::name)));
                 out!(self, ">");
             }
             Node::JSXAttribute(JSXAttribute {
-                range: _,
+                metadata: _,
                 name,
                 value,
             }) => {
-                name.visit(ctx, self, Some(node));
+                name.visit(ctx, self, Some(Path::new(node, NodeField::name)));
                 if let Some(value) = value {
                     out!(self, "=");
-                    value.visit(ctx, self, Some(node));
+                    value.visit(ctx, self, Some(Path::new(node, NodeField::value)));
                 }
             }
-            Node::JSXSpreadAttribute(JSXSpreadAttribute { range: _, argument }) => {
+            Node::JSXSpreadAttribute(JSXSpreadAttribute {
+                metadata: _,
+                argument,
+            }) => {
                 out!(self, "{{...");
-                argument.visit(ctx, self, Some(node));
+                argument.visit(ctx, self, Some(Path::new(node, NodeField::argument)));
                 out!(self, "}}");
             }
             Node::JSXText(JSXText {
-                range: _,
+                metadata: _,
                 value: _,
                 raw,
             }) => {
@@ -1627,94 +1888,104 @@ impl<W: Write> GenJS<W> {
                 }
             }
             Node::JSXElement(JSXElement {
-                range: _,
+                metadata: _,
                 opening_element,
                 children,
                 closing_element,
             }) => {
-                opening_element.visit(ctx, self, Some(node));
+                opening_element.visit(ctx, self, Some(Path::new(node, NodeField::opening_element)));
                 if let Some(closing_element) = closing_element {
                     for child in children {
-                        child.visit(ctx, self, Some(node));
+                        child.visit(ctx, self, Some(Path::new(node, NodeField::children)));
                     }
-                    closing_element.visit(ctx, self, Some(node));
+                    closing_element.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::closing_element)),
+                    );
                 }
             }
             Node::JSXFragment(JSXFragment {
-                range: _,
+                metadata: _,
                 opening_fragment,
                 children,
                 closing_fragment,
             }) => {
-                opening_fragment.visit(ctx, self, Some(node));
+                opening_fragment.visit(
+                    ctx,
+                    self,
+                    Some(Path::new(node, NodeField::opening_fragment)),
+                );
                 for child in children {
-                    child.visit(ctx, self, Some(node));
+                    child.visit(ctx, self, Some(Path::new(node, NodeField::children)));
                 }
-                closing_fragment.visit(ctx, self, Some(node));
+                closing_fragment.visit(
+                    ctx,
+                    self,
+                    Some(Path::new(node, NodeField::closing_fragment)),
+                );
             }
             Node::JSXOpeningFragment(_) => {
-                out_token!(self, node.get(ctx), "<>");
+                out_token!(self, node, "<>");
             }
             Node::JSXClosingFragment(_) => {
-                out_token!(self, node.get(ctx), "</>");
+                out_token!(self, node, "</>");
             }
 
             Node::ExistsTypeAnnotation(_) => {
-                out_token!(self, node.get(ctx), "*");
+                out_token!(self, node, "*");
             }
             Node::EmptyTypeAnnotation(_) => {
-                out_token!(self, node.get(ctx), "empty");
+                out_token!(self, node, "empty");
             }
             Node::StringTypeAnnotation(_) => {
-                out_token!(self, node.get(ctx), "string");
+                out_token!(self, node, "string");
             }
             Node::NumberTypeAnnotation(_) => {
-                out_token!(self, node.get(ctx), "number");
+                out_token!(self, node, "number");
             }
-            Node::StringLiteralTypeAnnotation(StringLiteralTypeAnnotation { range: _, value }) => {
-                out_token!(self, node.get(ctx), "\"");
+            Node::StringLiteralTypeAnnotation(StringLiteralTypeAnnotation {
+                metadata: _,
+                value,
+            }) => {
+                out_token!(self, node, "\"");
                 self.print_escaped_string_literal(value, '"');
                 out!(self, "\"");
             }
             Node::NumberLiteralTypeAnnotation(NumberLiteralTypeAnnotation {
-                range: _,
+                metadata: _,
                 value,
                 ..
             }) => {
-                out_token!(self, node.get(ctx), "{}", convert::number_to_string(*value));
+                out_token!(self, node, "{}", convert::number_to_string(*value));
             }
             Node::BooleanTypeAnnotation(_) => {
-                out_token!(self, node.get(ctx), "boolean");
+                out_token!(self, node, "boolean");
             }
             Node::BooleanLiteralTypeAnnotation(BooleanLiteralTypeAnnotation {
-                range: _,
+                metadata: _,
                 value,
                 ..
             }) => {
-                out_token!(
-                    self,
-                    node.get(ctx),
-                    "{}",
-                    if *value { "true" } else { "false" }
-                );
+                out_token!(self, node, "{}", if *value { "true" } else { "false" });
             }
             Node::NullLiteralTypeAnnotation(_) => {
-                out_token!(self, node.get(ctx), "null");
+                out_token!(self, node, "null");
             }
             Node::SymbolTypeAnnotation(_) => {
-                out_token!(self, node.get(ctx), "symbol");
+                out_token!(self, node, "symbol");
             }
             Node::AnyTypeAnnotation(_) => {
-                out_token!(self, node.get(ctx), "any");
+                out_token!(self, node, "any");
             }
             Node::MixedTypeAnnotation(_) => {
-                out_token!(self, node.get(ctx), "mixed");
+                out_token!(self, node, "mixed");
             }
             Node::VoidTypeAnnotation(_) => {
-                out_token!(self, node.get(ctx), "void");
+                out_token!(self, node, "void");
             }
             Node::FunctionTypeAnnotation(FunctionTypeAnnotation {
-                range: _,
+                metadata: _,
                 params,
                 this,
                 return_type,
@@ -1722,7 +1993,11 @@ impl<W: Write> GenJS<W> {
                 type_parameters,
             }) => {
                 if let Some(type_parameters) = type_parameters {
-                    type_parameters.visit(ctx, self, Some(node));
+                    type_parameters.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::type_parameters)),
+                    );
                 }
                 let need_parens = type_parameters.is_some() || rest.is_some() || params.len() != 1;
                 if need_parens {
@@ -1730,28 +2005,32 @@ impl<W: Write> GenJS<W> {
                 }
                 let mut need_comma = false;
                 if let Some(this) = this {
-                    match &this.get(ctx) {
+                    match this {
                         Node::FunctionTypeParam(FunctionTypeParam {
-                            range: _,
+                            metadata: _,
                             type_annotation,
                             ..
                         }) => {
                             out!(self, "this:");
                             self.space(ForceSpace::No);
-                            type_annotation.visit(ctx, self, Some(node));
+                            type_annotation.visit(
+                                ctx,
+                                self,
+                                Some(Path::new(node, NodeField::type_annotation)),
+                            );
                         }
                         _ => {
                             unimplemented!("Malformed AST: Need to handle error");
                         }
                     }
-                    this.visit(ctx, self, Some(node));
+                    this.visit(ctx, self, Some(Path::new(node, NodeField::this)));
                     need_comma = true;
                 }
                 for param in params.iter() {
                     if need_comma {
                         self.comma();
                     }
-                    param.visit(ctx, self, Some(node));
+                    param.visit(ctx, self, Some(Path::new(node, NodeField::param)));
                     need_comma = true;
                 }
                 if let Some(rest) = rest {
@@ -1759,7 +2038,7 @@ impl<W: Write> GenJS<W> {
                         self.comma();
                     }
                     out!(self, "...");
-                    rest.visit(ctx, self, Some(node));
+                    rest.visit(ctx, self, Some(Path::new(node, NodeField::rest)));
                 }
                 if need_parens {
                     out!(self, ")");
@@ -1769,114 +2048,131 @@ impl<W: Write> GenJS<W> {
                 } else {
                     out!(self, "=>");
                 }
-                return_type.visit(ctx, self, Some(node));
+                return_type.visit(ctx, self, Some(Path::new(node, NodeField::return_type)));
             }
             Node::FunctionTypeParam(FunctionTypeParam {
-                range: _,
+                metadata: _,
                 name,
                 type_annotation,
                 optional,
             }) => {
                 if let Some(name) = name {
-                    name.visit(ctx, self, Some(node));
+                    name.visit(ctx, self, Some(Path::new(node, NodeField::name)));
                     if *optional {
                         out!(self, "?");
                     }
                     out!(self, ":");
                     self.space(ForceSpace::No);
                 }
-                type_annotation.visit(ctx, self, Some(node));
+                type_annotation.visit(ctx, self, Some(Path::new(node, NodeField::type_annotation)));
             }
             Node::NullableTypeAnnotation(NullableTypeAnnotation {
-                range: _,
+                metadata: _,
                 type_annotation,
             }) => {
                 out!(self, "?");
-                type_annotation.visit(ctx, self, Some(node));
+                type_annotation.visit(ctx, self, Some(Path::new(node, NodeField::type_annotation)));
             }
             Node::QualifiedTypeIdentifier(QualifiedTypeIdentifier {
-                range: _,
+                metadata: _,
                 qualification,
                 id,
             }) => {
-                qualification.visit(ctx, self, Some(node));
+                qualification.visit(ctx, self, Some(Path::new(node, NodeField::qualification)));
                 out!(self, ".");
-                id.visit(ctx, self, Some(node));
+                id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
             }
-            Node::TypeofTypeAnnotation(TypeofTypeAnnotation { range: _, argument }) => {
+            Node::TypeofTypeAnnotation(TypeofTypeAnnotation {
+                metadata: _,
+                argument,
+            }) => {
                 out!(self, "typeof ");
-                argument.visit(ctx, self, Some(node));
+                argument.visit(ctx, self, Some(Path::new(node, NodeField::argument)));
             }
-            Node::TupleTypeAnnotation(TupleTypeAnnotation { range: _, types }) => {
+            Node::TupleTypeAnnotation(TupleTypeAnnotation { metadata: _, types }) => {
                 out!(self, "[");
                 for (i, ty) in types.iter().enumerate() {
                     if i > 0 {
                         self.comma();
                     }
-                    ty.visit(ctx, self, Some(node));
+                    ty.visit(ctx, self, Some(Path::new(node, NodeField::types)));
                 }
                 out!(self, "]");
             }
             Node::ArrayTypeAnnotation(ArrayTypeAnnotation {
-                range: _,
+                metadata: _,
                 element_type,
             }) => {
-                element_type.visit(ctx, self, Some(node));
+                element_type.visit(ctx, self, Some(Path::new(node, NodeField::element_type)));
                 out!(self, "[]");
             }
-            Node::UnionTypeAnnotation(UnionTypeAnnotation { range: _, types }) => {
+            Node::UnionTypeAnnotation(UnionTypeAnnotation { metadata: _, types }) => {
                 for (i, ty) in types.iter().enumerate() {
                     if i > 0 {
                         self.space(ForceSpace::No);
                         out!(self, "|");
                         self.space(ForceSpace::No);
                     }
-                    self.print_child(ctx, Some(*ty), node, ChildPos::Anywhere);
+                    self.print_child(
+                        ctx,
+                        Some(*ty),
+                        Path::new(node, NodeField::types),
+                        ChildPos::Anywhere,
+                    );
                 }
             }
-            Node::IntersectionTypeAnnotation(IntersectionTypeAnnotation { range: _, types }) => {
+            Node::IntersectionTypeAnnotation(IntersectionTypeAnnotation { metadata: _, types }) => {
                 for (i, ty) in types.iter().enumerate() {
                     if i > 0 {
                         self.space(ForceSpace::No);
                         out!(self, "&");
                         self.space(ForceSpace::No);
                     }
-                    self.print_child(ctx, Some(*ty), node, ChildPos::Anywhere);
+                    self.print_child(
+                        ctx,
+                        Some(*ty),
+                        Path::new(node, NodeField::types),
+                        ChildPos::Anywhere,
+                    );
                 }
             }
             Node::GenericTypeAnnotation(GenericTypeAnnotation {
-                range: _,
+                metadata: _,
                 id,
                 type_parameters,
             }) => {
-                id.visit(ctx, self, Some(node));
+                id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
                 if let Some(type_parameters) = type_parameters {
-                    type_parameters.visit(ctx, self, Some(node));
+                    type_parameters.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::type_parameters)),
+                    );
                 }
             }
             Node::IndexedAccessType(IndexedAccessType {
-                range: _,
+                metadata: _,
                 object_type,
                 index_type,
             }) => {
-                object_type.visit(ctx, self, Some(node));
+                object_type.visit(ctx, self, Some(Path::new(node, NodeField::object_type)));
                 out!(self, "[");
-                index_type.visit(ctx, self, Some(node));
+                index_type.visit(ctx, self, Some(Path::new(node, NodeField::index_type)));
                 out!(self, "]");
             }
             Node::OptionalIndexedAccessType(OptionalIndexedAccessType {
-                range: _,
+                metadata: _,
                 object_type,
                 index_type,
                 optional,
             }) => {
-                object_type.visit(ctx, self, Some(node));
+                object_type.visit(ctx, self, Some(Path::new(node, NodeField::object_type)));
                 out!(self, "{}[", if *optional { "?." } else { "" });
-                index_type.visit(ctx, self, Some(node));
+                index_type.visit(ctx, self, Some(Path::new(node, NodeField::index_type)));
                 out!(self, "]");
             }
             Node::InterfaceTypeAnnotation(InterfaceTypeAnnotation {
-                range: _,
+                metadata: _,
                 extends,
                 body,
             }) => {
@@ -1887,77 +2183,85 @@ impl<W: Write> GenJS<W> {
                         if i > 0 {
                             self.comma();
                         }
-                        extend.visit(ctx, self, Some(node));
+                        extend.visit(ctx, self, Some(Path::new(node, NodeField::extends)));
                     }
                 } else {
                     self.space(ForceSpace::No);
                 }
                 if let Some(body) = body {
-                    body.visit(ctx, self, Some(node));
+                    body.visit(ctx, self, Some(Path::new(node, NodeField::body)));
                 }
             }
 
             Node::TypeAlias(TypeAlias {
-                range: _,
+                metadata: _,
                 id,
                 type_parameters,
                 right,
             })
             | Node::DeclareTypeAlias(DeclareTypeAlias {
-                range: _,
+                metadata: _,
                 id,
                 type_parameters,
                 right,
             }) => {
-                if matches!(&node.get(ctx), Node::DeclareTypeAlias(_)) {
-                    out_token!(self, node.get(ctx), "declare type");
+                if matches!(&node, Node::DeclareTypeAlias(_)) {
+                    out_token!(self, node, "declare type");
                 } else {
-                    out_token!(self, node.get(ctx), "type ");
+                    out_token!(self, node, "type ");
                 }
-                id.visit(ctx, self, Some(node));
+                id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
                 if let Some(type_parameters) = type_parameters {
-                    type_parameters.visit(ctx, self, Some(node));
+                    type_parameters.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::type_parameters)),
+                    );
                 }
                 if self.pretty == Pretty::Yes {
                     out!(self, " = ");
                 } else {
                     out!(self, "=");
                 }
-                right.visit(ctx, self, Some(node));
+                right.visit(ctx, self, Some(Path::new(node, NodeField::right)));
             }
             Node::OpaqueType(OpaqueType {
-                range: _,
+                metadata: _,
                 id,
                 type_parameters,
                 impltype,
                 supertype,
             }) => {
-                out_token!(self, node.get(ctx), "opaque type ");
-                id.visit(ctx, self, Some(node));
+                out_token!(self, node, "opaque type ");
+                id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
                 if let Some(type_parameters) = type_parameters {
-                    type_parameters.visit(ctx, self, Some(node));
+                    type_parameters.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::type_parameters)),
+                    );
                 }
                 if let Some(supertype) = supertype {
                     out!(self, ":");
                     self.space(ForceSpace::No);
-                    supertype.visit(ctx, self, Some(node));
+                    supertype.visit(ctx, self, Some(Path::new(node, NodeField::supertype)));
                 }
                 if self.pretty == Pretty::Yes {
                     out!(self, " = ");
                 } else {
                     out!(self, "=");
                 }
-                impltype.visit(ctx, self, Some(node));
+                impltype.visit(ctx, self, Some(Path::new(node, NodeField::impltype)));
             }
             Node::InterfaceDeclaration(InterfaceDeclaration {
-                range: _,
+                metadata: _,
                 id,
                 type_parameters,
                 extends,
                 body,
             })
             | Node::DeclareInterface(DeclareInterface {
-                range: _,
+                metadata: _,
                 id,
                 type_parameters,
                 extends,
@@ -1965,7 +2269,7 @@ impl<W: Write> GenJS<W> {
             }) => {
                 self.visit_interface(
                     ctx,
-                    if matches!(node.get(ctx), Node::InterfaceDeclaration(_)) {
+                    if matches!(node, Node::InterfaceDeclaration(_)) {
                         "interface"
                     } else {
                         "declare interface"
@@ -1978,21 +2282,25 @@ impl<W: Write> GenJS<W> {
                 );
             }
             Node::DeclareOpaqueType(DeclareOpaqueType {
-                range: _,
+                metadata: _,
                 id,
                 type_parameters,
                 impltype,
                 supertype,
             }) => {
-                out_token!(self, node.get(ctx), "opaque type ");
-                id.visit(ctx, self, Some(node));
+                out_token!(self, node, "opaque type ");
+                id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
                 if let Some(type_parameters) = type_parameters {
-                    type_parameters.visit(ctx, self, Some(node));
+                    type_parameters.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::type_parameters)),
+                    );
                 }
                 if let Some(supertype) = supertype {
                     out!(self, ":");
                     self.space(ForceSpace::No);
-                    supertype.visit(ctx, self, Some(node));
+                    supertype.visit(ctx, self, Some(Path::new(node, NodeField::supertype)));
                 }
                 if self.pretty == Pretty::Yes {
                     out!(self, " = ");
@@ -2000,11 +2308,11 @@ impl<W: Write> GenJS<W> {
                     out!(self, "=");
                 }
                 if let Some(impltype) = impltype {
-                    impltype.visit(ctx, self, Some(node));
+                    impltype.visit(ctx, self, Some(Path::new(node, NodeField::impltype)));
                 }
             }
             Node::DeclareClass(DeclareClass {
-                range: _,
+                metadata: _,
                 id,
                 type_parameters,
                 extends,
@@ -2012,10 +2320,14 @@ impl<W: Write> GenJS<W> {
                 mixins,
                 body,
             }) => {
-                out_token!(self, node.get(ctx), "declare class ");
-                id.visit(ctx, self, Some(node));
+                out_token!(self, node, "declare class ");
+                id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
                 if let Some(type_parameters) = type_parameters {
-                    type_parameters.visit(ctx, self, Some(node));
+                    type_parameters.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::type_parameters)),
+                    );
                 }
                 if !extends.is_empty() {
                     out!(self, " extends ");
@@ -2023,7 +2335,7 @@ impl<W: Write> GenJS<W> {
                         if i > 0 {
                             self.comma();
                         }
-                        extend.visit(ctx, self, Some(node));
+                        extend.visit(ctx, self, Some(Path::new(node, NodeField::extends)));
                     }
                 }
                 if !mixins.is_empty() {
@@ -2032,7 +2344,7 @@ impl<W: Write> GenJS<W> {
                         if i > 0 {
                             self.comma();
                         }
-                        mixin.visit(ctx, self, Some(node));
+                        mixin.visit(ctx, self, Some(Path::new(node, NodeField::mixins)));
                     }
                 }
                 if !implements.is_empty() {
@@ -2041,70 +2353,65 @@ impl<W: Write> GenJS<W> {
                         if i > 0 {
                             self.comma();
                         }
-                        implement.visit(ctx, self, Some(node));
+                        implement.visit(ctx, self, Some(Path::new(node, NodeField::implements)));
                     }
                 }
                 self.space(ForceSpace::No);
-                body.visit(ctx, self, Some(node));
+                body.visit(ctx, self, Some(Path::new(node, NodeField::body)));
             }
             Node::DeclareFunction(DeclareFunction {
-                range: _,
+                metadata: _,
                 id,
                 predicate,
             }) => {
                 // This AST type uses the Identifier/TypeAnnotation
                 // pairing to put a name on a function header-looking construct,
                 // so we have to do some deep matching to get it to come out right.
-                out_token!(self, node.get(ctx), "declare function ");
-                match &id.get(ctx) {
+                out_token!(self, node, "declare function ");
+                match id {
                     Node::Identifier(Identifier {
-                        range: _,
+                        metadata: _,
                         name,
                         type_annotation,
                         ..
                     }) => {
                         out!(self, "{}", &ctx.str(*name));
                         match type_annotation {
-                            None => {
-                                unimplemented!("Malformed AST: Need to handle error");
-                            }
-                            Some(type_annotation) => match &type_annotation.get(ctx) {
-                                Node::TypeAnnotation(TypeAnnotation {
-                                    range: _,
-                                    type_annotation,
-                                }) => match &type_annotation.get(ctx) {
+                            Some(Node::TypeAnnotation(TypeAnnotation {
+                                metadata: _,
+                                type_annotation:
                                     Node::FunctionTypeAnnotation(FunctionTypeAnnotation {
-                                        range: _,
+                                        metadata: _,
                                         params,
                                         this,
                                         return_type,
                                         rest,
                                         type_parameters,
-                                    }) => {
-                                        self.visit_func_type_params(
-                                            ctx,
-                                            params,
-                                            *this,
-                                            *rest,
-                                            *type_parameters,
-                                            node,
-                                        );
-                                        out!(self, ":");
-                                        self.space(ForceSpace::No);
-                                        return_type.visit(ctx, self, Some(node));
-                                    }
-                                    _ => {
-                                        unimplemented!("Malformed AST: Need to handle error");
-                                    }
-                                },
-                                _ => {
-                                    unimplemented!("Malformed AST: Need to handle error");
-                                }
-                            },
+                                    }),
+                            })) => {
+                                self.visit_func_type_params(
+                                    ctx,
+                                    params,
+                                    *this,
+                                    *rest,
+                                    *type_parameters,
+                                    node,
+                                );
+                                out!(self, ":");
+                                self.space(ForceSpace::No);
+                                return_type.visit(
+                                    ctx,
+                                    self,
+                                    Some(Path::new(node, NodeField::return_type)),
+                                );
+                            }
+                            _ => {
+                                unimplemented!("Malformed AST: Need to handle error");
+                            }
                         }
                         if let Some(predicate) = predicate {
                             self.space(ForceSpace::No);
-                            predicate.visit(ctx, self, Some(node));
+                            predicate.visit(ctx, self, Some(Path::new(node, NodeField::predicate)));
                         }
                     }
                     _ => {
@@ -2112,87 +2419,97 @@ impl<W: Write> GenJS<W> {
                     }
                 }
             }
-            Node::DeclareVariable(DeclareVariable { range: _, id }) => {
-                if let Some(parent) = parent {
-                    if !matches!(parent.get(ctx), Node::DeclareExportDeclaration(_)) {
+            Node::DeclareVariable(DeclareVariable { metadata: _, id }) => {
+                if let Some(path) = path {
+                    if !matches!(path.parent, Node::DeclareExportDeclaration(_)) {
                         out!(self, "declare ");
                     }
                 }
-                id.visit(ctx, self, Some(node));
+                id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
             }
             Node::DeclareExportDeclaration(DeclareExportDeclaration {
-                range: _,
+                metadata: _,
                 declaration,
                 specifiers,
                 source,
                 default,
             }) => {
-                out_token!(self, node.get(ctx), "declare export ");
+                out_token!(self, node, "declare export ");
                 if *default {
                     out!(self, "default ");
                 }
                 if let Some(declaration) = declaration {
-                    declaration.visit(ctx, self, Some(node));
+                    declaration.visit(ctx, self, Some(Path::new(node, NodeField::declaration)));
                 } else {
                     out!(self, "{{");
                     for (i, spec) in specifiers.iter().enumerate() {
                         if i > 0 {
                             self.comma();
                         }
-                        spec.visit(ctx, self, Some(node));
+                        spec.visit(ctx, self, Some(Path::new(node, NodeField::specifiers)));
                     }
                     out!(self, "}}");
                     if let Some(source) = source {
                         out!(self, " from ");
-                        source.visit(ctx, self, Some(node));
+                        source.visit(ctx, self, Some(Path::new(node, NodeField::source)));
                     }
                 }
             }
-            Node::DeclareExportAllDeclaration(DeclareExportAllDeclaration { range: _, source }) => {
-                out_token!(self, node.get(ctx), "declare export * from ");
-                source.visit(ctx, self, Some(node));
+            Node::DeclareExportAllDeclaration(DeclareExportAllDeclaration {
+                metadata: _,
+                source,
+            }) => {
+                out_token!(self, node, "declare export * from ");
+                source.visit(ctx, self, Some(Path::new(node, NodeField::source)));
             }
             Node::DeclareModule(DeclareModule {
-                range: _, id, body, ..
+                metadata: _,
+                id,
+                body,
+                ..
             }) => {
                 out!(self, "declare module ");
-                id.visit(ctx, self, Some(node));
+                id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
                 self.space(ForceSpace::No);
-                body.visit(ctx, self, Some(node));
+                body.visit(ctx, self, Some(Path::new(node, NodeField::body)));
             }
             Node::DeclareModuleExports(DeclareModuleExports {
-                range: _,
+                metadata: _,
                 type_annotation,
             }) => {
                 out!(self, "declare module.exports:");
                 self.space(ForceSpace::No);
-                type_annotation.visit(ctx, self, Some(node));
+                type_annotation.visit(ctx, self, Some(Path::new(node, NodeField::type_annotation)));
             }
 
             Node::InterfaceExtends(InterfaceExtends {
-                range: _,
+                metadata: _,
                 id,
                 type_parameters,
             })
             | Node::ClassImplements(ClassImplements {
-                range: _,
+                metadata: _,
                 id,
                 type_parameters,
             }) => {
-                id.visit(ctx, self, Some(node));
+                id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
                 if let Some(type_parameters) = type_parameters {
-                    type_parameters.visit(ctx, self, Some(node));
+                    type_parameters.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::type_parameters)),
+                    );
                 }
             }
 
             Node::TypeAnnotation(TypeAnnotation {
-                range: _,
+                metadata: _,
                 type_annotation,
             }) => {
-                type_annotation.visit(ctx, self, Some(node));
+                type_annotation.visit(ctx, self, Some(Path::new(node, NodeField::type_annotation)));
             }
             Node::ObjectTypeAnnotation(ObjectTypeAnnotation {
-                range: _,
+                metadata: _,
                 properties,
                 indexers,
                 call_properties,
@@ -2210,7 +2527,7 @@ impl<W: Write> GenJS<W> {
                     if need_comma {
                         self.comma();
                     }
-                    prop.visit(ctx, self, Some(node));
+                    prop.visit(ctx, self, Some(Path::new(node, NodeField::properties)));
                     self.newline();
                     need_comma = true;
                 }
@@ -2218,7 +2535,7 @@ impl<W: Write> GenJS<W> {
                     if need_comma {
                         self.comma();
                     }
-                    prop.visit(ctx, self, Some(node));
+                    prop.visit(ctx, self, Some(Path::new(node, NodeField::indexers)));
                     self.newline();
                     need_comma = true;
                 }
@@ -2226,7 +2543,7 @@ impl<W: Write> GenJS<W> {
                     if need_comma {
                         self.comma();
                     }
-                    prop.visit(ctx, self, Some(node));
+                    prop.visit(ctx, self, Some(Path::new(node, NodeField::call_properties)));
                     self.newline();
                     need_comma = true;
                 }
@@ -2234,7 +2551,7 @@ impl<W: Write> GenJS<W> {
                     if need_comma {
                         self.comma();
                     }
-                    prop.visit(ctx, self, Some(node));
+                    prop.visit(ctx, self, Some(Path::new(node, NodeField::internal_slots)));
                     self.newline();
                     need_comma = true;
                 }
@@ -2251,7 +2568,7 @@ impl<W: Write> GenJS<W> {
                 out!(self, "{}", if *exact { "|}" } else { "}" });
             }
             Node::ObjectTypeProperty(ObjectTypeProperty {
-                range: _,
+                metadata: _,
                 key,
                 value,
                 method,
@@ -2262,7 +2579,7 @@ impl<W: Write> GenJS<W> {
                 ..
             }) => {
                 if let Some(variance) = variance {
-                    variance.visit(ctx, self, Some(node));
+                    variance.visit(ctx, self, Some(Path::new(node, NodeField::variance)));
                 }
                 if *is_static {
                     out!(self, "static ");
@@ -2270,14 +2587,14 @@ impl<W: Write> GenJS<W> {
                 if *proto {
                     out!(self, "proto ");
                 }
-                key.visit(ctx, self, Some(node));
+                key.visit(ctx, self, Some(Path::new(node, NodeField::key)));
                 if *optional {
                     out!(self, "?");
                 }
                 if *method {
-                    match &value.get(ctx) {
+                    match value {
                         Node::FunctionTypeAnnotation(FunctionTypeAnnotation {
-                            range: _,
+                            metadata: _,
                             params,
                             this,
                             return_type,
@@ -2294,7 +2611,11 @@ impl<W: Write> GenJS<W> {
                             );
                             out!(self, ":");
                             self.space(ForceSpace::No);
-                            return_type.visit(ctx, self, Some(node));
+                            return_type.visit(
+                                ctx,
+                                self,
+                                Some(Path::new(node, NodeField::return_type)),
+                            );
                         }
                         _ => {
                             unimplemented!("Malformed AST: Need to handle error");
@@ -2303,15 +2624,18 @@ impl<W: Write> GenJS<W> {
                 } else {
                     out!(self, ":");
                     self.space(ForceSpace::No);
-                    value.visit(ctx, self, Some(node));
+                    value.visit(ctx, self, Some(Path::new(node, NodeField::value)));
                 }
             }
-            Node::ObjectTypeSpreadProperty(ObjectTypeSpreadProperty { range: _, argument }) => {
+            Node::ObjectTypeSpreadProperty(ObjectTypeSpreadProperty {
+                metadata: _,
+                argument,
+            }) => {
                 out!(self, "...");
-                argument.visit(ctx, self, Some(node));
+                argument.visit(ctx, self, Some(Path::new(node, NodeField::argument)));
             }
             Node::ObjectTypeInternalSlot(ObjectTypeInternalSlot {
-                range: _,
+                metadata: _,
                 id,
                 value,
                 optional,
@@ -2322,15 +2646,15 @@ impl<W: Write> GenJS<W> {
                     out!(self, "static ");
                 }
                 out!(self, "[[");
-                id.visit(ctx, self, Some(node));
+                id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
                 if *optional {
                     out!(self, "?");
                 }
                 out!(self, "]]");
                 if *method {
-                    match &value.get(ctx) {
+                    match value {
                         Node::FunctionTypeAnnotation(FunctionTypeAnnotation {
-                            range: _,
+                            metadata: _,
                             params,
                             this,
                             return_type,
@@ -2347,7 +2671,11 @@ impl<W: Write> GenJS<W> {
                             );
                             out!(self, ":");
                             self.space(ForceSpace::No);
-                            return_type.visit(ctx, self, Some(node));
+                            return_type.visit(
+                                ctx,
+                                self,
+                                Some(Path::new(node, NodeField::return_type)),
+                            );
                         }
                         _ => {
                             unimplemented!("Malformed AST: Need to handle error");
@@ -2356,20 +2684,20 @@ impl<W: Write> GenJS<W> {
                 } else {
                     out!(self, ":");
                     self.space(ForceSpace::No);
-                    value.visit(ctx, self, Some(node));
+                    value.visit(ctx, self, Some(Path::new(node, NodeField::value)));
                 }
             }
             Node::ObjectTypeCallProperty(ObjectTypeCallProperty {
-                range: _,
+                metadata: _,
                 value,
                 is_static,
             }) => {
                 if *is_static {
                     out!(self, "static ");
                 }
-                match &value.get(ctx) {
+                match value {
                     Node::FunctionTypeAnnotation(FunctionTypeAnnotation {
-                        range: _,
+                        metadata: _,
                         params,
                         this,
                         return_type,
@@ -2386,7 +2714,7 @@ impl<W: Write> GenJS<W> {
                         );
                         out!(self, ":");
                         self.space(ForceSpace::No);
-                        return_type.visit(ctx, self, Some(node));
+                        return_type.visit(ctx, self, Some(Path::new(node, NodeField::return_type)));
                     }
                     _ => {
                         unimplemented!("Malformed AST: Need to handle error");
@@ -2394,7 +2722,7 @@ impl<W: Write> GenJS<W> {
                 }
             }
             Node::ObjectTypeIndexer(ObjectTypeIndexer {
-                range: _,
+                metadata: _,
                 id,
                 key,
                 value,
@@ -2405,24 +2733,24 @@ impl<W: Write> GenJS<W> {
                     out!(self, "static ");
                 }
                 if let Some(variance) = variance {
-                    variance.visit(ctx, self, Some(node));
+                    variance.visit(ctx, self, Some(Path::new(node, NodeField::variance)));
                 }
                 out!(self, "[");
                 if let Some(id) = id {
-                    id.visit(ctx, self, Some(node));
+                    id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
                     out!(self, ":");
                     self.space(ForceSpace::No);
                 }
-                key.visit(ctx, self, Some(node));
+                key.visit(ctx, self, Some(Path::new(node, NodeField::key)));
                 out!(self, "]");
                 out!(self, ":");
                 self.space(ForceSpace::No);
-                value.visit(ctx, self, Some(node));
+                value.visit(ctx, self, Some(Path::new(node, NodeField::value)));
             }
-            Node::Variance(Variance { range: _, kind }) => {
+            Node::Variance(Variance { metadata: _, kind }) => {
                 out_token!(
                     self,
-                    node.get(ctx),
+                    node,
                     "{}",
                     match ctx.str(*kind) {
                         "plus" => "+",
@@ -2432,67 +2760,88 @@ impl<W: Write> GenJS<W> {
                 )
             }
 
-            Node::TypeParameterDeclaration(TypeParameterDeclaration { range: _, params })
-            | Node::TypeParameterInstantiation(TypeParameterInstantiation { range: _, params }) => {
+            Node::TypeParameterDeclaration(TypeParameterDeclaration {
+                metadata: _,
+                params,
+            })
+            | Node::TypeParameterInstantiation(TypeParameterInstantiation {
+                metadata: _,
+                params,
+            }) => {
                 out!(self, "<");
                 for (i, param) in params.iter().enumerate() {
                     if i > 0 {
                         self.comma();
                     }
-                    param.visit(ctx, self, Some(node));
+                    param.visit(ctx, self, Some(Path::new(node, NodeField::params)));
                 }
                 out!(self, ">");
             }
             Node::TypeParameter(TypeParameter {
-                range: _,
+                metadata: _,
                 name,
                 bound,
                 variance,
                 default,
             }) => {
                 if let Some(variance) = variance {
-                    variance.visit(ctx, self, Some(node));
+                    variance.visit(ctx, self, Some(Path::new(node, NodeField::variance)));
                 }
                 out!(self, "{}", ctx.str(*name));
                 if let Some(bound) = bound {
                     out!(self, ":");
                     self.space(ForceSpace::No);
-                    bound.visit(ctx, self, Some(node));
+                    bound.visit(ctx, self, Some(Path::new(node, NodeField::bound)));
                 }
                 if let Some(default) = default {
                     out!(self, "=");
                     self.space(ForceSpace::No);
-                    default.visit(ctx, self, Some(node));
+                    default.visit(ctx, self, Some(Path::new(node, NodeField::default)));
                 }
             }
             Node::TypeCastExpression(TypeCastExpression {
-                range: _,
+                metadata: _,
                 expression,
                 type_annotation,
             }) => {
-                // Type casts are required to have parentheses.
+                // Type casts are required to have pathheses.
                 out!(self, "(");
-                self.print_child(ctx, Some(*expression), node, ChildPos::Left);
+                self.print_child(
+                    ctx,
+                    Some(*expression),
+                    Path::new(node, NodeField::expression),
+                    ChildPos::Left,
+                );
                 out!(self, ":");
                 self.space(ForceSpace::No);
-                self.print_child(ctx, Some(*type_annotation), node, ChildPos::Right);
+                self.print_child(
+                    ctx,
+                    Some(*type_annotation),
+                    Path::new(node, NodeField::type_annotation),
+                    ChildPos::Right,
+                );
+                out!(self, ")");
             }
             Node::InferredPredicate(_) => {
-                out_token!(self, node.get(ctx), "%checks");
+                out_token!(self, node, "%checks");
             }
-            Node::DeclaredPredicate(DeclaredPredicate { range: _, value }) => {
-                out_token!(self, node.get(ctx), "%checks(");
-                value.visit(ctx, self, Some(node));
+            Node::DeclaredPredicate(DeclaredPredicate { metadata: _, value }) => {
+                out_token!(self, node, "%checks(");
+                value.visit(ctx, self, Some(Path::new(node, NodeField::value)));
                 out!(self, ")");
             }
 
-            Node::EnumDeclaration(EnumDeclaration { range: _, id, body }) => {
-                out_token!(self, node.get(ctx), "enum ");
-                id.visit(ctx, self, Some(node));
-                body.visit(ctx, self, Some(node));
+            Node::EnumDeclaration(EnumDeclaration {
+                metadata: _,
+                id,
+                body,
+            }) => {
+                out_token!(self, node, "enum ");
+                id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
+                body.visit(ctx, self, Some(Path::new(node, NodeField::body)));
             }
             Node::EnumStringBody(EnumStringBody {
-                range: _,
+                metadata: _,
                 members,
                 explicit_type,
                 has_unknown_members,
@@ -2507,7 +2856,7 @@ impl<W: Write> GenJS<W> {
                 );
             }
             Node::EnumNumberBody(EnumNumberBody {
-                range: _,
+                metadata: _,
                 members,
                 explicit_type,
                 has_unknown_members,
@@ -2522,7 +2871,7 @@ impl<W: Write> GenJS<W> {
                 );
             }
             Node::EnumBooleanBody(EnumBooleanBody {
-                range: _,
+                metadata: _,
                 members,
                 explicit_type,
                 has_unknown_members,
@@ -2537,19 +2886,31 @@ impl<W: Write> GenJS<W> {
                 );
             }
             Node::EnumSymbolBody(EnumSymbolBody {
-                range: _,
+                metadata: _,
                 members,
                 has_unknown_members,
             }) => {
                 self.visit_enum_body(ctx, "symbol", members, true, *has_unknown_members, node);
             }
-            Node::EnumDefaultedMember(EnumDefaultedMember { range: _, id }) => {
-                id.visit(ctx, self, Some(node));
+            Node::EnumDefaultedMember(EnumDefaultedMember { metadata: _, id }) => {
+                id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
             }
-            Node::EnumStringMember(EnumStringMember { range: _, id, init })
-            | Node::EnumNumberMember(EnumNumberMember { range: _, id, init })
-            | Node::EnumBooleanMember(EnumBooleanMember { range: _, id, init }) => {
-                id.visit(ctx, self, Some(node));
+            Node::EnumStringMember(EnumStringMember {
+                metadata: _,
+                id,
+                init,
+            })
+            | Node::EnumNumberMember(EnumNumberMember {
+                metadata: _,
+                id,
+                init,
+            })
+            | Node::EnumBooleanMember(EnumBooleanMember {
+                metadata: _,
+                id,
+                init,
+            }) => {
+                id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
                 out!(
                     self,
                     "{}",
@@ -2558,11 +2919,11 @@ impl<W: Write> GenJS<W> {
                         Pretty::No => "=",
                     }
                 );
-                init.visit(ctx, self, Some(node));
+                init.visit(ctx, self, Some(Path::new(node, NodeField::init)));
             }
 
             _ => {
-                unimplemented!("Cannot generate node kind: {}", node.get(ctx).name());
+                unimplemented!("Cannot generate node kind: {}", node.name());
             }
         };
     }
@@ -2620,40 +2981,45 @@ impl<W: Write> GenJS<W> {
         self.position.col = 1;
     }
 
-    /// Print the child of a `parent` node at the position `child_pos`.
-    fn print_child(
+    /// Print the child of a `path` node at the position `child_pos`.
+    fn print_child<'gc>(
         &mut self,
-        ctx: &Context,
-        child: Option<NodePtr>,
-        parent: NodePtr,
+        ctx: &'gc GCLock,
+        child: Option<&'gc Node<'gc>>,
+        path: Path<'gc>,
         child_pos: ChildPos,
     ) {
         if let Some(child) = child {
             self.print_parens(
                 ctx,
                 child,
-                parent,
-                self.need_parens(ctx, parent, child, child_pos),
+                path,
+                self.need_parens(ctx, path, child, child_pos),
             );
         }
     }
 
     /// Print one expression in a sequence separated by comma. It needs parens
     /// if its precedence is <= comma.
-    fn print_comma_expression(&mut self, ctx: &Context, child: NodePtr, parent: NodePtr) {
+    fn print_comma_expression<'gc>(
+        &mut self,
+        ctx: &'gc GCLock,
+        child: &'gc Node<'gc>,
+        path: Path<'gc>,
+    ) {
         self.print_parens(
             ctx,
             child,
-            parent,
-            NeedParens::from(self.get_precedence(child.get(ctx)).0 <= precedence::SEQ),
+            path,
+            NeedParens::from(self.get_precedence(child).0 <= precedence::SEQ),
         )
     }
 
-    fn print_parens(
+    fn print_parens<'gc>(
         &mut self,
-        ctx: &Context,
-        child: NodePtr,
-        parent: NodePtr,
+        ctx: &'gc GCLock,
+        child: &'gc Node<'gc>,
+        path: Path<'gc>,
         need_parens: NeedParens,
     ) {
         if need_parens == NeedParens::Yes {
@@ -2661,7 +3027,7 @@ impl<W: Write> GenJS<W> {
         } else if need_parens == NeedParens::Space {
             out!(self, " ");
         }
-        child.visit(ctx, self, Some(parent));
+        child.visit(ctx, self, Some(path));
         if need_parens == NeedParens::Yes {
             out!(self, ")");
         }
@@ -2669,128 +3035,133 @@ impl<W: Write> GenJS<W> {
 
     fn print_escaped_string_literal(&mut self, value: &NodeString, esc: char) {
         for &c in &value.str {
-            let c8 = char::from(c as u8);
-            match c8 {
-                '\\' => {
-                    out!(self, "\\\\");
-                    continue;
-                }
-                '\x08' => {
-                    out!(self, "\\b");
-                    continue;
-                }
-                '\x0c' => {
-                    out!(self, "\\f");
-                    continue;
-                }
-                '\n' => {
-                    out!(self, "\\n");
-                    continue;
-                }
-                '\r' => {
-                    out!(self, "\\r");
-                    continue;
-                }
-                '\t' => {
-                    out!(self, "\\t");
-                    continue;
-                }
-                '\x0b' => {
-                    out!(self, "\\v");
-                    continue;
-                }
-                _ => {}
-            };
+            if c <= u8::MAX as u16 {
+                match char::from(c as u8) {
+                    '\\' => {
+                        out!(self, "\\\\");
+                        continue;
+                    }
+                    '\x08' => {
+                        out!(self, "\\b");
+                        continue;
+                    }
+                    '\x0c' => {
+                        out!(self, "\\f");
+                        continue;
+                    }
+                    '\n' => {
+                        out!(self, "\\n");
+                        continue;
+                    }
+                    '\r' => {
+                        out!(self, "\\r");
+                        continue;
+                    }
+                    '\t' => {
+                        out!(self, "\\t");
+                        continue;
+                    }
+                    '\x0b' => {
+                        out!(self, "\\v");
+                        continue;
+                    }
+                    _ => {}
+                };
+            }
             if c == esc as u16 {
                 out!(self, "\\");
             }
             if (0x20..=0x7f).contains(&c) {
                 // Printable.
-                out!(self, "{}", c8);
+                out!(self, "{}", char::from(c as u8));
             } else {
                 out!(self, "\\u{:04x}", c);
             }
         }
     }
 
-    fn visit_props(&mut self, ctx: &Context, props: &[NodePtr], parent: NodePtr) {
+    fn visit_props<'gc>(&mut self, ctx: &'gc GCLock, props: &[&'gc Node<'gc>], path: Path<'gc>) {
         out!(self, "{{");
         for (i, prop) in props.iter().enumerate() {
             if i > 0 {
                 self.comma();
             }
-            prop.visit(ctx, self, Some(parent));
+            prop.visit(ctx, self, Some(path));
         }
         out!(self, "}}");
     }
 
-    fn visit_func_params_body(
+    fn visit_func_params_body<'gc>(
         &mut self,
-        ctx: &Context,
-        params: &[NodePtr],
-        return_type: Option<NodePtr>,
-        predicate: Option<NodePtr>,
-        body: NodePtr,
-        node: NodePtr,
+        ctx: &'gc GCLock,
+        params: &[&'gc Node<'gc>],
+        return_type: Option<&'gc Node<'gc>>,
+        predicate: Option<&'gc Node<'gc>>,
+        body: &'gc Node<'gc>,
+        node: &'gc Node<'gc>,
     ) {
         out!(self, "(");
         for (i, param) in params.iter().enumerate() {
             if i > 0 {
                 self.comma();
             }
-            param.visit(ctx, self, Some(node));
+            param.visit(ctx, self, Some(Path::new(node, NodeField::param)));
         }
         out!(self, ")");
         if let Some(return_type) = return_type {
             out!(self, ":");
             self.space(ForceSpace::No);
-            return_type.visit(ctx, self, Some(node));
+            return_type.visit(ctx, self, Some(Path::new(node, NodeField::return_type)));
         }
         if let Some(predicate) = predicate {
             self.space(ForceSpace::Yes);
-            predicate.visit(ctx, self, Some(node));
+            predicate.visit(ctx, self, Some(Path::new(node, NodeField::predicate)));
         }
         self.space(ForceSpace::No);
-        body.visit(ctx, self, Some(node));
+        body.visit(ctx, self, Some(Path::new(node, NodeField::body)));
     }
 
-    fn visit_func_type_params(
+    fn visit_func_type_params<'gc>(
         &mut self,
-        ctx: &Context,
-        params: &[NodePtr],
-        this: Option<NodePtr>,
-        rest: Option<NodePtr>,
-        type_parameters: Option<NodePtr>,
-        node: NodePtr,
+        ctx: &'gc GCLock,
+        params: &[&'gc Node<'gc>],
+        this: Option<&'gc Node<'gc>>,
+        rest: Option<&'gc Node<'gc>>,
+        type_parameters: Option<&'gc Node<'gc>>,
+        node: &'gc Node<'gc>,
     ) {
         if let Some(type_parameters) = type_parameters {
-            type_parameters.visit(ctx, self, Some(node));
+            type_parameters.visit(ctx, self, Some(Path::new(node, NodeField::type_parameters)));
         }
         out!(self, "(");
         let mut need_comma = false;
         if let Some(this) = this {
-            match &this.get(ctx) {
+            match this {
                 Node::FunctionTypeParam(FunctionTypeParam {
-                    range: _,
+                    metadata: _,
                     type_annotation,
                     ..
                 }) => {
                     out!(self, "this:");
                     self.space(ForceSpace::No);
-                    type_annotation.visit(ctx, self, Some(node));
+                    type_annotation.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::type_annotation)),
+                    );
                 }
                 _ => {
                     unimplemented!("Malformed AST: Need to handle error");
                 }
             }
-            this.visit(ctx, self, Some(node));
+            this.visit(ctx, self, Some(Path::new(node, NodeField::this)));
             need_comma = true;
         }
         for param in params.iter() {
             if need_comma {
                 self.comma();
             }
-            param.visit(ctx, self, Some(node));
+            param.visit(ctx, self, Some(Path::new(node, NodeField::param)));
             need_comma = true;
         }
         if let Some(rest) = rest {
@@ -2798,26 +3169,26 @@ impl<W: Write> GenJS<W> {
                 self.comma();
             }
             out!(self, "...");
-            rest.visit(ctx, self, Some(node));
+            rest.visit(ctx, self, Some(Path::new(node, NodeField::rest)));
         }
         out!(self, ")");
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn visit_interface(
+    fn visit_interface<'gc>(
         &mut self,
-        ctx: &Context,
+        ctx: &'gc GCLock,
         decl: &str,
-        id: NodePtr,
-        type_parameters: Option<NodePtr>,
-        extends: &[NodePtr],
-        body: NodePtr,
-        node: NodePtr,
+        id: &'gc Node<'gc>,
+        type_parameters: Option<&'gc Node<'gc>>,
+        extends: &[&'gc Node<'gc>],
+        body: &'gc Node<'gc>,
+        node: &'gc Node<'gc>,
     ) {
         out!(self, "{} ", decl);
-        id.visit(ctx, self, Some(node));
+        id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
         if let Some(type_parameters) = type_parameters {
-            type_parameters.visit(ctx, self, Some(node));
+            type_parameters.visit(ctx, self, Some(Path::new(node, NodeField::type_parameters)));
         }
         self.space(ForceSpace::No);
         if !extends.is_empty() {
@@ -2826,22 +3197,22 @@ impl<W: Write> GenJS<W> {
                 if i > 0 {
                     self.comma();
                 }
-                extend.visit(ctx, self, Some(node));
+                extend.visit(ctx, self, Some(Path::new(node, NodeField::extends)));
             }
             self.space(ForceSpace::No);
         }
-        body.visit(ctx, self, Some(node));
+        body.visit(ctx, self, Some(Path::new(node, NodeField::body)));
     }
 
     /// Generate the body of a Flow enum with type `kind`.
-    fn visit_enum_body(
+    fn visit_enum_body<'gc>(
         &mut self,
-        ctx: &Context,
+        ctx: &'gc GCLock,
         kind: &str,
-        members: &[NodePtr],
+        members: &[&'gc Node<'gc>],
         explicit_type: bool,
         has_unknown_members: bool,
-        node: NodePtr,
+        node: &'gc Node<'gc>,
     ) {
         if explicit_type {
             out!(self, ":");
@@ -2857,7 +3228,7 @@ impl<W: Write> GenJS<W> {
                 self.comma();
                 self.newline();
             }
-            member.visit(ctx, self, Some(node));
+            member.visit(ctx, self, Some(Path::new(node, NodeField::members)));
         }
 
         if has_unknown_members {
@@ -2876,14 +3247,14 @@ impl<W: Write> GenJS<W> {
     /// Visit a statement node which is the body of a loop or a clause in an if.
     /// It could be a block statement.
     /// Return true if block
-    fn visit_stmt_or_block(
+    fn visit_stmt_or_block<'gc>(
         &mut self,
-        ctx: &Context,
-        node: NodePtr,
+        ctx: &'gc GCLock,
+        node: &'gc Node<'gc>,
         force_block: ForceBlock,
-        parent: NodePtr,
+        path: Path<'gc>,
     ) -> bool {
-        if let Node::BlockStatement(BlockStatement { range: _, body }) = &node.get(ctx) {
+        if let Node::BlockStatement(BlockStatement { metadata: _, body }) = &node {
             if body.is_empty() {
                 self.space(ForceSpace::No);
                 out!(self, "{{}}");
@@ -2893,7 +3264,7 @@ impl<W: Write> GenJS<W> {
             out!(self, "{{");
             self.inc_indent();
             self.newline();
-            self.visit_stmt_list(ctx, body, node);
+            self.visit_stmt_list(ctx, body, Path::new(node, NodeField::body));
             self.dec_indent();
             self.newline();
             out!(self, "}}");
@@ -2904,39 +3275,44 @@ impl<W: Write> GenJS<W> {
             out!(self, "{{");
             self.inc_indent();
             self.newline();
-            self.visit_stmt_in_block(ctx, node, parent);
+            self.visit_stmt_in_block(ctx, node, path);
             self.dec_indent();
             self.newline();
             out!(self, "}}");
+            self.newline();
             true
         } else {
             self.inc_indent();
             self.newline();
-            node.visit(ctx, self, Some(parent));
+            self.visit_stmt_in_block(ctx, node, path);
             self.dec_indent();
-            self.newline();
             false
         }
     }
 
-    fn visit_stmt_list(&mut self, ctx: &Context, list: &[NodePtr], parent: NodePtr) {
+    fn visit_stmt_list<'gc>(&mut self, ctx: &'gc GCLock, list: &[&'gc Node<'gc>], path: Path<'gc>) {
         for (i, stmt) in list.iter().enumerate() {
             if i > 0 {
                 self.newline();
             }
-            self.visit_stmt_in_block(ctx, *stmt, parent);
+            self.visit_stmt_in_block(ctx, *stmt, path);
         }
     }
 
-    fn visit_stmt_in_block(&mut self, ctx: &Context, stmt: NodePtr, parent: NodePtr) {
-        stmt.visit(ctx, self, Some(parent));
-        if !ends_with_block(ctx, Some(stmt)) {
+    fn visit_stmt_in_block<'gc>(
+        &mut self,
+        ctx: &'gc GCLock,
+        stmt: &'gc Node<'gc>,
+        path: Path<'gc>,
+    ) {
+        stmt.visit(ctx, self, Some(path));
+        if !stmt_skip_semi(ctx, Some(stmt)) {
             out!(self, ";");
         }
     }
 
     /// Return the precedence and associativity of `node`.
-    fn get_precedence(&self, node: &Node) -> (precedence::Precedence, Assoc) {
+    fn get_precedence(&self, node: &Node<'_>) -> (precedence::Precedence, Assoc) {
         // Precedence order taken from
         // https://github.com/facebook/flow/blob/master/src/parser_utils/output/js_layout_generator.ml
         use precedence::*;
@@ -2954,14 +3330,17 @@ impl<W: Write> GenJS<W> {
             | Node::ObjectPattern(_)
             | Node::FunctionExpression(_)
             | Node::ClassExpression(_)
-            | Node::TemplateLiteral(_) => (PRIMARY, Assoc::Ltr),
+            | Node::TemplateLiteral(_)
+            | Node::JSXElement(_)
+            | Node::JSXFragment(_)
+            | Node::TypeCastExpression(_) => (PRIMARY, Assoc::Ltr),
             Node::MemberExpression(_)
             | Node::OptionalMemberExpression(_)
             | Node::MetaProperty(_)
             | Node::CallExpression(_)
             | Node::OptionalCallExpression(_) => (MEMBER, Assoc::Ltr),
             Node::NewExpression(NewExpression {
-                range: _,
+                metadata: _,
                 arguments,
                 ..
             }) => {
@@ -2977,7 +3356,9 @@ impl<W: Write> GenJS<W> {
                 (TAGGED_TEMPLATE, Assoc::Ltr)
             }
             Node::UpdateExpression(UpdateExpression {
-                range: _, prefix, ..
+                metadata: _,
+                prefix,
+                ..
             }) => {
                 if *prefix {
                     (POST_UPDATE, Assoc::Ltr)
@@ -2987,10 +3368,14 @@ impl<W: Write> GenJS<W> {
             }
             Node::UnaryExpression(_) => (UNARY, Assoc::Rtl),
             Node::BinaryExpression(BinaryExpression {
-                range: _, operator, ..
+                metadata: _,
+                operator,
+                ..
             }) => (get_binary_precedence(*operator), Assoc::Ltr),
             Node::LogicalExpression(LogicalExpression {
-                range: _, operator, ..
+                metadata: _,
+                operator,
+                ..
             }) => (get_logical_precedence(*operator), Assoc::Ltr),
             Node::ConditionalExpression(_) => (COND, Assoc::Rtl),
             Node::AssignmentExpression(_) => (ASSIGN, Assoc::Rtl),
@@ -3018,34 +3403,44 @@ impl<W: Write> GenJS<W> {
         }
     }
 
-    /// Return whether parentheses are needed around the `child` node,
-    /// which is situated at `child_pos` position in relation to its `parent`.
-    fn need_parens(
+    /// Return whether pathheses are needed around the `child` node,
+    /// which is situated at `child_pos` position in relation to its `path`.
+    fn need_parens<'gc>(
         &self,
-        ctx: &Context,
-        parent: NodePtr,
-        child: NodePtr,
+        ctx: &'gc GCLock,
+        path: Path<'gc>,
+        child: &'gc Node<'gc>,
         child_pos: ChildPos,
     ) -> NeedParens {
-        let parent_node = parent.get(ctx);
-        let child_node = child.get(ctx);
-
         #[allow(clippy::if_same_then_else)]
-        if matches!(parent_node, Node::ArrowFunctionExpression(_)) {
+        if matches!(path.parent, Node::ArrowFunctionExpression(_)) {
             // (x) => ({x: 10}) needs parens to avoid confusing it with a block and a
             // labelled statement.
-            if child_pos == ChildPos::Right && matches!(child_node, Node::ObjectExpression(_)) {
+            if child_pos == ChildPos::Right && matches!(child, Node::ObjectExpression(_)) {
                 return NeedParens::Yes;
             }
-        } else if matches!(parent_node, Node::ForStatement(_)) {
+        } else if matches!(path.parent, Node::ForStatement(_)) {
             // for((a in b);..;..) needs parens to avoid confusing it with for(a in b).
-            return NeedParens::from(match &child_node {
+            return NeedParens::from(match &child {
                 Node::BinaryExpression(BinaryExpression {
-                    range: _, operator, ..
+                    metadata: _,
+                    operator,
+                    ..
                 }) => *operator == BinaryExpressionOperator::In,
                 _ => false,
             });
-        } else if matches!(parent_node, Node::ExpressionStatement(_)) {
+        } else if matches!(path.parent, Node::NewExpression(_)) {
+            // `new(fn())` needs parens to avoid confusing it with `new fn()`.
+            // Need to check the entire subtree to ensure there isn't a call anywhere in it,
+            // because if there is, it would take precedence and terminate the `new` early.
+            // As an example, see the difference between
+            // `new(foo().bar)` (which gets `bar` on `foo()`)
+            // and
+            // `new foo().bar` (which gets `bar` on `new foo()`)
+            if child_pos == ChildPos::Left && contains_call(ctx, child) {
+                return NeedParens::Yes;
+            }
+        } else if matches!(path.parent, Node::ExpressionStatement(_)) {
             // Expression statement like (function () {} + 1) needs parens.
             return NeedParens::from(self.root_starts_with(ctx, child, |kind| -> bool {
                 matches!(
@@ -3056,15 +3451,15 @@ impl<W: Write> GenJS<W> {
                         | Node::ObjectPattern(_)
                 )
             }));
-        } else if (parent_node.is_unary_op(UnaryExpressionOperator::Minus)
+        } else if (path.parent.is_unary_op(UnaryExpressionOperator::Minus)
             && self.root_starts_with(ctx, child, Node::check_minus))
-            || (parent_node.is_unary_op(UnaryExpressionOperator::Plus)
+            || (path.parent.is_unary_op(UnaryExpressionOperator::Plus)
                 && self.root_starts_with(ctx, child, Node::check_plus))
             || (child_pos == ChildPos::Right
-                && parent_node.is_binary_op(BinaryExpressionOperator::Minus)
+                && path.parent.is_binary_op(BinaryExpressionOperator::Minus)
                 && self.root_starts_with(ctx, child, Node::check_minus))
             || (child_pos == ChildPos::Right
-                && parent_node.is_binary_op(BinaryExpressionOperator::Plus)
+                && path.parent.is_binary_op(BinaryExpressionOperator::Plus)
                 && self.root_starts_with(ctx, child, Node::check_plus))
         {
             // -(-x) or -(--x) or -(-5)
@@ -3077,37 +3472,37 @@ impl<W: Write> GenJS<W> {
                 NeedParens::Space
             };
         } else if matches!(
-            parent_node,
+            path.parent,
             Node::MemberExpression(_) | Node::CallExpression(_)
         ) && matches!(
-            child_node,
+            child,
             Node::OptionalMemberExpression(_) | Node::OptionalCallExpression(_)
         ) && child_pos == ChildPos::Left
         {
             // When optional chains are terminated by non-optional member/calls,
-            // we need the left hand side to be parenthesized.
+            // we need the left hand side to be pathhesized.
             // Avoids confusing `(a?.b).c` with `a?.b.c`.
             return NeedParens::Yes;
-        } else if (parent_node.check_and_or() && child_node.check_nullish())
-            || (parent_node.check_nullish() && child_node.check_and_or())
+        } else if (path.parent.check_and_or() && child.check_nullish())
+            || (path.parent.check_nullish() && child.check_and_or())
         {
             // Nullish coalescing always requires parens when mixed with any
             // other logical operations.
             return NeedParens::Yes;
         }
 
-        let (child_prec, _child_assoc) = self.get_precedence(child_node);
+        let (child_prec, _child_assoc) = self.get_precedence(child);
         if child_prec == precedence::ALWAYS_PAREN {
             return NeedParens::Yes;
         }
 
-        let (parent_prec, parent_assoc) = self.get_precedence(parent_node);
+        let (path_prec, path_assoc) = self.get_precedence(path.parent);
 
-        if child_prec < parent_prec {
+        if child_prec < path_prec {
             // Child is definitely a danger.
             return NeedParens::Yes;
         }
-        if child_prec > parent_prec {
+        if child_prec > path_prec {
             // Definitely cool.
             return NeedParens::No;
         }
@@ -3121,81 +3516,111 @@ impl<W: Write> GenJS<W> {
             return NeedParens::No;
         }
         // Check if child is on the dangerous side.
-        NeedParens::from(if parent_assoc == Assoc::Rtl {
+        NeedParens::from(if path_assoc == Assoc::Rtl {
             child_pos == ChildPos::Left
         } else {
             child_pos == ChildPos::Right
         })
     }
 
-    fn root_starts_with<F: Fn(&Node) -> bool>(
+    fn root_starts_with<'gc, F: Fn(&'gc Node<'gc>) -> bool>(
         &self,
-        ctx: &Context,
-        expr: NodePtr,
+        ctx: &'gc GCLock,
+        expr: &'gc Node<'gc>,
         pred: F,
     ) -> bool {
         self.expr_starts_with(ctx, expr, None, pred)
     }
 
-    fn expr_starts_with<F: Fn(&Node) -> bool>(
+    fn expr_starts_with<'gc, F: Fn(&'gc Node<'gc>) -> bool>(
         &self,
-        ctx: &Context,
-        expr: NodePtr,
-        parent: Option<NodePtr>,
+        ctx: &'gc GCLock,
+        expr: &'gc Node<'gc>,
+        path: Option<Path<'gc>>,
         pred: F,
     ) -> bool {
-        if let Some(parent) = parent {
-            if self.need_parens(ctx, parent, expr, ChildPos::Left) == NeedParens::Yes {
+        if let Some(path) = path {
+            if self.need_parens(ctx, path, expr, ChildPos::Left) == NeedParens::Yes {
                 return false;
             }
         }
 
-        if pred(expr.get(ctx)) {
+        if pred(expr) {
             return true;
         }
 
         // Ensure the recursive calls are the last things to run,
         // hopefully the compiler makes this into a loop.
-        match &expr.get(ctx) {
+        match expr {
             Node::CallExpression(CallExpression {
-                range: _, callee, ..
-            }) => self.expr_starts_with(ctx, *callee, Some(expr), pred),
+                metadata: _,
+                callee,
+                ..
+            }) => {
+                self.expr_starts_with(ctx, *callee, Some(Path::new(expr, NodeField::callee)), pred)
+            }
             Node::OptionalCallExpression(OptionalCallExpression {
-                range: _, callee, ..
-            }) => self.expr_starts_with(ctx, *callee, Some(expr), pred),
-            Node::BinaryExpression(BinaryExpression { range: _, left, .. }) => {
-                self.expr_starts_with(ctx, *left, Some(expr), pred)
+                metadata: _,
+                callee,
+                ..
+            }) => {
+                self.expr_starts_with(ctx, *callee, Some(Path::new(expr, NodeField::callee)), pred)
             }
-            Node::LogicalExpression(LogicalExpression { range: _, left, .. }) => {
-                self.expr_starts_with(ctx, *left, Some(expr), pred)
-            }
-            Node::ConditionalExpression(ConditionalExpression { range: _, test, .. }) => {
-                self.expr_starts_with(ctx, *test, Some(expr), pred)
-            }
-            Node::AssignmentExpression(AssignmentExpression { range: _, left, .. }) => {
-                self.expr_starts_with(ctx, *left, Some(expr), pred)
-            }
+            Node::BinaryExpression(BinaryExpression {
+                metadata: _, left, ..
+            }) => self.expr_starts_with(ctx, *left, Some(Path::new(expr, NodeField::left)), pred),
+            Node::LogicalExpression(LogicalExpression {
+                metadata: _, left, ..
+            }) => self.expr_starts_with(ctx, *left, Some(Path::new(expr, NodeField::left)), pred),
+            Node::ConditionalExpression(ConditionalExpression {
+                metadata: _, test, ..
+            }) => self.expr_starts_with(ctx, *test, Some(Path::new(expr, NodeField::test)), pred),
+            Node::AssignmentExpression(AssignmentExpression {
+                metadata: _, left, ..
+            }) => self.expr_starts_with(ctx, *left, Some(Path::new(expr, NodeField::left)), pred),
             Node::UpdateExpression(UpdateExpression {
-                range: _,
+                metadata: _,
                 prefix,
                 argument,
                 ..
-            }) => !*prefix && self.expr_starts_with(ctx, *argument, Some(expr), pred),
+            }) => {
+                !*prefix
+                    && self.expr_starts_with(
+                        ctx,
+                        *argument,
+                        Some(Path::new(expr, NodeField::argument)),
+                        pred,
+                    )
+            }
             Node::UnaryExpression(UnaryExpression {
-                range: _,
+                metadata: _,
                 prefix,
                 argument,
                 ..
-            }) => !*prefix && self.expr_starts_with(ctx, *argument, Some(expr), pred),
+            }) => {
+                !*prefix
+                    && self.expr_starts_with(
+                        ctx,
+                        *argument,
+                        Some(Path::new(expr, NodeField::argument)),
+                        pred,
+                    )
+            }
             Node::MemberExpression(MemberExpression {
-                range: _, object, ..
+                metadata: _,
+                object,
+                ..
             })
             | Node::OptionalMemberExpression(OptionalMemberExpression {
-                range: _, object, ..
-            }) => self.expr_starts_with(ctx, *object, Some(expr), pred),
-            Node::TaggedTemplateExpression(TaggedTemplateExpression { range: _, tag, .. }) => {
-                self.expr_starts_with(ctx, *tag, Some(expr), pred)
+                metadata: _,
+                object,
+                ..
+            }) => {
+                self.expr_starts_with(ctx, *object, Some(Path::new(expr, NodeField::object)), pred)
             }
+            Node::TaggedTemplateExpression(TaggedTemplateExpression {
+                metadata: _, tag, ..
+            }) => self.expr_starts_with(ctx, *tag, Some(Path::new(expr, NodeField::tag)), pred),
             _ => false,
         }
     }
@@ -3203,11 +3628,13 @@ impl<W: Write> GenJS<W> {
     /// Adds the current location as a segment pointing to the start of `node`.
     fn add_segment(&mut self, node: &Node) {
         // Convert from 1-indexed to 0-indexed as expected by source map.
+        // Use `wrapping_sub` in case the line/col are invalid (0) to ensure
+        // the overflow goes to `u32::MAX`.
         let new_token = Some(RawToken {
-            dst_line: self.position.line - 1,
-            dst_col: self.position.col - 1,
-            src_line: node.range().start.line - 1,
-            src_col: node.range().start.col - 1,
+            dst_line: self.position.line.wrapping_sub(1),
+            dst_col: self.position.col.wrapping_sub(1),
+            src_line: node.range().start.line.wrapping_sub(1),
+            src_col: node.range().start.col.wrapping_sub(1),
             src_id: 0,
             name_id: !0,
         });
@@ -3239,17 +3666,19 @@ impl<W: Write> GenJS<W> {
     }
 }
 
-impl<W: Write> Visitor for GenJS<W> {
-    fn call(&mut self, ctx: &Context, node: NodePtr, parent: Option<NodePtr>) {
-        self.gen_node(ctx, node, parent);
+impl<'gc, W: Write> Visitor<'gc> for GenJS<W> {
+    fn call(&mut self, ctx: &'gc GCLock, node: &'gc Node<'gc>, path: Option<Path<'gc>>) {
+        self.gen_node(ctx, node, path);
     }
 }
 
-impl Node {
+impl Node<'_> {
     fn is_unary_op(&self, op: UnaryExpressionOperator) -> bool {
         match self {
             Node::UnaryExpression(UnaryExpression {
-                range: _, operator, ..
+                metadata: _,
+                operator,
+                ..
             }) => *operator == op,
             _ => false,
         }
@@ -3258,7 +3687,7 @@ impl Node {
     fn is_update_prefix(&self, op: UpdateExpressionOperator) -> bool {
         match self {
             Node::UpdateExpression(UpdateExpression {
-                range: _,
+                metadata: _,
                 prefix,
                 operator,
                 ..
@@ -3270,7 +3699,7 @@ impl Node {
     fn is_negative_number(&self) -> bool {
         match self {
             Node::NumericLiteral(NumericLiteral {
-                range: _, value, ..
+                metadata: _, value, ..
             }) => *value < 0f64,
             _ => false,
         }
@@ -3279,7 +3708,9 @@ impl Node {
     fn is_binary_op(&self, op: BinaryExpressionOperator) -> bool {
         match self {
             Node::BinaryExpression(BinaryExpression {
-                range: _, operator, ..
+                metadata: _,
+                operator,
+                ..
             }) => *operator == op,
             _ => false,
         }
@@ -3288,7 +3719,7 @@ impl Node {
     fn is_if_without_else(&self) -> bool {
         match self {
             Node::IfStatement(IfStatement {
-                range: _,
+                metadata: _,
                 alternate,
                 ..
             }) => alternate.is_none(),
@@ -3311,7 +3742,7 @@ impl Node {
         matches!(
             self,
             Node::LogicalExpression(LogicalExpression {
-                range: _,
+                metadata: _,
                 operator: LogicalExpressionOperator::And | LogicalExpressionOperator::Or,
                 ..
             })
@@ -3322,7 +3753,7 @@ impl Node {
         matches!(
             self,
             Node::LogicalExpression(LogicalExpression {
-                range: _,
+                metadata: _,
                 operator: LogicalExpressionOperator::NullishCoalesce,
                 ..
             })
@@ -3330,56 +3761,75 @@ impl Node {
     }
 }
 
-fn ends_with_block(ctx: &Context, node: Option<NodePtr>) -> bool {
+/// Whether to skip the semicolon at the end of `node`.
+/// Block statements don't need semicolons at the end, but other statements which contain
+/// statements don't need them either.
+/// For example:
+/// ```js
+/// if (x)
+///   y();
+/// ```
+/// The semicolon will be emitted as part of emitting `y()`, which is an `ExpressionStatement`,
+/// so the `IfStatement` does not need to emit a semicolon.
+fn stmt_skip_semi<'gc>(ctx: &'gc GCLock, node: Option<&'gc Node<'gc>>) -> bool {
     match node {
-        Some(node) => match &node.get(ctx) {
-            Node::BlockStatement(_) | Node::FunctionDeclaration(_) => true,
-            Node::WhileStatement(WhileStatement { range: _, body, .. }) => {
-                ends_with_block(ctx, Some(*body))
-            }
-            Node::ForStatement(ForStatement { range: _, body, .. }) => {
-                ends_with_block(ctx, Some(*body))
-            }
-            Node::ForInStatement(ForInStatement { range: _, body, .. }) => {
-                ends_with_block(ctx, Some(*body))
-            }
-            Node::ForOfStatement(ForOfStatement { range: _, body, .. }) => {
-                ends_with_block(ctx, Some(*body))
-            }
-            Node::WithStatement(WithStatement { range: _, body, .. }) => {
-                ends_with_block(ctx, Some(*body))
-            }
+        Some(node) => match &node {
+            Node::BlockStatement(_)
+            | Node::FunctionDeclaration(_)
+            | Node::WhileStatement(_)
+            | Node::ForStatement(_)
+            | Node::ForInStatement(_)
+            | Node::ForOfStatement(_)
+            | Node::IfStatement(_)
+            | Node::WithStatement(_) => true,
             Node::SwitchStatement(_) => true,
-            Node::LabeledStatement(LabeledStatement { range: _, body, .. }) => {
-                ends_with_block(ctx, Some(*body))
+            Node::LabeledStatement(LabeledStatement { body, .. }) => {
+                stmt_skip_semi(ctx, Some(*body))
             }
             Node::TryStatement(TryStatement {
-                range: _,
+                metadata: _,
                 finalizer,
                 handler,
                 ..
-            }) => ends_with_block(ctx, finalizer.or(*handler)),
-            Node::CatchClause(CatchClause { range: _, body, .. }) => {
-                ends_with_block(ctx, Some(*body))
-            }
-            Node::IfStatement(IfStatement {
-                range: _,
-                alternate,
-                consequent,
-                ..
-            }) => ends_with_block(ctx, alternate.or(Some(*consequent))),
+            }) => stmt_skip_semi(ctx, finalizer.or(*handler)),
+            Node::CatchClause(CatchClause { body, .. }) => stmt_skip_semi(ctx, Some(*body)),
             Node::ClassDeclaration(_) => true,
             Node::ExportDefaultDeclaration(ExportDefaultDeclaration {
-                range: _,
+                metadata: _,
                 declaration,
-            }) => ends_with_block(ctx, Some(*declaration)),
+            }) => stmt_skip_semi(ctx, Some(*declaration)),
             Node::ExportNamedDeclaration(ExportNamedDeclaration {
-                range: _,
+                metadata: _,
                 declaration,
                 ..
-            }) => ends_with_block(ctx, *declaration),
+            }) => stmt_skip_semi(ctx, *declaration),
             _ => false,
         },
         None => false,
     }
+}
+
+/// Return true if `node` contains a `CallExpression`.
+fn contains_call<'gc>(gc: &'gc GCLock, node: &'gc Node<'gc>) -> bool {
+    struct CallFinder {
+        found: bool,
+    }
+    impl<'gc> Visitor<'gc> for CallFinder {
+        fn call(&mut self, gc: &'gc GCLock, node: &'gc Node<'gc>, _path: Option<Path<'gc>>) {
+            match node {
+                Node::CallExpression(_)
+                | Node::OptionalCallExpression(OptionalCallExpression {
+                    optional: false, ..
+                }) => {
+                    self.found = true;
+                }
+                _ => {
+                    node.visit_children(gc, self);
+                }
+            };
+        }
+    }
+    let mut finder = CallFinder { found: false };
+    node.visit(gc, &mut finder, None);
+    finder.found
 }

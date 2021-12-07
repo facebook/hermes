@@ -11,17 +11,13 @@ import java.util.HashSet;
 import java.util.Set;
 import org.junit.Test;
 
-// Run "./gradlew :intltest:prepareTests" from the root to download and copy the test files to the
+// Run "./gradlew :intltest:prepareTests" from the root to copy the test files to the
 // APK assets.
 public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
-
-  private static final String LOG_TAG = "HermesIntlNumberFormatTest";
 
   public void testIntlNumberFormat() throws IOException {
 
     String basePath = "test262/test/intl402/NumberFormat";
-
-    Set<String> whiteList = new HashSet<>();
 
     Set<String> deviations =
         new HashSet<>(
@@ -43,12 +39,13 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
                 // thrown.
                 "currency-digits.js", // Didn't get correct minimumFractionDigts for currency AFN.
                 // Expected SameValue(«0», «2») to be true
-                "constructor-unit.js" // com.facebook.hermes.intl.JSRangeErrorException: Unknown
+                "constructor-unit.js", // com.facebook.hermes.intl.JSRangeErrorException: Unknown
                 // unit: acre-per-acre .. We support only units directly known
                 // to
                 // https://developer.android.com/reference/android/icu/util/MeasureUnit ..
                 // MeasureFormat.format requires an instance of MeasureUnit.
-                ));
+                "constructor-options-roundingMode-invalid.js",
+                "constructor-options-throwing-getters-rounding-mode.js"));
 
     Set<String> testIssues =
         new HashSet<>(
@@ -71,43 +68,29 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
               ));
     }
 
-    Set<String> blackList = testIssues;
-    blackList.addAll(deviations);
-    blackList.addAll(icuIssues);
+    Set<String> skipList = testIssues;
+    skipList.addAll(deviations);
+    skipList.addAll(icuIssues);
 
-    runTests(basePath, blackList, whiteList);
+    runTests(basePath, skipList);
   }
 
   @Test
   public void testIntlNumberFormat_prototype() throws IOException {
-
     String basePath = "test262/test/intl402/NumberFormat/prototype";
-
-    Set<String> whiteList = new HashSet<>();
-    Set<String> blackList = new HashSet<>();
-
-    runTests(basePath, blackList, whiteList);
+    runTests(basePath);
   }
 
   @Test
   public void testIntlNumberFormat_supportedLocalesOf() throws IOException {
-
     String basePath = "test262/test/intl402/NumberFormat/supportedLocalesOf";
-
-    Set<String> whiteList = new HashSet<>();
-    Set<String> blackList = new HashSet<>();
-    runTests(basePath, blackList, whiteList);
+    runTests(basePath);
   }
 
   @Test
   public void testIntlNumberFormat_prototype_constructor() throws IOException {
-
     String basePath = "test262/test/intl402/NumberFormat/prototype/constructor";
-
-    Set<String> whiteList = new HashSet<>();
-    Set<String> blackList = new HashSet<>();
-
-    runTests(basePath, blackList, whiteList);
+    runTests(basePath);
   }
 
   @Test
@@ -115,7 +98,6 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
 
     String basePath = "test262/test/intl402/NumberFormat/prototype/toStringTag";
 
-    Set<String> whiteList = new HashSet<>();
     Set<String> deviations =
         new HashSet<>(
             Arrays.asList(
@@ -128,9 +110,9 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
                 // (and Chrome) returns "[object Object]:
                 ));
 
-    Set<String> blackList = deviations;
+    Set<String> skipList = deviations;
 
-    runTests(basePath, blackList, whiteList);
+    runTests(basePath, skipList);
   }
 
   @Test
@@ -138,27 +120,25 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
 
     String basePath = "test262/test/intl402/NumberFormat/prototype/resolvedOptions";
 
-    Set<String> whiteList = new HashSet<>();
     Set<String> deviations =
         new HashSet<>(
             Arrays.asList(
-                "order.js" // // Expected SameValue(«Object», «Intl.NumberFormat») to be true ..
+                "order.js", // Expected SameValue(«Object», «Intl.NumberFormat») to be true ..
                 // Test expects new Intl.NumberFormat().toString() to return "[object
                 // Intl.NumberFormat]" which Firefox does.. but hermes (and Chrome)
                 // returns "[object Object]:
+                "roundingMode.js" // Not implemented
                 ));
 
-    Set<String> blackList = deviations;
+    Set<String> skipList = deviations;
 
-    runTests(basePath, blackList, whiteList);
+    runTests(basePath, skipList);
   }
 
   @Test
   public void testIntlNumberFormat_prototype_format() throws IOException {
 
     String basePath = "test262/test/intl402/NumberFormat/prototype/format";
-
-    Set<String> whiteList = new HashSet<>();
 
     // Our implementation doesn't support signDisplay as implementing with ICU APIs available in
     // Android before API 30 is very involved and tricky (Requires explicit manipulation of patterns
@@ -198,7 +178,6 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
       icuIssues.addAll(
           Arrays.asList(
               "engineering-scientific-de-DE.js", // Expected SameValue(«-∞E0», «-∞») to be true
-              "engineering-scientific-zh-TW.js", // Expected SameValue(«-∞E0», «-∞») to be true
               "engineering-scientific-ja-JP.js", // Expected SameValue(«-∞E0», «-∞») to be true
               "numbering-systems.js", // numberingSystem: diak, digit: 0 Expected SameValue(«0»,
               // «𑥐») to be true
@@ -231,8 +210,7 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
           Arrays.asList(
               "notation-compact-ko-KR.js", // Expected SameValue(«9,900만», «9877만») to be true
               "notation-compact-en-US.js", // Expected SameValue(«990M», «988M») to be true
-              "notation-compact-ja-JP.js", // Expected SameValue(«9,900万», «9877万») to be true
-              "notation-compact-zh-TW.js" // Expected SameValue(«9,900萬», «9877萬») to be true
+              "notation-compact-ja-JP.js" // Expected SameValue(«9,900万», «9877万») to be true
               ));
     }
 
@@ -243,7 +221,6 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
           Arrays.asList(
               "unit-ko-KR.js", // : Expected SameValue(«-987», «-987km/h») to be true
               "unit-de-DE.js", // : Expected SameValue(«-987», «-987 km/h») to be true
-              "unit-zh-TW.js", // : Expected SameValue(«-987», «-987 公里/小時») to be true
               "format-fraction-digits-precision.js", // : Unexpected formatted 1.1 for
               // en-US-u-nu-hanidec and options
               // {"useGrouping":false,"minimumIntegerDigits":3,"minimumFractionDigits":1,"maximumFractionDigits":3}: 〇〇〈.〈
@@ -257,21 +234,40 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
               ));
     }
 
-    Set<String> blackList = new HashSet<>();
-    blackList.addAll(signDisplayList);
-    blackList.addAll(unitIssues);
-    blackList.addAll(icuIssues);
-    blackList.addAll(pre24Issues);
+    Set<String> roundingMode = new HashSet<>();
+    roundingMode.addAll(
+        Arrays.asList(
+            "format-rounding-mode-trunc.js",
+            "format-rounding-mode-ceil.js",
+            "format-rounding-mode-floor.js",
+            "format-rounding-mode-half-floor.js",
+            "format-rounding-mode-half-even.js",
+            "format-rounding-mode-half-trunc.js",
+            "format-rounding-mode-half-ceil.js",
+            "format-rounding-mode-expand.js"));
 
-    runTests(basePath, blackList, whiteList);
+    // There seem to be significant gaps in the implementation for zh-TW, even
+    // with the latest API.
+    Set<String> zh_TW = new HashSet<>();
+    zh_TW.addAll(
+        Arrays.asList(
+            "engineering-scientific-zh-TW.js", "unit-zh-TW.js", "notation-compact-zh-TW.js"));
+
+    Set<String> skipList = new HashSet<>();
+    skipList.addAll(signDisplayList);
+    skipList.addAll(unitIssues);
+    skipList.addAll(icuIssues);
+    skipList.addAll(pre24Issues);
+    skipList.addAll(roundingMode);
+    skipList.addAll(zh_TW);
+
+    runTests(basePath, skipList);
   }
 
   @Test
   public void testIntlNumberFormat_prototype_formatToParts() throws IOException {
 
     String basePath = "test262/test/intl402/NumberFormat/prototype/formatToParts";
-
-    Set<String> whiteList = new HashSet<>();
 
     // Our implementation doesn't support signDisplay as implementing with ICU APIs available in
     // Android before API 30 is very involved and tricky (Requires explicit manipulation of patterns
@@ -337,8 +333,6 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
               // SameValue(«4», «2») to be true
               "notation-compact-en-US.js", // Compact short: 987654321: parts[1].type Expected
               // SameValue(«literal», «compact») to be true
-              "engineering-scientific-zh-TW.js", // -Infinity - engineering: length Expected
-              // SameValue(«4», «2») to be true
               "engineering-scientific-ja-JP.js", // -Infinity - engineering: length Expected
               // SameValue(«4», «2») to be true
               "notation-compact-ja-JP.js", // Compact short: 987654321: parts[3].type Expected
@@ -358,13 +352,17 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
               ));
     }
 
-    Set<String> blackList = new HashSet<>();
+    Set<String> zh_TW = new HashSet<>();
+    zh_TW.addAll(Arrays.asList("engineering-scientific-zh-TW.js", "notation-compact-zh-TW.js"));
 
-    blackList.addAll(signDisplayList);
-    blackList.addAll(unitList);
-    blackList.addAll(icuIssues);
-    blackList.addAll(pre24Issues);
+    Set<String> skipList = new HashSet<>();
 
-    runTests(basePath, blackList, whiteList);
+    skipList.addAll(signDisplayList);
+    skipList.addAll(unitList);
+    skipList.addAll(icuIssues);
+    skipList.addAll(pre24Issues);
+    skipList.addAll(zh_TW);
+
+    runTests(basePath, skipList);
   }
 }

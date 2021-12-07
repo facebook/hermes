@@ -958,8 +958,8 @@ typedArrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
   return self.getHermesValue();
 }
 
-CallResult<HermesValue>
-typedArrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
+static CallResult<HermesValue>
+typedFindHelper(void *ctx, bool reverse, Runtime *runtime, NativeArgs args) {
   bool index = static_cast<bool>(ctx);
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
       ExecutionStatus::EXCEPTION) {
@@ -974,7 +974,8 @@ typedArrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
   auto thisArg = args.getArgHandle(1);
   GCScope gcScope(runtime);
   auto marker = gcScope.createMarker();
-  for (JSTypedArrayBase::size_type i = 0; i < len; ++i) {
+  for (JSTypedArrayBase::size_type counter = 0; counter < len; counter++) {
+    auto i = reverse ? (len - counter - 1) : counter;
     auto val = JSObject::getOwnIndexed(*self, runtime, i);
     auto idx = HermesValue::encodeNumberValue(i);
     auto callRes = Callable::executeCall3(
@@ -990,6 +991,16 @@ typedArrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
   }
   return index ? HermesValue::encodeNumberValue(-1)
                : HermesValue::encodeUndefinedValue();
+}
+
+CallResult<HermesValue>
+typedArrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
+  return typedFindHelper(ctx, false, runtime, args);
+}
+
+CallResult<HermesValue>
+typedArrayPrototypeFindLast(void *ctx, Runtime *runtime, NativeArgs args) {
+  return typedFindHelper(ctx, true, runtime, args);
 }
 
 CallResult<HermesValue>
@@ -1738,6 +1749,20 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
       Predefined::getSymbolID(Predefined::findIndex),
       (void *)true,
       typedArrayPrototypeFind,
+      1);
+  defineMethod(
+      runtime,
+      proto,
+      Predefined::getSymbolID(Predefined::findLast),
+      (void *)false,
+      typedArrayPrototypeFindLast,
+      1);
+  defineMethod(
+      runtime,
+      proto,
+      Predefined::getSymbolID(Predefined::findLastIndex),
+      (void *)true,
+      typedArrayPrototypeFindLast,
       1);
   defineMethod(
       runtime,

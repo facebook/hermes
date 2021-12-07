@@ -39,9 +39,9 @@ if [ ! -x "$clang_format" ]; then
   exit 1
 fi
 clang_format_version="$("$clang_format" --version)"
-if echo "$clang_format_version" | grep -q -v '11.0.*'
+if echo "$clang_format_version" | grep -q -v '12.0.*'
 then
-   printf "ERROR: clang-format's version must match 11.0.*\n  clang-format path: %s\n  clang-format --version: %s" "$clang_format" "$clang_format_version"
+   printf "ERROR: clang-format's version must match 12.0.*\n  clang-format path: %s\n  clang-format --version: %s" "$clang_format" "$clang_format_version"
    exit 1
 fi
 

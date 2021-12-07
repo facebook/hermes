@@ -85,7 +85,7 @@ class RuntimeFunctionHeader {
 };
 
 static_assert(
-    IsTriviallyCopyable<RuntimeFunctionHeader, true>::value,
+    std::is_trivially_copyable<RuntimeFunctionHeader>::value,
     "RuntimeFunctionHeader should be trivially copyable");
 
 /// Base class designed to provide bytecode data. We use this class

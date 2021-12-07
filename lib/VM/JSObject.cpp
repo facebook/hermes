@@ -671,7 +671,7 @@ namespace {
 /// methods, so this function has to be local to the cpp file in order
 /// to be inlined for the perf win.
 LLVM_ATTRIBUTE_ALWAYS_INLINE
-CallResult<bool> getOwnComputedPrimitiveDescriptorImpl(
+inline CallResult<bool> getOwnComputedPrimitiveDescriptorImpl(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<> nameValHandle,

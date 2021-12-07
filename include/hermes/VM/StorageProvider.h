@@ -21,7 +21,7 @@ namespace vm {
 class StorageProvider {
  public:
   StorageProvider() = default;
-  virtual ~StorageProvider() = default;
+  virtual ~StorageProvider();
 
   /// @name Factories
   /// @{

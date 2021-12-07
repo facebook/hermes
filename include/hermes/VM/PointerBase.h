@@ -18,14 +18,10 @@
 namespace hermes {
 namespace vm {
 
+#ifdef HERMESVM_COMPRESSED_POINTERS
 class BasedPointer final {
  public:
-  using StorageType =
-#ifdef HERMESVM_COMPRESSED_POINTERS
-      uint32_t;
-#else
-      uintptr_t;
-#endif
+  using StorageType = uint32_t;
   explicit operator bool() const;
 
   inline bool operator==(BasedPointer other) const;
@@ -39,30 +35,19 @@ class BasedPointer final {
   explicit BasedPointer(StorageType raw);
 
   BasedPointer &operator=(std::nullptr_t);
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  inline uint32_t getSegmentIndex() const;
-
-  inline uint32_t getOffset() const;
-#endif // HERMESVM_COMPRESSED_POINTERS
 
   inline StorageType getRawValue() const;
 
  private:
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  // The low AlignedStorage::kLogSize bits are the offset, and the
-  // remaining upper bits are the segment index.
-  static inline uint32_t computeSegmentAndOffset(const void *heapAddr);
-#endif // HERMESVM_COMPRESSED_POINTERS
+  // Only PointerBase needs these functions. To every other part of the system
+  // this is an opaque type that PointerBase handles translations for.
+  friend class PointerBase;
+  inline uint32_t getSegmentIndex() const;
+  inline uint32_t getOffset() const;
 
   StorageType raw_;
-
-  inline explicit BasedPointer(const void *heapAddr);
-
-  // Only PointerBase needs to access this field and the constructor. To every
-  // other part of the system this is an opaque type that PointerBase handles
-  // translations for.
-  friend class PointerBase;
 };
+#endif
 
 /// PointerBase is an opaque type meant to be used as a base pointer.
 /// This is used to implement a mechanism where 32-bit offsets are used as
@@ -71,6 +56,13 @@ class PointerBase {
  public:
   /// Initialize the PointerBase.
   inline PointerBase();
+
+  /// Record \p segStart as the start address for the given segment index.
+  inline void setSegment(unsigned idx, void *segStart);
+
+#ifdef HERMESVM_COMPRESSED_POINTERS
+ private:
+  friend class CompressedPointer;
 
   /// Convert a pointer to an offset from this.
   /// \param ptr A pointer to convert.
@@ -89,15 +81,7 @@ class PointerBase {
   /// \pre ptr is not null.
   inline void *basedToPointerNonNull(BasedPointer ptr) const;
 
-  /// Record \p segStart as the start address for the given segment index.
-  inline void setSegment(unsigned idx, void *segStart);
-
   static constexpr unsigned kNullPtrSegmentIndex = 0;
-  static constexpr unsigned kYGSegmentIndex = 1;
-  static constexpr unsigned kFirstOGSegmentIndex = 2;
-
- private:
-#ifdef HERMESVM_COMPRESSED_POINTERS
   /// To support 32-bit GC pointers in segmentIdx:offset form,
   /// segmentMap_ maps segment indices to "biased segment starts."
   /// This "bias" speeds up the decoding of a BasedPointer.  If the segmentMap_
@@ -139,6 +123,7 @@ class PointerBase {
 /// @name Inline implementations.
 /// @{
 
+#ifdef HERMESVM_COMPRESSED_POINTERS
 inline BasedPointer::BasedPointer(std::nullptr_t) : raw_(0) {}
 inline BasedPointer::BasedPointer(StorageType raw) : raw_(raw) {}
 
@@ -149,11 +134,6 @@ inline BasedPointer &BasedPointer::operator=(std::nullptr_t) {
 
 inline BasedPointer::StorageType BasedPointer::getRawValue() const {
   return raw_;
-}
-
-inline BasedPointer PointerBase::pointerToBasedNonNull(const void *ptr) const {
-  assert(ptr && "Null pointer given to pointerToBasedNonNull");
-  return BasedPointer{ptr};
 }
 
 inline BasedPointer::operator bool() const {
@@ -174,13 +154,9 @@ inline void *PointerBase::basedToPointerNonNull(BasedPointer ptr) const {
   return basedToPointer(ptr);
 }
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
 inline PointerBase::PointerBase() {
   segmentMap_[kNullPtrSegmentIndex] = nullptr;
 }
-
-inline BasedPointer::BasedPointer(const void *heapAddr)
-    : raw_(computeSegmentAndOffset(heapAddr)) {}
 
 inline uint32_t BasedPointer::getSegmentIndex() const {
   return raw_ >> AlignedStorage::kLogSize;
@@ -204,21 +180,21 @@ inline BasedPointer PointerBase::pointerToBased(const void *ptr) const {
   return pointerToBasedNonNull(ptr);
 }
 
-/*static*/
-inline uint32_t BasedPointer::computeSegmentAndOffset(const void *heapAddr) {
-  assert(heapAddr != nullptr);
-  uintptr_t addrAsInt = reinterpret_cast<uintptr_t>(heapAddr);
-  void *segStart = AlignedStorage::start(heapAddr);
+inline BasedPointer PointerBase::pointerToBasedNonNull(const void *ptr) const {
+  assert(ptr && "Null pointer given to pointerToBasedNonNull");
+  uintptr_t addrAsInt = reinterpret_cast<uintptr_t>(ptr);
+  void *segStart = AlignedStorage::start(ptr);
   /// segStart is the start of the AlignedStorage containing
-  /// heapAddr, so its low AlignedStorage::kLogSize are zeros.
-  /// Thus, offset, below, will be the offset of heapAddr within the
+  /// ptr, so its low AlignedStorage::kLogSize are zeros.
+  /// Thus, offset, below, will be the offset of ptr within the
   /// segment; bits above AlignedStorage::kLogSize will be zero.
   uintptr_t offset = addrAsInt - reinterpret_cast<uintptr_t>(segStart);
-  /// Now get the segment index, and shift it so that it's bits do not
+  /// Now get the segment index, and shift it so that its bits do not
   /// overlap with those of offset.
-  return (SegmentInfo::segmentIndexFromStart(segStart)
-          << AlignedStorage::kLogSize) |
+  uint32_t raw = (SegmentInfo::segmentIndexFromStart(segStart)
+                  << AlignedStorage::kLogSize) |
       offset;
+  return BasedPointer{raw};
 }
 
 inline void PointerBase::setSegment(unsigned idx, void *segStart) {
@@ -232,18 +208,7 @@ inline void PointerBase::setSegment(unsigned idx, void *segStart) {
 }
 
 #else
-inline BasedPointer::BasedPointer(const void *heapAddr)
-    : raw_(reinterpret_cast<uintptr_t>(heapAddr)) {}
-
 inline PointerBase::PointerBase() {}
-
-inline void *PointerBase::basedToPointer(BasedPointer ptr) const {
-  return reinterpret_cast<void *>(ptr.getRawValue());
-}
-
-inline BasedPointer PointerBase::pointerToBased(const void *ptr) const {
-  return BasedPointer{ptr};
-}
 
 inline void PointerBase::setSegment(unsigned idx, void *segStart) {
   assert(segStart == AlignedStorage::start(segStart) && "Precondition");

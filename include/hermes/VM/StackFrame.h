@@ -284,10 +284,10 @@ void dumpStackFrame(ConstStackFramePtr frame);
 void dumpStackFrame(StackFramePtr frame);
 
 static_assert(
-    IsTriviallyCopyable<StackFramePtr, true>::value,
+    std::is_trivially_copyable<StackFramePtr>::value,
     "StackFramePtr must be trivially copyable");
 static_assert(
-    IsTriviallyCopyable<ConstStackFramePtr, true>::value,
+    std::is_trivially_copyable<ConstStackFramePtr>::value,
     "ConstStackFramePtr must be trivially copyable");
 
 /// Unidirectional iterator over stack frames, starting from the top-most
@@ -354,10 +354,10 @@ using StackFrameIterator = StackFrameIteratorT<false>;
 using ConstStackFrameIterator = StackFrameIteratorT<true>;
 
 static_assert(
-    IsTriviallyCopyable<StackFrameIterator, true>::value,
+    std::is_trivially_copyable<StackFrameIterator>::value,
     "StackFrameIterator must be trivially copyable");
 static_assert(
-    IsTriviallyCopyable<ConstStackFrameIterator, true>::value,
+    std::is_trivially_copyable<ConstStackFrameIterator>::value,
     "ConstStackFrameIterator must be trivially copyable");
 
 } // namespace vm

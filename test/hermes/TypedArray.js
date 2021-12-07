@@ -779,6 +779,43 @@ cons.forEach(function(TypedArray) {
 });
 /// @}
 
+/// @name TypedArray.prototype.findLast/.findLastIndex
+/// @{
+cons.forEach(function(TypedArray) {
+  var arr = new TypedArray([0, 1, 2, 3]);
+
+  var cb = function(elem, i, view) {
+    assert.equal(view, arr);
+    assert.equal(elem, i);
+    return i === arr.length - 1;
+  };
+  assert.equal(arr.findLast(cb), arr.length - 1);
+  assert.equal(arr.findLastIndex(cb), arr.length - 1);
+  var numcalls = 0;
+  cb = function() {
+    ++numcalls;
+    return true;
+  };
+  assert.equal(arr.findLast(cb), 3);
+  assert.equal(arr.findLastIndex(cb), 3);
+  assert.equal(numcalls, 2);
+
+  cb = function() {
+    return false;
+  };
+  assert.equal(arr.findLast(cb), undefined);
+  assert.equal(arr.findLastIndex(cb), -1);
+
+  var state = [];
+  cb = function(elem, i, view) {
+    state.push(elem);
+    return elem === 2;
+  };
+  assert.equal(arr.findLast(cb), 2);
+  assert.arrayEqual(state, [3, 2]);
+});
+/// @}
+
 /// @name TypedArray.prototype.find/.findIndex
 /// @{
 cons.forEach(function(TypedArray) {
@@ -805,6 +842,13 @@ cons.forEach(function(TypedArray) {
   };
   assert.equal(arr.find(cb), undefined);
   assert.equal(arr.findIndex(cb), -1);
+  var state = [];
+  cb = function(elem, i, view) {
+    state.push(elem);
+    return elem === 2;
+  };
+  assert.equal(arr.find(cb), 2);
+  assert.arrayEqual(state, [0, 1, 2]);
 });
 /// @}
 

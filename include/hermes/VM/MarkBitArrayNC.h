@@ -18,8 +18,8 @@ namespace hermes {
 namespace vm {
 
 /// Encapsulates the array of bits used for marking the allocation region of an
-/// GenGCHeapSegment.  The array expects to be constructed inside an
-/// GenGCHeapSegment's storage, at some position before the allocation region.
+/// AlignedHeapSegment.  The array expects to be constructed inside an
+/// AlignedHeapSegment's storage, at some position before the allocation region.
 class MarkBitArrayNC {
  public:
   MarkBitArrayNC() = default;
@@ -34,7 +34,7 @@ class MarkBitArrayNC {
   /// Returns the size of the bit array, counted as a number of bits.
   ///
   /// For the sake of simplicity, there are enough bits to cover an allocation
-  /// region that takes up all the space in an GenGCHeapSegment -- even though
+  /// region that takes up all the space in an AlignedHeapSegment -- even though
   /// some prefix of the storage is reserved for auxiliary data structures.
   static constexpr size_t size();
 

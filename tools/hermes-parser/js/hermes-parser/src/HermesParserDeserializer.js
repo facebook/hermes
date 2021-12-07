@@ -4,21 +4,61 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @flow strict
  * @format
  */
 
 'use strict';
 
+import type {
+  HermesSourceLocation,
+  HermesNode,
+  HermesToken,
+  HermesComment,
+} from './HermesAST';
+import typeof HermesParserWASM from './HermesParserWASM';
+import type {ParserOptions} from './ParserOptions';
+
 import HermesParserDecodeUTF8String from './HermesParserDecodeUTF8String';
 import NODE_DESERIALIZERS from './HermesParserNodeDeserializers';
 
 export default class HermesParserDeserializer {
+  programBufferIdx: number;
+  positionBufferIdx: number;
+  +positionBufferSize: number;
+  +locMap: {[number]: HermesSourceLocation};
+  +HEAPU8: HermesParserWASM['HEAPU8'];
+  +HEAPU32: HermesParserWASM['HEAPU32'];
+  +HEAPF64: HermesParserWASM['HEAPF64'];
+  +options: ParserOptions;
+
+  // Matches StoredComment::Kind enum in JSLexer.h
+  +commentTypes: $ReadOnlyArray<HermesComment['type']> = [
+    'CommentLine',
+    'CommentBlock',
+    'InterpreterDirective',
+  ];
+
+  // Matches TokenType enum in HermesParserJSSerializer.h
+  +tokenTypes: $ReadOnlyArray<HermesToken['type']> = [
+    'Boolean',
+    'Identifier',
+    'Keyword',
+    'Null',
+    'Numeric',
+    'Punctuator',
+    'String',
+    'RegularExpression',
+    'Template',
+    'JSXText',
+  ];
+
   constructor(
-    programBuffer,
-    positionBuffer,
-    positionBufferSize,
-    wasmParser,
-    options,
+    programBuffer: number,
+    positionBuffer: number,
+    positionBufferSize: number,
+    wasmParser: HermesParserWASM,
+    options: ParserOptions,
   ) {
     // Program and position buffer are memory addresses, so we must convert
     // into indices into HEAPU32 (an array of 4-byte integers).
@@ -38,20 +78,20 @@ export default class HermesParserDeserializer {
   /**
    * Consume and return the next 4 bytes in the program buffer.
    */
-  next() {
+  next(): number {
     const num = this.HEAPU32[this.programBufferIdx++];
     return num;
   }
 
-  deserialize() {
-    const program = {
+  deserialize(): HermesNode {
+    const program: HermesNode = {
       type: 'Program',
       loc: this.addEmptyLoc(),
       body: this.deserializeNodeList(),
       comments: this.deserializeComments(),
     };
 
-    if (this.options.tokens) {
+    if (this.options.tokens === true) {
       program.tokens = this.deserializeTokens();
     }
 
@@ -63,7 +103,7 @@ export default class HermesParserDeserializer {
   /**
    * Booleans are serialized as a single 4-byte integer.
    */
-  deserializeBoolean() {
+  deserializeBoolean(): boolean {
     return Boolean(this.next());
   }
 
@@ -71,7 +111,7 @@ export default class HermesParserDeserializer {
    * Numbers are serialized directly into program buffer, taking up 8 bytes
    * preceded by 4 bytes of alignment padding if necessary.
    */
-  deserializeNumber() {
+  deserializeNumber(): number {
     let floatIdx;
 
     // Numbers are aligned on 8-byte boundaries, so skip padding if we are at
@@ -92,7 +132,7 @@ export default class HermesParserDeserializer {
    * by their size as a 4-byte integer. The size is only present if the
    * pointer is non-null.
    */
-  deserializeString() {
+  deserializeString(): ?string {
     const ptr = this.next();
     if (ptr === 0) {
       return null;
@@ -110,7 +150,7 @@ export default class HermesParserDeserializer {
    * If the node kind is 0 the node is null, otherwise the node kind - 1 is an
    * index into the array of node deserialization functions.
    */
-  deserializeNode() {
+  deserializeNode(): ?HermesNode {
     const nodeType = this.next();
     if (nodeType === 0) {
       return null;
@@ -124,7 +164,7 @@ export default class HermesParserDeserializer {
    * Node lists are serialized as a 4-byte integer denoting the number of
    * elements in the list, followed by the serialized elements.
    */
-  deserializeNodeList() {
+  deserializeNodeList(): Array<?HermesNode> {
     const size = this.next();
     const nodeList = [];
 
@@ -135,29 +175,12 @@ export default class HermesParserDeserializer {
     return nodeList;
   }
 
-  // Matches StoredComment::Kind enum in JSLexer.h
-  commentTypes = ['CommentLine', 'CommentBlock', 'InterpreterDirective'];
-
-  // Matches TokenType enum in HermesParserJSSerializer.h
-  tokenTypes = [
-    'Boolean',
-    'Identifier',
-    'Keyword',
-    'Null',
-    'Numeric',
-    'Punctuator',
-    'String',
-    'RegularExpression',
-    'Template',
-    'JSXText',
-  ];
-
   /**
    * Comments are serialized as a node list, where each comment is serialized
    * as a 4-byte integer denoting comment type, followed by a 4-byte value
    * denoting the loc ID, followed by a serialized string for the comment value.
    */
-  deserializeComments() {
+  deserializeComments(): Array<HermesComment> {
     const size = this.next();
     const comments = [];
 
@@ -175,7 +198,7 @@ export default class HermesParserDeserializer {
     return comments;
   }
 
-  deserializeTokens() {
+  deserializeTokens(): Array<HermesToken> {
     const size = this.next();
     const tokens = [];
 
@@ -198,8 +221,9 @@ export default class HermesParserDeserializer {
    * a 4-byte loc ID. This is used to create a map of loc IDs to empty loc
    * objects that are filled after the AST has been deserialized.
    */
-  addEmptyLoc() {
-    const loc = {};
+  addEmptyLoc(): HermesSourceLocation {
+    // $FlowExpectedError
+    const loc: HermesSourceLocation = {};
     this.locMap[this.next()] = loc;
     return loc;
   }
@@ -209,7 +233,7 @@ export default class HermesParserDeserializer {
    * followed by kind which denotes whether it is a start or end position,
    * followed by line, column, and offset (4-bytes each).
    */
-  fillLocs() {
+  fillLocs(): void {
     for (let i = 0; i < this.positionBufferSize; i++) {
       const locId = this.HEAPU32[this.positionBufferIdx++];
       const kind = this.HEAPU32[this.positionBufferIdx++];
