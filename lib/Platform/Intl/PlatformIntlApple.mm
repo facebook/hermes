@@ -240,8 +240,8 @@ vm::CallResult<llvh::Optional<std::u16string>> getOptionString(
         vm::TwineChar16("Value ") +
         vm::TwineChar16(value->second.getString().c_str()) +
         vm::TwineChar16(
-            " out of range for Intl.DateTimeFormat options property " +
-            vm::TwineChar16(property.c_str())));
+            " out of range for Intl.DateTimeFormat options property ") +
+            vm::TwineChar16(property.c_str()));
   }
   // 8. Return value.
   return llvh::Optional<std::u16string>(value->second.getString());
@@ -259,7 +259,7 @@ vm::CallResult<llvh::Optional<bool>> getOptionBool(
     return fallback;
   }
   if (!value->second.isBool()) {
-    return runtime->raiseTypeError("Option is not a bool");
+    return runtime->raiseTypeError(vm::TwineChar16("Option for property ") + vm::TwineChar16(property.c_str()) + vm::TwineChar16(" is not a bool"));
   }
   //  8. Return value.
   return llvh::Optional<bool>(value->second.getBool());
@@ -279,7 +279,7 @@ vm::CallResult<llvh::Optional<uint8_t>> defaultNumberOption(
   //  3. If value is NaN or less than minimum or greater than maximum, throw a
   //  RangeError exception.
   if (std::isnan(value) || value < minimum || value > maximum) {
-    return runtime->raiseRangeError("Number is invalid");
+    return vm::ExecutionStatus::EXCEPTION;
   }
   //  4. Return floor(value).
   return llvh::Optional<uint8_t>(std::floor(value));
@@ -307,7 +307,7 @@ vm::CallResult<llvh::Optional<uint8_t>> getNumberOption(
       llvh::Optional<uint8_t>(fallback),
       runtime);
   if (defaultNumber == vm::ExecutionStatus::EXCEPTION) {
-    return vm::ExecutionStatus::EXCEPTION;
+    return runtime->raiseRangeError(vm::TwineChar16(property.c_str()) + vm::TwineChar16(" value is out of range"));
   } else {
     return llvh::Optional<uint8_t>(defaultNumber.getValue());
   }
