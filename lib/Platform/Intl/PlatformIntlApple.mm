@@ -369,7 +369,12 @@ vm::CallResult<llvh::Optional<bool>> getOptionBool(
     return fallback;
   }
   if (!value->second.isBool()) {
-    return runtime->raiseTypeError(vm::TwineChar16("Option for property ") + vm::TwineChar16(property.c_str()) + vm::TwineChar16(" is not a bool"));
+    return runtime->raiseRangeError(
+        vm::TwineChar16("Value ") +
+        vm::TwineChar16(value->second.getBool()) +
+        vm::TwineChar16(
+            " out of range for Intl.DateTimeFormat options property ") +
+            vm::TwineChar16(property.c_str()));
   }
   //  8. Return value.
   return llvh::Optional<bool>(value->second.getBool());
@@ -414,7 +419,7 @@ vm::CallResult<llvh::Optional<uint8_t>> getNumberOption(
       value->second.getNumber(),
       minimum,
       maximum,
-      llvh::Optional<uint8_t>(fallback),
+      fallback,
       runtime);
   if (defaultNumber == vm::ExecutionStatus::EXCEPTION) {
     return runtime->raiseRangeError(vm::TwineChar16(property.c_str()) + vm::TwineChar16(" value is out of range"));
