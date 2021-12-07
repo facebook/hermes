@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
@@ -24,11 +24,14 @@ print(Intl.getCanonicalLocales(["en-us-u-asd-a-tbd"]));
 // CHECK-NEXT: en-US-a-tbd-u-asd
 
 try {
-  Intl.getCanonicalLocales('en_uk');
+  Intl.getCanonicalLocales("en_uk");
 } catch (exception) {
   print(exception);
 }
 // CHECK-NEXT: RangeError: Unicode locale id en_uk is not structurally valid.
+
+print(Intl.getCanonicalLocales("und-T-en-arab-us-z1-100-a1-101-zebra"));
+// CHECK-NEXT: und-t-en-arab-us-a1-1o1-zebra-z1-100
 
 print(Intl.getCanonicalLocales([]).length);
 //CHECK-NEXT: 0

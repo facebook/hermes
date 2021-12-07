@@ -9,7 +9,6 @@ if(HERMES_ENABLE_INTL)
     add_hermes_library(hermesPlatformIntl STATIC PlatformIntlAndroid.cpp
         LINK_LIBS
         fbjni::fbjni
-        hermesBCP47Parser
     )
     target_compile_options(hermesPlatformIntl PRIVATE -frtti -fexceptions)
   elseif(APPLE)
@@ -24,5 +23,3 @@ if(HERMES_ENABLE_INTL)
     add_hermes_library(hermesPlatformIntl STATIC PlatformIntlDummy.cpp)
   endif()
 endif()
-
-

@@ -163,17 +163,13 @@ class LanguageTagParser {
   
   ParsedLocaleIdentifier parsedLocaleIdentifier;
   std::u16string localeId_;
-  std::u16string originalLocaleId_;
+  const std::u16string &originalLocaleId_;
   int subtagStart_;
   int subtagEnd_;
 };
 
-LanguageTagParser::LanguageTagParser(const std::u16string &localeId) {
-  localeId_ = localeId;
+LanguageTagParser::LanguageTagParser(const std::u16string &localeId) : localeId_{localeId}, originalLocaleId_(localeId), subtagStart_(0), subtagEnd_(-1) {
   toASCIILowerCase(localeId_);
-  originalLocaleId_ = localeId;
-  subtagStart_ = 0;
-  subtagEnd_ = -1;
 }
 LanguageTagParser::~LanguageTagParser() = default;
 
@@ -201,25 +197,19 @@ bool LanguageTagParser::parseUnicodeLanguageId(bool transformedExtensionId) {
       return false;
     }
   }
- 
-  ParsedLanguageIdentifier *languageId;
   
-  if (transformedExtensionId) {
-    languageId = &parsedLocaleIdentifier.transformedLanguageIdentifier;
-  } else {
-    languageId = &parsedLocaleIdentifier.languageIdentifier;
-  }
+  ParsedLanguageIdentifier &languageId = transformedExtensionId ? parsedLocaleIdentifier.transformedLanguageIdentifier : parsedLocaleIdentifier.languageIdentifier;
   
-  languageId->languageSubtag = getCurrentSubtag();
+  languageId.languageSubtag = getCurrentSubtag();
   
   if (!nextSubtag()) {
     return true;
   }
   
   if (isUnicodeScriptSubtag(getCurrentSubtagRef())) {
-    languageId->scriptSubtag = getCurrentSubtag();
+    languageId.scriptSubtag = getCurrentSubtag();
     if (!transformedExtensionId) {
-      toASCIITitleCase(languageId->scriptSubtag);
+      toASCIITitleCase(languageId.scriptSubtag);
     }
     if (!nextSubtag()) {
       return true;
@@ -227,9 +217,9 @@ bool LanguageTagParser::parseUnicodeLanguageId(bool transformedExtensionId) {
   }
 
   if (isUnicodeRegionSubtag(getCurrentSubtagRef())) {
-    languageId->regionSubtag = getCurrentSubtag();
+    languageId.regionSubtag = getCurrentSubtag();
     if (!transformedExtensionId) {
-      toASCIIUpperCase(languageId->regionSubtag);
+      toASCIIUpperCase(languageId.regionSubtag);
     }
     if (!nextSubtag()) {
       return true;
@@ -239,41 +229,31 @@ bool LanguageTagParser::parseUnicodeLanguageId(bool transformedExtensionId) {
   while (true) {
     if (!isUnicodeVariantSubtag(getCurrentSubtagRef())) {
       return true;
-    } else {
-      if (!addVariantSubtag(transformedExtensionId)) {
-        return false;
-      }
+    } else if (!addVariantSubtag(transformedExtensionId)) {
+      return false;
     }
-    
+  
     if (!nextSubtag()) {
       return true;
     }
   }
-
-  
-  return false;
 }
 
 bool LanguageTagParser::addVariantSubtag(bool transformedExtensionId) {
-  ParsedLanguageIdentifier *languageId;
-  if (transformedExtensionId) {
-    languageId = &parsedLocaleIdentifier.transformedLanguageIdentifier;
-  } else {
-    languageId = &parsedLocaleIdentifier.languageIdentifier;
-  }
+  ParsedLanguageIdentifier &languageId = transformedExtensionId ? parsedLocaleIdentifier.transformedLanguageIdentifier : parsedLocaleIdentifier.languageIdentifier;
 
   // Insert in alphabetical order
-  if (languageId->variantSubtagList.empty()) {
-    languageId->variantSubtagList.push_back(getCurrentSubtag());
+  if (languageId.variantSubtagList.empty()) {
+    languageId.variantSubtagList.push_back(getCurrentSubtag());
   } else {
     auto subtag = getCurrentSubtag();
-    auto begin = languageId->variantSubtagList.begin();
-    auto end = languageId->variantSubtagList.end();
+    auto begin = languageId.variantSubtagList.begin();
+    auto end = languageId.variantSubtagList.end();
     auto position = std::upper_bound(begin, end, subtag);
     if (position != std::lower_bound(begin, end, subtag)) {
       return false;
     }
-    languageId->variantSubtagList.insert(position, subtag);
+    languageId.variantSubtagList.insert(position, subtag);
   }
   return true;
 }
@@ -424,8 +404,8 @@ bool LanguageTagParser::parseTransformedExtension() {
       }
       
       std::u16string tkey = getCurrentSubtag();
-      parsedLocaleIdentifier.transformedExtensionFields.insert({tkey, {}});
-      std::vector<std::u16string> *tvalues = &parsedLocaleIdentifier.transformedExtensionFields.find(tkey)->second;
+      
+      std::vector<std::u16string> *tvalues = &parsedLocaleIdentifier.transformedExtensionFields.insert({tkey, {}}).first->second;
       
       // read key then one or more values
       if (!nextSubtag()) {
