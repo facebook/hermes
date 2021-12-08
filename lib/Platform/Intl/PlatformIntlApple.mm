@@ -351,7 +351,7 @@ vm::CallResult<llvh::Optional<std::u16string>> getOptionString(
         vm::TwineChar16(value->second.getString().c_str()) +
         vm::TwineChar16(
             " out of range for Intl.DateTimeFormat options property ") +
-            vm::TwineChar16(property.c_str()));
+        vm::TwineChar16(property.c_str()));
   }
   // 8. Return value.
   return llvh::Optional<std::u16string>(value->second.getString());
@@ -370,11 +370,10 @@ vm::CallResult<llvh::Optional<bool>> getOptionBool(
   }
   if (!value->second.isBool()) {
     return runtime->raiseRangeError(
-        vm::TwineChar16("Value ") +
-        vm::TwineChar16(value->second.getBool()) +
+        vm::TwineChar16("Value ") + vm::TwineChar16(value->second.getBool()) +
         vm::TwineChar16(
             " out of range for Intl.DateTimeFormat options property ") +
-            vm::TwineChar16(property.c_str()));
+        vm::TwineChar16(property.c_str()));
   }
   //  8. Return value.
   return llvh::Optional<bool>(value->second.getBool());
@@ -394,7 +393,9 @@ vm::CallResult<llvh::Optional<uint8_t>> defaultNumberOption(
   //  2. Set value to ? ToNumber(value).
   //  3. If value is NaN or less than minimum or greater than maximum, throw a
   //  RangeError exception.
-  if (!value->second.isNumber() || std::isnan(value->second.getNumber()) || value->second.getNumber() < minimum || value->second.getNumber() > maximum) {
+  if (!value->second.isNumber() || std::isnan(value->second.getNumber()) ||
+      value->second.getNumber() < minimum ||
+      value->second.getNumber() > maximum) {
     return vm::ExecutionStatus::EXCEPTION;
   }
   //  4. Return floor(value).
@@ -413,15 +414,12 @@ vm::CallResult<llvh::Optional<uint8_t>> getNumberOption(
   //  2. Let value be ? Get(options, property).
   auto value = options.find(property);
   //  3. Return ? DefaultNumberOption(value, minimum, maximum, fallback).
-  auto defaultNumber = defaultNumberOption(
-      options,
-      value,
-      minimum,
-      maximum,
-      fallback,
-      runtime);
+  auto defaultNumber =
+      defaultNumberOption(options, value, minimum, maximum, fallback, runtime);
   if (defaultNumber == vm::ExecutionStatus::EXCEPTION) {
-    return runtime->raiseRangeError(vm::TwineChar16(property.c_str()) + vm::TwineChar16(" value is out of range"));
+    return runtime->raiseRangeError(
+        vm::TwineChar16(property.c_str()) +
+        vm::TwineChar16(" value is out of range"));
   } else {
     return llvh::Optional<uint8_t>(defaultNumber.getValue());
   }
@@ -536,7 +534,9 @@ struct UnicodeExtensionKeys {
       u"colcasefirst"; // TODO:: double check this
   std::u16string COLLATION_CASEFIRST_CANON = u"kf";
 };
-std::u16string resolveAlias (const std::u16string &value, const std::map<std::u16string, std::u16string> &mappings) {
+std::u16string resolveAlias(
+    const std::u16string &value,
+    const std::map<std::u16string, std::u16string> &mappings) {
   if (mappings.find(value) == mappings.end()) {
     return value;
   } else {
@@ -553,15 +553,12 @@ std::u16string resolveKnownAliases(
     return resolveAlias(value, {{u"traditional", u"traditio"}});
   }
   if (key == u"co") {
-    return resolveAlias(value, {{
-      u"dictionary",
-      u"dict"},
-      {u"phonebook",
-      u"phonebk"},
-      {u"traditional",
-      u"trad"},
-      {u"gb2312han",
-        u"gb2312"}});
+    return resolveAlias(
+        value,
+        {{u"dictionary", u"dict"},
+         {u"phonebook", u"phonebk"},
+         {u"traditional", u"trad"},
+         {u"gb2312han", u"gb2312"}});
   }
   if (key == u"kn" && value == u"yes") {
     return std::u16string(u"true");
@@ -676,8 +673,23 @@ ResolveLocale resolveLocale(
   //  Skip 1/2/3, as we don't need to have independant implementations for best
   //  fit
   auto localeMatchResult = lookupMatcher(requestedLocales, availableLocales);
-  //  5. Let result be a new Record.
+//  4. Let foundLocale be r.[[locale]].
+  auto foundLocale = localeMatchResult.locale;
+//  5. Let result be a new Record.
   ResolveLocale result;
+//  6. Set result.[[dataLocale]] to foundLocale.
+  result.dataLocale = foundLocale;
+//  7. If r has an [[extension]] field, then
+  std::map<std::u16string, std::u16string> keywords;
+  if (localeMatchResult.extension != u"") {
+//  a. Let components be ! UnicodeExtensionComponents(r.[[extension]]).
+//  b. Let keywords be components.[[Keywords]].
+    // Split not working
+    //localeMatchResult.extension.split('-', keywords);
+  }
+//  8. Let supportedExtension be "-u".
+  std::u16string supportedExtension = u"-u";
+  
   std::u16string value;
   std::vector<std::u16string> supportedExtensionAdditionKeys;
   //  9. For each element key of relevantExtensionKeys, do
@@ -685,7 +697,7 @@ ResolveLocale resolveLocale(
     result.value = u"";
     if (localeMatchResult.extension != u"") { // 9.h.
       if (localeMatchResult.extension.find(key)) { // 9.h.i.
-        std::u16string requestedValue = localeMatchResult.extension;
+        std::u16string requestedValue = keywords.at(key);
         if (requestedValue != u"") {
           value = requestedValue;
         } else {
@@ -745,8 +757,7 @@ vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
     const Options &options) noexcept {
   // 1. Let availableLocales be %DateTimeFormat%.[[AvailableLocales]].
   // 2. Let requestedLocales be ? CanonicalizeLocaleList(locales).
-  auto requestedLocales =
-      getCanonicalLocales(runtime, locales);
+  auto requestedLocales = getCanonicalLocales(runtime, locales);
   std::vector<std::u16string> availableLocales = getAvailableLocales();
   // 3. Return ? (availableLocales, requestedLocales, options).
   return supportedLocales(
@@ -984,8 +995,8 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   // 16 - 23
   static const std::vector<std::u16string> relevantExtensionKeys = {
       u"ca", u"nu", u"hc"};
-  auto r =
-      resolveLocale(locales, requestedLocales.getValue(), options, relevantExtensionKeys);
+  auto r = resolveLocale(
+      locales, requestedLocales.getValue(), options, relevantExtensionKeys);
   impl_->locale = r.locale; // needs fixing
   // Get default locale as NS for future defaults
   NSLocale *defaultNSLocale = [[NSLocale alloc]
