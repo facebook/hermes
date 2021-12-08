@@ -492,10 +492,10 @@ double Collator::compare(
 
 // Implementation of
 // https://tc39.es/ecma402/#datetimeformat-objects
+struct newRecord {
+  std::u16string localeMatcher, ca, nu, hc, hcDefault; // For opt
+};
 struct DateTimeFormat::Impl {
-  struct newRecord {
-    std::u16string localeMatcher, ca, nu, hc, hcDefault; // For opt
-  };
   // Table 7
   // https://tc39.es/ecma402/#table-datetimeformat-resolvedoptions-properties
   // For DateTimeFormat::impl_ in initialize
@@ -655,98 +655,128 @@ bool isValidKeyword(const std::u16string &key, const std::u16string &value) {
       return false;
   }
 };
-void setUnicodeExtensions(
-    const std::u16string &supportedExtendionKey,
-    const std::vector<std::u16string> &valueList) {
+// https://tc39.es/ecma402/#sec-unicode-extension-components
+std::map<std::u16string, std::u16string> unicodeExtensionComponents(const std::u16string &extensions) {
+  // TODO
+  std::map<std::u16string, std::u16string> record;
+  return record;
+}
+// https://tc39.es/ecma402/#sec-insert-unicode-extension-and-canonicalize
+std::u16string setUnicodeExtensions(
+    const std::u16string &locale,
+    const std::u16string &extension) {
   std::vector<std::u16string> unicodeExtensionKeywords;
   // TODO: From BCP Parser
   // https://github.com/facebook/hermes/blob/17d7583650e5f4b59645e0607e24c7ccb15404ee/lib/Platform/Intl/java/com/facebook/hermes/intl/LocaleObjectAndroid.java#L247
+  return extension;
 };
 // https://tc39.es/ecma402/#sec-resolvelocale
 ResolveLocale resolveLocale(
     const std::vector<std::u16string> &availableLocales,
     const std::vector<std::u16string> &requestedLocales,
-    const Options &options,
+    newRecord opt,
     const std::vector<std::u16string> &relevantExtensionKeys
     //  In line with Java, haven't included LocaleData
 ) {
   //  Skip 1/2/3, as we don't need to have independant implementations for best
   //  fit
-  auto localeMatchResult = lookupMatcher(requestedLocales, availableLocales);
+  std::map<std::u16string, std::u16string> keywords;
+  auto r = lookupMatcher(requestedLocales, availableLocales);
 //  4. Let foundLocale be r.[[locale]].
-  auto foundLocale = localeMatchResult.locale;
+  auto foundLocale = r.locale;
 //  5. Let result be a new Record.
   ResolveLocale result;
 //  6. Set result.[[dataLocale]] to foundLocale.
   result.dataLocale = foundLocale;
 //  7. If r has an [[extension]] field, then
-  std::map<std::u16string, std::u16string> keywords;
-  if (localeMatchResult.extension != u"") {
+  if (r.extension != u"") {
 //  a. Let components be ! UnicodeExtensionComponents(r.[[extension]]).
 //  b. Let keywords be components.[[Keywords]].
-    // Split not working
-    //localeMatchResult.extension.split('-', keywords);
+    // TODO: unicodeExtensionComponents
+    keywords = unicodeExtensionComponents(r.extension);
   }
 //  8. Let supportedExtension be "-u".
   std::u16string supportedExtension = u"-u";
   
   std::u16string value;
-  std::vector<std::u16string> supportedExtensionAdditionKeys;
   //  9. For each element key of relevantExtensionKeys, do
   for (std::u16string key : relevantExtensionKeys) {
-    result.value = u"";
-    if (localeMatchResult.extension != u"") { // 9.h.
-      if (localeMatchResult.extension.find(key)) { // 9.h.i.
+//    a. Let foundLocaleData be localeData.[[<foundLocale>]].
+    auto foundLocaleData = result.dataLocale;
+//    b. Assert: Type(foundLocaleData) is Record.
+//    c. Let keyLocaleData be foundLocaleData.[[<key>]].
+    auto keyLocaleData = result.key;
+//    d. Assert: Type(keyLocaleData) is List.
+//    e. Let value be keyLocaleData[0].
+    //auto value = keyLocaleData[0];
+//    f. Assert: Type(value) is either String or Null.
+//    g. Let supportedExtensionAddition be "".
+    std::u16string supportedExtensionAddition;
+//    h. If r has an [[extension]] field, then
+    if (r.extension != u"") {
+//    i. If keywords contains an element whose [[Key]] is the same as key, then
+      if (keywords.find(key) != keywords.end()) {
+//    1. Let entry be the element of keywords whose [[Key]] is the same as key.
+//    2. Let requestedValue be entry.[[Value]].
         std::u16string requestedValue = keywords.at(key);
+//    3. If requestedValue is not the empty String, then
         if (requestedValue != u"") {
-          value = requestedValue;
-        } else {
-          value = u"true";
-        }
-        supportedExtensionAdditionKeys.push_back(key);
-      }
+//      a. If keyLocaleData contains requestedValue, then
+          if (keyLocaleData.find(requestedValue)) {
+//      i. Let value be requestedValue.
+            value = requestedValue;
+//      ii. Let supportedExtensionAddition be the string-concatenation of "-", key, "-", and value.
+            supportedExtensionAddition = u"-" + key + u"-" + value;
+          } else if (keyLocaleData.find(u"true")) {
+//      4. Else if keyLocaleData contains "true", then
+//      a. Let value be "true".
+            value = u"true";
+//      b. Let supportedExtensionAddition be the string-concatenation of "-" and key.
+            supportedExtensionAddition = u"-" + key;
+          }
     }
-    if (options.find(key) != options.end()) { // 9.i.
-      auto optionsValue = options.find(key)->second;
-      if (optionsValue.isString()) {
-        if (optionsValue.getString() == u"") {
-          optionsValue = true;
-        }
-        if (optionsValue.getString() != u"" &&
-            optionsValue.getString() != value) {
-          supportedExtensionAdditionKeys.erase(
-              std::remove(
-                  supportedExtensionAdditionKeys.begin(),
-                  supportedExtensionAdditionKeys.end(),
-                  key),
-              supportedExtensionAdditionKeys.end());
-          value = optionsValue.getString();
-        }
-      }
-      if (resolveKnownAliases(key, value) != u"") {
-        if (!value.empty() && !isValidKeyword(key, value)) {
-          result.key = u"";
-          continue;
-        }
-        result.key = value;
-      }
-      for (std::u16string supportedExtendionKey :
-           supportedExtensionAdditionKeys) {
-        std::vector<std::u16string> valueList;
-        std::u16string keyValue = localeMatchResult.extension;
-        keyValue = resolveKnownAliases(localeMatchResult.extension, keyValue);
-        if (!keyValue.empty() &&
-            !isValidKeyword(supportedExtendionKey, keyValue)) {
-          continue;
-        }
-        valueList.push_back(keyValue);
-        // Void function but SHOULD affect localeMatchResult.matchedLocale?
-        setUnicodeExtensions(supportedExtendionKey, valueList);
-        localeMatchResult.matchedLocale = keyValue; // not right
-      }
     }
-  }
-  result.locale = localeMatchResult.locale;
+//      i. If options has a field [[<key>]], then
+      if (opt.find(key)) {
+//      i. Let optionsValue be options.[[<key>]].
+        auto optionsValue = opt.<key>;
+//      ii. Assert: Type(optionsValue) is either String, Undefined, or Null.
+//      iii. If Type(optionsValue) is String, then
+        if (optionsValue->second.isString() && isValidKeyword(key, optionsValue)) {
+// 1. Let optionsValue be the string optionsValue after performing the algorithm steps to transform Unicode extension values to canonical syntax per Unicode Technical Standard #35 LDML § 3.2.1 Canonical Unicode Locale Identifiers, treating key as ukey and optionsValue as uvalue productions.
+// 2. Let optionsValue be the string optionsValue after performing the algorithm steps to replace Unicode extension values with their canonical form per Unicode Technical Standard #35 LDML § 3.2.1 Canonical Unicode Locale Identifiers, treating key as ukey and optionsValue as uvalue productions.
+//          3. If optionsValue is the empty String, then
+//          a. Let optionsValue be "true".
+          if (optionsValue->second.getString() == u"") {
+            value = u"true";
+          }
+        }
+//   iv. If keyLocaleData contains optionsValue, then
+        if (keyLocaleData.find(optionsValue->second.getString())) {
+//   1. If SameValue(optionsValue, value) is false, then
+          if (optionsValue->second.getString() != value) {
+//   a. Let value be optionsValue.
+            value = optionsValue->second.getString();
+//   b. Let supportedExtensionAddition be "".
+            supportedExtensionAddition = u"";
+          }
+        }
+//    j. Set result.[[<key>]] to value.
+      result.key = value;
+//    k. Append supportedExtensionAddition to supportedExtension.
+      supportedExtension += supportedExtensionAddition;
+    }
+    }
+//    10. If the number of elements in supportedExtension is greater than 2, then
+    if (supportedExtension.size() > 2) {
+//    a. Let foundLocale be InsertUnicodeExtensionAndCanonicalize(foundLocale, supportedExtension).
+      // TODO: setUnicodeExtensions
+      foundLocale = setUnicodeExtensions(foundLocale, supportedExtension);
+    }
+    }
+//  11. Set result.[[locale]] to foundLocale.
+  result.locale = foundLocale;
+//  12. Return result.
   return result;
 }
 // Implementation of
@@ -868,8 +898,7 @@ std::u16string getDefaultTimeZone(NSLocale *locale) {
   return nsStringToU16String(nstrTime);
 }
 static NSDictionary<NSString *, NSString *> *getDictOfTimeZoneNames() {
-  NSDictionary<NSString *, NSString *> *dictListOfTimeZones;
-  return dictListOfTimeZones = [NSTimeZone abbreviationDictionary];
+  return [NSTimeZone abbreviationDictionary];
 }
 bool isTimeZoneValid(const std::u16string &timeZoneValue) {
   static NSDictionary<NSString *, NSString *> *dictListOfTimeZones =
@@ -922,7 +951,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   }
   auto optionsToUse = optionsTo.getValue();
   // 3. Let opt be a new Record.
-  Impl::newRecord opt;
+  newRecord opt;
   // 4. Let matcher be ? GetOption(options, "localeMatcher", "string", «
   //   "lookup", "best fit" », "best fit").
   auto matcher = getOptionString(
@@ -991,12 +1020,12 @@ vm::ExecutionStatus DateTimeFormat::initialize(
       opt.hc = hourCycle->getValue();
     }
   }
-
+  
   // 16 - 23
   static const std::vector<std::u16string> relevantExtensionKeys = {
       u"ca", u"nu", u"hc"};
   auto r = resolveLocale(
-      locales, requestedLocales.getValue(), options, relevantExtensionKeys);
+      locales, requestedLocales.getValue(), opt, relevantExtensionKeys);
   impl_->locale = r.locale; // needs fixing
   // Get default locale as NS for future defaults
   NSLocale *defaultNSLocale = [[NSLocale alloc]
@@ -1057,7 +1086,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   }
   // Expected to be a string 'best fit' by default
   impl_->FormatMatcher = formatMatcherOption->getValue();
-
+// 33. Set dateTimeFormat.[[DateStyle]] to dateStyle.
   auto dateStyleOption = getOptionString(
       optionsToUse,
       u"dateStyle",
@@ -1070,6 +1099,8 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   if (dateStyleOption->hasValue()) {
     impl_->DateStyle = dateStyleOption->getValue();
   }
+// 34. Let timeStyle be ? GetOption(options, "timeStyle", "string", « "full", "long", "medium", "short" », undefined).
+// 35. Set dateTimeFormat.[[TimeStyle]] to timeStyle.
   auto timeStyleOption = getOptionString(
       optionsToUse,
       u"timeStyle",
