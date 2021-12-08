@@ -10,6 +10,8 @@
 namespace hermes {
 namespace bcp47_parser {
 namespace {
+using UTF16Ref = llvh::ArrayRef<char16_t>;
+
 // character type functions
 bool isASCIILetter(char16_t c) {
   return ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'));
@@ -21,17 +23,17 @@ bool isASCIILetterOrDigit(char16_t c) {
   return isASCIILetter(c) || isASCIIDigit(c);
 }
 void toASCIILowerCase(std::u16string &str) {
-  for (size_t i = 0; i < str.length(); i++) {
-    if (str[i] <= 'Z' && str[i] >= 'A') {
-      str[i] -= 'Z' - 'z';
+  for (char16_t &c : str) {
+    if (c <= 'Z' && c >= 'A') {
+      c -= 'Z' - 'z';
     }
   }
   return;
 }
 void toASCIIUpperCase(std::u16string &str) {
-  for (size_t i = 0; i < str.length(); i++) {
-    if (str[i] <= 'z' && str[i] >= 'a') {
-      str[i] -= 'z' - 'Z';
+  for (char16_t &c : str) {
+    if (c <= 'z' && c >= 'a') {
+      c -= 'z' - 'Z';
     }
   }
   return;
@@ -49,12 +51,8 @@ void toASCIITitleCase(std::u16string &str) {
 bool isSubtagSeparator(char16_t c) {
   return c == u'-';
 }
-bool isCharType(const llvh::ArrayRef<char16_t> str, int min, int max, bool(*charType)(char16_t)) {
-  int length = str.size();
-  if (length == 0) {
-    return false;
-  }
-  
+bool isCharType(const UTF16Ref str, size_t min, size_t max, bool(*charType)(char16_t)) {
+  size_t length = str.size();
   if (length < min || length > max) {
     return false;
   }
@@ -68,67 +66,61 @@ bool isCharType(const llvh::ArrayRef<char16_t> str, int min, int max, bool(*char
 }
 
 // tag type functions
-bool isUnicodeLanguageSubtag(const llvh::ArrayRef<char16_t> subtagRef) {
+bool isUnicodeLanguageSubtag(const UTF16Ref subtagRef) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = alpha{2,3} | alpha{5,8};
   // root case?
   return isCharType(subtagRef, 2, 3, &isASCIILetter) ||
     isCharType(subtagRef, 5, 8, &isASCIILetter);
 }
-bool isUnicodeScriptSubtag(const llvh::ArrayRef<char16_t> subtagRef) {
+bool isUnicodeScriptSubtag(const UTF16Ref subtagRef) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = alpha{4};
   return isCharType(subtagRef, 4, 4, &isASCIILetter);
 }
-bool isUnicodeRegionSubtag(const llvh::ArrayRef<char16_t> subtagRef) {
+bool isUnicodeRegionSubtag(const UTF16Ref subtagRef) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = (alpha{2} | digit{3});
   return isCharType(subtagRef, 2, 2, &isASCIILetter) ||
     isCharType(subtagRef, 3, 3, &isASCIIDigit);
 }
-bool isUnicodeVariantSubtag(const llvh::ArrayRef<char16_t> subtagRef) {
+bool isUnicodeVariantSubtag(const UTF16Ref subtagRef) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = (alphanum{5,8} | digit alphanum{3});
   return isCharType(subtagRef, 5, 8, &isASCIILetterOrDigit) ||
     isCharType(subtagRef, 3, 3, &isASCIILetterOrDigit);
 }
-bool isUnicodeExtensionAttribute(const llvh::ArrayRef<char16_t> subtagRef) {
+bool isUnicodeExtensionAttribute(const UTF16Ref subtagRef) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = alphanum{3,8};
   return isCharType(subtagRef, 3, 8, &isASCIILetterOrDigit);
 }
-bool isUnicodeExtensionKey(const llvh::ArrayRef<char16_t> subtagRef) {
+bool isUnicodeExtensionKey(const UTF16Ref subtagRef) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = alphanum alpha;
-  if (subtagRef.size() != 2) {
-    return false;
-  }
-  return isASCIILetterOrDigit(subtagRef.front()) && isASCIILetter(subtagRef.back());
+  return subtagRef.size() == 2 && isASCIILetterOrDigit(subtagRef.front()) && isASCIILetter(subtagRef.back());
 }
-bool isUnicodeExtensionKeyTypeItem(const llvh::ArrayRef<char16_t> subtagRef) {
+bool isUnicodeExtensionKeyTypeItem(const UTF16Ref subtagRef) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = alphanum{3,8};
   return isCharType(subtagRef, 3, 8, &isASCIILetterOrDigit);
 }
-bool isTransformedExtensionKey(const llvh::ArrayRef<char16_t> subtagRef) {
+bool isTransformedExtensionKey(const UTF16Ref subtagRef) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = alpha digit;
-  if (subtagRef.size() != 2) {
-    return false;
-  }
-  return isASCIILetter(subtagRef.front()) && isASCIIDigit(subtagRef.back());
+  return subtagRef.size() == 2 && isASCIILetter(subtagRef.front()) && isASCIIDigit(subtagRef.back());
 }
-bool isTransformedExtensionTValueItem(const llvh::ArrayRef<char16_t> subtagRef) {
+bool isTransformedExtensionTValueItem(const UTF16Ref subtagRef) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = (sep alphanum{3,8})+;
   return isCharType(subtagRef, 3, 8, &isASCIILetterOrDigit);
 }
-bool isPrivateUseExtension(const llvh::ArrayRef<char16_t> subtagRef) {
+bool isPrivateUseExtension(const UTF16Ref subtagRef) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = (sep alphanum{1,8})+;
   return isCharType(subtagRef, 1, 8, &isASCIILetterOrDigit);
 }
-bool isOtherExtension(const llvh::ArrayRef<char16_t> subtagRef) {
+bool isOtherExtension(const UTF16Ref subtagRef) {
   // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
   // = (sep alphanum{2,8})+;
   return isCharType(subtagRef, 2, 8, &isASCIILetterOrDigit);
@@ -138,13 +130,9 @@ bool isOtherExtension(const llvh::ArrayRef<char16_t> subtagRef) {
 class LanguageTagParser {
  public:
   LanguageTagParser(const std::u16string &localeId);
-  LanguageTagParser();
-  ~LanguageTagParser();
 
   // public function declaration
-  bool parseUnicodeLocaleId();
-  ParsedLocaleIdentifier getParsedLocaleId();
-  std::u16string toString();
+  llvh::Optional<ParsedLocaleIdentifier> parseUnicodeLocaleId();
 
  private:
   // private function declaration
@@ -157,47 +145,41 @@ class LanguageTagParser {
   bool parsePUExtension();
   // tokenizer functions
   std::u16string getCurrentSubtag();
-  llvh::ArrayRef<char16_t> getCurrentSubtagRef();
+  UTF16Ref getCurrentSubtagRef();
   bool hasMoreSubtags();
   bool nextSubtag();
   
   ParsedLocaleIdentifier parsedLocaleIdentifier;
   std::u16string localeId_;
-  const std::u16string &originalLocaleId_;
   int subtagStart_;
   int subtagEnd_;
 };
 
-LanguageTagParser::LanguageTagParser(const std::u16string &localeId) : localeId_{localeId}, originalLocaleId_(localeId), subtagStart_(0), subtagEnd_(-1) {
+LanguageTagParser::LanguageTagParser(const std::u16string &localeId) : localeId_{localeId}, subtagStart_(0), subtagEnd_(-1) {
   toASCIILowerCase(localeId_);
 }
-LanguageTagParser::~LanguageTagParser() = default;
 
-ParsedLocaleIdentifier LanguageTagParser::getParsedLocaleId(){
-  return parsedLocaleIdentifier;
-}
-
-bool LanguageTagParser::parseUnicodeLocaleId() {
+llvh::Optional<ParsedLocaleIdentifier> LanguageTagParser::parseUnicodeLocaleId() {
+  if (!nextSubtag()) {
+    return {};
+  }
   if (!parseUnicodeLanguageId(false))  {
-    return false;
+    return {};
   }
   if (!hasMoreSubtags()) {
-    return true;
+    return parsedLocaleIdentifier;
   }
   if (!parseExtensions()) {
-    return false;
+    return {};
   }
   
-  return !hasMoreSubtags();
+  return hasMoreSubtags() ?  llvh::Optional<ParsedLocaleIdentifier>() :  parsedLocaleIdentifier;
 }
 
 bool LanguageTagParser::parseUnicodeLanguageId(bool transformedExtensionId) {
-  if (!transformedExtensionId) {
-    if (!nextSubtag() || !isUnicodeLanguageSubtag(getCurrentSubtagRef())) {
-      return false;
-    }
+  if (!transformedExtensionId && !isUnicodeLanguageSubtag(getCurrentSubtagRef())) {
+    return false;
   }
-  
   ParsedLanguageIdentifier &languageId = transformedExtensionId ? parsedLocaleIdentifier.transformedLanguageIdentifier : parsedLocaleIdentifier.languageIdentifier;
   
   languageId.languageSubtag = getCurrentSubtag();
@@ -494,19 +476,19 @@ bool LanguageTagParser::nextSubtag() {
     return false;
   }
   
-  int length = localeId_.length();
+  size_t length = localeId_.length();
   
   if (subtagEnd_ >= subtagStart_) {
     if (!isSubtagSeparator(localeId_[subtagEnd_+1])) {
       return false;
     }
-    if (subtagEnd_ + 2 == length) {
+    if (subtagEnd_ + 2 == (int)length) {
       return false;
     }
     subtagStart_ = subtagEnd_ + 2;
   }
   
-  for (subtagEnd_ = subtagStart_; subtagEnd_ < length && !isSubtagSeparator(localeId_[subtagEnd_]); subtagEnd_++)
+  for (subtagEnd_ = subtagStart_; subtagEnd_ < (int)length && !isSubtagSeparator(localeId_[subtagEnd_]); subtagEnd_++)
     ;
   
   if (subtagEnd_ > subtagStart_) {
@@ -516,23 +498,18 @@ bool LanguageTagParser::nextSubtag() {
     return false;
   }
 }
-std::u16string LanguageTagParser::toString() {
-  return originalLocaleId_;
-}
+
 std::u16string LanguageTagParser::getCurrentSubtag() {
   return localeId_.substr(subtagStart_, subtagEnd_ - subtagStart_ + 1);
 }
-llvh::ArrayRef<char16_t> LanguageTagParser::getCurrentSubtagRef() {
-  return llvh::ArrayRef<char16_t>(localeId_.data() + subtagStart_, subtagEnd_ - subtagStart_ + 1);
+UTF16Ref LanguageTagParser::getCurrentSubtagRef() {
+  return UTF16Ref(localeId_.data() + subtagStart_, subtagEnd_ - subtagStart_ + 1);
 }
 
 // Parses and returns locale id if it is a structurally valid language tag
 llvh::Optional<ParsedLocaleIdentifier> parseLocaleId(const std::u16string &localeId) {
   LanguageTagParser parser(localeId);
-  if (!parser.parseUnicodeLocaleId()) {
-    return {};
-  }
-  return parser.getParsedLocaleId();
+  return parser.parseUnicodeLocaleId();
 }
 
 } // namespace bcp47_parser
