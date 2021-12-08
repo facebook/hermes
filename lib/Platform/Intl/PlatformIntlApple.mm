@@ -253,23 +253,24 @@ vm::CallResult<llvh::Optional<bool>> getOptionBool(
 }
 // https://tc39.es/ecma402/#sec-defaultnumberoption
 vm::CallResult<llvh::Optional<uint8_t>> defaultNumberOption(
-    const double value,
+    const Options &options,
+    const std::unordered_map<std::u16string, Option>::const_iterator &value,
     const std::uint8_t minimum,
     const std::uint8_t maximum,
     llvh::Optional<uint8_t> fallback,
     vm::Runtime *runtime) {
   //  1. If value is undefined, return fallback.
-  if (!value && value != 0) {
+  if (value == options.end()) {
     return fallback;
   }
   //  2. Set value to ? ToNumber(value).
   //  3. If value is NaN or less than minimum or greater than maximum, throw a
   //  RangeError exception.
-  if (std::isnan(value) || value < minimum || value > maximum) {
+  if (!value->second.isNumber() || std::isnan(value->second.getNumber()) || value->second.getNumber() < minimum || value->second.getNumber() > maximum) {
     return vm::ExecutionStatus::EXCEPTION;
   }
   //  4. Return floor(value).
-  return llvh::Optional<uint8_t>(std::floor(value));
+  return llvh::Optional<uint8_t>(std::floor(value->second.getNumber()));
 }
 // Implementation of
 // https://402.ecma-international.org/8.0/#sec-getnumberoption
@@ -283,12 +284,10 @@ vm::CallResult<llvh::Optional<uint8_t>> getNumberOption(
   //  1. Assert: Type(options) is Object.
   //  2. Let value be ? Get(options, property).
   auto value = options.find(property);
-  if (value == options.end()) {
-    return fallback;
-  }
   //  3. Return ? DefaultNumberOption(value, minimum, maximum, fallback).
   auto defaultNumber = defaultNumberOption(
-      value->second.getNumber(),
+      options,
+      value,
       minimum,
       maximum,
       fallback,
