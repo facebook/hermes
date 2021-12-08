@@ -23,7 +23,9 @@ namespace vm {
 class GCPointerBase : public CompressedPointer {
  protected:
   explicit GCPointerBase(std::nullptr_t) : CompressedPointer(nullptr) {}
-  inline GCPointerBase(PointerBase *base, GCCell *ptr);
+
+  template <typename NeedsBarriers>
+  inline GCPointerBase(PointerBase *base, GCCell *ptr, GC *gc, NeedsBarriers);
 
  public:
   // These classes are used as arguments to GCPointer constructors, to
@@ -54,15 +56,12 @@ class GCPointer : public GCPointerBase {
   GCPointer(std::nullptr_t null) : GCPointerBase(nullptr) {}
 
   /// Other constructors may need to perform barriers, using the \p gc argument,
-  /// as indicated by the \p needsBarrier argument.  (The value of
+  /// as indicated by the \p needsBarriers argument.  (The value of
   /// this argument is unused, but its type's boolean value constant indicates
   /// whether barriers are required.)
   template <typename NeedsBarriers>
-  GCPointer(
-      PointerBase *base,
-      T *ptr,
-      GC *gc,
-      NeedsBarriers needsBarriersUnused);
+  GCPointer(PointerBase *base, T *ptr, GC *gc, NeedsBarriers needsBarriers)
+      : GCPointerBase(base, ptr, gc, needsBarriers) {}
 
   /// Same as the constructor above, with the default for
   /// NeedsBarriers as "YesBarriers".  (We can't use default template
@@ -98,14 +97,6 @@ class GCPointer : public GCPointerBase {
     set(base, ptr.get(base), gc);
   }
 };
-
-/// @name Inline implementations.
-/// @{
-
-inline GCPointerBase::GCPointerBase(PointerBase *base, GCCell *ptr)
-    : CompressedPointer(base, ptr) {}
-
-/// @}
 
 } // namespace vm
 } // namespace hermes

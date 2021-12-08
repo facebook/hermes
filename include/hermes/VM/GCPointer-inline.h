@@ -16,10 +16,13 @@
 namespace hermes {
 namespace vm {
 
-template <typename T>
 template <typename NeedsBarriers>
-GCPointer<T>::GCPointer(PointerBase *base, T *ptr, GC *gc, NeedsBarriers)
-    : GCPointerBase(base, ptr) {
+GCPointerBase::GCPointerBase(
+    PointerBase *base,
+    GCCell *ptr,
+    GC *gc,
+    NeedsBarriers)
+    : CompressedPointer(base, ptr) {
   assert(
       (!ptr || gc->validPointer(ptr)) &&
       "Cannot construct a GCPointer from an invalid pointer");
