@@ -39,6 +39,7 @@ class GCPointerBase : public CompressedPointer {
   /// \param base The base of ptr.
   /// \param gc Used for write barriers.
   inline void set(PointerBase *base, GCCell *ptr, GC *gc);
+  inline void set(PointerBase *base, CompressedPointer ptr, GC *gc);
 
   /// Set this pointer to null. This needs a write barrier in some types of
   /// garbage collectors.
@@ -53,7 +54,7 @@ class GCPointer : public GCPointerBase {
   /// Default method stores nullptr.  No barrier necessary.
   GCPointer() : GCPointerBase(nullptr) {}
   /// Explicit construct for the nullptr type.  No barrier necessary.
-  GCPointer(std::nullptr_t null) : GCPointerBase(nullptr) {}
+  GCPointer(std::nullptr_t) : GCPointerBase(nullptr) {}
 
   /// Other constructors may need to perform barriers, using the \p gc argument,
   /// as indicated by the \p needsBarriers argument.  (The value of
@@ -94,7 +95,7 @@ class GCPointer : public GCPointerBase {
 
   /// Convenience overload of GCPointer::set for other GCPointers.
   void set(PointerBase *base, const GCPointer<T> &ptr, GC *gc) {
-    set(base, ptr.get(base), gc);
+    GCPointerBase::set(base, ptr, gc);
   }
 };
 
