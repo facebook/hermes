@@ -492,9 +492,6 @@ double Collator::compare(
 
 // Implementation of
 // https://tc39.es/ecma402/#datetimeformat-objects
-struct newRecord {
-  std::u16string localeMatcher, ca, nu, hc, hcDefault; // For opt
-};
 struct DateTimeFormat::Impl {
   // Table 7
   // https://tc39.es/ecma402/#table-datetimeformat-resolvedoptions-properties
@@ -504,6 +501,9 @@ struct DateTimeFormat::Impl {
       TimeStyle, Calendar, NumberingSystem, locale;
   uint8_t FractionalSecondDigits;
   bool hour12;
+  struct newRecord {
+    std::u16string localeMatcher, ca, nu, hc, hcDefault; // For opt
+  };
 };
 
 DateTimeFormat::DateTimeFormat() : impl_(std::make_unique<Impl>()) {}
@@ -674,7 +674,7 @@ std::u16string setUnicodeExtensions(
 ResolveLocale resolveLocale(
     const std::vector<std::u16string> &availableLocales,
     const std::vector<std::u16string> &requestedLocales,
-    newRecord opt,
+    const Options &opt,
     const std::vector<std::u16string> &relevantExtensionKeys
     //  In line with Java, haven't included LocaleData
 ) {
@@ -737,14 +737,16 @@ ResolveLocale resolveLocale(
     }
     }
 //      i. If options has a field [[<key>]], then
-      if (opt.find(key)) {
+      if (opt.find(key) != opt.end()) {
 //      i. Let optionsValue be options.[[<key>]].
-        auto optionsValue = opt.<key>;
+        auto optionsValue = opt.find(key);
 //      ii. Assert: Type(optionsValue) is either String, Undefined, or Null.
 //      iii. If Type(optionsValue) is String, then
-        if (optionsValue->second.isString() && isValidKeyword(key, optionsValue)) {
+        if (optionsValue->second.isString()) {
 // 1. Let optionsValue be the string optionsValue after performing the algorithm steps to transform Unicode extension values to canonical syntax per Unicode Technical Standard #35 LDML § 3.2.1 Canonical Unicode Locale Identifiers, treating key as ukey and optionsValue as uvalue productions.
+          std::u16string resolveOptionsValue = resolveKnownAliases(key, optionsValue->second.getString());
 // 2. Let optionsValue be the string optionsValue after performing the algorithm steps to replace Unicode extension values with their canonical form per Unicode Technical Standard #35 LDML § 3.2.1 Canonical Unicode Locale Identifiers, treating key as ukey and optionsValue as uvalue productions.
+          if (isValidKeyword(key, resolveOptionsValue)) {
 //          3. If optionsValue is the empty String, then
 //          a. Let optionsValue be "true".
           if (optionsValue->second.getString() == u"") {
@@ -760,6 +762,7 @@ ResolveLocale resolveLocale(
 //   b. Let supportedExtensionAddition be "".
             supportedExtensionAddition = u"";
           }
+        }
         }
 //    j. Set result.[[<key>]] to value.
       result.key = value;
@@ -951,7 +954,8 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   }
   auto optionsToUse = optionsTo.getValue();
   // 3. Let opt be a new Record.
-  newRecord opt;
+  Impl::newRecord opt;
+  Options copyOpt;
   // 4. Let matcher be ? GetOption(options, "localeMatcher", "string", «
   //   "lookup", "best fit" », "best fit").
   auto matcher = getOptionString(
@@ -962,7 +966,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
       runtime);
   // 5. Set opt.[[localeMatcher]] to matcher.
   opt.localeMatcher = matcher->getValue();
-
+  copyOpt.emplace(std::u16string(u"localeMatcher"), Option(std::u16string(matcher->getValue())));
   // 6. Let calendar be ? GetOption(options, "calendar", "string",
   //    undefined, undefined).
   auto calendar = getOptionString(
@@ -976,6 +980,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   }
   if (calendar->hasValue()) {
     opt.ca = calendar->getValue();
+    copyOpt.emplace(std::u16string(u"ca"), Option(std::u16string(calendar->getValue())));
   }
   // 9. Let numberingSystem be ? GetOption(options, "numberingSystem",
   //    "string", undefined, undefined).
@@ -995,6 +1000,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   }
   if (numberingSystem->hasValue()) {
     opt.nu = numberingSystem->getValue();
+    copyOpt.emplace(std::u16string(u"nu"), Option(std::u16string(numberingSystem->getValue())));
   }
   // 12. Let hour12 be ? GetOption(options, "hour12", "boolean",
   //     undefined, undefined).
@@ -1018,6 +1024,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
       hourCycle->getValue() = u"";
       // 15. Set opt.[[hc]] to hourCycle.
       opt.hc = hourCycle->getValue();
+      copyOpt.emplace(std::u16string(u"hc"), Option(std::u16string(hourCycle->getValue())));
     }
   }
   
@@ -1025,8 +1032,8 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   static const std::vector<std::u16string> relevantExtensionKeys = {
       u"ca", u"nu", u"hc"};
   auto r = resolveLocale(
-      locales, requestedLocales.getValue(), opt, relevantExtensionKeys);
-  impl_->locale = r.locale; // needs fixing
+      locales, requestedLocales.getValue(), copyOpt, relevantExtensionKeys);
+  impl_->locale = r.locale;
   // Get default locale as NS for future defaults
   NSLocale *defaultNSLocale = [[NSLocale alloc]
       initWithLocaleIdentifier:u16StringToNSString(impl_->locale)];
@@ -1694,7 +1701,7 @@ std::u16string DateTimeFormat::getNSDateFormat() noexcept {
   // Set the custom date from all the concatonated NSStrings (locale will
   // automatically seperate the order) Only set a template format if it isn't
   // empty
-  if (![customFormattedDate isEqual:@""]) {
+  if (customFormattedDate.length > 0) {
     [dateFormatter setLocalizedDateFormatFromTemplate:customFormattedDate];
   }
 
@@ -1765,14 +1772,14 @@ std::u16string returnTypeOfDate(const char &formatter) {
   return u"literal";
 }
 std::u16string removeDuplicatesFromString(const std::u16string &s) {
-  std::u16string arr;
+  std::u16string uniqueLetters;
   std::unordered_map<char, char> exists;
   for (const auto &el : s) {
     if (exists.insert({el, 0}).second) {
-      arr += el;
+      uniqueLetters += el;
     }
   }
-  return arr;
+  return uniqueLetters;
 }
 
 // Implementer note: This method corresponds roughly to
