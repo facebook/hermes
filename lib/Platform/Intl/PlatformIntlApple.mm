@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/Platform/Intl/PlatformIntl.h"
-
 #import <Foundation/Foundation.h>
+#include <unordered_set>
+#include "hermes/Platform/Intl/PlatformIntl.h"
 
 namespace hermes {
 namespace platform_intl {
@@ -381,25 +381,24 @@ vm::CallResult<llvh::Optional<bool>> getOptionBool(
 // https://tc39.es/ecma402/#sec-defaultnumberoption
 vm::CallResult<llvh::Optional<uint8_t>> defaultNumberOption(
     const Options &options,
-    const std::unordered_map<std::u16string, Option>::const_iterator &value,
+    llvh::Optional<Option> value,
     const std::uint8_t minimum,
     const std::uint8_t maximum,
     llvh::Optional<uint8_t> fallback,
     vm::Runtime *runtime) {
   //  1. If value is undefined, return fallback.
-  if (value == options.end()) {
+  if (!value) {
     return fallback;
   }
   //  2. Set value to ? ToNumber(value).
   //  3. If value is NaN or less than minimum or greater than maximum, throw a
   //  RangeError exception.
-  if (!value->second.isNumber() || std::isnan(value->second.getNumber()) ||
-      value->second.getNumber() < minimum ||
-      value->second.getNumber() > maximum) {
+  if (!value->isNumber() || std::isnan(value->getNumber()) ||
+      value->getNumber() < minimum || value->getNumber() > maximum) {
     return vm::ExecutionStatus::EXCEPTION;
   }
   //  4. Return floor(value).
-  return llvh::Optional<uint8_t>(std::floor(value->second.getNumber()));
+  return llvh::Optional<uint8_t>(std::floor(value->getNumber()));
 }
 // Implementation of
 // https://402.ecma-international.org/8.0/#sec-getnumberoption
@@ -412,7 +411,11 @@ vm::CallResult<llvh::Optional<uint8_t>> getNumberOption(
     vm::Runtime *runtime) {
   //  1. Assert: Type(options) is Object.
   //  2. Let value be ? Get(options, property).
-  auto value = options.find(property);
+  llvh::Optional<Option> value;
+  auto iter = options.find(property);
+  if (iter != options.end()) {
+    value = Option(iter->second);
+  }
   //  3. Return ? DefaultNumberOption(value, minimum, maximum, fallback).
   auto defaultNumber =
       defaultNumberOption(options, value, minimum, maximum, fallback, runtime);
@@ -656,7 +659,8 @@ bool isValidKeyword(const std::u16string &key, const std::u16string &value) {
   }
 };
 // https://tc39.es/ecma402/#sec-unicode-extension-components
-std::map<std::u16string, std::u16string> unicodeExtensionComponents(const std::u16string &extensions) {
+std::map<std::u16string, std::u16string> unicodeExtensionComponents(
+    const std::u16string &extensions) {
   // TODO
   std::map<std::u16string, std::u16string> record;
   return record;
@@ -682,104 +686,120 @@ ResolveLocale resolveLocale(
   //  fit
   std::map<std::u16string, std::u16string> keywords;
   auto r = lookupMatcher(requestedLocales, availableLocales);
-//  4. Let foundLocale be r.[[locale]].
+  //  4. Let foundLocale be r.[[locale]].
   auto foundLocale = r.locale;
-//  5. Let result be a new Record.
+  //  5. Let result be a new Record.
   ResolveLocale result;
-//  6. Set result.[[dataLocale]] to foundLocale.
+  //  6. Set result.[[dataLocale]] to foundLocale.
   result.dataLocale = foundLocale;
-//  7. If r has an [[extension]] field, then
+  //  7. If r has an [[extension]] field, then
   if (r.extension != u"") {
-//  a. Let components be ! UnicodeExtensionComponents(r.[[extension]]).
-//  b. Let keywords be components.[[Keywords]].
+    //  a. Let components be ! UnicodeExtensionComponents(r.[[extension]]).
+    //  b. Let keywords be components.[[Keywords]].
     // TODO: unicodeExtensionComponents
     keywords = unicodeExtensionComponents(r.extension);
   }
-//  8. Let supportedExtension be "-u".
+  //  8. Let supportedExtension be "-u".
   std::u16string supportedExtension = u"-u";
-  
+
   std::u16string value;
   //  9. For each element key of relevantExtensionKeys, do
   for (std::u16string key : relevantExtensionKeys) {
-//    a. Let foundLocaleData be localeData.[[<foundLocale>]].
+    //    a. Let foundLocaleData be localeData.[[<foundLocale>]].
     auto foundLocaleData = result.dataLocale;
-//    b. Assert: Type(foundLocaleData) is Record.
-//    c. Let keyLocaleData be foundLocaleData.[[<key>]].
+    //    b. Assert: Type(foundLocaleData) is Record.
+    //    c. Let keyLocaleData be foundLocaleData.[[<key>]].
     auto keyLocaleData = result.key;
-//    d. Assert: Type(keyLocaleData) is List.
-//    e. Let value be keyLocaleData[0].
-    //auto value = keyLocaleData[0];
-//    f. Assert: Type(value) is either String or Null.
-//    g. Let supportedExtensionAddition be "".
+    //    d. Assert: Type(keyLocaleData) is List.
+    //    e. Let value be keyLocaleData[0].
+    // auto value = keyLocaleData[0];
+    //    f. Assert: Type(value) is either String or Null.
+    //    g. Let supportedExtensionAddition be "".
     std::u16string supportedExtensionAddition;
-//    h. If r has an [[extension]] field, then
+    //    h. If r has an [[extension]] field, then
     if (r.extension != u"") {
-//    i. If keywords contains an element whose [[Key]] is the same as key, then
+      //    i. If keywords contains an element whose [[Key]] is the same as key,
+      //    then
       if (keywords.find(key) != keywords.end()) {
-//    1. Let entry be the element of keywords whose [[Key]] is the same as key.
-//    2. Let requestedValue be entry.[[Value]].
+        //    1. Let entry be the element of keywords whose [[Key]] is the same
+        //    as key.
+        //    2. Let requestedValue be entry.[[Value]].
         std::u16string requestedValue = keywords.at(key);
-//    3. If requestedValue is not the empty String, then
+        //    3. If requestedValue is not the empty String, then
         if (requestedValue != u"") {
-//      a. If keyLocaleData contains requestedValue, then
+          //      a. If keyLocaleData contains requestedValue, then
           if (keyLocaleData.find(requestedValue)) {
-//      i. Let value be requestedValue.
+            //      i. Let value be requestedValue.
             value = requestedValue;
-//      ii. Let supportedExtensionAddition be the string-concatenation of "-", key, "-", and value.
+            //      ii. Let supportedExtensionAddition be the
+            //      string-concatenation of "-", key, "-", and value.
             supportedExtensionAddition = u"-" + key + u"-" + value;
           } else if (keyLocaleData.find(u"true")) {
-//      4. Else if keyLocaleData contains "true", then
-//      a. Let value be "true".
+            //      4. Else if keyLocaleData contains "true", then
+            //      a. Let value be "true".
             value = u"true";
-//      b. Let supportedExtensionAddition be the string-concatenation of "-" and key.
+            //      b. Let supportedExtensionAddition be the
+            //      string-concatenation of "-" and key.
             supportedExtensionAddition = u"-" + key;
           }
-    }
-    }
-//      i. If options has a field [[<key>]], then
+        }
+      }
+      //      i. If options has a field [[<key>]], then
       if (opt.find(key) != opt.end()) {
-//      i. Let optionsValue be options.[[<key>]].
+        //      i. Let optionsValue be options.[[<key>]].
         auto optionsValue = opt.find(key);
-//      ii. Assert: Type(optionsValue) is either String, Undefined, or Null.
-//      iii. If Type(optionsValue) is String, then
+        //      ii. Assert: Type(optionsValue) is either String, Undefined, or
+        //      Null. iii. If Type(optionsValue) is String, then
         if (optionsValue->second.isString()) {
-// 1. Let optionsValue be the string optionsValue after performing the algorithm steps to transform Unicode extension values to canonical syntax per Unicode Technical Standard #35 LDML § 3.2.1 Canonical Unicode Locale Identifiers, treating key as ukey and optionsValue as uvalue productions.
-          std::u16string resolveOptionsValue = resolveKnownAliases(key, optionsValue->second.getString());
-// 2. Let optionsValue be the string optionsValue after performing the algorithm steps to replace Unicode extension values with their canonical form per Unicode Technical Standard #35 LDML § 3.2.1 Canonical Unicode Locale Identifiers, treating key as ukey and optionsValue as uvalue productions.
+          // 1. Let optionsValue be the string optionsValue after performing the
+          // algorithm steps to transform Unicode extension values to canonical
+          // syntax per Unicode Technical Standard #35 LDML § 3.2.1 Canonical
+          // Unicode Locale Identifiers, treating key as ukey and optionsValue
+          // as uvalue productions.
+          std::u16string resolveOptionsValue =
+              resolveKnownAliases(key, optionsValue->second.getString());
+          // 2. Let optionsValue be the string optionsValue after performing the
+          // algorithm steps to replace Unicode extension values with their
+          // canonical form per Unicode Technical Standard #35 LDML § 3.2.1
+          // Canonical Unicode Locale Identifiers, treating key as ukey and
+          // optionsValue as uvalue productions.
           if (isValidKeyword(key, resolveOptionsValue)) {
-//          3. If optionsValue is the empty String, then
-//          a. Let optionsValue be "true".
-          if (optionsValue->second.getString() == u"") {
-            value = u"true";
+            //          3. If optionsValue is the empty String, then
+            //          a. Let optionsValue be "true".
+            if (optionsValue->second.getString() == u"") {
+              value = u"true";
+            }
+          }
+          //   iv. If keyLocaleData contains optionsValue, then
+          if (keyLocaleData.find(optionsValue->second.getString())) {
+            //   1. If SameValue(optionsValue, value) is false, then
+            if (optionsValue->second.getString() != value) {
+              //   a. Let value be optionsValue.
+              value = optionsValue->second.getString();
+              //   b. Let supportedExtensionAddition be "".
+              supportedExtensionAddition = u"";
+            }
           }
         }
-//   iv. If keyLocaleData contains optionsValue, then
-        if (keyLocaleData.find(optionsValue->second.getString())) {
-//   1. If SameValue(optionsValue, value) is false, then
-          if (optionsValue->second.getString() != value) {
-//   a. Let value be optionsValue.
-            value = optionsValue->second.getString();
-//   b. Let supportedExtensionAddition be "".
-            supportedExtensionAddition = u"";
-          }
-        }
-        }
-//    j. Set result.[[<key>]] to value.
-      result.key = value;
-//    k. Append supportedExtensionAddition to supportedExtension.
-      supportedExtension += supportedExtensionAddition;
+        //    j. Set result.[[<key>]] to value.
+        result.key = value;
+        //    k. Append supportedExtensionAddition to supportedExtension.
+        supportedExtension += supportedExtensionAddition;
+      }
     }
-    }
-//    10. If the number of elements in supportedExtension is greater than 2, then
+    //    10. If the number of elements in supportedExtension is greater than 2,
+    //    then
     if (supportedExtension.size() > 2) {
-//    a. Let foundLocale be InsertUnicodeExtensionAndCanonicalize(foundLocale, supportedExtension).
+      //    a. Let foundLocale be
+      //    InsertUnicodeExtensionAndCanonicalize(foundLocale,
+      //    supportedExtension).
       // TODO: setUnicodeExtensions
       foundLocale = setUnicodeExtensions(foundLocale, supportedExtension);
     }
-    }
-//  11. Set result.[[locale]] to foundLocale.
+  }
+  //  11. Set result.[[locale]] to foundLocale.
   result.locale = foundLocale;
-//  12. Return result.
+  //  12. Return result.
   return result;
 }
 // Implementation of
@@ -966,7 +986,9 @@ vm::ExecutionStatus DateTimeFormat::initialize(
       runtime);
   // 5. Set opt.[[localeMatcher]] to matcher.
   opt.localeMatcher = matcher->getValue();
-  copyOpt.emplace(std::u16string(u"localeMatcher"), Option(std::u16string(matcher->getValue())));
+  copyOpt.emplace(
+      std::u16string(u"localeMatcher"),
+      Option(std::u16string(matcher->getValue())));
   // 6. Let calendar be ? GetOption(options, "calendar", "string",
   //    undefined, undefined).
   auto calendar = getOptionString(
@@ -980,7 +1002,8 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   }
   if (calendar->hasValue()) {
     opt.ca = calendar->getValue();
-    copyOpt.emplace(std::u16string(u"ca"), Option(std::u16string(calendar->getValue())));
+    copyOpt.emplace(
+        std::u16string(u"ca"), Option(std::u16string(calendar->getValue())));
   }
   // 9. Let numberingSystem be ? GetOption(options, "numberingSystem",
   //    "string", undefined, undefined).
@@ -1000,7 +1023,9 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   }
   if (numberingSystem->hasValue()) {
     opt.nu = numberingSystem->getValue();
-    copyOpt.emplace(std::u16string(u"nu"), Option(std::u16string(numberingSystem->getValue())));
+    copyOpt.emplace(
+        std::u16string(u"nu"),
+        Option(std::u16string(numberingSystem->getValue())));
   }
   // 12. Let hour12 be ? GetOption(options, "hour12", "boolean",
   //     undefined, undefined).
@@ -1024,10 +1049,11 @@ vm::ExecutionStatus DateTimeFormat::initialize(
       hourCycle->getValue() = u"";
       // 15. Set opt.[[hc]] to hourCycle.
       opt.hc = hourCycle->getValue();
-      copyOpt.emplace(std::u16string(u"hc"), Option(std::u16string(hourCycle->getValue())));
+      copyOpt.emplace(
+          std::u16string(u"hc"), Option(std::u16string(hourCycle->getValue())));
     }
   }
-  
+
   // 16 - 23
   static const std::vector<std::u16string> relevantExtensionKeys = {
       u"ca", u"nu", u"hc"};
@@ -1093,7 +1119,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   }
   // Expected to be a string 'best fit' by default
   impl_->FormatMatcher = formatMatcherOption->getValue();
-// 33. Set dateTimeFormat.[[DateStyle]] to dateStyle.
+  // 33. Set dateTimeFormat.[[DateStyle]] to dateStyle.
   auto dateStyleOption = getOptionString(
       optionsToUse,
       u"dateStyle",
@@ -1106,8 +1132,9 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   if (dateStyleOption->hasValue()) {
     impl_->DateStyle = dateStyleOption->getValue();
   }
-// 34. Let timeStyle be ? GetOption(options, "timeStyle", "string", « "full", "long", "medium", "short" », undefined).
-// 35. Set dateTimeFormat.[[TimeStyle]] to timeStyle.
+  // 34. Let timeStyle be ? GetOption(options, "timeStyle", "string", « "full",
+  // "long", "medium", "short" », undefined).
+  // 35. Set dateTimeFormat.[[TimeStyle]] to timeStyle.
   auto timeStyleOption = getOptionString(
       optionsToUse,
       u"timeStyle",
@@ -1773,9 +1800,9 @@ std::u16string returnTypeOfDate(const char &formatter) {
 }
 std::u16string removeDuplicatesFromString(const std::u16string &s) {
   std::u16string uniqueLetters;
-  std::unordered_map<char, char> exists;
+  std::unordered_set<char> exists;
   for (const auto &el : s) {
-    if (exists.insert({el, 0}).second) {
+    if (exists.insert(el).second) {
       uniqueLetters += el;
     }
   }
