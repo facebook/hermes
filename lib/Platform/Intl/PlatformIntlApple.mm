@@ -223,7 +223,7 @@ vm::CallResult<llvh::Optional<std::u16string>> getOptionString(
         vm::TwineChar16(value->second.getString().c_str()) +
         vm::TwineChar16(
             " out of range for Intl.DateTimeFormat options property ") +
-            vm::TwineChar16(property.c_str()));
+        vm::TwineChar16(property.c_str()));
   }
   // 8. Return value.
   return llvh::Optional<std::u16string>(value->second.getString());
@@ -242,11 +242,10 @@ vm::CallResult<llvh::Optional<bool>> getOptionBool(
   }
   if (!value->second.isBool()) {
     return runtime->raiseRangeError(
-        vm::TwineChar16("Value ") +
-        vm::TwineChar16(value->second.getBool()) +
+        vm::TwineChar16("Value ") + vm::TwineChar16(value->second.getBool()) +
         vm::TwineChar16(
             " out of range for Intl.DateTimeFormat options property ") +
-            vm::TwineChar16(property.c_str()));
+        vm::TwineChar16(property.c_str()));
   }
   //  8. Return value.
   return llvh::Optional<bool>(value->second.getBool());
@@ -254,23 +253,24 @@ vm::CallResult<llvh::Optional<bool>> getOptionBool(
 // https://tc39.es/ecma402/#sec-defaultnumberoption
 vm::CallResult<llvh::Optional<uint8_t>> defaultNumberOption(
     const Options &options,
-    const std::unordered_map<std::u16string, Option>::const_iterator &value,
+    llvh::Optional<Option> value,
     const std::uint8_t minimum,
     const std::uint8_t maximum,
     llvh::Optional<uint8_t> fallback,
     vm::Runtime *runtime) {
   //  1. If value is undefined, return fallback.
-  if (value == options.end()) {
+  if (!value) {
     return fallback;
   }
   //  2. Set value to ? ToNumber(value).
   //  3. If value is NaN or less than minimum or greater than maximum, throw a
   //  RangeError exception.
-  if (!value->second.isNumber() || std::isnan(value->second.getNumber()) || value->second.getNumber() < minimum || value->second.getNumber() > maximum) {
+  if (!value->isNumber() || std::isnan(value->getNumber()) ||
+      value->getNumber() < minimum || value->getNumber() > maximum) {
     return vm::ExecutionStatus::EXCEPTION;
   }
   //  4. Return floor(value).
-  return llvh::Optional<uint8_t>(std::floor(value->second.getNumber()));
+  return llvh::Optional<uint8_t>(std::floor(value->getNumber()));
 }
 // Implementation of
 // https://402.ecma-international.org/8.0/#sec-getnumberoption
@@ -283,17 +283,18 @@ vm::CallResult<llvh::Optional<uint8_t>> getNumberOption(
     vm::Runtime *runtime) {
   //  1. Assert: Type(options) is Object.
   //  2. Let value be ? Get(options, property).
-  auto value = options.find(property);
+  llvh::Optional<Option> value;
+  auto iter = options.find(property);
+  if (iter != options.end()) {
+    value = Option(iter->second);
+  }
   //  3. Return ? DefaultNumberOption(value, minimum, maximum, fallback).
-  auto defaultNumber = defaultNumberOption(
-      options,
-      value,
-      minimum,
-      maximum,
-      fallback,
-      runtime);
+  auto defaultNumber =
+      defaultNumberOption(options, value, minimum, maximum, fallback, runtime);
   if (defaultNumber == vm::ExecutionStatus::EXCEPTION) {
-    return runtime->raiseRangeError(vm::TwineChar16(property.c_str()) + vm::TwineChar16(" value is out of range"));
+    return runtime->raiseRangeError(
+        vm::TwineChar16(property.c_str()) +
+        vm::TwineChar16(" value is out of range"));
   } else {
     return llvh::Optional<uint8_t>(defaultNumber.getValue());
   }
