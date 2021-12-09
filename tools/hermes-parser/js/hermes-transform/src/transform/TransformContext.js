@@ -17,6 +17,7 @@ import type {
   TypeAnnotationType,
 } from 'hermes-estree';
 import type {DetachedNode} from '../detachedNode';
+import type {TransformCloneSignatures} from '../generated/TransformCloneSignatures';
 import type {TransformReplaceSignatures} from '../generated/TransformReplaceSignatures';
 import type {AddLeadingCommentsMutation} from './mutations/AddLeadingComments';
 import type {AddTrailingCommentsMutation} from './mutations/AddTrailingComments';
@@ -83,9 +84,10 @@ export type TransformContext = $ReadOnly<{
    * If you want to literally duplicate a node to place somewhere else
    * in the AST, then use `deepCloneNode` instead.
    */
-  shallowCloneNode: {
-    <T: ESNode>(node: T, newProps?: $Shape<T>): DetachedNode<T>,
-    <T: ESNode>(node: ?T, newProps?: $Shape<T>): ?DetachedNode<T>,
+  shallowCloneNode: TransformCloneSignatures & {
+    // generic passthrough cases with no options
+    <T: ESNode>(node: T): DetachedNode<T>,
+    <T: ESNode>(node: ?T): DetachedNode<T> | null,
   },
 
   /**
@@ -103,7 +105,11 @@ export type TransformContext = $ReadOnly<{
    * Because this is a deep clone, using it high up in the AST can
    * result in a lot of work being done.
    */
-  deepCloneNode: typeof deepCloneNode,
+  deepCloneNode: TransformCloneSignatures & {
+    // generic passthrough cases with no options
+    <T: ESNode>(node: T): DetachedNode<T>,
+    <T: ESNode>(node: ?T): DetachedNode<T> | null,
+  },
 
   /**
    * Insert `nodeToInsert` after the `target` statement.
@@ -248,11 +254,12 @@ export function getTransformContext(): TransformContext {
       return mutations.length > 0;
     },
 
-    // $FlowExpectedError[class-object-subtyping]
+    // $FlowExpectedError[incompatible-exact]
     shallowCloneNode: ((
       node: ?ESNode,
       newProps?: $ReadOnly<{...}>,
     ): // $FlowExpectedError[incompatible-cast]
+    // $FlowExpectedError[prop-missing]
     ?DetachedNode<ESNode> => {
       if (node == null) {
         return null;
@@ -272,7 +279,19 @@ export function getTransformContext(): TransformContext {
       return nodes.map(node => shallowCloneNode<T>(node));
     }: TransformContext['shallowCloneArray']),
 
-    deepCloneNode: (deepCloneNode: TransformContext['deepCloneNode']),
+    // $FlowExpectedError[incompatible-exact]
+    deepCloneNode: ((
+      node: ?ESNode,
+      newProps?: $ReadOnly<{...}>,
+    ): // $FlowExpectedError[incompatible-cast]
+    // $FlowExpectedError[prop-missing]
+    ?DetachedNode<ESNode> => {
+      if (node == null) {
+        return null;
+      }
+
+      return deepCloneNode(node, newProps);
+    }: TransformContext['deepCloneNode']),
 
     insertAfterStatement: ((target, nodesToInsert): void => {
       pushMutation(

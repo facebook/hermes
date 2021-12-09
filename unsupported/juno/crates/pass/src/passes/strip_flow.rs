@@ -39,7 +39,7 @@ impl<'gc> VisitorMut<'gc> for StripFlow {
         &mut self,
         gc: &'gc GCLock<'_, '_>,
         node: &'gc Node<'gc>,
-        _parent: Option<&'gc Node<'gc>>,
+        _parent: Option<Path<'gc>>,
     ) -> TransformResult<&'gc Node<'gc>> {
         match node {
             Node::TypeCastExpression(TypeCastExpression { expression, .. }) => {
@@ -196,20 +196,15 @@ impl<'gc> VisitorMut<'gc> for StripFlow {
             Node::EnumDeclaration(n) => {
                 return node.replace_with_existing(transform_enum(gc, n), gc, self);
             }
-            Node::Program(n) => {
-                let mut builder = builder::Program::from_node(n);
-                let mut body = n.body.clone();
-                for i in (0..body.len()).rev() {
-                    if let Some(Node::ExportDefaultDeclaration(ExportDefaultDeclaration {
-                        metadata,
-                        declaration: enum_node @ Node::EnumDeclaration(e),
-                    })) = body.get(i)
-                    {
-                        body[i] = enum_node;
-                        body.insert(
-                            i + 1,
-                            builder::ExportDefaultDeclaration::build_template(
-                                gc,
+            Node::ExportDefaultDeclaration(ExportDefaultDeclaration {
+                metadata,
+                declaration: Node::EnumDeclaration(e),
+            }) => {
+                return node.replace_with_multiple(
+                    vec![
+                        builder::Builder::from_node(transform_enum(gc, e)),
+                        builder::Builder::ExportDefaultDeclaration(
+                            builder::ExportDefaultDeclaration::from_template(
                                 template::ExportDefaultDeclaration {
                                     metadata: TemplateMetadata {
                                         range: metadata.range,
@@ -218,13 +213,12 @@ impl<'gc> VisitorMut<'gc> for StripFlow {
                                     declaration: e.id,
                                 },
                             ),
-                        )
-                    }
-                }
-                builder.body(body);
-                return node.replace_with_new(builder::Builder::Program(builder), gc, self);
+                        ),
+                    ],
+                    gc,
+                    self,
+                );
             }
-
             _ => {}
         }
         node.visit_children_mut(gc, self)

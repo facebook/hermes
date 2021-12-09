@@ -332,7 +332,6 @@ class Foo {
                   init: t.ArrowFunctionExpression({
                     async: node.async,
                     body: context.shallowCloneNode(node.body),
-                    expression: false,
                     params: context.shallowCloneArray(node.params),
                     predicate: context.shallowCloneNode(node.predicate),
                     returnType: context.shallowCloneNode(node.returnType),

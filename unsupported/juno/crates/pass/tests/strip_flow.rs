@@ -449,7 +449,7 @@ fn assert_strip(input: &str, expected: &str) {
     assert_eq!(
         std::str::from_utf8(&expected_json).unwrap(),
         std::str::from_utf8(&transformed_json).unwrap(),
-        "AST mismatch: Expected Source:\n{}\nGenerated Source:\n{}",
+        "AST mismatch:\n Expected Source:\n{}\nGenerated Source:\n{}",
         std::str::from_utf8(&expected_js).unwrap(),
         std::str::from_utf8(&transformed_js).unwrap()
     );

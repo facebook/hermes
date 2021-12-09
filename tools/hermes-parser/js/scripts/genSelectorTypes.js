@@ -16,7 +16,7 @@ import {
   LITERAL_TYPES,
 } from './utils/scriptUtils';
 
-const imports: Array<string> = ['ESNode'];
+const imports: Array<string> = [];
 const enterSelectors: Array<string> = [];
 const exitSelectors: Array<string> = [];
 const typeAliases = new Map<string, string>();
@@ -101,22 +101,20 @@ for (const specialSelector of specialSelectors) {
 const fileContents = `\
 import type {
 ${imports.join(',\n')}
-} from './types';
+} from '../types';
 
 ${Array.from(typeAliases.values()).join('\n')}
 
-export type ESQueryNodeSelectors = {
+export type ESQueryNodeSelectorsWithoutFallback = {
 ${enterSelectors.join(',\n')},
 ${exitSelectors.join(',\n')},
-
-  // TODO - make this looser so that you can manually type complex selectors
-  [selector: string]: (node: ESNode) => void,
 };
 `;
 
 formatAndWriteDistArtifact({
   code: fileContents,
   package: 'hermes-estree',
+  subdirSegments: ['generated'],
   filename: 'HermesESTreeSelectorTypes.js.flow',
   flow: 'strict',
 });

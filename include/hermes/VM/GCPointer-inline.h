@@ -16,10 +16,13 @@
 namespace hermes {
 namespace vm {
 
-template <typename T>
 template <typename NeedsBarriers>
-GCPointer<T>::GCPointer(PointerBase *base, T *ptr, GC *gc, NeedsBarriers)
-    : GCPointerBase(base, ptr) {
+GCPointerBase::GCPointerBase(
+    PointerBase *base,
+    GCCell *ptr,
+    GC *gc,
+    NeedsBarriers)
+    : CompressedPointer(base, ptr) {
   assert(
       (!ptr || gc->validPointer(ptr)) &&
       "Cannot construct a GCPointer from an invalid pointer");
@@ -37,6 +40,16 @@ inline void GCPointerBase::set(PointerBase *base, GCCell *ptr, GC *gc) {
   // Write barrier must happen before the write.
   gc->writeBarrier(this, ptr);
   setNoBarrier(CompressedPointer(base, ptr));
+}
+
+inline void
+GCPointerBase::set(PointerBase *base, CompressedPointer ptr, GC *gc) {
+  assert(
+      (!ptr || gc->validPointer(ptr.get(base))) &&
+      "Cannot set a GCPointer to an invalid pointer");
+  // Write barrier must happen before the write.
+  gc->writeBarrier(this, ptr.get(base));
+  setNoBarrier(ptr);
 }
 
 inline void GCPointerBase::setNull(GC *gc) {

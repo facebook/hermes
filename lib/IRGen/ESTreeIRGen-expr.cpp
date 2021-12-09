@@ -110,15 +110,7 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
 
   // Handle Binary Expressions.
   if (auto *Bin = llvh::dyn_cast<ESTree::BinaryExpressionNode>(expr)) {
-    Value *LHS = genExpression(Bin->_left);
-    Value *RHS = genExpression(Bin->_right);
-    auto cookie = instrumentIR_.preBinaryExpression(Bin, LHS, RHS);
-
-    auto Kind = BinaryOperatorInst::parseOperator(Bin->_operator->str());
-
-    BinaryOperatorInst *result =
-        Builder.createBinaryOperatorInst(LHS, RHS, Kind);
-    return instrumentIR_.postBinaryExpression(Bin, cookie, result, LHS, RHS);
+    return genBinaryExpression(Bin);
   }
 
   // Handle Unary operator Expressions.
@@ -1347,6 +1339,35 @@ Value *ESTreeIRGen::genResumeGenerator(
   return resume;
 }
 
+Value *ESTreeIRGen::genBinaryExpression(ESTree::BinaryExpressionNode *bin) {
+  // Handle long chains of +/- non-recursively.
+  if (bin->_operator->str() == "+" || bin->_operator->str() == "-") {
+    auto list = linearizeLeft(bin, {"+", "-"});
+
+    Value *LHS = genExpression(list[0]->_left);
+    for (auto *e : list) {
+      Value *RHS = genExpression(e->_right);
+      Builder.setLocation(e->getDebugLoc());
+      auto cookie = instrumentIR_.preBinaryExpression(e, LHS, RHS);
+      auto Kind = BinaryOperatorInst::parseOperator(e->_operator->str());
+      BinaryOperatorInst *result =
+          Builder.createBinaryOperatorInst(LHS, RHS, Kind);
+      LHS = instrumentIR_.postBinaryExpression(e, cookie, result, LHS, RHS);
+    }
+
+    return LHS;
+  }
+
+  Value *LHS = genExpression(bin->_left);
+  Value *RHS = genExpression(bin->_right);
+  auto cookie = instrumentIR_.preBinaryExpression(bin, LHS, RHS);
+
+  auto Kind = BinaryOperatorInst::parseOperator(bin->_operator->str());
+
+  BinaryOperatorInst *result = Builder.createBinaryOperatorInst(LHS, RHS, Kind);
+  return instrumentIR_.postBinaryExpression(bin, cookie, result, LHS, RHS);
+}
+
 Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
   auto kind = UnaryOperatorInst::parseOperator(U->_operator->str());
 
@@ -1456,93 +1477,128 @@ Value *ESTreeIRGen::genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr) {
   return (isPrefix ? result : original);
 }
 
-Value *ESTreeIRGen::genAssignmentExpr(ESTree::AssignmentExpressionNode *AE) {
-  LLVM_DEBUG(dbgs() << "IRGen assignment operator.\n");
-
-  auto opStr = AE->_operator->str();
-  auto AssignmentKind = BinaryOperatorInst::parseAssignmentOperator(opStr);
-
-  LReference lref = createLRef(AE->_left, false);
-
+/// Extract a name hint from a LReference.
+static Identifier extractNameHint(const LReference &lref) {
   Identifier nameHint{};
   if (auto *var = lref.castAsVariable()) {
     nameHint = var->getName();
   } else if (auto *globProp = lref.castAsGlobalObjectProperty()) {
     nameHint = globProp->getName()->getValue();
   }
+  return nameHint;
+}
+
+Value *ESTreeIRGen::genAssignmentExpr(ESTree::AssignmentExpressionNode *AE) {
+  LLVM_DEBUG(dbgs() << "IRGen assignment operator.\n");
+
+  auto opStr = AE->_operator->str();
+
+  // Handle nested normal assignments non-recursively.
+  if (opStr == "=") {
+    auto list = ESTree::linearizeRight(AE, {"="});
+
+    // Create an LReference for every assignment left side.
+    llvh::SmallVector<LReference, 1> lrefs;
+    lrefs.reserve(list.size());
+    for (auto *e : list) {
+      lrefs.push_back(createLRef(e->_left, false));
+    }
+
+    Value *RHS = nullptr;
+    auto lrefIterator = lrefs.end();
+    for (auto *e : llvh::make_range(list.rbegin(), list.rend())) {
+      --lrefIterator;
+      if (!RHS)
+        RHS = genExpression(e->_right, extractNameHint(*lrefIterator));
+      Builder.setLocation(e->getDebugLoc());
+      auto *cookie = instrumentIR_.preAssignment(e, nullptr, RHS);
+      RHS = instrumentIR_.postAssignment(e, cookie, RHS, nullptr, RHS);
+      lrefIterator->emitStore(RHS);
+    }
+
+    return RHS;
+  }
+
+  auto AssignmentKind = BinaryOperatorInst::parseAssignmentOperator(opStr);
+
+  LReference lref = createLRef(AE->_left, false);
+  Identifier nameHint = extractNameHint(lref);
 
   Value *result;
   if (AssignmentKind == BinaryOperatorInst::OpKind::AssignShortCircuitOrKind ||
       AssignmentKind == BinaryOperatorInst::OpKind::AssignShortCircuitAndKind ||
       AssignmentKind == BinaryOperatorInst::OpKind::AssignNullishCoalesceKind) {
-    // Logical assignment expressions must use short-circuiting logic.
-    // BB which actually performs the assignment.
-    BasicBlock *assignBB = Builder.createBasicBlock(Builder.getFunction());
-    // BB which simply continues without performing the assignment.
-    BasicBlock *continueBB = Builder.createBasicBlock(Builder.getFunction());
-    auto *lhs = lref.emitLoad();
-
-    PhiInst::ValueListType values;
-    PhiInst::BasicBlockListType blocks;
-
-    values.push_back(lhs);
-    blocks.push_back(Builder.getInsertionBlock());
-
-    switch (AssignmentKind) {
-      case BinaryOperatorInst::OpKind::AssignShortCircuitOrKind:
-        Builder.createCondBranchInst(lhs, continueBB, assignBB);
-        break;
-      case BinaryOperatorInst::OpKind::AssignShortCircuitAndKind:
-        Builder.createCondBranchInst(lhs, assignBB, continueBB);
-        break;
-      case BinaryOperatorInst::OpKind::AssignNullishCoalesceKind:
-        Builder.createCondBranchInst(
-            Builder.createBinaryOperatorInst(
-                lhs,
-                Builder.getLiteralNull(),
-                BinaryOperatorInst::OpKind::EqualKind),
-            assignBB,
-            continueBB);
-        break;
-      default:
-        llvm_unreachable("invalid AssignmentKind in this branch");
-    }
-
-    Builder.setInsertionBlock(assignBB);
-    auto *rhs = genExpression(AE->_right, nameHint);
-    auto *cookie = instrumentIR_.preAssignment(AE, lhs, rhs);
-    result = instrumentIR_.postAssignment(AE, cookie, rhs, lhs, rhs);
-    lref.emitStore(result);
-    values.push_back(result);
-    blocks.push_back(Builder.getInsertionBlock());
-    Builder.createBranchInst(continueBB);
-
-    Builder.setInsertionBlock(continueBB);
-    // Final result is either the original value or the value assigned,
-    // depending on which branch was taken.
-    return Builder.createPhiInst(std::move(values), std::move(blocks));
+    return genLogicalAssignmentExpr(AE, AssignmentKind, lref, nameHint);
   }
 
-  if (AssignmentKind != BinaryOperatorInst::OpKind::IdentityKind) {
-    // Section 11.13.1 specifies that we should first load the
-    // LHS before materializing the RHS. Unlike in C, this
-    // code is well defined: "x+= x++".
-    // https://es5.github.io/#x11.13.1
-    auto V = lref.emitLoad();
-    auto *RHS = genExpression(AE->_right, nameHint);
-    auto *cookie = instrumentIR_.preAssignment(AE, V, RHS);
-    result = Builder.createBinaryOperatorInst(V, RHS, AssignmentKind);
-    result = instrumentIR_.postAssignment(AE, cookie, result, V, RHS);
-  } else {
-    auto *RHS = genExpression(AE->_right, nameHint);
-    auto *cookie = instrumentIR_.preAssignment(AE, nullptr, RHS);
-    result = instrumentIR_.postAssignment(AE, cookie, RHS, nullptr, RHS);
-  }
+  assert(AssignmentKind != BinaryOperatorInst::OpKind::IdentityKind);
+  // Section 11.13.1 specifies that we should first load the
+  // LHS before materializing the RHS. Unlike in C, this
+  // code is well defined: "x+= x++".
+  // https://es5.github.io/#x11.13.1
+  auto V = lref.emitLoad();
+  auto *RHS = genExpression(AE->_right, nameHint);
+  auto *cookie = instrumentIR_.preAssignment(AE, V, RHS);
+  result = Builder.createBinaryOperatorInst(V, RHS, AssignmentKind);
+  result = instrumentIR_.postAssignment(AE, cookie, result, V, RHS);
 
   lref.emitStore(result);
 
   // Return the value that we stored as the result of the expression.
   return result;
+}
+
+Value *ESTreeIRGen::genLogicalAssignmentExpr(
+    ESTree::AssignmentExpressionNode *AE,
+    BinaryOperatorInst::OpKind AssignmentKind,
+    LReference lref,
+    Identifier nameHint) {
+  // Logical assignment expressions must use short-circuiting logic.
+  // BB which actually performs the assignment.
+  BasicBlock *assignBB = Builder.createBasicBlock(Builder.getFunction());
+  // BB which simply continues without performing the assignment.
+  BasicBlock *continueBB = Builder.createBasicBlock(Builder.getFunction());
+  auto *lhs = lref.emitLoad();
+
+  PhiInst::ValueListType values;
+  PhiInst::BasicBlockListType blocks;
+
+  values.push_back(lhs);
+  blocks.push_back(Builder.getInsertionBlock());
+
+  switch (AssignmentKind) {
+    case BinaryOperatorInst::OpKind::AssignShortCircuitOrKind:
+      Builder.createCondBranchInst(lhs, continueBB, assignBB);
+      break;
+    case BinaryOperatorInst::OpKind::AssignShortCircuitAndKind:
+      Builder.createCondBranchInst(lhs, assignBB, continueBB);
+      break;
+    case BinaryOperatorInst::OpKind::AssignNullishCoalesceKind:
+      Builder.createCondBranchInst(
+          Builder.createBinaryOperatorInst(
+              lhs,
+              Builder.getLiteralNull(),
+              BinaryOperatorInst::OpKind::EqualKind),
+          assignBB,
+          continueBB);
+      break;
+    default:
+      llvm_unreachable("invalid AssignmentKind in this branch");
+  }
+
+  Builder.setInsertionBlock(assignBB);
+  auto *rhs = genExpression(AE->_right, nameHint);
+  auto *cookie = instrumentIR_.preAssignment(AE, lhs, rhs);
+  auto *result = instrumentIR_.postAssignment(AE, cookie, rhs, lhs, rhs);
+  lref.emitStore(result);
+  values.push_back(result);
+  blocks.push_back(Builder.getInsertionBlock());
+  Builder.createBranchInst(continueBB);
+
+  Builder.setInsertionBlock(continueBB);
+  // Final result is either the original value or the value assigned,
+  // depending on which branch was taken.
+  return Builder.createPhiInst(std::move(values), std::move(blocks));
 }
 
 Value *ESTreeIRGen::genConditionalExpr(ESTree::ConditionalExpressionNode *C) {

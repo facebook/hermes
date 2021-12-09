@@ -8,7 +8,7 @@
 use super::{
     kind::*, AssignmentExpressionOperator, BinaryExpressionOperator, Context, ExportKind, GCLock,
     ImportKind, LogicalExpressionOperator, MethodDefinitionKind, Node, NodeLabel, NodeList, NodeRc,
-    NodeString, NodeVariant, PropertyKind, UnaryExpressionOperator, UpdateExpressionOperator,
+    NodeString, NodeVariant, Path, PropertyKind, UnaryExpressionOperator, UpdateExpressionOperator,
     VariableDeclarationKind, Visitor,
 };
 
@@ -255,7 +255,7 @@ impl Validator {
 }
 
 impl<'gc> Visitor<'gc> for Validator {
-    fn call(&mut self, ctx: &'gc GCLock, node: &'gc Node<'gc>, _parent: Option<&'gc Node<'gc>>) {
+    fn call(&mut self, ctx: &'gc GCLock, node: &'gc Node<'gc>, _parent: Option<Path<'gc>>) {
         self.validate_node(ctx, node);
     }
 }

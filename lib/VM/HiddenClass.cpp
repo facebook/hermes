@@ -211,7 +211,7 @@ Handle<HiddenClass> HiddenClass::copyToNewDictionary(
     initializeMissingPropertyMap(selfHandle, runtime);
 
   newClassHandle->propertyMap_.set(
-      runtime, selfHandle->propertyMap_.get(runtime), &runtime->getHeap());
+      runtime, selfHandle->propertyMap_, &runtime->getHeap());
   selfHandle->propertyMap_.setNull(&runtime->getHeap());
 
   LLVM_DEBUG(
@@ -433,7 +433,7 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
         return ExecutionStatus::EXCEPTION;
       }
       optChildHandle.getValue()->propertyMap_.set(
-          runtime, selfHandle->propertyMap_.get(runtime), &runtime->getHeap());
+          runtime, selfHandle->propertyMap_, &runtime->getHeap());
     } else {
       LLVM_DEBUG(
           dbgs() << "Adding property " << runtime->formatSymbolID(name)
@@ -508,7 +508,7 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
 
     // Move the map to the child class.
     childHandle->propertyMap_.set(
-        runtime, selfHandle->propertyMap_.get(runtime), &runtime->getHeap());
+        runtime, selfHandle->propertyMap_, &runtime->getHeap());
     selfHandle->propertyMap_.setNull(&runtime->getHeap());
 
     if (LLVM_UNLIKELY(
@@ -584,7 +584,7 @@ Handle<HiddenClass> HiddenClass::updateProperty(
 
       descPair->second.flags = newFlags;
       optChildHandle.getValue()->propertyMap_.set(
-          runtime, selfHandle->propertyMap_.get(runtime), &runtime->getHeap());
+          runtime, selfHandle->propertyMap_, &runtime->getHeap());
     } else {
       LLVM_DEBUG(
           dbgs() << "Updating property " << runtime->formatSymbolID(name)
@@ -629,7 +629,7 @@ Handle<HiddenClass> HiddenClass::updateProperty(
 
   // Move the updated map to the child class.
   childHandle->propertyMap_.set(
-      runtime, selfHandle->propertyMap_.get(runtime), &runtime->getHeap());
+      runtime, selfHandle->propertyMap_, &runtime->getHeap());
   selfHandle->propertyMap_.setNull(&runtime->getHeap());
 
   return childHandle;
@@ -933,9 +933,7 @@ void HiddenClass::stealPropertyMapFromParent(
 
   // Success! Just steal our parent's map and add our own property.
   self->propertyMap_.set(
-      runtime,
-      self->parent_.get(runtime)->propertyMap_.get(runtime),
-      &runtime->getHeap());
+      runtime, self->parent_.get(runtime)->propertyMap_, &runtime->getHeap());
   self->parent_.get(runtime)->propertyMap_.setNull(&runtime->getHeap());
 
   // Does our class add a new property?

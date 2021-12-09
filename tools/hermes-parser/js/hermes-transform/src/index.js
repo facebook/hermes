@@ -12,3 +12,4 @@
 
 export {traverse} from './traverse/traverse';
 export {transform} from './transform/transform';
+export * as t from './generated/node-types';

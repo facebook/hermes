@@ -18,7 +18,6 @@
 
 import type {
   ESNode,
-  ArrowFunctionExpression as ArrowFunctionExpressionType,
   BlockStatement as BlockStatementType,
   ExpressionStatement as ExpressionStatementType,
   NumberTypeAnnotation as NumberTypeAnnotationType,
@@ -32,37 +31,14 @@ import {
   setParentPointersInDirectChildren,
 } from '../detachedNode';
 
-export function ArrowFunctionExpression({
-  parent,
-  ...props
-}: {
-  +id?: ?DetachedNode<ArrowFunctionExpressionType['id']>,
-  +params: $ReadOnlyArray<
-    DetachedNode<ArrowFunctionExpressionType['params'][number]>,
-  >,
-  +body: DetachedNode<ArrowFunctionExpressionType['body']>,
-  +typeParameters?: ?DetachedNode<
-    ArrowFunctionExpressionType['typeParameters'],
-  >,
-  +returnType?: ?DetachedNode<ArrowFunctionExpressionType['returnType']>,
-  +predicate?: ?DetachedNode<ArrowFunctionExpressionType['predicate']>,
-  +expression: ArrowFunctionExpressionType['expression'],
-  +async: ArrowFunctionExpressionType['async'],
-  +parent?: ESNode,
-}): DetachedNode<ArrowFunctionExpressionType> {
-  const node = detachedProps<ArrowFunctionExpressionType>(parent, {
-    type: 'ArrowFunctionExpression',
-    ...props,
-  });
-  setParentPointersInDirectChildren(node);
-  return node;
-}
-
+export type BlockStatementProps = {
+  +body: $ReadOnlyArray<DetachedNode<BlockStatementType['body'][number]>>,
+};
 export function BlockStatement({
   parent,
   ...props
 }: {
-  +body: $ReadOnlyArray<DetachedNode<BlockStatementType['body'][number]>>,
+  ...$ReadOnly<BlockStatementProps>,
   +parent?: ESNode,
 }): DetachedNode<BlockStatementType> {
   const node = detachedProps<BlockStatementType>(parent, {
@@ -73,12 +49,15 @@ export function BlockStatement({
   return node;
 }
 
+export type ExpressionStatementProps = {
+  +expression: DetachedNode<ExpressionStatementType['expression']>,
+  +directive?: ?ExpressionStatementType['directive'],
+};
 export function ExpressionStatement({
   parent,
   ...props
 }: {
-  +expression: DetachedNode<ExpressionStatementType['expression']>,
-  +directive?: ?ExpressionStatementType['directive'],
+  ...$ReadOnly<ExpressionStatementProps>,
   +parent?: ESNode,
 }): DetachedNode<ExpressionStatementType> {
   const node = detachedProps<ExpressionStatementType>(parent, {
@@ -89,6 +68,7 @@ export function ExpressionStatement({
   return node;
 }
 
+export type NumberTypeAnnotationProps = {};
 export function NumberTypeAnnotation({
   parent,
 }: {
@@ -99,14 +79,17 @@ export function NumberTypeAnnotation({
   });
 }
 
-export function VariableDeclaration({
-  parent,
-  ...props
-}: {
+export type VariableDeclarationProps = {
   +kind: VariableDeclarationType['kind'],
   +declarations: $ReadOnlyArray<
     DetachedNode<VariableDeclarationType['declarations'][number]>,
   >,
+};
+export function VariableDeclaration({
+  parent,
+  ...props
+}: {
+  ...$ReadOnly<VariableDeclarationProps>,
   +parent?: ESNode,
 }): DetachedNode<VariableDeclarationType> {
   const node = detachedProps<VariableDeclarationType>(parent, {
@@ -117,12 +100,15 @@ export function VariableDeclaration({
   return node;
 }
 
+export type VariableDeclaratorProps = {
+  +init?: ?DetachedNode<VariableDeclaratorType['init']>,
+  +id: DetachedNode<VariableDeclaratorType['id']>,
+};
 export function VariableDeclarator({
   parent,
   ...props
 }: {
-  +init?: ?DetachedNode<VariableDeclaratorType['init']>,
-  +id: DetachedNode<VariableDeclaratorType['id']>,
+  ...$ReadOnly<VariableDeclaratorProps>,
   +parent?: ESNode,
 }): DetachedNode<VariableDeclaratorType> {
   const node = detachedProps<VariableDeclaratorType>(parent, {

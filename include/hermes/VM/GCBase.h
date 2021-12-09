@@ -157,6 +157,7 @@ class WeakRefSlot {
   void reset(HermesValue v) {
     static_assert(Unmarked == 0, "unmarked state should not need tagging");
     state_ = Unmarked;
+    assert(v.isPointer() && "Only pointers are currently supported");
     value_ = v;
     assert(state() == Unmarked && "initial state should be unmarked");
   }

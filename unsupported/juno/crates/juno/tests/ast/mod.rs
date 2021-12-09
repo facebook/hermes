@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use juno::ast::*;
+use juno::{ast::*, hparser, node_cast};
 
 mod validate;
 
@@ -115,10 +115,10 @@ fn test_visit() {
 
     impl<'gc> Visitor<'gc> for NumberFinder {
         /// Visit the Node `node` with the given `parent`.
-        fn call(&mut self, ctx: &'gc GCLock, node: &'gc Node<'gc>, parent: Option<&'gc Node<'gc>>) {
+        fn call(&mut self, ctx: &'gc GCLock, node: &'gc Node<'gc>, path: Option<Path<'gc>>) {
             if let Node::NumericLiteral(NumericLiteral { value, .. }) = node {
                 assert!(matches!(
-                    parent.unwrap(),
+                    path.unwrap().parent,
                     Node::ExpressionStatement(ExpressionStatement { .. })
                 ));
                 self.acc.push(*value);
@@ -188,7 +188,7 @@ fn test_visit_mut() {
             &mut self,
             ctx: &'gc GCLock,
             node: &'gc Node<'gc>,
-            _parent: Option<&'gc Node<'gc>>,
+            _path: Option<Path<'gc>>,
         ) -> TransformResult<&'gc Node<'gc>> {
             if let Node::BinaryExpression(
                 e1 @ BinaryExpression {
@@ -258,6 +258,100 @@ fn test_visit_mut() {
 }
 
 #[test]
+fn test_replace_var_decls() {
+    let mut ctx = Context::new();
+    let ast = hparser::parse_with_flags(Default::default(), "var x, y;", &mut ctx).unwrap();
+
+    {
+        let gc = GCLock::new(&mut ctx);
+        match ast.node(&gc) {
+            Node::Program(Program { body, .. }) => {
+                assert_eq!(body.len(), 1, "Program is {:#?}", ast.node(&gc));
+            }
+            _ => panic!("Parse failed: {:#?}", ast.node(&gc)),
+        };
+    }
+
+    struct Pass {}
+    impl<'gc> VisitorMut<'gc> for Pass {
+        fn call(
+            &mut self,
+            lock: &'gc GCLock,
+            node: &'gc Node<'gc>,
+            path: Option<Path<'gc>>,
+        ) -> TransformResult<&'gc Node<'gc>> {
+            match node {
+                Node::VariableDeclaration(VariableDeclaration {
+                    metadata: _,
+                    kind,
+                    declarations,
+                }) if declarations.len() > 1 => {
+                    assert_eq!(path.unwrap().field, NodeField::body);
+                    let mut result: Vec<builder::Builder> = Vec::new();
+                    for decl in declarations {
+                        result.push(builder::Builder::VariableDeclaration(
+                            builder::VariableDeclaration::from_template(
+                                template::VariableDeclaration {
+                                    metadata: Default::default(),
+                                    kind: *kind,
+                                    declarations: vec![decl],
+                                },
+                            ),
+                        ));
+                    }
+                    node.replace_with_multiple(result, lock, self)
+                }
+                _ => node.visit_children_mut(lock, self),
+            }
+        }
+    }
+    let mut pass = Pass {};
+
+    let transformed = {
+        let gc = GCLock::new(&mut ctx);
+        NodeRc::from_node(&gc, ast.node(&gc).visit_mut(&gc, &mut pass, None).unwrap())
+    };
+
+    {
+        let gc = GCLock::new(&mut ctx);
+        match transformed.node(&gc) {
+            Node::Program(Program { body, .. }) => {
+                assert_eq!(body.len(), 2, "Program is {:#?}", transformed.node(&gc));
+                assert_eq!(
+                    gc.ctx().str(
+                        node_cast!(
+                            Node::Identifier,
+                            node_cast!(
+                                Node::VariableDeclarator,
+                                node_cast!(Node::VariableDeclaration, body[0]).declarations[0]
+                            )
+                            .id
+                        )
+                        .name
+                    ),
+                    "x"
+                );
+                assert_eq!(
+                    gc.ctx().str(
+                        node_cast!(
+                            Node::Identifier,
+                            node_cast!(
+                                Node::VariableDeclarator,
+                                node_cast!(Node::VariableDeclaration, body[1]).declarations[0]
+                            )
+                            .id
+                        )
+                        .name
+                    ),
+                    "y"
+                );
+            }
+            _ => panic!("Transformation failed: {:#?}", transformed.node(&gc)),
+        };
+    }
+}
+
+#[test]
 fn test_many_nodes() {
     let mut ctx = Context::new();
     let mut cached = None;
@@ -312,7 +406,7 @@ fn test_store_node() {
     }
 
     impl<'gc> Visitor<'gc> for Foo<'gc> {
-        fn call(&mut self, gc: &'gc GCLock, node: &'gc Node<'gc>, _parent: Option<&'gc Node<'gc>>) {
+        fn call(&mut self, gc: &'gc GCLock, node: &'gc Node<'gc>, _path: Option<Path<'gc>>) {
             self.set_n(node);
             node.visit_children(gc, self)
         }

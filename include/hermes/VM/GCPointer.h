@@ -23,7 +23,9 @@ namespace vm {
 class GCPointerBase : public CompressedPointer {
  protected:
   explicit GCPointerBase(std::nullptr_t) : CompressedPointer(nullptr) {}
-  inline GCPointerBase(PointerBase *base, GCCell *ptr);
+
+  template <typename NeedsBarriers>
+  inline GCPointerBase(PointerBase *base, GCCell *ptr, GC *gc, NeedsBarriers);
 
  public:
   // These classes are used as arguments to GCPointer constructors, to
@@ -37,6 +39,7 @@ class GCPointerBase : public CompressedPointer {
   /// \param base The base of ptr.
   /// \param gc Used for write barriers.
   inline void set(PointerBase *base, GCCell *ptr, GC *gc);
+  inline void set(PointerBase *base, CompressedPointer ptr, GC *gc);
 
   /// Set this pointer to null. This needs a write barrier in some types of
   /// garbage collectors.
@@ -51,18 +54,15 @@ class GCPointer : public GCPointerBase {
   /// Default method stores nullptr.  No barrier necessary.
   GCPointer() : GCPointerBase(nullptr) {}
   /// Explicit construct for the nullptr type.  No barrier necessary.
-  GCPointer(std::nullptr_t null) : GCPointerBase(nullptr) {}
+  GCPointer(std::nullptr_t) : GCPointerBase(nullptr) {}
 
   /// Other constructors may need to perform barriers, using the \p gc argument,
-  /// as indicated by the \p needsBarrier argument.  (The value of
+  /// as indicated by the \p needsBarriers argument.  (The value of
   /// this argument is unused, but its type's boolean value constant indicates
   /// whether barriers are required.)
   template <typename NeedsBarriers>
-  GCPointer(
-      PointerBase *base,
-      T *ptr,
-      GC *gc,
-      NeedsBarriers needsBarriersUnused);
+  GCPointer(PointerBase *base, T *ptr, GC *gc, NeedsBarriers needsBarriers)
+      : GCPointerBase(base, ptr, gc, needsBarriers) {}
 
   /// Same as the constructor above, with the default for
   /// NeedsBarriers as "YesBarriers".  (We can't use default template
@@ -95,17 +95,9 @@ class GCPointer : public GCPointerBase {
 
   /// Convenience overload of GCPointer::set for other GCPointers.
   void set(PointerBase *base, const GCPointer<T> &ptr, GC *gc) {
-    set(base, ptr.get(base), gc);
+    GCPointerBase::set(base, ptr, gc);
   }
 };
-
-/// @name Inline implementations.
-/// @{
-
-inline GCPointerBase::GCPointerBase(PointerBase *base, GCCell *ptr)
-    : CompressedPointer(base, ptr) {}
-
-/// @}
 
 } // namespace vm
 } // namespace hermes
