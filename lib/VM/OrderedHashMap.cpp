@@ -187,7 +187,7 @@ ExecutionStatus OrderedHashMap::rehashIfNecessary(
     }
   }
 
-  self->hashTable_.set(runtime, newHashTable.get(), &runtime->getHeap());
+  self->hashTable_.setNonNull(runtime, newHashTable.get(), &runtime->getHeap());
   assert(
       self->hashTable_.get(runtime)->size() == self->capacity_ &&
       "Inconsistent capacity");

@@ -89,7 +89,7 @@ class JSDataView final : public JSObject {
     assert(
         offset + length <= buffer->size() &&
         "A DataView cannot be looking outside of the storage");
-    buffer_.set(runtime, buffer, &runtime->getHeap());
+    buffer_.setNonNull(runtime, buffer, &runtime->getHeap());
     offset_ = offset;
     length_ = length;
   }

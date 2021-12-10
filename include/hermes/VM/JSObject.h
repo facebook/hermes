@@ -1635,7 +1635,7 @@ inline ExecutionStatus JSObject::allocatePropStorage(
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
 
-  selfHandle->propStorage_.set(
+  selfHandle->propStorage_.setNonNull(
       runtime, vmcast<PropStorage>(*res), &runtime->getHeap());
   return ExecutionStatus::RETURNED;
 }

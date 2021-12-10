@@ -99,7 +99,7 @@ PseudoHandle<JSObject> JSObject::create(
     Runtime *runtime,
     Handle<HiddenClass> clazz) {
   auto obj = JSObject::create(runtime, clazz->getNumProperties());
-  obj->clazz_.set(runtime, *clazz, &runtime->getHeap());
+  obj->clazz_.setNonNull(runtime, *clazz, &runtime->getHeap());
   // If the hidden class has index like property, we need to clear the fast path
   // flag.
   if (LLVM_UNLIKELY(obj->clazz_.get(runtime)->getHasIndexLikeProperties()))
@@ -226,7 +226,7 @@ void JSObject::allocateNewSlotStorage(
     assert(newSlotIndex == 0 && "allocated slot must be at end");
     auto arrRes = runtime->ignoreAllocationFailure(
         PropStorage::create(runtime, DEFAULT_PROPERTY_CAPACITY));
-    selfHandle->propStorage_.set(
+    selfHandle->propStorage_.setNonNull(
         runtime, vmcast<PropStorage>(arrRes), &runtime->getHeap());
   } else if (LLVM_UNLIKELY(
                  newSlotIndex >=
@@ -237,7 +237,7 @@ void JSObject::allocateNewSlotStorage(
         "allocated slot must be at end");
     auto hnd = runtime->makeMutableHandle(selfHandle->propStorage_);
     PropStorage::resize(hnd, runtime, newSlotIndex + 1);
-    selfHandle->propStorage_.set(runtime, *hnd, &runtime->getHeap());
+    selfHandle->propStorage_.setNonNull(runtime, *hnd, &runtime->getHeap());
   }
 
   {
@@ -1861,7 +1861,7 @@ CallResult<bool> JSObject::deleteNamed(
   // Perform the actual deletion.
   auto newClazz = HiddenClass::deleteProperty(
       runtime->makeHandle(selfHandle->clazz_), runtime, *pos);
-  selfHandle->clazz_.set(runtime, *newClazz, &runtime->getHeap());
+  selfHandle->clazz_.setNonNull(runtime, *newClazz, &runtime->getHeap());
 
   return true;
 }
@@ -1961,7 +1961,7 @@ CallResult<bool> JSObject::deleteComputed(
     // Remove the property descriptor.
     auto newClazz = HiddenClass::deleteProperty(
         runtime->makeHandle(selfHandle->clazz_), runtime, *pos);
-    selfHandle->clazz_.set(runtime, *newClazz, &runtime->getHeap());
+    selfHandle->clazz_.setNonNull(runtime, *newClazz, &runtime->getHeap());
   } else if (LLVM_UNLIKELY(selfHandle->flags_.proxyObject)) {
     CallResult<Handle<>> key = toPropertyKey(runtime, nameValPrimitiveHandle);
     if (key == ExecutionStatus::EXCEPTION)
@@ -2548,7 +2548,7 @@ ExecutionStatus JSObject::seal(Handle<JSObject> selfHandle, Runtime *runtime) {
 
   auto newClazz = HiddenClass::makeAllNonConfigurable(
       runtime->makeHandle(selfHandle->clazz_), runtime);
-  selfHandle->clazz_.set(runtime, *newClazz, &runtime->getHeap());
+  selfHandle->clazz_.setNonNull(runtime, *newClazz, &runtime->getHeap());
 
   selfHandle->flags_.sealed = true;
 
@@ -2573,7 +2573,7 @@ ExecutionStatus JSObject::freeze(
 
   auto newClazz = HiddenClass::makeAllReadOnly(
       runtime->makeHandle(selfHandle->clazz_), runtime);
-  selfHandle->clazz_.set(runtime, *newClazz, &runtime->getHeap());
+  selfHandle->clazz_.setNonNull(runtime, *newClazz, &runtime->getHeap());
 
   selfHandle->flags_.frozen = true;
   selfHandle->flags_.sealed = true;
@@ -2593,7 +2593,7 @@ void JSObject::updatePropertyFlagsWithoutTransitions(
       flagsToClear,
       flagsToSet,
       props);
-  selfHandle->clazz_.set(runtime, *newClazz, &runtime->getHeap());
+  selfHandle->clazz_.setNonNull(runtime, *newClazz, &runtime->getHeap());
 }
 
 CallResult<bool> JSObject::isExtensible(
@@ -2718,7 +2718,8 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
   if (LLVM_UNLIKELY(addResult == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  selfHandle->clazz_.set(runtime, *addResult->first, &runtime->getHeap());
+  selfHandle->clazz_.setNonNull(
+      runtime, *addResult->first, &runtime->getHeap());
 
   allocateNewSlotStorage(
       selfHandle, runtime, addResult->second, valueOrAccessor);
@@ -2761,7 +2762,7 @@ CallResult<bool> JSObject::updateOwnProperty(
         runtime,
         propertyPos,
         desc.flags);
-    selfHandle->clazz_.set(runtime, *newClazz, &runtime->getHeap());
+    selfHandle->clazz_.setNonNull(runtime, *newClazz, &runtime->getHeap());
   }
 
   if (updateStatus->first == PropertyUpdateStatus::done)

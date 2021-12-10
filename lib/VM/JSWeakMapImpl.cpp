@@ -304,7 +304,7 @@ CallResult<uint32_t> JSWeakMapImplBase::getFreeValueStorageIndex(
   }
 
   assert(i < storageHandle->size() && "invalid index");
-  self->valueStorage_.set(runtime, *storageHandle, &runtime->getHeap());
+  self->valueStorage_.setNonNull(runtime, *storageHandle, &runtime->getHeap());
 
   return i;
 }

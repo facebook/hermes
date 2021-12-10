@@ -849,7 +849,8 @@ ExecutionStatus HiddenClass::addToPropertyMap(
     return ExecutionStatus::EXCEPTION;
   }
 
-  selfHandle->propertyMap_.set(runtime, *updatedMap, &runtime->getHeap());
+  selfHandle->propertyMap_.setNonNull(
+      runtime, *updatedMap, &runtime->getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -912,7 +913,7 @@ void HiddenClass::initializeMissingPropertyMap(
       inserted->first->slot = slotIndex++;
   }
 
-  selfHandle->propertyMap_.set(runtime, *mapHandle, &runtime->getHeap());
+  selfHandle->propertyMap_.setNonNull(runtime, *mapHandle, &runtime->getHeap());
 }
 
 void HiddenClass::stealPropertyMapFromParent(

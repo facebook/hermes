@@ -40,6 +40,7 @@ class GCPointerBase : public CompressedPointer {
   /// \param gc Used for write barriers.
   inline void set(PointerBase *base, GCCell *ptr, GC *gc);
   inline void set(PointerBase *base, CompressedPointer ptr, GC *gc);
+  inline void setNonNull(PointerBase *base, GCCell *ptr, GC *gc);
 
   /// Set this pointer to null. This needs a write barrier in some types of
   /// garbage collectors.
@@ -91,6 +92,9 @@ class GCPointer : public GCPointerBase {
   /// \param gc Used for write barriers.
   void set(PointerBase *base, T *ptr, GC *gc) {
     GCPointerBase::set(base, ptr, gc);
+  }
+  void setNonNull(PointerBase *base, T *ptr, GC *gc) {
+    GCPointerBase::setNonNull(base, ptr, gc);
   }
 
   /// Convenience overload of GCPointer::set for other GCPointers.
