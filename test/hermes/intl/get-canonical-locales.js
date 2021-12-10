@@ -37,6 +37,13 @@ try {
 }
 // CHECK-NEXT: RangeError: Unicode locale id und-t-en-us-t-en-us is not structurally valid.
 
+try {
+  Intl.getCanonicalLocales('EN-Us-u-x-test');
+} catch (exception) {
+  print(exception);
+}
+// CHECK-NEXT: RangeError: Unicode locale id EN-Us-u-x-test is not structurally valid.
+
 print(Intl.getCanonicalLocales("und-T-en-arab-us-z1-100-a1-101-zebra"));
 // CHECK-NEXT: und-t-en-arab-us-a1-101-zebra-z1-100
 

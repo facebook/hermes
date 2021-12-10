@@ -172,8 +172,10 @@ llvh::Optional<ParsedLocaleIdentifier> LanguageTagParser::parseUnicodeLocaleId()
   if (!parseExtensions()) {
     return {};
   }
-  
-  return hasMoreSubtags() ?  llvh::Optional<ParsedLocaleIdentifier>() :  parsedLocaleIdentifier;
+  if (hasMoreSubtags()) {
+    return {};
+  }
+  return parsedLocaleIdentifier;
 }
 
 bool LanguageTagParser::parseUnicodeLanguageId(bool transformedExtensionId) {
@@ -241,11 +243,7 @@ bool LanguageTagParser::addVariantSubtag(bool transformedExtensionId) {
 }
 
 bool LanguageTagParser::parseExtensions() {
-  while (true) {
-    if (subtagEnd_ != subtagStart_) {
-      return true;
-    }
-    
+  while (subtagEnd_ == subtagStart_) {
     char16_t singleton = getCurrentSubtag()[0];
     if (!isASCIILetterOrDigit(singleton)) {
       return true;
@@ -272,7 +270,7 @@ bool LanguageTagParser::parseExtensions() {
         break;
       }
       case 'x': {
-        // private use extension
+        // private use extension - must be the last extension
         if (!parsePUExtension()) {
           return false;
         }
@@ -288,7 +286,7 @@ bool LanguageTagParser::parseExtensions() {
     }
   }
 
-  return false;
+  return true;
 }
 
 // unicode_locale_extensions = sep [uU]
@@ -309,7 +307,10 @@ bool LanguageTagParser::parseUnicodeExtension() {
     return false;
   }
   
+  bool hasKeywordOrAttribute = false;
+  
   while (isUnicodeExtensionAttribute(getCurrentSubtagRef())) {
+    hasKeywordOrAttribute = true;
     // Insert in sorted order
     if (parsedLocaleIdentifier.unicodeExtensionAttributes.empty()) {
       parsedLocaleIdentifier.unicodeExtensionAttributes.push_back(getCurrentSubtag());
@@ -327,10 +328,11 @@ bool LanguageTagParser::parseUnicodeExtension() {
   }
   
   while (isUnicodeExtensionKey(getCurrentSubtagRef())) {
+    hasKeywordOrAttribute = true;
+    
     std::u16string key = getCurrentSubtag();
 
-    parsedLocaleIdentifier.unicodeExtensionKeywords.insert({key, {}});
-    std::vector<std::u16string> *extensionKeyTypes = &parsedLocaleIdentifier.unicodeExtensionKeywords.find(key)->second;
+    std::vector<std::u16string> *extensionKeyTypes = &parsedLocaleIdentifier.unicodeExtensionKeywords.insert({key, {}}).first->second;
     
     if (!nextSubtag()) {
       return true;
@@ -344,7 +346,7 @@ bool LanguageTagParser::parseUnicodeExtension() {
     }
   }
   
-  return true;
+  return hasKeywordOrAttribute;
 }
 
 // transformed_extensions= sep [tT]
@@ -479,9 +481,6 @@ bool LanguageTagParser::nextSubtag() {
   size_t length = localeId_.length();
   
   if (subtagEnd_ >= subtagStart_) {
-    if (!isSubtagSeparator(localeId_[subtagEnd_+1])) {
-      return false;
-    }
     if (subtagEnd_ + 2 == (int)length) {
       return false;
     }
