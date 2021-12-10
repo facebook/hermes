@@ -274,7 +274,7 @@ DateTimeFormat::formatToParts(double jsTimeValue) noexcept {
 struct NumberFormat::Impl {
   // impl_->
   uint8_t minimumIntegerDigits, minimumFractionDigits, maximumFractionDigits, minimumSignificantDigits, maximumSignificantDigits;
-  std::u16string numberingSystem, currency, currencyDisplay, currencySign, notation, compactDisplay, signDisplay, unit, unitDisplay, style, locale;
+  std::u16string numberingSystem, currency, currencyDisplay, currencySign, notation, compactDisplay, signDisplay, unit, unitDisplay, style, locale, dataLocale, numberFormat;
   bool useGrouping;
   struct newRecord {
       std::u16string localeMatcher, ca, nu;// For opt
@@ -289,38 +289,13 @@ vm::CallResult<std::vector<std::u16string>> NumberFormat::supportedLocalesOf(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
-    //  1. Let availableLocales be %NumberFormat%.[[AvailableLocales]].
-    NSArray<NSString *> *nsAvailableLocales =
-        [NSLocale availableLocaleIdentifiers];
-
+    // 1. Let availableLocales be %DateTimeFormat%.[[AvailableLocales]].
     // 2. Let requestedLocales be ? CanonicalizeLocaleList(locales).
-    vm::CallResult<std::vector<std::u16string>> requestedLocales =
-        getCanonicalLocales(runtime, locales);
-    std::vector<std::u16string> availableLocales =
-        nsStringArrayToU16StringArray(nsAvailableLocales);
-
-    // 3. Return ? SupportedLocales(availableLocales, requestedLocales, options).
-    // Get a non-const copy of options
-    Options copyOptions = options;
+    auto requestedLocales = getCanonicalLocales(runtime, locales);
+    std::vector<std::u16string> availableLocales = getAvailableLocales();
+    // 3. Return ? (availableLocales, requestedLocales, options).
     return supportedLocales(
-        availableLocales, requestedLocales.getValue(), copyOptions);
-}
-
-// https://tc39.es/ecma402/#sec-defaultnumberoption
-vm::CallResult<std::uint8_t> defaultNumberOption(const std::uint8_t value,
-  const std::uint8_t minimum, const std::uint8_t maximum,
-  const std::uint8_t fallback, vm::Runtime *runtime) {
-//  1. If value is undefined, return fallback.
-  if (!value) {
-    return fallback;
-  }
-//  2. Set value to ? ToNumber(value).
-//  3. If value is NaN or less than minimum or greater than maximum, throw a RangeError exception.
-  if (value == NAN || value < minimum || value > maximum) {
-    return runtime->raiseRangeError("Number is invalid");
-  }
-//  4. Return floor(value).
-  return std::floor(value);
+        availableLocales, requestedLocales.getValue(), options, runtime);
 }
 // https://tc39.es/ecma402/#sec-issanctionedsimpleunitidentifier
 bool isSanctionedSimpleUnitIdentifier(const std::u16string &unitIdentifier) {
@@ -446,72 +421,62 @@ vm::CallResult<Options> setNumberFormatUnitOptions(Options &options, vm::Runtime
 //  2. Assert: Type(options) is Object.
 //  3. Let style be ? GetOption(options, "style", "string", « "decimal", "percent", "currency", "unit" », "decimal").
 //  4. Set intlObj.[[Style]] to style.
-  Options decimalFallback;
-  decimalFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"decimal")));
-  auto style = getOption(options, u"style", u"string", {u"decimal", u"percent", u"currency", u"unit"}, decimalFallback, runtime);
-  options.emplace(std::u16string(u"style"), Option(style->getString()));
+  auto style = getOptionString(options, u"style", {u"decimal", u"percent", u"currency", u"unit"}, llvh::Optional<std::u16string>(u"decimal"), runtime);
+  options.emplace(std::u16string(u"style"), Option(style->getValue()));
 //  Let currency be ? GetOption(options, "currency", "string", undefined, undefined).
-  Options undefinedFallback;
-  undefinedFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"")));
-  auto currency = getOption(options, u"currency", u"string", {}, undefinedFallback, runtime);
+  auto currency = getOptionString(options, u"currency", {}, llvh::Optional<std::u16string>(), runtime);
 //  6. If currency is undefined, then
-  if (currency->getString() == u"") {
+  if (!currency->hasValue()) {
 //  a. If style is "currency", throw a TypeError exception.
-    if (style->getString() == u"currency") {
+    if (style->getValue() == u"currency") {
       return runtime->raiseTypeError("Currency is undefined");
     }
     //  7. Else,
     else {
     //  a. If the result of IsWellFormedCurrencyCode(currency) is false, throw a RangeError exception.
-      if (!isWellFormedCurrencyCode(currency->getString())) {
+      if (!isWellFormedCurrencyCode(currency->getValue())) {
         return runtime->raiseRangeError("Currency is invalid");
       }
     }
   }
 //  8. Let currencyDisplay be ? GetOption(options, "currencyDisplay", "string", « "code", "symbol", "narrowSymbol", "name" », "symbol").
-  Options symbolFallback;
-  symbolFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"symbol")));
-  auto currencyDisplay = getOption(options, u"currencyDisplay", u"string", {u"code", u"symbol", u"narrowSymbol", u"name"}, symbolFallback, runtime);
+  auto currencyDisplay = getOptionString(options, u"currencyDisplay", {u"code", u"symbol", u"narrowSymbol", u"name"}, llvh::Optional<std::u16string>(u"symbol"), runtime);
 //  9. Let currencySign be ? GetOption(options, "currencySign", "string", « "standard", "accounting" », "standard").
-  Options standardFallback;
-  standardFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"standard")));
-  auto currencySign = getOption(options, u"currencySign", u"string", {u"standard", u"accounting"}, standardFallback, runtime);
+  auto currencySign = getOptionString(options, u"currencySign", {u"standard", u"accounting"}, llvh::Optional<std::u16string>(u"standard"), runtime);
 //  10. Let unit be ? GetOption(options, "unit", "string", undefined, undefined).
-  auto unit = getOption(options, u"unit", u"string", {}, undefinedFallback, runtime);
+  auto unit = getOptionString(options, u"unit", {}, llvh::Optional<std::u16string>(), runtime);
 //  11. If unit is undefined, then
-  if (unit->getString() == u"") {
+  if (!unit->hasValue()) {
 //  a. If style is "unit", throw a TypeError exception.
-    if (style->getString() == u"unit") {
+    if (style->getValue() == u"unit") {
       return runtime->raiseTypeError("Unit is undefined");
     }
 //  12. Else,
     else {
 //  a. If the result of IsWellFormedUnitIdentifier(unit) is false, throw a RangeError exception.
-      if (!isWellFormedUnitIdentifier(unit->getString())) {
+      if (!isWellFormedUnitIdentifier(unit->getValue())) {
         return runtime->raiseRangeError("Unit is invalid");
       }
     }
   }
 //  13. Let unitDisplay be ? GetOption(options, "unitDisplay", "string", « "short", "narrow", "long" », "short").
-  Options shortFallback;
-  symbolFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"short")));
-  auto unitDisplay = getOption(options, u"unitDisplay", u"string", {u"short", u"narrow", u"long"}, shortFallback, runtime);
+  auto unitDisplay = getOptionString(options, u"unitDisplay", {u"short", u"narrow", u"long"}, llvh::Optional<std::u16string>(u"short"), runtime);
 //  14. If style is "currency", then
-  if (style->getString() == u"currency") {
+  if (style->getValue() == u"currency") {
 //  a. Let currency be the result of converting currency to upper case as specified in 6.1.
 //  b. Set intlObj.[[Currency]] to currency.
 //  c. Set intlObj.[[CurrencyDisplay]] to currencyDisplay.
 //  d. Set intlObj.[[CurrencySign]] to currencySign.
-    options.emplace(std::u16string(u"currency"), Option(normalizeCurrencyCode(currency->getString())));
-    options.emplace(std::u16string(u"currencyDisplay"), Option(currencyDisplay->getString()));
-    options.emplace(std::u16string(u"currencySign"), Option(currencySign->getString()));
+    options.emplace(std::u16string(u"currency"), Option(normalizeCurrencyCode(currency->getValue())));
+    options.emplace(std::u16string(u"currencyDisplay"), Option(currencyDisplay->getValue()));
+    options.emplace(std::u16string(u"currencySign"), Option(currencySign->getValue()));
   }
-  if (style->getString() == u"unit") {
+  if (style->getValue() == u"unit") {
 //  15. If style is "unit", then
 //  a. Set intlObj.[[Unit]] to unit.
 //  b. Set intlObj.[[UnitDisplay]] to unitDisplay.
-    options.emplace(std::u16string(u"unit"), Option(unit->getString()));
-    options.emplace(std::u16string(u"unitDisplay"), Option(unitDisplay->getString()));
+    options.emplace(std::u16string(u"unit"), Option(unit->getValue()));
+    options.emplace(std::u16string(u"unitDisplay"), Option(unitDisplay->getValue()));
   }
   return vm::ExecutionStatus::RETURNED;
 }
@@ -519,9 +484,7 @@ vm::CallResult<Options> setNumberFormatUnitOptions(Options &options, vm::Runtime
 // https://tc39.es/ecma402/#sec-setnfdigitoptions
 vm::CallResult<Options> setNumberFormatDigitOptions(Options &options, uint8_t mnfdDefault, uint8_t mxfdDefault, std::u16string &notation, vm::Runtime *runtime) {
   //  1. Let mnid be ? GetNumberOption(options, "minimumIntegerDigits,", 1, 21, 1).
-  Options oneFallback;
-  oneFallback.emplace(std::u16string(u"fallback"), 1);
-  auto mnid = getOptionNumber(options, u"minimumIntegerDigits", 1, 21, oneFallback);
+  auto mnid = getNumberOption(options, u"minimumIntegerDigits", 1, 21, llvh::Optional<uint8_t>(1), runtime);
 //  2. Let mnfd be ? Get(options, "minimumFractionDigits").
   auto mnfd = options.find(u"minimumFractionDigits");
 //  3. Let mxfd be ? Get(options, "maximumFractionDigits").
@@ -531,8 +494,7 @@ vm::CallResult<Options> setNumberFormatDigitOptions(Options &options, uint8_t mn
 //  5. Let mxsd be ? Get(options, "maximumSignificantDigits").
   auto mxsd = options.find(u"maximumSignificantDigits");
 //  6. Set intlObj.[[MinimumIntegerDigits]] to mnid.
-//  May need to be rounded?
-  options.emplace(std::u16string(u"minimumIntegerDigits"), Option(mnid->getString()));
+  options.emplace(std::u16string(u"minimumIntegerDigits"), Option(double(mnid->getValue())));
   bool hasSd, hasFd, needSd, needFd;
 //  If mnsd is not undefined or mxsd is not undefined, then
   if (mnsd->second.getNumber() != NAN || mxsd->second.getNumber() != NAN) {
@@ -567,60 +529,61 @@ vm::CallResult<Options> setNumberFormatDigitOptions(Options &options, uint8_t mn
     if (needSd == true) {
 //  a. Assert: hasSd is true.
 //  b. Set mnsd to ? DefaultNumberOption(mnsd, 1, 21, 1).
-    auto rmnsd = defaultNumberOption(mnsd->second.getNumber(), 1, 21, 1, runtime);
+    auto rmnsd = defaultNumberOption(options, u"minimumSignificantDigits", mnsd->second, 1, 21, 1, runtime);
 //  c. Set mxsd to ? DefaultNumberOption(mxsd, mnsd, 21, 21).
-    auto rmxsd = defaultNumberOption(mxsd->second.getNumber(), mnsd->second.getNumber(), 21, 21, runtime);
+    auto rmxsd = defaultNumberOption(options, u"maximumSignificantDigits", mxsd->second, mnsd->second.getNumber(), 21, 21, runtime);
 //  d. Set intlObj.[[MinimumSignificantDigits]] to mnsd.
-      options.emplace(std::u16string(u"minimumSignificantDigits"), (rmnsd));
+      options.emplace(std::u16string(u"minimumSignificantDigits"), Option(double(rmnsd->getValue())));
 //  e. Set intlObj.[[MaximumSignificantDigits]] to mxsd.
-      options.emplace(std::u16string(u"maximumSignificantDigits"), (rmxsd));
+      options.emplace(std::u16string(u"maximumSignificantDigits"), Option(double(uint8_t(rmxsd->getValue()))));
   }
 //  15. If needFd is true, then
     if (needFd == true) {
 //  a. If hasFd is true, then
     if (hasFd == true) {
 //  i. Set mnfd to ? DefaultNumberOption(mnfd, 0, 20, undefined).
-      auto rmnfd = defaultNumberOption(mnfd->second.getNumber(), 0, 20, NAN, runtime);
+      auto rmnfd = defaultNumberOption(options, u"minimumFractionDigits", mnfd->second, 0, 20, llvh::Optional<uint8_t>(), runtime);
 //  ii. Set mxfd to ? DefaultNumberOption(mxfd, 0, 20, undefined).
-      auto rmxfd = defaultNumberOption(mxfd->second.getNumber(), 0, 20, NAN, runtime);
+      auto rmxfd = defaultNumberOption(options, u"maximumFractionDigits", mxfd->second, 0, 20, llvh::Optional<uint8_t>(), runtime);
+      uint8_t omnfd, omxfd;
 //  iii. If mnfd is undefined, set mnfd to min(mnfdDefault, mxfd).
-      if (rmnfd.getValue() == NAN) {
-        rmnfd = std::min(mnfdDefault, rmxfd.getValue());
+      if (!rmnfd->hasValue()) {
+        omnfd = std::min(mnfdDefault, rmxfd->getValue());
       }
 //  iv. Else if mxfd is undefined, set mxfd to max(mxfdDefault, mnfd).
-      else if (rmxfd.getValue() == NAN) {
-        rmxfd = std::max(mxfdDefault, rmnfd.getValue());
+      else if (!rmxfd->hasValue()) {
+        omxfd = std::max(mxfdDefault, rmnfd->getValue());
       }
 //  v. Else if mnfd is greater than mxfd, throw a RangeError exception.
       else if (rmnfd.getValue() > rmxfd.getValue()) {
         return runtime->raiseRangeError("minimumFractionDigits is greater than maximumFractionDigits");
       }
 //  vi. Set intlObj.[[MinimumFractionDigits]] to mnfd.
-      options.emplace(std::u16string(u"minimumFractionDigits"), (rmnfd));
+      options.emplace(std::u16string(u"minimumFractionDigits"), Option(double(omnfd)));
 //  vii. Set intlObj.[[MaximumFractionDigits]] to mxfd.
-      options.emplace(std::u16string(u"maximumFractionDigits"), (rmxfd));
+      options.emplace(std::u16string(u"maximumFractionDigits"), Option(double(omxfd)));
     }
 //  b. Else,
     else {
 //  i. Set intlObj.[[MinimumFractionDigits]] to mnfdDefault.
-      options.emplace(std::u16string(u"minimumFractionDigits"), (mnfdDefault));
+      options.emplace(std::u16string(u"minimumFractionDigits"), Option(double(mnfdDefault)));
 //  ii. Set intlObj.[[MaximumFractionDigits]] to mxfdDefault.
-      options.emplace(std::u16string(u"maximumFractionDigits"), (mxfdDefault));
+      options.emplace(std::u16string(u"maximumFractionDigits"), Option(double(mxfdDefault)));
     }
 //    16. If needSd is false and needFd is false, then
     if (needSd == false && needFd == false) {
 //    a. Set intlObj.[[RoundingType]] to compactRounding.
-      options.emplace(std::u16string(u"roundingType"), std::u16string(u"compactRounding"));
+      options.emplace(std::u16string(u"roundingType"), Option(std::u16string(u"compactRounding")));
     }
 //    17. Else if hasSd is true, then
     else if (hasSd == true) {
 //    a. Set intlObj.[[RoundingType]] to significantDigits.
-      options.emplace(std::u16string(u"roundingType"), std::u16string(u"significantDigits"));
+      options.emplace(std::u16string(u"roundingType"), Option(std::u16string(u"significantDigits")));
     }
 //    18. Else,
     else {
 //    a. Set intlObj.[[RoundingType]] to fractionDigits.
-      options.emplace(std::u16string(u"roundingType"), std::u16string(u"fractionDigits"));
+      options.emplace(std::u16string(u"roundingType"), Option(std::u16string(u"fractionDigits")));
     }
   }
 }
@@ -656,31 +619,28 @@ vm::ExecutionStatus NumberFormat::initialize(
 // Create a copy of the unordered map &options
     Options copyOptions = options;
 // 4. Let matcher be ? GetOption(options, "localeMatcher", "string", « "lookup", "best fit" », "best fit").
-    std::vector<std::u16string> values = {u"lookup", u"best fit"};
-    Options matcherFallback;
-    matcherFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"best fit")));
-    auto matcher = getOption(copyOptions, u"localeMatcher", u"string", values, matcherFallback, runtime);
+      auto matcher = getOptionString(copyOptions, u"localeMatcher",  {u"lookup", u"best fit"}, llvh::Optional<std::u16string>(u"best fit"), runtime);
 // 5. Set opt.[[localeMatcher]] to matcher.
-    opt.localeMatcher = matcher->getString();
-    
-    Options undefinedFallback;
-    undefinedFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"")));
+    opt.localeMatcher = matcher->getValue();
 // 6. Let numberingSystem be ? GetOption(options, "numberingSystem", "string", undefined, undefined).
-      auto numberingSystem = getOption(copyOptions, u"numberingSystem", u"string", {}, undefinedFallback, runtime);
+      auto numberingSystem = getOptionString(copyOptions, u"numberingSystem", {}, llvh::Optional<std::u16string>(), runtime);
 // 7. If numberingSystem is not undefined, then
 //   a. If numberingSystem does not match the Unicode Locale Identifier type nonterminal, throw a RangeError exception.
 // 8. Set opt.[[nu]] to numberingSystem.
-    if (numberingSystem->isString()) {
-          opt.nu = numberingSystem->getString();
+    if (numberingSystem->hasValue()) {
+          opt.nu = numberingSystem->getValue();
       }
       else {
         return runtime->raiseRangeError("Incorrect numberingSystem information provided");
       }
-// TODO: Once resolveLocale has been resolved
 // Let r be ResolveLocale(%NumberFormat%.[[AvailableLocales]], requestedLocales, opt, %NumberFormat%.[[RelevantExtensionKeys]], localeData).
+    auto r = resolveLocale(locales, requestedLocales.getValues(), opt, {u"nu"});
 // 11. Set numberFormat.[[Locale]] to r.[[locale]].
+    impl_->locale = r.locale;
 // 12. Set numberFormat.[[DataLocale]] to r.[[dataLocale]].
+    impl_->dataLocale = r.dataLocale;
 // 13. Set numberFormat.[[NumberingSystem]] to r.[[nu]].
+    impl_->numberFormat = r.nu;
       
 // Perform ? SetNumberFormatUnitOptions(numberFormat, options).
   setNumberFormatUnitOptions(copyOptions, runtime);
@@ -713,35 +673,27 @@ vm::ExecutionStatus NumberFormat::initialize(
     }
   }
 // 18. Let notation be ? GetOption(options, "notation", "string", « "standard", "scientific", "engineering", "compact" », "standard").
-  Options standardFallback;
-  standardFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"standard")));
-  auto notation = getOption(copyOptions, u"notation", u"string", {u"standard", u"scientific", u"engineering", u"compact"}, standardFallback, runtime);
+  auto notation = getOptionString(copyOptions, u"notation", {u"standard", u"scientific", u"engineering", u"compact"}, llvh::Optional<std::u16string>(u"standard"), runtime);
 // 19. Set numberFormat.[[Notation]] to notation.
-  impl_->notation = notation->getString();
+  impl_->notation = notation->getValue();
 
 // Perform ? SetNumberFormatDigitOptions(numberFormat, options, mnfdDefault, mxfdDefault, notation).
   setNumberFormatDigitOptions(copyOptions, mnfdDefault, mxfdDefault, impl_->notation, runtime);
 // 21. Let compactDisplay be ? GetOption(options, "compactDisplay", "string", « "short", "long" », "short").
-  Options shortFallback;
-  shortFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"short")));
-  auto compactDisplay = getOption(copyOptions, u"compactDisplay", u"string", {u"short", u"long"}, shortFallback, runtime);
+  auto compactDisplay = getOptionString(copyOptions, u"compactDisplay", {u"short", u"long"}, llvh::Optional<std::u16string>(u"short"), runtime);
 // 22. If notation is "compact", then
-    if (notation->getString() == u"compact") {
+    if (notation->getValue() == u"compact") {
 //   a. Set numberFormat.[[CompactDisplay]] to compactDisplay.
-      impl_->compactDisplay = compactDisplay->getString();
+      impl_->compactDisplay = compactDisplay->getValue();
     }
 // 23. Let useGrouping be ? GetOption(options, "useGrouping", "boolean", undefined, true).
-  Options trueFallback;
-  trueFallback.emplace(std::u16string(u"fallback"), true);
-      auto useGrouping = getOption(copyOptions, u"useGrouping", u"boolean", {}, trueFallback, runtime);
+    auto useGrouping = getOptionBool(copyOptions, u"useGrouping", llvh::Optional<bool>(true), runtime);
 // 24. Set numberFormat.[[UseGrouping]] to useGrouping.
-  impl_->useGrouping = useGrouping->getBool();
+  impl_->useGrouping = useGrouping->getValue();
 // 25. Let signDisplay be ? GetOption(options, "signDisplay", "string", « "auto", "never", "always", "exceptZero" », "auto").
-  Options autoFallback;
-  autoFallback.emplace(std::u16string(u"fallback"), Option(std::u16string(u"auto")));
-  auto signDisplay = getOption(copyOptions, u"signDisplay", u"string", {u"auto", u"never", u"always", u"exceptZero"}, autoFallback, runtime);
+  auto signDisplay = getOptionString(copyOptions, u"signDisplay", {u"auto", u"never", u"always", u"exceptZero"}, llvh::Optional<std::u16string>(u"auto"), runtime);
 // 26. Set numberFormat.[[SignDisplay]] to signDisplay.
-  impl_->signDisplay = signDisplay->getString();
+  impl_->signDisplay = signDisplay->getValue();
   return vm::ExecutionStatus::RETURNED;
 }
 
