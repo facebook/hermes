@@ -280,7 +280,7 @@ ExecutionStatus Domain::importCJSModuleTable(
         &runtime->getHeap());
     cjsModules->set(
         index + ModuleOffset,
-        HermesValue::encodeObjectValue(nullptr),
+        HermesValue::encodeNullValue(),
         &runtime->getHeap());
     cjsModules->set(
         index + FunctionIndexOffset,

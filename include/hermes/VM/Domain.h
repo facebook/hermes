@@ -171,7 +171,7 @@ class Domain final : public GCCell {
   /// \return the module object for the given cjsModuleOffset.
   PseudoHandle<JSObject> getModule(Runtime *runtime, uint32_t cjsModuleOffset)
       const {
-    return createPseudoHandle(vmcast_or_null<JSObject>(
+    return createPseudoHandle(dyn_vmcast<JSObject>(
         cjsModules_.get(runtime)->at(cjsModuleOffset + ModuleOffset)));
   }
 
@@ -201,10 +201,7 @@ class Domain final : public GCCell {
   }
 
   /// Set the module object for the given cjsModuleOffset.
-  void setModule(
-      uint32_t cjsModuleOffset,
-      Runtime *runtime,
-      Handle<JSObject> module) {
+  void setModule(uint32_t cjsModuleOffset, Runtime *runtime, Handle<> module) {
     cjsModules_.get(runtime)->set(
         cjsModuleOffset + ModuleOffset,
         module.getHermesValue(),
