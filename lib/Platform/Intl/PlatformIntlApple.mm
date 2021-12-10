@@ -381,6 +381,7 @@ vm::CallResult<llvh::Optional<bool>> getOptionBool(
 // https://tc39.es/ecma402/#sec-defaultnumberoption
 vm::CallResult<llvh::Optional<uint8_t>> defaultNumberOption(
     const Options &options,
+    const std::u16string &property,
     llvh::Optional<Option> value,
     const std::uint8_t minimum,
     const std::uint8_t maximum,
@@ -395,7 +396,9 @@ vm::CallResult<llvh::Optional<uint8_t>> defaultNumberOption(
   //  RangeError exception.
   if (!value->isNumber() || std::isnan(value->getNumber()) ||
       value->getNumber() < minimum || value->getNumber() > maximum) {
-    return vm::ExecutionStatus::EXCEPTION;
+    return runtime->raiseRangeError(
+        vm::TwineChar16(property.c_str()) +
+        vm::TwineChar16(" value is out of range"));
   }
   //  4. Return floor(value).
   return llvh::Optional<uint8_t>(std::floor(value->getNumber()));
@@ -417,12 +420,10 @@ vm::CallResult<llvh::Optional<uint8_t>> getNumberOption(
     value = Option(iter->second);
   }
   //  3. Return ? DefaultNumberOption(value, minimum, maximum, fallback).
-  auto defaultNumber =
-      defaultNumberOption(options, value, minimum, maximum, fallback, runtime);
+  auto defaultNumber = defaultNumberOption(
+      options, property, value, minimum, maximum, fallback, runtime);
   if (defaultNumber == vm::ExecutionStatus::EXCEPTION) {
-    return runtime->raiseRangeError(
-        vm::TwineChar16(property.c_str()) +
-        vm::TwineChar16(" value is out of range"));
+    return vm::ExecutionStatus::EXCEPTION;
   } else {
     return llvh::Optional<uint8_t>(defaultNumber.getValue());
   }
