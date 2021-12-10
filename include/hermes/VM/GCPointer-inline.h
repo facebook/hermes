@@ -22,7 +22,7 @@ GCPointerBase::GCPointerBase(
     GCCell *ptr,
     GC *gc,
     NeedsBarriers)
-    : CompressedPointer(base, ptr) {
+    : CompressedPointer(CompressedPointer::encode(ptr, base)) {
   assert(
       (!ptr || gc->validPointer(ptr)) &&
       "Cannot construct a GCPointer from an invalid pointer");
@@ -39,7 +39,7 @@ inline void GCPointerBase::set(PointerBase *base, GCCell *ptr, GC *gc) {
       "Cannot set a GCPointer to an invalid pointer");
   // Write barrier must happen before the write.
   gc->writeBarrier(this, ptr);
-  setNoBarrier(CompressedPointer(base, ptr));
+  setNoBarrier(CompressedPointer::encode(ptr, base));
 }
 
 inline void

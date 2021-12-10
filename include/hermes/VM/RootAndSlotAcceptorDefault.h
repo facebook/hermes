@@ -27,7 +27,7 @@ class RootAndSlotAcceptorDefault : public RootAndSlotAcceptor {
   void accept(GCPointerBase &ptr) final {
     auto *p = ptr.get(pointerBase_);
     accept(p);
-    ptr.setInGC(CompressedPointer{pointerBase_, p});
+    ptr.setInGC(CompressedPointer::encode(p, pointerBase_));
   }
 
   void accept(PinnedHermesValue &hv) final {
@@ -78,7 +78,7 @@ class RootAndSlotAcceptorWithNamesDefault
   void accept(GCPointerBase &ptr, const char *name) final {
     auto *p = ptr.get(pointerBase_);
     accept(p, name);
-    ptr.setInGC(CompressedPointer{pointerBase_, p});
+    ptr.setInGC(CompressedPointer::encode(p, pointerBase_));
   }
 
   void accept(PinnedHermesValue &hv, const char *name) final {
@@ -137,7 +137,7 @@ class WeakAcceptorDefault : public WeakRefAcceptor, public WeakRootAcceptor {
 inline void WeakAcceptorDefault::acceptWeak(WeakRootBase &ptr) {
   GCCell *p = ptr.getNoBarrierUnsafe(pointerBaseForWeakRoot_);
   acceptWeak(p);
-  ptr = CompressedPointer(pointerBaseForWeakRoot_, p);
+  ptr = CompressedPointer::encode(p, pointerBaseForWeakRoot_);
 }
 
 /// @}

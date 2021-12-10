@@ -274,7 +274,7 @@ class HermesValue32 {
 
   static HermesValue32
   encodePointerImpl(GCCell *ptr, Tag tag, PointerBase *pb) {
-    return encodePointerImpl(CompressedPointer(pb, ptr), tag);
+    return encodePointerImpl(CompressedPointer::encode(ptr, pb), tag);
   }
 
   static HermesValue32 encodePointerImpl(CompressedPointer ptr, Tag tag) {

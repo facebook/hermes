@@ -77,7 +77,7 @@ void HadesGC::OldGen::addCellToFreelist(FreelistCell *cell, size_t segmentIdx) {
   // Push onto the size-specific free list for this bucket and segment.
   cell->next_ = freelistSegmentsBuckets_[segmentIdx][bucket];
   freelistSegmentsBuckets_[segmentIdx][bucket] =
-      CompressedPointer(gc_->getPointerBase(), cell);
+      CompressedPointer::encodeNonNull(cell, gc_->getPointerBase());
 
   // Set a bit indicating that there are now available blocks in this segment
   // for the given bucket.
@@ -113,7 +113,7 @@ void HadesGC::OldGen::addCellToFreelistFromSweep(
   // Push onto the size-specific free list for this bucket and segment.
   newCell->next_ = freelistSegmentsBuckets_[sweepIterator_.segNumber][bucket];
   freelistSegmentsBuckets_[sweepIterator_.segNumber][bucket] =
-      CompressedPointer(gc_->getPointerBase(), newCell);
+      CompressedPointer::encodeNonNull(newCell, gc_->getPointerBase());
   __asan_poison_memory_region(newCell + 1, newCellSize - sizeof(FreelistCell));
 }
 
@@ -388,7 +388,7 @@ static T convertPtr(PointerBase *, GCCell *p) {
 }
 template <>
 /* static */ CompressedPointer convertPtr(PointerBase *base, GCCell *a) {
-  return CompressedPointer(base, a);
+  return CompressedPointer::encodeNonNull(a, base);
 }
 
 template <bool CompactionEnabled>
@@ -481,7 +481,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     CopyListCell *const copyCell = static_cast<CopyListCell *>(cell);
     // Set the forwarding pointer in the old spot
     copyCell->setMarkedForwardingPointer(
-        CompressedPointer(pointerBase_, newCell));
+        CompressedPointer::encodeNonNull(newCell, pointerBase_));
     if (isTrackingIDs_) {
       gc.moveObject(cell, cellSize, newCell, cellSize);
     }
@@ -570,7 +570,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
 
   void push(CopyListCell *cell) {
     cell->next_ = copyListHead_;
-    copyListHead_ = CompressedPointer(pointerBase_, cell);
+    copyListHead_ = CompressedPointer::encodeNonNull(cell, pointerBase_);
   }
 };
 
@@ -1755,9 +1755,9 @@ void HadesGC::prepareCompactee(bool forceCompaction) {
     addSegmentExtentToCrashManager(
         *compactee_.segment, kCompacteeNameForCrashMgr);
     compactee_.start = compactee_.segment->lowLim();
-    compactee_.startCP = CompressedPointer(
-        getPointerBase(),
-        reinterpret_cast<GCCell *>(compactee_.segment->lowLim()));
+    compactee_.startCP = CompressedPointer::encodeNonNull(
+        reinterpret_cast<GCCell *>(compactee_.segment->lowLim()),
+        getPointerBase());
     compacteeHandleForSweep_ = compactee_.segment;
   }
 }
@@ -2666,8 +2666,8 @@ HadesGC::HeapSegment HadesGC::setYoungGen(HeapSegment seg) {
   addSegmentExtentToCrashManager(seg, "YG");
   youngGenFinalizables_.clear();
   std::swap(youngGen_, seg);
-  youngGenCP_ = CompressedPointer{
-      getPointerBase(), reinterpret_cast<GCCell *>(youngGen_.lowLim())};
+  youngGenCP_ = CompressedPointer::encodeNonNull(
+      reinterpret_cast<GCCell *>(youngGen_.lowLim()), getPointerBase());
   return seg;
 }
 
