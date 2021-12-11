@@ -182,10 +182,10 @@ bool LanguageTagParser::parseUnicodeLanguageId(bool transformedExtensionId) {
   if (!transformedExtensionId && !isUnicodeLanguageSubtag(getCurrentSubtagRef())) {
     return false;
   }
+  
   ParsedLanguageIdentifier &languageId = transformedExtensionId ? parsedLocaleIdentifier.transformedLanguageIdentifier : parsedLocaleIdentifier.languageIdentifier;
   
   languageId.languageSubtag = getCurrentSubtag();
-  
   if (!nextSubtag()) {
     return true;
   }
@@ -235,6 +235,7 @@ bool LanguageTagParser::addVariantSubtag(bool transformedExtensionId) {
     auto end = languageId.variantSubtagList.end();
     auto position = std::upper_bound(begin, end, subtag);
     if (position != std::lower_bound(begin, end, subtag)) {
+      // Must not be duplicate variant subtags
       return false;
     }
     languageId.variantSubtagList.insert(position, subtag);
@@ -292,15 +293,6 @@ bool LanguageTagParser::parseExtensions() {
 // unicode_locale_extensions = sep [uU]
 // ((sep keyword)+
 // |(sep attribute)+ (sep keyword)*) ;
-//
-// keyword = = key (sep type)? ;
-//
-// key = = alphanum alpha ;
-//
-// type = = alphanum{3,8}
-//  (sep alphanum{3,8})* ;
-//
-// attribute = alphanum{3,8} ;
 bool LanguageTagParser::parseUnicodeExtension() {
   if (!parsedLocaleIdentifier.unicodeExtensionAttributes.empty() ||
       !parsedLocaleIdentifier.unicodeExtensionKeywords.empty()) {
@@ -311,17 +303,7 @@ bool LanguageTagParser::parseUnicodeExtension() {
   
   while (isUnicodeExtensionAttribute(getCurrentSubtagRef())) {
     hasKeywordOrAttribute = true;
-    // Insert in sorted order
-    if (parsedLocaleIdentifier.unicodeExtensionAttributes.empty()) {
-      parsedLocaleIdentifier.unicodeExtensionAttributes.push_back(getCurrentSubtag());
-    } else {
-      auto subtag = getCurrentSubtag();
-      auto begin = parsedLocaleIdentifier.unicodeExtensionAttributes.begin();
-      auto end = parsedLocaleIdentifier.unicodeExtensionAttributes.end();
-      auto position = std::upper_bound(begin, end, subtag);
-      parsedLocaleIdentifier.unicodeExtensionAttributes.insert(position, subtag);
-    }
-
+    parsedLocaleIdentifier.unicodeExtensionAttributes.push_back(getCurrentSubtag());
     if (!nextSubtag()) {
       return true;
     }
@@ -359,10 +341,6 @@ bool LanguageTagParser::parseUnicodeExtension() {
 //  (sep unicode_variant_subtag)* ;
 //
 //  tfield = tkey tvalue;
-//
-//  tkey = alpha digit ;
-//
-// tvalue = (sep alphanum{3,8})+ ;
 bool LanguageTagParser::parseTransformedExtension() {
   if (!parsedLocaleIdentifier.transformedLanguageIdentifier.languageSubtag.empty() ||
       !parsedLocaleIdentifier.transformedExtensionFields.empty()) {
@@ -418,8 +396,6 @@ bool LanguageTagParser::parseTransformedExtension() {
 
 // pu_extensions= sep [xX]
 // (sep alphanum{1,8})+ ;
-//
-// No tokens may appear after pu_extensions
 bool LanguageTagParser::parsePUExtension() {
   if (!isPrivateUseExtension(getCurrentSubtagRef())) {
     return false;

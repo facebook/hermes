@@ -188,7 +188,7 @@ vm::CallResult<std::u16string> canonicalizeLocaleId(const std::u16string &locale
   canoLocaleId.reserve(localeId.length());
 
   // Casing, variant, and attribute sorting are handled in parsing
-  const auto &parsedId = *parserOpt;
+  auto &parsedId = *parserOpt;
   
   // Append unicode_language_id
   if (!parsedId.languageIdentifier.languageSubtag.empty()) {
@@ -287,6 +287,7 @@ vm::CallResult<std::u16string> canonicalizeLocaleId(const std::u16string &locale
   std::u16string unicodeExtension;
   
   // Append sorted Unicode attributes
+  std::sort(parsedId.unicodeExtensionAttributes.begin(), parsedId.unicodeExtensionAttributes.end());
   for (const auto &attribute : parsedId.unicodeExtensionAttributes) {
     unicodeExtension += u"-" + attribute;
   }
