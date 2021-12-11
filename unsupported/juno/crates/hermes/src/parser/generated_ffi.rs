@@ -549,6 +549,7 @@ extern "C" {
     pub fn hermes_get_JSXFragment_closingFragment(node: NodePtr) -> NodePtr;
     // StringLiteralTypeAnnotation
     pub fn hermes_get_StringLiteralTypeAnnotation_value(node: NodePtr) -> NodeString;
+    pub fn hermes_get_StringLiteralTypeAnnotation_raw(node: NodePtr) -> NodeString;
     // NumberLiteralTypeAnnotation
     pub fn hermes_get_NumberLiteralTypeAnnotation_value(node: NodePtr) -> f64;
     pub fn hermes_get_NumberLiteralTypeAnnotation_raw(node: NodePtr) -> NodeLabel;

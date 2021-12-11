@@ -942,6 +942,7 @@ export interface VoidTypeAnnotation extends BaseNode {
 export interface StringLiteralTypeAnnotation extends BaseNode {
   +type: 'StringLiteralTypeAnnotation';
   +value: string;
+  +raw: string;
 }
 export interface NumberLiteralTypeAnnotation extends BaseNode {
   +type: 'NumberLiteralTypeAnnotation';

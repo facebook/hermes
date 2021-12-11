@@ -1947,6 +1947,7 @@ impl<W: Write> GenJS<W> {
             Node::StringLiteralTypeAnnotation(StringLiteralTypeAnnotation {
                 metadata: _,
                 value,
+                raw: _,
             }) => {
                 out_token!(self, node, "\"");
                 self.print_escaped_string_literal(value, '"');

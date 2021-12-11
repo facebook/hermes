@@ -445,6 +445,7 @@ macro_rules! nodekind_defs {
             NumberTypeAnnotation[FlowType],
             StringLiteralTypeAnnotation[FlowType] {
                 value: NodeString,
+                raw: NodeString,
             },
             NumberLiteralTypeAnnotation[FlowType] {
                 value: f64,

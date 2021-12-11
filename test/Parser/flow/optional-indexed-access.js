@@ -31,7 +31,8 @@ type A = Obj?.['a'];
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "indexType": {
 // CHECK-NEXT:          "type": "StringLiteralTypeAnnotation",
-// CHECK-NEXT:          "value": "a"
+// CHECK-NEXT:          "value": "a",
+// CHECK-NEXT:          "raw": "'a'"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "optional": true
 // CHECK-NEXT:      }
@@ -59,12 +60,14 @@ type B = Obj['a']?.['b'];
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "indexType": {
 // CHECK-NEXT:            "type": "StringLiteralTypeAnnotation",
-// CHECK-NEXT:            "value": "a"
+// CHECK-NEXT:            "value": "a",
+// CHECK-NEXT:            "raw": "'a'"
 // CHECK-NEXT:          }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "indexType": {
 // CHECK-NEXT:          "type": "StringLiteralTypeAnnotation",
-// CHECK-NEXT:          "value": "b"
+// CHECK-NEXT:          "value": "b",
+// CHECK-NEXT:          "raw": "'b'"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "optional": true
 // CHECK-NEXT:      }
@@ -92,13 +95,15 @@ type C = Obj?.['a']['b'];
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "indexType": {
 // CHECK-NEXT:            "type": "StringLiteralTypeAnnotation",
-// CHECK-NEXT:            "value": "a"
+// CHECK-NEXT:            "value": "a",
+// CHECK-NEXT:            "raw": "'a'"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "optional": true
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "indexType": {
 // CHECK-NEXT:          "type": "StringLiteralTypeAnnotation",
-// CHECK-NEXT:          "value": "b"
+// CHECK-NEXT:          "value": "b",
+// CHECK-NEXT:          "raw": "'b'"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "optional": false
 // CHECK-NEXT:      }
@@ -126,13 +131,15 @@ type D = Obj?.['a']?.['b'];
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "indexType": {
 // CHECK-NEXT:            "type": "StringLiteralTypeAnnotation",
-// CHECK-NEXT:            "value": "a"
+// CHECK-NEXT:            "value": "a",
+// CHECK-NEXT:            "raw": "'a'"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "optional": true
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "indexType": {
 // CHECK-NEXT:          "type": "StringLiteralTypeAnnotation",
-// CHECK-NEXT:          "value": "b"
+// CHECK-NEXT:          "value": "b",
+// CHECK-NEXT:          "raw": "'b'"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "optional": true
 // CHECK-NEXT:      }

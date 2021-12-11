@@ -456,7 +456,7 @@ fn test_types() {
     test_roundtrip_flow("type A = number");
     test_roundtrip_flow("type A = ?number");
     test_roundtrip_flow("type A = string");
-    test_roundtrip_flow("type A = 'foo'");
+    test_roundtrip_flow("type A = \"foo\"");
     test_roundtrip_flow("type A = 3");
     test_roundtrip_flow("type A = boolean");
     test_roundtrip_flow("type A = true | false");

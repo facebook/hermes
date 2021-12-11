@@ -676,9 +676,10 @@ ESTREE_NODE_0_ARGS(ExistsTypeAnnotation, Base)
 ESTREE_NODE_0_ARGS(EmptyTypeAnnotation, Base)
 ESTREE_NODE_0_ARGS(StringTypeAnnotation, Base)
 ESTREE_NODE_0_ARGS(NumberTypeAnnotation, Base)
-ESTREE_NODE_1_ARGS(
+ESTREE_NODE_2_ARGS(
     StringLiteralTypeAnnotation, Base,
-    NodeString, value, false)
+    NodeString, value, false,
+    NodeString, raw, false)
 ESTREE_NODE_2_ARGS(
     NumberLiteralTypeAnnotation, Base,
     NodeNumber, value, false,

@@ -1179,10 +1179,11 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
 
     case TokenKind::string_literal: {
       UniqueString *str = tok_->getStringLiteral();
+      UniqueString *raw = lexer_.getStringLiteral(tok_->inputStr());
       return setLocation(
           start,
           advance(JSLexer::GrammarContext::Type).End,
-          new (context_) ESTree::StringLiteralTypeAnnotationNode(str));
+          new (context_) ESTree::StringLiteralTypeAnnotationNode(str, raw));
     }
 
     case TokenKind::numeric_literal: {

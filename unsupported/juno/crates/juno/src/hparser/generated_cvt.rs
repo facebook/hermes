@@ -13,8 +13,8 @@ use super::convert::*;
 use crate::ast;
 
 pub unsafe fn cvt_node_ptr<'parser, 'gc>(
-  cvt: &mut Converter<'parser>, 
-  gc: &'gc ast::GCLock, 
+  cvt: &mut Converter<'parser>,
+  gc: &'gc ast::GCLock,
   n: NodePtr) -> &'gc ast::Node<'gc> {
     let nr = n.as_ref();
     let range = ast::SourceRange {
@@ -1179,9 +1179,11 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
         }
         NodeKind::StringLiteralTypeAnnotation => {
           let value = cvt_string(hermes_get_StringLiteralTypeAnnotation_value(n));
+          let raw = cvt_string(hermes_get_StringLiteralTypeAnnotation_raw(n));
           let mut template = ast::template::StringLiteralTypeAnnotation {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   value,
+                  raw,
           };
           template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
           ast::builder::StringLiteralTypeAnnotation::build_template(gc, template)
