@@ -245,7 +245,7 @@ bool LanguageTagParser::addVariantSubtag(bool transformedExtensionId) {
 
 bool LanguageTagParser::parseExtensions() {
   while (subtagEnd_ == subtagStart_ + 1) {
-    char16_t singleton = getCurrentSubtag()[0];//here
+    char16_t singleton = getCurrentSubtagRef()[0];
     if (!isASCIILetterOrDigit(singleton)) {
       return true;
     }
@@ -467,7 +467,7 @@ bool LanguageTagParser::nextSubtag() {
   for (subtagEnd_ = subtagStart_ + 1; subtagEnd_ < length && !isSubtagSeparator(localeId_[subtagEnd_]); subtagEnd_++)
     ;
   
-  if (subtagEnd_ > subtagStart_) { //here
+  if (subtagEnd_ > subtagStart_) {
     return true;
   } else {
     return false;
