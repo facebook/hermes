@@ -151,11 +151,11 @@ class LanguageTagParser {
   
   ParsedLocaleIdentifier parsedLocaleIdentifier;
   std::u16string localeId_;
-  int subtagStart_;
-  int subtagEnd_;
+  size_t subtagStart_;
+  size_t subtagEnd_;
 };
 
-LanguageTagParser::LanguageTagParser(const std::u16string &localeId) : localeId_{localeId}, subtagStart_(0), subtagEnd_(-1) {
+LanguageTagParser::LanguageTagParser(const std::u16string &localeId) : localeId_{localeId}, subtagStart_(0), subtagEnd_(0) {
   toASCIILowerCase(localeId_);
 }
 
@@ -244,8 +244,8 @@ bool LanguageTagParser::addVariantSubtag(bool transformedExtensionId) {
 }
 
 bool LanguageTagParser::parseExtensions() {
-  while (subtagEnd_ == subtagStart_) {
-    char16_t singleton = getCurrentSubtag()[0];
+  while (subtagEnd_ == subtagStart_ + 1) {
+    char16_t singleton = getCurrentSubtag()[0];//here
     if (!isASCIILetterOrDigit(singleton)) {
       return true;
     }
@@ -447,7 +447,7 @@ bool LanguageTagParser::parseOtherExtension(char16_t singleton) {
 }
 
 bool LanguageTagParser::hasMoreSubtags() {
-  return localeId_.length() > 0 && subtagEnd_ < (int)localeId_.length() - 1;
+  return localeId_.length() > 0 && subtagEnd_ < localeId_.length();
 }
 bool LanguageTagParser::nextSubtag() {
   if (!hasMoreSubtags()) {
@@ -456,18 +456,18 @@ bool LanguageTagParser::nextSubtag() {
   
   size_t length = localeId_.length();
   
-  if (subtagEnd_ >= subtagStart_) {
-    if (subtagEnd_ + 2 == (int)length) {
+  // set subtagStart_ to first character after current subtag
+  if (subtagEnd_ > subtagStart_) {
+    if (subtagEnd_ + 1 == length) {
       return false;
     }
-    subtagStart_ = subtagEnd_ + 2;
+    subtagStart_ = subtagEnd_ + 1;
   }
   
-  for (subtagEnd_ = subtagStart_; subtagEnd_ < (int)length && !isSubtagSeparator(localeId_[subtagEnd_]); subtagEnd_++)
+  for (subtagEnd_ = subtagStart_ + 1; subtagEnd_ < length && !isSubtagSeparator(localeId_[subtagEnd_]); subtagEnd_++)
     ;
   
-  if (subtagEnd_ > subtagStart_) {
-    subtagEnd_--;
+  if (subtagEnd_ > subtagStart_) { //here
     return true;
   } else {
     return false;
@@ -475,10 +475,10 @@ bool LanguageTagParser::nextSubtag() {
 }
 
 std::u16string LanguageTagParser::getCurrentSubtag() {
-  return localeId_.substr(subtagStart_, subtagEnd_ - subtagStart_ + 1);
+  return localeId_.substr(subtagStart_, subtagEnd_ - subtagStart_);
 }
 UTF16Ref LanguageTagParser::getCurrentSubtagRef() {
-  return UTF16Ref(localeId_.data() + subtagStart_, subtagEnd_ - subtagStart_ + 1);
+  return UTF16Ref(localeId_.data() + subtagStart_, subtagEnd_ - subtagStart_);
 }
 
 // Parses and returns locale id if it is a structurally valid language tag
