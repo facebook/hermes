@@ -32,7 +32,6 @@ inline PinnedHermesValue &PinnedHermesValue::operator=(PseudoHandle<T> &&hv) {
 template <typename HVType>
 template <typename NeedsBarriers>
 GCHermesValueBase<HVType>::GCHermesValueBase(HVType hv, GC *gc) : HVType{hv} {
-  assert(!hv.isPointer() || hv.getPointer());
   if (NeedsBarriers::value)
     gc->constructorWriteBarrier(this, hv);
 }
@@ -41,7 +40,7 @@ template <typename HVType>
 template <typename NeedsBarriers>
 GCHermesValueBase<HVType>::GCHermesValueBase(HVType hv, GC *gc, std::nullptr_t)
     : HVType{hv} {
-  assert(!hv.isPointer());
+  assert(!hv.isPointer() || !hv.getPointer(gc->getPointerBase()));
   // No need to invoke any write barriers here, since the old value is
   // uninitialized (so the snapshot barrier does not apply), and the new value
   // is not a pointer (so the generational/relocation barrier does not apply).
@@ -51,7 +50,7 @@ template <typename HVType>
 template <typename NeedsBarriers>
 inline void GCHermesValueBase<HVType>::set(HVType hv, GC *gc) {
   HERMES_SLOW_ASSERT(gc && "Need a GC parameter in case of a write barrier");
-  if (hv.isPointer()) {
+  if (hv.isPointer() && hv.getPointer(gc->getPointerBase())) {
     HERMES_SLOW_ASSERT(
         gc->validPointer(hv.getPointer(gc->getPointerBase())) &&
         "Setting an invalid pointer into a GCHermesValue");
@@ -68,7 +67,7 @@ inline void GCHermesValueBase<HVType>::set(HVType hv, GC *gc) {
 template <typename HVType>
 void GCHermesValueBase<HVType>::setNonPtr(HVType hv, GC *gc) {
   HERMES_SLOW_ASSERT(gc && "Need a GC parameter in case of a write barrier");
-  assert(!hv.isPointer());
+  assert(!hv.isPointer() || !hv.getPointer(gc->getPointerBase()));
   gc->snapshotWriteBarrier(this);
   HVType::setNoBarrier(hv);
 }

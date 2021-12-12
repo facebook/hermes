@@ -274,7 +274,7 @@ class HermesValue32 {
 
   static HermesValue32
   encodePointerImpl(GCCell *ptr, Tag tag, PointerBase *pb) {
-    return encodePointerImpl(CompressedPointer::encodeNonNull(ptr, pb), tag);
+    return encodePointerImpl(CompressedPointer::encode(ptr, pb), tag);
   }
 
   static HermesValue32 encodePointerImpl(CompressedPointer ptr, Tag tag) {
@@ -341,7 +341,7 @@ class HermesValue32 {
   /// Methods to access pointer values.
   GCCell *getPointer(PointerBase *pb) const {
     assert(isPointer());
-    return getPointer().getNonNull(pb);
+    return getPointer().get(pb);
   }
   GCCell *getObject(PointerBase *pb) const {
     assert(isObject());
@@ -382,6 +382,15 @@ class HermesValue32 {
   HermesValue32 updatePointer(CompressedPointer ptr) const {
     assert(isPointer());
     return encodePointerImpl(ptr, getTag());
+  }
+
+  /// Serializer/Deserializer helpers.
+  inline uint32_t getRelocationID() const {
+    assert(isPointer());
+    return getValue();
+  }
+  void unsafeUpdateRelocationID(uint32_t id) {
+    setNoBarrier(fromTagAndValue(getTag(), id));
   }
 
   /// Convert a normal HermesValue to a HermesValue32. If \p hv is a pointer,
