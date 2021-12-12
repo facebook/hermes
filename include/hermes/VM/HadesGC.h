@@ -246,8 +246,7 @@ class HadesGC final : public GCBase {
   }
   void snapshotWriteBarrier(const GCPointerBase *loc) {
     if (LLVM_UNLIKELY(!inYoungGen(loc) && ogMarkingBarriers_))
-      if (CompressedPointer cp = *loc)
-        snapshotWriteBarrierInternal(cp);
+      snapshotWriteBarrierInternal(*loc);
   }
   void snapshotWriteBarrier(const GCSymbolID *loc) {
     if (LLVM_UNLIKELY(!inYoungGen(loc) && ogMarkingBarriers_))

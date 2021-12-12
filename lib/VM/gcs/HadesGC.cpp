@@ -727,7 +727,8 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
   void accept(GCHermesValue &hvRef) override {
     HermesValue hv = concurrentRead<HermesValue>(hvRef);
     if (hv.isPointer()) {
-      acceptHeap(static_cast<GCCell *>(hv.getPointer()), &hvRef);
+      if (auto *ptr = hv.getPointer())
+        acceptHeap(static_cast<GCCell *>(ptr), &hvRef);
     } else if (hv.isSymbol()) {
       acceptSym(hv.getSymbol());
     }
@@ -746,7 +747,8 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
   void accept(GCSmallHermesValue &hvRef) override {
     const SmallHermesValue hv = concurrentRead<SmallHermesValue>(hvRef);
     if (hv.isPointer()) {
-      acceptHeap(hv.getPointer(pointerBase_), &hvRef);
+      if (auto cp = hv.getPointer())
+        acceptHeap(cp.get(pointerBase_), &hvRef);
     } else if (hv.isSymbol()) {
       acceptSym(hv.getSymbol());
     }
@@ -1948,7 +1950,7 @@ void HadesGC::writeBarrierSlow(
 }
 
 void HadesGC::writeBarrierSlow(const GCPointerBase *loc, const GCCell *value) {
-  if (*loc && ogMarkingBarriers_)
+  if (ogMarkingBarriers_)
     snapshotWriteBarrierInternal(*loc);
   // Always do the non-snapshot write barrier in order for YG to be able to
   // scan cards.
@@ -2021,9 +2023,9 @@ void HadesGC::snapshotWriteBarrierRangeSlow(
 
 void HadesGC::snapshotWriteBarrierInternal(GCCell *oldValue) {
   assert(
-      (oldValue->isValid()) &&
+      (!oldValue || oldValue->isValid()) &&
       "Invalid cell encountered in snapshotWriteBarrier");
-  if (!inYoungGen(oldValue)) {
+  if (oldValue && !inYoungGen(oldValue)) {
     HERMES_SLOW_ASSERT(
         dbgContains(oldValue) &&
         "Non-heap pointer encountered in snapshotWriteBarrier");
@@ -2033,9 +2035,9 @@ void HadesGC::snapshotWriteBarrierInternal(GCCell *oldValue) {
 
 void HadesGC::snapshotWriteBarrierInternal(CompressedPointer oldValue) {
   assert(
-      (oldValue.get(getPointerBase())->isValid()) &&
+      (!oldValue || oldValue.get(getPointerBase())->isValid()) &&
       "Invalid cell encountered in snapshotWriteBarrier");
-  if (!inYoungGen(oldValue)) {
+  if (oldValue && !inYoungGen(oldValue)) {
     GCCell *ptr = oldValue.get(getPointerBase());
     HERMES_SLOW_ASSERT(
         dbgContains(ptr) &&

@@ -122,9 +122,7 @@ class WeakRootBase : protected CompressedPointer {
       : CompressedPointer(CompressedPointer::encode(ptr, base)) {}
 
   void *get(PointerBase *base, GC *gc) const {
-    if (!*this)
-      return nullptr;
-    GCCell *ptr = CompressedPointer::getNonNull(base);
+    GCCell *ptr = CompressedPointer::get(base);
     gc->weakRefReadBarrier(ptr);
     return ptr;
   }
