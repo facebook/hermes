@@ -156,7 +156,7 @@ LocaleMatch lookupMatcher(
       // 1. Let extension be the String value consisting of the substring of
       // the Unicode locale extension sequence within locale.
       // 2. Set result.[[extension]] to extension.
-      result.extension = locale.substr(noExtensionsLocale.length());
+      result.extension = locale.substr(0, noExtensionsLocale.length());
       // iii. Return result.
       return result;
     }
@@ -518,26 +518,6 @@ DateTimeFormat::~DateTimeFormat() {}
 struct ResolveLocale {
   std::u16string key, value, dataLocale, resolveLocale, locale, ca, nu, hc;
 };
-struct UnicodeExtensionKeys {
-  std::u16string CALENDAR = u"calendar";
-  std::u16string CALENDAR_CANON = u"ca";
-
-  std::u16string NUMERINGSYSTEM = u"numbers";
-  std::u16string NUMERINGSYSTEM_CANON = u"nu";
-
-  std::u16string HOURCYCLE = u"hours";
-  std::u16string HOURCYCLE_CANON = u"hc";
-
-  std::u16string COLLATION = u"collation";
-  std::u16string COLLATION_CANON = u"co";
-
-  std::u16string COLLATION_NUMERIC = u"colnumeric";
-  std::u16string COLLATION_NUMERIC_CANON = u"kn";
-
-  std::u16string COLLATION_CASEFIRST =
-      u"colcasefirst"; // TODO:: double check this
-  std::u16string COLLATION_CASEFIRST_CANON = u"kf";
-};
 std::u16string resolveAlias(
     const std::u16string &value,
     const std::map<std::u16string, std::u16string> &mappings) {
@@ -659,11 +639,98 @@ bool isValidKeyword(const std::u16string &key, const std::u16string &value) {
       return false;
   }
 };
+// https://tc39.es/ecma262/#sec-stringindexof
+int8_t stringIndexOf(const std::u16string &string, const std::u16string &searchValue, uint8_t fromIndex) {
+//  1. Let len be the length of string.
+  uint8_t len = string.length();
+//  2. If searchValue is the empty String and fromIndex ≤ len, return fromIndex.
+  if (searchValue == u"" && fromIndex <= len) {
+    return fromIndex;
+  }
+//  3. Let searchLen be the length of searchValue.
+  uint8_t searchLen = searchValue.length();
+//  4. For each integer i starting with fromIndex such that i ≤ len - searchLen, in ascending order, do
+  for (uint8_t i = fromIndex; i <= len - searchLen; i++) {
+//    a. Let candidate be the substring of string from i to i + searchLen.
+    std::u16string candidate = string.substr(i, i+searchLen);
+//    b. If candidate is the same sequence of code units as searchValue, return i.
+    if (candidate == searchValue) {
+      return i;
+    }
+  }
+//  5. Return -1.
+  return -1;
+}
 // https://tc39.es/ecma402/#sec-unicode-extension-components
 std::map<std::u16string, std::u16string> unicodeExtensionComponents(
-    const std::u16string &extensions) {
-  // TODO
+    const std::u16string &extension) {
   std::map<std::u16string, std::u16string> record;
+//  1. Let attributes be a new empty List.
+  std::vector<std::u16string> attributes;
+//  2. Let keywords be a new empty List.
+  std::vector<std::u16string> keywords;
+//  3. Let keyword be undefined.
+  std::u16string keyword;
+//  4. Let size be the length of extension.
+  auto size = extension.length();
+//  5. Let k be 3.
+  uint8_t k = 3;
+  uint8_t len;
+//  6. Repeat, while k < size
+  while (k < size) {
+//    a. Let e be ! StringIndexOf(extension, "-", k).
+    auto e = stringIndexOf(extension, u"-", k);
+//    b. If e = -1, let len be size - k; else let len be e - k.
+    if (e == -1) {
+      len = size - k;
+    } else {
+      len = e - k;
+    }
+//    c. Let subtag be the String value equal to the substring of extension consisting of the code units at indices k (inclusive) through k + len (exclusive).
+    std::u16string subtag = extension.substr(k, k+len);
+//    If keyword is undefined and len ≠ 2, then
+    if (keyword == u"" && len != 2) {
+//    i. If subtag is not an element of attributes, then
+      if (std::find(attributes.begin(), attributes.end(), subtag) == attributes.end()) {
+//    1. Append subtag to attributes.
+        attributes.push_back(subtag);
+      }
+    }
+//    e. Else if len = 2, then
+    else if (len == 2) {
+//    i. If keyword is not undefined and keywords does not contain an element whose [[Key]] is the same as keyword.[[Key]], then
+      if (keyword != u"" && std::find(keywords.begin(), keywords.end(), keyword) == keywords.end()) {
+//    1. Append keyword to keywords.
+        keywords.push_back(keyword);
+//    ii. Set keyword to the Record { [[Key]]: subtag, [[Value]]: "" }.
+        record.insert(std::pair<std::u16string, std::u16string> (subtag, u""));
+      }
+    }
+//    f. Else,
+    else {
+//    i. If keyword.[[Value]] is the empty String, then
+      if (keyword == u"") {
+//    1. Set keyword.[[Value]] to subtag.
+        keyword = subtag;
+      }
+//    ii. Else,
+      else {
+//    1. Set keyword.[[Value]] to the string-concatenation of keyword.[[Value]], "-", and subtag.
+        keyword = keyword + u"-" + subtag;
+      }
+    }
+//    g. Let k be k + len + 1.
+    k++;
+  };
+//  7. If keyword is not undefined and keywords does not contain an element whose [[Key]] is the same as keyword.[[Key]], then
+  if (keyword != u"" && std::find(keywords.begin(), keywords.end(), keyword) == keywords.end()) {
+//  a. Append keyword to keywords.
+    keywords.push_back(keyword);
+  }
+//  8. Return the Record { [[Attributes]]: attributes, [[Keywords]]: keywords }.
+  for (std::vector<std::u16string>::size_type i = 0; i != keywords.size(); i++) {
+    record.insert(std::pair<std::u16string, std::u16string> (attributes[i], keywords[i]));
+  }
   return record;
 }
 // https://tc39.es/ecma402/#sec-insert-unicode-extension-and-canonicalize
@@ -697,7 +764,6 @@ ResolveLocale resolveLocale(
   if (r.extension != u"") {
     //  a. Let components be ! UnicodeExtensionComponents(r.[[extension]]).
     //  b. Let keywords be components.[[Keywords]].
-    // TODO: unicodeExtensionComponents
     keywords = unicodeExtensionComponents(r.extension);
   }
   //  8. Let supportedExtension be "-u".
