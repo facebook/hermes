@@ -695,7 +695,7 @@ ExecutionStatus JSONStringifyer::initializeSpace(Handle<> space) {
     tmpHandle_ = strRes->getHermesValue();
   }
   if (tmpHandle_->isNumber()) {
-    auto intRes = toInteger(runtime_, tmpHandle_);
+    auto intRes = toIntegerOrInfinity(runtime_, tmpHandle_);
     assert(
         intRes != ExecutionStatus::EXCEPTION &&
         "toInteger on a number cannot throw");

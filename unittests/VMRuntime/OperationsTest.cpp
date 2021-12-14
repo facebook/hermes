@@ -658,7 +658,7 @@ TEST_F(OperationsLargeHeapTest, ToNumberTest) {
 #define ToIntegerTest(result, value)                       \
   {                                                        \
     auto scopedValue = runtime->makeHandle(value);         \
-    res = toInteger(runtime, scopedValue);                 \
+    res = toIntegerOrInfinity(runtime, scopedValue);       \
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus()); \
     EXPECT_EQ(result, res->getNumber());                   \
   }

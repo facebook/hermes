@@ -1523,15 +1523,15 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
     auto matched = runtime->makeHandle(std::move(*strRes));
     // f. Let matchLength be the number of code units in matched.
     uint32_t matchLength = matched->getStringLength();
-    // g. Let position be ToInteger(Get(result, "index")).
+    // g. Let position be ToIntegerOrInfinity(Get(result, "index")).
     // h. ReturnIfAbrupt(position).
     propRes = JSObject::getNamed_RJS(
         result, runtime, Predefined::getSymbolID(Predefined::index));
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto intRes =
-        toInteger(runtime, runtime->makeHandle(std::move(propRes.getValue())));
+    auto intRes = toIntegerOrInfinity(
+        runtime, runtime->makeHandle(std::move(propRes.getValue())));
     if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

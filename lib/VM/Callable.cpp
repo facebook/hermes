@@ -441,7 +441,8 @@ CallResult<double> Callable::extractOwnLengthProperty_RJS(
     }
   }
 
-  auto intRes = toInteger(runtime, runtime->makeHandle(std::move(*propRes)));
+  auto intRes =
+      toIntegerOrInfinity(runtime, runtime->makeHandle(std::move(*propRes)));
   if (intRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }

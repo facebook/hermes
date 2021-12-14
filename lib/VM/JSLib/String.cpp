@@ -418,9 +418,9 @@ stringFromCodePoint(void *, Runtime *runtime, NativeArgs args) {
     }
     nextCP = *nextCPRes;
 
-    // 5d. If SameValue(nextCP, ToInteger(nextCP)) is false, throw a RangeError
-    // exception.
-    auto nextCPInt = toInteger(runtime, nextCP);
+    // 5d. If SameValue(nextCP, ToIntegerOrInfinity(nextCP)) is false, throw
+    // a RangeError exception.
+    auto nextCPInt = toIntegerOrInfinity(runtime, nextCP);
     if (LLVM_UNLIKELY(nextCPInt == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -595,7 +595,8 @@ stringPrototypeCharCodeAt(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto S = runtime->makeHandle(std::move(*strRes));
-  auto intRes = toInteger(runtime, runtime->makeHandle(args.getArg(0)));
+  auto intRes =
+      toIntegerOrInfinity(runtime, runtime->makeHandle(args.getArg(0)));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -624,8 +625,8 @@ stringPrototypeCodePointAt(void *, Runtime *runtime, NativeArgs args) {
   }
   auto S = runtime->makeHandle(std::move(*strRes));
 
-  // 4. Let position be ToInteger(pos).
-  auto positionRes = toInteger(runtime, args.getArgHandle(0));
+  // 4. Let position be ToIntegerOrInfinity(pos).
+  auto positionRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(positionRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -745,7 +746,7 @@ stringPrototypeSubstring(void *, Runtime *runtime, NativeArgs args) {
   auto S = runtime->makeHandle(std::move(*strRes));
   double len = S->getStringLength();
 
-  auto intRes = toInteger(runtime, args.getArgHandle(0));
+  auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -756,7 +757,7 @@ stringPrototypeSubstring(void *, Runtime *runtime, NativeArgs args) {
     intEnd = len;
   } else {
     if (LLVM_UNLIKELY(
-            (intRes = toInteger(runtime, args.getArgHandle(1))) ==
+            (intRes = toIntegerOrInfinity(runtime, args.getArgHandle(1))) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -935,7 +936,7 @@ stringPrototypeSubstr(void *, Runtime *runtime, NativeArgs args) {
   auto S = runtime->makeHandle(std::move(*strRes));
   double stringLen = S->getStringLength();
 
-  auto intRes = toInteger(runtime, args.getArgHandle(0));
+  auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -946,7 +947,7 @@ stringPrototypeSubstr(void *, Runtime *runtime, NativeArgs args) {
     length = stringLen;
   } else {
     if (LLVM_UNLIKELY(
-            (intRes = toInteger(runtime, args.getArgHandle(1))) ==
+            (intRes = toIntegerOrInfinity(runtime, args.getArgHandle(1))) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1182,9 +1183,9 @@ stringPrototypeRepeat(void *, Runtime *runtime, NativeArgs args) {
   }
   auto S = runtime->makeHandle(std::move(*sRes));
 
-  // 4. Let n be ToInteger(count).
+  // 4. Let n be ToIntegerOrInfinity(count).
   // 5. ReturnIfAbrupt(n).
-  auto nRes = toInteger(runtime, args.getArgHandle(0));
+  auto nRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(nRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1413,12 +1414,12 @@ static CallResult<HermesValue> stringDirectedIndexOf(
     }
     Handle<> numPos = runtime->makeHandle(intRes.getValue());
     // 6. If numPos is NaN, let pos be +∞; otherwise, let pos be !
-    // ToInteger(numPos).
+    // ToIntegerOrInfinity(numPos).
     if (std::isnan(numPos->getNumber())) {
       pos = std::numeric_limits<double>::infinity();
     } else {
       if (LLVM_UNLIKELY(
-              (intRes = toInteger(runtime, numPos)) ==
+              (intRes = toIntegerOrInfinity(runtime, numPos)) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1426,8 +1427,8 @@ static CallResult<HermesValue> stringDirectedIndexOf(
     }
   } else {
     // indexOf
-    // 4. Let pos be ? ToInteger(position).
-    auto intRes = toInteger(runtime, position);
+    // 4. Let pos be ? ToIntegerOrInfinity(position).
+    auto intRes = toIntegerOrInfinity(runtime, position);
     if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -2098,7 +2099,8 @@ stringPrototypeCharAt(void *, Runtime *runtime, NativeArgs args) {
   }
   auto S = runtime->makeHandle(std::move(*strRes));
 
-  auto intRes = toInteger(runtime, runtime->makeHandle(args.getArg(0)));
+  auto intRes =
+      toIntegerOrInfinity(runtime, runtime->makeHandle(args.getArg(0)));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2127,7 +2129,7 @@ stringPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   auto S = runtime->makeHandle(std::move(*strRes));
   double len = S->getStringLength();
 
-  auto intRes = toInteger(runtime, args.getArgHandle(0));
+  auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2138,7 +2140,7 @@ stringPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
     intEnd = len;
   } else {
     if (LLVM_UNLIKELY(
-            (intRes = toInteger(runtime, args.getArgHandle(1))) ==
+            (intRes = toIntegerOrInfinity(runtime, args.getArgHandle(1))) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -2193,12 +2195,12 @@ stringPrototypeEndsWith(void *, Runtime *runtime, NativeArgs args) {
   double len = S->getStringLength();
 
   // 10. If endPosition is undefined, let pos be len, else let pos be
-  // ToInteger(endPosition).
+  // ToIntegerOrInfinity(endPosition).
   double pos;
   if (args.getArg(1).isUndefined()) {
     pos = len;
   } else {
-    auto posRes = toInteger(runtime, args.getArgHandle(1));
+    auto posRes = toIntegerOrInfinity(runtime, args.getArgHandle(1));
     if (LLVM_UNLIKELY(posRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -2530,9 +2532,9 @@ CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(
   }
   auto searchStr = runtime->makeHandle(std::move(*searchStrRes));
 
-  // 9. Let pos be ToInteger(position).
+  // 9. Let pos be ToIntegerOrInfinity(position).
   // (If position is undefined, this step produces the value 0).
-  auto posRes = toInteger(runtime, args.getArgHandle(1));
+  auto posRes = toIntegerOrInfinity(runtime, args.getArgHandle(1));
   if (LLVM_UNLIKELY(posRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

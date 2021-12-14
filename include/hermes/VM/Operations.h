@@ -67,8 +67,10 @@ CallResult<uint64_t> toLengthU64(Runtime *runtime, Handle<> valueHandle);
 /// ES 2018 7.1.17
 CallResult<HermesValue> toIndex(Runtime *runtime, Handle<> valueHandle);
 
-/// ES5.1 9.4
-CallResult<HermesValue> toInteger(Runtime *runtime, Handle<> valueHandle);
+/// ES 2022 7.1.5
+CallResult<HermesValue> toIntegerOrInfinity(
+    Runtime *runtime,
+    Handle<> valueHandle);
 
 /// ES6 7.1.9
 CallResult<HermesValue> toInt8(Runtime *runtime, Handle<> valueHandle);
