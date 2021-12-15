@@ -2117,9 +2117,7 @@ tailCall:
         CAPTURE_IP(
             res = Environment::create(
                 runtime,
-                tmpHandle->getPointer() ? Handle<Environment>::vmcast(tmpHandle)
-                                        : Handle<Environment>::vmcast_or_null(
-                                              &runtime->nullPointer_),
+                Handle<Environment>::vmcast_or_null(tmpHandle),
                 curCodeBlock->getEnvironmentSize()));
         if (res == ExecutionStatus::EXCEPTION) {
           goto exception;
