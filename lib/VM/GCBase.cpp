@@ -861,36 +861,32 @@ void GCBase::recordGCStats(const GCAnalyticsEvent &event, bool onMutator) {
 }
 
 void GCBase::oom(std::error_code reason) {
-#ifdef HERMESVM_EXCEPTION_ON_OOM
-  HeapInfo heapInfo;
-  getHeapInfo(heapInfo);
   char detailBuffer[400];
-  snprintf(
-      detailBuffer,
-      sizeof(detailBuffer),
-      "Javascript heap memory exhausted: heap size = %d, allocated = %d.",
-      heapInfo.heapSize,
-      heapInfo.allocatedBytes);
+  oomDetail(detailBuffer, reason);
+#ifdef HERMESVM_EXCEPTION_ON_OOM
   // No need to run finalizeAll, the exception will propagate and eventually run
   // ~Runtime.
   throw JSOutOfMemoryError(
       std::string(detailBuffer) + "\ncall stack:\n" +
       gcCallbacks_->getCallStackNoAlloc());
 #else
-  oomDetail(reason);
+  hermesLog("HermesGC", "OOM: %s.", detailBuffer);
+  // Record the OOM custom data with the crash manager.
+  crashMgr_->setCustomData("HermesGCOOMDetailBasic", detailBuffer);
   hermes_fatal("OOM", reason);
 #endif
 }
 
-void GCBase::oomDetail(std::error_code reason) {
+void GCBase::oomDetail(
+    llvh::MutableArrayRef<char> detailBuffer,
+    std::error_code reason) {
   HeapInfo heapInfo;
   getHeapInfo(heapInfo);
-  // Could use a stringstream here, but want to avoid dynamic allocation.
-  char detailBuffer[400];
   snprintf(
-      detailBuffer,
-      sizeof(detailBuffer),
-      "[%.20s] reason = %.150s (%d from category: %.50s), numCollections = %d, heapSize = %d, allocated = %d, va = %" PRIu64,
+      detailBuffer.data(),
+      detailBuffer.size(),
+      "[%.20s] reason = %.150s (%d from category: %.50s), numCollections = %u, heapSize = %" PRIu64
+      ", allocated = %" PRIu64 ", va = %" PRIu64,
       name_.c_str(),
       reason.message().c_str(),
       reason.value(),
@@ -899,9 +895,6 @@ void GCBase::oomDetail(std::error_code reason) {
       heapInfo.heapSize,
       heapInfo.allocatedBytes,
       heapInfo.va);
-  hermesLog("HermesGC", "OOM: %s.", detailBuffer);
-  // Record the OOM custom data with the crash manager.
-  crashMgr_->setCustomData("HermesGCOOMDetailBasic", detailBuffer);
 }
 
 #ifndef NDEBUG

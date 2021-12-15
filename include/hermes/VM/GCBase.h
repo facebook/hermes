@@ -474,9 +474,9 @@ class GCBase {
     uint64_t totalAllocatedBytes{0};
     /// Number of currently allocated bytes within the JS heap. Some may be
     /// in unreachable objects (unless a full collection just occurred).
-    gcheapsize_t allocatedBytes{0};
+    uint64_t allocatedBytes{0};
     /// Current capacity of the JS heap, in bytes.
-    gcheapsize_t heapSize{0};
+    uint64_t heapSize{0};
     /// Estimate of amount of current malloc space used by the runtime and any
     /// auxiliary allocations owned by heap objects. (Calculated by querying
     /// each finalizable object to report its malloc usage.)
@@ -1478,8 +1478,10 @@ class GCBase {
   void sizeDiagnosticCensus(size_t allocatedBytes);
 
   /// Do any additional GC-specific logging that is useful before dying with
-  /// out-of-memory.
-  virtual void oomDetail(std::error_code reason);
+  /// out-of-memory. Takes a char buffer to avoid dynamic allocations.
+  virtual void oomDetail(
+      llvh::MutableArrayRef<char> detailBuffer,
+      std::error_code reason);
 
 #ifndef NDEBUG
   // Returns true iff \p finalizables is non-empty, and \p cell is the
