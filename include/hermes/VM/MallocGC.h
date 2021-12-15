@@ -120,6 +120,8 @@ class MallocGC final : public GCBase {
   gcheapsize_t sizeLimit_;
   /// allocatedBytes_ is the current amount of memory stored in the heap.
   gcheapsize_t allocatedBytes_{0};
+  /// externalBytes_ is the external memory retained by cells on the heap.
+  uint64_t externalBytes_{0};
 
  public:
   /// See comment in GCBase.
@@ -219,6 +221,9 @@ class MallocGC final : public GCBase {
 
   /// Same as in superclass GCBase.
   virtual void createSnapshot(llvh::raw_ostream &os) override;
+
+  virtual void creditExternalMemory(GCCell *alloc, uint32_t size) override;
+  virtual void debitExternalMemory(GCCell *alloc, uint32_t size) override;
 
   void writeBarrier(const GCHermesValue *, HermesValue) {}
   void writeBarrier(const GCSmallHermesValue *, SmallHermesValue) {}

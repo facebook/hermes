@@ -276,7 +276,8 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
 #endif
   const auto wallStart = steady_clock::now();
   const auto cpuStart = oscompat::thread_cpu_time();
-  auto allocatedBefore = allocatedBytes_;
+  const auto allocatedBefore = allocatedBytes_;
+  const auto externalBefore = externalBytes_;
 
   resetStats();
 
@@ -388,7 +389,7 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
       /*size*/ BeforeAndAfter{allocatedBefore, allocatedBytes_},
       // TODO: MallocGC doesn't yet support credit/debit external memory, so
       // it has no data for these numbers.
-      /*external*/ BeforeAndAfter{0, 0},
+      /*external*/ BeforeAndAfter{externalBefore, externalBytes_},
       /*survivalRatio*/
       allocatedBefore ? (allocatedBytes_ * 1.0) / allocatedBefore : 0,
       /*tags*/ {}};
@@ -586,6 +587,13 @@ bool MallocGC::isMostRecentFinalizableObj(const GCCell *cell) const {
 void MallocGC::createSnapshot(llvh::raw_ostream &os) {
   GCCycle cycle{this};
   GCBase::createSnapshot(this, os);
+}
+
+void MallocGC::creditExternalMemory(GCCell *, uint32_t size) {
+  externalBytes_ += size;
+}
+void MallocGC::debitExternalMemory(GCCell *, uint32_t size) {
+  externalBytes_ -= size;
 }
 
 /// @name Forward instantiations

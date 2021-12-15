@@ -1123,10 +1123,9 @@ class GCBase {
   /// will be gone.
   virtual void disableSamplingHeapProfiler(llvh::raw_ostream &os);
 
-  /// Default implementations for the external memory credit/debit APIs: do
-  /// nothing.
-  virtual void creditExternalMemory(GCCell *alloc, uint32_t size) {}
-  virtual void debitExternalMemory(GCCell *alloc, uint32_t size) {}
+  /// Inform the GC about external memory retained by objects.
+  virtual void creditExternalMemory(GCCell *alloc, uint32_t size) = 0;
+  virtual void debitExternalMemory(GCCell *alloc, uint32_t size) = 0;
 
 #ifdef HERMESVM_GC_RUNTIME
   /// Default implementations for read and write barriers: do nothing.
