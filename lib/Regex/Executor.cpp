@@ -9,7 +9,6 @@
 #include "hermes/Regex/RegexTraits.h"
 #include "hermes/Support/OptValue.h"
 
-#include "hermes/VM/CallResult.h"
 #include "llvh/ADT/SmallVector.h"
 #include "llvh/Support/TrailingObjects.h"
 
