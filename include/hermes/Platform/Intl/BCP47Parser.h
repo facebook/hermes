@@ -14,6 +14,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <set>
 
 namespace hermes {
 namespace bcp47_parser {
@@ -22,7 +23,7 @@ struct ParsedLanguageIdentifier {
   std::u16string languageSubtag;
   std::u16string scriptSubtag;
   std::u16string regionSubtag;
-  std::vector<std::u16string> variantSubtagList;
+  std::set<std::u16string> variantSubtagList;
 };
 
 struct ParsedLocaleIdentifier {

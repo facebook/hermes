@@ -226,20 +226,13 @@ bool LanguageTagParser::parseUnicodeLanguageId(bool transformedExtensionId) {
 bool LanguageTagParser::addVariantSubtag(bool transformedExtensionId) {
   ParsedLanguageIdentifier &languageId = transformedExtensionId ? parsedLocaleIdentifier.transformedLanguageIdentifier : parsedLocaleIdentifier.languageIdentifier;
 
-  // Insert in alphabetical order
-  if (languageId.variantSubtagList.empty()) {
-    languageId.variantSubtagList.push_back(getCurrentSubtag());
-  } else {
-    auto subtag = getCurrentSubtag();
-    auto begin = languageId.variantSubtagList.begin();
-    auto end = languageId.variantSubtagList.end();
-    auto position = std::upper_bound(begin, end, subtag);
-    if (position != std::lower_bound(begin, end, subtag)) {
-      // Must not be duplicate variant subtags
-      return false;
-    }
-    languageId.variantSubtagList.insert(position, subtag);
+  const std::u16string &currentSubtag = getCurrentSubtag();
+  if (languageId.variantSubtagList.count(currentSubtag)) {
+    // Valid identifiers must not have duplicate variant subtags
+    return false;
   }
+
+  languageId.variantSubtagList.insert(currentSubtag);
   return true;
 }
 
