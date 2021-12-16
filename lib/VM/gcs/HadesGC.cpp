@@ -2681,10 +2681,11 @@ void HadesGC::checkTripwireAndResetStats() {
   if (!ogCollectionStats_) {
     return;
   }
-  const auto afterAllocatedBytes = ogCollectionStats_->afterAllocatedBytes();
+  const auto usedBytes = ogCollectionStats_->afterAllocatedBytes() +
+      ogCollectionStats_->afterExternalBytes();
   // We use the amount of live data from after a GC completed as the minimum
   // bound of what is live.
-  checkTripwire(afterAllocatedBytes);
+  checkTripwire(usedBytes);
   // Resetting the stats both runs the destructor (submitting the stats), as
   // well as prevent us from checking the tripwire every YG.
   ogCollectionStats_.reset();

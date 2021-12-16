@@ -395,7 +395,7 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
       /*tags*/ {}};
 
   recordGCStats(event, /* onMutator */ true);
-  checkTripwire(allocatedBytes_);
+  checkTripwire(allocatedBytes_ + externalBytes_);
 }
 
 void MallocGC::drainMarkStack(MarkingAcceptor &acceptor) {

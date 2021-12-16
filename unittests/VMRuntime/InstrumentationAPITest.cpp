@@ -78,7 +78,7 @@ TEST(InstrumentationAPITest, RunCallbackAfterAllocatingMemoryOverLimit) {
       kTestGCConfigSmall.rebuild()
           .withTripwireConfig(
               GCTripwireConfig::Builder()
-                  .withLimit(32)
+                  .withLimit(256)
                   .withCallback([&triggeredTripwire](GCTripwireContext &) {
                     triggeredTripwire = true;
                   })
@@ -88,7 +88,8 @@ TEST(InstrumentationAPITest, RunCallbackAfterAllocatingMemoryOverLimit) {
   runtime.collect();
   EXPECT_FALSE(triggeredTripwire);
   GCScope scope{&runtime};
-  runtime.makeHandle(DummyObject::create(&runtime.getHeap()));
+  auto h = runtime.makeHandle(DummyObject::create(&runtime.getHeap()));
+  h->acquireExtMem(&runtime.getHeap(), 200);
   runtime.collect();
   EXPECT_TRUE(triggeredTripwire);
 }
