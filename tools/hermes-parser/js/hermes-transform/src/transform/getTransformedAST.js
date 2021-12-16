@@ -47,7 +47,7 @@ export function getTransformedAST(
   attachComments(ast.comments, ast, code);
 
   // traverse the AST and colllect the mutations
-  const transformContext = getTransformContext();
+  const transformContext = getTransformContext(code);
   traverseWithContext(ast, scopeManager, () => transformContext, visitors);
 
   // apply the mutations to the AST

@@ -10,6 +10,9 @@
 
 'use strict';
 
-export {traverse} from './traverse/traverse';
+export type {TraversalContext, Visitor} from './traverse/traverse';
+export type {TransformVisitor} from './transform/transform';
+
+export {traverse, traverseWithContext} from './traverse/traverse';
 export {transform} from './transform/transform';
 export * as t from './generated/node-types';

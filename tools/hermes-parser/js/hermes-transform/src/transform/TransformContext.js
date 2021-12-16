@@ -28,6 +28,7 @@ import type {RemoveStatementMutation} from './mutations/RemoveStatement';
 import type {ReplaceNodeMutation} from './mutations/ReplaceNode';
 import type {ReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
 
+import {codeFrameColumns} from '@babel/code-frame';
 import {deepCloneNode, shallowCloneNode} from '../detachedNode';
 import {
   getCommentsForNode,
@@ -233,9 +234,34 @@ export type TransformContext = $ReadOnly<{
    * Removes the specified comments
    */
   removeComments: (comments: SingleOrArray<Comment>) => void,
+
+  /**
+   * Creates a full code frame for the node along with the message.
+   *
+   * i.e. `context.buildCodeFrame(node, 'foo')` will create a string like:
+   * ```
+   * 56 | function () {
+   *    | ^^^^^^^^^^^^^
+   * 57 | }.bind(this)
+   *    | ^^ foo
+   * ```
+   */
+  buildCodeFrame: (node: ESNode, message: string) => string,
+
+  /**
+   * Creates a simple code frame for the node along with the message.
+   * Use this if you want a condensed marker for your message.
+   *
+   * i.e. `context.logWithNode(node, 'foo')` will create a string like:
+   * ```
+   * [FunctionExpression:56:44] foo
+   * ```
+   * (where 56:44 represents L56, Col44)
+   */
+  buildSimpleCodeFrame: (node: ESNode, message: string) => string,
 }>;
 
-export function getTransformContext(): TransformContext {
+export function getTransformContext(code: string): TransformContext {
   /**
    * The mutations in order of collection.
    */
@@ -259,7 +285,6 @@ export function getTransformContext(): TransformContext {
       node: ?ESNode,
       newProps?: $ReadOnly<{...}>,
     ): // $FlowExpectedError[incompatible-cast]
-    // $FlowExpectedError[prop-missing]
     ?DetachedNode<ESNode> => {
       if (node == null) {
         return null;
@@ -284,7 +309,6 @@ export function getTransformContext(): TransformContext {
       node: ?ESNode,
       newProps?: $ReadOnly<{...}>,
     ): // $FlowExpectedError[incompatible-cast]
-    // $FlowExpectedError[prop-missing]
     ?DetachedNode<ESNode> => {
       if (node == null) {
         return null;
@@ -366,6 +390,30 @@ export function getTransformContext(): TransformContext {
         pushMutation(createRemoveCommentMutation(comment));
       });
     }: TransformContext['removeComments']),
+
+    buildCodeFrame: (node: ESNode, message: string): string => {
+      // babel uses 1-indexed columns
+      const locForBabel = {
+        start: {
+          line: node.loc.start.line,
+          column: node.loc.start.column + 1,
+        },
+        end: {
+          line: node.loc.end.line,
+          column: node.loc.end.column + 1,
+        },
+      };
+      return codeFrameColumns(code, locForBabel, {
+        linesAbove: 0,
+        linesBelow: 0,
+        highlightCode: process.env.NODE_ENV !== 'test',
+        message: message,
+      });
+    },
+
+    buildSimpleCodeFrame: (node: ESNode, message: string): string => {
+      return `[${node.type}:${node.loc.start.line}:${node.loc.start.column}] ${message}`;
+    },
   };
 }
 
