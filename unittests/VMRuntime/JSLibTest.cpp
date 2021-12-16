@@ -470,14 +470,14 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
     auto getter = runtime->makeHandle<JSFunction>(JSFunction::create(
         runtime,
         runtimeModule->getDomain(runtime),
-        Handle<JSObject>(runtime),
-        Handle<Environment>(runtime),
+        runtime->makeNullHandle<JSObject>(),
+        runtime->makeNullHandle<Environment>(),
         codeBlock));
     auto setter = runtime->makeHandle<JSFunction>(JSFunction::create(
         runtime,
         runtimeModule->getDomain(runtime),
-        Handle<JSObject>(runtime),
-        Handle<Environment>(runtime),
+        runtime->makeNullHandle<JSObject>(),
+        runtime->makeNullHandle<Environment>(),
         codeBlock));
     auto accessor = runtime->makeHandle<PropertyAccessor>(
         *PropertyAccessor::create(runtime, getter, setter));

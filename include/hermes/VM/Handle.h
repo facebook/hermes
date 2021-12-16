@@ -311,13 +311,9 @@ class Handle : public HandleBase {
   using value_type = typename HermesValueTraits<T>::value_type;
 
   /// Allocate a new handle in the current GCScope
-  explicit Handle(
-      HandleRootOwner *runtime,
-      value_type value = HermesValueTraits<T>::defaultValue())
+  explicit Handle(HandleRootOwner *runtime, value_type value)
       : HandleBase(runtime, HermesValueTraits<T>::encode(value)){};
-  explicit Handle(
-      GCScope *inScope,
-      value_type value = HermesValueTraits<T>::defaultValue())
+  explicit Handle(GCScope *inScope, value_type value)
       : HandleBase(inScope, HermesValueTraits<T>::encode(value)){};
 
   /// Create a Handle aliasing a non-movable HermesValue without

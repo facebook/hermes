@@ -339,8 +339,8 @@ L1:
   Handle<JSFunction> factFn = runtime->makeHandle(JSFunction::create(
       runtime,
       runtimeModule->getDomain(runtime),
-      Handle<JSObject>(runtime),
-      Handle<Environment>(runtime),
+      runtime->makeNullHandle<JSObject>(),
+      runtime->makeNullHandle<Environment>(),
       codeBlock));
 
   // Define the 'fact' function.

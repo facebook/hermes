@@ -577,7 +577,7 @@ class NativeFunction : public Callable {
         functionPtr,
         name,
         paramCount,
-        Handle<JSObject>(runtime),
+        runtime->makeNullHandle<JSObject>(),
         additionalSlotCount);
   }
 

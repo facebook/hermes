@@ -91,7 +91,7 @@ TEST_F(OperationsTest, IsSameValueTest) {
   v2 = HermesValue::encodeDoubleValue(182.54);
   IsSameValueTest(FALSE, v1, v2);
 
-  Handle<JSObject> nullObj(runtime);
+  auto nullObj = runtime->makeNullHandle<JSObject>();
   auto obj1 = runtime->makeHandle(JSObject::create(runtime, nullObj));
   auto obj2 = runtime->makeHandle(JSObject::create(runtime, nullObj));
 
@@ -208,7 +208,7 @@ TEST_F(OperationsTest, AbstractEqualityTest) {
   v2 = HermesValue::encodeDoubleValue(182.54);
   AbstractEqualityTest(FALSE, v1, v2);
 
-  Handle<JSObject> nullObj(runtime);
+  auto nullObj = runtime->makeNullHandle<JSObject>();
   auto obj1 = runtime->makeHandle(JSObject::create(runtime, nullObj));
   auto obj2 = runtime->makeHandle(JSObject::create(runtime, nullObj));
 
@@ -329,7 +329,7 @@ TEST_F(OperationsTest, StrictEquaityTest) {
   v2 = HermesValue::encodeDoubleValue(182.54);
   StrictEqualityTest(FALSE, v1, v2);
 
-  Handle<JSObject> nullObj(runtime);
+  auto nullObj = runtime->makeNullHandle<JSObject>();
   auto obj1 = runtime->makeHandle(JSObject::create(runtime, nullObj));
   auto obj2 = runtime->makeHandle(JSObject::create(runtime, nullObj));
 
@@ -378,7 +378,7 @@ TEST_F(OperationsTest, IsPrimitiveTest) {
   v = HermesValue::encodeStringValue(s.get());
   EXPECT_TRUE(isPrimitive(v));
 
-  Handle<JSObject> nullObj(runtime);
+  auto nullObj = runtime->makeNullHandle<JSObject>();
   auto obj = JSObject::create(runtime, nullObj);
   v = HermesValue::encodeObjectValue(&obj);
   EXPECT_FALSE(isPrimitive(v));

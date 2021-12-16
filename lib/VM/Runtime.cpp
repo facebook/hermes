@@ -265,8 +265,7 @@ Runtime::Runtime(
     }
   }
 
-  global_ =
-      JSObject::create(this, Handle<JSObject>(this, nullptr)).getHermesValue();
+  global_ = JSObject::create(this, makeNullHandle<JSObject>()).getHermesValue();
 
   JSLibFlags jsLibFlags{};
   jsLibFlags.enableHermesInternal = runtimeConfig.getEnableHermesInternal();

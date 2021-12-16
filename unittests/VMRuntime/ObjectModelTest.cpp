@@ -43,8 +43,8 @@ static inline Handle<Callable> makeSimpleJSFunction(
   return runtime->makeHandle<JSFunction>(JSFunction::create(
       runtime,
       runtimeModule->getDomain(runtime),
-      Handle<JSObject>(runtime),
-      Handle<Environment>(runtime),
+      runtime->makeNullHandle<JSObject>(),
+      runtime->makeNullHandle<Environment>(),
       codeBlock));
 }
 

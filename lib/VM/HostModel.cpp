@@ -61,7 +61,7 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
           finalizePtr);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
 
-  auto prototypeObjectHandle = Handle<JSObject>(runtime);
+  auto prototypeObjectHandle = runtime->makeNullHandle<JSObject>();
 
   auto st = defineNameLengthAndPrototype(
       selfHandle,
