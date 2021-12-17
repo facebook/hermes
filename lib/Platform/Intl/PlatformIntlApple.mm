@@ -508,18 +508,12 @@ struct DateTimeFormat::Impl {
   uint8_t FractionalSecondDigits;
   bool hour12;
 };
-struct newRecord {
-  std::u16string localeMatcher, ca, nu, hc, hcDefault; // For opt
-};
 
 DateTimeFormat::DateTimeFormat() : impl_(std::make_unique<Impl>()) {}
 DateTimeFormat::~DateTimeFormat() {}
 
 // Implementation of
 // https://tc39.es/ecma402/#sec-resolvelocale
-struct ResolveLocale {
-  std::u16string key, value, dataLocale, resolveLocale, locale, ca, nu, hc;
-};
 std::u16string resolveAlias(
     const std::u16string &value,
     const std::map<std::u16string, std::u16string> &mappings) {
@@ -554,6 +548,7 @@ std::u16string resolveKnownAliases(
       return std::u16string(u"false");
     }
   }
+  return u"";
 }
 bool containsValidKeyword(
     const std::vector<std::u16string> &values,
@@ -642,96 +637,115 @@ bool isValidKeyword(const std::u16string &key, const std::u16string &value) {
   }
 };
 // https://tc39.es/ecma262/#sec-stringindexof
-int8_t stringIndexOf(const std::u16string &string, const std::u16string &searchValue, uint8_t fromIndex) {
-//  1. Let len be the length of string.
+int8_t stringIndexOf(
+    const std::u16string &string,
+    const std::u16string &searchValue,
+    uint8_t fromIndex) {
+  //  1. Let len be the length of string.
   uint8_t len = string.length();
-//  2. If searchValue is the empty String and fromIndex ≤ len, return fromIndex.
+  //  2. If searchValue is the empty String and fromIndex ≤ len, return
+  //  fromIndex.
   if (searchValue == u"" && fromIndex <= len) {
     return fromIndex;
   }
-//  3. Let searchLen be the length of searchValue.
+  //  3. Let searchLen be the length of searchValue.
   uint8_t searchLen = searchValue.length();
-//  4. For each integer i starting with fromIndex such that i ≤ len - searchLen, in ascending order, do
+  //  4. For each integer i starting with fromIndex such that i ≤ len -
+  //  searchLen, in ascending order, do
   for (uint8_t i = fromIndex; i <= len - searchLen; i++) {
-//    a. Let candidate be the substring of string from i to i + searchLen.
+    //    a. Let candidate be the substring of string from i to i + searchLen.
     std::u16string candidate = string.substr(i, searchLen);
-//    b. If candidate is the same sequence of code units as searchValue, return i.
+    //    b. If candidate is the same sequence of code units as searchValue,
+    //    return i.
     if (candidate == searchValue) {
       return i;
     }
   }
-//  5. Return -1.
+  //  5. Return -1.
   return -1;
 }
 // https://tc39.es/ecma402/#sec-unicode-extension-components
 std::unordered_map<std::u16string, std::u16string> unicodeExtensionComponents(
     const std::u16string &extension) {
   std::unordered_map<std::u16string, std::u16string> record;
-//  1. Let attributes be a new empty List.
+  //  1. Let attributes be a new empty List.
   std::vector<std::u16string> attributes;
-//  2. Let keywords be a new empty List.
+  //  2. Let keywords be a new empty List.
   std::vector<std::u16string> keywords;
-//  3. Let keyword be undefined.
+  //  3. Let keyword be undefined.
   std::u16string keyword;
-//  4. Let size be the length of extension.
+  //  4. Let size be the length of extension.
   auto size = extension.length();
-//  5. Let k be 3.
+  //  5. Let k be 3.
   uint8_t k = 3;
   uint8_t len;
-//  6. Repeat, while k < size
+  //  6. Repeat, while k < size
   while (k < size) {
-//    a. Let e be ! StringIndexOf(extension, "-", k).
+    //    a. Let e be ! StringIndexOf(extension, "-", k).
     auto e = stringIndexOf(extension, u"-", k);
-//    b. If e = -1, let len be size - k; else let len be e - k.
+    //    b. If e = -1, let len be size - k; else let len be e - k.
     if (e == -1) {
       len = size - k;
     } else {
       len = e - k;
     }
-//    c. Let subtag be the String value equal to the substring of extension consisting of the code units at indices k (inclusive) through k + len (exclusive).
+    //    c. Let subtag be the String value equal to the substring of extension
+    //    consisting of the code units at indices k (inclusive) through k + len
+    //    (exclusive).
     std::u16string subtag = extension.substr(k, len);
-//    d. If keyword is undefined and len ≠ 2, then
+    //    d. If keyword is undefined and len ≠ 2, then
     if (keyword == u"" && len != 2) {
-//    i. If subtag is not an element of attributes, then
-      if (std::find(attributes.begin(), attributes.end(), subtag) == attributes.end()) {
-//    1. Append subtag to attributes.
+      //    i. If subtag is not an element of attributes, then
+      if (std::find(attributes.begin(), attributes.end(), subtag) ==
+          attributes.end()) {
+        //    1. Append subtag to attributes.
         attributes.push_back(subtag);
       }
     }
-//    e. Else if len = 2, then
+    //    e. Else if len = 2, then
     else if (len == 2) {
-//    i. If keyword is not undefined and keywords does not contain an element whose [[Key]] is the same as keyword.[[Key]], then
-      if (keyword != u"u" && std::find(keywords.begin(), keywords.end(), keyword) == keywords.end()) {
-//    1. Append keyword to keywords.
+      //    i. If keyword is not undefined and keywords does not contain an
+      //    element whose [[Key]] is the same as keyword.[[Key]], then
+      if (keyword != u"u" &&
+          std::find(keywords.begin(), keywords.end(), keyword) ==
+              keywords.end()) {
+        //    1. Append keyword to keywords.
         keywords.push_back(subtag);
-//    ii. Set keyword to the Record { [[Key]]: subtag, [[Value]]: "" }.
-        //record.insert(std::pair<std::u16string, std::u16string> (subtag, u""));
+        //    ii. Set keyword to the Record { [[Key]]: subtag, [[Value]]: "" }.
+        // record.insert(std::pair<std::u16string, std::u16string> (subtag,
+        // u""));
       }
     }
-//    f. Else,
+    //    f. Else,
     else {
-//    i. If keyword.[[Value]] is the empty String, then
+      //    i. If keyword.[[Value]] is the empty String, then
       if (keyword == u"") {
-//    1. Set keyword.[[Value]] to subtag.
+        //    1. Set keyword.[[Value]] to subtag.
         keyword = subtag;
       }
-//    ii. Else,
+      //    ii. Else,
       else {
-//    1. Set keyword.[[Value]] to the string-concatenation of keyword.[[Value]], "-", and subtag.
+        //    1. Set keyword.[[Value]] to the string-concatenation of
+        //    keyword.[[Value]], "-", and subtag.
         keyword = keyword + u"-" + subtag;
       }
     }
-//    g. Let k be k + len + 1.
+    //    g. Let k be k + len + 1.
     k = k + len + 1;
   }
-//  7. If keyword is not undefined and keywords does not contain an element whose [[Key]] is the same as keyword.[[Key]], then
-  if (keyword != u"" && std::find(keywords.begin(), keywords.end(), keyword) == keywords.end()) {
-//  a. Append keyword to keywords.
+  //  7. If keyword is not undefined and keywords does not contain an element
+  //  whose [[Key]] is the same as keyword.[[Key]], then
+  if (keyword != u"" &&
+      std::find(keywords.begin(), keywords.end(), keyword) == keywords.end()) {
+    //  a. Append keyword to keywords.
     keywords.push_back(keyword);
   }
-//  8. Return the Record { [[Attributes]]: attributes, [[Keywords]]: keywords }.
-  for (std::vector<std::u16string>::size_type i = 0; i != keywords.size(); i++) {
-    record.emplace(std::pair<std::u16string, std::u16string> (keywords[i], attributes[i]));
+  //  8. Return the Record { [[Attributes]]: attributes, [[Keywords]]: keywords
+  //  }.
+  for (std::vector<std::u16string>::size_type i = 0; i != keywords.size();
+       i++) {
+    record.emplace(
+        std::pair<std::u16string, std::u16string>(keywords[i], attributes[i]));
   }
   return record;
 }
@@ -761,7 +775,8 @@ const std::unordered_map<std::u16string, std::u16string> resolveLocale(
   //  5. Let result be a new Record.
   std::unordered_map<std::u16string, std::u16string> result;
   //  6. Set result.[[dataLocale]] to foundLocale.
-  result.emplace(std::pair<std::u16string, std::u16string> (u"dataLocale", foundLocale));
+  result.emplace(
+      std::pair<std::u16string, std::u16string>(u"dataLocale", foundLocale));
   //  7. If r has an [[extension]] field, then
   if (r.extension != u"") {
     //  a. Let components be ! UnicodeExtensionComponents(r.[[extension]]).
@@ -775,7 +790,8 @@ const std::unordered_map<std::u16string, std::u16string> resolveLocale(
   //  9. For each element key of relevantExtensionKeys, do
   for (std::u16string key : relevantExtensionKeys) {
     //    a. Let foundLocaleData be localeData.[[<foundLocale>]].
-    result.emplace(std::pair<std::u16string, std::u16string> (u"foundLocaleData", foundLocale));
+    result.emplace(std::pair<std::u16string, std::u16string>(
+        u"foundLocaleData", foundLocale));
     //    b. Assert: Type(foundLocaleData) is Record.
     //    c. Let keyLocaleData be foundLocaleData.[[<key>]].
     auto keyLocaleData = key;
@@ -850,7 +866,7 @@ const std::unordered_map<std::u16string, std::u16string> resolveLocale(
           }
         }
         //    j. Set result.[[<key>]] to value.
-        result.emplace(std::pair<std::u16string, std::u16string> (key, value));
+        result.emplace(std::pair<std::u16string, std::u16string>(key, value));
         //    k. Append supportedExtensionAddition to supportedExtension.
         supportedExtension += supportedExtensionAddition;
       }
@@ -866,7 +882,8 @@ const std::unordered_map<std::u16string, std::u16string> resolveLocale(
     }
   }
   //  11. Set result.[[locale]] to foundLocale.
-  result.emplace(std::pair<std::u16string, std::u16string> (u"locale", foundLocale));
+  result.emplace(
+      std::pair<std::u16string, std::u16string>(u"locale", foundLocale));
   //  12. Return result.
   return result;
 }
@@ -1052,7 +1069,8 @@ vm::ExecutionStatus DateTimeFormat::initialize(
       llvh::Optional<std::u16string>(u"best fit"),
       runtime);
   // 5. Set opt.[[localeMatcher]] to matcher.
-  mapOpt.emplace(std::pair<std::u16string, std::u16string> (u"localeMatcher", matcher->getValue()));
+  mapOpt.emplace(std::pair<std::u16string, std::u16string>(
+      u"localeMatcher", matcher->getValue()));
   // 6. Let calendar be ? GetOption(options, "calendar", "string",
   //    undefined, undefined).
   auto calendar = getOptionString(
@@ -1064,9 +1082,9 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   if (calendar == vm::ExecutionStatus::EXCEPTION) {
     return runtime->raiseRangeError("Incorrect calendar information provided");
   }
-  mapOpt.emplace(std::pair<std::u16string, std::u16string> (u"ca", u""));
-  mapOpt.emplace(std::pair<std::u16string, std::u16string> (u"nu", u""));
-  mapOpt.emplace(std::pair<std::u16string, std::u16string> (u"hc", u""));
+  mapOpt.emplace(std::pair<std::u16string, std::u16string>(u"ca", u""));
+  mapOpt.emplace(std::pair<std::u16string, std::u16string>(u"nu", u""));
+  mapOpt.emplace(std::pair<std::u16string, std::u16string>(u"hc", u""));
   if (calendar->hasValue()) {
     mapOpt.find(u"ca")->second = calendar->getValue();
   }
@@ -1115,31 +1133,30 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   }
   // 16 - 23
   auto r = resolveLocale(
-      locales, requestedLocales.getValue(), mapOpt, {
-        u"ca", u"nu", u"hc"});
-      if (r.find(u"locale") != r.end()) {
-        impl_->locale = r.find(u"locale")->second;
-      }
+      locales, requestedLocales.getValue(), mapOpt, {u"ca", u"nu", u"hc"});
+  if (r.find(u"locale") != r.end()) {
+    impl_->locale = r.find(u"locale")->second;
+  }
   // Get default locale as NS for future defaults
   NSLocale *defaultNSLocale = [[NSLocale alloc]
       initWithLocaleIdentifier:u16StringToNSString(impl_->locale)];
   bool useDefaultCalendar;
   std::u16string calendarResolved;
-    if (r.find(u"ca") != r.end()) {
-      calendarResolved = r.find(u"ca")->second;
-    }
+  if (r.find(u"ca") != r.end()) {
+    calendarResolved = r.find(u"ca")->second;
+  }
   if (calendarResolved != u"") {
     useDefaultCalendar = false;
     impl_->Calendar = calendarResolved;
   } else {
     useDefaultCalendar = true;
-    impl_->Calendar = u"gregorian"; // Placeholder for now
+    impl_->Calendar = u"gregory";
   }
   bool useDefaultNumberSystem;
   std::u16string numberingSystemResolved;
-      if (r.find(u"nu") != r.end()) {
-        numberingSystemResolved = r.find(u"nu")->second;
-      }
+  if (r.find(u"nu") != r.end()) {
+    numberingSystemResolved = r.find(u"nu")->second;
+  }
   if (numberingSystemResolved != u"") {
     useDefaultNumberSystem = false;
     impl_->NumberingSystem = numberingSystemResolved;
@@ -1148,9 +1165,9 @@ vm::ExecutionStatus DateTimeFormat::initialize(
     impl_->NumberingSystem = u"latn";
   }
   std::u16string hourCycleResolved;
-      if (r.find(u"hc") != r.end()) {
-        hourCycleResolved = r.find(u"hc")->second;
-      }
+  if (r.find(u"hc") != r.end()) {
+    hourCycleResolved = r.find(u"hc")->second;
+  }
 
   // 24-27
   //  24. Let timeZone be ? Get(options, "timeZone").
@@ -1373,7 +1390,8 @@ vm::ExecutionStatus DateTimeFormat::initialize(
     impl_->HourCycle = u"";
   } else {
     std::u16string hcDefaultNS = getDefaultHourCycle(defaultNSLocale);
-    mapOpt.insert(std::pair<std::u16string, std::u16string> (u"hcDefault", hcDefaultNS));
+    mapOpt.insert(
+        std::pair<std::u16string, std::u16string>(u"hcDefault", hcDefaultNS));
     if (hourCycleResolved == u"") {
       mapOpt.find(u"hc")->second = hcDefaultNS;
     } else {
