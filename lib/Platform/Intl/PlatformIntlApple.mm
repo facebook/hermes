@@ -156,6 +156,7 @@ LocaleMatch lookupMatcher(
       // 1. Let extension be the String value consisting of the substring of
       // the Unicode locale extension sequence within locale, starting -u.
       // 2. Set result.[[extension]] to extension.
+      // Placeholder to test resolveLocale while locale and noExtensionsLocale output is identical
       if (noExtensionsLocale.length() > 5) {
         result.extension = locale.substr(5, noExtensionsLocale.length());
       }
@@ -756,7 +757,7 @@ std::u16string setUnicodeExtensions(
   std::vector<std::u16string> unicodeExtensionKeywords;
   // TODO: From BCP Parser
   // https://github.com/facebook/hermes/blob/17d7583650e5f4b59645e0607e24c7ccb15404ee/lib/Platform/Intl/java/com/facebook/hermes/intl/LocaleObjectAndroid.java#L247
-  return extension;
+  return locale;
 };
 // https://tc39.es/ecma402/#sec-resolvelocale
 const std::unordered_map<std::u16string, std::u16string> resolveLocale(
@@ -771,7 +772,7 @@ const std::unordered_map<std::u16string, std::u16string> resolveLocale(
   std::unordered_map<std::u16string, std::u16string> keywords;
   auto r = lookupMatcher(requestedLocales, availableLocales);
   //  4. Let foundLocale be r.[[locale]].
-  auto foundLocale = r.locale;
+  auto foundLocale = r.locale; // Should be void of extensions
   //  5. Let result be a new Record.
   std::unordered_map<std::u16string, std::u16string> result;
   //  6. Set result.[[dataLocale]] to foundLocale.
