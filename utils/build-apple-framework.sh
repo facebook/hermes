@@ -87,9 +87,9 @@ function build_apple_framework {
   configure_apple_framework "$1" "$2" "$3"
 
   if [[ "$BUILD_SYSTEM" == "Ninja" ]]; then
-    (cd "./build_$1" && ninja install/strip)
+    (cd "./build_$1" && ninja install)
   else
-    (cd "./build_$1" && make install/strip)
+    (cd "./build_$1" && make install)
   fi
 }
 
