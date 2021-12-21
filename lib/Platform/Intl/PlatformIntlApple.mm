@@ -114,16 +114,24 @@ std::u16string toNoUnicodeExtensionsLocale(const std::u16string &locale) {
   std::u16string result;
   size_t size = subtags.size();
   for (size_t i = 0; i < size;) {
-    if (i > 0)
+    if (i > 0) {
       result.append(u"-");
+    }
     result.append(subtags[i]);
     i++;
     // If next tag is a private marker and there are remaining tags
-    if (subtags[i] == u"u" && i < size - 1)
+    if ((subtags[i] == u"u" || subtags[i] == u"U") && i < size - 1) {
       // Skip those tags until you reach end or another singleton subtag
-      while (i < size && subtags[i].size() > 1)
+      while (i < size && subtags[i+1].size() > 1) {
         i++;
+      }
+      if (i == size || i == size - 1) {
+        break;
+      }
+    }
   }
+  // Remove once BCP 47 parser is in place
+  std::replace(result.begin(), result.end(), u'-', u'_');
   return result;
 }
 // Implementer note: This method corresponds roughly to
@@ -139,8 +147,10 @@ LocaleMatch lookupMatcher(
   // 1. Let result be a new Record.
   LocaleMatch result;
   // 2. For each element locale of requestedLocales, do
-  for (const std::u16string &locale : requestedLocales) {
-    // a. Let noExtensionsLocale be the String value that is locale with
+  for (std::u16string locale : requestedLocales) {
+    // Remove once BCP 47 parser is in place
+    std::replace(locale.begin(), locale.end(), u'_', u'-');
+    // a. Let noExtensionsLsocale be the String value that is locale with
     // any Unicode locale extension sequences removed.
     std::u16string noExtensionsLocale = toNoUnicodeExtensionsLocale(locale);
     // b. Let availableLocale be BestAvailableLocale(availableLocales,
@@ -156,9 +166,8 @@ LocaleMatch lookupMatcher(
       // 1. Let extension be the String value consisting of the substring of
       // the Unicode locale extension sequence within locale, starting -u.
       // 2. Set result.[[extension]] to extension.
-      // Placeholder to test resolveLocale while locale and noExtensionsLocale output is identical
-      if (noExtensionsLocale.length() > 5) {
-        result.extension = locale.substr(5, noExtensionsLocale.length());
+      if (locale != noExtensionsLocale) {
+        result.extension = locale.substr(noExtensionsLocale.length(), locale.length());
       }
       // iii. Return result.
       return result;
@@ -218,10 +227,11 @@ vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
   for (std::u16string locale : locales) {
     // TODO - BCP 47 tag validation
     // 7.c.vi. Let canonicalizedTag be CanonicalizeUnicodeLocaleId(tag).
-    auto *localeNSString = u16StringToNSString(locale);
-    NSString *canonicalizedTagNSString =
-        [NSLocale canonicalLocaleIdentifierFromString:localeNSString];
-    auto canonicalizedTag = nsStringToU16String(canonicalizedTagNSString);
+//    auto *localeNSString = u16StringToNSString(locale);
+//    NSString *canonicalizedTagNSString =
+//        [NSLocale canonicalLocaleIdentifierFromString:localeNSString];
+//    auto canonicalizedTag = nsStringToU16String(canonicalizedTagNSString);
+    auto canonicalizedTag = locale;
     // 7.c.vii. If canonicalizedTag is not an element of seen, append
     // canonicalizedTag as the last element of seen.
     if (std::find(seen.begin(), seen.end(), canonicalizedTag) == seen.end()) {
@@ -757,7 +767,7 @@ std::u16string setUnicodeExtensions(
   std::vector<std::u16string> unicodeExtensionKeywords;
   // TODO: From BCP Parser
   // https://github.com/facebook/hermes/blob/17d7583650e5f4b59645e0607e24c7ccb15404ee/lib/Platform/Intl/java/com/facebook/hermes/intl/LocaleObjectAndroid.java#L247
-  return locale;
+  return locale + extension;
 };
 // https://tc39.es/ecma402/#sec-resolvelocale
 const std::unordered_map<std::u16string, std::u16string> resolveLocale(
@@ -773,6 +783,7 @@ const std::unordered_map<std::u16string, std::u16string> resolveLocale(
   auto r = lookupMatcher(requestedLocales, availableLocales);
   //  4. Let foundLocale be r.[[locale]].
   auto foundLocale = r.locale; // Should be void of extensions
+  std::u16string resultingLocale;
   //  5. Let result be a new Record.
   std::unordered_map<std::u16string, std::u16string> result;
   //  6. Set result.[[dataLocale]] to foundLocale.
@@ -866,11 +877,13 @@ const std::unordered_map<std::u16string, std::u16string> resolveLocale(
             }
           }
         }
+        if (optionsValue->second != u"null" && supportedExtensionAddition != u"") {
         //    j. Set result.[[<key>]] to value.
         result.emplace(std::pair<std::u16string, std::u16string>(key, value));
         //    k. Append supportedExtensionAddition to supportedExtension.
         supportedExtension += supportedExtensionAddition;
       }
+    }
     }
     //    10. If the number of elements in supportedExtension is greater than 2,
     //    then
@@ -879,12 +892,11 @@ const std::unordered_map<std::u16string, std::u16string> resolveLocale(
       //    InsertUnicodeExtensionAndCanonicalize(foundLocale,
       //    supportedExtension).
       // TODO: setUnicodeExtensions
-      foundLocale = setUnicodeExtensions(foundLocale, supportedExtension);
+      resultingLocale = setUnicodeExtensions(foundLocale, supportedExtension);
     }
   }
-  //  11. Set result.[[locale]] to foundLocale.
   result.emplace(
-      std::pair<std::u16string, std::u16string>(u"locale", foundLocale));
+      std::pair<std::u16string, std::u16string>(u"locale", resultingLocale));
   //  12. Return result.
   return result;
 }
@@ -1088,6 +1100,8 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   mapOpt.emplace(std::pair<std::u16string, std::u16string>(u"hc", u""));
   if (calendar->hasValue()) {
     mapOpt.find(u"ca")->second = calendar->getValue();
+  } else {
+    mapOpt.find(u"ca")->second = u"null";
   }
   // 9. Let numberingSystem be ? GetOption(options, "numberingSystem",
   //    "string", undefined, undefined).
@@ -1107,6 +1121,8 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   }
   if (numberingSystem->hasValue()) {
     mapOpt.find(u"nu")->second = numberingSystem->getValue();
+  } else {
+    mapOpt.find(u"nu")->second = u"null";
   }
   // 12. Let hour12 be ? GetOption(options, "hour12", "boolean",
   //     undefined, undefined).
@@ -1125,19 +1141,18 @@ vm::ExecutionStatus DateTimeFormat::initialize(
       runtime);
   // 14. If hour12 is not undefined, then
   //     a. Let hourCycle be null.
+  // 15. Set opt.[[hc]] to hourCycle.
   if (hour12->hasValue()) {
+      hourCycle->reset();
+      mapOpt.find(u"hc")->second = u"null";
+  } else {
     if (hourCycle->hasValue()) {
-      hourCycle->getValue() = u"";
-      // 15. Set opt.[[hc]] to hourCycle.
       mapOpt.find(u"hc")->second = hourCycle->getValue();
     }
   }
   // 16 - 23
   auto r = resolveLocale(
-      locales, requestedLocales.getValue(), mapOpt, {u"ca", u"nu", u"hc"});
-  if (r.find(u"locale") != r.end()) {
-    impl_->locale = r.find(u"locale")->second;
-  }
+      getAvailableLocales(), requestedLocales.getValue(), mapOpt, {u"ca", u"nu", u"hc"});
   // Get default locale as NS for future defaults
   NSLocale *defaultNSLocale = [[NSLocale alloc]
       initWithLocaleIdentifier:u16StringToNSString(impl_->locale)];
@@ -1169,7 +1184,13 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   if (r.find(u"hc") != r.end()) {
     hourCycleResolved = r.find(u"hc")->second;
   }
-
+  if (calendarResolved != u"" || numberingSystemResolved != u"" || hourCycleResolved != u"") {
+    if (r.find(u"locale") != r.end()) {
+      impl_->locale = r.find(u"locale")->second;
+    }
+  } else {
+    impl_->locale = r.find(u"dataLocale")->second;
+  }
   // 24-27
   //  24. Let timeZone be ? Get(options, "timeZone").
   std::u16string timeZoneValue;
