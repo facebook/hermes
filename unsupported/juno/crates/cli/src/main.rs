@@ -481,14 +481,18 @@ fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
         let ast = {
             // Convert to Juno AST.
             let lock = ast::GCLock::new(&mut ctx);
-            let program = parsed.to_ast(&lock, file_id).unwrap();
-            if input_paths.len() > 1 {
-                NodeRc::from_node(
-                    &lock,
-                    script_to_module(&lock, node_cast!(ast::Node::Program, program)),
-                )
-            } else {
-                NodeRc::from_node(&lock, program)
+            match parsed.to_ast(&lock, file_id) {
+                None => return Ok(TransformStatus::Error),
+                Some(program) => {
+                    if input_paths.len() > 1 {
+                        NodeRc::from_node(
+                            &lock,
+                            script_to_module(&lock, node_cast!(ast::Node::Program, program)),
+                        )
+                    } else {
+                        NodeRc::from_node(&lock, program)
+                    }
+                }
             }
         };
         // We don't need the original parser anymore.

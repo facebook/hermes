@@ -2300,7 +2300,13 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
           ast::builder::TSCallSignatureDeclaration::build_template(gc, template)
         }
-        _ => panic!("Invalid node kind")
+        _ => {
+          cvt.report_invalid_node(gc, n, range);
+          let template = ast::template::Empty {
+            metadata: ast::TemplateMetadata {range, ..Default::default()}
+          };
+          ast::builder::Empty::build_template(gc, template)
+        }
     };
 
     res

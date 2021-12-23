@@ -148,6 +148,31 @@ impl<'parser> Converter<'parser> {
     ) -> Option<ast::NodeLabel> {
         u.as_node_label().map(|u| self.cvt_label(ctx, u))
     }
+
+    /// Report an invalid node kind for conversion via the SourceManager.
+    pub fn report_invalid_node(&self, lock: &ast::GCLock, node: NodePtr, range: ast::SourceRange) {
+        use hermes::parser::NodeKind::*;
+        let node = node.as_ref();
+        match node.kind {
+            CoverEmptyArgs => {
+                lock.sm().error(range, "invalid empty parentheses '( )'");
+            }
+            CoverTrailingComma => {
+                lock.sm().error(range, "expression expected after ','");
+            }
+            CoverInitializer => {
+                lock.sm()
+                    .error(range, "':' expected in property initialization");
+            }
+            CoverRestElement => {
+                lock.sm().error(range, "'...' not allowed in this context");
+            }
+            _ => {
+                lock.sm()
+                    .error(range, format!("unsupported syntax: {:?}", node.kind));
+            }
+        }
+    }
 }
 
 /// # Safety

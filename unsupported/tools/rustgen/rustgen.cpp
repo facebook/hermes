@@ -466,8 +466,16 @@ static void genConvert() {
     genStruct(cls);
   }
 
-  llvh::outs() << "        _ => panic!(\"Invalid node kind\")\n"
-                  "    };\n\n";
+  llvh::outs()
+      << "        _ => {\n"
+         "          cvt.report_invalid_node(gc, n, range);\n"
+         "          let template = ast::template::Empty {\n"
+         "            metadata: ast::TemplateMetadata {range, ..Default::default()}\n"
+         "          };\n"
+         "          ast::builder::Empty::build_template(gc, template)\n"
+         "        }\n"
+
+         "    };\n\n";
   llvh::outs() << "    res\n";
   llvh::outs() << "}\n";
 }
