@@ -8,12 +8,13 @@
 use anyhow::{self, ensure, Context, Error};
 use command_line::{CommandLine, Hidden, Opt, OptDesc};
 use juno::ast::{self, validate_tree, NodeRc, SourceRange};
-use juno::gen_js;
 use juno::hparser::{self, MagicCommentKind, ParsedJS, ParserDialect};
-use juno::sema;
+use juno::source_manager::SourceId;
 use juno::sourcemap::merge_sourcemaps;
+use juno::{gen_js, node_cast, resolve_dependency, sema};
 use pass::PassManager;
 use sourcemap::SourceMap;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -142,6 +143,7 @@ impl Options {
                 OptDesc {
                     desc: Some("'input-path'"),
                     min_count: 1,
+                    list: true,
                     ..Default::default()
                 },
             ),
@@ -319,6 +321,23 @@ fn load_source_map(url: Url) -> anyhow::Result<SourceMap> {
         })
 }
 
+/// Convert a `Program` (script) AST node to a `Module` with an identical body.
+fn script_to_module<'gc>(
+    lock: &'gc ast::GCLock,
+    program: &'gc ast::Program<'gc>,
+) -> &'gc ast::Node<'gc> {
+    ast::builder::Module::build_template(
+        lock,
+        ast::template::Module {
+            metadata: ast::TemplateMetadata {
+                phantom: Default::default(),
+                range: program.metadata.range,
+            },
+            body: program.body.clone(),
+        },
+    )
+}
+
 /// Generate the specified output, if any.
 /// Returns whether any output was generated.
 fn gen_output(
@@ -403,6 +422,14 @@ enum TransformStatus {
     Error,
 }
 
+/// Parsed JS file with its associated sourcemap.
+struct ParsedJSModule {
+    id: SourceId,
+    /// AST node, may be either `Program` or `Module`.
+    ast: NodeRc,
+    source_map: Option<SourceMap>,
+}
+
 fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
     opt.validate()?;
 
@@ -414,80 +441,141 @@ fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
     }
     ctx.warn_undefined = *opt.warn_undefined;
 
-    // Read the input into memory.
-    let input = opt.input_path.as_path();
-    let file_id = ctx
-        .sm_mut()
-        .add_source(input.display().to_string(), read_file_or_stdin(input)?);
-    let buf = ctx.sm().source_buffer_rc(file_id);
-
     // Start measuring time.
     let mut timer = Timer::new();
 
-    // Parse.
-    let parsed = hparser::ParsedJS::parse(
-        hparser::ParserFlags {
-            strict_mode: ctx.strict_mode(),
-            enable_jsx: *opt.jsx,
-            dialect: *opt.dialect,
-        },
-        &buf,
-    );
-    timer.mark("Parse");
-    if let Some(e) = parsed.first_error() {
-        ctx.sm().error(SourceRange::from_loc(file_id, e.0), e.1);
-        return Ok(TransformStatus::Error);
-    }
+    // Read the input into memory.
+    let input_paths = opt.input_path.values();
 
-    // Extract the optional source mapping URL.
-    let sm_url = if *opt.input_source_map != InputSourceMap::Ignore {
-        parse_magic_url(&parsed, MagicCommentKind::SourceMappingUrl, opt)?
-    } else {
-        None
-    };
+    let mut js_modules = HashMap::<SourceId, ParsedJSModule>::new();
 
-    let ast = {
-        // Convert to Juno AST.
-        let gc = ast::GCLock::new(&mut ctx);
-        NodeRc::from_node(&gc, parsed.to_ast(&gc, file_id).unwrap())
-    };
-    // We don't need the original parser anymore.
-    drop(parsed);
-    timer.mark("Cvt");
+    for path in input_paths {
+        let input = path.as_path();
+        let file_id = ctx
+            .sm_mut()
+            .add_source(input.display().to_string(), read_file_or_stdin(input)?);
+        let buf = ctx.sm().source_buffer_rc(file_id);
 
-    if *opt.validate_ast {
-        validate_tree(&mut ctx, &ast).with_context(|| input.display().to_string())?;
-        timer.mark("Validate AST");
-    }
-
-    // Fetch and parse the source map before we generate the output.
-    let source_map = sm_url.map(load_source_map).transpose()?;
-
-    if *opt.sema {
-        let lock = ast::GCLock::new(&mut ctx);
-        let sem = sema::resolve_program(&lock, file_id, ast.node(&lock));
-        println!(
-            "{} error(s), {} warning(s)",
-            lock.sm().num_errors(),
-            lock.sm().num_warnings()
+        // Parse.
+        let parsed = hparser::ParsedJS::parse(
+            hparser::ParserFlags {
+                strict_mode: ctx.strict_mode(),
+                enable_jsx: *opt.jsx,
+                dialect: *opt.dialect,
+            },
+            &buf,
         );
-        if lock.sm().num_errors() != 0 {
+        timer.mark("Parse");
+        if let Some(e) = parsed.first_error() {
+            ctx.sm().error(SourceRange::from_loc(file_id, e.0), e.1);
             return Ok(TransformStatus::Error);
         }
 
-        println!("{:7} functions", sem.all_functions().len());
-        println!("{:7} lexical scopes", sem.all_scopes().len());
-        println!("{:7} declarations", sem.all_decls().len());
-        println!("{:7} ident resolutions", sem.all_ident_decls().len());
-        println!();
-        timer.mark("Sema");
-        drop(sem);
-        timer.mark("Drop Sema");
+        // Extract the optional source mapping URL.
+        let sm_url = if *opt.input_source_map != InputSourceMap::Ignore {
+            parse_magic_url(&parsed, MagicCommentKind::SourceMappingUrl, opt)?
+        } else {
+            None
+        };
+
+        let ast = {
+            // Convert to Juno AST.
+            let lock = ast::GCLock::new(&mut ctx);
+            let program = parsed.to_ast(&lock, file_id).unwrap();
+            if input_paths.len() > 1 {
+                NodeRc::from_node(
+                    &lock,
+                    script_to_module(&lock, node_cast!(ast::Node::Program, program)),
+                )
+            } else {
+                NodeRc::from_node(&lock, program)
+            }
+        };
+        // We don't need the original parser anymore.
+        drop(parsed);
+        timer.mark("Cvt");
+
+        if *opt.validate_ast {
+            validate_tree(&mut ctx, &ast).with_context(|| input.display().to_string())?;
+            timer.mark("Validate AST");
+        }
+
+        // Fetch and parse the source map before we generate the output.
+        let source_map = sm_url.map(load_source_map).transpose()?;
+
+        js_modules.insert(
+            file_id,
+            ParsedJSModule {
+                id: file_id,
+                ast,
+                source_map,
+            },
+        );
     }
 
-    // Generate output.
-    if gen_output(opt, &mut ctx, ast, &source_map)? {
-        timer.mark("Gen");
+    if js_modules.len() == 1 {
+        let js_module = js_modules.into_values().next().unwrap();
+        if *opt.sema {
+            let lock = ast::GCLock::new(&mut ctx);
+            let sem = sema::resolve_program(&lock, js_module.id, js_module.ast.node(&lock));
+            println!(
+                "{} error(s), {} warning(s)",
+                lock.sm().num_errors(),
+                lock.sm().num_warnings()
+            );
+            if lock.sm().num_errors() != 0 {
+                return Ok(TransformStatus::Error);
+            }
+
+            println!("{:7} functions", sem.all_functions().len());
+            println!("{:7} lexical scopes", sem.all_scopes().len());
+            println!("{:7} declarations", sem.all_decls().len());
+            println!("{:7} ident resolutions", sem.all_ident_decls().len());
+            println!();
+            timer.mark("Sema");
+            drop(sem);
+            timer.mark("Drop Sema");
+        }
+
+        // Generate output.
+        if gen_output(opt, &mut ctx, js_module.ast, &js_module.source_map)? {
+            timer.mark("Gen");
+        }
+    } else {
+        println!("{} modules", js_modules.len());
+
+        if *opt.sema {
+            let mut sems = Vec::new();
+            let resolver = resolve_dependency::DefaultResolver::new();
+            for module in js_modules.into_values() {
+                let lock = ast::GCLock::new(&mut ctx);
+                let sem = sema::resolve_module(&lock, module.ast.node(&lock), module.id, &resolver);
+
+                let source_name = lock.sm().source_name(module.id);
+                println!("Module: {}", source_name);
+                println!(
+                    "{} error(s), {} warning(s)",
+                    lock.sm().num_errors(),
+                    lock.sm().num_warnings()
+                );
+                if lock.sm().num_errors() != 0 {
+                    return Ok(TransformStatus::Error);
+                }
+
+                println!("{:7} functions", sem.all_functions().len());
+                println!("{:7} lexical scopes", sem.all_scopes().len());
+                println!("{:7} declarations", sem.all_decls().len());
+                println!("{:7} ident resolutions", sem.all_ident_decls().len());
+                println!("{:7} require resolutions", sem.all_requires().len());
+                println!();
+
+                sems.push(sem);
+            }
+            timer.mark("Sema");
+
+            drop(sems);
+            timer.mark("Drop Sema");
+        }
     }
 
     // Drop the AST. We are doing it explicitly just to measure the time.
