@@ -7,6 +7,7 @@ license = "MIT"
 
 [dependencies]
 support = { path = "../support" }
+libcplusplus = { path = "../libcplusplus" }
 libc = "0.2"
 thiserror = "1.0"
 

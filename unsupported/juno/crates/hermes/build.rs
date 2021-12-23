@@ -39,5 +39,4 @@ fn main() {
     println!("cargo:rustc-link-lib=hermesSupport");
     println!("cargo:rustc-link-lib=LLVHSupport");
     println!("cargo:rustc-link-lib=dtoa");
-    println!("cargo:rustc-link-lib=c++");
 }

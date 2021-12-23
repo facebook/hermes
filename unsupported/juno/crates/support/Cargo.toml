@@ -6,6 +6,7 @@ edition = "2018"
 license = "MIT"
 
 [dependencies]
+libcplusplus = { path = "../libcplusplus" }
 base64 = "0.13"
 anyhow = "1.0"
 thiserror = "1.0"
