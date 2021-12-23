@@ -27,6 +27,7 @@
 //! Visitor patterns are provided by [`Visitor`] and [`VisitorMut`].
 
 use crate::source_manager::{SourceId, SourceManager};
+use juno_support::define_str_enum;
 use libc::c_void;
 use memoffset::offset_of;
 use std::{
@@ -37,7 +38,6 @@ use std::{
     ptr::NonNull,
     sync::atomic::{AtomicU32, Ordering},
 };
-use support::define_str_enum;
 use thiserror::Error;
 
 #[macro_use]

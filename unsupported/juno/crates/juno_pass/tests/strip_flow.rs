@@ -5,15 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-extern crate support;
+extern crate juno_support;
 
 use juno::{
     ast::{self, dump_json, NodeRc},
     gen_js,
     hparser::{self, ParserDialect},
 };
-use pass::PassManager;
-use support::NullTerminatedBuf;
+use juno_pass::PassManager;
+use juno_support::NullTerminatedBuf;
 
 #[test]
 fn imports_exports() {

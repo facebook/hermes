@@ -12,7 +12,9 @@ use juno::hparser::{self, MagicCommentKind, ParsedJS, ParserDialect};
 use juno::source_manager::SourceId;
 use juno::sourcemap::merge_sourcemaps;
 use juno::{gen_js, node_cast, resolve_dependency, sema};
-use pass::PassManager;
+use juno_pass::PassManager;
+use juno_support::NullTerminatedBuf;
+use juno_support::{fetchurl, Timer};
 use sourcemap::SourceMap;
 use std::collections::HashMap;
 use std::fs::File;
@@ -20,8 +22,6 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::str::FromStr;
-use support::NullTerminatedBuf;
-use support::{fetchurl, Timer};
 use url::{self, Url};
 
 #[derive(Debug, Copy, Clone, PartialEq)]

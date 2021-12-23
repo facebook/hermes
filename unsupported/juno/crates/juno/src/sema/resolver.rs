@@ -17,8 +17,8 @@ use crate::sema::keywords::Keywords;
 use crate::sema::known_globals::KNOWN_GLOBALS;
 use crate::source_manager::SourceId;
 use crate::{node_cast, node_isa};
+use juno_support::ScopedHashMap;
 use smallvec::SmallVec;
-use support::ScopedHashMap;
 
 #[derive(Debug)]
 struct Binding<'gc> {

@@ -56,21 +56,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "assert_cmd",
- "command_line",
- "juno",
- "pass",
- "sourcemap",
- "support",
- "toml",
- "url",
-]
-
-[[package]]
 name = "command_line"
 version = "0.1.0"
 
@@ -112,9 +97,9 @@ dependencies = [
 name = "hermes"
 version = "0.1.0"
 dependencies = [
+ "juno_support",
  "libc",
  "libcplusplus",
- "support",
  "thiserror",
  "toml",
 ]
@@ -147,13 +132,48 @@ name = "juno"
 version = "0.1.0"
 dependencies = [
  "hermes",
+ "juno_support",
  "libc",
  "memoffset",
  "paste",
  "smallvec",
  "sourcemap",
- "support",
  "thiserror",
+]
+
+[[package]]
+name = "juno_cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "assert_cmd",
+ "command_line",
+ "juno",
+ "juno_pass",
+ "juno_support",
+ "sourcemap",
+ "toml",
+ "url",
+]
+
+[[package]]
+name = "juno_pass"
+version = "0.1.0"
+dependencies = [
+ "juno",
+ "juno_support",
+]
+
+[[package]]
+name = "juno_support"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64 0.13.0",
+ "libcplusplus",
+ "thiserror",
+ "toml",
+ "url",
 ]
 
 [[package]]
@@ -207,14 +227,6 @@ name = "once_cell"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "692fcb63b64b1758029e0a96ee63e049ce8c5948587f2f7208df04625e5f6b56"
-
-[[package]]
-name = "pass"
-version = "0.1.0"
-dependencies = [
- "juno",
- "support",
-]
 
 [[package]]
 name = "paste"
@@ -369,18 +381,6 @@ dependencies = [
  "rustc_version",
  "serde",
  "serde_json",
- "url",
-]
-
-[[package]]
-name = "support"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "base64 0.13.0",
- "libcplusplus",
- "thiserror",
- "toml",
  "url",
 ]
 

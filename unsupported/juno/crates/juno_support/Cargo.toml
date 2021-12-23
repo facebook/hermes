@@ -1,5 +1,5 @@
 [package]
-name = "support"
+name = "juno_support"
 version = "0.1.0"
 authors = ["Facebook"]
 edition = "2018"

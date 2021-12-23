@@ -6,12 +6,12 @@
  */
 
 use crate::ast::*;
+use juno_support::convert;
 use sourcemap::{RawToken, SourceMap, SourceMapBuilder};
 use std::{
     fmt,
     io::{self, BufWriter, Write},
 };
-use support::convert;
 
 /// Whether to pretty-print the generated JS.
 /// Does not do full formatting of the source, but does add indentation and

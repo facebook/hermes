@@ -1,5 +1,5 @@
 [package]
-name = "cli"
+name = "juno_cli"
 version = "0.1.0"
 authors = ["Facebook"]
 edition = "2018"
@@ -10,9 +10,9 @@ name = "juno"
 path = "src/main.rs"
 
 [dependencies]
-support = { path = "../support" }
 juno = { path = "../juno" }
-pass = { path = "../pass" }
+juno_support = { path = "../juno_support" }
+juno_pass = { path = "../juno_pass" }
 command_line = { path = "../command_line" }
 anyhow = "1.0"
 url = "2.2.2"

@@ -6,7 +6,7 @@ edition = "2018"
 license = "MIT"
 
 [dependencies]
-support = { path = "../support" }
+juno_support = { path = "../juno_support" }
 libcplusplus = { path = "../libcplusplus" }
 libc = "0.2"
 thiserror = "1.0"

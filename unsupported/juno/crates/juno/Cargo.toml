@@ -7,7 +7,7 @@ license = "MIT"
 
 [dependencies]
 hermes = { path = "../hermes" }
-support = { path = "../support" }
+juno_support = { path = "../juno_support" }
 libc = "0.2"
 thiserror = "1.0"
 sourcemap = "6.0"

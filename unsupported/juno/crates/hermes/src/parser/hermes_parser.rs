@@ -7,11 +7,11 @@
 
 use super::node::{Node, NodePtr, NodePtrOpt, SMLoc, StringRef};
 use crate::utf::utf8_with_surrogates_to_string_lossy;
+use juno_support::NullTerminatedBuf;
 use std::fmt::Formatter;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 use std::os::raw::{c_char, c_uint};
-use support::NullTerminatedBuf;
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq)]

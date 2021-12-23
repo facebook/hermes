@@ -11,10 +11,10 @@ use super::{
     NodeString, PropertyKind, UnaryExpressionOperator, UpdateExpressionOperator,
     VariableDeclarationKind,
 };
+use juno_support::{case::ascii_snake_to_camel, json::*};
 use std::io::{self, Write};
-use support::{case::ascii_snake_to_camel, json::*};
 
-pub use support::json::Pretty;
+pub use juno_support::json::Pretty;
 
 /// Generate boilerplate code for the `NodeKind` enum.
 macro_rules! gen_dumper {

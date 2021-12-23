@@ -13,8 +13,8 @@ use convert::Converter;
 use generated_cvt::cvt_node_ptr;
 use hermes::parser::{HermesParser, NodePtr};
 use hermes::utf::utf8_with_surrogates_to_string_lossy;
+use juno_support::NullTerminatedBuf;
 use std::fmt::Formatter;
-use support::NullTerminatedBuf;
 use thiserror::Error;
 
 use crate::source_manager::SourceId;

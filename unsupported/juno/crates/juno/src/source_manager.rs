@@ -6,10 +6,10 @@
  */
 
 use crate::ast::SourceRange;
+use juno_support::NullTerminatedBuf;
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use support::NullTerminatedBuf;
 
 /// An opaque value identifying a source registered with SourceManager.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
