@@ -19,6 +19,20 @@ fn validate_src_with_flags(
     validate_tree(&mut ctx, &ast)
 }
 
+fn validate_src(src: &str) -> Result<(), TreeValidationError> {
+    validate_src_with_flags(Default::default(), src)
+}
+
+fn validate_src_jsx(src: &str) -> Result<(), TreeValidationError> {
+    validate_src_with_flags(
+        ParserFlags {
+            enable_jsx: true,
+            ..Default::default()
+        },
+        src,
+    )
+}
+
 fn validate_src_flow(src: &str) -> Result<(), TreeValidationError> {
     validate_src_with_flags(
         ParserFlags {
@@ -138,6 +152,31 @@ fn test_error() {
             assert_eq!(e[0].node, bad_ret);
         }
     }
+}
+
+#[test]
+fn test_literals() {
+    validate_src("({});").unwrap();
+    validate_src("({x: y});").unwrap();
+    validate_src("({x: y, ...z});").unwrap();
+    validate_src("[]").unwrap();
+    validate_src("[x, y, ...z]").unwrap();
+}
+
+#[test]
+fn test_calls() {
+    validate_src("foo()").unwrap();
+    validate_src("foo(1,2)").unwrap();
+    validate_src("foo(1,2,...bar)").unwrap();
+}
+
+#[test]
+fn test_jsx() {
+    validate_src_jsx("<foo />").unwrap();
+    validate_src_jsx("<foo bar={1} />").unwrap();
+    validate_src_jsx("<foo bar='abc' />").unwrap();
+    validate_src_jsx("<foo><bar></bar></foo>").unwrap();
+    validate_src_jsx("<foo><bar>abc</bar></foo>").unwrap();
 }
 
 #[test]

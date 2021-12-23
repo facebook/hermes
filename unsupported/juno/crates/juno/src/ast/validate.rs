@@ -107,7 +107,7 @@ impl<'gc> ValidChild<'gc> for &Node<'gc> {
         Err(ValidationError::new(
             ctx,
             node,
-            format!("Unexpected {:?}", self.variant()),
+            format!("Unexpected {:?} in {:?}", self.variant(), node.variant()),
         ))
     }
 }
@@ -131,7 +131,7 @@ impl<'gc> ValidChild<'gc> for NodeList<'gc> {
             return Err(ValidationError::new(
                 ctx,
                 node,
-                format!("Unexpected {:?}", elem.variant()),
+                format!("Unexpected {:?} in {:?}", elem.variant(), node.variant()),
             ));
         }
         Ok(())

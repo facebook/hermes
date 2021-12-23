@@ -156,7 +156,7 @@ macro_rules! nodekind_defs {
                 expressions: NodeList<'a>[Expression],
             },
             ObjectExpression[Expression] {
-                properties: NodeList<'a>[Property],
+                properties: NodeList<'a>[Property, SpreadElement],
             },
             ArrayExpression[Expression] {
                 elements: NodeList<'a>[Expression, SpreadElement, Empty],
@@ -184,12 +184,12 @@ macro_rules! nodekind_defs {
             CallExpression[Expression] {
                 callee: &'a Node<'a>[Expression, Super],
                 type_arguments: Option<&'a Node<'a>>[TypeParameterInstantiation],
-                arguments: NodeList<'a>[Expression],
+                arguments: NodeList<'a>[Expression, SpreadElement],
             },
             OptionalCallExpression[Expression] {
                 callee: &'a Node<'a>[Expression, Super],
                 type_arguments: Option<&'a Node<'a>>[TypeParameterInstantiation],
-                arguments: NodeList<'a>[Expression],
+                arguments: NodeList<'a>[Expression, SpreadElement],
                 optional: bool,
             },
             AssignmentExpression[Expression] {
@@ -292,7 +292,7 @@ macro_rules! nodekind_defs {
                 id: Option<&'a Node<'a>>[Identifier],
                 type_parameters: Option<&'a Node<'a>>[TypeParameterDeclaration],
                 super_class: Option<&'a Node<'a>>[Expression],
-                super_type_parameters: Option<&'a Node<'a>>[TypeParameterDeclaration],
+                super_type_parameters: Option<&'a Node<'a>>[TypeParameterInstantiation],
                 implements: NodeList<'a>[ClassImplements],
                 decorators: NodeList<'a>,
                 body: &'a Node<'a>[ClassBody],
@@ -346,10 +346,10 @@ macro_rules! nodekind_defs {
                 local: &'a Node<'a>[Identifier],
                 import_kind: ImportKind,
             },
-            ImportDefaultSpecifier {
+            ImportDefaultSpecifier[ImportSpecifier] {
                 local: &'a Node<'a>[Identifier],
             },
-            ImportNamespaceSpecifier {
+            ImportNamespaceSpecifier[ImportSpecifier] {
                 local: &'a Node<'a>[Identifier],
             },
             ImportAttribute {
@@ -357,7 +357,7 @@ macro_rules! nodekind_defs {
                 value: &'a Node<'a>[Expression],
             },
             ExportNamedDeclaration[Declaration] {
-                declaration: Option<&'a Node<'a>>[Declaration],
+                declaration: Option<&'a Node<'a>>[Declaration, Identifier],
                 specifiers: NodeList<'a>[ExportSpecifier],
                 source: Option<&'a Node<'a>>[StringLiteral],
                 export_kind: ExportKind,
@@ -370,18 +370,18 @@ macro_rules! nodekind_defs {
                 exported: &'a Node<'a>[Identifier],
             },
             ExportDefaultDeclaration[Declaration] {
-                declaration: &'a Node<'a>[Declaration],
+                declaration: &'a Node<'a>[Declaration, Expression],
             },
             ExportAllDeclaration[Declaration] {
                 source: &'a Node<'a>[StringLiteral],
                 export_kind: ExportKind,
             },
             ObjectPattern[Pattern] {
-                properties: NodeList<'a>[Property],
+                properties: NodeList<'a>[Property, RestElement],
                 type_annotation: Option<&'a Node<'a>>[TypeAnnotation],
             },
             ArrayPattern[Pattern] {
-                elements: NodeList<'a>[Pattern],
+                elements: NodeList<'a>[Pattern, RestElement],
                 type_annotation: Option<&'a Node<'a>>[TypeAnnotation],
             },
             RestElement[Pattern] {
@@ -396,47 +396,47 @@ macro_rules! nodekind_defs {
                 name: NodeLabel,
             },
             JSXMemberExpression {
-                object: &'a Node<'a>,
-                property: &'a Node<'a>,
+                object: &'a Node<'a>[JSXMemberExpression, JSXIdentifier],
+                property: &'a Node<'a>[JSXIdentifier],
             },
             JSXNamespacedName {
-                namespace: &'a Node<'a>,
-                name: &'a Node<'a>,
+                namespace: &'a Node<'a>[JSXIdentifier],
+                name: &'a Node<'a>[JSXIdentifier],
             },
-            JSXEmptyExpression,
-            JSXExpressionContainer {
-                expression: &'a Node<'a>,
+            JSXEmptyExpression[Expression],
+            JSXExpressionContainer[JSXChild] {
+                expression: &'a Node<'a>[Expression],
             },
-            JSXSpreadChild {
-                expression: &'a Node<'a>,
+            JSXSpreadChild[JSXChild] {
+                expression: &'a Node<'a>[Expression],
             },
             JSXOpeningElement {
-                name: &'a Node<'a>,
+                name: &'a Node<'a>[JSXIdentifier, JSXMemberExpression, JSXNamespacedName],
                 attributes: NodeList<'a>[JSXAttribute, JSXSpreadAttribute],
                 self_closing: bool,
             },
             JSXClosingElement {
-                name: &'a Node<'a>,
+                name: &'a Node<'a>[JSXIdentifier, JSXMemberExpression, JSXNamespacedName],
             },
             JSXAttribute {
-                name: &'a Node<'a>,
-                value: Option<&'a Node<'a>>,
+                name: &'a Node<'a>[JSXIdentifier, JSXMemberExpression, JSXNamespacedName],
+                value: Option<&'a Node<'a>>[JSXExpressionContainer, StringLiteral],
             },
             JSXSpreadAttribute {
-                argument: &'a Node<'a>,
+                argument: &'a Node<'a>[Expression],
             },
-            JSXText {
+            JSXText[JSXChild] {
                 value: NodeString,
                 raw: NodeLabel,
             },
             JSXElement[Expression] {
                 opening_element: &'a Node<'a>[JSXOpeningElement],
-                children: NodeList<'a>,
+                children: NodeList<'a>[JSXElement, JSXFragment, JSXChild],
                 closing_element: Option<&'a Node<'a>>[JSXClosingElement],
             },
             JSXFragment[Expression] {
                 opening_fragment: &'a Node<'a>[JSXOpeningFragment],
-                children: NodeList<'a>,
+                children: NodeList<'a>[JSXElement, JSXFragment, JSXChild],
                 closing_fragment: &'a Node<'a>[JSXClosingFragment],
             },
             JSXOpeningFragment,
@@ -469,7 +469,7 @@ macro_rules! nodekind_defs {
                 this: Option<&'a Node<'a>>[FunctionTypeParam],
                 return_type: &'a Node<'a>[FlowType],
                 rest: Option<&'a Node<'a>>[FunctionTypeParam],
-                type_parameters: Option<&'a Node<'a>>,
+                type_parameters: Option<&'a Node<'a>>[TypeParameterDeclaration],
             },
             FunctionTypeParam[FlowType] {
                 name: Option<&'a Node<'a>>[Identifier],
@@ -659,17 +659,17 @@ macro_rules! nodekind_defs {
                 body: &'a Node<'a>[FlowEnumBody],
             },
             EnumStringBody[FlowEnumBody] {
-                members: NodeList<'a>[EnumStringMember],
+                members: NodeList<'a>[EnumStringMember, EnumDefaultedMember],
                 explicit_type: bool,
                 has_unknown_members: bool,
             },
             EnumNumberBody[FlowEnumBody] {
-                members: NodeList<'a>[EnumNumberMember],
+                members: NodeList<'a>[EnumNumberMember, EnumDefaultedMember],
                 explicit_type: bool,
                 has_unknown_members: bool,
             },
             EnumBooleanBody[FlowEnumBody] {
-                members: NodeList<'a>[EnumBooleanMember],
+                members: NodeList<'a>[EnumBooleanMember, EnumDefaultedMember],
                 explicit_type: bool,
                 has_unknown_members: bool,
             },
