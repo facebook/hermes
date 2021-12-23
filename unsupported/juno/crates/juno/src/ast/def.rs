@@ -35,6 +35,9 @@ macro_rules! nodekind_defs {
             Program {
                 body: NodeList<'a>[Directive, Statement],
             },
+            Module {
+                body: NodeList<'a>[Directive, Statement],
+            },
             FunctionExpression[Expression] {
                 id: Option<&'a Node<'a>>[Identifier],
                 params: NodeList<'a>[Pattern],

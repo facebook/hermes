@@ -13,6 +13,7 @@ pub(super) struct Keywords {
     pub ident_let: Atom,
     pub ident_new: Atom,
     pub ident_target: Atom,
+    pub ident_require: Atom,
 }
 
 impl Keywords {
@@ -23,6 +24,7 @@ impl Keywords {
             ident_let: tab.atom("let"),
             ident_new: tab.atom("new"),
             ident_target: tab.atom("target"),
+            ident_require: tab.atom("require"),
         }
     }
 }

@@ -7,6 +7,7 @@
 
 use crate::ast::SourceRange;
 use std::cell::UnsafeCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 use support::NullTerminatedBuf;
 
@@ -38,6 +39,7 @@ struct Inner {
 #[derive(Debug, Default)]
 pub struct SourceManager {
     sources: Vec<(String, Rc<NullTerminatedBuf>)>,
+    filenames: HashMap<String, SourceId>,
     inner: UnsafeCell<Inner>,
 }
 
@@ -52,8 +54,11 @@ impl SourceManager {
             self.sources.len() < SourceId::INVALID.0 as usize,
             "Too many sources",
         );
-        self.sources.push((name.into(), Rc::new(buf)));
-        SourceId(self.sources.len() as u32 - 1)
+        let id = SourceId(self.sources.len() as u32);
+        let name_str = name.into();
+        self.filenames.insert(name_str.clone(), id);
+        self.sources.push((name_str, Rc::new(buf)));
+        id
     }
 
     /// Obtain the name of a previously registered source buffer.
@@ -69,6 +74,11 @@ impl SourceManager {
     /// Obtain a Rc of a previously registered source buffer.
     pub fn source_buffer_rc(&self, source_id: SourceId) -> Rc<NullTerminatedBuf> {
         Rc::clone(&self.sources[source_id.as_usize()].1)
+    }
+
+    /// Get the `SourceId` for a given file `name`.
+    pub fn lookup_name<S: AsRef<str>>(&self, name: S) -> Option<SourceId> {
+        self.filenames.get(name.as_ref()).copied()
     }
 
     /// Gain mutable access to the mutable inner object.

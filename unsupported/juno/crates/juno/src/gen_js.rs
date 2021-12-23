@@ -280,6 +280,9 @@ impl<W: Write> GenJS<W> {
             Node::Program(Program { metadata: _, body }) => {
                 self.visit_stmt_list(ctx, body, Path::new(node, NodeField::body));
             }
+            Node::Module(Module { metadata: _, body }) => {
+                self.visit_stmt_list(ctx, body, Path::new(node, NodeField::body));
+            }
 
             Node::FunctionExpression(FunctionExpression {
                 metadata: _,

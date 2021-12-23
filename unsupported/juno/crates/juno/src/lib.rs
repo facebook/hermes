@@ -8,6 +8,7 @@
 pub mod ast;
 pub mod gen_js;
 pub mod hparser;
+pub mod resolve_dependency;
 pub mod sema;
 pub mod source_manager;
 pub mod sourcemap;

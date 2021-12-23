@@ -465,7 +465,7 @@ fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
 
     if *opt.sema {
         let lock = ast::GCLock::new(&mut ctx);
-        let sem = sema::resolve_program(&lock, ast.node(&lock));
+        let sem = sema::resolve_program(&lock, file_id, ast.node(&lock));
         println!(
             "{} error(s), {} warning(s)",
             lock.sm().num_errors(),

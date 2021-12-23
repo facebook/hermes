@@ -18,5 +18,5 @@ mod known_globals;
 mod resolver;
 mod sem_context;
 
-pub use resolver::resolve_program;
+pub use resolver::{resolve_module, resolve_program};
 pub use sem_context::*;
