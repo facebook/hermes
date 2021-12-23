@@ -1026,6 +1026,36 @@ impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
                 }
             }
 
+            Node::ImportDeclaration(ast::ImportDeclaration {
+                source: Node::StringLiteral(ast::StringLiteral { value, .. }),
+                ..
+            }) => {
+                node.visit_children(lock, self);
+                if let ResolverMode::Module {
+                    dependency_resolver,
+                } = self.mode
+                {
+                    // Resolve `import`.
+                    let target = String::from_utf16_lossy(&value.str);
+                    match dependency_resolver.resolve_dependency(
+                        lock,
+                        self.file_id,
+                        &target,
+                        DependencyKind::Import,
+                    ) {
+                        Some(file_id) => {
+                            self.sem.add_require(NodeRc::from_node(lock, node), file_id);
+                        }
+                        None => {
+                            lock.sm().warning(
+                                *node.range(),
+                                format!("Unable to resolve import for {}", target),
+                            );
+                        }
+                    }
+                }
+            }
+
             Node::CallExpression(call @ ast::CallExpression { arguments, .. }) => {
                 node.visit_children(lock, self);
                 if let ResolverMode::Module {

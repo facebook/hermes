@@ -7,8 +7,10 @@
 
 // RUN: %juno %s %S/simple-2.js %S/simple-3.js | %FileCheck %s --match-full-lines
 
+import 'simple-3';
+
 require('./simple-2.js');
 require('simple-3');
 
 // CHECK-LABEL: Module: {{.*}}/simple-1.js
-// CHECK: 2 require resolutions
+// CHECK: 3 require resolutions
