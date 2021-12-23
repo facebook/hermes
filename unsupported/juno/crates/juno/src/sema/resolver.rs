@@ -7,16 +7,16 @@
 
 use super::sem_context::*;
 use crate::ast::{
-    self, builder, template, Atom, GCLock, Identifier, Node, NodeField, NodeList, NodeRc,
-    NodeVariant, Path, SourceRange, TemplateMetadata, UnaryExpressionOperator,
-    VariableDeclarationKind, Visitor,
+    self, builder, node_cast, node_isa, template, GCLock, Identifier, Node, NodeField, NodeList,
+    NodeRc, NodeVariant, Path, TemplateMetadata, UnaryExpressionOperator, VariableDeclarationKind,
+    Visitor,
 };
 use crate::resolve_dependency::{DependencyKind, DependencyResolver};
 use crate::sema::decl_collector::DeclCollector;
 use crate::sema::keywords::Keywords;
 use crate::sema::known_globals::KNOWN_GLOBALS;
-use crate::source_manager::SourceId;
-use crate::{node_cast, node_isa};
+use juno_support::atom_table::Atom;
+use juno_support::source_manager::{SourceId, SourceRange};
 use juno_support::ScopedHashMap;
 use smallvec::SmallVec;
 

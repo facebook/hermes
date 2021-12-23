@@ -7,7 +7,7 @@
 
 use super::generated_cvt::cvt_node_ptr;
 use crate::ast;
-use crate::source_manager::SourceId;
+use crate::ast::SourceId;
 use hermes::parser::{
     DataRef, HermesParser, NodeLabel, NodeLabelOpt, NodeListOptRef, NodeListRef, NodePtr,
     NodePtrOpt, NodeString, NodeStringOpt, SMLoc,
@@ -15,6 +15,7 @@ use hermes::parser::{
 use hermes::utf::{
     is_utf8_continuation, utf8_with_surrogates_to_string, utf8_with_surrogates_to_utf16,
 };
+use juno_support::atom_table;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::str::FromStr;
@@ -49,7 +50,7 @@ pub struct Converter<'parser> {
     /// Map from NodeLabel, which has been uniqued in Hermes, to an
     /// ast::Identifier. This allows us to avoid repeated conversion of the same
     /// NodeLabel.
-    atom_tab: HashMap<NodeLabel, ast::Atom>,
+    atom_tab: HashMap<NodeLabel, atom_table::Atom>,
 }
 
 /// Adjust the source location backwards making sure it doesn't point to \r or

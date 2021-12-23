@@ -132,12 +132,20 @@ name = "juno"
 version = "0.1.0"
 dependencies = [
  "hermes",
+ "juno_ast",
+ "juno_support",
+ "smallvec",
+ "sourcemap",
+ "thiserror",
+]
+
+[[package]]
+name = "juno_ast"
+version = "0.1.0"
+dependencies = [
  "juno_support",
  "libc",
  "memoffset",
- "paste",
- "smallvec",
- "sourcemap",
  "thiserror",
 ]
 
@@ -227,12 +235,6 @@ name = "once_cell"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "692fcb63b64b1758029e0a96ee63e049ce8c5948587f2f7208df04625e5f6b56"
-
-[[package]]
-name = "paste"
-version = "1.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
 
 [[package]]
 name = "percent-encoding"

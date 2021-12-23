@@ -26,10 +26,12 @@
 //!
 //! Visitor patterns are provided by [`Visitor`] and [`VisitorMut`].
 
-use crate::source_manager::{SourceId, SourceManager};
+use juno_support::atom_table::{Atom, AtomTable};
 use juno_support::define_str_enum;
 use libc::c_void;
 use memoffset::offset_of;
+use std::hash::{Hash, Hasher};
+use std::ops::Deref;
 use std::{
     cell::{Cell, UnsafeCell},
     fmt,
@@ -42,11 +44,12 @@ use thiserror::Error;
 
 #[macro_use]
 mod def;
-mod atom_table;
 mod dump;
 mod field;
 mod kind;
 mod validate;
+
+pub use juno_support::source_manager::{SourceId, SourceLoc, SourceManager, SourceRange};
 
 pub use field::NodeField;
 pub use kind::NodeVariant;
@@ -54,10 +57,6 @@ pub use kind::NodeVariant;
 pub use dump::{dump_json, Pretty};
 pub use kind::*;
 pub use validate::{validate_tree, validate_tree_pure, TreeValidationError, ValidationError};
-
-pub use atom_table::{Atom, AtomTable, INVALID_ATOM};
-use std::hash::{Hash, Hasher};
-use std::ops::Deref;
 
 /// ID which indicates a `StorageEntry` is free.
 const FREE_ENTRY: u32 = 0;
@@ -662,32 +661,6 @@ pub trait VisitorMut<'gc> {
     ) -> TransformResult<&'gc Node<'gc>>;
 }
 
-/// A source range within a single JS file.
-///
-/// Represented as a closed interval: [start, end].
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct SourceRange {
-    /// Index of the file this range is in.
-    pub file: SourceId,
-
-    /// Start of the source range, inclusive.
-    pub start: SourceLoc,
-
-    /// End of the source range, inclusive.
-    pub end: SourceLoc,
-}
-
-impl SourceRange {
-    /// Create a SourceRange describing a single location.
-    pub fn from_loc(file: SourceId, start: SourceLoc) -> SourceRange {
-        SourceRange {
-            file,
-            start,
-            end: start,
-        }
-    }
-}
-
 /// Metadata common to all AST nodes.
 ///
 /// Stored inside [`Node`] and must not be constructed directly by users.
@@ -727,23 +700,6 @@ impl Default for TemplateMetadata<'_> {
                 end: SourceLoc::invalid(),
             },
         }
-    }
-}
-
-/// Line and column of a file.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct SourceLoc {
-    /// 1-based line number.
-    pub line: u32,
-
-    /// 1-based column number.
-    pub col: u32,
-}
-
-impl SourceLoc {
-    /// Return an instance of SourceLoc initialized to an invalid value.
-    pub fn invalid() -> SourceLoc {
-        SourceLoc { line: 0, col: 0 }
     }
 }
 

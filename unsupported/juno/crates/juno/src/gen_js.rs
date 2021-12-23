@@ -6,7 +6,7 @@
  */
 
 use crate::ast::*;
-use juno_support::convert;
+use juno_support::{convert, source_manager::SourceLoc};
 use sourcemap::{RawToken, SourceMap, SourceMapBuilder};
 use std::{
     fmt,
@@ -686,7 +686,7 @@ impl<W: Write> GenJS<W> {
                 out!(self, "(");
                 test.visit(ctx, self, Some(Path::new(node, NodeField::test)));
                 out!(self, ")");
-                let force_block = if alternate.is_some() && consequent.is_if_without_else() {
+                let force_block = if alternate.is_some() && is_if_without_else(consequent) {
                     ForceBlock::Yes
                 } else {
                     ForceBlock::No
@@ -3455,16 +3455,16 @@ impl<W: Write> GenJS<W> {
                         | Node::ObjectPattern(_)
                 )
             }));
-        } else if (path.parent.is_unary_op(UnaryExpressionOperator::Minus)
-            && self.root_starts_with(ctx, child, Node::check_minus))
-            || (path.parent.is_unary_op(UnaryExpressionOperator::Plus)
-                && self.root_starts_with(ctx, child, Node::check_plus))
+        } else if (is_unary_op(path.parent, UnaryExpressionOperator::Minus)
+            && self.root_starts_with(ctx, child, check_minus))
+            || (is_unary_op(path.parent, UnaryExpressionOperator::Plus)
+                && self.root_starts_with(ctx, child, check_plus))
             || (child_pos == ChildPos::Right
-                && path.parent.is_binary_op(BinaryExpressionOperator::Minus)
-                && self.root_starts_with(ctx, child, Node::check_minus))
+                && is_binary_op(path.parent, BinaryExpressionOperator::Minus)
+                && self.root_starts_with(ctx, child, check_minus))
             || (child_pos == ChildPos::Right
-                && path.parent.is_binary_op(BinaryExpressionOperator::Plus)
-                && self.root_starts_with(ctx, child, Node::check_plus))
+                && is_binary_op(path.parent, BinaryExpressionOperator::Plus)
+                && self.root_starts_with(ctx, child, check_plus))
         {
             // -(-x) or -(--x) or -(-5)
             // +(+x) or +(++x)
@@ -3487,8 +3487,8 @@ impl<W: Write> GenJS<W> {
             // we need the left hand side to be pathhesized.
             // Avoids confusing `(a?.b).c` with `a?.b.c`.
             return NeedParens::Yes;
-        } else if (path.parent.check_and_or() && child.check_nullish())
-            || (path.parent.check_nullish() && child.check_and_or())
+        } else if (check_and_or(path.parent) && check_nullish(child))
+            || (check_nullish(path.parent) && check_and_or(child))
         {
             // Nullish coalescing always requires parens when mixed with any
             // other logical operations.
@@ -3676,93 +3676,91 @@ impl<'gc, W: Write> Visitor<'gc> for GenJS<W> {
     }
 }
 
-impl Node<'_> {
-    fn is_unary_op(&self, op: UnaryExpressionOperator) -> bool {
-        match self {
-            Node::UnaryExpression(UnaryExpression {
-                metadata: _,
-                operator,
-                ..
-            }) => *operator == op,
-            _ => false,
-        }
+fn is_unary_op(node: &Node, op: UnaryExpressionOperator) -> bool {
+    match node {
+        Node::UnaryExpression(UnaryExpression {
+            metadata: _,
+            operator,
+            ..
+        }) => *operator == op,
+        _ => false,
     }
+}
 
-    fn is_update_prefix(&self, op: UpdateExpressionOperator) -> bool {
-        match self {
-            Node::UpdateExpression(UpdateExpression {
-                metadata: _,
-                prefix,
-                operator,
-                ..
-            }) => *prefix && *operator == op,
-            _ => false,
-        }
+fn is_update_prefix(node: &Node, op: UpdateExpressionOperator) -> bool {
+    match node {
+        Node::UpdateExpression(UpdateExpression {
+            metadata: _,
+            prefix,
+            operator,
+            ..
+        }) => *prefix && *operator == op,
+        _ => false,
     }
+}
 
-    fn is_negative_number(&self) -> bool {
-        match self {
-            Node::NumericLiteral(NumericLiteral {
-                metadata: _, value, ..
-            }) => *value < 0f64,
-            _ => false,
-        }
+fn is_negative_number(node: &Node) -> bool {
+    match node {
+        Node::NumericLiteral(NumericLiteral {
+            metadata: _, value, ..
+        }) => *value < 0f64,
+        _ => false,
     }
+}
 
-    fn is_binary_op(&self, op: BinaryExpressionOperator) -> bool {
-        match self {
-            Node::BinaryExpression(BinaryExpression {
-                metadata: _,
-                operator,
-                ..
-            }) => *operator == op,
-            _ => false,
-        }
+fn is_binary_op(node: &Node, op: BinaryExpressionOperator) -> bool {
+    match node {
+        Node::BinaryExpression(BinaryExpression {
+            metadata: _,
+            operator,
+            ..
+        }) => *operator == op,
+        _ => false,
     }
+}
 
-    fn is_if_without_else(&self) -> bool {
-        match self {
-            Node::IfStatement(IfStatement {
-                metadata: _,
-                alternate,
-                ..
-            }) => alternate.is_none(),
-            _ => false,
-        }
+fn is_if_without_else(node: &Node) -> bool {
+    match node {
+        Node::IfStatement(IfStatement {
+            metadata: _,
+            alternate,
+            ..
+        }) => alternate.is_none(),
+        _ => false,
     }
+}
 
-    fn check_plus(&self) -> bool {
-        self.is_unary_op(UnaryExpressionOperator::Plus)
-            || self.is_update_prefix(UpdateExpressionOperator::Increment)
-    }
+fn check_plus(node: &Node) -> bool {
+    is_unary_op(node, UnaryExpressionOperator::Plus)
+        || is_update_prefix(node, UpdateExpressionOperator::Increment)
+}
 
-    fn check_minus(&self) -> bool {
-        self.is_unary_op(UnaryExpressionOperator::Minus)
-            || self.is_update_prefix(UpdateExpressionOperator::Decrement)
-            || self.is_negative_number()
-    }
+fn check_minus(node: &Node) -> bool {
+    is_unary_op(node, UnaryExpressionOperator::Minus)
+        || is_update_prefix(node, UpdateExpressionOperator::Decrement)
+        || is_negative_number(node)
+}
 
-    fn check_and_or(&self) -> bool {
-        matches!(
-            self,
-            Node::LogicalExpression(LogicalExpression {
-                metadata: _,
-                operator: LogicalExpressionOperator::And | LogicalExpressionOperator::Or,
-                ..
-            })
-        )
-    }
+fn check_and_or(node: &Node) -> bool {
+    matches!(
+        node,
+        Node::LogicalExpression(LogicalExpression {
+            metadata: _,
+            operator: LogicalExpressionOperator::And | LogicalExpressionOperator::Or,
+            ..
+        })
+    )
+}
 
-    fn check_nullish(&self) -> bool {
-        matches!(
-            self,
-            Node::LogicalExpression(LogicalExpression {
-                metadata: _,
-                operator: LogicalExpressionOperator::NullishCoalesce,
-                ..
-            })
-        )
-    }
+fn check_nullish(node: &Node) -> bool {
+    matches!(
+        node,
+        Node::LogicalExpression(LogicalExpression {
+            metadata: _,
+            operator: LogicalExpressionOperator::NullishCoalesce,
+            ..
+        })
+    )
 }
 
 /// Whether to skip the semicolon at the end of `node`.

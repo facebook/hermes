@@ -5,11 +5,53 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::ast::SourceRange;
-use juno_support::NullTerminatedBuf;
+use crate::NullTerminatedBuf;
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+
+/// A source range within a single JS file.
+///
+/// Represented as a closed interval: [start, end].
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct SourceRange {
+    /// Index of the file this range is in.
+    pub file: SourceId,
+
+    /// Start of the source range, inclusive.
+    pub start: SourceLoc,
+
+    /// End of the source range, inclusive.
+    pub end: SourceLoc,
+}
+
+impl SourceRange {
+    /// Create a SourceRange describing a single location.
+    pub fn from_loc(file: SourceId, start: SourceLoc) -> SourceRange {
+        SourceRange {
+            file,
+            start,
+            end: start,
+        }
+    }
+}
+
+/// Line and column of a file.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct SourceLoc {
+    /// 1-based line number.
+    pub line: u32,
+
+    /// 1-based column number.
+    pub col: u32,
+}
+
+impl SourceLoc {
+    /// Return an instance of SourceLoc initialized to an invalid value.
+    pub fn invalid() -> SourceLoc {
+        SourceLoc { line: 0, col: 0 }
+    }
+}
 
 /// An opaque value identifying a source registered with SourceManager.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]

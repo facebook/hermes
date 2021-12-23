@@ -5,10 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::{
-    ast::GCLock,
-    source_manager::{SourceId, SourceManager},
-};
+use crate::ast::GCLock;
+use juno_support::source_manager::{SourceId, SourceManager};
 use std::{
     collections::HashMap,
     path::{Component, Path, PathBuf},

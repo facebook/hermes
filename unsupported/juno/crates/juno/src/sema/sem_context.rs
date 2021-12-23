@@ -5,8 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::ast::{Atom, NodeRc};
-use crate::source_manager::SourceId;
+use crate::ast::NodeRc;
+use juno_support::atom_table::Atom;
+use juno_support::source_manager::SourceId;
 use std::collections::HashMap;
 use std::num::NonZeroU32;
 

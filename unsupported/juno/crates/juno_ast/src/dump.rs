@@ -35,7 +35,7 @@ macro_rules! gen_dumper {
             node: &'gc Node<'gc>,
             emitter: &mut JSONEmitter<W>,
         ) {
-            use crate::ast::*;
+            use crate::*;
             emitter.open_dict();
             emitter.emit_key("type");
             emitter.emit_string(node.name());

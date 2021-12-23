@@ -18,7 +18,9 @@ pub use scoped_hashmap::ScopedHashMap;
 #[allow(unused_macros)]
 pub mod str_enum;
 
+pub mod atom_table;
 pub mod case;
 pub mod convert;
 pub mod fetchurl;
 pub mod json;
+pub mod source_manager;

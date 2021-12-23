@@ -7,12 +7,12 @@
 
 use anyhow::{self, ensure, Context, Error};
 use command_line::{CommandLine, Hidden, Opt, OptDesc};
-use juno::ast::{self, validate_tree, NodeRc, SourceRange};
+use juno::ast::{self, node_cast, validate_tree, NodeRc, SourceRange};
 use juno::hparser::{self, MagicCommentKind, ParsedJS, ParserDialect};
-use juno::source_manager::SourceId;
 use juno::sourcemap::merge_sourcemaps;
-use juno::{gen_js, node_cast, resolve_dependency, sema};
+use juno::{gen_js, resolve_dependency, sema};
 use juno_pass::PassManager;
+use juno_support::source_manager::SourceId;
 use juno_support::NullTerminatedBuf;
 use juno_support::{fetchurl, Timer};
 use sourcemap::SourceMap;

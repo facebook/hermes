@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use juno::{ast::*, hparser, node_cast};
+use juno::ast::{node_cast, *};
+use juno::hparser;
 
 mod validate;
 
