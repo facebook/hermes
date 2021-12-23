@@ -5,8 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::{ast::GCLock, source_manager::SourceId};
-use std::path::{Component, PathBuf};
+use crate::{
+    ast::GCLock,
+    source_manager::{SourceId, SourceManager},
+};
+use std::{
+    collections::HashMap,
+    path::{Component, Path, PathBuf},
+};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum DependencyKind {
@@ -28,11 +34,30 @@ pub trait DependencyResolver {
 }
 
 #[derive(Debug, Default)]
-pub struct DefaultResolver {}
+pub struct DefaultResolver {
+    /// Modules with unique names, allowing `require` to avoid specifying the full path.
+    /// e.g. given `/foo/bar/baz.js`, we store `baz` as the key in this map.
+    module_names: HashMap<String, SourceId>,
+}
 
 impl DefaultResolver {
-    pub fn new() -> Self {
-        Default::default()
+    pub fn new(source_manager: &SourceManager) -> Self {
+        let mut module_names = HashMap::new();
+
+        for i in 0..source_manager.num_sources() {
+            let id = SourceId(i as u32);
+            let name = source_manager.source_name(id);
+            let name_str: String = name.into();
+
+            let stem = Path::new(&name_str)
+                .file_stem()
+                .expect("Module filename must not be empty")
+                .to_str()
+                .expect("Module filename must be valid unicode");
+            module_names.insert(stem.to_string(), id);
+        }
+
+        DefaultResolver { module_names }
     }
 }
 
@@ -58,8 +83,7 @@ impl DependencyResolver for DefaultResolver {
                 lock.sm().lookup_name(&filename)
             })
         } else {
-            // TODO: Absolute path resolution
-            None
+            self.module_names.get(path).copied()
         }
     }
 }

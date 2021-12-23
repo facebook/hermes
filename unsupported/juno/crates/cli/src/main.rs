@@ -546,7 +546,7 @@ fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
 
         if *opt.sema {
             let mut sems = Vec::new();
-            let resolver = resolve_dependency::DefaultResolver::new();
+            let resolver = resolve_dependency::DefaultResolver::new(ctx.sm());
             for module in js_modules.into_values() {
                 let lock = ast::GCLock::new(&mut ctx);
                 let sem = sema::resolve_module(&lock, module.ast.node(&lock), module.id, &resolver);

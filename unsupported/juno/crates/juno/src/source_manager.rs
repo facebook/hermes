@@ -61,6 +61,11 @@ impl SourceManager {
         id
     }
 
+    /// Obtain the number of registered sources.
+    pub fn num_sources(&self) -> usize {
+        self.sources.len()
+    }
+
     /// Obtain the name of a previously registered source buffer.
     pub fn source_name(&self, source_id: SourceId) -> &str {
         self.sources[source_id.as_usize()].0.as_str()

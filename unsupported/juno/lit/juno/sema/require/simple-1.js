@@ -5,9 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %juno %s %S/simple-2.js | %FileCheck %s --match-full-lines
+// RUN: %juno %s %S/simple-2.js %S/simple-3.js | %FileCheck %s --match-full-lines
 
 require('./simple-2.js');
+require('simple-3');
 
 // CHECK-LABEL: Module: {{.*}}/simple-1.js
-// CHECK: 1 require resolutions
+// CHECK: 2 require resolutions
