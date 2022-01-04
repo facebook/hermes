@@ -48,6 +48,9 @@ module.exports = {
     'flowtype/array-style-simple-type': ['error', 'verbose'],
 
     'prettier/prettier': 'error',
+
+    'no-undef': 'off',
+    'flowtype/define-flow-type': 'off',
   },
   overrides: [
     {

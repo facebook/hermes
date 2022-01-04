@@ -6,7 +6,24 @@
  */
 
 module.exports = {
-  presets: ['@babel/preset-env'],
+  assumptions: {
+    constantReexports: true,
+    constantSuper: true,
+    noClassCalls: true,
+    noDocumentAll: true,
+    noNewArrows: true,
+    setPublicClassFields: true,
+  },
+  presets: [
+    [
+      '@babel/preset-env',
+      {
+        targets: {
+          node: '12.0.0',
+        },
+      },
+    ],
+  ],
   plugins: [
     [
       '@babel/plugin-transform-flow-strip-types',

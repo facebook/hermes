@@ -4,6 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @flow strict-local
  * @format
  */
 
@@ -32,7 +33,8 @@
 */
 'use strict';
 
-const {parseForESLint} = require('./eslint-scope-test-utils');
+import {DefinitionType} from '../../src/scope-manager/definition/DefinitionType';
+import {parseForESLint} from './eslint-scope-test-utils';
 
 describe('ES6 rest arguments', () => {
   it('materialize rest argument in scope', () => {
@@ -56,7 +58,13 @@ describe('ES6 rest arguments', () => {
     expect(scope.variables).toHaveLength(2);
     expect(scope.variables[0].name).toEqual('arguments');
     expect(scope.variables[1].name).toEqual('bar');
-    expect(scope.variables[1].defs[0].name.name).toEqual('bar');
-    expect(scope.variables[1].defs[0].rest).toBe(true);
+    expect(
+      scope.variables[1].defs[0].name.type === 'Identifier' &&
+        scope.variables[1].defs[0].name.name,
+    ).toEqual('bar');
+    expect(
+      scope.variables[1].defs[0].type === DefinitionType.Parameter &&
+        scope.variables[1].defs[0].rest,
+    ).toBe(true);
   });
 });

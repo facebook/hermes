@@ -10,7 +10,7 @@
 
 'use strict';
 
-const {parseForESLint} = require('hermes-eslint');
+const {parseForESLint} = require('../src');
 
 test('Parser produces ESTree AST', () => {
   expect(parseForESLint('const x = 1').ast).toMatchObject({

@@ -4,6 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @flow strict-local
  * @format
  */
 
@@ -32,7 +33,7 @@
 */
 'use strict';
 
-const {parseForESLint} = require('./eslint-scope-test-utils');
+import {parseForESLint} from './eslint-scope-test-utils';
 
 describe('catch', () => {
   it('creates scope', () => {
@@ -56,7 +57,6 @@ describe('catch', () => {
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(1);
     expect(scope.variables[0].name).toEqual('arguments');
-    expect(scope.isArgumentsMaterialized()).toBe(false);
     expect(scope.references).toHaveLength(0);
 
     scope = scopeManager.scopes[2];
@@ -68,7 +68,6 @@ describe('catch', () => {
     expect(scope.type).toEqual('catch');
     expect(scope.variables).toHaveLength(1);
     expect(scope.variables[0].name).toEqual('e');
-    expect(scope.isArgumentsMaterialized()).toBe(true);
     expect(scope.references).toHaveLength(0);
 
     scope = scopeManager.scopes[4];

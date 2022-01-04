@@ -4,6 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @flow strict-local
  * @format
  */
 
@@ -32,17 +33,19 @@
 */
 'use strict';
 
-const visit = require('esrecurse').visit;
-const {parse} = require('../../dist');
-const HermesScopeManager = require('../../dist/HermesScopeManager');
+// $FlowExpectedError[untyped-import]
+import {visit} from 'esrecurse';
+import {parse} from '../../src';
+import {analyze} from '../../src/scope-manager';
 
 describe('ScopeManager.prototype.getDeclaredVariables', () => {
   function verify(ast, type, expectedNamesList) {
-    const scopeManager = HermesScopeManager.create(ast, {
+    const scopeManager = analyze(ast, {
       sourceType: 'module',
     });
 
     visit(ast, {
+      // $FlowExpectedError[invalid-computed-prop]
       [type](node) {
         const expected = expectedNamesList.shift();
         const actual = scopeManager.getDeclaredVariables(node);
@@ -56,6 +59,7 @@ describe('ScopeManager.prototype.getDeclaredVariables', () => {
           }
         }
 
+        // $FlowExpectedError[object-this-reference]
         this.visitChildren(node);
       },
     });
