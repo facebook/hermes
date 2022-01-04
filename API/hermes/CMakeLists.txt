@@ -24,6 +24,8 @@ target_include_directories(hermesapiLean PUBLIC ..)
 add_hermes_library(synthTrace hermes_tracing.cpp SynthTrace.cpp TracingRuntime.cpp
   LINK_LIBS hermesapi)
 
+add_hermes_library(timerStats TimerStats.cpp LINK_LIBS hermesapi)
+
 add_hermes_library(traceInterpreter TraceInterpreter.cpp
   LINK_LIBS hermesapi hermesInstrumentation synthTrace synthTraceParser)
 
