@@ -792,8 +792,8 @@ bail:
       ip,
       nullptr,
       0,
-      nullptr,
-      false);
+      HermesValue::encodeEmptyValue(),
+      HermesValue::encodeEmptyValue());
 
   // Restore "thisArg" and clear the scratch register to avoid a leak.
   originalCalleeFrame.getThisArgRef() = callerFrame.getScratchRef();

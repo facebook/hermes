@@ -156,7 +156,11 @@ TEST_F(ObjectBufferTest, TestNewObjectWithBuffer) {
   CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
   {
     ScopedNativeCallFrame frame{
-        runtime, 0, nullptr, false, HermesValue::encodeUndefinedValue()};
+        runtime,
+        0,
+        HermesValue::encodeUndefinedValue(),
+        HermesValue::encodeUndefinedValue(),
+        HermesValue::encodeUndefinedValue()};
     status = runtime->interpretFunction(codeBlock);
   }
   auto frames = runtime->getStackFrames();

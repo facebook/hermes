@@ -203,7 +203,11 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
   CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
   {
     ScopedNativeCallFrame frame(
-        runtime, 0, nullptr, false, HermesValue::encodeUndefinedValue());
+        runtime,
+        0,
+        HermesValue::encodeUndefinedValue(),
+        HermesValue::encodeUndefinedValue(),
+        HermesValue::encodeUndefinedValue());
     ASSERT_FALSE(frame.overflowed());
     status = runtime->interpretFunction(codeBlock);
   }
@@ -265,7 +269,11 @@ L2:
   CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
   {
     ScopedNativeCallFrame newFrame(
-        runtime, 1, nullptr, false, HermesValue::encodeUndefinedValue());
+        runtime,
+        1,
+        HermesValue::encodeUndefinedValue(),
+        HermesValue::encodeUndefinedValue(),
+        HermesValue::encodeUndefinedValue());
     ASSERT_FALSE(newFrame.overflowed());
     newFrame->getArgRef(0) = HermesValue::encodeDoubleValue(5);
     status = runtime->interpretFunction(codeBlock);
@@ -354,7 +362,11 @@ L1:
     CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
     {
       ScopedNativeCallFrame newFrame(
-          runtime, 1, nullptr, false, HermesValue::encodeUndefinedValue());
+          runtime,
+          1,
+          HermesValue::encodeUndefinedValue(),
+          HermesValue::encodeUndefinedValue(),
+          HermesValue::encodeUndefinedValue());
       ASSERT_FALSE(newFrame.overflowed());
       newFrame->getArgRef(0) = HermesValue::encodeDoubleValue(2);
       status = runtime->interpretFunction(codeBlock);
@@ -372,7 +384,11 @@ L1:
     CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
     {
       ScopedNativeCallFrame newFrame(
-          runtime, 1, nullptr, false, HermesValue::encodeUndefinedValue());
+          runtime,
+          1,
+          HermesValue::encodeUndefinedValue(),
+          HermesValue::encodeUndefinedValue(),
+          HermesValue::encodeUndefinedValue());
       ASSERT_FALSE(newFrame.overflowed());
       newFrame->getArgRef(0) = HermesValue::encodeDoubleValue(5);
       status = runtime->interpretFunction(codeBlock);

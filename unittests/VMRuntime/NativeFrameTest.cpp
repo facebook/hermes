@@ -18,7 +18,11 @@ static unsigned makeFramesUntilOverflow(
     Runtime *runtime,
     ScopedNativeCallFrame *prev) {
   ScopedNativeCallFrame frame{
-      runtime, 0, nullptr, false, HermesValue::encodeUndefinedValue()};
+      runtime,
+      0,
+      HermesValue::encodeUndefinedValue(),
+      HermesValue::encodeUndefinedValue(),
+      HermesValue::encodeUndefinedValue()};
   if (frame.overflowed())
     return 0;
   EXPECT_TRUE(!prev || (*prev)->ptr() < frame->ptr());
@@ -39,14 +43,22 @@ TEST_F(NativeFrameTest, OverflowTest) {
 TEST_F(NativeFrameTest, PoisonedStackTest) {
   // Verify that stack frames are poisoned.
   ScopedNativeCallFrame frame{
-      runtime, 0, nullptr, false, HermesValue::encodeUndefinedValue()};
+      runtime,
+      0,
+      HermesValue::encodeUndefinedValue(),
+      HermesValue::encodeUndefinedValue(),
+      HermesValue::encodeUndefinedValue()};
   ASSERT_FALSE(frame.overflowed());
   // We should not die after this because there were no arguments.
   runtime->collect("test");
 
   // Now make a frame with arguments.
   ScopedNativeCallFrame frame2{
-      runtime, 1, nullptr, false, HermesValue::encodeUndefinedValue()};
+      runtime,
+      1,
+      HermesValue::encodeUndefinedValue(),
+      HermesValue::encodeUndefinedValue(),
+      HermesValue::encodeUndefinedValue()};
   ASSERT_FALSE(frame2.overflowed());
   // The frame should be poisoned; ensure we die after a GC.
   EXPECT_DEATH(runtime->collect("test"), "Invalid");
