@@ -1758,7 +1758,7 @@ inline void JSObject::setNamedSlotValueUnsafe(
   if (LLVM_LIKELY(index < DIRECT_PROPERTY_SLOTS))
     return self->directProps()[index].set(value, &runtime->getHeap());
 
-  self->propStorage_.get(runtime)->set<inl>(
+  self->propStorage_.getNonNull(runtime)->set<inl>(
       index - DIRECT_PROPERTY_SLOTS, value, &runtime->getHeap());
 }
 
@@ -2005,8 +2005,8 @@ inline OptValue<HiddenClass::PropertyPos> JSObject::findProperty(
 }
 
 inline bool JSObject::shouldCacheForIn(Runtime *runtime) const {
-  return !clazz_.get(runtime)->isDictionary() && !flags_.indexedStorage &&
-      !flags_.hostObject && !flags_.proxyObject;
+  return !clazz_.getNonNull(runtime)->isDictionary() &&
+      !flags_.indexedStorage && !flags_.hostObject && !flags_.proxyObject;
 }
 
 } // namespace vm

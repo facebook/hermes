@@ -147,12 +147,13 @@ class Domain final : public GCCell {
   /// module with the given ID has not been loaded.
   OptValue<uint32_t> getCJSModuleOffset(Runtime *runtime, uint32_t id) const {
     assert(cjsModules_ && "CJS Modules not initialized");
-    if (LLVM_UNLIKELY(id >= cjsModules_.get(runtime)->size() / CJSModuleSize)) {
+    if (LLVM_UNLIKELY(
+            id >= cjsModules_.getNonNull(runtime)->size() / CJSModuleSize)) {
       // Out of bounds.
       return llvh::None;
     }
     uint32_t offset = id * CJSModuleSize;
-    if (LLVM_UNLIKELY(cjsModules_.get(runtime)
+    if (LLVM_UNLIKELY(cjsModules_.getNonNull(runtime)
                           ->at(offset + FunctionIndexOffset)
                           .isEmpty())) {
       // The entry has not been populated yet.
@@ -164,20 +165,20 @@ class Domain final : public GCCell {
   /// \return the cached exports object for the given cjsModuleOffset.
   PseudoHandle<> getCachedExports(Runtime *runtime, uint32_t cjsModuleOffset)
       const {
-    return createPseudoHandle(
-        cjsModules_.get(runtime)->at(cjsModuleOffset + CachedExportsOffset));
+    return createPseudoHandle(cjsModules_.getNonNull(runtime)->at(
+        cjsModuleOffset + CachedExportsOffset));
   }
 
   /// \return the module object for the given cjsModuleOffset.
   PseudoHandle<JSObject> getModule(Runtime *runtime, uint32_t cjsModuleOffset)
       const {
     return createPseudoHandle(dyn_vmcast<JSObject>(
-        cjsModules_.get(runtime)->at(cjsModuleOffset + ModuleOffset)));
+        cjsModules_.getNonNull(runtime)->at(cjsModuleOffset + ModuleOffset)));
   }
 
   /// \return the function index for the given cjsModuleOffset.
   uint32_t getFunctionIndex(Runtime *runtime, uint32_t cjsModuleOffset) const {
-    return cjsModules_.get(runtime)
+    return cjsModules_.getNonNull(runtime)
         ->at(cjsModuleOffset + FunctionIndexOffset)
         .getNativeUInt32();
   }
@@ -194,7 +195,7 @@ class Domain final : public GCCell {
       uint32_t cjsModuleOffset,
       Runtime *runtime,
       HermesValue cachedExports) {
-    cjsModules_.get(runtime)->set(
+    cjsModules_.getNonNull(runtime)->set(
         cjsModuleOffset + CachedExportsOffset,
         cachedExports,
         &runtime->getHeap());
@@ -202,7 +203,7 @@ class Domain final : public GCCell {
 
   /// Set the module object for the given cjsModuleOffset.
   void setModule(uint32_t cjsModuleOffset, Runtime *runtime, Handle<> module) {
-    cjsModules_.get(runtime)->set(
+    cjsModules_.getNonNull(runtime)->set(
         cjsModuleOffset + ModuleOffset,
         module.getHermesValue(),
         &runtime->getHeap());

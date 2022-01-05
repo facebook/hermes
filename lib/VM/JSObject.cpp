@@ -101,7 +101,8 @@ PseudoHandle<JSObject> JSObject::create(
   obj->clazz_.setNonNull(runtime, *clazz, &runtime->getHeap());
   // If the hidden class has index like property, we need to clear the fast path
   // flag.
-  if (LLVM_UNLIKELY(obj->clazz_.get(runtime)->getHasIndexLikeProperties()))
+  if (LLVM_UNLIKELY(
+          obj->clazz_.getNonNull(runtime)->getHasIndexLikeProperties()))
     obj->flags_.fastIndexProperties = false;
   return obj;
 }
@@ -229,10 +230,10 @@ void JSObject::allocateNewSlotStorage(
         runtime, vmcast<PropStorage>(arrRes), &runtime->getHeap());
   } else if (LLVM_UNLIKELY(
                  newSlotIndex >=
-                 selfHandle->propStorage_.get(runtime)->capacity())) {
+                 selfHandle->propStorage_.getNonNull(runtime)->capacity())) {
     // Reallocate the existing one.
     assert(
-        newSlotIndex == selfHandle->propStorage_.get(runtime)->size() &&
+        newSlotIndex == selfHandle->propStorage_.getNonNull(runtime)->size() &&
         "allocated slot must be at end");
     auto hnd = runtime->makeMutableHandle(selfHandle->propStorage_);
     PropStorage::resize(hnd, runtime, newSlotIndex + 1);
@@ -273,7 +274,7 @@ CallResult<PseudoHandle<>> JSObject::getNamedPropertyValue_RJS(
     return createPseudoHandle(HermesValue::encodeUndefinedValue());
 
   // Execute the accessor on this object.
-  return accessor->getter.get(runtime)->executeCall0(
+  return accessor->getter.getNonNull(runtime)->executeCall0(
       runtime->makeHandle(accessor->getter), runtime, selfHandle);
 }
 
@@ -296,7 +297,7 @@ CallResult<PseudoHandle<>> JSObject::getComputedPropertyValueInternal_RJS(
     return createPseudoHandle(HermesValue::encodeUndefinedValue());
 
   // Execute the accessor on this object.
-  return accessor->getter.get(runtime)->executeCall0(
+  return accessor->getter.getNonNull(runtime)->executeCall0(
       runtime->makeHandle(accessor->getter), runtime, selfHandle);
 }
 
@@ -356,8 +357,8 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
   // Estimate the capacity of the output array.  This estimate is only
   // reasonable for the non-symbol case.
   uint32_t capacity = okFlags.getIncludeNonSymbols()
-      ? (selfHandle->clazz_.get(runtime)->getNumProperties() + range.second -
-         range.first)
+      ? (selfHandle->clazz_.getNonNull(runtime)->getNumProperties() +
+         range.second - range.first)
       : 0;
 
   auto arrayRes = JSArray::create(runtime, capacity, 0);
@@ -1145,7 +1146,7 @@ CallResult<PseudoHandle<>> JSObject::getComputedWithReceiver_RJS(
       return createPseudoHandle(HermesValue::encodeUndefinedValue());
 
     // Execute the accessor on this object.
-    return accessor->getter.get(runtime)->executeCall0(
+    return accessor->getter.getNonNull(runtime)->executeCall0(
         runtime->makeHandle(accessor->getter), runtime, receiver);
   } else if (desc.flags.hostObject) {
     SymbolID id{};
@@ -1354,7 +1355,7 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
       }
 
       // Execute the accessor on this object.
-      if (accessor->setter.get(runtime)->executeCall1(
+      if (accessor->setter.getNonNull(runtime)->executeCall1(
               runtime->makeHandle(accessor->setter),
               runtime,
               receiver,
@@ -1606,7 +1607,7 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
       }
 
       // Execute the accessor on this object.
-      if (accessor->setter.get(runtime)->executeCall1(
+      if (accessor->setter.getNonNull(runtime)->executeCall1(
               runtime->makeHandle(accessor->setter),
               runtime,
               receiver,
@@ -2123,7 +2124,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
   // has an index-like name.
 
   // First check if a named property with the same name exists.
-  if (selfHandle->clazz_.get(runtime)->getHasIndexLikeProperties()) {
+  if (selfHandle->clazz_.getNonNull(runtime)->getHasIndexLikeProperties()) {
     LAZY_TO_IDENTIFIER(runtime, nameValHandle, id);
 
     NamedPropertyDescriptor desc;

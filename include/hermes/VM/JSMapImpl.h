@@ -58,7 +58,7 @@ class JSMapImpl final : public JSObject {
 
   /// Advance iterator and return the next.
   HashMapEntry *iteratorNext(Runtime *runtime, HashMapEntry *entry) {
-    return storage_.get(runtime)->iteratorNext(runtime, entry);
+    return storage_.getNonNull(runtime)->iteratorNext(runtime, entry);
   }
 
   /// Add a value.
@@ -100,13 +100,13 @@ class JSMapImpl final : public JSObject {
   /// \returns the size.
   static uint32_t getSize(JSMapImpl *self, Runtime *runtime) {
     self->assertInitialized();
-    return self->storage_.get(runtime)->size();
+    return self->storage_.getNonNull(runtime)->size();
   }
 
   /// Clear all elements from the storage.
   static void clear(Handle<JSMapImpl> self, Runtime *runtime) {
     self->assertInitialized();
-    self->storage_.get(runtime)->clear(runtime);
+    self->storage_.getNonNull(runtime)->clear(runtime);
   }
 
   /// Call \p callbackfn for each entry, with \p thisArg as this.
@@ -118,9 +118,10 @@ class JSMapImpl final : public JSObject {
     self->assertInitialized();
     MutableHandle<HashMapEntry> entry{runtime};
     GCScopeMarkerRAII marker{runtime};
-    for (entry = self->storage_.get(runtime)->iteratorNext(runtime); entry;
-         entry =
-             self->storage_.get(runtime)->iteratorNext(runtime, entry.get())) {
+    for (entry = self->storage_.getNonNull(runtime)->iteratorNext(runtime);
+         entry;
+         entry = self->storage_.getNonNull(runtime)->iteratorNext(
+             runtime, entry.get())) {
       marker.flush();
       HermesValue key = entry->key;
       HermesValue value = entry->value;
@@ -216,16 +217,16 @@ class JSMapIteratorImpl final : public JSObject {
       // Advance the iterator.
       self->itr_.set(
           runtime,
-          self->data_.get(runtime)->iteratorNext(
+          self->data_.getNonNull(runtime)->iteratorNext(
               runtime, self->itr_.get(runtime)),
           &runtime->getHeap());
       if (self->itr_) {
         switch (self->iterationKind_) {
           case IterationKind::Key:
-            value = self->itr_.get(runtime)->key;
+            value = self->itr_.getNonNull(runtime)->key;
             break;
           case IterationKind::Value:
-            value = self->itr_.get(runtime)->value;
+            value = self->itr_.getNonNull(runtime)->value;
             break;
           case IterationKind::Entry: {
             // If we are iterating both key and value, we need to create an
@@ -235,9 +236,9 @@ class JSMapIteratorImpl final : public JSObject {
               return ExecutionStatus::EXCEPTION;
             }
             auto arrHandle = *arrRes;
-            value = self->itr_.get(runtime)->key;
+            value = self->itr_.getNonNull(runtime)->key;
             JSArray::setElementAt(arrHandle, runtime, 0, value);
-            value = self->itr_.get(runtime)->value;
+            value = self->itr_.getNonNull(runtime)->value;
             JSArray::setElementAt(arrHandle, runtime, 1, value);
             value = arrHandle.getHermesValue();
             break;

@@ -1395,7 +1395,8 @@ void GeneratorInnerFunction::restoreStack(Runtime *runtime) {
   assert(
       dst + frameSize <= runtime->getStackPointer() &&
       "writing off the end of the stack");
-  const GCHermesValue *src = savedContext_.get(runtime)->data() + frameOffset;
+  const GCHermesValue *src =
+      savedContext_.getNonNull(runtime)->data() + frameOffset;
   GCHermesValueUtil::copyToPinned(src, src + frameSize, dst);
 }
 
@@ -1411,7 +1412,7 @@ void GeneratorInnerFunction::saveStack(Runtime *runtime) {
   GCHermesValue::copy(
       first,
       first + frameSize,
-      savedContext_.get(runtime)->data() + frameOffset,
+      savedContext_.getNonNull(runtime)->data() + frameOffset,
       &runtime->getHeap());
 }
 

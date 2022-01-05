@@ -479,7 +479,7 @@ ExecutionStatus Interpreter::putByIdTransient_RJS(
     }
 
     CallResult<PseudoHandle<>> setRes =
-        accessor->setter.get(runtime)->executeCall1(
+        accessor->setter.getNonNull(runtime)->executeCall1(
             runtime->makeHandle(accessor->setter), runtime, base, *value);
     if (setRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -2293,7 +2293,7 @@ tailCall:
 #endif
         CompressedPointer clazzPtr{obj->getClassGCPtr()};
 #ifndef NDEBUG
-        if (vmcast<HiddenClass>(clazzPtr.get(runtime))->isDictionary())
+        if (vmcast<HiddenClass>(clazzPtr.getNonNull(runtime))->isDictionary())
           ++NumGetByIdDict;
 #else
         (void)NumGetByIdDict;

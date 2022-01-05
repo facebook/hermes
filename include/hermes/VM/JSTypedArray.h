@@ -94,7 +94,7 @@ class JSTypedArrayBase : public JSObject {
 
   /// \return Whether this JSTypedArrayBase is attached to some buffer.
   bool attached(Runtime *runtime) const {
-    return buffer_ && buffer_.get(runtime)->attached();
+    return buffer_ && buffer_.getNonNull(runtime)->attached();
   }
 
   /// \return The offset from the beginning of the buffer this typed array

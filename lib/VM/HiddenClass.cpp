@@ -861,7 +861,7 @@ void HiddenClass::initializeMissingPropertyMap(
   // Check whether we can steal our parent's map. If we can, we only need
   // to add or update a single property.
   if (selfHandle->parent_ &&
-      selfHandle->parent_.get(runtime)->propertyMap_.get(runtime))
+      selfHandle->parent_.getNonNull(runtime)->propertyMap_)
     return stealPropertyMapFromParent(selfHandle, runtime);
 
   LLVM_DEBUG(
@@ -922,25 +922,29 @@ void HiddenClass::stealPropertyMapFromParent(
   NoAllocScope noAlloc(runtime);
   auto *self = *selfHandle;
   assert(
-      self->parent_ && self->parent_.get(runtime)->propertyMap_ &&
+      self->parent_ && self->parent_.getNonNull(runtime)->propertyMap_ &&
       !self->propertyMap_ &&
       "stealPropertyMapFromParent() must be called with a valid parent with a property map");
 
   LLVM_DEBUG(
       dbgs() << "Class:" << self->getDebugAllocationId()
              << " stealing map from parent Class:"
-             << self->parent_.get(runtime)->getDebugAllocationId() << "\n");
+             << self->parent_.getNonNull(runtime)->getDebugAllocationId()
+             << "\n");
 
   // Success! Just steal our parent's map and add our own property.
   self->propertyMap_.set(
-      runtime, self->parent_.get(runtime)->propertyMap_, &runtime->getHeap());
-  self->parent_.get(runtime)->propertyMap_.setNull(&runtime->getHeap());
+      runtime,
+      self->parent_.getNonNull(runtime)->propertyMap_,
+      &runtime->getHeap());
+  self->parent_.getNonNull(runtime)->propertyMap_.setNull(&runtime->getHeap());
 
   // Does our class add a new property?
   if (LLVM_LIKELY(!self->propertyFlags_.flagsTransition)) {
     // This is a new property that we must now add.
     assert(
-        self->numProperties_ - 1 == self->propertyMap_.get(runtime)->size() &&
+        self->numProperties_ - 1 ==
+            self->propertyMap_.getNonNull(runtime)->size() &&
         "propertyMap->size() must match HiddenClass::numProperties-1 in "
         "new prop transition");
 
@@ -956,7 +960,7 @@ void HiddenClass::stealPropertyMapFromParent(
   // to find it and update it.
 
   assert(
-      self->numProperties_ == self->propertyMap_.get(runtime)->size() &&
+      self->numProperties_ == self->propertyMap_.getNonNull(runtime)->size() &&
       "propertyMap->size() must match HiddenClass::numProperties in "
       "flag update transition");
 
