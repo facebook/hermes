@@ -88,7 +88,6 @@ class JSArrayBuffer final : public JSObject {
  protected:
   static void _finalizeImpl(GCCell *cell, GC *gc);
   static size_t _mallocSizeImpl(GCCell *cell);
-  static gcheapsize_t _externalMemorySizeImpl(const GCCell *cell);
   static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
   static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 

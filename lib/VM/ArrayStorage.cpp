@@ -23,7 +23,6 @@ const VTable ArrayStorageBase<HVType>::vt(
     nullptr,
     nullptr,
     _trimSizeCallback,
-    nullptr,
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::Array,
         nullptr,

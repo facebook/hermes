@@ -462,7 +462,6 @@ const CallableVTable BoundFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
                 BoundFunction::_snapshotNameImpl,
@@ -823,7 +822,6 @@ const CallableVTable NativeFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
                 NativeFunction::_snapshotNameImpl,
@@ -996,7 +994,6 @@ const CallableVTable NativeConstructor::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
                 NativeConstructor::_snapshotNameImpl,
@@ -1049,7 +1046,6 @@ const CallableVTable JSFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
                 JSFunction::_snapshotNameImpl,
@@ -1162,7 +1158,6 @@ const CallableVTable JSAsyncFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
                 JSAsyncFunction::_snapshotNameImpl,
@@ -1217,7 +1212,6 @@ const CallableVTable JSGeneratorFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
                 JSGeneratorFunction::_snapshotNameImpl,
@@ -1272,7 +1266,6 @@ const CallableVTable GeneratorInnerFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
                 GeneratorInnerFunction::_snapshotNameImpl,

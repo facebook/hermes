@@ -22,8 +22,7 @@ const VTable DummyObject::vt{
     _finalizeImpl,
     _markWeakImpl,
     _mallocSizeImpl,
-    nullptr,
-    _externalMemorySizeImpl};
+    nullptr};
 
 DummyObject::DummyObject(GC *gc)
     : GCCell(gc, &vt), other(), x(1), y(2), weak(gc, this) {
@@ -66,10 +65,6 @@ void DummyObject::_finalizeImpl(GCCell *cell, GC *gc) {
     (*self->finalizerCallback)();
   self->releaseExtMem(gc);
   self->~DummyObject();
-}
-
-gcheapsize_t DummyObject::_externalMemorySizeImpl(const GCCell *cell) {
-  return vmcast<DummyObject>(cell)->externalBytes;
 }
 
 size_t DummyObject::_mallocSizeImpl(GCCell *cell) {

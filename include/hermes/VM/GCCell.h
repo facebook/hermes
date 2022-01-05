@@ -268,12 +268,6 @@ class GCCell {
     return forwardingPointer_.getRaw() & 0x1;
   }
 
-  /// If the cell has any associated external memory, return the size (in bytes)
-  /// of that external memory, else zero.
-  inline gcheapsize_t externalMemorySize() const {
-    return getVT()->externalMemorySize(this);
-  }
-
   static constexpr uint32_t maxSize() {
     return KindAndSize::maxSize();
   }

@@ -607,9 +607,6 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   /// assumed to be an ExternalStringPrimitive.
   static size_t _mallocSizeImpl(GCCell *cell);
 
-  /// \return the size of the external memory credited to the cell.
-  static gcheapsize_t _externalMemorySizeImpl(const GCCell *cell);
-
   static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
   static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 
@@ -792,7 +789,6 @@ const VTable DynamicStringPrimitive<T, Uniqued>::vt = VTable(
     nullptr,
     nullptr,
     nullptr,
-    nullptr,
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::String,
         DynamicStringPrimitive<T, Uniqued>::_snapshotNameImpl,
@@ -817,7 +813,6 @@ const VTable ExternalStringPrimitive<T>::vt = VTable(
     nullptr, // markWeak.
     ExternalStringPrimitive<T>::_mallocSizeImpl,
     nullptr,
-    ExternalStringPrimitive<T>::_externalMemorySizeImpl,
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::String,
         ExternalStringPrimitive<T>::_snapshotNameImpl,
@@ -836,7 +831,6 @@ const VTable BufferedStringPrimitive<T>::vt = VTable(
     nullptr, // markWeak.
     nullptr, // mallocSize
     nullptr,
-    nullptr, // externalMemorySize
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::String,
         BufferedStringPrimitive<T>::_snapshotNameImpl,

@@ -98,7 +98,6 @@ const VTable HiddenClass::vt{
     _markWeakImpl,
     _mallocSizeImpl,
     nullptr,
-    nullptr,
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::Object,
         HiddenClass::_snapshotNameImpl,

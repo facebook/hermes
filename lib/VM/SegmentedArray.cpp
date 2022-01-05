@@ -20,7 +20,6 @@ const VTable SegmentedArray::Segment::vt(
     nullptr,
     nullptr,
     nullptr,
-    nullptr, // externalMemorySize
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::Array,
         nullptr,
@@ -67,7 +66,6 @@ const VTable SegmentedArray::vt(
     nullptr,
     nullptr,
     _trimSizeCallback,
-    nullptr, // externalMemorySize
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::Array,
         nullptr,

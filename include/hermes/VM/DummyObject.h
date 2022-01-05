@@ -48,7 +48,6 @@ struct DummyObject final : public GCCell {
   static DummyObject *createLongLived(GC *gc);
   static bool classof(const GCCell *cell);
   static void _finalizeImpl(GCCell *cell, GC *);
-  static gcheapsize_t _externalMemorySizeImpl(const GCCell *cell);
   static size_t _mallocSizeImpl(GCCell *cell);
   static void _markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor);
 };
