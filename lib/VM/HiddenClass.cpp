@@ -339,7 +339,7 @@ bool HiddenClass::debugIsPropertyDefined(
   do {
     // If we happen to have a property map, use it.
     if (self->propertyMap_)
-      return DictPropertyMap::find(self->propertyMap_.get(base), name)
+      return DictPropertyMap::find(self->propertyMap_.getNonNull(base), name)
           .hasValue();
     // Is the property defined in this class?
     if (self->symbolID_ == name)
@@ -544,7 +544,7 @@ Handle<HiddenClass> HiddenClass::updateProperty(
         selfHandle->propertyMap_ &&
         "propertyMap must exist in dictionary mode");
     DictPropertyMap::getDescriptorPair(
-        selfHandle->propertyMap_.get(runtime), pos)
+        selfHandle->propertyMap_.getNonNull(runtime), pos)
         ->second.flags = newFlags;
     // If it's still cacheable, make it non-cacheable.
     if (!selfHandle->isDictionaryNoCache()) {
@@ -876,7 +876,7 @@ void HiddenClass::initializeMissingPropertyMap(
     // Walk chain of parents using raw pointers.
     NoAllocScope _(runtime);
     for (auto *cur = *selfHandle; cur->numProperties_ > 0;
-         cur = cur->parent_.get(runtime)) {
+         cur = cur->parent_.getNonNull(runtime)) {
       auto tmpFlags = cur->propertyFlags_;
       tmpFlags.flagsTransition = 0;
       entries.emplace_back(cur->symbolID_, tmpFlags);

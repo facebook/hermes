@@ -1792,14 +1792,14 @@ CallResult<HermesValue> objectFromPropertyDescriptor(
     auto *accessor = vmcast<PropertyAccessor>(valueOrAccessor.get());
 
     auto getter = runtime->makeHandle(
-        accessor->getter
-            ? HermesValue::encodeObjectValue(accessor->getter.get(runtime))
-            : HermesValue::encodeUndefinedValue());
+        accessor->getter ? HermesValue::encodeObjectValue(
+                               accessor->getter.getNonNull(runtime))
+                         : HermesValue::encodeUndefinedValue());
 
     auto setter = runtime->makeHandle(
-        accessor->setter
-            ? HermesValue::encodeObjectValue(accessor->setter.get(runtime))
-            : HermesValue::encodeUndefinedValue());
+        accessor->setter ? HermesValue::encodeObjectValue(
+                               accessor->setter.getNonNull(runtime))
+                         : HermesValue::encodeUndefinedValue());
 
     auto result = JSObject::defineOwnProperty(
         obj,

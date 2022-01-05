@@ -1559,7 +1559,8 @@ objectPrototypeLookupGetter(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   return (*accessorRes && (*accessorRes)->getter)
-      ? HermesValue::encodeObjectValue((*accessorRes)->getter.get(runtime))
+      ? HermesValue::encodeObjectValue(
+            (*accessorRes)->getter.getNonNull(runtime))
       : HermesValue::encodeUndefinedValue();
 }
 
@@ -1570,7 +1571,8 @@ objectPrototypeLookupSetter(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   return (*accessorRes && (*accessorRes)->setter)
-      ? HermesValue::encodeObjectValue((*accessorRes)->setter.get(runtime))
+      ? HermesValue::encodeObjectValue(
+            (*accessorRes)->setter.getNonNull(runtime))
       : HermesValue::encodeUndefinedValue();
 }
 

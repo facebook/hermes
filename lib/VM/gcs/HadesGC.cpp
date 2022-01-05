@@ -439,7 +439,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
   LLVM_NODISCARD CompressedPointer
   acceptHeap(CompressedPointer cptr, void *heapLoc) {
     if (shouldForward(cptr)) {
-      GCCell *ptr = cptr.get(pointerBase_);
+      GCCell *ptr = cptr.getNonNull(pointerBase_);
       assert(
           HeapSegment::getCellMarkBit(ptr) &&
           "Should only evacuate marked objects.");
@@ -553,7 +553,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
       return nullptr;
     } else {
       CopyListCell *const cell =
-          static_cast<CopyListCell *>(copyListHead_.get(pointerBase_));
+          static_cast<CopyListCell *>(copyListHead_.getNonNull(pointerBase_));
       assert(HeapSegment::getCellMarkBit(cell) && "Discovered unmarked object");
       copyListHead_ = cell->next_;
       return cell;
@@ -721,7 +721,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
 
   void accept(GCPointerBase &ptr) override {
     if (auto cp = concurrentRead<CompressedPointer>(ptr))
-      acceptHeap(cp.get(pointerBase_), &ptr);
+      acceptHeap(cp.getNonNull(pointerBase_), &ptr);
   }
 
   void accept(GCHermesValue &hvRef) override {
@@ -748,7 +748,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
     const SmallHermesValue hv = concurrentRead<SmallHermesValue>(hvRef);
     if (hv.isPointer()) {
       if (auto cp = hv.getPointer())
-        acceptHeap(cp.get(pointerBase_), &hvRef);
+        acceptHeap(cp.getNonNull(pointerBase_), &hvRef);
     } else if (hv.isSymbol()) {
       acceptSym(hv.getSymbol());
     }
