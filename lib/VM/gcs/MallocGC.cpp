@@ -484,6 +484,7 @@ void MallocGC::getHeapInfo(HeapInfo &info) {
   info.allocatedBytes = allocatedBytes_;
   // MallocGC does not have a heap size.
   info.heapSize = 0;
+  info.externalBytes = externalBytes_;
 }
 void MallocGC::getHeapInfoWithMallocSize(HeapInfo &info) {
   getHeapInfo(info);

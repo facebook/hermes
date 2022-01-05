@@ -483,6 +483,11 @@ class GCBase {
     unsigned mallocSizeEstimate{0};
     /// The total amount of Virtual Address space (VA) that the GC is using.
     uint64_t va{0};
+    /// Number of bytes retained by objects as external memory on the C++ heap.
+    /// This is typically associated with allocations that are modified
+    /// infrequently, and can therefore be stored in a counter in the GC, making
+    /// them cheaper to query. This is a subset of mallocSizeEstimate.
+    uint64_t externalBytes{0};
     /// Cumulative number of mark stack overflows in full collections
     /// (zero if non-generational GC).
     unsigned numMarkStackOverflows{0};

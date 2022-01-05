@@ -310,8 +310,10 @@ TEST_F(GCBasicsTest, ExtraBytes) {
   {
     GCBase::HeapInfo info;
     auto *obj = DummyObject::create(&rt.getHeap());
+    obj->acquireExtMem(&gc, 256);
     obj->extraBytes = 1;
     gc.getHeapInfoWithMallocSize(info);
+    EXPECT_EQ(info.externalBytes, 256);
     // Since there is one dummy in the heap, the malloc size is the size of its
     // corresponding WeakRefSlot and one extra byte.
     EXPECT_EQ(info.mallocSizeEstimate, sizeof(WeakRefSlot) + 1);
@@ -320,9 +322,20 @@ TEST_F(GCBasicsTest, ExtraBytes) {
   {
     GCBase::HeapInfo info;
     auto *obj = DummyObject::create(&rt.getHeap());
+    obj->acquireExtMem(&gc, 1024);
     obj->extraBytes = 1;
     gc.getHeapInfoWithMallocSize(info);
+    EXPECT_EQ(info.externalBytes, 256 + 1024);
     EXPECT_EQ(info.mallocSizeEstimate, sizeof(WeakRefSlot) * 2 + 2);
+  }
+
+  rt.collect();
+
+  {
+    GCBase::HeapInfo info;
+    gc.getHeapInfoWithMallocSize(info);
+    EXPECT_EQ(info.externalBytes, 0);
+    EXPECT_EQ(info.mallocSizeEstimate, sizeof(WeakRefSlot) * 2);
   }
 }
 

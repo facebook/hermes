@@ -886,7 +886,7 @@ void GCBase::oomDetail(
       detailBuffer.data(),
       detailBuffer.size(),
       "[%.20s] reason = %.150s (%d from category: %.50s), numCollections = %u, heapSize = %" PRIu64
-      ", allocated = %" PRIu64 ", va = %" PRIu64,
+      ", allocated = %" PRIu64 ", va = %" PRIu64 ", external = %" PRIu64,
       name_.c_str(),
       reason.message().c_str(),
       reason.value(),
@@ -894,7 +894,8 @@ void GCBase::oomDetail(
       heapInfo.numCollections,
       heapInfo.heapSize,
       heapInfo.allocatedBytes,
-      heapInfo.va);
+      heapInfo.va,
+      heapInfo.externalBytes);
 }
 
 #ifndef NDEBUG

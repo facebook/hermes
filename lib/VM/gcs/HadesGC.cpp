@@ -1322,6 +1322,7 @@ void HadesGC::getHeapInfo(HeapInfo &info) {
   // If YG isn't empty, its bytes haven't been accounted for yet, add them here.
   info.totalAllocatedBytes = totalAllocatedBytes_ + youngGen().used();
   info.va = info.heapSize;
+  info.externalBytes = oldGen_.externalBytes() + getYoungGenExternalBytes();
 }
 
 void HadesGC::getHeapInfoWithMallocSize(HeapInfo &info) {
