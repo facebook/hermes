@@ -248,6 +248,51 @@ TEST(JSLexerTest, NumericSeparatorTest) {
   }
 }
 
+#define LEX_EXPECT_BIGINT(s, lex)                                 \
+  ASSERT_EQ(TokenKind::bigint_literal, lex.advance()->getKind()); \
+  EXPECT_STREQ(s, lex.getCurToken()->getBigIntLiteral()->c_str())
+
+TEST(JSLexerTest, BigIntTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  {
+    JSLexer lex(
+        " 0n"
+        " 1n"
+        " 1000n"
+        " 1928371289378129381212398n"
+        " 0xdeadbeefn"
+        " 0b10101100101n",
+        sm,
+        alloc);
+
+    LEX_EXPECT_BIGINT("0n", lex);
+    LEX_EXPECT_BIGINT("1n", lex);
+    LEX_EXPECT_BIGINT("1000n", lex);
+    LEX_EXPECT_BIGINT("1928371289378129381212398n", lex);
+    LEX_EXPECT_BIGINT("0xdeadbeefn", lex);
+    LEX_EXPECT_BIGINT("0b10101100101n", lex);
+  }
+
+  {
+    JSLexer lex("09n", sm, alloc);
+    lex.advance();
+    ASSERT_EQ(1, diag.getErrCountClear());
+  }
+  {
+    JSLexer lex("1.1n", sm, alloc);
+    lex.advance();
+    ASSERT_EQ(1, diag.getErrCountClear());
+  }
+  {
+    JSLexer lex("1e2n", sm, alloc);
+    lex.advance();
+    ASSERT_EQ(1, diag.getErrCountClear());
+  }
+}
+
 TEST(JSLexerTest, BadNumbersTest) {
   JSLexer::Allocator alloc;
   SourceErrorManager sm;

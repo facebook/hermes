@@ -1831,12 +1831,10 @@ PERMANENT_SKIP_LIST = [
     "mjsunit/es6/proxies-",
     "mjsunit/es6/proxies.js",
     # Flow AST features.
-    "flow/bigint/",
     "flow/comment_interning/",
     "flow/decorators/",
     "flow/types/annotations_in_comments/",
     "flow/types/annotations_in_comments_invalid/",
-    "flow/types/bigint_literal/",
     # Flow bug
     "flow/JSX_invalid/migrated_0000.js",
 ]

@@ -186,6 +186,20 @@ type A = 1;
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
+type A = 1n;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "A"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "BigIntLiteralTypeAnnotation",
+// CHECK-NEXT:         "raw": "1n"
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
 type A = -1;
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "TypeAlias",

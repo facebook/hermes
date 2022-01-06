@@ -1362,6 +1362,7 @@ void JSLexer::scanNumber(GrammarContext grammarContext) {
   unsigned radix = 10;
   bool real = false;
   bool ok = true;
+  const char *rawStart = curCharPtr_;
   const char *start = curCharPtr_;
 
   // True when we encounter the numeric literal separator: '_'.
@@ -1456,11 +1457,20 @@ exponent:
 end:
   // We arrive here after we have consumed all we can from the number. Now,
   // as per the spec, we consume a sequence of identifier characters if they
-  // directly, which means the number is invalid though.
-  //
+  // follow directly, which means the number is invalid if it's not BigInt.
   if (consumeIdentifierStart()) {
-    ok = false;
     consumeIdentifierParts<IdentifierMode::JS>();
+
+    llvh::StringRef raw{rawStart, (size_t)(curCharPtr_ - rawStart)};
+    if (ok && !real && (!legacyOctal || raw == "0n") && tmpStorage_ == "n") {
+      // This is a BigInt.
+      rawStorage_.clear();
+      rawStorage_.append(raw);
+      token_.setBigIntLiteral(getStringLiteral(rawStorage_));
+      return;
+    }
+
+    ok = false;
   }
 
   double val;

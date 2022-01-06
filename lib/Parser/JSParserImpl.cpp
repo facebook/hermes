@@ -2293,6 +2293,15 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
       return res;
     }
 
+    case TokenKind::bigint_literal: {
+      auto *res = setLocation(
+          tok_,
+          tok_,
+          new (context_) ESTree::BigIntLiteralNode(tok_->getBigIntLiteral()));
+      advance(JSLexer::AllowDiv);
+      return res;
+    }
+
     case TokenKind::string_literal: {
       auto *res = setLocation(
           tok_,

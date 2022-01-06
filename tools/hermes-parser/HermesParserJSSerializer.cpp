@@ -222,6 +222,9 @@ class HermesParserJSSerializer {
         case TokenKind::numeric_literal:
           serializeToken(token, TokenType::Numeric);
           break;
+        case TokenKind::bigint_literal:
+          serializeToken(token, TokenType::BigInt);
+          break;
         case TokenKind::string_literal:
           serializeToken(token, TokenType::String);
           break;

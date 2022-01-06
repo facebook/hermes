@@ -20,6 +20,7 @@ enum class TokenType {
   Keyword,
   Null,
   Numeric,
+  BigInt,
   Punctuator,
   String,
   RegularExpression,

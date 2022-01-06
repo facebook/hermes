@@ -64,6 +64,7 @@ export interface MostTokens extends BaseToken {
     | 'Keyword'
     | 'Null'
     | 'Numeric'
+    | 'BigInt'
     | 'Punctuator'
     | 'RegularExpression'
     | 'String'
@@ -913,6 +914,7 @@ export type TypeAnnotationType =
   | VoidTypeAnnotation
   | StringLiteralTypeAnnotation
   | NumberLiteralTypeAnnotation
+  | BigIntLiteralTypeAnnotation
   | BooleanLiteralTypeAnnotation
   | ArrayTypeAnnotation
   | NullableTypeAnnotation
@@ -997,6 +999,11 @@ export interface StringLiteralTypeAnnotation extends BaseNode {
 export interface NumberLiteralTypeAnnotation extends BaseNode {
   +type: 'NumberLiteralTypeAnnotation';
   +value: number;
+  +raw: string;
+}
+export interface BigIntLiteralTypeAnnotation extends BaseNode {
+  +type: 'BigIntLiteralTypeAnnotation';
+  +value: null;
   +raw: string;
 }
 export interface BooleanLiteralTypeAnnotation extends BaseNode {

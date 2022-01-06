@@ -1195,23 +1195,42 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
           new (context_) ESTree::NumberLiteralTypeAnnotationNode(value, raw));
     }
 
-    case TokenKind::minus: {
-      advance(JSLexer::GrammarContext::Type);
-      if (!need(
-              TokenKind::numeric_literal,
-              "in type annotation",
-              "start of annotation",
-              start))
-        return None;
-      // Negate the literal.
-      double value = -tok_->getNumericLiteral();
-      UniqueString *raw = lexer_.getStringLiteral(StringRef(
-          start.getPointer(),
-          tok_->getEndLoc().getPointer() - start.getPointer()));
+    case TokenKind::bigint_literal: {
+      UniqueString *raw = tok_->getBigIntLiteral();
       return setLocation(
           start,
           advance(JSLexer::GrammarContext::Type).End,
-          new (context_) ESTree::NumberLiteralTypeAnnotationNode(value, raw));
+          new (context_) ESTree::BigIntLiteralTypeAnnotationNode(raw));
+    }
+
+    case TokenKind::minus: {
+      advance(JSLexer::GrammarContext::Type);
+      if (check(TokenKind::numeric_literal)) {
+        // Negate the literal.
+        double value = -tok_->getNumericLiteral();
+        UniqueString *raw = lexer_.getStringLiteral(StringRef(
+            start.getPointer(),
+            tok_->getEndLoc().getPointer() - start.getPointer()));
+        return setLocation(
+            start,
+            advance(JSLexer::GrammarContext::Type).End,
+            new (context_) ESTree::NumberLiteralTypeAnnotationNode(value, raw));
+      } else if (check(TokenKind::bigint_literal)) {
+        UniqueString *raw = lexer_.getStringLiteral(StringRef(
+            start.getPointer(),
+            tok_->getEndLoc().getPointer() - start.getPointer()));
+        return setLocation(
+            start,
+            advance(JSLexer::GrammarContext::Type).End,
+            new (context_) ESTree::BigIntLiteralTypeAnnotationNode(raw));
+      } else {
+        errorExpected(
+            TokenKind::numeric_literal,
+            "in type annotation",
+            "start of annotation",
+            start);
+        return None;
+      }
     }
 
     case TokenKind::rw_true:

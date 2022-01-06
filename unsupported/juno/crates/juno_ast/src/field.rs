@@ -15,6 +15,7 @@ pub enum NodeField {
     arguments,
     assertions,
     attributes,
+    bigint,
     block,
     body,
     bound,

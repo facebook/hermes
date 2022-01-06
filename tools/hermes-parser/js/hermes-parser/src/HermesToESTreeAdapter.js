@@ -56,12 +56,16 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
       case 'StringLiteral':
       case 'NumericLiteral':
         return this.mapSimpleLiteral(node);
+      case 'BigIntLiteral':
+        return this.mapBigIntLiteral(node);
       case 'RegExpLiteral':
         return this.mapRegExpLiteral(node);
       case 'Empty':
         return this.mapEmpty(node);
       case 'TemplateElement':
         return this.mapTemplateElement(node);
+      case 'BigIntLiteralTypeAnnotation':
+        return this.mapBigIntLiteralTypeAnnotation(node);
       case 'GenericTypeAnnotation':
         return this.mapGenericTypeAnnotation(node);
       case 'ImportDeclaration':
@@ -93,6 +97,18 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
     node.type = 'Literal';
     node.raw = this.code.slice(node.range[0], node.range[1]);
 
+    return node;
+  }
+
+  mapBigIntLiteral(node: HermesNode): HermesNode {
+    node.type = 'Literal';
+    node.value = null;
+    node.raw = this.code.slice(node.range[0], node.range[1]);
+    return node;
+  }
+
+  mapBigIntLiteralTypeAnnotation(node: HermesNode): HermesNode {
+    node.value = null;
     return node;
   }
 

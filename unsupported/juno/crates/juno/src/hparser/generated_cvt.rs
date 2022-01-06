@@ -355,6 +355,15 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
           ast::builder::RegExpLiteral::build_template(gc, template)
         }
+        NodeKind::BigIntLiteral => {
+          let bigint = cvt.cvt_label(gc, hermes_get_BigIntLiteral_bigint(n));
+          let mut template = ast::template::BigIntLiteral {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  bigint,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::builder::BigIntLiteral::build_template(gc, template)
+        }
         NodeKind::ThisExpression => {
           let mut template = ast::template::ThisExpression {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
@@ -1198,6 +1207,15 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           };
           template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
           ast::builder::NumberLiteralTypeAnnotation::build_template(gc, template)
+        }
+        NodeKind::BigIntLiteralTypeAnnotation => {
+          let raw = cvt.cvt_label(gc, hermes_get_BigIntLiteralTypeAnnotation_raw(n));
+          let mut template = ast::template::BigIntLiteralTypeAnnotation {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  raw,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::builder::BigIntLiteralTypeAnnotation::build_template(gc, template)
         }
         NodeKind::BooleanTypeAnnotation => {
           let mut template = ast::template::BooleanTypeAnnotation {

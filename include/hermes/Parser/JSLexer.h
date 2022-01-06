@@ -186,6 +186,11 @@ class Token {
     return rawString_;
   }
 
+  UniqueString *getBigIntLiteral() const {
+    assert(getKind() == TokenKind::bigint_literal);
+    return rawString_;
+  }
+
   RegExpLiteral *getRegExpLiteral() const {
     assert(getKind() == TokenKind::regexp_literal);
     return regExpLiteral_;
@@ -220,6 +225,10 @@ class Token {
     kind_ = TokenKind::eof;
   }
 
+  void setBigIntLiteral(UniqueString *raw) {
+    kind_ = TokenKind::bigint_literal;
+    rawString_ = raw;
+  }
   void setNumericLiteral(double literal) {
     kind_ = TokenKind::numeric_literal;
     numeric_ = literal;

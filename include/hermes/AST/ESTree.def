@@ -220,6 +220,9 @@ ESTREE_NODE_2_ARGS(
     NodeLabel,
     flags,
     false)
+ESTREE_NODE_1_ARGS(
+    BigIntLiteral, Base,
+    NodeLabel, bigint, false)
 
 ESTREE_NODE_0_ARGS(ThisExpression, Base)
 ESTREE_NODE_0_ARGS(Super, Base)
@@ -683,6 +686,9 @@ ESTREE_NODE_2_ARGS(
 ESTREE_NODE_2_ARGS(
     NumberLiteralTypeAnnotation, Base,
     NodeNumber, value, false,
+    NodeLabel, raw, false)
+ESTREE_NODE_1_ARGS(
+    BigIntLiteralTypeAnnotation, Base,
     NodeLabel, raw, false)
 ESTREE_NODE_0_ARGS(BooleanTypeAnnotation, Base)
 ESTREE_NODE_2_ARGS(

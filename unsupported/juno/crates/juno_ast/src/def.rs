@@ -146,6 +146,9 @@ macro_rules! nodekind_defs {
             NumericLiteral[Literal] {
                 value: f64,
             },
+            BigIntLiteral[Literal] {
+                bigint: NodeLabel,
+            },
             RegExpLiteral[Literal] {
                 pattern: NodeLabel,
                 flags: NodeLabel,
@@ -446,6 +449,9 @@ macro_rules! nodekind_defs {
             EmptyTypeAnnotation[FlowType],
             StringTypeAnnotation[FlowType],
             NumberTypeAnnotation[FlowType],
+            BigIntLiteralTypeAnnotation[FlowType] {
+                raw: NodeLabel,
+            },
             StringLiteralTypeAnnotation[FlowType] {
                 value: NodeString,
                 raw: NodeString,

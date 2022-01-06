@@ -171,6 +171,7 @@ class SemanticValidator {
 
   void visit(LabeledStatementNode *labelStmt);
 
+  void visit(BigIntLiteralNode *bigint);
   void visit(RegExpLiteralNode *regexp);
 
   void visit(TryStatementNode *tryStatement);

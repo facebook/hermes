@@ -46,6 +46,7 @@ export default class HermesParserDeserializer {
     'Keyword',
     'Null',
     'Numeric',
+    'BigInt',
     'Punctuator',
     'String',
     'RegularExpression',

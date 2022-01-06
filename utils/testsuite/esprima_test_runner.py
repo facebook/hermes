@@ -54,6 +54,8 @@ HERMES_OMITTED_KEYS = {
 ESPRIMA_OMITTED_KEYS = {
     "Program": {"tokens", "sourceType", "comments"},
     "Literal": {"raw"},
+    "BigIntLiteral": {"value"},
+    "BigIntLiteralTypeAnnotation": {"value"},
     "ImportDeclaration": {"importKind", "attributes"},
     "ImportSpecifier": {"importKind"},
     "ExportNamedDeclaration": {"exportKind"},

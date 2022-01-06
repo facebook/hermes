@@ -48,6 +48,7 @@ pub enum NodeKind {
     StringLiteral,
     NumericLiteral,
     RegExpLiteral,
+    BigIntLiteral,
     ThisExpression,
     Super,
     SequenceExpression,
@@ -128,6 +129,7 @@ pub enum NodeKind {
     NumberTypeAnnotation,
     StringLiteralTypeAnnotation,
     NumberLiteralTypeAnnotation,
+    BigIntLiteralTypeAnnotation,
     BooleanTypeAnnotation,
     BooleanLiteralTypeAnnotation,
     NullLiteralTypeAnnotation,
@@ -325,6 +327,8 @@ extern "C" {
     // RegExpLiteral
     pub fn hermes_get_RegExpLiteral_pattern(node: NodePtr) -> NodeLabel;
     pub fn hermes_get_RegExpLiteral_flags(node: NodePtr) -> NodeLabel;
+    // BigIntLiteral
+    pub fn hermes_get_BigIntLiteral_bigint(node: NodePtr) -> NodeLabel;
     // SequenceExpression
     pub fn hermes_get_SequenceExpression_expressions(node: NodePtr) -> NodeListRef;
     // ObjectExpression
@@ -553,6 +557,8 @@ extern "C" {
     // NumberLiteralTypeAnnotation
     pub fn hermes_get_NumberLiteralTypeAnnotation_value(node: NodePtr) -> f64;
     pub fn hermes_get_NumberLiteralTypeAnnotation_raw(node: NodePtr) -> NodeLabel;
+    // BigIntLiteralTypeAnnotation
+    pub fn hermes_get_BigIntLiteralTypeAnnotation_raw(node: NodePtr) -> NodeLabel;
     // BooleanLiteralTypeAnnotation
     pub fn hermes_get_BooleanLiteralTypeAnnotation_value(node: NodePtr) -> bool;
     pub fn hermes_get_BooleanLiteralTypeAnnotation_raw(node: NodePtr) -> NodeLabel;
