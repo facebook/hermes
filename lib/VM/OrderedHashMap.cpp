@@ -316,8 +316,7 @@ bool OrderedHashMap::erase(
     self->hashTable_.getNonNull(runtime)->set(
         bucket,
         entry->nextEntryInBucket
-            ? SmallHermesValue::encodeObjectValue(
-                  entry->nextEntryInBucket.get(runtime), runtime)
+            ? SmallHermesValue::encodeObjectValue(entry->nextEntryInBucket)
             : SmallHermesValue::encodeEmptyValue(),
         &runtime->getHeap());
   }

@@ -128,6 +128,10 @@ class SmallHermesValueAdaptor : protected HermesValue {
   static SmallHermesValueAdaptor encodeObjectValue(GCCell *ptr, PointerBase *) {
     return SmallHermesValueAdaptor{HermesValue::encodeObjectValue(ptr)};
   }
+  static SmallHermesValueAdaptor encodeObjectValue(CompressedPointer cp) {
+    GCCell *cellPtr = reinterpret_cast<GCCell *>(cp.getRaw());
+    return SmallHermesValueAdaptor{HermesValue::encodeObjectValue(cellPtr)};
+  }
   static SmallHermesValueAdaptor encodeStringValue(
       StringPrimitive *ptr,
       PointerBase *) {
@@ -407,6 +411,9 @@ class HermesValue32 {
   inline static HermesValue32 encodeNumberValue(double d, Runtime *runtime);
 
   inline static HermesValue32 encodeObjectValue(GCCell *ptr, PointerBase *pb);
+  static HermesValue32 encodeObjectValue(CompressedPointer cp) {
+    return encodePointerImpl(cp, Tag::Object);
+  }
 
   static HermesValue32 encodeStringValue(
       StringPrimitive *ptr,
