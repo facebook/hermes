@@ -484,6 +484,12 @@ fn test_types() {
 }
 
 #[test]
+fn test_enum() {
+    test_roundtrip_flow("enum Foo {}");
+    test_roundtrip_flow("enum Foo : string {A = 'A', B = 'B'}");
+}
+
+#[test]
 fn test_typecast() {
     test_roundtrip_flow("async function foo() { return (x: any); }");
     test_roundtrip_flow("var x = (y: number | number => string)");

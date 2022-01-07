@@ -3853,6 +3853,7 @@ fn stmt_skip_semi<'gc>(ctx: &'gc GCLock, node: Option<&'gc Node<'gc>>) -> bool {
                 declaration,
                 ..
             }) => stmt_skip_semi(ctx, *declaration),
+            Node::EnumDeclaration(_) => true,
             _ => false,
         },
         None => false,
