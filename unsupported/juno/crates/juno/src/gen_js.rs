@@ -1354,7 +1354,11 @@ impl<W: Write> GenJS<W> {
                 if need_sep {
                     out!(self, " ");
                 }
-                key.visit(ctx, self, None);
+                if *shorthand {
+                    value.visit(ctx, self, None);
+                } else {
+                    key.visit(ctx, self, None);
+                }
                 if *computed {
                     out!(self, "]");
                 }

@@ -162,7 +162,7 @@ fn test_functions() {
     test_roundtrip("function foo(x, y) {}");
     test_roundtrip("function foo(x, y=3) {}");
     test_roundtrip("function foo([x, y], {z}) {}");
-    test_roundtrip("function foo([x, y] = [1,2], {z:q}) {}");
+    test_roundtrip("function foo([x, y] = [1,2], {z:q}, {w = 1}) {}");
     test_roundtrip("function foo() { return this; }");
     test_roundtrip("function *foo() {}");
     test_roundtrip("function *foo() { yield 1; }");
@@ -311,6 +311,7 @@ fn test_objects() {
             a: 1,
             [x]: 1,
             fn() {},
+            b,
             ...from,
         })",
     );
