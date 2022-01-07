@@ -410,6 +410,16 @@ fn test_classes() {
             static d() {}
         }",
     );
+    test_roundtrip_flow(
+        "class C<T> extends D<T> {
+            prop1: ?number = null;
+            +prop2: number;
+            -prop3;
+            declare prop4;
+            #prop5;
+            #prop5: ?number = null;
+        }",
+    );
     test_roundtrip(
         "var cls = (class C extends D {
             prop1;

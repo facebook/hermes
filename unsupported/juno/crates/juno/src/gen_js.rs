@@ -1499,13 +1499,19 @@ impl<W: Write> GenJS<W> {
                 value,
                 computed,
                 is_static,
-                declare: _,
-                optional: _,
-                variance: _,
-                type_annotation: _,
+                declare,
+                optional,
+                variance,
+                type_annotation,
             }) => {
+                if let Some(variance) = variance {
+                    variance.visit(ctx, self, Some(Path::new(node, NodeField::variance)));
+                }
                 if *is_static {
                     out!(self, "static ");
+                }
+                if *declare {
+                    out!(self, "declare ");
                 }
                 if *computed {
                     out!(self, "[");
@@ -1514,8 +1520,20 @@ impl<W: Write> GenJS<W> {
                 if *computed {
                     out!(self, "]");
                 }
-                self.space(ForceSpace::No);
+                if *optional {
+                    out!(self, "?");
+                }
+                if let Some(type_annotation) = type_annotation {
+                    out!(self, ":");
+                    self.space(ForceSpace::No);
+                    type_annotation.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::type_annotation)),
+                    );
+                }
                 if let Some(value) = value {
+                    self.space(ForceSpace::No);
                     out!(self, "=");
                     self.space(ForceSpace::No);
                     value.visit(ctx, self, Some(Path::new(node, NodeField::value)));
@@ -1527,16 +1545,34 @@ impl<W: Write> GenJS<W> {
                 key,
                 value,
                 is_static,
-                declare: _,
-                optional: _,
-                variance: _,
-                type_annotation: _,
+                declare,
+                optional,
+                variance,
+                type_annotation,
             }) => {
+                if let Some(variance) = variance {
+                    variance.visit(ctx, self, Some(Path::new(node, NodeField::variance)));
+                }
                 if *is_static {
+                    out!(self, "static ");
+                }
+                if *declare {
                     out!(self, "static ");
                 }
                 out!(self, "#");
                 key.visit(ctx, self, Some(Path::new(node, NodeField::key)));
+                if *optional {
+                    out!(self, "?");
+                }
+                if let Some(type_annotation) = type_annotation {
+                    out!(self, ":");
+                    self.space(ForceSpace::No);
+                    type_annotation.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::type_annotation)),
+                    );
+                }
                 self.space(ForceSpace::No);
                 if let Some(value) = value {
                     out!(self, "=");
