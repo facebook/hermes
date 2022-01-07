@@ -2046,15 +2046,7 @@ impl<W: Write> GenJS<W> {
                         Some(Path::new(node, NodeField::type_parameters)),
                     );
                 }
-                let need_parens = type_parameters.is_some()
-                    || rest.is_some()
-                    || params.len() != 1
-                    || node_cast!(Node::FunctionTypeParam, params[0])
-                        .name
-                        .is_some();
-                if need_parens {
-                    out!(self, "(");
-                }
+                out!(self, "(");
                 let mut need_comma = false;
                 if let Some(this) = this {
                     match this {
@@ -2092,9 +2084,7 @@ impl<W: Write> GenJS<W> {
                     out!(self, "...");
                     rest.visit(ctx, self, Some(Path::new(node, NodeField::rest)));
                 }
-                if need_parens {
-                    out!(self, ")");
-                }
+                out!(self, ")");
                 if self.pretty == Pretty::Yes {
                     out!(self, " => ");
                 } else {
@@ -2123,7 +2113,12 @@ impl<W: Write> GenJS<W> {
                 type_annotation,
             }) => {
                 out!(self, "?");
-                type_annotation.visit(ctx, self, Some(Path::new(node, NodeField::type_annotation)));
+                self.print_child(
+                    ctx,
+                    Some(type_annotation),
+                    Path::new(node, NodeField::type_annotation),
+                    ChildPos::Right,
+                );
             }
             Node::QualifiedTypeIdentifier(QualifiedTypeIdentifier {
                 metadata: _,
@@ -3448,6 +3443,7 @@ impl<W: Write> GenJS<W> {
             | Node::AnyTypeAnnotation(_)
             | Node::MixedTypeAnnotation(_)
             | Node::VoidTypeAnnotation(_) => (PRIMARY, Assoc::Ltr),
+            Node::NullableTypeAnnotation(_) => (UNARY, Assoc::Ltr),
             Node::UnionTypeAnnotation(_) => (UNION_TYPE, Assoc::Ltr),
             Node::IntersectionTypeAnnotation(_) => (INTERSECTION_TYPE, Assoc::Ltr),
 

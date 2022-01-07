@@ -469,6 +469,7 @@ fn test_types() {
     test_roundtrip_flow("number | boolean & string");
     test_roundtrip_flow("type A = number");
     test_roundtrip_flow("type A = ?number");
+    test_roundtrip_flow("type A = ?(number | string)");
     test_roundtrip_flow("type A = string");
     test_roundtrip_flow("type A = \"foo\"");
     test_roundtrip_flow("type A = 3");
@@ -481,6 +482,8 @@ fn test_types() {
     test_roundtrip_flow("type A = number => number");
     test_roundtrip_flow("type A = (foo: number) => number");
     test_roundtrip_flow("type A = (number, string) => number");
+    test_roundtrip_flow("type A = (?number) => number");
+    test_roundtrip_flow("type A = ?(number, string) => number");
 }
 
 #[test]
