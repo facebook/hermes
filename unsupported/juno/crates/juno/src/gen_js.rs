@@ -362,6 +362,11 @@ impl<W: Write> GenJS<W> {
                     && type_parameters.is_none()
                     && return_type.is_none()
                     && predicate.is_none()
+                    && node_isa!(Node::Identifier, params[0])
+                    && node_cast!(Node::Identifier, params[0])
+                        .type_annotation
+                        .is_none()
+                    && !node_cast!(Node::Identifier, params[0]).optional
                     && (*expression || self.pretty == Pretty::No)
                 {
                     if need_sep {
@@ -381,7 +386,12 @@ impl<W: Write> GenJS<W> {
                 if let Some(return_type) = return_type {
                     out!(self, ":");
                     self.space(ForceSpace::No);
-                    return_type.visit(ctx, self, Some(Path::new(node, NodeField::return_type)));
+                    self.print_child(
+                        ctx,
+                        Some(return_type),
+                        Path::new(node, NodeField::return_type),
+                        ChildPos::Anywhere,
+                    );
                 }
                 if let Some(predicate) = predicate {
                     self.space(ForceSpace::Yes);
@@ -2003,7 +2013,12 @@ impl<W: Write> GenJS<W> {
                         Some(Path::new(node, NodeField::type_parameters)),
                     );
                 }
-                let need_parens = type_parameters.is_some() || rest.is_some() || params.len() != 1;
+                let need_parens = type_parameters.is_some()
+                    || rest.is_some()
+                    || params.len() != 1
+                    || node_cast!(Node::FunctionTypeParam, params[0])
+                        .name
+                        .is_some();
                 if need_parens {
                     out!(self, "(");
                 }

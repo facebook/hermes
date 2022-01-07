@@ -180,6 +180,8 @@ fn test_functions() {
     test_roundtrip("(x => 1) + (y => 1)");
     test_roundtrip("x = y => 1");
     test_roundtrip("x = (y => 1)");
+    test_roundtrip("x = (({a, b}) => 1)");
+    test_roundtrip_flow("var x = (): (number=>string) => 1");
     test_roundtrip(
         "function foo() {
         return (y => 1);
@@ -465,6 +467,7 @@ fn test_types() {
     test_roundtrip_flow("type A = any");
     test_roundtrip_flow("type A = void");
     test_roundtrip_flow("type A = number => number");
+    test_roundtrip_flow("type A = (foo: number) => number");
     test_roundtrip_flow("type A = (number, string) => number");
 }
 
