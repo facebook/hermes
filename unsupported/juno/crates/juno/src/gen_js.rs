@@ -1649,7 +1649,6 @@ impl<W: Write> GenJS<W> {
                         out!(self, "}}");
                     }
                 }
-                self.newline();
             }
             Node::ImportSpecifier(ImportSpecifier {
                 metadata: _,
@@ -1690,12 +1689,12 @@ impl<W: Write> GenJS<W> {
                 export_kind,
             }) => {
                 out_token!(self, node, "export ");
-                if *export_kind != ExportKind::Value {
-                    out!(self, "{} ", export_kind.as_str());
-                }
                 if let Some(declaration) = declaration {
                     declaration.visit(ctx, self, Some(Path::new(node, NodeField::declaration)));
                 } else {
+                    if *export_kind != ExportKind::Value {
+                        out!(self, "{} ", export_kind.as_str());
+                    }
                     out!(self, "{{");
                     for (i, spec) in specifiers.iter().enumerate() {
                         if i > 0 {
@@ -1709,7 +1708,6 @@ impl<W: Write> GenJS<W> {
                         source.visit(ctx, self, Some(Path::new(node, NodeField::source)));
                     }
                 }
-                self.newline();
             }
             Node::ExportSpecifier(ExportSpecifier {
                 metadata: _,
@@ -1733,7 +1731,6 @@ impl<W: Write> GenJS<W> {
             }) => {
                 out_token!(self, node, "export default ");
                 declaration.visit(ctx, self, Some(Path::new(node, NodeField::declaration)));
-                self.newline();
             }
             Node::ExportAllDeclaration(ExportAllDeclaration {
                 metadata: _,

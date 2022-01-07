@@ -450,6 +450,8 @@ fn test_export() {
     test_roundtrip("export default function foo() {}");
     test_roundtrip("export {x as y};");
     test_roundtrip("export * from 'foo';");
+    test_roundtrip_flow("export type Foo = number;");
+    test_roundtrip_flow("export type { x as y } from 'foo';");
 }
 
 #[test]
