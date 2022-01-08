@@ -656,7 +656,8 @@ class CallBuiltinInst : public CallInst {
       : CallInst(ValueKind::CallBuiltinInstKind, callee, thisValue, args) {
     assert(
         callee->getValue() == (int)callee->getValue() &&
-        callee->getValue() < BuiltinMethod::_count && "invalid builtin call");
+        callee->getValue() < (double)BuiltinMethod::_count &&
+        "invalid builtin call");
   }
   explicit CallBuiltinInst(
       const CallBuiltinInst *src,
@@ -683,7 +684,7 @@ class GetBuiltinClosureInst : public Instruction {
       : Instruction(ValueKind::GetBuiltinClosureInstKind) {
     assert(
         builtinIndex->asInt32() &&
-        builtinIndex->getValue() < BuiltinMethod::_count &&
+        builtinIndex->getValue() < (double)BuiltinMethod::_count &&
         "invalid builtin call");
     pushOperand(builtinIndex);
     setType(Type::createClosure());
