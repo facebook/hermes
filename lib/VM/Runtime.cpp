@@ -232,6 +232,7 @@ Runtime::Runtime(
   const bool isSnapshot = std::strstr(__FILE__, "hermes-snapshot");
   crashMgr_->setCustomData("HermesIsSnapshot", isSnapshot ? "true" : "false");
 #endif
+  crashMgr_->registerMemory(this, sizeof(Runtime));
   auto maxNumRegisters = runtimeConfig.getMaxNumRegisters();
   if (LLVM_UNLIKELY(maxNumRegisters > kMaxSupportedNumRegisters)) {
     hermes_fatal("RuntimeConfig maxNumRegisters too big");
@@ -387,6 +388,8 @@ Runtime::~Runtime() {
   for (auto callback : destructionCallbacks_) {
     callback(this);
   }
+
+  crashMgr_->unregisterMemory(this);
 }
 
 /// A helper class used to measure the duration of GC marking different roots.

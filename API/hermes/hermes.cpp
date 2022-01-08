@@ -206,8 +206,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
                 .withMaxNumRegisters(kMaxNumRegisters)
                 .build())),
         runtime_(*rt_),
-        vmExperimentFlags_(runtimeConfig.getVMExperimentFlags()),
-        crashMgr_(runtimeConfig.getCrashMgr()) {
+        vmExperimentFlags_(runtimeConfig.getVMExperimentFlags()) {
     compileFlags_.optimize = false;
 #ifdef HERMES_ENABLE_DEBUGGER
     compileFlags_.debug = true;
@@ -231,8 +230,6 @@ class HermesRuntimeImpl final : public HermesRuntime,
     compileFlags_.enableGenerator = runtimeConfig.getEnableGenerator();
     compileFlags_.emitAsyncBreakCheck = defaultEmitAsyncBreakCheck_ =
         runtimeConfig.getAsyncBreakCheckInEval();
-    // Register the memory for the runtime.
-    crashMgr_->registerMemory(&runtime_, sizeof(vm::Runtime));
     runtime_.addCustomRootsFunction(
         [this](vm::GC *, vm::RootAcceptor &acceptor) {
           for (auto it = hermesValues_->begin(); it != hermesValues_->end();) {
@@ -298,8 +295,6 @@ class HermesRuntimeImpl final : public HermesRuntime,
     // This must be done before we check hermesValues_ below.
     debugger_.reset();
 #endif
-    // Unregister the memory for the runtime.
-    crashMgr_->unregisterMemory(&runtime_);
   }
 
 #ifdef HERMES_ENABLE_DEBUGGER
@@ -988,7 +983,6 @@ class HermesRuntimeImpl final : public HermesRuntime,
   std::unique_ptr<debugger::Debugger> debugger_;
 #endif
   ::hermes::vm::experiments::VMExperimentFlags vmExperimentFlags_{0};
-  std::shared_ptr<vm::CrashManager> crashMgr_;
 
   /// Compilation flags used by prepareJavaScript().
   ::hermes::hbc::CompileFlags compileFlags_{};
