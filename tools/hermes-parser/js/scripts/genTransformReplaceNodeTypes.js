@@ -24,10 +24,11 @@ import {
   LITERAL_TYPES,
 } from './utils/scriptUtils';
 
-const imports: Array<string> = ['ESNode'];
+const imports: Array<string> = [];
 const replaceSignatures: Array<string> = [];
 
-for (const node of HermesESTreeJSON.concat({name: 'Literal', arguments: []})) {
+const nodes = HermesESTreeJSON.concat({name: 'Literal', arguments: []});
+for (const node of nodes) {
   if (LITERAL_TYPES.has(node.name)) {
     continue;
   }
@@ -35,11 +36,11 @@ for (const node of HermesESTreeJSON.concat({name: 'Literal', arguments: []})) {
   imports.push(node.name);
 
   replaceSignatures.push(
-    `(
+    `type ${node.name}ReplaceSignature = (
       target: ${node.name},
       nodeToReplaceWith: DetachedNode<${node.name}>,
       options?: $ReadOnly<{keepComments?: boolean}>,
-    ): void`,
+    ) => void`,
   );
 }
 
@@ -49,9 +50,10 @@ ${imports.join(',\n')}
 } from 'hermes-estree';
 import type {DetachedNode} from '../detachedNode';
 
-export type TransformReplaceSignatures = {
-${replaceSignatures.join(',\n')},
-};
+${replaceSignatures.join(';\n')};
+export type TransformReplaceSignatures = ${nodes
+  .map(n => `${n.name}ReplaceSignature`)
+  .join(' & ')};
 `;
 
 formatAndWriteDistArtifact({

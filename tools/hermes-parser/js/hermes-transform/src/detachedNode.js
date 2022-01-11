@@ -46,7 +46,7 @@ export function detachedProps<T: BaseNode>(
  */
 export function shallowCloneNode<T: ESNode>(
   node: T,
-  newProps: $Shape<{...}> = {},
+  newProps: $Partial<{...}> = {},
 ): DetachedNode<T> {
   return detachedProps(null, (Object.assign({}, node, newProps): $FlowFixMe));
 }
@@ -56,7 +56,7 @@ export function shallowCloneNode<T: ESNode>(
  */
 export function deepCloneNode<T: ESNode>(
   node: T,
-  newProps: $Shape<{...}> = {},
+  newProps: $Partial<{...}> = {},
 ): DetachedNode<T> {
   const clone: DetachedNode<T> = Object.assign(
     JSON.parse(

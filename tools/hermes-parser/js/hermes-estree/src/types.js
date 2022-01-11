@@ -556,12 +556,25 @@ export interface NewExpression extends BaseCallExpression {
   +type: 'NewExpression';
 }
 
-interface BaseMemberExpression extends BaseNode {
+interface BaseMemberExpressionWithComputedName extends BaseNode {
   +object: Expression | Super;
   +property: Expression;
-  +computed: boolean;
+  +computed: true;
 }
-export interface MemberExpression extends BaseMemberExpression {
+interface BaseMemberExpressionWithNonComputedName extends BaseNode {
+  +object: Expression | Super;
+  +property: Identifier;
+  +computed: false;
+}
+export type MemberExpression =
+  | MemberExpressionWithComputedName
+  | MemberExpressionWithNonComputedName;
+export interface MemberExpressionWithComputedName
+  extends BaseMemberExpressionWithComputedName {
+  +type: 'MemberExpression';
+}
+export interface MemberExpressionWithNonComputedName
+  extends BaseMemberExpressionWithNonComputedName {
   +type: 'MemberExpression';
 }
 
@@ -777,11 +790,13 @@ interface BaseClass extends BaseNode {
   +decorators: $ReadOnlyArray<Decorator>;
 }
 
+export type ClassMember =
+  | ClassProperty
+  | ClassPrivateProperty
+  | MethodDefinition;
 export interface ClassBody extends BaseNode {
   +type: 'ClassBody';
-  +body: $ReadOnlyArray<
-    ClassProperty | ClassPrivateProperty | MethodDefinition,
-  >;
+  +body: $ReadOnlyArray<ClassMember>;
 }
 
 export interface MethodDefinition extends BaseNode {
@@ -1158,8 +1173,7 @@ export interface InterfaceExtends extends BaseNode {
 }
 
 interface ClassPropertyBase extends BaseNode {
-  +key: Identifier;
-  +value: null | Literal;
+  +value: null | Expression;
   +typeAnnotation: null | TypeAnnotationType;
   +static: boolean;
   +variance: null | Variance;
@@ -1453,7 +1467,16 @@ export interface OptionalCallExpression extends BaseCallExpression {
   +type: 'OptionalCallExpression';
   +optional: boolean;
 }
-export interface OptionalMemberExpression extends BaseMemberExpression {
+export type OptionalMemberExpression =
+  | OptionalMemberExpressionWithComputedName
+  | OptionalMemberExpressionWithNonComputedName;
+export interface OptionalMemberExpressionWithComputedName
+  extends BaseMemberExpressionWithComputedName {
+  +type: 'OptionalMemberExpression';
+  +optional: boolean;
+}
+export interface OptionalMemberExpressionWithNonComputedName
+  extends BaseMemberExpressionWithNonComputedName {
   +type: 'OptionalMemberExpression';
   +optional: boolean;
 }
@@ -1472,12 +1495,22 @@ export interface BigIntLiteralLegacy extends BaseNode {
 }
 
 // `PropertyDefinition` is the new standard for all class properties
-export interface ClassProperty extends ClassPropertyBase {
+export type ClassProperty =
+  | ClassPropertyWithComputedName
+  | ClassPropertyWithNonComputedName;
+export interface ClassPropertyWithComputedName extends ClassPropertyBase {
   +type: 'ClassProperty';
-  +computed: false; // flow itself doesn't support computed ClassProperties, even though they might parse fine.
+  +key: Identifier;
+  +computed: false;
+}
+export interface ClassPropertyWithNonComputedName extends ClassPropertyBase {
+  +type: 'ClassProperty';
+  +key: Expression;
+  +computed: true;
 }
 export interface ClassPrivateProperty extends ClassPropertyBase {
   +type: 'ClassPrivateProperty';
+  +key: Identifier;
 }
 
 // `PrivateIdentifier` is the new standard for #private identifiers

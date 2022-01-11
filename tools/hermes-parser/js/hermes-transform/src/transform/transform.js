@@ -51,10 +51,14 @@ export function transform(
   // $FlowExpectedError[cannot-write]
   delete ast.comments;
 
-  return prettier.format(mutatedCode, {
-    ...prettierOptions,
-    parser() {
-      return ast;
+  return prettier.format(
+    mutatedCode,
+    // $FlowExpectedError[incompatible-exact] - we don't want to create a dependency on the prettier types
+    {
+      ...prettierOptions,
+      parser() {
+        return ast;
+      },
     },
-  });
+  );
 }

@@ -18,7 +18,7 @@ import {
 } from './utils/scriptUtils';
 
 const imports: Array<string> = [];
-const replaceSignatures: Array<string> = [];
+const cloneSignatures: Array<string> = [];
 
 for (const node of HermesESTreeJSON) {
   if (node.name === 'Program') {
@@ -29,15 +29,18 @@ for (const node of HermesESTreeJSON) {
   imports.push(node.name);
 
   const propTypes = `${node.name}Props`;
-  replaceSignatures.push(
-    `(
-      node: ${node.name},
-      newProps?: $Shape<${propTypes}>,
-    ): DetachedNode<${node.name}>`,
-    `(
-      node: ?${node.name},
-      newProps?: $Shape<${propTypes}>,
-    ): DetachedNode<${node.name}> | null`,
+  cloneSignatures.push(
+    `
+type ${node.name}CloneSignature =
+  ((
+    node: ${node.name},
+    newProps?: $Partial<${propTypes}>,
+  ) => DetachedNode<${node.name}>) &
+  ((
+    node: ?${node.name},
+    newProps?: $Partial<${propTypes}>,
+  ) => DetachedNode<${node.name}> | null);
+`,
   );
 }
 
@@ -50,9 +53,10 @@ ${imports.map(i => `${i}Props`).join(',\n')}
 } from './node-types';
 import type {DetachedNode} from '../detachedNode';
 
-export type TransformCloneSignatures = {
-${replaceSignatures.join(',\n')},
-};
+${cloneSignatures.join(';\n')};
+export type TransformCloneSignatures = ${HermesESTreeJSON.map(
+  n => `${n.name}CloneSignature`,
+).join(' & ')};
 `;
 
 formatAndWriteDistArtifact({

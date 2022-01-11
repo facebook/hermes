@@ -19,10 +19,9 @@
 import type {VariableDeclaration} from 'hermes-estree';
 import type {DetachedNode} from '../detachedNode';
 
-export type TransformReplaceSignatures = {
-  (
-    target: VariableDeclaration,
-    nodeToReplaceWith: DetachedNode<VariableDeclaration>,
-    options?: $ReadOnly<{keepComments?: boolean}>,
-  ): void,
-};
+type VariableDeclarationReplaceSignature = (
+  target: VariableDeclaration,
+  nodeToReplaceWith: DetachedNode<VariableDeclaration>,
+  options?: $ReadOnly<{keepComments?: boolean}>,
+) => void;
+export type TransformReplaceSignatures = VariableDeclarationReplaceSignature;
