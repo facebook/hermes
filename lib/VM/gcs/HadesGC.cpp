@@ -1487,27 +1487,17 @@ void HadesGC::waitForCollectionToFinish(std::string cause) {
   }
   GCCycle cycle{this, gcCallbacks_, "Old Gen (Direct)"};
 
-  llvh::Optional<CollectionStats> waitingStats;
-  if (ygCollectionStats_) {
-    // If this wait happened during a YG collection, add a "(waiting)" suffix.
-    ygCollectionStats_->addCollectionType("waiting");
-  } else {
-    // Otherwise, if this happened during a direct-OG alloc or a manually
-    // triggered collection, create a new stats event to track the time spent in
-    // this wait.
-    waitingStats.emplace(this, std::move(cause), "waiting");
-    waitingStats->beginCPUTimeSection();
-    waitingStats->setBeginTime();
-  }
+  assert(!ygCollectionStats_ && "Cannot collect OG during a YG collection");
+  CollectionStats waitingStats(this, std::move(cause), "waiting");
+  waitingStats.beginCPUTimeSection();
+  waitingStats.setBeginTime();
 
   while (concurrentPhase_ != Phase::None)
     incrementalCollect(false);
 
-  if (waitingStats) {
-    waitingStats->endCPUTimeSection();
-    waitingStats->setEndTime();
-    recordGCStats(std::move(*waitingStats).getEvent(), true);
-  }
+  waitingStats.endCPUTimeSection();
+  waitingStats.setEndTime();
+  recordGCStats(std::move(waitingStats).getEvent(), true);
 }
 
 void HadesGC::oldGenCollection(std::string cause, bool forceCompaction) {
@@ -1872,9 +1862,8 @@ void HadesGC::finalizeAll() {
 }
 
 void HadesGC::finalizeAllLocked() {
-  // Wait for any existing OG collections to finish.
-  // TODO: Investigate sending a cancellation instead.
-  waitForCollectionToFinish("finalizeAll");
+  // Terminate any existing OG collection.
+  concurrentPhase_ = Phase::None;
   if (ogCollectionStats_)
     ogCollectionStats_->markUsed();
   // In case of an OOM, we may be in the middle of a YG collection.
@@ -2286,9 +2275,10 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
     HeapSegment::setCellMarkBit(newObj);
     return newObj;
   }
-  // Can't expand to any more segments, wait for an old gen collection to finish
-  // and possibly free up memory.
-  gc_->waitForCollectionToFinish("full heap");
+
+  // TODO(T109282643): Block on any pending OG collections here in case they
+  // free up space.
+
   // Repeat the search in case the collection did free memory.
   if (GCCell *cell = search(sz)) {
     return cell;

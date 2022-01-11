@@ -12,6 +12,7 @@
 #include "EmptyCell.h"
 #include "TestHelpers.h"
 #include "hermes/VM/GC.h"
+#include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/LimitedStorageProvider.h"
 #include "hermes/VM/PointerBase.h"
 
@@ -50,6 +51,21 @@ static void exceedMaxHeap(
 
 TEST(GCOOMDeathTest, Fragmentation) {
   EXPECT_OOM(exceedMaxHeap());
+}
+
+TEST_F(RuntimeTestFixture, WeakMapMarking) {
+  auto mapResult = JSWeakMap::create(
+      runtime, Handle<JSObject>::vmcast(&runtime->weakMapPrototype));
+  auto map = runtime->makeHandle(std::move(*mapResult));
+  MutableHandle<ArrayStorage> keys{runtime};
+  keys = vmcast<ArrayStorage>(*ArrayStorage::create(runtime, 5));
+  EXPECT_OOM(while (true) {
+    GCScopeMarkerRAII marker(runtime);
+    auto key = runtime->makeHandle(JSObject::create(runtime));
+    ArrayStorage::push_back(keys, runtime, key);
+    auto value = runtime->makeHandle(JSObject::create(runtime));
+    JSWeakMap::setValue(map, runtime, key, value);
+  });
 }
 
 } // namespace
