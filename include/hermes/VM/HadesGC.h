@@ -902,10 +902,11 @@ class HadesGC final : public GCBase {
   /// This function checks if the live bytes after the last OG GC is greater
   /// than the tripwire limit. If the conditions are met, the tripwire is
   /// triggered and tripwireCallback_ is called.
-  /// Also resets the stats counter, so that it calls the analytics callback.
+  /// Also submits pending OG collection stats, and calls the analytics
+  /// callback.
   /// WARNING: Do not call this while there is an ongoing collection. It can
   /// cause a race condition and a deadlock.
-  void checkTripwireAndResetStats();
+  void checkTripwireAndSubmitStats();
 
   /// Transfer any external memory charges from YG to OG. Used as part of YG
   /// collection.

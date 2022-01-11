@@ -249,16 +249,13 @@ class HadesGC::CollectionStats final {
   using TimePoint = std::chrono::time_point<Clock>;
   using Duration = std::chrono::microseconds;
 
-  CollectionStats(
-      HadesGC *gc,
-      std::string cause,
-      std::string collectionType,
-      bool onMutator)
+  CollectionStats(HadesGC *gc, std::string cause, std::string collectionType)
       : gc_{gc},
         cause_{std::move(cause)},
-        collectionType_{std::move(collectionType)},
-        onMutator_{onMutator} {}
-  ~CollectionStats();
+        collectionType_{std::move(collectionType)} {}
+  ~CollectionStats() {
+    assert(usedDbg_ && "Stats not submitted.");
+  }
 
   void addCollectionType(std::string collectionType) {
     if (std::find(tags_.begin(), tags_.end(), collectionType) == tags_.end())
@@ -338,11 +335,31 @@ class HadesGC::CollectionStats final {
         : 0;
   }
 
+  void markUsed() {
+    assert(!std::exchange(usedDbg_, true) && "markUsed called twice");
+  }
+
+  GCAnalyticsEvent getEvent() && {
+    markUsed();
+    return GCAnalyticsEvent{
+        gc_->getName(),
+        gc_->getKindAsStr(),
+        collectionType_,
+        std::move(cause_),
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            endTime_ - beginTime_),
+        std::chrono::duration_cast<std::chrono::milliseconds>(cpuDuration_),
+        /*allocated*/ BeforeAndAfter{allocatedBefore_, afterAllocatedBytes()},
+        /*size*/ BeforeAndAfter{sizeBefore_, sizeAfter_},
+        /*external*/ BeforeAndAfter{externalBefore_, afterExternalBytes()},
+        /*survivalRatio*/ survivalRatio(),
+        /*tags*/ std::move(tags_)};
+  }
+
  private:
   HadesGC *gc_;
   std::string cause_;
   std::string collectionType_;
-  bool onMutator_;
   std::vector<std::string> tags_;
   TimePoint beginTime_{};
   TimePoint endTime_{};
@@ -354,25 +371,11 @@ class HadesGC::CollectionStats final {
   uint64_t sizeAfter_{0};
   uint64_t sweptBytes_{0};
   uint64_t sweptExternalBytes_{0};
-};
 
-HadesGC::CollectionStats::~CollectionStats() {
-  gc_->recordGCStats(
-      GCAnalyticsEvent{
-          gc_->getName(),
-          gc_->getKindAsStr(),
-          collectionType_,
-          std::move(cause_),
-          std::chrono::duration_cast<std::chrono::milliseconds>(
-              endTime_ - beginTime_),
-          std::chrono::duration_cast<std::chrono::milliseconds>(cpuDuration_),
-          /*allocated*/ BeforeAndAfter{allocatedBefore_, afterAllocatedBytes()},
-          /*size*/ BeforeAndAfter{sizeBefore_, sizeAfter_},
-          /*external*/ BeforeAndAfter{externalBefore_, afterExternalBytes()},
-          /*survivalRatio*/ survivalRatio(),
-          /*tags*/ std::move(tags_)},
-      onMutator_);
-}
+#ifndef NDEBUG
+  bool usedDbg_{false};
+#endif
+};
 
 template <typename T>
 static T convertPtr(PointerBase *, CompressedPointer cp) {
@@ -1492,7 +1495,7 @@ void HadesGC::waitForCollectionToFinish(std::string cause) {
     // Otherwise, if this happened during a direct-OG alloc or a manually
     // triggered collection, create a new stats event to track the time spent in
     // this wait.
-    waitingStats.emplace(this, std::move(cause), "waiting", true);
+    waitingStats.emplace(this, std::move(cause), "waiting");
     waitingStats->beginCPUTimeSection();
     waitingStats->setBeginTime();
   }
@@ -1503,6 +1506,7 @@ void HadesGC::waitForCollectionToFinish(std::string cause) {
   if (waitingStats) {
     waitingStats->endCPUTimeSection();
     waitingStats->setEndTime();
+    recordGCStats(std::move(*waitingStats).getEvent(), true);
   }
 }
 
@@ -1536,12 +1540,10 @@ void HadesGC::oldGenCollection(std::string cause, bool forceCompaction) {
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();
 #endif
-  // Note: This line calls the destructor for the previous CollectionStats (if
-  // any) in addition to creating a new CollectionStats. It is desirable to
-  // call the destructor here so that the analytics callback is invoked from the
-  // mutator thread. This might also be done from checkTripwireAndResetStats.
+  if (ogCollectionStats_)
+    recordGCStats(std::move(*ogCollectionStats_).getEvent(), false);
   ogCollectionStats_ =
-      std::make_unique<CollectionStats>(this, std::move(cause), "old", false);
+      std::make_unique<CollectionStats>(this, std::move(cause), "old");
   // NOTE: Leave CPU time as zero if the collection isn't concurrent, as the
   // times aren't useful.
   if (kConcurrentGC)
@@ -1704,7 +1706,7 @@ void HadesGC::incrementalCollect(bool backgroundThread) {
         compacteeHandleForSweep_.reset();
         concurrentPhase_ = Phase::None;
         if (!backgroundThread)
-          checkTripwireAndResetStats();
+          checkTripwireAndSubmitStats();
       }
       break;
     default:
@@ -1873,6 +1875,11 @@ void HadesGC::finalizeAllLocked() {
   // Wait for any existing OG collections to finish.
   // TODO: Investigate sending a cancellation instead.
   waitForCollectionToFinish("finalizeAll");
+  if (ogCollectionStats_)
+    ogCollectionStats_->markUsed();
+  // In case of an OOM, we may be in the middle of a YG collection.
+  if (ygCollectionStats_)
+    ygCollectionStats_->markUsed();
   // Now finalize the heap.
   // We might be in the middle of a YG collection, with some objects promoted to
   // the OG, and some not. Only finalize objects that have not been promoted to
@@ -2435,8 +2442,7 @@ void HadesGC::youngGenEvacuateImpl(Acceptor &acceptor, bool doCompaction) {
 void HadesGC::youngGenCollection(
     std::string cause,
     bool forceOldGenCollection) {
-  ygCollectionStats_ =
-      std::make_unique<CollectionStats>(this, cause, "young", true);
+  ygCollectionStats_ = std::make_unique<CollectionStats>(this, cause, "young");
   ygCollectionStats_->beginCPUTimeSection();
   ygCollectionStats_->setBeginTime();
   // Acquire the GC lock for the duration of the YG collection.
@@ -2596,7 +2602,7 @@ void HadesGC::youngGenCollection(
   if (concurrentPhase_ == Phase::None && !compactee_.evacActive()) {
     // There is no OG collection running, check the tripwire in case this is the
     // first YG after an OG completed.
-    checkTripwireAndResetStats();
+    checkTripwireAndSubmitStats();
     if (forceOldGenCollection) {
       // If an OG collection is being forced, it's because something called
       // collect directly, most likely from a memory warning. In order to
@@ -2624,6 +2630,7 @@ void HadesGC::youngGenCollection(
 #endif
   ygCollectionStats_->setEndTime();
   ygCollectionStats_->endCPUTimeSection();
+  recordGCStats(std::move(*ygCollectionStats_).getEvent(), true);
   ygCollectionStats_.reset();
 }
 
@@ -2672,10 +2679,10 @@ HadesGC::HeapSegment HadesGC::setYoungGen(HeapSegment seg) {
   return seg;
 }
 
-void HadesGC::checkTripwireAndResetStats() {
+void HadesGC::checkTripwireAndSubmitStats() {
   assert(
       gcMutex_ &&
-      "gcMutex must be held before calling checkTripwireAndResetStats");
+      "gcMutex must be held before calling checkTripwireAndSubmitStats");
   assert(
       concurrentPhase_ == Phase::None &&
       "Cannot check stats while OG collection is ongoing.");
@@ -2687,8 +2694,7 @@ void HadesGC::checkTripwireAndResetStats() {
   // We use the amount of live data from after a GC completed as the minimum
   // bound of what is live.
   checkTripwire(usedBytes);
-  // Resetting the stats both runs the destructor (submitting the stats), as
-  // well as prevent us from checking the tripwire every YG.
+  recordGCStats(std::move(*ogCollectionStats_).getEvent(), false);
   ogCollectionStats_.reset();
 }
 
