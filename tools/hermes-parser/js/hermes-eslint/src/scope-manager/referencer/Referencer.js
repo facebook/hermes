@@ -170,7 +170,7 @@ class Referencer extends Visitor {
   }
 
   _referenceJsxPragma(): void {
-    if (this._jsxPragma === null || this._hasReferencedJsxFactory) {
+    if (this._jsxPragma == null || this._hasReferencedJsxFactory) {
       return;
     }
     this._hasReferencedJsxFactory = this._referenceInSomeUpperScope(
@@ -180,7 +180,7 @@ class Referencer extends Visitor {
 
   _referenceJsxFragment(): void {
     if (
-      this._jsxFragmentName === null ||
+      this._jsxFragmentName == null ||
       this._hasReferencedJsxFragmentFactory
     ) {
       return;

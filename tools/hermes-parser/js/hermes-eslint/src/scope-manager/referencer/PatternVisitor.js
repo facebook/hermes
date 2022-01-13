@@ -119,10 +119,7 @@ class PatternVisitor extends VisitorBase {
 
     this._identifierCallback(pattern, {
       topLevel: pattern === this._rootPattern,
-      rest:
-        lastRestElement !== null &&
-        lastRestElement !== undefined &&
-        lastRestElement.argument === pattern,
+      rest: lastRestElement != null && lastRestElement.argument === pattern,
       assignments: this._assignments,
     });
     if (pattern.typeAnnotation) {

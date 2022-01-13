@@ -26,6 +26,7 @@ import {performAddTrailingCommentsMutation} from './mutations/AddTrailingComment
 import {performCloneCommentsToMutation} from './mutations/CloneCommentsTo';
 import {performInsertStatementMutation} from './mutations/InsertStatement';
 import {performRemoveCommentMutations} from './mutations/RemoveComment';
+import {performRemoveNodeMutation} from './mutations/RemoveNode';
 import {performRemoveStatementMutation} from './mutations/RemoveStatement';
 import {performReplaceNodeMutation} from './mutations/ReplaceNode';
 import {performReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
@@ -71,6 +72,10 @@ export function getTransformedAST(
             mutationContext,
             mutation,
           );
+        }
+
+        case 'removeNode': {
+          return performRemoveNodeMutation(mutationContext, mutation);
         }
 
         case 'removeStatement': {

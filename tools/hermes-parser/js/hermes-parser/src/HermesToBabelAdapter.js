@@ -198,7 +198,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
   mapGenericTypeAnnotation(node: HermesNode): HermesNode {
     // Convert simple `this` generic type to ThisTypeAnnotation
     if (
-      node.typeParameters === null &&
+      node.typeParameters == null &&
       node.id.type === 'Identifier' &&
       node.id.name === 'this'
     ) {

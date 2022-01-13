@@ -27,6 +27,7 @@ module.exports = {
   parser: require.resolve('./hermes-eslint'),
   rules: {
     curly: ['error', 'all'],
+    eqeqeq: ['error', 'always', {null: 'never'}],
     'no-unused-vars': [
       'error',
       {

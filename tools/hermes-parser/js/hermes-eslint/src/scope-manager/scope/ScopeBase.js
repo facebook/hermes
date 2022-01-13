@@ -98,7 +98,7 @@ function isStrictScope(scope: Scope, isMethodDefinition: boolean): boolean {
     if (expr.type !== 'Literal' || typeof expr.value !== 'string') {
       break;
     }
-    if (expr.raw !== null && expr.raw !== undefined) {
+    if (expr.raw != null) {
       if (expr.raw === '"use strict"' || expr.raw === "'use strict'") {
         return true;
       }

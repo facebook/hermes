@@ -52,7 +52,7 @@ export function getStatementParent(
   }
   function getAssertedIndex(key: string, arr: $ReadOnlyArray<mixed>): number {
     const idx = arr.indexOf(target);
-    if (idx == null) {
+    if (idx === -1) {
       throw new InvalidStatementError(
         `Could not find target in array of \`${parent.type}.${key}\`.`,
       );
