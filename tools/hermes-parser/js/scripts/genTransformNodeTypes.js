@@ -12,12 +12,14 @@ import {
   HermesESTreeJSON,
   formatAndWriteDistArtifact,
   LITERAL_TYPES,
+  NODES_WITHOUT_TRANSFORM_NODE_TYPES,
 } from './utils/scriptUtils';
 
 const imports: Array<string> = [];
 const nodeTypeFunctions: Array<string> = [];
 const nodePropTypes: Array<string> = [];
 
+// these nodes are listed in ./hermes-transform/src/generated/special-case-node-types.js
 const NODES_WITH_SPECIAL_HANDLING = new Set([
   'ArrowFunctionExpression',
   'RegExpLiteral',
@@ -27,16 +29,13 @@ const NODES_WITH_SPECIAL_HANDLING = new Set([
   'NumericLiteral',
   'NullLiteral',
   'StringLiteral',
-
-  // TODO: BigIntLiteral is not supported by flow/hermes yet - so it has no function at all
-  'BigIntLiteral',
-  // a lot of additional properties are set on this, but nobody should ever "create" one so
-  // we purposely don't define a creation function
-  'Program',
 ]);
 
 for (const node of HermesESTreeJSON) {
-  if (NODES_WITH_SPECIAL_HANDLING.has(node.name)) {
+  if (
+    NODES_WITH_SPECIAL_HANDLING.has(node.name) ||
+    NODES_WITHOUT_TRANSFORM_NODE_TYPES.has(node.name)
+  ) {
     continue;
   }
 

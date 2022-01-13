@@ -28,15 +28,18 @@ const imports: Array<string> = [];
 const replaceSignatures: Array<string> = [];
 
 const nodes = HermesESTreeJSON.concat({name: 'Literal', arguments: []});
+const signatureNames: Array<string> = [];
 for (const node of nodes) {
   if (LITERAL_TYPES.has(node.name)) {
     continue;
   }
 
   imports.push(node.name);
+  const signatureName = `${node.name}ReplaceSignature`;
+  signatureNames.push(signatureName);
 
   replaceSignatures.push(
-    `type ${node.name}ReplaceSignature = (
+    `type ${signatureName} = (
       target: ${node.name},
       nodeToReplaceWith: DetachedNode<${node.name}>,
       options?: $ReadOnly<{keepComments?: boolean}>,
@@ -51,9 +54,7 @@ ${imports.join(',\n')}
 import type {DetachedNode} from '../detachedNode';
 
 ${replaceSignatures.join(';\n')};
-export type TransformReplaceSignatures = ${nodes
-  .map(n => `${n.name}ReplaceSignature`)
-  .join(' & ')};
+export type TransformReplaceSignatures = ${signatureNames.join(' & ')};
 `;
 
 formatAndWriteDistArtifact({

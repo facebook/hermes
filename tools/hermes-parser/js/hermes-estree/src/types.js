@@ -475,18 +475,45 @@ export interface ObjectPropertyWithComputedName extends BaseNode {
   +shorthand: false;
 }
 
-export interface DestructuringObjectProperty extends BaseNode {
-  +type: 'Property';
-  // destructuring properties cannot have computed names
-  +computed: false;
-  // destructuring properties must be identifiers
-  +key: Identifier;
-  // destructuring properties must be identifiers
-  +value: DestructuringPattern;
-  // destructuring properties
+export type DestructuringObjectProperty =
+  | DestructuringObjectPropertyWithNonShorthandStaticName
+  | DestructuringObjectPropertyWithShorthandStaticName
+  | DestructuringObjectPropertyWithComputedName;
+interface DestructuringObjectPropertyBase extends BaseNode {
+  // destructuring properties cannot be methods
   +kind: 'init';
   +method: false;
-  +shorthand: boolean;
+}
+export interface DestructuringObjectPropertyWithNonShorthandStaticName
+  extends DestructuringObjectPropertyBase {
+  +type: 'Property';
+  +computed: false;
+  // non-computed, non-shorthand names are constrained significantly
+  +key: Identifier | StringLiteral | NumericLiteral;
+  // destructuring properties cannot have any value
+  +value: DestructuringPattern;
+  +shorthand: false;
+}
+export interface DestructuringObjectPropertyWithShorthandStaticName
+  extends DestructuringObjectPropertyBase {
+  +type: 'Property';
+  +computed: false;
+  // shorthand keys *must* be identifiers
+  +key: Identifier;
+  // shorthand values *must* be identifiers (that look the same as the key)
+  +value: Identifier;
+  +shorthand: true;
+}
+export interface DestructuringObjectPropertyWithComputedName
+  extends DestructuringObjectPropertyBase {
+  +type: 'Property';
+  +computed: true;
+  // computed names can be any expression
+  +key: Expression;
+  // destructuring properties cannot have any value
+  +value: DestructuringPattern;
+  // cannot have a shorthand computed name
+  +shorthand: false;
 }
 
 export interface FunctionExpression extends BaseFunction {
@@ -799,12 +826,33 @@ export interface ClassBody extends BaseNode {
   +body: $ReadOnlyArray<ClassMember>;
 }
 
-export interface MethodDefinition extends BaseNode {
+export type MethodDefinition =
+  | MethodDefinitionConstructor
+  | MethodDefinitionWithComputedName
+  | MethodDefinitionWithNonComputedName;
+interface MethodDefinitionBase extends BaseNode {
+  +value: FunctionExpression;
+}
+export interface MethodDefinitionConstructor extends MethodDefinitionBase {
+  +type: 'MethodDefinition';
+  +key: Identifier | StringLiteral;
+  +kind: 'constructor';
+  +computed: false;
+  +static: false;
+}
+export interface MethodDefinitionWithComputedName extends MethodDefinitionBase {
   +type: 'MethodDefinition';
   +key: Expression;
-  +value: FunctionExpression;
-  +kind: 'constructor' | 'method' | 'get' | 'set';
-  +computed: boolean;
+  +kind: 'method' | 'get' | 'set';
+  +computed: true;
+  +static: boolean;
+}
+export interface MethodDefinitionWithNonComputedName
+  extends MethodDefinitionBase {
+  +type: 'MethodDefinition';
+  +key: Identifier;
+  +kind: 'method' | 'get' | 'set';
+  +computed: false;
   +static: boolean;
 }
 
@@ -1172,16 +1220,6 @@ export interface InterfaceExtends extends BaseNode {
   +typeParameters: null | TypeParameterDeclaration;
 }
 
-interface ClassPropertyBase extends BaseNode {
-  +value: null | Expression;
-  +typeAnnotation: null | TypeAnnotationType;
-  +static: boolean;
-  +variance: null | Variance;
-  +declare: boolean;
-  // hermes always emit this as false
-  +optional: false;
-}
-
 export interface ClassImplements extends BaseNode {
   +type: 'ClassImplements';
   +id: Identifier;
@@ -1498,15 +1536,24 @@ export interface BigIntLiteralLegacy extends BaseNode {
 export type ClassProperty =
   | ClassPropertyWithComputedName
   | ClassPropertyWithNonComputedName;
-export interface ClassPropertyWithComputedName extends ClassPropertyBase {
-  +type: 'ClassProperty';
-  +key: Identifier;
-  +computed: false;
+interface ClassPropertyBase extends BaseNode {
+  +value: null | Expression;
+  +typeAnnotation: null | TypeAnnotationType;
+  +static: boolean;
+  +variance: null | Variance;
+  +declare: boolean;
+  // hermes always emit this as false
+  +optional: false;
 }
-export interface ClassPropertyWithNonComputedName extends ClassPropertyBase {
+export interface ClassPropertyWithComputedName extends ClassPropertyBase {
   +type: 'ClassProperty';
   +key: Expression;
   +computed: true;
+}
+export interface ClassPropertyWithNonComputedName extends ClassPropertyBase {
+  +type: 'ClassProperty';
+  +key: Identifier;
+  +computed: false;
 }
 export interface ClassPrivateProperty extends ClassPropertyBase {
   +type: 'ClassPrivateProperty';

@@ -16,7 +16,7 @@ import {
   LITERAL_TYPES,
 } from './utils/scriptUtils';
 
-const imports: Array<string> = [];
+const imports: Array<string> = ['ESNode'];
 const enterSelectors: Array<string> = [];
 const exitSelectors: Array<string> = [];
 const typeAliases = new Map<string, string>();

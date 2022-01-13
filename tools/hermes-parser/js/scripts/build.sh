@@ -67,3 +67,7 @@ for package in "${PACKAGES[@]}"; do
   PACKAGE_DIST_DIR="$THIS_DIR/../$package/dist"
   yarn babel --config-file="$THIS_DIR/../babel.config.js" "$PACKAGE_DIST_DIR" --out-dir="$PACKAGE_DIST_DIR"
 done
+
+# Validate that the generated flow files are sane
+# We don't bother validating the raw-js files as they are validated by babel first
+yarn eslint "*/dist/**/*.js.flow" --no-ignore
