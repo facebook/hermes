@@ -1600,7 +1600,7 @@ describe('Imports', () => {
               {
                 name: 'RefType',
                 type: DefinitionType.ImportBinding,
-                referenceCount: 0,
+                referenceCount: 1,
               },
               {
                 name: 'foo',
@@ -1717,7 +1717,7 @@ describe('Imports', () => {
                 {
                   name: 'RefType',
                   type: DefinitionType.ImportBinding,
-                  referenceCount: 0,
+                  referenceCount: 1,
                 },
                 {
                   name: 'foo',
@@ -1835,7 +1835,7 @@ describe('Imports', () => {
             {
               name: 'RefType',
               type: DefinitionType.ImportBinding,
-              referenceCount: 0,
+              referenceCount: 1,
             },
             {
               name: 'foo',

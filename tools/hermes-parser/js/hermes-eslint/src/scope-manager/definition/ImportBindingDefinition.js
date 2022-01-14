@@ -43,33 +43,31 @@ class ImportBindingDefinition extends DefinitionBase<
           decl.importKind === 'type' ||
           decl.importKind === 'typeof'
         ) {
-          this.isTypeDefinition = true;
           this.isVariableDefinition = false;
         } else {
-          this.isTypeDefinition = false;
           this.isVariableDefinition = true;
         }
         break;
 
       case 'ImportDefaultSpecifier':
         if (decl.importKind === 'type' || decl.importKind === 'typeof') {
-          this.isTypeDefinition = true;
           this.isVariableDefinition = false;
         } else {
-          this.isTypeDefinition = false;
           this.isVariableDefinition = true;
         }
         break;
 
       case 'ImportNamespaceSpecifier':
-        // not possible for a namespace import to be a type in flow
-        this.isTypeDefinition = false;
         this.isVariableDefinition = true;
         break;
     }
   }
 
-  +isTypeDefinition: boolean;
+  // all imports are treated as "type" definitions regardless of whether or
+  // not they have a "type" kind. You can import classes and enums as values
+  // and use them in type locations. Additionally namespace imports can be
+  // used in a type location (eg React.MixedElement).
+  +isTypeDefinition: boolean = true;
   +isVariableDefinition: boolean;
 }
 
