@@ -76,7 +76,8 @@ int SamplingProfiler::GlobalProfiler::invokeSignalAction(void (*handler)(int)) {
   struct sigaction actions;
   memset(&actions, 0, sizeof(actions));
   sigemptyset(&actions.sa_mask);
-  actions.sa_flags = 0;
+  // Allows interrupted IO primitives to restart.
+  actions.sa_flags = SA_RESTART;
   actions.sa_handler = handler;
   return sigaction(SIGPROF, &actions, nullptr);
 }
