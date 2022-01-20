@@ -322,14 +322,15 @@ impl<W: Write> GenJS<W> {
                 if let Some(id) = id {
                     id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
                 }
-                if let Some(type_parameters) = type_parameters {
-                    type_parameters.visit(
-                        ctx,
-                        self,
-                        Some(Path::new(node, NodeField::type_parameters)),
-                    );
-                }
-                self.visit_func_params_body(ctx, params, *return_type, *predicate, *body, node);
+                self.visit_func_params_body(
+                    ctx,
+                    params,
+                    *type_parameters,
+                    *return_type,
+                    *predicate,
+                    *body,
+                    node,
+                );
             }
 
             Node::ArrowFunctionExpression(ArrowFunctionExpression {
@@ -1379,15 +1380,21 @@ impl<W: Write> GenJS<W> {
                     match value {
                         Node::FunctionExpression(FunctionExpression {
                             metadata: _,
+                            // Name is handled by the property key.
+                            id: _,
                             params,
                             body,
                             return_type,
                             predicate,
-                            ..
+                            type_parameters,
+                            // Handled above.
+                            generator: _,
+                            is_async: _,
                         }) => {
                             self.visit_func_params_body(
                                 ctx,
                                 params,
+                                *type_parameters,
                                 *return_type,
                                 *predicate,
                                 *body,
@@ -1603,21 +1610,31 @@ impl<W: Write> GenJS<W> {
                 computed,
                 is_static,
             }) => {
-                let (is_async, generator, params, body, return_type, predicate) = match value {
-                    Node::FunctionExpression(FunctionExpression {
-                        metadata: _,
-                        generator,
-                        is_async,
-                        params,
-                        body,
-                        return_type,
-                        predicate,
-                        ..
-                    }) => (*is_async, *generator, params, body, return_type, predicate),
-                    _ => {
-                        unreachable!("Invalid method value");
-                    }
-                };
+                let (is_async, generator, params, body, return_type, predicate, type_parameters) =
+                    match value {
+                        Node::FunctionExpression(FunctionExpression {
+                            metadata: _,
+                            id: _,
+                            generator,
+                            is_async,
+                            params,
+                            body,
+                            return_type,
+                            predicate,
+                            type_parameters,
+                        }) => (
+                            *is_async,
+                            *generator,
+                            params,
+                            body,
+                            return_type,
+                            predicate,
+                            type_parameters,
+                        ),
+                        _ => {
+                            unreachable!("Invalid method value");
+                        }
+                    };
                 if *is_static {
                     out!(self, "static ");
                 }
@@ -1646,7 +1663,15 @@ impl<W: Write> GenJS<W> {
                 if *computed {
                     out!(self, "]");
                 }
-                self.visit_func_params_body(ctx, params, *return_type, *predicate, *body, node);
+                self.visit_func_params_body(
+                    ctx,
+                    params,
+                    *type_parameters,
+                    *return_type,
+                    *predicate,
+                    *body,
+                    node,
+                );
             }
 
             Node::ImportDeclaration(ImportDeclaration {
@@ -3167,15 +3192,20 @@ impl<W: Write> GenJS<W> {
         out!(self, "}}");
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn visit_func_params_body<'gc>(
         &mut self,
         ctx: &'gc GCLock,
         params: &[&'gc Node<'gc>],
+        type_parameters: Option<&'gc Node<'gc>>,
         return_type: Option<&'gc Node<'gc>>,
         predicate: Option<&'gc Node<'gc>>,
         body: &'gc Node<'gc>,
         node: &'gc Node<'gc>,
     ) {
+        if let Some(type_parameters) = type_parameters {
+            type_parameters.visit(ctx, self, Some(Path::new(node, NodeField::type_parameters)));
+        }
         out!(self, "(");
         for (i, param) in params.iter().enumerate() {
             if i > 0 {

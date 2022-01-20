@@ -317,6 +317,11 @@ fn test_objects() {
             ...from,
         })",
     );
+    test_roundtrip_flow(
+        "({
+            foo<T>() {},
+        })",
+    );
 }
 
 #[test]
@@ -422,6 +427,7 @@ fn test_classes() {
             declare prop4;
             #prop5;
             #prop5: ?number = null;
+            foo<T>() {}
         }",
     );
     test_roundtrip(
