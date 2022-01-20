@@ -2011,11 +2011,12 @@ impl<W: Write> GenJS<W> {
             Node::StringLiteralTypeAnnotation(StringLiteralTypeAnnotation {
                 metadata: _,
                 value,
-                raw: _,
+                raw,
             }) => {
-                out_token!(self, node, "\"");
-                self.print_escaped_string_literal(value, '"');
-                out!(self, "\"");
+                let quote = raw.str[0] as u8 as char;
+                out_token!(self, node, "{}", quote);
+                self.print_escaped_string_literal(value, quote);
+                out!(self, "{}", quote);
             }
             Node::NumberLiteralTypeAnnotation(NumberLiteralTypeAnnotation {
                 metadata: _,
