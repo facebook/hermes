@@ -1389,7 +1389,7 @@ impl<W: Write> GenJS<W> {
                 } else {
                     out!(self, ":");
                     self.space(ForceSpace::No);
-                    self.print_comma_expression(ctx, *value, Path::new(node, NodeField::value));
+                    value.visit(ctx, self, Some(Path::new(node, NodeField::value)));
                 }
             }
 

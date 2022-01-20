@@ -343,6 +343,7 @@ fn test_assignment() {
     test_roundtrip("(a = b) && c");
     test_roundtrip("a && b = c");
     test_roundtrip("a && (b = c)");
+    test_roundtrip("var {x: {y: [{z}]}} = foo;");
 }
 
 #[test]
