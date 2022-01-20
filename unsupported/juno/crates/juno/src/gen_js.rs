@@ -919,7 +919,12 @@ impl<W: Write> GenJS<W> {
                     if i > 0 {
                         self.comma();
                     }
-                    self.print_comma_expression(ctx, *arg, Path::new(node, NodeField::arguments));
+                    self.print_child(
+                        ctx,
+                        Some(*arg),
+                        Path::new(node, NodeField::arguments),
+                        ChildPos::Anywhere,
+                    );
                 }
                 out!(self, ")");
             }
@@ -948,7 +953,12 @@ impl<W: Write> GenJS<W> {
                     if i > 0 {
                         self.comma();
                     }
-                    self.print_comma_expression(ctx, *arg, Path::new(node, NodeField::arguments));
+                    self.print_child(
+                        ctx,
+                        Some(*arg),
+                        Path::new(node, NodeField::arguments),
+                        ChildPos::Anywhere,
+                    );
                 }
                 out!(self, ")");
             }
@@ -3556,6 +3566,13 @@ impl<W: Write> GenJS<W> {
             // Nullish coalescing always requires parens when mixed with any
             // other logical operations.
             return NeedParens::Yes;
+        } else if matches!(
+            path.parent,
+            Node::CallExpression(_) | Node::OptionalCallExpression(_)
+        ) && matches!(child, Node::SpreadElement(_))
+        {
+            // It's illegal to place parens around spread arguments.
+            return NeedParens::No;
         }
 
         let (child_prec, _child_assoc) = self.get_precedence(child);

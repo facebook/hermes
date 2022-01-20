@@ -199,8 +199,10 @@ fn test_calls() {
     test_roundtrip("f();");
     test_roundtrip("f(1);");
     test_roundtrip("f(1, 2);");
+    test_roundtrip("f(1, (2,3), 4);");
     test_roundtrip("(f?.(1, 2))(3);");
     test_roundtrip("f?.(1, 2)?.(3)(5);");
+    test_roundtrip("f(...x)");
     test_roundtrip("new f();");
     test_roundtrip("new f(1);");
     test_roundtrip("new(a.b);");
