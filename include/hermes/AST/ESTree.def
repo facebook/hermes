@@ -645,6 +645,10 @@ ESTREE_NODE_2_ARGS(
 ESTREE_NODE_1_ARGS(
     JSXSpreadAttribute, Base,
     NodePtr, argument, false)
+ESTREE_NODE_2_ARGS(
+    JSXStringLiteral, Base,
+    NodeString, value, false,
+    NodeLabel, raw, false)
 
 ESTREE_NODE_2_ARGS(
     JSXText, Base,

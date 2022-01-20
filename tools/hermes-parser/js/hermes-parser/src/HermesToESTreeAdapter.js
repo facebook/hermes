@@ -55,6 +55,7 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
       case 'BooleanLiteral':
       case 'StringLiteral':
       case 'NumericLiteral':
+      case 'JSXStringLiteral':
         return this.mapSimpleLiteral(node);
       case 'BigIntLiteral':
         return this.mapBigIntLiteral(node);

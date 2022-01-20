@@ -31,8 +31,9 @@
 // CHECK-NEXT:                 "name": "foo"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
-// CHECK-NEXT:                 "type": "StringLiteral",
-// CHECK-NEXT:                 "value": "A & B"
+// CHECK-NEXT:                 "type": "JSXStringLiteral",
+// CHECK-NEXT:                 "value": "A & B",
+// CHECK-NEXT:                 "raw": "\"A &amp; B\""
 // CHECK-NEXT:               }
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ],

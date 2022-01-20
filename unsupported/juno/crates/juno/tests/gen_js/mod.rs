@@ -504,6 +504,15 @@ fn test_jsx() {
     test_roundtrip_jsx("<foo />");
     test_roundtrip_jsx("<foo></foo>");
     test_roundtrip_jsx("<foo>abc</foo>");
+    test_roundtrip_jsx(
+        r#"
+        <asdf desc="foo
+            bar"
+            prop2='foo """ bar'>
+            body
+        </asdf>
+        "#,
+    );
     test_roundtrip_jsx("<></>");
     test_roundtrip_jsx(
         "

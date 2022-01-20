@@ -1923,6 +1923,20 @@ impl<W: Write> GenJS<W> {
                 argument.visit(ctx, self, Some(Path::new(node, NodeField::argument)));
                 out!(self, "}}");
             }
+            Node::JSXStringLiteral(JSXStringLiteral {
+                metadata: _,
+                value: _,
+                raw,
+            }) => {
+                let mut buf = [0u8; 4];
+                for char in ctx.str(*raw).chars() {
+                    if char == '\n' {
+                        self.force_newline_without_indent();
+                        continue;
+                    }
+                    self.write_char(char, &mut buf);
+                }
+            }
             Node::JSXText(JSXText {
                 metadata: _,
                 value: _,

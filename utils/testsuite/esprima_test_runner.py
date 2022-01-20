@@ -26,6 +26,7 @@ HERMES_LITERAL_NODE_TYPES = {
     "StringLiteral",
     "NumericLiteral",
     "RegExpLiteral",
+    "JSXStringLiteral",
 }
 
 # These are the keys in the JSON ASTs that should be omitted during diffing.

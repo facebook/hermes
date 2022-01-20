@@ -1107,6 +1107,17 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
           ast::builder::JSXSpreadAttribute::build_template(gc, template)
         }
+        NodeKind::JSXStringLiteral => {
+          let value = cvt_string(hermes_get_JSXStringLiteral_value(n));
+          let raw = cvt.cvt_label(gc, hermes_get_JSXStringLiteral_raw(n));
+          let mut template = ast::template::JSXStringLiteral {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  value,
+                  raw,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::builder::JSXStringLiteral::build_template(gc, template)
+        }
         NodeKind::JSXText => {
           let value = cvt_string(hermes_get_JSXText_value(n));
           let raw = cvt.cvt_label(gc, hermes_get_JSXText_raw(n));
