@@ -129,7 +129,7 @@ class PatternVisitor extends VisitorBase {
 
   MemberExpression(node: MemberExpression): void {
     // Computed property's key is a right hand node.
-    if (node.computed) {
+    if (node.computed === true) {
       this.rightHandNodes.push(node.property);
     }
 
