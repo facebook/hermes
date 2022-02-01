@@ -47,7 +47,7 @@ class WeakRef;
 ///
 /// The old generation is a collection of heap segments, and allocations in the
 /// old gen are done with a freelist (not a bump-pointer). When the old
-/// collection is nearly full, it starts a backthround thread that will mark all
+/// collection is nearly full, it starts a background thread that will mark all
 /// objects in the old gen, and then sweep the dead ones onto freelists.
 ///
 /// Compaction is done in the old gen on a per-segment basis.

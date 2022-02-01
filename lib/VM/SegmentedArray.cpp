@@ -121,7 +121,7 @@ SegmentedArray::create(Runtime *runtime, size_type capacity, size_type size) {
     return ExecutionStatus::EXCEPTION;
   }
   PseudoHandle<SegmentedArray> self = std::move(*arrRes);
-  // TODO T25663446: This is potentially optimizable to iterate over the inline
+  // TODO T25663446: This is potentially optimizeable to iterate over the inline
   // storage and the segments separately.
   self = increaseSize(runtime, std::move(self), size);
   return self;

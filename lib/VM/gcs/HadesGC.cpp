@@ -991,7 +991,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
 
     // The cast to a volatile variable forces a read from valRef, since
     // reads from volatile variables are considered observable behaviour. This
-    // prevents the compiler from optimising away the returned value,
+    // prevents the compiler from optimizing away the returned value,
     // guaranteeing that we will not observe changes to the underlying value
     // past this point. Not using volatile here could lead to a TOCTOU bug,
     // because the underlying value may change after a pointer check (in the

@@ -709,7 +709,7 @@ inline CallResult<bool> getOwnComputedPrimitiveDescriptorImpl(
         !selfHandle->isProxyObject()) {
       // Early return to handle the case where an object definitely has no
       // index-like properties. This avoids allocating a new StringPrimitive and
-      // uniquing it below.
+      // uniqueing it below.
       return false;
     }
   }
@@ -2991,7 +2991,7 @@ namespace {
 
 /// Helper function to add all the property names of an object to an
 /// array, starting at the given index. Only enumerable properties are
-/// incluced. Returns the index after the last property added, but...
+/// included. Returns the index after the last property added, but...
 CallResult<uint32_t> appendAllPropertyNames(
     Handle<JSObject> obj,
     Runtime *runtime,

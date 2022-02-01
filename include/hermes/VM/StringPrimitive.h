@@ -632,7 +632,7 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
 /// longer need the \c largeString suffix.
 ///
 /// The probability of this happening is not high, but it is possible. One way
-/// to adress this in the future is to create new ExternalStringPrimitive after
+/// to address this in the future is to create new ExternalStringPrimitive after
 /// a  certain amount of resizing. In this way each stage of the concatenation
 /// has an upper bound of the amount of extra memory it can keep alive.
 template <typename T>
@@ -716,7 +716,7 @@ class BufferedStringPrimitive final : public StringPrimitive {
       Handle<StringPrimitive> rightHnd);
 
   /// Create a new concatenation buffer of type T (the type parameter of this
-  /// template clases), initialize it with the concatenation of \p leftHnd and
+  /// template classes), initialize it with the concatenation of \p leftHnd and
   /// \p rightHnd and allocate a new BufferedStringPrimitive to represent the
   /// result.
   /// \pre The types must be compatible with respect to T (cannot append UTF16

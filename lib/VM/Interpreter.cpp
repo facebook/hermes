@@ -102,7 +102,7 @@ HERMES_SLOW_STATISTIC(
 
 #if defined(HERMESVM_PROFILER_EXTERN)
 // External profiler mode wraps calls to each JS function with a unique native
-// function that recusively calls the interpreter. See Profiler.{h,cpp} for how
+// function that recursively calls the interpreter. See Profiler.{h,cpp} for how
 // these symbols are subsequently patched with JS function names.
 #define INTERP_WRAPPER(name)                                                \
   __attribute__((__noinline__)) static llvh::CallResult<llvh::HermesValue>  \

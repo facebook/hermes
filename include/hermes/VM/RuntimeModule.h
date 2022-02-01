@@ -435,7 +435,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
       const StringTableEntry &entry,
       OptValue<uint32_t> mhash);
 
-  /// \return a unqiue hash key for object literal hidden class cache.
+  /// \return a unique hash key for object literal hidden class cache.
   /// \param keyBufferIndex value of NewObjectWithBuffer instruction(must be
   /// less than 2^24).
   /// \param numLiterals number of literals used from key buffer of

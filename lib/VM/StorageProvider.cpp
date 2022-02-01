@@ -63,7 +63,7 @@ llvh::ErrorOr<void *> VMAllocateStorageProvider::newStorageImpl(
   }
   void *mem = *result;
   assert(isAligned(mem));
-  (void)isAligned;
+  (void)mem;
 #ifdef HERMESVM_ALLOW_HUGE_PAGES
   oscompat::vm_hugepage(mem, AlignedStorage::size());
 #endif

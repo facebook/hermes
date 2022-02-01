@@ -191,7 +191,7 @@ class AlignedHeapSegment {
   /// The number of bytes in the segment that are currently allocated.
   inline size_t used() const;
 
-  /// The number of bytes in the segment that are avialable for allocation.
+  /// The number of bytes in the segment that are available for allocation.
   inline size_t available() const;
 
   /// Returns the address that is the lower bound of the segment.

@@ -98,7 +98,7 @@ class HandleRootOwner {
   /// An efficient way to pass empty to a function accepting Handle.
   static Handle<HermesValue> getEmptyValue();
 
-  /// An efficient way to pass bools to a function accepting Handle.
+  /// An efficient way to pass bool to a function accepting Handle.
   static Handle<HermesValue> getBoolValue(bool b);
 
   /// An efficient way to pass 0 to a function accepting Handle.
@@ -151,7 +151,7 @@ class HandleRootOwner {
       GCScope *inScope,
       HermesValue value);
 
-  /// Allocate storage for a new PinnedHermesValye in the top-most GCScope and
+  /// Allocate storage for a new PinnedHermesValue in the top-most GCScope and
   /// initialize it with \p value.
   PinnedHermesValue *newPinnedHermesValue(HermesValue value);
 };
