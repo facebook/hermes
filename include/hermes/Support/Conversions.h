@@ -88,7 +88,7 @@ inline uint32_t truncateToUInt32(double d) {
 /// "A property name P (in the form of a String value) is an array index if and
 /// only if ToString(ToUint32(P)) is equal to P and ToUint32(P) is not equal to
 /// 2**32−1."
-/// It must meet the requirements of InputIterator and its 'value_type' must be
+/// IT must meet the requirements of InputIterator and its 'value_type' must be
 /// an integral type holding a superset of ASCII, typically char, char16_t,
 /// char32_t or wchar_t.
 /// \return an "empty" OptValue if the string isn't a valid index, or the
