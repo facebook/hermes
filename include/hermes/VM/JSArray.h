@@ -133,7 +133,7 @@ class ArrayImpl : public JSObject {
   ///   constructing array objects using the JavaScript Array() constructor,
   ///   since we don't know the length in advance.
   /// \tparam NeedsBarriers indicates whether write barriers are needed
-  ///   for initializating writes in the constructor.  (In debug builds,
+  ///   for initializing writes in the constructor.  (In debug builds,
   ///   a claim that they are not necessary is checked dynamically,
   ///   which should find any incorrect specifications.)
   template <typename NeedsBarriers>
