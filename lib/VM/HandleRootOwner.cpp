@@ -98,7 +98,7 @@ void GCScope::mark(RootAcceptor &acceptor) {
 
     // Mark the handles.
     for (; first != last; ++first)
-      acceptor.accept(*first);
+      acceptor.acceptNullable(*first);
   }
 }
 
