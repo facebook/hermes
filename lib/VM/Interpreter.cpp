@@ -2111,7 +2111,7 @@ tailCall:
       }
 
       CASE(CreateEnvironment) {
-        tmpHandle = HermesValue::encodeObjectValue(
+        tmpHandle = HermesValue::encodeObjectValueUnsafe(
             FRAME.getCalleeClosureUnsafe()->getEnvironment(runtime));
 
         CAPTURE_IP(

@@ -18,7 +18,7 @@ namespace vm {
 // class HandleRootOwner
 
 const PinnedHermesValue HandleRootOwner::nullPointer_{
-    HermesValue::encodeNullptrObjectValue()};
+    HermesValue::encodeNullptrObjectValueUnsafe()};
 const PinnedHermesValue HandleRootOwner::undefinedValue_{
     HermesValue::encodeUndefinedValue()};
 const PinnedHermesValue HandleRootOwner::nullValue_{

@@ -28,9 +28,7 @@ template <class T>
 class WeakRef : public WeakRefBase {
  public:
   using Traits = HermesValueTraits<T>;
-  explicit WeakRef(
-      GC *gc,
-      typename Traits::value_type value = Traits::defaultValue())
+  explicit WeakRef(GC *gc, typename Traits::value_type value)
       : WeakRefBase(gc->allocWeakSlot(Traits::encode(value))) {
     HermesValueCast<T>::assertValid(slot_->value());
   }
