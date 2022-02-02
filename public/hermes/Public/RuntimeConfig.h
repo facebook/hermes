@@ -80,8 +80,8 @@ class PinnedHermesValue;
   /* Enable sampling certain statistics. */                            \
   F(constexpr, bool, EnableSampledStats, false)                        \
                                                                        \
-  /* Whether to enable sampling profiler */                            \
-  F(constexpr, bool, EnableSampleProfiling, true)                      \
+  /* Whether to enable automatic sampling profiler registration */     \
+  F(constexpr, bool, EnableSampleProfiling, false)                     \
                                                                        \
   /* Whether to randomize stack placement etc. */                      \
   F(constexpr, bool, RandomizeMemoryLayout, false)                     \
