@@ -709,7 +709,7 @@ inline CallResult<bool> getOwnComputedPrimitiveDescriptorImpl(
         !selfHandle->isProxyObject()) {
       // Early return to handle the case where an object definitely has no
       // index-like properties. This avoids allocating a new StringPrimitive and
-      // uniqueing it below.
+      // uniquing it below.
       return false;
     }
   }
