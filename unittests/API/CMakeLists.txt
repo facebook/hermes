@@ -15,6 +15,9 @@ set(APITestsSources
 set(APISegmentTestCompileSources
   SegmentTestCompile.cpp
   )
+set(SamplingProfilerSources
+  SamplingProfilerPosixHermesAPITest.cpp
+  )
 
 set(HERMES_LINK_COMPONENTS LLVHSupport)
 
@@ -36,3 +39,6 @@ target_link_libraries(APITests hermesapi compileJS SegmentTestCompile)
 
 add_hermes_unittest(APILeanTests APILeanTest.cpp)
 target_link_libraries(APILeanTests hermesapiLean)
+
+add_hermes_unittest(SamplingProfilerTests ${SamplingProfilerSources})
+target_link_libraries(SamplingProfilerTests hermesapiLean hermesVMRuntimeLean)
