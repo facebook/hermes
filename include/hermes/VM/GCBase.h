@@ -739,7 +739,7 @@ class GCBase {
     explicit IDTracker();
 
     /// Return true if IDs are being tracked.
-    bool isTrackingIDs() const;
+    bool isTrackingIDs();
 
     /// Get the unique object id of the given object.
     /// If one does not yet exist, start tracking it.
