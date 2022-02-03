@@ -151,7 +151,7 @@ class HandleRootOwner {
       GCScope *inScope,
       HermesValue value);
 
-  /// Allocate storage for a new PinnedHermesValye in the top-most GCScope and
+  /// Allocate storage for a new PinnedHermesValue in the top-most GCScope and
   /// initialize it with \p value.
   PinnedHermesValue *newPinnedHermesValue(HermesValue value);
 };

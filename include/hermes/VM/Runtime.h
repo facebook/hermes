@@ -1320,7 +1320,7 @@ class Runtime : public HandleRootOwner,
     return oldFlag;
   }
 
-  /// \return whether timeout async break was requsted or not. Clear the
+  /// \return whether timeout async break was requested or not. Clear the
   /// timeout request bit afterward.
   bool testAndClearTimeoutAsyncBreakRequest() {
     return testAndClearAsyncBreakRequest(

@@ -619,7 +619,7 @@ class GCHermesValueBase final : public HVType {
   uninitialized_copy(InputIt first, InputIt last, OutputIt result, GC *gc);
 
 #if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
-  /// Same as \p copy, but specialised for raw pointers.
+  /// Same as \p copy, but specialized for raw pointers.
   static inline GCHermesValueBase<HVType> *copy(
       GCHermesValueBase<HVType> *first,
       GCHermesValueBase<HVType> *last,
@@ -627,7 +627,7 @@ class GCHermesValueBase final : public HVType {
       GC *gc);
 #endif
 
-  /// Same as \p uninitialized_copy, but specialised for raw pointers. This is
+  /// Same as \p uninitialized_copy, but specialized for raw pointers. This is
   /// unsafe to use if the memory region being copied into (pointed to by
   /// \p result) is reachable by the GC (for instance, memory within the
   /// size of an ArrayStorage), since it does not update elements atomically.

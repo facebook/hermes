@@ -2991,7 +2991,7 @@ namespace {
 
 /// Helper function to add all the property names of an object to an
 /// array, starting at the given index. Only enumerable properties are
-/// incluced. Returns the index after the last property added, but...
+/// included. Returns the index after the last property added, but...
 CallResult<uint32_t> appendAllPropertyNames(
     Handle<JSObject> obj,
     Runtime *runtime,

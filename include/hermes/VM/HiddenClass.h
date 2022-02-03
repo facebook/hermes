@@ -308,7 +308,7 @@ class HiddenClass final : public GCCell {
     return flags_.dictionaryMode;
   }
 
-  /// \return true if this class is in "non-cachable dictionary mode"
+  /// \return true if this class is in "non-cacheable dictionary mode"
   /// - it is a dictionary, and the owning object has been modified in
   /// a way since becoming a dictionary that precludes inline caching
   /// (for example, a property has been deleted or updated).
