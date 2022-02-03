@@ -502,6 +502,11 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
   }
 
   void accept(PinnedHermesValue &hv) override {
+    assert((!hv.isPointer() || hv.getPointer()) && "Value is not nullable.");
+    acceptNullable(hv);
+  }
+
+  void acceptNullable(PinnedHermesValue &hv) override {
     if (hv.isPointer()) {
       GCCell *forwardedPtr = acceptRoot(static_cast<GCCell *>(hv.getPointer()));
       hv.setInGC(hv.updatePointer(forwardedPtr), &gc);
@@ -713,13 +718,14 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
   }
 
   void acceptRoot(GCCell *cell) {
-    assert((!cell || cell->isValid()) && "Encountered an invalid cell");
-    if (cell && !HeapSegment::getCellMarkBit(cell))
+    assert(cell->isValid() && "Encountered an invalid cell");
+    if (!HeapSegment::getCellMarkBit(cell))
       push(cell);
   }
 
   void accept(GCCell *&ptr) override {
-    acceptRoot(ptr);
+    if (ptr)
+      acceptRoot(ptr);
   }
 
   void accept(GCPointerBase &ptr) override {
@@ -742,6 +748,14 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
     // there's no risk of a concurrent access.
     if (hv.isPointer()) {
       acceptRoot(static_cast<GCCell *>(hv.getPointer()));
+    } else if (hv.isSymbol()) {
+      acceptSym(hv.getSymbol());
+    }
+  }
+  void acceptNullable(PinnedHermesValue &hv) override {
+    if (hv.isPointer()) {
+      if (void *ptr = hv.getPointer())
+        acceptRoot(static_cast<GCCell *>(ptr));
     } else if (hv.isSymbol()) {
       acceptSym(hv.getSymbol());
     }

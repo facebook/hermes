@@ -31,6 +31,10 @@ class RootAndSlotAcceptorDefault : public RootAndSlotAcceptor {
   }
 
   void accept(PinnedHermesValue &hv) final {
+    assert((!hv.isPointer() || hv.getPointer()) && "Value is not nullable.");
+    acceptHV(hv);
+  }
+  void acceptNullable(PinnedHermesValue &hv) final {
     acceptHV(hv);
   }
 
@@ -82,6 +86,10 @@ class RootAndSlotAcceptorWithNamesDefault
   }
 
   void accept(PinnedHermesValue &hv, const char *name) final {
+    assert((!hv.isPointer() || hv.getPointer()) && "Value is not nullable.");
+    acceptHV(hv, name);
+  }
+  void acceptNullable(PinnedHermesValue &hv, const char *name) final {
     acceptHV(hv, name);
   }
 

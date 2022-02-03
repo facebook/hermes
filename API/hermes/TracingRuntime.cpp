@@ -691,7 +691,7 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
         traceScratchPath.c_str(),
         ec.message().c_str());
     return makeTracingHermesRuntime(
-        std::move(hermesRuntime), runtimeConfig, nullptr, "");
+        std::move(hermesRuntime), runtimeConfig, nullptr, true);
   }
 
   return makeTracingHermesRuntimeImpl(
