@@ -790,8 +790,8 @@ export interface ObjectPattern extends BaseNode {
 
 export interface ArrayPattern extends BaseNode {
   +type: 'ArrayPattern';
-  +elements: $ReadOnlyArray<DestructuringPattern>;
-
+  // an element will be null if the pattern contains a hole: `[a,,b]`
+  +elements: $ReadOnlyArray<?DestructuringPattern>;
   +typeAnnotation: TypeAnnotation | null;
 }
 

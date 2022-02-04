@@ -14,6 +14,7 @@ export type {TraversalContext, Visitor} from './traverse/traverse';
 export type {TransformVisitor} from './transform/transform';
 export type {DetachedNode} from './detachedNode';
 
+export {SimpleTraverser} from './traverse/SimpleTraverser';
 export {traverse, traverseWithContext} from './traverse/traverse';
 export {transform} from './transform/transform';
 export * as t from './generated/node-types';

@@ -38,6 +38,9 @@ export const SimpleTraverserBreak: Error = new Error();
  * A very simple traverser class to traverse AST trees.
  */
 export class SimpleTraverser {
+  static Break: Error = SimpleTraverserBreak;
+  static Skip: Error = SimpleTraverserSkip;
+
   /**
    * Traverse the given AST tree.
    * @param node The root node to traverse.
