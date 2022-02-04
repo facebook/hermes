@@ -32,6 +32,8 @@ const NODES_TO_REMOVE = new Set([
   'DirectiveLiteral',
   // used by hermes to represent an "empty" array destructuring element (`let [,,] = [1,2,3]`)
   'Empty',
+  // used by hermes to avoid adding 'raw' field to actual StringLiteral
+  'JSXStringLiteral',
   // don't know what this is for...
   'Metadata',
 ]);

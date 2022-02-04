@@ -71,7 +71,7 @@ endif()
 # - npm/package.json
 # - hermes-engine.podspec
 project(Hermes
-        VERSION 0.10.0
+        VERSION 0.11.0
         LANGUAGES C CXX)
 # Optional suffix like "-rc3"
 set(VERSION_SUFFIX "")
@@ -207,6 +207,9 @@ set(HERMES_STATIC_LINK OFF CACHE BOOL
 
 set(HERMES_USE_STATIC_ICU OFF CACHE BOOL
   "Force static linking of ICU. May only work on GNU/Linux.")
+
+set(HERMES_UNICODE_LITE OFF CACHE BOOL
+  "Enable to use internal no-op unicode functionality instead of relying on underlying system libraries")
 
 set(HERMES_ENABLE_DEBUGGER_DEFAULT OFF)
 if (NOT HERMES_IS_MOBILE_BUILD)

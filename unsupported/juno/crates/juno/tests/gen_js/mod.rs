@@ -199,8 +199,10 @@ fn test_calls() {
     test_roundtrip("f();");
     test_roundtrip("f(1);");
     test_roundtrip("f(1, 2);");
+    test_roundtrip("f(1, (2,3), 4);");
     test_roundtrip("(f?.(1, 2))(3);");
     test_roundtrip("f?.(1, 2)?.(3)(5);");
+    test_roundtrip("f(...x)");
     test_roundtrip("new f();");
     test_roundtrip("new f(1);");
     test_roundtrip("new(a.b);");
@@ -315,6 +317,11 @@ fn test_objects() {
             ...from,
         })",
     );
+    test_roundtrip_flow(
+        "({
+            foo<T>() {},
+        })",
+    );
 }
 
 #[test]
@@ -343,6 +350,7 @@ fn test_assignment() {
     test_roundtrip("(a = b) && c");
     test_roundtrip("a && b = c");
     test_roundtrip("a && (b = c)");
+    test_roundtrip("var {x: {y: [{z}]}} = foo;");
 }
 
 #[test]
@@ -419,6 +427,7 @@ fn test_classes() {
             declare prop4;
             #prop5;
             #prop5: ?number = null;
+            foo<T>() {}
         }",
     );
     test_roundtrip(
@@ -473,6 +482,7 @@ fn test_types() {
     test_roundtrip_flow("type A = ?(number | string)");
     test_roundtrip_flow("type A = string");
     test_roundtrip_flow("type A = \"foo\"");
+    test_roundtrip_flow("type A = 'foo'");
     test_roundtrip_flow("type A = 3");
     test_roundtrip_flow("type A = boolean");
     test_roundtrip_flow("type A = true | false");
@@ -504,6 +514,15 @@ fn test_jsx() {
     test_roundtrip_jsx("<foo />");
     test_roundtrip_jsx("<foo></foo>");
     test_roundtrip_jsx("<foo>abc</foo>");
+    test_roundtrip_jsx(
+        r#"
+        <asdf desc="foo
+            bar"
+            prop2='foo """ bar'>
+            body
+        </asdf>
+        "#,
+    );
     test_roundtrip_jsx("<></>");
     test_roundtrip_jsx(
         "

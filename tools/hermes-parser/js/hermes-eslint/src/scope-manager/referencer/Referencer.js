@@ -343,7 +343,7 @@ class Referencer extends Visitor {
     node: MemberExpression | OptionalMemberExpression,
   ): void {
     this.visit(node.object);
-    if (node.computed) {
+    if (node.computed === true) {
       this.visit(node.property);
     }
   }

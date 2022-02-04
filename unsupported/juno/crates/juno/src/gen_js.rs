@@ -322,14 +322,15 @@ impl<W: Write> GenJS<W> {
                 if let Some(id) = id {
                     id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
                 }
-                if let Some(type_parameters) = type_parameters {
-                    type_parameters.visit(
-                        ctx,
-                        self,
-                        Some(Path::new(node, NodeField::type_parameters)),
-                    );
-                }
-                self.visit_func_params_body(ctx, params, *return_type, *predicate, *body, node);
+                self.visit_func_params_body(
+                    ctx,
+                    params,
+                    *type_parameters,
+                    *return_type,
+                    *predicate,
+                    *body,
+                    node,
+                );
             }
 
             Node::ArrowFunctionExpression(ArrowFunctionExpression {
@@ -919,7 +920,12 @@ impl<W: Write> GenJS<W> {
                     if i > 0 {
                         self.comma();
                     }
-                    self.print_comma_expression(ctx, *arg, Path::new(node, NodeField::arguments));
+                    self.print_child(
+                        ctx,
+                        Some(*arg),
+                        Path::new(node, NodeField::arguments),
+                        ChildPos::Anywhere,
+                    );
                 }
                 out!(self, ")");
             }
@@ -948,7 +954,12 @@ impl<W: Write> GenJS<W> {
                     if i > 0 {
                         self.comma();
                     }
-                    self.print_comma_expression(ctx, *arg, Path::new(node, NodeField::arguments));
+                    self.print_child(
+                        ctx,
+                        Some(*arg),
+                        Path::new(node, NodeField::arguments),
+                        ChildPos::Anywhere,
+                    );
                 }
                 out!(self, ")");
             }
@@ -1369,15 +1380,21 @@ impl<W: Write> GenJS<W> {
                     match value {
                         Node::FunctionExpression(FunctionExpression {
                             metadata: _,
+                            // Name is handled by the property key.
+                            id: _,
                             params,
                             body,
                             return_type,
                             predicate,
-                            ..
+                            type_parameters,
+                            // Handled above.
+                            generator: _,
+                            is_async: _,
                         }) => {
                             self.visit_func_params_body(
                                 ctx,
                                 params,
+                                *type_parameters,
                                 *return_type,
                                 *predicate,
                                 *body,
@@ -1389,7 +1406,7 @@ impl<W: Write> GenJS<W> {
                 } else {
                     out!(self, ":");
                     self.space(ForceSpace::No);
-                    self.print_comma_expression(ctx, *value, Path::new(node, NodeField::value));
+                    value.visit(ctx, self, Some(Path::new(node, NodeField::value)));
                 }
             }
 
@@ -1593,21 +1610,31 @@ impl<W: Write> GenJS<W> {
                 computed,
                 is_static,
             }) => {
-                let (is_async, generator, params, body, return_type, predicate) = match value {
-                    Node::FunctionExpression(FunctionExpression {
-                        metadata: _,
-                        generator,
-                        is_async,
-                        params,
-                        body,
-                        return_type,
-                        predicate,
-                        ..
-                    }) => (*is_async, *generator, params, body, return_type, predicate),
-                    _ => {
-                        unreachable!("Invalid method value");
-                    }
-                };
+                let (is_async, generator, params, body, return_type, predicate, type_parameters) =
+                    match value {
+                        Node::FunctionExpression(FunctionExpression {
+                            metadata: _,
+                            id: _,
+                            generator,
+                            is_async,
+                            params,
+                            body,
+                            return_type,
+                            predicate,
+                            type_parameters,
+                        }) => (
+                            *is_async,
+                            *generator,
+                            params,
+                            body,
+                            return_type,
+                            predicate,
+                            type_parameters,
+                        ),
+                        _ => {
+                            unreachable!("Invalid method value");
+                        }
+                    };
                 if *is_static {
                     out!(self, "static ");
                 }
@@ -1636,7 +1663,15 @@ impl<W: Write> GenJS<W> {
                 if *computed {
                     out!(self, "]");
                 }
-                self.visit_func_params_body(ctx, params, *return_type, *predicate, *body, node);
+                self.visit_func_params_body(
+                    ctx,
+                    params,
+                    *type_parameters,
+                    *return_type,
+                    *predicate,
+                    *body,
+                    node,
+                );
             }
 
             Node::ImportDeclaration(ImportDeclaration {
@@ -1923,6 +1958,20 @@ impl<W: Write> GenJS<W> {
                 argument.visit(ctx, self, Some(Path::new(node, NodeField::argument)));
                 out!(self, "}}");
             }
+            Node::JSXStringLiteral(JSXStringLiteral {
+                metadata: _,
+                value: _,
+                raw,
+            }) => {
+                let mut buf = [0u8; 4];
+                for char in ctx.str(*raw).chars() {
+                    if char == '\n' {
+                        self.force_newline_without_indent();
+                        continue;
+                    }
+                    self.write_char(char, &mut buf);
+                }
+            }
             Node::JSXText(JSXText {
                 metadata: _,
                 value: _,
@@ -1997,11 +2046,12 @@ impl<W: Write> GenJS<W> {
             Node::StringLiteralTypeAnnotation(StringLiteralTypeAnnotation {
                 metadata: _,
                 value,
-                raw: _,
+                raw,
             }) => {
-                out_token!(self, node, "\"");
-                self.print_escaped_string_literal(value, '"');
-                out!(self, "\"");
+                let quote = raw.str[0] as u8 as char;
+                out_token!(self, node, "{}", quote);
+                self.print_escaped_string_literal(value, quote);
+                out!(self, "{}", quote);
             }
             Node::NumberLiteralTypeAnnotation(NumberLiteralTypeAnnotation {
                 metadata: _,
@@ -3142,15 +3192,20 @@ impl<W: Write> GenJS<W> {
         out!(self, "}}");
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn visit_func_params_body<'gc>(
         &mut self,
         ctx: &'gc GCLock,
         params: &[&'gc Node<'gc>],
+        type_parameters: Option<&'gc Node<'gc>>,
         return_type: Option<&'gc Node<'gc>>,
         predicate: Option<&'gc Node<'gc>>,
         body: &'gc Node<'gc>,
         node: &'gc Node<'gc>,
     ) {
+        if let Some(type_parameters) = type_parameters {
+            type_parameters.visit(ctx, self, Some(Path::new(node, NodeField::type_parameters)));
+        }
         out!(self, "(");
         for (i, param) in params.iter().enumerate() {
             if i > 0 {
@@ -3541,6 +3596,13 @@ impl<W: Write> GenJS<W> {
             // Nullish coalescing always requires parens when mixed with any
             // other logical operations.
             return NeedParens::Yes;
+        } else if matches!(
+            path.parent,
+            Node::CallExpression(_) | Node::OptionalCallExpression(_)
+        ) && matches!(child, Node::SpreadElement(_))
+        {
+            // It's illegal to place parens around spread arguments.
+            return NeedParens::No;
         }
 
         let (child_prec, _child_assoc) = self.get_precedence(child);

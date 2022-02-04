@@ -73,6 +73,8 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapRestElement(node);
       case 'ImportExpression':
         return this.mapImportExpression(node);
+      case 'JSXStringLiteral':
+        return this.mapJSXStringLiteral(node);
       case 'PrivateName':
       case 'ClassPrivateProperty':
         return this.mapPrivateProperty(node);
@@ -340,6 +342,19 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
         end: node.end,
       },
       arguments: [this.mapNode(node.source)],
+    };
+  }
+
+  mapJSXStringLiteral(node: HermesNode): HermesNode {
+    // Babel expects StringLiterals in JSX,
+    // but Hermes uses JSXStringLiteral to attach the raw value without
+    // having to internally attach it to every single string literal.
+    return {
+      type: 'StringLiteral',
+      loc: node.loc,
+      start: node.start,
+      end: node.end,
+      value: node.value,
     };
   }
 

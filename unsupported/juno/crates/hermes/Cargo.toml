@@ -12,4 +12,4 @@ libc = "0.2"
 thiserror = "1.0"
 
 [build-dependencies]
-toml = "=0.5.7"
+cmake = "0.1"

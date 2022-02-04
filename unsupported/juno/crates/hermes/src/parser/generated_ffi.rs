@@ -118,6 +118,7 @@ pub enum NodeKind {
     JSXClosingElement,
     JSXAttribute,
     JSXSpreadAttribute,
+    JSXStringLiteral,
     JSXText,
     JSXElement,
     JSXFragment,
@@ -540,6 +541,9 @@ extern "C" {
     pub fn hermes_get_JSXAttribute_value(node: NodePtr) -> NodePtrOpt;
     // JSXSpreadAttribute
     pub fn hermes_get_JSXSpreadAttribute_argument(node: NodePtr) -> NodePtr;
+    // JSXStringLiteral
+    pub fn hermes_get_JSXStringLiteral_value(node: NodePtr) -> NodeString;
+    pub fn hermes_get_JSXStringLiteral_raw(node: NodePtr) -> NodeLabel;
     // JSXText
     pub fn hermes_get_JSXText_value(node: NodePtr) -> NodeString;
     pub fn hermes_get_JSXText_raw(node: NodePtr) -> NodeLabel;

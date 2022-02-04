@@ -1235,11 +1235,19 @@ void HermesRuntime::debugJavaScript(
 
 void HermesRuntime::registerForProfiling() {
   vm::Runtime &runtime = impl(this)->runtime_;
+  if (runtime.samplingProfiler) {
+    ::hermes::hermes_fatal(
+        "re-registering HermesVMs for profiling is not allowed");
+  }
   runtime.samplingProfiler =
       std::make_unique<::hermes::vm::SamplingProfiler>(&runtime);
 }
 
 void HermesRuntime::unregisterForProfiling() {
+  if (!impl(this)->runtime_.samplingProfiler) {
+    ::hermes::hermes_fatal(
+        "unregistering HermesVM not registered for profiling is not allowed");
+  }
   impl(this)->runtime_.samplingProfiler.reset();
 }
 

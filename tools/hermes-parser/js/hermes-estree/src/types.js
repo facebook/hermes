@@ -400,7 +400,8 @@ export type Expression =
   | ImportExpression
   | ChainExpression
   | TypeCastExpression
-  | PrivateName;
+  | JSXFragment
+  | JSXElement;
 
 export interface ThisExpression extends BaseNode {
   +type: 'ThisExpression';
@@ -536,6 +537,8 @@ export interface BinaryExpression extends BaseNode {
   +operator: BinaryOperator;
   +left: Expression;
   +right: Expression;
+  // once private brand checks are supported: `#x in this`
+  // | PrivateName;
 }
 
 export interface AssignmentExpression extends BaseNode {
@@ -586,7 +589,7 @@ interface BaseMemberExpressionWithComputedName extends BaseNode {
 }
 interface BaseMemberExpressionWithNonComputedName extends BaseNode {
   +object: Expression | Super;
-  +property: Identifier;
+  +property: Identifier | PrivateName;
   +computed: false;
 }
 export type MemberExpression =

@@ -329,10 +329,12 @@ Optional<ESTree::Node *> JSParserImpl::parseJSXAttribute() {
   //   ^
   ESTree::Node *value = nullptr;
   if (check(TokenKind::string_literal)) {
+    UniqueString *raw = lexer_.getStringLiteral(tok_->inputStr());
     value = setLocation(
         tok_,
         tok_,
-        new (context_) ESTree::StringLiteralNode(tok_->getStringLiteral()));
+        new (context_)
+            ESTree::JSXStringLiteralNode(tok_->getStringLiteral(), raw));
     advance(JSLexer::GrammarContext::AllowJSXIdentifier);
   } else {
     // { AssignmentExpression }

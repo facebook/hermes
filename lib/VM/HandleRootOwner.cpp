@@ -18,7 +18,7 @@ namespace vm {
 // class HandleRootOwner
 
 const PinnedHermesValue HandleRootOwner::nullPointer_{
-    HermesValue::encodeNullptrObjectValue()};
+    HermesValue::encodeNullptrObjectValueUnsafe()};
 const PinnedHermesValue HandleRootOwner::undefinedValue_{
     HermesValue::encodeUndefinedValue()};
 const PinnedHermesValue HandleRootOwner::nullValue_{
@@ -63,7 +63,7 @@ GCScope::~GCScope() {
 }
 
 PinnedHermesValue *GCScope::_newChunkAndPHV(HermesValue value) {
-  assert(next_ == curChunkEnd_ && "current chunk is not exhaused");
+  assert(next_ == curChunkEnd_ && "current chunk is not exhausted");
 
   // Move to the next chunk.
   ++curChunkIndex_;
@@ -98,7 +98,7 @@ void GCScope::mark(RootAcceptor &acceptor) {
 
     // Mark the handles.
     for (; first != last; ++first)
-      acceptor.accept(*first);
+      acceptor.acceptNullable(*first);
   }
 }
 

@@ -310,7 +310,7 @@ class TraceInterpreter final {
       const jsi::PropNameID *nativePropNameToConsumeAsDef = nullptr);
 
   /// Requires that \p valID is the proper id for \p val, and that a
-  /// defining occurence of \p valID occurs at the given \p
+  /// defining occurrence of \p valID occurs at the given \p
   /// globalRecordNum.  Decides whether the definition should be
   /// recorded, locally in \p call, or globally, and, if so, adds the
   /// association between \p valID and \p val to \p locals or \p
@@ -335,7 +335,7 @@ class TraceInterpreter final {
       std::unordered_map<SynthTrace::ObjectID, ValueType> &globals);
 
   /// Requires that \p valID is the proper id for \p val, and that a
-  /// defining occurence of \p key occurs at the given \p
+  /// defining occurrence of \p key occurs at the given \p
   /// globalRecordNum.  Decides whether the definition should be
   /// recorded, locally in \p call, or globally, and, if so, adds the
   /// association between \p key and \p val to \p locals or \p
@@ -360,7 +360,7 @@ class TraceInterpreter final {
   }
 
   /// Requires that \p valID is the proper id for \p propNameID, and
-  /// that a defining occurence of \p propNameID occurs at the given
+  /// that a defining occurrence of \p propNameID occurs at the given
   /// \p globalRecordNum.  Decides whether the definition should be
   /// recorded, locally in \p call, or globally, and, if so, adds the
   /// association between \p propNameID and \p val to \p locals or \p

@@ -399,7 +399,7 @@ CallResult<Handle<Arguments>> Arguments::create(
 /// Adds a property to the object in \p OBJ_HANDLE.  \p SYMBOL provides its name
 /// as a \c Predefined enum value, and its value is  rooted in \p HANDLE.  If
 /// property definition fails, the exceptional execution status will be
-/// propogated to the outer function.
+/// propagated to the outer function.
 #define DEFINE_PROP(OBJ_HANDLE, SYMBOL, HANDLE)                            \
   do {                                                                     \
     auto status = JSObject::defineNewOwnProperty(                          \

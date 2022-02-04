@@ -260,7 +260,7 @@ using WeakSlotState = WeakRefSlot::State;
 ///   be in the heap).  The value is may be null.  Execute a write barrier.
 ///     void writeBarrier(const GCPointerBase *loc, const GCCell *value);
 ///
-///   The given value/pointer is being written at a previously uninitialised loc
+///   The given value/pointer is being written at a previously uninitialized loc
 ///   (required to be in the heap).
 ///     void constructorWriteBarrier(
 ///         const GCHermesValue *loc,
@@ -739,7 +739,7 @@ class GCBase {
     explicit IDTracker();
 
     /// Return true if IDs are being tracked.
-    bool isTrackingIDs() const;
+    bool isTrackingIDs();
 
     /// Get the unique object id of the given object.
     /// If one does not yet exist, start tracking it.
@@ -1610,7 +1610,7 @@ class GCBase {
   // The cumulative GC stats.
   CumulativeHeapStats cumStats_;
 
-  /// Name to indentify this heap in logs.
+  /// Name to identify this heap in logs.
   std::string name_;
 
   /// weakSlots_ is a list of all the weak pointers in the system. They are
