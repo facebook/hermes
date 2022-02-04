@@ -12,5 +12,4 @@
 
 export type * from './selectors';
 export type * from './types';
-
-export {};
+export * from './predicates';

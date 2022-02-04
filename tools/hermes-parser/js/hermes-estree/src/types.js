@@ -711,7 +711,7 @@ export type BinaryOperator =
   | 'in'
   | 'instanceof';
 
-export type LogicalOperator = '||' | '&&';
+export type LogicalOperator = '||' | '&&' | '??';
 
 export type AssignmentOperator =
   | '='
@@ -726,7 +726,11 @@ export type AssignmentOperator =
   | '>>>='
   | '|='
   | '^='
-  | '&=';
+  | '&='
+  // not yet supported, but future proofing
+  | '||='
+  | '&&='
+  | '??=';
 
 export type UpdateOperator = '++' | '--';
 
