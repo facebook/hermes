@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -27,10 +27,14 @@ class RootAndSlotAcceptorDefault : public RootAndSlotAcceptor {
   void accept(GCPointerBase &ptr) final {
     auto *p = ptr.get(pointerBase_);
     accept(p);
-    ptr.setInGC(CompressedPointer{pointerBase_, p});
+    ptr.setInGC(CompressedPointer::encode(p, pointerBase_));
   }
 
   void accept(PinnedHermesValue &hv) final {
+    assert((!hv.isPointer() || hv.getPointer()) && "Value is not nullable.");
+    acceptHV(hv);
+  }
+  void acceptNullable(PinnedHermesValue &hv) final {
     acceptHV(hv);
   }
 
@@ -78,10 +82,14 @@ class RootAndSlotAcceptorWithNamesDefault
   void accept(GCPointerBase &ptr, const char *name) final {
     auto *p = ptr.get(pointerBase_);
     accept(p, name);
-    ptr.setInGC(CompressedPointer{pointerBase_, p});
+    ptr.setInGC(CompressedPointer::encode(p, pointerBase_));
   }
 
   void accept(PinnedHermesValue &hv, const char *name) final {
+    assert((!hv.isPointer() || hv.getPointer()) && "Value is not nullable.");
+    acceptHV(hv, name);
+  }
+  void acceptNullable(PinnedHermesValue &hv, const char *name) final {
     acceptHV(hv, name);
   }
 
@@ -137,7 +145,7 @@ class WeakAcceptorDefault : public WeakRefAcceptor, public WeakRootAcceptor {
 inline void WeakAcceptorDefault::acceptWeak(WeakRootBase &ptr) {
   GCCell *p = ptr.getNoBarrierUnsafe(pointerBaseForWeakRoot_);
   acceptWeak(p);
-  ptr = CompressedPointer(pointerBaseForWeakRoot_, p);
+  ptr = CompressedPointer::encode(p, pointerBaseForWeakRoot_);
 }
 
 /// @}

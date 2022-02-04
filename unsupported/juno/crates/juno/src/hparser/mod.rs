@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -13,11 +13,11 @@ use convert::Converter;
 use generated_cvt::cvt_node_ptr;
 use hermes::parser::{HermesParser, NodePtr};
 use hermes::utf::utf8_with_surrogates_to_string_lossy;
+use juno_support::source_manager::SourceId;
+use juno_support::NullTerminatedBuf;
 use std::fmt::Formatter;
-use support::NullTerminatedBuf;
 use thiserror::Error;
 
-use crate::source_manager::SourceId;
 pub use hermes::parser::{MagicCommentKind, ParserDialect, ParserFlags};
 
 pub struct ParsedJS<'a> {
@@ -69,7 +69,14 @@ impl<'parser> ParsedJS<'parser> {
 
         match self.parser.root() {
             None => None,
-            Some(node) => Some(convert_ast(&mut cvt, ctx, node)),
+            Some(node) => {
+                let ast = convert_ast(&mut cvt, ctx, node);
+                if ctx.sm().num_errors() > 0 {
+                    None
+                } else {
+                    Some(ast)
+                }
+            }
         }
     }
 }
@@ -112,8 +119,13 @@ pub fn parse_with_flags(
     if let Some(ast) = parsed.to_ast(&gc, file_id) {
         Ok(ast::NodeRc::from_node(&gc, ast))
     } else {
-        let (loc, msg) = parsed.first_error().unwrap();
-        Err(ParseError { loc, msg })
+        match parsed.first_error() {
+            Some((loc, msg)) => Err(ParseError { loc, msg }),
+            None => Err(ParseError {
+                loc: ast::SourceLoc::invalid(),
+                msg: "invalid AST produced".into(),
+            }),
+        }
     }
 }
 

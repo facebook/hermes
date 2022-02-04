@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -24,7 +24,6 @@ const ObjectVTable JSArrayBuffer::vt{
         nullptr,
         _mallocSizeImpl,
         nullptr,
-        _externalMemorySizeImpl, // externalMemorySize
         VTable::HeapSnapshotMetadata{
             HeapSnapshot::NodeType::Object,
             nullptr,
@@ -123,12 +122,6 @@ void JSArrayBuffer::_finalizeImpl(GCCell *cell, GC *gc) {
 }
 
 size_t JSArrayBuffer::_mallocSizeImpl(GCCell *cell) {
-  const auto *buffer = vmcast<JSArrayBuffer>(cell);
-  return buffer->size_;
-}
-
-gcheapsize_t JSArrayBuffer::_externalMemorySizeImpl(
-    hermes::vm::GCCell const *cell) {
   const auto *buffer = vmcast<JSArrayBuffer>(cell);
   return buffer->size_;
 }

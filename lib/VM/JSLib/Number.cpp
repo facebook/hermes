@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -209,7 +209,7 @@ numberIsInteger(void *, Runtime *runtime, NativeArgs args) {
     // If number is NaN, +∞, or −∞, return false.
     return HermesValue::encodeBoolValue(false);
   }
-  // Let integer be ToInteger(number).
+  // Let integer be ToIntegerOrInfinity(number).
   assert(!std::isnan(number) && "number must not be NaN after the check");
   // Call std::trunc because we've alredy checked NaN with isfinite.
   double integer = std::trunc(number);
@@ -243,7 +243,7 @@ numberIsSafeInteger(void *, Runtime *runtime, NativeArgs args) {
     return HermesValue::encodeBoolValue(false);
   }
 
-  // Let integer be ToInteger(number).
+  // Let integer be ToIntegerOrInfinity(number).
   assert(!std::isnan(number) && "number must not be NaN after the check");
   // Call std::trunc because we've alredy checked NaN with isfinite.
   double integer = std::trunc(number);
@@ -295,8 +295,8 @@ numberPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   if (args.getArg(0).isUndefined())
     radix = 10;
   else {
-    // ToInteger(arg0).
-    auto intRes = toInteger(runtime, args.getArgHandle(0));
+    // ToIntegerOrInfinity(arg0).
+    auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
     if (intRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -358,7 +358,7 @@ numberPrototypeToLocaleString(void *ctx, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 numberPrototypeToFixed(void *, Runtime *runtime, NativeArgs args) {
-  auto intRes = toInteger(runtime, args.getArgHandle(0));
+  auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -492,7 +492,7 @@ numberPrototypeToExponential(void *, Runtime *runtime, NativeArgs args) {
     x = numPtr->getPrimitiveNumber();
   }
 
-  auto res = toInteger(runtime, args.getArgHandle(0));
+  auto res = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -629,7 +629,7 @@ numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args) {
     return resultRes->getHermesValue();
   }
 
-  auto intRes = toInteger(runtime, args.getArgHandle(0));
+  auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

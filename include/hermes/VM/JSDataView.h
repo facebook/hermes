@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -78,7 +78,7 @@ class JSDataView final : public JSObject {
     assert(
         buffer_ &&
         "Cannot call attached() when there is not even a buffer set");
-    return buffer_.get(runtime)->attached();
+    return buffer_.getNonNull(runtime)->attached();
   }
 
   void setBuffer(
@@ -89,7 +89,7 @@ class JSDataView final : public JSObject {
     assert(
         offset + length <= buffer->size() &&
         "A DataView cannot be looking outside of the storage");
-    buffer_.set(runtime, buffer, &runtime->getHeap());
+    buffer_.setNonNull(runtime, buffer, &runtime->getHeap());
     offset_ = offset;
     length_ = length;
   }
@@ -127,7 +127,7 @@ T JSDataView::get(
   T result;
   ::memcpy(
       &result,
-      buffer_.get(runtime)->getDataBlock() + offset_ + offset,
+      buffer_.getNonNull(runtime)->getDataBlock() + offset_ + offset,
       sizeof(T));
   return llvh::support::endian::byte_swap(
       result,
@@ -150,7 +150,7 @@ void JSDataView::set(
       littleEndian ? llvh::support::endianness::little
                    : llvh::support::endianness::big);
   memcpy(
-      buffer_.get(runtime)->getDataBlock() + offset_ + offset,
+      buffer_.getNonNull(runtime)->getDataBlock() + offset_ + offset,
       &value,
       sizeof(T));
 }

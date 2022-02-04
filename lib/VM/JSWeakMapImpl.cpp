@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -40,9 +40,9 @@ ExecutionStatus JSWeakMapImplBase::setValue(
     if (it != self->map_.end()) {
       // Key already exists, update existing value.
       assert(
-          it->second < self->valueStorage_.get(runtime)->size() &&
+          it->second < self->valueStorage_.getNonNull(runtime)->size() &&
           "invalid index");
-      self->valueStorage_.get(runtime)->set(
+      self->valueStorage_.getNonNull(runtime)->set(
           it->second, *value, &runtime->getHeap());
       return ExecutionStatus::RETURNED;
     }
@@ -68,7 +68,7 @@ ExecutionStatus JSWeakMapImplBase::setValue(
     assert(result.second && "unable to add a new value to map");
   }
 
-  self->valueStorage_.get(runtime)->set(i, *value, &runtime->getHeap());
+  self->valueStorage_.getNonNull(runtime)->set(i, *value, &runtime->getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -146,7 +146,7 @@ HermesValue JSWeakMapImplBase::getValue(
   if (it == self->map_.end()) {
     return HermesValue::encodeUndefinedValue();
   }
-  return self->valueStorage_.get(runtime)->at(it->second);
+  return self->valueStorage_.getNonNull(runtime)->at(it->second);
 }
 
 uint32_t JSWeakMapImplBase::debugFreeSlotsAndGetSize(
@@ -304,7 +304,7 @@ CallResult<uint32_t> JSWeakMapImplBase::getFreeValueStorageIndex(
   }
 
   assert(i < storageHandle->size() && "invalid index");
-  self->valueStorage_.set(runtime, *storageHandle, &runtime->getHeap());
+  self->valueStorage_.setNonNull(runtime, *storageHandle, &runtime->getHeap());
 
   return i;
 }
@@ -335,7 +335,6 @@ const ObjectVTable JSWeakMapImpl<C>::vt{
         JSWeakMapImpl::_finalizeImpl,
         JSWeakMapImpl::_markWeakImpl,
         JSWeakMapImpl::_mallocSizeImpl,
-        nullptr,
         nullptr,
         VTable::HeapSnapshotMetadata{
             HeapSnapshot::NodeType::Object,

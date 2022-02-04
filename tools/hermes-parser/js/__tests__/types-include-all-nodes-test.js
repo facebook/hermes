@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -100,6 +100,13 @@ function getInterfaces(): $ReadOnlyMap<
   return interfaces;
 }
 
+const typesThatShouldBeSkipped = new Set([
+  // These types have a special union type declared to allow consumers to refine on `.computed`
+  'ClassProperty',
+  'MethodDefinition',
+  'MemberExpression',
+  'OptionalMemberExpression',
+]);
 const propertiesThatShouldBeSkipped = new Map([
   [
     'TemplateElement',
@@ -159,6 +166,13 @@ describe('All nodes declared by hermes should have an interface in hermes-estree
   const interfaces = getInterfaces();
 
   for (const node of HermesESTreeJSON) {
+    if (typesThatShouldBeSkipped.has(node.name)) {
+      describe.skip(node.name, () => {
+        it.skip('was skipped due to being included in `typesThatShouldBeSkipped`', () => {});
+      });
+      continue;
+    }
+
     describe(node.name, () => {
       const iface = interfaces.get(node.name);
       it('has an interface declared', () => {
@@ -173,6 +187,7 @@ describe('All nodes declared by hermes should have an interface in hermes-estree
       for (const {name, optional} of node.arguments) {
         // property is known to be incorrect
         if (propertiesThatShouldBeSkipped.get(node.name)?.has(name)) {
+          it.skip('was marked to be skipped in `propertiesThatShouldBeSkipped`', () => {});
           continue;
         }
 
@@ -193,9 +208,7 @@ describe('All nodes declared by hermes should have an interface in hermes-estree
               .get(node.name)
               ?.has(name)
           ) {
-            it('has an incorrect optional flag in the hermes spec so we skip this test', () => {
-              expect(true).toBe(true);
-            });
+            it.skip('has an incorrect optional flag in the hermes spec so we skip this test', () => {});
             return;
           }
 

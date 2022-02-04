@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -214,7 +214,7 @@ inline OutIt convertUTF8WithSurrogatesToUTF16(
 }
 
 /// Convert a UTF-16 encoded string \p input to UTF-8 stored in \p dest,
-/// encoding each surrogate halves individully into UTF-8.
+/// encoding each surrogate halves individually into UTF-8.
 /// This is the inverse function of convertUTF8WithSurrogatesToUTF16.
 /// Note the result is not valid utf-8 if it contains surrogate values.
 /// Only use it to get the internal representation of utf-8 strings in hermes

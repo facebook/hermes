@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -1559,7 +1559,8 @@ objectPrototypeLookupGetter(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   return (*accessorRes && (*accessorRes)->getter)
-      ? HermesValue::encodeObjectValue((*accessorRes)->getter.get(runtime))
+      ? HermesValue::encodeObjectValue(
+            (*accessorRes)->getter.getNonNull(runtime))
       : HermesValue::encodeUndefinedValue();
 }
 
@@ -1570,7 +1571,8 @@ objectPrototypeLookupSetter(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   return (*accessorRes && (*accessorRes)->setter)
-      ? HermesValue::encodeObjectValue((*accessorRes)->setter.get(runtime))
+      ? HermesValue::encodeObjectValue(
+            (*accessorRes)->setter.getNonNull(runtime))
       : HermesValue::encodeUndefinedValue();
 }
 

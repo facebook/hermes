@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -15,9 +15,9 @@
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/instrumentation/StatSamplingThread.h"
 
-#include "llvh/ADT/MapVector.h"
-
+#include <list>
 #include <memory>
+#include <unordered_map>
 
 namespace hermes {
 
@@ -29,7 +29,10 @@ class ConsoleHostContext {
   /// The task queue to implement a minimalistic event loop. The only type of
   /// task at this moment is timer task added via setTimeout and friends.
   /// Values are marked by registering a custom roots function with the Runtime.
-  llvh::MapVector<uint32_t, vm::Callable *> taskQueue_{};
+  using TaskQueue = std::list<std::pair<uint32_t, vm::Callable *>>;
+  TaskQueue taskQueue_;
+  /// Enables fast access by ID.
+  std::unordered_map<uint32_t, TaskQueue::iterator> taskMap_;
 
   /// Next task ID to be allocated by queueTask.
   uint32_t nextTaskId_{1};
@@ -46,16 +49,21 @@ class ConsoleHostContext {
   /// Enqueue a task.
   /// \return the ID of the task.
   uint32_t queueTask(vm::PseudoHandle<vm::Callable> task) {
-    taskQueue_.insert({nextTaskId_, task.get()});
+    auto it = taskQueue_.insert(taskQueue_.end(), {nextTaskId_, task.get()});
+    taskMap_.emplace(nextTaskId_, it);
+    assert(taskQueue_.size() == taskMap_.size() && "map & queue must agree");
     task.invalidate();
     return nextTaskId_++;
   }
 
   /// \param id the task to clear from the queue.
   void clearTask(uint32_t id) {
-    taskQueue_.remove_if([id](std::pair<uint32_t, vm::Callable *> it) {
-      return it.first == id;
-    });
+    auto it = taskMap_.find(id);
+    if (it != taskMap_.end()) {
+      taskQueue_.erase(it->second);
+      taskMap_.erase(it);
+      assert(taskQueue_.size() == taskMap_.size() && "map & queue must agree");
+    }
   }
 
   /// Remove the first task from the queue.
@@ -65,7 +73,7 @@ class ConsoleHostContext {
       return llvh::None;
     vm::PseudoHandle<vm::Callable> result =
         createPseudoHandle(taskQueue_.front().second);
-    taskQueue_.erase(taskQueue_.begin());
+    clearTask(taskQueue_.front().first);
     return result;
   }
 };

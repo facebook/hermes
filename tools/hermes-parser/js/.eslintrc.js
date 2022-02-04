@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -27,6 +27,7 @@ module.exports = {
   parser: require.resolve('./hermes-eslint'),
   rules: {
     curly: ['error', 'all'],
+    eqeqeq: ['error', 'always', {null: 'never'}],
     'no-unused-vars': [
       'error',
       {
@@ -48,6 +49,9 @@ module.exports = {
     'flowtype/array-style-simple-type': ['error', 'verbose'],
 
     'prettier/prettier': 'error',
+
+    'no-undef': 'off',
+    'flowtype/define-flow-type': 'off',
   },
   overrides: [
     {

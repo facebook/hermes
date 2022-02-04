@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -17,11 +17,11 @@ import * as prettier from 'prettier';
 import {getTransformedAST} from './getTransformedAST';
 import {SimpleTraverser} from '../traverse/SimpleTraverser';
 
-export type Visitors = Visitor<TransformContext>;
+export type TransformVisitor = Visitor<TransformContext>;
 
 export function transform(
   originalCode: string,
-  visitors: Visitor<TransformContext>,
+  visitors: TransformVisitor,
   prettierOptions: {...} = {},
 ): string {
   const {ast, astWasMutated, mutatedCode} = getTransformedAST(
@@ -51,10 +51,14 @@ export function transform(
   // $FlowExpectedError[cannot-write]
   delete ast.comments;
 
-  return prettier.format(mutatedCode, {
-    ...prettierOptions,
-    parser() {
-      return ast;
+  return prettier.format(
+    mutatedCode,
+    // $FlowExpectedError[incompatible-exact] - we don't want to create a dependency on the prettier types
+    {
+      ...prettierOptions,
+      parser() {
+        return ast;
+      },
     },
-  });
+  );
 }

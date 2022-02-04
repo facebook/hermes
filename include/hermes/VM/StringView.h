@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -22,7 +22,7 @@ namespace vm {
 /// allow you to iterate through a string without worrying about the type.
 /// Internally, it's a char pointer and a char16 pointer (only one is valid).
 ///
-/// Performance: Iterating from StringView is slighly slower than normal
+/// Performance: Iterating from StringView is slightly slower than normal
 /// iterations: every operation has one extra conditional check on the type.
 /// If you are in a extremely performance sensitive setting, consider getting
 /// raw pointers directly out of StringPrimitive and explicitly duplicate code

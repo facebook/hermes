@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -64,6 +64,7 @@ export interface MostTokens extends BaseToken {
     | 'Keyword'
     | 'Null'
     | 'Numeric'
+    | 'BigInt'
     | 'Punctuator'
     | 'RegularExpression'
     | 'String'
@@ -131,7 +132,10 @@ export type ESNode =
   | Super
   | TemplateElement
   | SpreadElement
-  | Pattern
+  | BindingName
+  | RestElement
+  | AssignmentPattern
+  | MemberExpression
   | ClassBody
   | AClass
   | MethodDefinition
@@ -165,17 +169,23 @@ export type ESNode =
   | EnumBooleanBody
   | EnumBooleanMember
   | EnumSymbolBody
-  | DeclareClass
-  | DeclareVariable
-  | DeclareFunction
-  | DeclaredPredicate
-  | DeclareModule
+  | DeclaredNode
   | ObjectTypeInternalSlot
   // JSX
   | JSXNode;
 
+export type BindingName = Identifier | BindingPattern;
+export type BindingPattern = ArrayPattern | ObjectPattern;
+export type RestElementPattern = AssignmentPattern | BindingName | RestElement;
+export type FunctionParameter = AssignmentPattern | BindingName | RestElement;
+export type DestructuringPattern =
+  | BindingName
+  | AssignmentPattern
+  | MemberExpression
+  | RestElement;
+
 interface BaseFunction extends BaseNode {
-  +params: $ReadOnlyArray<Pattern>;
+  +params: $ReadOnlyArray<FunctionParameter>;
   +async: boolean;
 
   +predicate: null | InferredPredicate;
@@ -318,7 +328,7 @@ export interface ForStatement extends BaseNode {
 }
 
 interface BaseForXStatement extends BaseNode {
-  +left: VariableDeclaration | Pattern;
+  +left: VariableDeclaration | BindingName | MemberExpression;
   +right: Expression;
   +body: Statement;
 }
@@ -357,7 +367,7 @@ export interface VariableDeclaration extends BaseNode {
 
 export interface VariableDeclarator extends BaseNode {
   +type: 'VariableDeclarator';
-  +id: Pattern;
+  +id: BindingName;
   +init?: Expression | null;
 }
 
@@ -390,7 +400,8 @@ export type Expression =
   | ImportExpression
   | ChainExpression
   | TypeCastExpression
-  | PrivateName;
+  | JSXFragment
+  | JSXElement;
 
 export interface ThisExpression extends BaseNode {
   +type: 'ThisExpression';
@@ -405,29 +416,101 @@ export interface ArrayExpression extends BaseNode {
 
 export interface ObjectExpression extends BaseNode {
   +type: 'ObjectExpression';
-  +properties: $ReadOnlyArray<Property | SpreadElement>;
+  +properties: $ReadOnlyArray<ObjectProperty | SpreadElement>;
 }
 
-interface PropertyBase extends BaseNode {
-  +key: Expression;
-  +shorthand: boolean;
-  +computed: boolean;
-}
-
-export interface Property extends PropertyBase {
+// This is the complete type of a "Property"
+// This same node (unfortunately) covers both object literal properties
+// and object desturcturing properties.
+//
+// This interface must be a "supertype" for the below refined property types
+// or else the below types will be incompatible with the ESNode union
+export interface Property extends BaseNode {
   +type: 'Property';
-  +value: Expression | Pattern; // Could be an AssignmentProperty
+  +key: Expression;
+  +value: Expression | DestructuringPattern;
   +kind: 'init' | 'get' | 'set';
   +method: boolean;
+  +computed: boolean;
+  +shorthand: boolean;
 }
 
-// this is a special type of property
-// we can't use `interface ... extends` here because it's a sub-type
-export interface AssignmentProperty extends PropertyBase {
+export type ObjectProperty =
+  | ObjectPropertyWithNonShorthandStaticName
+  | ObjectPropertyWithShorthandStaticName
+  | ObjectPropertyWithComputedName;
+export interface ObjectPropertyWithNonShorthandStaticName extends BaseNode {
   +type: 'Property';
-  +value: Pattern;
+  +computed: false;
+  // non-computed, non-shorthand names are constrained significantly
+  +key: Identifier | StringLiteral | NumericLiteral;
+  +value: Expression;
+  +kind: 'init' | 'get' | 'set';
+  +method: boolean;
+  +shorthand: false;
+}
+export interface ObjectPropertyWithShorthandStaticName extends BaseNode {
+  +type: 'Property';
+  +computed: false;
+  // shorthand keys *must* be identifiers
+  +key: Identifier;
+  // shorthand values *must* be identifiers (that look the same as the key)
+  +value: Identifier;
+  +kind: 'init';
+  +method: boolean;
+  +shorthand: true;
+}
+export interface ObjectPropertyWithComputedName extends BaseNode {
+  +type: 'Property';
+  +computed: true;
+  // computed names can be any expression
+  +key: Expression;
+  +value: Expression;
+  +kind: 'init' | 'get' | 'set';
+  +method: boolean;
+  // cannot have a shorthand computed name
+  +shorthand: false;
+}
+
+export type DestructuringObjectProperty =
+  | DestructuringObjectPropertyWithNonShorthandStaticName
+  | DestructuringObjectPropertyWithShorthandStaticName
+  | DestructuringObjectPropertyWithComputedName;
+interface DestructuringObjectPropertyBase extends BaseNode {
+  // destructuring properties cannot be methods
   +kind: 'init';
   +method: false;
+}
+export interface DestructuringObjectPropertyWithNonShorthandStaticName
+  extends DestructuringObjectPropertyBase {
+  +type: 'Property';
+  +computed: false;
+  // non-computed, non-shorthand names are constrained significantly
+  +key: Identifier | StringLiteral | NumericLiteral;
+  // destructuring properties cannot have any value
+  +value: DestructuringPattern;
+  +shorthand: false;
+}
+export interface DestructuringObjectPropertyWithShorthandStaticName
+  extends DestructuringObjectPropertyBase {
+  +type: 'Property';
+  +computed: false;
+  // shorthand keys *must* be identifiers
+  +key: Identifier;
+  // shorthand values *must* be identifiers (that look the same as the key)
+  +value: Identifier;
+  +shorthand: true;
+}
+export interface DestructuringObjectPropertyWithComputedName
+  extends DestructuringObjectPropertyBase {
+  +type: 'Property';
+  +computed: true;
+  // computed names can be any expression
+  +key: Expression;
+  // destructuring properties cannot have any value
+  +value: DestructuringPattern;
+  // cannot have a shorthand computed name
+  +shorthand: false;
 }
 
 export interface FunctionExpression extends BaseFunction {
@@ -454,12 +537,14 @@ export interface BinaryExpression extends BaseNode {
   +operator: BinaryOperator;
   +left: Expression;
   +right: Expression;
+  // once private brand checks are supported: `#x in this`
+  // | PrivateName;
 }
 
 export interface AssignmentExpression extends BaseNode {
   +type: 'AssignmentExpression';
   +operator: AssignmentOperator;
-  +left: Pattern | MemberExpression;
+  +left: BindingName | MemberExpression;
   +right: Expression;
 }
 
@@ -497,13 +582,28 @@ export interface NewExpression extends BaseCallExpression {
   +type: 'NewExpression';
 }
 
-interface BaseMemberExpression extends BaseNode {
+interface BaseMemberExpressionWithComputedName extends BaseNode {
   +object: Expression | Super;
   +property: Expression;
-  +computed: boolean;
+  +computed: true;
 }
-export interface MemberExpression extends BaseMemberExpression {
+interface BaseMemberExpressionWithNonComputedName extends BaseNode {
+  +object: Expression | Super;
+  +property: Identifier | PrivateName;
+  +computed: false;
+}
+export type MemberExpression =
+  | MemberExpressionWithComputedName
+  | MemberExpressionWithNonComputedName;
+export interface MemberExpressionWithComputedName
+  extends BaseMemberExpressionWithComputedName {
   +type: 'MemberExpression';
+  +computed: true;
+}
+export interface MemberExpressionWithNonComputedName
+  extends BaseMemberExpressionWithNonComputedName {
+  +type: 'MemberExpression';
+  +computed: false;
 }
 
 export type ChainElement = CallExpression | MemberExpression;
@@ -513,14 +613,6 @@ export interface ChainExpression extends BaseNode {
   +expression: ChainElement;
 }
 
-export type Pattern =
-  | Identifier
-  | ObjectPattern
-  | ArrayPattern
-  | RestElement
-  | AssignmentPattern
-  | MemberExpression;
-
 export interface SwitchCase extends BaseNode {
   +type: 'SwitchCase';
   +test?: Expression | null;
@@ -529,7 +621,7 @@ export interface SwitchCase extends BaseNode {
 
 export interface CatchClause extends BaseNode {
   +type: 'CatchClause';
-  +param: Pattern | null;
+  +param: BindingName | null;
   +body: BlockStatement;
 }
 
@@ -691,27 +783,27 @@ export interface TemplateElement extends BaseNode {
 
 export interface ObjectPattern extends BaseNode {
   +type: 'ObjectPattern';
-  +properties: $ReadOnlyArray<AssignmentProperty | RestElement>;
+  +properties: $ReadOnlyArray<DestructuringObjectProperty | RestElement>;
   // if used as a VariableDeclarator.id
   +typeAnnotation: TypeAnnotation | null;
 }
 
 export interface ArrayPattern extends BaseNode {
   +type: 'ArrayPattern';
-  +elements: $ReadOnlyArray<Pattern>;
+  +elements: $ReadOnlyArray<DestructuringPattern>;
 
   +typeAnnotation: TypeAnnotation | null;
 }
 
 export interface RestElement extends BaseNode {
   +type: 'RestElement';
-  +argument: Pattern;
+  +argument: RestElementPattern;
   // the Pattern owns the typeAnnotation
 }
 
 export interface AssignmentPattern extends BaseNode {
   +type: 'AssignmentPattern';
-  +left: Pattern;
+  +left: BindingName;
   +right: Expression;
 }
 
@@ -726,19 +818,47 @@ interface BaseClass extends BaseNode {
   +decorators: $ReadOnlyArray<Decorator>;
 }
 
+export type ClassMember =
+  | ClassProperty
+  | ClassPrivateProperty
+  | MethodDefinition;
+export type ClassMemberWithNonComputedName =
+  | ClassPropertyWithNonComputedName
+  | ClassPrivateProperty
+  | MethodDefinitionConstructor
+  | MethodDefinitionWithNonComputedName;
 export interface ClassBody extends BaseNode {
   +type: 'ClassBody';
-  +body: $ReadOnlyArray<
-    ClassProperty | ClassPrivateProperty | MethodDefinition,
-  >;
+  +body: $ReadOnlyArray<ClassMember>;
 }
 
-export interface MethodDefinition extends BaseNode {
+export type MethodDefinition =
+  | MethodDefinitionConstructor
+  | MethodDefinitionWithComputedName
+  | MethodDefinitionWithNonComputedName;
+interface MethodDefinitionBase extends BaseNode {
+  +value: FunctionExpression;
+}
+export interface MethodDefinitionConstructor extends MethodDefinitionBase {
+  +type: 'MethodDefinition';
+  +key: Identifier | StringLiteral;
+  +kind: 'constructor';
+  +computed: false;
+  +static: false;
+}
+export interface MethodDefinitionWithComputedName extends MethodDefinitionBase {
   +type: 'MethodDefinition';
   +key: Expression;
-  +value: FunctionExpression;
-  +kind: 'constructor' | 'method' | 'get' | 'set';
-  +computed: boolean;
+  +kind: 'method' | 'get' | 'set';
+  +computed: true;
+  +static: boolean;
+}
+export interface MethodDefinitionWithNonComputedName
+  extends MethodDefinitionBase {
+  +type: 'MethodDefinition';
+  +key: Identifier;
+  +kind: 'method' | 'get' | 'set';
+  +computed: false;
   +static: boolean;
 }
 
@@ -863,6 +983,7 @@ export type TypeAnnotationType =
   | VoidTypeAnnotation
   | StringLiteralTypeAnnotation
   | NumberLiteralTypeAnnotation
+  | BigIntLiteralTypeAnnotation
   | BooleanLiteralTypeAnnotation
   | ArrayTypeAnnotation
   | NullableTypeAnnotation
@@ -942,10 +1063,16 @@ export interface VoidTypeAnnotation extends BaseNode {
 export interface StringLiteralTypeAnnotation extends BaseNode {
   +type: 'StringLiteralTypeAnnotation';
   +value: string;
+  +raw: string;
 }
 export interface NumberLiteralTypeAnnotation extends BaseNode {
   +type: 'NumberLiteralTypeAnnotation';
   +value: number;
+  +raw: string;
+}
+export interface BigIntLiteralTypeAnnotation extends BaseNode {
+  +type: 'BigIntLiteralTypeAnnotation';
+  +value: null;
   +raw: string;
 }
 export interface BooleanLiteralTypeAnnotation extends BaseNode {
@@ -966,7 +1093,7 @@ export interface ExistsTypeAnnotation extends BaseNode {
 }
 export interface GenericTypeAnnotation extends BaseNode {
   +type: 'GenericTypeAnnotation';
-  +id: Identifier;
+  +id: Identifier | QualifiedTypeIdentifier;
   +typeParameters: null | TypeParameterInstantiation;
 }
 export interface QualifiedTypeIdentifier extends BaseNode {
@@ -976,7 +1103,7 @@ export interface QualifiedTypeIdentifier extends BaseNode {
 }
 export interface TypeofTypeAnnotation extends BaseNode {
   +type: 'TypeofTypeAnnotation';
-  +argument: GenericTypeAnnotation | QualifiedTypeIdentifier;
+  +argument: TypeAnnotationType;
 }
 export interface TupleTypeAnnotation extends BaseNode {
   +type: 'TupleTypeAnnotation';
@@ -1099,17 +1226,6 @@ export interface InterfaceExtends extends BaseNode {
   +typeParameters: null | TypeParameterDeclaration;
 }
 
-interface ClassPropertyBase extends BaseNode {
-  +key: Identifier;
-  +value: null | Literal;
-  +typeAnnotation: null | TypeAnnotationType;
-  +static: boolean;
-  +variance: null | Variance;
-  +declare: boolean;
-  // hermes always emit this as false
-  +optional: false;
-}
-
 export interface ClassImplements extends BaseNode {
   +type: 'ClassImplements';
   +id: Identifier;
@@ -1201,6 +1317,19 @@ export interface EnumDefaultedMember extends BaseNode {
  * Declare nodes *
  *****************/
 
+export type DeclaredNode =
+  | DeclareClass
+  | DeclareVariable
+  | DeclareFunction
+  | DeclareModule
+  | DeclareInterface
+  | DeclareTypeAlias
+  | DeclareOpaqueType
+  | DeclareExportAllDeclaration
+  | DeclareExportDeclaration
+  | DeclareModuleExports
+  | DeclaredPredicate;
+
 export interface DeclareClass extends BaseNode {
   +type: 'DeclareClass';
   +id: Identifier;
@@ -1219,7 +1348,7 @@ export interface DeclareVariable extends BaseNode {
 export interface DeclareFunction extends BaseNode {
   +type: 'DeclareFunction';
   +id: Identifier;
-  +predicate: InferredPredicate | null;
+  +predicate: InferredPredicate | DeclaredPredicate | null;
 }
 
 export interface DeclareModule extends BaseNode {
@@ -1395,9 +1524,20 @@ export interface OptionalCallExpression extends BaseCallExpression {
   +type: 'OptionalCallExpression';
   +optional: boolean;
 }
-export interface OptionalMemberExpression extends BaseMemberExpression {
+export type OptionalMemberExpression =
+  | OptionalMemberExpressionWithComputedName
+  | OptionalMemberExpressionWithNonComputedName;
+export interface OptionalMemberExpressionWithComputedName
+  extends BaseMemberExpressionWithComputedName {
   +type: 'OptionalMemberExpression';
   +optional: boolean;
+  +computed: true;
+}
+export interface OptionalMemberExpressionWithNonComputedName
+  extends BaseMemberExpressionWithNonComputedName {
+  +type: 'OptionalMemberExpression';
+  +optional: boolean;
+  +computed: false;
 }
 
 // `ExportAllDeclaration` is the new standard for `export * as y from 'z'`
@@ -1414,12 +1554,33 @@ export interface BigIntLiteralLegacy extends BaseNode {
 }
 
 // `PropertyDefinition` is the new standard for all class properties
-export interface ClassProperty extends ClassPropertyBase {
+export type ClassProperty =
+  | ClassPropertyWithComputedName
+  | ClassPropertyWithNonComputedName;
+interface ClassPropertyBase extends BaseNode {
+  +value: null | Expression;
+  +typeAnnotation: null | TypeAnnotationType;
+  +static: boolean;
+  +variance: null | Variance;
+  +declare: boolean;
+  // hermes always emit this as false
+  +optional: false;
+}
+export interface ClassPropertyWithComputedName extends ClassPropertyBase {
   +type: 'ClassProperty';
-  +computed: false; // flow itself doesn't support computed ClassProperties, even though they might parse fine.
+  +key: Expression;
+  +computed: true;
+}
+export interface ClassPropertyWithNonComputedName extends ClassPropertyBase {
+  +type: 'ClassProperty';
+  +key: Identifier;
+  +computed: false;
 }
 export interface ClassPrivateProperty extends ClassPropertyBase {
   +type: 'ClassPrivateProperty';
+  +key: Identifier;
+  // this is never emitted, but it makes it easier to do lookups with the `ClassMember` type
+  +computed?: void;
 }
 
 // `PrivateIdentifier` is the new standard for #private identifiers

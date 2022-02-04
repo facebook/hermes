@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -163,6 +163,10 @@ class Token {
     assert(getKind() == TokenKind::string_literal);
     return stringLiteral_;
   }
+  UniqueString *getStringLiteralRawValue() const {
+    assert(getKind() == TokenKind::string_literal);
+    return rawString_;
+  }
   bool getStringLiteralContainsEscapes() const {
     assert(getKind() == TokenKind::string_literal);
     return stringLiteralContainsEscapes_;
@@ -183,6 +187,11 @@ class Token {
 
   UniqueString *getTemplateRawValue() const {
     assert(isTemplateLiteral());
+    return rawString_;
+  }
+
+  UniqueString *getBigIntLiteral() const {
+    assert(getKind() == TokenKind::bigint_literal);
     return rawString_;
   }
 
@@ -220,6 +229,10 @@ class Token {
     kind_ = TokenKind::eof;
   }
 
+  void setBigIntLiteral(UniqueString *raw) {
+    kind_ = TokenKind::bigint_literal;
+    rawString_ = raw;
+  }
   void setNumericLiteral(double literal) {
     kind_ = TokenKind::numeric_literal;
     numeric_ = literal;
@@ -236,6 +249,12 @@ class Token {
     kind_ = TokenKind::string_literal;
     stringLiteral_ = literal;
     stringLiteralContainsEscapes_ = containsEscapes;
+  }
+  void setJSXStringLiteral(UniqueString *literal, UniqueString *raw) {
+    kind_ = TokenKind::string_literal;
+    stringLiteral_ = literal;
+    rawString_ = raw;
+    stringLiteralContainsEscapes_ = false;
   }
   void setRegExpLiteral(RegExpLiteral *literal) {
     kind_ = TokenKind::regexp_literal;

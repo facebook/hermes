@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -936,14 +936,6 @@ class Runtime : public HandleRootOwner,
   void getInlineCacheProfilerInfo(llvh::raw_ostream &ostream);
 #endif
 
- protected:
-  /// Construct a Runtime on the stack.
-  /// NOTE: This should only be used by StackRuntime. All other uses should use
-  /// Runtime::create.
-  explicit Runtime(
-      std::shared_ptr<StorageProvider> provider,
-      const RuntimeConfig &runtimeConfig);
-
 #if defined(HERMESVM_PROFILER_EXTERN)
  public:
 #else
@@ -953,6 +945,10 @@ class Runtime : public HandleRootOwner,
   CallResult<HermesValue> interpretFunctionImpl(CodeBlock *newCodeBlock);
 
  private:
+  explicit Runtime(
+      std::shared_ptr<StorageProvider> provider,
+      const RuntimeConfig &runtimeConfig);
+
   /// Called by the GC at the beginning of a collection. This method informs the
   /// GC of all runtime roots.  The \p markLongLived argument
   /// indicates whether root data structures that contain only
@@ -1133,6 +1129,7 @@ class Runtime : public HandleRootOwner,
   friend class ScopedNativeDepthTracker;
   friend class ScopedNativeCallFrame;
 
+  class StackRuntime;
   class MarkRootsPhaseTimer;
 
   /// Whenever we pass through the first phase, we record the current time here,
@@ -1323,7 +1320,7 @@ class Runtime : public HandleRootOwner,
     return oldFlag;
   }
 
-  /// \return whether timeout async break was requsted or not. Clear the
+  /// \return whether timeout async break was requested or not. Clear the
   /// timeout request bit afterward.
   bool testAndClearTimeoutAsyncBreakRequest() {
     return testAndClearAsyncBreakRequest(
@@ -1479,21 +1476,6 @@ class Runtime : public HandleRootOwner,
   void popCallStackImpl();
   void pushCallStackImpl(const CodeBlock *codeBlock, const inst::Inst *ip);
   std::unique_ptr<StackTracesTree> stackTracesTree_;
-};
-
-/// StackRuntime is meant to be used whenever a Runtime should be allocated on
-/// the stack. This should only be used by JSI, everything else should use the
-/// default creator.
-class StackRuntime final : public Runtime {
- public:
-  StackRuntime(const RuntimeConfig &config);
-  StackRuntime(
-      std::shared_ptr<StorageProvider> provider,
-      const RuntimeConfig &config);
-
-  // A dummy virtual destructor to avoid problems when StackRuntime is used
-  // in compilation units compiled with RTTI.
-  virtual ~StackRuntime();
 };
 
 /// An RAII class for automatically tracking the native call frame depth.

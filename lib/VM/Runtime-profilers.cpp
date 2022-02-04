@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -24,7 +24,7 @@ namespace vm {
 #ifdef HERMESVM_PROFILER_OPCODE
 void Runtime::dumpOpcodeStats(llvh::raw_ostream &os) const {
   std::ostringstream stream;
-  // Get all non-zero occurence opcodes.
+  // Get all non-zero occurrence opcodes.
   std::vector<size_t> idx;
   for (size_t i = 0; i < static_cast<uint32_t>(inst::OpCode::_last); ++i) {
     if (opcodeExecuteFrequency[i])
@@ -200,7 +200,7 @@ void Runtime::dumpNativeCallStats(llvh::raw_ostream &OS) {
   OS << "Native call stats\n";
   OS << "=================\n";
 
-  // The stats we gather for a single native finction.
+  // The stats we gather for a single native function.
   struct Info {
     uint32_t count{};
     uint64_t duration{};

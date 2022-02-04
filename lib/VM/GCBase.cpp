@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -861,36 +861,32 @@ void GCBase::recordGCStats(const GCAnalyticsEvent &event, bool onMutator) {
 }
 
 void GCBase::oom(std::error_code reason) {
-#ifdef HERMESVM_EXCEPTION_ON_OOM
-  HeapInfo heapInfo;
-  getHeapInfo(heapInfo);
   char detailBuffer[400];
-  snprintf(
-      detailBuffer,
-      sizeof(detailBuffer),
-      "Javascript heap memory exhausted: heap size = %d, allocated = %d.",
-      heapInfo.heapSize,
-      heapInfo.allocatedBytes);
+  oomDetail(detailBuffer, reason);
+#ifdef HERMESVM_EXCEPTION_ON_OOM
   // No need to run finalizeAll, the exception will propagate and eventually run
   // ~Runtime.
   throw JSOutOfMemoryError(
       std::string(detailBuffer) + "\ncall stack:\n" +
       gcCallbacks_->getCallStackNoAlloc());
 #else
-  oomDetail(reason);
+  hermesLog("HermesGC", "OOM: %s.", detailBuffer);
+  // Record the OOM custom data with the crash manager.
+  crashMgr_->setCustomData("HermesGCOOMDetailBasic", detailBuffer);
   hermes_fatal("OOM", reason);
 #endif
 }
 
-void GCBase::oomDetail(std::error_code reason) {
+void GCBase::oomDetail(
+    llvh::MutableArrayRef<char> detailBuffer,
+    std::error_code reason) {
   HeapInfo heapInfo;
   getHeapInfo(heapInfo);
-  // Could use a stringstream here, but want to avoid dynamic allocation.
-  char detailBuffer[400];
   snprintf(
-      detailBuffer,
-      sizeof(detailBuffer),
-      "[%.20s] reason = %.150s (%d from category: %.50s), numCollections = %d, heapSize = %d, allocated = %d, va = %" PRIu64,
+      detailBuffer.data(),
+      detailBuffer.size(),
+      "[%.20s] reason = %.150s (%d from category: %.50s), numCollections = %u, heapSize = %" PRIu64
+      ", allocated = %" PRIu64 ", va = %" PRIu64 ", external = %" PRIu64,
       name_.c_str(),
       reason.message().c_str(),
       reason.value(),
@@ -898,10 +894,8 @@ void GCBase::oomDetail(std::error_code reason) {
       heapInfo.numCollections,
       heapInfo.heapSize,
       heapInfo.allocatedBytes,
-      heapInfo.va);
-  hermesLog("HermesGC", "OOM: %s.", detailBuffer);
-  // Record the OOM custom data with the crash manager.
-  crashMgr_->setCustomData("HermesGCOOMDetailBasic", detailBuffer);
+      heapInfo.va,
+      heapInfo.externalBytes);
 }
 
 #ifndef NDEBUG
@@ -984,14 +978,14 @@ std::vector<detail::WeakRefKey *> GCBase::buildKeyList(
 
 HeapSnapshot::NodeID GCBase::getObjectID(const GCCell *cell) {
   assert(cell && "Called getObjectID on a null pointer");
-  return getObjectID(
-      CompressedPointer{pointerBase_, const_cast<GCCell *>(cell)});
+  return getObjectID(CompressedPointer::encodeNonNull(
+      const_cast<GCCell *>(cell), pointerBase_));
 }
 
 HeapSnapshot::NodeID GCBase::getObjectIDMustExist(const GCCell *cell) {
   assert(cell && "Called getObjectID on a null pointer");
-  return idTracker_.getObjectIDMustExist(
-      CompressedPointer{pointerBase_, const_cast<GCCell *>(cell)});
+  return idTracker_.getObjectIDMustExist(CompressedPointer::encodeNonNull(
+      const_cast<GCCell *>(cell), pointerBase_));
 }
 
 HeapSnapshot::NodeID GCBase::getObjectID(CompressedPointer cell) {
@@ -1010,8 +1004,8 @@ HeapSnapshot::NodeID GCBase::getNativeID(const void *mem) {
 
 bool GCBase::hasObjectID(const GCCell *cell) {
   assert(cell && "Called hasObjectID on a null pointer");
-  return idTracker_.hasObjectID(
-      CompressedPointer{pointerBase_, const_cast<GCCell *>(cell)});
+  return idTracker_.hasObjectID(CompressedPointer::encodeNonNull(
+      const_cast<GCCell *>(cell), pointerBase_));
 }
 
 void GCBase::newAlloc(const GCCell *ptr, uint32_t sz) {
@@ -1025,8 +1019,10 @@ void GCBase::moveObject(
     const GCCell *newPtr,
     uint32_t newSize) {
   idTracker_.moveObject(
-      CompressedPointer{pointerBase_, const_cast<GCCell *>(oldPtr)},
-      CompressedPointer{pointerBase_, const_cast<GCCell *>(newPtr)});
+      CompressedPointer::encodeNonNull(
+          const_cast<GCCell *>(oldPtr), pointerBase_),
+      CompressedPointer::encodeNonNull(
+          const_cast<GCCell *>(newPtr), pointerBase_));
   // Use newPtr here because the idTracker_ just moved it.
   allocationLocationTracker_.updateSize(newPtr, oldSize, newSize);
   samplingAllocationTracker_.updateSize(newPtr, oldSize, newSize);
@@ -1038,8 +1034,8 @@ void GCBase::untrackObject(const GCCell *cell, uint32_t sz) {
   // before untrackObject.
   getAllocationLocationTracker().freeAlloc(cell, sz);
   getSamplingAllocationTracker().freeAlloc(cell, sz);
-  idTracker_.untrackObject(
-      CompressedPointer{pointerBase_, const_cast<GCCell *>(cell)});
+  idTracker_.untrackObject(CompressedPointer::encodeNonNull(
+      const_cast<GCCell *>(cell), pointerBase_));
 }
 
 #ifndef NDEBUG
@@ -1180,7 +1176,8 @@ bool GCBase::IDTracker::hasNativeIDs() {
   return !nativeIDMap_.empty();
 }
 
-bool GCBase::IDTracker::isTrackingIDs() const {
+bool GCBase::IDTracker::isTrackingIDs() {
+  std::lock_guard<Mutex> lk{mtx_};
   return !objectIDMap_.empty();
 }
 
@@ -1719,6 +1716,9 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
     }
 
     void accept(PinnedHermesValue &hv) override {
+      acceptNullable(hv);
+    }
+    void acceptNullable(PinnedHermesValue &hv) override {
       acceptHV(
           hv,
           diagnostic.stats.breakdown["HermesValue"],

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -607,9 +607,6 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   /// assumed to be an ExternalStringPrimitive.
   static size_t _mallocSizeImpl(GCCell *cell);
 
-  /// \return the size of the external memory credited to the cell.
-  static gcheapsize_t _externalMemorySizeImpl(const GCCell *cell);
-
   static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
   static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 
@@ -635,7 +632,7 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
 /// longer need the \c largeString suffix.
 ///
 /// The probability of this happening is not high, but it is possible. One way
-/// to adress this in the future is to create new ExternalStringPrimitive after
+/// to address this in the future is to create new ExternalStringPrimitive after
 /// a  certain amount of resizing. In this way each stage of the concatenation
 /// has an upper bound of the amount of extra memory it can keep alive.
 template <typename T>
@@ -719,7 +716,7 @@ class BufferedStringPrimitive final : public StringPrimitive {
       Handle<StringPrimitive> rightHnd);
 
   /// Create a new concatenation buffer of type T (the type parameter of this
-  /// template clases), initialize it with the concatenation of \p leftHnd and
+  /// template classes), initialize it with the concatenation of \p leftHnd and
   /// \p rightHnd and allocate a new BufferedStringPrimitive to represent the
   /// result.
   /// \pre The types must be compatible with respect to T (cannot append UTF16
@@ -792,7 +789,6 @@ const VTable DynamicStringPrimitive<T, Uniqued>::vt = VTable(
     nullptr,
     nullptr,
     nullptr,
-    nullptr,
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::String,
         DynamicStringPrimitive<T, Uniqued>::_snapshotNameImpl,
@@ -817,7 +813,6 @@ const VTable ExternalStringPrimitive<T>::vt = VTable(
     nullptr, // markWeak.
     ExternalStringPrimitive<T>::_mallocSizeImpl,
     nullptr,
-    ExternalStringPrimitive<T>::_externalMemorySizeImpl,
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::String,
         ExternalStringPrimitive<T>::_snapshotNameImpl,
@@ -836,7 +831,6 @@ const VTable BufferedStringPrimitive<T>::vt = VTable(
     nullptr, // markWeak.
     nullptr, // mallocSize
     nullptr,
-    nullptr, // externalMemorySize
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::String,
         BufferedStringPrimitive<T>::_snapshotNameImpl,

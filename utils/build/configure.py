@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -81,6 +81,7 @@ def parse_args():
         "--enable-trace-pc-guard", dest="enable_trace_pc_guard", action="store_true"
     )
     parser.add_argument("--icu", type=str, dest="icu_root", default="")
+    parser.add_argument("--unicode-lite", dest="unicode_lite", action="store_true")
     parser.add_argument("--fbsource", type=str, dest="fbsource_dir", default="")
     parser.add_argument("--opcode-stats", dest="opcode_stats", action="store_true")
     parser.add_argument(
@@ -265,6 +266,8 @@ def main():
             "-s NODERAWFS=1 -s WASM=1 -s ALLOW_MEMORY_GROWTH=1",
             "-DEMSCRIPTEN_FASTCOMP=" + str(int(args.emscripten_platform == "fastcomp")),
         ]
+    if args.unicode_lite:
+        cmake_flags += ["-DHERMES_UNICODE_LITE=ON"]
 
     if args.icu_root:
         cmake_flags += ["-DICU_ROOT=" + args.icu_root]

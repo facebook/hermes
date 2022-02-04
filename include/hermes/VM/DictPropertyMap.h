@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -453,7 +453,7 @@ class DictPropertyMap final
   }
 
   /// Return true if DictPropertyMap with the specified capacity is guaranteed
-  /// to fit within the GC's maxumum allocation size. The check is conservative:
+  /// to fit within the GC's maximum allocation size. The check is conservative:
   /// it might a few return false negatives at the end of the range.
   /// NOTE: it must not be used at runtime since it might be slow.
   static constexpr bool constWouldFitAllocation(uint32_t cap) {
@@ -474,7 +474,7 @@ class DictPropertyMap final
                                         : constFindMaxCapacity(lower, mid);
   }
 
-  /// A place to put things in order to avoid restructins on using constexpr
+  /// A place to put things in order to avoid restrictions on using constexpr
   /// functions declared in the same class.
   struct detail;
   friend struct detail;

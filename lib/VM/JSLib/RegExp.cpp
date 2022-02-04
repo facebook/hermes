@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -1523,22 +1523,25 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
     auto matched = runtime->makeHandle(std::move(*strRes));
     // f. Let matchLength be the number of code units in matched.
     uint32_t matchLength = matched->getStringLength();
-    // g. Let position be ToInteger(Get(result, "index")).
+    // g. Let position be ToIntegerOrInfinity(Get(result, "index")).
     // h. ReturnIfAbrupt(position).
     propRes = JSObject::getNamed_RJS(
         result, runtime, Predefined::getSymbolID(Predefined::index));
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto intRes =
-        toInteger(runtime, runtime->makeHandle(std::move(propRes.getValue())));
+    auto intRes = toIntegerOrInfinity(
+        runtime, runtime->makeHandle(std::move(propRes.getValue())));
     if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    // position could potentially be negative here, so use int64_t.
-    auto position = intRes->getNumberAs<int64_t>();
+    // position could potentially be negative or Infinity here, so use double.
+    double positionDouble = intRes->getNumber();
     // i. Let position be max(min(position, lengthS), 0).
-    position = std::max(std::min(position, (int64_t)lengthS), (int64_t)0);
+    // Now we can clamp to uint32_t because we've bounds checked
+    // and `lengthS` is `uint32_t`.
+    uint32_t position = (int64_t)std::fmax(
+        std::fmin(positionDouble, (double)lengthS), (double)0);
     // j. Let n be 1.
     // Match the type of nCaptures.
     uint64_t n = 1;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -118,8 +118,7 @@ CallResult<HermesValue> runRequireCall(
               module.getHermesValue()) == ExecutionStatus::EXCEPTION)) {
     // If initialization of the module throws, reset it so that calling require
     // again may succeed.
-    domain->setModule(
-        cjsModuleOffset, runtime, Runtime::makeNullHandle<JSObject>());
+    domain->setModule(cjsModuleOffset, runtime, Runtime::getNullValue());
     return ExecutionStatus::EXCEPTION;
   }
 

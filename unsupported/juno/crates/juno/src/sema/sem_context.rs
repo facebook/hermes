@@ -1,11 +1,13 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::ast::{Atom, NodeRc};
+use crate::ast::NodeRc;
+use juno_support::atom_table::Atom;
+use juno_support::source_manager::SourceId;
 use std::collections::HashMap;
 use std::num::NonZeroU32;
 
@@ -148,6 +150,8 @@ pub struct SemContext {
     /// Lexical scopes associated with AST nodes. Usually BlockStatement, but
     /// occasionally others.
     node_scopes: HashMap<NodeRc, LexicalScopeId>,
+    /// Resolved `require` calls.
+    requires: HashMap<NodeRc, SourceId>,
 }
 
 impl SemContext {
@@ -267,6 +271,13 @@ impl SemContext {
     }
     pub(super) fn function_mut(&mut self, id: FunctionInfoId) -> &mut FunctionInfo {
         &mut self.funcs[id.as_usize()]
+    }
+
+    pub fn all_requires(&self) -> &HashMap<NodeRc, SourceId> {
+        &self.requires
+    }
+    pub fn add_require(&mut self, call: NodeRc, file_id: SourceId) {
+        self.requires.insert(call, file_id);
     }
 
     /// Return the id of the global scope in the context. This may seem

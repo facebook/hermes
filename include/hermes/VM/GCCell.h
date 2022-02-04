@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -266,12 +266,6 @@ class GCCell {
   /// Returns whether the cell's mark bit is set.
   bool isMarked() const {
     return forwardingPointer_.getRaw() & 0x1;
-  }
-
-  /// If the cell has any associated external memory, return the size (in bytes)
-  /// of that external memory, else zero.
-  inline gcheapsize_t externalMemorySize() const {
-    return getVT()->externalMemorySize(this);
   }
 
   static constexpr uint32_t maxSize() {

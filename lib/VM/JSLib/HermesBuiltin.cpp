@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -372,7 +372,7 @@ hermesBuiltinCopyDataProperties(void *, Runtime *runtime, NativeArgs args) {
   // 2. Assert: excludedItems is a List of property keys.
   // In Hermes, excludedItems is represented as a JSObject, created by
   // bytecode emitted by the compiler, whose keys are the excluded
-  // propertyKyes
+  // propertyKeys
   Handle<JSObject> excludedItems = args.dyncastArg<JSObject>(2);
   assert(
       (!excludedItems || !excludedItems->isProxyObject()) &&

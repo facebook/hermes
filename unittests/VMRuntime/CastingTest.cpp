@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -41,7 +41,7 @@ TEST(CastingTest, SmokeTest) {
 
   auto v1 = HermesValue::encodeObjectValue(p1);
   auto v2 = HermesValue::encodeObjectValue(p2);
-  auto nullv = HermesValue::encodeObjectValue(nullptr);
+  auto nullv = HermesValue::encodeNullptrObjectValueUnsafe();
 
   EXPECT_EQ(TAG1, vmcast<ArrayStorage>(p1)->at(0).getNumber());
   EXPECT_EQ(TAG2, vmcast<ArrayStorageSmall>(p2)->at(0).getSymbol());

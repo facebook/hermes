@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -118,7 +118,7 @@ struct StackTracesTree {
 
   /// This vector is the root of all data held in the tree. We hold this here,
   /// rather than allowing the data to avoid an excessive call-stack when
-  /// deallocating the tree. Wihtout this, Hermes tests which exercise
+  /// deallocating the tree. Without this, Hermes tests which exercise
   /// JS stack overflow cause C++ stack overflow.
   llvh::SmallVector<std::unique_ptr<StackTracesTreeNode>, 1024> nodes_;
 };

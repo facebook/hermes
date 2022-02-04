@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -29,7 +29,6 @@ const ObjectVTable JSObject::vt{
         nullptr,
         nullptr,
         nullptr,
-        nullptr, // externalMemorySize
         VTable::HeapSnapshotMetadata{
             HeapSnapshot::NodeType::Object,
             JSObject::_snapshotNameImpl,
@@ -99,10 +98,11 @@ PseudoHandle<JSObject> JSObject::create(
     Runtime *runtime,
     Handle<HiddenClass> clazz) {
   auto obj = JSObject::create(runtime, clazz->getNumProperties());
-  obj->clazz_.set(runtime, *clazz, &runtime->getHeap());
+  obj->clazz_.setNonNull(runtime, *clazz, &runtime->getHeap());
   // If the hidden class has index like property, we need to clear the fast path
   // flag.
-  if (LLVM_UNLIKELY(obj->clazz_.get(runtime)->getHasIndexLikeProperties()))
+  if (LLVM_UNLIKELY(
+          obj->clazz_.getNonNull(runtime)->getHasIndexLikeProperties()))
     obj->flags_.fastIndexProperties = false;
   return obj;
 }
@@ -226,18 +226,18 @@ void JSObject::allocateNewSlotStorage(
     assert(newSlotIndex == 0 && "allocated slot must be at end");
     auto arrRes = runtime->ignoreAllocationFailure(
         PropStorage::create(runtime, DEFAULT_PROPERTY_CAPACITY));
-    selfHandle->propStorage_.set(
+    selfHandle->propStorage_.setNonNull(
         runtime, vmcast<PropStorage>(arrRes), &runtime->getHeap());
   } else if (LLVM_UNLIKELY(
                  newSlotIndex >=
-                 selfHandle->propStorage_.get(runtime)->capacity())) {
+                 selfHandle->propStorage_.getNonNull(runtime)->capacity())) {
     // Reallocate the existing one.
     assert(
-        newSlotIndex == selfHandle->propStorage_.get(runtime)->size() &&
+        newSlotIndex == selfHandle->propStorage_.getNonNull(runtime)->size() &&
         "allocated slot must be at end");
     auto hnd = runtime->makeMutableHandle(selfHandle->propStorage_);
     PropStorage::resize(hnd, runtime, newSlotIndex + 1);
-    selfHandle->propStorage_.set(runtime, *hnd, &runtime->getHeap());
+    selfHandle->propStorage_.setNonNull(runtime, *hnd, &runtime->getHeap());
   }
 
   {
@@ -274,7 +274,7 @@ CallResult<PseudoHandle<>> JSObject::getNamedPropertyValue_RJS(
     return createPseudoHandle(HermesValue::encodeUndefinedValue());
 
   // Execute the accessor on this object.
-  return accessor->getter.get(runtime)->executeCall0(
+  return accessor->getter.getNonNull(runtime)->executeCall0(
       runtime->makeHandle(accessor->getter), runtime, selfHandle);
 }
 
@@ -297,7 +297,7 @@ CallResult<PseudoHandle<>> JSObject::getComputedPropertyValueInternal_RJS(
     return createPseudoHandle(HermesValue::encodeUndefinedValue());
 
   // Execute the accessor on this object.
-  return accessor->getter.get(runtime)->executeCall0(
+  return accessor->getter.getNonNull(runtime)->executeCall0(
       runtime->makeHandle(accessor->getter), runtime, selfHandle);
 }
 
@@ -357,8 +357,8 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
   // Estimate the capacity of the output array.  This estimate is only
   // reasonable for the non-symbol case.
   uint32_t capacity = okFlags.getIncludeNonSymbols()
-      ? (selfHandle->clazz_.get(runtime)->getNumProperties() + range.second -
-         range.first)
+      ? (selfHandle->clazz_.getNonNull(runtime)->getNumProperties() +
+         range.second - range.first)
       : 0;
 
   auto arrayRes = JSArray::create(runtime, capacity, 0);
@@ -1146,7 +1146,7 @@ CallResult<PseudoHandle<>> JSObject::getComputedWithReceiver_RJS(
       return createPseudoHandle(HermesValue::encodeUndefinedValue());
 
     // Execute the accessor on this object.
-    return accessor->getter.get(runtime)->executeCall0(
+    return accessor->getter.getNonNull(runtime)->executeCall0(
         runtime->makeHandle(accessor->getter), runtime, receiver);
   } else if (desc.flags.hostObject) {
     SymbolID id{};
@@ -1355,7 +1355,7 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
       }
 
       // Execute the accessor on this object.
-      if (accessor->setter.get(runtime)->executeCall1(
+      if (accessor->setter.getNonNull(runtime)->executeCall1(
               runtime->makeHandle(accessor->setter),
               runtime,
               receiver,
@@ -1607,7 +1607,7 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
       }
 
       // Execute the accessor on this object.
-      if (accessor->setter.get(runtime)->executeCall1(
+      if (accessor->setter.getNonNull(runtime)->executeCall1(
               runtime->makeHandle(accessor->setter),
               runtime,
               receiver,
@@ -1861,7 +1861,7 @@ CallResult<bool> JSObject::deleteNamed(
   // Perform the actual deletion.
   auto newClazz = HiddenClass::deleteProperty(
       runtime->makeHandle(selfHandle->clazz_), runtime, *pos);
-  selfHandle->clazz_.set(runtime, *newClazz, &runtime->getHeap());
+  selfHandle->clazz_.setNonNull(runtime, *newClazz, &runtime->getHeap());
 
   return true;
 }
@@ -1961,7 +1961,7 @@ CallResult<bool> JSObject::deleteComputed(
     // Remove the property descriptor.
     auto newClazz = HiddenClass::deleteProperty(
         runtime->makeHandle(selfHandle->clazz_), runtime, *pos);
-    selfHandle->clazz_.set(runtime, *newClazz, &runtime->getHeap());
+    selfHandle->clazz_.setNonNull(runtime, *newClazz, &runtime->getHeap());
   } else if (LLVM_UNLIKELY(selfHandle->flags_.proxyObject)) {
     CallResult<Handle<>> key = toPropertyKey(runtime, nameValPrimitiveHandle);
     if (key == ExecutionStatus::EXCEPTION)
@@ -2124,7 +2124,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
   // has an index-like name.
 
   // First check if a named property with the same name exists.
-  if (selfHandle->clazz_.get(runtime)->getHasIndexLikeProperties()) {
+  if (selfHandle->clazz_.getNonNull(runtime)->getHasIndexLikeProperties()) {
     LAZY_TO_IDENTIFIER(runtime, nameValHandle, id);
 
     NamedPropertyDescriptor desc;
@@ -2548,7 +2548,7 @@ ExecutionStatus JSObject::seal(Handle<JSObject> selfHandle, Runtime *runtime) {
 
   auto newClazz = HiddenClass::makeAllNonConfigurable(
       runtime->makeHandle(selfHandle->clazz_), runtime);
-  selfHandle->clazz_.set(runtime, *newClazz, &runtime->getHeap());
+  selfHandle->clazz_.setNonNull(runtime, *newClazz, &runtime->getHeap());
 
   selfHandle->flags_.sealed = true;
 
@@ -2573,7 +2573,7 @@ ExecutionStatus JSObject::freeze(
 
   auto newClazz = HiddenClass::makeAllReadOnly(
       runtime->makeHandle(selfHandle->clazz_), runtime);
-  selfHandle->clazz_.set(runtime, *newClazz, &runtime->getHeap());
+  selfHandle->clazz_.setNonNull(runtime, *newClazz, &runtime->getHeap());
 
   selfHandle->flags_.frozen = true;
   selfHandle->flags_.sealed = true;
@@ -2593,7 +2593,7 @@ void JSObject::updatePropertyFlagsWithoutTransitions(
       flagsToClear,
       flagsToSet,
       props);
-  selfHandle->clazz_.set(runtime, *newClazz, &runtime->getHeap());
+  selfHandle->clazz_.setNonNull(runtime, *newClazz, &runtime->getHeap());
 }
 
 CallResult<bool> JSObject::isExtensible(
@@ -2718,7 +2718,8 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
   if (LLVM_UNLIKELY(addResult == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  selfHandle->clazz_.set(runtime, *addResult->first, &runtime->getHeap());
+  selfHandle->clazz_.setNonNull(
+      runtime, *addResult->first, &runtime->getHeap());
 
   allocateNewSlotStorage(
       selfHandle, runtime, addResult->second, valueOrAccessor);
@@ -2761,7 +2762,7 @@ CallResult<bool> JSObject::updateOwnProperty(
         runtime,
         propertyPos,
         desc.flags);
-    selfHandle->clazz_.set(runtime, *newClazz, &runtime->getHeap());
+    selfHandle->clazz_.setNonNull(runtime, *newClazz, &runtime->getHeap());
   }
 
   if (updateStatus->first == PropertyUpdateStatus::done)
@@ -2990,7 +2991,7 @@ namespace {
 
 /// Helper function to add all the property names of an object to an
 /// array, starting at the given index. Only enumerable properties are
-/// incluced. Returns the index after the last property added, but...
+/// included. Returns the index after the last property added, but...
 CallResult<uint32_t> appendAllPropertyNames(
     Handle<JSObject> obj,
     Runtime *runtime,

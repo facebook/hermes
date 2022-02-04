@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -22,14 +22,14 @@ import java.util.TimeZone;
 
 /**
  * This class represents the Java part of the Android Intl.DateTimeFormat implementation. The
- * interaction with the Hermes JaveScript internals are implemented in C++ and should not generally
+ * interaction with the Hermes JavaScript internals are implemented in C++ and should not generally
  * need to be changed. Implementers' notes here will describe what parts of the ECMA 402 spec remain
  * to be implemented.
  *
  * <p>Implementer notes:
  *
  * <p>Internal slots: In the ECMA 402 spec, there are a number of references to internal slots.
- * These are gneerally expressed in terms of JavaScript objects, but the semantics do not generally
+ * These are generally expressed in terms of JavaScript objects, but the semantics do not generally
  * depend on this. For example, where the spec says "Intl.DateTimeFormat instances have an
  * [[InitializedDateTimeFormat]] internal slot", this would not be a literal artifact of the
  * implementation. Internal slots, where necessary, should be represented as members of this java

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -55,13 +55,18 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
       case 'BooleanLiteral':
       case 'StringLiteral':
       case 'NumericLiteral':
+      case 'JSXStringLiteral':
         return this.mapSimpleLiteral(node);
+      case 'BigIntLiteral':
+        return this.mapBigIntLiteral(node);
       case 'RegExpLiteral':
         return this.mapRegExpLiteral(node);
       case 'Empty':
         return this.mapEmpty(node);
       case 'TemplateElement':
         return this.mapTemplateElement(node);
+      case 'BigIntLiteralTypeAnnotation':
+        return this.mapBigIntLiteralTypeAnnotation(node);
       case 'GenericTypeAnnotation':
         return this.mapGenericTypeAnnotation(node);
       case 'ImportDeclaration':
@@ -93,6 +98,18 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
     node.type = 'Literal';
     node.raw = this.code.slice(node.range[0], node.range[1]);
 
+    return node;
+  }
+
+  mapBigIntLiteral(node: HermesNode): HermesNode {
+    node.type = 'Literal';
+    node.value = null;
+    node.raw = this.code.slice(node.range[0], node.range[1]);
+    return node;
+  }
+
+  mapBigIntLiteralTypeAnnotation(node: HermesNode): HermesNode {
+    node.value = null;
     return node;
   }
 
@@ -144,7 +161,7 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
   mapGenericTypeAnnotation(node: HermesNode): HermesNode {
     // Convert simple `this` generic type to ThisTypeAnnotation
     if (
-      node.typeParameters === null &&
+      node.typeParameters == null &&
       node.id.type === 'Identifier' &&
       node.id.name === 'this'
     ) {

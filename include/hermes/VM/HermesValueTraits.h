@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -188,7 +188,7 @@ struct StringTraitsImpl {
     return value_type{};
   }
   static HermesValue encode(T *value) {
-    return HermesValue::encodeStringValue(value);
+    return HermesValue::encodeStringValueUnsafe(value);
   }
   static T *decode(HermesValue value) {
     return (T *)value.getString();
@@ -224,7 +224,7 @@ struct HermesValueTraits<T, true> {
     return value_type{};
   }
   static HermesValue encode(T *value) {
-    return HermesValue::encodeObjectValue(value);
+    return HermesValue::encodeObjectValueUnsafe(value);
   }
   static T *decode(HermesValue value) {
     return static_cast<T *>(value.getObject());

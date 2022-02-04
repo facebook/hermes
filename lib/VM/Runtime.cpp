@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -52,6 +52,8 @@
 #include "llvh/ADT/DenseMap.h"
 #endif
 
+#include <future>
+
 namespace hermes {
 namespace vm {
 
@@ -74,10 +76,59 @@ static const Predefined::Str fixedPropCacheNames[(size_t)PropCacheID::_COUNT] =
 
 } // namespace
 
+// Minidumps include stack memory, not heap memory.  If we want to be
+// able to inspect the Runtime object in a minidump, we can do that by
+// arranging for it to be allocated on a stack.  No existing stack is
+// a good candidate, so we achieve this by creating a thread just to
+// hold the Runtime.
+class Runtime::StackRuntime {
+ public:
+  StackRuntime(const vm::RuntimeConfig &runtimeConfig)
+      : thread_(runtimeMemoryThread, this) {
+    startup_.get_future().get();
+    new (runtime_) Runtime(StorageProvider::mmapProvider(), runtimeConfig);
+  }
+
+  ~StackRuntime() {
+    runtime_->~Runtime();
+    shutdown_.set_value();
+    thread_.join();
+  }
+
+  static std::shared_ptr<Runtime> create(const RuntimeConfig &runtimeConfig) {
+    auto srt = std::make_shared<StackRuntime>(runtimeConfig);
+    return std::shared_ptr<Runtime>(srt, srt->runtime_);
+  }
+
+ private:
+  static void runtimeMemoryThread(StackRuntime *stack) {
+    ::hermes::oscompat::set_thread_name("hermes-runtime-memorythread");
+    std::aligned_storage<sizeof(Runtime)>::type rt;
+    stack->runtime_ = reinterpret_cast<Runtime *>(&rt);
+    stack->startup_.set_value();
+    stack->shutdown_.get_future().get();
+  }
+
+  // The order here matters.
+  // * Set up the promises
+  // * Initialize runtime_ to null
+  // * Start the thread which uses them
+  // * Initialize runtime_ from that thread
+  std::promise<void> startup_;
+  std::promise<void> shutdown_;
+  Runtime *runtime_{nullptr};
+  std::thread thread_;
+};
+
 /* static */
 std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
+#if defined(HERMES_FACEBOOK_BUILD) && !defined(HERMES_FBCODE_BUILD)
+  // TODO (T84179835): Disable this once it is no longer useful for debugging.
+  return StackRuntime::create(runtimeConfig);
+#else
   return std::shared_ptr<Runtime>{
       new Runtime(StorageProvider::mmapProvider(), runtimeConfig)};
+#endif
 }
 
 CallResult<PseudoHandle<>> Runtime::getNamed(
@@ -181,6 +232,7 @@ Runtime::Runtime(
   const bool isSnapshot = std::strstr(__FILE__, "hermes-snapshot");
   crashMgr_->setCustomData("HermesIsSnapshot", isSnapshot ? "true" : "false");
 #endif
+  crashMgr_->registerMemory(this, sizeof(Runtime));
   auto maxNumRegisters = runtimeConfig.getMaxNumRegisters();
   if (LLVM_UNLIKELY(maxNumRegisters > kMaxSupportedNumRegisters)) {
     hermes_fatal("RuntimeConfig maxNumRegisters too big");
@@ -265,8 +317,7 @@ Runtime::Runtime(
     }
   }
 
-  global_ =
-      JSObject::create(this, Handle<JSObject>(this, nullptr)).getHermesValue();
+  global_ = JSObject::create(this, makeNullHandle<JSObject>()).getHermesValue();
 
   JSLibFlags jsLibFlags{};
   jsLibFlags.enableHermesInternal = runtimeConfig.getEnableHermesInternal();
@@ -337,6 +388,8 @@ Runtime::~Runtime() {
   for (auto callback : destructionCallbacks_) {
     callback(this);
   }
+
+  crashMgr_->unregisterMemory(this);
 }
 
 /// A helper class used to measure the duration of GC marking different roots.
@@ -1693,16 +1746,6 @@ LLVM_ATTRIBUTE_NOINLINE
 void Runtime::dumpCallFrames() {
   dumpCallFrames(llvh::errs());
 }
-
-StackRuntime::StackRuntime(const RuntimeConfig &config)
-    : StackRuntime(StorageProvider::mmapProvider(), config) {}
-
-StackRuntime::StackRuntime(
-    std::shared_ptr<StorageProvider> provider,
-    const RuntimeConfig &config)
-    : Runtime(std::move(provider), config) {}
-
-StackRuntime::~StackRuntime() {}
 
 /// Serialize a SymbolID.
 llvh::raw_ostream &operator<<(

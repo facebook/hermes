@@ -1,11 +1,12 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
 
 #include "hermes/Support/OSCompat.h"
+#include "hermes/TimerStats.h"
 #include "hermes/hermes.h"
 
 #include "llvh/Support/CommandLine.h"
@@ -31,6 +32,11 @@ static llvh::cl::opt<std::string> EvalScript(
 static llvh::cl::opt<bool> PrintResult(
     "print",
     llvh::cl::desc("print result of evaluated script"),
+    llvh::cl::init(false));
+
+static llvh::cl::opt<bool> CollectTiming(
+    "collect-timing",
+    llvh::cl::desc("enable timing stats collection"),
     llvh::cl::init(false));
 
 static llvh::cl::opt<std::string> InputFilename(
@@ -92,7 +98,11 @@ int main(int argc, char **argv) {
       : InputFilename == "-"         ? "<stdin>"
                                      : std::string(InputFilename);
 
-  auto runtime = facebook::hermes::makeHermesRuntime();
+  std::unique_ptr<jsi::Runtime> runtime(facebook::hermes::makeHermesRuntime());
+
+  if (CollectTiming) {
+    runtime = facebook::hermes::makeTimedRuntime(std::move(runtime));
+  }
 
   try {
     auto js = runtime->prepareJavaScript(jsiBuffer, srcPath);

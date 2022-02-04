@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -97,7 +97,6 @@ const VTable HiddenClass::vt{
     _finalizeImpl,
     _markWeakImpl,
     _mallocSizeImpl,
-    nullptr,
     nullptr,
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::Object,
@@ -211,7 +210,7 @@ Handle<HiddenClass> HiddenClass::copyToNewDictionary(
     initializeMissingPropertyMap(selfHandle, runtime);
 
   newClassHandle->propertyMap_.set(
-      runtime, selfHandle->propertyMap_.get(runtime), &runtime->getHeap());
+      runtime, selfHandle->propertyMap_, &runtime->getHeap());
   selfHandle->propertyMap_.setNull(&runtime->getHeap());
 
   LLVM_DEBUG(
@@ -340,7 +339,7 @@ bool HiddenClass::debugIsPropertyDefined(
   do {
     // If we happen to have a property map, use it.
     if (self->propertyMap_)
-      return DictPropertyMap::find(self->propertyMap_.get(base), name)
+      return DictPropertyMap::find(self->propertyMap_.getNonNull(base), name)
           .hasValue();
     // Is the property defined in this class?
     if (self->symbolID_ == name)
@@ -433,7 +432,7 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
         return ExecutionStatus::EXCEPTION;
       }
       optChildHandle.getValue()->propertyMap_.set(
-          runtime, selfHandle->propertyMap_.get(runtime), &runtime->getHeap());
+          runtime, selfHandle->propertyMap_, &runtime->getHeap());
     } else {
       LLVM_DEBUG(
           dbgs() << "Adding property " << runtime->formatSymbolID(name)
@@ -508,7 +507,7 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
 
     // Move the map to the child class.
     childHandle->propertyMap_.set(
-        runtime, selfHandle->propertyMap_.get(runtime), &runtime->getHeap());
+        runtime, selfHandle->propertyMap_, &runtime->getHeap());
     selfHandle->propertyMap_.setNull(&runtime->getHeap());
 
     if (LLVM_UNLIKELY(
@@ -545,7 +544,7 @@ Handle<HiddenClass> HiddenClass::updateProperty(
         selfHandle->propertyMap_ &&
         "propertyMap must exist in dictionary mode");
     DictPropertyMap::getDescriptorPair(
-        selfHandle->propertyMap_.get(runtime), pos)
+        selfHandle->propertyMap_.getNonNull(runtime), pos)
         ->second.flags = newFlags;
     // If it's still cacheable, make it non-cacheable.
     if (!selfHandle->isDictionaryNoCache()) {
@@ -584,7 +583,7 @@ Handle<HiddenClass> HiddenClass::updateProperty(
 
       descPair->second.flags = newFlags;
       optChildHandle.getValue()->propertyMap_.set(
-          runtime, selfHandle->propertyMap_.get(runtime), &runtime->getHeap());
+          runtime, selfHandle->propertyMap_, &runtime->getHeap());
     } else {
       LLVM_DEBUG(
           dbgs() << "Updating property " << runtime->formatSymbolID(name)
@@ -629,7 +628,7 @@ Handle<HiddenClass> HiddenClass::updateProperty(
 
   // Move the updated map to the child class.
   childHandle->propertyMap_.set(
-      runtime, selfHandle->propertyMap_.get(runtime), &runtime->getHeap());
+      runtime, selfHandle->propertyMap_, &runtime->getHeap());
   selfHandle->propertyMap_.setNull(&runtime->getHeap());
 
   return childHandle;
@@ -849,7 +848,8 @@ ExecutionStatus HiddenClass::addToPropertyMap(
     return ExecutionStatus::EXCEPTION;
   }
 
-  selfHandle->propertyMap_.set(runtime, *updatedMap, &runtime->getHeap());
+  selfHandle->propertyMap_.setNonNull(
+      runtime, *updatedMap, &runtime->getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -861,7 +861,7 @@ void HiddenClass::initializeMissingPropertyMap(
   // Check whether we can steal our parent's map. If we can, we only need
   // to add or update a single property.
   if (selfHandle->parent_ &&
-      selfHandle->parent_.get(runtime)->propertyMap_.get(runtime))
+      selfHandle->parent_.getNonNull(runtime)->propertyMap_)
     return stealPropertyMapFromParent(selfHandle, runtime);
 
   LLVM_DEBUG(
@@ -876,7 +876,7 @@ void HiddenClass::initializeMissingPropertyMap(
     // Walk chain of parents using raw pointers.
     NoAllocScope _(runtime);
     for (auto *cur = *selfHandle; cur->numProperties_ > 0;
-         cur = cur->parent_.get(runtime)) {
+         cur = cur->parent_.getNonNull(runtime)) {
       auto tmpFlags = cur->propertyFlags_;
       tmpFlags.flagsTransition = 0;
       entries.emplace_back(cur->symbolID_, tmpFlags);
@@ -912,7 +912,7 @@ void HiddenClass::initializeMissingPropertyMap(
       inserted->first->slot = slotIndex++;
   }
 
-  selfHandle->propertyMap_.set(runtime, *mapHandle, &runtime->getHeap());
+  selfHandle->propertyMap_.setNonNull(runtime, *mapHandle, &runtime->getHeap());
 }
 
 void HiddenClass::stealPropertyMapFromParent(
@@ -922,27 +922,29 @@ void HiddenClass::stealPropertyMapFromParent(
   NoAllocScope noAlloc(runtime);
   auto *self = *selfHandle;
   assert(
-      self->parent_ && self->parent_.get(runtime)->propertyMap_ &&
+      self->parent_ && self->parent_.getNonNull(runtime)->propertyMap_ &&
       !self->propertyMap_ &&
       "stealPropertyMapFromParent() must be called with a valid parent with a property map");
 
   LLVM_DEBUG(
       dbgs() << "Class:" << self->getDebugAllocationId()
              << " stealing map from parent Class:"
-             << self->parent_.get(runtime)->getDebugAllocationId() << "\n");
+             << self->parent_.getNonNull(runtime)->getDebugAllocationId()
+             << "\n");
 
   // Success! Just steal our parent's map and add our own property.
   self->propertyMap_.set(
       runtime,
-      self->parent_.get(runtime)->propertyMap_.get(runtime),
+      self->parent_.getNonNull(runtime)->propertyMap_,
       &runtime->getHeap());
-  self->parent_.get(runtime)->propertyMap_.setNull(&runtime->getHeap());
+  self->parent_.getNonNull(runtime)->propertyMap_.setNull(&runtime->getHeap());
 
   // Does our class add a new property?
   if (LLVM_LIKELY(!self->propertyFlags_.flagsTransition)) {
     // This is a new property that we must now add.
     assert(
-        self->numProperties_ - 1 == self->propertyMap_.get(runtime)->size() &&
+        self->numProperties_ - 1 ==
+            self->propertyMap_.getNonNull(runtime)->size() &&
         "propertyMap->size() must match HiddenClass::numProperties-1 in "
         "new prop transition");
 
@@ -958,7 +960,7 @@ void HiddenClass::stealPropertyMapFromParent(
   // to find it and update it.
 
   assert(
-      self->numProperties_ == self->propertyMap_.get(runtime)->size() &&
+      self->numProperties_ == self->propertyMap_.getNonNull(runtime)->size() &&
       "propertyMap->size() must match HiddenClass::numProperties in "
       "flag update transition");
 

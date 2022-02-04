@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -461,13 +461,6 @@ void ExternalStringPrimitive<T>::_finalizeImpl(GCCell *cell, GC *gc) {
 template <typename T>
 size_t ExternalStringPrimitive<T>::_mallocSizeImpl(GCCell *cell) {
   ExternalStringPrimitive<T> *self = vmcast<ExternalStringPrimitive<T>>(cell);
-  return self->calcExternalMemorySize();
-}
-
-template <typename T>
-gcheapsize_t ExternalStringPrimitive<T>::_externalMemorySizeImpl(
-    hermes::vm::GCCell const *cell) {
-  auto *self = vmcast<ExternalStringPrimitive<T>>(cell);
   return self->calcExternalMemorySize();
 }
 

@@ -1,17 +1,19 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @flow strict-local
  * @format
  */
 
 'use strict';
 
-const {parseForESLint} = require('hermes-eslint');
-const {DefinitionType} = require('../dist/eslint-scope/definition');
-const {ScopeType} = require('../dist/eslint-scope/scope');
+import type {DefinitionTypeType, ScopeTypeType} from '../src';
+
+import {parseForESLint} from '../src';
+import {DefinitionType, ScopeType} from '../src';
 
 /**
  * Utility to check that scope manager produces correct scopes and variables.
@@ -20,18 +22,40 @@ const {ScopeType} = require('../dist/eslint-scope/scope');
  * where each object has a scope type and array of variables, Each variable is
  * an object with a name, optional reference count, and optional definition type.
  */
-function verifyHasScopes(code, expectedScopes) {
+function verifyHasScopes(
+  code: string,
+  expectedScopes: $ReadOnlyArray<{
+    type: ScopeTypeType,
+    variables: $ReadOnlyArray<{
+      name: string,
+      type: ?DefinitionTypeType,
+      referenceCount: ?number,
+    }>,
+  }>,
+) {
   const {scopeManager} = parseForESLint(code);
 
-  // Global scope (at index 0 of actual scopes) is not passed as an expected scope
-  expect(scopeManager.scopes).toHaveLength(expectedScopes.length + 1);
+  // report as an array so that it's easier to debug the tests
+  // otherwise you get a cryptic failure that just says "expected 1 but received 2"
+  expect(scopeManager.scopes.map(s => s.type)).toEqual([
+    // Global scope (at index 0 of actual scopes) is not passed as an expected scope
+    'global',
+    ...expectedScopes.map(s => s.type),
+  ]);
 
   for (let i = 0; i < expectedScopes.length; i++) {
     const actualScope = scopeManager.scopes[i + 1];
     const expectedScope = expectedScopes[i];
 
     expect(actualScope.type).toEqual(expectedScope.type);
-    expect(actualScope.variables).toHaveLength(expectedScope.variables.length);
+    // report as an object so that it's easier to debug the tests
+    expect({
+      type: actualScope.type,
+      variables: actualScope.variables.map(v => v.name),
+    }).toEqual({
+      type: actualScope.type,
+      variables: expectedScope.variables.map(v => v.name),
+    });
 
     for (let j = 0; j < expectedScope.variables.length; j++) {
       const expectedVariable = expectedScope.variables[j];
@@ -40,9 +64,17 @@ function verifyHasScopes(code, expectedScopes) {
       expect(actualVariable.name).toEqual(expectedVariable.name);
 
       if (expectedVariable.referenceCount != null) {
-        expect(actualVariable.references).toHaveLength(
-          expectedVariable.referenceCount,
-        );
+        const cnt = expectedVariable.referenceCount;
+        // report as an object so that it's easier to debug the tests
+        expect({
+          type: expectedVariable.type,
+          name: actualVariable.name,
+          refCount: actualVariable.references.length,
+        }).toEqual({
+          type: expectedVariable.type,
+          name: actualVariable.name,
+          refCount: cnt,
+        });
       }
 
       if (expectedVariable.type != null) {
@@ -83,22 +115,26 @@ describe('Source type option', () => {
 
 describe('Type and value references', () => {
   function verifyValueAndTypeReferences(code, name, definitionType) {
-    const {scopeManager} = parseForESLint(code);
+    it(code, () => {
+      const {scopeManager} = parseForESLint(code);
 
-    // Verify that scope contains a single variable
-    const scope = scopeManager.scopes[1];
-    expect(scope.variables).toHaveLength(1);
-    const variable = scope.variables[0];
+      // Verify that scope contains a single variable
+      const scope = scopeManager.scopes[1];
+      expect(scope.variables).toHaveLength(1);
+      const variable = scope.variables[0];
 
-    // Verify that variable has correct name and definition type
-    expect(variable.name).toEqual(name);
-    expect(variable.defs).toHaveLength(1);
-    expect(variable.defs[0].type).toEqual(definitionType);
+      // Verify that variable has correct name and definition type
+      expect(variable.name).toEqual(name);
+      expect(variable.defs).toHaveLength(1);
+      expect(variable.defs[0].type).toEqual(definitionType);
 
-    // Variable has both a value and type reference
-    expect(variable.references).toHaveLength(2);
-    expect(variable.references[0].isValueReference()).toBe(true);
-    expect(variable.references[1].isTypeReference()).toBe(true);
+      // Variable has both a value and type reference
+      expect(variable.references).toHaveLength(2);
+      expect(variable.references[0].isValueReference).toBe(true);
+      expect(variable.references[0].isTypeReference).toBe(false);
+      expect(variable.references[1].isValueReference).toBe(false);
+      expect(variable.references[1].isTypeReference).toBe(true);
+    });
   }
 
   verifyValueAndTypeReferences(
@@ -108,14 +144,6 @@ describe('Type and value references', () => {
     `,
     'C',
     DefinitionType.ClassName,
-  );
-  verifyValueAndTypeReferences(
-    `
-      import V from 'V';
-      (V: V);
-    `,
-    'V',
-    DefinitionType.ImportBinding,
   );
   verifyValueAndTypeReferences(
     `
@@ -147,7 +175,7 @@ describe('Type definitions', () => {
     expect(variable.references).toHaveLength(1);
     expect(variable.references[0]).toBe(reference);
     expect(reference.resolved).toBe(variable);
-    expect(reference.isTypeReference()).toBe(true);
+    expect(reference.isTypeReference).toBe(true);
     expect(reference.isReadOnly()).toBe(true);
 
     // Verify there is one TypeDefinition
@@ -203,7 +231,7 @@ describe('Enums', () => {
     expect(variable.references).toHaveLength(1);
     expect(variable.references[0]).toBe(reference);
     expect(reference.resolved).toBe(variable);
-    expect(reference.isValueReference()).toBe(true);
+    expect(reference.isValueReference).toBe(true);
 
     // Verify there is one Enum definition
     expect(variable.defs).toHaveLength(1);
@@ -230,7 +258,8 @@ describe('QualifiedTypeIdentifier', () => {
     const variable = scope.variables[0];
     expect(variable.name).toEqual('Foo');
     expect(variable.references).toHaveLength(1);
-    expect(variable.references[0].isValueReference()).toBe(true);
+    expect(variable.references[0].isValueReference).toBe(true);
+    expect(variable.references[0].isTypeReference).toBe(false);
   });
 });
 
@@ -247,7 +276,13 @@ describe('Identifiers not mistakenly treated as references', () => {
       const variable = scope.variables[i];
 
       expect(variable.name).toEqual(name);
-      expect(variable.references).toHaveLength(count);
+      expect({
+        name: variable.name,
+        count: variable.references.length,
+      }).toEqual({
+        name,
+        count,
+      });
     }
   }
 
@@ -287,7 +322,7 @@ describe('Identifiers not mistakenly treated as references', () => {
     verifyHasReferences(
       `
         import Foo from 'Foo';
-        import Bar from 'Bar';
+        import type Bar from 'Bar';
         (1: { Foo: Bar });
       `,
       [
@@ -301,7 +336,7 @@ describe('Identifiers not mistakenly treated as references', () => {
     verifyHasReferences(
       `
         import Foo from 'Foo';
-        import Bar from 'Bar';
+        import type Bar from 'Bar';
         (1: { [Foo: Bar]: string });
       `,
       [
@@ -315,7 +350,7 @@ describe('Identifiers not mistakenly treated as references', () => {
     verifyHasReferences(
       `
         import Foo from 'Foo';
-        import Bar from 'Bar';
+        import type Bar from 'Bar';
         (1: { [[Foo]]: Bar });
       `,
       [
@@ -329,7 +364,7 @@ describe('Identifiers not mistakenly treated as references', () => {
     verifyHasReferences(
       `
         import Foo from 'Foo';
-        import Bar from 'Bar';
+        import type Bar from 'Bar';
         (1: (Foo: Bar) => void);
       `,
       [
@@ -371,7 +406,7 @@ describe('Identifiers not mistakenly treated as references', () => {
     verifyHasReferences(
       `
         import Foo from 'Foo';
-        import Bar from 'Bar';
+        import type Bar from 'Bar';
         class C {
           Foo: Bar;
         }
@@ -395,7 +430,7 @@ describe('Type parameters', () => {
 
     // Definition contains Identifier with correct name and location
     const id = scope.variables[0].defs[0].name;
-    expect(id.name).toEqual('T');
+    expect(id.type === 'Identifier' && id.name).toEqual('T');
     expect(id.loc).toMatchObject({
       start: {
         line: 1,
@@ -524,7 +559,8 @@ describe('Type parameters', () => {
         variables: [
           {
             name: 'C',
-            type: DefinitionType.Class,
+            type: DefinitionType.ClassName,
+            referenceCount: null,
           },
         ],
       },
@@ -555,18 +591,8 @@ describe('Type parameters', () => {
           variables: [
             {
               name: 'foo',
-              type: DefinitionType.Function,
+              type: DefinitionType.FunctionName,
               referenceCount: 0,
-            },
-          ],
-        },
-        {
-          type: ScopeType.Type,
-          variables: [
-            {
-              name: 'T',
-              type: DefinitionType.TypeParameter,
-              referenceCount: 1,
             },
           ],
         },
@@ -574,8 +600,14 @@ describe('Type parameters', () => {
           type: ScopeType.Function,
           variables: [
             {
+              type: null,
               name: 'arguments',
               referenceCount: 0,
+            },
+            {
+              name: 'T',
+              type: DefinitionType.TypeParameter,
+              referenceCount: 1,
             },
             {
               name: 'x',
@@ -601,16 +633,6 @@ describe('Type parameters', () => {
           variables: [],
         },
         {
-          type: ScopeType.Type,
-          variables: [
-            {
-              name: 'T',
-              type: DefinitionType.TypeParameter,
-              referenceCount: 1,
-            },
-          ],
-        },
-        {
           type: ScopeType.FunctionExpressionName,
           variables: [
             {
@@ -625,7 +647,13 @@ describe('Type parameters', () => {
           variables: [
             {
               name: 'arguments',
+              type: null,
               referenceCount: 0,
+            },
+            {
+              name: 'T',
+              type: DefinitionType.TypeParameter,
+              referenceCount: 1,
             },
             {
               name: 'x',
@@ -652,7 +680,7 @@ describe('Type parameters', () => {
           variables: [
             {
               name: 'C',
-              type: DefinitionType.Class,
+              type: DefinitionType.ClassName,
               referenceCount: 0,
             },
           ],
@@ -662,7 +690,7 @@ describe('Type parameters', () => {
           variables: [
             {
               name: 'C',
-              type: DefinitionType.Class,
+              type: DefinitionType.ClassName,
               referenceCount: 0,
             },
             {
@@ -695,12 +723,22 @@ describe('Flow type nodes in Patterns', () => {
               // In variable declaration and function parameter
               referenceCount: 2,
             },
-            {name: 'A'},
+            {
+              type: DefinitionType.Variable,
+              name: 'A',
+              referenceCount: 1,
+            },
           ],
         },
         {
           type: ScopeType.Function,
-          variables: [{name: 'B'}],
+          variables: [
+            {
+              type: DefinitionType.Parameter,
+              name: 'B',
+              referenceCount: 0,
+            },
+          ],
         },
       ],
     );
@@ -723,12 +761,22 @@ describe('Flow type nodes in Patterns', () => {
               // In variable declaration and function parameter
               referenceCount: 2,
             },
-            {name: 'A'},
+            {
+              type: DefinitionType.Variable,
+              name: 'A',
+              referenceCount: 1,
+            },
           ],
         },
         {
           type: ScopeType.Function,
-          variables: [{name: 'B'}],
+          variables: [
+            {
+              type: DefinitionType.Parameter,
+              name: 'B',
+              referenceCount: 0,
+            },
+          ],
         },
       ],
     );
@@ -751,12 +799,22 @@ describe('Flow type nodes in Patterns', () => {
               // In variable declaration and function parameter
               referenceCount: 2,
             },
-            {name: 'A'},
+            {
+              type: DefinitionType.Variable,
+              name: 'A',
+              referenceCount: 1,
+            },
           ],
         },
         {
           type: ScopeType.Function,
-          variables: [{name: 'B'}],
+          variables: [
+            {
+              type: DefinitionType.Parameter,
+              name: 'B',
+              referenceCount: 0,
+            },
+          ],
         },
       ],
     );
@@ -778,8 +836,16 @@ describe('Flow type nodes in Patterns', () => {
               type: DefinitionType.Type,
               referenceCount: 2,
             },
-            {name: 'A'},
-            {name: 'B'},
+            {
+              type: DefinitionType.Variable,
+              name: 'A',
+              referenceCount: 1,
+            },
+            {
+              type: DefinitionType.Variable,
+              name: 'B',
+              referenceCount: 1,
+            },
           ],
         },
       ],
@@ -801,9 +867,22 @@ describe('Flow type nodes in Patterns', () => {
               type: DefinitionType.Type,
               referenceCount: 4,
             },
-            {name: 'A'},
-            {name: 'B'},
-            {name: 'C'},
+            {
+              type: DefinitionType.Variable,
+              name: 'A',
+              referenceCount: 1,
+            },
+            {
+              type: DefinitionType.Variable,
+              name: 'B',
+              // has 2 because it's being written to
+              referenceCount: 2,
+            },
+            {
+              type: DefinitionType.Variable,
+              name: 'C',
+              referenceCount: 1,
+            },
           ],
         },
       ],
@@ -902,7 +981,7 @@ describe('Declare statements', () => {
           variables: [
             {
               name: 'Foo',
-              type: DefinitionType.Function,
+              type: DefinitionType.FunctionName,
               referenceCount: 1,
             },
           ],
@@ -923,7 +1002,7 @@ describe('Declare statements', () => {
           variables: [
             {
               name: 'C',
-              type: DefinitionType.Class,
+              type: DefinitionType.ClassName,
               referenceCount: 1,
             },
           ],
@@ -946,10 +1025,6 @@ describe('Declare statements', () => {
         },
         {
           type: ScopeType.DeclareModule,
-          variables: [],
-        },
-        {
-          type: ScopeType.Block,
           variables: [
             {
               name: 'V',
@@ -973,7 +1048,7 @@ describe('Declare statements', () => {
     `);
 
     // All variables are defined in block scope within declare module scope
-    expect(scopeManager.scopes).toHaveLength(4);
+    expect(scopeManager.scopes).toHaveLength(3);
 
     expect(scopeManager.scopes[0].type).toEqual(ScopeType.Global);
     expect(scopeManager.scopes[0].variables).toHaveLength(0);
@@ -982,13 +1057,10 @@ describe('Declare statements', () => {
     expect(scopeManager.scopes[1].variables).toHaveLength(0);
 
     expect(scopeManager.scopes[2].type).toEqual(ScopeType.DeclareModule);
-    expect(scopeManager.scopes[2].variables).toHaveLength(0);
-
-    expect(scopeManager.scopes[3].type).toEqual(ScopeType.Block);
-    expect(scopeManager.scopes[3].variables).toHaveLength(2);
+    expect(scopeManager.scopes[2].variables).toHaveLength(2);
 
     // No references are resolved to the two variables in the declare module body
-    const variables = scopeManager.scopes[3].variables;
+    const variables = scopeManager.scopes[2].variables;
     expect(variables[0].name).toEqual('V');
     expect(variables[0].references).toHaveLength(0);
     expect(variables[1].name).toEqual('T');
@@ -999,7 +1071,6 @@ describe('Declare statements', () => {
     expect(scopeManager.scopes[0].references).toHaveLength(0);
     expect(scopeManager.scopes[1].references).toHaveLength(2);
     expect(scopeManager.scopes[2].references).toHaveLength(0);
-    expect(scopeManager.scopes[3].references).toHaveLength(0);
 
     const references = scopeManager.scopes[1].references;
     expect(references[0].identifier.name).toEqual('V');
@@ -1043,10 +1114,6 @@ describe('Declare statements', () => {
           type: ScopeType.DeclareModule,
           variables: [],
         },
-        {
-          type: ScopeType.Block,
-          variables: [],
-        },
       ],
     );
   });
@@ -1065,7 +1132,7 @@ describe('Declare statements', () => {
           declare export class C {}
           declare export function F(T, O, I): void;
 
-          declare export {V, C, F}
+          declare export {V, C, F as T};
         }
       `,
       [
@@ -1075,10 +1142,6 @@ describe('Declare statements', () => {
         },
         {
           type: ScopeType.DeclareModule,
-          variables: [],
-        },
-        {
-          type: ScopeType.Block,
           variables: [
             {
               name: 'T',
@@ -1107,7 +1170,7 @@ describe('Declare statements', () => {
             },
             {
               name: 'F',
-              type: DefinitionType.Function,
+              type: DefinitionType.FunctionName,
               referenceCount: 1,
             },
           ],
@@ -1119,7 +1182,7 @@ describe('Declare statements', () => {
 
 describe('Flow specific properties visited on non-Flow nodes', () => {
   test('Function', () => {
-    // Return type and predicate are visited
+    // Return type is visited, but predicate is NOT visited
     verifyHasScopes(
       `
         type T = string;
@@ -1134,17 +1197,26 @@ describe('Flow specific properties visited on non-Flow nodes', () => {
               type: DefinitionType.Type,
               referenceCount: 1,
             },
-            {name: 'foo'},
+            {
+              type: DefinitionType.FunctionName,
+              name: 'foo',
+              referenceCount: 0,
+            },
           ],
         },
         {
           type: ScopeType.Function,
           variables: [
-            {name: 'arguments'},
+            {
+              type: null,
+              name: 'arguments',
+              referenceCount: null,
+            },
             {
               name: 'V',
               type: DefinitionType.Parameter,
-              referenceCount: 1,
+              // NOT visited
+              referenceCount: 0,
             },
           ],
         },
@@ -1183,11 +1255,23 @@ describe('Flow specific properties visited on non-Flow nodes', () => {
         },
         {
           type: ScopeType.Class,
-          variables: [{name: 'B'}],
+          variables: [
+            {
+              type: DefinitionType.ClassName,
+              name: 'B',
+              referenceCount: 0,
+            },
+          ],
         },
         {
           type: ScopeType.Class,
-          variables: [{name: 'C'}],
+          variables: [
+            {
+              type: DefinitionType.ClassName,
+              name: 'C',
+              referenceCount: 0,
+            },
+          ],
         },
       ],
     );
@@ -1195,47 +1279,59 @@ describe('Flow specific properties visited on non-Flow nodes', () => {
 });
 
 describe('ClassProperty', () => {
-  verifyHasScopes(
-    `
-      import Foo from 'Foo';
-      import Bar from 'Bar';
-      import Baz from 'Baz';
-      class C {
-        [Foo]: Bar = Baz;
-      }
-    `,
-    [
-      {
-        type: ScopeType.Module,
-        variables: [
-          {
-            name: 'Foo',
-            type: DefinitionType.ImportBinding,
-            referenceCount: 1,
-          },
-          {
-            name: 'Bar',
-            type: DefinitionType.ImportBinding,
-            referenceCount: 1,
-          },
-          {
-            name: 'Baz',
-            type: DefinitionType.ImportBinding,
-            referenceCount: 1,
-          },
-          {
-            name: 'C',
-            type: DefinitionType.ClassName,
-            referenceCount: 0,
-          },
-        ],
-      },
-      {
-        type: ScopeType.Class,
-        variables: [{name: 'C'}],
-      },
-    ],
-  );
+  it('ClassProperty', () => {
+    verifyHasScopes(
+      `
+        import Foo from 'Foo';
+        import type Bar from 'Bar';
+        import Baz from 'Baz';
+        class C {
+          [Foo]: Bar = Baz;
+        }
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'Foo',
+              type: DefinitionType.ImportBinding,
+              referenceCount: 1,
+            },
+            {
+              name: 'Bar',
+              type: DefinitionType.ImportBinding,
+              referenceCount: 1,
+            },
+            {
+              name: 'Baz',
+              type: DefinitionType.ImportBinding,
+              referenceCount: 1,
+            },
+            {
+              name: 'C',
+              type: DefinitionType.ClassName,
+              referenceCount: 0,
+            },
+          ],
+        },
+        {
+          type: ScopeType.Class,
+          variables: [
+            {
+              name: 'C',
+              type: DefinitionType.ClassName,
+              referenceCount: 0,
+            },
+          ],
+        },
+        {
+          type: ScopeType.ClassFieldInitializer,
+          variables: [],
+        },
+      ],
+    );
+  });
 });
 
 describe('FunctionExpression', () => {
@@ -1260,6 +1356,7 @@ describe('FunctionExpression', () => {
         variables: [
           {
             name: 'arguments',
+            type: null,
             referenceCount: 0,
           },
         ],
@@ -1267,24 +1364,35 @@ describe('FunctionExpression', () => {
     ]);
   });
 
-  test('Function name shadows type parameter', () => {
+  /*
+  // TODO - Flow behaves very inconsistently here.
+  //        it's not actually possible to write error-less flow
+  //        code here, so for now we'll leave this rare (if ever)
+  //        edge-case broken unless there's an actual usecase for it.
+  type foo = 1;
+  //   ^^^ no references - shadowed by the type parameter
+  (function foo<foo>(a: foo): foo {
+    //                  ^^^   ^^^ refers to the type param
+    //                  ^^^ refers to the type param
+      return (a: foo);
+    //           ^^^ refers to the function name !!!
+  })
+  */
+  test.skip('Function name shadows type parameter', () => {
     verifyHasScopes(
       `
-        (function foo<foo>() {
-          (1: foo);
-        });
+        type foo = 1;
+        (function foo<foo>(a: foo): foo {
+            return (a: foo);
+        })
       `,
       [
         {
           type: ScopeType.Module,
-          variables: [],
-        },
-        {
-          type: ScopeType.Type,
           variables: [
             {
               name: 'foo',
-              type: DefinitionType.TypeParameter,
+              type: DefinitionType.Type,
               referenceCount: 0,
             },
           ],
@@ -1295,7 +1403,12 @@ describe('FunctionExpression', () => {
             {
               name: 'foo',
               type: DefinitionType.FunctionName,
-              referenceCount: 1,
+              referenceCount: 1, // flow's weirdness
+            },
+            {
+              name: 'foo',
+              type: DefinitionType.TypeParameter,
+              referenceCount: 2,
             },
           ],
         },
@@ -1304,6 +1417,7 @@ describe('FunctionExpression', () => {
           variables: [
             {
               name: 'arguments',
+              type: null,
               referenceCount: 0,
             },
           ],
@@ -1337,10 +1451,12 @@ describe('This type annotation', () => {
           variables: [
             {
               name: 'arguments',
+              type: null,
               referenceCount: 0,
             },
             {
               name: 'param',
+              type: DefinitionType.Parameter,
               referenceCount: 0,
             },
           ],
@@ -1376,6 +1492,359 @@ describe('This type annotation', () => {
           variables: [
             {
               name: 'arguments',
+              type: null,
+              referenceCount: 0,
+            },
+          ],
+        },
+      ],
+    );
+  });
+});
+
+describe('Imports', () => {
+  describe('default', () => {
+    it('import type', () => {
+      verifyHasScopes(
+        `
+          import type RefValue from 'foo';
+          import type RefType from 'foo';
+          const foo = RefValue;
+          type T = RefType;
+        `,
+        [
+          {
+            type: ScopeType.Module,
+            variables: [
+              {
+                name: 'RefValue',
+                type: DefinitionType.ImportBinding,
+                referenceCount: 0,
+              },
+              {
+                name: 'RefType',
+                type: DefinitionType.ImportBinding,
+                referenceCount: 1,
+              },
+              {
+                name: 'foo',
+                type: DefinitionType.Variable,
+                referenceCount: 1,
+              },
+              {
+                name: 'T',
+                type: DefinitionType.Type,
+                referenceCount: 0,
+              },
+            ],
+          },
+        ],
+      );
+    });
+
+    it('import typeof', () => {
+      verifyHasScopes(
+        `
+          import typeof RefValue from 'foo';
+          import typeof RefType from 'foo';
+          const foo = RefValue;
+          type T = RefType;
+        `,
+        [
+          {
+            type: ScopeType.Module,
+            variables: [
+              {
+                name: 'RefValue',
+                type: DefinitionType.ImportBinding,
+                referenceCount: 0,
+              },
+              {
+                name: 'RefType',
+                type: DefinitionType.ImportBinding,
+                referenceCount: 1,
+              },
+              {
+                name: 'foo',
+                type: DefinitionType.Variable,
+                referenceCount: 1,
+              },
+              {
+                name: 'T',
+                type: DefinitionType.Type,
+                referenceCount: 0,
+              },
+            ],
+          },
+        ],
+      );
+    });
+
+    it('import value', () => {
+      verifyHasScopes(
+        `
+          import RefValue from 'foo';
+          import RefType from 'foo';
+          const foo = RefValue;
+          type T = RefType;
+        `,
+        [
+          {
+            type: ScopeType.Module,
+            variables: [
+              {
+                name: 'RefValue',
+                type: DefinitionType.ImportBinding,
+                referenceCount: 1,
+              },
+              {
+                name: 'RefType',
+                type: DefinitionType.ImportBinding,
+                referenceCount: 1,
+              },
+              {
+                name: 'foo',
+                type: DefinitionType.Variable,
+                referenceCount: 1,
+              },
+              {
+                name: 'T',
+                type: DefinitionType.Type,
+                referenceCount: 0,
+              },
+            ],
+          },
+        ],
+      );
+    });
+  });
+
+  describe('named', () => {
+    describe('top-level', () => {
+      it('import type', () => {
+        verifyHasScopes(
+          `
+            import type {RefValue} from 'foo';
+            import type {RefType} from 'foo';
+            const foo = RefValue;
+            type T = RefType;
+          `,
+          [
+            {
+              type: ScopeType.Module,
+              variables: [
+                {
+                  name: 'RefValue',
+                  type: DefinitionType.ImportBinding,
+                  referenceCount: 0,
+                },
+                {
+                  name: 'RefType',
+                  type: DefinitionType.ImportBinding,
+                  referenceCount: 1,
+                },
+                {
+                  name: 'foo',
+                  type: DefinitionType.Variable,
+                  referenceCount: 1,
+                },
+                {
+                  name: 'T',
+                  type: DefinitionType.Type,
+                  referenceCount: 0,
+                },
+              ],
+            },
+          ],
+        );
+      });
+
+      it('import typeof', () => {
+        verifyHasScopes(
+          `
+            import typeof {RefValue} from 'foo';
+            import typeof {RefType} from 'foo';
+            const foo = RefValue;
+            type T = RefType;
+          `,
+          [
+            {
+              type: ScopeType.Module,
+              variables: [
+                {
+                  name: 'RefValue',
+                  type: DefinitionType.ImportBinding,
+                  referenceCount: 0,
+                },
+                {
+                  name: 'RefType',
+                  type: DefinitionType.ImportBinding,
+                  referenceCount: 1,
+                },
+                {
+                  name: 'foo',
+                  type: DefinitionType.Variable,
+                  referenceCount: 1,
+                },
+                {
+                  name: 'T',
+                  type: DefinitionType.Type,
+                  referenceCount: 0,
+                },
+              ],
+            },
+          ],
+        );
+      });
+
+      it('import value', () => {
+        verifyHasScopes(
+          `
+            import {RefValue} from 'foo';
+            import {RefType} from 'foo';
+            const foo = RefValue;
+            type T = RefType;
+          `,
+          [
+            {
+              type: ScopeType.Module,
+              variables: [
+                {
+                  name: 'RefValue',
+                  type: DefinitionType.ImportBinding,
+                  referenceCount: 1,
+                },
+                {
+                  name: 'RefType',
+                  type: DefinitionType.ImportBinding,
+                  referenceCount: 1,
+                },
+                {
+                  name: 'foo',
+                  type: DefinitionType.Variable,
+                  referenceCount: 1,
+                },
+                {
+                  name: 'T',
+                  type: DefinitionType.Type,
+                  referenceCount: 0,
+                },
+              ],
+            },
+          ],
+        );
+      });
+    });
+
+    describe('inline', () => {
+      it('import type', () => {
+        verifyHasScopes(
+          `
+            import {type RefValue} from 'foo';
+            import {type RefType} from 'foo';
+            const foo = RefValue;
+            type T = RefType;
+          `,
+          [
+            {
+              type: ScopeType.Module,
+              variables: [
+                {
+                  name: 'RefValue',
+                  type: DefinitionType.ImportBinding,
+                  referenceCount: 0,
+                },
+                {
+                  name: 'RefType',
+                  type: DefinitionType.ImportBinding,
+                  referenceCount: 1,
+                },
+                {
+                  name: 'foo',
+                  type: DefinitionType.Variable,
+                  referenceCount: 1,
+                },
+                {
+                  name: 'T',
+                  type: DefinitionType.Type,
+                  referenceCount: 0,
+                },
+              ],
+            },
+          ],
+        );
+      });
+
+      it('import typeof', () => {
+        verifyHasScopes(
+          `
+            import {typeof RefValue} from 'foo';
+            import {typeof RefType} from 'foo';
+            const foo = RefValue;
+            type T = RefType;
+          `,
+          [
+            {
+              type: ScopeType.Module,
+              variables: [
+                {
+                  name: 'RefValue',
+                  type: DefinitionType.ImportBinding,
+                  referenceCount: 0,
+                },
+                {
+                  name: 'RefType',
+                  type: DefinitionType.ImportBinding,
+                  referenceCount: 1,
+                },
+                {
+                  name: 'foo',
+                  type: DefinitionType.Variable,
+                  referenceCount: 1,
+                },
+                {
+                  name: 'T',
+                  type: DefinitionType.Type,
+                  referenceCount: 0,
+                },
+              ],
+            },
+          ],
+        );
+      });
+    });
+  });
+
+  it('namespace', () => {
+    verifyHasScopes(
+      `
+        import * as RefValue from 'foo';
+        import * as RefType from 'foo';
+        const foo = RefValue;
+        type T = RefType;
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'RefValue',
+              type: DefinitionType.ImportBinding,
+              referenceCount: 1,
+            },
+            {
+              name: 'RefType',
+              type: DefinitionType.ImportBinding,
+              referenceCount: 1,
+            },
+            {
+              name: 'foo',
+              type: DefinitionType.Variable,
+              referenceCount: 1,
+            },
+            {
+              name: 'T',
+              type: DefinitionType.Type,
               referenceCount: 0,
             },
           ],

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -112,6 +112,12 @@ class SamplingProfiler {
         : tid(tid), timeStamp(ts), stack(stackStart, stackEnd) {}
   };
 
+#ifdef UNIT_TEST
+  pthread_t getCurrentThread() const {
+    return currentThread_;
+  }
+#endif // UNIT_TEST
+
  private:
   /// Max size of sampleStorage_.
   static const int kMaxStackDepth = 500;
@@ -123,8 +129,9 @@ class SamplingProfiler {
     static std::atomic<GlobalProfiler *> instance_;
 
     /// Used to synchronise data writes between the timer thread and the signal
-    /// handler in the runtime thread.
-    static std::atomic<bool> handlerSyncFlag_;
+    /// handler in the runtime thread. Also used to send the target
+    /// SamplingProfiler to be used during the stack walk.
+    static std::atomic<SamplingProfiler *> profilerForSig_;
 
     /// Lock for profiler operations and access to member fields.
     std::mutex profilerLock_;
@@ -133,9 +140,11 @@ class SamplingProfiler {
     /// registered.
     std::unordered_set<SamplingProfiler *> profilers_;
 
-    /// Per-thread profiler instance for loom/local profiling.
+#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+    /// Per-thread profiler instance for loom profiling.
     /// Limitations: No recursive runtimes in one thread.
-    ThreadLocal<SamplingProfiler> threadLocalProfiler_;
+    ThreadLocal<SamplingProfiler> threadLocalProfilerForLoom_;
+#endif
 
     /// Whether profiler is enabled or not. Protected by profilerLock_.
     bool enabled_{false};

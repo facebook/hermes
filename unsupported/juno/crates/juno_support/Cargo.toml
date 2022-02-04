@@ -1,0 +1,16 @@
+[package]
+name = "juno_support"
+version = "0.1.0"
+authors = ["Facebook"]
+edition = "2018"
+license = "MIT"
+
+[dependencies]
+libcplusplus = { path = "../libcplusplus" }
+base64 = "0.13"
+anyhow = "1.0"
+thiserror = "1.0"
+url = "2.2.2"
+
+[build-dependencies]
+cmake = "0.1"

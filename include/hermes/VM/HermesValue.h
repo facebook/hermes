@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -231,21 +231,36 @@ class HermesValue {
     return ((a & kTagMask) << kTagWidth) | (b & kTagMask);
   }
 
-  constexpr inline static HermesValue encodeNullptrObjectValue() {
+  /// Special functions that allow nullptr to be stored in a HermesValue.
+  /// WARNING: These should never be used on the JS stack or heap, and are only
+  /// intended for Handles.
+  constexpr inline static HermesValue encodeNullptrObjectValueUnsafe() {
     return HermesValue(0, ObjectTag);
   }
-  inline static HermesValue encodeObjectValue(void *val) {
+
+  inline static HermesValue encodeObjectValueUnsafe(void *val) {
     validatePointer(val);
     HermesValue RV(safeTypeCast<void *, uintptr_t>(val), ObjectTag);
     assert(RV.isObject());
     return RV;
   }
 
-  inline static HermesValue encodeStringValue(const StringPrimitive *val) {
+  inline static HermesValue encodeStringValueUnsafe(
+      const StringPrimitive *val) {
     validatePointer(val);
     HermesValue RV(safeTypeCast<const void *, uintptr_t>(val), StrTag);
     assert(RV.isString());
     return RV;
+  }
+
+  inline static HermesValue encodeObjectValue(void *val) {
+    assert(val && "Null pointers require special handling.");
+    return encodeObjectValueUnsafe(val);
+  }
+
+  inline static HermesValue encodeStringValue(const StringPrimitive *val) {
+    assert(val && "Null pointers require special handling.");
+    return encodeStringValueUnsafe(val);
   }
 
   inline static HermesValue encodeNativeUInt32(uint32_t val) {
@@ -604,7 +619,7 @@ class GCHermesValueBase final : public HVType {
   uninitialized_copy(InputIt first, InputIt last, OutputIt result, GC *gc);
 
 #if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
-  /// Same as \p copy, but specialised for raw pointers.
+  /// Same as \p copy, but specialized for raw pointers.
   static inline GCHermesValueBase<HVType> *copy(
       GCHermesValueBase<HVType> *first,
       GCHermesValueBase<HVType> *last,
@@ -612,7 +627,7 @@ class GCHermesValueBase final : public HVType {
       GC *gc);
 #endif
 
-  /// Same as \p uninitialized_copy, but specialised for raw pointers. This is
+  /// Same as \p uninitialized_copy, but specialized for raw pointers. This is
   /// unsafe to use if the memory region being copied into (pointed to by
   /// \p result) is reachable by the GC (for instance, memory within the
   /// size of an ArrayStorage), since it does not update elements atomically.

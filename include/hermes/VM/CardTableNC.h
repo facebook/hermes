@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -23,7 +23,7 @@
 namespace hermes {
 namespace vm {
 
-/// The card table optimises young gen collections by restricting the amount of
+/// The card table optimizes young gen collections by restricting the amount of
 /// heap belonging to the old gen that must be scanned.  The card table expects
 /// to be constructed inside an AlignedHeapSegment's storage, at some position
 /// before the allocation region, and covers the extent of that storage's

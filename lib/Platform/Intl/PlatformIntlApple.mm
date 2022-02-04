@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -12,7 +12,7 @@
 namespace hermes {
 namespace platform_intl {
 namespace {
-NSString *u16StringToNSString(std::u16string src) {
+NSString *u16StringToNSString(const std::u16string &src) {
   auto size = src.size();
   const auto *cString = (const unichar *)src.c_str();
   return [NSString stringWithCharacters:cString length:size];
@@ -23,6 +23,18 @@ std::u16string nsStringToU16String(NSString *src) {
   result.resize(size);
   [src getCharacters:(unichar *)&result[0] range:NSMakeRange(0, size)];
   return result;
+}
+const std::vector<std::u16string> &getAvailableLocales() {
+  static const std::vector<std::u16string> *availableLocales = [] {
+    NSArray<NSString *> *availableLocales =
+        [NSLocale availableLocaleIdentifiers];
+    // Intentionally leaked to avoid destruction order problems.
+    auto *vec = new std::vector<std::u16string>();
+    for (id str in availableLocales)
+      vec->push_back(nsStringToU16String(str));
+    return vec;
+  }();
+  return *availableLocales;
 }
 std::u16string getDefaultLocale() {
   // Environment variable used for testing only
@@ -135,6 +147,31 @@ LocaleMatch lookupMatcher(
   // 5. Return result.
   return result;
 }
+// Implementer note: This method corresponds roughly to
+// https://402.ecma-international.org/7.0/#sec-lookupsupportedlocales
+std::vector<std::u16string> lookupSupportedLocales(
+    const std::vector<std::u16string> &availableLocales,
+    const std::vector<std::u16string> &requestedLocales) {
+  // 1. Let subset be a new empty List.
+  std::vector<std::u16string> subset;
+  // 2. For each element locale of requestedLocales in List order, do
+  for (const std::u16string &locale : requestedLocales) {
+    // a. Let noExtensionsLocale be the String value that is locale with all
+    // Unicode locale extension sequences removed.
+    std::u16string noExtensionsLocale = toNoUnicodeExtensionsLocale(locale);
+    // b. Let availableLocale be BestAvailableLocale(availableLocales,
+    // noExtensionsLocale).
+    llvh::Optional<std::u16string> availableLocale =
+        bestAvailableLocale(availableLocales, noExtensionsLocale);
+    // c. If availableLocale is not undefined, append locale to the end of
+    // subset.
+    if (availableLocale) {
+      subset.push_back(locale);
+    }
+  }
+  // 3. Return subset.
+  return subset;
+}
 }
 
 // Implementation of https://tc39.es/ecma402/#sec-canonicalizelocalelist
@@ -179,17 +216,90 @@ vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
   return canonicalizeLocaleList(runtime, locales);
 }
 
+vm::CallResult<std::u16string> localeListToLocaleString(
+    vm::Runtime *runtime,
+    const std::vector<std::u16string> &locales) {
+  // 3. Let requestedLocales be ? CanonicalizeLocaleList(locales).
+  vm::CallResult<std::vector<std::u16string>> requestedLocales =
+      canonicalizeLocaleList(runtime, locales);
+  if (LLVM_UNLIKELY(requestedLocales == vm::ExecutionStatus::EXCEPTION)) {
+    return vm::ExecutionStatus::EXCEPTION;
+  }
+
+  // 4. If requestedLocales is not an empty List, then
+  // a. Let requestedLocale be requestedLocales[0].
+  // 5. Else,
+  // a. Let requestedLocale be DefaultLocale().
+  std::u16string requestedLocale = requestedLocales->empty()
+      ? getDefaultLocale()
+      : std::move(requestedLocales->front());
+  // 6. Let noExtensionsLocale be the String value that is requestedLocale with
+  // any Unicode locale extension sequences (6.2.1) removed.
+  std::u16string noExtensionsLocale =
+      toNoUnicodeExtensionsLocale(requestedLocale);
+
+  // 7. Let availableLocales be a List with language tags that includes the
+  // languages for which the Unicode Character Database contains language
+  // sensitive case mappings. Implementations may add additional language tags
+  // if they support case mapping for additional locales.
+  // 8. Let locale be BestAvailableLocale(availableLocales, noExtensionsLocale).
+  // Convert to C++ array for bestAvailableLocale function
+  const std::vector<std::u16string> &availableLocales = getAvailableLocales();
+  llvh::Optional<std::u16string> locale =
+      bestAvailableLocale(availableLocales, noExtensionsLocale);
+  // 9. If locale is undefined, let locale be "und".
+  return locale.getValueOr(u"und");
+}
+// Implementer note: This method corresponds roughly to
+// https://tc39.es/ecma402/#sup-string.prototype.tolocalelowercase
 vm::CallResult<std::u16string> toLocaleLowerCase(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales,
     const std::u16string &str) {
-  return std::u16string(u"lowered");
+  NSString *nsStr = u16StringToNSString(str);
+  // Steps 3-9 in localeListToLocaleString()
+  vm::CallResult<std::u16string> locale =
+      localeListToLocaleString(runtime, locales);
+  // 10. Let cpList be a List containing in order the code points of S as
+  // defined in es2022, 6.1.4, starting at the first element of S.
+  // 11. Let cuList be a List where the elements are the result of a lower case
+  // transformation of the ordered code points in cpList according to the
+  // Unicode Default Case Conversion algorithm or an implementation-defined
+  // conversion algorithm. A conforming implementation's lower case
+  // transformation algorithm must always yield the same cpList given the same
+  // cuList and locale.
+  // 12. Let L be a String whose elements are the UTF-16 Encoding (defined in
+  // es2022, 6.1.4) of the code points of cuList.
+  NSString *L = u16StringToNSString(locale.getValue());
+  // 13. Return L.
+  return nsStringToU16String([nsStr
+      lowercaseStringWithLocale:[[NSLocale alloc] initWithLocaleIdentifier:L]]);
 }
+
+// Implementer note: This method corresponds roughly to
+// https://tc39.es/ecma402/#sup-string.prototype.tolocaleuppercase
 vm::CallResult<std::u16string> toLocaleUpperCase(
     vm::Runtime *runtime,
     const std::vector<std::u16string> &locales,
     const std::u16string &str) {
-  return std::u16string(u"uppered");
+  NSString *nsStr = u16StringToNSString(str);
+  // Steps 3-9 in localeListToLocaleString()
+  vm::CallResult<std::u16string> locale =
+      localeListToLocaleString(runtime, locales);
+  // 10. Let cpList be a List containing in order the code points of S as
+  // defined in es2022, 6.1.4, starting at the first element of S.
+  // 11. Let cuList be a List where the elements are the result of a lower case
+  // transformation of the ordered code points in cpList according to the
+  // Unicode Default Case Conversion algorithm or an implementation-defined
+  // conversion algorithm. A conforming implementation's lower case
+  // transformation algorithm must always yield the same cpList given the same
+  // cuList and locale.
+  // 12. Let L be a String whose elements are the UTF-16 Encoding (defined in
+  // es2022, 6.1.4) of the code points of cuList.
+  NSString *L = u16StringToNSString(locale.getValue());
+  // 13. Return L.
+  return nsStringToU16String([nsStr
+      uppercaseStringWithLocale:[[NSLocale alloc] initWithLocaleIdentifier:L]]);
 }
 
 struct Collator::Impl {

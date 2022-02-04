@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -13,8 +13,8 @@ Pod::Spec.new do |spec|
   # This must be consistent with the release_version in:
   # - android/build.gradle
   # - npm/package.json
-  # - CMakeLists.txt 
-  spec.version     = "0.10.0"
+  # - CMakeLists.txt
+  spec.version     = "0.11.0"
   spec.summary     = "Hermes is a small and lightweight JavaScript engine optimized for running React Native."
   spec.description = "Hermes is a JavaScript engine optimized for fast start-up of React Native apps. It features ahead-of-time static optimization and compact bytecode."
   spec.homepage    = "https://hermesengine.dev"

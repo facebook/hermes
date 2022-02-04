@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -80,8 +80,8 @@ class PinnedHermesValue;
   /* Enable sampling certain statistics. */                            \
   F(constexpr, bool, EnableSampledStats, false)                        \
                                                                        \
-  /* Whether to enable sampling profiler */                            \
-  F(constexpr, bool, EnableSampleProfiling, true)                      \
+  /* Whether to enable automatic sampling profiler registration */     \
+  F(constexpr, bool, EnableSampleProfiling, false)                     \
                                                                        \
   /* Whether to randomize stack placement etc. */                      \
   F(constexpr, bool, RandomizeMemoryLayout, false)                     \

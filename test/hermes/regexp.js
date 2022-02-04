@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -536,6 +536,12 @@ print(RegExp.prototype[Symbol.replace].name);
 // CHECK-NEXT: [Symbol.replace]
 print(/-/g[Symbol.replace]('2016-01-01', '.'));
 // CHECK-NEXT: 2016.01.01
+// Shouldn't throw if index is large.
+var r = /./;
+r.exec = function () {
+  return { index: 1.7976931348623157e+308 }
+};
+r[Symbol.replace](0);
 
 print("RegExp.prototype[Symbol.split]");
 // CHECK-LABEL: RegExp.prototype[Symbol.split]

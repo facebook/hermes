@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -26,6 +26,7 @@ import {performAddTrailingCommentsMutation} from './mutations/AddTrailingComment
 import {performCloneCommentsToMutation} from './mutations/CloneCommentsTo';
 import {performInsertStatementMutation} from './mutations/InsertStatement';
 import {performRemoveCommentMutations} from './mutations/RemoveComment';
+import {performRemoveNodeMutation} from './mutations/RemoveNode';
 import {performRemoveStatementMutation} from './mutations/RemoveStatement';
 import {performReplaceNodeMutation} from './mutations/ReplaceNode';
 import {performReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
@@ -47,7 +48,7 @@ export function getTransformedAST(
   attachComments(ast.comments, ast, code);
 
   // traverse the AST and colllect the mutations
-  const transformContext = getTransformContext();
+  const transformContext = getTransformContext(code);
   traverseWithContext(ast, scopeManager, () => transformContext, visitors);
 
   // apply the mutations to the AST
@@ -71,6 +72,10 @@ export function getTransformedAST(
             mutationContext,
             mutation,
           );
+        }
+
+        case 'removeNode': {
+          return performRemoveNodeMutation(mutationContext, mutation);
         }
 
         case 'removeStatement': {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -186,6 +186,20 @@ type A = 1;
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
+type A = 1n;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "A"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "BigIntLiteralTypeAnnotation",
+// CHECK-NEXT:         "raw": "1n"
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
 type A = -1;
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "TypeAlias",
@@ -211,7 +225,68 @@ type A = 'foo';
 // CHECK-NEXT:       "typeParameters": null,
 // CHECK-NEXT:       "right": {
 // CHECK-NEXT:         "type": "StringLiteralTypeAnnotation",
-// CHECK-NEXT:         "value": "foo"
+// CHECK-NEXT:         "value": "foo",
+// CHECK-NEXT:         "raw": "'foo'"
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+type A = "foo";
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "A"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "StringLiteralTypeAnnotation",
+// CHECK-NEXT:         "value": "foo",
+// CHECK-NEXT:         "raw": "\"foo\""
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+type A = '\'foo';
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "A"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "StringLiteralTypeAnnotation",
+// CHECK-NEXT:         "value": "'foo",
+// CHECK-NEXT:         "raw": "'\\'foo'"
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+type A = '"foo';
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "A"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "StringLiteralTypeAnnotation",
+// CHECK-NEXT:         "value": "\"foo",
+// CHECK-NEXT:         "raw": "'\"foo'"
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+type A = "\"foo";
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "A"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "StringLiteralTypeAnnotation",
+// CHECK-NEXT:         "value": "\"foo",
+// CHECK-NEXT:         "raw": "\"\\\"foo\""
 // CHECK-NEXT:       }
 // CHECK-NEXT:     }
 

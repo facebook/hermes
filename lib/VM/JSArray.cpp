@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -353,7 +353,6 @@ const ObjectVTable Arguments::vt{
         nullptr,
         nullptr,
         nullptr,
-        nullptr, // externalMemorySize
         VTable::HeapSnapshotMetadata{
             HeapSnapshot::NodeType::Object,
             nullptr,
@@ -400,7 +399,7 @@ CallResult<Handle<Arguments>> Arguments::create(
 /// Adds a property to the object in \p OBJ_HANDLE.  \p SYMBOL provides its name
 /// as a \c Predefined enum value, and its value is  rooted in \p HANDLE.  If
 /// property definition fails, the exceptional execution status will be
-/// propogated to the outer function.
+/// propagated to the outer function.
 #define DEFINE_PROP(OBJ_HANDLE, SYMBOL, HANDLE)                            \
   do {                                                                     \
     auto status = JSObject::defineNewOwnProperty(                          \
@@ -467,7 +466,6 @@ const ObjectVTable JSArray::vt{
         nullptr,
         nullptr,
         nullptr,
-        nullptr, // externalMemorySize
         VTable::HeapSnapshotMetadata{
             HeapSnapshot::NodeType::Object,
             nullptr,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -305,11 +305,11 @@ TEST(HermesValueTest, OutputStreamTest) {
   llvh::raw_string_ostream OS(result);
 
   result.clear();
-  OS << HermesValue::encodeObjectValue(nullptr);
+  OS << HermesValue::encodeObjectValueUnsafe(nullptr);
   EXPECT_EQ("[Object :0 0x00000000]", OS.str());
 
   result.clear();
-  OS << HermesValue::encodeStringValue(nullptr);
+  OS << HermesValue::encodeStringValueUnsafe(nullptr);
   EXPECT_EQ("[String :0 0x00000000]", OS.str());
 
   result.clear();

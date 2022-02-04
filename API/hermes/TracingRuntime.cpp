@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -124,7 +124,7 @@ jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
       try {
         // Note that this ignores the "rt" argument, passing the
         // DHO's cached decoratedRuntime() to the underlying HostObject's
-        // getProprtyNames.  In this case, that will be a TracingRuntime.
+        // getPropertyNames.  In this case, that will be a TracingRuntime.
         props = DecoratedHostObject::getPropertyNames(rt);
       } catch (...) {
         // TODO(T28293178): The trace currently has no way to model
@@ -691,7 +691,7 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
         traceScratchPath.c_str(),
         ec.message().c_str());
     return makeTracingHermesRuntime(
-        std::move(hermesRuntime), runtimeConfig, nullptr, "");
+        std::move(hermesRuntime), runtimeConfig, nullptr, true);
   }
 
   return makeTracingHermesRuntimeImpl(

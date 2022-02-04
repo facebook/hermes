@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -29,11 +29,16 @@ class CompressedPointer {
 
   explicit CompressedPointer() = default;
   constexpr explicit CompressedPointer(std::nullptr_t) : ptr_() {}
-  CompressedPointer(PointerBase *base, GCCell *ptr)
-      : ptr_(pointerToStorageType(ptr, base)) {}
 
   static CompressedPointer fromRaw(RawType r) {
     return CompressedPointer(r);
+  }
+
+  static CompressedPointer encode(GCCell *ptr, PointerBase *base) {
+    return CompressedPointer(pointerToStorageType(ptr, base));
+  }
+  static CompressedPointer encodeNonNull(GCCell *ptr, PointerBase *base) {
+    return CompressedPointer(pointerToStorageTypeNonNull(ptr, base));
   }
 
   GCCell *get(PointerBase *base) const {
@@ -94,6 +99,7 @@ class CompressedPointer {
 
  private:
   explicit CompressedPointer(RawType r) : ptr_(rawToStorageType(r)) {}
+  explicit CompressedPointer(StorageType s) : ptr_(s) {}
 
 #ifdef HERMESVM_COMPRESSED_POINTERS
   static BasedPointer::StorageType storageTypeToRaw(StorageType st) {
@@ -104,6 +110,11 @@ class CompressedPointer {
   }
   static StorageType pointerToStorageType(GCCell *ptr, PointerBase *base) {
     return base->pointerToBased(ptr);
+  }
+  static StorageType pointerToStorageTypeNonNull(
+      GCCell *ptr,
+      PointerBase *base) {
+    return base->pointerToBasedNonNull(ptr);
   }
   static GCCell *storageTypeToPointer(StorageType st, PointerBase *base) {
     return reinterpret_cast<GCCell *>(base->basedToPointer(st));
@@ -116,6 +127,11 @@ class CompressedPointer {
     return reinterpret_cast<StorageType>(st);
   }
   static StorageType pointerToStorageType(GCCell *ptr, PointerBase *) {
+    return ptr;
+  }
+  static StorageType pointerToStorageTypeNonNull(
+      GCCell *ptr,
+      PointerBase *base) {
     return ptr;
   }
   static GCCell *storageTypeToPointer(StorageType st, PointerBase *) {

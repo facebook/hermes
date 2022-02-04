@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -7,16 +7,18 @@
 
 use super::sem_context::*;
 use crate::ast::{
-    self, builder, template, Atom, GCLock, Identifier, Node, NodeField, NodeList, NodeRc,
-    NodeVariant, Path, SourceRange, TemplateMetadata, UnaryExpressionOperator,
-    VariableDeclarationKind, Visitor,
+    self, builder, node_cast, node_isa, template, GCLock, Identifier, Node, NodeField, NodeList,
+    NodeRc, NodeVariant, Path, TemplateMetadata, UnaryExpressionOperator, VariableDeclarationKind,
+    Visitor,
 };
+use crate::resolve_dependency::{DependencyKind, DependencyResolver};
 use crate::sema::decl_collector::DeclCollector;
 use crate::sema::keywords::Keywords;
 use crate::sema::known_globals::KNOWN_GLOBALS;
-use crate::{node_cast, node_isa};
+use juno_support::atom_table::Atom;
+use juno_support::source_manager::{SourceId, SourceRange};
+use juno_support::ScopedHashMap;
 use smallvec::SmallVec;
-use support::ScopedHashMap;
 
 #[derive(Debug)]
 struct Binding<'gc> {
@@ -34,7 +36,17 @@ struct FunctionContext<'gc> {
     decls: DeclCollector<'gc>,
 }
 
-struct Resolver<'gc> {
+/// What type of file the resolver is resolving.
+#[derive(Clone)]
+enum ResolverMode<'a> {
+    Script,
+    Module {
+        /// How to resolve the dependency.
+        dependency_resolver: &'a dyn DependencyResolver,
+    },
+}
+
+struct Resolver<'gc, 'mode> {
     kw: Keywords,
     sem: SemContext,
     func_stack: Vec<FunctionContext<'gc>>,
@@ -45,6 +57,8 @@ struct Resolver<'gc> {
     /// The depth of the global scope in ['binding_table'].
     /// It is None until we have actually entered the global scope.
     global_binding_scope_depth: Option<usize>,
+    file_id: SourceId,
+    mode: ResolverMode<'mode>,
 }
 
 impl FunctionContext<'_> {
@@ -62,15 +76,37 @@ impl FunctionContext<'_> {
 }
 
 /// Perform semantic validation of the AST and return semantic resolution information.
-pub fn resolve_program<'gc>(lock: &'gc GCLock, root: &'gc Node<'gc>) -> SemContext {
-    let mut r = Resolver::new(lock);
+pub fn resolve_program<'gc>(
+    lock: &'gc GCLock,
+    file_id: SourceId,
+    root: &'gc Node<'gc>,
+) -> SemContext {
+    let mut r = Resolver::new(lock, file_id, ResolverMode::Script);
     r.program(lock, root);
     r.sem
 }
 
+/// Perform semantic validation of the AST and return semantic resolution information.
+pub fn resolve_module<'gc>(
+    lock: &'gc GCLock,
+    module: &'gc Node<'gc>,
+    file_id: SourceId,
+    dependency_resolver: &'_ dyn DependencyResolver,
+) -> SemContext {
+    let mut r = Resolver::new(
+        lock,
+        file_id,
+        ResolverMode::Module {
+            dependency_resolver,
+        },
+    );
+    r.module(lock, module);
+    r.sem
+}
+
 // Public functions
-impl<'gc> Resolver<'gc> {
-    fn new(lock: &'gc GCLock) -> Resolver<'gc> {
+impl<'gc, 'mode> Resolver<'gc, 'mode> {
+    fn new(lock: &'gc GCLock, file_id: SourceId, mode: ResolverMode<'mode>) -> Self {
         let kw = Keywords::new(lock.ctx().atom_table());
         Resolver {
             kw,
@@ -80,6 +116,8 @@ impl<'gc> Resolver<'gc> {
             binding_table: Default::default(),
             validating_formal_params: false,
             global_binding_scope_depth: None,
+            file_id,
+            mode,
         }
     }
 
@@ -87,10 +125,14 @@ impl<'gc> Resolver<'gc> {
         assert!(node_isa!(Node::Program, node));
         self.visit_program(ctx, node);
     }
+
+    fn module(&mut self, ctx: &'gc GCLock, module: &'gc Node<'gc>) {
+        self.visit_module(ctx, module);
+    }
 }
 
 // Utility functions
-impl<'gc> Resolver<'gc> {
+impl<'gc> Resolver<'gc, '_> {
     /// Return a reference to the current function context.
     fn function_context(&self) -> &FunctionContext<'gc> {
         self.func_stack.last().unwrap()
@@ -108,6 +150,24 @@ impl<'gc> Resolver<'gc> {
     // the current function.
     fn decl_in_cur_function(&self, decl: DeclId) -> bool {
         self.decl_scope(decl).parent_function == self.function_context().func_id
+    }
+
+    /// Return `true` if the `callee` is the `require` function.
+    fn is_require(&mut self, lock: &GCLock, node: &'gc ast::CallExpression) -> bool {
+        debug_assert!(
+            matches!(self.mode, ResolverMode::Module { .. }),
+            "is_require must only be called in module mode"
+        );
+        if let Node::Identifier(ident @ ast::Identifier { name, .. }) = node.callee {
+            if *name == self.kw.ident_require && node.arguments.len() == 1 {
+                // The identifier must not have a binding.
+                // It has been resolved as an ambient global property.
+                if let Some(id) = self.check_identifier_resolved(lock, ident, node.callee) {
+                    return self.sem.decl(id).kind == DeclKind::UndeclaredGlobalProperty;
+                }
+            }
+        }
+        false
     }
 
     /// Create a new function, push a new function context, execute the callback
@@ -198,7 +258,7 @@ impl<'gc> Resolver<'gc> {
 }
 
 // Business logic.
-impl<'gc> Resolver<'gc> {
+impl<'gc> Resolver<'gc, '_> {
     fn visit_program(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>) {
         self.in_new_function(lock, node, |pself| {
             // Search for "use strict".
@@ -223,6 +283,57 @@ impl<'gc> Resolver<'gc> {
         });
     }
 
+    fn visit_module(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>) {
+        // Create a fake global function in order to have a scope in which to declare
+        // the known globals.
+        // TODO: Share the global AST node and scope between calls to `visit_module` to avoid
+        // making a new node for every module.
+        let global = builder::FunctionDeclaration::build_template(
+            lock,
+            template::FunctionDeclaration {
+                metadata: Default::default(),
+                id: None,
+                params: vec![],
+                body: builder::BlockStatement::build_template(
+                    lock,
+                    template::BlockStatement {
+                        metadata: Default::default(),
+                        body: vec![],
+                    },
+                ),
+                type_parameters: None,
+                return_type: None,
+                predicate: None,
+                generator: false,
+                is_async: false,
+            },
+        );
+
+        // Create the global function.
+        self.in_new_function(lock, global, |pself| {
+            // Create the global scope.
+            pself.in_new_scope(lock, global, |pself| {
+                // If we are warning on undefined symbols, pre-define the known
+                // globals to decrease the number of warnings.
+                if lock.ctx().warn_undefined {
+                    pself.declare_known_globals(lock, *global.range());
+                }
+
+                pself.in_new_scope(lock, node, |pself| {
+                    // Search for "use strict".
+                    if find_use_strict(&node_cast!(Node::Module, node).body).is_some() {
+                        pself
+                            .sem
+                            .function_mut(pself.function_context().func_id)
+                            .strict = true;
+                    }
+
+                    pself.process_collected_declarations(lock, node);
+                    node.visit_children(lock, pself);
+                });
+            })
+        });
+    }
     /// Declare the well known globals to avoid strict mode warnings about them.
     /// `program_range`'s start is used as a synthetic location for the identifiers.
     fn declare_known_globals(&mut self, lock: &'gc GCLock, program_range: SourceRange) {
@@ -466,15 +577,16 @@ impl<'gc> Resolver<'gc> {
         }
     }
 
-    fn resolve_identifier(
+    /// Look up the `ident` to see if it already has been resolved or has a binding assigned.
+    /// Assigns the associated declaration if it exists.
+    fn check_identifier_resolved(
         &mut self,
         lock: &GCLock,
         ident: &'gc Identifier,
         node: &Node,
-        in_typeof: bool,
-    ) {
+    ) -> Option<DeclId> {
         let ptr = NodeRc::from_node(lock, node);
-        let decl = if let Some(decl) = self.sem.ident_decl(&ptr) {
+        if let Some(decl) = self.sem.ident_decl(&ptr) {
             // If identifier already resolved, pick the resolved declaration.
             Some(decl)
         } else if let Some(b) = self.binding_table.value(ident.name) {
@@ -483,7 +595,17 @@ impl<'gc> Resolver<'gc> {
             Some(b.decl)
         } else {
             None
-        };
+        }
+    }
+
+    fn resolve_identifier(
+        &mut self,
+        lock: &GCLock,
+        ident: &'gc Identifier,
+        node: &Node,
+        in_typeof: bool,
+    ) {
+        let decl = self.check_identifier_resolved(lock, ident, node);
 
         // Is this "arguments"?
         if ident.name == self.kw.ident_arguments {
@@ -843,7 +965,7 @@ impl<'gc> Resolver<'gc> {
     }
 }
 
-impl<'gc> Visitor<'gc> for Resolver<'gc> {
+impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
     fn call(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>, path: Option<Path<'gc>>) {
         match node {
             Node::Program(_) => {
@@ -901,6 +1023,68 @@ impl<'gc> Visitor<'gc> for Resolver<'gc> {
                     // by a direct eval.
                     lock.sm()
                         .error(*node.range(), "'new.target' outside of a function");
+                }
+            }
+
+            Node::ImportDeclaration(ast::ImportDeclaration {
+                source: Node::StringLiteral(ast::StringLiteral { value, .. }),
+                ..
+            }) => {
+                node.visit_children(lock, self);
+                if let ResolverMode::Module {
+                    dependency_resolver,
+                } = self.mode
+                {
+                    // Resolve `import`.
+                    let target = String::from_utf16_lossy(&value.str);
+                    match dependency_resolver.resolve_dependency(
+                        lock,
+                        self.file_id,
+                        &target,
+                        DependencyKind::Import,
+                    ) {
+                        Some(file_id) => {
+                            self.sem.add_require(NodeRc::from_node(lock, node), file_id);
+                        }
+                        None => {
+                            lock.sm().warning(
+                                *node.range(),
+                                format!("Unable to resolve import for {}", target),
+                            );
+                        }
+                    }
+                }
+            }
+
+            Node::CallExpression(call @ ast::CallExpression { arguments, .. }) => {
+                node.visit_children(lock, self);
+                if let ResolverMode::Module {
+                    dependency_resolver,
+                } = self.mode
+                {
+                    if self.is_require(lock, call) {
+                        // Resolve `require()` call.
+                        if let Node::StringLiteral(ast::StringLiteral { value, .. }) = arguments[0]
+                        {
+                            let target = String::from_utf16_lossy(&value.str);
+                            match dependency_resolver.resolve_dependency(
+                                lock,
+                                self.file_id,
+                                &target,
+                                DependencyKind::Require,
+                            ) {
+                                Some(file_id) => {
+                                    self.sem.add_require(NodeRc::from_node(lock, node), file_id);
+                                }
+                                None => {
+                                    lock.sm().warning(
+                                        *node.range(),
+                                        format!("Unable to resolve require for {}", target),
+                                    );
+                                }
+                            }
+                        }
+                    }
                 }
             }
 

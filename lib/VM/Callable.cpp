@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -127,7 +127,7 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
 /// Adds a property to the object in \p OBJ_HANDLE.  \p SYMBOL provides its name
 /// as a \c Predefined enum value, and its value is  rooted in \p HANDLE.  If
 /// property definition fails, the exceptional execution status will be
-/// propogated to the outer function.
+/// propagated to the outer function.
 #define DEFINE_PROP(OBJ_HANDLE, SYMBOL, HANDLE)                            \
   do {                                                                     \
     auto status = JSObject::defineNewOwnProperty(                          \
@@ -441,7 +441,8 @@ CallResult<double> Callable::extractOwnLengthProperty_RJS(
     }
   }
 
-  auto intRes = toInteger(runtime, runtime->makeHandle(std::move(*propRes)));
+  auto intRes =
+      toIntegerOrInfinity(runtime, runtime->makeHandle(std::move(*propRes)));
   if (intRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -461,7 +462,6 @@ const CallableVTable BoundFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
                 BoundFunction::_snapshotNameImpl,
@@ -792,8 +792,8 @@ bail:
       ip,
       nullptr,
       0,
-      nullptr,
-      false);
+      HermesValue::encodeEmptyValue(),
+      HermesValue::encodeEmptyValue());
 
   // Restore "thisArg" and clear the scratch register to avoid a leak.
   originalCalleeFrame.getThisArgRef() = callerFrame.getScratchRef();
@@ -822,7 +822,6 @@ const CallableVTable NativeFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
                 NativeFunction::_snapshotNameImpl,
@@ -995,7 +994,6 @@ const CallableVTable NativeConstructor::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
                 NativeConstructor::_snapshotNameImpl,
@@ -1048,7 +1046,6 @@ const CallableVTable JSFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
                 JSFunction::_snapshotNameImpl,
@@ -1161,7 +1158,6 @@ const CallableVTable JSAsyncFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
                 JSAsyncFunction::_snapshotNameImpl,
@@ -1216,7 +1212,6 @@ const CallableVTable JSGeneratorFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
                 JSGeneratorFunction::_snapshotNameImpl,
@@ -1271,7 +1266,6 @@ const CallableVTable GeneratorInnerFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
                 GeneratorInnerFunction::_snapshotNameImpl,
@@ -1401,7 +1395,8 @@ void GeneratorInnerFunction::restoreStack(Runtime *runtime) {
   assert(
       dst + frameSize <= runtime->getStackPointer() &&
       "writing off the end of the stack");
-  const GCHermesValue *src = savedContext_.get(runtime)->data() + frameOffset;
+  const GCHermesValue *src =
+      savedContext_.getNonNull(runtime)->data() + frameOffset;
   GCHermesValueUtil::copyToPinned(src, src + frameSize, dst);
 }
 
@@ -1417,7 +1412,7 @@ void GeneratorInnerFunction::saveStack(Runtime *runtime) {
   GCHermesValue::copy(
       first,
       first + frameSize,
-      savedContext_.get(runtime)->data() + frameOffset,
+      savedContext_.getNonNull(runtime)->data() + frameOffset,
       &runtime->getHeap());
 }
 

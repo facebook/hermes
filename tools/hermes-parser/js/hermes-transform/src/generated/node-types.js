@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -31,11 +31,14 @@ import {
   setParentPointersInDirectChildren,
 } from '../detachedNode';
 
+export type BlockStatementProps = {
+  +body: $ReadOnlyArray<DetachedNode<BlockStatementType['body'][number]>>,
+};
 export function BlockStatement({
   parent,
   ...props
 }: {
-  +body: $ReadOnlyArray<DetachedNode<BlockStatementType['body'][number]>>,
+  ...$ReadOnly<BlockStatementProps>,
   +parent?: ESNode,
 }): DetachedNode<BlockStatementType> {
   const node = detachedProps<BlockStatementType>(parent, {
@@ -46,12 +49,15 @@ export function BlockStatement({
   return node;
 }
 
+export type ExpressionStatementProps = {
+  +expression: DetachedNode<ExpressionStatementType['expression']>,
+  +directive?: ?ExpressionStatementType['directive'],
+};
 export function ExpressionStatement({
   parent,
   ...props
 }: {
-  +expression: DetachedNode<ExpressionStatementType['expression']>,
-  +directive?: ?ExpressionStatementType['directive'],
+  ...$ReadOnly<ExpressionStatementProps>,
   +parent?: ESNode,
 }): DetachedNode<ExpressionStatementType> {
   const node = detachedProps<ExpressionStatementType>(parent, {
@@ -62,6 +68,7 @@ export function ExpressionStatement({
   return node;
 }
 
+export type NumberTypeAnnotationProps = {};
 export function NumberTypeAnnotation({
   parent,
 }: {
@@ -72,14 +79,17 @@ export function NumberTypeAnnotation({
   });
 }
 
-export function VariableDeclaration({
-  parent,
-  ...props
-}: {
+export type VariableDeclarationProps = {
   +kind: VariableDeclarationType['kind'],
   +declarations: $ReadOnlyArray<
     DetachedNode<VariableDeclarationType['declarations'][number]>,
   >,
+};
+export function VariableDeclaration({
+  parent,
+  ...props
+}: {
+  ...$ReadOnly<VariableDeclarationProps>,
   +parent?: ESNode,
 }): DetachedNode<VariableDeclarationType> {
   const node = detachedProps<VariableDeclarationType>(parent, {
@@ -90,12 +100,15 @@ export function VariableDeclaration({
   return node;
 }
 
+export type VariableDeclaratorProps = {
+  +init?: ?DetachedNode<VariableDeclaratorType['init']>,
+  +id: DetachedNode<VariableDeclaratorType['id']>,
+};
 export function VariableDeclarator({
   parent,
   ...props
 }: {
-  +init?: ?DetachedNode<VariableDeclaratorType['init']>,
-  +id: DetachedNode<VariableDeclaratorType['id']>,
+  ...$ReadOnly<VariableDeclaratorProps>,
   +parent?: ESNode,
 }): DetachedNode<VariableDeclaratorType> {
   const node = detachedProps<VariableDeclaratorType>(parent, {

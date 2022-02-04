@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -420,7 +420,9 @@ if (GCC_COMPATIBLE)
   add_flag_if_supported("-Wdelete-non-virtual-dtor" DELETE_NON_VIRTUAL_DTOR_FLAG)
 
   # Avoid triggering arbitrary UB when converting doubles to ints.
-  add_flag_if_supported("-fno-strict-float-cast-overflow" NO_STRICT_FLOAT_CAST_OVERFLOW_FLAG)
+  # TODO(T108716033) Evaluate adding this flag back in once a new clang is
+  # released or XCode is fixed.
+  # add_flag_if_supported("-fno-strict-float-cast-overflow" NO_STRICT_FLOAT_CAST_OVERFLOW_FLAG)
 
   # Disable range loop analysis warnings.
   check_cxx_compiler_flag("-Wrange-loop-analysis" RANGE_ANALYSIS_FLAG)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -54,7 +54,7 @@
 // In fbcode we might have bigger code samples during development due to
 // integration testing. However, we're also at liberty to increase stack
 // size at the application level and for things like HaaS we do this.
-#if !defined(HERMES_FBCODE_BUILD) && \
+#if !defined(HERMES_FBCODE_BUILD) && !defined(HERMES_LARGE_STACK_DEPTH) && \
     (defined(HERMES_UBSAN) || LLVM_ADDRESS_SANITIZER_BUILD)
 #define HERMES_LIMIT_STACK_DEPTH
 #endif

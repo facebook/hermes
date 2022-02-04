@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -429,10 +429,11 @@ bool JSError::appendFunctionNameAtIndex(
   // If funcNames_ is set and contains a string primitive, use that.
   if (selfHandle->funcNames_) {
     assert(
-        index < selfHandle->funcNames_.get(runtime)->size() &&
+        index < selfHandle->funcNames_.getNonNull(runtime)->size() &&
         "Index out of bounds");
     name = dyn_vmcast<StringPrimitive>(
-        selfHandle->funcNames_.get(runtime)->at(index).unboxToHV(runtime));
+        selfHandle->funcNames_.getNonNull(runtime)->at(index).unboxToHV(
+            runtime));
   }
 
   if (!name || name->getStringLength() == 0) {

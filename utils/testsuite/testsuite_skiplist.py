@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -1820,7 +1820,10 @@ PERMANENT_SKIP_LIST = [
     "test262/test/intl402/NumberFormat/",
     "test262/test/intl402/PluralRules/",
     "test262/test/intl402/Segmenter/",
-    "test262/test/intl402/String/",
+    "test262/test/intl402/String/prototype/toLocaleLowerCase/special_casing_Lithuanian.js",
+    "test262/test/intl402/String/prototype/toLocaleLowerCase/special_casing_Azeri.js",
+    "test262/test/intl402/String/prototype/toLocaleLowerCase/special_casing_Turkish.js",
+    "test262/test/intl402/String/prototype/toLocaleUpperCase/special_casing_Lithuanian.js",
     "test262/test/intl402/RelativeTimeFormat/",
     "mjsunit/asm/",
     "mjsunit/regress/wasm/",
@@ -1828,12 +1831,10 @@ PERMANENT_SKIP_LIST = [
     "mjsunit/es6/proxies-",
     "mjsunit/es6/proxies.js",
     # Flow AST features.
-    "flow/bigint/",
     "flow/comment_interning/",
     "flow/decorators/",
     "flow/types/annotations_in_comments/",
     "flow/types/annotations_in_comments_invalid/",
-    "flow/types/bigint_literal/",
     # Flow bug
     "flow/JSX_invalid/migrated_0000.js",
 ]

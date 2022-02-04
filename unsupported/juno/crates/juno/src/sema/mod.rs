@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -18,5 +18,5 @@ mod known_globals;
 mod resolver;
 mod sem_context;
 
-pub use resolver::resolve_program;
+pub use resolver::{resolve_module, resolve_program};
 pub use sem_context::*;

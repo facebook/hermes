@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -265,8 +265,9 @@
 // CHECK-NEXT:                 "name": "b"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
-// CHECK-NEXT:                 "type": "StringLiteral",
-// CHECK-NEXT:                 "value": "1"
+// CHECK-NEXT:                 "type": "JSXStringLiteral",
+// CHECK-NEXT:                 "value": "1",
+// CHECK-NEXT:                 "raw": "'1'"
 // CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             {
@@ -276,8 +277,9 @@
 // CHECK-NEXT:                 "name": "c"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
-// CHECK-NEXT:                 "type": "StringLiteral",
-// CHECK-NEXT:                 "value": "2"
+// CHECK-NEXT:                 "type": "JSXStringLiteral",
+// CHECK-NEXT:                 "value": "2",
+// CHECK-NEXT:                 "raw": "\"2\""
 // CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             {
@@ -535,8 +537,9 @@
 // CHECK-NEXT:                 "name": "c-d"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
-// CHECK-NEXT:                 "type": "StringLiteral",
-// CHECK-NEXT:                 "value": "hello"
+// CHECK-NEXT:                 "type": "JSXStringLiteral",
+// CHECK-NEXT:                 "value": "hello",
+// CHECK-NEXT:                 "raw": "\"hello\""
 // CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             {
@@ -717,8 +720,9 @@
 // CHECK-NEXT:                 "name": "a-b"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
-// CHECK-NEXT:                 "type": "StringLiteral",
-// CHECK-NEXT:                 "value": "foo"
+// CHECK-NEXT:                 "type": "JSXStringLiteral",
+// CHECK-NEXT:                 "value": "foo",
+// CHECK-NEXT:                 "raw": "\"foo\""
 // CHECK-NEXT:               }
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ],
@@ -750,8 +754,9 @@
 // CHECK-NEXT:                 "name": "foo"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
-// CHECK-NEXT:                 "type": "StringLiteral",
-// CHECK-NEXT:                 "value": "abc\n  def"
+// CHECK-NEXT:                 "type": "JSXStringLiteral",
+// CHECK-NEXT:                 "value": "abc\n  def",
+// CHECK-NEXT:                 "raw": "\"abc\n  def\""
 // CHECK-NEXT:               }
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ],
@@ -927,8 +932,9 @@
 // CHECK-NEXT:                 "name": "foo"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
-// CHECK-NEXT:                 "type": "StringLiteral",
-// CHECK-NEXT:                 "value": "\\"
+// CHECK-NEXT:                 "type": "JSXStringLiteral",
+// CHECK-NEXT:                 "value": "\\",
+// CHECK-NEXT:                 "raw": "\"\\\""
 // CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             {
@@ -938,8 +944,9 @@
 // CHECK-NEXT:                 "name": "bar"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
-// CHECK-NEXT:                 "type": "StringLiteral",
-// CHECK-NEXT:                 "value": "\\'"
+// CHECK-NEXT:                 "type": "JSXStringLiteral",
+// CHECK-NEXT:                 "value": "\\'",
+// CHECK-NEXT:                 "raw": "\"\\'\""
 // CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             {
@@ -949,8 +956,9 @@
 // CHECK-NEXT:                 "name": "baz"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
-// CHECK-NEXT:                 "type": "StringLiteral",
-// CHECK-NEXT:                 "value": "\\t\\n"
+// CHECK-NEXT:                 "type": "JSXStringLiteral",
+// CHECK-NEXT:                 "value": "\\t\\n",
+// CHECK-NEXT:                 "raw": "\"\\t\\n\""
 // CHECK-NEXT:               }
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ],
@@ -981,8 +989,9 @@
 // CHECK-NEXT:                 "name": "foo"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
-// CHECK-NEXT:                 "type": "StringLiteral",
-// CHECK-NEXT:                 "value": "\\"
+// CHECK-NEXT:                 "type": "JSXStringLiteral",
+// CHECK-NEXT:                 "value": "\\",
+// CHECK-NEXT:                 "raw": "'\\'"
 // CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             {
@@ -992,8 +1001,9 @@
 // CHECK-NEXT:                 "name": "bar"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
-// CHECK-NEXT:                 "type": "StringLiteral",
-// CHECK-NEXT:                 "value": "\\\""
+// CHECK-NEXT:                 "type": "JSXStringLiteral",
+// CHECK-NEXT:                 "value": "\\\"",
+// CHECK-NEXT:                 "raw": "'\\\"'"
 // CHECK-NEXT:               }
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ],

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -203,7 +203,11 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
   CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
   {
     ScopedNativeCallFrame frame(
-        runtime, 0, nullptr, false, HermesValue::encodeUndefinedValue());
+        runtime,
+        0,
+        HermesValue::encodeUndefinedValue(),
+        HermesValue::encodeUndefinedValue(),
+        HermesValue::encodeUndefinedValue());
     ASSERT_FALSE(frame.overflowed());
     status = runtime->interpretFunction(codeBlock);
   }
@@ -265,7 +269,11 @@ L2:
   CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
   {
     ScopedNativeCallFrame newFrame(
-        runtime, 1, nullptr, false, HermesValue::encodeUndefinedValue());
+        runtime,
+        1,
+        HermesValue::encodeUndefinedValue(),
+        HermesValue::encodeUndefinedValue(),
+        HermesValue::encodeUndefinedValue());
     ASSERT_FALSE(newFrame.overflowed());
     newFrame->getArgRef(0) = HermesValue::encodeDoubleValue(5);
     status = runtime->interpretFunction(codeBlock);
@@ -339,8 +347,8 @@ L1:
   Handle<JSFunction> factFn = runtime->makeHandle(JSFunction::create(
       runtime,
       runtimeModule->getDomain(runtime),
-      Handle<JSObject>(runtime),
-      Handle<Environment>(runtime),
+      runtime->makeNullHandle<JSObject>(),
+      runtime->makeNullHandle<Environment>(),
       codeBlock));
 
   // Define the 'fact' function.
@@ -354,7 +362,11 @@ L1:
     CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
     {
       ScopedNativeCallFrame newFrame(
-          runtime, 1, nullptr, false, HermesValue::encodeUndefinedValue());
+          runtime,
+          1,
+          HermesValue::encodeUndefinedValue(),
+          HermesValue::encodeUndefinedValue(),
+          HermesValue::encodeUndefinedValue());
       ASSERT_FALSE(newFrame.overflowed());
       newFrame->getArgRef(0) = HermesValue::encodeDoubleValue(2);
       status = runtime->interpretFunction(codeBlock);
@@ -372,7 +384,11 @@ L1:
     CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
     {
       ScopedNativeCallFrame newFrame(
-          runtime, 1, nullptr, false, HermesValue::encodeUndefinedValue());
+          runtime,
+          1,
+          HermesValue::encodeUndefinedValue(),
+          HermesValue::encodeUndefinedValue(),
+          HermesValue::encodeUndefinedValue());
       ASSERT_FALSE(newFrame.overflowed());
       newFrame->getArgRef(0) = HermesValue::encodeDoubleValue(5);
       status = runtime->interpretFunction(codeBlock);

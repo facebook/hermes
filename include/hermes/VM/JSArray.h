@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -133,7 +133,7 @@ class ArrayImpl : public JSObject {
   ///   constructing array objects using the JavaScript Array() constructor,
   ///   since we don't know the length in advance.
   /// \tparam NeedsBarriers indicates whether write barriers are needed
-  ///   for initializating writes in the constructor.  (In debug builds,
+  ///   for initializing writes in the constructor.  (In debug builds,
   ///   a claim that they are not necessary is checked dynamically,
   ///   which should find any incorrect specifications.)
   template <typename NeedsBarriers>
@@ -189,7 +189,7 @@ class ArrayImpl : public JSObject {
   /// semantics of the "indexed storage" the storage capacity may need to be
   /// expanded (e.g. affecting Array.length), or the write may simply be ignored
   /// (in the case of typed arrays).
-  /// \return true if the write succeeded, or fals if it was ignored.
+  /// \return true if the write succeeded, or false if it was ignored.
   static CallResult<bool> _setOwnIndexedImpl(
       Handle<JSObject> selfHandle,
       Runtime *runtime,

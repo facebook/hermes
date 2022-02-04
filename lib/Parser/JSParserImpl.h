@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -666,10 +666,16 @@ class JSParserImpl {
 
   /// Parse a function body. This is a wrapper around parseBlock for the
   /// purposes of lazy parsing.
+  /// \param paramYield the value of paramYield at the start of the function,
+  ///   used for lazy compilation.
+  /// \param paramAwait the value of paramAwait at the start of the function,
+  ///   used for lazy compilation.
   /// \param param [Yield]
   Optional<ESTree::BlockStatementNode *> parseFunctionBody(
       Param param,
       bool eagerly,
+      bool paramYield,
+      bool paramAwait,
       JSLexer::GrammarContext grammarContext = JSLexer::AllowRegExp,
       bool parseDirectives = false);
 

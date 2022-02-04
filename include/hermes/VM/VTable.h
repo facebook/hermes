@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -122,9 +122,6 @@ struct VTable {
   /// This should not modify the cell.
   using TrimSizeCallback = gcheapsize_t(const GCCell *);
   TrimSizeCallback *const trimSize_;
-  /// Calculate the external memory size.
-  using ExternalMemorySize = gcheapsize_t(const GCCell *);
-  ExternalMemorySize *const externalMemorySize_;
 
   /// Any metadata associated with heap snapshots.
   const HeapSnapshotMetadata snapshotMetaData;
@@ -140,7 +137,6 @@ struct VTable {
       MarkWeakCallback *markWeak = nullptr,
       MallocSizeCallback *mallocSize = nullptr,
       TrimSizeCallback *trimSize = nullptr,
-      ExternalMemorySize *externalMemorySize = nullptr,
       HeapSnapshotMetadata snapshotMetaData =
           HeapSnapshotMetadata{
               HeapSnapshot::NodeType::Object,
@@ -154,7 +150,6 @@ struct VTable {
         markWeak_(markWeak),
         mallocSize_(mallocSize),
         trimSize_(trimSize),
-        externalMemorySize_(externalMemorySize),
         snapshotMetaData(snapshotMetaData) {}
 
   bool isVariableSize() const {
@@ -195,12 +190,6 @@ struct VTable {
         isValid() && trimmedSize <= origSize &&
         "Growing objects is not supported.");
     return trimmedSize;
-  }
-
-  /// If the cell has any associated external memory, return the size (in bytes)
-  /// of that external memory, else zero.
-  gcheapsize_t externalMemorySize(const GCCell *cell) const {
-    return externalMemorySize_ ? (*externalMemorySize_)(cell) : 0;
   }
 
   /// \return true iff this VTable is valid.

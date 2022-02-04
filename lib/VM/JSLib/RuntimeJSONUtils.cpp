@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -695,7 +695,7 @@ ExecutionStatus JSONStringifyer::initializeSpace(Handle<> space) {
     tmpHandle_ = strRes->getHermesValue();
   }
   if (tmpHandle_->isNumber()) {
-    auto intRes = toInteger(runtime_, tmpHandle_);
+    auto intRes = toIntegerOrInfinity(runtime_, tmpHandle_);
     assert(
         intRes != ExecutionStatus::EXCEPTION &&
         "toInteger on a number cannot throw");

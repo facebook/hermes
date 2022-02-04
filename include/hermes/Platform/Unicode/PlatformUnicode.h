@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -16,6 +16,7 @@
 #define HERMES_PLATFORM_UNICODE_CF 2
 #define HERMES_PLATFORM_UNICODE_ICU 3
 #define HERMES_PLATFORM_UNICODE_EMSCRIPTEN 4
+#define HERMES_PLATFORM_UNICODE_LITE 5
 
 #ifndef HERMES_PLATFORM_UNICODE
 #if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)

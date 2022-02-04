@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -7,7 +7,7 @@
 
 use super::generated_cvt::cvt_node_ptr;
 use crate::ast;
-use crate::source_manager::SourceId;
+use crate::ast::SourceId;
 use hermes::parser::{
     DataRef, HermesParser, NodeLabel, NodeLabelOpt, NodeListOptRef, NodeListRef, NodePtr,
     NodePtrOpt, NodeString, NodeStringOpt, SMLoc,
@@ -15,6 +15,7 @@ use hermes::parser::{
 use hermes::utf::{
     is_utf8_continuation, utf8_with_surrogates_to_string, utf8_with_surrogates_to_utf16,
 };
+use juno_support::atom_table;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::str::FromStr;
@@ -49,7 +50,7 @@ pub struct Converter<'parser> {
     /// Map from NodeLabel, which has been uniqued in Hermes, to an
     /// ast::Identifier. This allows us to avoid repeated conversion of the same
     /// NodeLabel.
-    atom_tab: HashMap<NodeLabel, ast::Atom>,
+    atom_tab: HashMap<NodeLabel, atom_table::Atom>,
 }
 
 /// Adjust the source location backwards making sure it doesn't point to \r or
@@ -147,6 +148,31 @@ impl<'parser> Converter<'parser> {
         u: NodeLabelOpt,
     ) -> Option<ast::NodeLabel> {
         u.as_node_label().map(|u| self.cvt_label(ctx, u))
+    }
+
+    /// Report an invalid node kind for conversion via the SourceManager.
+    pub fn report_invalid_node(&self, lock: &ast::GCLock, node: NodePtr, range: ast::SourceRange) {
+        use hermes::parser::NodeKind::*;
+        let node = node.as_ref();
+        match node.kind {
+            CoverEmptyArgs => {
+                lock.sm().error(range, "invalid empty parentheses '( )'");
+            }
+            CoverTrailingComma => {
+                lock.sm().error(range, "expression expected after ','");
+            }
+            CoverInitializer => {
+                lock.sm()
+                    .error(range, "':' expected in property initialization");
+            }
+            CoverRestElement => {
+                lock.sm().error(range, "'...' not allowed in this context");
+            }
+            _ => {
+                lock.sm()
+                    .error(range, format!("unsupported syntax: {:?}", node.kind));
+            }
+        }
     }
 }
 

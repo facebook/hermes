@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -252,7 +252,7 @@ class Callable : public JSObject {
     return selfHandle->getVT()->call(selfHandle, runtime);
   }
 
-  /// Call the callable in contruct mode with arguments already on the stack.
+  /// Call the callable in construct mode with arguments already on the stack.
   /// Checks the return value of the called function. If it is an object, then
   /// it is returned, else the `this` value is returned.
   static CallResult<PseudoHandle<>>
@@ -373,7 +373,7 @@ class BoundFunction final : public Callable {
   static CallResult<PseudoHandle<>>
   _boundCall(BoundFunction *self, const Inst *ip, Runtime *runtime);
 
-  /// Intialize the length and name and property of a lazily created bound
+  /// Initialize the length and name and property of a lazily created bound
   /// function.
   static ExecutionStatus initializeLengthAndName(
       Handle<Callable> selfHandle,
@@ -383,7 +383,7 @@ class BoundFunction final : public Callable {
 
   /// \return the number of arguments, including the 'this' param.
   unsigned getArgCountWithThis(Runtime *runtime) const {
-    return argStorage_.get(runtime)->size();
+    return argStorage_.getNonNull(runtime)->size();
   }
 
  public:
@@ -401,7 +401,7 @@ class BoundFunction final : public Callable {
   /// Return a pointer to the stored arguments, including \c this. \c this is
   /// at index 0, followed by the rest.
   GCHermesValue *getArgsWithThis(Runtime *runtime) {
-    return argStorage_.get(runtime)->begin();
+    return argStorage_.getNonNull(runtime)->begin();
   }
 
   /// Create an instance of the object using the bound constructor.
@@ -577,7 +577,7 @@ class NativeFunction : public Callable {
         functionPtr,
         name,
         paramCount,
-        Handle<JSObject>(runtime),
+        runtime->makeNullHandle<JSObject>(),
         additionalSlotCount);
   }
 
@@ -1289,7 +1289,7 @@ class GeneratorInnerFunction final : public JSFunction {
   /// \return the number of frame registers in the stored context.
   uint32_t getFrameSizeInContext(Runtime *runtime) const {
     uint32_t frameOffset = getFrameOffsetInContext();
-    return savedContext_.get(runtime)->size() - frameOffset;
+    return savedContext_.getNonNull(runtime)->size() - frameOffset;
   }
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -148,8 +148,8 @@ arrayBufferPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
 
   // 5. Let len be the value of O’s [[ArrayBufferByteLength]] internal slot.
   double len = self->size();
-  // 6. Let relativeStart be ToInteger(start).
-  auto intRes = toInteger(runtime, start);
+  // 6. Let relativeStart be ToIntegerOrInfinity(start).
+  auto intRes = toIntegerOrInfinity(runtime, start);
   if (intRes == ExecutionStatus::EXCEPTION) {
     // 7. ReturnIfAbrupt(relativeStart).
     return ExecutionStatus::EXCEPTION;
@@ -160,12 +160,12 @@ arrayBufferPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   double first = relativeStart < 0 ? max(len + relativeStart, 0.0)
                                    : min(relativeStart, len);
   // 9. If end is undefined, let relativeEnd be len; else let relativeEnd be
-  // ToInteger(end).
+  // ToIntegerOrInfinity(end).
   double relativeEnd;
   if (end->isUndefined()) {
     relativeEnd = len;
   } else {
-    intRes = toInteger(runtime, end);
+    intRes = toIntegerOrInfinity(runtime, end);
     if (intRes == ExecutionStatus::EXCEPTION) {
       // 10. ReturnIfAbrupt(relativeEnd).
       return ExecutionStatus::EXCEPTION;

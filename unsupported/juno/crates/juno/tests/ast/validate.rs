@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -17,6 +17,20 @@ fn validate_src_with_flags(
     let mut ctx = Context::new();
     let ast = hparser::parse_with_flags(flags, src, &mut ctx).unwrap();
     validate_tree(&mut ctx, &ast)
+}
+
+fn validate_src(src: &str) -> Result<(), TreeValidationError> {
+    validate_src_with_flags(Default::default(), src)
+}
+
+fn validate_src_jsx(src: &str) -> Result<(), TreeValidationError> {
+    validate_src_with_flags(
+        ParserFlags {
+            enable_jsx: true,
+            ..Default::default()
+        },
+        src,
+    )
 }
 
 fn validate_src_flow(src: &str) -> Result<(), TreeValidationError> {
@@ -138,6 +152,31 @@ fn test_error() {
             assert_eq!(e[0].node, bad_ret);
         }
     }
+}
+
+#[test]
+fn test_literals() {
+    validate_src("({});").unwrap();
+    validate_src("({x: y});").unwrap();
+    validate_src("({x: y, ...z});").unwrap();
+    validate_src("[]").unwrap();
+    validate_src("[x, y, ...z]").unwrap();
+}
+
+#[test]
+fn test_calls() {
+    validate_src("foo()").unwrap();
+    validate_src("foo(1,2)").unwrap();
+    validate_src("foo(1,2,...bar)").unwrap();
+}
+
+#[test]
+fn test_jsx() {
+    validate_src_jsx("<foo />").unwrap();
+    validate_src_jsx("<foo bar={1} />").unwrap();
+    validate_src_jsx("<foo bar='abc' />").unwrap();
+    validate_src_jsx("<foo><bar></bar></foo>").unwrap();
+    validate_src_jsx("<foo><bar>abc</bar></foo>").unwrap();
 }
 
 #[test]

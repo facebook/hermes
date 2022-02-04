@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -11,8 +11,6 @@
 // some windows standard library macros that gtest-port.h relies on.
 #include <gtest/gtest.h>
 
-#include <folly/dynamic.h>
-#include <folly/json.h>
 #include <hermes/CompileJS.h>
 #include <hermes/hermes.h>
 #include <jsi/instrumentation.h>
@@ -56,15 +54,14 @@ class HeapSnapshotAPITest : public ::testing::TestWithParam<bool> {
 
 static std::string functionInfoToString(
     int idx,
-    const folly::dynamic &traceFunctionInfos,
-    const folly::dynamic &strings) {
-  auto it = traceFunctionInfos.begin() + idx * 6;
-  auto functionID = it->asInt();
-  auto name = strings.at((it + 1)->asInt()).asString();
-  auto scriptName = strings.at((it + 2)->asInt()).asString();
-  auto scriptID = (it + 3)->asInt();
-  auto line = (it + 4)->asInt();
-  auto col = (it + 5)->asInt();
+    const std::vector<uint64_t> &traceFunctionInfos,
+    const std::vector<std::string> &strings) {
+  auto functionID = traceFunctionInfos[idx * 6];
+  auto name = strings[traceFunctionInfos[idx * 6 + 1]];
+  auto scriptName = strings[traceFunctionInfos[idx * 6 + 2]];
+  auto scriptID = traceFunctionInfos[idx * 6 + 3];
+  auto line = traceFunctionInfos[idx * 6 + 4];
+  auto col = traceFunctionInfos[idx * 6 + 5];
 
   std::ostringstream os;
   os << name << "(" << functionID << ") @ " << scriptName << "(" << scriptID
@@ -82,26 +79,30 @@ struct ChromeStackTreeNode {
   /// must outlive \p idNodeMap or else \p idNodeMap will have dangling pointers
   /// to the nodes.
   static std::vector<std::unique_ptr<ChromeStackTreeNode>> parse(
-      const folly::dynamic &traceNodes,
+      facebook::jsi::Runtime *rt,
+      const facebook::jsi::Array &traceNodes,
       ChromeStackTreeNode *parent,
       std::map<int, ChromeStackTreeNode *> &idNodeMap) {
     std::vector<std::unique_ptr<ChromeStackTreeNode>> res;
-    for (auto node = traceNodes.begin(); node != traceNodes.end(); node += 5) {
-      auto id = node->asInt();
-      auto functionInfoIndex = (node + 1)->asInt();
-      folly::dynamic children = *(node + 4);
+    auto numNodes = traceNodes.size(*rt);
+    for (size_t i = 0; i < numNodes; i += 5) {
+      auto id = traceNodes.getValueAtIndex(*rt, i).asNumber();
+      auto functionInfoIndex =
+          traceNodes.getValueAtIndex(*rt, i + 1).asNumber();
+      auto children =
+          traceNodes.getValueAtIndex(*rt, i + 4).asObject(*rt).asArray(*rt);
       auto treeNode =
           std::make_unique<ChromeStackTreeNode>(parent, functionInfoIndex);
       idNodeMap.emplace(id, treeNode.get());
-      treeNode->children_ = parse(children, treeNode.get(), idNodeMap);
+      treeNode->children_ = parse(rt, children, treeNode.get(), idNodeMap);
       res.emplace_back(std::move(treeNode));
     }
     return res;
   };
 
   std::string buildStackTrace(
-      const folly::dynamic &traceFunctionInfos,
-      const folly::dynamic &strings) {
+      const std::vector<uint64_t> &traceFunctionInfos,
+      const std::vector<std::string> &strings) {
     std::string res =
         parent_ ? parent_->buildStackTrace(traceFunctionInfos, strings) : "";
     res += "\n" +
@@ -130,24 +131,36 @@ TEST_P(HeapSnapshotAPITest, HeapTimeline) {
   stopTrackingHeapObjects();
 
   const std::string heapTimeline = os.str();
-  folly::dynamic json = folly::parseJson(heapTimeline);
-  ASSERT_TRUE(json.isObject());
-  auto it = json.find("strings");
-  ASSERT_NE(it, json.items().end());
-  auto strings = it->second;
-  it = json.find("nodes");
-  ASSERT_NE(it, json.items().end());
-  auto nodes = it->second;
-  it = json.find("trace_tree");
-  ASSERT_NE(it, json.items().end());
-  auto traceTree = it->second;
-  it = json.find("trace_function_infos");
-  ASSERT_NE(it, json.items().end());
-  auto traceFunctionInfos = it->second;
+  auto json = rt->global()
+                  .getPropertyAsObject(*rt, "JSON")
+                  .getPropertyAsFunction(*rt, "parse")
+                  .call(*rt, heapTimeline)
+                  .asObject(*rt);
+
+  auto jsStrings = json.getPropertyAsObject(*rt, "strings").asArray(*rt);
+
+  std::vector<std::string> strings;
+  for (size_t i = 0; i < jsStrings.size(*rt); i++)
+    strings.push_back(
+        jsStrings.getValueAtIndex(*rt, i).asString(*rt).utf8(*rt));
+
+  auto jsNodes = json.getPropertyAsObject(*rt, "nodes").asArray(*rt);
+  std::vector<uint64_t> nodes;
+  for (size_t i = 0; i < jsNodes.size(*rt); i++)
+    nodes.push_back(jsNodes.getValueAtIndex(*rt, i).asNumber());
+
+  auto jsTraceFunctionInfos =
+      json.getPropertyAsObject(*rt, "trace_function_infos").asArray(*rt);
+  std::vector<uint64_t> traceFunctionInfos;
+  for (size_t i = 0; i < jsTraceFunctionInfos.size(*rt); i++)
+    traceFunctionInfos.push_back(
+        jsTraceFunctionInfos.getValueAtIndex(*rt, i).asNumber());
+
+  auto traceTree = json.getPropertyAsObject(*rt, "trace_tree").asArray(*rt);
 
   // The root node should be the only thing at the top of the tree. There are 5
   // fields per single node, and the last field is a children array.
-  EXPECT_EQ(traceTree.size(), 5)
+  EXPECT_EQ(traceTree.size(*rt), 5)
       << "There should never be more than a single 5-tuple at the beginning of "
          "the trace tree";
 
@@ -158,9 +171,9 @@ TEST_P(HeapSnapshotAPITest, HeapTimeline) {
   uint64_t traceNodeID = 0;
   ASSERT_EQ(nodes.size() % nodeTupleSize, 0)
       << "Nodes array must consist of tuples";
-  for (auto node = nodes.begin(); node != nodes.end(); node += nodeTupleSize) {
-    if (static_cast<uint64_t>((node + nodeIDFieldIndex)->asInt()) == objID) {
-      traceNodeID = (node + nodeTraceIDFieldIndex)->asInt();
+  for (size_t i = 0; i < nodes.size(); i += nodeTupleSize) {
+    if (nodes[i + nodeIDFieldIndex] == objID) {
+      traceNodeID = nodes[i + nodeTraceIDFieldIndex];
       EXPECT_NE(traceNodeID, 0ul) << "Object in node graph has a zero trace ID";
       break;
     }
@@ -169,7 +182,8 @@ TEST_P(HeapSnapshotAPITest, HeapTimeline) {
 
   // Now use the trace node ID to locate the corresponding stack.
   std::map<int, ChromeStackTreeNode *> idNodeMap;
-  auto roots = ChromeStackTreeNode::parse(traceTree, nullptr, idNodeMap);
+  auto roots =
+      ChromeStackTreeNode::parse(rt.get(), traceTree, nullptr, idNodeMap);
   (void)roots;
   auto stackTreeNode = idNodeMap.find(traceNodeID);
   ASSERT_NE(stackTreeNode, idNodeMap.end());

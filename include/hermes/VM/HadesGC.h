@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -47,7 +47,7 @@ class WeakRef;
 ///
 /// The old generation is a collection of heap segments, and allocations in the
 /// old gen are done with a freelist (not a bump-pointer). When the old
-/// collection is nearly full, it starts a backthround thread that will mark all
+/// collection is nearly full, it starts a background thread that will mark all
 /// objects in the old gen, and then sweep the dead ones onto freelists.
 ///
 /// Compaction is done in the old gen on a per-segment basis.
@@ -902,10 +902,11 @@ class HadesGC final : public GCBase {
   /// This function checks if the live bytes after the last OG GC is greater
   /// than the tripwire limit. If the conditions are met, the tripwire is
   /// triggered and tripwireCallback_ is called.
-  /// Also resets the stats counter, so that it calls the analytics callback.
+  /// Also submits pending OG collection stats, and calls the analytics
+  /// callback.
   /// WARNING: Do not call this while there is an ongoing collection. It can
   /// cause a race condition and a deadlock.
-  void checkTripwireAndResetStats();
+  void checkTripwireAndSubmitStats();
 
   /// Transfer any external memory charges from YG to OG. Used as part of YG
   /// collection.

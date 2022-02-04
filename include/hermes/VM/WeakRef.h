@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -28,9 +28,7 @@ template <class T>
 class WeakRef : public WeakRefBase {
  public:
   using Traits = HermesValueTraits<T>;
-  explicit WeakRef(
-      GC *gc,
-      typename Traits::value_type value = Traits::defaultValue())
+  explicit WeakRef(GC *gc, typename Traits::value_type value)
       : WeakRefBase(gc->allocWeakSlot(Traits::encode(value))) {
     HermesValueCast<T>::assertValid(slot_->value());
   }
@@ -119,7 +117,7 @@ class WeakRootBase : protected CompressedPointer {
   explicit WeakRootBase() : CompressedPointer(nullptr) {}
   explicit WeakRootBase(std::nullptr_t) : CompressedPointer(nullptr) {}
   explicit WeakRootBase(GCCell *ptr, PointerBase *base)
-      : CompressedPointer(base, ptr) {}
+      : CompressedPointer(CompressedPointer::encode(ptr, base)) {}
 
   void *get(PointerBase *base, GC *gc) const {
     GCCell *ptr = CompressedPointer::get(base);
@@ -166,7 +164,7 @@ class WeakRoot final : public WeakRootBase {
   }
 
   void set(PointerBase *base, T *ptr) {
-    WeakRootBase::operator=(CompressedPointer(base, ptr));
+    WeakRootBase::operator=(CompressedPointer::encode(ptr, base));
   }
 
   WeakRoot &operator=(CompressedPointer ptr) {

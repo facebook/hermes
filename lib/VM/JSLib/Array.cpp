@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -1632,8 +1632,8 @@ arrayPrototypeFlat(void *ctx, Runtime *runtime, NativeArgs args) {
   double depthNum = 1;
   if (!args.getArg(0).isUndefined()) {
     // 4. If depth is not undefined, then
-    // a.     Set depthNum to ? ToInteger(depth).
-    auto depthNumRes = toInteger(runtime, args.getArgHandle(0));
+    // a.     Set depthNum to ? ToIntegerOrInfinity(depth).
+    auto depthNumRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
     if (LLVM_UNLIKELY(depthNumRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1744,7 +1744,7 @@ arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   }
   double len = *lenRes;
 
-  auto intRes = toInteger(runtime, args.getArgHandle(0));
+  auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1764,7 +1764,7 @@ arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
     relativeEnd = len;
   } else {
     if (LLVM_UNLIKELY(
-            (intRes = toInteger(runtime, args.getArgHandle(1))) ==
+            (intRes = toIntegerOrInfinity(runtime, args.getArgHandle(1))) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1841,7 +1841,7 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
   }
   double len = *lenRes;
 
-  auto intRes = toInteger(runtime, args.getArgHandle(0));
+  auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1868,7 +1868,7 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
     default:
       // Otherwise, use the specified delete count.
       if (LLVM_UNLIKELY(
-              (intRes = toInteger(runtime, args.getArgHandle(1))) ==
+              (intRes = toIntegerOrInfinity(runtime, args.getArgHandle(1))) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -2136,9 +2136,9 @@ arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
   }
   double len = *lenRes;
 
-  // 5. Let relativeTarget be ToInteger(target).
+  // 5. Let relativeTarget be ToIntegerOrInfinity(target).
   // 6. ReturnIfAbrupt(relativeTarget).
-  auto relativeTargetRes = toInteger(runtime, args.getArgHandle(0));
+  auto relativeTargetRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(relativeTargetRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2149,9 +2149,9 @@ arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
   double to = relativeTarget < 0 ? std::max((len + relativeTarget), (double)0)
                                  : std::min(relativeTarget, len);
 
-  // 8. Let relativeStart be ToInteger(start).
+  // 8. Let relativeStart be ToIntegerOrInfinity(start).
   // 9. ReturnIfAbrupt(relativeStart).
-  auto relativeStartRes = toInteger(runtime, args.getArgHandle(1));
+  auto relativeStartRes = toIntegerOrInfinity(runtime, args.getArgHandle(1));
   if (LLVM_UNLIKELY(relativeStartRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2163,13 +2163,13 @@ arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
                                   : std::min(relativeStart, len);
 
   // 11. If end is undefined, let relativeEnd be len; else let relativeEnd be
-  // ToInteger(end).
+  // ToIntegerOrInfinity(end).
   // 12. ReturnIfAbrupt(relativeEnd).
   double relativeEnd;
   if (args.getArg(2).isUndefined()) {
     relativeEnd = len;
   } else {
-    auto relativeEndRes = toInteger(runtime, args.getArgHandle(2));
+    auto relativeEndRes = toIntegerOrInfinity(runtime, args.getArgHandle(2));
     if (LLVM_UNLIKELY(relativeEndRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -2472,7 +2472,7 @@ indexOfHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
   }
 
   // Relative index to start the search at.
-  auto intRes = toInteger(runtime, args.getArgHandle(1));
+  auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(1));
   double n;
   if (args.getArgCount() > 1) {
     if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
@@ -2949,7 +2949,7 @@ arrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
   // Get the value to be filled.
   MutableHandle<> value(runtime, args.getArg(0));
   // Get the relative start and end.
-  auto intRes = toInteger(runtime, args.getArgHandle(1));
+  auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(1));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2962,7 +2962,7 @@ arrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
     relativeEnd = len;
   } else {
     if (LLVM_UNLIKELY(
-            (intRes = toInteger(runtime, args.getArgHandle(2))) ==
+            (intRes = toIntegerOrInfinity(runtime, args.getArgHandle(2))) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -3360,9 +3360,9 @@ arrayPrototypeIncludes(void *, Runtime *runtime, NativeArgs args) {
     return HermesValue::encodeBoolValue(false);
   }
 
-  // 4. Let n be ? ToInteger(fromIndex).
+  // 4. Let n be ? ToIntegerOrInfinity(fromIndex).
   // (If fromIndex is undefined, this step produces the value 0.)
-  auto nRes = toInteger(runtime, args.getArgHandle(1));
+  auto nRes = toIntegerOrInfinity(runtime, args.getArgHandle(1));
   if (LLVM_UNLIKELY(nRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

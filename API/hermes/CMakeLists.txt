@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -23,6 +23,8 @@ target_include_directories(hermesapiLean PUBLIC ..)
 
 add_hermes_library(synthTrace hermes_tracing.cpp SynthTrace.cpp TracingRuntime.cpp
   LINK_LIBS hermesapi)
+
+add_hermes_library(timerStats TimerStats.cpp LINK_LIBS hermesapi)
 
 add_hermes_library(traceInterpreter TraceInterpreter.cpp
   LINK_LIBS hermesapi hermesInstrumentation synthTrace synthTraceParser)

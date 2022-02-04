@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -496,7 +496,7 @@ CallResult<HermesValue> toNumber_RJS(Runtime *runtime, Handle<> valueHandle) {
 
 CallResult<HermesValue> toLength(Runtime *runtime, Handle<> valueHandle) {
   constexpr double maxLength = 9007199254740991.0; // 2**53 - 1
-  auto res = toInteger(runtime, valueHandle);
+  auto res = toIntegerOrInfinity(runtime, valueHandle);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -512,7 +512,7 @@ CallResult<HermesValue> toLength(Runtime *runtime, Handle<> valueHandle) {
 CallResult<uint64_t> toLengthU64(Runtime *runtime, Handle<> valueHandle) {
   constexpr double highestIntegralDouble =
       ((uint64_t)1 << std::numeric_limits<double>::digits) - 1;
-  auto res = toInteger(runtime, valueHandle);
+  auto res = toIntegerOrInfinity(runtime, valueHandle);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -529,7 +529,7 @@ CallResult<HermesValue> toIndex(Runtime *runtime, Handle<> valueHandle) {
   auto value = (valueHandle->isUndefined())
       ? runtime->makeHandle(HermesValue::encodeDoubleValue(0))
       : valueHandle;
-  auto res = toInteger(runtime, value);
+  auto res = toIntegerOrInfinity(runtime, value);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -551,7 +551,9 @@ CallResult<HermesValue> toIndex(Runtime *runtime, Handle<> valueHandle) {
   return res;
 }
 
-CallResult<HermesValue> toInteger(Runtime *runtime, Handle<> valueHandle) {
+CallResult<HermesValue> toIntegerOrInfinity(
+    Runtime *runtime,
+    Handle<> valueHandle) {
   auto res = toNumber_RJS(runtime, valueHandle);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1790,14 +1792,14 @@ CallResult<HermesValue> objectFromPropertyDescriptor(
     auto *accessor = vmcast<PropertyAccessor>(valueOrAccessor.get());
 
     auto getter = runtime->makeHandle(
-        accessor->getter
-            ? HermesValue::encodeObjectValue(accessor->getter.get(runtime))
-            : HermesValue::encodeUndefinedValue());
+        accessor->getter ? HermesValue::encodeObjectValue(
+                               accessor->getter.getNonNull(runtime))
+                         : HermesValue::encodeUndefinedValue());
 
     auto setter = runtime->makeHandle(
-        accessor->setter
-            ? HermesValue::encodeObjectValue(accessor->setter.get(runtime))
-            : HermesValue::encodeUndefinedValue());
+        accessor->setter ? HermesValue::encodeObjectValue(
+                               accessor->setter.getNonNull(runtime))
+                         : HermesValue::encodeUndefinedValue());
 
     auto result = JSObject::defineOwnProperty(
         obj,

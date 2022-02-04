@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -12,17 +12,17 @@
 
 import type {Program} from 'hermes-estree';
 import type {VisitorKeys as VisitorKeysType} from './HermesESLintVisitorKeys';
-import type ScopeManagerClass from './eslint-scope/scope-manager';
+import type {PartialAnalyzeOptions, ScopeManager} from './scope-manager';
 
-const HermesParser = require('hermes-parser');
-const ScopeManager = require('./HermesScopeManager');
-const VisitorKeys = require('./HermesESLintVisitorKeys');
+import * as HermesParser from 'hermes-parser';
+import {analyze} from './scope-manager';
+import VisitorKeys from './HermesESLintVisitorKeys';
 
-type Options = {
-  sourceType?: 'module' | 'script',
-};
+type ParseForESLintOptions = $ReadOnly<{
+  ...PartialAnalyzeOptions,
+}>;
 
-function parse(code: string, options?: Options): Program {
+function parse(code: string, options?: ParseForESLintOptions): Program {
   const parserOptions = {
     allowReturnOutsideFunction: true,
     flow: 'all',
@@ -44,22 +44,30 @@ function parse(code: string, options?: Options): Program {
   }
 }
 
+type ParseForESLintReturn = {
+  ast: Program,
+  scopeManager: ScopeManager,
+  visitorKeys: VisitorKeysType,
+};
 function parseForESLint(
   code: string,
-  options?: Options,
+  options?: ParseForESLintOptions,
 ): {
   ast: Program,
-  scopeManager: ScopeManagerClass,
+  scopeManager: ScopeManager,
   visitorKeys: VisitorKeysType,
 } {
   const ast = parse(code, options);
+  const scopeManager = analyze(ast, options);
 
   return {
     ast,
-    scopeManager: ScopeManager.create(ast),
+    scopeManager,
     visitorKeys: VisitorKeys,
   };
 }
 
-export type * from './eslint-scope/types';
-module.exports = {parse, parseForESLint, VisitorKeys};
+export type * from './scope-manager';
+export type {ParseForESLintOptions, ParseForESLintReturn};
+export {ScopeType, DefinitionType} from './scope-manager';
+export {parse, parseForESLint, VisitorKeys};

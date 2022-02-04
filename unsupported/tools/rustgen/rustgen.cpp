@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -466,8 +466,16 @@ static void genConvert() {
     genStruct(cls);
   }
 
-  llvh::outs() << "        _ => panic!(\"Invalid node kind\")\n"
-                  "    };\n\n";
+  llvh::outs()
+      << "        _ => {\n"
+         "          cvt.report_invalid_node(gc, n, range);\n"
+         "          let template = ast::template::Empty {\n"
+         "            metadata: ast::TemplateMetadata {range, ..Default::default()}\n"
+         "          };\n"
+         "          ast::builder::Empty::build_template(gc, template)\n"
+         "        }\n"
+
+         "    };\n\n";
   llvh::outs() << "    res\n";
   llvh::outs() << "}\n";
 }
@@ -493,7 +501,7 @@ int main(int argc, char **argv) {
 
   llvh::outs()
       << "/*\n"
-         " * Copyright (c) Facebook, Inc. and its affiliates.\n"
+         " * Copyright (c) Meta Platforms, Inc. and affiliates.\n"
          " *\n"
          " * This source code is licensed under the MIT license found in the\n"
          " * LICENSE file in the root directory of this source tree.\n"
