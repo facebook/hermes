@@ -169,11 +169,7 @@ export type ESNode =
   | EnumBooleanBody
   | EnumBooleanMember
   | EnumSymbolBody
-  | DeclareClass
-  | DeclareVariable
-  | DeclareFunction
-  | DeclaredPredicate
-  | DeclareModule
+  | DeclaredNode
   | ObjectTypeInternalSlot
   // JSX
   | JSXNode;
@@ -404,7 +400,8 @@ export type Expression =
   | ImportExpression
   | ChainExpression
   | TypeCastExpression
-  | PrivateName;
+  | JSXFragment
+  | JSXElement;
 
 export interface ThisExpression extends BaseNode {
   +type: 'ThisExpression';
@@ -540,6 +537,8 @@ export interface BinaryExpression extends BaseNode {
   +operator: BinaryOperator;
   +left: Expression;
   +right: Expression;
+  // once private brand checks are supported: `#x in this`
+  // | PrivateName;
 }
 
 export interface AssignmentExpression extends BaseNode {
@@ -590,7 +589,7 @@ interface BaseMemberExpressionWithComputedName extends BaseNode {
 }
 interface BaseMemberExpressionWithNonComputedName extends BaseNode {
   +object: Expression | Super;
-  +property: Identifier;
+  +property: Identifier | PrivateName;
   +computed: false;
 }
 export type MemberExpression =
@@ -599,10 +598,12 @@ export type MemberExpression =
 export interface MemberExpressionWithComputedName
   extends BaseMemberExpressionWithComputedName {
   +type: 'MemberExpression';
+  +computed: true;
 }
 export interface MemberExpressionWithNonComputedName
   extends BaseMemberExpressionWithNonComputedName {
   +type: 'MemberExpression';
+  +computed: false;
 }
 
 export type ChainElement = CallExpression | MemberExpression;
@@ -821,6 +822,11 @@ export type ClassMember =
   | ClassProperty
   | ClassPrivateProperty
   | MethodDefinition;
+export type ClassMemberWithNonComputedName =
+  | ClassPropertyWithNonComputedName
+  | ClassPrivateProperty
+  | MethodDefinitionConstructor
+  | MethodDefinitionWithNonComputedName;
 export interface ClassBody extends BaseNode {
   +type: 'ClassBody';
   +body: $ReadOnlyArray<ClassMember>;
@@ -1311,6 +1317,19 @@ export interface EnumDefaultedMember extends BaseNode {
  * Declare nodes *
  *****************/
 
+export type DeclaredNode =
+  | DeclareClass
+  | DeclareVariable
+  | DeclareFunction
+  | DeclareModule
+  | DeclareInterface
+  | DeclareTypeAlias
+  | DeclareOpaqueType
+  | DeclareExportAllDeclaration
+  | DeclareExportDeclaration
+  | DeclareModuleExports
+  | DeclaredPredicate;
+
 export interface DeclareClass extends BaseNode {
   +type: 'DeclareClass';
   +id: Identifier;
@@ -1512,11 +1531,13 @@ export interface OptionalMemberExpressionWithComputedName
   extends BaseMemberExpressionWithComputedName {
   +type: 'OptionalMemberExpression';
   +optional: boolean;
+  +computed: true;
 }
 export interface OptionalMemberExpressionWithNonComputedName
   extends BaseMemberExpressionWithNonComputedName {
   +type: 'OptionalMemberExpression';
   +optional: boolean;
+  +computed: false;
 }
 
 // `ExportAllDeclaration` is the new standard for `export * as y from 'z'`
@@ -1558,6 +1579,8 @@ export interface ClassPropertyWithNonComputedName extends ClassPropertyBase {
 export interface ClassPrivateProperty extends ClassPropertyBase {
   +type: 'ClassPrivateProperty';
   +key: Identifier;
+  // this is never emitted, but it makes it easier to do lookups with the `ClassMember` type
+  +computed?: void;
 }
 
 // `PrivateIdentifier` is the new standard for #private identifiers

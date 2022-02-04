@@ -524,7 +524,7 @@ namespace llvh {
 
 // Instantiating Optional with a T "isPodLike" will result in a specialized
 // OptionalStorage class without move ctor and would only copy T. Since the
-// PseudoHandle is not copyable we spcialized the trait to be always false.
+// PseudoHandle is not copyable we specialized the trait to be always false.
 template <typename T>
 struct isPodLike<hermes::vm::PseudoHandle<T>> {
   static const bool value = false;

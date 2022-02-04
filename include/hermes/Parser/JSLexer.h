@@ -163,6 +163,10 @@ class Token {
     assert(getKind() == TokenKind::string_literal);
     return stringLiteral_;
   }
+  UniqueString *getStringLiteralRawValue() const {
+    assert(getKind() == TokenKind::string_literal);
+    return rawString_;
+  }
   bool getStringLiteralContainsEscapes() const {
     assert(getKind() == TokenKind::string_literal);
     return stringLiteralContainsEscapes_;
@@ -245,6 +249,12 @@ class Token {
     kind_ = TokenKind::string_literal;
     stringLiteral_ = literal;
     stringLiteralContainsEscapes_ = containsEscapes;
+  }
+  void setJSXStringLiteral(UniqueString *literal, UniqueString *raw) {
+    kind_ = TokenKind::string_literal;
+    stringLiteral_ = literal;
+    rawString_ = raw;
+    stringLiteralContainsEscapes_ = false;
   }
   void setRegExpLiteral(RegExpLiteral *literal) {
     kind_ = TokenKind::regexp_literal;

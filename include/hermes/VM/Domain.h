@@ -67,7 +67,7 @@ class Domain final : public GCCell {
     CJSModuleSize,
   };
 
-  // TODO(T83098051): Consider optimising cjsModules_ for non-contiguous IDs.
+  // TODO(T83098051): Consider optimizing cjsModules_ for non-contiguous IDs.
   /// CJS Modules used when modules have been resolved ahead of time.
   /// Used during requireFast modules by index.
   /// Stores information on module i at entries (i * CJSModuleSize) through

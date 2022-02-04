@@ -116,7 +116,7 @@ ExecutionStatus OrderedHashMap::rehashIfNecessary(
     Runtime *runtime) {
   uint32_t newCapacity = self->capacity_;
   // NOTE: we have ensured that self->capacity_ * 4 never overflows uint32_t by
-  // setting MAX_CAPACITY to the apropriate value. self->size_ is always <=
+  // setting MAX_CAPACITY to the appropriate value. self->size_ is always <=
   // self->capacity_, so this applies to self->size_ as well.
   static_assert(
       MAX_CAPACITY < UINT32_MAX / 4,

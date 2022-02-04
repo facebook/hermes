@@ -1176,7 +1176,8 @@ bool GCBase::IDTracker::hasNativeIDs() {
   return !nativeIDMap_.empty();
 }
 
-bool GCBase::IDTracker::isTrackingIDs() const {
+bool GCBase::IDTracker::isTrackingIDs() {
+  std::lock_guard<Mutex> lk{mtx_};
   return !objectIDMap_.empty();
 }
 
@@ -1715,6 +1716,9 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
     }
 
     void accept(PinnedHermesValue &hv) override {
+      acceptNullable(hv);
+    }
+    void acceptNullable(PinnedHermesValue &hv) override {
       acceptHV(
           hv,
           diagnostic.stats.breakdown["HermesValue"],

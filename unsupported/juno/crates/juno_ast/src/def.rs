@@ -423,10 +423,14 @@ macro_rules! nodekind_defs {
             },
             JSXAttribute {
                 name: &'a Node<'a>[JSXIdentifier, JSXMemberExpression, JSXNamespacedName],
-                value: Option<&'a Node<'a>>[JSXExpressionContainer, StringLiteral],
+                value: Option<&'a Node<'a>>[JSXExpressionContainer, JSXStringLiteral],
             },
             JSXSpreadAttribute {
                 argument: &'a Node<'a>[Expression],
+            },
+            JSXStringLiteral {
+                value: NodeString,
+                raw: NodeLabel,
             },
             JSXText[JSXChild] {
                 value: NodeString,

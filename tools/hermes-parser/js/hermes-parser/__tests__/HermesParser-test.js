@@ -1610,6 +1610,33 @@ return 1
   });
 });
 
+test('Allow JSX String literals', () => {
+  expect(parse(`<foo a="abc &amp; def" />;`)).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'JSXElement',
+          openingElement: {
+            type: 'JSXOpeningElement',
+            attributes: [
+              {
+                type: 'JSXAttribute',
+                value: {
+                  type: 'Literal',
+                  value: 'abc & def',
+                  raw: '"abc &amp; def"',
+                },
+              },
+            ],
+          },
+        },
+      },
+    ],
+  });
+});
+
 describe('This type annotations', () => {
   test('Removed in Babel mode', () => {
     const params = [

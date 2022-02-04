@@ -43,7 +43,8 @@ class WeakValueMap {
   /// \return true if the hash table is known to be empty.
   /// It can report false negatives because it doesn't prune invalid references
   /// - that would be too slow. In other words, if the table contains only
-  /// invalid weak refs, it is not knownto be empty, and this will return false.
+  /// invalid weak refs, it is not known to be empty, and this will return
+  /// false.
   bool isKnownEmpty() const {
     return map_.empty();
   }

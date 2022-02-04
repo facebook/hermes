@@ -227,7 +227,7 @@ DictPropertyMap::findOrAdd(
             std::max(toRValue(detail::kMaxCapacity), self->numProperties_ + 1);
     } else {
       // Calculate the new capacity to be exactly as much as we need to
-      // accomodate the deleted list plus one extra property. It it happens
+      // accommodate the deleted list plus one extra property. It it happens
       // to exceed kMaxCapacity, there is nothing we can do, so grow() will
       // raise an exception.
       newCapacity = self->numProperties_ + 1 + self->deletedListSize_;

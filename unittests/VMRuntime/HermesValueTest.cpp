@@ -305,11 +305,11 @@ TEST(HermesValueTest, OutputStreamTest) {
   llvh::raw_string_ostream OS(result);
 
   result.clear();
-  OS << HermesValue::encodeObjectValue(nullptr);
+  OS << HermesValue::encodeObjectValueUnsafe(nullptr);
   EXPECT_EQ("[Object :0 0x00000000]", OS.str());
 
   result.clear();
-  OS << HermesValue::encodeStringValue(nullptr);
+  OS << HermesValue::encodeStringValueUnsafe(nullptr);
   EXPECT_EQ("[String :0 0x00000000]", OS.str());
 
   result.clear();
