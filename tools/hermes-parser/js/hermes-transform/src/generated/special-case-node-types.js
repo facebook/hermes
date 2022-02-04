@@ -20,6 +20,7 @@ import type {
   RegExpLiteral as RegExpLiteralType,
   TemplateElement as TemplateElementType,
   Identifier as IdentifierType,
+  BigIntLiteral as BigIntLiteralType,
   BooleanLiteral as BooleanLiteralType,
   NumericLiteral as NumericLiteralType,
   NullLiteral as NullLiteralType,
@@ -144,6 +145,31 @@ export function Identifier({
 // Literals require a "raw" which is added by the estree transform, not hermes.
 //
 
+export type BigIntLiteralProps = {
+  +value: $FlowFixMe /* bigint | null */,
+  /**
+   * Only set this if you want to use a source-code representation like 1_1n, etc.
+   * By default "raw" will just be the exact number you've given.
+   */
+  +raw?: NumericLiteralType['raw'],
+};
+export function BigIntLiteral({
+  parent,
+  ...props
+}: {
+  ...$ReadOnly<BigIntLiteralProps>,
+  +parent?: ESNode,
+}): DetachedNode<BigIntLiteralType> {
+  const node = detachedProps<BigIntLiteralType>(parent, {
+    type: 'Literal',
+    ...props,
+    raw: props.raw ?? `${props.value}n`,
+    bigint: `${props.value}`,
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
 export type BooleanLiteralProps = {
   +value: BooleanLiteralType['value'],
 };
@@ -164,7 +190,7 @@ export function BooleanLiteral({
 export type NumericLiteralProps = {
   +value: NumericLiteralType['value'],
   /**
-   * Only set this if you want to use a source-code representation like 1e100, 0x11, etc.
+   * Only set this if you want to use a source-code representation like 1e100, 0x11, 1_1, etc.
    * By default "raw" will just be the exact number you've given.
    */
   +raw?: NumericLiteralType['raw'],

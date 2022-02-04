@@ -32,6 +32,7 @@ describe('Literal', () => {
           Object {
             "directive": null,
             "expression": Object {
+              "literalType": "null",
               "raw": "null",
               "type": "Literal",
               "value": null,
@@ -41,6 +42,7 @@ describe('Literal', () => {
           Object {
             "directive": null,
             "expression": Object {
+              "literalType": "numeric",
               "raw": "10",
               "type": "Literal",
               "value": 10,
@@ -50,6 +52,7 @@ describe('Literal', () => {
           Object {
             "directive": null,
             "expression": Object {
+              "literalType": "numeric",
               "raw": "0.56283",
               "type": "Literal",
               "value": 0.56283,
@@ -59,6 +62,7 @@ describe('Literal', () => {
           Object {
             "directive": null,
             "expression": Object {
+              "literalType": "string",
               "raw": "\\"test\\"",
               "type": "Literal",
               "value": "test",
@@ -68,6 +72,7 @@ describe('Literal', () => {
           Object {
             "directive": null,
             "expression": Object {
+              "literalType": "boolean",
               "raw": "true",
               "type": "Literal",
               "value": true,
@@ -77,6 +82,7 @@ describe('Literal', () => {
           Object {
             "directive": null,
             "expression": Object {
+              "literalType": "regexp",
               "raw": "/foo/g",
               "regex": Object {
                 "flags": "g",
@@ -90,20 +96,22 @@ describe('Literal', () => {
           Object {
             "directive": null,
             "expression": Object {
-              "bigint": "4321n",
+              "bigint": "4321",
+              "literalType": "bigint",
               "raw": "4321n",
               "type": "Literal",
-              "value": null,
+              "value": 4321n,
             },
             "type": "ExpressionStatement",
           },
           Object {
             "directive": null,
             "expression": Object {
-              "bigint": "12_34n",
+              "bigint": "1234",
+              "literalType": "bigint",
               "raw": "12_34n",
               "type": "Literal",
-              "value": null,
+              "value": 1234n,
             },
             "type": "ExpressionStatement",
           },
@@ -155,13 +163,15 @@ describe('Literal', () => {
         {
           type: 'ExpressionStatement',
           expression: {
-            value: null,
+            // $FlowExpectedError[cannot-resolve-name] - not supported by flow yet
+            value: BigInt(4321),
           },
         },
         {
           type: 'ExpressionStatement',
           expression: {
-            value: null,
+            // $FlowExpectedError[cannot-resolve-name] - not supported by flow yet
+            value: BigInt(1234),
           },
         },
       ],

@@ -44,6 +44,7 @@ describe('Object properties', () => {
                   "shorthand": false,
                   "type": "Property",
                   "value": Object {
+                    "literalType": "numeric",
                     "raw": "1",
                     "type": "Literal",
                     "value": 1,

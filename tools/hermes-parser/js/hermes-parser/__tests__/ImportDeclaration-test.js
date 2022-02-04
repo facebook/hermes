@@ -24,6 +24,7 @@ describe('ImportDeclaration', () => {
               "assertions": Array [],
               "importKind": "value",
               "source": Object {
+                "literalType": "string",
                 "raw": "'Foo'",
                 "type": "Literal",
                 "value": "Foo",

@@ -69,6 +69,7 @@ describe('MemberExpression', () => {
                   "typeAnnotation": null,
                 },
                 "property": Object {
+                  "literalType": "string",
                   "raw": "'y'",
                   "type": "Literal",
                   "value": "y",
@@ -300,6 +301,7 @@ describe('OptionalMemberExpression', () => {
                 },
                 "optional": true,
                 "property": Object {
+                  "literalType": "numeric",
                   "raw": "2",
                   "type": "Literal",
                   "value": 2,
@@ -322,6 +324,7 @@ describe('OptionalMemberExpression', () => {
                   },
                   "optional": true,
                   "property": Object {
+                    "literalType": "numeric",
                     "raw": "2",
                     "type": "Literal",
                     "value": 2,
@@ -330,6 +333,7 @@ describe('OptionalMemberExpression', () => {
                 },
                 "optional": false,
                 "property": Object {
+                  "literalType": "numeric",
                   "raw": "3",
                   "type": "Literal",
                   "value": 3,
@@ -351,6 +355,7 @@ describe('OptionalMemberExpression', () => {
                     "typeAnnotation": null,
                   },
                   "property": Object {
+                    "literalType": "numeric",
                     "raw": "2",
                     "type": "Literal",
                     "value": 2,
@@ -359,6 +364,7 @@ describe('OptionalMemberExpression', () => {
                 },
                 "optional": true,
                 "property": Object {
+                  "literalType": "numeric",
                   "raw": "3",
                   "type": "Literal",
                   "value": 3,
@@ -380,6 +386,7 @@ describe('OptionalMemberExpression', () => {
                     "typeAnnotation": null,
                   },
                   "property": Object {
+                    "literalType": "numeric",
                     "raw": "2",
                     "type": "Literal",
                     "value": 2,
@@ -388,6 +395,7 @@ describe('OptionalMemberExpression', () => {
                 },
                 "optional": true,
                 "property": Object {
+                  "literalType": "numeric",
                   "raw": "3",
                   "type": "Literal",
                   "value": 3,
@@ -411,6 +419,7 @@ describe('OptionalMemberExpression', () => {
                       "typeAnnotation": null,
                     },
                     "property": Object {
+                      "literalType": "numeric",
                       "raw": "2",
                       "type": "Literal",
                       "value": 2,
@@ -419,6 +428,7 @@ describe('OptionalMemberExpression', () => {
                   },
                   "optional": true,
                   "property": Object {
+                    "literalType": "numeric",
                     "raw": "3",
                     "type": "Literal",
                     "value": 3,
@@ -427,6 +437,7 @@ describe('OptionalMemberExpression', () => {
                 },
                 "optional": false,
                 "property": Object {
+                  "literalType": "numeric",
                   "raw": "4",
                   "type": "Literal",
                   "value": 4,
@@ -450,6 +461,7 @@ describe('OptionalMemberExpression', () => {
                       "typeAnnotation": null,
                     },
                     "property": Object {
+                      "literalType": "numeric",
                       "raw": "2",
                       "type": "Literal",
                       "value": 2,
@@ -458,6 +470,7 @@ describe('OptionalMemberExpression', () => {
                   },
                   "optional": true,
                   "property": Object {
+                    "literalType": "numeric",
                     "raw": "3",
                     "type": "Literal",
                     "value": 3,
@@ -466,6 +479,7 @@ describe('OptionalMemberExpression', () => {
                 },
                 "optional": true,
                 "property": Object {
+                  "literalType": "numeric",
                   "raw": "4",
                   "type": "Literal",
                   "value": 4,
@@ -749,6 +763,7 @@ describe('OptionalMemberExpression', () => {
                   },
                   "optional": true,
                   "property": Object {
+                    "literalType": "numeric",
                     "raw": "2",
                     "type": "Literal",
                     "value": 2,
@@ -771,6 +786,7 @@ describe('OptionalMemberExpression', () => {
                     },
                     "optional": true,
                     "property": Object {
+                      "literalType": "numeric",
                       "raw": "2",
                       "type": "Literal",
                       "value": 2,
@@ -778,6 +794,7 @@ describe('OptionalMemberExpression', () => {
                     "type": "OptionalMemberExpression",
                   },
                   "property": Object {
+                    "literalType": "numeric",
                     "raw": "3",
                     "type": "Literal",
                     "value": 3,
@@ -799,6 +816,7 @@ describe('OptionalMemberExpression', () => {
                       "typeAnnotation": null,
                     },
                     "property": Object {
+                      "literalType": "numeric",
                       "raw": "2",
                       "type": "Literal",
                       "value": 2,
@@ -807,6 +825,7 @@ describe('OptionalMemberExpression', () => {
                   },
                   "optional": true,
                   "property": Object {
+                    "literalType": "numeric",
                     "raw": "3",
                     "type": "Literal",
                     "value": 3,
@@ -830,6 +849,7 @@ describe('OptionalMemberExpression', () => {
                         "typeAnnotation": null,
                       },
                       "property": Object {
+                        "literalType": "numeric",
                         "raw": "2",
                         "type": "Literal",
                         "value": 2,
@@ -838,6 +858,7 @@ describe('OptionalMemberExpression', () => {
                     },
                     "optional": true,
                     "property": Object {
+                      "literalType": "numeric",
                       "raw": "3",
                       "type": "Literal",
                       "value": 3,
@@ -845,6 +866,7 @@ describe('OptionalMemberExpression', () => {
                     "type": "OptionalMemberExpression",
                   },
                   "property": Object {
+                    "literalType": "numeric",
                     "raw": "4",
                     "type": "Literal",
                     "value": 4,
@@ -868,6 +890,7 @@ describe('OptionalMemberExpression', () => {
                         "typeAnnotation": null,
                       },
                       "property": Object {
+                        "literalType": "numeric",
                         "raw": "2",
                         "type": "Literal",
                         "value": 2,
@@ -876,6 +899,7 @@ describe('OptionalMemberExpression', () => {
                     },
                     "optional": true,
                     "property": Object {
+                      "literalType": "numeric",
                       "raw": "3",
                       "type": "Literal",
                       "value": 3,
@@ -884,6 +908,7 @@ describe('OptionalMemberExpression', () => {
                   },
                   "optional": true,
                   "property": Object {
+                    "literalType": "numeric",
                     "raw": "4",
                     "type": "Literal",
                     "value": 4,
@@ -909,6 +934,7 @@ describe('OptionalMemberExpression', () => {
                           "typeAnnotation": null,
                         },
                         "property": Object {
+                          "literalType": "numeric",
                           "raw": "2",
                           "type": "Literal",
                           "value": 2,
@@ -917,6 +943,7 @@ describe('OptionalMemberExpression', () => {
                       },
                       "optional": true,
                       "property": Object {
+                        "literalType": "numeric",
                         "raw": "3",
                         "type": "Literal",
                         "value": 3,
@@ -925,6 +952,7 @@ describe('OptionalMemberExpression', () => {
                     },
                     "optional": true,
                     "property": Object {
+                      "literalType": "numeric",
                       "raw": "4",
                       "type": "Literal",
                       "value": 4,
@@ -932,6 +960,7 @@ describe('OptionalMemberExpression', () => {
                     "type": "OptionalMemberExpression",
                   },
                   "property": Object {
+                    "literalType": "numeric",
                     "raw": "5",
                     "type": "Literal",
                     "value": 5,

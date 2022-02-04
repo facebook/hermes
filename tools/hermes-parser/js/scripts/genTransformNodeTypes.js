@@ -22,13 +22,14 @@ const nodePropTypes: Array<string> = [];
 // these nodes are listed in ./hermes-transform/src/generated/special-case-node-types.js
 const NODES_WITH_SPECIAL_HANDLING = new Set([
   'ArrowFunctionExpression',
-  'RegExpLiteral',
-  'TemplateElement',
-  'Identifier',
+  'BigIntLiteral',
   'BooleanLiteral',
-  'NumericLiteral',
+  'Identifier',
   'NullLiteral',
+  'NumericLiteral',
+  'RegExpLiteral',
   'StringLiteral',
+  'TemplateElement',
 ]);
 
 for (const node of HermesESTreeJSON) {

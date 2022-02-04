@@ -59,6 +59,7 @@ describe('ClassProperty', () => {
                   "type": "ClassProperty",
                   "typeAnnotation": null,
                   "value": Object {
+                    "literalType": "numeric",
                     "raw": "1",
                     "type": "Literal",
                     "value": 1,
@@ -91,6 +92,7 @@ describe('ClassProperty', () => {
                     },
                   },
                   "value": Object {
+                    "literalType": "numeric",
                     "raw": "1",
                     "type": "Literal",
                     "value": 1,

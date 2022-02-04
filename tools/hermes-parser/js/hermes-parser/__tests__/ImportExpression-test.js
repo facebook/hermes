@@ -24,6 +24,7 @@ describe('ImportExpression', () => {
             "expression": Object {
               "attributes": null,
               "source": Object {
+                "literalType": "string",
                 "raw": "'foo'",
                 "type": "Literal",
                 "value": "foo",

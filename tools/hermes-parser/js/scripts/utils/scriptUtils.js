@@ -118,13 +118,12 @@ export function formatAndWriteDistArtifact({
 }
 
 export const LITERAL_TYPES: $ReadOnlySet<string> = new Set([
+  'BigIntLiteral',
+  'BooleanLiteral',
+  'NullLiteral',
+  'NumericLiteral',
   'RegExpLiteral',
   'StringLiteral',
-  'BooleanLiteral',
-  'NumericLiteral',
-  'NullLiteral',
-  // future-proofing for when this is added
-  'BigIntLiteral',
 ]);
 
 export const FLIPPED_ALIAS_KEYS: $ReadOnly<{
@@ -148,8 +147,6 @@ export const FLIPPED_ALIAS_KEYS: $ReadOnly<{
 
 export const NODES_WITHOUT_TRANSFORM_NODE_TYPES: $ReadOnlySet<string> = new Set(
   [
-    // TODO: BigIntLiteral is not supported by flow/hermes yet - so it has no function at all
-    'BigIntLiteral',
     // a lot of additional properties are set on this, but nobody should ever "create" one so
     // we purposely don't define a creation function
     'Program',

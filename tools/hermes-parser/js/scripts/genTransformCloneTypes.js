@@ -23,7 +23,6 @@ const cloneSignatures: Array<string> = [];
 const signatureNames: Array<string> = [];
 for (const node of HermesESTreeJSON) {
   if (NODES_WITHOUT_TRANSFORM_NODE_TYPES.has(node.name)) {
-    // cloning the entire program isn't supported
     continue;
   }
 

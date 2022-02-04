@@ -43,12 +43,14 @@ describe('Array', () => {
                 "init": Object {
                   "elements": Array [
                     Object {
+                      "literalType": "numeric",
                       "raw": "1",
                       "type": "Literal",
                       "value": 1,
                     },
                     null,
                     Object {
+                      "literalType": "numeric",
                       "raw": "2",
                       "type": "Literal",
                       "value": 2,
