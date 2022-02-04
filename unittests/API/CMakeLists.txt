@@ -11,6 +11,7 @@ set(APITestsSources
   APITestFactory.cpp
   DebuggerTest.cpp
   SegmentTest.cpp
+  HeapSnapshotAPITest.cpp
   )
 set(APISegmentTestCompileSources
   SegmentTestCompile.cpp
