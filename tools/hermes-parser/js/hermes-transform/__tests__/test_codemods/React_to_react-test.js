@@ -8,6 +8,7 @@
  * @format
  */
 
+import {isStringLiteral} from 'hermes-estree';
 import {t, transform} from './test-utils';
 
 function codemod(code: string) {
@@ -24,8 +25,7 @@ function codemod(code: string) {
         node.callee.type !== 'Identifier' ||
         node.callee.name !== 'require' ||
         node.arguments.length !== 1 ||
-        node.arguments[0].type !== 'Literal' ||
-        typeof node.arguments[0].value !== 'string'
+        !isStringLiteral(node.arguments[0])
       ) {
         return;
       }

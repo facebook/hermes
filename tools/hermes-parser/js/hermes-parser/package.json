@@ -11,6 +11,9 @@
   "dependencies": {
     "hermes-estree": "0.5.0"
   },
+  "devDependencies": {
+    "hermes-transform": "0.5.0"
+  },
   "files": [
     "dist"
   ]

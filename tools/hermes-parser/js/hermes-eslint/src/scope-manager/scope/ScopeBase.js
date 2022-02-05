@@ -32,6 +32,7 @@ import type {
 } from '../referencer/Reference';
 import type {ScopeManager} from '../ScopeManager';
 
+import {isStringLiteral} from 'hermes-estree';
 import {ScopeType} from './ScopeType';
 import {DefinitionType} from '../definition';
 import {createIdGenerator} from '../ID';
@@ -95,18 +96,10 @@ function isStrictScope(scope: Scope, isMethodDefinition: boolean): boolean {
     }
     const expr = stmt.expression;
 
-    if (expr.type !== 'Literal' || typeof expr.value !== 'string') {
+    if (!isStringLiteral(expr)) {
       break;
     }
-    if (expr.raw != null) {
-      if (expr.raw === '"use strict"' || expr.raw === "'use strict'") {
-        return true;
-      }
-    } else {
-      if (expr.value === 'use strict') {
-        return true;
-      }
-    }
+    return expr.value === 'use strict';
   }
 
   return false;

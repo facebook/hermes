@@ -422,18 +422,7 @@ export interface ObjectExpression extends BaseNode {
 // This is the complete type of a "Property"
 // This same node (unfortunately) covers both object literal properties
 // and object desturcturing properties.
-//
-// This interface must be a "supertype" for the below refined property types
-// or else the below types will be incompatible with the ESNode union
-export interface Property extends BaseNode {
-  +type: 'Property';
-  +key: Expression;
-  +value: Expression | DestructuringPattern;
-  +kind: 'init' | 'get' | 'set';
-  +method: boolean;
-  +computed: boolean;
-  +shorthand: boolean;
-}
+export type Property = ObjectProperty | DestructuringObjectProperty;
 
 export type ObjectProperty =
   | ObjectPropertyWithNonShorthandStaticName
@@ -636,7 +625,6 @@ export interface Identifier extends BaseNode {
 
 export type Literal =
   | BigIntLiteral
-  | BigIntLiteralLegacy
   | BooleanLiteral
   | NullLiteral
   | NumericLiteral
@@ -648,24 +636,28 @@ export interface BigIntLiteral extends BaseNode {
   +value: null /* | bigint */;
   +bigint: string;
   +raw: string;
+  +literalType: 'bigint';
 }
 
 export interface BooleanLiteral extends BaseNode {
   +type: 'Literal';
   +value: boolean;
   +raw: 'true' | 'false';
+  +literalType: 'boolean';
 }
 
 export interface NullLiteral extends BaseNode {
   +type: 'Literal';
   +value: null;
   +raw: 'null';
+  +literalType: 'null';
 }
 
 export interface NumericLiteral extends BaseNode {
   +type: 'Literal';
   +value: number;
   +raw: string;
+  +literalType: 'numeric';
 }
 
 export interface RegExpLiteral extends BaseNode {
@@ -676,12 +668,14 @@ export interface RegExpLiteral extends BaseNode {
     +flags: string,
   };
   +raw: string;
+  +literalType: 'regexp';
 }
 
 export interface StringLiteral extends BaseNode {
   +type: 'Literal';
   +value: string;
   +raw: string;
+  +literalType: 'string';
 }
 
 export type UnaryOperator =
@@ -717,7 +711,7 @@ export type BinaryOperator =
   | 'in'
   | 'instanceof';
 
-export type LogicalOperator = '||' | '&&';
+export type LogicalOperator = '||' | '&&' | '??';
 
 export type AssignmentOperator =
   | '='
@@ -732,7 +726,11 @@ export type AssignmentOperator =
   | '>>>='
   | '|='
   | '^='
-  | '&=';
+  | '&='
+  // not yet supported, but future proofing
+  | '||='
+  | '&&='
+  | '??=';
 
 export type UpdateOperator = '++' | '--';
 
@@ -790,8 +788,8 @@ export interface ObjectPattern extends BaseNode {
 
 export interface ArrayPattern extends BaseNode {
   +type: 'ArrayPattern';
-  +elements: $ReadOnlyArray<DestructuringPattern>;
-
+  // an element will be null if the pattern contains a hole: `[a,,b]`
+  +elements: $ReadOnlyArray<?DestructuringPattern>;
   +typeAnnotation: TypeAnnotation | null;
 }
 
@@ -1544,13 +1542,6 @@ export interface OptionalMemberExpressionWithNonComputedName
 export interface ExportNamespaceSpecifier extends BaseNode {
   +type: 'ExportNamespaceSpecifier';
   +exported: Identifier;
-}
-
-// `Literal` is the new standard for bigints (see the BigIntLiteral interface)
-export interface BigIntLiteralLegacy extends BaseNode {
-  +type: 'BigIntLiteral';
-  +value: null /* | bigint */;
-  +bigint: string;
 }
 
 // `PropertyDefinition` is the new standard for all class properties
