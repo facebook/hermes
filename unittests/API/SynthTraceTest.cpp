@@ -7,6 +7,7 @@
 
 #include <hermes/SynthTrace.h>
 
+#include <hermes/TraceInterpreter.h>
 #include <hermes/TracingRuntime.h>
 
 #include "llvh/Support/SHA1.h"
@@ -935,6 +936,53 @@ TEST_F(SynthTraceTest, HostObjectThrowsExceptionFails) {
       { thro.setProperty(*rt, "foo", jsi::Value::undefined()); }, "");
 }
 #endif
+
+/// @}
+
+/// @name Synth trace replay tests
+/// @{
+
+struct SynthTraceReplayTest : public ::testing::Test {
+  ::hermes::vm::RuntimeConfig config =
+      ::hermes::vm::RuntimeConfig::Builder().withTraceEnabled(true).build();
+  std::string traceResult;
+  std::unique_ptr<TracingHermesRuntime> traceRt;
+  std::unique_ptr<jsi::Runtime> replayRt;
+
+  SynthTraceReplayTest()
+      : traceRt(makeTracingHermesRuntime(
+            makeHermesRuntime(config),
+            config,
+            /* traceStream */
+            std::make_unique<llvh::raw_string_ostream>(traceResult),
+            /* forReplay */ true)) {}
+
+  void replay() {
+    traceRt.reset();
+    replayRt = makeHermesRuntime(config);
+    tracing::TraceInterpreter::execFromMemoryBuffer(
+        llvh::MemoryBuffer::getMemBuffer(traceResult), {}, *replayRt, {});
+  }
+};
+
+TEST_F(SynthTraceReplayTest, CreateObjectReplay) {
+  {
+    auto &rt = *traceRt;
+    auto obj = jsi::Object(rt);
+    obj.setProperty(rt, "bar", 5);
+    rt.global().setProperty(rt, "foo", obj);
+  }
+  replay();
+  {
+    auto &rt = *replayRt;
+    EXPECT_EQ(
+        rt.global()
+            .getPropertyAsObject(rt, "foo")
+            .getProperty(rt, "bar")
+            .asNumber(),
+        5);
+  }
+}
 
 /// @}
 
