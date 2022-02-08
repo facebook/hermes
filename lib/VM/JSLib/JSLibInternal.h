@@ -356,9 +356,9 @@ setLastIndex(Handle<JSObject> regexp, Runtime *runtime, double value) {
 uint64_t
 advanceStringIndex(const StringPrimitive *S, uint64_t index, bool unicode);
 
-/// Create and initialize the global Function constructor. Populate the methods
-/// of Function and Function.prototype.
-/// \return the global Function constructor.
+/// Create and initialize the global Array constructor. Populate the methods
+/// of Array and Array.prototype.
+/// \return the global Array constructor.
 Handle<JSObject> createArrayConstructor(Runtime *runtime);
 
 Handle<JSObject> createArrayBufferConstructor(Runtime *runtime);
