@@ -540,7 +540,7 @@ TracingHermesRuntime::~TracingHermesRuntime() {
   if (crashCallbackKey_) {
     conf_.getCrashMgr()->unregisterCallback(*crashCallbackKey_);
   }
-  if (flushedAndDisabled_) {
+  if (!flushedAndDisabled_) {
     // If the trace is not flushed and disabled, flush the trace and
     // run rollback action (e.g. delete the in-progress trace)
     flushAndDisableTrace();
