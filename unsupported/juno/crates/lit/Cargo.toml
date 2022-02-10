@@ -1,0 +1,9 @@
+[package]
+name = "lit"
+version = "0.1.0"
+authors = ["Facebook"]
+edition = "2018"
+license = "MIT"
+
+[build-dependencies]
+cmake = "0.1"
