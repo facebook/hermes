@@ -26,6 +26,8 @@ use url::{self, Url};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum Gen {
+    /// Dump the Semantic resolution information.
+    Sema,
     /// Dump the AST as JSON.
     Ast,
     /// Generate JavaScript source.
@@ -113,6 +115,7 @@ impl Options {
                 OptDesc {
                     desc: Some("Choose generated output:"),
                     values: Some(&[
+                        ("gen-sema", Gen::Sema, "Dump the Sema data."),
                         ("gen-ast", Gen::Ast, "Dump the AST as JSON."),
                         ("gen-js", Gen::Js, "Generate JavaScript source."),
                     ]),
@@ -531,11 +534,9 @@ fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
                 return Ok(TransformStatus::Error);
             }
 
-            println!("{:7} functions", sem.all_functions().len());
-            println!("{:7} lexical scopes", sem.all_scopes().len());
-            println!("{:7} declarations", sem.all_decls().len());
-            println!("{:7} ident resolutions", sem.all_ident_decls().len());
-            println!();
+            if *opt.gen == Gen::Sema {
+                sem.dump(&lock);
+            }
             timer.mark("Sema");
             drop(sem);
             timer.mark("Drop Sema");
@@ -565,14 +566,9 @@ fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
                 if lock.sm().num_errors() != 0 {
                     return Ok(TransformStatus::Error);
                 }
-
-                println!("{:7} functions", sem.all_functions().len());
-                println!("{:7} lexical scopes", sem.all_scopes().len());
-                println!("{:7} declarations", sem.all_decls().len());
-                println!("{:7} ident resolutions", sem.all_ident_decls().len());
-                println!("{:7} require resolutions", sem.all_requires().len());
-                println!();
-
+                if *opt.gen == Gen::Sema {
+                    sem.dump(&lock);
+                }
                 sems.push(sem);
             }
             timer.mark("Sema");
