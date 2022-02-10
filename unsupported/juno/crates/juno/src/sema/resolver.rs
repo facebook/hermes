@@ -639,6 +639,8 @@ impl<'gc> Resolver<'gc, '_> {
         let global_decl = self
             .sem
             .new_global(ident.name, DeclKind::UndeclaredGlobalProperty);
+        self.sem
+            .set_ident_decl(NodeRc::from_node(lock, node), global_decl);
         self.binding_table
             .insert_into_scope(
                 self.global_binding_scope_depth.unwrap(),
