@@ -119,6 +119,17 @@ class JSError final : public JSObject {
       Handle<JSError> selfHandle,
       Handle<Callable> callableHandle);
 
+  /// Given a codeblock and opcode offset, \returns the debug information.
+  static OptValue<hbc::DebugSourceLocation> getDebugInfo(
+      CodeBlock *codeBlock,
+      uint32_t bytecodeOffset);
+
+  /// \return the name of the function at \p index.
+  static Handle<StringPrimitive> getFunctionNameAtIndex(
+      Runtime *runtime,
+      Handle<JSError> selfHandle,
+      size_t index);
+
   JSError(
       Runtime *runtime,
       Handle<JSObject> parent,
@@ -172,6 +183,11 @@ class JSError final : public JSObject {
       Handle<JSError> selfHandle,
       Handle<JSObject> targetHandle,
       SmallU16String<32> &stack);
+
+  /// Construct the callSites array for Error.prepareStackTrace.
+  static CallResult<HermesValue> constructCallSitesArray(
+      Runtime *runtime,
+      Handle<JSError> selfHandle);
 
   /// Append the name of the function at \p index to the given \p str.
   /// \return true on success, false if the name was missing, invalid or empty.

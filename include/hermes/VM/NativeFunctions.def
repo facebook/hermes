@@ -6,7 +6,7 @@
  */
 
 // Updated January 28, 2022
-#define NATIVE_FUNCTION_VERSION_VALUE 11
+#define NATIVE_FUNCTION_VERSION_VALUE 12
 
 #ifndef NATIVE_FUNCTION
 #define NATIVE_FUNCTION(func)
@@ -61,6 +61,23 @@ NATIVE_FUNCTION(asyncFunctionConstructor)
 NATIVE_FUNCTION(booleanConstructor)
 NATIVE_FUNCTION(booleanPrototypeToString)
 NATIVE_FUNCTION(booleanPrototypeValueOf)
+NATIVE_FUNCTION(callSitePrototypeGetFunctionName)
+NATIVE_FUNCTION(callSitePrototypeGetFileName)
+NATIVE_FUNCTION(callSitePrototypeGetLineNumber)
+NATIVE_FUNCTION(callSitePrototypeGetColumnNumber)
+NATIVE_FUNCTION(callSitePrototypeGetBytecodeAddress)
+NATIVE_FUNCTION(callSitePrototypeIsNative)
+NATIVE_FUNCTION(callSitePrototypeGetThis)
+NATIVE_FUNCTION(callSitePrototypeGetTypeName)
+NATIVE_FUNCTION(callSitePrototypeGetFunction)
+NATIVE_FUNCTION(callSitePrototypeGetMethodName)
+NATIVE_FUNCTION(callSitePrototypeGetEvalOrigin)
+NATIVE_FUNCTION(callSitePrototypeIsToplevel)
+NATIVE_FUNCTION(callSitePrototypeIsEval)
+NATIVE_FUNCTION(callSitePrototypeIsConstructor)
+NATIVE_FUNCTION(callSitePrototypeIsAsync)
+NATIVE_FUNCTION(callSitePrototypeIsPromiseAll)
+NATIVE_FUNCTION(callSitePrototypeGetPromiseIndex)
 NATIVE_FUNCTION(dataViewConstructor)
 NATIVE_FUNCTION(dataViewPrototypeBuffer)
 NATIVE_FUNCTION(dataViewPrototypeByteLength)

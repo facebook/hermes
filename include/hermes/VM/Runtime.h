@@ -882,6 +882,21 @@ class Runtime : public HandleRootOwner,
     return getCallStackNoAlloc(nullptr);
   }
 
+  /// \return whether we are currently formatting a stack trace. Used to break
+  /// recursion in Error.prepareStackTrace.
+  bool formattingStackTrace() const {
+    return formattingStackTrace_;
+  }
+
+  /// Mark whether we are currently formatting a stack trace. Used to break
+  /// recursion in Error.prepareStackTrace.
+  void setFormattingStackTrace(bool value) {
+    assert(
+        value != formattingStackTrace() &&
+        "All calls to setFormattingStackTrace must actually change the current state");
+    formattingStackTrace_ = value;
+  }
+
   /// A stack overflow exception is thrown when \c nativeCallFrameDepth_ exceeds
   /// this threshold.
   static constexpr unsigned MAX_NATIVE_CALL_FRAME_DEPTH =
@@ -1110,6 +1125,10 @@ class Runtime : public HandleRootOwner,
 
   // Signal-based I/O tracking. Slows down execution.
   const bool trackIO_;
+
+  // Whether we are currently formatting a stack trace. Used to break recursion
+  // in Error.prepareStackTrace.
+  bool formattingStackTrace_{false};
 
   /// This value can be passed to the runtime as flags to test experimental
   /// features. Each experimental feature decides how to interpret these

@@ -42,6 +42,7 @@
 #endif
 
 #include "llvh/ADT/Hashing.h"
+#include "llvh/ADT/ScopeExit.h"
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/raw_ostream.h"
 
@@ -379,6 +380,10 @@ Runtime::~Runtime() {
   for (auto &module : runtimeModuleList_) {
     module.prepareForRuntimeShutdown();
   }
+
+  assert(
+      !formattingStackTrace_ &&
+      "Runtime is being destroyed while exception is being formatted");
 
   while (!runtimeModuleList_.empty()) {
     // Calling delete will automatically remove it from the list.
@@ -1077,8 +1082,27 @@ void Runtime::printException(llvh::raw_ostream &os, Handle<> valueHandle) {
                  this,
                  Predefined::getSymbolID(Predefined::stack))) ==
             ExecutionStatus::EXCEPTION)) {
-      os << "exception thrown while getting stack trace\n";
-      return;
+      // Suppress prepareStackTrace using the recursion-breaking flag and retry.
+      bool wasFormattingStackTrace = formattingStackTrace();
+      if (LLVM_LIKELY(!wasFormattingStackTrace)) {
+        setFormattingStackTrace(true);
+      }
+      const auto &guard = llvh::make_scope_exit([=]() {
+        if (formattingStackTrace() != wasFormattingStackTrace) {
+          setFormattingStackTrace(wasFormattingStackTrace);
+        }
+      });
+      (void)guard;
+
+      if (LLVM_UNLIKELY(
+              (propRes = JSObject::getNamed_RJS(
+                   objHandle,
+                   this,
+                   Predefined::getSymbolID(Predefined::stack))) ==
+              ExecutionStatus::EXCEPTION)) {
+        os << "exception thrown while getting stack trace\n";
+        return;
+      }
     }
   }
   SmallU16String<32> tmp;
