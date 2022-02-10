@@ -79,8 +79,10 @@ class JSError final : public JSObject {
       const Inst *ip = nullptr);
 
   /// Define the stack setter and getter, for later stack trace creation.
+  /// May be used on JSError instances, or on any JSObject that has a
+  /// \c CapturedError property.
   static ExecutionStatus setupStack(
-      Handle<JSError> selfHandle,
+      Handle<JSObject> selfHandle,
       Runtime *runtime);
 
   /// Set the message property.
@@ -97,9 +99,8 @@ class JSError final : public JSObject {
     return catchable_;
   }
 
-  /// Upon called, construct the stacktrace string based on
-  /// the value of stacktrace_, and reset the stack property to the
-  /// stacktrace string.
+  /// When called, construct the stacktrace string based on the value of
+  /// stacktrace_, and reset the stack property to the stacktrace string.
   friend CallResult<HermesValue>
   errorStackGetter(void *, Runtime *runtime, NativeArgs args);
 
@@ -108,6 +109,15 @@ class JSError final : public JSObject {
   /// stack access and replace it with a regular property.
   friend CallResult<HermesValue>
   errorStackSetter(void *, Runtime *runtime, NativeArgs args);
+
+  /// Pop frames from the stack trace until we encounter a frame attributed to
+  /// \p callable, and pop that frame too. No frames are skipped if a matching
+  /// frame isn't found.
+  /// \pre \p selfHandle's stacktrace_ is non-null.
+  static void popFramesUntilInclusive(
+      Runtime *runtime,
+      Handle<JSError> selfHandle,
+      Handle<Callable> callableHandle);
 
   JSError(
       Runtime *runtime,
@@ -127,6 +137,11 @@ class JSError final : public JSObject {
   /// A pointer to the stack trace, or nullptr if it has not been set.
   StackTracePtr stacktrace_;
 
+  /// The index of the stack frame to start from when converting the stack
+  /// trace to a string or otherwise exposing it to user code.
+  /// This can only be changed while stacktrace_ is non-null.
+  size_t firstExposedFrameIndex_{0};
+
   /// A list of Domains which are referenced by the stacktrace_.
   GCPointer<ArrayStorageSmall> domains_;
 
@@ -144,9 +159,18 @@ class JSError final : public JSObject {
   /// Construct the stacktrace string, append to \p stack.
   /// If the construction of the stack throws an uncatchable error, this
   /// function returns prematurely.
+  ///
+  /// \param selfHandle supplies the call stack for the trace.
+  /// \param targetHandle supplies the error name and message for the trace.
+  ///
+  /// In the `(new Error).stack` case, selfHandle and targetHandle will both
+  /// refer to the same object.
+  /// In the `target = {}; Error.captureErrorStack(target); target.stack` case,
+  /// selfHandle will be the value of `target`'s [[CapturedError]] slot.
   static ExecutionStatus constructStackTraceString(
       Runtime *runtime,
       Handle<JSError> selfHandle,
+      Handle<JSObject> targetHandle,
       SmallU16String<32> &stack);
 
   /// Append the name of the function at \p index to the given \p str.
@@ -156,6 +180,15 @@ class JSError final : public JSObject {
       Handle<JSError> selfHandle,
       size_t index,
       llvh::SmallVectorImpl<char16_t> &str);
+
+  /// Given an object \p targetHandle:
+  /// 1. If its [[CapturedError]] slot has a non-null handle, return it as a
+  ///    JSError.
+  /// 2. Otherwise, return \t targetHandle cast to JSError.
+  /// Throws if any cast or property access fails.
+  static CallResult<Handle<JSError>> getErrorFromStackTarget(
+      Runtime *runtime,
+      Handle<JSObject> targetHandle);
 };
 
 } // namespace vm

@@ -142,6 +142,7 @@ STR(message, "message")
 STR(cause, "cause")
 STR(stack, "stack")
 STR(stacktraceTooLong, "Stacktrace too long")
+STR(captureStackTrace, "captureStackTrace")
 #define ALL_ERROR_TYPE(name) STR(name, "" #name)
 #include "hermes/VM/NativeErrorTypes.def"
 

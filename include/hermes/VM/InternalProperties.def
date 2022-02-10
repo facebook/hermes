@@ -18,5 +18,6 @@ NAMED_PROP(InternalProperty4)
 NAMED_PROP(InternalProperty5)
 NAMED_PROP(InternalProperty6)
 NAMED_PROP(InternalPropertyNamedPropForUnitTestOnly)
+NAMED_PROP(InternalPropertyCapturedError)
 
 #undef NAMED_PROP

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// Updated June 04, 2020
-#define NATIVE_FUNCTION_VERSION_VALUE 10
+// Updated January 28, 2022
+#define NATIVE_FUNCTION_VERSION_VALUE 11
 
 #ifndef NATIVE_FUNCTION
 #define NATIVE_FUNCTION(func)
@@ -155,6 +155,7 @@ NATIVE_FUNCTION(shouldPauseOnThrow)
 NATIVE_FUNCTION(isFinite)
 NATIVE_FUNCTION(isNaN)
 NATIVE_FUNCTION(iteratorPrototypeIterator)
+NATIVE_FUNCTION(errorCaptureStackTrace)
 NATIVE_FUNCTION(errorStackGetter)
 NATIVE_FUNCTION(errorStackSetter)
 NATIVE_FUNCTION(jsonParse)

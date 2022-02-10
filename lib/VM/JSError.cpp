@@ -46,15 +46,38 @@ void ErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("domains", &self->domains_);
 }
 
+CallResult<Handle<JSError>> JSError::getErrorFromStackTarget(
+    Runtime *runtime,
+    Handle<JSObject> targetHandle) {
+  if (targetHandle) {
+    auto capturedErrorRes = JSObject::getNamed_RJS(
+        targetHandle,
+        runtime,
+        Predefined::getSymbolID(Predefined::InternalPropertyCapturedError));
+    if (capturedErrorRes == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto capturedErrorHandle =
+        runtime->makeHandle(std::move(*capturedErrorRes));
+    auto errorHandle = Handle<JSError>::dyn_vmcast(
+        capturedErrorHandle ? capturedErrorHandle : targetHandle);
+    if (errorHandle) {
+      return errorHandle;
+    }
+  }
+  return runtime->raiseTypeError(
+      "Error.stack getter called with an invalid receiver");
+}
+
 CallResult<HermesValue>
 errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSError>();
-  if (!selfHandle) {
-    return runtime->raiseTypeError(
-        "Error.stack accessor 'this' must be an instance of 'Error'");
+  auto targetHandle = args.dyncastThis<JSObject>();
+  auto errorHandleRes = JSError::getErrorFromStackTarget(runtime, targetHandle);
+  if (errorHandleRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
   }
-
-  if (!selfHandle->stacktrace_) {
+  auto errorHandle = *errorHandleRes;
+  if (!errorHandle->stacktrace_) {
     // Stacktrace has not been set, we simply return empty string.
     // This is different from other VMs where stacktrace is created when
     // the error object is created. We only set it when the error
@@ -66,7 +89,9 @@ errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
   // RangeError.  Allow ourselves a little extra room to do this.
   vm::ScopedNativeDepthReducer reducer(runtime);
   SmallU16String<32> stack;
-  if (JSError::constructStackTraceString(runtime, selfHandle, stack) ==
+
+  if (JSError::constructStackTraceString(
+          runtime, errorHandle, targetHandle, stack) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -75,7 +100,7 @@ errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
 // internal stacktrace_; if there is no debugger it can be freed. We no longer
 // need the accessor. Redefines the stack property to a regular property.
 #ifndef HERMES_ENABLE_DEBUGGER
-  selfHandle->stacktrace_.reset();
+  errorHandle->stacktrace_.reset();
 #endif
 
   MutableHandle<> stacktraceStr{runtime};
@@ -92,7 +117,7 @@ errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
   if (JSObject::defineOwnProperty(
-          selfHandle,
+          targetHandle,
           runtime,
           Predefined::getSymbolID(Predefined::stack),
           dpf,
@@ -150,8 +175,14 @@ PseudoHandle<JSError> JSError::create(
 }
 
 ExecutionStatus JSError::setupStack(
-    Handle<JSError> selfHandle,
+    Handle<JSObject> selfHandle,
     Runtime *runtime) {
+  assert(
+      JSError::getErrorFromStackTarget(runtime, selfHandle) !=
+          ExecutionStatus::EXCEPTION &&
+      "setupStack requires a valid stack target: either JSError, or JSObject "
+      "with InternalPropertyCapturedError set");
+
   // Lazily allocate the accessor.
   if (runtime->jsErrorStackAccessor.isUndefined()) {
     // This code path allocates quite a few handles, so make sure we
@@ -455,10 +486,11 @@ bool JSError::appendFunctionNameAtIndex(
 ExecutionStatus JSError::constructStackTraceString(
     Runtime *runtime,
     Handle<JSError> selfHandle,
+    Handle<JSObject> targetHandle,
     SmallU16String<32> &stack) {
   GCScope gcScope(runtime);
-  // First of all, the stacktrace string starts with error.toString.
-  auto res = toString_RJS(runtime, selfHandle);
+  // First of all, the stacktrace string starts with target.toString.
+  auto res = toString_RJS(runtime, targetHandle);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     if (isUncatchableError(runtime->getThrownValue())) {
       // If toString throws an uncatchable exception, propagate it up.
@@ -482,7 +514,10 @@ ExecutionStatus JSError::constructStackTraceString(
 
   // Append each function location in the call stack to stack trace.
   auto marker = gcScope.createMarker();
-  for (size_t index = 0, max = selfHandle->stacktrace_->size(); index < max;
+  for (size_t index = 0,
+              max = selfHandle->stacktrace_->size() -
+           selfHandle->firstExposedFrameIndex_;
+       index < max;
        index++) {
     char buf[NUMBER_TO_STRING_BUF_SIZE];
 
@@ -505,14 +540,15 @@ ExecutionStatus JSError::constructStackTraceString(
       }
     }
 
-    const StackTraceInfo &sti = selfHandle->stacktrace_->at(index);
+    const size_t absIndex = index + selfHandle->firstExposedFrameIndex_;
+    const StackTraceInfo &sti = selfHandle->stacktrace_->at(absIndex);
     gcScope.flushToMarker(marker);
     // For each stacktrace entry, we add a line with the following format:
     // at <functionName> (<fileName>:<lineNo>:<columnNo>)
 
     stack.append(u"\n    at ");
 
-    if (!appendFunctionNameAtIndex(runtime, selfHandle, index, stack))
+    if (!appendFunctionNameAtIndex(runtime, selfHandle, absIndex, stack))
       stack.append(u"anonymous");
 
     // If we have a null codeBlock, it's a native function, which do not have
@@ -585,6 +621,47 @@ ExecutionStatus JSError::constructStackTraceString(
     stack.push_back(u')');
   }
   return ExecutionStatus::RETURNED;
+}
+
+/// \return the code block associated with \p callableHandle if it is a
+/// (possibly bound) function, or nullptr otherwise.
+static const CodeBlock *getLeafCodeBlock(
+    Handle<Callable> callableHandle,
+    Runtime *runtime) {
+  const Callable *callable = callableHandle.get();
+  while (callable) {
+    if (auto *asFunction = dyn_vmcast<const JSFunction>(callable)) {
+      return asFunction->getCodeBlock();
+    }
+    if (auto *asBoundFunction = dyn_vmcast<const BoundFunction>(callable)) {
+      callable = asBoundFunction->getTarget(runtime);
+    }
+  }
+
+  return nullptr;
+}
+
+void JSError::popFramesUntilInclusive(
+    Runtime *runtime,
+    Handle<JSError> selfHandle,
+    Handle<Callable> callableHandle) {
+  assert(
+      selfHandle->stacktrace_ && "Cannot pop frames when stacktrace_ is null");
+  auto codeBlock = getLeafCodeBlock(callableHandle, runtime);
+  if (!codeBlock) {
+    return;
+  }
+  // By default, assume we won't encounter the sentinel function and skip the
+  // entire stack.
+  selfHandle->firstExposedFrameIndex_ = selfHandle->stacktrace_->size();
+  for (size_t index = 0, max = selfHandle->stacktrace_->size(); index < max;
+       index++) {
+    const StackTraceInfo &sti = selfHandle->stacktrace_->at(index);
+    if (sti.codeBlock == codeBlock) {
+      selfHandle->firstExposedFrameIndex_ = index + 1;
+      break;
+    }
+  }
 }
 
 void JSError::_finalizeImpl(GCCell *cell, GC *) {
