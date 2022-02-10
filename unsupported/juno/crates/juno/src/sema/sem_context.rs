@@ -10,6 +10,7 @@ use juno_ast::{node_cast, GCLock, Node};
 use juno_support::atom_table::Atom;
 use juno_support::source_manager::SourceId;
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::num::NonZeroU32;
 
 macro_rules! declare_opaque_id {
@@ -28,6 +29,12 @@ macro_rules! declare_opaque_id {
             }
             fn as_usize(self) -> usize {
                 (self.0.get() - 1) as usize
+            }
+        }
+        impl Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.as_usize())?;
+                Ok(())
             }
         }
     };

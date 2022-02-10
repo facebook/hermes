@@ -5,7 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::ast::*;
+use crate::{
+    ast::*,
+    sema::{DeclKind, SemContext},
+};
 use juno_support::{convert, source_manager::SourceLoc};
 use sourcemap::{RawToken, SourceMap, SourceMapBuilder};
 use std::{
@@ -29,9 +32,10 @@ pub fn generate<W: Write>(
     ctx: &mut Context,
     root: &NodeRc,
     pretty: Pretty,
+    annotation: Annotation,
 ) -> io::Result<SourceMap> {
     let gc = GCLock::new(ctx);
-    GenJS::gen_root(out, &gc, root.node(&gc), pretty)
+    GenJS::gen_root(out, &gc, root.node(&gc), pretty, annotation)
 }
 
 /// Associativity direction.
@@ -145,10 +149,18 @@ enum ForceBlock {
     Yes,
 }
 
+pub enum Annotation<'s> {
+    No,
+    Sem(&'s SemContext),
+}
+
 /// Generator for output JS. Walks the AST to output real JS.
-struct GenJS<W: Write> {
+struct GenJS<'s, W: Write> {
     /// Where to write the generated JS.
     out: BufWriter<W>,
+
+    /// How to annotate the generated source.
+    annotation: Annotation<'s>,
 
     /// Whether to pretty print the output JS.
     pretty: Pretty,
@@ -192,18 +204,20 @@ macro_rules! out_token {
     }}
 }
 
-impl<W: Write> GenJS<W> {
+impl<W: Write> GenJS<'_, W> {
     /// Generate JS for `root` and flush the output.
     /// If at any point, JS generation resulted in an error, return `Err(err)`,
     /// otherwise return `Ok(())`.
-    fn gen_root<'gc>(
+    fn gen_root<'s, 'gc>(
         writer: W,
         ctx: &'gc GCLock,
         root: &'gc Node<'gc>,
         pretty: Pretty,
+        annotation: Annotation<'s>,
     ) -> io::Result<SourceMap> {
         let mut gen_js = GenJS {
             out: BufWriter::new(writer),
+            annotation,
             pretty,
             indent_step: 2,
             indent: 0,
@@ -1187,6 +1201,7 @@ impl<W: Write> GenJS<W> {
             }) => {
                 self.add_segment(node);
                 self.write_utf8(ctx.str(*name).as_ref());
+                self.annotate_identifier(ctx, node);
                 if *optional {
                     out!(self, "?");
                 }
@@ -3778,9 +3793,36 @@ impl<W: Write> GenJS<W> {
         }
         self.cur_token = None;
     }
+
+    /// Add an "@" and some information tagging an identifier with its declaration ID.
+    fn annotate_identifier(&mut self, lock: &GCLock, node: &Node) {
+        if let Annotation::Sem(sem) = &self.annotation {
+            if let Some(decl_id) = sem.ident_decl(&NodeRc::from_node(lock, node)) {
+                match sem.decl(decl_id).kind {
+                    DeclKind::Let
+                    | DeclKind::Const
+                    | DeclKind::Class
+                    | DeclKind::Import
+                    | DeclKind::ES5Catch
+                    | DeclKind::FunctionExprName
+                    | DeclKind::ScopedFunction
+                    | DeclKind::Var
+                    | DeclKind::Parameter => {
+                        out!(self, "@D{}", decl_id);
+                    }
+                    DeclKind::GlobalProperty => {
+                        out!(self, "@global");
+                    }
+                    DeclKind::UndeclaredGlobalProperty => {
+                        out!(self, "@uglobal");
+                    }
+                };
+            }
+        }
+    }
 }
 
-impl<'gc, W: Write> Visitor<'gc> for GenJS<W> {
+impl<'gc, W: Write> Visitor<'gc> for GenJS<'_, W> {
     fn call(&mut self, ctx: &'gc GCLock, node: &'gc Node<'gc>, path: Option<Path<'gc>>) {
         self.gen_node(ctx, node, path);
     }
