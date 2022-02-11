@@ -35,7 +35,7 @@ Handle<JSObject> createArrayBufferConstructor(Runtime *runtime) {
       arrayBufferConstructor,
       arrayBufferPrototype,
       1,
-      CellKind::ArrayBufferKind);
+      CellKind::JSArrayBufferKind);
 
   // ArrayBuffer.prototype.xxx() methods.
   defineAccessor(

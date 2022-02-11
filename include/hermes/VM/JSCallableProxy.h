@@ -18,12 +18,14 @@ namespace vm {
 /// See JSProxy for more discussion.
 class JSCallableProxy : public NativeFunction {
  public:
-  friend void CallableProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend void JSCallableProxyBuildMeta(
+      const GCCell *cell,
+      Metadata::Builder &mb);
   friend detail::ProxySlots &detail::slots(JSObject *selfHandle);
 
   static const CallableVTable vt;
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::CallableProxyKind;
+    return cell->getKind() == CellKind::JSCallableProxyKind;
   }
 
   static PseudoHandle<JSCallableProxy> create(Runtime *runtime);

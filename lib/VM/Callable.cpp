@@ -46,7 +46,7 @@ void EnvironmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 void CallableBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<Callable>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const Callable *>(cell);
   mb.setVTable(&Callable::vt.base);
   mb.addField("environment", &self->environment_);
@@ -1040,7 +1040,7 @@ CallResult<PseudoHandle<>> NativeConstructor::_callImpl(
 const CallableVTable JSFunction::vt{
     {
         VTable(
-            CellKind::FunctionKind,
+            CellKind::JSFunctionKind,
             cellSize<JSFunction>(),
             nullptr,
             nullptr,
@@ -1063,7 +1063,7 @@ const CallableVTable JSFunction::vt{
     JSFunction::_newObjectImpl,
     JSFunction::_callImpl};
 
-void FunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSFunction>());
   CallableBuildMeta(cell, mb);
   const auto *self = static_cast<const JSFunction *>(cell);
@@ -1152,7 +1152,7 @@ void JSFunction::_snapshotAddLocationsImpl(
 const CallableVTable JSAsyncFunction::vt{
     {
         VTable(
-            CellKind::AsyncFunctionKind,
+            CellKind::JSAsyncFunctionKind,
             cellSize<JSAsyncFunction>(),
             nullptr,
             nullptr,
@@ -1175,9 +1175,9 @@ const CallableVTable JSAsyncFunction::vt{
     JSAsyncFunction::_newObjectImpl,
     JSAsyncFunction::_callImpl};
 
-void AsyncFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSAsyncFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSAsyncFunction>());
-  FunctionBuildMeta(cell, mb);
+  JSFunctionBuildMeta(cell, mb);
   mb.setVTable(&JSAsyncFunction::vt.base.base);
 }
 
@@ -1206,7 +1206,7 @@ PseudoHandle<JSAsyncFunction> JSAsyncFunction::create(
 const CallableVTable JSGeneratorFunction::vt{
     {
         VTable(
-            CellKind::GeneratorFunctionKind,
+            CellKind::JSGeneratorFunctionKind,
             cellSize<JSGeneratorFunction>(),
             nullptr,
             nullptr,
@@ -1229,9 +1229,9 @@ const CallableVTable JSGeneratorFunction::vt{
     JSGeneratorFunction::_newObjectImpl,
     JSGeneratorFunction::_callImpl};
 
-void GeneratorFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSGeneratorFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSGeneratorFunction>());
-  FunctionBuildMeta(cell, mb);
+  JSFunctionBuildMeta(cell, mb);
   mb.setVTable(&JSGeneratorFunction::vt.base.base);
 }
 
@@ -1288,7 +1288,7 @@ void GeneratorInnerFunctionBuildMeta(
     Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(
       JSObject::numOverlapSlots<GeneratorInnerFunction>());
-  FunctionBuildMeta(cell, mb);
+  JSFunctionBuildMeta(cell, mb);
   const auto *self = static_cast<const GeneratorInnerFunction *>(cell);
   mb.setVTable(&GeneratorInnerFunction::vt.base.base);
   mb.addField("savedContext", &self->savedContext_);

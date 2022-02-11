@@ -10,17 +10,15 @@
 
 namespace hermes {
 namespace vm {
-void MathBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(
-      JSObject::numOverlapSlots<SingleObject<CellKind::MathKind>>());
-  ObjectBuildMeta(cell, mb);
+void JSMathBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSMath>());
+  JSObjectBuildMeta(cell, mb);
   mb.setVTable(&JSMath::vt.base);
 }
 
-void JSONBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(
-      JSObject::numOverlapSlots<SingleObject<CellKind::JSONKind>>());
-  ObjectBuildMeta(cell, mb);
+void JSJSONBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSJSON>());
+  JSObjectBuildMeta(cell, mb);
   mb.setVTable(&JSJSON::vt.base);
 }
 

@@ -45,7 +45,7 @@ class JSError final : public JSObject {
   using Super = JSObject;
   static const ObjectVTable vt;
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::ErrorKind;
+    return cell->getKind() == CellKind::JSErrorKind;
   }
 
   /// Create an Error Object.
@@ -138,7 +138,7 @@ class JSError final : public JSObject {
       : JSObject(runtime, &vt.base, *parent, *clazz), catchable_{catchable} {}
 
  private:
-  friend void ErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend void JSErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb);
   static void _finalizeImpl(GCCell *cell, GC *gc);
   static size_t _mallocSizeImpl(GCCell *cell);
 

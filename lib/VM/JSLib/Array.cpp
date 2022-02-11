@@ -135,7 +135,7 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       arrayConstructor,
       arrayPrototype,
       1,
-      CellKind::ArrayKind);
+      CellKind::JSArrayKind);
 
   defineMethod(
       runtime,

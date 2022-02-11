@@ -131,7 +131,7 @@ Handle<JSObject> createMapConstructor(Runtime *runtime) {
       mapConstructor,
       mapPrototype,
       0,
-      CellKind::MapKind);
+      CellKind::JSMapKind);
 
   return cons;
 }

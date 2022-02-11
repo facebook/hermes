@@ -965,7 +965,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
     // cell's kind after initialization. The GC thread might to a free cell, but
     // only during sweeping, not concurrently with this operation. Therefore
     // there's no need for any synchronization here.
-    if (cell->getKind() == CellKind::WeakMapKind) {
+    if (vmisa<JSWeakMap>(cell)) {
       reachableWeakMaps_.push_back(vmcast<JSWeakMap>(cell));
     } else {
       localWorklist_.push(cell);

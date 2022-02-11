@@ -21,7 +21,7 @@ namespace vm {
 
 void ArrayImplBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<ArrayImpl>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const ArrayImpl *>(cell);
   // This edge has to be called "elements" in order for Chrome to attribute
   // the size of the indexed storage as part of total usage of "JS Arrays".
@@ -460,7 +460,7 @@ CallResult<Handle<Arguments>> Arguments::create(
 
 const ObjectVTable JSArray::vt{
     VTable(
-        CellKind::ArrayKind,
+        CellKind::JSArrayKind,
         cellSize<JSArray>(),
         nullptr,
         nullptr,
@@ -481,7 +481,7 @@ const ObjectVTable JSArray::vt{
     JSArray::_checkAllOwnIndexedImpl,
 };
 
-void ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSArray>());
   ArrayImplBuildMeta(cell, mb);
   mb.setVTable(&JSArray::vt.base);
@@ -711,7 +711,7 @@ CallResult<bool> JSArray::setLength(
 // class JSArrayIterator
 
 const ObjectVTable JSArrayIterator::vt{
-    VTable(CellKind::ArrayIteratorKind, cellSize<JSArrayIterator>()),
+    VTable(CellKind::JSArrayIteratorKind, cellSize<JSArrayIterator>()),
     JSArrayIterator::_getOwnIndexedRangeImpl,
     JSArrayIterator::_haveOwnIndexedImpl,
     JSArrayIterator::_getOwnIndexedPropertyFlagsImpl,
@@ -721,9 +721,9 @@ const ObjectVTable JSArrayIterator::vt{
     JSArrayIterator::_checkAllOwnIndexedImpl,
 };
 
-void ArrayIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSArrayIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSArrayIterator>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSArrayIterator *>(cell);
   mb.setVTable(&JSArrayIterator::vt.base);
   mb.addField("iteratedObject", &self->iteratedObject_);

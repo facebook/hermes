@@ -29,7 +29,7 @@ Handle<JSObject> createSymbolConstructor(Runtime *runtime) {
       symbolConstructor,
       symbolPrototype,
       0,
-      CellKind::SymbolObjectKind);
+      CellKind::JSSymbolKind);
 
   defineMethod(
       runtime,

@@ -14,7 +14,7 @@ namespace hermes {
 namespace vm {
 
 const ObjectVTable JSDataView::vt{
-    VTable(CellKind::DataViewKind, cellSize<JSDataView>()),
+    VTable(CellKind::JSDataViewKind, cellSize<JSDataView>()),
     JSDataView::_getOwnIndexedRangeImpl,
     JSDataView::_haveOwnIndexedImpl,
     JSDataView::_getOwnIndexedPropertyFlagsImpl,
@@ -24,9 +24,9 @@ const ObjectVTable JSDataView::vt{
     JSDataView::_checkAllOwnIndexedImpl,
 };
 
-void DataViewBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSDataViewBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSDataView>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSDataView *>(cell);
   mb.setVTable(&JSDataView::vt.base);
   mb.addField("buffer", &self->buffer_);

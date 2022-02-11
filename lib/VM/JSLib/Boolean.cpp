@@ -27,7 +27,7 @@ Handle<JSObject> createBooleanConstructor(Runtime *runtime) {
       booleanConstructor,
       booleanPrototype,
       1,
-      CellKind::BooleanObjectKind);
+      CellKind::JSBooleanKind);
 
   // Boolean.prototype.xxx methods.
   defineMethod(

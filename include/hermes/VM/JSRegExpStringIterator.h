@@ -18,7 +18,7 @@ namespace vm {
 class JSRegExpStringIterator : public JSObject {
   using Super = JSObject;
 
-  friend void RegExpStringIteratorBuildMeta(
+  friend void JSRegExpStringIteratorBuildMeta(
       const GCCell *cell,
       Metadata::Builder &mb);
 
@@ -26,7 +26,7 @@ class JSRegExpStringIterator : public JSObject {
   static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::RegExpStringIteratorKind;
+    return cell->getKind() == CellKind::JSRegExpStringIteratorKind;
   }
 
   static PseudoHandle<JSRegExpStringIterator> create(

@@ -96,7 +96,7 @@ const ObjectVTable HostObject::vt{
 
 void HostObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<HostObject>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   mb.setVTable(&HostObject::vt.base);
 }
 

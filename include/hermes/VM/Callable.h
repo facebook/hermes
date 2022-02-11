@@ -832,7 +832,7 @@ class NativeConstructor final : public NativeFunction {
 /// An interpreted callable function with environment.
 class JSFunction : public Callable {
   using Super = Callable;
-  friend void FunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend void JSFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
   /// CodeBlock to execute when called.
   CodeBlock *codeBlock_;
@@ -976,7 +976,7 @@ class JSAsyncFunction final : public JSFunction {
   }
 
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::AsyncFunctionKind;
+    return cell->getKind() == CellKind::JSAsyncFunctionKind;
   }
 
   JSAsyncFunction(
@@ -1044,7 +1044,7 @@ class JSGeneratorFunction final : public JSFunction {
   }
 
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::GeneratorFunctionKind;
+    return cell->getKind() == CellKind::JSGeneratorFunctionKind;
   }
 
  public:

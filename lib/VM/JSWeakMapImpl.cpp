@@ -17,7 +17,7 @@ void JSWeakMapImplBase::WeakMapImplBaseBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSWeakMapImplBase>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSWeakMapImplBase *>(cell);
   mb.addField("valueStorage", &self->valueStorage_);
 }
@@ -317,13 +317,13 @@ void JSWeakMapImpl<C>::WeakMapOrSetBuildMeta(
   WeakMapImplBaseBuildMeta(cell, mb);
 }
 
-void WeakMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  JSWeakMapImpl<CellKind::WeakMapKind>::WeakMapOrSetBuildMeta(cell, mb);
+void JSWeakMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  JSWeakMap::WeakMapOrSetBuildMeta(cell, mb);
   mb.setVTable(&JSWeakMap::vt.base);
 }
 
-void WeakSetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  JSWeakMapImpl<CellKind::WeakSetKind>::WeakMapOrSetBuildMeta(cell, mb);
+void JSWeakSetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  JSWeakSet::WeakMapOrSetBuildMeta(cell, mb);
   mb.setVTable(&JSWeakSet::vt.base);
 }
 
@@ -370,8 +370,8 @@ CallResult<PseudoHandle<JSWeakMapImpl<C>>> JSWeakMapImpl<C>::create(
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
-template class JSWeakMapImpl<CellKind::WeakMapKind>;
-template class JSWeakMapImpl<CellKind::WeakSetKind>;
+template class JSWeakMapImpl<CellKind::JSWeakMapKind>;
+template class JSWeakMapImpl<CellKind::JSWeakSetKind>;
 
 } // namespace vm
 } // namespace hermes

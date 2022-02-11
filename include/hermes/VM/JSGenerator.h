@@ -24,13 +24,13 @@ namespace vm {
 /// field storage.
 class JSGenerator final : public JSObject {
   using Super = JSObject;
-  friend void GeneratorBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend void JSGeneratorBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
   const static ObjectVTable vt;
 
  public:
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::GeneratorKind;
+    return cell->getKind() == CellKind::JSGeneratorKind;
   }
 
   static CallResult<PseudoHandle<JSGenerator>> create(

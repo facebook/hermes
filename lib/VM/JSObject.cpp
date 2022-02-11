@@ -23,7 +23,7 @@ namespace vm {
 
 const ObjectVTable JSObject::vt{
     VTable(
-        CellKind::ObjectKind,
+        CellKind::JSObjectKind,
         cellSize<JSObject>(),
         nullptr,
         nullptr,
@@ -44,7 +44,7 @@ const ObjectVTable JSObject::vt{
     JSObject::_checkAllOwnIndexedImpl,
 };
 
-void ObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   // This call is just for debugging and consistency purposes.
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSObject>());
 
@@ -2331,7 +2331,7 @@ std::string JSObject::getHeuristicTypeName(GC *gc) {
   }
 
   // If it's not an Object, the CellKind is most likely good enough on its own
-  if (getKind() != CellKind::ObjectKind) {
+  if (getKind() != CellKind::JSObjectKind) {
     return name;
   }
 

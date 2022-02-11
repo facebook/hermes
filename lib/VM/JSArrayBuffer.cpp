@@ -18,7 +18,7 @@ namespace vm {
 
 const ObjectVTable JSArrayBuffer::vt{
     VTable(
-        CellKind::ArrayBufferKind,
+        CellKind::JSArrayBufferKind,
         cellSize<JSArrayBuffer>(),
         _finalizeImpl,
         nullptr,
@@ -39,9 +39,9 @@ const ObjectVTable JSArrayBuffer::vt{
     _checkAllOwnIndexedImpl,
 };
 
-void ArrayBufferBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSArrayBufferBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSArrayBuffer>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   mb.setVTable(&JSArrayBuffer::vt.base);
 }
 

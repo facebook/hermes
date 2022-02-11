@@ -87,7 +87,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       // location. Don't update the stale address that is about to be free'd.
       header->markWithForwardingPointer(newLocation);
       auto *newCell = newLocation->data();
-      if (newCell->getKind() == CellKind::WeakMapKind) {
+      if (vmisa<JSWeakMap>(newCell)) {
         reachableWeakMaps_.push_back(vmcast<JSWeakMap>(newCell));
       } else {
         worklist_.push_back(newLocation);
@@ -110,7 +110,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       if (newSize != origSize) {
         static_cast<VariableSizeRuntimeCell *>(cell)->setSizeFromGC(newSize);
       }
-      if (cell->getKind() == CellKind::WeakMapKind) {
+      if (vmisa<JSWeakMap>(cell)) {
         reachableWeakMaps_.push_back(vmcast<JSWeakMap>(cell));
       } else {
         worklist_.push_back(header);

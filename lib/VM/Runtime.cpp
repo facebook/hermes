@@ -779,8 +779,7 @@ void Runtime::printArrayCensus(llvh::raw_ostream &os) {
   os << "Array Census for JSArray:\n";
   arraySizeToCountAndWastedSlots.clear();
   getHeap().forAllObjs([&arraySizeToCountAndWastedSlots, this](GCCell *cell) {
-    if (cell->getKind() == CellKind::ArrayKind) {
-      JSArray *arr = vmcast<JSArray>(cell);
+    if (JSArray *arr = dyn_vmcast<JSArray>(cell)) {
       JSArray::StorageType *storage = arr->getIndexedStorage(this);
       const auto capacity = storage ? storage->totalCapacityOfSpine() : 0;
       const auto sz = storage ? storage->size() : 0;

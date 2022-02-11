@@ -109,7 +109,7 @@ Handle<JSObject> createDateConstructor(Runtime *runtime) {
       dateConstructor,
       datePrototype,
       7,
-      CellKind::DateKind);
+      CellKind::JSDateKind);
 
   // Date.prototype.xxx() methods.
   defineMethod(

@@ -60,7 +60,7 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
       regExpConstructor,
       proto,
       2,
-      CellKind::RegExpKind);
+      CellKind::JSRegExpKind);
 
   defineMethod(
       runtime,

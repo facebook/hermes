@@ -27,7 +27,7 @@ namespace vm {
 
 const ObjectVTable JSError::vt{
     VTable(
-        CellKind::ErrorKind,
+        CellKind::JSErrorKind,
         cellSize<JSError>(),
         JSError::_finalizeImpl,
         nullptr,
@@ -41,9 +41,9 @@ const ObjectVTable JSError::vt{
     JSError::_checkAllOwnIndexedImpl,
 };
 
-void ErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSError>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSError *>(cell);
   mb.setVTable(&JSError::vt.base);
   mb.addField("funcNames", &self->funcNames_);

@@ -125,7 +125,7 @@ Handle<JSObject> createSetConstructor(Runtime *runtime) {
       setConstructor,
       setPrototype,
       0,
-      CellKind::SetKind);
+      CellKind::JSSetKind);
 
   return cons;
 }

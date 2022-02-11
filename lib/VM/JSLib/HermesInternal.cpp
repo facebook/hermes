@@ -67,8 +67,7 @@ hermesInternalGetEpilogues(void *, Runtime *runtime, NativeArgs args) {
   for (unsigned i = 0; i < outerLen; ++i) {
     auto innerLen = eps[i].size();
     if (innerLen != 0) {
-      auto result = JSTypedArray<uint8_t, CellKind::Uint8ArrayKind>::allocate(
-          runtime, innerLen);
+      auto result = Uint8Array::allocate(runtime, innerLen);
       if (result == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }

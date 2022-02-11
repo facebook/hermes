@@ -284,7 +284,7 @@ class JSArray final : public ArrayImpl {
       Handle<JSObject> prototypeHandle);
 
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::ArrayKind;
+    return cell->getKind() == CellKind::JSArrayKind;
   }
 
   static uint32_t getLength(const JSArray *self, PointerBase *pb) {
@@ -383,13 +383,15 @@ class JSArray final : public ArrayImpl {
 class JSArrayIterator : public JSObject {
   using Super = JSObject;
 
-  friend void ArrayIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend void JSArrayIteratorBuildMeta(
+      const GCCell *cell,
+      Metadata::Builder &mb);
 
  public:
   static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::ArrayIteratorKind;
+    return cell->getKind() == CellKind::JSArrayIteratorKind;
   }
 
   static PseudoHandle<JSArrayIterator>

@@ -197,7 +197,7 @@ Handle<JSObject> createDataViewConstructor(Runtime *runtime) {
       dataViewConstructor,
       proto,
       1,
-      CellKind::DataViewKind);
+      CellKind::JSDataViewKind);
 
   // DataView.prototype.xxx() methods.
   defineAccessor(

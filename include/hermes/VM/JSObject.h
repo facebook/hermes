@@ -312,7 +312,7 @@ struct ObjectVTable {
 /// integer values are detected and used with the "indexed storage", if
 /// available.
 class JSObject : public GCCell {
-  friend void ObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend void JSObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
  public:
   /// A light-weight constructor which performs no GC allocations. Its purpose

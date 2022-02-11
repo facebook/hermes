@@ -49,12 +49,12 @@ findTrap(Handle<JSObject> selfHandle, Runtime *runtime, Predefined::Str name);
 /// instead of calling isa twice.
 class JSProxy : public JSObject {
  public:
-  friend void ProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend void JSProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb);
   friend detail::ProxySlots &detail::slots(JSObject *selfHandle);
 
   static const ObjectVTable vt;
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::ProxyKind;
+    return cell->getKind() == CellKind::JSProxyKind;
   }
 
   static PseudoHandle<JSProxy> create(Runtime *runtime);

@@ -56,7 +56,7 @@ Handle<JSObject> createErrorConstructor(Runtime *runtime) {
       ErrorConstructor,
       errorPrototype,
       1,
-      CellKind::ErrorKind);
+      CellKind::JSErrorKind);
 
   defineMethod(
       runtime,
@@ -94,7 +94,7 @@ Handle<JSObject> createErrorConstructor(Runtime *runtime) {
         Handle<JSObject>::vmcast(&runtime->errorConstructor),                \
         1,                                                                   \
         NativeConstructor::creatorFunction<JSError>,                         \
-        CellKind::ErrorKind);                                                \
+        CellKind::JSErrorKind);                                              \
   }
 #include "hermes/VM/NativeErrorTypes.def"
 

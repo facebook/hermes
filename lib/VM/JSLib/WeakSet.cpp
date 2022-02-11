@@ -57,7 +57,7 @@ Handle<JSObject> createWeakSetConstructor(Runtime *runtime) {
       weakSetConstructor,
       weakSetPrototype,
       0,
-      CellKind::WeakSetKind);
+      CellKind::JSWeakSetKind);
 
   // ES6.0 23.4.3.1
   defineProperty(

@@ -1633,7 +1633,7 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
       typedArrayBaseConstructor,
       0,
       NativeConstructor::creatorFunction<JSObject>,
-      CellKind::ObjectKind));
+      CellKind::JSObjectKind));
 
   // Define %TypedArray%.prototype to be proto.
   auto st = Callable::defineNameLengthAndPrototype(

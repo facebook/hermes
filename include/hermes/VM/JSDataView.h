@@ -27,7 +27,7 @@ class JSDataView final : public JSObject {
   static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::DataViewKind;
+    return cell->getKind() == CellKind::JSDataViewKind;
   }
 
   static PseudoHandle<JSDataView> create(
@@ -95,7 +95,7 @@ class JSDataView final : public JSObject {
   }
 
  public:
-  friend void DataViewBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend void JSDataViewBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
  private:
   /// buffer_ is the underlying storage of the bytes for a DataView.
