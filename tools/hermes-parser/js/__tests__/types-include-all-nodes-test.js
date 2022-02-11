@@ -36,15 +36,14 @@ function getInterfaces(): $ReadOnlyMap<
     properties: $ReadOnlyMap<string, PropertyEntry>,
   }>,
 > {
-  const {ast, scopeManager} = parseForESLint(
-    fs.readFileSync(
-      path.resolve(__dirname, '..', 'hermes-estree', 'src', 'types.js'),
-      'utf8',
-    ),
+  const code = fs.readFileSync(
+    path.resolve(__dirname, '..', 'hermes-estree', 'src', 'types.js'),
+    'utf8',
   );
+  const {ast, scopeManager} = parseForESLint(code);
 
   const interfaces = new Map<string, InterfaceEntry>();
-  traverse(ast, scopeManager, () => {
+  traverse(code, ast, scopeManager, () => {
     return {
       InterfaceDeclaration(node) {
         // the granular flow-types are a generated artefact that we don't have access to
