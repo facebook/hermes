@@ -212,10 +212,11 @@ jsi::PropNameID TracingRuntime::createPropNameIDFromUtf8(
 
 jsi::PropNameID TracingRuntime::createPropNameIDFromString(
     const jsi::String &str) {
-  std::string s = str.utf8(*this);
   jsi::PropNameID res = RD::createPropNameIDFromString(str);
   trace_.emplace_back<SynthTrace::CreatePropNameIDRecord>(
-      getTimeSinceStart(), getUniqueID(res), std::move(s), /* isAscii */ false);
+      getTimeSinceStart(),
+      getUniqueID(res),
+      SynthTrace::encodeString(getUniqueID(str)));
   return res;
 }
 

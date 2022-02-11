@@ -199,6 +199,7 @@ TEST_F(SynthTraceTest, GetProperty) {
   std::string b{"b"};
   SynthTrace::ObjectID objID;
   SynthTrace::ObjectID aStringID;
+  SynthTrace::ObjectID aPropID;
   SynthTrace::ObjectID bPropID;
   {
     auto obj = jsi::Object(*rt);
@@ -210,14 +211,20 @@ TEST_F(SynthTraceTest, GetProperty) {
     auto aValue = obj.getProperty(*rt, aStr);
     ASSERT_TRUE(aValue.isUndefined());
 
-    // Now get using a PropNameID.
+    // Now get using a PropNameID created from aStr.
+    auto aProp = jsi::PropNameID::forString(*rt, aStr);
+    aPropID = rt->getUniqueID(aProp);
+    aValue = obj.getProperty(*rt, aProp);
+    ASSERT_TRUE(aValue.isUndefined());
+
+    // Now get using a PropNameID created from b.
     auto bProp = jsi::PropNameID::forAscii(*rt, b);
     bPropID = rt->getUniqueID(bProp);
     auto bValue = obj.getProperty(*rt, bProp);
     ASSERT_TRUE(bValue.isUndefined());
   }
   const auto &records = rt->trace().records();
-  EXPECT_EQ(5, records.size());
+  EXPECT_EQ(7, records.size());
   EXPECT_EQ_RECORD(
       SynthTrace::CreateObjectRecord(dummyTime, objID), *records.at(0));
   EXPECT_EQ_RECORD(
@@ -233,9 +240,22 @@ TEST_F(SynthTraceTest, GetProperty) {
       SynthTrace::encodeUndefined());
   EXPECT_EQ_RECORD(gprExpect0, *records.at(2));
   EXPECT_EQ_RECORD(
-      SynthTrace::CreatePropNameIDRecord(dummyTime, bPropID, b.c_str(), 1),
+      SynthTrace::CreatePropNameIDRecord(
+          dummyTime, aPropID, SynthTrace::encodeString(aStringID)),
       *records.at(3));
   auto gprExpect1 = SynthTrace::GetPropertyRecord(
+      dummyTime,
+      objID,
+      aPropID,
+#ifdef HERMESVM_API_TRACE_DEBUG
+      a,
+#endif
+      SynthTrace::encodeUndefined());
+  EXPECT_EQ_RECORD(gprExpect1, *records.at(4));
+  EXPECT_EQ_RECORD(
+      SynthTrace::CreatePropNameIDRecord(dummyTime, bPropID, b.c_str(), 1),
+      *records.at(5));
+  auto gprExpect2 = SynthTrace::GetPropertyRecord(
       dummyTime,
       objID,
       bPropID,
@@ -243,7 +263,7 @@ TEST_F(SynthTraceTest, GetProperty) {
       b,
 #endif
       SynthTrace::encodeUndefined());
-  EXPECT_EQ_RECORD(gprExpect1, *records.at(4));
+  EXPECT_EQ_RECORD(gprExpect2, *records.at(6));
 }
 
 TEST_F(SynthTraceTest, SetProperty) {
@@ -972,6 +992,10 @@ struct SynthTraceReplayTest : public ::testing::Test {
     tracing::TraceInterpreter::execFromMemoryBuffer(
         llvh::MemoryBuffer::getMemBuffer(traceResult), {}, *replayRt, {});
   }
+
+  jsi::Value eval(jsi::Runtime &rt, const char *code) {
+    return rt.global().getPropertyAsFunction(rt, "eval").call(rt, code);
+  }
 };
 
 TEST_F(SynthTraceReplayTest, CreateObjectReplay) {
@@ -990,6 +1014,29 @@ TEST_F(SynthTraceReplayTest, CreateObjectReplay) {
             .getProperty(rt, "bar")
             .asNumber(),
         5);
+  }
+}
+
+TEST_F(SynthTraceReplayTest, SetPropertyReplay) {
+  {
+    auto &rt = *traceRt;
+    auto asciiProp = jsi::PropNameID::forAscii(rt, "a");
+    auto utf8Prop = jsi::PropNameID::forUtf8(rt, "b");
+    auto strProp =
+        jsi::PropNameID::forString(rt, jsi::String::createFromAscii(rt, "c"));
+
+    jsi::Object x(rt);
+    x.setProperty(rt, asciiProp, "apple");
+    x.setProperty(rt, utf8Prop, "banana");
+    x.setProperty(rt, strProp, "coconut");
+    rt.global().setProperty(rt, "x", x);
+  }
+  replay();
+  {
+    auto &rt = *replayRt;
+    EXPECT_EQ(eval(rt, "x.a").asString(rt).utf8(rt), "apple");
+    EXPECT_EQ(eval(rt, "x.b").asString(rt).utf8(rt), "banana");
+    EXPECT_EQ(eval(rt, "x.c").asString(rt).utf8(rt), "coconut");
   }
 }
 

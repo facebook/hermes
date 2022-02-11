@@ -351,27 +351,32 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
       }
       case RecordType::CreatePropNameID: {
         auto id = llvh::dyn_cast_or_null<JSONNumber>(obj->get("objID"));
-        auto encoding =
-            llvh::dyn_cast_or_null<JSONString>(obj->get("encoding"));
-        bool isAscii = false;
-        if (encoding->str() == "ASCII") {
-          isAscii = true;
-        } else {
-          assert(encoding->str() == "UTF-8");
-        }
-        auto str = llvh::dyn_cast_or_null<JSONString>(obj->get("chars"));
-        if (isAscii) {
+        if (propValue) {
           trace.emplace_back<SynthTrace::CreatePropNameIDRecord>(
-              timeFromStart,
-              id->getValue(),
-              str->str().data(),
-              str->str().size());
+              timeFromStart, id->getValue(), trace.decode(propValue->c_str()));
         } else {
-          trace.emplace_back<SynthTrace::CreatePropNameIDRecord>(
-              timeFromStart,
-              id->getValue(),
-              reinterpret_cast<const uint8_t *>(str->str().data()),
-              str->str().size());
+          auto encoding =
+              llvh::dyn_cast_or_null<JSONString>(obj->get("encoding"));
+          bool isAscii = false;
+          if (encoding->str() == "ASCII") {
+            isAscii = true;
+          } else {
+            assert(encoding->str() == "UTF-8");
+          }
+          auto str = llvh::dyn_cast_or_null<JSONString>(obj->get("chars"));
+          if (isAscii) {
+            trace.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+                timeFromStart,
+                id->getValue(),
+                str->str().data(),
+                str->str().size());
+          } else {
+            trace.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+                timeFromStart,
+                id->getValue(),
+                reinterpret_cast<const uint8_t *>(str->str().data()),
+                str->str().size());
+          }
         }
         break;
       }
