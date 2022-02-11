@@ -105,25 +105,28 @@ TEST_F(IdentifierTableTest, NotUniquedSymbol) {
   }
 }
 
-TEST_F(IdentifierTableTest, LazyExternalSymbolTooBig) {
-  GCScope gcScope{runtime};
-  auto &idTable = runtime->getIdentifierTable();
+TEST(IdentifierTableDeathTest, LazyExternalSymbolTooBig) {
+  auto fn = [] {
+    auto rt = Runtime::create(
+        RuntimeConfig::Builder().withGCConfig(kTestGCConfig).build());
+    auto *runtime = rt.get();
+    GCScope gcScope{runtime};
+    auto &idTable = runtime->getIdentifierTable();
 
-  const auto extSize = (1 << 24) +
-      std::max(kTestGCConfig.getMaxHeapSize(),
-               toRValue(StringPrimitive::EXTERNAL_STRING_THRESHOLD));
+    const auto extSize = (1 << 24) +
+        std::max(kTestGCConfig.getMaxHeapSize(),
+                 toRValue(StringPrimitive::EXTERNAL_STRING_THRESHOLD));
 
-  // A string of this size is definitely too big to be allocated.
-  ASSERT_FALSE(runtime->getHeap().canAllocExternalMemory(extSize));
+    // A string of this size is definitely too big to be allocated.
+    ASSERT_FALSE(runtime->getHeap().canAllocExternalMemory(extSize));
 
-  std::string buf(extSize, '\0');
-  ASCIIRef ref{buf.data(), extSize};
+    std::string buf(extSize, '\0');
+    ASCIIRef ref{buf.data(), extSize};
 
-  SymbolID symbol = idTable.registerLazyIdentifier(ref);
-
-  EXPECT_DEATH_IF_SUPPORTED(
-      { idTable.getStringPrim(runtime, symbol); },
-      "Unhandled out of memory exception");
+    SymbolID symbol = idTable.registerLazyIdentifier(ref);
+    idTable.getStringPrim(runtime, symbol);
+  };
+  EXPECT_DEATH_IF_SUPPORTED(fn(), "Unhandled out of memory exception");
 }
 
 // Verifies that SymbolIDs are allocated consecutively, increasing from zero, as

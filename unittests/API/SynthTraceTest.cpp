@@ -26,20 +26,23 @@ namespace jsi = facebook::jsi;
 namespace {
 
 struct SynthTraceTest : public ::testing::Test {
-  ::hermes::vm::RuntimeConfig config =
-      ::hermes::vm::RuntimeConfig::Builder().withTraceEnabled(true).build();
   std::unique_ptr<TracingHermesRuntime> rt;
   SynthTrace::TimeSinceStart dummyTime{SynthTrace::TimeSinceStart::zero()};
 
-  SynthTraceTest()
-      // We pass "forReplay = true" below, to prevent the TracingHermesRuntime
-      // from interactions it does automatically on non-replay runs.
-      // We don't need those for these tests.
-      : rt(makeTracingHermesRuntime(
-            makeHermesRuntime(config),
-            config,
-            /* traceStream */ nullptr,
-            /* forReplay */ true)) {}
+  static std::unique_ptr<TracingHermesRuntime> makeRuntime() {
+    ::hermes::vm::RuntimeConfig config =
+        ::hermes::vm::RuntimeConfig::Builder().withTraceEnabled(true).build();
+    // We pass "forReplay = true" below, to prevent the TracingHermesRuntime
+    // from interactions it does automatically on non-replay runs.
+    // We don't need those for these tests.
+    return makeTracingHermesRuntime(
+        makeHermesRuntime(config),
+        config,
+        /* traceStream */ nullptr,
+        /* forReplay */ true);
+  }
+
+  SynthTraceTest() : rt(makeRuntime()) {}
 
   template <typename T>
   void expectEqual(
@@ -898,22 +901,26 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
 
 // These tests fail on Windows.
 #if defined(EXPECT_DEATH_IF_SUPPORTED) && !defined(_WINDOWS)
-TEST_F(SynthTraceTest, HostFunctionThrowsExceptionFails) {
-  // TODO (T28293178) Remove this once exceptions are supported.
-  jsi::Function throwingFunc = jsi::Function::createFromHostFunction(
-      *rt,
-      jsi::PropNameID::forAscii(*rt, "thrower"),
-      0,
-      [](jsi::Runtime &rt,
-         const jsi::Value &thisVal,
-         const jsi::Value *args,
-         size_t count) -> jsi::Value {
-        throw std::runtime_error("Cannot call");
-      });
-  EXPECT_DEATH_IF_SUPPORTED({ throwingFunc.call(*rt); }, "");
+TEST(SynthTraceDeathTest, HostFunctionThrowsExceptionFails) {
+  auto fn = [] {
+    auto rt = SynthTraceTest::makeRuntime();
+    // TODO (T28293178) Remove this once exceptions are supported.
+    jsi::Function throwingFunc = jsi::Function::createFromHostFunction(
+        *rt,
+        jsi::PropNameID::forAscii(*rt, "thrower"),
+        0,
+        [](jsi::Runtime &rt,
+           const jsi::Value &thisVal,
+           const jsi::Value *args,
+           size_t count) -> jsi::Value {
+          throw std::runtime_error("Cannot call");
+        });
+    throwingFunc.call(*rt);
+  };
+  EXPECT_DEATH_IF_SUPPORTED(fn(), "");
 }
 
-TEST_F(SynthTraceTest, HostObjectThrowsExceptionFails) {
+TEST(SynthTraceDeathTest, HostObjectThrowsExceptionFails) {
   // TODO (T28293178) Remove this once exceptions are supported.
   class ThrowingHostObject : public jsi::HostObject {
     jsi::Value get(jsi::Runtime &rt, const jsi::PropNameID &sym) override {
@@ -928,12 +935,14 @@ TEST_F(SynthTraceTest, HostObjectThrowsExceptionFails) {
     }
   };
 
-  jsi::Object thro = jsi::Object::createFromHostObject(
-      *rt, std::make_shared<ThrowingHostObject>());
-  ASSERT_TRUE(thro.isHostObject(*rt));
-  EXPECT_DEATH_IF_SUPPORTED({ thro.getProperty(*rt, "foo"); }, "");
-  EXPECT_DEATH_IF_SUPPORTED(
-      { thro.setProperty(*rt, "foo", jsi::Value::undefined()); }, "");
+  auto fn = [] {
+    auto rt = SynthTraceTest::makeRuntime();
+    jsi::Object thro = jsi::Object::createFromHostObject(
+        *rt, std::make_shared<ThrowingHostObject>());
+    ASSERT_TRUE(thro.isHostObject(*rt));
+    thro.getProperty(*rt, "foo");
+  };
+  EXPECT_DEATH_IF_SUPPORTED(fn(), "");
 }
 #endif
 
