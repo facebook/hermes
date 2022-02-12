@@ -40,6 +40,9 @@ class HashMapEntry final : public GCCell {
   /// Next entry in the hash table bucket.
   GCPointer<HashMapEntry> nextEntryInBucket{nullptr};
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::HashMapEntryKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::HashMapEntryKind;
   }
@@ -85,6 +88,9 @@ class OrderedHashMap final : public GCCell {
  public:
   static const VTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::OrderedHashMapKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::OrderedHashMapKind;
   }

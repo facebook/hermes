@@ -27,6 +27,9 @@ class FillerCell : public VariableSizeRuntimeCell {
     return &vt;
   };
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::FillerCellKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::FillerCellKind;
   }

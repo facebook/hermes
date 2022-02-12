@@ -23,6 +23,10 @@ class JSRegExp final : public JSObject {
  public:
   using Super = JSObject;
   static const ObjectVTable vt;
+
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSRegExpKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::JSRegExpKind;
   }

@@ -449,6 +449,7 @@ class DynamicStringPrimitive final
 
   using Ref = llvh::ArrayRef<T>;
 
+ public:
   /// \return the cell kind for this string.
   static constexpr CellKind getCellKind() {
     return std::is_same<T, char16_t>::value
@@ -458,7 +459,6 @@ class DynamicStringPrimitive final
                    : CellKind::DynamicASCIIStringPrimitiveKind);
   }
 
- public:
   static bool classof(const GCCell *cell) {
     return cell->getKind() == DynamicStringPrimitive::getCellKind();
   }
@@ -549,6 +549,7 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   using StdString = std::basic_string<T>;
   using CopyableStdString = CopyableBasicString<T>;
 
+ public:
   /// \return the cell kind for this string.
   static constexpr CellKind getCellKind() {
     return std::is_same<T, char16_t>::value
@@ -556,7 +557,6 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
         : CellKind::ExternalASCIIStringPrimitiveKind;
   }
 
- public:
   static bool classof(const GCCell *cell) {
     return cell->getKind() == ExternalStringPrimitive::getCellKind();
   }
@@ -665,6 +665,7 @@ class BufferedStringPrimitive final : public StringPrimitive {
   using Ref = llvh::ArrayRef<T>;
   using StdString = std::basic_string<T>;
 
+ public:
   /// \return the cell kind for this string.
   static constexpr CellKind getCellKind() {
     return std::is_same<T, char16_t>::value
@@ -672,7 +673,6 @@ class BufferedStringPrimitive final : public StringPrimitive {
         : CellKind::BufferedASCIIStringPrimitiveKind;
   }
 
- public:
   static bool classof(const GCCell *cell) {
     return cell->getKind() == BufferedStringPrimitive::getCellKind();
   }

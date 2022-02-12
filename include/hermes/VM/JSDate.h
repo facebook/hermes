@@ -21,6 +21,9 @@ class JSDate final : public JSObject {
  public:
   static const ObjectVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSDateKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::JSDateKind;
   }

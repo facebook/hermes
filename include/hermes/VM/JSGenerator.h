@@ -29,6 +29,9 @@ class JSGenerator final : public JSObject {
   const static ObjectVTable vt;
 
  public:
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSGeneratorKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::JSGeneratorKind;
   }

@@ -20,6 +20,9 @@ class SingleObject final : public JSObject {
   using Super = JSObject;
   static const ObjectVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return kind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == kind;
   }

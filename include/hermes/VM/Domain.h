@@ -105,6 +105,9 @@ class Domain final : public GCCell {
   OptValue<uint32_t> cjsEntryModuleID_;
 
  public:
+  static constexpr CellKind getCellKind() {
+    return CellKind::DomainKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::DomainKind;
   }
@@ -253,6 +256,9 @@ class RequireContext final : public JSObject {
   friend void RequireContextSerialize(Serializer &, const GCCell *);
 
  public:
+  static constexpr CellKind getCellKind() {
+    return CellKind::RequireContextKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::RequireContextKind;
   }

@@ -46,6 +46,7 @@ struct DummyObject final : public GCCell {
 
   static DummyObject *create(GC *gc);
   static DummyObject *createLongLived(GC *gc);
+  static constexpr CellKind getCellKind();
   static bool classof(const GCCell *cell);
   static void _finalizeImpl(GCCell *cell, GC *);
   static size_t _mallocSizeImpl(GCCell *cell);

@@ -27,6 +27,9 @@ class JSMapImpl final : public JSObject {
  public:
   static const ObjectVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return C;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == C;
   }
@@ -178,6 +181,9 @@ class JSMapIteratorImpl final : public JSObject {
  public:
   static const ObjectVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return C;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == C;
   }

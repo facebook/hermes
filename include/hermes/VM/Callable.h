@@ -35,6 +35,9 @@ class Environment final
  public:
   static const VTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::EnvironmentKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::EnvironmentKind;
   }
@@ -345,6 +348,9 @@ class BoundFunction final : public Callable {
   using Super = Callable;
   static const CallableVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::BoundFunctionKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::BoundFunctionKind;
   }
@@ -440,6 +446,9 @@ class NativeFunction : public Callable {
   using Super = Callable;
   static const CallableVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::NativeFunctionKind;
+  }
   static bool classof(const GCCell *cell) {
     return kindInRange(
         cell->getKind(),
@@ -693,6 +702,9 @@ class NativeConstructor final : public NativeFunction {
 
   static const CallableVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::NativeConstructorKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::NativeConstructorKind;
   }
@@ -878,6 +890,9 @@ class JSFunction : public Callable {
  public:
   static const CallableVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSFunctionKind;
+  }
   static bool classof(const GCCell *cell) {
     return kindInRange(
         cell->getKind(),
@@ -975,6 +990,9 @@ class JSAsyncFunction final : public JSFunction {
         runtime->getEmptyCodeBlock());
   }
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSAsyncFunctionKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::JSAsyncFunctionKind;
   }
@@ -1043,6 +1061,9 @@ class JSGeneratorFunction final : public JSFunction {
         runtime->getEmptyCodeBlock());
   }
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSGeneratorFunctionKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::JSGeneratorFunctionKind;
   }
@@ -1108,6 +1129,9 @@ class GeneratorInnerFunction final : public JSFunction {
  public:
   static const CallableVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::GeneratorInnerFunctionKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::GeneratorInnerFunctionKind;
   }

@@ -53,6 +53,9 @@ class SegmentedArray final
     /// Creates an empty segment with zero length
     static PseudoHandle<Segment> create(Runtime *runtime);
 
+    static constexpr CellKind getCellKind() {
+      return CellKind::SegmentKind;
+    }
     static bool classof(const GCCell *cell) {
       return cell->getKind() == CellKind::SegmentKind;
     }
@@ -344,6 +347,9 @@ class SegmentedArray final
     shrinkRight(runtime, size());
   }
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::SegmentedArrayKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::SegmentedArrayKind;
   }

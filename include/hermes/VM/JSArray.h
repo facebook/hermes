@@ -237,6 +237,9 @@ class Arguments final : public ArrayImpl {
   static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
       Super::NAMED_PROPERTY_SLOTS + 1;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::ArgumentsKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::ArgumentsKind;
   }
@@ -283,6 +286,9 @@ class JSArray final : public ArrayImpl {
       Runtime *runtime,
       Handle<JSObject> prototypeHandle);
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSArrayKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::JSArrayKind;
   }
@@ -390,6 +396,9 @@ class JSArrayIterator : public JSObject {
  public:
   static const ObjectVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSArrayIteratorKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::JSArrayIteratorKind;
   }

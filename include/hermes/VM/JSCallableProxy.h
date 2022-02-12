@@ -24,6 +24,9 @@ class JSCallableProxy : public NativeFunction {
   friend detail::ProxySlots &detail::slots(JSObject *selfHandle);
 
   static const CallableVTable vt;
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSCallableProxyKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::JSCallableProxyKind;
   }

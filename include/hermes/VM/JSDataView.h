@@ -26,6 +26,9 @@ class JSDataView final : public JSObject {
 
   static const ObjectVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSDataViewKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::JSDataViewKind;
   }

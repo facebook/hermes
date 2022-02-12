@@ -25,6 +25,9 @@ class JSRegExpStringIterator : public JSObject {
  public:
   static const ObjectVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSRegExpStringIteratorKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::JSRegExpStringIteratorKind;
   }

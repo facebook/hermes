@@ -220,6 +220,9 @@ class JSTypedArray final : public JSTypedArrayBase {
 
   static const ObjectVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return C;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == C;
   }

@@ -379,6 +379,9 @@ class JSObject : public GCCell {
   /// Number of property slots allocated directly inside the object.
   static const PropStorage::size_type DIRECT_PROPERTY_SLOTS = 5;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSObjectKind;
+  }
   static bool classof(const GCCell *cell) {
     return kindInRange(
         cell->getKind(), CellKind::ObjectKind_first, CellKind::ObjectKind_last);

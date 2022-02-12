@@ -176,6 +176,9 @@ class DictPropertyMap final
 
   static const VTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::DictPropertyMapKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::DictPropertyMapKind;
   }

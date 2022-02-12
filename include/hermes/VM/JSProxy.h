@@ -53,6 +53,10 @@ class JSProxy : public JSObject {
   friend detail::ProxySlots &detail::slots(JSObject *selfHandle);
 
   static const ObjectVTable vt;
+
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSProxyKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::JSProxyKind;
   }

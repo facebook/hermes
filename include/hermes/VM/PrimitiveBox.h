@@ -25,6 +25,9 @@ class JSString final : public JSObject {
       Super::NAMED_PROPERTY_SLOTS + 1;
   static const ObjectVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSStringKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::JSStringKind;
   }
@@ -129,6 +132,9 @@ class JSStringIterator : public JSObject {
  public:
   static const ObjectVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSStringIteratorKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::JSStringIteratorKind;
   }
@@ -164,6 +170,9 @@ class JSNumber final : public JSObject {
  public:
   static const ObjectVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSNumberKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::JSNumberKind;
   }
@@ -201,6 +210,9 @@ class JSBoolean final : public JSObject {
  public:
   static const ObjectVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSBooleanKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::JSBooleanKind;
   }
@@ -240,6 +252,9 @@ class JSSymbol final : public JSObject {
  public:
   static const ObjectVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSSymbolKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::JSSymbolKind;
   }

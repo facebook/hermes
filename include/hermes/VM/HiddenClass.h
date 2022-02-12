@@ -281,6 +281,9 @@ class HiddenClass final : public GCCell {
 
   static const VTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::HiddenClassKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::HiddenClassKind;
   }

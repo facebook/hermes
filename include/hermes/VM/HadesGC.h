@@ -493,6 +493,9 @@ class HadesGC final : public GCBase {
       /// \pre getAllocatedSize() >= sz + minAllocationSize()
       GCCell *carve(uint32_t sz);
 
+      static constexpr CellKind getCellKind() {
+        return CellKind::FreelistKind;
+      }
       static bool classof(const GCCell *cell) {
         return cell->getKind() == CellKind::FreelistKind;
       }

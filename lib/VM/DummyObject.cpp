@@ -48,6 +48,10 @@ void DummyObject::setPointer(GC *gc, DummyObject *obj) {
   other.set(gc->getPointerBase(), obj, gc);
 }
 
+/* static */ constexpr CellKind DummyObject::getCellKind() {
+  return CellKind::DummyObjectKind;
+}
+
 DummyObject *DummyObject::create(GC *gc) {
   return gc->makeAFixed<DummyObject, HasFinalizer::Yes>(gc);
 }

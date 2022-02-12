@@ -24,6 +24,9 @@ class BoxedDouble final : public GCCell {
   double value_;
 
  public:
+  static constexpr CellKind getCellKind() {
+    return CellKind::BoxedDoubleKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::BoxedDoubleKind;
   }
