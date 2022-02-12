@@ -214,9 +214,6 @@ class MallocGC final : public GCBase {
   /// \return true iff the pointer \p p is controlled by this GC.
   bool validPointer(const void *p) const override;
   bool dbgContains(const void *p) const override;
-
-  /// Returns true if \p cell is the most-recently allocated finalizable object.
-  bool isMostRecentFinalizableObj(const GCCell *cell) const override;
 #endif
 
   /// Same as in superclass GCBase.

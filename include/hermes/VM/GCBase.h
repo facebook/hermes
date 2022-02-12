@@ -216,9 +216,6 @@ using WeakSlotState = WeakRefSlot::State;
 /// Returns true if \p p points into the heap.
 ///   bool contains(const void *p) const;
 ///
-/// Returns true iff \p cell is the most-recently allocated finalizable object.
-///   bool isMostRecentFinalizableObj(const GCCell* cell) const;
-///
 /// Return the lower bound of the heap's virtual address range (inclusive).
 ///   char *lowLim() const;
 ///
@@ -1075,7 +1072,6 @@ class GCBase {
   }
   virtual bool dbgContains(const void *ptr) const = 0;
   virtual void trackReachable(CellKind kind, unsigned sz) {}
-  virtual bool isMostRecentFinalizableObj(const GCCell *cell) const = 0;
   /// \}
 #endif
 
@@ -1488,15 +1484,6 @@ class GCBase {
       llvh::MutableArrayRef<char> detailBuffer,
       std::error_code reason);
 
-#ifndef NDEBUG
-  // Returns true iff \p finalizables is non-empty, and \p cell is the
-  // last element in the vector.  Useful in code checking that
-  // objects with finalizers are allocated correctly.
-  static bool isMostRecentCellInFinalizerVector(
-      const std::vector<GCCell *> &finalizables,
-      const GCCell *cell);
-#endif
-
   /// If a cell has any weak references to mark, and the acceptor supports
   /// marking them, mark those weak references.
   template <typename Acceptor>
@@ -1514,8 +1501,7 @@ class GCBase {
     // In C++17, we could implement this via "constexpr if" rather than
     // overloads with std::true_type.
     // Once C++17 is available, switch to using that.
-    if (auto *cb = VTable::vtableArray[static_cast<size_t>(kind)]
-                       ->getMarkWeakCallback()) {
+    if (auto *cb = VTable::getVTable(kind)->getMarkWeakCallback()) {
       std::lock_guard<Mutex> wrLk{weakRefMutex()};
       cb(cell, acceptor);
     }

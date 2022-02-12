@@ -26,12 +26,6 @@ GCCell::GCCell(GC *gc, const VTable *vtp)
     : kindAndSize_(vtp->kind, vtp->size),
       _debugAllocationId_(gc->nextObjectID()) {
   assert(getVT() == vtp && "VTable does not match kind.");
-  // If the vtp has a finalizer, then it should be the most recent thing
-  // added to the finalizer list.
-  assert(
-      (vtp->finalize_ == nullptr || gc->isMostRecentFinalizableObj(this)) &&
-      "If the vtp has a finalizer, then the obj should be on the "
-      "finalizer list");
   if (gc->lastAllocationWasFixedSize() == GCBase::FixedSizeValue::Yes) {
     assert(
         vtp->size > 0 &&

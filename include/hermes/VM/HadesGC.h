@@ -335,9 +335,6 @@ class HadesGC final : public GCBase {
   /// found reachable in a full GC.
   void trackReachable(CellKind kind, unsigned sz) override;
 
-  /// Returns true if \p cell is the most-recently allocated finalizable object.
-  bool isMostRecentFinalizableObj(const GCCell *cell) const override;
-
   /// \}
 #endif
 

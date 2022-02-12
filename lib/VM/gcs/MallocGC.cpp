@@ -575,14 +575,6 @@ bool MallocGC::dbgContains(const void *p) const {
   isValid = isValid || newPointers_.find(header) != newPointers_.end();
   return isValid;
 }
-
-bool MallocGC::isMostRecentFinalizableObj(const GCCell *cell) const {
-  // We don't keep track of the sequence of finalizable objects in
-  // MallocGC; rather, it looks directly at whether a freed cell's vtable has
-  // a finalizer method. So we just return whether \p cell has a finalizer.
-  // This won't detect errors, but it also won't give false positives.
-  return cell->getVT()->finalize_ != nullptr;
-}
 #endif
 
 void MallocGC::createSnapshot(llvh::raw_ostream &os) {

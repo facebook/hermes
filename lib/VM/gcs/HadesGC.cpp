@@ -2202,18 +2202,6 @@ bool HadesGC::dbgContains(const void *p) const {
 }
 
 void HadesGC::trackReachable(CellKind kind, unsigned sz) {}
-
-bool HadesGC::isMostRecentFinalizableObj(const GCCell *cell) const {
-  if (inYoungGen(cell)) {
-    return youngGenFinalizables_.back() == cell;
-  } else {
-    // Hades doesn't have a most recent finalizable object list for the old
-    // generation, it iterates over all dead objects during sweeping. So any
-    // object with a finalize pointer set will be finalized.
-    return cell->getVT()->finalize_ != nullptr;
-  }
-}
-
 #endif
 
 void *HadesGC::allocSlow(uint32_t sz) {

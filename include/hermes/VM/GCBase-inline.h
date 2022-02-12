@@ -52,6 +52,10 @@ template <
 T *GCBase::makeA(uint32_t size, Args &&...args) {
   assert(
       isSizeHeapAligned(size) && "Size must be aligned before reaching here");
+  assert(
+      !!VTable::getVTable(T::getCellKind())->finalize_ ==
+          (hasFinalizer == HasFinalizer::Yes) &&
+      "hasFinalizer should be set iff the cell has a finalizer.");
 #ifdef HERMESVM_GC_RUNTIME
   T *ptr = runtimeGCDispatch([&](auto *gc) {
     return gc->template makeA<T, fixedSize, hasFinalizer, longLived>(

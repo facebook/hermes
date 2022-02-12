@@ -130,6 +130,10 @@ struct VTable {
   /// initialized by buildMetadataTable.
   static std::array<const VTable *, kNumCellKinds> vtableArray;
 
+  static const VTable *getVTable(CellKind c) {
+    return vtableArray[static_cast<size_t>(c)];
+  }
+
   constexpr explicit VTable(
       CellKind kind,
       uint32_t size,
