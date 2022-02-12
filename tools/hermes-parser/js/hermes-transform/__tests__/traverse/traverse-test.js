@@ -15,10 +15,11 @@ import {traverse} from '../../src/traverse/traverse';
 
 describe('traverse', () => {
   it('accepts and calls selectors', () => {
-    const {ast, scopeManager} = parseForESLint('const x = 1;');
+    const code = 'const x = 1;';
+    const {ast, scopeManager} = parseForESLint(code);
 
     const visitedNodes = [];
-    traverse(ast, scopeManager, () => ({
+    traverse(code, ast, scopeManager, () => ({
       Program(node) {
         visitedNodes.push(node.type);
       },
@@ -34,10 +35,11 @@ describe('traverse', () => {
   });
 
   it('visits the AST in the correct order - traversed as defined by the visitor keys', () => {
-    const {ast, scopeManager} = parseForESLint('const x = 1;');
+    const code = 'const x = 1;';
+    const {ast, scopeManager} = parseForESLint(code);
 
     const starNodes = [];
-    traverse(ast, scopeManager, () => ({
+    traverse(code, ast, scopeManager, () => ({
       '*'(node) {
         starNodes.push(node.type);
       },
@@ -53,10 +55,11 @@ describe('traverse', () => {
   });
 
   it('sets the parent pointers', () => {
-    const {ast, scopeManager} = parseForESLint('const x = 1;');
+    const code = 'const x = 1;';
+    const {ast, scopeManager} = parseForESLint(code);
 
     expect(ast.body[0]).not.toHaveProperty('parent');
-    traverse(ast, scopeManager, () => ({
+    traverse(code, ast, scopeManager, () => ({
       '*'(node) {
         expect(node).toHaveProperty('parent');
         if (node.type === 'Program') {
@@ -71,9 +74,10 @@ describe('traverse', () => {
   });
 
   it('passes an immutable context object', () => {
-    const {ast, scopeManager} = parseForESLint('const x = 1;');
+    const code = 'const x = 1;';
+    const {ast, scopeManager} = parseForESLint(code);
 
-    traverse(ast, scopeManager, context => ({
+    traverse(code, ast, scopeManager, context => ({
       Program() {
         expect(typeof context).toBe('object');
         expect(context).toHaveProperty('getScope');
@@ -86,16 +90,17 @@ describe('traverse', () => {
   });
 
   it('correctly handles scope analysis', () => {
-    const {ast, scopeManager} = parseForESLint(`
+    const code = `
       const x = 1;
       {
         function foo(x) {
           x + 1;
         }
       }
-    `);
+    `;
+    const {ast, scopeManager} = parseForESLint(code);
 
-    traverse(ast, scopeManager, context => ({
+    traverse(code, ast, scopeManager, context => ({
       VariableDeclarator(node) {
         const declaredVariables = context.getDeclaredVariables(node);
         expect(declaredVariables).toHaveLength(1);

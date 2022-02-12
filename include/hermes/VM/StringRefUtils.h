@@ -18,6 +18,7 @@ namespace hermes {
 namespace vm {
 
 using UTF16Ref = llvh::ArrayRef<char16_t>;
+using UTF8Ref = llvh::ArrayRef<uint8_t>;
 using ASCIIRef = llvh::ArrayRef<char>;
 
 /// Convenient alias.

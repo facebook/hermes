@@ -18,7 +18,7 @@ namespace vm {
 // class JSString
 
 const ObjectVTable JSString::vt{
-    VTable(CellKind::StringObjectKind, cellSize<JSString>()),
+    VTable(CellKind::JSStringKind, cellSize<JSString>()),
     JSString::_getOwnIndexedRangeImpl,
     JSString::_haveOwnIndexedImpl,
     JSString::_getOwnIndexedPropertyFlagsImpl,
@@ -28,9 +28,9 @@ const ObjectVTable JSString::vt{
     JSString::_checkAllOwnIndexedImpl,
 };
 
-void StringObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSStringBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSString>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSString *>(cell);
   mb.setVTable(&JSString::vt.base);
   mb.addField(&self->primitiveValue_);
@@ -167,7 +167,7 @@ bool JSString::_deleteOwnIndexedImpl(
 // class JSStringIterator
 
 const ObjectVTable JSStringIterator::vt{
-    VTable(CellKind::StringIteratorKind, cellSize<JSStringIterator>()),
+    VTable(CellKind::JSStringIteratorKind, cellSize<JSStringIterator>()),
     JSStringIterator::_getOwnIndexedRangeImpl,
     JSStringIterator::_haveOwnIndexedImpl,
     JSStringIterator::_getOwnIndexedPropertyFlagsImpl,
@@ -177,9 +177,9 @@ const ObjectVTable JSStringIterator::vt{
     JSStringIterator::_checkAllOwnIndexedImpl,
 };
 
-void StringIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSStringIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSStringIterator>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSStringIterator *>(cell);
   mb.setVTable(&JSStringIterator::vt.base);
   mb.addField("iteratedString", &self->iteratedString_);
@@ -263,7 +263,7 @@ CallResult<HermesValue> JSStringIterator::nextElement(
 // class JSNumber
 
 const ObjectVTable JSNumber::vt{
-    VTable(CellKind::NumberObjectKind, cellSize<JSNumber>()),
+    VTable(CellKind::JSNumberKind, cellSize<JSNumber>()),
     JSNumber::_getOwnIndexedRangeImpl,
     JSNumber::_haveOwnIndexedImpl,
     JSNumber::_getOwnIndexedPropertyFlagsImpl,
@@ -273,9 +273,9 @@ const ObjectVTable JSNumber::vt{
     JSNumber::_checkAllOwnIndexedImpl,
 };
 
-void NumberObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSNumberBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSNumber>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   mb.setVTable(&JSNumber::vt.base);
 }
 
@@ -294,7 +294,7 @@ PseudoHandle<JSNumber> JSNumber::create(
 // class JSBoolean
 
 const ObjectVTable JSBoolean::vt{
-    VTable(CellKind::BooleanObjectKind, cellSize<JSBoolean>()),
+    VTable(CellKind::JSBooleanKind, cellSize<JSBoolean>()),
     JSBoolean::_getOwnIndexedRangeImpl,
     JSBoolean::_haveOwnIndexedImpl,
     JSBoolean::_getOwnIndexedPropertyFlagsImpl,
@@ -304,9 +304,9 @@ const ObjectVTable JSBoolean::vt{
     JSBoolean::_checkAllOwnIndexedImpl,
 };
 
-void BooleanObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSBooleanBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSBoolean>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   mb.setVTable(&JSBoolean::vt.base);
 }
 
@@ -323,7 +323,7 @@ JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
 // class JSSymbol
 
 const ObjectVTable JSSymbol::vt{
-    VTable(CellKind::SymbolObjectKind, cellSize<JSSymbol>()),
+    VTable(CellKind::JSSymbolKind, cellSize<JSSymbol>()),
     _getOwnIndexedRangeImpl,
     _haveOwnIndexedImpl,
     _getOwnIndexedPropertyFlagsImpl,
@@ -333,9 +333,9 @@ const ObjectVTable JSSymbol::vt{
     _checkAllOwnIndexedImpl,
 };
 
-void SymbolObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSSymbolBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSSymbol>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSSymbol *>(cell);
   mb.setVTable(&JSSymbol::vt.base);
   mb.addField(&self->primitiveValue_);

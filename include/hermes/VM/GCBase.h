@@ -57,7 +57,7 @@ struct WeakRefKey;
 }
 template <CellKind C>
 class JSWeakMapImpl;
-using JSWeakMap = JSWeakMapImpl<CellKind::WeakMapKind>;
+using JSWeakMap = JSWeakMapImpl<CellKind::JSWeakMapKind>;
 
 class GCCell;
 

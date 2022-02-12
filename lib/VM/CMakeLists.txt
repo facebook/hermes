@@ -26,6 +26,7 @@ set(source_files
   Interpreter.cpp InstLayout.inc Interpreter-slowpaths.cpp
   JSArray.cpp
   JSArrayBuffer.cpp
+  JSCallSite.cpp
   JSCallableProxy.cpp
   JSDataView.cpp
   JSDate.cpp
@@ -75,6 +76,7 @@ set(source_files
   JSLib/ArrayBuffer.cpp
   JSLib/ArrayIterator.cpp
   JSLib/AsyncFunction.cpp
+  JSLib/CallSite.cpp
   JSLib/DataView.cpp
   JSLib/TypedArray.cpp
   JSLib/Error.cpp

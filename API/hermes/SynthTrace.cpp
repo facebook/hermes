@@ -334,8 +334,9 @@ bool SynthTrace::CreatePropNameIDRecord::operator==(const Record &that) const {
     return false;
   }
   auto &thatCasted = dynamic_cast<const CreatePropNameIDRecord &>(that);
-  return propNameID_ == thatCasted.propNameID_ && ascii_ == thatCasted.ascii_ &&
-      chars_ == thatCasted.chars_;
+  return propNameID_ == thatCasted.propNameID_ &&
+      valueType_ == thatCasted.valueType_ &&
+      traceValue_ == thatCasted.traceValue_ && chars_ == thatCasted.chars_;
 }
 
 bool SynthTrace::CreateHostFunctionRecord::operator==(
@@ -513,8 +514,12 @@ void SynthTrace::CreatePropNameIDRecord::toJSONInternal(
     JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", propNameID_);
-  json.emitKeyValue("encoding", encodingName(ascii_));
-  json.emitKeyValue("chars", llvh::StringRef(chars_.data(), chars_.size()));
+  if (valueType_ == TRACEVALUE)
+    json.emitKeyValue("value", encode(traceValue_));
+  else {
+    json.emitKeyValue("encoding", encodingName(valueType_ == ASCII));
+    json.emitKeyValue("chars", llvh::StringRef(chars_.data(), chars_.size()));
+  }
 }
 
 void SynthTrace::CreateHostFunctionRecord::toJSONInternal(

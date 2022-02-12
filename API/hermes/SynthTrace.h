@@ -497,7 +497,8 @@ class SynthTrace {
     static constexpr RecordType type{RecordType::CreatePropNameID};
     const ObjectID propNameID_;
     std::string chars_;
-    bool ascii_;
+    const TraceValue traceValue_{TraceValue::encodeUndefinedValue()};
+    enum ValueType { ASCII, UTF8, TRACEVALUE } valueType_;
 
     // General UTF-8.
     CreatePropNameIDRecord(
@@ -508,7 +509,7 @@ class SynthTrace {
         : Record(time),
           propNameID_(propNameID),
           chars_(reinterpret_cast<const char *>(chars), length),
-          ascii_(false) {}
+          valueType_(UTF8) {}
     // Ascii.
     CreatePropNameIDRecord(
         TimeSinceStart time,
@@ -518,17 +519,16 @@ class SynthTrace {
         : Record(time),
           propNameID_(propNameID),
           chars_(chars, length),
-          ascii_(true) {}
-    // std::string
+          valueType_(ASCII) {}
+    // jsi::String.
     CreatePropNameIDRecord(
         TimeSinceStart time,
         ObjectID propNameID,
-        std::string &&chars,
-        bool isAscii)
+        TraceValue traceValue)
         : Record(time),
           propNameID_(propNameID),
-          chars_(std::move(chars)),
-          ascii_(isAscii) {}
+          traceValue_(traceValue),
+          valueType_(TRACEVALUE) {}
 
     bool operator==(const Record &that) const override;
 
@@ -542,7 +542,9 @@ class SynthTrace {
     }
 
     std::vector<ObjectID> uses() const override {
-      return {};
+      std::vector<ObjectID> vec;
+      pushIfTrackedValue(traceValue_, vec);
+      return vec;
     }
   };
 

@@ -15,6 +15,7 @@
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringView.h"
+#include "llvh/Support/ConvertUTF.h"
 
 namespace hermes {
 namespace vm {
@@ -103,6 +104,67 @@ CallResult<HermesValue> StringPrimitive::createEfficient(
     Runtime *runtime,
     ASCIIRef str) {
   return createEfficientImpl(runtime, str);
+}
+
+static ExecutionStatus convertUtf8ToUtf16(
+    Runtime *runtime,
+    UTF8Ref utf8,
+    bool IgnoreInputErrors,
+    std::u16string &out) {
+  out.resize(utf8.size());
+  const llvh::UTF8 *sourceStart = (const llvh::UTF8 *)utf8.data();
+  const llvh::UTF8 *sourceEnd = sourceStart + utf8.size();
+  llvh::UTF16 *targetStart = (llvh::UTF16 *)&out[0];
+  llvh::UTF16 *targetEnd = targetStart + out.size();
+  llvh::ConversionResult cRes = llvh::ConvertUTF8toUTF16(
+      &sourceStart,
+      sourceEnd,
+      &targetStart,
+      targetEnd,
+      llvh::lenientConversion);
+  switch (cRes) {
+    case llvh::ConversionResult::sourceExhausted:
+      if (IgnoreInputErrors) {
+        break;
+      }
+      return runtime->raiseRangeError(
+          "Malformed UTF8 input: partial character in input");
+    case llvh::ConversionResult::sourceIllegal:
+      if (IgnoreInputErrors) {
+        break;
+      }
+      return runtime->raiseRangeError("Malformed UTF8 input: illegal sequence");
+    case llvh::ConversionResult::conversionOK:
+      break;
+    case llvh::ConversionResult::targetExhausted:
+      return runtime->raiseRangeError(
+          "Cannot allocate memory for UTF8 to UTF16 conversion.");
+  }
+
+  out.resize((char16_t *)targetStart - &out[0]);
+  return ExecutionStatus::RETURNED;
+}
+
+CallResult<HermesValue> StringPrimitive::createEfficient(
+    Runtime *runtime,
+    UTF8Ref str,
+    bool IgnoreInputErrors) {
+  const uint8_t *utf8 = str.data();
+  const size_t length = str.size();
+  if (isAllASCII(utf8, utf8 + length)) {
+    const char *ascii = reinterpret_cast<const char *>(utf8);
+    return StringPrimitive::createEfficient(
+        runtime, llvh::makeArrayRef(ascii, length));
+  }
+
+  std::u16string out;
+  ExecutionStatus cRes =
+      convertUtf8ToUtf16(runtime, str, IgnoreInputErrors, out);
+  if (LLVM_UNLIKELY(cRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return StringPrimitive::createEfficient(runtime, std::move(out));
 }
 
 CallResult<HermesValue> StringPrimitive::createEfficient(

@@ -50,13 +50,23 @@ Handle<JSObject> createErrorConstructor(Runtime *runtime) {
       Predefined::getSymbolID(Predefined::message),
       runtime->makeHandle(HermesValue::encodeStringValue(defaultMessage)));
 
-  return defineSystemConstructor<JSError>(
+  auto cons = defineSystemConstructor<JSError>(
       runtime,
       Predefined::getSymbolID(Predefined::Error),
       ErrorConstructor,
       errorPrototype,
       1,
-      CellKind::ErrorKind);
+      CellKind::JSErrorKind);
+
+  defineMethod(
+      runtime,
+      cons,
+      Predefined::getSymbolID(Predefined::captureStackTrace),
+      nullptr,
+      errorCaptureStackTrace,
+      2);
+
+  return cons;
 }
 
 // The constructor creation functions have to be expanded from macros because
@@ -84,7 +94,7 @@ Handle<JSObject> createErrorConstructor(Runtime *runtime) {
         Handle<JSObject>::vmcast(&runtime->errorConstructor),                \
         1,                                                                   \
         NativeConstructor::creatorFunction<JSError>,                         \
-        CellKind::ErrorKind);                                                \
+        CellKind::JSErrorKind);                                              \
   }
 #include "hermes/VM/NativeErrorTypes.def"
 
@@ -103,9 +113,18 @@ static CallResult<HermesValue> constructErrorObject(
   }
 
   // Record the stack trace, skipping this entry.
-  JSError::recordStackTrace(selfHandle, runtime, true);
+  if (LLVM_UNLIKELY(
+          JSError::recordStackTrace(selfHandle, runtime, true) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
   // Initialize stack accessor.
-  JSError::setupStack(selfHandle, runtime);
+  if (LLVM_UNLIKELY(
+          JSError::setupStack(selfHandle, runtime) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
 
   // new Error(message).
   // Only proceed when 'typeof message' isn't undefined.
@@ -251,6 +270,83 @@ errorPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   builder.appendASCIIRef({": ", 2});
   builder.appendStringPrim(msgStr);
   return builder.getStringPrimitive().getHermesValue();
+}
+
+/// captureStackTrace(target, sentinelOpt?) { ... }
+///
+/// Adds a `stack` getter to the given `target` object that yields the current
+/// stack trace. This is the exact same getter as the one available on Error
+/// instances.
+///
+/// If the second argument to captureStackTrace is a function, when collecting
+/// the stack trace all frames above the topmost call to the provided function,
+/// including that call, are left out of the stack trace.
+CallResult<HermesValue>
+errorCaptureStackTrace(void *, Runtime *runtime, NativeArgs args) {
+  // Get the target object.
+  auto targetHandle = args.dyncastArg<JSObject>(0);
+  if (!targetHandle) {
+    return runtime->raiseTypeError("Invalid argument");
+  }
+
+  // Before we perform any side effects, check that we're going to be able to
+  // add the `stack` accessor to the target object.
+  // This provides a better error message than `Cannot add new property ''`
+  // which would otherwise happen when we try to add [[CapturedError]].
+  if (LLVM_UNLIKELY(!targetHandle->isExtensible())) {
+    return runtime->raiseTypeError(
+        // NOTE: Using string concatenation here so that we only refer to
+        // strings which already exist in Hermes.
+        TwineChar16("Cannot add new property '") + "stack" + "'");
+  }
+
+  // Construct a temporary Error instance.
+  auto errorPrototype = Handle<JSError>::vmcast(&runtime->ErrorPrototype);
+  auto errorHandle =
+      runtime->makeHandle(JSError::create(runtime, errorPrototype));
+
+  // Record the stack trace, skipping the entry for captureStackTrace itself.
+  const bool skipTopFrame = true;
+  JSError::recordStackTrace(errorHandle, runtime, skipTopFrame);
+
+  // Skip frames until and including the sentinel function, if any.
+  if (auto sentinel = args.dyncastArg<Callable>(1)) {
+    JSError::popFramesUntilInclusive(runtime, errorHandle, sentinel);
+  }
+
+  // Initialize the target's [[CapturedError]] slot with the error instance.
+  DefinePropertyFlags dpf;
+  dpf.setEnumerable = 1;
+  dpf.enumerable = 0;
+  dpf.setValue = 1;
+  dpf.setConfigurable = 1;
+  dpf.configurable = 0;
+  dpf.setWritable = 1;
+  dpf.writable = 1;
+  auto res = JSObject::defineOwnProperty(
+      targetHandle,
+      runtime,
+      Predefined::getSymbolID(Predefined::InternalPropertyCapturedError),
+      dpf,
+      errorHandle);
+  assert(
+      res != ExecutionStatus::EXCEPTION && *res &&
+      "failed to set [[CapturedError]]");
+
+  // Even though highly unlikely, something could have happened that caused
+  // defineOwnProperty to throw an exception.
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // Initialize the `stack` accessor on the target object.
+  if (LLVM_UNLIKELY(
+          JSError::setupStack(targetHandle, runtime) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return HermesValue::encodeUndefinedValue();
 }
 
 } // namespace vm

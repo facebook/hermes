@@ -17,7 +17,7 @@ namespace vm {
 const VTable FillerCell::vt{CellKind::FillerCellKind, 0};
 
 void UninitializedBuildMeta(const GCCell *, Metadata::Builder &mb) {
-  const static VTable vt{CellKind::UninitializedKind, 0};
+  static VTable vt{CellKind::UninitializedKind, 0};
   mb.setVTable(&vt);
 }
 void FillerCellBuildMeta(const GCCell *, Metadata::Builder &mb) {

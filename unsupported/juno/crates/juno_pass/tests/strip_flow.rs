@@ -434,6 +434,7 @@ fn assert_strip(input: &str, expected: &str) {
         &mut ctx_input,
         &ast_transformed,
         gen_js::Pretty::Yes,
+        gen_js::Annotation::No,
     )
     .unwrap();
 
@@ -443,6 +444,7 @@ fn assert_strip(input: &str, expected: &str) {
         &mut ctx_expected,
         &ast_expected,
         gen_js::Pretty::Yes,
+        gen_js::Annotation::No,
     )
     .unwrap();
 

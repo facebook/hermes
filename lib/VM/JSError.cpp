@@ -11,10 +11,14 @@
 #include "hermes/Support/OptValue.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Callable.h"
+#include "hermes/VM/JSArray.h"
+#include "hermes/VM/JSCallSite.h"
 #include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringView.h"
+
+#include "llvh/ADT/ScopeExit.h"
 
 namespace hermes {
 namespace vm {
@@ -23,7 +27,7 @@ namespace vm {
 
 const ObjectVTable JSError::vt{
     VTable(
-        CellKind::ErrorKind,
+        CellKind::JSErrorKind,
         cellSize<JSError>(),
         JSError::_finalizeImpl,
         nullptr,
@@ -37,24 +41,49 @@ const ObjectVTable JSError::vt{
     JSError::_checkAllOwnIndexedImpl,
 };
 
-void ErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSError>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSError *>(cell);
   mb.setVTable(&JSError::vt.base);
   mb.addField("funcNames", &self->funcNames_);
   mb.addField("domains", &self->domains_);
 }
 
+CallResult<Handle<JSError>> JSError::getErrorFromStackTarget(
+    Runtime *runtime,
+    Handle<JSObject> targetHandle) {
+  if (targetHandle) {
+    auto capturedErrorRes = JSObject::getNamed_RJS(
+        targetHandle,
+        runtime,
+        Predefined::getSymbolID(Predefined::InternalPropertyCapturedError));
+    if (capturedErrorRes == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto capturedErrorHandle =
+        runtime->makeHandle(std::move(*capturedErrorRes));
+    auto errorHandle = Handle<JSError>::dyn_vmcast(
+        capturedErrorHandle ? capturedErrorHandle : targetHandle);
+    if (errorHandle) {
+      return errorHandle;
+    }
+  }
+  return runtime->raiseTypeError(
+      "Error.stack getter called with an invalid receiver");
+}
+
 CallResult<HermesValue>
 errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSError>();
-  if (!selfHandle) {
-    return runtime->raiseTypeError(
-        "Error.stack accessor 'this' must be an instance of 'Error'");
-  }
+  GCScope gcScope(runtime);
 
-  if (!selfHandle->stacktrace_) {
+  auto targetHandle = args.dyncastThis<JSObject>();
+  auto errorHandleRes = JSError::getErrorFromStackTarget(runtime, targetHandle);
+  if (errorHandleRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto errorHandle = *errorHandleRes;
+  if (!errorHandle->stacktrace_) {
     // Stacktrace has not been set, we simply return empty string.
     // This is different from other VMs where stacktrace is created when
     // the error object is created. We only set it when the error
@@ -66,40 +95,76 @@ errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
   // RangeError.  Allow ourselves a little extra room to do this.
   vm::ScopedNativeDepthReducer reducer(runtime);
   SmallU16String<32> stack;
-  if (JSError::constructStackTraceString(runtime, selfHandle, stack) ==
-      ExecutionStatus::EXCEPTION) {
+
+  auto errorCtor = Handle<JSObject>::vmcast(&runtime->errorConstructor);
+
+  auto prepareStackTraceRes = JSObject::getNamed_RJS(
+      errorCtor,
+      runtime,
+      Predefined::getSymbolID(Predefined::prepareStackTrace),
+      PropOpFlags().plusThrowOnError());
+
+  if (prepareStackTraceRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
 
-// After the stacktrace string is constructed, only the debugger may want the
-// internal stacktrace_; if there is no debugger it can be freed. We no longer
-// need the accessor. Redefines the stack property to a regular property.
-#ifndef HERMES_ENABLE_DEBUGGER
-  selfHandle->stacktrace_.reset();
-#endif
+  MutableHandle<> stackTraceFormatted{runtime};
 
-  MutableHandle<> stacktraceStr{runtime};
-  auto strRes = StringPrimitive::create(runtime, stack);
-  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
-    // StringPrimitive creation can throw if the stacktrace string is too long.
-    // In that case, we replace it with a predefined string.
-    stacktraceStr = HermesValue::encodeStringValue(
-        runtime->getPredefinedString(Predefined::stacktraceTooLong));
-    runtime->clearThrownValue();
+  auto prepareStackTrace = Handle<Callable>::dyn_vmcast(
+      runtime->makeHandle(std::move(*prepareStackTraceRes)));
+  if (LLVM_UNLIKELY(prepareStackTrace && !runtime->formattingStackTrace())) {
+    const auto &recursionGuard = llvh::make_scope_exit(
+        [=]() { runtime->setFormattingStackTrace(false); });
+    (void)recursionGuard;
+
+    runtime->setFormattingStackTrace(true);
+
+    auto callSitesRes = JSError::constructCallSitesArray(runtime, errorHandle);
+
+    if (LLVM_UNLIKELY(callSitesRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto prepareRes = Callable::executeCall2(
+        prepareStackTrace,
+        runtime,
+        runtime->getNullValue(),
+        targetHandle.getHermesValue(),
+        *callSitesRes);
+    if (LLVM_UNLIKELY(prepareRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    stackTraceFormatted = std::move(*prepareRes);
   } else {
-    stacktraceStr = *strRes;
+    if (JSError::constructStackTraceString(
+            runtime, errorHandle, targetHandle, stack) ==
+        ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    auto strRes = StringPrimitive::create(runtime, stack);
+    if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+      // StringPrimitive creation can throw if the stacktrace string is too
+      // long. In that case, we replace it with a predefined string.
+      stackTraceFormatted = HermesValue::encodeStringValue(
+          runtime->getPredefinedString(Predefined::stacktraceTooLong));
+      runtime->clearThrownValue();
+    } else {
+      stackTraceFormatted = std::move(*strRes);
+    }
   }
 
+  // We no longer need the accessor. Redefine the stack property to a regular
+  // property.
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
   if (JSObject::defineOwnProperty(
-          selfHandle,
+          targetHandle,
           runtime,
           Predefined::getSymbolID(Predefined::stack),
           dpf,
-          stacktraceStr) == ExecutionStatus::EXCEPTION) {
+          stackTraceFormatted) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  return stacktraceStr.getHermesValue();
+  return *stackTraceFormatted;
 }
 
 CallResult<HermesValue>
@@ -150,8 +215,14 @@ PseudoHandle<JSError> JSError::create(
 }
 
 ExecutionStatus JSError::setupStack(
-    Handle<JSError> selfHandle,
+    Handle<JSObject> selfHandle,
     Runtime *runtime) {
+  assert(
+      JSError::getErrorFromStackTarget(runtime, selfHandle) !=
+          ExecutionStatus::EXCEPTION &&
+      "setupStack requires a valid stack target: either JSError, or JSObject "
+      "with InternalPropertyCapturedError set");
+
   // Lazily allocate the accessor.
   if (runtime->jsErrorStackAccessor.isUndefined()) {
     // This code path allocates quite a few handles, so make sure we
@@ -403,7 +474,7 @@ ExecutionStatus JSError::recordStackTrace(
 }
 
 /// Given a codeblock and opcode offset, \returns the debug information.
-static OptValue<hbc::DebugSourceLocation> getDebugInfo(
+OptValue<hbc::DebugSourceLocation> JSError::getDebugInfo(
     CodeBlock *codeBlock,
     uint32_t bytecodeOffset) {
   auto offset = codeBlock->getDebugSourceLocationsOffset();
@@ -417,11 +488,10 @@ static OptValue<hbc::DebugSourceLocation> getDebugInfo(
       ->getLocationForAddress(offset.getValue(), bytecodeOffset);
 }
 
-bool JSError::appendFunctionNameAtIndex(
+Handle<StringPrimitive> JSError::getFunctionNameAtIndex(
     Runtime *runtime,
     Handle<JSError> selfHandle,
-    size_t index,
-    llvh::SmallVectorImpl<char16_t> &str) {
+    size_t index) {
   IdentifierTable &idt = runtime->getIdentifierTable();
   MutableHandle<StringPrimitive> name{
       runtime, runtime->getPredefinedString(Predefined::emptyString)};
@@ -445,7 +515,21 @@ bool JSError::appendFunctionNameAtIndex(
     }
   }
 
-  if (!name || name->getStringLength() == 0)
+  if (!name || name->getStringLength() == 0) {
+    return runtime->makeNullHandle<StringPrimitive>();
+  }
+
+  return std::move(name);
+}
+
+bool JSError::appendFunctionNameAtIndex(
+    Runtime *runtime,
+    Handle<JSError> selfHandle,
+    size_t index,
+    llvh::SmallVectorImpl<char16_t> &str) {
+  auto name = getFunctionNameAtIndex(runtime, selfHandle, index);
+
+  if (!name)
     return false;
 
   name->appendUTF16String(str);
@@ -455,10 +539,11 @@ bool JSError::appendFunctionNameAtIndex(
 ExecutionStatus JSError::constructStackTraceString(
     Runtime *runtime,
     Handle<JSError> selfHandle,
+    Handle<JSObject> targetHandle,
     SmallU16String<32> &stack) {
   GCScope gcScope(runtime);
-  // First of all, the stacktrace string starts with error.toString.
-  auto res = toString_RJS(runtime, selfHandle);
+  // First of all, the stacktrace string starts with target.toString.
+  auto res = toString_RJS(runtime, targetHandle);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     if (isUncatchableError(runtime->getThrownValue())) {
       // If toString throws an uncatchable exception, propagate it up.
@@ -482,7 +567,10 @@ ExecutionStatus JSError::constructStackTraceString(
 
   // Append each function location in the call stack to stack trace.
   auto marker = gcScope.createMarker();
-  for (size_t index = 0, max = selfHandle->stacktrace_->size(); index < max;
+  for (size_t index = 0,
+              max = selfHandle->stacktrace_->size() -
+           selfHandle->firstExposedFrameIndex_;
+       index < max;
        index++) {
     char buf[NUMBER_TO_STRING_BUF_SIZE];
 
@@ -505,14 +593,15 @@ ExecutionStatus JSError::constructStackTraceString(
       }
     }
 
-    const StackTraceInfo &sti = selfHandle->stacktrace_->at(index);
+    const size_t absIndex = index + selfHandle->firstExposedFrameIndex_;
+    const StackTraceInfo &sti = selfHandle->stacktrace_->at(absIndex);
     gcScope.flushToMarker(marker);
     // For each stacktrace entry, we add a line with the following format:
     // at <functionName> (<fileName>:<lineNo>:<columnNo>)
 
     stack.append(u"\n    at ");
 
-    if (!appendFunctionNameAtIndex(runtime, selfHandle, index, stack))
+    if (!appendFunctionNameAtIndex(runtime, selfHandle, absIndex, stack))
       stack.append(u"anonymous");
 
     // If we have a null codeBlock, it's a native function, which do not have
@@ -585,6 +674,98 @@ ExecutionStatus JSError::constructStackTraceString(
     stack.push_back(u')');
   }
   return ExecutionStatus::RETURNED;
+}
+
+CallResult<HermesValue> JSError::constructCallSitesArray(
+    Runtime *runtime,
+    Handle<JSError> selfHandle) {
+  auto max = selfHandle->stacktrace_
+      ? selfHandle->stacktrace_->size() - selfHandle->firstExposedFrameIndex_
+      : 0;
+  auto arrayRes = JSArray::create(runtime, max, 0);
+  if (LLVM_UNLIKELY(arrayRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  auto array = std::move(*arrayRes);
+  if (!selfHandle->stacktrace_) {
+    return array.getHermesValue();
+  }
+
+  size_t callSiteIndex = 0;
+
+  GCScope gcScope(runtime);
+  auto marker = gcScope.createMarker();
+
+  for (size_t index = 0; index < max; index++) {
+    // TODO: truncate traces? Support Error.stackTraceLimit?
+    // Problem: The CallSite API doesn't provide a way to denote skipped frames.
+    // V8 truncates bottom frames (and adds no marker) while we truncate middle
+    // frames (and in string traces, add a marker with a count).
+
+    auto absIndex = index + selfHandle->firstExposedFrameIndex_;
+
+    // Each CallSite stores a reference to this JSError and a particular frame
+    // index, and provides methods for querying information about that frame.
+    auto callSiteRes = JSCallSite::create(runtime, selfHandle, absIndex);
+    if (callSiteRes == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto callSite = runtime->makeHandle(*callSiteRes);
+
+    JSArray::setElementAt(array, runtime, callSiteIndex++, callSite);
+
+    gcScope.flushToMarker(marker);
+  }
+
+  auto cr =
+      JSArray::setLengthProperty(array, runtime, callSiteIndex, PropOpFlags{});
+  (void)cr;
+  assert(
+      cr != ExecutionStatus::EXCEPTION && *cr && "JSArray::setLength() failed");
+
+  return array.getHermesValue();
+}
+
+/// \return the code block associated with \p callableHandle if it is a
+/// (possibly bound) function, or nullptr otherwise.
+static const CodeBlock *getLeafCodeBlock(
+    Handle<Callable> callableHandle,
+    Runtime *runtime) {
+  const Callable *callable = callableHandle.get();
+  while (callable) {
+    if (auto *asFunction = dyn_vmcast<const JSFunction>(callable)) {
+      return asFunction->getCodeBlock();
+    }
+    if (auto *asBoundFunction = dyn_vmcast<const BoundFunction>(callable)) {
+      callable = asBoundFunction->getTarget(runtime);
+    }
+  }
+
+  return nullptr;
+}
+
+void JSError::popFramesUntilInclusive(
+    Runtime *runtime,
+    Handle<JSError> selfHandle,
+    Handle<Callable> callableHandle) {
+  assert(
+      selfHandle->stacktrace_ && "Cannot pop frames when stacktrace_ is null");
+  auto codeBlock = getLeafCodeBlock(callableHandle, runtime);
+  if (!codeBlock) {
+    return;
+  }
+  // By default, assume we won't encounter the sentinel function and skip the
+  // entire stack.
+  selfHandle->firstExposedFrameIndex_ = selfHandle->stacktrace_->size();
+  for (size_t index = 0, max = selfHandle->stacktrace_->size(); index < max;
+       index++) {
+    const StackTraceInfo &sti = selfHandle->stacktrace_->at(index);
+    if (sti.codeBlock == codeBlock) {
+      selfHandle->firstExposedFrameIndex_ = index + 1;
+      break;
+    }
+  }
 }
 
 void JSError::_finalizeImpl(GCCell *cell, GC *) {

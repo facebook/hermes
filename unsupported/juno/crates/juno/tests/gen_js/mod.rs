@@ -13,7 +13,7 @@ use juno::sourcemap::merge_sourcemaps;
 fn do_gen<'ast>(ctx: &mut Context<'ast>, node: &NodeRc, pretty: gen_js::Pretty) -> String {
     use juno::gen_js::*;
     let mut out: Vec<u8> = vec![];
-    generate(&mut out, ctx, node, pretty).unwrap();
+    generate(&mut out, ctx, node, pretty, Annotation::No).unwrap();
     String::from_utf8(out).expect("Invalid UTF-8 output in test")
 }
 
@@ -544,7 +544,7 @@ fn test_sourcemap() {
     let mut ctx = Context::new();
     let ast1: NodeRc = hparser::parse(&mut ctx, "function foo() { return 1 }").unwrap();
     let mut out: Vec<u8> = vec![];
-    let sourcemap = generate(&mut out, &mut ctx, &ast1, Pretty::Yes).unwrap();
+    let sourcemap = generate(&mut out, &mut ctx, &ast1, Pretty::Yes, Annotation::No).unwrap();
     let string = String::from_utf8(out).expect("Invalid UTF-8 output in test");
     assert_eq!(
         string,
@@ -626,7 +626,7 @@ fn test_sourcemap_merged() {
     .unwrap();
     let mut out: Vec<u8> = vec![];
     let node = hparser::parse_with_flags(Default::default(), input_src, ctx).unwrap();
-    let output_map = generate(&mut out, ctx, &node, Pretty::Yes).unwrap();
+    let output_map = generate(&mut out, ctx, &node, Pretty::Yes, Annotation::No).unwrap();
     let output = String::from_utf8(out).expect("Invalid UTF-8 output in test");
     assert_eq!(output, "function foo() {\n  1;\n}\n",);
 

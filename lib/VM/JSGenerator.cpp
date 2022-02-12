@@ -16,7 +16,7 @@ namespace vm {
 // class JSGenerator
 
 const ObjectVTable JSGenerator::vt{
-    VTable(CellKind::GeneratorKind, cellSize<JSGenerator>()),
+    VTable(CellKind::JSGeneratorKind, cellSize<JSGenerator>()),
     JSGenerator::_getOwnIndexedRangeImpl,
     JSGenerator::_haveOwnIndexedImpl,
     JSGenerator::_getOwnIndexedPropertyFlagsImpl,
@@ -26,9 +26,9 @@ const ObjectVTable JSGenerator::vt{
     JSGenerator::_checkAllOwnIndexedImpl,
 };
 
-void GeneratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSGeneratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSGenerator>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSGenerator *>(cell);
   mb.setVTable(&JSGenerator::vt.base);
   mb.addField("innerFunction", &self->innerFunction_);

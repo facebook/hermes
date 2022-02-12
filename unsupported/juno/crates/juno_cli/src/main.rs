@@ -9,6 +9,7 @@ use anyhow::{self, ensure, Context, Error};
 use command_line::{CommandLine, Hidden, Opt, OptDesc};
 use juno::ast::{self, node_cast, validate_tree, NodeRc, SourceRange};
 use juno::hparser::{self, MagicCommentKind, ParsedJS, ParserDialect};
+use juno::sema::SemContext;
 use juno::sourcemap::merge_sourcemaps;
 use juno::{gen_js, resolve_dependency, sema};
 use juno_pass::PassManager;
@@ -26,10 +27,14 @@ use url::{self, Url};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum Gen {
+    /// Dump the Semantic resolution information.
+    Sema,
     /// Dump the AST as JSON.
     Ast,
     /// Generate JavaScript source.
     Js,
+    /// Generate JavaScript source with annotations about variable resolution.
+    ResolvedJs,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -113,8 +118,14 @@ impl Options {
                 OptDesc {
                     desc: Some("Choose generated output:"),
                     values: Some(&[
+                        ("gen-sema", Gen::Sema, "Dump the Sema data."),
                         ("gen-ast", Gen::Ast, "Dump the AST as JSON."),
                         ("gen-js", Gen::Js, "Generate JavaScript source."),
+                        (
+                            "gen-resolved-js",
+                            Gen::ResolvedJs,
+                            "Generate resolution information.",
+                        ),
                     ]),
                     category: output_cat,
                     ..Default::default()
@@ -343,6 +354,7 @@ fn script_to_module<'gc>(
 fn gen_output(
     opt: &Options,
     ctx: &mut ast::Context,
+    sem: Option<&SemContext>,
     root: NodeRc,
     input_map: &Option<SourceMap>,
 ) -> anyhow::Result<bool> {
@@ -365,44 +377,55 @@ fn gen_output(
         final_ast
     };
 
-    if *opt.gen == Gen::Ast {
-        ast::dump_json(
-            out,
-            ctx,
-            &final_ast,
-            if !*opt.pretty {
-                ast::Pretty::No
-            } else {
-                ast::Pretty::Yes
-            },
-        )?;
-        Ok(true)
-    } else if *opt.gen == Gen::Js {
-        let generated_map = gen_js::generate(
-            out,
-            ctx,
-            &final_ast,
-            if !*opt.pretty {
-                gen_js::Pretty::No
-            } else {
-                gen_js::Pretty::Yes
-            },
-        )?;
-        if *opt.sourcemap {
-            // Workaround because `PathBuf` doesn't have a way to append an extension,
-            // only to replace the existing one.
-            let mut path = output_path.clone().into_os_string();
-            path.push(".map");
-            let sourcemap_file = File::create(PathBuf::from(path))?;
-            let merged_map = match input_map {
-                None => generated_map,
-                Some(input_map) => merge_sourcemaps(input_map, &generated_map),
-            };
-            merged_map.to_writer(sourcemap_file)?;
+    match *opt.gen {
+        Gen::Ast => {
+            ast::dump_json(
+                out,
+                ctx,
+                &final_ast,
+                if !*opt.pretty {
+                    ast::Pretty::No
+                } else {
+                    ast::Pretty::Yes
+                },
+            )?;
+            Ok(true)
         }
-        Ok(true)
-    } else {
-        Ok(false)
+        Gen::Js | Gen::ResolvedJs => {
+            let generated_map = gen_js::generate(
+                out,
+                ctx,
+                &final_ast,
+                if !*opt.pretty {
+                    gen_js::Pretty::No
+                } else {
+                    gen_js::Pretty::Yes
+                },
+                match sem {
+                    Some(sem) if *opt.gen == Gen::ResolvedJs => gen_js::Annotation::Sem(sem),
+                    _ => gen_js::Annotation::No,
+                },
+            )?;
+            if *opt.sourcemap {
+                // Workaround because `PathBuf` doesn't have a way to append an extension,
+                // only to replace the existing one.
+                let mut path = output_path.clone().into_os_string();
+                path.push(".map");
+                let sourcemap_file = File::create(PathBuf::from(path))?;
+                let merged_map = match input_map {
+                    None => generated_map,
+                    Some(input_map) => merge_sourcemaps(input_map, &generated_map),
+                };
+                merged_map.to_writer(sourcemap_file)?;
+            }
+            Ok(true)
+        }
+        Gen::Sema => {
+            if let Some(sem) = sem {
+                sem.dump(&ast::GCLock::new(ctx));
+            }
+            Ok(true)
+        }
     }
 }
 
@@ -519,7 +542,7 @@ fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
 
     if js_modules.len() == 1 {
         let js_module = js_modules.into_values().next().unwrap();
-        if *opt.sema {
+        let sem = if *opt.sema {
             let lock = ast::GCLock::new(&mut ctx);
             let sem = sema::resolve_program(&lock, js_module.id, js_module.ast.node(&lock));
             println!(
@@ -531,18 +554,20 @@ fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
                 return Ok(TransformStatus::Error);
             }
 
-            println!("{:7} functions", sem.all_functions().len());
-            println!("{:7} lexical scopes", sem.all_scopes().len());
-            println!("{:7} declarations", sem.all_decls().len());
-            println!("{:7} ident resolutions", sem.all_ident_decls().len());
-            println!();
             timer.mark("Sema");
-            drop(sem);
-            timer.mark("Drop Sema");
-        }
+            Some(sem)
+        } else {
+            None
+        };
 
         // Generate output.
-        if gen_output(opt, &mut ctx, js_module.ast, &js_module.source_map)? {
+        if gen_output(
+            opt,
+            &mut ctx,
+            sem.as_ref(),
+            js_module.ast,
+            &js_module.source_map,
+        )? {
             timer.mark("Gen");
         }
     } else {
@@ -552,27 +577,26 @@ fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
             let mut sems = Vec::new();
             let resolver = resolve_dependency::DefaultResolver::new(ctx.sm());
             for module in js_modules.into_values() {
-                let lock = ast::GCLock::new(&mut ctx);
-                let sem = sema::resolve_module(&lock, module.ast.node(&lock), module.id, &resolver);
+                let sem;
+                {
+                    let lock = ast::GCLock::new(&mut ctx);
+                    sem = sema::resolve_module(&lock, module.ast.node(&lock), module.id, &resolver);
 
-                let source_name = lock.sm().source_name(module.id);
-                println!("Module: {}", source_name);
-                println!(
-                    "{} error(s), {} warning(s)",
-                    lock.sm().num_errors(),
-                    lock.sm().num_warnings()
-                );
-                if lock.sm().num_errors() != 0 {
-                    return Ok(TransformStatus::Error);
+                    let source_name = lock.sm().source_name(module.id);
+                    println!("Module: {}", source_name);
+                    println!(
+                        "{} error(s), {} warning(s)",
+                        lock.sm().num_errors(),
+                        lock.sm().num_warnings()
+                    );
+                    if lock.sm().num_errors() != 0 {
+                        return Ok(TransformStatus::Error);
+                    }
                 }
-
-                println!("{:7} functions", sem.all_functions().len());
-                println!("{:7} lexical scopes", sem.all_scopes().len());
-                println!("{:7} declarations", sem.all_decls().len());
-                println!("{:7} ident resolutions", sem.all_ident_decls().len());
-                println!("{:7} require resolutions", sem.all_requires().len());
-                println!();
-
+                // Generate output.
+                if gen_output(opt, &mut ctx, Some(&sem), module.ast, &module.source_map)? {
+                    timer.mark("Gen");
+                }
                 sems.push(sem);
             }
             timer.mark("Sema");

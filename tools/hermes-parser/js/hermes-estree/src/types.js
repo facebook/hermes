@@ -155,6 +155,7 @@ export type ESNode =
   | InterfaceExtends
   | ClassProperty
   | ClassPrivateProperty
+  | PrivateName
   | ClassImplements
   | Decorator
   | TypeParameterDeclaration

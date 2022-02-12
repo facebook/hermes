@@ -88,7 +88,7 @@ export function parseAndGetAstAndNode<T: ESNode = ESNode>(
   attachComments(ast.comments, ast, code);
 
   let target: T | null = null;
-  traverse(ast, scopeManager, () => ({
+  traverse(code, ast, scopeManager, () => ({
     // $FlowExpectedError[invalid-computed-prop] - this is guaranteed safe
     [type](node) {
       target = node;

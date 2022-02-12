@@ -16,13 +16,13 @@ namespace vm {
 /// Date object.
 class JSDate final : public JSObject {
   using Super = JSObject;
-  friend void DateBuildMeta(const GCCell *, Metadata::Builder &);
+  friend void JSDateBuildMeta(const GCCell *, Metadata::Builder &);
 
  public:
   static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::DateKind;
+    return cell->getKind() == CellKind::JSDateKind;
   }
 
   static PseudoHandle<JSDate>

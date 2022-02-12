@@ -10,8 +10,9 @@
 
 'use strict';
 
-export type {TraversalContext, Visitor} from './traverse/traverse';
+export type {TraversalContextBase, Visitor} from './traverse/traverse';
 export type {TransformVisitor} from './transform/transform';
+export type {TransformContext} from './transform/TransformContext';
 export type {DetachedNode} from './detachedNode';
 
 export {SimpleTraverser} from './traverse/SimpleTraverser';

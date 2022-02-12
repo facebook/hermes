@@ -1,0 +1,25 @@
+
+// Installs a userland stack trace formatter which _approximately_ matches the
+// output of JSError::constructStackTraceString.
+Error.prepareStackTrace = (error, stack) => {
+  return (
+    error.toString() +
+    '\n' +
+    stack
+      .map(frame => {
+        const func = frame.getFunctionName();
+        const file = frame.getFileName();
+        const line = frame.getLineNumber();
+        const column = frame.getColumnNumber();
+        const virtualOffset = frame.getBytecodeAddress();
+        const locationType = column == null ? 'address at ' : '';
+        const location = frame.isNative()
+          ? ''
+          : ` (${locationType}${file}:${line}:${
+              column == null ? virtualOffset : column
+            })`;
+        return `    at ${func}${location}`;
+      })
+      .join('\n')
+  );
+};

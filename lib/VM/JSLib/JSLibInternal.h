@@ -234,6 +234,9 @@ CallResult<HermesValue> directObjectPrototypeToString(
   Handle<JSObject> create##name##Constructor(Runtime *runtime);
 #include "hermes/VM/NativeErrorTypes.def"
 
+/// Populate the internal CallSite.prototype.
+void populateCallSitePrototype(Runtime *runtime);
+
 /// Create and initialize the global String constructor. Populate the methods
 /// of String and String.prototype.
 /// \return the global String constructor.
@@ -356,9 +359,9 @@ setLastIndex(Handle<JSObject> regexp, Runtime *runtime, double value) {
 uint64_t
 advanceStringIndex(const StringPrimitive *S, uint64_t index, bool unicode);
 
-/// Create and initialize the global Function constructor. Populate the methods
-/// of Function and Function.prototype.
-/// \return the global Function constructor.
+/// Create and initialize the global Array constructor. Populate the methods
+/// of Array and Array.prototype.
+/// \return the global Array constructor.
 Handle<JSObject> createArrayConstructor(Runtime *runtime);
 
 Handle<JSObject> createArrayBufferConstructor(Runtime *runtime);

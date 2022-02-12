@@ -337,7 +337,7 @@ const ObjectVTable RequireContext::vt{
 
 void RequireContextBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<RequireContext>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const RequireContext *>(cell);
   mb.setVTable(&RequireContext::vt.base);
   mb.addField(&self->domain_);

@@ -163,12 +163,12 @@ class JSMapImpl final : public JSObject {
 template <CellKind T>
 struct JSMapTypeTraits;
 template <>
-struct JSMapTypeTraits<CellKind::SetIteratorKind> {
-  static constexpr CellKind ContainerKind = CellKind::SetKind;
+struct JSMapTypeTraits<CellKind::JSSetIteratorKind> {
+  static constexpr CellKind ContainerKind = CellKind::JSSetKind;
 };
 template <>
-struct JSMapTypeTraits<CellKind::MapIteratorKind> {
-  static constexpr CellKind ContainerKind = CellKind::MapKind;
+struct JSMapTypeTraits<CellKind::JSMapIteratorKind> {
+  static constexpr CellKind ContainerKind = CellKind::JSMapKind;
 };
 
 template <CellKind C>
@@ -283,10 +283,10 @@ class JSMapIteratorImpl final : public JSObject {
   bool iterationFinished_{false};
 };
 
-using JSMap = JSMapImpl<CellKind::MapKind>;
-using JSSet = JSMapImpl<CellKind::SetKind>;
-using JSMapIterator = JSMapIteratorImpl<CellKind::MapIteratorKind>;
-using JSSetIterator = JSMapIteratorImpl<CellKind::SetIteratorKind>;
+using JSMap = JSMapImpl<CellKind::JSMapKind>;
+using JSSet = JSMapImpl<CellKind::JSSetKind>;
+using JSMapIterator = JSMapIteratorImpl<CellKind::JSMapIteratorKind>;
+using JSSetIterator = JSMapIteratorImpl<CellKind::JSSetIteratorKind>;
 
 } // namespace vm
 } // namespace hermes

@@ -18,7 +18,7 @@ class JSString final : public JSObject {
  public:
   using Super = JSObject;
 
-  friend void StringObjectBuildMeta(const GCCell *, Metadata::Builder &);
+  friend void JSStringBuildMeta(const GCCell *, Metadata::Builder &);
 
   // We need one more slot for the length property.
   static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
@@ -26,7 +26,7 @@ class JSString final : public JSObject {
   static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::StringObjectKind;
+    return cell->getKind() == CellKind::JSStringKind;
   }
 
   static CallResult<Handle<JSString>> create(
@@ -122,7 +122,7 @@ class JSString final : public JSObject {
 class JSStringIterator : public JSObject {
   using Super = JSObject;
 
-  friend void StringIteratorBuildMeta(
+  friend void JSStringIteratorBuildMeta(
       const GCCell *cell,
       Metadata::Builder &mb);
 
@@ -130,7 +130,7 @@ class JSStringIterator : public JSObject {
   static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::StringIteratorKind;
+    return cell->getKind() == CellKind::JSStringIteratorKind;
   }
 
   static PseudoHandle<JSStringIterator> create(
@@ -165,7 +165,7 @@ class JSNumber final : public JSObject {
   static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::NumberObjectKind;
+    return cell->getKind() == CellKind::JSNumberKind;
   }
 
   static PseudoHandle<JSNumber>
@@ -202,7 +202,7 @@ class JSBoolean final : public JSObject {
   static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::BooleanObjectKind;
+    return cell->getKind() == CellKind::JSBooleanKind;
   }
 
   static PseudoHandle<JSBoolean>
@@ -235,13 +235,13 @@ class JSBoolean final : public JSObject {
 
 /// Symbol object.
 class JSSymbol final : public JSObject {
-  friend void SymbolObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend void JSSymbolBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
  public:
   static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::SymbolObjectKind;
+    return cell->getKind() == CellKind::JSSymbolKind;
   }
 
   static PseudoHandle<JSSymbol>

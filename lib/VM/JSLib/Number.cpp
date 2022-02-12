@@ -34,7 +34,7 @@ Handle<JSObject> createNumberConstructor(Runtime *runtime) {
       numberConstructor,
       numberPrototype,
       1,
-      CellKind::NumberObjectKind);
+      CellKind::JSNumberKind);
 
   defineMethod(
       runtime,

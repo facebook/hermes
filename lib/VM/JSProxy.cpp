@@ -71,7 +71,7 @@ findTrap(Handle<JSObject> selfHandle, Runtime *runtime, Predefined::Str name) {
 // class JSProxy
 
 const ObjectVTable JSProxy::vt{
-    VTable(CellKind::ProxyKind, cellSize<JSProxy>()),
+    VTable(CellKind::JSProxyKind, cellSize<JSProxy>()),
     JSProxy::_getOwnIndexedRangeImpl,
     JSProxy::_haveOwnIndexedImpl,
     JSProxy::_getOwnIndexedPropertyFlagsImpl,
@@ -81,9 +81,9 @@ const ObjectVTable JSProxy::vt{
     JSProxy::_checkAllOwnIndexedImpl,
 };
 
-void ProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSProxy>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSProxy *>(cell);
   mb.setVTable(&JSProxy::vt.base);
   mb.addField("@target", &self->slots_.target);

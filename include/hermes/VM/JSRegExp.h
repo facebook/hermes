@@ -24,7 +24,7 @@ class JSRegExp final : public JSObject {
   using Super = JSObject;
   static const ObjectVTable vt;
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::RegExpKind;
+    return cell->getKind() == CellKind::JSRegExpKind;
   }
 
   /// Create a JSRegExp, with the empty string for pattern and flags.
@@ -108,7 +108,7 @@ class JSRegExp final : public JSObject {
       uint32_t searchStartOffset);
 
  public:
-  friend void RegExpBuildMeta(const GCCell *, Metadata::Builder &);
+  friend void JSRegExpBuildMeta(const GCCell *, Metadata::Builder &);
 
   JSRegExp(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
       : JSObject(runtime, &vt.base, *parent, *clazz),

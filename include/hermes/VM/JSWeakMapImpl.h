@@ -332,8 +332,8 @@ class JSWeakMapImpl final : public JSWeakMapImplBase {
       : JSWeakMapImplBase(runtime, &vt.base, parent, clazz, valueStorage) {}
 };
 
-using JSWeakMap = JSWeakMapImpl<CellKind::WeakMapKind>;
-using JSWeakSet = JSWeakMapImpl<CellKind::WeakSetKind>;
+using JSWeakMap = JSWeakMapImpl<CellKind::JSWeakMapKind>;
+using JSWeakSet = JSWeakMapImpl<CellKind::JSWeakSetKind>;
 
 } // namespace vm
 } // namespace hermes

@@ -27,7 +27,7 @@ class JSArrayBuffer final : public JSObject {
   static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::ArrayBufferKind;
+    return cell->getKind() == CellKind::JSArrayBufferKind;
   }
 
   static PseudoHandle<JSArrayBuffer> create(

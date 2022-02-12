@@ -25,7 +25,7 @@ namespace vm {
 
 const ObjectVTable JSRegExp::vt{
     VTable(
-        CellKind::RegExpKind,
+        CellKind::JSRegExpKind,
         cellSize<JSRegExp>(),
         JSRegExp::_finalizeImpl,
         nullptr,
@@ -46,9 +46,9 @@ const ObjectVTable JSRegExp::vt{
     JSRegExp::_checkAllOwnIndexedImpl,
 };
 
-void RegExpBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSRegExpBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSRegExp>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSRegExp *>(cell);
   mb.setVTable(&JSRegExp::vt.base);
   mb.addField(&self->pattern_);

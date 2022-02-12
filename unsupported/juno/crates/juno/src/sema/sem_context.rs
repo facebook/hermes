@@ -6,9 +6,11 @@
  */
 
 use crate::ast::NodeRc;
+use juno_ast::{node_cast, GCLock, Node};
 use juno_support::atom_table::Atom;
 use juno_support::source_manager::SourceId;
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::num::NonZeroU32;
 
 macro_rules! declare_opaque_id {
@@ -27,6 +29,12 @@ macro_rules! declare_opaque_id {
             }
             fn as_usize(self) -> usize {
                 (self.0.get() - 1) as usize
+            }
+        }
+        impl Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.as_usize())?;
+                Ok(())
             }
         }
     };
@@ -50,7 +58,7 @@ impl FunctionInfoId {
     }
 }
 
-#[derive(PartialOrd, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Copy, Clone)]
 pub enum DeclKind {
     // ==== Let-like declarations ===
     Let,
@@ -95,6 +103,7 @@ impl DeclKind {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Special {
     NotSpecial,
     Arguments,
@@ -115,6 +124,25 @@ pub struct Decl {
     pub scope: LexicalScopeId,
 }
 
+impl Decl {
+    fn dump(&self, lock: &GCLock, id: DeclId, indent: usize) {
+        println!(
+            "{:indent$} Decl#{id} '{name}' {kind:?} {special:?}{function_in_scope}",
+            "",
+            indent = indent,
+            id = id.as_usize(),
+            name = lock.str(self.name),
+            kind = self.kind,
+            special = self.special,
+            function_in_scope = if self.function_in_scope {
+                " functionInScope"
+            } else {
+                ""
+            },
+        );
+    }
+}
+
 pub struct LexicalScope {
     /// The function owning this lexical scope.
     pub parent_function: FunctionInfoId,
@@ -127,6 +155,36 @@ pub struct LexicalScope {
     pub hoisted_functions: Vec<NodeRc>,
 }
 
+impl LexicalScope {
+    fn dump(&self, sem: &SemContext, lock: &GCLock, id: LexicalScopeId, indent: usize) {
+        println!(
+            "{:indent$} Scope#{id}",
+            "",
+            indent = indent,
+            id = id.as_usize()
+        );
+        for &decl in &self.decls {
+            sem.decl(decl).dump(lock, decl, indent + 1);
+        }
+        for func in &self.hoisted_functions {
+            let node = func.node(lock);
+            println!(
+                "{:indent$} hoistedFunction {name}",
+                "",
+                indent = indent + 1,
+                name = lock.str(
+                    node_cast!(
+                        Node::Identifier,
+                        node_cast!(Node::FunctionDeclaration, node).id.unwrap()
+                    )
+                    .name
+                ),
+            );
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct FunctionInfo {
     /// The function surrounding this function.
     pub parent_function: Option<FunctionInfoId>,
@@ -138,6 +196,48 @@ pub struct FunctionInfo {
     pub scopes: Vec<LexicalScopeId>,
     /// The implicitly declared "arguments" object. It is declared only if it is used.
     pub arguments_decl: Option<DeclId>,
+}
+
+impl FunctionInfo {
+    fn dump(&self, sem: &SemContext, lock: &GCLock, id: FunctionInfoId, indent: usize) {
+        println!(
+            "{:indent$} Func#{id}",
+            "",
+            indent = indent,
+            id = id.as_usize()
+        );
+        let mut children = HashMap::<LexicalScopeId, Vec<LexicalScopeId>>::new();
+
+        for &scope_id in &self.scopes {
+            let scope = sem.scope(scope_id);
+            if let Some(parent) = &scope.parent_scope {
+                match children.get_mut(parent) {
+                    Some(v) => v.push(scope_id),
+                    None => {
+                        children.insert(*parent, vec![scope_id]);
+                    }
+                };
+            }
+        }
+
+        self.dump_scope(sem, lock, &children, self.scopes[0], indent + 1);
+    }
+
+    fn dump_scope(
+        &self,
+        sem: &SemContext,
+        lock: &GCLock,
+        children: &HashMap<LexicalScopeId, Vec<LexicalScopeId>>,
+        id: LexicalScopeId,
+        level: usize,
+    ) {
+        sem.scope(id).dump(sem, lock, id, level);
+        if let Some(next) = children.get(&id) {
+            for c in next {
+                self.dump_scope(sem, lock, children, *c, level + 1);
+            }
+        }
+    }
 }
 
 #[derive(Default)]
@@ -329,5 +429,57 @@ impl SemContext {
         self.function_mut(func).arguments_decl = Some(decl);
 
         decl
+    }
+
+    /// Dumps information about the semantic context directly to stdout.
+    /// Intended for testing and debugging.
+    pub fn dump(&self, lock: &GCLock) {
+        println!("SemContext");
+        println!("{:7} functions", self.all_functions().len());
+        println!("{:7} lexical scopes", self.all_scopes().len());
+        println!("{:7} declarations", self.all_decls().len());
+        println!("{:7} ident resolutions", self.all_ident_decls().len());
+        if !self.all_requires().is_empty() {
+            println!("{:7} require resolutions", self.all_requires().len());
+        }
+        println!();
+
+        let mut children = HashMap::<FunctionInfoId, Vec<FunctionInfoId>>::new();
+        for i in 0..self.funcs.len() {
+            let f = FunctionInfoId::new(i);
+            if let Some(parent) = &self.function(f).parent_function {
+                match children.get_mut(parent) {
+                    Some(v) => v.push(f),
+                    None => {
+                        children.insert(*parent, vec![f]);
+                    }
+                };
+            }
+        }
+
+        for id in 0..self.decls.len() {
+            let id = DeclId::new(id);
+            let decl = self.decl(id);
+            if decl.kind == DeclKind::GlobalProperty {
+                decl.dump(lock, id, 1);
+            }
+        }
+
+        self.dump_function(lock, &children, FunctionInfoId::GLOBAL_FUNCTION_ID, 0);
+    }
+
+    fn dump_function(
+        &self,
+        lock: &GCLock,
+        children: &HashMap<FunctionInfoId, Vec<FunctionInfoId>>,
+        id: FunctionInfoId,
+        level: usize,
+    ) {
+        self.function(id).dump(self, lock, id, level);
+        if let Some(next) = children.get(&id) {
+            for c in next {
+                self.dump_function(lock, children, *c, level + 1);
+            }
+        }
     }
 }

@@ -20,7 +20,7 @@ namespace vm {
 
 const ObjectVTable JSRegExpStringIterator::vt{
     VTable(
-        CellKind::RegExpStringIteratorKind,
+        CellKind::JSRegExpStringIteratorKind,
         cellSize<JSRegExpStringIterator>()),
     JSRegExpStringIterator::_getOwnIndexedRangeImpl,
     JSRegExpStringIterator::_haveOwnIndexedImpl,
@@ -31,10 +31,12 @@ const ObjectVTable JSRegExpStringIterator::vt{
     JSRegExpStringIterator::_checkAllOwnIndexedImpl,
 };
 
-void RegExpStringIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSRegExpStringIteratorBuildMeta(
+    const GCCell *cell,
+    Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(
       JSObject::numOverlapSlots<JSRegExpStringIterator>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSRegExpStringIterator *>(cell);
   mb.setVTable(&JSRegExpStringIterator::vt.base);
   mb.addField("iteratedRegExp", &self->iteratedRegExp_);

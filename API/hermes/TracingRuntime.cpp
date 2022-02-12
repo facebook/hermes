@@ -212,10 +212,11 @@ jsi::PropNameID TracingRuntime::createPropNameIDFromUtf8(
 
 jsi::PropNameID TracingRuntime::createPropNameIDFromString(
     const jsi::String &str) {
-  std::string s = str.utf8(*this);
   jsi::PropNameID res = RD::createPropNameIDFromString(str);
   trace_.emplace_back<SynthTrace::CreatePropNameIDRecord>(
-      getTimeSinceStart(), getUniqueID(res), std::move(s), /* isAscii */ false);
+      getTimeSinceStart(),
+      getUniqueID(res),
+      SynthTrace::encodeString(getUniqueID(str)));
   return res;
 }
 
@@ -540,7 +541,7 @@ TracingHermesRuntime::~TracingHermesRuntime() {
   if (crashCallbackKey_) {
     conf_.getCrashMgr()->unregisterCallback(*crashCallbackKey_);
   }
-  if (flushedAndDisabled_) {
+  if (!flushedAndDisabled_) {
     // If the trace is not flushed and disabled, flush the trace and
     // run rollback action (e.g. delete the in-progress trace)
     flushAndDisableTrace();

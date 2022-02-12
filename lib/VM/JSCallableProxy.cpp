@@ -17,7 +17,7 @@ namespace vm {
 
 const CallableVTable JSCallableProxy::vt{
     {
-        VTable(CellKind::CallableProxyKind, cellSize<JSCallableProxy>()),
+        VTable(CellKind::JSCallableProxyKind, cellSize<JSCallableProxy>()),
         JSCallableProxy::_getOwnIndexedRangeImpl,
         JSCallableProxy::_haveOwnIndexedImpl,
         JSCallableProxy::_getOwnIndexedPropertyFlagsImpl,
@@ -30,7 +30,7 @@ const CallableVTable JSCallableProxy::vt{
     JSCallableProxy::_callImpl,
 };
 
-void CallableProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSCallableProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSCallableProxy>());
   NativeFunctionBuildMeta(cell, mb);
   const auto *self = static_cast<const JSCallableProxy *>(cell);

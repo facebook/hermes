@@ -1488,7 +1488,6 @@ SKIP_LIST = [
     "mjsunit/smi-mul-const.js",
     "mjsunit/smi-representation.js",
     "mjsunit/stack-traces-2.js",
-    "mjsunit/stack-traces-custom-lazy.js",
     "mjsunit/stack-traces-custom.js",
     "mjsunit/stack-traces-overflow.js",
     "mjsunit/string-case.js",

@@ -167,6 +167,17 @@ class StringPrimitive : public VariableSizeRuntimeCell {
       Runtime *runtime,
       UTF16Ref str);
 
+  /// Create a StringPrimitive as efficiently as the contents of \p str allow.
+  /// UTF8 inputs will be converted to UTF16. Invalid code points in \p str will
+  /// cause a RangeError (if \p IgnoreInputErrors is false) to be raised, or a
+  /// truncated PrimitiveString (if \p IgnoreInputErrors is true) to be returned
+  /// -- its contents will stop right before the first invalid code point in
+  /// \p str.
+  static CallResult<HermesValue> createEfficient(
+      Runtime *runtime,
+      UTF8Ref str,
+      bool IgnoreInputErrors = false);
+
   /// Versions of createEfficient that allow for ownership transfer of an
   /// std::string. Create a StringPrimitive from \p str. The implementation may
   /// choose to acquire ownership of \p str and use it to back the string.

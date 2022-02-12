@@ -1190,19 +1190,24 @@ Value TraceInterpreter::execFunction(
             const auto &cpnr =
                 static_cast<const SynthTrace::CreatePropNameIDRecord &>(*rec);
             // We perform the calls below for their side effects (for example,
-            auto propNameID =
-                (cpnr.ascii_ ? PropNameID::forAscii(
-                                   rt_, cpnr.chars_.data(), cpnr.chars_.size())
-                             : PropNameID::forUtf8(
-                                   rt_,
-                                   reinterpret_cast<const uint8_t *>(
-                                       cpnr.chars_.data()),
-                                   cpnr.chars_.size()));
-            assert(
-                propNameID.utf8(rt_) ==
-                std::string(
-                    reinterpret_cast<const char *>(cpnr.chars_.data()),
-                    cpnr.chars_.size()));
+            auto propNameID = [&] {
+              switch (cpnr.valueType_) {
+                case SynthTrace::CreatePropNameIDRecord::ASCII:
+                  return PropNameID::forAscii(
+                      rt_, cpnr.chars_.data(), cpnr.chars_.size());
+                case SynthTrace::CreatePropNameIDRecord::UTF8:
+                  return PropNameID::forUtf8(
+                      rt_,
+                      reinterpret_cast<const uint8_t *>(cpnr.chars_.data()),
+                      cpnr.chars_.size());
+                case SynthTrace::CreatePropNameIDRecord::TRACEVALUE: {
+                  auto val = traceValueToJSIValue(
+                      rt_, trace_, getJSIValueForUse, cpnr.traceValue_);
+                  return PropNameID::forString(rt_, val.getString(rt_));
+                }
+              }
+              llvm_unreachable("No other way to construct PropNameID");
+            }();
             addPropNameIDToDefs(
                 call,
                 cpnr.propNameID_,

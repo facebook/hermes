@@ -44,7 +44,7 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
       stringConstructor,
       stringPrototype,
       1,
-      CellKind::StringObjectKind);
+      CellKind::JSStringKind);
 
   // String.prototype.xxx methods.
   void *ctx = nullptr;

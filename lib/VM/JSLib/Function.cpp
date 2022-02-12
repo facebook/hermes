@@ -35,7 +35,7 @@ Handle<JSObject> createFunctionConstructor(Runtime *runtime) {
       functionConstructor,
       functionPrototype,
       1,
-      CellKind::FunctionKind);
+      CellKind::JSFunctionKind);
 
   // Function.prototype.xxx() methods.
   defineMethod(

@@ -31,7 +31,7 @@ JSTypedArrayBase::JSTypedArrayBase(
 
 void TypedArrayBaseBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSTypedArrayBase>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSTypedArrayBase *>(cell);
   mb.addField("buffer", &self->buffer_);
 }

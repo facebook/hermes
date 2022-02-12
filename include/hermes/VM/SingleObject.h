@@ -60,8 +60,8 @@ const ObjectVTable SingleObject<kind>::vt = {
     SingleObject::_checkAllOwnIndexedImpl,
 };
 
-using JSMath = SingleObject<CellKind::MathKind>;
-using JSJSON = SingleObject<CellKind::JSONKind>;
+using JSMath = SingleObject<CellKind::JSMathKind>;
+using JSJSON = SingleObject<CellKind::JSJSONKind>;
 
 } // namespace vm
 } // namespace hermes

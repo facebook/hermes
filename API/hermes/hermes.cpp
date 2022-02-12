@@ -37,7 +37,6 @@
 #include "hermes/VM/SymbolID.h"
 #include "hermes/VM/TimeLimitMonitor.h"
 
-#include "llvh/Support/ConvertUTF.h"
 #include "llvh/Support/ErrorHandling.h"
 #include "llvh/Support/FileSystem.h"
 #include "llvh/Support/SHA1.h"
@@ -1596,28 +1595,6 @@ std::string HermesRuntimeImpl::utf8(const jsi::String &str) {
   });
 }
 
-static void
-convertUtf8ToUtf16(const uint8_t *utf8, size_t length, std::u16string &out) {
-  // length is the number of input bytes
-  out.resize(length);
-  const llvh::UTF8 *sourceStart = (const llvh::UTF8 *)utf8;
-  const llvh::UTF8 *sourceEnd = sourceStart + length;
-  llvh::UTF16 *targetStart = (llvh::UTF16 *)&out[0];
-  llvh::UTF16 *targetEnd = targetStart + out.size();
-  llvh::ConversionResult cRes;
-  cRes = ConvertUTF8toUTF16(
-      &sourceStart,
-      sourceEnd,
-      &targetStart,
-      targetEnd,
-      llvh::lenientConversion);
-  (void)cRes;
-  assert(
-      cRes != llvh::ConversionResult::targetExhausted &&
-      "not enough space allocated for UTF16 conversion");
-  out.resize((char16_t *)targetStart - &out[0]);
-}
-
 jsi::Value HermesRuntimeImpl::createValueFromJsonUtf8(
     const uint8_t *json,
     size_t length) {
@@ -2125,14 +2102,10 @@ vm::HermesValue HermesRuntimeImpl::stringHVFromAscii(
 vm::HermesValue HermesRuntimeImpl::stringHVFromUtf8(
     const uint8_t *utf8,
     size_t length) {
-  if (::hermes::isAllASCII(utf8, utf8 + length)) {
-    return stringHVFromAscii((const char *)utf8, length);
-  }
-  std::u16string out;
-  convertUtf8ToUtf16(utf8, length, out);
-  auto strRes = vm::StringPrimitive::createEfficient(&runtime_, std::move(out));
+  const bool IgnoreInputErrors = true;
+  auto strRes = vm::StringPrimitive::createEfficient(
+      &runtime_, llvh::makeArrayRef(utf8, length), IgnoreInputErrors);
   checkStatus(strRes.getStatus());
-
   return *strRes;
 }
 

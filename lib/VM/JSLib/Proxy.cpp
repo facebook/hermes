@@ -177,7 +177,7 @@ Handle<JSObject> createProxyConstructor(Runtime *runtime) {
       proxyConstructor,
       runtime->makeNullHandle<JSObject>(),
       2,
-      CellKind::ProxyKind);
+      CellKind::JSProxyKind);
 
   defineMethod(
       runtime,

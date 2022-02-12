@@ -40,7 +40,7 @@ Handle<JSObject> createObjectConstructor(Runtime *runtime) {
       objectConstructor,
       Handle<JSObject>::vmcast(&runtime->objectPrototype),
       1,
-      CellKind::ObjectKind);
+      CellKind::JSObjectKind);
   void *ctx = nullptr;
 
   // Object.prototype.xxx methods.
@@ -1193,10 +1193,10 @@ CallResult<HermesValue> directObjectPrototypeToString(
     }
     if (*isArrayRes) {
       // 6. If isArray is true, let builtinTag be "Array".
-      str = runtime->getPredefinedString(Predefined::squareObject_Array);
+      str = runtime->getPredefinedString(Predefined::squareObject_JSArray);
     } else if (vmisa<JSString>(O.getHermesValue())) {
       // 7. Else, if O is an exotic String object, let builtinTag be "String".
-      str = runtime->getPredefinedString(Predefined::squareObject_StringObject);
+      str = runtime->getPredefinedString(Predefined::squareObject_JSString);
     } else if (vmisa<Arguments>(O.getHermesValue())) {
       // 8. Else, if O has an [[ParameterMap]] internal slot, let builtinTag be
       // "Arguments".
@@ -1204,30 +1204,29 @@ CallResult<HermesValue> directObjectPrototypeToString(
     } else if (vmisa<Callable>(O.getHermesValue())) {
       // 9. Else, if O has a [[Call]] internal method, let builtinTag be
       // "Function".
-      str = runtime->getPredefinedString(Predefined::squareObject_Function);
+      str = runtime->getPredefinedString(Predefined::squareObject_JSFunction);
     } else if (vmisa<JSError>(O.getHermesValue())) {
       // 10. Else, if O has an [[ErrorData]] internal slot, let builtinTag be
       // "Error".
-      str = runtime->getPredefinedString(Predefined::squareObject_Error);
+      str = runtime->getPredefinedString(Predefined::squareObject_JSError);
     } else if (vmisa<JSBoolean>(O.getHermesValue())) {
       // 11. Else, if O has a [[BooleanData]] internal slot, let builtinTag be
       // "Boolean".
-      str =
-          runtime->getPredefinedString(Predefined::squareObject_BooleanObject);
+      str = runtime->getPredefinedString(Predefined::squareObject_JSBoolean);
     } else if (vmisa<JSNumber>(O.getHermesValue())) {
       // 12. Else, if O has a [[NumberData]] internal slot, let builtinTag be
       // "Number".
-      str = runtime->getPredefinedString(Predefined::squareObject_NumberObject);
+      str = runtime->getPredefinedString(Predefined::squareObject_JSNumber);
     } else if (vmisa<JSDate>(O.getHermesValue())) {
       // 13. Else, if O has a [[DateValue]] internal slot, let builtinTag be
       // "Date".
-      str = runtime->getPredefinedString(Predefined::squareObject_Date);
+      str = runtime->getPredefinedString(Predefined::squareObject_JSDate);
     } else if (vmisa<JSRegExp>(O.getHermesValue())) {
       // 14. Else, if O has a [[RegExpMatcher]] internal slot, let builtinTag be
       // "RegExp".
-      str = runtime->getPredefinedString(Predefined::squareObject_RegExp);
+      str = runtime->getPredefinedString(Predefined::squareObject_JSRegExp);
     } else {
-      str = runtime->getPredefinedString(Predefined::squareObject_Object);
+      str = runtime->getPredefinedString(Predefined::squareObject_JSObject);
     }
   }
 

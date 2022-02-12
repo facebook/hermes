@@ -17,7 +17,7 @@ namespace vm {
 // class JSDate
 
 const ObjectVTable JSDate::vt{
-    VTable(CellKind::DateKind, cellSize<JSDate>()),
+    VTable(CellKind::JSDateKind, cellSize<JSDate>()),
     JSDate::_getOwnIndexedRangeImpl,
     JSDate::_haveOwnIndexedImpl,
     JSDate::_getOwnIndexedPropertyFlagsImpl,
@@ -27,9 +27,9 @@ const ObjectVTable JSDate::vt{
     JSDate::_checkAllOwnIndexedImpl,
 };
 
-void DateBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSDateBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSDate>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   mb.setVTable(&JSDate::vt.base);
 }
 

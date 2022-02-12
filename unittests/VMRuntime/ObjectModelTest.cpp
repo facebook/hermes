@@ -566,7 +566,7 @@ TEST_F(ObjectModelTest, NativeConstructorTest) {
       nullptr,
       0,
       creator,
-      CellKind::FunctionKind));
+      CellKind::JSFunctionKind));
   auto crtRes = dateCons->newObject(
       dateCons, runtime, Runtime::makeNullHandle<JSObject>());
   ASSERT_EQ(ExecutionStatus::RETURNED, crtRes.getStatus());

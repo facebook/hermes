@@ -21,18 +21,18 @@ void JSMapImpl<C>::MapOrSetBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSMapImpl<C>>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSMapImpl<C> *>(cell);
   mb.addField("storage", &self->storage_);
 }
 
-void MapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  JSMapImpl<CellKind::MapKind>::MapOrSetBuildMeta(cell, mb);
+void JSMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  JSMap::MapOrSetBuildMeta(cell, mb);
   mb.setVTable(&JSMap::vt.base);
 }
 
-void SetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  JSMapImpl<CellKind::SetKind>::MapOrSetBuildMeta(cell, mb);
+void JSSetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  JSSet::MapOrSetBuildMeta(cell, mb);
   mb.setVTable(&JSSet::vt.base);
 }
 
@@ -60,8 +60,8 @@ PseudoHandle<JSMapImpl<C>> JSMapImpl<C>::create(
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
-template class JSMapImpl<CellKind::SetKind>;
-template class JSMapImpl<CellKind::MapKind>;
+template class JSMapImpl<CellKind::JSSetKind>;
+template class JSMapImpl<CellKind::JSMapKind>;
 
 //===----------------------------------------------------------------------===//
 // class JSSetIterator
@@ -71,21 +71,19 @@ void JSMapIteratorImpl<C>::MapOrSetIteratorBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSMapIteratorImpl<C>>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSMapIteratorImpl<C> *>(cell);
   mb.addField("data", &self->data_);
   mb.addField("itr", &self->itr_);
 }
 
-void MapIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  JSMapIteratorImpl<CellKind::MapIteratorKind>::MapOrSetIteratorBuildMeta(
-      cell, mb);
+void JSMapIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  JSMapIterator::MapOrSetIteratorBuildMeta(cell, mb);
   mb.setVTable(&JSMapIterator::vt.base);
 }
 
-void SetIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  JSMapIteratorImpl<CellKind::SetIteratorKind>::MapOrSetIteratorBuildMeta(
-      cell, mb);
+void JSSetIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  JSSetIterator::MapOrSetIteratorBuildMeta(cell, mb);
   mb.setVTable(&JSSetIterator::vt.base);
 }
 
@@ -113,8 +111,8 @@ PseudoHandle<JSMapIteratorImpl<C>> JSMapIteratorImpl<C>::create(
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
-template class JSMapIteratorImpl<CellKind::MapIteratorKind>;
-template class JSMapIteratorImpl<CellKind::SetIteratorKind>;
+template class JSMapIteratorImpl<CellKind::JSMapIteratorKind>;
+template class JSMapIteratorImpl<CellKind::JSSetIteratorKind>;
 
 } // namespace vm
 } // namespace hermes

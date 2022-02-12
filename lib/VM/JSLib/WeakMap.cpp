@@ -65,7 +65,7 @@ Handle<JSObject> createWeakMapConstructor(Runtime *runtime) {
       weakMapConstructor,
       weakMapPrototype,
       0,
-      CellKind::WeakMapKind);
+      CellKind::JSWeakMapKind);
 
   // ES6.0 23.3.3.1
   defineProperty(

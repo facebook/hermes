@@ -877,7 +877,7 @@ TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
       nodesAndEdges.first,
       Node(
           HeapSnapshot::NodeType::Object,
-          "WeakMap",
+          "JSWeakMap",
           mapID,
           map->getAllocatedSize(),
           firstNamed + 3));
@@ -968,7 +968,7 @@ TEST_F(HeapSnapshotRuntimeTest, PropertyUpdatesTest) {
       nodesAndEdges.first,
       Node(
           HeapSnapshot::NodeType::Object,
-          "Object(foo, bar)",
+          "JSObject(foo, bar)",
           objID,
           obj->getAllocatedSize(),
           FIRST_NAMED_PROPERTY_EDGE + 2));
@@ -1025,7 +1025,7 @@ TEST_F(HeapSnapshotRuntimeTest, ArrayElements) {
       nodeAndEdges.first,
       Node(
           HeapSnapshot::NodeType::Object,
-          "Array",
+          "JSArray",
           arrayID,
           array->getAllocatedSize(),
           FIRST_NAMED_PROPERTY_EDGE + 6));
