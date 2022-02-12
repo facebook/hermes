@@ -918,17 +918,6 @@ class GCBase {
     return randomizeAllocSpace_;
   }
 
-#ifndef NDEBUG
-  /// Returns whether the most-recently allocated object was specified as
-  /// fixed-size in the the allocation.  (FixedSizeValue is a trinary type,
-  /// defined above: Yes, No, or Unknown.)
-  virtual FixedSizeValue lastAllocationWasFixedSize() const {
-    // The default implementation returns Unknown.  This makes sense for GC
-    // implementations that don't care about FixedSize.
-    return FixedSizeValue::Unknown;
-  }
-#endif
-
   /// Name to identify this heap in logs.
   const std::string &getName() const {
     return name_;

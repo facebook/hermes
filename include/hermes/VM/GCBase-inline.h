@@ -26,6 +26,8 @@ T *GCBase::makeAFixed(Args &&...args) {
       cellSize<T>() >= minAllocationSize() &&
           cellSize<T>() <= maxAllocationSize(),
       "Cell size outside legal range.");
+  assert(
+      VTable::getVTable(T::getCellKind())->size && "Cell is not fixed size.");
   return makeA<T, true /* fixedSize */, hasFinalizer, longLived>(
       cellSize<T>(), std::forward<Args>(args)...);
 }
@@ -39,6 +41,9 @@ T *GCBase::makeAVariable(uint32_t size, Args &&...args) {
   // If size is greater than the max, we should OOM.
   assert(
       size >= GC::minAllocationSize() && "Cell size is smaller than minimum");
+  assert(
+      !VTable::getVTable(T::getCellKind())->size &&
+      "Cell is not variable size.");
   return makeA<T, false /* fixedSize */, hasFinalizer, longLived>(
       heapAlignSize(size), std::forward<Args>(args)...);
 }

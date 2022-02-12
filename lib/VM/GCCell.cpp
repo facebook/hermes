@@ -26,15 +26,6 @@ GCCell::GCCell(GC *gc, const VTable *vtp)
     : kindAndSize_(vtp->kind, vtp->size),
       _debugAllocationId_(gc->nextObjectID()) {
   assert(getVT() == vtp && "VTable does not match kind.");
-  if (gc->lastAllocationWasFixedSize() == GCBase::FixedSizeValue::Yes) {
-    assert(
-        vtp->size > 0 &&
-        "Fixed size allocation must specify object size in vtable.");
-  } else if (gc->lastAllocationWasFixedSize() == GCBase::FixedSizeValue::No) {
-    assert(
-        vtp->size == 0 &&
-        "Variable size allocation must have object size = 0 in vtable.");
-  }
   assert(
       (!vtp->mallocSize_ || vtp->finalize_) &&
       "If a cell uses malloc, then it needs a finalizer");
