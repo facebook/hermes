@@ -1872,10 +1872,6 @@ void HadesGC::completeMarking() {
 
 void HadesGC::finalizeAll() {
   std::lock_guard<Mutex> lk{gcMutex_};
-  finalizeAllLocked();
-}
-
-void HadesGC::finalizeAllLocked() {
   // Terminate any existing OG collection.
   concurrentPhase_ = Phase::None;
   if (ogCollectionStats_)

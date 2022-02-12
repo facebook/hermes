@@ -999,10 +999,6 @@ class HadesGC final : public GCBase {
   /// Finalize all objects in YG that have finalizers.
   void finalizeYoungGenObjects();
 
-  /// Run the finalizers for all heap objects, if the gcMutex_ is already
-  /// locked.
-  void finalizeAllLocked();
-
   /// Update all of the weak references and invalidate the ones that point to
   /// dead objects.
   void updateWeakReferencesForYoungGen();
