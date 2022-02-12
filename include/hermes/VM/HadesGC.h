@@ -688,7 +688,8 @@ class HadesGC final : public GCBase {
   /// Note that we only set the YG size using this at the end of the first real
   /// YG, since doing it for direct promotions would waste OG memory without a
   /// pause time benefit.
-  double ygSizeFactor_{0.5};
+  static constexpr double kYGInitialSizeFactor = 0.5;
+  double ygSizeFactor_{kYGInitialSizeFactor};
 
   /// oldGen_ is a free list space, so it needs a different segment
   /// representation.
@@ -771,8 +772,9 @@ class HadesGC final : public GCBase {
   /// together in a linked list.
   WeakRefSlot *firstFreeWeak_{nullptr};
 
-  /// The weighted average of the YG survival ratio over time.
-  ExponentialMovingAverage ygAverageSurvivalRatio_;
+  /// The weighted average of the number of bytes that are promoted to the OG in
+  /// each YG collection.
+  ExponentialMovingAverage ygAverageSurvivalBytes_;
 
   /// The amount of bytes of external memory credited to objects in the YG.
   /// Only accessible to the mutator.

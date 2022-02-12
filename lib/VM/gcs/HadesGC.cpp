@@ -1293,9 +1293,10 @@ HadesGC::HadesGC(
       promoteYGToOG_{!gcConfig.getAllocInYoung()},
       revertToYGAtTTI_{gcConfig.getRevertToYGAtTTI()},
       occupancyTarget_(gcConfig.getOccupancyTarget()),
-      ygAverageSurvivalRatio_{
+      ygAverageSurvivalBytes_{
           /*weight*/ 0.5,
-          /*init*/ kYGInitialSurvivalRatio} {
+          /*init*/ kYGInitialSizeFactor * HeapSegment::maxSize() *
+              kYGInitialSurvivalRatio} {
   (void)vmExperimentFlags;
   std::lock_guard<Mutex> lk(gcMutex_);
   crashMgr_->setCustomData("HermesGC", getKindAsStr().c_str());
@@ -2577,12 +2578,11 @@ void HadesGC::youngGenCollection(
     ygCollectionStats_->setSweptExternalBytes(
         externalBytes.before - externalBytes.after);
     ygCollectionStats_->setAfterSize(segmentFootprint());
-    // If this is not a compacting YG, the average survival ratio should be
-    // updated before starting an OG collection. In a compacting YG, since the
-    // evacuatedBytes counter tracks both segments, this survival ratio is not
-    // useful.
+    // If this is not a compacting YG, update the average survival bytes.
+    // In a compacting YG, since the evacuatedBytes counter tracks both
+    // segments, this value is not a useful predictor of future collections.
     if (!doCompaction)
-      ygAverageSurvivalRatio_.update(ygCollectionStats_->survivalRatio());
+      ygAverageSurvivalBytes_.update(ygCollectionStats_->afterAllocatedBytes());
   }
 #ifdef HERMES_SLOW_DEBUG
   // Check that the card tables are well-formed after the collection.
@@ -3199,7 +3199,7 @@ size_t HadesGC::getDrainRate() {
   // On average, the number of bytes that survive a YG collection. Round it up
   // to at least 1.
   const uint64_t ygSurvivalBytes =
-      std::max(ygAverageSurvivalRatio_ * HeapSegment::maxSize(), 1.0);
+      std::max<double>(ygAverageSurvivalBytes_, 1.0);
   const size_t ygCollectionsUntilFull =
       llvh::divideCeil(bytesToFill ? bytesToFill : 1, ygSurvivalBytes);
   assert(
