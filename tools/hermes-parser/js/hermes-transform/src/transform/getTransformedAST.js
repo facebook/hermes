@@ -11,8 +11,7 @@
 'use strict';
 
 import type {ESNode, Program} from 'hermes-estree';
-import type {Visitor} from '../traverse/traverse';
-import type {TransformContext} from './TransformContext';
+import type {TransformVisitor} from './transform';
 import type {RemoveCommentMutation} from './mutations/RemoveComment';
 
 import {parseForESLint} from 'hermes-eslint';
@@ -33,7 +32,7 @@ import {performReplaceStatementWithManyMutation} from './mutations/ReplaceStatem
 
 export function getTransformedAST(
   code: string,
-  visitors: Visitor<TransformContext>,
+  visitors: TransformVisitor,
 ): {
   ast: Program,
   astWasMutated: boolean,
@@ -53,8 +52,7 @@ export function getTransformedAST(
     code,
     ast,
     scopeManager,
-    // $FlowExpectedError[cannot-spread-interface]
-    ctxBase => ({...ctxBase, ...transformContext}),
+    () => transformContext,
     visitors,
   );
 

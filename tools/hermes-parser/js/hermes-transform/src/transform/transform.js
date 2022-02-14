@@ -11,13 +11,13 @@
 'use strict';
 
 import type {Visitor} from '../traverse/traverse';
-import type {TransformContext} from './TransformContext';
+import type {TransformContextAdditions} from './TransformContext';
 
 import * as prettier from 'prettier';
 import {getTransformedAST} from './getTransformedAST';
 import {SimpleTraverser} from '../traverse/SimpleTraverser';
 
-export type TransformVisitor = Visitor<TransformContext>;
+export type TransformVisitor = Visitor<TransformContextAdditions>;
 
 export function transform(
   originalCode: string,
