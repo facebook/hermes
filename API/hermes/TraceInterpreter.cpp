@@ -368,7 +368,7 @@ Value traceValueToJSIValue(
   if (value.isBool()) {
     return Value(value.getBool());
   }
-  if (value.isObject() || value.isString()) {
+  if (value.isObject() || value.isString() || value.isSymbol()) {
     return getJSIValueForUse(value.getUID());
   }
   llvm_unreachable("Unrecognized value type encountered");
@@ -510,6 +510,8 @@ void assertMatch(const SynthTrace::TraceValue &traceValue, const Value &val) {
     assert(val.isString() && "type mismatch between trace and replay");
   } else if (traceValue.isObject()) {
     assert(val.isObject() && "type mismatch between trace and replay");
+  } else if (traceValue.isSymbol()) {
+    assert(val.isSymbol() && "type mismatch between trace and replay");
   }
 }
 #endif
@@ -1017,7 +1019,7 @@ Value TraceInterpreter::execFunction(
       if (it != locals.end()) {
         // Satisfiable locally
         Value val{rt_, it->second};
-        assert(val.isObject() || val.isString());
+        assert(val.isObject() || val.isString() || val.isSymbol());
         // If it was the last local use, delete that object id from locals.
         auto defAndUse = call.locals.find(obj);
         if (defAndUse != call.locals.end() &&
@@ -1039,7 +1041,7 @@ Value TraceInterpreter::execFunction(
       it = gom_.find(obj);
       if (it != gom_.end()) {
         Value val{rt_, it->second};
-        assert(val.isObject() || val.isString());
+        assert(val.isObject() || val.isString() || val.isSymbol());
         // If it was the last global use, delete that object id from globals.
         if (defAndUse->second.lastUse == globalRecordNum) {
           gom_.erase(it);
@@ -1259,7 +1261,9 @@ Value TraceInterpreter::execFunction(
             jsi::Value value;
             const auto &obj = getObjForUse(gpr.objID_);
             auto propIDValOpt = getJSIValueForUseOpt(gpr.propID_);
-            if (propIDValOpt) {
+            // TODO(T111638575): We have to check whether the value is a string,
+            // because we cannot disambiguate Symbols from PropNameIDs.
+            if (propIDValOpt && propIDValOpt->isString()) {
               const jsi::String propString = (*propIDValOpt).asString(rt_);
 #ifdef HERMESVM_API_TRACE_DEBUG
               assert(propString.utf8(rt_) == gpr.propNameDbg_);
@@ -1282,7 +1286,8 @@ Value TraceInterpreter::execFunction(
             auto obj = getObjForUse(spr.objID_);
             // Call set property on the object specified and give it the value.
             auto propIDValOpt = getJSIValueForUseOpt(spr.propID_);
-            if (propIDValOpt) {
+            // TODO(T111638575)
+            if (propIDValOpt && propIDValOpt->isString()) {
               const jsi::String propString = (*propIDValOpt).asString(rt_);
 #ifdef HERMESVM_API_TRACE_DEBUG
               assert(propString.utf8(rt_) == spr.propNameDbg_);
@@ -1310,7 +1315,8 @@ Value TraceInterpreter::execFunction(
                 static_cast<const SynthTrace::HasPropertyRecord &>(*rec);
             auto obj = getObjForUse(hpr.objID_);
             auto propIDValOpt = getJSIValueForUseOpt(hpr.propID_);
-            if (propIDValOpt) {
+            // TODO(T111638575)
+            if (propIDValOpt && propIDValOpt->isString()) {
               const jsi::String propString = (*propIDValOpt).asString(rt_);
 #ifdef HERMESVM_API_TRACE_DEBUG
               assert(propString.utf8(rt_) == hpr.propNameDbg_);
@@ -1621,7 +1627,7 @@ void TraceInterpreter::ifObjectAddToDefs(
     assertMatch(traceValue, val);
   }
 #endif
-  if (traceValue.isObject() || traceValue.isString()) {
+  if (traceValue.isObject() || traceValue.isString() || traceValue.isSymbol()) {
     addJSIValueToDefs(
         call, traceValue.getUID(), globalRecordNum, std::move(val), locals);
   }

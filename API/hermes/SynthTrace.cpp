@@ -228,6 +228,10 @@ SynthTrace::TraceValue SynthTrace::encodePropNameID(ObjectID objID) {
   return TraceValue::encodePropNameIDValue(objID);
 }
 
+SynthTrace::TraceValue SynthTrace::encodeSymbol(ObjectID objID) {
+  return TraceValue::encodeSymbolValue(objID);
+}
+
 /*static*/
 std::string SynthTrace::encode(TraceValue value) {
   if (value.isUndefined()) {
@@ -240,6 +244,8 @@ std::string SynthTrace::encode(TraceValue value) {
     return std::string("string:") + std::to_string(value.getUID());
   } else if (value.isPropNameID()) {
     return std::string("propNameID:") + std::to_string(value.getUID());
+  } else if (value.isSymbol()) {
+    return std::string("symbol:") + std::to_string(value.getUID());
   } else if (value.isNumber()) {
     return std::string("number:") + doublePrinter(value.getNumber());
   } else if (value.isBool()) {
@@ -273,6 +279,8 @@ SynthTrace::TraceValue SynthTrace::decode(const std::string &str) {
     return encodeString(decodeID(rest));
   } else if (tag == "propNameID") {
     return encodePropNameID(decodeID(rest));
+  } else if (tag == "symbol") {
+    return encodeSymbol(decodeID(rest));
   } else {
     llvm_unreachable("Illegal object encountered");
   }

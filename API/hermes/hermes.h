@@ -131,6 +131,7 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   uint64_t getUniqueID(const jsi::Object &o) const;
   uint64_t getUniqueID(const jsi::String &s) const;
   uint64_t getUniqueID(const jsi::PropNameID &pni) const;
+  uint64_t getUniqueID(const jsi::Symbol &sym) const;
 
   /// Same as the other \c getUniqueID, except it can return 0 for some values.
   /// 0 means there is no ID associated with the value.

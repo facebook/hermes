@@ -1148,9 +1148,17 @@ uint64_t HermesRuntime::getUniqueID(const jsi::String &s) const {
   return impl(this)->runtime_.getHeap().getObjectID(
       static_cast<vm::GCCell *>(impl(this)->phv(s).getString()));
 }
+
+// TODO(T111638575): PropNameID and Symbol can have the same unique ID. We
+// should either add a way to distinguish them, or explicitly state that the
+// unique ID may not be used to distinguish a PropNameID from a Value.
 uint64_t HermesRuntime::getUniqueID(const jsi::PropNameID &pni) const {
   return impl(this)->runtime_.getHeap().getObjectID(
       impl(this)->phv(pni).getSymbol());
+}
+uint64_t HermesRuntime::getUniqueID(const jsi::Symbol &sym) const {
+  return impl(this)->runtime_.getHeap().getObjectID(
+      impl(this)->phv(sym).getSymbol());
 }
 
 uint64_t HermesRuntime::getUniqueID(const jsi::Value &val) const {

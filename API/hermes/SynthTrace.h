@@ -73,8 +73,12 @@ class SynthTrace {
       return tag_ == Tag::PropNameID;
     }
 
+    bool isSymbol() const {
+      return tag_ == Tag::Symbol;
+    }
+
     bool isUID() const {
-      return isObject() || isString() || isPropNameID();
+      return isObject() || isString() || isPropNameID() || isSymbol();
     }
 
     static TraceValue encodeUndefinedValue() {
@@ -105,6 +109,10 @@ class SynthTrace {
       return TraceValue(Tag::PropNameID, uid);
     }
 
+    static TraceValue encodeSymbolValue(uint64_t uid) {
+      return TraceValue(Tag::Symbol, uid);
+    }
+
     bool operator==(const TraceValue &that) const;
 
     ObjectID getUID() const {
@@ -130,7 +138,8 @@ class SynthTrace {
       Number,
       Object,
       String,
-      PropNameID
+      PropNameID,
+      Symbol
     };
 
     explicit TraceValue(Tag tag) : tag_(tag) {}
@@ -284,6 +293,8 @@ class SynthTrace {
   static TraceValue encodeString(ObjectID objID);
   /// Encodes a PropNameID for the trace as a unique id.
   static TraceValue encodePropNameID(ObjectID objID);
+  /// Encodes a Symbol for the trace as a unique id.
+  static TraceValue encodeSymbol(ObjectID objID);
 
   /// Decodes a string into a trace value.
   static TraceValue decode(const std::string &);

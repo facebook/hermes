@@ -31,6 +31,7 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
   virtual SynthTrace::ObjectID getUniqueID(const jsi::Object &o) = 0;
   virtual SynthTrace::ObjectID getUniqueID(const jsi::String &s) = 0;
   virtual SynthTrace::ObjectID getUniqueID(const jsi::PropNameID &pni) = 0;
+  virtual SynthTrace::ObjectID getUniqueID(const jsi::Symbol &sym) = 0;
 
   virtual void flushAndDisableTrace() = 0;
 
@@ -163,6 +164,9 @@ class TracingHermesRuntime final : public TracingRuntime {
   }
   SynthTrace::ObjectID getUniqueID(const jsi::PropNameID &pni) override {
     return static_cast<SynthTrace::ObjectID>(hermesRuntime().getUniqueID(pni));
+  }
+  SynthTrace::ObjectID getUniqueID(const jsi::Symbol &sym) override {
+    return static_cast<SynthTrace::ObjectID>(hermesRuntime().getUniqueID(sym));
   }
 
   void flushAndDisableTrace() override;

@@ -513,6 +513,8 @@ SynthTrace::TraceValue TracingRuntime::toTraceValue(const jsi::Value &value) {
     // Get a unique identifier from the object, and use that instead. This is
     // so that object identity is tracked.
     return SynthTrace::encodeObject(getUniqueID(value.getObject(*this)));
+  } else if (value.isSymbol()) {
+    return SynthTrace::encodeSymbol(getUniqueID(value.getSymbol(*this)));
   } else {
     throw std::logic_error("Unsupported value reached");
   }
