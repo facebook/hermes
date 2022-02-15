@@ -681,6 +681,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::PropNameID createPropNameIDFromUtf8(const uint8_t *utf8, size_t length)
       override;
   jsi::PropNameID createPropNameIDFromString(const jsi::String &str) override;
+  jsi::PropNameID createPropNameIDFromSymbol(const jsi::Symbol &sym) override;
   std::string utf8(const jsi::PropNameID &) override;
   bool compare(const jsi::PropNameID &, const jsi::PropNameID &) override;
 
@@ -1525,6 +1526,11 @@ jsi::PropNameID HermesRuntimeImpl::createPropNameIDFromString(
     checkStatus(cr.getStatus());
     return add<jsi::PropNameID>(cr->getHermesValue());
   });
+}
+
+jsi::PropNameID HermesRuntimeImpl::createPropNameIDFromSymbol(
+    const jsi::Symbol &sym) {
+  return add<jsi::PropNameID>(phv(sym));
 }
 
 std::string HermesRuntimeImpl::utf8(const jsi::PropNameID &sym) {

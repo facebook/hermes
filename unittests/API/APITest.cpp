@@ -498,6 +498,21 @@ TEST_F(HermesRuntimeTest, HostObjectAsParentTest) {
       eval("var subClass = {__proto__: ho}; subClass.prop1 == 10;").getBool());
 }
 
+TEST_F(HermesRuntimeTest, PropNameIDFromSymbol) {
+  auto strProp = PropNameID::forAscii(*rt, "a");
+  auto secretProp = PropNameID::forSymbol(
+      *rt, eval("var secret = Symbol('a'); secret;").getSymbol(*rt));
+  auto globalProp =
+      PropNameID::forSymbol(*rt, eval("Symbol.for('a');").getSymbol(*rt));
+  auto x =
+      eval("({a : 'str', [secret] : 'secret', [Symbol.for('a')] : 'global'});")
+          .getObject(*rt);
+
+  EXPECT_EQ(x.getProperty(*rt, strProp).getString(*rt).utf8(*rt), "str");
+  EXPECT_EQ(x.getProperty(*rt, secretProp).getString(*rt).utf8(*rt), "secret");
+  EXPECT_EQ(x.getProperty(*rt, globalProp).getString(*rt).utf8(*rt), "global");
+}
+
 TEST_F(HermesRuntimeTest, HasComputedTest) {
   // The only use of JSObject::hasComputed() is in HermesRuntimeImpl,
   // so we test its Proxy support here, instead of from JS.
