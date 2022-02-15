@@ -1828,6 +1828,7 @@ void HadesGC::completeMarking() {
   // Update the collection threshold before marking anything more, so that only
   // the concurrently marked bytes are part of the calculation.
   updateOldGenThreshold();
+  ogMarkingBarriers_ = false;
   // No locks are needed here because the world is stopped and there is only 1
   // active thread.
   oldGenMarker_->globalWorklist().flushPushChunk();
@@ -1841,11 +1842,6 @@ void HadesGC::completeMarking() {
   assert(
       oldGenMarker_->globalWorklist().empty() &&
       "Marking worklist wasn't drained");
-  // completeWeakMapMarking examines all WeakRefs stored in various WeakMaps and
-  // examines them, regardless of whether the object they use is live or not. We
-  // don't want to execute any read barriers during that time which would affect
-  // the liveness of the object read out of the weak reference.
-  ogMarkingBarriers_ = false;
   completeWeakMapMarking(*oldGenMarker_);
   // Update the compactee tracking pointers so that the next YG collection will
   // do a compaction.

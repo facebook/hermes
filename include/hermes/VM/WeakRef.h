@@ -70,10 +70,10 @@ class WeakRef : public WeakRefBase {
   }
 
   /// Same as \c unsafeGetOptional, but without a read barrier to the GC.
-  /// Do not use this unless it is within a signal handler or on a
-  /// non-mutator thread. If you call this in normal VM operations, the pointer
-  /// might be garbage collected from underneath you at some time in the future,
-  /// even if it's placed in a handle.
+  /// Do not use this unless it is within a signal handler or in the GC itself.
+  /// If you call this in normal VM operations, the pointer might be garbage
+  /// collected from underneath you at some time in the future, even if it's
+  /// placed in a handle.
   OptValue<typename Traits::value_type> unsafeGetOptionalNoReadBarrier() const {
     if (!isValid()) {
       return OptValue<typename Traits::value_type>(llvh::None);

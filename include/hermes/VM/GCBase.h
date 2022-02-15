@@ -1215,8 +1215,8 @@ class GCBase {
   /// pointer slot during a collection.  "Mark-in-place" acceptors
   /// will generally have this property.  Uses \p objIsMarked to
   /// determine whether an object is marked, and, for entries whose
-  /// keys are marked, invokes \p checkValIsMarked on the
-  /// corresponding value.  These have the following specs:
+  /// keys are marked, invokes \p markFromVal on the corresponding value.
+  /// These have the following specs:
   ///
   ///  * objIsMarked: (GCCell*) ==> bool
   ///    Returns whether a GCCell is marked.

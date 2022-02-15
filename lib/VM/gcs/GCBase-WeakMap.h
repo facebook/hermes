@@ -28,7 +28,7 @@ void GCBase::clearEntriesWithUnreachableKeys(
   for (auto iter = weakMap->keys_begin(), end = weakMap->keys_end();
        iter != end;
        iter++) {
-    JSObject *keyObj = iter->getObject(gc);
+    JSObject *keyObj = iter->getObjectInGC(gc);
     if (!keyObj || !objIsMarked(keyObj)) {
       weakMap->clearEntryDirect(gc, *iter);
     }
@@ -61,7 +61,7 @@ bool GCBase::markFromReachableWeakMapKeys(
       keyList->end(),
       [weakMap, gc, objIsMarked, markFromVal, &newlyMarkedValue](
           detail::WeakRefKey *key) {
-        GCCell *cell = key->getObject(gc);
+        GCCell *cell = key->getObjectInGC(gc);
         if (!cell) {
           // Remove key from list.
           return true;

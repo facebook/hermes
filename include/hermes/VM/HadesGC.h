@@ -723,7 +723,7 @@ class HadesGC final : public GCBase {
   /// Represents whether the background thread is currently marking. Should only
   /// be accessed by the mutator thread or during a STW pause.
   /// ogMarkingBarriers_ is true from the start of marking the OG heap until the
-  /// start of WeakMap marking but is kept separate from concurrentPhase_ in
+  /// start of the STW pause but is kept separate from concurrentPhase_ in
   /// order to reduce synchronisation requirements for write barriers.
   bool ogMarkingBarriers_{false};
 

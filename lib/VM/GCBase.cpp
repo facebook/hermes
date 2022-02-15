@@ -960,7 +960,7 @@ std::vector<detail::WeakRefKey *> GCBase::buildKeyList(
   for (auto iter = weakMap->keys_begin(), end = weakMap->keys_end();
        iter != end;
        iter++) {
-    if (iter->getObject(gc)) {
+    if (iter->getObjectInGC(gc)) {
       res.push_back(&(*iter));
     }
   }

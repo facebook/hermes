@@ -35,7 +35,7 @@ struct WeakRefKey {
   /// Returns the object reference of ref; returns null if ref is not valid.
   /// Should only be called during GC; the \param gc argument is used only to
   /// verify this.
-  JSObject *getObject(GC *gc) const;
+  JSObject *getObjectInGC(GC *gc) const;
 };
 
 /// Enable using WeakRef<JSObject> in DenseMap.
