@@ -97,8 +97,8 @@ void CardTable::updateBoundaries(
   // that we should go backwards by 2^(-k - 1) cards, and consult the
   // table there.
   int8_t currentExp = 0;
-  int64_t currentIndexDelta = 1;
-  int8_t numWithCurrentExp = 0;
+  unsigned currentIndexDelta = 1;
+  unsigned numWithCurrentExp = 0;
   while (boundary->address() < end) {
     boundaries_[boundary->index()] = encodeExp(currentExp);
     numWithCurrentExp++;
