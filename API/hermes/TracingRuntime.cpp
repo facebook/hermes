@@ -220,6 +220,16 @@ jsi::PropNameID TracingRuntime::createPropNameIDFromString(
   return res;
 }
 
+jsi::PropNameID TracingRuntime::createPropNameIDFromSymbol(
+    const jsi::Symbol &sym) {
+  jsi::PropNameID res = RD::createPropNameIDFromSymbol(sym);
+  trace_.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+      getTimeSinceStart(),
+      getUniqueID(res),
+      SynthTrace::encodeSymbol(getUniqueID(sym)));
+  return res;
+}
+
 jsi::Value TracingRuntime::getProperty(
     const jsi::Object &obj,
     const jsi::String &name) {

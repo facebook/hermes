@@ -1025,11 +1025,15 @@ TEST_F(SynthTraceReplayTest, SetPropertyReplay) {
     auto strProp =
         jsi::PropNameID::forString(rt, jsi::String::createFromAscii(rt, "c"));
     rt.global().setProperty(rt, "symD", eval(rt, "Symbol('d')"));
+    rt.global().setProperty(rt, "symE", eval(rt, "Symbol('e')"));
+    auto symProp = jsi::PropNameID::forSymbol(
+        rt, rt.global().getProperty(rt, "symE").asSymbol(rt));
 
     jsi::Object x(rt);
     x.setProperty(rt, asciiProp, "apple");
     x.setProperty(rt, utf8Prop, "banana");
     x.setProperty(rt, strProp, "coconut");
+    x.setProperty(rt, symProp, "eggplant");
     rt.global().setProperty(rt, "x", x);
     eval(rt, "x[symD] = 'durian'");
   }
@@ -1040,6 +1044,7 @@ TEST_F(SynthTraceReplayTest, SetPropertyReplay) {
     EXPECT_EQ(eval(rt, "x.b").asString(rt).utf8(rt), "banana");
     EXPECT_EQ(eval(rt, "x.c").asString(rt).utf8(rt), "coconut");
     EXPECT_EQ(eval(rt, "x[symD]").asString(rt).utf8(rt), "durian");
+    EXPECT_EQ(eval(rt, "x[symE]").asString(rt).utf8(rt), "eggplant");
   }
 }
 

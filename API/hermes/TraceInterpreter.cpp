@@ -1205,6 +1205,8 @@ Value TraceInterpreter::execFunction(
                 case SynthTrace::CreatePropNameIDRecord::TRACEVALUE: {
                   auto val = traceValueToJSIValue(
                       rt_, trace_, getJSIValueForUse, cpnr.traceValue_);
+                  if (val.isSymbol())
+                    return PropNameID::forSymbol(rt_, val.getSymbol(rt_));
                   return PropNameID::forString(rt_, val.getString(rt_));
                 }
               }

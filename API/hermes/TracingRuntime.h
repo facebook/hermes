@@ -53,6 +53,7 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
   jsi::PropNameID createPropNameIDFromUtf8(const uint8_t *utf8, size_t length)
       override;
   jsi::PropNameID createPropNameIDFromString(const jsi::String &str) override;
+  jsi::PropNameID createPropNameIDFromSymbol(const jsi::Symbol &sym) override;
 
   jsi::Value getProperty(const jsi::Object &obj, const jsi::String &name)
       override;

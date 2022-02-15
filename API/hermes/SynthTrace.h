@@ -531,7 +531,7 @@ class SynthTrace {
           propNameID_(propNameID),
           chars_(chars, length),
           valueType_(ASCII) {}
-    // jsi::String.
+    // jsi::String or jsi::Symbol.
     CreatePropNameIDRecord(
         TimeSinceStart time,
         ObjectID propNameID,
