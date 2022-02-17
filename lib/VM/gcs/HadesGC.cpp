@@ -3148,27 +3148,23 @@ size_t HadesGC::getDrainRate() {
   // We want to make progress so that we are able to complete marking over all
   // YG collections before OG fills up.
   uint64_t totalAllocated = oldGen_.allocatedBytes() + oldGen_.externalBytes();
+  // Must be >0 to avoid division by zero below.
   uint64_t bytesToFill =
-      std::max(oldGen_.targetSizeBytes(), totalAllocated) - totalAllocated;
-  // On average, the number of bytes that survive a YG collection. Round it up
-  // to at least 1.
-  const uint64_t ygSurvivalBytes =
-      std::max<double>(ygAverageSurvivalBytes_, 1.0);
-  const size_t ygCollectionsUntilFull =
-      llvh::divideCeil(bytesToFill ? bytesToFill : 1, ygSurvivalBytes);
-  assert(
-      ygCollectionsUntilFull != 0 &&
-      "All of the math above should avoid a 0 ygCollectionsUntilFull");
-  // If any of the above calculations end up being a tiny drain rate, make the
-  // lower limit at least 8 KB, to ensure collections eventually end.
-  constexpr uint64_t byteDrainRateMin = 8192;
+      std::max(oldGen_.targetSizeBytes(), totalAllocated + 1) - totalAllocated;
   uint64_t preAllocated = ogCollectionStats_->beforeAllocatedBytes();
   uint64_t markedBytes = oldGenMarker_->markedBytes();
   assert(
       markedBytes <= preAllocated &&
       "Cannot mark more bytes than were initially allocated");
-  return std::max(
-      (preAllocated - markedBytes) / ygCollectionsUntilFull, byteDrainRateMin);
+  uint64_t bytesToMark = preAllocated - markedBytes;
+  // The drain rate is calculated from:
+  //   bytesToMark / (collections until full)
+  // = bytesToMark / (bytesToFill / ygAverageSurvivalBytes_)
+  uint64_t drainRate = bytesToMark * ygAverageSurvivalBytes_ / bytesToFill;
+  // If any of the above calculations end up being a tiny drain rate, make
+  // the lower limit at least 8 KB, to ensure collections eventually end.
+  constexpr uint64_t byteDrainRateMin = 8192;
+  return std::max(drainRate, byteDrainRateMin);
 }
 
 void HadesGC::addSegmentExtentToCrashManager(
