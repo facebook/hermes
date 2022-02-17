@@ -1281,9 +1281,8 @@ HadesGC::HadesGC(
           gcConfig,
           std::move(crashMgr),
           HeapKind::HadesGC),
-      maxHeapSize_{std::max(
-          static_cast<size_t>(
-              llvh::alignTo<AlignedStorage::size()>(gcConfig.getMaxHeapSize())),
+      maxHeapSize_{std::max<uint64_t>(
+          gcConfig.getMaxHeapSize(),
           // At least one YG segment and one OG segment.
           2 * AlignedStorage::size())},
       provider_(std::move(provider)),
@@ -1306,21 +1305,11 @@ HadesGC::HadesGC(
   if (!newYoungGen)
     hermes_fatal("Failed to initialize the young gen", newYoungGen.getError());
   setYoungGen(std::move(newYoungGen.get()));
-  const size_t minHeapSegments =
-      // Align up first to round up.
-      llvh::alignTo<AlignedStorage::size()>(gcConfig.getMinHeapSize()) /
-      AlignedStorage::size();
-  const size_t requestedInitHeapSegments =
-      // Align up first to round up.
-      llvh::alignTo<AlignedStorage::size()>(gcConfig.getInitHeapSize()) /
-      AlignedStorage::size();
-
-  const size_t initHeapSegments = std::max(
-      {minHeapSegments,
-       requestedInitHeapSegments,
-       // At least one YG segment and one OG segment.
-       static_cast<size_t>(2)});
-  oldGen_.setTargetSizeBytes((initHeapSegments - 1) * HeapSegment::maxSize());
+  const size_t initHeapSize = std::max<uint64_t>(
+      {gcConfig.getMinHeapSize(),
+       gcConfig.getInitHeapSize(),
+       HeapSegment::maxSize()});
+  oldGen_.setTargetSizeBytes(initHeapSize - HeapSegment::maxSize());
 }
 
 HadesGC::~HadesGC() {
@@ -2987,7 +2976,7 @@ uint64_t HadesGC::OldGen::size() const {
 uint64_t HadesGC::OldGen::targetSizeBytes() const {
   assert(
       gc_->gcMutex_ && "Must hold gcMutex_ when accessing targetSizeBytes_.");
-  return llvh::alignTo(targetSizeBytes_, HeapSegment::maxSize());
+  return targetSizeBytes_;
 }
 
 size_t HadesGC::getYoungGenExternalBytes() const {
@@ -3045,10 +3034,6 @@ size_t HadesGC::OldGen::numSegments() const {
 }
 
 size_t HadesGC::OldGen::maxNumSegments() const {
-  assert(
-      llvh::alignTo<AlignedStorage::size()>(gc_->maxHeapSize_) ==
-          gc_->maxHeapSize_ &&
-      "max heap size must be aligned");
   // Subtract the YG component from the max heap size.
   const auto ogMaxHeapSize = gc_->maxHeapSize_ - AlignedStorage::size();
   if (numSegments() * AlignedStorage::size() + externalBytes_ >=

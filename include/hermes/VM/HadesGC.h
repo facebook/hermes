@@ -448,9 +448,7 @@ class HadesGC final : public GCBase {
 
     /// \return the total number of bytes that we aim to use in the OG
     /// section of the JS heap, including free list entries. This may be smaller
-    /// or greater than size(). It is rounded up to the nearest segment to make
-    /// to reflect the fact that in practice, the heap size will be an integer
-    /// multiple of segment size.
+    /// or greater than size().
     uint64_t targetSizeBytes() const;
 
     /// Add some external memory cost to the OG.
