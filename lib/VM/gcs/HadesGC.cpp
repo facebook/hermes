@@ -1223,18 +1223,15 @@ bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
   auto &stats = *gc_->ogCollectionStats_;
   stats.setSweptBytes(sweepIterator_.sweptBytes);
   stats.setSweptExternalBytes(sweepIterator_.sweptExternalBytes);
-  // The formula for occupancyTarget_ is:
-  // occupancyTarget_ = (allocatedBytes + externalBytes) / (capacityBytes +
-  //  externalBytes)
-  // Solving for capacityBytes:
-  // capacityBytes = (allocatedBytes + externalBytes) / occupancyTarget_ -
-  //  externalBytes
   const uint64_t targetSizeBytes =
       (stats.afterAllocatedBytes() + stats.afterExternalBytes()) /
-          gc_->occupancyTarget_ -
-      stats.afterExternalBytes();
-  const uint64_t clampedSizeBytes = std::min<uint64_t>(
-      targetSizeBytes, maxNumSegments() * HeapSegment::maxSize());
+      gc_->occupancyTarget_;
+
+  // In a very large heap, use the configured max heap size as a backstop to
+  // prevent the target size crossing it (which would delay collection and cause
+  // an OOM). This is just an approximation, a precise accounting would subtract
+  // segment metadata and YG memory.
+  uint64_t clampedSizeBytes = std::min(targetSizeBytes, gc_->maxHeapSize_);
   targetSizeBytes_.update(clampedSizeBytes);
   sweepIterator_ = {};
   return false;
@@ -1721,7 +1718,8 @@ void HadesGC::prepareCompactee(bool forceCompaction) {
   // than the target size. Since the selected segment will be removed from the
   // heap, we only want to compact if there are at least 2 segments in the OG.
   double threshold = oldGen_.targetSizeBytes() * 1.05;
-  if ((forceCompaction || oldGen_.size() > threshold) &&
+  uint64_t totalBytes = oldGen_.size() + oldGen_.externalBytes();
+  if ((forceCompaction || totalBytes > threshold) &&
       oldGen_.numSegments() > 1) {
     // Select the one with the fewest allocated bytes, to
     // minimise scanning and copying. We intentionally avoid selecting the very
@@ -2555,7 +2553,9 @@ void HadesGC::youngGenCollection(
     // In a compacting YG, since the evacuatedBytes counter tracks both
     // segments, this value is not a useful predictor of future collections.
     if (!doCompaction)
-      ygAverageSurvivalBytes_.update(ygCollectionStats_->afterAllocatedBytes());
+      ygAverageSurvivalBytes_.update(
+          ygCollectionStats_->afterAllocatedBytes() +
+          ygCollectionStats_->afterExternalBytes());
   }
 #ifdef HERMES_SLOW_DEBUG
   // Check that the card tables are well-formed after the collection.
@@ -2589,8 +2589,7 @@ void HadesGC::youngGenCollection(
       // instead just influence when collections begin.
       const uint64_t totalAllocated =
           oldGen_.allocatedBytes() + oldGen_.externalBytes();
-      const uint64_t totalBytes =
-          oldGen_.targetSizeBytes() + oldGen_.externalBytes();
+      const uint64_t totalBytes = oldGen_.targetSizeBytes();
       double allocatedRatio = static_cast<double>(totalAllocated) / totalBytes;
       if (allocatedRatio >= ogThreshold_) {
         oldGenCollection(kNaturalCauseForAnalytics, /*forceCompaction*/ false);
@@ -3033,19 +3032,6 @@ size_t HadesGC::OldGen::numSegments() const {
   return segments_.size();
 }
 
-size_t HadesGC::OldGen::maxNumSegments() const {
-  // Subtract the YG component from the max heap size.
-  const auto ogMaxHeapSize = gc_->maxHeapSize_ - AlignedStorage::size();
-  if (numSegments() * AlignedStorage::size() + externalBytes_ >=
-      ogMaxHeapSize) {
-    // If the current OldGen footprint is greater than the max heap size, say
-    // the current number of segments are the max number of segments.
-    return numSegments();
-  }
-  return llvh::divideCeil(
-      ogMaxHeapSize - externalBytes_, AlignedStorage::size());
-}
-
 HadesGC::HeapSegment &HadesGC::OldGen::operator[](size_t i) {
   return segments_[i];
 }
@@ -3159,12 +3145,11 @@ size_t HadesGC::getDrainRate() {
   // OG faster than it fills up.
   assert(!kConcurrentGC);
 
-  // We want to make progress so that over all YG collections before the heap
-  // fills up, we are able to complete marking before OG fills up. Don't include
-  // external memory since that doesn't need to be marked.
-  const size_t bytesToFill =
-      std::max(oldGen_.targetSizeBytes(), oldGen_.size()) -
-      oldGen_.allocatedBytes();
+  // We want to make progress so that we are able to complete marking over all
+  // YG collections before OG fills up.
+  uint64_t totalAllocated = oldGen_.allocatedBytes() + oldGen_.externalBytes();
+  uint64_t bytesToFill =
+      std::max(oldGen_.targetSizeBytes(), totalAllocated) - totalAllocated;
   // On average, the number of bytes that survive a YG collection. Round it up
   // to at least 1.
   const uint64_t ygSurvivalBytes =

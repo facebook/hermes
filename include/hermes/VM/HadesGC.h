@@ -390,7 +390,6 @@ class HadesGC final : public GCBase {
     std::deque<HeapSegment>::const_iterator end() const;
 
     size_t numSegments() const;
-    size_t maxNumSegments() const;
 
     HeapSegment &operator[](size_t i);
 
@@ -447,8 +446,8 @@ class HadesGC final : public GCBase {
     uint64_t size() const;
 
     /// \return the total number of bytes that we aim to use in the OG
-    /// section of the JS heap, including free list entries. This may be smaller
-    /// or greater than size().
+    /// section of the heap, including free list entries and external memory.
+    /// This may be smaller or greater than size() + externalBytes().
     uint64_t targetSizeBytes() const;
 
     /// Add some external memory cost to the OG.
@@ -556,10 +555,7 @@ class HadesGC final : public GCBase {
     /// remain valid across a push_back.
     std::deque<HeapSegment> segments_;
 
-    /// This is the target size in bytes for the OG JS heap. It does not
-    /// include external memory and may be larger or smaller than the actual
-    /// capacity of the heap. Should be initialised using setTargetSizeBytes
-    /// before use.
+    /// See \c targetSizeBytes() above.
     ExponentialMovingAverage targetSizeBytes_{0, 0};
 
     /// This is the sum of all bytes currently allocated in the heap, excluding
