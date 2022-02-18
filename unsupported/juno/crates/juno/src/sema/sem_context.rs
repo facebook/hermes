@@ -145,6 +145,8 @@ impl Decl {
 }
 
 pub struct LexicalScope {
+    /// The global depth of this scope, where 0 is the root scope.
+    pub depth: u32,
     /// The function owning this lexical scope.
     pub parent_function: FunctionInfoId,
     /// The enclosing lexical scope (it could be in another function).
@@ -289,8 +291,10 @@ impl SemContext {
         &mut self,
         in_function: FunctionInfoId,
         parent_scope: Option<LexicalScopeId>,
+        depth: u32,
     ) -> (LexicalScopeId, &LexicalScope) {
         self.scopes.push(LexicalScope {
+            depth,
             parent_function: in_function,
             parent_scope,
             decls: Default::default(),

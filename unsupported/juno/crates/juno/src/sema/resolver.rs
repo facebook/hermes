@@ -257,9 +257,11 @@ impl<'gc> Resolver<'gc, '_> {
         self.binding_table.push_scope();
         // New lexical scope.
         let prev_scope = self.current_scope;
-        let (new_scope, _) = self
-            .sem
-            .new_scope(self.function_context().func_id, prev_scope);
+        let (new_scope, _) = self.sem.new_scope(
+            self.function_context().func_id,
+            prev_scope,
+            prev_scope.map_or(0, |p| self.sem.scope(p).depth + 1),
+        );
         self.current_scope = Some(new_scope);
         // Record the global scope depth.
         if prev_scope.is_none() {
