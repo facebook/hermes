@@ -771,7 +771,7 @@ impl<'gc> Resolver<'gc, '_> {
     }
 
     /// Declare all declarations from `scope_decls` in the current scope by
-    /// calling [`Self::validate_and_declare_identifier()'].
+    /// calling [`Self::validate_and_declare_identifier()`].
     fn process_declarations(&mut self, lock: &GCLock, scope_decls: &[&'gc Node<'gc>]) {
         for &decl in scope_decls {
             let mut idents = SmallVec::<[&Node; 4]>::new();
@@ -1102,6 +1102,27 @@ impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
             Node::Identifier(ident) => self.visit_identifier(lock, ident, node, path.unwrap()),
 
             Node::BlockStatement(_) => self.visit_block_statement(lock, node, path.unwrap()),
+
+            Node::SwitchStatement(switch) => {
+                // Visit the discriminant before creating a new scope.
+                switch.discriminant.visit(
+                    lock,
+                    self,
+                    Some(Path::new(node, NodeField::discriminant)),
+                );
+                self.with_new_label(lock, None, node, |pself| {
+                    pself.in_new_scope(lock, node, |pself| {
+                        if let Some(decls) =
+                            pself.function_context().decls.scope_decls_for_node(node)
+                        {
+                            pself.process_declarations(lock, &decls);
+                        }
+                        for case in &switch.cases {
+                            case.visit(lock, pself, Some(Path::new(node, NodeField::cases)));
+                        }
+                    });
+                });
+            }
 
             Node::ForStatement(_) | Node::ForInStatement(_) | Node::ForOfStatement(_) => {
                 self.with_new_label(lock, None, node, |pself| {
