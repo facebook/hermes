@@ -567,6 +567,9 @@ impl<'gc> Resolver<'gc, '_> {
         | Node::FunctionExpression(_)
         | Node::ArrowFunctionExpression(_)
         | Node::CatchClause(_)
+        | Node::ForStatement(_)
+        | Node::ForInStatement(_)
+        | Node::ForOfStatement(_)
         | Node::Program(_) = path.parent
         {
             return node.visit_children(lock, self);
@@ -1003,6 +1006,18 @@ impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
             Node::Identifier(ident) => self.visit_identifier(lock, ident, node, path.unwrap()),
 
             Node::BlockStatement(_) => self.visit_block_statement(lock, node, path.unwrap()),
+
+            Node::ForStatement(_) | Node::ForInStatement(_) | Node::ForOfStatement(_) => {
+                // Only create a lexical scope if there are declarations in it.
+                if let Some(decls) = self.function_context().decls.scope_decls_for_node(node) {
+                    self.in_new_scope(lock, node, |pself| {
+                        pself.process_declarations(lock, decls.as_slice());
+                        node.visit_children(lock, pself);
+                    });
+                } else {
+                    node.visit_children(lock, self);
+                }
+            }
 
             Node::CatchClause(ast::CatchClause { param, body, .. }) => {
                 self.in_new_scope(lock, node, |pself| {
