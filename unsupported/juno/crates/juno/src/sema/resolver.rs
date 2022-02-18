@@ -8,17 +8,19 @@
 use super::sem_context::*;
 use crate::ast::{
     self, builder, node_cast, node_isa, template, GCLock, Identifier, Node, NodeField, NodeList,
-    NodeRc, NodeVariant, Path, TemplateMetadata, UnaryExpressionOperator, VariableDeclarationKind,
-    Visitor,
+    NodePtr, NodeRc, NodeVariant, Path, TemplateMetadata, UnaryExpressionOperator,
+    VariableDeclarationKind, Visitor,
 };
 use crate::resolve_dependency::{DependencyKind, DependencyResolver};
-use crate::sema::decl_collector::DeclCollector;
+use crate::sema::decl_collector::{DeclCollector, ScopeDecls};
 use crate::sema::keywords::Keywords;
 use crate::sema::known_globals::KNOWN_GLOBALS;
 use juno_support::atom_table::Atom;
 use juno_support::source_manager::{SourceId, SourceRange};
 use juno_support::ScopedHashMap;
 use smallvec::SmallVec;
+use std::collections::HashSet;
+use std::rc::Rc;
 
 #[derive(Debug)]
 struct Binding<'gc> {
@@ -136,6 +138,10 @@ impl<'gc> Resolver<'gc, '_> {
     /// Return a reference to the current function context.
     fn function_context(&self) -> &FunctionContext<'gc> {
         self.func_stack.last().unwrap()
+    }
+    /// Return a reference to the current function context.
+    fn function_context_mut(&mut self) -> &mut FunctionContext<'gc> {
+        self.func_stack.last_mut().unwrap()
     }
     /// Return true if the current function is strict.
     fn function_strict_mode(&self) -> bool {
@@ -484,7 +490,7 @@ impl<'gc> Resolver<'gc, '_> {
 
                 if let Node::BlockStatement(_) = body {
                     if !pself.function_strict_mode() {
-                        // FIXME: self.promote_scoped_func_decls(lock, node);
+                        pself.promote_scoped_func_decls(lock, node);
                     }
                 }
                 pself.process_collected_declarations(lock, node);
@@ -965,6 +971,15 @@ impl<'gc> Resolver<'gc, '_> {
             }
         }
     }
+
+    fn promote_scoped_func_decls(&mut self, lock: &'gc GCLock, func_node: &'gc Node<'gc>) {
+        debug_assert!(func_node.is_function_like());
+        if self.function_context().decls.scoped_func_decls().is_empty() {
+            // No scoped function declarations, nothing to promote.
+            return;
+        }
+        ScopedFunctionPromoter::new(self).run(lock, func_node);
+    }
 }
 
 impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
@@ -1123,4 +1138,261 @@ fn find_use_strict<'gc>(body: &NodeList<'gc>) -> Option<&'gc Node<'gc>> {
         }
     }
     None
+}
+
+/// This class checks whether it is safe to promote block-scoped function
+/// declarations to function scope. i.e. whether it is safe to replace one with
+/// "var" without creating a conflict, and promotes them.
+///
+/// A conflict exists if a lex-like declaration is visible in the declaration
+/// scope. The checker starts with a list of all block scoped function
+/// declarations. Then it visits all scopes recursively, maintaining a scoped
+/// table of let-like declarations with matching names. When it encounters a
+/// block-scoped function declaration, it checks whether a matching let-like
+/// declaration is visible. If not, it is safe to promote.
+///
+/// The input is a list of block-scoped function function declarations. The
+/// ones that can be promoted are deleted from their own scope and added to the
+/// function scope.
+struct ScopedFunctionPromoter<'a, 'gc, 'mode> {
+    resolver: &'a mut Resolver<'gc, 'mode>,
+
+    /// The names of the scoped functions. We will ignore all other identifiers.
+    func_names: HashSet<Atom>,
+
+    /// The scoped function declarations. We remove each from this set once
+    /// we encounter it.
+    func_decls: HashSet<NodePtr<'gc>>,
+
+    /// The currently lexically visible names.
+    binding_table: ScopedHashMap<Atom, ()>,
+}
+
+impl<'a, 'gc, 'mode> ScopedFunctionPromoter<'a, 'gc, 'mode> {
+    fn new(resolver: &'a mut Resolver<'gc, 'mode>) -> Self {
+        ScopedFunctionPromoter {
+            resolver,
+            func_names: Default::default(),
+            func_decls: Default::default(),
+            binding_table: Default::default(),
+        }
+    }
+
+    /// Run on the `func_node` and promote any necessary functions.
+    fn run(&mut self, lock: &'gc GCLock, func_node: &'gc Node<'gc>) {
+        debug_assert!(func_node.is_function_like());
+        let decls = self.resolver.function_context().decls.scoped_func_decls();
+
+        // Populate the sets.
+        for node in decls {
+            let func_decl = node_cast!(Node::FunctionDeclaration, node);
+            self.func_names
+                .insert(node_cast!(Node::Identifier, func_decl.id.unwrap()).name);
+            self.func_decls.insert(NodePtr::from_node(node));
+        }
+
+        // The core of the loop doesn't descend into functions,
+        // so we take care of the only time we have to examine a function scope.
+        // Process the first decls here, because they're associated with the function like node,
+        // not the BlockStatement that forms the body.
+        // After processing those declarations, immediately start visiting the body's children,
+        // because the body itself has been handled as part of the function's processing.
+        self.process_declarations(lock, func_node);
+        func_node.function_like_body().visit_children(lock, self);
+    }
+
+    /// Visit any statement starting a scope.
+    fn visit_scope(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>) {
+        self.binding_table.push_scope();
+        self.process_declarations(lock, node);
+        self.binding_table.pop_scope();
+    }
+
+    /// Process the declarations in a scope.
+    /// This is the core of the algorithm, it updates the binding tables, etc.
+    /// Promotes the scoped FunctionDeclarations to function scope if they don't conflict.
+    fn process_declarations(&mut self, lock: &'gc GCLock, scope: &'gc Node<'gc>) {
+        let decls = match self
+            .resolver
+            .function_context()
+            .decls
+            .scope_decls_for_node(scope)
+        {
+            None => return,
+            Some(decls) => decls,
+        };
+
+        let mut idents = SmallVec::<[&Node; 4]>::new();
+
+        // Whenever we encounter one of the scoped func decls we are trying to promote,
+        // we store the entry here (so we can promote it if we want to).
+        let mut found_decls = Vec::<&Node>::new();
+
+        for &decl_node in decls.iter() {
+            if let Node::FunctionDeclaration(_) = decl_node {
+                if self.func_decls.contains(&decl_node.into()) {
+                    // We encountered one of the candidate declarations.
+                    // Add it to the found_decls list and move on.
+                    found_decls.push(decl_node);
+                }
+                continue;
+            }
+
+            // Extract idents, report errors.
+            idents.clear();
+            let decl_kind = Self::extract_declared_idents(lock, decl_node, &mut idents);
+
+            // We are only interested in let-like declarations.
+            if !decl_kind.is_let_like() {
+                continue;
+            }
+
+            // Remember only idents matching the set.
+            for &ident_node in &idents {
+                let ident = node_cast!(Node::Identifier, ident_node);
+                if self.func_names.contains(&ident.name) {
+                    self.binding_table.insert(ident.name, ());
+                }
+            }
+        }
+
+        if found_decls.is_empty() {
+            // No work to do.
+            return;
+        }
+
+        // Ensure we don't have the `Rc` alive when we do the actual promotion.
+        drop(decls);
+
+        // The decls list with the promoted function declarations omitted.
+        let mut new_decls = ScopeDecls::new();
+
+        for &node in &found_decls {
+            // Remove it from the set, since we are no longer interested in it.
+            self.func_decls.remove(&node.into());
+
+            let func_decl = node_cast!(Node::FunctionDeclaration, node);
+            match func_decl.id {
+                None => {
+                    // No name on the declaration, nothing to promote.
+                    new_decls.push(node);
+                    continue;
+                }
+                Some(id) => {
+                    // Is there a visible let-like declaration with the same name?
+                    // If so, it can't be promoted because it would shadow a `let`,
+                    // so keep it in `new_decls` and move on.
+                    if self
+                        .binding_table
+                        .contains_key(&node_cast!(Node::Identifier, id).name)
+                    {
+                        new_decls.push(node);
+                        continue;
+                    }
+                }
+            };
+
+            // This block-scoped function declaration can (and should) be promoted.
+            // 1. Don't add it to the new_decls list.
+            // 2. Add it to the function scope list.
+            self.resolver
+                .function_context_mut()
+                .decls
+                .add_scope_decl_for_func(node);
+        }
+
+        self.resolver
+            .function_context_mut()
+            .decls
+            .set_scope_decls_for_node(scope, Rc::new(new_decls));
+    }
+
+    /// Extract the list of declared identifiers in a declaration node into `idents`.
+    /// Return the declaration kind of the node.
+    /// Function declarations are always returned as `ScopedFunction`, so they can be distinguished.
+    fn extract_declared_idents<A: smallvec::Array<Item = &'gc Node<'gc>>>(
+        lock: &GCLock,
+        node: &'gc Node<'gc>,
+        idents: &mut SmallVec<A>,
+    ) -> DeclKind {
+        match node {
+            Node::VariableDeclaration(decl) => {
+                for &declarator in &decl.declarations {
+                    Resolver::extract_declared_idents_from_id(
+                        lock,
+                        Some(node_cast!(Node::VariableDeclarator, declarator).id),
+                        idents,
+                    )
+                }
+                match decl.kind {
+                    VariableDeclarationKind::Let => DeclKind::Let,
+                    VariableDeclarationKind::Const => DeclKind::Const,
+                    VariableDeclarationKind::Var => DeclKind::Var,
+                }
+            }
+            Node::FunctionDeclaration(decl) => {
+                Resolver::extract_declared_idents_from_id(lock, decl.id, idents);
+                DeclKind::ScopedFunction
+            }
+            Node::ClassDeclaration(decl) => {
+                Resolver::extract_declared_idents_from_id(lock, decl.id, idents);
+                DeclKind::Class
+            }
+            Node::ImportDeclaration(decl) => {
+                for &spec in &decl.specifiers {
+                    match spec {
+                        Node::ImportSpecifier(spec) => {
+                            Resolver::extract_declared_idents_from_id(
+                                lock,
+                                Some(spec.local),
+                                idents,
+                            );
+                        }
+                        Node::ImportDefaultSpecifier(spec) => {
+                            Resolver::extract_declared_idents_from_id(
+                                lock,
+                                Some(spec.local),
+                                idents,
+                            );
+                        }
+                        Node::ImportNamespaceSpecifier(spec) => {
+                            Resolver::extract_declared_idents_from_id(
+                                lock,
+                                Some(spec.local),
+                                idents,
+                            );
+                        }
+                        _ => {
+                            unreachable!("Invalid import specifier: {:?}", node.variant());
+                        }
+                    }
+                }
+                DeclKind::Import
+            }
+            _ => {
+                unreachable!("Invalid declaration kind: {:?}", node.variant());
+            }
+        }
+    }
+}
+
+impl<'gc> Visitor<'gc> for ScopedFunctionPromoter<'_, 'gc, '_> {
+    fn call(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>, _path: Option<Path<'gc>>) {
+        match node {
+            Node::SwitchStatement(_)
+            | Node::BlockStatement(_)
+            | Node::ForStatement(_)
+            | Node::ForInStatement(_)
+            | Node::ForOfStatement(_) => {
+                self.visit_scope(lock, node);
+                node.visit_children(lock, self);
+            }
+            _ => {
+                // Do not descend into nested functions.
+                if !node.is_function_like() {
+                    node.visit_children(lock, self);
+                }
+            }
+        };
+    }
 }
