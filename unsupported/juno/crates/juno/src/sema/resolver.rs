@@ -147,6 +147,13 @@ impl<'gc> Resolver<'gc, '_> {
     fn function_strict_mode(&self) -> bool {
         self.sem.function(self.function_context().func_id).strict
     }
+    /// Return a mutable reference to the current strict mode flag.
+    fn function_strict_mode_mut(&mut self) -> &mut bool {
+        &mut self
+            .sem
+            .function_mut(self.function_context().func_id)
+            .strict
+    }
 
     // Convenience function returning the scope object of a declaration.
     fn decl_scope(&self, decl: DeclId) -> &LexicalScope {
@@ -1086,6 +1093,13 @@ impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
                         }
                     }
                 }
+            }
+
+            Node::ClassDeclaration(_) | Node::ClassExpression(_) => {
+                let old_strict = self.function_strict_mode();
+                *self.function_strict_mode_mut() = true;
+                node.visit_children(lock, self);
+                *self.function_strict_mode_mut() = old_strict;
             }
 
             Node::CallExpression(call @ ast::CallExpression { arguments, .. }) => {
