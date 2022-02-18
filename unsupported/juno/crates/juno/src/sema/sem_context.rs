@@ -145,6 +145,9 @@ pub struct Decl {
     /// The lexical scope of the declaration. Could be nullptr for special
     /// declarations, since they are technically unscoped.
     pub scope: LexicalScopeId,
+    /// Whether the variable can be renamed.
+    /// False when, e.g., it may be read/written by a local `eval` call.
+    pub can_rename: bool,
 }
 
 impl Decl {
@@ -178,6 +181,10 @@ pub struct LexicalScope {
     /// A list of functions that need to be hoisted and materialized before we
     /// can generate the rest of the scope.
     pub hoisted_functions: Vec<NodeRc>,
+    /// True if this scope or any descendent scopes have a local eval call.
+    /// If any descendent uses local eval,
+    /// it's impossible to know whether local variables are modified.
+    pub local_eval: bool,
 }
 
 impl LexicalScope {
@@ -274,13 +281,21 @@ impl FunctionInfo {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum Resolution {
+    /// Unable to resolve due to presence of `eval` or `with`.
+    Unresolvable,
+    /// Resolved to a proper declaration.
+    Decl(DeclId),
+}
+
 #[derive(Default)]
 pub struct SemContext {
     pub decls: DeclList,
     pub scopes: LexicalScopeList,
     pub funcs: FunctionInfoList,
-    /// Resolved identifiers: declarations associated with Identifier AST nodes.
-    ident_decls: HashMap<NodeRc, DeclId>,
+    /// Declarations associated with Identifier AST nodes or marked [`Resolution::Unresolvable`].
+    ident_decls: HashMap<NodeRc, Resolution>,
     /// Lexical scopes associated with AST nodes. Usually BlockStatement, but
     /// occasionally others.
     node_scopes: HashMap<NodeRc, LexicalScopeId>,
@@ -321,6 +336,7 @@ impl SemContext {
             parent_scope,
             decls: Default::default(),
             hoisted_functions: Default::default(),
+            local_eval: false,
         });
         let scope_id = LexicalScopeId::new(self.scopes.0.len() - 1);
 
@@ -342,6 +358,7 @@ impl SemContext {
             special,
             function_in_scope: false,
             scope,
+            can_rename: false,
         });
         let decl_id = DeclId::new(self.decls.0.len() - 1);
         self.scopes.get_mut(scope).decls.push(decl_id);
@@ -360,13 +377,16 @@ impl SemContext {
         )
     }
 
-    pub fn all_ident_decls(&self) -> &HashMap<NodeRc, DeclId> {
+    pub fn all_ident_decls(&self) -> &HashMap<NodeRc, Resolution> {
         &self.ident_decls
     }
     pub(super) fn set_ident_decl(&mut self, node: NodeRc, decl: DeclId) {
-        self.ident_decls.insert(node, decl);
+        self.ident_decls.insert(node, Resolution::Decl(decl));
     }
-    pub fn ident_decl(&self, node: &NodeRc) -> Option<DeclId> {
+    pub(super) fn set_ident_unresolvable(&mut self, node: NodeRc) {
+        self.ident_decls.insert(node, Resolution::Unresolvable);
+    }
+    pub fn ident_decl(&self, node: &NodeRc) -> Option<Resolution> {
         self.ident_decls.get(node).copied()
     }
 

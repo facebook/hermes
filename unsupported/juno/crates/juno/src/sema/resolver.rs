@@ -595,6 +595,14 @@ impl<'gc> Resolver<'gc, '_> {
 
                 // Finally visit the body.
                 body.visit(lock, pself, Some(Path::new(node, NodeField::body)));
+
+                // Check for local eval and run the unresolver pass in non-strict mode.
+                let func = pself.sem.function(pself.function_context().func_id);
+                let scope = pself.sem.scope(func.scopes[0]);
+                if scope.local_eval && !func.strict {
+                    let depth = pself.sem.scope(func.scopes[0]).depth;
+                    Unresolver::new(pself, depth).run(lock, node);
+                }
             });
         });
     }
@@ -686,6 +694,7 @@ impl<'gc> Resolver<'gc, '_> {
 
     /// Look up the `ident` to see if it already has been resolved or has a binding assigned.
     /// Assigns the associated declaration if it exists.
+    /// If the identifier is unresolvable, returns `None`.
     fn check_identifier_resolved(
         &mut self,
         lock: &GCLock,
@@ -693,9 +702,11 @@ impl<'gc> Resolver<'gc, '_> {
         node: &Node,
     ) -> Option<DeclId> {
         let ptr = NodeRc::from_node(lock, node);
-        if let Some(decl) = self.sem.ident_decl(&ptr) {
+        if let Some(Resolution::Decl(decl)) = self.sem.ident_decl(&ptr) {
             // If identifier already resolved, pick the resolved declaration.
             Some(decl)
+        } else if let Some(Resolution::Unresolvable) = self.sem.ident_decl(&ptr) {
+            None
         } else if let Some(b) = self.binding_table.value(ident.name) {
             // If we can find the binding, assign the associated declaration and return it.
             self.sem.set_ident_decl(ptr, b.decl);
@@ -1073,6 +1084,29 @@ impl<'gc> Resolver<'gc, '_> {
         }
     }
 
+    /// Mark the current scope and every one of its ancestor scopes as users of local `eval()`.
+    /// Set the `can_rename` flag on every variable in the scopes to `false`.
+    fn register_local_eval(&mut self) {
+        let mut id = self.current_scope.unwrap();
+        loop {
+            // Flag this scope as having a local `eval` call.
+            self.sem.scope_mut(id).local_eval = true;
+            // Set every variable as not being able to rename.
+            // TODO: It can be possible to avoid setting this flag if the variable is shadowed
+            // in a scope between this one and the local `eval()` call, so investigate that
+            // at a later time if necessary.
+            for &decl_id in &self.sem.scopes.get(id).decls {
+                self.sem.decls.get_mut(decl_id).can_rename = false;
+            }
+            match self.sem.scope(id).parent_scope {
+                None => break,
+                Some(p) => {
+                    id = p;
+                }
+            };
+        }
+    }
+
     fn promote_scoped_func_decls(&mut self, lock: &'gc GCLock, func_node: &'gc Node<'gc>) {
         debug_assert!(func_node.is_function_like());
         if self.function_context().decls.scoped_func_decls().is_empty() {
@@ -1279,6 +1313,22 @@ impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
             }
 
             Node::CallExpression(call @ ast::CallExpression { arguments, .. }) => {
+                // Check for a direct call to local `eval()`.
+                if let Node::Identifier(identifier) = call.callee {
+                    if identifier.name == self.kw.ident_eval {
+                        let is_eval = match self.binding_table.get(&identifier.name) {
+                            None => true,
+                            Some(name) => {
+                                let decl = self.sem.decl(name.decl);
+                                decl.scope.is_global() && decl.kind.is_var_like()
+                            }
+                        };
+                        if is_eval {
+                            self.register_local_eval();
+                        }
+                    }
+                }
+
                 node.visit_children(lock, self);
                 if let ResolverMode::Module {
                     dependency_resolver,
@@ -1599,5 +1649,47 @@ impl<'gc> Visitor<'gc> for ScopedFunctionPromoter<'_, 'gc, '_> {
                 }
             }
         };
+    }
+}
+
+/// Visitor pass for marking variables as Unresolvable based on local `eval()` or `with`.
+struct Unresolver<'a, 'gc, 'mode> {
+    resolver: &'a mut Resolver<'gc, 'mode>,
+    /// Depth of the scope which contains the construct which could shadow variables dynamically.
+    /// e.g. the depth of the function containing a local `eval()`.
+    depth: u32,
+}
+
+impl<'a, 'gc, 'mode> Unresolver<'a, 'gc, 'mode> {
+    fn new(resolver: &'a mut Resolver<'gc, 'mode>, depth: u32) -> Self {
+        Self { resolver, depth }
+    }
+
+    fn run(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>) {
+        node.visit(lock, self, None);
+    }
+}
+
+impl<'gc> Visitor<'gc> for Unresolver<'_, 'gc, '_> {
+    fn call(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>, _path: Option<Path<'gc>>) {
+        match node {
+            Node::Identifier(_) => {
+                let ident = NodeRc::from_node(lock, node);
+                if let Some(Resolution::Decl(decl_id)) = self.resolver.sem.ident_decl(&ident) {
+                    let decl = self.resolver.sem.decl(decl_id);
+                    let scope = self.resolver.sem.scope(decl.scope);
+                    // The depth of this identifier's declaration is less than the `eval`/`with`
+                    // declaration that could shadow it, so we must declare this identifier as
+                    // unresolvable.
+                    if scope.depth < self.depth {
+                        self.resolver.sem.set_ident_unresolvable(ident);
+                    }
+                }
+                node.visit_children(lock, self);
+            }
+            _ => {
+                node.visit_children(lock, self);
+            }
+        }
     }
 }

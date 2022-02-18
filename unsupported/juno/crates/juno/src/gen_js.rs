@@ -7,7 +7,7 @@
 
 use crate::{
     ast::*,
-    sema::{DeclKind, SemContext},
+    sema::{DeclKind, Resolution, SemContext},
 };
 use juno_support::{convert, source_manager::SourceLoc};
 use sourcemap::{RawToken, SourceMap, SourceMapBuilder};
@@ -3797,28 +3797,34 @@ impl<W: Write> GenJS<'_, W> {
     /// Add an "@" and some information tagging an identifier with its declaration ID.
     fn annotate_identifier(&mut self, lock: &GCLock, node: &Node) {
         if let Annotation::Sem(sem) = &self.annotation {
-            if let Some(decl_id) = sem.ident_decl(&NodeRc::from_node(lock, node)) {
-                match sem.decl(decl_id).kind {
-                    DeclKind::Let
-                    | DeclKind::Const
-                    | DeclKind::Class
-                    | DeclKind::Import
-                    | DeclKind::ES5Catch
-                    | DeclKind::FunctionExprName
-                    | DeclKind::ScopedFunction
-                    | DeclKind::Var
-                    | DeclKind::Parameter => {
-                        out!(self, "@D{}", decl_id);
-                    }
-                    DeclKind::GlobalProperty => {
-                        out!(self, "@global");
-                    }
-                    DeclKind::UndeclaredGlobalProperty => {
-                        out!(self, "@uglobal");
-                    }
-                };
+            match sem.ident_decl(&NodeRc::from_node(lock, node)) {
+                Some(Resolution::Decl(decl_id)) => {
+                    match sem.decl(decl_id).kind {
+                        DeclKind::Let
+                        | DeclKind::Const
+                        | DeclKind::Class
+                        | DeclKind::Import
+                        | DeclKind::ES5Catch
+                        | DeclKind::FunctionExprName
+                        | DeclKind::ScopedFunction
+                        | DeclKind::Var
+                        | DeclKind::Parameter => {
+                            out!(self, "@D{}", decl_id);
+                        }
+                        DeclKind::GlobalProperty => {
+                            out!(self, "@global");
+                        }
+                        DeclKind::UndeclaredGlobalProperty => {
+                            out!(self, "@uglobal");
+                        }
+                    };
+                }
+                Some(Resolution::Unresolvable) => {
+                    out!(self, "@unresolvable");
+                }
+                _ => {}
             }
-        }
+        };
     }
 }
 
