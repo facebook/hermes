@@ -19,7 +19,7 @@ use juno_support::atom_table::Atom;
 use juno_support::source_manager::{SourceId, SourceRange};
 use juno_support::ScopedHashMap;
 use smallvec::SmallVec;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 #[derive(Debug)]
@@ -29,6 +29,17 @@ struct Binding<'gc> {
     ident: &'gc Identifier<'gc>,
 }
 
+#[derive(Debug)]
+#[allow(dead_code)]
+struct Label<'gc> {
+    id: LabelId,
+    /// The declaring node.
+    label: &'gc Identifier<'gc>,
+    /// Statement targeted by the label.
+    /// Either a loop or LabeledStatement.
+    target_statement: &'gc Node<'gc>,
+}
+
 struct FunctionContext<'gc> {
     /// Ast node declaring the function. In the global function this would
     /// be [`Node::Program`] (which is not "function-like").
@@ -36,6 +47,8 @@ struct FunctionContext<'gc> {
     /// Associated semantic data structure.
     func_id: FunctionInfoId,
     decls: DeclCollector<'gc>,
+    /// Map of the names of labels to the `Label` object.
+    label_table: HashMap<Atom, Label<'gc>>,
 }
 
 /// What type of file the resolver is resolving.
@@ -53,6 +66,10 @@ struct Resolver<'gc, 'mode> {
     sem: SemContext,
     func_stack: Vec<FunctionContext<'gc>>,
     current_scope: Option<LexicalScopeId>,
+    /// The most nested active loop statement.
+    current_loop: Option<LabelId>,
+    /// The most nested active loop or switch statement.
+    current_loop_or_switch: Option<LabelId>,
     binding_table: ScopedHashMap<Atom, Binding<'gc>>,
     /// True for a short time we are validating a formal parameter list.
     validating_formal_params: bool,
@@ -115,6 +132,8 @@ impl<'gc, 'mode> Resolver<'gc, 'mode> {
             sem: Default::default(),
             func_stack: Default::default(),
             current_scope: Default::default(),
+            current_loop: None,
+            current_loop_or_switch: None,
             binding_table: Default::default(),
             validating_formal_params: false,
             global_binding_scope_depth: None,
@@ -209,6 +228,7 @@ impl<'gc> Resolver<'gc, '_> {
             node: root,
             func_id,
             decls: DeclCollector::run(lock, root),
+            label_table: Default::default(),
         });
 
         // Save and reset validating_formal_params.
@@ -258,6 +278,75 @@ impl<'gc> Resolver<'gc, '_> {
         // Restore the current scope.
         self.current_scope = prev_scope;
         self.binding_table.pop_scope();
+
+        res
+    }
+
+    /// Allocate a new label in this scope, updating internal state, and call `f`.
+    /// Restore the original label and return the result of `f`.
+    /// Reports an error if the label is already defined.
+    fn with_new_label<R, F: FnOnce(&mut Self) -> R>(
+        &mut self,
+        lock: &GCLock,
+        identifier: Option<&'gc Node<'gc>>,
+        statement: &'gc Node<'gc>,
+        f: F,
+    ) -> R {
+        // New lexical scope.
+        let prev_loop = self.current_loop;
+        let prev_loop_or_switch = self.current_loop_or_switch;
+        let new_label = self
+            .sem
+            .function_mut(self.function_context().func_id)
+            .new_label();
+        match statement {
+            Node::LabeledStatement(_) => {}
+            Node::SwitchStatement(_) => {
+                self.current_loop_or_switch = Some(new_label);
+            }
+            Node::ForStatement(_)
+            | Node::ForInStatement(_)
+            | Node::ForOfStatement(_)
+            | Node::WhileStatement(_)
+            | Node::DoWhileStatement(_) => {
+                // Must be a loop.
+                self.current_loop = Some(new_label);
+                self.current_loop_or_switch = Some(new_label);
+            }
+            _ => {
+                unreachable!("Invalid label statement: {:?}", statement.variant());
+            }
+        };
+        let mut inserted = None;
+        if let Some(identifier) = identifier {
+            use std::collections::hash_map::Entry;
+            let key = node_cast!(Node::Identifier, identifier).name;
+            match self.function_context_mut().label_table.entry(key) {
+                Entry::Occupied(_) => {
+                    lock.sm().error(
+                        *identifier.range(),
+                        format!("label {} is already defined", identifier.name()),
+                    );
+                }
+                Entry::Vacant(entry) => {
+                    entry.insert(Label {
+                        id: new_label,
+                        label: node_cast!(Node::Identifier, identifier),
+                        target_statement: statement,
+                    });
+                    inserted = Some(key);
+                }
+            };
+        }
+
+        let res = f(self);
+
+        // Restore the current scope.
+        self.current_loop_or_switch = prev_loop_or_switch;
+        self.current_loop = prev_loop;
+        if let Some(key) = &inserted {
+            self.function_context_mut().label_table.remove(key);
+        }
 
         res
     }
@@ -1015,14 +1104,78 @@ impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
             Node::BlockStatement(_) => self.visit_block_statement(lock, node, path.unwrap()),
 
             Node::ForStatement(_) | Node::ForInStatement(_) | Node::ForOfStatement(_) => {
-                // Only create a lexical scope if there are declarations in it.
-                if let Some(decls) = self.function_context().decls.scope_decls_for_node(node) {
-                    self.in_new_scope(lock, node, |pself| {
-                        pself.process_declarations(lock, decls.as_slice());
+                self.with_new_label(lock, None, node, |pself| {
+                    // Only create a lexical scope if there are declarations in it.
+                    if let Some(decls) = pself.function_context().decls.scope_decls_for_node(node) {
+                        pself.in_new_scope(lock, node, |pself| {
+                            pself.process_declarations(lock, decls.as_slice());
+                            node.visit_children(lock, pself);
+                        });
+                    } else {
                         node.visit_children(lock, pself);
-                    });
-                } else {
-                    node.visit_children(lock, self);
+                    }
+                });
+            }
+
+            Node::WhileStatement(_) | Node::DoWhileStatement(_) => {
+                self.with_new_label(lock, None, node, |pself| {
+                    node.visit_children(lock, pself);
+                });
+            }
+
+            Node::LabeledStatement(labeled) => {
+                self.with_new_label(lock, Some(labeled.label), node, |pself| {
+                    node.visit_children(lock, pself);
+                });
+            }
+
+            Node::BreakStatement(ast::BreakStatement {
+                label: Some(label), ..
+            }) => {
+                let name = node_cast!(Node::Identifier, label).name;
+                if self.function_context().label_table.get(&name).is_none() {
+                    lock.sm().error(
+                        *label.range(),
+                        format!("label '{}' is not defined", lock.str(name)),
+                    );
+                }
+            }
+            Node::BreakStatement(ast::BreakStatement { label: None, .. }) => {
+                if self.current_loop_or_switch.is_none() {
+                    lock.sm()
+                        .error(*node.range(), "'break' not within a loop or switch");
+                }
+            }
+
+            Node::ContinueStatement(ast::ContinueStatement {
+                label: Some(label_node),
+                ..
+            }) => {
+                let name = node_cast!(Node::Identifier, label_node).name;
+                match self.function_context().label_table.get(&name) {
+                    Some(label) => {
+                        if matches!(label.target_statement, Node::LabeledStatement(_)) {
+                            lock.sm().error(
+                                *label_node.range(),
+                                format!(
+                                    "'continue' label '{}' is not a loop label",
+                                    lock.str(name)
+                                ),
+                            );
+                        }
+                    }
+                    None => {
+                        lock.sm().error(
+                            *label_node.range(),
+                            format!("label '{}' is not defined", lock.str(name)),
+                        );
+                    }
+                }
+            }
+            Node::ContinueStatement(ast::ContinueStatement { label: None, .. }) => {
+                if self.current_loop.is_none() {
+                    lock.sm()
+                        .error(*node.range(), "'continue' not within a loop or switch");
                 }
             }
 

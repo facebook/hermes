@@ -43,6 +43,7 @@ macro_rules! declare_opaque_id {
 declare_opaque_id!(DeclId);
 declare_opaque_id!(LexicalScopeId);
 declare_opaque_id!(FunctionInfoId);
+declare_opaque_id!(LabelId);
 
 impl LexicalScopeId {
     pub const GLOBAL_SCOPE_ID: LexicalScopeId = unsafe { LexicalScopeId::new_unchecked(0) };
@@ -196,9 +197,18 @@ pub struct FunctionInfo {
     pub scopes: Vec<LexicalScopeId>,
     /// The implicitly declared "arguments" object. It is declared only if it is used.
     pub arguments_decl: Option<DeclId>,
+    /// How many labels have been allocated in this function so far.
+    num_labels: usize,
 }
 
 impl FunctionInfo {
+    /// Allocate a new label and return its ID.
+    pub fn new_label(&mut self) -> LabelId {
+        let result = LabelId::new(self.num_labels);
+        self.num_labels += 1;
+        result
+    }
+
     fn dump(&self, sem: &SemContext, lock: &GCLock, id: FunctionInfoId, indent: usize) {
         println!(
             "{:indent$} Func#{id}",
@@ -267,6 +277,7 @@ impl SemContext {
             strict,
             scopes: Default::default(),
             arguments_decl: Default::default(),
+            num_labels: 0,
         });
         (
             FunctionInfoId::new(self.funcs.len() - 1),
