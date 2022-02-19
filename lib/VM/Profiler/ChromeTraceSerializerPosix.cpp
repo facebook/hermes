@@ -45,6 +45,27 @@ std::shared_ptr<ChromeStackFrameNode> ChromeStackFrameNode::findOrAddNewChild(
   return trace;
 }
 
+namespace {
+std::string getJSFunctionName(hbc::BCProvider *bcProvider, uint32_t funcId) {
+  hbc::RuntimeFunctionHeader functionHeader =
+      bcProvider->getFunctionHeader(funcId);
+  return bcProvider->getStringRefFromID(functionHeader.functionName()).str();
+}
+
+OptValue<hbc::DebugSourceLocation> getSourceLocation(
+    hbc::BCProvider *bcProvider,
+    uint32_t funcId,
+    uint32_t opcodeOffset) {
+  const hbc::DebugOffsets *debugOffsets = bcProvider->getDebugOffsets(funcId);
+  if (debugOffsets &&
+      debugOffsets->sourceLocations != hbc::DebugOffsets::NO_OFFSET) {
+    return bcProvider->getDebugInfo()->getLocationForAddress(
+        debugOffsets->sourceLocations, opcodeOffset);
+  }
+  return llvh::None;
+}
+} // namespace
+
 ChromeTraceSerializer::ChromeTraceSerializer(ChromeTraceFormat &&chromeTrace)
     : trace_(std::move(chromeTrace)) {
   firstEventTimeStamp_ = trace_.getSampledEvents().empty()
@@ -52,21 +73,17 @@ ChromeTraceSerializer::ChromeTraceSerializer(ChromeTraceFormat &&chromeTrace)
       : trace_.getSampledEvents()[0].getTimeStamp();
 }
 
-enum class ChromeEventType {
-  Completed = 0,
-  Instant = 1,
-  Metadata = 2,
-};
-static const char *ChromeEventTypeNames[] = {"X", "i", "M"};
+namespace chrome_event_type {
+static const char *Completed = "X";
+static const char *Metadata = "M";
+} // namespace chrome_event_type
 
 void ChromeTraceSerializer::serializeProcessName(JSONEmitter &json) const {
   double pid = trace_.getPid();
   json.openDict();
   {
     json.emitKeyValue("name", "process_name");
-    json.emitKeyValue(
-        "ph",
-        ChromeEventTypeNames[static_cast<uint32_t>(ChromeEventType::Metadata)]);
+    json.emitKeyValue("ph", chrome_event_type::Metadata);
     json.emitKeyValue("cat", "__metadata");
     json.emitKeyValue("pid", pid);
     // Use first event time for process_name time.
@@ -93,10 +110,7 @@ void ChromeTraceSerializer::serializeThreads(JSONEmitter &json) const {
     json.openDict();
     {
       json.emitKeyValue("name", "thread_name");
-      json.emitKeyValue(
-          "ph",
-          ChromeEventTypeNames[static_cast<uint32_t>(
-              ChromeEventType::Metadata)]);
+      json.emitKeyValue("ph", chrome_event_type::Metadata);
       json.emitKeyValue("cat", "__metadata");
       json.emitKeyValue("pid", static_cast<double>(pid));
       // Use first event time for thread_name time.
@@ -115,10 +129,7 @@ void ChromeTraceSerializer::serializeThreads(JSONEmitter &json) const {
     {
       json.emitKeyValue("name", threadName);
       json.emitKeyValue("cat", threadName);
-      json.emitKeyValue(
-          "ph",
-          ChromeEventTypeNames[static_cast<uint32_t>(
-              ChromeEventType::Completed)]);
+      json.emitKeyValue("ph", chrome_event_type::Completed);
       json.emitKeyValue("dur", 0.0);
       json.emitKeyValue("pid", static_cast<double>(pid));
       json.emitKeyValue("ts", getSerializedTimeStamp(firstEventTimeStamp_));
@@ -166,27 +177,6 @@ void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
     }
 
     json.openDict();
-
-    auto getJSFunctionName = [](hbc::BCProvider *bcProvider, uint32_t funcId) {
-      hbc::RuntimeFunctionHeader functionHeader =
-          bcProvider->getFunctionHeader(funcId);
-      return bcProvider->getStringRefFromID(functionHeader.functionName())
-          .str();
-    };
-
-    auto getSourceLocation =
-        [](hbc::BCProvider *bcProvider,
-           uint32_t funcId,
-           uint32_t opcodeOffset) -> OptValue<hbc::DebugSourceLocation> {
-      const hbc::DebugOffsets *debugOffsets =
-          bcProvider->getDebugOffsets(funcId);
-      if (debugOffsets != nullptr &&
-          debugOffsets->sourceLocations != hbc::DebugOffsets::NO_OFFSET) {
-        return bcProvider->getDebugInfo()->getLocationForAddress(
-            debugOffsets->sourceLocations, opcodeOffset);
-      }
-      return llvh::None;
-    };
 
     std::string frameName, categoryName;
     const auto &frame = node.getFrameInfo();
