@@ -1,0 +1,27 @@
+name: Publish Tag
+on:
+  workflow_dispatch:
+    inputs:
+      rnVersion:
+        description: 'The RN version that triggered this tagging'
+        required: true
+
+jobs:
+  publish:
+    runs-on: [ubuntu-latest]
+
+    steps:
+      - name: Get current date
+        id: date
+        run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+
+      - name: Create tag
+        uses: actions/github-script@v5
+        with:
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/hermes-${{ steps.date.outputs.date }}-RNv${{ github.event.inputs.rnVersion }}-${{ github.sha }}',
+              sha: context.sha
+            })
