@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -151,7 +151,7 @@ enum class GCEventKind {
   F(constexpr, gcheapsize_t, InitHeapSize, 32 << 20)                      \
                                                                           \
   /* Maximum heap size hint. */                                           \
-  F(constexpr, gcheapsize_t, MaxHeapSize, 512 << 20)                      \
+  F(constexpr, gcheapsize_t, MaxHeapSize, 3u << 30)                       \
                                                                           \
   /* Sizing heuristic: fraction of heap to be occupied by live data. */   \
   F(constexpr, double, OccupancyTarget, 0.5)                              \

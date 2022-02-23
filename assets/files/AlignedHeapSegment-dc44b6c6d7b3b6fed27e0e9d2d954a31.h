@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -20,7 +20,6 @@
 #include "hermes/VM/MarkBitArrayNC.h"
 #include "hermes/VM/PointerBase.h"
 #include "hermes/VM/SegmentInfo.h"
-#include "hermes/VM/SweepResultNC.h"
 
 #include "llvh/Support/MathExtras.h"
 
@@ -192,7 +191,7 @@ class AlignedHeapSegment {
   /// The number of bytes in the segment that are currently allocated.
   inline size_t used() const;
 
-  /// The number of bytes in the segment that are avialable for allocation.
+  /// The number of bytes in the segment that are available for allocation.
   inline size_t available() const;
 
   /// Returns the address that is the lower bound of the segment.
