@@ -51,8 +51,6 @@ class HermesRuntimeTest : public HermesRuntimeTestBase {
                                   .build()) {}
 };
 
-using HermesRuntimeDeathTest = HermesRuntimeTest;
-
 // In JSC there's a bug where host functions are always ran with a this in
 // nonstrict mode so this must be a hermes only test. See
 // https://es5.github.io/#x10.4.3 for more info.
@@ -212,9 +210,19 @@ TEST_F(HermesRuntimeTest, NoCorruptionOnJSError) {
 // use the ASSERT_DEATH macros when testing that implementation.
 // Asserts are compiled out of opt builds
 #if !defined(NDEBUG) && defined(ASSERT_DEATH)
-TEST_F(HermesRuntimeDeathTest, ValueTest) {
-  ASSERT_DEATH(eval("'slay'").getNumber(), "Assertion.*isNumber");
-  ASSERT_DEATH(eval("123").getString(*rt), "Assertion.*isString");
+TEST(HermesRuntimeDeathTest, ValueTest) {
+  auto eval = [](Runtime &rt, const char *code) {
+    return rt.global().getPropertyAsFunction(rt, "eval").call(rt, code);
+  };
+
+  ASSERT_DEATH(
+      eval(*makeHermesRuntime(), "'slay'").getNumber(), "Assertion.*isNumber");
+  ASSERT_DEATH(
+      {
+        auto rt = makeHermesRuntime();
+        eval(*rt, "123").getString(*rt);
+      },
+      "Assertion.*isString");
 }
 #endif
 
