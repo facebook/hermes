@@ -40,6 +40,9 @@ try {
 }
 //CHECK-NEXT: TypeError: Constructor Set requires 'new'
 
+try{ Set.prototype.clear(); } catch (e) { print(e); }
+//CHECK-NEXT: TypeError: Non-Set object called on Set.prototype.clear
+
 var s = new Set([1, 2, 3, 4, 5]);
 s.forEach(Error);
 print(s.size);

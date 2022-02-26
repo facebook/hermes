@@ -332,10 +332,7 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
 
   // "Forward declaration" of Error.prototype. Its properties will be populated
   // later.
-  runtime->ErrorPrototype =
-      JSError::create(
-          runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype))
-          .getHermesValue();
+  runtime->ErrorPrototype = JSObject::create(runtime).getHermesValue();
 
 // "Forward declaration" of the prototype for native error types. Their
 // properties will be populated later.
@@ -476,10 +473,7 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
 
   // "Forward declaration" of TypedArrayBase.prototype. Its properties will be
   // populated later.
-  runtime->typedArrayBasePrototype =
-      JSTypedArrayBase::create(
-          runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype))
-          .getHermesValue();
+  runtime->typedArrayBasePrototype = JSObject::create(runtime).getHermesValue();
 
 // Typed arrays
 // NOTE: a TypedArray's prototype is a normal object, not a TypedArray.
@@ -493,20 +487,14 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
 
   // "Forward declaration" of Set.prototype. Its properties will be
   // populated later.
-  runtime->setPrototype =
-      JSSet::create(
-          runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype))
-          .getHermesValue();
+  runtime->setPrototype = JSObject::create(runtime).getHermesValue();
 
   runtime->setIteratorPrototype =
       createSetIteratorPrototype(runtime).getHermesValue();
 
   // "Forward declaration" of Map.prototype. Its properties will be
   // populated later.
-  runtime->mapPrototype =
-      JSMap::create(
-          runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype))
-          .getHermesValue();
+  runtime->mapPrototype = JSObject::create(runtime).getHermesValue();
 
   runtime->mapIteratorPrototype =
       createMapIteratorPrototype(runtime).getHermesValue();

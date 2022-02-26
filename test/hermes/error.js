@@ -30,6 +30,13 @@ try { Error.prototype.toString.call(11); } catch (e) { print(e.name); }
 try { Error.prototype.toString.call(Symbol()); } catch (e) { print(e.name); }
 //CHECK-NEXT: TypeError
 
+print(Error.prototype.toString())
+// CHECK-NEXT: Error
+print(Object.prototype.toString.call(Error.prototype))
+// CHECK-NEXT: [object Object]
+print(Object.prototype.toString.call(new Error()))
+// CHECK-NEXT: [object Error]
+
 e.name = 'RandomError';
 print(e);
 //CHECK-NEXT: RandomError

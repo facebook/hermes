@@ -18,7 +18,7 @@ namespace hermes {
 namespace vm {
 
 Handle<JSObject> createSetConstructor(Runtime *runtime) {
-  auto setPrototype = Handle<JSSet>::vmcast(&runtime->setPrototype);
+  auto setPrototype = Handle<JSObject>::vmcast(&runtime->setPrototype);
 
   // Set.prototype.xxx methods.
   defineMethod(

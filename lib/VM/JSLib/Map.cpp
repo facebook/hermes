@@ -18,7 +18,7 @@ namespace hermes {
 namespace vm {
 
 Handle<JSObject> createMapConstructor(Runtime *runtime) {
-  auto mapPrototype = Handle<JSMap>::vmcast(&runtime->mapPrototype);
+  auto mapPrototype = Handle<JSObject>::vmcast(&runtime->mapPrototype);
 
   // Map.prototype.xxx methods.
   defineMethod(
