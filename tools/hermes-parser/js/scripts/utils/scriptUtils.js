@@ -8,7 +8,7 @@
  * @format
  */
 
-// @lint-ignore-every LICENSELINT
+// @licenselint-loose-mode
 
 'use strict';
 
