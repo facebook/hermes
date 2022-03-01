@@ -30,7 +30,8 @@ enum {
   // GenGC = 1 << 11,
   // HadesTimedIncremental = 1 << 12,
   CrashTrace = 1 << 13,
-  JobQueue = 1 << 14,
+  // JobQueue = 1 << 14,
+  PromiseOnImmediateQueue = 1 << 15,
 };
 
 /// Set of flags for active VM experiments.
