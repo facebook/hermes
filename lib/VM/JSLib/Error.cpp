@@ -329,9 +329,6 @@ errorCaptureStackTrace(void *, Runtime *runtime, NativeArgs args) {
       Predefined::getSymbolID(Predefined::InternalPropertyCapturedError),
       dpf,
       errorHandle);
-  assert(
-      res != ExecutionStatus::EXCEPTION && *res &&
-      "failed to set [[CapturedError]]");
 
   // Even though highly unlikely, something could have happened that caused
   // defineOwnProperty to throw an exception.
