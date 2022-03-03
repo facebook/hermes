@@ -18,7 +18,7 @@ namespace hermes {
 namespace vm {
 
 Handle<JSObject> createSetConstructor(Runtime *runtime) {
-  auto setPrototype = Handle<JSSet>::vmcast(&runtime->setPrototype);
+  auto setPrototype = Handle<JSObject>::vmcast(&runtime->setPrototype);
 
   // Set.prototype.xxx methods.
   defineMethod(
@@ -211,10 +211,6 @@ setPrototypeAdd(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Non-Set object called on Set.prototype.add");
   }
-  if (LLVM_UNLIKELY(!selfHandle->isInitialized())) {
-    return runtime->raiseTypeError(
-        "Method Set.prototype.add called on incompatible receiver");
-  }
   auto valueHandle = args.getArgHandle(0);
   // 5. If value is -0, set value to +0.
   // N.B. in the case of Set, the value is used as both the value and the key of
@@ -233,10 +229,6 @@ setPrototypeClear(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Non-Set object called on Set.prototype.clear");
   }
-  if (LLVM_UNLIKELY(!selfHandle->isInitialized())) {
-    return runtime->raiseTypeError(
-        "Method Set.prototype.clear called on incompatible receiver");
-  }
   JSSet::clear(selfHandle, runtime);
   return HermesValue::encodeUndefinedValue();
 }
@@ -248,10 +240,6 @@ setPrototypeDelete(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Non-Set object called on Set.prototype.delete");
   }
-  if (LLVM_UNLIKELY(!selfHandle->isInitialized())) {
-    return runtime->raiseTypeError(
-        "Method Set.prototype.delete called on incompatible receiver");
-  }
   return HermesValue::encodeBoolValue(
       JSSet::deleteKey(selfHandle, runtime, args.getArgHandle(0)));
 }
@@ -262,10 +250,6 @@ setPrototypeEntries(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-Set object called on Set.prototype.entries");
-  }
-  if (LLVM_UNLIKELY(!selfHandle->isInitialized())) {
-    return runtime->raiseTypeError(
-        "Method Set.prototype.entries called on incompatible receiver");
   }
   auto iterator = runtime->makeHandle(JSSetIterator::create(
       runtime, Handle<JSObject>::vmcast(&runtime->setIteratorPrototype)));
@@ -279,10 +263,6 @@ setPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-Set object called on Set.prototype.forEach");
-  }
-  if (LLVM_UNLIKELY(!selfHandle->isInitialized())) {
-    return runtime->raiseTypeError(
-        "Method Set.prototype.forEach called on incompatible receiver");
   }
   auto callbackfn = args.dyncastArg<Callable>(0);
   if (LLVM_UNLIKELY(!callbackfn)) {
@@ -304,10 +284,6 @@ setPrototypeHas(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Non-Set object called on Set.prototype.has");
   }
-  if (LLVM_UNLIKELY(!selfHandle->isInitialized())) {
-    return runtime->raiseTypeError(
-        "Method Set.prototype.has called on incompatible receiver");
-  }
   return HermesValue::encodeBoolValue(
       JSSet::hasKey(selfHandle, runtime, args.getArgHandle(0)));
 }
@@ -319,10 +295,6 @@ setPrototypeSizeGetter(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Non-Set object called on Set.prototype.size");
   }
-  if (LLVM_UNLIKELY(!self->isInitialized())) {
-    return runtime->raiseTypeError(
-        "Method Set.prototype.size called on incompatible receiver");
-  }
   return HermesValue::encodeNumberValue(JSSet::getSize(self, runtime));
 }
 
@@ -332,10 +304,6 @@ setPrototypeValues(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-Set object called on Set.prototype.values");
-  }
-  if (LLVM_UNLIKELY(!selfHandle->isInitialized())) {
-    return runtime->raiseTypeError(
-        "Method Set.prototype.values called on incompatible receiver");
   }
   auto iterator = runtime->makeHandle(JSSetIterator::create(
       runtime, Handle<JSObject>::vmcast(&runtime->setIteratorPrototype)));
@@ -373,10 +341,6 @@ setIteratorPrototypeNext(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-SetIterator object called on SetIterator.prototype.next");
-  }
-  if (LLVM_UNLIKELY(!selfHandle->isInitialized())) {
-    return runtime->raiseTypeError(
-        "Method SetIterator.prototype.next called on incompatible receiver");
   }
   auto cr = JSSetIterator::nextElement(selfHandle, runtime);
   if (cr == ExecutionStatus::EXCEPTION) {

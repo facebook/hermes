@@ -33,6 +33,9 @@ try {
 }
 //CHECK-NEXT: TypeError: Constructor Map requires 'new'
 
+try{ Map.prototype.clear(); } catch (e) { print(e); }
+//CHECK-NEXT: TypeError: Non-Map object called on Map.prototype.clear
+
 var m = new Map([]);
 print(m.size);
 // CHECK-NEXT: 0

@@ -43,6 +43,7 @@ macro_rules! declare_opaque_id {
 declare_opaque_id!(DeclId);
 declare_opaque_id!(LexicalScopeId);
 declare_opaque_id!(FunctionInfoId);
+declare_opaque_id!(LabelId);
 
 impl LexicalScopeId {
     pub const GLOBAL_SCOPE_ID: LexicalScopeId = unsafe { LexicalScopeId::new_unchecked(0) };
@@ -57,6 +58,28 @@ impl FunctionInfoId {
         self == Self::GLOBAL_FUNCTION_ID
     }
 }
+
+macro_rules! declare_opaque_list {
+    ($name:ident, $storage:ident, $id:ident) => {
+        #[derive(Default)]
+        pub struct $name(Vec<$storage>);
+        impl $name {
+            pub fn as_slice(&self) -> &[$storage] {
+                self.0.as_slice()
+            }
+            pub fn get(&self, id: $id) -> &$storage {
+                &self.0[id.as_usize()]
+            }
+            pub(super) fn get_mut(&mut self, id: $id) -> &mut $storage {
+                &mut self.0[id.as_usize()]
+            }
+        }
+    };
+}
+
+declare_opaque_list!(DeclList, Decl, DeclId);
+declare_opaque_list!(LexicalScopeList, LexicalScope, LexicalScopeId);
+declare_opaque_list!(FunctionInfoList, FunctionInfo, FunctionInfoId);
 
 #[derive(Debug, PartialOrd, PartialEq, Eq, Copy, Clone)]
 pub enum DeclKind {
@@ -122,6 +145,9 @@ pub struct Decl {
     /// The lexical scope of the declaration. Could be nullptr for special
     /// declarations, since they are technically unscoped.
     pub scope: LexicalScopeId,
+    /// Whether the variable can be renamed.
+    /// False when, e.g., it may be read/written by a local `eval` call.
+    pub can_rename: bool,
 }
 
 impl Decl {
@@ -144,6 +170,8 @@ impl Decl {
 }
 
 pub struct LexicalScope {
+    /// The global depth of this scope, where 0 is the root scope.
+    pub depth: u32,
     /// The function owning this lexical scope.
     pub parent_function: FunctionInfoId,
     /// The enclosing lexical scope (it could be in another function).
@@ -153,6 +181,10 @@ pub struct LexicalScope {
     /// A list of functions that need to be hoisted and materialized before we
     /// can generate the rest of the scope.
     pub hoisted_functions: Vec<NodeRc>,
+    /// True if this scope or any descendent scopes have a local eval call.
+    /// If any descendent uses local eval,
+    /// it's impossible to know whether local variables are modified.
+    pub local_eval: bool,
 }
 
 impl LexicalScope {
@@ -196,9 +228,18 @@ pub struct FunctionInfo {
     pub scopes: Vec<LexicalScopeId>,
     /// The implicitly declared "arguments" object. It is declared only if it is used.
     pub arguments_decl: Option<DeclId>,
+    /// How many labels have been allocated in this function so far.
+    num_labels: usize,
 }
 
 impl FunctionInfo {
+    /// Allocate a new label and return its ID.
+    pub fn new_label(&mut self) -> LabelId {
+        let result = LabelId::new(self.num_labels);
+        self.num_labels += 1;
+        result
+    }
+
     fn dump(&self, sem: &SemContext, lock: &GCLock, id: FunctionInfoId, indent: usize) {
         println!(
             "{:indent$} Func#{id}",
@@ -240,13 +281,21 @@ impl FunctionInfo {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum Resolution {
+    /// Unable to resolve due to presence of `eval` or `with`.
+    Unresolvable,
+    /// Resolved to a proper declaration.
+    Decl(DeclId),
+}
+
 #[derive(Default)]
 pub struct SemContext {
-    decls: Vec<Decl>,
-    scopes: Vec<LexicalScope>,
-    funcs: Vec<FunctionInfo>,
-    /// Resolved identifiers: declarations associated with Identifier AST nodes.
-    ident_decls: HashMap<NodeRc, DeclId>,
+    pub decls: DeclList,
+    pub scopes: LexicalScopeList,
+    pub funcs: FunctionInfoList,
+    /// Declarations associated with Identifier AST nodes or marked [`Resolution::Unresolvable`].
+    ident_decls: HashMap<NodeRc, Resolution>,
     /// Lexical scopes associated with AST nodes. Usually BlockStatement, but
     /// occasionally others.
     node_scopes: HashMap<NodeRc, LexicalScopeId>,
@@ -261,16 +310,17 @@ impl SemContext {
         parent_scope: Option<LexicalScopeId>,
         strict: bool,
     ) -> (FunctionInfoId, &FunctionInfo) {
-        self.funcs.push(FunctionInfo {
+        self.funcs.0.push(FunctionInfo {
             parent_function,
             parent_scope,
             strict,
             scopes: Default::default(),
             arguments_decl: Default::default(),
+            num_labels: 0,
         });
         (
-            FunctionInfoId::new(self.funcs.len() - 1),
-            self.funcs.last().unwrap(),
+            FunctionInfoId::new(self.funcs.0.len() - 1),
+            self.funcs.0.last().unwrap(),
         )
     }
 
@@ -278,18 +328,21 @@ impl SemContext {
         &mut self,
         in_function: FunctionInfoId,
         parent_scope: Option<LexicalScopeId>,
+        depth: u32,
     ) -> (LexicalScopeId, &LexicalScope) {
-        self.scopes.push(LexicalScope {
+        self.scopes.0.push(LexicalScope {
+            depth,
             parent_function: in_function,
             parent_scope,
             decls: Default::default(),
             hoisted_functions: Default::default(),
+            local_eval: false,
         });
-        let scope_id = LexicalScopeId::new(self.scopes.len() - 1);
+        let scope_id = LexicalScopeId::new(self.scopes.0.len() - 1);
 
-        self.funcs[in_function.as_usize()].scopes.push(scope_id);
+        self.funcs.get_mut(in_function).scopes.push(scope_id);
 
-        (scope_id, self.scopes.last().unwrap())
+        (scope_id, self.scopes.0.last().unwrap())
     }
 
     pub(super) fn new_decl_special(
@@ -299,15 +352,16 @@ impl SemContext {
         kind: DeclKind,
         special: Special,
     ) -> DeclId {
-        self.decls.push(Decl {
+        self.decls.0.push(Decl {
             name,
             kind,
             special,
             function_in_scope: false,
             scope,
+            can_rename: false,
         });
-        let decl_id = DeclId::new(self.decls.len() - 1);
-        self.scopes[scope.as_usize()].decls.push(decl_id);
+        let decl_id = DeclId::new(self.decls.0.len() - 1);
+        self.scopes.get_mut(scope).decls.push(decl_id);
         decl_id
     }
     pub(super) fn new_decl(&mut self, scope: LexicalScopeId, name: Atom, kind: DeclKind) -> DeclId {
@@ -323,13 +377,16 @@ impl SemContext {
         )
     }
 
-    pub fn all_ident_decls(&self) -> &HashMap<NodeRc, DeclId> {
+    pub fn all_ident_decls(&self) -> &HashMap<NodeRc, Resolution> {
         &self.ident_decls
     }
     pub(super) fn set_ident_decl(&mut self, node: NodeRc, decl: DeclId) {
-        self.ident_decls.insert(node, decl);
+        self.ident_decls.insert(node, Resolution::Decl(decl));
     }
-    pub fn ident_decl(&self, node: &NodeRc) -> Option<DeclId> {
+    pub(super) fn set_ident_unresolvable(&mut self, node: NodeRc) {
+        self.ident_decls.insert(node, Resolution::Unresolvable);
+    }
+    pub fn ident_decl(&self, node: &NodeRc) -> Option<Resolution> {
         self.ident_decls.get(node).copied()
     }
 
@@ -347,30 +404,30 @@ impl SemContext {
         self.decls.as_slice()
     }
     pub fn decl(&self, id: DeclId) -> &Decl {
-        &self.decls[id.as_usize()]
+        self.decls.get(id)
     }
     pub(super) fn decl_mut(&mut self, id: DeclId) -> &mut Decl {
-        &mut self.decls[id.as_usize()]
+        self.decls.get_mut(id)
     }
 
     pub fn all_scopes(&self) -> &[LexicalScope] {
         self.scopes.as_slice()
     }
     pub fn scope(&self, id: LexicalScopeId) -> &LexicalScope {
-        &self.scopes[id.as_usize()]
+        self.scopes.get(id)
     }
     pub(super) fn scope_mut(&mut self, id: LexicalScopeId) -> &mut LexicalScope {
-        &mut self.scopes[id.as_usize()]
+        self.scopes.get_mut(id)
     }
 
     pub fn all_functions(&self) -> &[FunctionInfo] {
         self.funcs.as_slice()
     }
     pub fn function(&self, id: FunctionInfoId) -> &FunctionInfo {
-        &self.funcs[id.as_usize()]
+        self.funcs.get(id)
     }
     pub(super) fn function_mut(&mut self, id: FunctionInfoId) -> &mut FunctionInfo {
-        &mut self.funcs[id.as_usize()]
+        self.funcs.get_mut(id)
     }
 
     pub fn all_requires(&self) -> &HashMap<NodeRc, SourceId> {
@@ -384,7 +441,7 @@ impl SemContext {
     /// redundant, since the ID is constant. The idea here that the global scope
     /// may not have been created yet.
     pub fn global_scope_id(&self) -> Option<LexicalScopeId> {
-        if self.scopes.is_empty() {
+        if self.scopes.0.is_empty() {
             None
         } else {
             Some(LexicalScopeId::GLOBAL_SCOPE_ID)
@@ -395,7 +452,7 @@ impl SemContext {
     /// redundant, since the ID is constant. The idea here that the global
     /// function may not have been created yet.
     pub fn global_function_id(&self) -> Option<FunctionInfoId> {
-        if self.funcs.is_empty() {
+        if self.funcs.0.is_empty() {
             None
         } else {
             Some(FunctionInfoId::GLOBAL_FUNCTION_ID)
@@ -445,7 +502,7 @@ impl SemContext {
         println!();
 
         let mut children = HashMap::<FunctionInfoId, Vec<FunctionInfoId>>::new();
-        for i in 0..self.funcs.len() {
+        for i in 0..self.funcs.0.len() {
             let f = FunctionInfoId::new(i);
             if let Some(parent) = &self.function(f).parent_function {
                 match children.get_mut(parent) {
@@ -457,7 +514,7 @@ impl SemContext {
             }
         }
 
-        for id in 0..self.decls.len() {
+        for id in 0..self.decls.0.len() {
             let id = DeclId::new(id);
             let decl = self.decl(id);
             if decl.kind == DeclKind::GlobalProperty {

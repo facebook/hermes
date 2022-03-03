@@ -83,6 +83,7 @@ def parse_args():
     parser.add_argument("--icu", type=str, dest="icu_root", default="")
     parser.add_argument("--unicode-lite", dest="unicode_lite", action="store_true")
     parser.add_argument("--fbsource", type=str, dest="fbsource_dir", default="")
+    parser.add_argument("--jsidir", type=str, dest="jsi_dir", default="")
     parser.add_argument("--opcode-stats", dest="opcode_stats", action="store_true")
     parser.add_argument(
         "--basic-block-profiler", dest="basic_block_profiler", action="store_true"
@@ -115,6 +116,8 @@ def parse_args():
         args.icu_root = os.path.realpath(args.icu_root)
     if args.fbsource_dir:
         args.fbsource_dir = os.path.realpath(args.fbsource_dir)
+    if args.jsi_dir:
+        args.jsi_dir = os.path.realpath(args.jsi_dir)
     if args.emscripten_root:
         args.emscripten_root = os.path.realpath(args.emscripten_root)
     if args.wasm:
@@ -251,6 +254,8 @@ def main():
         cmake_flags += ["-DHERMES_ENABLE_TRACE_PC_GUARD=ON"]
     if args.fbsource_dir:
         cmake_flags += ["-DFBSOURCE_DIR=" + args.fbsource_dir]
+    if args.jsi_dir:
+        cmake_flags += ["-DJSI_DIR=" + args.jsi_dir]
     if args.wasm:
         cmake_flags += [
             "-DCMAKE_TOOLCHAIN_FILE={}".format(

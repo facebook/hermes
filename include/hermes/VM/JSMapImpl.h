@@ -52,13 +52,6 @@ class JSMapImpl final : public JSObject {
     return ExecutionStatus::RETURNED;
   }
 
-  /// Check whether the internal element storage has been allocated.
-  /// We need this because _.prototype is uninitialized which
-  /// cannot be called on any method.
-  bool isInitialized() const {
-    return static_cast<bool>(storage_);
-  }
-
   /// Advance iterator and return the next.
   HashMapEntry *iteratorNext(Runtime *runtime, HashMapEntry *entry) {
     return storage_.getNonNull(runtime)->iteratorNext(runtime, entry);

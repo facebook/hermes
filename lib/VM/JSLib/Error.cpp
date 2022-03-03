@@ -23,7 +23,7 @@ namespace vm {
 /// ErrorObject.
 
 Handle<JSObject> createErrorConstructor(Runtime *runtime) {
-  auto errorPrototype = Handle<JSError>::vmcast(&runtime->ErrorPrototype);
+  auto errorPrototype = Handle<JSObject>::vmcast(&runtime->ErrorPrototype);
 
   // Error.prototype.xxx methods.
   defineMethod(
@@ -301,7 +301,7 @@ errorCaptureStackTrace(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // Construct a temporary Error instance.
-  auto errorPrototype = Handle<JSError>::vmcast(&runtime->ErrorPrototype);
+  auto errorPrototype = Handle<JSObject>::vmcast(&runtime->ErrorPrototype);
   auto errorHandle =
       runtime->makeHandle(JSError::create(runtime, errorPrototype));
 
@@ -329,9 +329,6 @@ errorCaptureStackTrace(void *, Runtime *runtime, NativeArgs args) {
       Predefined::getSymbolID(Predefined::InternalPropertyCapturedError),
       dpf,
       errorHandle);
-  assert(
-      res != ExecutionStatus::EXCEPTION && *res &&
-      "failed to set [[CapturedError]]");
 
   // Even though highly unlikely, something could have happened that caused
   // defineOwnProperty to throw an exception.

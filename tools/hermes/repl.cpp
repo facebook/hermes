@@ -309,7 +309,7 @@ static std::error_code loadHistoryFile(llvh::SmallString<128> &historyFile) {
 
 // This is the vm driver.
 int repl(const vm::RuntimeConfig &config) {
-  auto runtime = vm::Runtime::create(config);
+  std::shared_ptr<vm::Runtime> runtime = vm::Runtime::create(config);
 
   vm::GCScope gcScope(runtime.get());
   ConsoleHostContext ctx{runtime.get()};

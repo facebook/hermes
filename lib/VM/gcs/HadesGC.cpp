@@ -1223,18 +1223,15 @@ bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
   auto &stats = *gc_->ogCollectionStats_;
   stats.setSweptBytes(sweepIterator_.sweptBytes);
   stats.setSweptExternalBytes(sweepIterator_.sweptExternalBytes);
-  // The formula for occupancyTarget_ is:
-  // occupancyTarget_ = (allocatedBytes + externalBytes) / (capacityBytes +
-  //  externalBytes)
-  // Solving for capacityBytes:
-  // capacityBytes = (allocatedBytes + externalBytes) / occupancyTarget_ -
-  //  externalBytes
   const uint64_t targetSizeBytes =
       (stats.afterAllocatedBytes() + stats.afterExternalBytes()) /
-          gc_->occupancyTarget_ -
-      stats.afterExternalBytes();
-  const uint64_t clampedSizeBytes = std::min<uint64_t>(
-      targetSizeBytes, maxNumSegments() * HeapSegment::maxSize());
+      gc_->occupancyTarget_;
+
+  // In a very large heap, use the configured max heap size as a backstop to
+  // prevent the target size crossing it (which would delay collection and cause
+  // an OOM). This is just an approximation, a precise accounting would subtract
+  // segment metadata and YG memory.
+  uint64_t clampedSizeBytes = std::min(targetSizeBytes, gc_->maxHeapSize_);
   targetSizeBytes_.update(clampedSizeBytes);
   sweepIterator_ = {};
   return false;
@@ -1281,9 +1278,8 @@ HadesGC::HadesGC(
           gcConfig,
           std::move(crashMgr),
           HeapKind::HadesGC),
-      maxHeapSize_{std::max(
-          static_cast<size_t>(
-              llvh::alignTo<AlignedStorage::size()>(gcConfig.getMaxHeapSize())),
+      maxHeapSize_{std::max<uint64_t>(
+          gcConfig.getMaxHeapSize(),
           // At least one YG segment and one OG segment.
           2 * AlignedStorage::size())},
       provider_(std::move(provider)),
@@ -1306,21 +1302,11 @@ HadesGC::HadesGC(
   if (!newYoungGen)
     hermes_fatal("Failed to initialize the young gen", newYoungGen.getError());
   setYoungGen(std::move(newYoungGen.get()));
-  const size_t minHeapSegments =
-      // Align up first to round up.
-      llvh::alignTo<AlignedStorage::size()>(gcConfig.getMinHeapSize()) /
-      AlignedStorage::size();
-  const size_t requestedInitHeapSegments =
-      // Align up first to round up.
-      llvh::alignTo<AlignedStorage::size()>(gcConfig.getInitHeapSize()) /
-      AlignedStorage::size();
-
-  const size_t initHeapSegments = std::max(
-      {minHeapSegments,
-       requestedInitHeapSegments,
-       // At least one YG segment and one OG segment.
-       static_cast<size_t>(2)});
-  oldGen_.setTargetSizeBytes((initHeapSegments - 1) * HeapSegment::maxSize());
+  const size_t initHeapSize = std::max<uint64_t>(
+      {gcConfig.getMinHeapSize(),
+       gcConfig.getInitHeapSize(),
+       HeapSegment::maxSize()});
+  oldGen_.setTargetSizeBytes(initHeapSize - HeapSegment::maxSize());
 }
 
 HadesGC::~HadesGC() {
@@ -1732,7 +1718,8 @@ void HadesGC::prepareCompactee(bool forceCompaction) {
   // than the target size. Since the selected segment will be removed from the
   // heap, we only want to compact if there are at least 2 segments in the OG.
   double threshold = oldGen_.targetSizeBytes() * 1.05;
-  if ((forceCompaction || oldGen_.size() > threshold) &&
+  uint64_t totalBytes = oldGen_.size() + oldGen_.externalBytes();
+  if ((forceCompaction || totalBytes > threshold) &&
       oldGen_.numSegments() > 1) {
     // Select the one with the fewest allocated bytes, to
     // minimise scanning and copying. We intentionally avoid selecting the very
@@ -2566,7 +2553,9 @@ void HadesGC::youngGenCollection(
     // In a compacting YG, since the evacuatedBytes counter tracks both
     // segments, this value is not a useful predictor of future collections.
     if (!doCompaction)
-      ygAverageSurvivalBytes_.update(ygCollectionStats_->afterAllocatedBytes());
+      ygAverageSurvivalBytes_.update(
+          ygCollectionStats_->afterAllocatedBytes() +
+          ygCollectionStats_->afterExternalBytes());
   }
 #ifdef HERMES_SLOW_DEBUG
   // Check that the card tables are well-formed after the collection.
@@ -2600,8 +2589,7 @@ void HadesGC::youngGenCollection(
       // instead just influence when collections begin.
       const uint64_t totalAllocated =
           oldGen_.allocatedBytes() + oldGen_.externalBytes();
-      const uint64_t totalBytes =
-          oldGen_.targetSizeBytes() + oldGen_.externalBytes();
+      const uint64_t totalBytes = oldGen_.targetSizeBytes();
       double allocatedRatio = static_cast<double>(totalAllocated) / totalBytes;
       if (allocatedRatio >= ogThreshold_) {
         oldGenCollection(kNaturalCauseForAnalytics, /*forceCompaction*/ false);
@@ -2987,7 +2975,7 @@ uint64_t HadesGC::OldGen::size() const {
 uint64_t HadesGC::OldGen::targetSizeBytes() const {
   assert(
       gc_->gcMutex_ && "Must hold gcMutex_ when accessing targetSizeBytes_.");
-  return llvh::alignTo(targetSizeBytes_, HeapSegment::maxSize());
+  return targetSizeBytes_;
 }
 
 size_t HadesGC::getYoungGenExternalBytes() const {
@@ -3042,23 +3030,6 @@ std::deque<HadesGC::HeapSegment>::const_iterator HadesGC::OldGen::end() const {
 
 size_t HadesGC::OldGen::numSegments() const {
   return segments_.size();
-}
-
-size_t HadesGC::OldGen::maxNumSegments() const {
-  assert(
-      llvh::alignTo<AlignedStorage::size()>(gc_->maxHeapSize_) ==
-          gc_->maxHeapSize_ &&
-      "max heap size must be aligned");
-  // Subtract the YG component from the max heap size.
-  const auto ogMaxHeapSize = gc_->maxHeapSize_ - AlignedStorage::size();
-  if (numSegments() * AlignedStorage::size() + externalBytes_ >=
-      ogMaxHeapSize) {
-    // If the current OldGen footprint is greater than the max heap size, say
-    // the current number of segments are the max number of segments.
-    return numSegments();
-  }
-  return llvh::divideCeil(
-      ogMaxHeapSize - externalBytes_, AlignedStorage::size());
 }
 
 HadesGC::HeapSegment &HadesGC::OldGen::operator[](size_t i) {
@@ -3174,31 +3145,26 @@ size_t HadesGC::getDrainRate() {
   // OG faster than it fills up.
   assert(!kConcurrentGC);
 
-  // We want to make progress so that over all YG collections before the heap
-  // fills up, we are able to complete marking before OG fills up. Don't include
-  // external memory since that doesn't need to be marked.
-  const size_t bytesToFill =
-      std::max(oldGen_.targetSizeBytes(), oldGen_.size()) -
-      oldGen_.allocatedBytes();
-  // On average, the number of bytes that survive a YG collection. Round it up
-  // to at least 1.
-  const uint64_t ygSurvivalBytes =
-      std::max<double>(ygAverageSurvivalBytes_, 1.0);
-  const size_t ygCollectionsUntilFull =
-      llvh::divideCeil(bytesToFill ? bytesToFill : 1, ygSurvivalBytes);
-  assert(
-      ygCollectionsUntilFull != 0 &&
-      "All of the math above should avoid a 0 ygCollectionsUntilFull");
-  // If any of the above calculations end up being a tiny drain rate, make the
-  // lower limit at least 8 KB, to ensure collections eventually end.
-  constexpr uint64_t byteDrainRateMin = 8192;
+  // We want to make progress so that we are able to complete marking over all
+  // YG collections before OG fills up.
+  uint64_t totalAllocated = oldGen_.allocatedBytes() + oldGen_.externalBytes();
+  // Must be >0 to avoid division by zero below.
+  uint64_t bytesToFill =
+      std::max(oldGen_.targetSizeBytes(), totalAllocated + 1) - totalAllocated;
   uint64_t preAllocated = ogCollectionStats_->beforeAllocatedBytes();
   uint64_t markedBytes = oldGenMarker_->markedBytes();
   assert(
       markedBytes <= preAllocated &&
       "Cannot mark more bytes than were initially allocated");
-  return std::max(
-      (preAllocated - markedBytes) / ygCollectionsUntilFull, byteDrainRateMin);
+  uint64_t bytesToMark = preAllocated - markedBytes;
+  // The drain rate is calculated from:
+  //   bytesToMark / (collections until full)
+  // = bytesToMark / (bytesToFill / ygAverageSurvivalBytes_)
+  uint64_t drainRate = bytesToMark * ygAverageSurvivalBytes_ / bytesToFill;
+  // If any of the above calculations end up being a tiny drain rate, make
+  // the lower limit at least 8 KB, to ensure collections eventually end.
+  constexpr uint64_t byteDrainRateMin = 8192;
+  return std::max(drainRate, byteDrainRateMin);
 }
 
 void HadesGC::addSegmentExtentToCrashManager(

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes %s | %FileCheck --match-full-lines --check-prefix=TASK %s
-// RUN: %hermes -Xvm-experiment-flags=16384 %s | %FileCheck --match-full-lines --check-prefix=MICROTASK %s
+// RUN: %hermes -Xvm-experiment-flags=32768 %s | %FileCheck --match-full-lines --check-prefix=TASK %s
+// RUN: %hermes %s | %FileCheck --match-full-lines --check-prefix=MICROTASK %s
 
 print('promise jobs scheduled in tasks');
 // CHECK-LABEL: promise jobs scheduled in tasks

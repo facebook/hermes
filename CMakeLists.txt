@@ -565,7 +565,16 @@ set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++14")
 set(HERMES_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(HERMES_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-if(EXISTS ${HERMES_SOURCE_DIR}/API/jsi)
+# JSI_DIR has always priority over other folders like FBSOURCE_DIR.
+# It's used by React Native when building Hermes from source so
+# the copy of JSI inside `react-native/ReactCommon/jsi` can be used.
+if(JSI_DIR)
+  if(EXISTS ${JSI_DIR})
+    set(HERMES_JSI_DIR ${JSI_DIR})
+  else()
+    message(FATAL_ERROR "You specified a JSI directory with -DJSI_DIR but JSI can't be found there.")
+  endif()
+elseif(EXISTS ${HERMES_SOURCE_DIR}/API/jsi)
   set(HERMES_JSI_DIR ${HERMES_SOURCE_DIR}/API/jsi)
 elseif(EXISTS ${FBSOURCE_DIR}/xplat/jsi)
   set(HERMES_JSI_DIR ${FBSOURCE_DIR}/xplat/jsi)

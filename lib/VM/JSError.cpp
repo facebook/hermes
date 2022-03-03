@@ -50,7 +50,7 @@ void JSErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("domains", &self->domains_);
 }
 
-CallResult<Handle<JSError>> JSError::getErrorFromStackTarget(
+CallResult<Handle<JSError>> JSError::getErrorFromStackTarget_RJS(
     Runtime *runtime,
     Handle<JSObject> targetHandle) {
   if (targetHandle) {
@@ -78,7 +78,8 @@ errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
 
   auto targetHandle = args.dyncastThis<JSObject>();
-  auto errorHandleRes = JSError::getErrorFromStackTarget(runtime, targetHandle);
+  auto errorHandleRes =
+      JSError::getErrorFromStackTarget_RJS(runtime, targetHandle);
   if (errorHandleRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -217,12 +218,6 @@ PseudoHandle<JSError> JSError::create(
 ExecutionStatus JSError::setupStack(
     Handle<JSObject> selfHandle,
     Runtime *runtime) {
-  assert(
-      JSError::getErrorFromStackTarget(runtime, selfHandle) !=
-          ExecutionStatus::EXCEPTION &&
-      "setupStack requires a valid stack target: either JSError, or JSObject "
-      "with InternalPropertyCapturedError set");
-
   // Lazily allocate the accessor.
   if (runtime->jsErrorStackAccessor.isUndefined()) {
     // This code path allocates quite a few handles, so make sure we
@@ -272,10 +267,12 @@ ExecutionStatus JSError::setupStack(
       Predefined::getSymbolID(Predefined::stack),
       dpf,
       accessor);
-  (void)res;
-  assert(
-      res != ExecutionStatus::EXCEPTION && *res &&
-      "defineOwnProperty() failed");
+
+  // Ignore failures to set the "stack" property as other engines do.
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    runtime->clearThrownValue();
+  }
+
   return ExecutionStatus::RETURNED;
 }
 

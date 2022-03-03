@@ -130,11 +130,6 @@ void SamplingProfiler::GlobalProfiler::profilingSignalHandler(int signo) {
   // re-assigning it.
   auto oldErrno = errno;
   auto *curThreadRuntime = localProfiler->runtime_;
-  if (curThreadRuntime == nullptr) {
-    // Runtime may have unregistered itself before signal.
-    errno = oldErrno;
-    return;
-  }
 
   auto profilerInstance = instance_.load();
   // Sampling stack will touch GC objects(like closure) so

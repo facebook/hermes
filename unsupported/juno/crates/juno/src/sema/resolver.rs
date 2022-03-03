@@ -8,23 +8,36 @@
 use super::sem_context::*;
 use crate::ast::{
     self, builder, node_cast, node_isa, template, GCLock, Identifier, Node, NodeField, NodeList,
-    NodeRc, NodeVariant, Path, TemplateMetadata, UnaryExpressionOperator, VariableDeclarationKind,
-    Visitor,
+    NodePtr, NodeRc, NodeVariant, Path, TemplateMetadata, UnaryExpressionOperator,
+    VariableDeclarationKind, Visitor,
 };
 use crate::resolve_dependency::{DependencyKind, DependencyResolver};
-use crate::sema::decl_collector::DeclCollector;
+use crate::sema::decl_collector::{DeclCollector, ScopeDecls};
 use crate::sema::keywords::Keywords;
 use crate::sema::known_globals::KNOWN_GLOBALS;
 use juno_support::atom_table::Atom;
 use juno_support::source_manager::{SourceId, SourceRange};
 use juno_support::ScopedHashMap;
 use smallvec::SmallVec;
+use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 
 #[derive(Debug)]
 struct Binding<'gc> {
     decl: DeclId,
     /// The declaring node.
     ident: &'gc Identifier<'gc>,
+}
+
+#[derive(Debug)]
+#[allow(dead_code)]
+struct Label<'gc> {
+    id: LabelId,
+    /// The declaring node.
+    label: &'gc Identifier<'gc>,
+    /// Statement targeted by the label.
+    /// Either a loop or LabeledStatement.
+    target_statement: &'gc Node<'gc>,
 }
 
 struct FunctionContext<'gc> {
@@ -34,6 +47,8 @@ struct FunctionContext<'gc> {
     /// Associated semantic data structure.
     func_id: FunctionInfoId,
     decls: DeclCollector<'gc>,
+    /// Map of the names of labels to the `Label` object.
+    label_table: HashMap<Atom, Label<'gc>>,
 }
 
 /// What type of file the resolver is resolving.
@@ -51,6 +66,10 @@ struct Resolver<'gc, 'mode> {
     sem: SemContext,
     func_stack: Vec<FunctionContext<'gc>>,
     current_scope: Option<LexicalScopeId>,
+    /// The most nested active loop statement.
+    current_loop: Option<LabelId>,
+    /// The most nested active loop or switch statement.
+    current_loop_or_switch: Option<LabelId>,
     binding_table: ScopedHashMap<Atom, Binding<'gc>>,
     /// True for a short time we are validating a formal parameter list.
     validating_formal_params: bool,
@@ -113,6 +132,8 @@ impl<'gc, 'mode> Resolver<'gc, 'mode> {
             sem: Default::default(),
             func_stack: Default::default(),
             current_scope: Default::default(),
+            current_loop: None,
+            current_loop_or_switch: None,
             binding_table: Default::default(),
             validating_formal_params: false,
             global_binding_scope_depth: None,
@@ -137,9 +158,20 @@ impl<'gc> Resolver<'gc, '_> {
     fn function_context(&self) -> &FunctionContext<'gc> {
         self.func_stack.last().unwrap()
     }
+    /// Return a reference to the current function context.
+    fn function_context_mut(&mut self) -> &mut FunctionContext<'gc> {
+        self.func_stack.last_mut().unwrap()
+    }
     /// Return true if the current function is strict.
     fn function_strict_mode(&self) -> bool {
         self.sem.function(self.function_context().func_id).strict
+    }
+    /// Return a mutable reference to the current strict mode flag.
+    fn function_strict_mode_mut(&mut self) -> &mut bool {
+        &mut self
+            .sem
+            .function_mut(self.function_context().func_id)
+            .strict
     }
 
     // Convenience function returning the scope object of a declaration.
@@ -196,6 +228,7 @@ impl<'gc> Resolver<'gc, '_> {
             node: root,
             func_id,
             decls: DeclCollector::run(lock, root),
+            label_table: Default::default(),
         });
 
         // Save and reset validating_formal_params.
@@ -224,9 +257,11 @@ impl<'gc> Resolver<'gc, '_> {
         self.binding_table.push_scope();
         // New lexical scope.
         let prev_scope = self.current_scope;
-        let (new_scope, _) = self
-            .sem
-            .new_scope(self.function_context().func_id, prev_scope);
+        let (new_scope, _) = self.sem.new_scope(
+            self.function_context().func_id,
+            prev_scope,
+            prev_scope.map_or(0, |p| self.sem.scope(p).depth + 1),
+        );
         self.current_scope = Some(new_scope);
         // Record the global scope depth.
         if prev_scope.is_none() {
@@ -245,6 +280,75 @@ impl<'gc> Resolver<'gc, '_> {
         // Restore the current scope.
         self.current_scope = prev_scope;
         self.binding_table.pop_scope();
+
+        res
+    }
+
+    /// Allocate a new label in this scope, updating internal state, and call `f`.
+    /// Restore the original label and return the result of `f`.
+    /// Reports an error if the label is already defined.
+    fn with_new_label<R, F: FnOnce(&mut Self) -> R>(
+        &mut self,
+        lock: &GCLock,
+        identifier: Option<&'gc Node<'gc>>,
+        statement: &'gc Node<'gc>,
+        f: F,
+    ) -> R {
+        // New lexical scope.
+        let prev_loop = self.current_loop;
+        let prev_loop_or_switch = self.current_loop_or_switch;
+        let new_label = self
+            .sem
+            .function_mut(self.function_context().func_id)
+            .new_label();
+        match statement {
+            Node::LabeledStatement(_) => {}
+            Node::SwitchStatement(_) => {
+                self.current_loop_or_switch = Some(new_label);
+            }
+            Node::ForStatement(_)
+            | Node::ForInStatement(_)
+            | Node::ForOfStatement(_)
+            | Node::WhileStatement(_)
+            | Node::DoWhileStatement(_) => {
+                // Must be a loop.
+                self.current_loop = Some(new_label);
+                self.current_loop_or_switch = Some(new_label);
+            }
+            _ => {
+                unreachable!("Invalid label statement: {:?}", statement.variant());
+            }
+        };
+        let mut inserted = None;
+        if let Some(identifier) = identifier {
+            use std::collections::hash_map::Entry;
+            let key = node_cast!(Node::Identifier, identifier).name;
+            match self.function_context_mut().label_table.entry(key) {
+                Entry::Occupied(_) => {
+                    lock.sm().error(
+                        *identifier.range(),
+                        format!("label {} is already defined", identifier.name()),
+                    );
+                }
+                Entry::Vacant(entry) => {
+                    entry.insert(Label {
+                        id: new_label,
+                        label: node_cast!(Node::Identifier, identifier),
+                        target_statement: statement,
+                    });
+                    inserted = Some(key);
+                }
+            };
+        }
+
+        let res = f(self);
+
+        // Restore the current scope.
+        self.current_loop_or_switch = prev_loop_or_switch;
+        self.current_loop = prev_loop;
+        if let Some(key) = &inserted {
+            self.function_context_mut().label_table.remove(key);
+        }
 
         res
     }
@@ -484,13 +588,21 @@ impl<'gc> Resolver<'gc, '_> {
 
                 if let Node::BlockStatement(_) = body {
                     if !pself.function_strict_mode() {
-                        // FIXME: self.promote_scoped_func_decls(lock, node);
+                        pself.promote_scoped_func_decls(lock, node);
                     }
                 }
                 pself.process_collected_declarations(lock, node);
 
                 // Finally visit the body.
                 body.visit(lock, pself, Some(Path::new(node, NodeField::body)));
+
+                // Check for local eval and run the unresolver pass in non-strict mode.
+                let func = pself.sem.function(pself.function_context().func_id);
+                let scope = pself.sem.scope(func.scopes[0]);
+                if scope.local_eval && !func.strict {
+                    let depth = pself.sem.scope(func.scopes[0]).depth;
+                    Unresolver::new(pself, depth).run(lock, node);
+                }
             });
         });
     }
@@ -561,6 +673,9 @@ impl<'gc> Resolver<'gc, '_> {
         | Node::FunctionExpression(_)
         | Node::ArrowFunctionExpression(_)
         | Node::CatchClause(_)
+        | Node::ForStatement(_)
+        | Node::ForInStatement(_)
+        | Node::ForOfStatement(_)
         | Node::Program(_) = path.parent
         {
             return node.visit_children(lock, self);
@@ -579,6 +694,7 @@ impl<'gc> Resolver<'gc, '_> {
 
     /// Look up the `ident` to see if it already has been resolved or has a binding assigned.
     /// Assigns the associated declaration if it exists.
+    /// If the identifier is unresolvable, returns `None`.
     fn check_identifier_resolved(
         &mut self,
         lock: &GCLock,
@@ -586,9 +702,11 @@ impl<'gc> Resolver<'gc, '_> {
         node: &Node,
     ) -> Option<DeclId> {
         let ptr = NodeRc::from_node(lock, node);
-        if let Some(decl) = self.sem.ident_decl(&ptr) {
+        if let Some(Resolution::Decl(decl)) = self.sem.ident_decl(&ptr) {
             // If identifier already resolved, pick the resolved declaration.
             Some(decl)
+        } else if let Some(Resolution::Unresolvable) = self.sem.ident_decl(&ptr) {
+            None
         } else if let Some(b) = self.binding_table.value(ident.name) {
             // If we can find the binding, assign the associated declaration and return it.
             self.sem.set_ident_decl(ptr, b.decl);
@@ -666,7 +784,7 @@ impl<'gc> Resolver<'gc, '_> {
     }
 
     /// Declare all declarations from `scope_decls` in the current scope by
-    /// calling [`Self::validate_and_declare_identifier()'].
+    /// calling [`Self::validate_and_declare_identifier()`].
     fn process_declarations(&mut self, lock: &GCLock, scope_decls: &[&'gc Node<'gc>]) {
         for &decl in scope_decls {
             let mut idents = SmallVec::<[&Node; 4]>::new();
@@ -965,6 +1083,38 @@ impl<'gc> Resolver<'gc, '_> {
             }
         }
     }
+
+    /// Mark the current scope and every one of its ancestor scopes as users of local `eval()`.
+    /// Set the `can_rename` flag on every variable in the scopes to `false`.
+    fn register_local_eval(&mut self) {
+        let mut id = self.current_scope.unwrap();
+        loop {
+            // Flag this scope as having a local `eval` call.
+            self.sem.scope_mut(id).local_eval = true;
+            // Set every variable as not being able to rename.
+            // TODO: It can be possible to avoid setting this flag if the variable is shadowed
+            // in a scope between this one and the local `eval()` call, so investigate that
+            // at a later time if necessary.
+            for &decl_id in &self.sem.scopes.get(id).decls {
+                self.sem.decls.get_mut(decl_id).can_rename = false;
+            }
+            match self.sem.scope(id).parent_scope {
+                None => break,
+                Some(p) => {
+                    id = p;
+                }
+            };
+        }
+    }
+
+    fn promote_scoped_func_decls(&mut self, lock: &'gc GCLock, func_node: &'gc Node<'gc>) {
+        debug_assert!(func_node.is_function_like());
+        if self.function_context().decls.scoped_func_decls().is_empty() {
+            // No scoped function declarations, nothing to promote.
+            return;
+        }
+        ScopedFunctionPromoter::new(self).run(lock, func_node);
+    }
 }
 
 impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
@@ -988,6 +1138,103 @@ impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
             Node::Identifier(ident) => self.visit_identifier(lock, ident, node, path.unwrap()),
 
             Node::BlockStatement(_) => self.visit_block_statement(lock, node, path.unwrap()),
+
+            Node::SwitchStatement(switch) => {
+                // Visit the discriminant before creating a new scope.
+                switch.discriminant.visit(
+                    lock,
+                    self,
+                    Some(Path::new(node, NodeField::discriminant)),
+                );
+                self.with_new_label(lock, None, node, |pself| {
+                    pself.in_new_scope(lock, node, |pself| {
+                        if let Some(decls) =
+                            pself.function_context().decls.scope_decls_for_node(node)
+                        {
+                            pself.process_declarations(lock, &decls);
+                        }
+                        for case in &switch.cases {
+                            case.visit(lock, pself, Some(Path::new(node, NodeField::cases)));
+                        }
+                    });
+                });
+            }
+
+            Node::ForStatement(_) | Node::ForInStatement(_) | Node::ForOfStatement(_) => {
+                self.with_new_label(lock, None, node, |pself| {
+                    // Only create a lexical scope if there are declarations in it.
+                    if let Some(decls) = pself.function_context().decls.scope_decls_for_node(node) {
+                        pself.in_new_scope(lock, node, |pself| {
+                            pself.process_declarations(lock, decls.as_slice());
+                            node.visit_children(lock, pself);
+                        });
+                    } else {
+                        node.visit_children(lock, pself);
+                    }
+                });
+            }
+
+            Node::WhileStatement(_) | Node::DoWhileStatement(_) => {
+                self.with_new_label(lock, None, node, |pself| {
+                    node.visit_children(lock, pself);
+                });
+            }
+
+            Node::LabeledStatement(labeled) => {
+                self.with_new_label(lock, Some(labeled.label), node, |pself| {
+                    node.visit_children(lock, pself);
+                });
+            }
+
+            Node::BreakStatement(ast::BreakStatement {
+                label: Some(label), ..
+            }) => {
+                let name = node_cast!(Node::Identifier, label).name;
+                if self.function_context().label_table.get(&name).is_none() {
+                    lock.sm().error(
+                        *label.range(),
+                        format!("label '{}' is not defined", lock.str(name)),
+                    );
+                }
+            }
+            Node::BreakStatement(ast::BreakStatement { label: None, .. }) => {
+                if self.current_loop_or_switch.is_none() {
+                    lock.sm()
+                        .error(*node.range(), "'break' not within a loop or switch");
+                }
+            }
+
+            Node::ContinueStatement(ast::ContinueStatement {
+                label: Some(label_node),
+                ..
+            }) => {
+                let name = node_cast!(Node::Identifier, label_node).name;
+                match self.function_context().label_table.get(&name) {
+                    Some(label) => {
+                        if matches!(label.target_statement, Node::LabeledStatement(_)) {
+                            lock.sm().error(
+                                *label_node.range(),
+                                format!(
+                                    "'continue' label '{}' is not a loop label",
+                                    lock.str(name)
+                                ),
+                            );
+                        }
+                    }
+                    None => {
+                        lock.sm().error(
+                            *label_node.range(),
+                            format!("label '{}' is not defined", lock.str(name)),
+                        );
+                    }
+                }
+            }
+            Node::ContinueStatement(ast::ContinueStatement { label: None, .. }) => {
+                if self.current_loop.is_none() {
+                    lock.sm()
+                        .error(*node.range(), "'continue' not within a loop or switch");
+                }
+            }
 
             Node::CatchClause(ast::CatchClause { param, body, .. }) => {
                 self.in_new_scope(lock, node, |pself| {
@@ -1058,7 +1305,30 @@ impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
                 }
             }
 
+            Node::ClassDeclaration(_) | Node::ClassExpression(_) => {
+                let old_strict = self.function_strict_mode();
+                *self.function_strict_mode_mut() = true;
+                node.visit_children(lock, self);
+                *self.function_strict_mode_mut() = old_strict;
+            }
+
             Node::CallExpression(call @ ast::CallExpression { arguments, .. }) => {
+                // Check for a direct call to local `eval()`.
+                if let Node::Identifier(identifier) = call.callee {
+                    if identifier.name == self.kw.ident_eval {
+                        let is_eval = match self.binding_table.get(&identifier.name) {
+                            None => true,
+                            Some(name) => {
+                                let decl = self.sem.decl(name.decl);
+                                decl.scope.is_global() && decl.kind.is_var_like()
+                            }
+                        };
+                        if is_eval {
+                            self.register_local_eval();
+                        }
+                    }
+                }
+
                 node.visit_children(lock, self);
                 if let ResolverMode::Module {
                     dependency_resolver,
@@ -1123,4 +1393,303 @@ fn find_use_strict<'gc>(body: &NodeList<'gc>) -> Option<&'gc Node<'gc>> {
         }
     }
     None
+}
+
+/// This class checks whether it is safe to promote block-scoped function
+/// declarations to function scope. i.e. whether it is safe to replace one with
+/// "var" without creating a conflict, and promotes them.
+///
+/// A conflict exists if a lex-like declaration is visible in the declaration
+/// scope. The checker starts with a list of all block scoped function
+/// declarations. Then it visits all scopes recursively, maintaining a scoped
+/// table of let-like declarations with matching names. When it encounters a
+/// block-scoped function declaration, it checks whether a matching let-like
+/// declaration is visible. If not, it is safe to promote.
+///
+/// The input is a list of block-scoped function function declarations. The
+/// ones that can be promoted are deleted from their own scope and added to the
+/// function scope.
+struct ScopedFunctionPromoter<'a, 'gc, 'mode> {
+    resolver: &'a mut Resolver<'gc, 'mode>,
+
+    /// The names of the scoped functions. We will ignore all other identifiers.
+    func_names: HashSet<Atom>,
+
+    /// The scoped function declarations. We remove each from this set once
+    /// we encounter it.
+    func_decls: HashSet<NodePtr<'gc>>,
+
+    /// The currently lexically visible names.
+    binding_table: ScopedHashMap<Atom, ()>,
+}
+
+impl<'a, 'gc, 'mode> ScopedFunctionPromoter<'a, 'gc, 'mode> {
+    fn new(resolver: &'a mut Resolver<'gc, 'mode>) -> Self {
+        ScopedFunctionPromoter {
+            resolver,
+            func_names: Default::default(),
+            func_decls: Default::default(),
+            binding_table: Default::default(),
+        }
+    }
+
+    /// Run on the `func_node` and promote any necessary functions.
+    fn run(&mut self, lock: &'gc GCLock, func_node: &'gc Node<'gc>) {
+        debug_assert!(func_node.is_function_like());
+        let decls = self.resolver.function_context().decls.scoped_func_decls();
+
+        // Populate the sets.
+        for node in decls {
+            let func_decl = node_cast!(Node::FunctionDeclaration, node);
+            self.func_names
+                .insert(node_cast!(Node::Identifier, func_decl.id.unwrap()).name);
+            self.func_decls.insert(NodePtr::from_node(node));
+        }
+
+        // The core of the loop doesn't descend into functions,
+        // so we take care of the only time we have to examine a function scope.
+        // Process the first decls here, because they're associated with the function like node,
+        // not the BlockStatement that forms the body.
+        // After processing those declarations, immediately start visiting the body's children,
+        // because the body itself has been handled as part of the function's processing.
+        self.process_declarations(lock, func_node);
+        func_node.function_like_body().visit_children(lock, self);
+    }
+
+    /// Visit any statement starting a scope.
+    fn visit_scope(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>) {
+        self.binding_table.push_scope();
+        self.process_declarations(lock, node);
+        self.binding_table.pop_scope();
+    }
+
+    /// Process the declarations in a scope.
+    /// This is the core of the algorithm, it updates the binding tables, etc.
+    /// Promotes the scoped FunctionDeclarations to function scope if they don't conflict.
+    fn process_declarations(&mut self, lock: &'gc GCLock, scope: &'gc Node<'gc>) {
+        let decls = match self
+            .resolver
+            .function_context()
+            .decls
+            .scope_decls_for_node(scope)
+        {
+            None => return,
+            Some(decls) => decls,
+        };
+
+        let mut idents = SmallVec::<[&Node; 4]>::new();
+
+        // Whenever we encounter one of the scoped func decls we are trying to promote,
+        // we store the entry here (so we can promote it if we want to).
+        let mut found_decls = Vec::<&Node>::new();
+
+        for &decl_node in decls.iter() {
+            if let Node::FunctionDeclaration(_) = decl_node {
+                if self.func_decls.contains(&decl_node.into()) {
+                    // We encountered one of the candidate declarations.
+                    // Add it to the found_decls list and move on.
+                    found_decls.push(decl_node);
+                }
+                continue;
+            }
+
+            // Extract idents, report errors.
+            idents.clear();
+            let decl_kind = Self::extract_declared_idents(lock, decl_node, &mut idents);
+
+            // We are only interested in let-like declarations.
+            if !decl_kind.is_let_like() {
+                continue;
+            }
+
+            // Remember only idents matching the set.
+            for &ident_node in &idents {
+                let ident = node_cast!(Node::Identifier, ident_node);
+                if self.func_names.contains(&ident.name) {
+                    self.binding_table.insert(ident.name, ());
+                }
+            }
+        }
+
+        if found_decls.is_empty() {
+            // No work to do.
+            return;
+        }
+
+        // Ensure we don't have the `Rc` alive when we do the actual promotion.
+        drop(decls);
+
+        // The decls list with the promoted function declarations omitted.
+        let mut new_decls = ScopeDecls::new();
+
+        for &node in &found_decls {
+            // Remove it from the set, since we are no longer interested in it.
+            self.func_decls.remove(&node.into());
+
+            let func_decl = node_cast!(Node::FunctionDeclaration, node);
+            match func_decl.id {
+                None => {
+                    // No name on the declaration, nothing to promote.
+                    new_decls.push(node);
+                    continue;
+                }
+                Some(id) => {
+                    // Is there a visible let-like declaration with the same name?
+                    // If so, it can't be promoted because it would shadow a `let`,
+                    // so keep it in `new_decls` and move on.
+                    if self
+                        .binding_table
+                        .contains_key(&node_cast!(Node::Identifier, id).name)
+                    {
+                        new_decls.push(node);
+                        continue;
+                    }
+                }
+            };
+
+            // This block-scoped function declaration can (and should) be promoted.
+            // 1. Don't add it to the new_decls list.
+            // 2. Add it to the function scope list.
+            self.resolver
+                .function_context_mut()
+                .decls
+                .add_scope_decl_for_func(node);
+        }
+
+        self.resolver
+            .function_context_mut()
+            .decls
+            .set_scope_decls_for_node(scope, Rc::new(new_decls));
+    }
+
+    /// Extract the list of declared identifiers in a declaration node into `idents`.
+    /// Return the declaration kind of the node.
+    /// Function declarations are always returned as `ScopedFunction`, so they can be distinguished.
+    fn extract_declared_idents<A: smallvec::Array<Item = &'gc Node<'gc>>>(
+        lock: &GCLock,
+        node: &'gc Node<'gc>,
+        idents: &mut SmallVec<A>,
+    ) -> DeclKind {
+        match node {
+            Node::VariableDeclaration(decl) => {
+                for &declarator in &decl.declarations {
+                    Resolver::extract_declared_idents_from_id(
+                        lock,
+                        Some(node_cast!(Node::VariableDeclarator, declarator).id),
+                        idents,
+                    )
+                }
+                match decl.kind {
+                    VariableDeclarationKind::Let => DeclKind::Let,
+                    VariableDeclarationKind::Const => DeclKind::Const,
+                    VariableDeclarationKind::Var => DeclKind::Var,
+                }
+            }
+            Node::FunctionDeclaration(decl) => {
+                Resolver::extract_declared_idents_from_id(lock, decl.id, idents);
+                DeclKind::ScopedFunction
+            }
+            Node::ClassDeclaration(decl) => {
+                Resolver::extract_declared_idents_from_id(lock, decl.id, idents);
+                DeclKind::Class
+            }
+            Node::ImportDeclaration(decl) => {
+                for &spec in &decl.specifiers {
+                    match spec {
+                        Node::ImportSpecifier(spec) => {
+                            Resolver::extract_declared_idents_from_id(
+                                lock,
+                                Some(spec.local),
+                                idents,
+                            );
+                        }
+                        Node::ImportDefaultSpecifier(spec) => {
+                            Resolver::extract_declared_idents_from_id(
+                                lock,
+                                Some(spec.local),
+                                idents,
+                            );
+                        }
+                        Node::ImportNamespaceSpecifier(spec) => {
+                            Resolver::extract_declared_idents_from_id(
+                                lock,
+                                Some(spec.local),
+                                idents,
+                            );
+                        }
+                        _ => {
+                            unreachable!("Invalid import specifier: {:?}", node.variant());
+                        }
+                    }
+                }
+                DeclKind::Import
+            }
+            _ => {
+                unreachable!("Invalid declaration kind: {:?}", node.variant());
+            }
+        }
+    }
+}
+
+impl<'gc> Visitor<'gc> for ScopedFunctionPromoter<'_, 'gc, '_> {
+    fn call(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>, _path: Option<Path<'gc>>) {
+        match node {
+            Node::SwitchStatement(_)
+            | Node::BlockStatement(_)
+            | Node::ForStatement(_)
+            | Node::ForInStatement(_)
+            | Node::ForOfStatement(_) => {
+                self.visit_scope(lock, node);
+                node.visit_children(lock, self);
+            }
+            _ => {
+                // Do not descend into nested functions.
+                if !node.is_function_like() {
+                    node.visit_children(lock, self);
+                }
+            }
+        };
+    }
+}
+
+/// Visitor pass for marking variables as Unresolvable based on local `eval()` or `with`.
+struct Unresolver<'a, 'gc, 'mode> {
+    resolver: &'a mut Resolver<'gc, 'mode>,
+    /// Depth of the scope which contains the construct which could shadow variables dynamically.
+    /// e.g. the depth of the function containing a local `eval()`.
+    depth: u32,
+}
+
+impl<'a, 'gc, 'mode> Unresolver<'a, 'gc, 'mode> {
+    fn new(resolver: &'a mut Resolver<'gc, 'mode>, depth: u32) -> Self {
+        Self { resolver, depth }
+    }
+
+    fn run(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>) {
+        node.visit(lock, self, None);
+    }
+}
+
+impl<'gc> Visitor<'gc> for Unresolver<'_, 'gc, '_> {
+    fn call(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>, _path: Option<Path<'gc>>) {
+        match node {
+            Node::Identifier(_) => {
+                let ident = NodeRc::from_node(lock, node);
+                if let Some(Resolution::Decl(decl_id)) = self.resolver.sem.ident_decl(&ident) {
+                    let decl = self.resolver.sem.decl(decl_id);
+                    let scope = self.resolver.sem.scope(decl.scope);
+                    // The depth of this identifier's declaration is less than the `eval`/`with`
+                    // declaration that could shadow it, so we must declare this identifier as
+                    // unresolvable.
+                    if scope.depth < self.depth {
+                        self.resolver.sem.set_ident_unresolvable(ident);
+                    }
+                }
+                node.visit_children(lock, self);
+            }
+            _ => {
+                node.visit_children(lock, self);
+            }
+        }
+    }
 }
