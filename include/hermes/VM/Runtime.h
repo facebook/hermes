@@ -853,7 +853,7 @@ class Runtime : public HandleRootOwner,
   }
 
   bool useJobQueue() const {
-    return !(getVMExperimentFlags() & experiments::PromiseOnImmediateQueue);
+    return getVMExperimentFlags() & experiments::JobQueue;
   }
 
   bool builtinsAreFrozen() const {
