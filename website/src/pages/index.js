@@ -76,17 +76,26 @@ function Home() {
     <Layout
       title="Hermes"
       description="JavaScript engine optimized for React Native">
-      <header className={classnames('hero hero--primary', styles.heroBanner)}>
+      <div className={styles.bannerWrapper}>
+        <div className={styles.banner}>
+          Support Ukraine 🇺🇦{" "}
+          <Link to="https://opensource.fb.com/support-ukraine">
+            Help Provide Humanitarian Aid to Ukraine
+          </Link>
+        </div>
+      </div>
+      <header className={classnames("hero hero--primary", styles.heroBanner)}>
         <div className="container">
           <h1 className="hero__title">{siteConfig.title}</h1>
           <p className="hero__subtitle">{siteConfig.tagline}</p>
           <div className={styles.buttons}>
             <Link
               className={classnames(
-                'button button--secondary button--lg',
-                styles.getStarted,
+                "button button--secondary button--lg",
+                styles.getStarted
               )}
-              to={'https://reactnative.dev/docs/hermes'}>
+              to={"https://reactnative.dev/docs/hermes"}
+            >
               Start Using Hermes
             </Link>
           </div>
@@ -98,10 +107,11 @@ function Home() {
           <section className={styles.features}>
             <div className="container">
               <div className="row">
-                {features.map(({imageUrl, title, description}, idx) => (
+                {features.map(({ imageUrl, title, description }, idx) => (
                   <div
                     key={idx}
-                    className={classnames('col col--4', styles.feature)}>
+                    className={classnames("col col--4", styles.feature)}
+                  >
                     {imageUrl && (
                       <div className="text--center margin-bottom--lg">
                         <img
