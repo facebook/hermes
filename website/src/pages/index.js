@@ -79,10 +79,9 @@ function Home() {
       <div className={styles.bannerWrapper}>
         <div className={styles.banner}>
           Support Ukraine 🇺🇦{" "}
-          <Link to="https://opensource.facebook.com/support-ukraine">
+          <Link to="https://opensource.fb.com/support-ukraine">
             Help Provide Humanitarian Aid to Ukraine
           </Link>
-          .
         </div>
       </div>
       <header className={classnames("hero hero--primary", styles.heroBanner)}>
