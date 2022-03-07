@@ -162,6 +162,7 @@ set(link_libs
   hermesSupport
   hermesPlatform
   hermesInternalBytecode
+  hermesPublic
   dtoa
 )
 
