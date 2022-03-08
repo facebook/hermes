@@ -622,16 +622,15 @@ void defineIntlCollator(Runtime &runtime, Handle<JSObject> intl) {
       constructor);
 
   {
-    DefinePropertyFlags dpf{};
-    dpf.setConfigurable = 1;
-    dpf.configurable = 1;
-    dpf.setValue = 1;
+    auto dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+    dpf.writable = 0;
+    dpf.enumerable = 0;
 
     defineProperty(
         runtime,
         prototype,
         Predefined::getSymbolID(Predefined::SymbolToStringTag),
-        runtime.getPredefinedStringHandle(Predefined::Object),
+        runtime.getPredefinedStringHandle(Predefined::IntlCollator),
         dpf);
   }
 
@@ -863,16 +862,15 @@ void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
       constructor);
 
   {
-    DefinePropertyFlags dpf{};
-    dpf.setConfigurable = 1;
-    dpf.configurable = 1;
-    dpf.setValue = 1;
+    auto dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+    dpf.writable = 0;
+    dpf.enumerable = 0;
 
     defineProperty(
         runtime,
         prototype,
         Predefined::getSymbolID(Predefined::SymbolToStringTag),
-        runtime.getPredefinedStringHandle(Predefined::Object),
+        runtime.getPredefinedStringHandle(Predefined::IntlDateTimeFormat),
         dpf);
   }
 
@@ -1181,16 +1179,15 @@ void defineIntlNumberFormat(Runtime &runtime, Handle<JSObject> intl) {
       constructor);
 
   {
-    DefinePropertyFlags dpf{};
-    dpf.setConfigurable = 1;
-    dpf.configurable = 1;
-    dpf.setValue = 1;
+    auto dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+    dpf.writable = 0;
+    dpf.enumerable = 0;
 
     defineProperty(
         runtime,
         prototype,
         Predefined::getSymbolID(Predefined::SymbolToStringTag),
-        runtime.getPredefinedStringHandle(Predefined::Object),
+        runtime.getPredefinedStringHandle(Predefined::IntlNumberFormat),
         dpf);
   }
 
@@ -1634,6 +1631,19 @@ vm::Handle<vm::JSObject> createIntlObject(vm::Runtime &runtime) {
       nullptr,
       intlGetCanonicalLocales,
       1);
+
+  {
+    auto dpf = vm::DefinePropertyFlags::getDefaultNewPropertyFlags();
+    dpf.writable = 0;
+    dpf.enumerable = 0;
+
+    defineProperty(
+        runtime,
+        intl,
+        vm::Predefined::getSymbolID(vm::Predefined::SymbolToStringTag),
+        runtime.getPredefinedStringHandle(vm::Predefined::Intl),
+        dpf);
+  }
 
   vm::defineIntlCollator(runtime, intl);
   vm::defineIntlDateTimeFormat(runtime, intl);

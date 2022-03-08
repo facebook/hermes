@@ -484,8 +484,11 @@ STR(squareSymbolSplit, "[Symbol.split]")
 // TODO T65916424: Consider how we can move these out of the
 // predefined strings table.
 STR(Collator, "Collator")
+STR(IntlCollator, "Intl.Collator")
 STR(DateTimeFormat, "DateTimeFormat")
+STR(IntlDateTimeFormat, "Intl.DateTimeFormat")
 STR(NumberFormat, "NumberFormat")
+STR(IntlNumberFormat, "Intl.NumberFormat")
 STR(Intl, "Intl")
 STR(compare, "compare")
 STR(format, "format")

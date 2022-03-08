@@ -103,4 +103,9 @@ public class HermesIntlCollatorTest extends HermesIntlTest262Base {
 
     runTests(basePath, skipList);
   }
+
+  public void testIntlCollator_prototype_toStringTag() throws IOException {
+    String basePath = "test262/test/intl402/Collator/prototype/toStringTag";
+    runTests(basePath);
+  }
 }

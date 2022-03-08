@@ -297,21 +297,8 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
   }
 
   public void testIntlDateTimeFormat_prototype_toStringTag() throws IOException {
-
     String basePath = "test262/test/intl402/DateTimeFormat/prototype/toStringTag";
-
-    Set<String> deviations =
-        new HashSet<>(
-            Arrays.asList(
-                "toString.js", // Expected SameValue(«[object Object]», «[object
-                // Intl.DateTimeFormat]») to be true
-                "toStringTag.js" // descriptor value should be Intl.DateTimeFormat
-                ));
-
-    Set<String> skipList = new HashSet<>();
-    skipList.addAll(deviations);
-
-    runTests(basePath, skipList);
+    runTests(basePath);
   }
 
   public void testIntlDateTimeFormat_prototype() throws IOException {

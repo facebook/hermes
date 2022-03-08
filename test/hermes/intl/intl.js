@@ -19,7 +19,6 @@ function testServiceTypes(service) {
   assert(service !== undefined);
   assert(service.prototype.constructor === service);
   assert(service.__proto__ === Function.prototype);
-  assert(service.prototype[Symbol.toStringTag] === 'Object');
   assert(service.supportedLocalesOf.__proto__ === Function.prototype);
 
   var s = service();
