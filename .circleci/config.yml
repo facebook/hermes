@@ -71,7 +71,7 @@ jobs:
       - run:
           name: Set up workspace and install dependencies
           command: |
-            yes | sdkmanager "cmake;3.10.2.4988404" &
+            yes | sdkmanager "cmake;3.18.1" &
             mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
             ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
             sudo apt-get update
@@ -80,7 +80,7 @@ jobs:
             sudo cp /usr/bin/ninja /usr/bin/ninja.real
             # See top comment
             printf '%s\n' '#!/bin/sh' 'ninja.real -j4 "$@" || ninja.real -j1 "$@"' | sudo tee /usr/bin/ninja
-            ln -sf /usr/bin/ninja /opt/android/sdk/cmake/3.10.2.4988404/bin/ninja
+            ln -sf /usr/bin/ninja /opt/android/sdk/cmake/3.18.1/bin/ninja
       - run:
           name: Build Hermes Compiler
           command: |
@@ -564,6 +564,10 @@ jobs:
           install-yarn: true
           lts: true
       - run:
+          name: Setup dependencies
+          command: |
+            (yes | sdkmanager "cmake;3.18.1" --verbose) || true
+      - run:
           name: Prepare RNTester
           command: |
             git clone https://github.com/facebook/react-native
@@ -592,7 +596,7 @@ jobs:
       - run:
           name: Setup dependencies
           command: |
-            (yes | sdkmanager "cmake;3.10.2.4988404" --verbose) || true
+            (yes | sdkmanager "cmake;3.18.1" --verbose) || true
             # Check out test262 at a pinned revision to reduce flakiness
             git clone https://github.com/tc39/test262
             cd test262
