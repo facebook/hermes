@@ -465,6 +465,13 @@ void SamplingProfiler::dumpChromeTrace(llvh::raw_ostream &OS) {
   clear();
 }
 
+void SamplingProfiler::serializeInDevToolsFormat(llvh::raw_ostream &OS) {
+  std::lock_guard<std::mutex> lk(runtimeDataLock_);
+  hermes::vm::serializeAsProfilerProfile(
+      OS, ChromeTraceFormat::create(getpid(), threadNames_, sampledStacks_));
+  clear();
+}
+
 bool SamplingProfiler::enable() {
   return GlobalProfiler::get()->enable();
 }

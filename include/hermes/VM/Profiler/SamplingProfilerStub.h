@@ -28,6 +28,10 @@ class SamplingProfiler {
   /// Dump sampled stack to \p OS in chrome trace format.
   static void dumpChromeTraceGlobal(llvh::raw_ostream &OS) {}
 
+  /// Dump the sampled stack to \p OS in the format consumed by the DevTools
+  /// JavaScript profiler.
+  void serializeInDevToolsFormat(llvh::raw_ostream &OS) {}
+
   /// Enable and start profiling.
   static bool enable() {
     return false;

@@ -300,6 +300,14 @@ class SamplingProfiler {
   /// Dump sampled stack to \p OS in chrome trace format.
   void dumpChromeTrace(llvh::raw_ostream &OS);
 
+  /// Dump the sampled stack to \p OS in the format expected by the
+  /// Profiler.stop return type. See
+  ///
+  /// https://chromedevtools.github.io/devtools-protocol/tot/Profiler/#type-Profile
+  ///
+  /// for a description.
+  void serializeInDevToolsFormat(llvh::raw_ostream &OS);
+
   /// Static wrapper for dumpSampledStack.
   static void dumpSampledStackGlobal(llvh::raw_ostream &OS);
 

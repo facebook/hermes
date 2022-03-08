@@ -46,6 +46,8 @@ class ChromeStackFrameNode {
   llvh::Optional<SamplingProfiler::StackFrame> frameInfo_;
   /// All callee/children of this stack frame.
   std::vector<std::shared_ptr<ChromeStackFrameNode>> children_;
+  /// How many times was this node on the top of the callstack during profiling.
+  uint32_t hitCount_ = 0;
 
   /// \p node represents the current visiting node.
   /// \p parent can be nullptr for root node.
@@ -79,6 +81,16 @@ class ChromeStackFrameNode {
     return *frameInfo_;
   }
 
+  /// Increments this node's hit counter by one.
+  void addHit() {
+    ++hitCount_;
+  }
+
+  /// \return this node's hit counter.
+  uint32_t getHitCount() const {
+    return hitCount_;
+  }
+
   /// Find a child node matching \p target, otherwise add \p target
   /// as a new child.
   /// \return the found/added child node.
@@ -90,6 +102,12 @@ class ChromeStackFrameNode {
   /// For each visited node, invoke \p callback.
   void dfsWalk(DfsWalkCallback &callback) const {
     this->dfsWalkHelper(callback, nullptr);
+  }
+
+  /// Get the vector with the this node's children list.
+  const std::vector<std::shared_ptr<ChromeStackFrameNode>> &getChildren()
+      const {
+    return children_;
   }
 };
 
@@ -205,6 +223,15 @@ class ChromeTraceSerializer {
   /// Serialize chrome trace to \p OS.
   void serialize(llvh::raw_ostream &OS) const;
 };
+
+/// Serialize the \p chromeTrace as a Profiler.Profile to \p os. See the url
+/// below for a description of that type.
+///
+/// https://chromedevtools.github.io/devtools-protocol/tot/Profiler/#type-Profile
+///
+void serializeAsProfilerProfile(
+    llvh::raw_ostream &os,
+    ChromeTraceFormat &&chromeTrace);
 
 } // namespace vm
 } // namespace hermes

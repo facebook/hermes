@@ -1060,6 +1060,11 @@ void HermesRuntime::dumpSampledTraceToStream(std::ostream &stream) {
   ::hermes::vm::SamplingProfiler::dumpChromeTraceGlobal(os);
 }
 
+void HermesRuntime::sampledTraceToStreamInDevToolsFormat(std::ostream &stream) {
+  llvh::raw_os_ostream os(stream);
+  impl(this)->runtime_.samplingProfiler->serializeInDevToolsFormat(os);
+}
+
 /*static*/ std::unordered_map<std::string, std::vector<std::string>>
 HermesRuntime::getExecutedFunctions() {
   std::unordered_map<
