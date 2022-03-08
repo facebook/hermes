@@ -12,6 +12,7 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <ostream>
 #include <string>
 
 #include <hermes/Public/RuntimeConfig.h>
@@ -27,10 +28,6 @@
 #endif // !defined(HERMES_EXPORT)
 
 struct HermesTestHelper;
-
-namespace llvh {
-class raw_ostream;
-}
 
 namespace hermes {
 namespace vm {
@@ -92,7 +89,7 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   static void dumpSampledTraceToFile(const std::string &fileName);
 
   /// Dump sampled stack trace to the given stream.
-  static void dumpSampledTraceToStream(llvh::raw_ostream &stream);
+  static void dumpSampledTraceToStream(std::ostream &stream);
 
   /// Return the executed JavaScript function info.
   /// This information holds the segmentID, Virtualoffset and sourceURL.
@@ -163,12 +160,12 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
 
 #ifdef HERMESVM_PROFILER_BB
   /// Write the trace to the given stream.
-  void dumpBasicBlockProfileTrace(llvh::raw_ostream &os) const;
+  void dumpBasicBlockProfileTrace(std::ostream &os) const;
 #endif
 
 #ifdef HERMESVM_PROFILER_OPCODE
   /// Write the opcode stats to the given stream.
-  void dumpOpcodeStats(llvh::raw_ostream &os) const;
+  void dumpOpcodeStats(std::ostream &os) const;
 #endif
 
 #ifdef HERMESVM_PROFILER_EXTERN

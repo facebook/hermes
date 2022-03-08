@@ -17,7 +17,9 @@
 
 #include <algorithm>
 #include <fstream>
+#include <iostream>
 #include <set>
+#include <sstream>
 
 using namespace hermes::parser;
 using namespace facebook::jsi;
@@ -963,7 +965,7 @@ std::string TraceInterpreter::execEntryFunction(
 
 #ifdef HERMESVM_PROFILER_BB
   if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
-    hermesRuntime->dumpBasicBlockProfileTrace(llvh::errs());
+    hermesRuntime->dumpBasicBlockProfileTrace(std::cerr);
   }
 #endif
 
@@ -1704,15 +1706,13 @@ std::string TraceInterpreter::printStats() {
   ::hermes::vm::instrumentation::PerfEvents::endAndInsertStats(stats);
 #ifdef HERMESVM_PROFILER_OPCODE
   stats += "\n";
-  std::string opcodeOutput;
-  llvh::raw_string_ostream os{opcodeOutput};
+  std::ostringstream os;
   if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
     hermesRuntime->dumpOpcodeStats(os);
   } else {
     throw std::runtime_error("Unable to cast runtime into HermesRuntime");
   }
-  os.flush();
-  stats += opcodeOutput;
+  stats += os.str();
   stats += "\n";
 #endif
   return stats;

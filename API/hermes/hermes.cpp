@@ -1055,8 +1055,9 @@ void HermesRuntime::dumpSampledTraceToFile(const std::string &fileName) {
   ::hermes::vm::SamplingProfiler::dumpChromeTraceGlobal(os);
 }
 
-void HermesRuntime::dumpSampledTraceToStream(llvh::raw_ostream &stream) {
-  ::hermes::vm::SamplingProfiler::dumpChromeTraceGlobal(stream);
+void HermesRuntime::dumpSampledTraceToStream(std::ostream &stream) {
+  llvh::raw_os_ostream os(stream);
+  ::hermes::vm::SamplingProfiler::dumpChromeTraceGlobal(os);
 }
 
 /*static*/ std::unordered_map<std::string, std::vector<std::string>>
@@ -1211,14 +1212,16 @@ std::string HermesRuntime::getIOTrackingInfoJSON() {
 }
 
 #ifdef HERMESVM_PROFILER_BB
-void HermesRuntime::dumpBasicBlockProfileTrace(llvh::raw_ostream &os) const {
+void HermesRuntime::dumpBasicBlockProfileTrace(std::ostream &stream) const {
+  llvh::raw_os_ostream os(stream);
   static_cast<const HermesRuntimeImpl *>(this)
       ->runtime_.dumpBasicBlockProfileTrace(os);
 }
 #endif
 
 #ifdef HERMESVM_PROFILER_OPCODE
-void HermesRuntime::dumpOpcodeStats(llvh::raw_ostream &os) const {
+void HermesRuntime::dumpOpcodeStats(std::ostream &stream) const {
+  llvh::raw_os_ostream os(stream);
   static_cast<const HermesRuntimeImpl *>(this)->runtime_.dumpOpcodeStats(os);
 }
 #endif
