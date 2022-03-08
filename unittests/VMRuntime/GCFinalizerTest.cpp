@@ -37,7 +37,7 @@ TEST(GCFinalizerTest, NoDeadFinalizables) {
   auto runtime = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
 
-  GCScope scope{&rt};
+  GCScope scope{rt};
   DummyObject::create(&rt.getHeap());
   rt.makeHandle(createWithFinalizeCount(&rt.getHeap(), &finalized));
   rt.collect();
@@ -50,7 +50,7 @@ TEST(GCFinalizerTest, FinalizablesOnly) {
   auto runtime = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
 
-  GCScope scope{&rt};
+  GCScope scope{rt};
   createWithFinalizeCount(&rt.getHeap(), &finalized);
   rt.makeHandle(createWithFinalizeCount(&rt.getHeap(), &finalized));
   rt.collect();
@@ -64,7 +64,7 @@ TEST(GCFinalizerTest, MultipleCollect) {
   DummyRuntime &rt = *runtime;
 
   {
-    GCScope scope{&rt};
+    GCScope scope{rt};
     createWithFinalizeCount(&rt.getHeap(), &finalized);
     DummyObject::create(&rt.getHeap());
     createWithFinalizeCount(&rt.getHeap(), &finalized);
@@ -85,7 +85,7 @@ TEST(GCFinalizerTest, FinalizeAllOnRuntimeDestructDummyRuntime) {
   {
     auto rt = DummyRuntime::create(kTestGCConfigSmall);
 
-    GCScope scope{rt.get()};
+    GCScope scope{*rt};
     rt->makeHandle(createWithFinalizeCount(&rt->getHeap(), &finalized));
     rt->makeHandle(createWithFinalizeCount(&rt->getHeap(), &finalized));
 
@@ -105,7 +105,7 @@ TEST(GCFinalizerTest, FinalizeAllOnRuntimeDestructRealRuntime) {
   int finalized = 0;
   std::shared_ptr<Runtime> rt{Runtime::create(kTestRTConfig)};
   {
-    GCScope gcScope(rt.get());
+    GCScope gcScope(*rt);
 
     auto r1 = rt->makeHandle(HermesValue::encodeObjectValue(
         createWithFinalizeCount(&rt->getHeap(), &finalized)));

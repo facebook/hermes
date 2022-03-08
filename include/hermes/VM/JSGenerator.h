@@ -37,20 +37,20 @@ class JSGenerator final : public JSObject {
   }
 
   static CallResult<PseudoHandle<JSGenerator>> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<GeneratorInnerFunction> innerFunction,
       Handle<JSObject> parentHandle);
 
   /// \return the inner function.
   static PseudoHandle<GeneratorInnerFunction> getInnerFunction(
-      Runtime *runtime,
+      Runtime &runtime,
       JSGenerator *self) {
     return createPseudoHandle(self->innerFunction_.get(runtime));
   }
 
  public:
   JSGenerator(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
       : JSObject(runtime, &vt.base, *parent, *clazz) {}

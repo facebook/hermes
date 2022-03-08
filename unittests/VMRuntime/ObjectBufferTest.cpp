@@ -161,12 +161,12 @@ TEST_F(ObjectBufferTest, TestNewObjectWithBuffer) {
         HermesValue::encodeUndefinedValue(),
         HermesValue::encodeUndefinedValue(),
         HermesValue::encodeUndefinedValue()};
-    status = runtime->interpretFunction(codeBlock);
+    status = runtime.interpretFunction(codeBlock);
   }
-  auto frames = runtime->getStackFrames();
+  auto frames = runtime.getStackFrames();
   ASSERT_TRUE(frames.begin() == frames.end());
   ASSERT_EQ(
-      StackFrameLayout::CalleeExtraRegistersAtStart, runtime->getStackLevel());
+      StackFrameLayout::CalleeExtraRegistersAtStart, runtime.getStackLevel());
   ASSERT_EQ(ExecutionStatus::RETURNED, status.getStatus());
   ASSERT_EQ(1, status.getValue().getDouble());
 }

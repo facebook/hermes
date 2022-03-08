@@ -81,23 +81,23 @@ class IdentifierTable {
   /// Note it is not safe to pass pointers to potentially GC-heap allocated
   /// strings here. Only strings not managed by the GC may be passed here.
   CallResult<Handle<SymbolID>>
-  getSymbolHandle(Runtime *runtime, UTF16Ref str, uint32_t hash);
-  CallResult<Handle<SymbolID>> getSymbolHandle(Runtime *runtime, UTF16Ref str) {
+  getSymbolHandle(Runtime &runtime, UTF16Ref str, uint32_t hash);
+  CallResult<Handle<SymbolID>> getSymbolHandle(Runtime &runtime, UTF16Ref str) {
     return getSymbolHandle(runtime, str, hermes::hashString(str));
   }
 
   /// Given a ASCII string \p str, retrieve a unique SymbolID for that
   /// string.
   CallResult<Handle<SymbolID>>
-  getSymbolHandle(Runtime *runtime, ASCIIRef str, uint32_t hash);
-  CallResult<Handle<SymbolID>> getSymbolHandle(Runtime *runtime, ASCIIRef str) {
+  getSymbolHandle(Runtime &runtime, ASCIIRef str, uint32_t hash);
+  CallResult<Handle<SymbolID>> getSymbolHandle(Runtime &runtime, ASCIIRef str) {
     return getSymbolHandle(runtime, str, hermes::hashString(str));
   }
 
   /// Given a UTF16 string \p str, if an equal string is already in the table,
   /// return it as a StringPrimitive, otherwise return nullptr.
   StringPrimitive *getExistingStringPrimitiveOrNull(
-      Runtime *runtime,
+      Runtime &runtime,
       llvh::ArrayRef<char16_t> str);
 
   /// Register a lazy ASCII identifier from a bytecode module or as predefined
@@ -113,19 +113,19 @@ class IdentifierTable {
 
   /// \return the SymbolID of the string primitive \p str.
   CallResult<Handle<SymbolID>> getSymbolHandleFromPrimitive(
-      Runtime *runtime,
+      Runtime &runtime,
       PseudoHandle<StringPrimitive> str);
 
   /// Given a \c SymbolID \p id, get the unique string str such that
   /// getIdentifier(str) == id.
-  StringPrimitive *getStringPrim(Runtime *runtime, SymbolID id);
+  StringPrimitive *getStringPrim(Runtime &runtime, SymbolID id);
 
   /// Given an \c SymbolID \p id, get a view of the unique string str such
   /// that getIdentifier(str) == id.
-  StringView getStringView(Runtime *runtime, SymbolID id) const;
+  StringView getStringView(Runtime &runtime, SymbolID id) const;
 
   /// Like \c getStringView but also shows some special SymbolIDs for debugging.
-  StringView getStringViewForDev(Runtime *runtime, SymbolID id) const;
+  StringView getStringViewForDev(Runtime &runtime, SymbolID id) const;
 
   /// Convert a SymbolID into the name it represents, encoded as UTF-8.
   /// This function does not perform any GC operations, such as allocations,
@@ -198,7 +198,7 @@ class IdentifierTable {
   /// \param desc the description of the not uniqued symbol.
   /// \return the newly allocated SymbolID.
   CallResult<SymbolID> createNotUniquedSymbol(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<StringPrimitive> desc);
 
  private:
@@ -422,13 +422,13 @@ class IdentifierTable {
   /// \return the SymbolID.
   template <typename T>
   CallResult<SymbolID> getOrCreateIdentifier(
-      Runtime *runtime,
+      Runtime &runtime,
       llvh::ArrayRef<T> str,
       Handle<StringPrimitive> primHandle,
       uint32_t hash);
   template <typename T>
   CallResult<SymbolID> getOrCreateIdentifier(
-      Runtime *runtime,
+      Runtime &runtime,
       llvh::ArrayRef<T> str,
       Handle<StringPrimitive> primHandle) {
     return getOrCreateIdentifier(
@@ -463,12 +463,12 @@ class IdentifierTable {
   /// \return the new allocated string.
   template <typename T, bool Unique = true>
   CallResult<PseudoHandle<StringPrimitive>> allocateDynamicString(
-      Runtime *runtime,
+      Runtime &runtime,
       llvh::ArrayRef<T> str,
       Handle<StringPrimitive> primHandle);
 
   /// Turn an existing lazy identifier into a StringPrimitive.
-  StringPrimitive *materializeLazyIdentifier(Runtime *runtime, SymbolID id);
+  StringPrimitive *materializeLazyIdentifier(Runtime &runtime, SymbolID id);
 };
 
 } // end namespace vm

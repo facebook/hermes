@@ -16,19 +16,19 @@ namespace vm {
 
 /// 26.7.1.1 AsyncFunction ( p1, p2, … , pn, body )
 CallResult<HermesValue>
-asyncFunctionConstructor(void *, Runtime *runtime, NativeArgs args) {
+asyncFunctionConstructor(void *, Runtime &runtime, NativeArgs args) {
   /// 3. Return CreateDynamicFunction(C, NewTarget, async, args).
   return createDynamicFunction(runtime, args, DynamicFunctionKind::Async);
 }
 
-Handle<JSObject> createAsyncFunctionConstructor(Runtime *runtime) {
-  auto proto = Handle<JSObject>::vmcast(&runtime->asyncFunctionPrototype);
+Handle<JSObject> createAsyncFunctionConstructor(Runtime &runtime) {
+  auto proto = Handle<JSObject>::vmcast(&runtime.asyncFunctionPrototype);
 
   /// 26.7.2 Properties of the AsyncFunction Constructor
   /// has a [[Prototype]] internal slot whose value is %Function%.
-  auto cons = runtime->makeHandle(NativeConstructor::create(
+  auto cons = runtime.makeHandle(NativeConstructor::create(
       runtime,
-      Handle<JSObject>::vmcast(&runtime->functionConstructor),
+      Handle<JSObject>::vmcast(&runtime.functionConstructor),
       nullptr,
       asyncFunctionConstructor,
       1,
@@ -71,7 +71,7 @@ Handle<JSObject> createAsyncFunctionConstructor(Runtime *runtime) {
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::SymbolToStringTag),
-      runtime->getPredefinedStringHandle(Predefined::AsyncFunction),
+      runtime.getPredefinedStringHandle(Predefined::AsyncFunction),
       dpf);
 
   return cons;

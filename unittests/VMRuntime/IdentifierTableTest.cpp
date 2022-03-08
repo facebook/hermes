@@ -28,7 +28,7 @@ namespace {
 using IdentifierTableLargeHeapTest = LargeHeapRuntimeTestFixture;
 
 TEST_F(IdentifierTableLargeHeapTest, LookupTest) {
-  IdentifierTable &table = runtime->getIdentifierTable();
+  IdentifierTable &table = runtime.getIdentifierTable();
 
   uint32_t predefinedCount = table.getSymbolsEnd();
 
@@ -82,23 +82,23 @@ TEST_F(IdentifierTableLargeHeapTest, LookupTest) {
   // Ensure allocations are aligned.
   EXPECT_EQ(
       0u,
-      (uint64_t)runtime->getStringPrimFromSymbolID(sa) % (uint64_t)HeapAlign);
+      (uint64_t)runtime.getStringPrimFromSymbolID(sa) % (uint64_t)HeapAlign);
   EXPECT_EQ(
       0u,
-      (uint64_t)runtime->getStringPrimFromSymbolID(sb) % (uint64_t)HeapAlign);
+      (uint64_t)runtime.getStringPrimFromSymbolID(sb) % (uint64_t)HeapAlign);
 }
 
 using IdentifierTableTest = RuntimeTestFixture;
 
 TEST_F(IdentifierTableTest, NotUniquedSymbol) {
-  auto &idTable = runtime->getIdentifierTable();
+  auto &idTable = runtime.getIdentifierTable();
 
   {
     ASCIIRef asdf{"asdf", 4};
-    Handle<StringPrimitive> id1 = runtime->makeHandle<StringPrimitive>(
+    Handle<StringPrimitive> id1 = runtime.makeHandle<StringPrimitive>(
         *StringPrimitive::create(runtime, asdf));
     Handle<SymbolID> sym =
-        runtime->makeHandle(*idTable.createNotUniquedSymbol(runtime, id1));
+        runtime.makeHandle(*idTable.createNotUniquedSymbol(runtime, id1));
     EXPECT_TRUE((*sym).isNotUniqued());
     EXPECT_FALSE((*sym).isUniqued());
     EXPECT_TRUE(idTable.getStringView(runtime, *sym).equals(asdf));
@@ -109,16 +109,16 @@ TEST(IdentifierTableDeathTest, LazyExternalSymbolTooBig) {
   auto fn = [] {
     auto rt = Runtime::create(
         RuntimeConfig::Builder().withGCConfig(kTestGCConfig).build());
-    auto *runtime = rt.get();
+    auto &runtime = *rt;
     GCScope gcScope{runtime};
-    auto &idTable = runtime->getIdentifierTable();
+    auto &idTable = runtime.getIdentifierTable();
 
     const auto extSize = (1 << 24) +
         std::max(kTestGCConfig.getMaxHeapSize(),
                  toRValue(StringPrimitive::EXTERNAL_STRING_THRESHOLD));
 
     // A string of this size is definitely too big to be allocated.
-    ASSERT_FALSE(runtime->getHeap().canAllocExternalMemory(extSize));
+    ASSERT_FALSE(runtime.getHeap().canAllocExternalMemory(extSize));
 
     std::string buf(extSize, '\0');
     ASCIIRef ref{buf.data(), extSize};

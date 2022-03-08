@@ -28,77 +28,77 @@ namespace JSCallSite {
 /// \return a JSObject that is a CallSite object -- i.e., it has the CallSite
 /// internal properties.
 CallResult<HermesValue>
-create(Runtime *runtime, Handle<JSError> error, uint32_t stackFrameIndex);
+create(Runtime &runtime, Handle<JSError> error, uint32_t stackFrameIndex);
 
 /// \return the function name of this call site, or null if it is anonymous or
 /// unavailable.
-CallResult<HermesValue> getFunctionName(Runtime *runtime, Handle<> selfHandle);
+CallResult<HermesValue> getFunctionName(Runtime &runtime, Handle<> selfHandle);
 
 /// \return the file name of this call site, or null if it is
 /// unavailable.
-CallResult<HermesValue> getFileName(Runtime *runtime, Handle<> selfHandle);
+CallResult<HermesValue> getFileName(Runtime &runtime, Handle<> selfHandle);
 
 /// \return the 1-based line number of this call site, or null if it is
 /// unavailable.
-CallResult<HermesValue> getLineNumber(Runtime *runtime, Handle<> selfHandle);
+CallResult<HermesValue> getLineNumber(Runtime &runtime, Handle<> selfHandle);
 
 /// \return the 1-based column number of this call site, or null if it is
 /// unavailable.
-CallResult<HermesValue> getColumnNumber(Runtime *runtime, Handle<> selfHandle);
+CallResult<HermesValue> getColumnNumber(Runtime &runtime, Handle<> selfHandle);
 
 /// This method is Hermes-specific.
 /// \return the 0-based virtual offset of this call site, or null if it is
 /// unavailable.
 CallResult<HermesValue> getBytecodeAddress(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle);
 
 /// \return true if this call site is a native function, false otherwise.
-CallResult<HermesValue> isNative(Runtime *runtime, Handle<> selfHandle);
+CallResult<HermesValue> isNative(Runtime &runtime, Handle<> selfHandle);
 
 /// Not implemented.
 /// \return \c undefined.
-CallResult<HermesValue> getThis(Runtime *runtime, Handle<> selfHandle);
+CallResult<HermesValue> getThis(Runtime &runtime, Handle<> selfHandle);
 
 /// Not implemented.
 /// \return \c null.
-CallResult<HermesValue> getTypeName(Runtime *runtime, Handle<> selfHandle);
+CallResult<HermesValue> getTypeName(Runtime &runtime, Handle<> selfHandle);
 
 /// Not implemented.
 /// \return \c undefined.
-CallResult<HermesValue> getFunction(Runtime *runtime, Handle<> selfHandle);
+CallResult<HermesValue> getFunction(Runtime &runtime, Handle<> selfHandle);
 
 /// Not implemented.
 /// \return \c null.
-CallResult<HermesValue> getMethodName(Runtime *runtime, Handle<> selfHandle);
+CallResult<HermesValue> getMethodName(Runtime &runtime, Handle<> selfHandle);
 
 /// Not implemented.
 /// \return \c null.
-CallResult<HermesValue> getEvalOrigin(Runtime *runtime, Handle<> selfHandle);
+CallResult<HermesValue> getEvalOrigin(Runtime &runtime, Handle<> selfHandle);
 
 /// Not implemented.
 /// \return \c null.
-CallResult<HermesValue> isToplevel(Runtime *runtime, Handle<> selfHandle);
+CallResult<HermesValue> isToplevel(Runtime &runtime, Handle<> selfHandle);
 
 /// Not implemented.
 /// \return \c null.
-CallResult<HermesValue> isEval(Runtime *runtime, Handle<> selfHandle);
+CallResult<HermesValue> isEval(Runtime &runtime, Handle<> selfHandle);
 
 /// Not implemented.
 /// \return \c null.
-CallResult<HermesValue> isConstructor(Runtime *runtime, Handle<> selfHandle);
+CallResult<HermesValue> isConstructor(Runtime &runtime, Handle<> selfHandle);
 
 /// Is this an async call (i.e. await or Promise.all())?
 /// \return \c false since Hermes has no native support for async calls.
-CallResult<HermesValue> isAsync(Runtime *runtime, Handle<> selfHandle);
+CallResult<HermesValue> isAsync(Runtime &runtime, Handle<> selfHandle);
 
 /// Is this an async call to Promise.all()?
 /// \return \c false since Hermes has no native support for async calls.
-CallResult<HermesValue> isPromiseAll(Runtime *runtime, Handle<> selfHandle);
+CallResult<HermesValue> isPromiseAll(Runtime &runtime, Handle<> selfHandle);
 
 /// Not implemented.
 /// \return \c null.
-CallResult<HermesValue> getPromiseIndex(Runtime *runtime, Handle<> selfHandle);
+CallResult<HermesValue> getPromiseIndex(Runtime &runtime, Handle<> selfHandle);
 }; // namespace JSCallSite
 
 } // namespace vm

@@ -18,7 +18,7 @@ namespace vm {
 
 template <typename NeedsBarriers>
 GCPointerBase::GCPointerBase(
-    PointerBase *base,
+    PointerBase &base,
     GCCell *ptr,
     GC *gc,
     NeedsBarriers)
@@ -33,7 +33,7 @@ GCPointerBase::GCPointerBase(
   }
 }
 
-inline void GCPointerBase::set(PointerBase *base, GCCell *ptr, GC *gc) {
+inline void GCPointerBase::set(PointerBase &base, GCCell *ptr, GC *gc) {
   assert(
       (!ptr || gc->validPointer(ptr)) &&
       "Cannot set a GCPointer to an invalid pointer");
@@ -42,7 +42,7 @@ inline void GCPointerBase::set(PointerBase *base, GCCell *ptr, GC *gc) {
   setNoBarrier(CompressedPointer::encode(ptr, base));
 }
 
-inline void GCPointerBase::setNonNull(PointerBase *base, GCCell *ptr, GC *gc) {
+inline void GCPointerBase::setNonNull(PointerBase &base, GCCell *ptr, GC *gc) {
   assert(
       gc->validPointer(ptr) && "Cannot set a GCPointer to an invalid pointer");
   // Write barrier must happen before the write.
@@ -51,7 +51,7 @@ inline void GCPointerBase::setNonNull(PointerBase *base, GCCell *ptr, GC *gc) {
 }
 
 inline void
-GCPointerBase::set(PointerBase *base, CompressedPointer ptr, GC *gc) {
+GCPointerBase::set(PointerBase &base, CompressedPointer ptr, GC *gc) {
   assert(
       (!ptr || gc->validPointer(ptr.get(base))) &&
       "Cannot set a GCPointer to an invalid pointer");

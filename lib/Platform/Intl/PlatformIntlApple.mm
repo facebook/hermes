@@ -176,7 +176,7 @@ std::vector<std::u16string> lookupSupportedLocales(
 
 // Implementation of https://tc39.es/ecma402/#sec-canonicalizelocalelist
 vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales) {
   // 1. If locales is undefined, then
   //   a. Return a new empty List
@@ -211,13 +211,13 @@ vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
 
 // https://tc39.es/ecma402/#sec-canonicalizelocalelist
 vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales) {
   return canonicalizeLocaleList(runtime, locales);
 }
 
 vm::CallResult<std::u16string> localeListToLocaleString(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales) {
   // 3. Let requestedLocales be ? CanonicalizeLocaleList(locales).
   vm::CallResult<std::vector<std::u16string>> requestedLocales =
@@ -253,7 +253,7 @@ vm::CallResult<std::u16string> localeListToLocaleString(
 // Implementer note: This method corresponds roughly to
 // https://tc39.es/ecma402/#sup-string.prototype.tolocalelowercase
 vm::CallResult<std::u16string> toLocaleLowerCase(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const std::u16string &str) {
   NSString *nsStr = u16StringToNSString(str);
@@ -279,7 +279,7 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
 // Implementer note: This method corresponds roughly to
 // https://tc39.es/ecma402/#sup-string.prototype.tolocaleuppercase
 vm::CallResult<std::u16string> toLocaleUpperCase(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const std::u16string &str) {
   NSString *nsStr = u16StringToNSString(str);
@@ -310,14 +310,14 @@ Collator::Collator() : impl_(std::make_unique<Impl>()) {}
 Collator::~Collator() {}
 
 vm::CallResult<std::vector<std::u16string>> Collator::supportedLocalesOf(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   return std::vector<std::u16string>{u"en-CA", u"de-DE"};
 }
 
 vm::ExecutionStatus Collator::initialize(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   impl_->locale = u"en-US";
@@ -345,14 +345,14 @@ DateTimeFormat::DateTimeFormat() : impl_(std::make_unique<Impl>()) {}
 DateTimeFormat::~DateTimeFormat() {}
 
 vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   return std::vector<std::u16string>{u"en-CA", u"de-DE"};
 }
 
 vm::ExecutionStatus DateTimeFormat::initialize(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   impl_->locale = u"en-US";
@@ -389,14 +389,14 @@ NumberFormat::NumberFormat() : impl_(std::make_unique<Impl>()) {}
 NumberFormat::~NumberFormat() {}
 
 vm::CallResult<std::vector<std::u16string>> NumberFormat::supportedLocalesOf(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   return std::vector<std::u16string>{u"en-CA", u"de-DE"};
 }
 
 vm::ExecutionStatus NumberFormat::initialize(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   impl_->locale = u"en-US";

@@ -35,15 +35,15 @@ void JSGeneratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 CallResult<PseudoHandle<JSGenerator>> JSGenerator::create(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<GeneratorInnerFunction> innerFunction,
     Handle<JSObject> parentHandle) {
-  auto *cell = runtime->makeAFixed<JSGenerator>(
+  auto *cell = runtime.makeAFixed<JSGenerator>(
       runtime,
       parentHandle,
-      runtime->getHiddenClassForPrototype(
+      runtime.getHiddenClassForPrototype(
           *parentHandle, numOverlapSlots<JSGenerator>()));
-  cell->innerFunction_.set(runtime, *innerFunction, &runtime->getHeap());
+  cell->innerFunction_.set(runtime, *innerFunction, &runtime.getHeap());
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 

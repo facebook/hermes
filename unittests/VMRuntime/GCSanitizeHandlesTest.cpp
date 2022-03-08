@@ -60,10 +60,10 @@ struct TestHarness {
 /// isForceCollect() is \p true.
 TEST(GCSanitizeHandlesTest, MovesRoots) {
   TestHarness TH;
-  DummyRuntime *runtime = TH.runtime.get();
+  DummyRuntime &runtime = *TH.runtime;
   GCScope gcScope(runtime);
 
-  auto dummy = runtime->makeHandle(DummyObject::create(&runtime->getHeap()));
+  auto dummy = runtime.makeHandle(DummyObject::create(&runtime.getHeap()));
   TH.testHandleMoves(dummy);
 }
 
@@ -71,12 +71,12 @@ TEST(GCSanitizeHandlesTest, MovesRoots) {
 /// before an allocation, when \p isForceCollect() is \p true.
 TEST(GCSanitizeHandlesTest, MovesNonRoots) {
   TestHarness TH;
-  DummyRuntime *runtime = TH.runtime.get();
+  DummyRuntime &runtime = *TH.runtime;
   GCScope gcScope(runtime);
 
-  auto dummy = runtime->makeHandle(DummyObject::create(&runtime->getHeap()));
-  auto *dummy2 = DummyObject::create(&runtime->getHeap());
-  dummy->setPointer(&runtime->getHeap(), dummy2);
+  auto dummy = runtime.makeHandle(DummyObject::create(&runtime.getHeap()));
+  auto *dummy2 = DummyObject::create(&runtime.getHeap());
+  dummy->setPointer(&runtime.getHeap(), dummy2);
 
   auto *before = dummy->other.get(runtime);
   TH.triggerFreshHeap();
@@ -90,12 +90,12 @@ TEST(GCSanitizeHandlesTest, MovesNonRoots) {
 /// that objects in the old generation are also appropriately moved.
 TEST(GCSanitizeHandlesTest, MovesAfterCollect) {
   TestHarness TH;
-  DummyRuntime *runtime = TH.runtime.get();
-  GCScope gcScope(TH.runtime.get());
+  DummyRuntime &runtime = *TH.runtime;
+  GCScope gcScope(runtime);
 
   Handle<DummyObject> dummy =
-      runtime->makeHandle(DummyObject::create(&runtime->getHeap()));
-  runtime->collect();
+      runtime.makeHandle(DummyObject::create(&runtime.getHeap()));
+  runtime.collect();
   TH.testHandleMoves(dummy);
 }
 
@@ -103,11 +103,11 @@ TEST(GCSanitizeHandlesTest, MovesAfterCollect) {
 /// be moved.
 TEST(GCSanitizeHandlesTest, DoesNotMoveNativeValues) {
   TestHarness TH;
-  DummyRuntime *runtime = TH.runtime.get();
+  DummyRuntime &runtime = *TH.runtime;
   GCScope gcScope(runtime);
 
   const char buf[] = "the quick brown fox jumped over the lazy dog.";
-  auto hNative = runtime->makeHandle(HermesValue::encodeNativePointer(
+  auto hNative = runtime.makeHandle(HermesValue::encodeNativePointer(
       const_cast<void *>(reinterpret_cast<const void *>(buf))));
 
   auto prevNativeLoc = reinterpret_cast<const void *>(buf);

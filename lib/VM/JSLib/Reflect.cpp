@@ -16,15 +16,15 @@ namespace hermes {
 namespace vm {
 
 CallResult<HermesValue>
-reflectApply(void *, Runtime *runtime, NativeArgs args) {
+reflectApply(void *, Runtime &runtime, NativeArgs args) {
   auto target = args.dyncastArg<Callable>(0);
   if (LLVM_UNLIKELY(!target)) {
-    return runtime->raiseTypeError("target is not callable");
+    return runtime.raiseTypeError("target is not callable");
   }
 
   auto arguments = args.dyncastArg<JSObject>(2);
   if (LLVM_UNLIKELY(!arguments)) {
-    return runtime->raiseTypeError("target arguments is not an object");
+    return runtime.raiseTypeError("target arguments is not an object");
   }
 
   return Callable::executeCall(
@@ -37,35 +37,35 @@ reflectApply(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-reflectConstruct(void *, Runtime *runtime, NativeArgs args) {
+reflectConstruct(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   Handle<Callable> target = args.dyncastArg<Callable>(0);
   if (LLVM_UNLIKELY(!target)) {
-    return runtime->raiseTypeError("target is not constructible");
+    return runtime.raiseTypeError("target is not constructible");
   }
   CallResult<bool> isConstructorRes = isConstructor(runtime, *target);
   if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   if (LLVM_UNLIKELY(!*isConstructorRes)) {
-    return runtime->raiseTypeError("target is not constructible");
+    return runtime.raiseTypeError("target is not constructible");
   }
   Handle<Callable> newTarget = args.dyncastArg<Callable>(2);
   if (args.getArgCount() >= 3) {
     if (LLVM_UNLIKELY(!newTarget)) {
-      return runtime->raiseTypeError("newTarget is not constructible");
+      return runtime.raiseTypeError("newTarget is not constructible");
     }
     CallResult<bool> isConstructorRes = isConstructor(runtime, *newTarget);
     if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     if (LLVM_UNLIKELY(!*isConstructorRes)) {
-      return runtime->raiseTypeError("newTarget is not constructible");
+      return runtime.raiseTypeError("newTarget is not constructible");
     }
   }
   auto arguments = args.dyncastArg<JSObject>(1);
   if (LLVM_UNLIKELY(!arguments)) {
-    return runtime->raiseTypeError("target arguments is not an object");
+    return runtime.raiseTypeError("target arguments is not an object");
   }
 
   MutableHandle<JSObject> prototype{runtime};
@@ -96,7 +96,7 @@ reflectConstruct(void *, Runtime *runtime, NativeArgs args) {
     prototype = PseudoHandle<JSObject>::dyn_vmcast(std::move(*tProtoRes));
     if (!prototype) {
       // If all else fails, use %ObjectPrototype%
-      prototype = runtime->objectPrototypeRawPtr;
+      prototype = runtime.objectPrototypeRawPtr;
     }
   }
   assert(prototype && "prototype was never set");
@@ -106,7 +106,7 @@ reflectConstruct(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  Handle<JSObject> thisVal = runtime->makeHandle(std::move(*thisValRes));
+  Handle<JSObject> thisVal = runtime.makeHandle(std::move(*thisValRes));
   CallResult<PseudoHandle<>> objRes = Callable::executeCall(
       target, runtime, newTarget ? newTarget : target, thisVal, arguments);
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
@@ -128,24 +128,24 @@ CallResult<HermesValue> toHV(CallResult<bool> boolRes) {
 } // namespace
 
 CallResult<HermesValue>
-reflectDefineProperty(void *, Runtime *runtime, NativeArgs args) {
+reflectDefineProperty(void *, Runtime &runtime, NativeArgs args) {
   return toHV(defineProperty(runtime, args, PropOpFlags()));
 }
 
 CallResult<HermesValue>
-reflectDeleteProperty(void *, Runtime *runtime, NativeArgs args) {
+reflectDeleteProperty(void *, Runtime &runtime, NativeArgs args) {
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!target)) {
-    return runtime->raiseTypeError("target is not an object");
+    return runtime.raiseTypeError("target is not an object");
   }
 
   return toHV(JSObject::deleteComputed(target, runtime, args.getArgHandle(1)));
 }
 
-CallResult<HermesValue> reflectGet(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> reflectGet(void *, Runtime &runtime, NativeArgs args) {
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!target)) {
-    return runtime->raiseTypeError("target is not an object");
+    return runtime.raiseTypeError("target is not an object");
   }
 
   return JSObject::getComputedWithReceiver_RJS(
@@ -157,49 +157,49 @@ CallResult<HermesValue> reflectGet(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-reflectGetOwnPropertyDescriptor(void *, Runtime *runtime, NativeArgs args) {
+reflectGetOwnPropertyDescriptor(void *, Runtime &runtime, NativeArgs args) {
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!target)) {
-    return runtime->raiseTypeError("target is not an object");
+    return runtime.raiseTypeError("target is not an object");
   }
 
   return getOwnPropertyDescriptor(runtime, target, args.getArgHandle(1));
 }
 
 CallResult<HermesValue>
-reflectGetPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
+reflectGetPrototypeOf(void *, Runtime &runtime, NativeArgs args) {
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!target)) {
-    return runtime->raiseTypeError("target is not an object");
+    return runtime.raiseTypeError("target is not an object");
   }
 
   return getPrototypeOf(runtime, target);
 }
 
-CallResult<HermesValue> reflectHas(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> reflectHas(void *, Runtime &runtime, NativeArgs args) {
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!target)) {
-    return runtime->raiseTypeError("target is not an object");
+    return runtime.raiseTypeError("target is not an object");
   }
 
   return toHV(JSObject::hasComputed(target, runtime, args.getArgHandle(1)));
 }
 
 CallResult<HermesValue>
-reflectIsExtensible(void *, Runtime *runtime, NativeArgs args) {
+reflectIsExtensible(void *, Runtime &runtime, NativeArgs args) {
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!target)) {
-    return runtime->raiseTypeError("target is not an object");
+    return runtime.raiseTypeError("target is not an object");
   }
 
   return toHV(JSObject::isExtensible(createPseudoHandle(*target), runtime));
 }
 
 CallResult<HermesValue>
-reflectOwnKeys(void *, Runtime *runtime, NativeArgs args) {
+reflectOwnKeys(void *, Runtime &runtime, NativeArgs args) {
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!target)) {
-    return runtime->raiseTypeError("target is not an object");
+    return runtime.raiseTypeError("target is not an object");
   }
 
   return getOwnPropertyKeysAsStrings(
@@ -212,19 +212,19 @@ reflectOwnKeys(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-reflectPreventExtensions(void *, Runtime *runtime, NativeArgs args) {
+reflectPreventExtensions(void *, Runtime &runtime, NativeArgs args) {
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!target)) {
-    return runtime->raiseTypeError("target is not an object");
+    return runtime.raiseTypeError("target is not an object");
   }
 
   return toHV(JSObject::preventExtensions(target, runtime));
 }
 
-CallResult<HermesValue> reflectSet(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> reflectSet(void *, Runtime &runtime, NativeArgs args) {
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!target)) {
-    return runtime->raiseTypeError("target is not an object");
+    return runtime.raiseTypeError("target is not an object");
   }
 
   return toHV(JSObject::putComputedWithReceiver_RJS(
@@ -236,23 +236,23 @@ CallResult<HermesValue> reflectSet(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-reflectSetPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
+reflectSetPrototypeOf(void *, Runtime &runtime, NativeArgs args) {
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!target)) {
-    return runtime->raiseTypeError("target is not an object");
+    return runtime.raiseTypeError("target is not an object");
   }
 
   HermesValue proto = args.getArg(1);
   if (LLVM_UNLIKELY(!proto.isObject() && !proto.isNull())) {
-    return runtime->raiseTypeError("target is not an object and not null");
+    return runtime.raiseTypeError("target is not an object and not null");
   }
 
   return toHV(JSObject::setParent(
       *target, runtime, proto.isObject() ? vmcast<JSObject>(proto) : nullptr));
 }
 
-Handle<JSObject> createReflectObject(Runtime *runtime) {
-  Handle<JSObject> reflect = runtime->makeHandle(JSObject::create(runtime));
+Handle<JSObject> createReflectObject(Runtime &runtime) {
+  Handle<JSObject> reflect = runtime.makeHandle(JSObject::create(runtime));
 
   auto defineReflectMethod =
       [&](Predefined::Str symID, NativeFunctionPtr func, uint8_t count) {
@@ -289,7 +289,7 @@ Handle<JSObject> createReflectObject(Runtime *runtime) {
       runtime,
       reflect,
       Predefined::getSymbolID(Predefined::SymbolToStringTag),
-      runtime->getPredefinedStringHandle(Predefined::Reflect),
+      runtime.getPredefinedStringHandle(Predefined::Reflect),
       dpf);
 
   return reflect;

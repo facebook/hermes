@@ -39,7 +39,7 @@ class ConsoleHostContext {
 
  public:
   /// Registers the ConsoleHostContext roots with \p runtime.
-  ConsoleHostContext(vm::Runtime *runtime);
+  ConsoleHostContext(vm::Runtime &runtime);
 
   /// \return true when there are no queued tasks remaining.
   bool tasksEmpty() const {
@@ -91,14 +91,13 @@ namespace microtask {
 /// Complete a checkpoint by repetitively trying to drain the engine job queue
 /// until there was no errors (implying queue exhaustiveness).
 /// Note that exceptions are directly printed to stderr.
-inline void performCheckpoint(vm::Runtime *runtime) {
-  if (!runtime->useJobQueue())
+inline void performCheckpoint(vm::Runtime &runtime) {
+  if (!runtime.useJobQueue())
     return;
 
-  while (
-      LLVM_UNLIKELY(runtime->drainJobs() == vm::ExecutionStatus::EXCEPTION)) {
-    runtime->printException(
-        llvh::errs(), runtime->makeHandle(runtime->getThrownValue()));
+  while (LLVM_UNLIKELY(runtime.drainJobs() == vm::ExecutionStatus::EXCEPTION)) {
+    runtime.printException(
+        llvh::errs(), runtime.makeHandle(runtime.getThrownValue()));
   };
 }
 
@@ -116,7 +115,7 @@ inline void performCheckpoint(vm::Runtime *runtime) {
 /// \p filename If non-null, the filename of the BC buffer being loaded.
 ///    Used to find the other segments to be loaded at runtime.
 void installConsoleBindings(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     ConsoleHostContext &ctx,
     vm::StatSamplingThread *statSampler = nullptr,
     const std::string *filename = nullptr);

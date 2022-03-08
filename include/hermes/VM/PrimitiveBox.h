@@ -33,39 +33,39 @@ class JSString final : public JSObject {
   }
 
   static CallResult<Handle<JSString>> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<StringPrimitive> value,
       Handle<JSObject> prototype);
 
   static CallResult<Handle<JSString>> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> prototype) {
     return create(
         runtime,
-        runtime->getPredefinedStringHandle(Predefined::emptyString),
+        runtime.getPredefinedStringHandle(Predefined::emptyString),
         prototype);
   }
 
   /// Set the [[PrimitiveValue]] internal property from a string.
   static void setPrimitiveString(
       Handle<JSString> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<StringPrimitive> string);
 
   /// Return the [[PrimitiveValue]] internal property as a string.
   static StringPrimitive *getPrimitiveString(
       const JSString *self,
-      Runtime *runtime) {
+      Runtime &runtime) {
     return self->primitiveValue_.get(runtime);
   }
 
   JSString(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<StringPrimitive> value,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
       : JSObject(runtime, &vt.base, *parent, *clazz),
-        primitiveValue_(runtime, *value, &runtime->getHeap()) {
+        primitiveValue_(runtime, *value, &runtime.getHeap()) {
     flags_.indexedStorage = true;
     flags_.fastIndexProperties = true;
   }
@@ -74,7 +74,7 @@ class JSString final : public JSObject {
   /// Check whether property with index \p index exists in indexed storage and
   /// \return true if it does.
   static bool
-  _haveOwnIndexedImpl(JSObject *self, Runtime *runtime, uint32_t index);
+  _haveOwnIndexedImpl(JSObject *self, Runtime &runtime, uint32_t index);
 
   /// Check whether property with index \p index exists in indexed storage and
   /// extract its \c PropertyFlags (if necessary checking whether the object is
@@ -82,19 +82,19 @@ class JSString final : public JSObject {
   /// \return PropertyFlags if the property exists.
   static OptValue<PropertyFlags> _getOwnIndexedPropertyFlagsImpl(
       JSObject *self,
-      Runtime *runtime,
+      Runtime &runtime,
       uint32_t index);
 
   /// \return the range of indexes (end-exclusive) in the array.
   static std::pair<uint32_t, uint32_t> _getOwnIndexedRangeImpl(
       JSObject *selfObj,
-      Runtime *runtime);
+      Runtime &runtime);
 
   /// Obtain an element from the "indexed storage" of this object. The storage
   /// itself is implementation dependent.
   /// \return the value of the element or "empty" if there is no such element.
   static HermesValue
-  _getOwnIndexedImpl(JSObject *self, Runtime *runtime, uint32_t index);
+  _getOwnIndexedImpl(JSObject *self, Runtime &runtime, uint32_t index);
 
   /// Set an element in the "indexed storage" of this object. Depending on the
   /// semantics of the "indexed storage" the storage capacity may need to be
@@ -103,7 +103,7 @@ class JSString final : public JSObject {
   /// \return true if the write succeeded, or false if it was ignored.
   static CallResult<bool> _setOwnIndexedImpl(
       Handle<JSObject> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       uint32_t index,
       Handle<> value);
 
@@ -113,7 +113,7 @@ class JSString final : public JSObject {
   ///     "holes"/deletion (e.g. typed arrays).
   static bool _deleteOwnIndexedImpl(
       Handle<JSObject> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       uint32_t index);
 
  private:
@@ -140,21 +140,21 @@ class JSStringIterator : public JSObject {
   }
 
   static PseudoHandle<JSStringIterator> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<StringPrimitive> string);
 
   /// Iterate to the next element and return.
   static CallResult<HermesValue> nextElement(
       Handle<JSStringIterator> self,
-      Runtime *runtime);
+      Runtime &runtime);
 
   JSStringIterator(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       Handle<StringPrimitive> iteratedString)
       : JSObject(runtime, &vt.base, *parent, *clazz),
-        iteratedString_(runtime, *iteratedString, &runtime->getHeap()) {}
+        iteratedString_(runtime, *iteratedString, &runtime.getHeap()) {}
 
  private:
   /// [[IteratedString]]
@@ -178,16 +178,16 @@ class JSNumber final : public JSObject {
   }
 
   static PseudoHandle<JSNumber>
-  create(Runtime *runtime, double value, Handle<JSObject> prototype);
+  create(Runtime &runtime, double value, Handle<JSObject> prototype);
 
   static PseudoHandle<JSNumber> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> prototype) {
     return create(runtime, 0.0, prototype);
   }
 
   JSNumber(
-      Runtime *runtime,
+      Runtime &runtime,
       double value,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
@@ -218,16 +218,16 @@ class JSBoolean final : public JSObject {
   }
 
   static PseudoHandle<JSBoolean>
-  create(Runtime *runtime, bool value, Handle<JSObject> prototype);
+  create(Runtime &runtime, bool value, Handle<JSObject> prototype);
 
   static PseudoHandle<JSBoolean> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> prototype) {
     return create(runtime, false, prototype);
   }
 
   JSBoolean(
-      Runtime *runtime,
+      Runtime &runtime,
       bool value,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
@@ -260,10 +260,10 @@ class JSSymbol final : public JSObject {
   }
 
   static PseudoHandle<JSSymbol>
-  create(Runtime *runtime, SymbolID value, Handle<JSObject> prototype);
+  create(Runtime &runtime, SymbolID value, Handle<JSObject> prototype);
 
   static PseudoHandle<JSSymbol> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> prototype) {
     return create(runtime, SymbolID{}, prototype);
   }
@@ -274,7 +274,7 @@ class JSSymbol final : public JSObject {
   }
 
   JSSymbol(
-      Runtime *runtime,
+      Runtime &runtime,
       SymbolID value,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)

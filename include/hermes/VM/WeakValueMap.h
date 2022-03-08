@@ -65,7 +65,7 @@ class WeakValueMap {
   /// Look for a key and return the value as Handle<T> if found or llvh::None if
   /// not found.
   llvh::Optional<Handle<ValueT>>
-  lookup(HandleRootOwner *runtime, GC *gc, const KeyT &key) {
+  lookup(HandleRootOwner &runtime, GC *gc, const KeyT &key) {
     auto it = internalFind(key);
     if (it == map_.end())
       return llvh::None;

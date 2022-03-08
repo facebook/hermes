@@ -34,13 +34,13 @@ class JSDataView final : public JSObject {
   }
 
   static PseudoHandle<JSDataView> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> prototype);
 
   /// Retrieves a pointer to the held buffer.
-  Handle<JSArrayBuffer> getBuffer(Runtime *runtime) {
+  Handle<JSArrayBuffer> getBuffer(Runtime &runtime) {
     assert(buffer_ && "Cannot get a null buffer");
-    return runtime->makeHandle(buffer_);
+    return runtime.makeHandle(buffer_);
   }
 
   /// \return the number of bytes viewed by this DataView.
@@ -62,7 +62,7 @@ class JSDataView final : public JSObject {
   /// \return The value which the bytes requested to view represent, as a type.
   /// \pre attached() must be true
   template <typename T>
-  T get(Runtime *runtime, size_type offset, bool littleEndian) const;
+  T get(Runtime &runtime, size_type offset, bool littleEndian) const;
 
   /// Set the value stored in the bytes from offset to offset + sizeof(T), in
   /// either little or big endian order.
@@ -72,12 +72,12 @@ class JSDataView final : public JSObject {
   /// \p littleEndian Whether to write the value as little or big endian.
   /// \pre attached() must be true
   template <typename T>
-  void set(Runtime *runtime, size_type offset, T value, bool littleEndian);
+  void set(Runtime &runtime, size_type offset, T value, bool littleEndian);
 
   /// Check if the underlying JSArrayBuffer is attached.
   /// \return true iff the JSArrayBuffer being viewed by this JSDataView is
   ///   attached to some storage.
-  bool attached(Runtime *runtime) const {
+  bool attached(Runtime &runtime) const {
     assert(
         buffer_ &&
         "Cannot call attached() when there is not even a buffer set");
@@ -85,14 +85,14 @@ class JSDataView final : public JSObject {
   }
 
   void setBuffer(
-      Runtime *runtime,
+      Runtime &runtime,
       JSArrayBuffer *buffer,
       size_type offset,
       size_type length) {
     assert(
         offset + length <= buffer->size() &&
         "A DataView cannot be looking outside of the storage");
-    buffer_.setNonNull(runtime, buffer, &runtime->getHeap());
+    buffer_.setNonNull(runtime, buffer, &runtime.getHeap());
     offset_ = offset;
     length_ = length;
   }
@@ -110,7 +110,7 @@ class JSDataView final : public JSObject {
 
  public:
   JSDataView(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz);
 };
@@ -120,7 +120,7 @@ class JSDataView final : public JSObject {
 
 template <typename T>
 T JSDataView::get(
-    Runtime *runtime,
+    Runtime &runtime,
     JSDataView::size_type offset,
     bool littleEndian) const {
   assert(attached(runtime) && "Cannot get on a detached buffer");
@@ -140,7 +140,7 @@ T JSDataView::get(
 
 template <typename T>
 void JSDataView::set(
-    Runtime *runtime,
+    Runtime &runtime,
     JSDataView::size_type offset,
     T value,
     bool littleEndian) {

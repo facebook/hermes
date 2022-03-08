@@ -46,13 +46,13 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// it.
   template <typename T>
   static CallResult<HermesValue> createEfficientImpl(
-      Runtime *runtime,
+      Runtime &runtime,
       llvh::ArrayRef<T> str,
       std::basic_string<T> *optStorage = nullptr);
 
   /// Create a new DynamicASCIIStringPrimitive if str is all ASCII, otherwise
   /// create a new DynamicUTF16StringPrimitive.
-  static CallResult<HermesValue> createDynamic(Runtime *runtime, UTF16Ref str);
+  static CallResult<HermesValue> createDynamic(Runtime &runtime, UTF16Ref str);
 
   /// The following private overloads are to prevent creation of a
   /// StringPrimitive from a string literal. Naively allowing this would invoke
@@ -61,12 +61,12 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// create() variants that are explicit about the length, e.g. ASCIIRef or
   /// UTF16Ref parameters.
   template <typename CharT, size_t N>
-  static CallResult<HermesValue> create(Runtime *, const CharT (&Arr)[N]);
+  static CallResult<HermesValue> create(Runtime &, const CharT (&Arr)[N]);
 
   /// As create(), but overloading createLongLived().
   template <typename CharT, size_t N>
   static CallResult<HermesValue> createLongLived(
-      Runtime *,
+      Runtime &,
       const CharT (&Arr)[N]);
 
   /// Internal helper to return a std::string from an ArrayRef.
@@ -91,11 +91,11 @@ class StringPrimitive : public VariableSizeRuntimeCell {
 
   /// Super constructor to set the length properly.
   explicit StringPrimitive(
-      Runtime *runtime,
+      Runtime &runtime,
       const VTable *vt,
       uint32_t cellSize,
       uint32_t length)
-      : VariableSizeRuntimeCell(&runtime->getHeap(), vt, cellSize),
+      : VariableSizeRuntimeCell(&runtime.getHeap(), vt, cellSize),
         lengthAndUniquedFlag_(length) {}
 
   /// Returns true if a string of the given \p length should be allocated as an
@@ -147,24 +147,24 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// The \p asciiNotUTF16 argument indicates whether the character type is char
   /// (if true) or char16_t (if false).
   static CallResult<HermesValue>
-  create(Runtime *runtime, uint32_t length, bool asciiNotUTF16);
+  create(Runtime &runtime, uint32_t length, bool asciiNotUTF16);
 
   /// Proxy to {Dynamic,External}StringPrimitive<char>::create(runtime, str).
-  static CallResult<HermesValue> create(Runtime *runtime, ASCIIRef str);
+  static CallResult<HermesValue> create(Runtime &runtime, ASCIIRef str);
 
   /// Proxy to {Dynamic,External}StringPrimitive<char16_t>::create(runtime,
   /// str).
-  static CallResult<HermesValue> create(Runtime *runtime, UTF16Ref str);
+  static CallResult<HermesValue> create(Runtime &runtime, UTF16Ref str);
 
   /// Create a StringPrimitive as efficiently as the contents of \p str allow.
   /// If it is the empty string or a single character string,
   /// return a string interned in the Runtime.
   static CallResult<HermesValue> createEfficient(
-      Runtime *runtime,
+      Runtime &runtime,
       ASCIIRef str);
 
   static CallResult<HermesValue> createEfficient(
-      Runtime *runtime,
+      Runtime &runtime,
       UTF16Ref str);
 
   /// Create a StringPrimitive as efficiently as the contents of \p str allow.
@@ -174,7 +174,7 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// -- its contents will stop right before the first invalid code point in
   /// \p str.
   static CallResult<HermesValue> createEfficient(
-      Runtime *runtime,
+      Runtime &runtime,
       UTF8Ref str,
       bool IgnoreInputErrors = false);
 
@@ -182,35 +182,35 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// std::string. Create a StringPrimitive from \p str. The implementation may
   /// choose to acquire ownership of \p str and use it to back the string.
   static CallResult<HermesValue> createEfficient(
-      Runtime *runtime,
+      Runtime &runtime,
       std::basic_string<char> &&str);
 
   static CallResult<HermesValue> createEfficient(
-      Runtime *runtime,
+      Runtime &runtime,
       std::basic_string<char16_t> &&str);
 
   /// Like the above, but the created StringPrimitives will be
   /// allocated in a "long-lived" area of the heap (if the GC supports
   /// that concept).
   static CallResult<HermesValue> createLongLived(
-      Runtime *runtime,
+      Runtime &runtime,
       ASCIIRef str);
   static CallResult<HermesValue> createLongLived(
-      Runtime *runtime,
+      Runtime &runtime,
       UTF16Ref str);
 
   /// Copy a UTF-16 sequence into a new StringPrim without throwing.
   /// This function should only be used during VM initialization, where OOM
   /// should never happen.
   static inline Handle<StringPrimitive> createNoThrow(
-      Runtime *runtime,
+      Runtime &runtime,
       UTF16Ref str);
 
   /// Copy a UTF-16 sequence into a new StringPrim without throwing.
   /// This function should only be used during VM initialization, where OOM
   /// should never happen.
   static inline Handle<StringPrimitive> createNoThrow(
-      Runtime *runtime,
+      Runtime &runtime,
       llvh::StringRef ascii);
 
   /// \return the length of string in 16-bit characters.
@@ -244,25 +244,25 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// Concatenate two StringPrimitives at \p xHandle and \p yHandle.
   /// \return pointer to a new StringPrimitive, representing the concatenation.
   static CallResult<HermesValue> concat(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<StringPrimitive> xHandle,
       Handle<StringPrimitive> yHandle);
 
   /// Slice the StringPrimitive at \p str, \p length characters at \p start.
   /// \return new StringPrimitive, representing the sliced string.
   static CallResult<HermesValue> slice(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<StringPrimitive> str,
       size_t start,
       size_t length);
 
   /// Flatten the string if it's a rope, possibly causing allocation/GC.
   static Handle<StringPrimitive> ensureFlat(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<StringPrimitive> self) {
     // In the future, ensureFlat may trigger GC as it might allocate for
     // ropes. Move the heap here.
-    runtime->potentiallyMoveHeap();
+    runtime.potentiallyMoveHeap();
     return self;
     // TODO: Deal with different subclasses (e.g. rope)
   }
@@ -275,7 +275,7 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// \return a StringView of this string. In the case of a rope, we will need
   /// to resolve the rope, which might involve object allocations.
   static StringView createStringView(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<StringPrimitive> self);
 
   /// In the rare case (most likely for debugging, printing and etc), we just
@@ -469,7 +469,7 @@ class DynamicStringPrimitive final
  public:
   /// Construct from a DynamicStringPrimitive, perhaps with a SymbolID.
   /// If a non-empty SymbolID is provided, we must be a Uniqued string.
-  explicit DynamicStringPrimitive(Runtime *runtime, uint32_t length)
+  explicit DynamicStringPrimitive(Runtime &runtime, uint32_t length)
       : OptSymbolStringPrimitive<Uniqued>(
             runtime,
             &vt,
@@ -478,23 +478,23 @@ class DynamicStringPrimitive final
     assert(!isExternalLength(length) && "length should not be external");
   }
 
-  explicit DynamicStringPrimitive(Runtime *runtime, Ref src);
+  explicit DynamicStringPrimitive(Runtime &runtime, Ref src);
 
  private:
   /// Copy a UTF-16 sequence into a new StringPrim. Throw \c RangeError if the
   /// string is longer than \c MAX_STRING_LENGTH characters. The new string is
-  static CallResult<HermesValue> create(Runtime *runtime, Ref str);
+  static CallResult<HermesValue> create(Runtime &runtime, Ref str);
 
   /// Like the above, but the created StringPrimitive will be
   /// allocated in a "long-lived" area of the heap (if the GC supports
   /// that concept).
-  static CallResult<HermesValue> createLongLived(Runtime *runtime, Ref str);
+  static CallResult<HermesValue> createLongLived(Runtime &runtime, Ref str);
 
   /// Create a StringPrim object with a specified capacity \p length in
   /// 16-bit characters. Throw \c RangeError if the string is longer than
   /// \c MAX_STRING_LENGTH characters. The new string is returned in
   /// \c CallResult<HermesValue>. This should only be used by StringBuilder.
-  static CallResult<HermesValue> create(Runtime *runtime, uint32_t length);
+  static CallResult<HermesValue> create(Runtime &runtime, uint32_t length);
 
   /// Calculate the allocation size of a StringPrimitive given character
   /// length.
@@ -535,7 +535,7 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   template <typename U>
   friend class BufferedStringPrimitive;
   friend PseudoHandle<StringPrimitive> internalConcatStringPrimitives(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<StringPrimitive> leftHnd,
       Handle<StringPrimitive> rightHnd);
   friend void ExternalASCIIStringPrimitiveBuildMeta(
@@ -572,7 +572,7 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   /// Construct an ExternalStringPrimitive from the given string \p contents,
   /// non-uniqued.
   template <class BasicString>
-  ExternalStringPrimitive(Runtime *runtime, BasicString &&contents);
+  ExternalStringPrimitive(Runtime &runtime, BasicString &&contents);
 
  private:
   /// Destructor deallocates the contents_ string.
@@ -581,21 +581,21 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   /// Transfer ownership of an std::string into a new StringPrim. Throw \c
   /// RangeError if the string is longer than \c MAX_STRING_LENGTH characters.
   template <class BasicString>
-  static CallResult<HermesValue> create(Runtime *runtime, BasicString &&str);
+  static CallResult<HermesValue> create(Runtime &runtime, BasicString &&str);
 
   /// Like the above, but the created StringPrimitive will be allocated in a
   /// "long-lived" area of the heap (if the GC supports that concept).  Note
   /// that this applies only to the object proper; the contents array is
   /// allocated outside the JS heap in either case.
   static CallResult<HermesValue> createLongLived(
-      Runtime *runtime,
+      Runtime &runtime,
       StdString &&str);
 
   /// Create a StringPrim object with a specified capacity \p length in
   /// 16-bit characters. Throw \c RangeError if the string is longer than
   /// \c MAX_STRING_LENGTH characters. The new string is returned in
   /// \c CallResult<HermesValue>. This should only be used by StringBuilder.
-  static CallResult<HermesValue> create(Runtime *runtime, uint32_t length);
+  static CallResult<HermesValue> create(Runtime &runtime, uint32_t length);
 
   const T *getRawPointer() const {
     // C++11 defines this to be valid even if the string is empty.
@@ -652,7 +652,7 @@ class BufferedStringPrimitive final : public StringPrimitive {
   friend class StringBuilder;
   friend class StringPrimitive;
   friend PseudoHandle<StringPrimitive> internalConcatStringPrimitives(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<StringPrimitive> leftHnd,
       Handle<StringPrimitive> rightHnd);
   friend void BufferedASCIIStringPrimitiveBuildMeta(
@@ -692,7 +692,7 @@ class BufferedStringPrimitive final : public StringPrimitive {
   /// and the associated concatenation buffer \p storage. Note that the length
   /// of the primitive may be smaller than the length of the buffer.
   BufferedStringPrimitive(
-      Runtime *runtime,
+      Runtime &runtime,
       uint32_t length,
       Handle<ExternalStringPrimitive<T>> concatBuffer)
       : StringPrimitive(
@@ -701,7 +701,7 @@ class BufferedStringPrimitive final : public StringPrimitive {
             sizeof(BufferedStringPrimitive<T>),
             length) {
     concatBufferHV_.set(
-        HermesValue::encodeObjectValue(*concatBuffer), &runtime->getHeap());
+        HermesValue::encodeObjectValue(*concatBuffer), &runtime.getHeap());
     assert(
         concatBuffer->contents_.size() >= length &&
         "length exceeds size of concatenation buffer");
@@ -712,7 +712,7 @@ class BufferedStringPrimitive final : public StringPrimitive {
   /// and the associated concatenation buffer \p storage. Note that the length
   /// of the primitive may be smaller than the length of the buffer.
   static PseudoHandle<StringPrimitive> create(
-      Runtime *runtime,
+      Runtime &runtime,
       uint32_t length,
       Handle<ExternalStringPrimitive<T>> storage);
 
@@ -723,7 +723,7 @@ class BufferedStringPrimitive final : public StringPrimitive {
   /// \return the new BufferedStringPrimitive representing the result.
   static PseudoHandle<StringPrimitive> append(
       Handle<BufferedStringPrimitive<T>> selfHnd,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<StringPrimitive> rightHnd);
 
   /// Create a new concatenation buffer of type T (the type parameter of this
@@ -734,7 +734,7 @@ class BufferedStringPrimitive final : public StringPrimitive {
   /// to ASCII) and the combined length must have been validated.
   /// \return a new BufferedStringPrimitive representing the result.
   static PseudoHandle<StringPrimitive> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<StringPrimitive> leftHnd,
       Handle<StringPrimitive> rightHnd);
 
@@ -788,7 +788,7 @@ inline bool isBufferedStringPrimitive(const GCCell *cell) {
 /// - appending to the middle of the concatenation chain.
 /// \pre The combined length must have been validated by the caller.
 PseudoHandle<StringPrimitive> internalConcatStringPrimitives(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> leftHnd,
     Handle<StringPrimitive> rightHnd);
 
@@ -865,27 +865,27 @@ inline llvh::raw_ostream &operator<<(
 }
 
 /*static*/ inline Handle<StringPrimitive> StringPrimitive::createNoThrow(
-    Runtime *runtime,
+    Runtime &runtime,
     UTF16Ref str) {
   auto strRes = create(runtime, str);
   if (strRes == ExecutionStatus::EXCEPTION) {
     hermes_fatal("String allocation failed");
   }
-  return runtime->makeHandle<StringPrimitive>(*strRes);
+  return runtime.makeHandle<StringPrimitive>(*strRes);
 }
 
 /*static*/ inline Handle<StringPrimitive> StringPrimitive::createNoThrow(
-    Runtime *runtime,
+    Runtime &runtime,
     llvh::StringRef ascii) {
   auto strRes = create(runtime, ASCIIRef(ascii.data(), ascii.size()));
   if (strRes == ExecutionStatus::EXCEPTION) {
     hermes_fatal("String allocation failed");
   }
-  return runtime->makeHandle<StringPrimitive>(*strRes);
+  return runtime.makeHandle<StringPrimitive>(*strRes);
 }
 
 inline CallResult<HermesValue>
-StringPrimitive::create(Runtime *runtime, uint32_t length, bool asciiNotUTF16) {
+StringPrimitive::create(Runtime &runtime, uint32_t length, bool asciiNotUTF16) {
   static_assert(
       EXTERNAL_STRING_THRESHOLD < MAX_STRING_LENGTH,
       "External string threshold should be smaller than max string size.");
@@ -905,7 +905,7 @@ StringPrimitive::create(Runtime *runtime, uint32_t length, bool asciiNotUTF16) {
 }
 
 inline CallResult<HermesValue> StringPrimitive::create(
-    Runtime *runtime,
+    Runtime &runtime,
     ASCIIRef str) {
   static_assert(
       EXTERNAL_STRING_THRESHOLD < MAX_STRING_LENGTH,
@@ -918,7 +918,7 @@ inline CallResult<HermesValue> StringPrimitive::create(
 }
 
 inline CallResult<HermesValue> StringPrimitive::create(
-    Runtime *runtime,
+    Runtime &runtime,
     UTF16Ref str) {
   static_assert(
       EXTERNAL_STRING_THRESHOLD < MAX_STRING_LENGTH,
@@ -932,7 +932,7 @@ inline CallResult<HermesValue> StringPrimitive::create(
 }
 
 inline CallResult<HermesValue> StringPrimitive::createLongLived(
-    Runtime *runtime,
+    Runtime &runtime,
     ASCIIRef str) {
   static_assert(
       EXTERNAL_STRING_THRESHOLD < MAX_STRING_LENGTH,
@@ -946,7 +946,7 @@ inline CallResult<HermesValue> StringPrimitive::createLongLived(
 }
 
 inline CallResult<HermesValue> StringPrimitive::createLongLived(
-    Runtime *runtime,
+    Runtime &runtime,
     UTF16Ref str) {
   static_assert(
       EXTERNAL_STRING_THRESHOLD < MAX_STRING_LENGTH,

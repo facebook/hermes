@@ -51,7 +51,7 @@ void JSErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 CallResult<Handle<JSError>> JSError::getErrorFromStackTarget_RJS(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> targetHandle) {
   if (targetHandle) {
     auto capturedErrorRes = JSObject::getNamed_RJS(
@@ -61,20 +61,19 @@ CallResult<Handle<JSError>> JSError::getErrorFromStackTarget_RJS(
     if (capturedErrorRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto capturedErrorHandle =
-        runtime->makeHandle(std::move(*capturedErrorRes));
+    auto capturedErrorHandle = runtime.makeHandle(std::move(*capturedErrorRes));
     auto errorHandle = Handle<JSError>::dyn_vmcast(
         capturedErrorHandle ? capturedErrorHandle : targetHandle);
     if (errorHandle) {
       return errorHandle;
     }
   }
-  return runtime->raiseTypeError(
+  return runtime.raiseTypeError(
       "Error.stack getter called with an invalid receiver");
 }
 
 CallResult<HermesValue>
-errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
+errorStackGetter(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope(runtime);
 
   auto targetHandle = args.dyncastThis<JSObject>();
@@ -90,14 +89,14 @@ errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
     // the error object is created. We only set it when the error
     // is raised.
     return HermesValue::encodeStringValue(
-        runtime->getPredefinedString(Predefined::emptyString));
+        runtime.getPredefinedString(Predefined::emptyString));
   }
   // It's possible we're getting the stack for a stack overflow
   // RangeError.  Allow ourselves a little extra room to do this.
   vm::ScopedNativeDepthReducer reducer(runtime);
   SmallU16String<32> stack;
 
-  auto errorCtor = Handle<JSObject>::vmcast(&runtime->errorConstructor);
+  auto errorCtor = Handle<JSObject>::vmcast(&runtime.errorConstructor);
 
   auto prepareStackTraceRes = JSObject::getNamed_RJS(
       errorCtor,
@@ -112,13 +111,13 @@ errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<> stackTraceFormatted{runtime};
 
   auto prepareStackTrace = Handle<Callable>::dyn_vmcast(
-      runtime->makeHandle(std::move(*prepareStackTraceRes)));
-  if (LLVM_UNLIKELY(prepareStackTrace && !runtime->formattingStackTrace())) {
+      runtime.makeHandle(std::move(*prepareStackTraceRes)));
+  if (LLVM_UNLIKELY(prepareStackTrace && !runtime.formattingStackTrace())) {
     const auto &recursionGuard = llvh::make_scope_exit(
-        [=]() { runtime->setFormattingStackTrace(false); });
+        [&runtime]() { runtime.setFormattingStackTrace(false); });
     (void)recursionGuard;
 
-    runtime->setFormattingStackTrace(true);
+    runtime.setFormattingStackTrace(true);
 
     auto callSitesRes = JSError::constructCallSitesArray(runtime, errorHandle);
 
@@ -128,7 +127,7 @@ errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
     auto prepareRes = Callable::executeCall2(
         prepareStackTrace,
         runtime,
-        runtime->getNullValue(),
+        runtime.getNullValue(),
         targetHandle.getHermesValue(),
         *callSitesRes);
     if (LLVM_UNLIKELY(prepareRes == ExecutionStatus::EXCEPTION)) {
@@ -147,8 +146,8 @@ errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
       // StringPrimitive creation can throw if the stacktrace string is too
       // long. In that case, we replace it with a predefined string.
       stackTraceFormatted = HermesValue::encodeStringValue(
-          runtime->getPredefinedString(Predefined::stacktraceTooLong));
-      runtime->clearThrownValue();
+          runtime.getPredefinedString(Predefined::stacktraceTooLong));
+      runtime.clearThrownValue();
     } else {
       stackTraceFormatted = std::move(*strRes);
     }
@@ -169,12 +168,12 @@ errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-errorStackSetter(void *, Runtime *runtime, NativeArgs args) {
+errorStackSetter(void *, Runtime &runtime, NativeArgs args) {
   auto res = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto selfHandle = runtime->makeHandle<JSObject>(res.getValue());
+  auto selfHandle = runtime.makeHandle<JSObject>(res.getValue());
 
   // Redefines the stack property to a regular property.
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
@@ -191,25 +190,25 @@ errorStackSetter(void *, Runtime *runtime, NativeArgs args) {
 }
 
 PseudoHandle<JSError> JSError::create(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> parentHandle) {
   return create(runtime, parentHandle, /*catchable*/ true);
 }
 
 PseudoHandle<JSError> JSError::createUncatchable(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> parentHandle) {
   return create(runtime, parentHandle, /*catchable*/ false);
 }
 
 PseudoHandle<JSError> JSError::create(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> parentHandle,
     bool catchable) {
-  auto *cell = runtime->makeAFixed<JSError, HasFinalizer::Yes>(
+  auto *cell = runtime.makeAFixed<JSError, HasFinalizer::Yes>(
       runtime,
       parentHandle,
-      runtime->getHiddenClassForPrototype(
+      runtime.getHiddenClassForPrototype(
           *parentHandle, numOverlapSlots<JSError>()),
       catchable);
   return JSObjectInit::initToPseudoHandle(runtime, cell);
@@ -217,16 +216,16 @@ PseudoHandle<JSError> JSError::create(
 
 ExecutionStatus JSError::setupStack(
     Handle<JSObject> selfHandle,
-    Runtime *runtime) {
+    Runtime &runtime) {
   // Lazily allocate the accessor.
-  if (runtime->jsErrorStackAccessor.isUndefined()) {
+  if (runtime.jsErrorStackAccessor.isUndefined()) {
     // This code path allocates quite a few handles, so make sure we
     // don't disturb the parent GCScope and free them.
     GCScope gcScope{runtime};
 
     auto getter = NativeFunction::create(
         runtime,
-        Handle<JSObject>::vmcast(&runtime->functionPrototype),
+        Handle<JSObject>::vmcast(&runtime.functionPrototype),
         nullptr,
         errorStackGetter,
         Predefined::getSymbolID(Predefined::emptyString),
@@ -235,7 +234,7 @@ ExecutionStatus JSError::setupStack(
 
     auto setter = NativeFunction::create(
         runtime,
-        Handle<JSObject>::vmcast(&runtime->functionPrototype),
+        Handle<JSObject>::vmcast(&runtime.functionPrototype),
         nullptr,
         errorStackSetter,
         Predefined::getSymbolID(Predefined::emptyString),
@@ -247,11 +246,11 @@ ExecutionStatus JSError::setupStack(
       return ExecutionStatus::EXCEPTION;
     }
 
-    runtime->jsErrorStackAccessor = *crtRes;
+    runtime.jsErrorStackAccessor = *crtRes;
   }
 
   auto accessor =
-      Handle<PropertyAccessor>::vmcast(&runtime->jsErrorStackAccessor);
+      Handle<PropertyAccessor>::vmcast(&runtime.jsErrorStackAccessor);
 
   DefinePropertyFlags dpf{};
   dpf.setEnumerable = 1;
@@ -270,7 +269,7 @@ ExecutionStatus JSError::setupStack(
 
   // Ignore failures to set the "stack" property as other engines do.
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    runtime->clearThrownValue();
+    runtime.clearThrownValue();
   }
 
   return ExecutionStatus::RETURNED;
@@ -278,7 +277,7 @@ ExecutionStatus JSError::setupStack(
 
 ExecutionStatus JSError::setMessage(
     Handle<JSError> selfHandle,
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> message) {
   auto stringMessage = Handle<StringPrimitive>::dyn_vmcast(message);
   if (LLVM_UNLIKELY(!stringMessage)) {
@@ -286,7 +285,7 @@ ExecutionStatus JSError::setMessage(
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    stringMessage = runtime->makeHandle(std::move(*strRes));
+    stringMessage = runtime.makeHandle(std::move(*strRes));
   }
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
@@ -307,12 +306,12 @@ ExecutionStatus JSError::setMessage(
 /// In case of error returns a nullptr handle.
 /// \param skipTopFrame if true, skip the top frame.
 static Handle<PropStorage> getCallStackFunctionNames(
-    Runtime *runtime,
+    Runtime &runtime,
     bool skipTopFrame,
     size_t sizeHint) {
   auto arrRes = PropStorage::create(runtime, sizeHint);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    runtime->clearThrownValue();
+    runtime.clearThrownValue();
     return Runtime::makeNullHandle<PropStorage>();
   }
   MutableHandle<PropStorage> names{runtime, vmcast<PropStorage>(*arrRes)};
@@ -323,7 +322,7 @@ static Handle<PropStorage> getCallStackFunctionNames(
 
   uint32_t frameIndex = 0;
   uint32_t namesIndex = 0;
-  for (StackFramePtr cf : runtime->getStackFrames()) {
+  for (StackFramePtr cf : runtime.getStackFrames()) {
     if (frameIndex++ == 0 && skipTopFrame)
       continue;
 
@@ -346,7 +345,7 @@ static Handle<PropStorage> getCallStackFunctionNames(
                    .unboxToHV(runtime);
       } else if (desc.flags.proxyObject) {
         name = HermesValue::encodeStringValue(
-            runtime->getPredefinedString(Predefined::proxyTrap));
+            runtime.getPredefinedString(Predefined::proxyTrap));
       }
     } else if (!cf.getCalleeClosureOrCBRef().isObject()) {
       // If CalleeClosureOrCB is not an object pointer, then it must be a native
@@ -355,16 +354,16 @@ static Handle<PropStorage> getCallStackFunctionNames(
           cf.getCalleeClosureOrCBRef().getNativePointer<const CodeBlock>();
       if (cb->getNameMayAllocate().isValid())
         name = HermesValue::encodeStringValue(
-            runtime->getStringPrimFromSymbolID(cb->getNameMayAllocate()));
+            runtime.getStringPrimFromSymbolID(cb->getNameMayAllocate()));
     }
     if (PropStorage::resize(names, runtime, namesIndex + 1) ==
         ExecutionStatus::EXCEPTION) {
-      runtime->clearThrownValue();
+      runtime.clearThrownValue();
       return Runtime::makeNullHandle<PropStorage>();
     }
     auto shv =
         SmallHermesValue::encodeHermesValue(name.getHermesValue(), runtime);
-    names->set(namesIndex, shv, &runtime->getHeap());
+    names->set(namesIndex, shv, &runtime.getHeap());
     ++namesIndex;
     gcScope.flushToMarker(marker);
   }
@@ -374,14 +373,14 @@ static Handle<PropStorage> getCallStackFunctionNames(
 
 ExecutionStatus JSError::recordStackTrace(
     Handle<JSError> selfHandle,
-    Runtime *runtime,
+    Runtime &runtime,
     bool skipTopFrame,
     CodeBlock *codeBlock,
     const Inst *ip) {
   if (selfHandle->stacktrace_)
     return ExecutionStatus::RETURNED;
 
-  auto frames = runtime->getStackFrames();
+  auto frames = runtime.getStackFrames();
 
   // Check if the top frame is a JSFunction and we don't have the current
   // CodeBlock, do nothing.
@@ -395,7 +394,7 @@ ExecutionStatus JSError::recordStackTrace(
   if (LLVM_UNLIKELY(domainsRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto domains = runtime->makeMutableHandle<ArrayStorageSmall>(
+  auto domains = runtime.makeMutableHandle<ArrayStorageSmall>(
       vmcast<ArrayStorageSmall>(*domainsRes));
 
   // Add the domain to the domains list, provided that it's not the same as the
@@ -403,7 +402,7 @@ ExecutionStatus JSError::recordStackTrace(
   // time check, but we don't have to loop through and check every domain to
   // deduplicate.
   auto addDomain = [&domains,
-                    runtime](CodeBlock *codeBlock) -> ExecutionStatus {
+                    &runtime](CodeBlock *codeBlock) -> ExecutionStatus {
     GCScopeMarkerRAII marker{runtime};
     Handle<Domain> domain = codeBlock->getRuntimeModule()->getDomain(runtime);
     if (domains->size() > 0 &&
@@ -425,11 +424,11 @@ ExecutionStatus JSError::recordStackTrace(
     }
   }
 
-  const StackFramePtr framesEnd = *runtime->getStackFrames().end();
+  const StackFramePtr framesEnd = *runtime.getStackFrames().end();
 
   // Fill in the call stack.
   // Each stack frame tracks information about the caller.
-  for (StackFramePtr cf : runtime->getStackFrames()) {
+  for (StackFramePtr cf : runtime.getStackFrames()) {
     CodeBlock *savedCodeBlock = cf.getSavedCodeBlock();
     const Inst *const savedIP = cf.getSavedIP();
     // Go up one frame and get the callee code block but use the current
@@ -452,7 +451,7 @@ ExecutionStatus JSError::recordStackTrace(
       stack->emplace_back(nullptr, 0);
     }
   }
-  selfHandle->domains_.set(runtime, domains.get(), &runtime->getHeap());
+  selfHandle->domains_.set(runtime, domains.get(), &runtime.getHeap());
 
   // Remove the last entry.
   stack->pop_back();
@@ -466,7 +465,7 @@ ExecutionStatus JSError::recordStackTrace(
       "Function names and stack trace must have same size.");
 
   selfHandle->stacktrace_ = std::move(stack);
-  selfHandle->funcNames_.set(runtime, *funcNames, &runtime->getHeap());
+  selfHandle->funcNames_.set(runtime, *funcNames, &runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -486,12 +485,12 @@ OptValue<hbc::DebugSourceLocation> JSError::getDebugInfo(
 }
 
 Handle<StringPrimitive> JSError::getFunctionNameAtIndex(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSError> selfHandle,
     size_t index) {
-  IdentifierTable &idt = runtime->getIdentifierTable();
+  IdentifierTable &idt = runtime.getIdentifierTable();
   MutableHandle<StringPrimitive> name{
-      runtime, runtime->getPredefinedString(Predefined::emptyString)};
+      runtime, runtime.getPredefinedString(Predefined::emptyString)};
 
   // If funcNames_ is set and contains a string primitive, use that.
   if (selfHandle->funcNames_) {
@@ -513,14 +512,14 @@ Handle<StringPrimitive> JSError::getFunctionNameAtIndex(
   }
 
   if (!name || name->getStringLength() == 0) {
-    return runtime->makeNullHandle<StringPrimitive>();
+    return runtime.makeNullHandle<StringPrimitive>();
   }
 
   return std::move(name);
 }
 
 bool JSError::appendFunctionNameAtIndex(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSError> selfHandle,
     size_t index,
     llvh::SmallVectorImpl<char16_t> &str) {
@@ -534,7 +533,7 @@ bool JSError::appendFunctionNameAtIndex(
 }
 
 ExecutionStatus JSError::constructStackTraceString(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSError> selfHandle,
     Handle<JSObject> targetHandle,
     SmallU16String<32> &stack) {
@@ -542,7 +541,7 @@ ExecutionStatus JSError::constructStackTraceString(
   // First of all, the stacktrace string starts with target.toString.
   auto res = toString_RJS(runtime, targetHandle);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    if (isUncatchableError(runtime->getThrownValue())) {
+    if (isUncatchableError(runtime.getThrownValue())) {
       // If toString throws an uncatchable exception, propagate it up.
       return ExecutionStatus::EXCEPTION;
     }
@@ -551,7 +550,7 @@ ExecutionStatus JSError::constructStackTraceString(
     // There is not much we can do if exception thrown when trying to
     // get the stacktrace. We just name it <error>, and it should be
     // sufficient to tell what happened here.
-    runtime->clearThrownValue();
+    runtime.clearThrownValue();
   } else {
     res->get()->appendUTF16String(stack);
   }
@@ -674,7 +673,7 @@ ExecutionStatus JSError::constructStackTraceString(
 }
 
 CallResult<HermesValue> JSError::constructCallSitesArray(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSError> selfHandle) {
   auto max = selfHandle->stacktrace_
       ? selfHandle->stacktrace_->size() - selfHandle->firstExposedFrameIndex_
@@ -708,7 +707,7 @@ CallResult<HermesValue> JSError::constructCallSitesArray(
     if (callSiteRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto callSite = runtime->makeHandle(*callSiteRes);
+    auto callSite = runtime.makeHandle(*callSiteRes);
 
     JSArray::setElementAt(array, runtime, callSiteIndex++, callSite);
 
@@ -728,7 +727,7 @@ CallResult<HermesValue> JSError::constructCallSitesArray(
 /// (possibly bound) function, or nullptr otherwise.
 static const CodeBlock *getLeafCodeBlock(
     Handle<Callable> callableHandle,
-    Runtime *runtime) {
+    Runtime &runtime) {
   const Callable *callable = callableHandle.get();
   while (callable) {
     if (auto *asFunction = dyn_vmcast<const JSFunction>(callable)) {
@@ -743,7 +742,7 @@ static const CodeBlock *getLeafCodeBlock(
 }
 
 void JSError::popFramesUntilInclusive(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSError> selfHandle,
     Handle<Callable> callableHandle) {
   assert(

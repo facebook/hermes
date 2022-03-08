@@ -18,7 +18,7 @@ namespace {
 TEST(CastingTest, SmokeTest) {
   auto rt = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &runtime = *rt;
-  GCScope gcScope(&runtime);
+  GCScope gcScope(runtime);
 
   const int TAG1 = 1234;
   const SymbolID TAG2 = SymbolID::unsafeCreate(4567);

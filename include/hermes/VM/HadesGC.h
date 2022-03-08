@@ -64,8 +64,8 @@ class HadesGC final : public GCBase {
   /// sizes.
   /// \param provider A provider of storage to be used by segments.
   HadesGC(
-      GCCallbacks *gcCallbacks,
-      PointerBase *pointerBase,
+      GCCallbacks &gcCallbacks,
+      PointerBase &pointerBase,
       const GCConfig &gcConfig,
       std::shared_ptr<CrashManager> crashMgr,
       std::shared_ptr<StorageProvider> provider,
@@ -377,7 +377,7 @@ class HadesGC final : public GCBase {
     void forAllObjs(CallbackFunction callback);
     /// Only call the callback on cells without forwarding pointers.
     template <typename CallbackFunction>
-    void forCompactedObjs(CallbackFunction callback, PointerBase *base);
+    void forCompactedObjs(CallbackFunction callback, PointerBase &base);
   };
 
   class OldGen final {

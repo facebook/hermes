@@ -59,7 +59,7 @@ using CallResultRuntimeTest = RuntimeTestFixture;
 
 TEST_F(CallResultRuntimeTest, HandleTest) {
   PseudoHandle<JSObject> pseudo = JSObject::create(runtime);
-  Handle<JSObject> handle = runtime->makeHandle(std::move(pseudo));
+  Handle<JSObject> handle = runtime.makeHandle(std::move(pseudo));
   CallResult<Handle<JSObject>> cr(handle);
   EXPECT_EQ(ExecutionStatus::RETURNED, cr.getStatus());
   EXPECT_TRUE(strictEqualityTest(

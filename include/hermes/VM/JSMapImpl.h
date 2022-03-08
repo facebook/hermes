@@ -35,72 +35,71 @@ class JSMapImpl final : public JSObject {
   }
 
   static PseudoHandle<JSMapImpl<C>> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parentHandle);
 
   /// Allocate the internal element storage.
   static ExecutionStatus initializeStorage(
       Handle<JSMapImpl> self,
-      Runtime *runtime) {
+      Runtime &runtime) {
     auto crtRes = OrderedHashMap::create(runtime);
     if (LLVM_UNLIKELY(crtRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto storageHandle =
-        runtime->makeHandle<OrderedHashMap>(std::move(*crtRes));
-    self->storage_.set(runtime, storageHandle.get(), &runtime->getHeap());
+    auto storageHandle = runtime.makeHandle<OrderedHashMap>(std::move(*crtRes));
+    self->storage_.set(runtime, storageHandle.get(), &runtime.getHeap());
     return ExecutionStatus::RETURNED;
   }
 
   /// Advance iterator and return the next.
-  HashMapEntry *iteratorNext(Runtime *runtime, HashMapEntry *entry) {
+  HashMapEntry *iteratorNext(Runtime &runtime, HashMapEntry *entry) {
     return storage_.getNonNull(runtime)->iteratorNext(runtime, entry);
   }
 
   /// Add a value.
   static void addValue(
       Handle<JSMapImpl> self,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<> key,
       Handle<> value) {
     self->assertInitialized();
     OrderedHashMap::insert(
-        runtime->makeHandle<OrderedHashMap>(self->storage_),
+        runtime.makeHandle<OrderedHashMap>(self->storage_),
         runtime,
         key,
         value);
   }
 
   /// \return true if a key exists.
-  static bool hasKey(Handle<JSMapImpl> self, Runtime *runtime, Handle<> key) {
+  static bool hasKey(Handle<JSMapImpl> self, Runtime &runtime, Handle<> key) {
     self->assertInitialized();
     return OrderedHashMap::has(
-        runtime->makeHandle<OrderedHashMap>(self->storage_), runtime, key);
+        runtime.makeHandle<OrderedHashMap>(self->storage_), runtime, key);
   }
 
   static HermesValue
-  getValue(Handle<JSMapImpl> self, Runtime *runtime, Handle<> key) {
+  getValue(Handle<JSMapImpl> self, Runtime &runtime, Handle<> key) {
     self->assertInitialized();
     return OrderedHashMap::get(
-        runtime->makeHandle<OrderedHashMap>(self->storage_), runtime, key);
+        runtime.makeHandle<OrderedHashMap>(self->storage_), runtime, key);
   }
 
   /// Delelet a key. \return true if succeeds.
   static bool
-  deleteKey(Handle<JSMapImpl> self, Runtime *runtime, Handle<> key) {
+  deleteKey(Handle<JSMapImpl> self, Runtime &runtime, Handle<> key) {
     self->assertInitialized();
     return OrderedHashMap::erase(
-        runtime->makeHandle<OrderedHashMap>(self->storage_), runtime, key);
+        runtime.makeHandle<OrderedHashMap>(self->storage_), runtime, key);
   }
 
   /// \returns the size.
-  static uint32_t getSize(JSMapImpl *self, Runtime *runtime) {
+  static uint32_t getSize(JSMapImpl *self, Runtime &runtime) {
     self->assertInitialized();
     return self->storage_.getNonNull(runtime)->size();
   }
 
   /// Clear all elements from the storage.
-  static void clear(Handle<JSMapImpl> self, Runtime *runtime) {
+  static void clear(Handle<JSMapImpl> self, Runtime &runtime) {
     self->assertInitialized();
     self->storage_.getNonNull(runtime)->clear(runtime);
   }
@@ -108,7 +107,7 @@ class JSMapImpl final : public JSObject {
   /// Call \p callbackfn for each entry, with \p thisArg as this.
   static ExecutionStatus forEach(
       Handle<JSMapImpl> self,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<Callable> callbackfn,
       Handle<> thisArg) {
     self->assertInitialized();
@@ -141,7 +140,7 @@ class JSMapImpl final : public JSObject {
   static void MapOrSetBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
   JSMapImpl(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
       : JSObject(runtime, &vt.base, *parent, *clazz) {}
@@ -183,16 +182,16 @@ class JSMapIteratorImpl final : public JSObject {
 
   /// Create a handle of JSMapIterator.
   static PseudoHandle<JSMapIteratorImpl<C>> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> prototype);
 
   /// Initialize the iterator, set its targeting Set data and iteration kind.
   /// The \p gc parameter is necessary for write barriers.
   void initializeIterator(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSMapImpl<JSMapTypeTraits<C>::ContainerKind>> data,
       IterationKind kind) {
-    data_.set(runtime, data.get(), &runtime->getHeap());
+    data_.set(runtime, data.get(), &runtime.getHeap());
     iterationKind_ = kind;
 
     assert(data_ && "Invalid storage data");
@@ -208,7 +207,7 @@ class JSMapIteratorImpl final : public JSObject {
   /// Iterate to the next element and return.
   static CallResult<HermesValue> nextElement(
       Handle<JSMapIteratorImpl> self,
-      Runtime *runtime) {
+      Runtime &runtime) {
     MutableHandle<> value{runtime};
     if (!self->iterationFinished_) {
       // Iteration has not yet reached the end previously.
@@ -218,7 +217,7 @@ class JSMapIteratorImpl final : public JSObject {
           runtime,
           self->data_.getNonNull(runtime)->iteratorNext(
               runtime, self->itr_.get(runtime)),
-          &runtime->getHeap());
+          &runtime.getHeap());
       if (self->itr_) {
         switch (self->iterationKind_) {
           case IterationKind::Key:
@@ -250,7 +249,7 @@ class JSMapIteratorImpl final : public JSObject {
         // If the next element in the iterator is invalid, we have
         // reached the end.
         self->iterationFinished_ = true;
-        self->data_.setNull(&runtime->getHeap());
+        self->data_.setNull(&runtime.getHeap());
       }
     }
     return createIterResultObject(runtime, value, self->iterationFinished_)
@@ -263,7 +262,7 @@ class JSMapIteratorImpl final : public JSObject {
       Metadata::Builder &mb);
 
   JSMapIteratorImpl(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
       : JSObject(runtime, &vt.base, *parent, *clazz) {}

@@ -14,12 +14,12 @@
 namespace hermes {
 namespace vm {
 
-Handle<JSObject> createGeneratorFunctionConstructor(Runtime *runtime) {
-  auto proto = Handle<JSObject>::vmcast(&runtime->generatorFunctionPrototype);
+Handle<JSObject> createGeneratorFunctionConstructor(Runtime &runtime) {
+  auto proto = Handle<JSObject>::vmcast(&runtime.generatorFunctionPrototype);
 
-  auto cons = runtime->makeHandle(NativeConstructor::create(
+  auto cons = runtime.makeHandle(NativeConstructor::create(
       runtime,
-      Handle<JSObject>::vmcast(&runtime->functionConstructor),
+      Handle<JSObject>::vmcast(&runtime.functionConstructor),
       nullptr,
       generatorFunctionConstructor,
       1,
@@ -57,21 +57,21 @@ Handle<JSObject> createGeneratorFunctionConstructor(Runtime *runtime) {
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::prototype),
-      Handle<>(&runtime->generatorPrototype),
+      Handle<>(&runtime.generatorPrototype),
       dpf);
 
   defineProperty(
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::SymbolToStringTag),
-      runtime->getPredefinedStringHandle(Predefined::GeneratorFunction),
+      runtime.getPredefinedStringHandle(Predefined::GeneratorFunction),
       dpf);
 
   return cons;
 }
 
 CallResult<HermesValue>
-generatorFunctionConstructor(void *, Runtime *runtime, NativeArgs args) {
+generatorFunctionConstructor(void *, Runtime &runtime, NativeArgs args) {
   return createDynamicFunction(runtime, args, DynamicFunctionKind::Generator);
 }
 

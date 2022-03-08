@@ -84,7 +84,7 @@ enum class MathKind {
 // corresponding function with the first argument
 
 CallResult<HermesValue>
-runContextFunc1Arg(void *ctx, Runtime *runtime, NativeArgs args) {
+runContextFunc1Arg(void *ctx, Runtime &runtime, NativeArgs args) {
   typedef double (*Math1ArgFuncPtr)(double);
   static Math1ArgFuncPtr math1ArgFuncs[] = {
 #define MATHFUNC_1ARG(name, func) func,
@@ -107,7 +107,7 @@ runContextFunc1Arg(void *ctx, Runtime *runtime, NativeArgs args) {
 // Interprets the ctx pointer as an enum and invoke corresponding
 // function with the first two arguments
 CallResult<HermesValue>
-runContextFunc2Arg(void *ctx, Runtime *runtime, NativeArgs args) {
+runContextFunc2Arg(void *ctx, Runtime &runtime, NativeArgs args) {
   typedef double (*Math2ArgFuncPtr)(double, double);
   static Math2ArgFuncPtr math2ArgFuncs[] = {
 #define MATHFUNC_2ARG(name, func) func,
@@ -136,7 +136,7 @@ runContextFunc2Arg(void *ctx, Runtime *runtime, NativeArgs args) {
 }
 
 // ES5.1 15.8.2.11
-CallResult<HermesValue> mathMax(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> mathMax(void *, Runtime &runtime, NativeArgs args) {
   double result = -std::numeric_limits<double>::infinity();
   GCScopeMarkerRAII marker{runtime};
   for (const Handle<> sarg : args.handles()) {
@@ -159,7 +159,7 @@ CallResult<HermesValue> mathMax(void *, Runtime *runtime, NativeArgs args) {
 }
 
 // ES5.1 15.8.2.12
-CallResult<HermesValue> mathMin(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> mathMin(void *, Runtime &runtime, NativeArgs args) {
   double result = std::numeric_limits<double>::infinity();
   GCScopeMarkerRAII marker{runtime};
   for (const Handle<> sarg : args.handles()) {
@@ -182,7 +182,7 @@ CallResult<HermesValue> mathMin(void *, Runtime *runtime, NativeArgs args) {
 }
 
 // ES9.0 20.2.2.26
-CallResult<HermesValue> mathPow(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> mathPow(void *, Runtime &runtime, NativeArgs args) {
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -200,13 +200,13 @@ CallResult<HermesValue> mathPow(void *, Runtime *runtime, NativeArgs args) {
 
 // ES5.1 15.8.2.14
 // Returns a Hermes-encoded pseudo-random number uniformly chosen from [0, 1)
-CallResult<HermesValue> mathRandom(void *, Runtime *runtime, NativeArgs) {
-  RuntimeCommonStorage *storage = runtime->getCommonStorage();
+CallResult<HermesValue> mathRandom(void *, Runtime &runtime, NativeArgs) {
+  RuntimeCommonStorage *storage = runtime.getCommonStorage();
   if (!storage->randomEngineSeeded_) {
     std::minstd_rand::result_type seed;
     if (storage->env) {
       if (storage->env->mathRandomSeed == 0) {
-        return runtime->raiseTypeError(
+        return runtime.raiseTypeError(
             "Replay of Math.random() without a traced seed set");
       }
       seed = storage->env->mathRandomSeed;
@@ -225,10 +225,10 @@ CallResult<HermesValue> mathRandom(void *, Runtime *runtime, NativeArgs) {
   return HermesValue::encodeDoubleValue(dist(storage->randomEngine_));
 }
 
-CallResult<HermesValue> mathFround(void *, Runtime *runtime, NativeArgs args)
+CallResult<HermesValue> mathFround(void *, Runtime &runtime, NativeArgs args)
     LLVM_NO_SANITIZE("float-cast-overflow");
 
-CallResult<HermesValue> mathFround(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> mathFround(void *, Runtime &runtime, NativeArgs args) {
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -246,7 +246,7 @@ CallResult<HermesValue> mathFround(void *, Runtime *runtime, NativeArgs args) {
 }
 
 // ES2022 21.3.2.18
-CallResult<HermesValue> mathHypot(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> mathHypot(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope{runtime};
   // 1. Let coerced be a new empty List.
   llvh::SmallVector<double, 4> coerced{};
@@ -316,7 +316,7 @@ CallResult<HermesValue> mathHypot(void *, Runtime *runtime, NativeArgs args) {
 
 // ES6.0 20.2.2.19
 // Integer multiplication.
-CallResult<HermesValue> mathImul(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> mathImul(void *, Runtime &runtime, NativeArgs args) {
   auto res = toUInt32_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -337,7 +337,7 @@ CallResult<HermesValue> mathImul(void *, Runtime *runtime, NativeArgs args) {
 
 // ES6.0 20.2.2.11
 // Count leading zeros on the 32-bit number.
-CallResult<HermesValue> mathClz32(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> mathClz32(void *, Runtime &runtime, NativeArgs args) {
   auto res = toUInt32_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -349,7 +349,7 @@ CallResult<HermesValue> mathClz32(void *, Runtime *runtime, NativeArgs args) {
 
 // ES6.0 20.2.2.29
 // Get the sign of the input.
-CallResult<HermesValue> mathSign(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> mathSign(void *, Runtime &runtime, NativeArgs args) {
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -367,11 +367,11 @@ CallResult<HermesValue> mathSign(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeNumberValue(std::signbit(x) ? -1 : +1);
 }
 
-Handle<JSObject> createMathObject(Runtime *runtime) {
+Handle<JSObject> createMathObject(Runtime &runtime) {
   auto objRes = JSMath::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype));
+      runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype));
   assert(objRes != ExecutionStatus::EXCEPTION && "unable to define Math");
-  auto math = runtime->makeHandle<JSMath>(*objRes);
+  auto math = runtime.makeHandle<JSMath>(*objRes);
 
   DefinePropertyFlags constantDPF =
       DefinePropertyFlags::getDefaultNewPropertyFlags();
@@ -401,11 +401,13 @@ Handle<JSObject> createMathObject(Runtime *runtime) {
   setMathValueProperty(Predefined::getSymbolID(Predefined::SQRT2), M_SQRT2);
 
   // ES5.1 15.8.2, Math function properties
-  auto setMathFunctionProperty1Arg = [=](SymbolID name, MathKind kind) {
+  auto setMathFunctionProperty1Arg = [&runtime, math](
+                                         SymbolID name, MathKind kind) {
     defineMethod(runtime, math, name, (void *)kind, runContextFunc1Arg, 1);
   };
 
-  auto setMathFunctionProperty2Arg = [=](SymbolID name, MathKind kind) {
+  auto setMathFunctionProperty2Arg = [&runtime, math](
+                                         SymbolID name, MathKind kind) {
     defineMethod(runtime, math, name, (void *)kind, runContextFunc2Arg, 2);
   };
 
@@ -534,7 +536,7 @@ Handle<JSObject> createMathObject(Runtime *runtime) {
       runtime,
       math,
       Predefined::getSymbolID(Predefined::SymbolToStringTag),
-      runtime->getPredefinedStringHandle(Predefined::Math),
+      runtime.getPredefinedStringHandle(Predefined::Math),
       dpf);
 
   return math;

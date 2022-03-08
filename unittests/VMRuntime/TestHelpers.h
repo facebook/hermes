@@ -77,13 +77,13 @@ static const RuntimeConfig kTestRTConfigLargeHeap =
 
 template <typename T>
 ::testing::AssertionResult isException(
-    Runtime *runtime,
+    Runtime &runtime,
     const CallResult<T> &res) {
   return isException(runtime, res.getStatus());
 }
 
 ::testing::AssertionResult isException(
-    Runtime *runtime,
+    Runtime &runtime,
     ExecutionStatus status);
 
 /// A RuntimeTestFixture should be used by any test that requires a Runtime.
@@ -93,7 +93,7 @@ class RuntimeTestFixtureBase : public ::testing::Test {
 
  protected:
   // Convenience accessor that points to rt.
-  Runtime *runtime;
+  Runtime &runtime;
 
   RuntimeConfig rtConfig;
 
@@ -103,10 +103,10 @@ class RuntimeTestFixtureBase : public ::testing::Test {
 
   RuntimeTestFixtureBase(const RuntimeConfig &runtimeConfig)
       : rt(Runtime::create(runtimeConfig)),
-        runtime(rt.get()),
+        runtime(*rt),
         rtConfig(runtimeConfig),
         gcScope(runtime),
-        domain(runtime->makeHandle(Domain::create(runtime))) {}
+        domain(runtime.makeHandle(Domain::create(runtime))) {}
 
   /// Can't copy due to internal pointer.
   RuntimeTestFixtureBase(const RuntimeTestFixtureBase &) = delete;
@@ -251,7 +251,7 @@ inline const GCConfig TestGCConfigFixedSize(
   } while (0)
 
 /// Get the global object.
-#define GET_GLOBAL(predefinedId) GET_VALUE(runtime->getGlobal(), predefinedId)
+#define GET_GLOBAL(predefinedId) GET_VALUE(runtime.getGlobal(), predefinedId)
 
 inline HermesValue operator"" _hd(long double d) {
   return HermesValue::encodeDoubleValue(d);
@@ -385,14 +385,12 @@ class DummyRuntimeTestFixtureBase : public ::testing::Test {
 
  protected:
   // Convenience accessor that points to rt.
-  DummyRuntime *runtime;
+  DummyRuntime &runtime;
 
   GCScope gcScope;
 
   DummyRuntimeTestFixtureBase(const GCConfig &gcConfig)
-      : rt(DummyRuntime::create(gcConfig)),
-        runtime(rt.get()),
-        gcScope(runtime) {}
+      : rt(DummyRuntime::create(gcConfig)), runtime(*rt), gcScope(runtime) {}
 
   /// Can't copy due to internal pointer.
   DummyRuntimeTestFixtureBase(const DummyRuntimeTestFixtureBase &) = delete;
@@ -410,7 +408,7 @@ inline bool operator==(HermesValue a, HermesValue b) {
 /// runtimeModule.
 inline CodeBlock *createCodeBlock(
     RuntimeModule *runtimeModule,
-    Runtime *,
+    Runtime &,
     hbc::BytecodeFunctionGenerator *BFG) {
   std::unique_ptr<hbc::BytecodeModule> BM(new hbc::BytecodeModule(1));
   BM->setFunction(

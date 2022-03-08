@@ -18,7 +18,7 @@ namespace vm {
 
 using SLG = hermes::hbc::SerializedLiteralGenerator;
 
-HermesValue SerializedLiteralParser::get(Runtime *) {
+HermesValue SerializedLiteralParser::get(Runtime &) {
   assert(hasNext() && "Object buffer doesn't have any more values");
 
   if (leftInSeq_ == 0)

@@ -484,11 +484,11 @@ class HermesValue {
   /// @name HV32 Compatibility APIs - DO NOT CALL DIRECTLY
   /// @{
 
-  GCCell *getPointer(PointerBase *) const {
+  GCCell *getPointer(PointerBase &) const {
     return static_cast<GCCell *>(getPointer());
   }
 
-  static HermesValue encodeHermesValue(HermesValue hv, Runtime *) {
+  static HermesValue encodeHermesValue(HermesValue hv, Runtime &) {
     return hv;
   }
 

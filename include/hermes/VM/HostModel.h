@@ -39,7 +39,7 @@ class FinalizableNativeFunction final : public NativeFunction {
   /// \param finalizePtr the finalizer function
   /// \param paramCount number of parameters (excluding `this`)
   static CallResult<HermesValue> createWithoutPrototype(
-      Runtime *runtime,
+      Runtime &runtime,
       void *context,
       NativeFunctionPtr functionPtr,
       FinalizeNativeFunctionPtr finalizePtr,
@@ -51,7 +51,7 @@ class FinalizableNativeFunction final : public NativeFunction {
   }
 
   FinalizableNativeFunction(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       void *context,
@@ -111,7 +111,7 @@ class HostObject final : public DecoratedObject {
 
   /// Create an instance of HostObject with no prototype.
   static CallResult<HermesValue> createWithoutPrototype(
-      Runtime *runtime,
+      Runtime &runtime,
       std::unique_ptr<HostObjectProxy> proxy);
 
   CallResult<HermesValue> get(SymbolID name) {
@@ -135,7 +135,7 @@ class HostObject final : public DecoratedObject {
   }
 
   HostObject(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       std::unique_ptr<HostObjectProxy> proxy)

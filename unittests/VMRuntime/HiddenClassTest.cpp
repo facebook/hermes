@@ -23,15 +23,15 @@ using HiddenClassTest = LargeHeapRuntimeTestFixture;
 TEST_F(HiddenClassTest, SmokeTest) {
   GCScope gcScope{runtime, "HiddenClassTest.SmokeTest", 48};
 
-  runtime->collect("test");
+  runtime.collect("test");
 
-  auto aHnd = *runtime->getIdentifierTable().getSymbolHandle(
+  auto aHnd = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"a"));
-  auto bHnd = *runtime->getIdentifierTable().getSymbolHandle(
+  auto bHnd = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"b"));
-  auto cHnd = *runtime->getIdentifierTable().getSymbolHandle(
+  auto cHnd = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"c"));
-  auto dHnd = *runtime->getIdentifierTable().getSymbolHandle(
+  auto dHnd = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"d"));
 
   // We will simulate and verify the following property operations, starting
@@ -49,8 +49,8 @@ TEST_F(HiddenClassTest, SmokeTest) {
   MutableHandle<HiddenClass> y{runtime};
   MutableHandle<HiddenClass> z{runtime};
 
-  auto rootHnd = runtime->makeHandle<HiddenClass>(
-      runtime->ignoreAllocationFailure(HiddenClass::createRoot(runtime)));
+  auto rootHnd = runtime.makeHandle<HiddenClass>(
+      runtime.ignoreAllocationFailure(HiddenClass::createRoot(runtime)));
 
   ASSERT_EQ(0u, rootHnd->getNumProperties());
   ASSERT_FALSE(rootHnd->isDictionary());
@@ -253,22 +253,22 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
   GCScope gcScope{
       runtime, "HiddenClassTest.UpdatePropertyFlagsWithoutTransitionsTest", 48};
 
-  runtime->collect("test");
+  runtime.collect("test");
 
-  auto aHnd = *runtime->getIdentifierTable().getSymbolHandle(
+  auto aHnd = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"a"));
-  auto bHnd = *runtime->getIdentifierTable().getSymbolHandle(
+  auto bHnd = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"b"));
-  auto cHnd = *runtime->getIdentifierTable().getSymbolHandle(
+  auto cHnd = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"c"));
-  auto dHnd = *runtime->getIdentifierTable().getSymbolHandle(
+  auto dHnd = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"d"));
 
   // Add y.a, y.b, y.c
   MutableHandle<HiddenClass> y{
       runtime,
       vmcast<HiddenClass>(
-          runtime->ignoreAllocationFailure(HiddenClass::createRoot(runtime)))};
+          runtime.ignoreAllocationFailure(HiddenClass::createRoot(runtime)))};
   {
     // y.a
     auto addRes = HiddenClass::addProperty(
@@ -400,11 +400,11 @@ TEST_F(HiddenClassTest, ForEachProperty) {
   MutableHandle<HiddenClass> clazz{
       runtime,
       vmcast<HiddenClass>(
-          runtime->ignoreAllocationFailure(HiddenClass::createRoot(runtime)))};
+          runtime.ignoreAllocationFailure(HiddenClass::createRoot(runtime)))};
 
-  auto aHnd = *runtime->getIdentifierTable().getSymbolHandle(
+  auto aHnd = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"a"));
-  auto bHnd = *runtime->getIdentifierTable().getSymbolHandle(
+  auto bHnd = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"b"));
 
   {
@@ -450,11 +450,11 @@ TEST_F(HiddenClassTest, ForEachProperty) {
 }
 
 TEST_F(HiddenClassTest, ReservedSlots) {
-  auto aHnd = *runtime->getIdentifierTable().getSymbolHandle(
+  auto aHnd = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"a"));
   for (unsigned i = 0; i <= InternalProperty::NumInternalProperties; ++i) {
     Handle<HiddenClass> clazz =
-        runtime->getHiddenClassForPrototype(*runtime->getGlobal(), i);
+        runtime.getHiddenClassForPrototype(*runtime.getGlobal(), i);
     EXPECT_FALSE(clazz->isDictionary());
     auto addRes = HiddenClass::addProperty(
         clazz, runtime, *aHnd, PropertyFlags::defaultNewNamedPropertyFlags());

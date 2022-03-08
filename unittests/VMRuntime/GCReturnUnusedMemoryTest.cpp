@@ -36,7 +36,7 @@ TEST(GCReturnUnusedMemoryTest, CollectReturnsFreeMemory) {
 
   llvh::ErrorOr<size_t> before = 0;
   {
-    GCScope scope{&rt};
+    GCScope scope{rt};
     // Allocate cells directly in the old generation.
     auto cell1 = rt.makeHandle(SemiCell::createLongLived(rt));
     auto cell2 = rt.makeHandle(SemiCell::createLongLived(rt));

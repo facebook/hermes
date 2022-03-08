@@ -208,7 +208,7 @@ void HadesGC::HeapSegment::forAllObjs(CallbackFunction callback) {
 template <typename CallbackFunction>
 void HadesGC::HeapSegment::forCompactedObjs(
     CallbackFunction callback,
-    PointerBase *base) {
+    PointerBase &base) {
   void *const stop = level();
   GCCell *cell = reinterpret_cast<GCCell *>(start());
   while (cell < stop) {
@@ -378,19 +378,19 @@ class HadesGC::CollectionStats final {
 };
 
 template <typename T>
-static T convertPtr(PointerBase *, CompressedPointer cp) {
+static T convertPtr(PointerBase &, CompressedPointer cp) {
   return cp;
 }
 template <>
-/* static */ GCCell *convertPtr(PointerBase *base, CompressedPointer cp) {
+/* static */ GCCell *convertPtr(PointerBase &base, CompressedPointer cp) {
   return cp.get(base);
 }
 template <typename T>
-static T convertPtr(PointerBase *, GCCell *p) {
+static T convertPtr(PointerBase &, GCCell *p) {
   return p;
 }
 template <>
-/* static */ CompressedPointer convertPtr(PointerBase *base, GCCell *a) {
+/* static */ CompressedPointer convertPtr(PointerBase &base, GCCell *a) {
   return CompressedPointer::encodeNonNull(a, base);
 }
 
@@ -570,7 +570,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
 
  private:
   HadesGC &gc;
-  PointerBase *const pointerBase_;
+  PointerBase &pointerBase_;
   /// The copy list is managed implicitly in the body of each copied YG object.
   AssignableCompressedPointer copyListHead_;
   const bool isTrackingIDs_;
@@ -696,8 +696,8 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
   MarkAcceptor(HadesGC &gc)
       : gc{gc},
         pointerBase_{gc.getPointerBase()},
-        markedSymbols_{gc.gcCallbacks_->getSymbolsEnd()},
-        writeBarrierMarkedSymbols_{gc.gcCallbacks_->getSymbolsEnd()} {}
+        markedSymbols_{gc.gcCallbacks_.getSymbolsEnd()},
+        writeBarrierMarkedSymbols_{gc.gcCallbacks_.getSymbolsEnd()} {}
 
   void acceptHeap(GCCell *cell, const void *heapLoc) {
     assert(cell && "Cannot pass null pointer to acceptHeap");
@@ -916,7 +916,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
 
  private:
   HadesGC &gc;
-  PointerBase *const pointerBase_;
+  PointerBase &pointerBase_;
 
   /// A worklist local to the marking thread, that is only pushed onto by the
   /// marking thread. If this is empty, the global worklist must be consulted
@@ -1266,8 +1266,8 @@ constexpr double kYGInitialSurvivalRatio = 0.3;
 HadesGC::OldGen::OldGen(HadesGC *gc) : gc_(gc) {}
 
 HadesGC::HadesGC(
-    GCCallbacks *gcCallbacks,
-    PointerBase *pointerBase,
+    GCCallbacks &gcCallbacks,
+    PointerBase &pointerBase,
     const GCConfig &gcConfig,
     std::shared_ptr<CrashManager> crashMgr,
     std::shared_ptr<StorageProvider> provider,
@@ -1336,7 +1336,7 @@ void HadesGC::getHeapInfoWithMallocSize(HeapInfo &info) {
   GCBase::getHeapInfoWithMallocSize(info);
   std::lock_guard<Mutex> lk{gcMutex_};
   // First add the usage by the runtime's roots.
-  info.mallocSizeEstimate += gcCallbacks_->mallocSize();
+  info.mallocSizeEstimate += gcCallbacks_.mallocSize();
   // Scan all objects for their malloc size. This operation is what makes
   // getHeapInfoWithMallocSize O(heap size).
   forAllObjs([&info](GCCell *cell) {
@@ -1359,7 +1359,7 @@ void HadesGC::createSnapshot(llvh::raw_ostream &os) {
   // Let any existing collections complete before taking the snapshot.
   waitForCollectionToFinish("snapshot");
   {
-    GCCycle cycle{this, gcCallbacks_, "Heap Snapshot"};
+    GCCycle cycle{this, &gcCallbacks_, "Heap Snapshot"};
     WeakRefLock lk{weakRefMutex()};
     GCBase::createSnapshot(this, os);
   }
@@ -1486,7 +1486,7 @@ void HadesGC::waitForCollectionToFinish(std::string cause) {
   if (concurrentPhase_ == Phase::None) {
     return;
   }
-  GCCycle cycle{this, gcCallbacks_, "Old Gen (Direct)"};
+  GCCycle cycle{this, &gcCallbacks_, "Old Gen (Direct)"};
 
   assert(!ygCollectionStats_ && "Cannot collect OG during a YG collection");
   CollectionStats waitingStats(this, std::move(cause), "waiting");
@@ -1555,7 +1555,7 @@ void HadesGC::oldGenCollection(std::string cause, bool forceCompaction) {
 
   // Unmark all symbols in the identifier table, as Symbol liveness will be
   // determined during the collection.
-  gcCallbacks_->unmarkSymbols();
+  gcCallbacks_.unmarkSymbols();
 
   // Mark phase: discover all pointers that are live.
   // This assignment will reset any leftover memory from the last collection. We
@@ -1822,7 +1822,7 @@ void HadesGC::completeMarking() {
   {
     // Remark any roots that may have changed without executing barriers.
     DroppingAcceptor<MarkAcceptor> nameAcceptor{*oldGenMarker_};
-    gcCallbacks_->markRootsForCompleteMarking(nameAcceptor);
+    gcCallbacks_.markRootsForCompleteMarking(nameAcceptor);
   }
   // Drain the marking queue.
   oldGenMarker_->drainAllWork();
@@ -1843,7 +1843,7 @@ void HadesGC::completeMarking() {
   markWeakRoots(acceptor, /*markLongLived*/ true);
 
   // Now free symbols and weak refs.
-  gcCallbacks_->freeSymbols(oldGenMarker_->markedSymbols());
+  gcCallbacks_.freeSymbols(oldGenMarker_->markedSymbols());
   // NOTE: If sweeping is done concurrently with YG collection, weak references
   // could be handled during the sweep pass instead of the mark pass. The read
   // barrier will need to be updated to handle the case where a WeakRef points
@@ -2421,7 +2421,7 @@ void HadesGC::youngGenCollection(
   auto lk = kConcurrentGC ? pauseBackgroundTask() : std::unique_lock<Mutex>();
   // The YG is not parseable while a collection is occurring.
   assert(!inGC() && "Cannot be in GC at the start of YG!");
-  GCCycle cycle{this, gcCallbacks_, "Young Gen"};
+  GCCycle cycle{this, &gcCallbacks_, "Young Gen"};
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();
   // Check that the card tables are well-formed before the collection.
@@ -3056,7 +3056,7 @@ llvh::ErrorOr<HadesGC::HeapSegment> HadesGC::createSegment() {
   } else {
     segIdx = ++numSegments_;
   }
-  pointerBase_->setSegment(segIdx, seg.lowLim());
+  pointerBase_.setSegment(segIdx, seg.lowLim());
   addSegmentExtentToCrashManager(seg, std::to_string(segIdx));
   seg.markBitArray().markAll();
   return llvh::ErrorOr<HadesGC::HeapSegment>(std::move(seg));

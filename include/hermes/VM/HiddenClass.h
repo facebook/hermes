@@ -164,7 +164,7 @@ class TransitionMap {
 
   /// Look for key and return the value as Handle<T> if found or None if not.
   llvh::Optional<Handle<HiddenClass>>
-  lookup(HandleRootOwner *runtime, GC *gc, const Transition &key) {
+  lookup(HandleRootOwner &runtime, GC *gc, const Transition &key) {
     if (smallKey_ == key) {
       return smallValue().get(runtime, gc);
     } else if (isLarge()) {
@@ -177,7 +177,7 @@ class TransitionMap {
   /// Insert a key/value into the map if the key is not already there.
   /// \return true if it was inserted, false if the key was already there.
   bool insertNew(
-      Runtime *runtime,
+      Runtime &runtime,
       const Transition &key,
       Handle<HiddenClass> value) {
     assert(
@@ -187,19 +187,19 @@ class TransitionMap {
       return false;
     }
     // Need to hold the lock when mutating smallKey and smallValue.
-    WeakRefLock lk{runtime->getHeap().weakRefMutex()};
+    WeakRefLock lk{runtime.getHeap().weakRefMutex()};
     if (isClean()) {
       smallKey_ = key;
-      smallValue() = WeakRef<HiddenClass>(&runtime->getHeap(), value);
+      smallValue() = WeakRef<HiddenClass>(&runtime.getHeap(), value);
       return true;
     }
     if (!isLarge())
       uncleanMakeLarge(runtime);
-    return large()->insertNewLocked(&runtime->getHeap(), key, value);
+    return large()->insertNewLocked(&runtime.getHeap(), key, value);
   }
 
   /// Insert key/value into the map. Used by deserialization.
-  void insertUnsafe(Runtime *runtime, const Transition &key, WeakRefSlot *ptr);
+  void insertUnsafe(Runtime &runtime, const Transition &key, WeakRefSlot *ptr);
 
   /// Accepts every valid WeakRef in the map.
   void markWeakRefs(WeakRefAcceptor &acceptor) {
@@ -244,7 +244,7 @@ class TransitionMap {
   }
 
   /// Expand to large mode, assuming already unclean.
-  void uncleanMakeLarge(Runtime *runtime);
+  void uncleanMakeLarge(Runtime &runtime);
 
   /// Accessors for each union member after asserting it's active.
   WeakRef<HiddenClass> &smallValue() {
@@ -290,7 +290,7 @@ class HiddenClass final : public GCCell {
 
   /// Create a "root" hidden class - one that doesn't define any properties, but
   /// is a starting point for a hierarchy.
-  static CallResult<HermesValue> createRoot(Runtime *runtime);
+  static CallResult<HermesValue> createRoot(Runtime &runtime);
 
   /// \return true if this hidden class is guaranteed to be a leaf.
   /// It can return false negatives, so it should only be used for stats
@@ -327,16 +327,16 @@ class HiddenClass final : public GCCell {
   }
 
   /// \return The for-in cache if one has been set, otherwise nullptr.
-  BigStorage *getForInCache(Runtime *runtime) const {
+  BigStorage *getForInCache(Runtime &runtime) const {
     return forInCache_.get(runtime);
   }
 
-  void setForInCache(BigStorage *arr, Runtime *runtime) {
-    forInCache_.set(runtime, arr, &runtime->getHeap());
+  void setForInCache(BigStorage *arr, Runtime &runtime) {
+    forInCache_.set(runtime, arr, &runtime.getHeap());
   }
 
-  void clearForInCache(Runtime *runtime) {
-    forInCache_.setNull(&runtime->getHeap());
+  void clearForInCache(Runtime &runtime) {
+    forInCache_.setNull(&runtime.getHeap());
   }
 
   /// Reset the property map, unless this class is in dictionary mode.
@@ -359,7 +359,7 @@ class HiddenClass final : public GCCell {
   template <typename CallbackFunction>
   static void forEachProperty(
       Handle<HiddenClass> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       const CallbackFunction &callback);
 
   /// Same as \p forEachProperty, but the callback cannot do any GC operations,
@@ -368,7 +368,7 @@ class HiddenClass final : public GCCell {
   /// the property map for the next query, so it is preferred.
   static void forEachPropertyNoAlloc(
       HiddenClass *self,
-      PointerBase *base,
+      PointerBase &base,
       std::function<void(SymbolID, NamedPropertyDescriptor)> callback);
 
   /// Same as forEachProperty() but the callback returns true to continue or
@@ -379,7 +379,7 @@ class HiddenClass final : public GCCell {
   template <typename CallbackFunction>
   static bool forEachPropertyWhile(
       Handle<HiddenClass> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       const CallbackFunction &callback);
 
   /// Look for a property in the property map. If the property is found, return
@@ -390,7 +390,7 @@ class HiddenClass final : public GCCell {
   /// \return the "position" of the property, if found.
   static OptValue<PropertyPos> findProperty(
       PseudoHandle<HiddenClass> self,
-      Runtime *runtime,
+      Runtime &runtime,
       SymbolID name,
       PropertyFlags expectedFlags,
       NamedPropertyDescriptor &desc);
@@ -399,7 +399,7 @@ class HiddenClass final : public GCCell {
   /// This is slower than \p findProperty because it needs to traverse the full
   /// hidden class chain in the worst case.
   static llvh::Optional<NamedPropertyDescriptor>
-  findPropertyNoAlloc(HiddenClass *self, PointerBase *base, SymbolID name);
+  findPropertyNoAlloc(HiddenClass *self, PointerBase &base, SymbolID name);
 
   /// An optimistic fast path for \c findProperty(). If there is an allocated
   /// property map, this will return an OptValue containing either true or
@@ -408,7 +408,7 @@ class HiddenClass final : public GCCell {
   /// must be used.
   static OptValue<bool> tryFindPropertyFast(
       const HiddenClass *self,
-      PointerBase *base,
+      PointerBase &base,
       SymbolID name,
       NamedPropertyDescriptor &desc);
 
@@ -417,20 +417,20 @@ class HiddenClass final : public GCCell {
   /// map because doing so would change the behavior.
   /// \return true if the property is defined, false otherwise.
   static bool
-  debugIsPropertyDefined(HiddenClass *self, PointerBase *base, SymbolID name);
+  debugIsPropertyDefined(HiddenClass *self, PointerBase &base, SymbolID name);
 
   /// Delete a property which we found earlier using \c findProperty.
   /// \return the resulting new class.
   static Handle<HiddenClass> deleteProperty(
       Handle<HiddenClass> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       PropertyPos pos);
 
   /// Add a new property. It must not already exist.
   /// \return the resulting new class and the index of the new property.
   static CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> addProperty(
       Handle<HiddenClass> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       SymbolID name,
       PropertyFlags propertyFlags);
 
@@ -438,7 +438,7 @@ class HiddenClass final : public GCCell {
   /// \param pos is the position of the property into the property map.
   static Handle<HiddenClass> updateProperty(
       Handle<HiddenClass> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       PropertyPos pos,
       PropertyFlags newFlags);
 
@@ -446,13 +446,13 @@ class HiddenClass final : public GCCell {
   /// \return the resulting class
   static Handle<HiddenClass> makeAllNonConfigurable(
       Handle<HiddenClass> selfHandle,
-      Runtime *runtime);
+      Runtime &runtime);
 
   /// Mark all properties as non-writable and non-configurable.
   /// \return the resulting class
   static Handle<HiddenClass> makeAllReadOnly(
       Handle<HiddenClass> selfHandle,
-      Runtime *runtime);
+      Runtime &runtime);
 
   /// Update the flags for the properties in the list \p props with \p
   /// flagsToClear and \p flagsToSet. If in dictionary mode, the properties are
@@ -468,7 +468,7 @@ class HiddenClass final : public GCCell {
   /// \return the resulting hidden class.
   static Handle<HiddenClass> updatePropertyFlagsWithoutTransitions(
       Handle<HiddenClass> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       PropertyFlags flagsToClear,
       PropertyFlags flagsToSet,
       OptValue<llvh::ArrayRef<SymbolID>> props);
@@ -480,36 +480,36 @@ class HiddenClass final : public GCCell {
   /// \return the resulting new class and the index of the reserved slot.
   static CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> reserveSlot(
       Handle<HiddenClass> selfHandle,
-      Runtime *runtime);
+      Runtime &runtime);
 
   /// \return true if all properties are non-configurable
   static bool areAllNonConfigurable(
       Handle<HiddenClass> selfHandle,
-      Runtime *runtime);
+      Runtime &runtime);
 
   /// \return true if all properties are non-writable and non-configurable
-  static bool areAllReadOnly(Handle<HiddenClass> selfHandle, Runtime *runtime);
+  static bool areAllReadOnly(Handle<HiddenClass> selfHandle, Runtime &runtime);
 
   HiddenClass(
-      Runtime *runtime,
+      Runtime &runtime,
       ClassFlags flags,
       Handle<HiddenClass> parent,
       SymbolID symbolID,
       PropertyFlags propertyFlags,
       unsigned numProperties)
-      : GCCell(&runtime->getHeap(), &vt),
+      : GCCell(&runtime.getHeap(), &vt),
         symbolID_(symbolID),
         propertyFlags_(propertyFlags),
         flags_(flags),
         numProperties_(numProperties),
-        parent_(runtime, *parent, &runtime->getHeap()) {
+        parent_(runtime, *parent, &runtime.getHeap()) {
     assert(propertyFlags.isValid() && "propertyFlags must be valid");
   }
 
  private:
   /// Allocate a new hidden class instance with the supplied parameters.
   static CallResult<HermesValue> create(
-      Runtime *runtime,
+      Runtime &runtime,
       ClassFlags flags,
       Handle<HiddenClass> parent,
       SymbolID symbolID,
@@ -528,14 +528,14 @@ class HiddenClass final : public GCCell {
   /// be set.  \return the new class.
   static Handle<HiddenClass> copyToNewDictionary(
       Handle<HiddenClass> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       bool noCache = false);
 
   /// Add a new property pair (\p name and \p desc) to the property map (which
   /// must have been initialized).
   static ExecutionStatus addToPropertyMap(
       Handle<HiddenClass> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       SymbolID name,
       NamedPropertyDescriptor desc);
 
@@ -543,14 +543,14 @@ class HiddenClass final : public GCCell {
   /// store it in \c propertyMap_.
   static void initializeMissingPropertyMap(
       Handle<HiddenClass> selfHandle,
-      Runtime *runtime);
+      Runtime &runtime);
 
   /// Initialize the property map by transferring the parent's map to ourselves
   /// and adding a our property to it. It must only be called if we don't have a
   /// property map of our own but have a valid parent with a property map.
   static void stealPropertyMapFromParent(
       Handle<HiddenClass> selfHandle,
-      Runtime *runtime);
+      Runtime &runtime);
 
   /// Free all non-GC managed resources associated with the object.
   static void _finalizeImpl(GCCell *cell, GC *gc);
@@ -611,30 +611,30 @@ class HiddenClass final : public GCCell {
 template <typename CallbackFunction>
 void HiddenClass::forEachProperty(
     Handle<HiddenClass> selfHandle,
-    Runtime *runtime,
+    Runtime &runtime,
     const CallbackFunction &callback) {
   if (LLVM_UNLIKELY(!selfHandle->propertyMap_))
     initializeMissingPropertyMap(selfHandle, runtime);
 
   return DictPropertyMap::forEachProperty(
-      runtime->makeHandle(selfHandle->propertyMap_), runtime, callback);
+      runtime.makeHandle(selfHandle->propertyMap_), runtime, callback);
 }
 
 template <typename CallbackFunction>
 bool HiddenClass::forEachPropertyWhile(
     Handle<HiddenClass> selfHandle,
-    Runtime *runtime,
+    Runtime &runtime,
     const CallbackFunction &callback) {
   if (LLVM_UNLIKELY(!selfHandle->propertyMap_))
     initializeMissingPropertyMap(selfHandle, runtime);
 
   return DictPropertyMap::forEachPropertyWhile(
-      runtime->makeHandle(selfHandle->propertyMap_), runtime, callback);
+      runtime.makeHandle(selfHandle->propertyMap_), runtime, callback);
 }
 
 inline OptValue<bool> HiddenClass::tryFindPropertyFast(
     const HiddenClass *self,
-    PointerBase *base,
+    PointerBase &base,
     SymbolID name,
     NamedPropertyDescriptor &desc) {
   if (LLVM_LIKELY(self->propertyMap_)) {

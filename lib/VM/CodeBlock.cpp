@@ -194,10 +194,10 @@ SymbolID CodeBlock::getNameMayAllocate() const {
       functionHeader_.functionName());
 }
 
-std::string CodeBlock::getNameString(GCBase::GCCallbacks *runtime) const {
+std::string CodeBlock::getNameString(GCBase::GCCallbacks &runtime) const {
 #ifndef HERMESVM_LEAN
   if (isLazy()) {
-    return runtime->convertSymbolToUTF8(runtimeModule_->getLazyName());
+    return runtime.convertSymbolToUTF8(runtimeModule_->getLazyName());
   }
 #endif
   return runtimeModule_->getStringFromStringID(functionHeader_.functionName());
@@ -332,7 +332,7 @@ std::unique_ptr<hbc::BytecodeModule> compileLazyFunction(
 }
 } // namespace
 
-void CodeBlock::lazyCompileImpl(Runtime *runtime) {
+void CodeBlock::lazyCompileImpl(Runtime &runtime) {
   assert(isLazy() && "Laziness has not been checked");
   PerfSection perf("Lazy function compilation");
   auto *provider = (hbc::BCProviderLazy *)runtimeModule_->getBytecode();
@@ -352,7 +352,7 @@ void CodeBlock::lazyCompileImpl(Runtime *runtime) {
 #endif // HERMESVM_LEAN
 
 void CodeBlock::markCachedHiddenClasses(
-    Runtime *runtime,
+    Runtime &runtime,
     WeakRootAcceptor &acceptor) {
   for (auto &prop :
        llvh::makeMutableArrayRef(propertyCache(), propertyCacheSize_)) {

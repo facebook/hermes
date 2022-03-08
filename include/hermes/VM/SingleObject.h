@@ -29,18 +29,18 @@ class SingleObject final : public JSObject {
 
   /// Create a SingleObject.
   static CallResult<HermesValue> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parentHandle) {
-    auto *cell = runtime->makeAFixed<SingleObject>(
+    auto *cell = runtime.makeAFixed<SingleObject>(
         runtime,
         parentHandle,
-        runtime->getHiddenClassForPrototype(
+        runtime.getHiddenClassForPrototype(
             *parentHandle, numOverlapSlots<SingleObject>()));
     return JSObjectInit::initToHermesValue(runtime, cell);
   }
 
   SingleObject(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
       : JSObject(runtime, &vt.base, *parent, *clazz) {}

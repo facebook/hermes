@@ -54,7 +54,7 @@ class JSError final : public JSObject {
 
   /// Create an Error Object.
   static PseudoHandle<JSError> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> prototype);
   /// Create an uncatchable Error Object. If this object is thrown, no catch
   /// handlers or finally handlers are called.
@@ -62,7 +62,7 @@ class JSError final : public JSObject {
   /// impossible or undesirable to continue running the VM. The error should be
   /// considered a fatal abort, but one that cleans up internal VM resources.
   static PseudoHandle<JSError> createUncatchable(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> prototype);
 
   /// If the stack trace is not set, attempt to record it by walking the runtime
@@ -77,7 +77,7 @@ class JSError final : public JSObject {
   ///   current CodeBlock.
   static ExecutionStatus recordStackTrace(
       Handle<JSError> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       bool skipTopFrame = false,
       CodeBlock *codeBlock = nullptr,
       const Inst *ip = nullptr);
@@ -87,11 +87,11 @@ class JSError final : public JSObject {
   /// \c CapturedError property.
   static ExecutionStatus setupStack(
       Handle<JSObject> selfHandle,
-      Runtime *runtime);
+      Runtime &runtime);
 
   /// Set the message property.
   static ExecutionStatus
-  setMessage(Handle<JSError> selfHandle, Runtime *runtime, Handle<> message);
+  setMessage(Handle<JSError> selfHandle, Runtime &runtime, Handle<> message);
 
   /// \return a pointer to the stack trace, or NULL if the stack trace has been
   /// cleared or not been set.
@@ -106,20 +106,20 @@ class JSError final : public JSObject {
   /// When called, construct the stacktrace string based on the value of
   /// stacktrace_, and reset the stack property to the stacktrace string.
   friend CallResult<HermesValue>
-  errorStackGetter(void *, Runtime *runtime, NativeArgs args);
+  errorStackGetter(void *, Runtime &runtime, NativeArgs args);
 
   /// This is called when someone manually set the stack property to
   /// an error object, which should happen rarely. It destroys the
   /// stack access and replace it with a regular property.
   friend CallResult<HermesValue>
-  errorStackSetter(void *, Runtime *runtime, NativeArgs args);
+  errorStackSetter(void *, Runtime &runtime, NativeArgs args);
 
   /// Pop frames from the stack trace until we encounter a frame attributed to
   /// \p callable, and pop that frame too. No frames are skipped if a matching
   /// frame isn't found.
   /// \pre \p selfHandle's stacktrace_ is non-null.
   static void popFramesUntilInclusive(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSError> selfHandle,
       Handle<Callable> callableHandle);
 
@@ -130,12 +130,12 @@ class JSError final : public JSObject {
 
   /// \return the name of the function at \p index.
   static Handle<StringPrimitive> getFunctionNameAtIndex(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSError> selfHandle,
       size_t index);
 
   JSError(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       bool catchable)
@@ -147,7 +147,7 @@ class JSError final : public JSObject {
   static size_t _mallocSizeImpl(GCCell *cell);
 
   static PseudoHandle<JSError>
-  create(Runtime *runtime, Handle<JSObject> prototype, bool catchable);
+  create(Runtime &runtime, Handle<JSObject> prototype, bool catchable);
 
   /// A pointer to the stack trace, or nullptr if it has not been set.
   StackTracePtr stacktrace_;
@@ -183,20 +183,20 @@ class JSError final : public JSObject {
   /// In the `target = {}; Error.captureErrorStack(target); target.stack` case,
   /// selfHandle will be the value of `target`'s [[CapturedError]] slot.
   static ExecutionStatus constructStackTraceString(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSError> selfHandle,
       Handle<JSObject> targetHandle,
       SmallU16String<32> &stack);
 
   /// Construct the callSites array for Error.prepareStackTrace.
   static CallResult<HermesValue> constructCallSitesArray(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSError> selfHandle);
 
   /// Append the name of the function at \p index to the given \p str.
   /// \return true on success, false if the name was missing, invalid or empty.
   static bool appendFunctionNameAtIndex(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSError> selfHandle,
       size_t index,
       llvh::SmallVectorImpl<char16_t> &str);
@@ -207,7 +207,7 @@ class JSError final : public JSObject {
   /// 2. Otherwise, return \t targetHandle cast to JSError.
   /// Throws if any cast or property access fails.
   static CallResult<Handle<JSError>> getErrorFromStackTarget_RJS(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> targetHandle);
 };
 

@@ -57,7 +57,7 @@ void ExternalUTF16StringPrimitiveBuildMeta(
 
 template <typename T>
 CallResult<HermesValue> StringPrimitive::createEfficientImpl(
-    Runtime *runtime,
+    Runtime &runtime,
     llvh::ArrayRef<T> str,
     std::basic_string<T> *optStorage) {
   constexpr bool charIs8Bit = std::is_same<T, char>::value;
@@ -70,10 +70,10 @@ CallResult<HermesValue> StringPrimitive::createEfficientImpl(
       "8 bit strings must be ASCII");
   if (str.empty()) {
     return HermesValue::encodeStringValue(
-        runtime->getPredefinedString(Predefined::emptyString));
+        runtime.getPredefinedString(Predefined::emptyString));
   }
   if (str.size() == 1) {
-    return runtime->getCharacterString(str[0]).getHermesValue();
+    return runtime.getCharacterString(str[0]).getHermesValue();
   }
 
   // Check if we should acquire ownership of storage.
@@ -91,7 +91,7 @@ CallResult<HermesValue> StringPrimitive::createEfficientImpl(
     if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto output = runtime->makeHandle<StringPrimitive>(*result);
+    auto output = runtime.makeHandle<StringPrimitive>(*result);
     // Copy directly into the StringPrimitive storage.
     std::copy(str.begin(), str.end(), output->castToASCIIPointerForWrite());
     return output.getHermesValue();
@@ -101,13 +101,13 @@ CallResult<HermesValue> StringPrimitive::createEfficientImpl(
 }
 
 CallResult<HermesValue> StringPrimitive::createEfficient(
-    Runtime *runtime,
+    Runtime &runtime,
     ASCIIRef str) {
   return createEfficientImpl(runtime, str);
 }
 
 static ExecutionStatus convertUtf8ToUtf16(
-    Runtime *runtime,
+    Runtime &runtime,
     UTF8Ref utf8,
     bool IgnoreInputErrors,
     std::u16string &out) {
@@ -127,17 +127,17 @@ static ExecutionStatus convertUtf8ToUtf16(
       if (IgnoreInputErrors) {
         break;
       }
-      return runtime->raiseRangeError(
+      return runtime.raiseRangeError(
           "Malformed UTF8 input: partial character in input");
     case llvh::ConversionResult::sourceIllegal:
       if (IgnoreInputErrors) {
         break;
       }
-      return runtime->raiseRangeError("Malformed UTF8 input: illegal sequence");
+      return runtime.raiseRangeError("Malformed UTF8 input: illegal sequence");
     case llvh::ConversionResult::conversionOK:
       break;
     case llvh::ConversionResult::targetExhausted:
-      return runtime->raiseRangeError(
+      return runtime.raiseRangeError(
           "Cannot allocate memory for UTF8 to UTF16 conversion.");
   }
 
@@ -146,7 +146,7 @@ static ExecutionStatus convertUtf8ToUtf16(
 }
 
 CallResult<HermesValue> StringPrimitive::createEfficient(
-    Runtime *runtime,
+    Runtime &runtime,
     UTF8Ref str,
     bool IgnoreInputErrors) {
   const uint8_t *utf8 = str.data();
@@ -168,27 +168,27 @@ CallResult<HermesValue> StringPrimitive::createEfficient(
 }
 
 CallResult<HermesValue> StringPrimitive::createEfficient(
-    Runtime *runtime,
+    Runtime &runtime,
     UTF16Ref str) {
   return createEfficientImpl(runtime, str);
 }
 
 CallResult<HermesValue> StringPrimitive::createEfficient(
-    Runtime *runtime,
+    Runtime &runtime,
     std::basic_string<char> &&str) {
   return createEfficientImpl(
       runtime, llvh::makeArrayRef(str.data(), str.size()), &str);
 }
 
 CallResult<HermesValue> StringPrimitive::createEfficient(
-    Runtime *runtime,
+    Runtime &runtime,
     std::basic_string<char16_t> &&str) {
   return createEfficientImpl(
       runtime, llvh::makeArrayRef(str.data(), str.size()), &str);
 }
 
 CallResult<HermesValue> StringPrimitive::createDynamic(
-    Runtime *runtime,
+    Runtime &runtime,
     UTF16Ref str) {
   if (LLVM_LIKELY(isAllASCII(str.begin(), str.end()))) {
     auto res = DynamicASCIIStringPrimitive::create(runtime, str.size());
@@ -252,7 +252,7 @@ int StringPrimitive::compare(const StringPrimitive *other) const {
 }
 
 CallResult<HermesValue> StringPrimitive::concat(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> xHandle,
     Handle<StringPrimitive> yHandle) {
   auto *xPtr = xHandle.get();
@@ -272,14 +272,13 @@ CallResult<HermesValue> StringPrimitive::concat(
   SafeUInt32 xyLen(xLen);
   xyLen.add(yLen);
   if (xyLen.isOverflowed() || xyLen.get() > MAX_STRING_LENGTH) {
-    return runtime->raiseRangeError("String length exceeds limit");
+    return runtime.raiseRangeError("String length exceeds limit");
   }
 
   if (xyLen.get() >= CONCAT_STRING_MIN_SIZE ||
       isBufferedStringPrimitive(xPtr)) {
-    if (LLVM_UNLIKELY(
-            !runtime->getHeap().canAllocExternalMemory(xyLen.get()))) {
-      return runtime->raiseRangeError(
+    if (LLVM_UNLIKELY(!runtime.getHeap().canAllocExternalMemory(xyLen.get()))) {
+      return runtime.raiseRangeError(
           "Cannot allocate an external string primitive.");
     }
     return internalConcatStringPrimitives(runtime, xHandle, yHandle)
@@ -298,7 +297,7 @@ CallResult<HermesValue> StringPrimitive::concat(
 }
 
 CallResult<HermesValue> StringPrimitive::slice(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> str,
     size_t start,
     size_t length) {
@@ -323,7 +322,7 @@ CallResult<HermesValue> StringPrimitive::slice(
 }
 
 StringView StringPrimitive::createStringView(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> self) {
   ensureFlat(runtime, self);
   return createStringViewMustBeFlat(self);
@@ -382,7 +381,7 @@ std::string StringPrimitive::_snapshotNameImpl(GCCell *cell, GC *gc) {
 
 template <typename T, bool Uniqued>
 DynamicStringPrimitive<T, Uniqued>::DynamicStringPrimitive(
-    Runtime *runtime,
+    Runtime &runtime,
     Ref src)
     : DynamicStringPrimitive(runtime, (uint32_t)src.size()) {
   hermes::uninitializedCopy(
@@ -391,20 +390,20 @@ DynamicStringPrimitive<T, Uniqued>::DynamicStringPrimitive(
 
 template <typename T, bool Uniqued>
 CallResult<HermesValue> DynamicStringPrimitive<T, Uniqued>::create(
-    Runtime *runtime,
+    Runtime &runtime,
     Ref str) {
   assert(!isExternalLength(str.size()) && "length should not be external");
-  auto *cell = runtime->makeAVariable<DynamicStringPrimitive<T, Uniqued>>(
+  auto *cell = runtime.makeAVariable<DynamicStringPrimitive<T, Uniqued>>(
       allocationSize((uint32_t)str.size()), runtime, str);
   return HermesValue::encodeStringValue(cell);
 }
 
 template <typename T, bool Uniqued>
 CallResult<HermesValue> DynamicStringPrimitive<T, Uniqued>::createLongLived(
-    Runtime *runtime,
+    Runtime &runtime,
     Ref str) {
   assert(!isExternalLength(str.size()) && "length should not be external");
-  auto *obj = runtime->makeAVariable<
+  auto *obj = runtime.makeAVariable<
       DynamicStringPrimitive<T, Uniqued>,
       HasFinalizer::No,
       LongLived::Yes>(allocationSize((uint32_t)str.size()), runtime, str);
@@ -413,9 +412,9 @@ CallResult<HermesValue> DynamicStringPrimitive<T, Uniqued>::createLongLived(
 
 template <typename T, bool Uniqued>
 CallResult<HermesValue> DynamicStringPrimitive<T, Uniqued>::create(
-    Runtime *runtime,
+    Runtime &runtime,
     uint32_t length) {
-  auto *cell = runtime->makeAVariable<DynamicStringPrimitive<T, Uniqued>>(
+  auto *cell = runtime.makeAVariable<DynamicStringPrimitive<T, Uniqued>>(
       allocationSize(length), runtime, length);
   return HermesValue::encodeStringValue(cell);
 }
@@ -430,7 +429,7 @@ template class DynamicStringPrimitive<char, false /* not Uniqued */>;
 template <typename T>
 template <class BasicString>
 ExternalStringPrimitive<T>::ExternalStringPrimitive(
-    Runtime *runtime,
+    Runtime &runtime,
     BasicString &&contents)
     : SymbolStringPrimitive(
           runtime,
@@ -451,22 +450,22 @@ ExternalStringPrimitive<T>::ExternalStringPrimitive(
 template <typename T>
 template <class BasicString>
 CallResult<HermesValue> ExternalStringPrimitive<T>::create(
-    Runtime *runtime,
+    Runtime &runtime,
     BasicString &&str) {
   static_assert(
       std::is_same<T, typename BasicString::value_type>::value,
       "ExternalStringPrimitive mismatched char type");
   if (LLVM_UNLIKELY(str.size() > MAX_STRING_LENGTH))
-    return runtime->raiseRangeError("String length exceeds limit");
+    return runtime.raiseRangeError("String length exceeds limit");
   // We have to use a variable sized alloc here even though the size is already
   // known, because ExternalStringPrimitive is derived from
   // VariableSizeRuntimeCell
   auto *extStr =
-      runtime->makeAVariable<ExternalStringPrimitive<T>, HasFinalizer::Yes>(
+      runtime.makeAVariable<ExternalStringPrimitive<T>, HasFinalizer::Yes>(
           sizeof(ExternalStringPrimitive<T>),
           runtime,
           std::forward<BasicString>(str));
-  runtime->getHeap().creditExternalMemory(
+  runtime.getHeap().creditExternalMemory(
       extStr, extStr->calcExternalMemorySize());
   auto res = HermesValue::encodeStringValue(extStr);
   return res;
@@ -474,37 +473,37 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::create(
 
 template <typename T>
 CallResult<HermesValue> ExternalStringPrimitive<T>::createLongLived(
-    Runtime *runtime,
+    Runtime &runtime,
     StdString &&str) {
   if (LLVM_UNLIKELY(str.size() > MAX_STRING_LENGTH))
-    return runtime->raiseRangeError("String length exceeds limit");
-  if (LLVM_UNLIKELY(!runtime->getHeap().canAllocExternalMemory(
+    return runtime.raiseRangeError("String length exceeds limit");
+  if (LLVM_UNLIKELY(!runtime.getHeap().canAllocExternalMemory(
           str.capacity() * sizeof(T)))) {
-    return runtime->raiseRangeError(
+    return runtime.raiseRangeError(
         "Cannot allocate an external string primitive.");
   }
   // Use variable size alloc since ExternalStringPrimitive is derived from
   // VariableSizeRuntimeCell.
-  auto *extStr = runtime->makeAVariable<
+  auto *extStr = runtime.makeAVariable<
       ExternalStringPrimitive<T>,
       HasFinalizer::Yes,
       LongLived::Yes>(
       sizeof(ExternalStringPrimitive<T>), runtime, std::move(str));
-  runtime->getHeap().creditExternalMemory(
+  runtime.getHeap().creditExternalMemory(
       extStr, extStr->calcExternalMemorySize());
   return HermesValue::encodeStringValue(extStr);
 }
 
 template <typename T>
 CallResult<HermesValue> ExternalStringPrimitive<T>::create(
-    Runtime *runtime,
+    Runtime &runtime,
     uint32_t length) {
   assert(isExternalLength(length) && "length should be external");
   if (LLVM_UNLIKELY(length > MAX_STRING_LENGTH))
-    return runtime->raiseRangeError("String length exceeds limit");
+    return runtime.raiseRangeError("String length exceeds limit");
   uint32_t allocSize = length * sizeof(T);
-  if (LLVM_UNLIKELY(!runtime->getHeap().canAllocExternalMemory(allocSize))) {
-    return runtime->raiseRangeError(
+  if (LLVM_UNLIKELY(!runtime.getHeap().canAllocExternalMemory(allocSize))) {
+    return runtime.raiseRangeError(
         "Cannot allocate an external string primitive.");
   }
   return create(runtime, StdString(length, T(0)));
@@ -557,11 +556,11 @@ template class ExternalStringPrimitive<char16_t>;
 template class ExternalStringPrimitive<char>;
 
 template CallResult<HermesValue> ExternalStringPrimitive<char>::create<
-    std::basic_string<char>>(Runtime *runtime, std::basic_string<char> &&str);
+    std::basic_string<char>>(Runtime &runtime, std::basic_string<char> &&str);
 
 template CallResult<HermesValue>
 ExternalStringPrimitive<char16_t>::create<std::basic_string<char16_t>>(
-    Runtime *runtime,
+    Runtime &runtime,
     std::basic_string<char16_t> &&str);
 
 //===----------------------------------------------------------------------===//
@@ -584,13 +583,13 @@ void BufferedUTF16StringPrimitiveBuildMeta(
 
 template <typename T>
 PseudoHandle<StringPrimitive> BufferedStringPrimitive<T>::create(
-    Runtime *runtime,
+    Runtime &runtime,
     uint32_t length,
     Handle<ExternalStringPrimitive<T>> storage) {
   // We have to use a variable sized alloc here even though the size is already
   // known, because BufferedStringPrimitive is derived from
   // VariableSizeRuntimeCell.
-  auto *cell = runtime->makeAVariable<BufferedStringPrimitive<T>>(
+  auto *cell = runtime.makeAVariable<BufferedStringPrimitive<T>>(
       sizeof(BufferedStringPrimitive<T>), runtime, length, storage);
   return createPseudoHandle<StringPrimitive>(cell);
 }
@@ -630,7 +629,7 @@ void BufferedStringPrimitive<char16_t>::appendToCopyableString(
 
 template <typename T>
 PseudoHandle<StringPrimitive> BufferedStringPrimitive<T>::create(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> leftHnd,
     Handle<StringPrimitive> rightHnd) {
   typename ExternalStringPrimitive<T>::CopyableStdString contents{};
@@ -649,8 +648,8 @@ PseudoHandle<StringPrimitive> BufferedStringPrimitive<T>::create(
     appendToCopyableString(contents, right);
   }
 
-  auto storageHnd = runtime->makeHandle<ExternalStringPrimitive<T>>(
-      runtime->ignoreAllocationFailure(
+  auto storageHnd = runtime.makeHandle<ExternalStringPrimitive<T>>(
+      runtime.ignoreAllocationFailure(
           ExternalStringPrimitive<T>::create(runtime, std::move(contents))));
 
   return create(runtime, len, storageHnd);
@@ -659,7 +658,7 @@ PseudoHandle<StringPrimitive> BufferedStringPrimitive<T>::create(
 template <typename T>
 PseudoHandle<StringPrimitive> BufferedStringPrimitive<T>::append(
     Handle<BufferedStringPrimitive<T>> selfHnd,
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> rightHnd) {
   NoAllocScope noAlloc{runtime};
   auto *self = selfHnd.get();
@@ -679,16 +678,16 @@ PseudoHandle<StringPrimitive> BufferedStringPrimitive<T>::append(
 
   auto oldExternalMem = storage->calcExternalMemorySize();
   appendToCopyableString(storage->contents_, right);
-  runtime->getHeap().creditExternalMemory(
+  runtime.getHeap().creditExternalMemory(
       storage, storage->calcExternalMemorySize() - oldExternalMem);
 
   noAlloc.release();
   return BufferedStringPrimitive<T>::create(
-      runtime, storage->contents_.size(), runtime->makeHandle(storage));
+      runtime, storage->contents_.size(), runtime.makeHandle(storage));
 }
 
 PseudoHandle<StringPrimitive> internalConcatStringPrimitives(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> leftHnd,
     Handle<StringPrimitive> rightHnd) {
   auto *left = leftHnd.get();

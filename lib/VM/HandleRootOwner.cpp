@@ -43,7 +43,7 @@ void HandleRootOwner::markGCScopes(RootAcceptor &acceptor) {
 
 GCScope::~GCScope() {
   // Pop ourselves from the scope list.
-  runtime_->topGCScope_ = prevScope_;
+  runtime_.topGCScope_ = prevScope_;
 
   // Free the dynamically allocated chunks, which are all chunks except the
   // first one.

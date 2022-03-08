@@ -180,7 +180,7 @@ TEST_F(SmallHermesValueRuntimeTest, StringTest) {
 TEST_F(SmallHermesValueRuntimeTest, ObjectTest) {
   // Encode an object.
   auto obj = JSNumber::create(
-      runtime, 3.14, Handle<JSObject>::vmcast(&runtime->numberPrototype));
+      runtime, 3.14, Handle<JSObject>::vmcast(&runtime.numberPrototype));
   auto SHV = SmallHermesValue::encodeHermesValue(
       HermesValue::encodeObjectValue(obj.get()), runtime);
   EXPECT_TRUE(SHV.isPointer());

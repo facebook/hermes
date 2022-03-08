@@ -45,7 +45,7 @@ class SerializedLiteralParser : public hbc::SerializedLiteralParserBase {
         runtimeModule_(runtimeModule) {}
 
   /// Extract and return the next literal. Note: performs GC allocations.
-  HermesValue get(Runtime *);
+  HermesValue get(Runtime &);
 };
 
 } // namespace vm

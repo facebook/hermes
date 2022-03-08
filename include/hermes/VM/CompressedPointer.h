@@ -34,20 +34,20 @@ class CompressedPointer {
     return CompressedPointer(r);
   }
 
-  static CompressedPointer encode(GCCell *ptr, PointerBase *base) {
+  static CompressedPointer encode(GCCell *ptr, PointerBase &base) {
     return CompressedPointer(pointerToStorageType(ptr, base));
   }
-  static CompressedPointer encodeNonNull(GCCell *ptr, PointerBase *base) {
+  static CompressedPointer encodeNonNull(GCCell *ptr, PointerBase &base) {
     return CompressedPointer(pointerToStorageTypeNonNull(ptr, base));
   }
 
-  GCCell *get(PointerBase *base) const {
+  GCCell *get(PointerBase &base) const {
     return storageTypeToPointer(ptr_, base);
   }
 
-  GCCell *getNonNull(PointerBase *base) const {
+  GCCell *getNonNull(PointerBase &base) const {
 #ifdef HERMESVM_COMPRESSED_POINTERS
-    return reinterpret_cast<GCCell *>(base->basedToPointerNonNull(ptr_));
+    return reinterpret_cast<GCCell *>(base.basedToPointerNonNull(ptr_));
 #else
     (void)base;
     return ptr_;
@@ -108,16 +108,16 @@ class CompressedPointer {
   static StorageType rawToStorageType(BasedPointer::StorageType raw) {
     return BasedPointer{raw};
   }
-  static StorageType pointerToStorageType(GCCell *ptr, PointerBase *base) {
-    return base->pointerToBased(ptr);
+  static StorageType pointerToStorageType(GCCell *ptr, PointerBase &base) {
+    return base.pointerToBased(ptr);
   }
   static StorageType pointerToStorageTypeNonNull(
       GCCell *ptr,
-      PointerBase *base) {
-    return base->pointerToBasedNonNull(ptr);
+      PointerBase &base) {
+    return base.pointerToBasedNonNull(ptr);
   }
-  static GCCell *storageTypeToPointer(StorageType st, PointerBase *base) {
-    return reinterpret_cast<GCCell *>(base->basedToPointer(st));
+  static GCCell *storageTypeToPointer(StorageType st, PointerBase &base) {
+    return reinterpret_cast<GCCell *>(base.basedToPointer(st));
   }
 #else
   static uintptr_t storageTypeToRaw(StorageType st) {
@@ -126,15 +126,15 @@ class CompressedPointer {
   static StorageType rawToStorageType(uintptr_t st) {
     return reinterpret_cast<StorageType>(st);
   }
-  static StorageType pointerToStorageType(GCCell *ptr, PointerBase *) {
+  static StorageType pointerToStorageType(GCCell *ptr, PointerBase &) {
     return ptr;
   }
   static StorageType pointerToStorageTypeNonNull(
       GCCell *ptr,
-      PointerBase *base) {
+      PointerBase &base) {
     return ptr;
   }
-  static GCCell *storageTypeToPointer(StorageType st, PointerBase *) {
+  static GCCell *storageTypeToPointer(StorageType st, PointerBase &) {
     return st;
   }
 #endif

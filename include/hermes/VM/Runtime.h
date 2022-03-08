@@ -98,7 +98,7 @@ static const unsigned STACK_RESERVE = 32;
 /// Type used to assign object unique integer identifiers.
 using ObjectID = uint32_t;
 
-using DestructionCallback = std::function<void(Runtime *)>;
+using DestructionCallback = std::function<void(Runtime &)>;
 
 #define PROP_CACHE_IDS(V) V(RegExpLastIndex, Predefined::lastIndex)
 
@@ -368,10 +368,10 @@ class Runtime : public HandleRootOwner,
 
   /// A wrapper to facilitate printing the name of a SymbolID to a stream.
   struct FormatSymbolID {
-    Runtime *const runtime;
+    Runtime &runtime;
     SymbolID const symbolID;
 
-    FormatSymbolID(Runtime *runtime, SymbolID symbolID)
+    FormatSymbolID(Runtime &runtime, SymbolID symbolID)
         : runtime(runtime), symbolID(symbolID) {}
   };
 
@@ -1303,7 +1303,7 @@ class Runtime : public HandleRootOwner,
         (uint8_t)AsyncBreakReasonBits::DebuggerImplicit);
   }
 
-  Debugger debugger_{this};
+  Debugger debugger_{*this};
 #endif
 
   /// Holds references to persistent BC providers for the lifetime of the
@@ -1499,19 +1499,19 @@ class Runtime : public HandleRootOwner,
 
 /// An RAII class for automatically tracking the native call frame depth.
 class ScopedNativeDepthTracker {
-  Runtime *const runtime_;
+  Runtime &runtime_;
 
  public:
-  explicit ScopedNativeDepthTracker(Runtime *runtime) : runtime_(runtime) {
-    ++runtime->nativeCallFrameDepth_;
+  explicit ScopedNativeDepthTracker(Runtime &runtime) : runtime_(runtime) {
+    ++runtime.nativeCallFrameDepth_;
   }
   ~ScopedNativeDepthTracker() {
-    --runtime_->nativeCallFrameDepth_;
+    --runtime_.nativeCallFrameDepth_;
   }
 
   /// \return whether we overflowed the native call frame depth.
   bool overflowed() const {
-    return runtime_->nativeCallFrameDepth_ >
+    return runtime_.nativeCallFrameDepth_ >
         Runtime::MAX_NATIVE_CALL_FRAME_DEPTH;
   }
 };
@@ -1521,21 +1521,21 @@ class ScopedNativeDepthTracker {
 /// stack, as the error may represent an overflow.  Without this, a
 /// cascade of exceptions could occur, overflowing the C++ stack.
 class ScopedNativeDepthReducer {
-  Runtime *const runtime_;
+  Runtime &runtime_;
   bool undo = false;
   // This is empirically good enough.
   static constexpr int kDepthAdjustment = 3;
 
  public:
-  explicit ScopedNativeDepthReducer(Runtime *runtime) : runtime_(runtime) {
-    if (runtime->nativeCallFrameDepth_ >= kDepthAdjustment) {
-      runtime->nativeCallFrameDepth_ -= kDepthAdjustment;
+  explicit ScopedNativeDepthReducer(Runtime &runtime) : runtime_(runtime) {
+    if (runtime.nativeCallFrameDepth_ >= kDepthAdjustment) {
+      runtime.nativeCallFrameDepth_ -= kDepthAdjustment;
       undo = true;
     }
   }
   ~ScopedNativeDepthReducer() {
     if (undo) {
-      runtime_->nativeCallFrameDepth_ += kDepthAdjustment;
+      runtime_.nativeCallFrameDepth_ += kDepthAdjustment;
     }
   }
 };
@@ -1551,7 +1551,7 @@ class ScopedNativeDepthReducer {
 /// for this purpose.
 class ScopedNativeCallFrame {
   /// The runtime for this call frame.
-  Runtime *const runtime_;
+  Runtime &runtime_;
 
   /// The stack pointer that will be restored in the destructor.
   PinnedHermesValue *const savedSP_;
@@ -1571,10 +1571,10 @@ class ScopedNativeCallFrame {
   /// of registers. This may fail if we've overflowed our register stack, or
   /// exceeded the native call frame depth.
   static bool runtimeCanAllocateFrame(
-      Runtime *runtime,
+      Runtime &runtime,
       uint32_t registersNeeded) {
-    return runtime->checkAvailableStack(registersNeeded) &&
-        runtime->nativeCallFrameDepth_ <= Runtime::MAX_NATIVE_CALL_FRAME_DEPTH;
+    return runtime.checkAvailableStack(registersNeeded) &&
+        runtime.nativeCallFrameDepth_ <= Runtime::MAX_NATIVE_CALL_FRAME_DEPTH;
   }
 
  public:
@@ -1589,13 +1589,13 @@ class ScopedNativeCallFrame {
   /// The arguments are initially uninitialized. The caller should initialize
   /// them by storing into them, or via fillArguments().
   ScopedNativeCallFrame(
-      Runtime *runtime,
+      Runtime &runtime,
       uint32_t argCount,
       HermesValue callee,
       HermesValue newTarget,
       HermesValue thisArg)
-      : runtime_(runtime), savedSP_(runtime->getStackPointer()) {
-    runtime->nativeCallFrameDepth_++;
+      : runtime_(runtime), savedSP_(runtime.getStackPointer()) {
+    runtime.nativeCallFrameDepth_++;
     uint32_t registersNeeded =
         StackFrameLayout::callerOutgoingRegisters(argCount);
     overflowed_ = !runtimeCanAllocateFrame(runtime, registersNeeded);
@@ -1605,10 +1605,10 @@ class ScopedNativeCallFrame {
 
     // We have enough space. Increment the call frame depth and construct the
     // frame. The ScopedNativeCallFrame will restore both.
-    auto *stack = runtime->allocUninitializedStack(registersNeeded);
+    auto *stack = runtime.allocUninitializedStack(registersNeeded);
     frame_ = StackFramePtr::initFrame(
         stack,
-        runtime->currentFrame_,
+        runtime.currentFrame_,
         nullptr,
         nullptr,
         argCount,
@@ -1633,7 +1633,7 @@ class ScopedNativeCallFrame {
   /// The arguments are initially uninitialized. The caller should initialize
   /// them by storing into them, or via fillArguments().
   ScopedNativeCallFrame(
-      Runtime *runtime,
+      Runtime &runtime,
       uint32_t argCount,
       Callable *callee,
       bool construct,
@@ -1649,8 +1649,8 @@ class ScopedNativeCallFrame {
   ~ScopedNativeCallFrame() {
     // Note that we unconditionally increment the native call frame depth and
     // save the SP to avoid branching in the dtor.
-    runtime_->nativeCallFrameDepth_--;
-    runtime_->popToSavedStackPointer(savedSP_);
+    runtime_.nativeCallFrameDepth_--;
+    runtime_.popToSavedStackPointer(savedSP_);
 #ifndef NDEBUG
     // Clear the frame to detect use-after-free.
     frame_ = StackFramePtr{};
@@ -1684,11 +1684,11 @@ class ScopedNativeCallFrame {
 class NoAllocScope {
  public:
 #ifdef NDEBUG
-  explicit NoAllocScope(Runtime *runtime) {}
+  explicit NoAllocScope(Runtime &runtime) {}
   explicit NoAllocScope(GC *gc) {}
   void release() {}
 #else
-  explicit NoAllocScope(Runtime *runtime) : NoAllocScope(&runtime->getHeap()) {}
+  explicit NoAllocScope(Runtime &runtime) : NoAllocScope(&runtime.getHeap()) {}
   explicit NoAllocScope(GC *gc) : noAllocLevel_(&gc->noAllocLevel_) {
     ++*noAllocLevel_;
   }
@@ -1787,12 +1787,12 @@ inline void Runtime::ttiReached() {
 
 template <class T>
 inline Handle<T> Runtime::makeHandle(const GCPointer<T> &p) {
-  return Handle<T>(this, p.get(this));
+  return Handle<T>(*this, p.get(*this));
 }
 
 template <class T>
 inline MutableHandle<T> Runtime::makeMutableHandle(const GCPointer<T> &p) {
-  return MutableHandle<T>(this, p.get(this));
+  return MutableHandle<T>(*this, p.get(*this));
 }
 
 inline StringPrimitive *Runtime::getPredefinedString(
@@ -1816,7 +1816,7 @@ inline Handle<StringPrimitive> Runtime::getPredefinedStringHandle(
 }
 
 inline StringPrimitive *Runtime::getStringPrimFromSymbolID(SymbolID id) {
-  return identifierTable_.getStringPrim(this, id);
+  return identifierTable_.getStringPrim(*this, id);
 }
 
 #ifdef HERMESVM_PROFILER_BB
@@ -1830,7 +1830,7 @@ inline void Runtime::dumpBasicBlockProfileTrace(llvh::raw_ostream &OS) {
 #endif
 
 inline Runtime::FormatSymbolID Runtime::formatSymbolID(SymbolID id) {
-  return FormatSymbolID(this, id);
+  return FormatSymbolID(*this, id);
 }
 
 inline void Runtime::popToSavedStackPointer(PinnedHermesValue *stackPointer) {

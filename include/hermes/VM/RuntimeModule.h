@@ -74,7 +74,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
       const char *str);
 
   /// The runtime this module is associated with.
-  Runtime *runtime_;
+  Runtime &runtime_;
 
   /// The table maps from a sequential string id in the bytecode to an
   /// SymbolID.
@@ -125,7 +125,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// \p domain owning it. The RuntimeModule will be freed when the
   /// domain is collected..
   explicit RuntimeModule(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<Domain> domain,
       RuntimeModuleFlags flags,
       llvh::StringRef sourceURL,
@@ -149,7 +149,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// \param sourceURL the filename to report in exception backtraces.
   /// \return a raw pointer to the runtime module.
   static CallResult<RuntimeModule *> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<Domain> domain,
       facebook::hermes::debugger::ScriptID scriptID,
       std::shared_ptr<hbc::BCProvider> &&bytecode = nullptr,
@@ -161,7 +161,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// \param runtime the runtime to use for the identifier table.
   /// \return a raw pointer to the runtime module.
   static RuntimeModule *createUninitialized(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<Domain> domain,
       RuntimeModuleFlags flags = {},
       facebook::hermes::debugger::ScriptID scriptID =
@@ -171,7 +171,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// Crates a lazy RuntimeModule as part of lazy compilation. This module
   /// will contain only one CodeBlock that points to \p function.
   static RuntimeModule *createLazyModule(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<Domain> domain,
       RuntimeModule *parent,
       uint32_t functionID);
@@ -304,10 +304,10 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   }
 
   /// \return the domain which owns this RuntimeModule.
-  inline Handle<Domain> getDomain(Runtime *);
+  inline Handle<Domain> getDomain(Runtime &);
 
   /// \return a raw pointer to the domain which owns this RuntimeModule.
-  inline Domain *getDomainUnsafe(Runtime *);
+  inline Domain *getDomainUnsafe(Runtime &);
 
   /// \return a raw pointer to the domain which owns this RuntimeModule.
   /// Does not execute any read or write barriers on the GC. Should only be
@@ -315,7 +315,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   inline Domain *getDomainForSamplingProfiler();
 
   /// \return the Runtime of this module.
-  Runtime *getRuntime() {
+  Runtime &getRuntime() {
     return runtime_;
   }
 
@@ -367,7 +367,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// NewObjectWithBuffer instruction.
   /// \return the cached hidden class.
   llvh::Optional<Handle<HiddenClass>> findCachedLiteralHiddenClass(
-      Runtime *runtime,
+      Runtime &runtime,
       unsigned keyBufferIndex,
       unsigned numLiterals) const;
 
@@ -376,7 +376,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// \param keyBufferIndex value of NewObjectWithBuffer instruction.
   /// \param clazz the hidden class to cache.
   void tryCacheLiteralHiddenClass(
-      Runtime *runtime,
+      Runtime &runtime,
       unsigned keyBufferIndex,
       HiddenClass *clazz);
 

@@ -247,7 +247,7 @@ class SamplingProfiler {
   /// runtimeDataLock_.
   std::vector<Domain *> domains_;
 
-  Runtime *runtime_;
+  Runtime &runtime_;
 
  private:
   /// Hold \p domain so that the RuntimeModule(s) used by profiler are not
@@ -287,7 +287,7 @@ class SamplingProfiler {
   void clear();
 
  public:
-  explicit SamplingProfiler(Runtime *runtime);
+  explicit SamplingProfiler(Runtime &runtime);
   ~SamplingProfiler();
 
   /// Mark roots that are kept alive by the SamplingProfiler.

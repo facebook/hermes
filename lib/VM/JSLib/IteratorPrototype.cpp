@@ -16,12 +16,12 @@
 namespace hermes {
 namespace vm {
 
-void populateIteratorPrototype(Runtime *runtime) {
-  auto proto = Handle<JSObject>::vmcast(&runtime->iteratorPrototype);
+void populateIteratorPrototype(Runtime &runtime) {
+  auto proto = Handle<JSObject>::vmcast(&runtime.iteratorPrototype);
 
   auto iteratorFunc = NativeFunction::create(
       runtime,
-      Handle<JSObject>::vmcast(&runtime->functionPrototype),
+      Handle<JSObject>::vmcast(&runtime.functionPrototype),
       nullptr,
       iteratorPrototypeIterator,
       Predefined::getSymbolID(Predefined::squareSymbolIterator),
@@ -32,11 +32,11 @@ void populateIteratorPrototype(Runtime *runtime) {
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::SymbolIterator),
-      runtime->makeHandle<NativeFunction>(*iteratorFunc));
+      runtime.makeHandle<NativeFunction>(*iteratorFunc));
 }
 
 CallResult<HermesValue>
-iteratorPrototypeIterator(void *, Runtime *runtime, NativeArgs args) {
+iteratorPrototypeIterator(void *, Runtime &runtime, NativeArgs args) {
   return args.getThisArg();
 }
 

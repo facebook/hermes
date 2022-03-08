@@ -25,9 +25,8 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 /// Function.
 
-Handle<JSObject> createFunctionConstructor(Runtime *runtime) {
-  auto functionPrototype =
-      Handle<Callable>::vmcast(&runtime->functionPrototype);
+Handle<JSObject> createFunctionConstructor(Runtime &runtime) {
+  auto functionPrototype = Handle<Callable>::vmcast(&runtime.functionPrototype);
 
   auto cons = defineSystemConstructor<JSFunction>(
       runtime,
@@ -85,17 +84,17 @@ Handle<JSObject> createFunctionConstructor(Runtime *runtime) {
 }
 
 CallResult<HermesValue>
-functionConstructor(void *, Runtime *runtime, NativeArgs args) {
+functionConstructor(void *, Runtime &runtime, NativeArgs args) {
   return createDynamicFunction(runtime, args, DynamicFunctionKind::Normal);
 }
 
 CallResult<HermesValue>
-functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
+functionPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope{runtime};
 
   auto func = args.dyncastThis<Callable>();
   if (!func) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "Can't call Function.prototype.toString() on non-callable");
   }
 
@@ -111,7 +110,7 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
     // Convert the name to string, unless it is undefined.
     if (!(*propRes)->isUndefined()) {
       auto strRes =
-          toString_RJS(runtime, runtime->makeHandle(std::move(*propRes)));
+          toString_RJS(runtime, runtime.makeHandle(std::move(*propRes)));
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -201,24 +200,24 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
 } // namespace vm
 
 CallResult<HermesValue>
-functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
+functionPrototypeApply(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   auto func = args.dyncastThis<Callable>();
   if (LLVM_UNLIKELY(!func)) {
-    return runtime->raiseTypeError("Can't apply() to non-callable");
+    return runtime.raiseTypeError("Can't apply() to non-callable");
   }
 
   if (args.getArg(1).isNull() || args.getArg(1).isUndefined()) {
     ScopedNativeCallFrame newFrame{runtime, 0, *func, false, args.getArg(0)};
     if (LLVM_UNLIKELY(newFrame.overflowed()))
-      return runtime->raiseStackOverflow(
+      return runtime.raiseStackOverflow(
           Runtime::StackOverflowKind::NativeStack);
     return Callable::call(func, runtime).toCallResultHermesValue();
   }
 
   auto argObj = Handle<JSObject>::dyn_vmcast(args.getArgHandle(1));
   if (LLVM_UNLIKELY(!argObj)) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "Can't apply() with non-object arguments list");
   }
 
@@ -232,17 +231,17 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-functionPrototypeCall(void *, Runtime *runtime, NativeArgs args) {
+functionPrototypeCall(void *, Runtime &runtime, NativeArgs args) {
   auto func = args.dyncastThis<Callable>();
   if (LLVM_UNLIKELY(!func)) {
-    return runtime->raiseTypeError("Can't call() non-callable");
+    return runtime.raiseTypeError("Can't call() non-callable");
   }
 
   uint32_t argCount = args.getArgCount();
   ScopedNativeCallFrame newFrame{
       runtime, argCount ? argCount - 1 : 0, *func, false, args.getArg(0)};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
-    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+    return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   for (uint32_t i = 1; i < argCount; ++i) {
     newFrame->getArgRef(i - 1) = args.getArg(i);
   }
@@ -254,10 +253,10 @@ functionPrototypeCall(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-functionPrototypeBind(void *, Runtime *runtime, NativeArgs args) {
+functionPrototypeBind(void *, Runtime &runtime, NativeArgs args) {
   auto target = Handle<Callable>::dyn_vmcast(args.getThisHandle());
   if (!target) {
-    return runtime->raiseTypeError("Can't bind() a non-callable");
+    return runtime.raiseTypeError("Can't bind() a non-callable");
   }
 
   return BoundFunction::create(
@@ -265,7 +264,7 @@ functionPrototypeBind(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-functionPrototypeSymbolHasInstance(void *, Runtime *runtime, NativeArgs args) {
+functionPrototypeSymbolHasInstance(void *, Runtime &runtime, NativeArgs args) {
   /// 1. Let F be the this value.
   auto F = args.getThisHandle();
   /// 2. Return OrdinaryHasInstance(F, V).

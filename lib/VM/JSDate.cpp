@@ -34,12 +34,12 @@ void JSDateBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 PseudoHandle<JSDate>
-JSDate::create(Runtime *runtime, double value, Handle<JSObject> parentHandle) {
-  auto *cell = runtime->makeAFixed<JSDate>(
+JSDate::create(Runtime &runtime, double value, Handle<JSObject> parentHandle) {
+  auto *cell = runtime.makeAFixed<JSDate>(
       runtime,
       value,
       parentHandle,
-      runtime->getHiddenClassForPrototype(
+      runtime.getHiddenClassForPrototype(
           *parentHandle, numOverlapSlots<JSDate>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }

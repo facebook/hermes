@@ -33,7 +33,7 @@ class JSRegExpStringIterator : public JSObject {
   }
 
   static PseudoHandle<JSRegExpStringIterator> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> R,
       Handle<StringPrimitive> S,
       bool global,
@@ -42,11 +42,11 @@ class JSRegExpStringIterator : public JSObject {
   /// Iterate to the next element and return.
   static CallResult<HermesValue> nextElement(
       Handle<JSRegExpStringIterator> self,
-      Runtime *runtime);
+      Runtime &runtime);
 
  public:
   JSRegExpStringIterator(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       Handle<JSObject> iteratedRegExp,
@@ -54,8 +54,8 @@ class JSRegExpStringIterator : public JSObject {
       bool global,
       bool unicode)
       : JSObject(runtime, &vt.base, *parent, *clazz),
-        iteratedRegExp_(runtime, *iteratedRegExp, &runtime->getHeap()),
-        iteratedString_(runtime, *iteratedString, &runtime->getHeap()),
+        iteratedRegExp_(runtime, *iteratedRegExp, &runtime.getHeap()),
+        iteratedString_(runtime, *iteratedString, &runtime.getHeap()),
         global_(global),
         unicode_(unicode) {}
 

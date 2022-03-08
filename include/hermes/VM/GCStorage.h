@@ -18,8 +18,8 @@ namespace vm {
 class GCStorage {
  public:
   GCStorage(
-      GCBase::GCCallbacks *gcCallbacks,
-      PointerBase *pointerBase,
+      GCBase::GCCallbacks &gcCallbacks,
+      PointerBase &pointerBase,
       const GCConfig &gcConfig,
       std::shared_ptr<CrashManager> crashMgr,
       std::shared_ptr<StorageProvider> provider,

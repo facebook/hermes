@@ -35,17 +35,17 @@ static inline bool shouldSingleStep(OpCode opCode) {
 }
 
 static StringView getFunctionName(
-    Runtime *runtime,
+    Runtime &runtime,
     const CodeBlock *codeBlock) {
   auto functionName = codeBlock->getNameMayAllocate();
   if (functionName == Predefined::getSymbolID(Predefined::emptyString)) {
     functionName = Predefined::getSymbolID(Predefined::anonymous);
   }
-  return runtime->getIdentifierTable().getStringView(runtime, functionName);
+  return runtime.getIdentifierTable().getStringView(runtime, functionName);
 }
 
 static std::string getFileNameAsUTF8(
-    Runtime *runtime,
+    Runtime &runtime,
     RuntimeModule *runtimeModule,
     uint32_t filenameId) {
   const auto *debugInfo = runtimeModule->getBytecode()->getDebugInfo();
@@ -56,7 +56,7 @@ static std::string getFileNameAsUTF8(
 /// including the global scope.
 /// \return none if the scope chain is unavailable.
 static llvh::Optional<ScopeChain> scopeChainForBlock(
-    Runtime *runtime,
+    Runtime &runtime,
     const CodeBlock *cb) {
   OptValue<uint32_t> lexicalDataOffset = cb->getDebugLexicalDataOffset();
   if (!lexicalDataOffset)
@@ -104,7 +104,7 @@ static llvh::Optional<ScopeChain> scopeChainForBlock(
 }
 
 void Debugger::triggerAsyncPause(AsyncPauseKind kind) {
-  runtime_->triggerDebuggerAsyncBreak(kind);
+  runtime_.triggerDebuggerAsyncBreak(kind);
 }
 
 llvh::Optional<uint32_t> Debugger::findJumpTarget(
@@ -134,7 +134,7 @@ void Debugger::breakAtPossibleNextInstructions(InterpreterState &state) {
   // the last instruction.
   if (nextOffset < state.codeBlock->getOpcodeArray().size()) {
     setStepBreakpoint(
-        state.codeBlock, nextOffset, runtime_->getCurrentFrameOffset());
+        state.codeBlock, nextOffset, runtime_.getCurrentFrameOffset());
   }
   // If the instruction is a jump, set a break point at the possible
   // jump target; otherwise, only break at the next instruction.
@@ -149,7 +149,7 @@ void Debugger::breakAtPossibleNextInstructions(InterpreterState &state) {
     setStepBreakpoint(
         state.codeBlock,
         jumpTarget.getValue(),
-        runtime_->getCurrentFrameOffset());
+        runtime_.getCurrentFrameOffset());
   }
 }
 
@@ -207,7 +207,7 @@ ExecutionStatus Debugger::runDebugger(
       } else if (
           breakpointOpt->callStackDepths.count(0) ||
           breakpointOpt->callStackDepths.count(
-              runtime_->getCurrentFrameOffset())) {
+              runtime_.getCurrentFrameOffset())) {
         // This is in fact a temp breakpoint we want to stop on right now.
         assert(curStepMode_ && "no step to finish");
         clearTempBreakpoints();
@@ -563,7 +563,7 @@ auto Debugger::getStackTrace(InterpreterState state) const -> StackTrace {
   const CodeBlock *codeBlock = state.codeBlock;
   uint32_t ipOffset = state.offset;
   GCScopeMarkerRAII marker2{runtime_};
-  for (auto cf : runtime_->getStackFrames()) {
+  for (auto cf : runtime_.getStackFrames()) {
     marker2.flush();
     CallFrameInfo frameInfo = getCallFrameInfo(codeBlock, ipOffset);
     if (auto callableHandle = Handle<Callable>::dyn_vmcast(
@@ -788,7 +788,7 @@ void Debugger::setEntryBreakpointForCodeBlock(CodeBlock *codeBlock) {
 }
 
 void Debugger::breakpointCaller() {
-  auto callFrames = runtime_->getStackFrames();
+  auto callFrames = runtime_.getStackFrames();
 
   assert(callFrames.begin() != callFrames.end() && "empty call stack");
 
@@ -819,7 +819,7 @@ void Debugger::breakpointCaller() {
   assert(codeBlock && "The code block must exist since we have ip");
   // Track the call stack depth that the breakpoint would be set on.
   uint32_t offset = codeBlock->getNextOffset(codeBlock->getOffsetOf(ip));
-  setStepBreakpoint(codeBlock, offset, runtime_->calcFrameOffset(frameIt));
+  setStepBreakpoint(codeBlock, offset, runtime_.calcFrameOffset(frameIt));
 }
 
 void Debugger::breakpointExceptionHandler(const InterpreterState &state) {
@@ -874,10 +874,10 @@ ExecutionStatus Debugger::stepInstruction(InterpreterState &state) {
   if (locationOpt.hasValue()) {
     // Temporarily uninstall the breakpoint so we can run the real instruction.
     codeBlock->uninstallBreakpointAtOffset(offset, locationOpt->opCode);
-    status = runtime_->stepFunction(newState);
+    status = runtime_.stepFunction(newState);
     codeBlock->installBreakpointAtOffset(offset);
   } else {
-    status = runtime_->stepFunction(newState);
+    status = runtime_.stepFunction(newState);
   }
 
   if (status != ExecutionStatus::EXCEPTION)
@@ -886,7 +886,7 @@ ExecutionStatus Debugger::stepInstruction(InterpreterState &state) {
 }
 
 auto Debugger::getLexicalInfoInFrame(uint32_t frame) const -> LexicalInfo {
-  auto frameInfo = runtime_->stackFrameInfoByIndex(frame);
+  auto frameInfo = runtime_.stackFrameInfoByIndex(frame);
   assert(frameInfo && "Invalid frame");
 
   LexicalInfo result;
@@ -922,7 +922,7 @@ HermesValue Debugger::getVariableInFrame(
     uint32_t variableIndex,
     std::string *outName) const {
   GCScope gcScope{runtime_};
-  auto frameInfo = runtime_->stackFrameInfoByIndex(frame);
+  auto frameInfo = runtime_.stackFrameInfoByIndex(frame);
   assert(frameInfo && "Invalid frame");
 
   const HermesValue undefined = HermesValue::encodeUndefinedValue();
@@ -960,12 +960,12 @@ HermesValue Debugger::getVariableInFrame(
 }
 
 HermesValue Debugger::getThisValue(uint32_t frame) const {
-  const auto frameInfo = runtime_->stackFrameInfoByIndex(frame);
+  const auto frameInfo = runtime_.stackFrameInfoByIndex(frame);
   assert(frameInfo && "Invalid frame");
 
   if (frameInfo->isGlobal) {
     // "this" value in the global frame is the global object.
-    return runtime_->getGlobal().getHermesValue();
+    return runtime_.getGlobal().getHermesValue();
   }
 
   return frameInfo->frame.getThisArgRef();
@@ -975,9 +975,9 @@ HermesValue Debugger::getExceptionAsEvalResult(
     EvalResultMetadata *outMetadata) {
   outMetadata->isException = true;
 
-  Handle<> thrownValue = runtime_->makeHandle(runtime_->getThrownValue());
+  Handle<> thrownValue = runtime_.makeHandle(runtime_.getThrownValue());
   assert(!thrownValue->isEmpty() && "Runtime did not throw");
-  runtime_->clearThrownValue();
+  runtime_.clearThrownValue();
 
   // Set the exceptionDetails.text to toString_RJS() of the thrown value.
   // TODO: rationalize what should happen if toString_RJS() itself throws.
@@ -1014,7 +1014,7 @@ HermesValue Debugger::evalInFrame(
   GCScope gcScope{runtime_};
   *outMetadata = EvalResultMetadata{};
   uint32_t frame = args.frameIdx;
-  auto frameInfo = runtime_->stackFrameInfoByIndex(frame);
+  auto frameInfo = runtime_.stackFrameInfoByIndex(frame);
   if (!frameInfo) {
     return HermesValue::encodeUndefinedValue();
   }
@@ -1042,8 +1042,8 @@ HermesValue Debugger::evalInFrame(
 
   // Interpreting code requires that the `thrownValue_` is empty.
   // Save it temporarily so we can restore it after the evalInEnvironment.
-  Handle<> savedThrownValue = runtime_->makeHandle(runtime_->getThrownValue());
-  runtime_->clearThrownValue();
+  Handle<> savedThrownValue = runtime_.makeHandle(runtime_.getThrownValue());
+  runtime_.clearThrownValue();
 
   CallResult<HermesValue> result = evalInEnvironment(
       runtime_,
@@ -1063,7 +1063,7 @@ HermesValue Debugger::evalInFrame(
     resultHandle = *result;
   }
 
-  runtime_->setThrownValue(savedThrownValue.getHermesValue());
+  runtime_.setThrownValue(savedThrownValue.getHermesValue());
   return *resultHandle;
 }
 
@@ -1071,14 +1071,14 @@ llvh::Optional<std::pair<InterpreterState, uint32_t>> Debugger::findCatchTarget(
     const InterpreterState &state) const {
   auto *codeBlock = state.codeBlock;
   auto offset = state.offset;
-  auto frames = runtime_->getStackFrames();
+  auto frames = runtime_.getStackFrames();
   for (auto it = frames.begin(), e = frames.end(); it != e; ++it) {
     if (codeBlock) {
       auto handlerOffset = codeBlock->findCatchTargetOffset(offset);
       if (handlerOffset != -1) {
         return std::make_pair(
             InterpreterState(codeBlock, handlerOffset),
-            runtime_->calcFrameOffset(it));
+            runtime_.calcFrameOffset(it));
       }
     }
     codeBlock = it->getSavedCodeBlock();
@@ -1106,7 +1106,7 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
   // If it is, we compile the CodeBlock and start over,
   // skipping any CodeBlocks we've seen before.
   GCScope gcScope{runtime_};
-  for (auto &runtimeModule : runtime_->getRuntimeModules()) {
+  for (auto &runtimeModule : runtime_.getRuntimeModules()) {
     llvh::DenseSet<CodeBlock *> visited{};
     std::vector<CodeBlock *> toVisit{};
     for (uint32_t i = 0, e = runtimeModule.getNumCodeBlocks(); i < e; ++i) {
@@ -1165,8 +1165,8 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
   // likely to match the user's intention.
   // Specifically, this will check any user source before runtime modules loaded
   // by the VM.
-  for (auto it = runtime_->getRuntimeModules().rbegin();
-       it != runtime_->getRuntimeModules().rend();
+  for (auto it = runtime_.getRuntimeModules().rbegin();
+       it != runtime_.getRuntimeModules().rend();
        ++it) {
     auto &runtimeModule = *it;
     GCScope gcScope{runtime_};
@@ -1264,7 +1264,7 @@ void Debugger::unresolveBreakpointLocation(Breakpoint &breakpoint) {
 }
 
 auto Debugger::getSourceMappingUrl(ScriptID scriptId) const -> String {
-  for (auto &runtimeModule : runtime_->getRuntimeModules()) {
+  for (auto &runtimeModule : runtime_.getRuntimeModules()) {
     if (!runtimeModule.isInitialized()) {
       // Uninitialized module.
       continue;

@@ -46,27 +46,27 @@ void JSArrayBufferBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 PseudoHandle<JSArrayBuffer> JSArrayBuffer::create(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> parentHandle) {
-  auto *cell = runtime->makeAFixed<JSArrayBuffer, HasFinalizer::Yes>(
+  auto *cell = runtime.makeAFixed<JSArrayBuffer, HasFinalizer::Yes>(
       runtime,
       parentHandle,
-      runtime->getHiddenClassForPrototype(
+      runtime.getHiddenClassForPrototype(
           *parentHandle, numOverlapSlots<JSArrayBuffer>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 CallResult<Handle<JSArrayBuffer>> JSArrayBuffer::clone(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSArrayBuffer> src,
     size_type srcOffset,
     size_type srcSize) {
   if (!src->attached()) {
-    return runtime->raiseTypeError("Cannot clone from a detached buffer");
+    return runtime.raiseTypeError("Cannot clone from a detached buffer");
   }
 
-  auto arr = runtime->makeHandle(JSArrayBuffer::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->arrayBufferPrototype)));
+  auto arr = runtime.makeHandle(JSArrayBuffer::create(
+      runtime, Handle<JSObject>::vmcast(&runtime.arrayBufferPrototype)));
 
   // Don't need to zero out the data since we'll be copying into it immediately.
   if (arr->createDataBlock(runtime, srcSize, false) ==
@@ -104,7 +104,7 @@ void JSArrayBuffer::copyDataBlockBytes(
 }
 
 JSArrayBuffer::JSArrayBuffer(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> parent,
     Handle<HiddenClass> clazz)
     : JSObject(runtime, &vt.base, *parent, *clazz),
@@ -176,8 +176,8 @@ void JSArrayBuffer::detach(GC *gc) {
 }
 
 ExecutionStatus
-JSArrayBuffer::createDataBlock(Runtime *runtime, size_type size, bool zero) {
-  detach(&runtime->getHeap());
+JSArrayBuffer::createDataBlock(Runtime &runtime, size_type size, bool zero) {
+  detach(&runtime.getHeap());
   if (size == 0) {
     // Even though there is no storage allocated, the spec requires an empty
     // ArrayBuffer to still be considered as attached.
@@ -186,8 +186,8 @@ JSArrayBuffer::createDataBlock(Runtime *runtime, size_type size, bool zero) {
   }
   // If an external allocation of this size would exceed the GC heap size,
   // raise RangeError.
-  if (LLVM_UNLIKELY(!runtime->getHeap().canAllocExternalMemory(size))) {
-    return runtime->raiseRangeError(
+  if (LLVM_UNLIKELY(!runtime.getHeap().canAllocExternalMemory(size))) {
+    return runtime.raiseRangeError(
         "Cannot allocate a data block for the ArrayBuffer");
   }
 
@@ -197,12 +197,12 @@ JSArrayBuffer::createDataBlock(Runtime *runtime, size_type size, bool zero) {
                : static_cast<uint8_t *>(malloc(sizeof(uint8_t) * size));
   if (data_ == nullptr) {
     // Failed to allocate.
-    return runtime->raiseRangeError(
+    return runtime.raiseRangeError(
         "Cannot allocate a data block for the ArrayBuffer");
   } else {
     attached_ = true;
     size_ = size;
-    runtime->getHeap().creditExternalMemory(this, size);
+    runtime.getHeap().creditExternalMemory(this, size);
     return ExecutionStatus::RETURNED;
   }
 }

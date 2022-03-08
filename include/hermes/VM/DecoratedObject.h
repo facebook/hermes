@@ -40,7 +40,7 @@ class DecoratedObject : public JSObject {
   /// numOverlaps, which is currently 3.
   /// If allocation fails, the GC declares an OOM.
   static PseudoHandle<DecoratedObject> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parentHandle,
       std::unique_ptr<Decoration> decoration,
       unsigned int additionalSlotCount = 0);
@@ -65,7 +65,7 @@ class DecoratedObject : public JSObject {
   /// the create method.
   static SmallHermesValue getAdditionalSlotValue(
       DecoratedObject *self,
-      Runtime *runtime,
+      Runtime &runtime,
       unsigned index) {
     return JSObject::getInternalProperty(
         self, runtime, numOverlapSlots<DecoratedObject>() + index);
@@ -76,7 +76,7 @@ class DecoratedObject : public JSObject {
   /// the create method.
   static void setAdditionalSlotValue(
       DecoratedObject *self,
-      Runtime *runtime,
+      Runtime &runtime,
       unsigned index,
       SmallHermesValue value) {
     JSObject::setInternalProperty(
@@ -100,7 +100,7 @@ class DecoratedObject : public JSObject {
   ~DecoratedObject() = default;
 
   DecoratedObject(
-      Runtime *runtime,
+      Runtime &runtime,
       const ObjectVTable *vt,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,

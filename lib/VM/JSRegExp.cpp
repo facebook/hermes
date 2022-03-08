@@ -55,26 +55,26 @@ void JSRegExpBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 PseudoHandle<JSRegExp> JSRegExp::create(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> parentHandle) {
-  auto *cell = runtime->makeAFixed<JSRegExp, HasFinalizer::Yes>(
+  auto *cell = runtime.makeAFixed<JSRegExp, HasFinalizer::Yes>(
       runtime,
       parentHandle,
-      runtime->getHiddenClassForPrototype(
+      runtime.getHiddenClassForPrototype(
           *parentHandle, numOverlapSlots<JSRegExp>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 void JSRegExp::initialize(
     Handle<JSRegExp> selfHandle,
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> pattern,
     Handle<StringPrimitive> flags,
     llvh::ArrayRef<uint8_t> bytecode) {
   assert(
       pattern && flags &&
       "Null pattern and/or flags passed to JSRegExp::initialize");
-  selfHandle->pattern_.set(runtime, *pattern, &runtime->getHeap());
+  selfHandle->pattern_.set(runtime, *pattern, &runtime.getHeap());
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.enumerable = 0;
@@ -96,7 +96,7 @@ void JSRegExp::initialize(
 
 ExecutionStatus JSRegExp::initialize(
     Handle<JSRegExp> selfHandle,
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSRegExp> otherHandle,
     Handle<StringPrimitive> flags) {
   llvh::SmallVector<char16_t, 16> flagsText16;
@@ -104,10 +104,10 @@ ExecutionStatus JSRegExp::initialize(
 
   auto sflags = regex::SyntaxFlags::fromString(flagsText16);
   if (!sflags) {
-    return runtime->raiseSyntaxError("Invalid RegExp: Invalid flags");
+    return runtime.raiseSyntaxError("Invalid RegExp: Invalid flags");
   }
 
-  auto pattern = runtime->makeHandle(getPattern(otherHandle.get(), runtime));
+  auto pattern = runtime.makeHandle(getPattern(otherHandle.get(), runtime));
 
   // Fast path to avoid recompiling the RegExp if the flags match
   if (LLVM_LIKELY(
@@ -126,7 +126,7 @@ ExecutionStatus JSRegExp::initialize(
 /// ES11 21.2.3.2.2 RegExpInitialize ( obj, pattern, flags )
 ExecutionStatus JSRegExp::initialize(
     Handle<JSRegExp> selfHandle,
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> pattern,
     Handle<StringPrimitive> flags) {
   assert(
@@ -142,7 +142,7 @@ ExecutionStatus JSRegExp::initialize(
   regex::Regex<regex::UTF16RegexTraits> regex(patternText16, flagsText16);
 
   if (!regex.valid()) {
-    return runtime->raiseSyntaxError(
+    return runtime.raiseSyntaxError(
         TwineChar16("Invalid RegExp: ") +
         regex::constants::messageForError(regex.getError()));
   }
@@ -167,13 +167,13 @@ void JSRegExp::initializeBytecode(llvh::ArrayRef<uint8_t> bytecode) {
 
 PseudoHandle<StringPrimitive> JSRegExp::getPattern(
     JSRegExp *self,
-    PointerBase *base) {
+    PointerBase &base) {
   return createPseudoHandle(self->pattern_.get(base));
 }
 
 template <typename CharT, typename Traits>
 CallResult<RegExpMatch> performSearch(
-    Runtime *runtime,
+    Runtime &runtime,
     llvh::ArrayRef<uint8_t> bytecode,
     const CharT *start,
     uint32_t stringLength,
@@ -188,7 +188,7 @@ CallResult<RegExpMatch> performSearch(
       &nativeMatchRanges,
       matchFlags);
   if (matchResult == regex::MatchRuntimeResult::StackOverflow) {
-    return runtime->raiseRangeError("Maximum regex stack depth reached");
+    return runtime.raiseRangeError("Maximum regex stack depth reached");
   } else if (matchResult == regex::MatchRuntimeResult::NoMatch) {
     return RegExpMatch{}; // not found.
   }
@@ -213,7 +213,7 @@ CallResult<RegExpMatch> performSearch(
 
 CallResult<RegExpMatch> JSRegExp::search(
     Handle<JSRegExp> selfHandle,
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> strHandle,
     uint32_t searchStartOffset) {
   assert(selfHandle->bytecode_ && "Missing bytecode");
@@ -257,9 +257,9 @@ CallResult<RegExpMatch> JSRegExp::search(
   if (LLVM_UNLIKELY(matchResult == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   } else if (!matchResult->empty()) {
-    runtime->regExpLastInput = strHandle.getHermesValue();
-    runtime->regExpLastRegExp = selfHandle.getHermesValue();
-    runtime->regExpLastMatch = *matchResult;
+    runtime.regExpLastInput = strHandle.getHermesValue();
+    runtime.regExpLastRegExp = selfHandle.getHermesValue();
+    runtime.regExpLastMatch = *matchResult;
   }
   return matchResult;
 }
@@ -323,7 +323,7 @@ void JSRegExp::_snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
 /// pattern.
 CallResult<HermesValue> JSRegExp::escapePattern(
     Handle<StringPrimitive> pattern,
-    Runtime *runtime) {
+    Runtime &runtime) {
   SmallU16String<32> result;
   result.reserve(pattern->getStringLength());
   auto patternView = StringPrimitive::createStringView(runtime, pattern);

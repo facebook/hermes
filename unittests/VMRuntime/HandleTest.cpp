@@ -148,8 +148,8 @@ TEST_F(HandleTest, MarkTest) {
 
 /// Make sure that related Handle-s can be assigned.
 TEST_F(HandleTest, ScopedPointerConstructorTest) {
-  auto function = runtime->makeHandle<JSFunction>(
-      JSFunction::create(runtime, domain, runtime->makeNullHandle<JSObject>()));
+  auto function = runtime.makeHandle<JSFunction>(
+      JSFunction::create(runtime, domain, runtime.makeNullHandle<JSObject>()));
   Handle<JSObject> obj = function;
   ASSERT_EQ(function.get(), obj.get());
 }

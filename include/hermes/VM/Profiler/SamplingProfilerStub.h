@@ -16,7 +16,7 @@ namespace vm {
 /// No-op implementation of wall-time based JS sampling profiler.
 class SamplingProfiler {
  public:
-  explicit SamplingProfiler(Runtime *){};
+  explicit SamplingProfiler(Runtime &){};
 
   /// Mark roots that are kept alive by the SamplingProfiler.
   void markRoots(RootAcceptor &acceptor) {}

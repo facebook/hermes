@@ -47,11 +47,11 @@ TEST_F(BytecodeProviderTest, IdentifierHashesPreserved) {
   // Each time the identifiers are incremented, so we expect the sum to be the
   // number of identifiers times the number of iterations.
   for (uint32_t i = 1; i <= 64; i++) {
-    auto cr = runtime->runBytecode(
+    auto cr = runtime.runBytecode(
         bcProvider,
         RuntimeModuleFlags{},
         "sourceURL",
-        runtime->makeNullHandle<Environment>());
+        runtime.makeNullHandle<Environment>());
     ASSERT_TRUE(cr == ExecutionStatus::RETURNED);
     EXPECT_EQ(i * identifierCount, cr->getNumberAs<uint32_t>());
   }

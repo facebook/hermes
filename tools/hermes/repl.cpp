@@ -311,16 +311,16 @@ static std::error_code loadHistoryFile(llvh::SmallString<128> &historyFile) {
 int repl(const vm::RuntimeConfig &config) {
   std::shared_ptr<vm::Runtime> runtime = vm::Runtime::create(config);
 
-  vm::GCScope gcScope(runtime.get());
-  ConsoleHostContext ctx{runtime.get()};
-  installConsoleBindings(runtime.get(), ctx);
+  vm::GCScope gcScope(*runtime);
+  ConsoleHostContext ctx{*runtime};
+  installConsoleBindings(*runtime, ctx);
 
   std::string code;
   code.reserve(256);
 
   auto global = runtime->getGlobal();
   auto propRes = vm::JSObject::getNamed_RJS(
-      global, runtime.get(), vm::Predefined::getSymbolID(vm::Predefined::eval));
+      global, *runtime, vm::Predefined::getSymbolID(vm::Predefined::eval));
   if (propRes == vm::ExecutionStatus::EXCEPTION) {
     runtime->printException(
         llvh::outs(), runtime->makeHandle(runtime->getThrownValue()));
@@ -335,9 +335,9 @@ int repl(const vm::RuntimeConfig &config) {
 
   auto callRes = evalFn->executeCall1(
       evalFn,
-      runtime.get(),
+      *runtime,
       global,
-      vm::StringPrimitive::createNoThrow(runtime.get(), evaluateLineString)
+      vm::StringPrimitive::createNoThrow(*runtime, evaluateLineString)
           .getHermesValue());
   if (callRes == vm::ExecutionStatus::EXCEPTION) {
     llvh::raw_ostream &errs = hasColors
@@ -365,7 +365,7 @@ int repl(const vm::RuntimeConfig &config) {
   }
 #endif
 
-  vm::MutableHandle<> resHandle{runtime.get()};
+  vm::MutableHandle<> resHandle{*runtime};
   // SetUnbuffered because there is no explicit flush after prompt (>>).
   // There is also no explicitly flush at end of line. (An automatic flush
   // mechanism is not guaranteed to be present, from my experiment on Windows)
@@ -400,15 +400,15 @@ int repl(const vm::RuntimeConfig &config) {
     }
 
     // Ensure we don't keep accumulating handles.
-    vm::GCScopeMarkerRAII gcMarker{runtime.get()};
+    vm::GCScopeMarkerRAII gcMarker{*runtime};
 
     bool threwException = false;
 
     if ((callRes = evaluateLineFn->executeCall2(
              evaluateLineFn,
-             runtime.get(),
+             *runtime,
              global,
-             vm::StringPrimitive::createNoThrow(runtime.get(), code)
+             vm::StringPrimitive::createNoThrow(*runtime, code)
                  .getHermesValue(),
              vm::HermesValue::encodeBoolValue(hasColors))) ==
         vm::ExecutionStatus::EXCEPTION) {
@@ -424,15 +424,15 @@ int repl(const vm::RuntimeConfig &config) {
     }
 
     // Perform a microtask checkpoint after running script.
-    microtask::performCheckpoint(runtime.get());
+    microtask::performCheckpoint(*runtime);
 
     if (!ctx.tasksEmpty()) {
       // Run the tasks until there are no more.
-      vm::MutableHandle<vm::Callable> task{runtime.get()};
+      vm::MutableHandle<vm::Callable> task{*runtime};
       while (auto optTask = ctx.dequeueTask()) {
         task = std::move(*optTask);
         auto taskCallRes = vm::Callable::executeCall0(
-            task, runtime.get(), vm::Runtime::getUndefinedValue(), false);
+            task, *runtime, vm::Runtime::getUndefinedValue(), false);
         if (LLVM_UNLIKELY(taskCallRes == vm::ExecutionStatus::EXCEPTION)) {
           threwException = true;
           runtime->printException(
@@ -445,7 +445,7 @@ int repl(const vm::RuntimeConfig &config) {
         }
 
         // Perform a microtask checkpoint at the end of every task tick.
-        microtask::performCheckpoint(runtime.get());
+        microtask::performCheckpoint(*runtime);
       }
     }
 
@@ -463,7 +463,7 @@ int repl(const vm::RuntimeConfig &config) {
     vm::operator<<(
         llvh::outs(),
         vm::StringPrimitive::createStringView(
-            runtime.get(), vm::Handle<vm::StringPrimitive>::vmcast(resHandle))
+            *runtime, vm::Handle<vm::StringPrimitive>::vmcast(resHandle))
             .getUTF16Ref(tmp))
         << "\n";
     code.clear();

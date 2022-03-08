@@ -54,7 +54,7 @@ class SymbolRegistry {
 
   /// Initialize the data structures of the SymbolRegistry.
   /// Must be performed before any other operations can be done.
-  void init(Runtime *runtime);
+  void init(Runtime &runtime);
 
   /// Mark the Strings and Symbols in the registry as roots.
   void markRoots(RootAcceptor &acceptor);
@@ -65,7 +65,7 @@ class SymbolRegistry {
   /// Note: We return the raw SymbolID because the registry will necessarily
   /// keep the SymbolID alive.
   CallResult<SymbolID> getSymbolForKey(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<StringPrimitive> key);
 
   /// \return true if \p symbol has been registered in the SymbolRegistry.

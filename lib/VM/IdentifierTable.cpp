@@ -37,25 +37,25 @@ IdentifierTable::IdentifierTable() {
 }
 
 CallResult<Handle<SymbolID>> IdentifierTable::getSymbolHandle(
-    Runtime *runtime,
+    Runtime &runtime,
     UTF16Ref str,
     uint32_t hash) {
   auto cr = getOrCreateIdentifier(
       runtime, str, Runtime::makeNullHandle<StringPrimitive>(), hash);
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
-  return runtime->makeHandle(*cr);
+  return runtime.makeHandle(*cr);
 }
 
 CallResult<Handle<SymbolID>> IdentifierTable::getSymbolHandle(
-    Runtime *runtime,
+    Runtime &runtime,
     ASCIIRef str,
     uint32_t hash) {
   auto cr = getOrCreateIdentifier(
       runtime, str, Runtime::makeNullHandle<StringPrimitive>(), hash);
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
-  return runtime->makeHandle(*cr);
+  return runtime.makeHandle(*cr);
 }
 
 SymbolID IdentifierTable::registerLazyIdentifier(ASCIIRef str) {
@@ -75,16 +75,16 @@ SymbolID IdentifierTable::registerLazyIdentifier(UTF16Ref str, uint32_t hash) {
 }
 
 CallResult<Handle<SymbolID>> IdentifierTable::getSymbolHandleFromPrimitive(
-    Runtime *runtime,
+    Runtime &runtime,
     PseudoHandle<StringPrimitive> str) {
   assert(str && "null string primitive");
   if (str->isUniqued()) {
     // If the string was already uniqued, we can return directly.
     SymbolID id = str->getUniqueID();
     symbolReadBarrier(id.unsafeGetIndex());
-    return runtime->makeHandle(id);
+    return runtime.makeHandle(id);
   }
-  auto handle = runtime->makeHandle(std::move(str));
+  auto handle = runtime.makeHandle(std::move(str));
   // Force the string primitive to flatten if it's a rope.
   handle = StringPrimitive::ensureFlat(runtime, handle);
   auto cr = handle->isASCII()
@@ -92,10 +92,10 @@ CallResult<Handle<SymbolID>> IdentifierTable::getSymbolHandleFromPrimitive(
       : getOrCreateIdentifier(runtime, handle->castToUTF16Ref(), handle);
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
-  return runtime->makeHandle(*cr);
+  return runtime.makeHandle(*cr);
 }
 
-StringPrimitive *IdentifierTable::getStringPrim(Runtime *runtime, SymbolID id) {
+StringPrimitive *IdentifierTable::getStringPrim(Runtime &runtime, SymbolID id) {
   auto &entry = getLookupTableEntry(id);
   if (entry.isStringPrim()) {
     return entry.getStringPrimRef();
@@ -106,7 +106,7 @@ StringPrimitive *IdentifierTable::getStringPrim(Runtime *runtime, SymbolID id) {
   return materializeLazyIdentifier(runtime, id);
 }
 
-StringView IdentifierTable::getStringView(Runtime *runtime, SymbolID id) const {
+StringView IdentifierTable::getStringView(Runtime &runtime, SymbolID id) const {
   auto &entry = getLookupTableEntry(id);
   if (entry.isStringPrim()) {
     // The const_cast is a mechanical requirement as it's not worth it to
@@ -123,7 +123,7 @@ StringView IdentifierTable::getStringView(Runtime *runtime, SymbolID id) const {
   return StringView(entry.getLazyUTF16Ref());
 }
 
-StringView IdentifierTable::getStringViewForDev(Runtime *runtime, SymbolID id)
+StringView IdentifierTable::getStringViewForDev(Runtime &runtime, SymbolID id)
     const {
   if (id == SymbolID::empty()) {
     assert(false && "getStringViewForDev on empty SymbolID");
@@ -237,7 +237,7 @@ void IdentifierTable::visitIdentifiers(
 template <typename T, bool Unique>
 CallResult<PseudoHandle<StringPrimitive>>
 IdentifierTable::allocateDynamicString(
-    Runtime *runtime,
+    Runtime &runtime,
     llvh::ArrayRef<T> str,
     Handle<StringPrimitive> primHandle) {
   size_t length = str.size();
@@ -250,7 +250,7 @@ IdentifierTable::allocateDynamicString(
   PseudoHandle<StringPrimitive> result;
   if (StringPrimitive::isExternalLength(length)) {
     if (LLVM_UNLIKELY(length > StringPrimitive::MAX_STRING_LENGTH)) {
-      return runtime->raiseRangeError("String length exceeds limit");
+      return runtime.raiseRangeError("String length exceeds limit");
     }
     std::basic_string<T> stdString(str.begin(), str.end());
     auto cr = ExternalStringPrimitive<T>::createLongLived(
@@ -260,7 +260,7 @@ IdentifierTable::allocateDynamicString(
     }
     result = createPseudoHandle(vmcast<StringPrimitive>(*cr));
   } else {
-    auto *tmp = runtime->makeAVariable<
+    auto *tmp = runtime.makeAVariable<
         DynamicStringPrimitive<T, Unique>,
         HasFinalizer::No,
         LongLived::Yes>(
@@ -312,7 +312,7 @@ uint32_t IdentifierTable::allocIDAndInsert(
 
 template <typename T>
 CallResult<SymbolID> IdentifierTable::getOrCreateIdentifier(
-    Runtime *runtime,
+    Runtime &runtime,
     llvh::ArrayRef<T> str,
     Handle<StringPrimitive> maybeIncomingPrimHandle,
     uint32_t hash) {
@@ -341,7 +341,7 @@ CallResult<SymbolID> IdentifierTable::getOrCreateIdentifier(
   // \code
   // if (maybeIncomingPrimHandle &&
   //     LLVM_UNLIKELY(maybeIncomingPrimHandle->canBeUniqued()) &&
-  //     runtime->getHeap().isLongLived(*maybeIncomingPrimHandle)) {
+  //     runtime.getHeap().isLongLived(*maybeIncomingPrimHandle)) {
   //   return SymbolID::unsafeCreate(
   //       allocIDAndInsert(idx, maybeIncomingPrimHandle.get()));
   // }
@@ -359,7 +359,7 @@ CallResult<SymbolID> IdentifierTable::getOrCreateIdentifier(
 }
 
 StringPrimitive *IdentifierTable::getExistingStringPrimitiveOrNull(
-    Runtime *runtime,
+    Runtime &runtime,
     llvh::ArrayRef<char16_t> str) {
   auto idx = hashTable_.lookupString(str, hashString(str));
   if (!hashTable_.isValid(idx)) {
@@ -395,7 +395,7 @@ SymbolID IdentifierTable::registerLazyIdentifierImpl(
 }
 
 StringPrimitive *IdentifierTable::materializeLazyIdentifier(
-    Runtime *runtime,
+    Runtime &runtime,
     SymbolID id) {
   auto &entry = getLookupTableEntry(id);
   assert(
@@ -403,7 +403,7 @@ StringPrimitive *IdentifierTable::materializeLazyIdentifier(
   // This in theory can throw if running out of memory. However there are only
   // finite number of persistent identifiers, and we should always have enough
   // memory to hold them.
-  PseudoHandle<StringPrimitive> strPrim = runtime->ignoreAllocationFailure(
+  PseudoHandle<StringPrimitive> strPrim = runtime.ignoreAllocationFailure(
       entry.isLazyASCII() ? allocateDynamicString(
                                 runtime,
                                 entry.getLazyASCIIRef(),
@@ -535,11 +535,11 @@ SymbolID IdentifierTable::createNotUniquedLazySymbol(ASCIIRef desc) {
 }
 
 CallResult<SymbolID> IdentifierTable::createNotUniquedSymbol(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> desc) {
   uint32_t nextID = allocNextID();
 
-  if (runtime->getHeap().inYoungGen(desc.get())) {
+  if (runtime.getHeap().inYoungGen(desc.get())) {
     // Need to reallocate in the old gen if the description is in the young gen.
     CallResult<PseudoHandle<StringPrimitive>> longLivedStr = desc->isASCII()
         ? allocateDynamicString<char, /* Unique */ false>(

@@ -26,7 +26,7 @@ class JSTypedArrayBase : public JSObject {
   using Super = JSObject;
 
   CallResult<Handle<JSTypedArrayBase>> allocate(
-      Runtime *runtime,
+      Runtime &runtime,
       size_type length = 0);
 
   /// Allocate a new instance of a TypedArray matching the runtime type of
@@ -36,13 +36,13 @@ class JSTypedArrayBase : public JSObject {
   /// \p beginIndex the first index of \p src to use in the new array.
   /// \p endIndex the last index of \p src to use in the new array.
   static CallResult<Handle<JSTypedArrayBase>> allocateToSameBuffer(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSTypedArrayBase> src,
       size_type beginIndex,
       size_type endIndex);
 
   static CallResult<Handle<JSTypedArrayBase>> allocateSpecies(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSTypedArrayBase> self,
       size_type length);
 
@@ -51,7 +51,7 @@ class JSTypedArrayBase : public JSObject {
   /// If \p checkAttached is true, it will also ensure that the typed array is
   /// attached.
   static ExecutionStatus validateTypedArray(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<> thisArg,
       bool checkAttached = true);
   static bool classof(const GCCell *cell) {
@@ -80,20 +80,20 @@ class JSTypedArrayBase : public JSObject {
   /// \return The underlying array buffer that this TypedArray uses for its
   /// storage.
   /// \pre This cannot be called on a detached TypedArray.
-  JSArrayBuffer *getBuffer(Runtime *runtime) const {
+  JSArrayBuffer *getBuffer(Runtime &runtime) const {
     assert(buffer_ && "Must have some JSArrayBuffer");
     return buffer_.get(runtime);
   }
 
-  uint8_t *begin(PointerBase *base) {
+  uint8_t *begin(PointerBase &base) {
     return buffer_.getNonNull(base)->getDataBlock() + offset_;
   }
-  uint8_t *end(PointerBase *base) {
+  uint8_t *end(PointerBase &base) {
     return begin(base) + getByteLength();
   }
 
   /// \return Whether this JSTypedArrayBase is attached to some buffer.
-  bool attached(Runtime *runtime) const {
+  bool attached(Runtime &runtime) const {
     return buffer_ && buffer_.getNonNull(runtime)->attached();
   }
 
@@ -106,7 +106,7 @@ class JSTypedArrayBase : public JSObject {
   /// Allocates a buffer using \p runtime with \p length number of
   /// elements, each of \p byteWidth size in bytes.
   static ExecutionStatus createBuffer(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSTypedArrayBase> selfObj,
       uint64_t length);
 
@@ -116,7 +116,7 @@ class JSTypedArrayBase : public JSObject {
   ///   src must not be a null handle.
   ///   byteOffset + srcSize <= src->size()
   static ExecutionStatus setToCopyOfBuffer(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSTypedArrayBase> dst,
       JSArrayBuffer::size_type dstByteOffset,
       Handle<JSArrayBuffer> src,
@@ -128,7 +128,7 @@ class JSTypedArrayBase : public JSObject {
   /// whole TypedArray must be copied into the current one.
   /// \pre src must not be a null handle.
   static ExecutionStatus setToCopyOfTypedArray(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSTypedArrayBase> dst,
       size_type dstIndex,
       Handle<JSTypedArrayBase> src,
@@ -144,7 +144,7 @@ class JSTypedArrayBase : public JSObject {
   ///   \p offset + size <= the size of \p buf.
   ///   Neither \p self nor \p buf can be null.
   static void setBuffer(
-      Runtime *runtime,
+      Runtime &runtime,
       JSTypedArrayBase *self,
       JSArrayBuffer *buf,
       size_type offset,
@@ -161,7 +161,7 @@ class JSTypedArrayBase : public JSObject {
   size_type offset_;
 
   explicit JSTypedArrayBase(
-      Runtime *runtime,
+      Runtime &runtime,
       const VTable *vt,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz);
@@ -174,7 +174,7 @@ class JSTypedArrayBase : public JSObject {
   ///   Both dst and src must be the same runtime type of TypedArray.
   ///   For distinct TypedArrays, use `setToCopyOfTypedArray` instead.
   static void setToCopyOfBytes(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSTypedArrayBase> dst,
       size_type dstIndex,
       Handle<JSTypedArrayBase> src,
@@ -183,24 +183,24 @@ class JSTypedArrayBase : public JSObject {
 
   static std::pair<uint32_t, uint32_t> _getOwnIndexedRangeImpl(
       JSObject *selfObj,
-      Runtime *runtime);
+      Runtime &runtime);
 
   static bool
-  _haveOwnIndexedImpl(JSObject *selfObj, Runtime *runtime, uint32_t index);
+  _haveOwnIndexedImpl(JSObject *selfObj, Runtime &runtime, uint32_t index);
   static OptValue<PropertyFlags> _getOwnIndexedPropertyFlagsImpl(
       JSObject *selfObj,
-      Runtime *runtime,
+      Runtime &runtime,
       uint32_t index);
   static bool _deleteOwnIndexedImpl(
       Handle<JSObject> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       uint32_t index);
   /// Check whether all indexed properties satisfy the requirement specified by
   /// \p mode. Either whether they are all non-configurable, or whether they are
   /// all both non-configurable and non-writable.
   static bool _checkAllOwnIndexedImpl(
       JSObject *selfObj,
-      Runtime *runtime,
+      Runtime &runtime,
       ObjectVTable::CheckAllOwnIndexedMode mode);
 
   friend void TypedArrayBaseBuildMeta(
@@ -228,13 +228,13 @@ class JSTypedArray final : public JSTypedArrayBase {
   }
 
   static PseudoHandle<JSTypedArray<T, C>> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> prototype);
 
-  iterator begin(PointerBase *base) {
+  iterator begin(PointerBase &base) {
     return reinterpret_cast<T *>(JSTypedArrayBase::begin(base));
   }
-  iterator end(PointerBase *base) {
+  iterator end(PointerBase &base) {
     return begin(base) + length_;
   }
 
@@ -242,20 +242,20 @@ class JSTypedArray final : public JSTypedArrayBase {
   /// \pre
   ///   This cannot be called on a detached TypedArray.
   ///   i must be less than the length of the TypedArray.
-  T &at(Runtime *runtime, size_type i) {
+  T &at(Runtime &runtime, size_type i) {
     assert(attached(runtime) && "at() requires a JSArrayBuffer");
     assert(i < getLength() && "That index is out of bounds of this TypedArray");
     return begin(runtime)[i];
   }
 
-  static Handle<JSObject> getPrototype(const Runtime *runtime);
-  static Handle<Callable> getConstructor(const Runtime *runtime);
-  static SymbolID getName(Runtime *runtime);
+  static Handle<JSObject> getPrototype(const Runtime &runtime);
+  static Handle<Callable> getConstructor(const Runtime &runtime);
+  static SymbolID getName(Runtime &runtime);
 
   /// Allocate a new instance of a TypedArray of this type.
   /// \p length the length of the TypedArray to create.
   static CallResult<Handle<JSTypedArrayBase>> allocate(
-      Runtime *runtime,
+      Runtime &runtime,
       size_type length = 0);
 
   /// Allocate a new instance of a TypedArray from the species constructor
@@ -263,7 +263,7 @@ class JSTypedArray final : public JSTypedArrayBase {
   /// constructor.
   static CallResult<Handle<JSTypedArrayBase>> allocateSpecies(
       Handle<JSTypedArrayBase> self,
-      Runtime *runtime,
+      Runtime &runtime,
       size_type length);
 
   /// Converts a \p value to the type used by this typed array.
@@ -277,10 +277,10 @@ class JSTypedArray final : public JSTypedArrayBase {
  protected:
   /// Retrieve an indexed property.
   static HermesValue
-  _getOwnIndexedImpl(JSObject *self, Runtime *runtime, uint32_t index);
+  _getOwnIndexedImpl(JSObject *self, Runtime &runtime, uint32_t index);
   static CallResult<bool> _setOwnIndexedImpl(
       Handle<JSObject> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       uint32_t index,
       Handle<> value);
 
@@ -289,7 +289,7 @@ class JSTypedArray final : public JSTypedArrayBase {
   // *BuildMeta functions must be updated to call addJSObjectOverlapSlots.
 
   explicit JSTypedArray(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz);
 };

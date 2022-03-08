@@ -48,10 +48,10 @@ TEST_F(SegmentedArrayTest, AllocLargeArrayThrowsRangeError) {
   auto res = SegmentedArray::create(runtime, SegmentedArray::maxElements() + 1);
   EXPECT_EQ(res, ExecutionStatus::EXCEPTION)
       << "Allocating an array slightly larger than its max size should throw";
-  HermesValue hv = runtime->getThrownValue();
+  HermesValue hv = runtime.getThrownValue();
   EXPECT_EQ(
       vmcast<JSObject>(hv)->getParent(runtime),
-      vmcast<JSObject>(runtime->RangeErrorPrototype))
+      vmcast<JSObject>(runtime.RangeErrorPrototype))
       << "Exception thrown was not a RangeError";
 }
 
@@ -65,12 +65,12 @@ TEST_F(SegmentedArrayTest, AllowTrimming) {
   // as a hint, so check for <=.
   EXPECT_LE(array->capacity(), originalCapacity);
   ASSERT_RETURNED(
-      SegmentedArray::push_back(array, runtime, runtime->makeHandle(0.0_hd)));
+      SegmentedArray::push_back(array, runtime, runtime.makeHandle(0.0_hd)));
   EXPECT_EQ(1, array->size());
 
   // Now force some GCs to happen.
   for (auto i = 0; i < 2; i++) {
-    runtime->collect("test");
+    runtime.collect("test");
   }
 
   // The array should be trimmed.

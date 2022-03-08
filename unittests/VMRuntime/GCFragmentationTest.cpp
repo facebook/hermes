@@ -36,7 +36,7 @@ TEST(GCFragmentationTest, TestCoalescing) {
   using QuarterCell = EmptyCell<AlignedHeapSegment::maxSize() / 4>;
 
   {
-    GCScope scope(&rt);
+    GCScope scope(rt);
     for (size_t i = 0; i < 16 * kNumOGSegments; i++)
       rt.makeHandle(SixteenthCell::create(rt));
   }
@@ -48,7 +48,7 @@ TEST(GCFragmentationTest, TestCoalescing) {
 #endif
 
   {
-    GCScope scope(&rt);
+    GCScope scope(rt);
     for (size_t i = 0; i < 8 * kNumOGSegments; i++)
       rt.makeHandle(EighthCell::create(rt));
   }
@@ -58,7 +58,7 @@ TEST(GCFragmentationTest, TestCoalescing) {
 #endif
 
   {
-    GCScope scope(&rt);
+    GCScope scope(rt);
     for (size_t i = 0; i < 4 * kNumOGSegments; i++)
       rt.makeHandle(QuarterCell::create(rt));
   }

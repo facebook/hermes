@@ -31,21 +31,21 @@ class JSCallableProxy : public NativeFunction {
     return cell->getKind() == CellKind::JSCallableProxyKind;
   }
 
-  static PseudoHandle<JSCallableProxy> create(Runtime *runtime);
+  static PseudoHandle<JSCallableProxy> create(Runtime &runtime);
 
   static CallResult<HermesValue> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> prototype);
 
   void setTargetAndHandler(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> target,
       Handle<JSObject> handler);
 
-  CallResult<bool> isConstructor(Runtime *runtime);
+  CallResult<bool> isConstructor(Runtime &runtime);
 
   JSCallableProxy(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
       : NativeFunction(
@@ -58,11 +58,11 @@ class JSCallableProxy : public NativeFunction {
 
  private:
   static CallResult<HermesValue>
-  _proxyNativeCall(void *, Runtime *runtime, NativeArgs);
+  _proxyNativeCall(void *, Runtime &runtime, NativeArgs);
 
   static CallResult<PseudoHandle<JSObject>> _newObjectImpl(
       Handle<Callable> callable,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> protoHandle);
 
   detail::ProxySlots slots_;

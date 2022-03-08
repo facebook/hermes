@@ -45,18 +45,17 @@ void JSRegExpStringIteratorBuildMeta(
 
 /// ES11 21.2.5.8.1 CreateRegExpStringIterator ( R, S, global, fullUnicode )
 PseudoHandle<JSRegExpStringIterator> JSRegExpStringIterator::create(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> R,
     Handle<StringPrimitive> S,
     bool global,
     bool fullUnicode) {
-  auto proto =
-      Handle<JSObject>::vmcast(&runtime->regExpStringIteratorPrototype);
+  auto proto = Handle<JSObject>::vmcast(&runtime.regExpStringIteratorPrototype);
 
-  auto *cell = runtime->makeAFixed<JSRegExpStringIterator>(
+  auto *cell = runtime.makeAFixed<JSRegExpStringIterator>(
       runtime,
       proto,
-      runtime->getHiddenClassForPrototype(
+      runtime.getHiddenClassForPrototype(
           *proto, numOverlapSlots<JSRegExpStringIterator>()),
       R,
       S,
@@ -68,7 +67,7 @@ PseudoHandle<JSRegExpStringIterator> JSRegExpStringIterator::create(
 /// ES11 21.2.7.1.1 %RegExpStringIteratorPrototype%.next ( ) 4-11
 CallResult<HermesValue> JSRegExpStringIterator::nextElement(
     Handle<JSRegExpStringIterator> O,
-    Runtime *runtime) {
+    Runtime &runtime) {
   // 4. If O.[[Done]] is true, then
   if (O->done_) {
     // a. Return ! CreateIterResultObject(undefined, true).
@@ -76,9 +75,9 @@ CallResult<HermesValue> JSRegExpStringIterator::nextElement(
         .getHermesValue();
   }
   // 5. Let R be O.[[IteratingRegExp]].
-  auto R = runtime->makeHandle(O->iteratedRegExp_);
+  auto R = runtime.makeHandle(O->iteratedRegExp_);
   // 6. Let S be O.[[IteratedString]].
-  auto S = runtime->makeHandle(O->iteratedString_);
+  auto S = runtime.makeHandle(O->iteratedString_);
 
   // 7. Let global be O.[[Global]].
   // 8. Let fullUnicode be O.[[Unicode]].
@@ -100,7 +99,7 @@ CallResult<HermesValue> JSRegExpStringIterator::nextElement(
         .getHermesValue();
   } else {
     // 11. Else,
-    auto matchObj = runtime->makeHandle<JSObject>(match);
+    auto matchObj = runtime.makeHandle<JSObject>(match);
     // a. If global is true, then
     if (O->global_) {
       //  i. Let matchStr be ? ToString(? Get(match, "0")).
@@ -110,20 +109,20 @@ CallResult<HermesValue> JSRegExpStringIterator::nextElement(
         return ExecutionStatus::EXCEPTION;
       }
       auto matchStrRes =
-          toString_RJS(runtime, runtime->makeHandle(std::move(*propRes)));
+          toString_RJS(runtime, runtime.makeHandle(std::move(*propRes)));
       if (matchStrRes == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto matchStr = runtime->makeHandle(std::move(*matchStrRes));
+      auto matchStr = runtime.makeHandle(std::move(*matchStrRes));
 
       //  ii. If matchStr is the empty String, then
       if (matchStr->getStringLength() == 0) {
         // 1. Let thisIndex be ? ToLength(? Get(R, "lastIndex")).
-        auto lastIndexRes = runtime->getNamed(R, PropCacheID::RegExpLastIndex);
+        auto lastIndexRes = runtime.getNamed(R, PropCacheID::RegExpLastIndex);
         if (lastIndexRes == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
         }
-        auto lastIndex = runtime->makeHandle(std::move(*lastIndexRes));
+        auto lastIndex = runtime.makeHandle(std::move(*lastIndexRes));
         auto thisIndex = toLength(runtime, lastIndex);
         if (thisIndex == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;

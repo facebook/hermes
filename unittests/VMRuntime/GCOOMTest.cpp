@@ -43,7 +43,7 @@ static void exceedMaxHeap(
   auto runtime =
       DummyRuntime::create(TestGCConfigFixedSize(kHeapSizeHint, baseConfig));
   DummyRuntime &rt = *runtime;
-  GCScope scope{&rt};
+  GCScope scope{rt};
 
   // Exceed the maximum size of the heap. Note we need 2 extra segments instead
   // of just one because Hades can sometimes hide the memory for a segment
@@ -60,18 +60,18 @@ TEST(GCOOMDeathTest, WeakMapMarking) {
   auto fn = [] {
     auto rt = Runtime::create(
         RuntimeConfig::Builder().withGCConfig(kTestGCConfig).build());
-    auto *runtime = rt.get();
+    auto &runtime = *rt;
     GCScope scope{runtime};
     auto mapResult = JSWeakMap::create(
-        runtime, Handle<JSObject>::vmcast(&runtime->weakMapPrototype));
-    auto map = runtime->makeHandle(std::move(*mapResult));
+        runtime, Handle<JSObject>::vmcast(&runtime.weakMapPrototype));
+    auto map = runtime.makeHandle(std::move(*mapResult));
     MutableHandle<ArrayStorage> keys{runtime};
     keys = vmcast<ArrayStorage>(*ArrayStorage::create(runtime, 5));
     while (true) {
       GCScopeMarkerRAII marker(runtime);
-      auto key = runtime->makeHandle(JSObject::create(runtime));
+      auto key = runtime.makeHandle(JSObject::create(runtime));
       ArrayStorage::push_back(keys, runtime, key);
-      auto value = runtime->makeHandle(JSObject::create(runtime));
+      auto value = runtime.makeHandle(JSObject::create(runtime));
       JSWeakMap::setValue(map, runtime, key, value);
     }
   };

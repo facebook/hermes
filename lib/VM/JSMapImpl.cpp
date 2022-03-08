@@ -50,12 +50,12 @@ const ObjectVTable JSMapImpl<C>::vt{
 
 template <CellKind C>
 PseudoHandle<JSMapImpl<C>> JSMapImpl<C>::create(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> parentHandle) {
-  auto *cell = runtime->makeAFixed<JSMapImpl>(
+  auto *cell = runtime.makeAFixed<JSMapImpl>(
       runtime,
       parentHandle,
-      runtime->getHiddenClassForPrototype(
+      runtime.getHiddenClassForPrototype(
           *parentHandle, numOverlapSlots<JSMapImpl>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
@@ -101,12 +101,12 @@ const ObjectVTable JSMapIteratorImpl<C>::vt = {
 
 template <CellKind C>
 PseudoHandle<JSMapIteratorImpl<C>> JSMapIteratorImpl<C>::create(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> prototype) {
-  auto *cell = runtime->makeAFixed<JSMapIteratorImpl<C>>(
+  auto *cell = runtime.makeAFixed<JSMapIteratorImpl<C>>(
       runtime,
       prototype,
-      runtime->getHiddenClassForPrototype(
+      runtime.getHiddenClassForPrototype(
           *prototype, numOverlapSlots<JSMapIteratorImpl>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }

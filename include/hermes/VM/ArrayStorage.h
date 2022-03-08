@@ -77,13 +77,13 @@ class ArrayStorageBase final
   }
 
   /// Create a new instance with at least the specified \p capacity.
-  static CallResult<HermesValue> create(Runtime *runtime, size_type capacity) {
+  static CallResult<HermesValue> create(Runtime &runtime, size_type capacity) {
     if (LLVM_UNLIKELY(capacity > maxElements())) {
       return throwExcessiveCapacityError(runtime, capacity);
     }
     const auto allocSize = allocationSize(capacity);
-    auto *cell = runtime->makeAVariable<ArrayStorageBase<HVType>>(
-        allocSize, &runtime->getHeap(), allocSize);
+    auto *cell = runtime.makeAVariable<ArrayStorageBase<HVType>>(
+        allocSize, &runtime.getHeap(), allocSize);
     return HermesValue::encodeObjectValue(cell);
   }
 
@@ -102,23 +102,23 @@ class ArrayStorageBase final
 
   /// Create a new long-lived instance with at least the specified \p capacity.
   static CallResult<HermesValue> createLongLived(
-      Runtime *runtime,
+      Runtime &runtime,
       size_type capacity) {
     if (LLVM_UNLIKELY(capacity > maxElements())) {
       return throwExcessiveCapacityError(runtime, capacity);
     }
     const auto allocSize = allocationSize(capacity);
     return HermesValue::encodeObjectValue(
-        runtime->makeAVariable<
+        runtime.makeAVariable<
             ArrayStorageBase<HVType>,
             HasFinalizer::No,
-            LongLived::Yes>(allocSize, &runtime->getHeap(), allocSize));
+            LongLived::Yes>(allocSize, &runtime.getHeap(), allocSize));
   }
 
   /// Create a new instance with at least the specified \p capacity and a size
   /// of \p size. Requires that \p size <= \p capacity.
   static CallResult<HermesValue>
-  create(Runtime *runtime, size_type capacity, size_type size) {
+  create(Runtime &runtime, size_type capacity, size_type size) {
     auto arrRes = create(runtime, capacity);
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -180,7 +180,7 @@ class ArrayStorageBase final
   /// Append the given element to the end (increasing size by 1).
   static ExecutionStatus push_back(
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<> value) {
     auto *self = selfHandle.get();
     const auto currSz = self->size();
@@ -195,7 +195,7 @@ class ArrayStorageBase final
     if (LLVM_LIKELY(currSz < self->capacity())) {
       // Use the constructor of GCHermesValue to use the correct write barrier
       // for uninitialized memory.
-      new (&self->data()[currSz]) GCHVType(hv, &runtime->getHeap());
+      new (&self->data()[currSz]) GCHVType(hv, &runtime.getHeap());
       self->size_.store(currSz + 1, std::memory_order_release);
       return ExecutionStatus::RETURNED;
     }
@@ -203,14 +203,14 @@ class ArrayStorageBase final
   }
 
   /// Pop the last element off the array and return it.
-  HVType pop_back(Runtime *runtime) {
+  HVType pop_back(Runtime &runtime) {
     const size_type sz = size();
     assert(sz > 0 && "Can't pop from empty ArrayStorage");
     HVType val = data()[sz - 1];
     // In Hades, a snapshot write barrier must be executed on the value that is
     // conceptually being changed to null. The write doesn't need to occur, but
     // it is the only correct way to use the write barrier.
-    data()[sz - 1].unreachableWriteBarrier(&runtime->getHeap());
+    data()[sz - 1].unreachableWriteBarrier(&runtime.getHeap());
     // The background thread can't mutate size, so we don't need fetch_sub here.
     // Relaxed is fine, because the GC doesn't care about the order of seeing
     // the length and the individual elements, as long as illegal HermesValues
@@ -223,7 +223,7 @@ class ArrayStorageBase final
   /// reallocating if needed.
   static ExecutionStatus ensureCapacity(
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       size_type capacity);
 
   /// Change the size of the storage to \p newSize. This can increase the size
@@ -231,7 +231,7 @@ class ArrayStorageBase final
   /// the size.
   static ExecutionStatus resize(
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       size_type newSize) {
     return shift(selfHandle, runtime, 0, 0, newSize);
   }
@@ -244,7 +244,7 @@ class ArrayStorageBase final
   /// as \c resize.
   static ExecutionStatus resizeLeft(
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       size_type newSize) {
     return shift(selfHandle, runtime, 0, newSize - selfHandle->size(), newSize);
   }
@@ -259,9 +259,9 @@ class ArrayStorageBase final
 
   static void resizeWithinCapacity(
       ArrayStorageBase<HVType> *self,
-      Runtime *runtime,
+      Runtime &runtime,
       size_type newSize) {
-    resizeWithinCapacity(self, &runtime->getHeap(), newSize);
+    resizeWithinCapacity(self, &runtime.getHeap(), newSize);
   }
 
  private:
@@ -280,14 +280,14 @@ class ArrayStorageBase final
   /// capacity allocated, and the max that is allowed.
   /// \returns ExecutionStatus::EXCEPTION always.
   static ExecutionStatus throwExcessiveCapacityError(
-      Runtime *runtime,
+      Runtime &runtime,
       size_type capacity);
 
   /// Append the given element to the end when the capacity has been exhausted
   /// and a reallocation is needed.
   static ExecutionStatus pushBackSlowPath(
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<> value);
 
   /// Shrinks \p self during GC compaction, so that it's capacity is equal to
@@ -302,7 +302,7 @@ class ArrayStorageBase final
   /// "length" number of elements are copied from "fromFirst" to "toFirst".
   static ExecutionStatus reallocateToLarger(
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       size_type capacity,
       size_type fromFirst,
       size_type toFirst,
@@ -325,7 +325,7 @@ class ArrayStorageBase final
   ///   "empty".
   static ExecutionStatus shift(
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       size_type fromFirst,
       size_type toFirst,
       size_type toLast);

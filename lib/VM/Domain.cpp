@@ -36,8 +36,8 @@ void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("throwingRequire", &self->throwingRequire_);
 }
 
-PseudoHandle<Domain> Domain::create(Runtime *runtime) {
-  auto *cell = runtime->makeAFixed<Domain, HasFinalizer::Yes>(runtime);
+PseudoHandle<Domain> Domain::create(Runtime &runtime) {
+  auto *cell = runtime.makeAFixed<Domain, HasFinalizer::Yes>(runtime);
   auto self = createPseudoHandle(cell);
   return self;
 }
@@ -57,7 +57,7 @@ Domain::~Domain() {
 }
 
 PseudoHandle<NativeFunction> Domain::getThrowingRequire(
-    Runtime *runtime) const {
+    Runtime &runtime) const {
   return createPseudoHandle(throwingRequire_.get(runtime));
 }
 
@@ -108,7 +108,7 @@ void Domain::_snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
 
 ExecutionStatus Domain::importCJSModuleTable(
     Handle<Domain> self,
-    Runtime *runtime,
+    Runtime &runtime,
     RuntimeModule *runtimeModule) {
   if (runtimeModule->getBytecode()->getCJSModuleTable().empty() &&
       runtimeModule->getBytecode()->getCJSModuleTableStatic().empty()) {
@@ -137,7 +137,7 @@ ExecutionStatus Domain::importCJSModuleTable(
     // Use uint64_t to allow us to check for overflow.
     const uint64_t requiredSize = firstSegmentModules * CJSModuleSize;
     if (requiredSize > std::numeric_limits<uint32_t>::max()) {
-      return runtime->raiseRangeError("Loaded module count exceeded limit");
+      return runtime.raiseRangeError("Loaded module count exceeded limit");
     }
 
     auto cjsModulesRes = ArrayStorage::create(runtime, requiredSize);
@@ -148,12 +148,12 @@ ExecutionStatus Domain::importCJSModuleTable(
     self->cjsRuntimeModules_.reserve(firstSegmentModules);
     for (size_t i = self->cjsRuntimeModules_.size(); i < firstSegmentModules;
          i++) {
-      self->cjsRuntimeModules_.push_back(nullptr, &runtime->getHeap());
+      self->cjsRuntimeModules_.push_back(nullptr, &runtime.getHeap());
     }
 
     auto requireFn = NativeFunction::create(
         runtime,
-        Handle<JSObject>::vmcast(&runtime->functionPrototype),
+        Handle<JSObject>::vmcast(&runtime.functionPrototype),
         (void *)TypeErrorKind::InvalidDynamicRequire,
         throwTypeError,
         Predefined::getSymbolID(Predefined::emptyString),
@@ -163,7 +163,7 @@ ExecutionStatus Domain::importCJSModuleTable(
     auto context = RequireContext::create(
         runtime,
         self,
-        runtime->getPredefinedStringHandle(Predefined::emptyString));
+        runtime.getPredefinedStringHandle(Predefined::emptyString));
 
     // Set the require.context property.
     PropertyFlags pf = PropertyFlags::defaultNewNamedPropertyFlags();
@@ -179,7 +179,7 @@ ExecutionStatus Domain::importCJSModuleTable(
       return ExecutionStatus::EXCEPTION;
     }
 
-    self->throwingRequire_.set(runtime, *requireFn, &runtime->getHeap());
+    self->throwingRequire_.set(runtime, *requireFn, &runtime.getHeap());
   } else {
     cjsModules = self->cjsModules_.get(runtime);
   }
@@ -218,7 +218,7 @@ ExecutionStatus Domain::importCJSModuleTable(
   // Use uint64_t to allow us to check for overflow.
   const uint64_t requiredSize = (maxModuleID + 1) * CJSModuleSize;
   if (requiredSize > std::numeric_limits<uint32_t>::max()) {
-    return runtime->raiseRangeError("Loaded module count exceeded limit");
+    return runtime.raiseRangeError("Loaded module count exceeded limit");
   }
 
   // Resize the array to allow for the new modules, if necessary.
@@ -230,7 +230,7 @@ ExecutionStatus Domain::importCJSModuleTable(
     }
     self->cjsRuntimeModules_.reserve(maxModuleID + 1);
     for (size_t i = self->cjsRuntimeModules_.size(); i <= maxModuleID; i++) {
-      self->cjsRuntimeModules_.push_back(nullptr, &runtime->getHeap());
+      self->cjsRuntimeModules_.push_back(nullptr, &runtime.getHeap());
     }
   }
 
@@ -261,7 +261,7 @@ ExecutionStatus Domain::importCJSModuleTable(
   auto &cjsEntryModuleID = self->cjsEntryModuleID_;
   auto &cjsRuntimeModules = self->cjsRuntimeModules_;
   const auto registerModule =
-      [runtime,
+      [&runtime,
        &cjsModules,
        &cjsRuntimeModules,
        runtimeModule,
@@ -276,15 +276,15 @@ ExecutionStatus Domain::importCJSModuleTable(
     cjsModules->set(
         index + CachedExportsOffset,
         HermesValue::encodeEmptyValue(),
-        &runtime->getHeap());
+        &runtime.getHeap());
     cjsModules->set(
         index + ModuleOffset,
         HermesValue::encodeNullValue(),
-        &runtime->getHeap());
+        &runtime.getHeap());
     cjsModules->set(
         index + FunctionIndexOffset,
         HermesValue::encodeNativeUInt32(functionID),
-        &runtime->getHeap());
+        &runtime.getHeap());
     cjsRuntimeModules[moduleID] = runtimeModule;
     assert(isModuleRegistered(moduleID) && "CJS module was not registered");
     return index;
@@ -320,7 +320,7 @@ ExecutionStatus Domain::importCJSModuleTable(
     }
   }
 
-  self->cjsModules_.set(runtime, cjsModules.get(), &runtime->getHeap());
+  self->cjsModules_.set(runtime, cjsModules.get(), &runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -345,18 +345,18 @@ void RequireContextBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 Handle<RequireContext> RequireContext::create(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<Domain> domain,
     Handle<StringPrimitive> dirname) {
-  auto objProto = Handle<JSObject>::vmcast(&runtime->objectPrototype);
-  auto *cell = runtime->makeAFixed<RequireContext>(
+  auto objProto = Handle<JSObject>::vmcast(&runtime.objectPrototype);
+  auto *cell = runtime.makeAFixed<RequireContext>(
       runtime,
       objProto,
-      runtime->getHiddenClassForPrototype(
+      runtime.getHiddenClassForPrototype(
           *objProto, numOverlapSlots<RequireContext>()));
   auto self = JSObjectInit::initToHandle(runtime, cell);
-  self->domain_.set(runtime, *domain, &runtime->getHeap());
-  self->dirname_.set(runtime, *dirname, &runtime->getHeap());
+  self->domain_.set(runtime, *domain, &runtime.getHeap());
+  self->dirname_.set(runtime, *dirname, &runtime.getHeap());
   return self;
 }
 

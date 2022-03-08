@@ -33,18 +33,18 @@ void JSDataViewBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 PseudoHandle<JSDataView> JSDataView::create(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> prototype) {
-  auto *cell = runtime->makeAFixed<JSDataView>(
+  auto *cell = runtime.makeAFixed<JSDataView>(
       runtime,
       prototype,
-      runtime->getHiddenClassForPrototype(
+      runtime.getHiddenClassForPrototype(
           *prototype, numOverlapSlots<JSDataView>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 JSDataView::JSDataView(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> parent,
     Handle<HiddenClass> clazz)
     : JSObject(runtime, &vt.base, *parent, *clazz),

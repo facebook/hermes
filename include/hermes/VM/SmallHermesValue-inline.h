@@ -28,7 +28,7 @@ void HermesValue32::setInGC(HermesValue32 hv, GC *gc) {
   assert(gc->calledByGC());
 }
 
-HermesValue HermesValue32::unboxToHV(PointerBase *pb) const {
+HermesValue HermesValue32::unboxToHV(PointerBase &pb) const {
   switch (getETag()) {
     case ETag::Object1:
     case ETag::Object2:
@@ -59,18 +59,18 @@ HermesValue HermesValue32::unboxToHV(PointerBase *pb) const {
   }
 }
 
-HermesValue HermesValue32::toHV(PointerBase *pb) const {
+HermesValue HermesValue32::toHV(PointerBase &pb) const {
   if (getTag() == Tag::BoxedDouble)
     return HermesValue::encodeObjectValue(getPointer(pb));
   return unboxToHV(pb);
 }
 
-StringPrimitive *HermesValue32::getString(PointerBase *pb) const {
+StringPrimitive *HermesValue32::getString(PointerBase &pb) const {
   assert(isString());
   return vmcast<StringPrimitive>(getPointer(pb));
 }
 
-double HermesValue32::getNumber(PointerBase *pb) const {
+double HermesValue32::getNumber(PointerBase &pb) const {
   assert(isNumber());
   if (LLVM_LIKELY(getTag() == Tag::SmallInt))
     return getSmallInt();
@@ -79,7 +79,7 @@ double HermesValue32::getNumber(PointerBase *pb) const {
 
 /* static */ HermesValue32 HermesValue32::encodeHermesValue(
     HermesValue hv,
-    Runtime *runtime) {
+    Runtime &runtime) {
 #ifdef HERMESVM_SANITIZE_HANDLES
   // When Handle-SAN is on, make a double so that this function always
   // allocates. Note we can't do this for pointer values since they would get
@@ -113,7 +113,7 @@ double HermesValue32::getNumber(PointerBase *pb) const {
 
 /* static */ HermesValue32 HermesValue32::encodeNumberValue(
     double d,
-    Runtime *runtime) {
+    Runtime &runtime) {
   // Always box values when Handle-SAN is on so we can catch any mistakes.
 #ifndef HERMESVM_SANITIZE_HANDLES
   const SmiType i = doubleToSmi(d);
@@ -128,7 +128,7 @@ double HermesValue32::getNumber(PointerBase *pb) const {
 
 /* static */ HermesValue32 HermesValue32::encodeObjectValue(
     GCCell *ptr,
-    PointerBase *pb) {
+    PointerBase &pb) {
   assert(
       (!ptr || !vmisa<StringPrimitive>(ptr)) &&
       "Strings must use encodeStringValue");

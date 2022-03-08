@@ -171,7 +171,7 @@ TEST_F(DictPropertyMapTest, GrowOverCapacityTest) {
   ASSERT_EQ(
       ExecutionStatus::EXCEPTION,
       DictPropertyMap::add(map, runtime, **symRes, desc));
-  runtime->clearThrownValue();
+  runtime.clearThrownValue();
 
   // Try it again.
   value.set(HermesValue::encodeNumberValue(maxCapacity + 1));
@@ -180,7 +180,7 @@ TEST_F(DictPropertyMapTest, GrowOverCapacityTest) {
   ASSERT_EQ(
       ExecutionStatus::EXCEPTION,
       DictPropertyMap::add(map, runtime, **symRes, desc));
-  runtime->clearThrownValue();
+  runtime.clearThrownValue();
 #endif
 }
 } // namespace

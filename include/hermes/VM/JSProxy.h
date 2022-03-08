@@ -31,7 +31,7 @@ struct ProxySlots {
 detail::ProxySlots &slots(JSObject *selfHandle);
 
 CallResult<Handle<Callable>>
-findTrap(Handle<JSObject> selfHandle, Runtime *runtime, Predefined::Str name);
+findTrap(Handle<JSObject> selfHandle, Runtime &runtime, Predefined::Str name);
 
 } // namespace detail
 
@@ -61,31 +61,31 @@ class JSProxy : public JSObject {
     return cell->getKind() == CellKind::JSProxyKind;
   }
 
-  static PseudoHandle<JSProxy> create(Runtime *runtime);
+  static PseudoHandle<JSProxy> create(Runtime &runtime);
 
   static PseudoHandle<JSProxy> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> /* prototype */) {
     return create(runtime);
   }
 
   static void setTargetAndHandler(
       Handle<JSObject> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> target,
       Handle<JSObject> handler);
 
-  static PseudoHandle<JSObject> getTarget(JSObject *proxy, PointerBase *base) {
+  static PseudoHandle<JSObject> getTarget(JSObject *proxy, PointerBase &base) {
     return createPseudoHandle(detail::slots(proxy).target.get(base));
   }
 
-  static PseudoHandle<JSObject> getHandler(JSObject *proxy, PointerBase *base) {
+  static PseudoHandle<JSObject> getHandler(JSObject *proxy, PointerBase &base) {
     return createPseudoHandle(detail::slots(proxy).handler.get(base));
   }
 
   /// Proxy.create checks if the proxy is revoked, which is defined by
   /// the spec as having a null handler.
-  static bool isRevoked(JSObject *proxy, PointerBase *base) {
+  static bool isRevoked(JSObject *proxy, PointerBase &base) {
     return !getHandler(proxy, base);
   }
 
@@ -93,77 +93,77 @@ class JSProxy : public JSObject {
 
   static CallResult<PseudoHandle<JSObject>> getPrototypeOf(
       Handle<JSObject> selfHandle,
-      Runtime *runtime);
+      Runtime &runtime);
 
   static CallResult<bool> setPrototypeOf(
       Handle<JSObject> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent);
 
   static CallResult<bool> isExtensible(
       Handle<JSObject> selfHandle,
-      Runtime *runtime);
+      Runtime &runtime);
 
   static CallResult<bool> preventExtensions(
       Handle<JSObject> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       PropOpFlags opFlags = PropOpFlags());
 
   static CallResult<bool> getOwnProperty(
       Handle<JSObject> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<> nameValHandle,
       ComputedPropertyDescriptor &desc,
       MutableHandle<> *valueOrAccessor);
 
   static CallResult<bool> defineOwnProperty(
       Handle<JSObject> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<> nameValHandle,
       DefinePropertyFlags dpFlags,
       Handle<> valueOrAccessor,
       PropOpFlags opFlags);
 
   static CallResult<bool>
-  hasNamed(Handle<JSObject> selfHandle, Runtime *runtime, SymbolID name);
+  hasNamed(Handle<JSObject> selfHandle, Runtime &runtime, SymbolID name);
 
   static CallResult<bool> hasComputed(
       Handle<JSObject> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<> nameValHandle);
 
   static CallResult<PseudoHandle<>> getNamed(
       Handle<JSObject> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       SymbolID name,
       Handle<> receiver);
 
   static CallResult<PseudoHandle<>> getComputed(
       Handle<JSObject> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<> nameValHandle,
       Handle<> receiver);
 
   static CallResult<bool> setNamed(
       Handle<JSObject> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       SymbolID name,
       Handle<> valueHandle,
       Handle<> receiver);
 
   static CallResult<bool> setComputed(
       Handle<JSObject> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<> nameValHandle,
       Handle<> valueHandle,
       Handle<> receiver);
 
   static CallResult<bool>
-  deleteNamed(Handle<JSObject> selfHandle, Runtime *runtime, SymbolID name);
+  deleteNamed(Handle<JSObject> selfHandle, Runtime &runtime, SymbolID name);
 
   static CallResult<bool> deleteComputed(
       Handle<JSObject> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<> nameValHandle);
 
   // If okflags.getIncludeNonEnumerable() is not true, this call needs to
@@ -172,11 +172,11 @@ class JSProxy : public JSObject {
   // call multiple traps.
   static CallResult<PseudoHandle<JSArray>> ownPropertyKeys(
       Handle<JSObject> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       OwnKeysFlags okFlags);
 
  public:
-  JSProxy(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
+  JSProxy(Runtime &runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
       : JSObject(runtime, &vt.base, *parent, *clazz) {}
 
  private:

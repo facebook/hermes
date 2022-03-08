@@ -42,7 +42,7 @@ class CodeCoverageProfiler {
     std::string debugInfo;
   };
 
-  explicit CodeCoverageProfiler(Runtime *runtime) : runtime_(runtime) {
+  explicit CodeCoverageProfiler(Runtime &runtime) : runtime_(runtime) {
     std::lock_guard<std::mutex> lk(globalMutex());
     allProfilers().insert(this);
   }
@@ -116,7 +116,7 @@ class CodeCoverageProfiler {
   /// \return reference to function bits array map for \p module.
   std::vector<bool> &getModuleFuncMapRef(RuntimeModule *module);
 
-  Runtime *runtime_;
+  Runtime &runtime_;
 
   /// Protect any local state of this code coverage profiler that can be
   /// accessed by the static members. For now, this is only used to protect

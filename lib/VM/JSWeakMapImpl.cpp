@@ -26,15 +26,15 @@ void JSWeakMapImplBase::WeakMapImplBaseBuildMeta(
 /// or add a new key/value if the key doesn't exist.
 ExecutionStatus JSWeakMapImplBase::setValue(
     Handle<JSWeakMapImplBase> self,
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> key,
     Handle<> value) {
   {
     // No allocations should occur while a WeakRefKey is live.
     NoAllocScope noAlloc{runtime};
     WeakRefKey mapKey(
-        WeakRef<JSObject>{&runtime->getHeap(), key},
-        runtime->gcStableHashHermesValue(key));
+        WeakRef<JSObject>{&runtime.getHeap(), key},
+        runtime.gcStableHashHermesValue(key));
     DenseMapT::iterator it = self->map_.find(mapKey);
 
     if (it != self->map_.end()) {
@@ -43,7 +43,7 @@ ExecutionStatus JSWeakMapImplBase::setValue(
           it->second < self->valueStorage_.getNonNull(runtime)->size() &&
           "invalid index");
       self->valueStorage_.getNonNull(runtime)->set(
-          it->second, *value, &runtime->getHeap());
+          it->second, *value, &runtime.getHeap());
       return ExecutionStatus::RETURNED;
     }
   }
@@ -59,16 +59,16 @@ ExecutionStatus JSWeakMapImplBase::setValue(
     // No allocations should occur while a WeakRefKey is live.
     NoAllocScope noAlloc{runtime};
     // Holding the WeakRefLock will prevent the weak ref from getting cleared.
-    WeakRefLock lk{runtime->getHeap().weakRefMutex()};
+    WeakRefLock lk{runtime.getHeap().weakRefMutex()};
     WeakRefKey mapKey(
-        WeakRef<JSObject>{&runtime->getHeap(), key},
-        runtime->gcStableHashHermesValue(key));
+        WeakRef<JSObject>{&runtime.getHeap(), key},
+        runtime.gcStableHashHermesValue(key));
     auto result = self->map_.try_emplace(mapKey, i);
     (void)result;
     assert(result.second && "unable to add a new value to map");
   }
 
-  self->valueStorage_.getNonNull(runtime)->set(i, *value, &runtime->getHeap());
+  self->valueStorage_.getNonNull(runtime)->set(i, *value, &runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -76,18 +76,18 @@ ExecutionStatus JSWeakMapImplBase::setValue(
 /// \return true if the key/value existed and was removed.
 bool JSWeakMapImplBase::deleteValue(
     Handle<JSWeakMapImplBase> self,
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> key) {
-  WeakRefLock lk{runtime->getHeap().weakRefMutex()};
+  WeakRefLock lk{runtime.getHeap().weakRefMutex()};
   NoAllocScope noAlloc{runtime};
   WeakRefKey mapKey(
-      WeakRef<JSObject>{&runtime->getHeap(), key},
-      runtime->gcStableHashHermesValue(key));
+      WeakRef<JSObject>{&runtime.getHeap(), key},
+      runtime.gcStableHashHermesValue(key));
   DenseMapT::iterator it = self->map_.find(mapKey);
   if (it == self->map_.end()) {
     return false;
   }
-  self->deleteInternal(runtime, &runtime->getHeap(), it);
+  self->deleteInternal(runtime, &runtime.getHeap(), it);
   return true;
 }
 
@@ -124,24 +124,24 @@ GCPointerBase &JSWeakMapImplBase::getValueStorageRef(GC *gc) {
 /// \return true if the \p key exists in the map.
 bool JSWeakMapImplBase::hasValue(
     Handle<JSWeakMapImplBase> self,
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> key) {
   NoAllocScope noAlloc{runtime};
   WeakRefKey mapKey(
-      WeakRef<JSObject>{&runtime->getHeap(), key},
-      runtime->gcStableHashHermesValue(key));
+      WeakRef<JSObject>{&runtime.getHeap(), key},
+      runtime.gcStableHashHermesValue(key));
   DenseMapT::iterator it = self->map_.find_as(mapKey);
   return it != self->map_.end();
 }
 
 HermesValue JSWeakMapImplBase::getValue(
     Handle<JSWeakMapImplBase> self,
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> key) {
   NoAllocScope noAlloc{runtime};
   WeakRefKey mapKey(
-      WeakRef<JSObject>{&runtime->getHeap(), key},
-      runtime->gcStableHashHermesValue(key));
+      WeakRef<JSObject>{&runtime.getHeap(), key},
+      runtime.gcStableHashHermesValue(key));
   DenseMapT::iterator it = self->map_.find(mapKey);
   if (it == self->map_.end()) {
     return HermesValue::encodeUndefinedValue();
@@ -150,7 +150,7 @@ HermesValue JSWeakMapImplBase::getValue(
 }
 
 uint32_t JSWeakMapImplBase::debugFreeSlotsAndGetSize(
-    PointerBase *base,
+    PointerBase &base,
     GC *gc,
     JSWeakMapImplBase *self) {
   /// Free up any freeable slots, so the count is more accurate.
@@ -236,7 +236,7 @@ void JSWeakMapImplBase::_snapshotAddNodesImpl(
 }
 
 /// Mark weak references and remove any invalid weak refs.
-void JSWeakMapImplBase::findAndDeleteFreeSlots(PointerBase *base, GC *gc) {
+void JSWeakMapImplBase::findAndDeleteFreeSlots(PointerBase &base, GC *gc) {
   WeakRefLock lk{gc->weakRefMutex()};
   for (auto it = map_.begin(); it != map_.end(); ++it) {
     if (!it->first.ref.isValid()) {
@@ -248,7 +248,7 @@ void JSWeakMapImplBase::findAndDeleteFreeSlots(PointerBase *base, GC *gc) {
 }
 
 void JSWeakMapImplBase::deleteInternal(
-    PointerBase *base,
+    PointerBase &base,
     GC *gc,
     JSWeakMapImplBase::DenseMapT::iterator it) {
   assert(it != map_.end() && "Invalid iterator to deleteInternal");
@@ -260,11 +260,11 @@ void JSWeakMapImplBase::deleteInternal(
 
 CallResult<uint32_t> JSWeakMapImplBase::getFreeValueStorageIndex(
     Handle<JSWeakMapImplBase> self,
-    Runtime *runtime) {
+    Runtime &runtime) {
   if (self->freeListHead_ == kFreeListInvalid && self->hasFreeableSlots_) {
     // No elements in the free list and there are freeable slots.
     // Try to find some.
-    self->findAndDeleteFreeSlots(runtime, &runtime->getHeap());
+    self->findAndDeleteFreeSlots(runtime, &runtime.getHeap());
   }
 
   // Index in valueStorage_ in which to place the new element.
@@ -276,7 +276,7 @@ CallResult<uint32_t> JSWeakMapImplBase::getFreeValueStorageIndex(
     // No elements in the free list.
     i = self->nextIndex_;
     if (LLVM_UNLIKELY(self->nextIndex_ == UINT32_MAX)) {
-      return runtime->raiseRangeError("Out of space for elements in map");
+      return runtime.raiseRangeError("Out of space for elements in map");
     }
     useNextIndex = true;
   } else {
@@ -285,7 +285,7 @@ CallResult<uint32_t> JSWeakMapImplBase::getFreeValueStorageIndex(
     useNextIndex = false;
   }
 
-  auto storageHandle = runtime->makeMutableHandle(self->valueStorage_);
+  auto storageHandle = runtime.makeMutableHandle(self->valueStorage_);
   if (i >= storageHandle->size()) {
     if (LLVM_UNLIKELY(
             BigStorage::resize(
@@ -307,7 +307,7 @@ CallResult<uint32_t> JSWeakMapImplBase::getFreeValueStorageIndex(
   }
 
   assert(i < storageHandle->size() && "invalid index");
-  self->valueStorage_.setNonNull(runtime, *storageHandle, &runtime->getHeap());
+  self->valueStorage_.setNonNull(runtime, *storageHandle, &runtime.getHeap());
 
   return i;
 }
@@ -356,18 +356,18 @@ const ObjectVTable JSWeakMapImpl<C>::vt{
 
 template <CellKind C>
 CallResult<PseudoHandle<JSWeakMapImpl<C>>> JSWeakMapImpl<C>::create(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> parentHandle) {
   auto valueRes = BigStorage::create(runtime, 1);
   if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto valueStorage = runtime->makeHandle<BigStorage>(std::move(*valueRes));
+  auto valueStorage = runtime.makeHandle<BigStorage>(std::move(*valueRes));
 
-  auto *cell = runtime->makeAFixed<JSWeakMapImpl<C>, HasFinalizer::Yes>(
+  auto *cell = runtime.makeAFixed<JSWeakMapImpl<C>, HasFinalizer::Yes>(
       runtime,
       parentHandle,
-      runtime->getHiddenClassForPrototype(
+      runtime.getHiddenClassForPrototype(
           *parentHandle, numOverlapSlots<JSWeakMapImpl>()),
       valueStorage);
   return JSObjectInit::initToPseudoHandle(runtime, cell);

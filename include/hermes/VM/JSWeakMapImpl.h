@@ -107,13 +107,13 @@ class JSWeakMapImplBase : public JSObject {
 
  protected:
   JSWeakMapImplBase(
-      Runtime *runtime,
+      Runtime &runtime,
       const VTable *vtp,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       Handle<BigStorage> valueStorage)
       : JSObject(runtime, vtp, *parent, *clazz),
-        valueStorage_(runtime, *valueStorage, &runtime->getHeap()) {}
+        valueStorage_(runtime, *valueStorage, &runtime.getHeap()) {}
 
  public:
   static const ObjectVTable vt;
@@ -133,7 +133,7 @@ class JSWeakMapImplBase : public JSObject {
   /// or add a new key/value if the key doesn't exist.
   static ExecutionStatus setValue(
       Handle<JSWeakMapImplBase> self,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> key,
       Handle<> value);
 
@@ -141,25 +141,25 @@ class JSWeakMapImplBase : public JSObject {
   /// \return true if the key/value existed and was removed.
   static bool deleteValue(
       Handle<JSWeakMapImplBase> self,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> key);
 
   /// \return true if the \p key exists in the map.
   static bool hasValue(
       Handle<JSWeakMapImplBase> self,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> key);
 
   /// \return the value at \p key, if it exists. Else, return undefined.
   static HermesValue getValue(
       Handle<JSWeakMapImplBase> self,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> key);
 
   /// \return the size of the internal map, after freeing any freeable slots.
   /// Used for testing purposes.
   static uint32_t
-  debugFreeSlotsAndGetSize(PointerBase *base, GC *gc, JSWeakMapImplBase *self);
+  debugFreeSlotsAndGetSize(PointerBase &base, GC *gc, JSWeakMapImplBase *self);
 
   /// An iterator over the keys of the map.
   struct KeyIterator {
@@ -232,12 +232,12 @@ class JSWeakMapImplBase : public JSObject {
 
   /// Iterate the slots in map_ and call deleteInternal on any invalid
   /// references, adding all available slots to the free list.
-  void findAndDeleteFreeSlots(PointerBase *base, GC *gc);
+  void findAndDeleteFreeSlots(PointerBase &base, GC *gc);
 
   /// Erase the map entry and corresponding valueStorage entry
   /// pointed to by the iterator \p it.
   /// Add the newly opened valueStorage slot to the free list.
-  void deleteInternal(PointerBase *base, GC *gc, DenseMapT::iterator it);
+  void deleteInternal(PointerBase &base, GC *gc, DenseMapT::iterator it);
 
  private:
   /// Get the index to insert a new value into valueStorage_.
@@ -245,7 +245,7 @@ class JSWeakMapImplBase : public JSObject {
   /// \return the index into which to insert, or EXCEPTION if resize failed.
   static CallResult<uint32_t> getFreeValueStorageIndex(
       Handle<JSWeakMapImplBase> self,
-      Runtime *runtime);
+      Runtime &runtime);
 
  public:
   // Public for tests.
@@ -322,13 +322,13 @@ class JSWeakMapImpl final : public JSWeakMapImplBase {
 
   /// Create a new WeakMap with prototype property \p parentHandle.
   static CallResult<PseudoHandle<JSWeakMapImpl<C>>> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parentHandle);
 
   static void WeakMapOrSetBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
   JSWeakMapImpl(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       Handle<BigStorage> valueStorage)

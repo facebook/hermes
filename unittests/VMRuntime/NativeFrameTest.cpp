@@ -15,7 +15,7 @@ namespace {
 // Count the number of native stack frames we can make before it reports
 // overflow. Also verify that our stack descends down.
 static unsigned makeFramesUntilOverflow(
-    Runtime *runtime,
+    Runtime &runtime,
     ScopedNativeCallFrame *prev) {
   ScopedNativeCallFrame frame{
       runtime,
@@ -43,7 +43,7 @@ TEST_F(NativeFrameTest, OverflowTest) {
 TEST(NativeFrameDeathTest, PoisonedStackTest) {
   auto fn = [] {
     auto rt = Runtime::create({});
-    auto *runtime = rt.get();
+    auto &runtime = *rt;
     // Verify that stack frames are poisoned.
     ScopedNativeCallFrame frame{
         runtime,
@@ -53,7 +53,7 @@ TEST(NativeFrameDeathTest, PoisonedStackTest) {
         HermesValue::encodeUndefinedValue()};
     ASSERT_FALSE(frame.overflowed());
     // We should not die after this because there were no arguments.
-    runtime->collect("test");
+    runtime.collect("test");
 
     // Now make a frame with arguments.
     ScopedNativeCallFrame frame2{
@@ -64,7 +64,7 @@ TEST(NativeFrameDeathTest, PoisonedStackTest) {
         HermesValue::encodeUndefinedValue()};
     ASSERT_FALSE(frame2.overflowed());
     // The frame should be poisoned; ensure we die after a GC.
-    runtime->collect("test");
+    runtime.collect("test");
   };
   EXPECT_DEATH_IF_SUPPORTED(fn(), "Invalid");
 }

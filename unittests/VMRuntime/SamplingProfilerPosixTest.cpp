@@ -56,9 +56,9 @@ TEST(SamplingProfilerPosixTest, MultipleRuntimes) {
 
 TEST(SamplingProfilerPosixTest, MultipleProfilers) {
   auto rt = makeRuntime(withSamplingProfilerEnabled);
-  auto sp0 = std::make_unique<SamplingProfiler>(rt.get());
-  auto sp1 = std::make_unique<SamplingProfiler>(rt.get());
-  auto sp2 = std::make_unique<SamplingProfiler>(rt.get());
+  auto sp0 = std::make_unique<SamplingProfiler>(*rt);
+  auto sp1 = std::make_unique<SamplingProfiler>(*rt);
+  auto sp2 = std::make_unique<SamplingProfiler>(*rt);
   EXPECT_EQ(owningThread(*rt->samplingProfiler), pthread_self());
   EXPECT_EQ(owningThread(*sp0), pthread_self());
   EXPECT_EQ(owningThread(*sp1), pthread_self());

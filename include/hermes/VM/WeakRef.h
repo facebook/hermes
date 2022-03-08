@@ -84,7 +84,7 @@ class WeakRef : public WeakRefBase {
   /// This function returns the stored HermesValue and wraps it into a new
   /// handle, ensuring that it cannot be freed while the handle is alive.
   /// If the weak reference is not live, returns None.
-  llvh::Optional<Handle<T>> get(HandleRootOwner *runtime, GC *gc) const {
+  llvh::Optional<Handle<T>> get(HandleRootOwner &runtime, GC *gc) const {
     if (const auto optValue = unsafeGetOptional(gc)) {
       return Handle<T>::vmcast(runtime, Traits::encode(optValue.getValue()));
     }
@@ -116,10 +116,10 @@ class WeakRootBase : protected CompressedPointer {
  protected:
   explicit WeakRootBase() : CompressedPointer(nullptr) {}
   explicit WeakRootBase(std::nullptr_t) : CompressedPointer(nullptr) {}
-  explicit WeakRootBase(GCCell *ptr, PointerBase *base)
+  explicit WeakRootBase(GCCell *ptr, PointerBase &base)
       : CompressedPointer(CompressedPointer::encode(ptr, base)) {}
 
-  void *get(PointerBase *base, GC *gc) const {
+  void *get(PointerBase &base, GC *gc) const {
     GCCell *ptr = CompressedPointer::get(base);
     gc->weakRefReadBarrier(ptr);
     return ptr;
@@ -133,7 +133,7 @@ class WeakRootBase : protected CompressedPointer {
 
   /// This function should only be used in cases where it is known that no read
   /// barrier is necessary.
-  GCCell *getNoBarrierUnsafe(PointerBase *base) {
+  GCCell *getNoBarrierUnsafe(PointerBase &base) {
     return CompressedPointer::get(base);
   }
 
@@ -157,13 +157,13 @@ class WeakRoot final : public WeakRootBase {
  public:
   explicit WeakRoot() : WeakRootBase() {}
   explicit WeakRoot(std::nullptr_t) : WeakRootBase(nullptr) {}
-  explicit WeakRoot(T *ptr, PointerBase *base) : WeakRootBase(ptr, base) {}
+  explicit WeakRoot(T *ptr, PointerBase &base) : WeakRootBase(ptr, base) {}
 
-  T *get(PointerBase *base, GC *gc) const {
+  T *get(PointerBase &base, GC *gc) const {
     return static_cast<T *>(WeakRootBase::get(base, gc));
   }
 
-  void set(PointerBase *base, T *ptr) {
+  void set(PointerBase &base, T *ptr) {
     WeakRootBase::operator=(CompressedPointer::encode(ptr, base));
   }
 

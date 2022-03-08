@@ -54,7 +54,7 @@ TEST(GCMarkWeakTest, MarkWeak) {
   // Probably zero, but we only care about the increase/decrease.
   const int initUsedWeak = gc.countUsedWeakRefs();
   {
-    GCScope scope{&rt};
+    GCScope scope{rt};
     auto t = rt.makeHandle(createWithMarkWeakCount(&gc, &numMarkWeakCalls));
     rt.collect();
 

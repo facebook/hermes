@@ -59,11 +59,11 @@ void CheckHeapWellFormedAcceptor::acceptSym(SymbolID sym) {
     return;
   }
   assert(
-      gc.getCallbacks()->isSymbolLive(sym) &&
+      gc.getCallbacks().isSymbolLive(sym) &&
       "Symbol is marked but is not live");
   // Check that the string used by this symbol is valid.
   accept(
-      static_cast<const GCCell *>(gc.getCallbacks()->getStringForSymbol(sym)));
+      static_cast<const GCCell *>(gc.getCallbacks().getStringForSymbol(sym)));
 }
 
 void CheckHeapWellFormedAcceptor::accept(WeakRefBase &wr) {

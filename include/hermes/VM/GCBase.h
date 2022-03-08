@@ -878,8 +878,8 @@ class GCBase {
   enum class HeapKind { HadesGC, MallocGC };
 
   GCBase(
-      GCCallbacks *gcCallbacks,
-      PointerBase *pointerBase,
+      GCCallbacks &gcCallbacks,
+      PointerBase &pointerBase,
       const GCConfig &gcConfig,
       std::shared_ptr<CrashManager> crashMgr,
       HeapKind kind);
@@ -927,18 +927,18 @@ class GCBase {
   /// NOTE: This normally should not be needed, Runtime provides it.
   /// However in some scenarios there is only a GC available, not a
   /// Runtime. In those cases use this function.
-  PointerBase *getPointerBase() const {
+  PointerBase &getPointerBase() const {
     return pointerBase_;
   }
 
-  GCCallbacks *getCallbacks() const {
+  GCCallbacks &getCallbacks() const {
     return gcCallbacks_;
   }
 
   /// Forwards to the GC callback \p convertSymbolToUTF8, see documentation
   /// for that function.
   std::string convertSymbolToUTF8(SymbolID id) {
-    return gcCallbacks_->convertSymbolToUTF8(id);
+    return gcCallbacks_.convertSymbolToUTF8(id);
   }
 
   /// Called by the Runtime to inform the GC that it is about to execute JS for
@@ -972,7 +972,7 @@ class GCBase {
     return cumStats_.gcCPUTime.sum();
   }
 
-  GCCallbacks *getGCCallbacks() const {
+  GCCallbacks &getGCCallbacks() const {
     return gcCallbacks_;
   }
 
@@ -1440,13 +1440,13 @@ class GCBase {
   /// be allocated in the old gen, and references to them need not be
   /// marked during young-gen collection.
   void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool markLongLived) {
-    gcCallbacks_->markRoots(acceptor, markLongLived);
+    gcCallbacks_.markRoots(acceptor, markLongLived);
   }
 
   /// Convenience method to invoke the mark weak roots function provided at
   /// initialization, using the context provided then (on this heap).
   void markWeakRoots(WeakRootAcceptor &acceptor, bool markLongLived) {
-    gcCallbacks_->markWeakRoots(acceptor, markLongLived);
+    gcCallbacks_.markWeakRoots(acceptor, markLongLived);
   }
 
   /// Print the cumulative statistics.
@@ -1544,10 +1544,10 @@ class GCBase {
 
   /// User-supplied callbacks invoked by the GC to query information or perform
   /// tasks.
-  GCCallbacks *const gcCallbacks_;
+  GCCallbacks &gcCallbacks_;
 
   /// Base of all pointers in compressed pointers implementation.
-  PointerBase *const pointerBase_;
+  PointerBase &pointerBase_;
 
   /// A place to log crash data if a crash is about to occur.
   std::shared_ptr<CrashManager> crashMgr_;

@@ -24,8 +24,8 @@ struct JSCallSiteInfo {
 
 /// Raises a TypeError when an incompatible receiver is used for any of the
 /// CallSite methods below.
-static ExecutionStatus raiseIncompatibleReceiverError(Runtime *runtime) {
-  return runtime->raiseTypeError(
+static ExecutionStatus raiseIncompatibleReceiverError(Runtime &runtime) {
+  return runtime.raiseTypeError(
       "CallSite method called on an incompatible receiver");
 }
 
@@ -33,14 +33,14 @@ static ExecutionStatus raiseIncompatibleReceiverError(Runtime *runtime) {
 /// isn't found.
 /// \return A pseudo-handle to \p iProp.
 static CallResult<PseudoHandle<>> getCallSiteProp(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> selfHandle,
     Predefined::IProp iProp) {
   auto pof = PropOpFlags().plusMustExist().plusThrowOnError();
   CallResult<PseudoHandle<>> res = JSObject::getNamed_RJS(
       selfHandle, runtime, Predefined::getSymbolID(iProp), pof);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    runtime->clearThrownValue();
+    runtime.clearThrownValue();
     return raiseIncompatibleReceiverError(runtime);
   }
   return res;
@@ -49,7 +49,7 @@ static CallResult<PseudoHandle<>> getCallSiteProp(
 /// Extracts the CallSite information from \p selfHandle. Raises TypeError if
 /// any CallSite property isn't found.
 static CallResult<JSCallSiteInfo> callSiteFromSelfHandle(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle) {
   auto selfObjHandle = Handle<JSObject>::dyn_vmcast(selfHandle);
   if (LLVM_UNLIKELY(!selfObjHandle)) {
@@ -62,7 +62,7 @@ static CallResult<JSCallSiteInfo> callSiteFromSelfHandle(
     return ExecutionStatus::EXCEPTION;
   }
 
-  auto error = runtime->makeHandle<JSError>(std::move(*errorRes));
+  auto error = runtime.makeHandle<JSError>(std::move(*errorRes));
 
   auto frameIndexRes = getCallSiteProp(
       runtime,
@@ -80,7 +80,7 @@ static CallResult<JSCallSiteInfo> callSiteFromSelfHandle(
 /// \return a reference to the stack frame into which this CallSite object is
 /// a view.
 CallResult<const StackTraceInfo *> getStackTraceInfo(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle) {
   auto callSiteRes = callSiteFromSelfHandle(runtime, selfHandle);
   if (LLVM_UNLIKELY(callSiteRes == ExecutionStatus::EXCEPTION)) {
@@ -100,13 +100,13 @@ CallResult<const StackTraceInfo *> getStackTraceInfo(
   return &stacktrace->at(callSiteRes->stackFrameIndex);
 }
 
-Handle<JSObject> createJSCallSite(Runtime *runtime) {
-  auto parentHandle = Handle<JSObject>::vmcast(&runtime->callSitePrototype);
-  auto *cell = runtime->makeAFixed<JSObject>(
+Handle<JSObject> createJSCallSite(Runtime &runtime) {
+  auto parentHandle = Handle<JSObject>::vmcast(&runtime.callSitePrototype);
+  auto *cell = runtime.makeAFixed<JSObject>(
       runtime,
       &JSObject::vt.base,
       parentHandle,
-      runtime->getHiddenClassForPrototype(
+      runtime.getHiddenClassForPrototype(
           *parentHandle, JSObject::numOverlapSlots<JSObject>()),
       GCPointerBase::NoBarriers());
   return JSObjectInit::initToHandle(runtime, cell);
@@ -114,7 +114,7 @@ Handle<JSObject> createJSCallSite(Runtime *runtime) {
 } // namespace
 
 CallResult<HermesValue> JSCallSite::create(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSError> errorHandle,
     uint32_t stackFrameIndex) {
   Handle<JSObject> selfHandle = createJSCallSite(runtime);
@@ -149,7 +149,7 @@ CallResult<HermesValue> JSCallSite::create(
   auto frameIndexHV = HermesValue::encodeNumberValue(stackFrameIndex);
   res = addCallSiteProp(
       Predefined::InternalPropertyCallSiteStackFrameIndex,
-      runtime->makeHandle(std::move(frameIndexHV)));
+      runtime.makeHandle(std::move(frameIndexHV)));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -162,7 +162,7 @@ CallResult<HermesValue> JSCallSite::create(
 }
 
 CallResult<HermesValue> JSCallSite::getFunctionName(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle) {
   auto callSiteRes = callSiteFromSelfHandle(runtime, selfHandle);
   if (LLVM_UNLIKELY(callSiteRes == ExecutionStatus::EXCEPTION)) {
@@ -176,7 +176,7 @@ CallResult<HermesValue> JSCallSite::getFunctionName(
 }
 
 CallResult<HermesValue> JSCallSite::getFileName(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle) {
   auto stiRes = getStackTraceInfo(runtime, selfHandle);
   if (LLVM_UNLIKELY(stiRes == ExecutionStatus::EXCEPTION)) {
@@ -215,7 +215,7 @@ CallResult<HermesValue> JSCallSite::getFileName(
 }
 
 CallResult<HermesValue> JSCallSite::getLineNumber(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle) {
   auto stiRes = getStackTraceInfo(runtime, selfHandle);
   if (LLVM_UNLIKELY(stiRes == ExecutionStatus::EXCEPTION)) {
@@ -240,7 +240,7 @@ CallResult<HermesValue> JSCallSite::getLineNumber(
 }
 
 CallResult<HermesValue> JSCallSite::getColumnNumber(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle) {
   auto stiRes = getStackTraceInfo(runtime, selfHandle);
   if (LLVM_UNLIKELY(stiRes == ExecutionStatus::EXCEPTION)) {
@@ -259,7 +259,7 @@ CallResult<HermesValue> JSCallSite::getColumnNumber(
 }
 
 CallResult<HermesValue> JSCallSite::getBytecodeAddress(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle) {
   auto stiRes = getStackTraceInfo(runtime, selfHandle);
   if (LLVM_UNLIKELY(stiRes == ExecutionStatus::EXCEPTION)) {
@@ -275,7 +275,7 @@ CallResult<HermesValue> JSCallSite::getBytecodeAddress(
 }
 
 CallResult<HermesValue> JSCallSite::isNative(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle) {
   auto stiRes = getStackTraceInfo(runtime, selfHandle);
   if (LLVM_UNLIKELY(stiRes == ExecutionStatus::EXCEPTION)) {
@@ -290,7 +290,7 @@ namespace {
 /// Ensures that \p selfHandle is a CallSite (raising a TypeError if not) before
 /// returning the default value.
 CallResult<HermesValue> HandleUnimplemented(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle,
     HermesValue (*createReturnHV)()) {
   if (LLVM_UNLIKELY(
@@ -304,77 +304,77 @@ CallResult<HermesValue> HandleUnimplemented(
 } // namespace
 
 CallResult<HermesValue> JSCallSite::getThis(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle) {
   return HandleUnimplemented(
       runtime, selfHandle, &HermesValue::encodeUndefinedValue);
 }
 
 CallResult<HermesValue> JSCallSite::getTypeName(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle) {
   return HandleUnimplemented(
       runtime, selfHandle, &HermesValue::encodeNullValue);
 }
 
 CallResult<HermesValue> JSCallSite::getFunction(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle) {
   return HandleUnimplemented(
       runtime, selfHandle, &HermesValue::encodeUndefinedValue);
 }
 
 CallResult<HermesValue> JSCallSite::getMethodName(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle) {
   return HandleUnimplemented(
       runtime, selfHandle, &HermesValue::encodeNullValue);
 }
 
 CallResult<HermesValue> JSCallSite::getEvalOrigin(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle) {
   return HandleUnimplemented(
       runtime, selfHandle, &HermesValue::encodeNullValue);
 }
 
 CallResult<HermesValue> JSCallSite::isToplevel(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle) {
   return HandleUnimplemented(
       runtime, selfHandle, &HermesValue::encodeNullValue);
 }
 
 CallResult<HermesValue> JSCallSite::isEval(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle) {
   return HandleUnimplemented(
       runtime, selfHandle, &HermesValue::encodeNullValue);
 }
 
 CallResult<HermesValue> JSCallSite::isConstructor(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle) {
   return HandleUnimplemented(
       runtime, selfHandle, &HermesValue::encodeNullValue);
 }
 
 CallResult<HermesValue> JSCallSite::isAsync(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle) {
   return HandleUnimplemented(
       runtime, selfHandle, [] { return HermesValue::encodeBoolValue(false); });
 }
 
 CallResult<HermesValue> JSCallSite::isPromiseAll(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle) {
   return HandleUnimplemented(
       runtime, selfHandle, [] { return HermesValue::encodeBoolValue(false); });
 }
 
 CallResult<HermesValue> JSCallSite::getPromiseIndex(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> selfHandle) {
   return HandleUnimplemented(
       runtime, selfHandle, &HermesValue::encodeNullValue);

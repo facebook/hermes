@@ -188,7 +188,7 @@ class DictPropertyMap final
 
   /// Create an instance of DictPropertyMap with the specified capacity.
   static CallResult<PseudoHandle<DictPropertyMap>> create(
-      Runtime *runtime,
+      Runtime &runtime,
       size_type capacity = DEFAULT_CAPACITY);
 
   /// Return the number of non-deleted properties in the map.
@@ -205,7 +205,7 @@ class DictPropertyMap final
   template <typename CallbackFunction>
   static void forEachProperty(
       Handle<DictPropertyMap> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       const CallbackFunction &callback);
 
   /// Same as \p forEachProperty, but the callback cannot do anything that
@@ -225,7 +225,7 @@ class DictPropertyMap final
   template <typename CallbackFunction>
   static bool forEachPropertyWhile(
       Handle<DictPropertyMap> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       const CallbackFunction &callback);
 
   /// Iterate over all the valid properties in the map, supplying a reference of
@@ -234,7 +234,7 @@ class DictPropertyMap final
   template <typename CallbackFunction>
   static void forEachMutablePropertyDescriptor(
       Handle<DictPropertyMap> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       const CallbackFunction &callback);
 
   static DescriptorPair *getDescriptorPair(
@@ -251,7 +251,7 @@ class DictPropertyMap final
   ///   denoting whether a new property was added.
   static CallResult<std::pair<NamedPropertyDescriptor *, bool>> findOrAdd(
       MutableHandle<DictPropertyMap> &selfHandleRef,
-      Runtime *runtime,
+      Runtime &runtime,
       SymbolID id);
 
   /// Add a new property with id \p id and descriptor \p desc, which must not
@@ -261,20 +261,20 @@ class DictPropertyMap final
   ///     object is re-allocated.
   static ExecutionStatus add(
       MutableHandle<DictPropertyMap> &selfHandleRef,
-      Runtime *runtime,
+      Runtime &runtime,
       SymbolID id,
       NamedPropertyDescriptor desc);
 
   /// Remove the property at the specified position. This invalidates all
   /// positions.
-  static void erase(DictPropertyMap *self, Runtime *runtime, PropertyPos pos);
+  static void erase(DictPropertyMap *self, Runtime &runtime, PropertyPos pos);
 
   /// Allocate a new property slot. Either pop the first entry in the deleted
   /// list, or, if the deleted list is empty, return slot \c numProperties_,
   /// which is the next slot at the end of the currently allocated storage.
   static SlotIndex allocatePropertySlot(
       DictPropertyMap *self,
-      Runtime *runtime);
+      Runtime &runtime);
 
   void dump();
 
@@ -340,11 +340,11 @@ class DictPropertyMap final
 
  public:
   DictPropertyMap(
-      Runtime *runtime,
+      Runtime &runtime,
       size_type descriptorCapacity,
       size_type hashCapacity)
       : VariableSizeRuntimeCell(
-            &runtime->getHeap(),
+            &runtime.getHeap(),
             &vt,
             allocationSize(descriptorCapacity, hashCapacity)),
         descriptorCapacity_(descriptorCapacity),
@@ -412,7 +412,7 @@ class DictPropertyMap final
   /// \param newCapacity the capacity of the new object's descriptor array.
   static ExecutionStatus grow(
       MutableHandle<DictPropertyMap> &selfHandleRef,
-      Runtime *runtime,
+      Runtime &runtime,
       size_type newCapacity);
 
   /// Gets the amount of memory required by this object for a given capacity.
@@ -496,7 +496,7 @@ class DictPropertyMap final
 template <typename CallbackFunction>
 void DictPropertyMap::forEachProperty(
     Handle<DictPropertyMap> selfHandle,
-    Runtime *runtime,
+    Runtime &runtime,
     const CallbackFunction &callback) {
   GCScopeMarkerRAII gcMarker{runtime};
   for (size_type
@@ -530,7 +530,7 @@ void DictPropertyMap::forEachPropertyNoAlloc(
 template <typename CallbackFunction>
 bool DictPropertyMap::forEachPropertyWhile(
     Handle<DictPropertyMap> selfHandle,
-    Runtime *runtime,
+    Runtime &runtime,
     const CallbackFunction &callback) {
   GCScopeMarkerRAII gcMarker{runtime};
   for (size_type
@@ -551,7 +551,7 @@ bool DictPropertyMap::forEachPropertyWhile(
 template <typename CallbackFunction>
 void DictPropertyMap::forEachMutablePropertyDescriptor(
     Handle<DictPropertyMap> selfHandle,
-    Runtime *runtime,
+    Runtime &runtime,
     const CallbackFunction &callback) {
   for (size_type
            i = 0,
@@ -598,7 +598,7 @@ inline OptValue<DictPropertyMap::PropertyPos> DictPropertyMap::find(
 
 inline ExecutionStatus DictPropertyMap::add(
     MutableHandle<DictPropertyMap> &selfHandleRef,
-    Runtime *runtime,
+    Runtime &runtime,
     SymbolID id,
     NamedPropertyDescriptor desc) {
   auto found = findOrAdd(selfHandleRef, runtime, id);

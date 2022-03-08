@@ -113,21 +113,21 @@ class Domain final : public GCCell {
   }
 
   /// Create a Domain with no associated RuntimeModules.
-  static PseudoHandle<Domain> create(Runtime *runtime);
+  static PseudoHandle<Domain> create(Runtime &runtime);
 
   /// Add \p runtimeModule to the list of RuntimeModules owned by this domain.
   static void addRuntimeModule(
       Handle<Domain> self,
-      Runtime *runtime,
+      Runtime &runtime,
       RuntimeModule *runtimeModule) {
-    self->runtimeModules_.push_back(runtimeModule, &runtime->getHeap());
+    self->runtimeModules_.push_back(runtimeModule, &runtime.getHeap());
   }
 
   /// Import the CommonJS module table from the given \p runtimeModule,
   /// ignoring modules with IDs / paths that have already been imported.
   LLVM_NODISCARD static ExecutionStatus importCJSModuleTable(
       Handle<Domain> self,
-      Runtime *runtime,
+      Runtime &runtime,
       RuntimeModule *runtimeModule);
 
   /// \return the ID of the entry CJS module.
@@ -148,7 +148,7 @@ class Domain final : public GCCell {
 
   /// \return the offset of the CJS module with ID \p index, None if a CJS
   /// module with the given ID has not been loaded.
-  OptValue<uint32_t> getCJSModuleOffset(Runtime *runtime, uint32_t id) const {
+  OptValue<uint32_t> getCJSModuleOffset(Runtime &runtime, uint32_t id) const {
     assert(cjsModules_ && "CJS Modules not initialized");
     if (LLVM_UNLIKELY(
             id >= cjsModules_.getNonNull(runtime)->size() / CJSModuleSize)) {
@@ -166,28 +166,28 @@ class Domain final : public GCCell {
   }
 
   /// \return the cached exports object for the given cjsModuleOffset.
-  PseudoHandle<> getCachedExports(Runtime *runtime, uint32_t cjsModuleOffset)
+  PseudoHandle<> getCachedExports(Runtime &runtime, uint32_t cjsModuleOffset)
       const {
     return createPseudoHandle(cjsModules_.getNonNull(runtime)->at(
         cjsModuleOffset + CachedExportsOffset));
   }
 
   /// \return the module object for the given cjsModuleOffset.
-  PseudoHandle<JSObject> getModule(Runtime *runtime, uint32_t cjsModuleOffset)
+  PseudoHandle<JSObject> getModule(Runtime &runtime, uint32_t cjsModuleOffset)
       const {
     return createPseudoHandle(dyn_vmcast<JSObject>(
         cjsModules_.getNonNull(runtime)->at(cjsModuleOffset + ModuleOffset)));
   }
 
   /// \return the function index for the given cjsModuleOffset.
-  uint32_t getFunctionIndex(Runtime *runtime, uint32_t cjsModuleOffset) const {
+  uint32_t getFunctionIndex(Runtime &runtime, uint32_t cjsModuleOffset) const {
     return cjsModules_.getNonNull(runtime)
         ->at(cjsModuleOffset + FunctionIndexOffset)
         .getNativeUInt32();
   }
 
   /// \return the runtime module for the given cjsModuleOffset.
-  RuntimeModule *getRuntimeModule(Runtime *runtime, uint32_t cjsModuleOffset)
+  RuntimeModule *getRuntimeModule(Runtime &runtime, uint32_t cjsModuleOffset)
       const {
     assert(cjsModuleOffset % CJSModuleSize == 0 && "Invalid cjsModuleOffset");
     return cjsRuntimeModules_[cjsModuleOffset / CJSModuleSize];
@@ -196,28 +196,28 @@ class Domain final : public GCCell {
   /// Set the module object for the given cjsModuleOffset.
   void setCachedExports(
       uint32_t cjsModuleOffset,
-      Runtime *runtime,
+      Runtime &runtime,
       HermesValue cachedExports) {
     cjsModules_.getNonNull(runtime)->set(
         cjsModuleOffset + CachedExportsOffset,
         cachedExports,
-        &runtime->getHeap());
+        &runtime.getHeap());
   }
 
   /// Set the module object for the given cjsModuleOffset.
-  void setModule(uint32_t cjsModuleOffset, Runtime *runtime, Handle<> module) {
+  void setModule(uint32_t cjsModuleOffset, Runtime &runtime, Handle<> module) {
     cjsModules_.getNonNull(runtime)->set(
         cjsModuleOffset + ModuleOffset,
         module.getHermesValue(),
-        &runtime->getHeap());
+        &runtime.getHeap());
   }
 
   /// \return the throwing require function with require.context bound to a
   /// context for this domain.
-  PseudoHandle<NativeFunction> getThrowingRequire(Runtime *runtime) const;
+  PseudoHandle<NativeFunction> getThrowingRequire(Runtime &runtime) const;
 
   /// Create a domain with no associated RuntimeModules.
-  Domain(Runtime *runtime) : GCCell(&runtime->getHeap(), &vt) {}
+  Domain(Runtime &runtime) : GCCell(&runtime.getHeap(), &vt) {}
 
  private:
   /// Destroy associated RuntimeModules.
@@ -265,22 +265,22 @@ class RequireContext final : public JSObject {
 
   /// Create a RequireContext with domain \p domain and dirname \p dirname.
   static Handle<RequireContext> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<Domain> domain,
       Handle<StringPrimitive> dirname);
 
   /// \return the domain for this require context.
-  static Domain *getDomain(Runtime *runtime, RequireContext *self) {
+  static Domain *getDomain(Runtime &runtime, RequireContext *self) {
     return self->domain_.get(runtime);
   }
 
   /// \return the current dirname for this require context.
-  static StringPrimitive *getDirname(Runtime *runtime, RequireContext *self) {
+  static StringPrimitive *getDirname(Runtime &runtime, RequireContext *self) {
     return self->dirname_.get(runtime);
   }
 
   RequireContext(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
       : JSObject(runtime, &vt.base, *parent, *clazz) {}

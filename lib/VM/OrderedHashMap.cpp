@@ -31,8 +31,8 @@ void HashMapEntryBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("nextEntryInBucket", &self->nextEntryInBucket);
 }
 
-CallResult<PseudoHandle<HashMapEntry>> HashMapEntry::create(Runtime *runtime) {
-  return createPseudoHandle(runtime->makeAFixed<HashMapEntry>(runtime));
+CallResult<PseudoHandle<HashMapEntry>> HashMapEntry::create(Runtime &runtime) {
+  return createPseudoHandle(runtime.makeAFixed<HashMapEntry>(runtime));
 }
 
 //===----------------------------------------------------------------------===//
@@ -51,26 +51,26 @@ void OrderedHashMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 OrderedHashMap::OrderedHashMap(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<ArrayStorageSmall> hashTableStorage)
-    : GCCell(&runtime->getHeap(), &vt),
-      hashTable_(runtime, hashTableStorage.get(), &runtime->getHeap()) {}
+    : GCCell(&runtime.getHeap(), &vt),
+      hashTable_(runtime, hashTableStorage.get(), &runtime.getHeap()) {}
 
 CallResult<PseudoHandle<OrderedHashMap>> OrderedHashMap::create(
-    Runtime *runtime) {
+    Runtime &runtime) {
   auto arrRes =
       ArrayStorageSmall::create(runtime, INITIAL_CAPACITY, INITIAL_CAPACITY);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto hashTableStorage = runtime->makeHandle<ArrayStorageSmall>(*arrRes);
+  auto hashTableStorage = runtime.makeHandle<ArrayStorageSmall>(*arrRes);
 
   return createPseudoHandle(
-      runtime->makeAFixed<OrderedHashMap>(runtime, hashTableStorage));
+      runtime.makeAFixed<OrderedHashMap>(runtime, hashTableStorage));
 }
 
 void OrderedHashMap::removeLinkedListNode(
-    Runtime *runtime,
+    Runtime &runtime,
     HashMapEntry *entry,
     GC *gc) {
   assert(
@@ -87,17 +87,17 @@ void OrderedHashMap::removeLinkedListNode(
   if (entry == firstIterationEntry_.get(runtime)) {
     firstIterationEntry_.set(runtime, entry->nextIterationEntry, gc);
   }
-  entry->prevIterationEntry.setNull(&runtime->getHeap());
+  entry->prevIterationEntry.setNull(&runtime.getHeap());
 }
 
-static HashMapEntry *castToMapEntry(SmallHermesValue shv, PointerBase *base) {
+static HashMapEntry *castToMapEntry(SmallHermesValue shv, PointerBase &base) {
   if (shv.isEmpty())
     return nullptr;
   return vmcast<HashMapEntry>(shv.getObject(base));
 }
 
 HashMapEntry *OrderedHashMap::lookupInBucket(
-    Runtime *runtime,
+    Runtime &runtime,
     uint32_t bucket,
     HermesValue key) {
   assert(
@@ -113,7 +113,7 @@ HashMapEntry *OrderedHashMap::lookupInBucket(
 
 ExecutionStatus OrderedHashMap::rehashIfNecessary(
     Handle<OrderedHashMap> self,
-    Runtime *runtime) {
+    Runtime &runtime) {
   uint32_t newCapacity = self->capacity_;
   // NOTE: we have ensured that self->capacity_ * 4 never overflows uint32_t by
   // setting MAX_CAPACITY to the appropriate value. self->size_ is always <=
@@ -154,7 +154,7 @@ ExecutionStatus OrderedHashMap::rehashIfNecessary(
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto newHashTable = runtime->makeHandle<ArrayStorageSmall>(*arrRes);
+  auto newHashTable = runtime.makeHandle<ArrayStorageSmall>(*arrRes);
 
   // Now re-add all entries to the hash table.
   MutableHandle<HashMapEntry> entry{runtime};
@@ -173,25 +173,25 @@ ExecutionStatus OrderedHashMap::rehashIfNecessary(
       oldNextInBucket = entry->nextEntryInBucket.get(runtime);
       if (newHashTable->at(bucket).isEmpty()) {
         // Empty bucket.
-        entry->nextEntryInBucket.setNull(&runtime->getHeap());
+        entry->nextEntryInBucket.setNull(&runtime.getHeap());
       } else {
         // There are already a bucket head.
         entry->nextEntryInBucket.set(
             runtime,
             vmcast<HashMapEntry>(newHashTable->at(bucket).getObject(runtime)),
-            &runtime->getHeap());
+            &runtime.getHeap());
       }
       // Update bucket head to the new entry.
       newHashTable->set(
           bucket,
           SmallHermesValue::encodeObjectValue(*entry, runtime),
-          &runtime->getHeap());
+          &runtime.getHeap());
 
       entry = *oldNextInBucket;
     }
   }
 
-  self->hashTable_.setNonNull(runtime, newHashTable.get(), &runtime->getHeap());
+  self->hashTable_.setNonNull(runtime, newHashTable.get(), &runtime.getHeap());
   assert(
       self->hashTable_.getNonNull(runtime)->size() == self->capacity_ &&
       "Inconsistent capacity");
@@ -200,7 +200,7 @@ ExecutionStatus OrderedHashMap::rehashIfNecessary(
 
 bool OrderedHashMap::has(
     Handle<OrderedHashMap> self,
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> key) {
   auto bucket = hashToBucket(self, runtime, key);
   return self->lookupInBucket(runtime, bucket, key.getHermesValue());
@@ -208,7 +208,7 @@ bool OrderedHashMap::has(
 
 HashMapEntry *OrderedHashMap::find(
     Handle<OrderedHashMap> self,
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> key) {
   auto bucket = hashToBucket(self, runtime, key);
   return self->lookupInBucket(runtime, bucket, key.getHermesValue());
@@ -216,7 +216,7 @@ HashMapEntry *OrderedHashMap::find(
 
 HermesValue OrderedHashMap::get(
     Handle<OrderedHashMap> self,
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> key) {
   auto *entry = find(self, runtime, key);
   if (!entry) {
@@ -227,14 +227,14 @@ HermesValue OrderedHashMap::get(
 
 ExecutionStatus OrderedHashMap::insert(
     Handle<OrderedHashMap> self,
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> key,
     Handle<> value) {
   uint32_t bucket = hashToBucket(self, runtime, key);
   if (auto *entry =
           self->lookupInBucket(runtime, bucket, key.getHermesValue())) {
     // Element already exists, update value and return.
-    entry->value.set(value.get(), &runtime->getHeap());
+    entry->value.set(value.get(), &runtime.getHeap());
     return ExecutionStatus::RETURNED;
   }
   // Create a new entry, set the key and value.
@@ -242,45 +242,45 @@ ExecutionStatus OrderedHashMap::insert(
   if (LLVM_UNLIKELY(crtRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto newMapEntry = runtime->makeHandle(std::move(*crtRes));
-  newMapEntry->key.set(key.get(), &runtime->getHeap());
-  newMapEntry->value.set(value.get(), &runtime->getHeap());
+  auto newMapEntry = runtime.makeHandle(std::move(*crtRes));
+  newMapEntry->key.set(key.get(), &runtime.getHeap());
+  newMapEntry->value.set(value.get(), &runtime.getHeap());
   auto *curBucketFront =
       castToMapEntry(self->hashTable_.getNonNull(runtime)->at(bucket), runtime);
   if (curBucketFront) {
     // If the bucket we are inserting to is not empty, we maintain the
     // linked list properly.
     newMapEntry->nextEntryInBucket.set(
-        runtime, curBucketFront, &runtime->getHeap());
+        runtime, curBucketFront, &runtime.getHeap());
   }
   // Set the newly inserted entry as the front of this bucket chain.
   self->hashTable_.getNonNull(runtime)->set(
       bucket,
       SmallHermesValue::encodeObjectValue(*newMapEntry, runtime),
-      &runtime->getHeap());
+      &runtime.getHeap());
 
   if (!self->firstIterationEntry_) {
     // If we are inserting the first ever element, update
     // first iteration entry pointer.
     self->firstIterationEntry_.set(
-        runtime, newMapEntry.get(), &runtime->getHeap());
+        runtime, newMapEntry.get(), &runtime.getHeap());
     self->lastIterationEntry_.set(
-        runtime, newMapEntry.get(), &runtime->getHeap());
+        runtime, newMapEntry.get(), &runtime.getHeap());
   } else {
     // Connect the new entry with the last entry.
     self->lastIterationEntry_.getNonNull(runtime)->nextIterationEntry.set(
-        runtime, newMapEntry.get(), &runtime->getHeap());
+        runtime, newMapEntry.get(), &runtime.getHeap());
     newMapEntry->prevIterationEntry.set(
-        runtime, self->lastIterationEntry_, &runtime->getHeap());
+        runtime, self->lastIterationEntry_, &runtime.getHeap());
 
     HashMapEntry *previousLastEntry = self->lastIterationEntry_.get(runtime);
     self->lastIterationEntry_.set(
-        runtime, newMapEntry.get(), &runtime->getHeap());
+        runtime, newMapEntry.get(), &runtime.getHeap());
 
     if (previousLastEntry && previousLastEntry->isDeleted()) {
       // If the last entry was a deleted entry, we no longer need to keep it.
       self->removeLinkedListNode(
-          runtime, previousLastEntry, &runtime->getHeap());
+          runtime, previousLastEntry, &runtime.getHeap());
     }
   }
 
@@ -290,7 +290,7 @@ ExecutionStatus OrderedHashMap::insert(
 
 bool OrderedHashMap::erase(
     Handle<OrderedHashMap> self,
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> key) {
   uint32_t bucket = hashToBucket(self, runtime, key);
   HashMapEntry *prevEntry = nullptr;
@@ -308,7 +308,7 @@ bool OrderedHashMap::erase(
   if (prevEntry) {
     // The entry we are deleting has a previous entry, update the link.
     prevEntry->nextEntryInBucket.set(
-        runtime, entry->nextEntryInBucket, &runtime->getHeap());
+        runtime, entry->nextEntryInBucket, &runtime.getHeap());
   } else {
     // The entry we are erasing is the front entry in the bucket, we need
     // to update the bucket head to the next entry in the bucket, if not
@@ -318,7 +318,7 @@ bool OrderedHashMap::erase(
         entry->nextEntryInBucket
             ? SmallHermesValue::encodeObjectValue(entry->nextEntryInBucket)
             : SmallHermesValue::encodeEmptyValue(),
-        &runtime->getHeap());
+        &runtime.getHeap());
   }
 
   entry->markDeleted(runtime);
@@ -330,7 +330,7 @@ bool OrderedHashMap::erase(
   // this entry, it will be able to follow on if we add new entries in the
   // future.
   if (entry != self->lastIterationEntry_.get(runtime)) {
-    self->removeLinkedListNode(runtime, entry, &runtime->getHeap());
+    self->removeLinkedListNode(runtime, entry, &runtime.getHeap());
   }
 
   self->rehashIfNecessary(self, runtime);
@@ -339,7 +339,7 @@ bool OrderedHashMap::erase(
 }
 
 HashMapEntry *OrderedHashMap::iteratorNext(
-    Runtime *runtime,
+    Runtime &runtime,
     HashMapEntry *entry) const {
   if (entry == nullptr) {
     // Starting a new iteration from the first entry.
@@ -356,7 +356,7 @@ HashMapEntry *OrderedHashMap::iteratorNext(
   return entry;
 }
 
-void OrderedHashMap::clear(Runtime *runtime) {
+void OrderedHashMap::clear(Runtime &runtime) {
   if (!firstIterationEntry_) {
     // Empty set.
     return;
@@ -372,7 +372,7 @@ void OrderedHashMap::clear(Runtime *runtime) {
     }
     // Clear every element in the hash table.
     hashTable_.getNonNull(runtime)->setNonPtr(
-        i, SmallHermesValue::encodeEmptyValue(), &runtime->getHeap());
+        i, SmallHermesValue::encodeEmptyValue(), &runtime.getHeap());
   }
   // Resize the hash table to the initial size.
   ArrayStorageSmall::resizeWithinCapacity(
@@ -383,9 +383,9 @@ void OrderedHashMap::clear(Runtime *runtime) {
   // in case there is an iterator out there
   // pointing to the middle of the iteration chain. We need it to be
   // able to merge back eventually.
-  firstIterationEntry_.set(runtime, lastIterationEntry_, &runtime->getHeap());
+  firstIterationEntry_.set(runtime, lastIterationEntry_, &runtime.getHeap());
   firstIterationEntry_.getNonNull(runtime)->prevIterationEntry.setNull(
-      &runtime->getHeap());
+      &runtime.getHeap());
   size_ = 0;
 }
 

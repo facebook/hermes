@@ -46,7 +46,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       : RootAndSlotAcceptorDefault(gc.getPointerBase()),
         WeakAcceptorDefault(gc.getPointerBase()),
         gc(gc),
-        markedSymbols_(gc.gcCallbacks_->getSymbolsEnd()) {}
+        markedSymbols_(gc.gcCallbacks_.getSymbolsEnd()) {}
 
   using RootAndSlotAcceptorDefault::accept;
 
@@ -184,8 +184,8 @@ gcheapsize_t MallocGC::Size::minStorageFootprint() const {
 }
 
 MallocGC::MallocGC(
-    GCCallbacks *gcCallbacks,
-    PointerBase *pointerBase,
+    GCCallbacks &gcCallbacks,
+    PointerBase &pointerBase,
     const GCConfig &gcConfig,
     std::shared_ptr<CrashManager> crashMgr,
     std::shared_ptr<StorageProvider> provider,
@@ -283,7 +283,7 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
 
   // Begin the collection phases.
   {
-    GCCycle cycle{this, gcCallbacks_, "Full collection"};
+    GCCycle cycle{this, &gcCallbacks_, "Full collection"};
     MarkingAcceptor acceptor(*this);
     DroppingAcceptor<MarkingAcceptor> nameAcceptor{acceptor};
     markRoots(nameAcceptor, true);
@@ -303,7 +303,7 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
     updateWeakReferences();
     resetWeakReferences();
     // Free the unused symbols.
-    gcCallbacks_->freeSymbols(acceptor.markedSymbols_);
+    gcCallbacks_.freeSymbols(acceptor.markedSymbols_);
     // By the end of the marking loop, all pointers left in pointers_ are dead.
     for (CellHeader *header : pointers_) {
 #ifndef HERMESVM_SANITIZE_HANDLES

@@ -42,21 +42,21 @@ void DecoratedObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 // static
 PseudoHandle<DecoratedObject> DecoratedObject::create(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> parentHandle,
     std::unique_ptr<Decoration> decoration,
     unsigned int additionalSlotCount) {
   const size_t reservedSlots =
       numOverlapSlots<DecoratedObject>() + additionalSlotCount;
-  auto *cell = runtime->makeAFixed<DecoratedObject, HasFinalizer::Yes>(
+  auto *cell = runtime.makeAFixed<DecoratedObject, HasFinalizer::Yes>(
       runtime,
       &vt,
       parentHandle,
-      runtime->getHiddenClassForPrototype(*parentHandle, reservedSlots),
+      runtime.getHiddenClassForPrototype(*parentHandle, reservedSlots),
       std::move(decoration));
   auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
   // Allocate a propStorage if the number of additional slots requires it.
-  auto selfWithSlots = runtime->ignoreAllocationFailure(
+  auto selfWithSlots = runtime.ignoreAllocationFailure(
       JSObject::allocatePropStorage(std::move(self), runtime, reservedSlots));
   return PseudoHandle<DecoratedObject>::vmcast(std::move(selfWithSlots));
 }

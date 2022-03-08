@@ -56,7 +56,7 @@ void CodeCoverageProfiler::markExecutedSlowPath(CodeBlock *codeBlock) {
   for (const auto &profiler : profilers) {
     std::vector<CodeCoverageProfiler::FuncInfo> profilerOutput =
         profiler->getExecutedFunctionsLocal();
-    result.emplace(profiler->runtime_->getHeap().getName(), profilerOutput);
+    result.emplace(profiler->runtime_.getHeap().getName(), profilerOutput);
   }
   return result;
 }

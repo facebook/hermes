@@ -34,14 +34,14 @@ class JSArrayBuffer final : public JSObject {
   }
 
   static PseudoHandle<JSArrayBuffer> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> prototype);
 
   /// ES7 24.1.1.4
   /// NOTE: since SharedArrayBuffer does not exist, this does not use the
   /// SpeciesConstructor, it always allocates a normal ArrayBuffer.
   static CallResult<Handle<JSArrayBuffer>> clone(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSArrayBuffer> src,
       size_type srcByteOffset,
       size_type srcSize);
@@ -60,7 +60,7 @@ class JSArrayBuffer final : public JSObject {
   ///   uninitialized.
   /// \return ExecutionStatus::RETURNED iff the allocation was successful.
   ExecutionStatus
-  createDataBlock(Runtime *runtime, size_type size, bool zero = true);
+  createDataBlock(Runtime &runtime, size_type size, bool zero = true);
 
   /// Retrieves a pointer to the held buffer.
   /// \return A pointer to the buffer owned by this object. This can be null
@@ -101,7 +101,7 @@ class JSArrayBuffer final : public JSObject {
 
  public:
   JSArrayBuffer(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz);
 

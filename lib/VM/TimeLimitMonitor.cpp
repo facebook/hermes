@@ -82,27 +82,27 @@ void TimeLimitMonitor::timerLoop() {
   }
 }
 
-void TimeLimitMonitor::watchRuntime(Runtime *runtime, int timeoutInMs) {
+void TimeLimitMonitor::watchRuntime(Runtime &runtime, int timeoutInMs) {
   {
     std::lock_guard<std::mutex> lock(timeoutMapMtx_);
     createTimerLoopIfNeeded();
     auto deadline = std::chrono::steady_clock::now() +
         std::chrono::milliseconds(timeoutInMs);
-    timeoutMap_[runtime] = deadline;
+    timeoutMap_[&runtime] = deadline;
   }
 
-  runtime->registerDestructionCallback(
-      [this](Runtime *runtime) { this->unwatchRuntime(runtime); });
+  runtime.registerDestructionCallback(
+      [this](Runtime &runtime) { this->unwatchRuntime(runtime); });
 
   // There is only one thread anyway.
   newRequestCond_.notify_one();
 }
 
-void TimeLimitMonitor::unwatchRuntime(Runtime *runtime) {
+void TimeLimitMonitor::unwatchRuntime(Runtime &runtime) {
   std::lock_guard<std::mutex> lock(timeoutMapMtx_);
   // unwatchRuntime() may be called multiple times for the same runtime.
-  if (timeoutMap_.find(runtime) != timeoutMap_.end()) {
-    timeoutMap_.erase(runtime);
+  if (timeoutMap_.find(&runtime) != timeoutMap_.end()) {
+    timeoutMap_.erase(&runtime);
   }
 }
 

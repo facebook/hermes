@@ -175,7 +175,7 @@ Part partFromJava(jni::alias_ref<JPartMap> result) {
 }
 
 vm::CallResult<std::vector<std::u16string>> localesFromJava(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     vm::CallResult<jni::local_ref<JLocalesList>> &&result) {
   if (LLVM_UNLIKELY(result == vm::ExecutionStatus::EXCEPTION)) {
     return vm::ExecutionStatus::EXCEPTION;
@@ -243,37 +243,37 @@ class JIntl : public jni::JavaClass<JIntl> {
 } // namespace
 
 vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales) {
   try {
     return localesFromJava(
         runtime, JIntl::getCanonicalLocales(localesToJava(locales)));
   } catch (const std::exception &ex) {
-    return runtime->raiseRangeError(ex.what());
+    return runtime.raiseRangeError(ex.what());
   }
 }
 
 vm::CallResult<std::u16string> toLocaleLowerCase(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const std::u16string &str) {
   try {
     return stringFromJava(
         JIntl::toLocaleLowerCase(localesToJava(locales), stringToJava(str)));
   } catch (const std::exception &ex) {
-    return runtime->raiseRangeError(ex.what());
+    return runtime.raiseRangeError(ex.what());
   }
 }
 
 vm::CallResult<std::u16string> toLocaleUpperCase(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const std::u16string &str) {
   try {
     return stringFromJava(
         JIntl::toLocaleUpperCase(localesToJava(locales), stringToJava(str)));
   } catch (const std::exception &ex) {
-    return runtime->raiseRangeError(ex.what());
+    return runtime.raiseRangeError(ex.what());
   }
 }
 
@@ -329,7 +329,7 @@ Collator::~Collator() {
 }
 
 vm::CallResult<std::vector<std::u16string>> Collator::supportedLocalesOf(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   try {
@@ -338,19 +338,19 @@ vm::CallResult<std::vector<std::u16string>> Collator::supportedLocalesOf(
         JCollator::supportedLocalesOf(
             localesToJava(locales), optionsToJava(options)));
   } catch (const std::exception &ex) {
-    return runtime->raiseRangeError(ex.what());
+    return runtime.raiseRangeError(ex.what());
   }
 }
 
 vm::ExecutionStatus Collator::initialize(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   try {
     impl_->jCollator_ = jni::make_global(
         JCollator::create(localesToJava(locales), optionsToJava(options)));
   } catch (const std::exception &ex) {
-    return runtime->raiseRangeError(ex.what());
+    return runtime.raiseRangeError(ex.what());
   }
 
   return vm::ExecutionStatus::RETURNED;
@@ -424,7 +424,7 @@ DateTimeFormat::~DateTimeFormat() {
 }
 
 vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   try {
@@ -433,19 +433,19 @@ vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
         JDateTimeFormat::supportedLocalesOf(
             localesToJava(locales), optionsToJava(options)));
   } catch (const std::exception &ex) {
-    return runtime->raiseRangeError(ex.what());
+    return runtime.raiseRangeError(ex.what());
   }
 }
 
 vm::ExecutionStatus DateTimeFormat::initialize(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   try {
     impl_->jDateTimeFormat_ = jni::make_global(JDateTimeFormat::create(
         localesToJava(locales), optionsToJava(options)));
   } catch (const std::exception &ex) {
-    return runtime->raiseRangeError(ex.what());
+    return runtime.raiseRangeError(ex.what());
   }
 
   return vm::ExecutionStatus::RETURNED;
@@ -526,7 +526,7 @@ NumberFormat::~NumberFormat() {
 }
 
 vm::CallResult<std::vector<std::u16string>> NumberFormat::supportedLocalesOf(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   try {
@@ -535,19 +535,19 @@ vm::CallResult<std::vector<std::u16string>> NumberFormat::supportedLocalesOf(
         JNumberFormat::supportedLocalesOf(
             localesToJava(locales), optionsToJava(options)));
   } catch (const std::exception &ex) {
-    return runtime->raiseRangeError(ex.what());
+    return runtime.raiseRangeError(ex.what());
   }
 }
 
 vm::ExecutionStatus NumberFormat::initialize(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   try {
     impl_->jNumberFormat_ = jni::make_global(
         JNumberFormat::create(localesToJava(locales), optionsToJava(options)));
   } catch (const std::exception &ex) {
-    return runtime->raiseRangeError(ex.what());
+    return runtime.raiseRangeError(ex.what());
   }
 
   return vm::ExecutionStatus::RETURNED;

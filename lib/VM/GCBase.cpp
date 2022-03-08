@@ -39,8 +39,8 @@ const char GCBase::kNaturalCauseForAnalytics[] = "natural";
 const char GCBase::kHandleSanCauseForAnalytics[] = "handle-san";
 
 GCBase::GCBase(
-    GCCallbacks *gcCallbacks,
-    PointerBase *pointerBase,
+    GCCallbacks &gcCallbacks,
+    PointerBase &pointerBase,
     const GCConfig &gcConfig,
     std::shared_ptr<CrashManager> crashMgr,
     HeapKind kind)
@@ -158,7 +158,7 @@ constexpr HeapSnapshot::NodeID objectIDForRootSection(
 struct SnapshotAcceptor : public RootAndSlotAcceptorWithNamesDefault {
   using RootAndSlotAcceptorWithNamesDefault::accept;
 
-  SnapshotAcceptor(PointerBase *base, HeapSnapshot &snap)
+  SnapshotAcceptor(PointerBase &base, HeapSnapshot &snap)
       : RootAndSlotAcceptorWithNamesDefault(base), snap_(snap) {}
 
   void acceptHV(HermesValue &hv, const char *name) override {
@@ -182,7 +182,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
   using SnapshotAcceptor::accept;
 
   PrimitiveNodeAcceptor(
-      PointerBase *base,
+      PointerBase &base,
       HeapSnapshot &snap,
       GCBase::IDTracker &tracker)
       : SnapshotAcceptor(base, snap), tracker_(tracker) {}
@@ -327,7 +327,7 @@ struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
   using SnapshotAcceptor::accept;
   using WeakRootAcceptor::acceptWeak;
 
-  SnapshotRootSectionAcceptor(PointerBase *base, HeapSnapshot &snap)
+  SnapshotRootSectionAcceptor(PointerBase &base, HeapSnapshot &snap)
       : SnapshotAcceptor(base, snap), WeakAcceptorDefault(base) {}
 
   void accept(GCCell *&, const char *) override {
@@ -481,7 +481,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
 
 void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   JSONEmitter json(os);
-  HeapSnapshot snap(json, gcCallbacks_->getStackTracesTree());
+  HeapSnapshot snap(json, gcCallbacks_.getStackTracesTree());
 
   const auto rootScan = [gc, &snap, this]() {
     {
@@ -523,9 +523,9 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
       markRoots(rootAcceptor, true);
       markWeakRoots(rootAcceptor, /*markLongLived*/ true);
     }
-    gcCallbacks_->visitIdentifiers([&snap, this](
-                                       SymbolID sym,
-                                       const StringPrimitive *str) {
+    gcCallbacks_.visitIdentifiers([&snap, this](
+                                      SymbolID sym,
+                                      const StringPrimitive *str) {
       snap.beginNode();
       if (str) {
         snap.addNamedEdge(
@@ -732,7 +732,7 @@ void GCBase::dump(llvh::raw_ostream &, bool) { /* nop */
 void GCBase::printStats(JSONEmitter &json) {
   json.emitKeyValue("type", "hermes");
   json.emitKeyValue("version", 0);
-  gcCallbacks_->printRuntimeGCStats(json);
+  gcCallbacks_.printRuntimeGCStats(json);
 
   std::chrono::duration<double> elapsedTime =
       std::chrono::steady_clock::now() - execStartTime_;
@@ -868,7 +868,7 @@ void GCBase::oom(std::error_code reason) {
   // ~Runtime.
   throw JSOutOfMemoryError(
       std::string(detailBuffer) + "\ncall stack:\n" +
-      gcCallbacks_->getCallStackNoAlloc());
+      gcCallbacks_.getCallStackNoAlloc());
 #else
   hermesLog("HermesGC", "OOM: %s.", detailBuffer);
   // Record the OOM custom data with the crash manager.
@@ -1334,7 +1334,7 @@ void GCBase::AllocationLocationTracker::newAlloc(
   // enabled as it allows us to assert this feature works across many tests.
   // Note it's not very slow, it's slower than the non-virtual version
   // in Runtime though.
-  const auto *ip = gc_->gcCallbacks_->getCurrentIPSlow();
+  const auto *ip = gc_->gcCallbacks_.getCurrentIPSlow();
   if (!enabled_) {
     return;
   }
@@ -1354,7 +1354,7 @@ void GCBase::AllocationLocationTracker::newAlloc(
   if (lastFrag.numBytes_ >= kFlushThreshold) {
     flushCallback();
   }
-  if (auto node = gc_->gcCallbacks_->getCurrentStackTracesTreeNode(ip)) {
+  if (auto node = gc_->gcCallbacks_.getCurrentStackTracesTreeNode(ip)) {
     auto itAndDidInsert = stackMap_.try_emplace(id, node);
     assert(itAndDidInsert.second && "Failed to create a new node");
     (void)itAndDidInsert;
@@ -1490,7 +1490,7 @@ void GCBase::SamplingAllocationLocationTracker::disable(llvh::raw_ostream &os) {
 
   // Have to emit the tree of stack frames before emitting samples, Chrome
   // requires the tree emitted first.
-  profile.emitTree(gc_->gcCallbacks_->getStackTracesTree(), sizesToCounts);
+  profile.emitTree(gc_->gcCallbacks_.getStackTracesTree(), sizesToCounts);
   profile.beginSamples();
   for (const auto &s : samples_) {
     const Sample &sample = s.second;
@@ -1514,11 +1514,11 @@ void GCBase::SamplingAllocationLocationTracker::newAlloc(
     limit_ -= sz;
     return;
   }
-  const auto *ip = gc_->gcCallbacks_->getCurrentIPSlow();
+  const auto *ip = gc_->gcCallbacks_.getCurrentIPSlow();
   // This is stateful and causes the object to have an ID assigned.
   const auto id = gc_->getObjectID(ptr);
   if (StackTracesTreeNode *node =
-          gc_->gcCallbacks_->getCurrentStackTracesTreeNode(ip)) {
+          gc_->gcCallbacks_.getCurrentStackTracesTreeNode(ip)) {
     // Hold a lock while modifying samples_.
     std::lock_guard<Mutex> lk{mtx_};
     auto sampleItAndDidInsert =
@@ -1690,9 +1690,9 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
     const int64_t HINT32_MAX = (1LL << 31) - 1;
 
     HeapSizeDiagnostic diagnostic;
-    PointerBase *pointerBase_;
+    PointerBase &pointerBase_;
 
-    HeapSizeDiagnosticAcceptor(PointerBase *pb) : pointerBase_{pb} {}
+    HeapSizeDiagnosticAcceptor(PointerBase &pb) : pointerBase_{pb} {}
 
     using SlotAcceptor::accept;
 

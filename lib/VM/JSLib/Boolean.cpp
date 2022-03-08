@@ -18,8 +18,8 @@
 namespace hermes {
 namespace vm {
 
-Handle<JSObject> createBooleanConstructor(Runtime *runtime) {
-  auto booleanPrototype = Handle<JSBoolean>::vmcast(&runtime->booleanPrototype);
+Handle<JSObject> createBooleanConstructor(Runtime &runtime) {
+  auto booleanPrototype = Handle<JSBoolean>::vmcast(&runtime.booleanPrototype);
 
   auto cons = defineSystemConstructor<JSBoolean>(
       runtime,
@@ -49,7 +49,7 @@ Handle<JSObject> createBooleanConstructor(Runtime *runtime) {
 }
 
 CallResult<HermesValue>
-booleanConstructor(void *, Runtime *runtime, NativeArgs args) {
+booleanConstructor(void *, Runtime &runtime, NativeArgs args) {
   bool value = toBoolean(args.getArg(0));
 
   if (args.isConstructorCall()) {
@@ -62,31 +62,31 @@ booleanConstructor(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-booleanPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
+booleanPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
   bool value;
   if (args.getThisArg().isBool()) {
     value = args.getThisArg().getBool();
   } else {
     auto *boolPtr = dyn_vmcast<JSBoolean>(args.getThisArg());
     if (!boolPtr) {
-      return runtime->raiseTypeError(
+      return runtime.raiseTypeError(
           "Boolean.prototype.valueOf() can only be used on Boolean");
     }
     value = boolPtr->getPrimitiveBoolean();
   }
   return HermesValue::encodeStringValue(
-      value ? runtime->getPredefinedString(Predefined::trueStr)
-            : runtime->getPredefinedString(Predefined::falseStr));
+      value ? runtime.getPredefinedString(Predefined::trueStr)
+            : runtime.getPredefinedString(Predefined::falseStr));
 }
 
 CallResult<HermesValue>
-booleanPrototypeValueOf(void *, Runtime *runtime, NativeArgs args) {
+booleanPrototypeValueOf(void *, Runtime &runtime, NativeArgs args) {
   if (args.getThisArg().isBool()) {
     return args.getThisArg();
   }
   auto *boolPtr = dyn_vmcast<JSBoolean>(args.getThisArg());
   if (!boolPtr) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "Boolean.prototype.valueOf() can only be used on Boolean");
   }
   return HermesValue::encodeBoolValue(boolPtr->getPrimitiveBoolean());

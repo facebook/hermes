@@ -29,10 +29,10 @@ class JSDate final : public JSObject {
   }
 
   static PseudoHandle<JSDate>
-  create(Runtime *runtime, double value, Handle<JSObject> prototype);
+  create(Runtime &runtime, double value, Handle<JSObject> prototype);
 
   static PseudoHandle<JSDate> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> prototype) {
     return create(runtime, std::numeric_limits<double>::quiet_NaN(), prototype);
   }
@@ -48,7 +48,7 @@ class JSDate final : public JSObject {
   }
 
   JSDate(
-      Runtime *runtime,
+      Runtime &runtime,
       double value,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)

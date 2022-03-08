@@ -129,12 +129,12 @@ void SamplingProfiler::GlobalProfiler::profilingSignalHandler(int signo) {
   // Avoid spoiling errno in a signal handler by storing the old version and
   // re-assigning it.
   auto oldErrno = errno;
-  auto *curThreadRuntime = localProfiler->runtime_;
+  auto &curThreadRuntime = localProfiler->runtime_;
 
   auto profilerInstance = instance_.load();
   // Sampling stack will touch GC objects(like closure) so
   // only do so if heap is valid.
-  if (LLVM_LIKELY(!curThreadRuntime->getHeap().inGC())) {
+  if (LLVM_LIKELY(!curThreadRuntime.getHeap().inGC())) {
     assert(
         profilerInstance != nullptr &&
         "Why is GlobalProfiler::instance_ not initialized yet?");
@@ -243,7 +243,7 @@ uint32_t SamplingProfiler::walkRuntimeStack(
 
   // TODO: capture leaf frame IP.
   const Inst *ip = nullptr;
-  for (ConstStackFramePtr frame : runtime_->getStackFrames()) {
+  for (ConstStackFramePtr frame : runtime_.getStackFrames()) {
     // Whether we successfully captured a stack frame or not.
     bool capturedFrame = true;
     auto &frameStorage = sampleStorage.stack[count];
@@ -322,12 +322,11 @@ bool SamplingProfiler::GlobalProfiler::enabled() {
     return StackCollectionRetcode::NO_STACK_FOR_THREAD;
   }
 
-  Runtime *curThreadRuntime = localProfiler->runtime_;
-  assert(curThreadRuntime && "A profiler should always have a runtime.");
+  Runtime &curThreadRuntime = localProfiler->runtime_;
   // Sampling stack will touch GC objects(like closure) so
   // only do so if heap is valid.
   uint32_t sampledStackDepth = 0;
-  if (!curThreadRuntime->getHeap().inGC()) {
+  if (!curThreadRuntime.getHeap().inGC()) {
     assert(
         profilerInstance != nullptr &&
         "Why is GlobalProfiler::instance_ not initialized yet?");
@@ -387,7 +386,7 @@ bool SamplingProfiler::GlobalProfiler::enabled() {
 }
 #endif
 
-SamplingProfiler::SamplingProfiler(Runtime *runtime)
+SamplingProfiler::SamplingProfiler(Runtime &runtime)
     : currentThread_{pthread_self()}, runtime_{runtime} {
   threadNames_[oscompat::thread_id()] = oscompat::thread_name();
   GlobalProfiler::get()->registerRuntime(this);
@@ -529,7 +528,7 @@ void SamplingProfiler::onGCEvent(
     GCEventKind kind,
     const std::string &extraInfo) {
   assert(
-      !runtime_->getHeap().inGC() &&
+      !runtime_.getHeap().inGC() &&
       "Cannot be in a GC when setting a GC event");
   switch (kind) {
     case GCEventKind::CollectionStart: {
