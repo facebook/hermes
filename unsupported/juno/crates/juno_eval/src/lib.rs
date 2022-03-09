@@ -5,4 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use juno_ast::NodeRc;
+
 mod eval;
+
+pub fn run(ast: &NodeRc) {
+    eprintln!("Sorry, running not supported");
+}

@@ -12,6 +12,7 @@ use juno::hparser::{self, MagicCommentKind, ParsedJS, ParserDialect};
 use juno::sema::SemContext;
 use juno::sourcemap::merge_sourcemaps;
 use juno::{gen_js, resolve_dependency, sema};
+use juno_eval;
 use juno_pass::PassManager;
 use juno_support::source_manager::SourceId;
 use juno_support::NullTerminatedBuf;
@@ -80,6 +81,9 @@ struct Options {
 
     /// Whether to run strip flow types.
     strip_flow: Opt<bool>,
+
+    /// Whether to run the parsed AST.
+    run: Opt<bool>,
 
     /// Control the recognized JavaScript dialect.
     dialect: Opt<ParserDialect>,
@@ -226,6 +230,14 @@ impl Options {
                     ..Default::default()
                 },
             ),
+            run: Opt::new_flag(
+                cl,
+                OptDesc {
+                    long: Some("run"),
+                    desc: Some("Run the parsed AST"),
+                    ..Default::default()
+                },
+            ),
             dialect: Opt::new_enum(
                 cl,
                 OptDesc {
@@ -279,7 +291,6 @@ impl Options {
             ),
         }
     }
-
 
     /// Ensure the arguments are valid.
     /// Return `Err` if there are any conflicts.
@@ -376,6 +387,11 @@ fn gen_output(
     } else {
         final_ast
     };
+
+    if *opt.run {
+        juno_eval::run(&final_ast);
+        return Ok(true);
+    }
 
     match *opt.gen {
         Gen::Ast => {

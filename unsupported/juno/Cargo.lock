@@ -172,6 +172,7 @@ dependencies = [
  "assert_cmd",
  "command_line",
  "juno",
+ "juno_eval",
  "juno_pass",
  "juno_support",
  "lit",
@@ -184,6 +185,7 @@ dependencies = [
 name = "juno_eval"
 version = "0.1.0"
 dependencies = [
+ "juno_ast",
  "num",
 ]
 
