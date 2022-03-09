@@ -324,6 +324,12 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
         trace.emplace_back<SynthTrace::CreateObjectRecord>(
             timeFromStart, objID->getValue());
         break;
+      case RecordType::DrainMicrotasks: {
+        int maxMicrotasksHint = getNumberAs<int>(obj->get("maxMicrotasksHint"));
+        trace.emplace_back<SynthTrace::DrainMicrotasksRecord>(
+            timeFromStart, maxMicrotasksHint);
+        break;
+      }
       case RecordType::CreateString: {
         auto encoding =
             llvh::dyn_cast_or_null<JSONString>(obj->get("encoding"));

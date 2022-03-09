@@ -178,6 +178,7 @@ class SynthTrace {
     CreatePropNameID,
     CreateHostObject,
     CreateHostFunction,
+    DrainMicrotasks,
     GetProperty,
     SetProperty,
     HasProperty,
@@ -634,6 +635,22 @@ class SynthTrace {
 
     std::vector<ObjectID> uses() const override {
       return {objID_, propID_};
+    }
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+  };
+
+  struct DrainMicrotasksRecord : public Record {
+    static constexpr RecordType type{RecordType::DrainMicrotasks};
+    int maxMicrotasksHint_;
+
+    DrainMicrotasksRecord(TimeSinceStart time, int tasksHint = -1)
+        : Record(time), maxMicrotasksHint_(tasksHint) {}
+
+    bool operator==(const Record &that) const final;
+
+    RecordType getType() const override {
+      return type;
     }
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;

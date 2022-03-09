@@ -1257,6 +1257,12 @@ Value TraceInterpreter::execFunction(
                 locals);
             break;
           }
+          case RecordType::DrainMicrotasks: {
+            const auto &drainRecord =
+                static_cast<const SynthTrace::DrainMicrotasksRecord &>(*rec);
+            rt_.drainMicrotasks(drainRecord.maxMicrotasksHint_);
+            break;
+          }
           case RecordType::GetProperty: {
             const auto &gpr =
                 static_cast<const SynthTrace::GetPropertyRecord &>(*rec);

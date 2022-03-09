@@ -10,6 +10,8 @@
 #include <hermes/TraceInterpreter.h>
 #include <hermes/TracingRuntime.h>
 
+#include "hermes/Public/RuntimeConfig.h"
+#include "hermes/VM/VMExperiments.h"
 #include "llvh/Support/SHA1.h"
 
 #include <gmock/gmock.h>
@@ -509,6 +511,19 @@ TEST_F(SynthTraceTest, CallObjectGetProp) {
       *records.at(8));
 }
 
+TEST_F(SynthTraceTest, DrainMicrotasks) {
+  {
+    rt->drainMicrotasks();
+    rt->drainMicrotasks(5);
+  }
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(2, records.size());
+  EXPECT_EQ_RECORD(
+      SynthTrace::DrainMicrotasksRecord(dummyTime), *records.at(0));
+  EXPECT_EQ_RECORD(
+      SynthTrace::DrainMicrotasksRecord(dummyTime, 5), *records.at(1));
+}
+
 TEST_F(SynthTraceTest, HostObjectProxy) {
   // This allows us to share the constant strings between the outer scope
   // and the TestHostObject, below.
@@ -972,19 +987,24 @@ TEST(SynthTraceDeathTest, HostObjectThrowsExceptionFails) {
 /// @{
 
 struct SynthTraceReplayTest : public ::testing::Test {
-  ::hermes::vm::RuntimeConfig config =
-      ::hermes::vm::RuntimeConfig::Builder().withTraceEnabled(true).build();
+  ::hermes::vm::RuntimeConfig config;
   std::string traceResult;
   std::unique_ptr<TracingHermesRuntime> traceRt;
   std::unique_ptr<jsi::Runtime> replayRt;
 
-  SynthTraceReplayTest()
-      : traceRt(makeTracingHermesRuntime(
+  SynthTraceReplayTest(::hermes::vm::RuntimeConfig conf)
+      : config(conf),
+        traceRt(makeTracingHermesRuntime(
             makeHermesRuntime(config),
             config,
             /* traceStream */
             std::make_unique<llvh::raw_string_ostream>(traceResult),
             /* forReplay */ true)) {}
+
+  SynthTraceReplayTest()
+      : SynthTraceReplayTest(::hermes::vm::RuntimeConfig::Builder()
+                                 .withTraceEnabled(true)
+                                 .build()) {}
 
   void replay() {
     traceRt.reset();
@@ -1045,6 +1065,50 @@ TEST_F(SynthTraceReplayTest, SetPropertyReplay) {
     EXPECT_EQ(eval(rt, "x.c").asString(rt).utf8(rt), "coconut");
     EXPECT_EQ(eval(rt, "x[symD]").asString(rt).utf8(rt), "durian");
     EXPECT_EQ(eval(rt, "x[symE]").asString(rt).utf8(rt), "eggplant");
+  }
+}
+
+struct JobQueueReplayTest : public SynthTraceReplayTest {
+  JobQueueReplayTest()
+      : SynthTraceReplayTest(
+            ::hermes::vm::RuntimeConfig::Builder()
+                .withTraceEnabled(true)
+                .withEnableHermesInternal(true)
+                .withVMExperimentFlags(::hermes::vm::experiments::JobQueue)
+                .build()) {}
+};
+
+TEST_F(JobQueueReplayTest, DrainSingleMicrotask) {
+  {
+    auto &rt = *traceRt;
+    eval(rt, "var x = 3; HermesInternal.enqueueJob(function(){x = 4;})");
+    rt.drainMicrotasks();
+  }
+  replay();
+  {
+    auto &rt = *replayRt;
+    EXPECT_EQ(eval(rt, "x").asNumber(), 4);
+  }
+}
+
+TEST_F(JobQueueReplayTest, DrainMultipleMicrotasks) {
+  {
+    auto &rt = *traceRt;
+    eval(rt, R""""(
+var x = 0;
+function inc(){
+  x += 1;
+}
+HermesInternal.enqueueJob(inc);
+HermesInternal.enqueueJob(inc);
+HermesInternal.enqueueJob(inc);
+)"""");
+    rt.drainMicrotasks();
+  }
+  replay();
+  {
+    auto &rt = *replayRt;
+    EXPECT_EQ(eval(rt, "x").asNumber(), 3);
   }
 }
 

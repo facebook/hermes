@@ -50,6 +50,13 @@ jsi::Value TracingRuntime::evaluateJavaScript(
   return res;
 }
 
+bool TracingRuntime::drainMicrotasks(int maxMicrotasksHint) {
+  auto res = RD::drainMicrotasks(maxMicrotasksHint);
+  trace_.emplace_back<SynthTrace::DrainMicrotasksRecord>(
+      getTimeSinceStart(), maxMicrotasksHint);
+  return res;
+};
+
 jsi::Object TracingRuntime::createObject() {
   auto obj = RD::createObject();
   trace_.emplace_back<SynthTrace::CreateObjectRecord>(
