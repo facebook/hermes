@@ -59,8 +59,8 @@ pub struct ObjectMethods {
     pub get_own_property: fn(&Runtime, ObjectAddr, &JSValue) -> Option<PropertyDescriptor>,
     pub define_own_property: fn(&mut Runtime, ObjectAddr, &JSValue, &PropertyDescriptor) -> bool,
     pub has_property: fn(&Runtime, ObjectAddr, &JSValue) -> bool,
-    pub get: fn(&mut Runtime, ObjectAddr, &JSValue, &JSValue) -> JSResult,
-    pub set: fn(&mut Runtime, ObjectAddr, &JSValue, JSValue, &JSValue) -> JSResult,
+    pub get: fn(&mut Runtime, ObjectAddr, &JSValue, &JSValue) -> CompletionRecord,
+    pub set: fn(&mut Runtime, ObjectAddr, &JSValue, JSValue, &JSValue) -> CompletionRecord,
     pub delete: fn(&mut Runtime, ObjectAddr, &JSValue) -> bool,
     pub own_property_keys: fn(&Runtime, ObjectAddr, JSValue) -> Vec<JSValue>,
 }
@@ -471,7 +471,7 @@ impl JSObject {
         oaddr: ObjectAddr,
         p: &JSValue,
         receiver: &JSValue,
-    ) -> JSResult {
+    ) -> CompletionRecord {
         debug_assert!(is_property_key(p));
         match (run.object(oaddr).methods.get_own_property)(run, oaddr, p) {
             None => match (run.object(oaddr).methods.get_prototype_of)(run, oaddr) {
@@ -501,7 +501,7 @@ impl JSObject {
         p: &JSValue,
         v: JSValue,
         receiver: &JSValue,
-    ) -> JSResult {
+    ) -> CompletionRecord {
         debug_assert!(is_property_key(p));
         let own_desc = (run.object(oaddr).methods.get_own_property)(run, oaddr, p);
         Self::ordinary_set_with_own_descriptor(run, oaddr, p, v, receiver, own_desc.as_ref())
@@ -515,7 +515,7 @@ impl JSObject {
         v: JSValue,
         receiver: &JSValue,
         opt_own_desc: Option<&PropertyDescriptor>,
-    ) -> JSResult {
+    ) -> CompletionRecord {
         debug_assert!(is_property_key(p));
         let own_desc = match opt_own_desc {
             None => {

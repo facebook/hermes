@@ -6,9 +6,9 @@
  */
 
 use super::addr::*;
+use super::completion_record::*;
 use super::jsobject::*;
 use super::runtime::*;
-use crate::eval::completion_record::JSResult;
 
 pub enum ConstructorKind {
     Base,
@@ -21,8 +21,8 @@ pub enum ThisMode {
 }
 
 pub struct FunctionMethods {
-    pub call: fn() -> JSResult,
-    pub construct: Option<fn() -> JSResult>,
+    pub call: fn() -> CompletionRecord,
+    pub construct: Option<fn() -> CompletionRecord>,
 }
 
 pub struct FunctionSlots {
@@ -41,7 +41,7 @@ pub struct JSFunction {
 }
 
 impl JSObject {
-    pub fn call_impl() -> JSResult {
+    pub fn call_impl() -> CompletionRecord {
         unimplemented!()
     }
 }

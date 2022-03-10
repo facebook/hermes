@@ -56,14 +56,17 @@ pub struct GlobalEnv {
 }
 
 pub struct EnvironmentMethods {
-    pub has_binding: fn(&mut Runtime, EnvRecordAddr, &Rc<JSString>) -> JSResult,
-    pub create_mutable_binding: fn(&mut Runtime, EnvRecordAddr, Rc<JSString>, bool) -> JSResult,
-    pub create_immutable_binding: fn(&mut Runtime, EnvRecordAddr, Rc<JSString>, bool) -> JSResult,
-    pub initialize_binding: fn(&mut Runtime, EnvRecordAddr, &Rc<JSString>, JSValue) -> JSResult,
+    pub has_binding: fn(&mut Runtime, EnvRecordAddr, &Rc<JSString>) -> CompletionRecord,
+    pub create_mutable_binding:
+        fn(&mut Runtime, EnvRecordAddr, Rc<JSString>, bool) -> CompletionRecord,
+    pub create_immutable_binding:
+        fn(&mut Runtime, EnvRecordAddr, Rc<JSString>, bool) -> CompletionRecord,
+    pub initialize_binding:
+        fn(&mut Runtime, EnvRecordAddr, &Rc<JSString>, JSValue) -> CompletionRecord,
     pub set_mutable_binding:
-        fn(&mut Runtime, EnvRecordAddr, &Rc<JSString>, JSValue, bool) -> JSResult,
-    pub get_binding_value: fn(&mut Runtime, EnvRecordAddr, &Rc<JSString>, bool) -> JSResult,
-    pub delete_binding: fn(&mut Runtime, EnvRecordAddr, &Rc<JSString>) -> JSResult,
+        fn(&mut Runtime, EnvRecordAddr, &Rc<JSString>, JSValue, bool) -> CompletionRecord,
+    pub get_binding_value: fn(&mut Runtime, EnvRecordAddr, &Rc<JSString>, bool) -> CompletionRecord,
+    pub delete_binding: fn(&mut Runtime, EnvRecordAddr, &Rc<JSString>) -> CompletionRecord,
     pub has_this_binding: fn(&Runtime, EnvRecordAddr) -> bool,
     pub has_super_binding: fn(&Runtime, EnvRecordAddr) -> bool,
     pub with_base_object: fn(&Runtime, EnvRecordAddr) -> Option<ObjectAddr>,
@@ -166,7 +169,7 @@ impl DeclarativeEnv {
 //noinspection RsSelfConvention
 impl DeclarativeEnv {
     /// https://262.ecma-international.org/11.0/#sec-declarative-environment-records-hasbinding-n
-    fn has_binding(run: &mut Runtime, eaddr: EnvRecordAddr, n: &Rc<JSString>) -> JSResult {
+    fn has_binding(run: &mut Runtime, eaddr: EnvRecordAddr, n: &Rc<JSString>) -> CompletionRecord {
         Ok(Some(JSValue::Boolean(
             run.env_record(eaddr).decl.find_binding(&n).is_some(),
         )))
@@ -178,7 +181,7 @@ impl DeclarativeEnv {
         eaddr: EnvRecordAddr,
         name: Rc<JSString>,
         deletable: bool,
-    ) -> JSResult {
+    ) -> CompletionRecord {
         run.env_record_mut(eaddr)
             .decl
             .create_binding(name, true, deletable, false);
@@ -191,7 +194,7 @@ impl DeclarativeEnv {
         eaddr: EnvRecordAddr,
         name: Rc<JSString>,
         strict: bool,
-    ) -> JSResult {
+    ) -> CompletionRecord {
         run.env_record_mut(eaddr)
             .decl
             .create_binding(name, false, false, strict);
@@ -204,7 +207,7 @@ impl DeclarativeEnv {
         eaddr: EnvRecordAddr,
         name: &Rc<JSString>,
         v: JSValue,
-    ) -> JSResult {
+    ) -> CompletionRecord {
         let dcl_rec = &mut run.env_record_mut(eaddr).decl;
         dcl_rec
             .initialize_binding_impl(dcl_rec.find_binding(&name).expect("binding must exist"), v);
@@ -218,7 +221,7 @@ impl DeclarativeEnv {
         name: &Rc<JSString>,
         value: JSValue,
         mut strict: bool,
-    ) -> JSResult {
+    ) -> CompletionRecord {
         let dcl_rec = &mut run.env_record_mut(eaddr).decl;
         let bindex = dcl_rec.find_binding(name);
         if bindex.is_none() {
@@ -255,7 +258,7 @@ impl DeclarativeEnv {
         eaddr: EnvRecordAddr,
         name: &Rc<JSString>,
         _strict: bool,
-    ) -> JSResult {
+    ) -> CompletionRecord {
         let dcl_rec = &run.env_record(eaddr).decl;
         let index = dcl_rec.find_binding(&*name).expect("binding must exist");
         let binding = dcl_rec.binding(index);
@@ -267,7 +270,11 @@ impl DeclarativeEnv {
     }
 
     /// https://262.ecma-international.org/11.0/#sec-declarative-environment-records-deletebinding-n
-    fn delete_binding(run: &mut Runtime, eaddr: EnvRecordAddr, name: &Rc<JSString>) -> JSResult {
+    fn delete_binding(
+        run: &mut Runtime,
+        eaddr: EnvRecordAddr,
+        name: &Rc<JSString>,
+    ) -> CompletionRecord {
         let dcl_rec = &mut run.env_record_mut(eaddr).decl;
         let index = dcl_rec.find_binding(&name).expect("binding must exist");
         if !dcl_rec.binding(index).deletable {
@@ -295,7 +302,7 @@ impl DeclarativeEnv {
 
 impl ObjectEnv {
     /// https://262.ecma-international.org/11.0/#sec-object-environment-records-hasbinding-n
-    fn has_binding(run: &mut Runtime, eaddr: EnvRecordAddr, n: &Rc<JSString>) -> JSResult {
+    fn has_binding(run: &mut Runtime, eaddr: EnvRecordAddr, n: &Rc<JSString>) -> CompletionRecord {
         let env_rec = &run.env_record(eaddr);
         let nv = JSValue::String(n.clone());
         if !run.has_property(env_rec.obj.binding_object, &nv) {
@@ -325,7 +332,7 @@ impl ObjectEnv {
         eaddr: EnvRecordAddr,
         name: Rc<JSString>,
         deletable: bool,
-    ) -> JSResult {
+    ) -> CompletionRecord {
         let bindings_addr = run.env_record(eaddr).obj.binding_object;
         run.define_property_or_throw(
             bindings_addr,
@@ -346,7 +353,7 @@ impl ObjectEnv {
         _eaddr: EnvRecordAddr,
         _name: Rc<JSString>,
         _strict: bool,
-    ) -> JSResult {
+    ) -> CompletionRecord {
         panic!("ObjectEnv::create_immutable_binding should never be used")
     }
 
@@ -356,7 +363,7 @@ impl ObjectEnv {
         eaddr: EnvRecordAddr,
         name: &Rc<JSString>,
         v: JSValue,
-    ) -> JSResult {
+    ) -> CompletionRecord {
         Self::set_mutable_binding(run, eaddr, &name, v, false)
     }
 
@@ -368,7 +375,7 @@ impl ObjectEnv {
         name: &Rc<JSString>,
         v: JSValue,
         strict: bool,
-    ) -> JSResult {
+    ) -> CompletionRecord {
         let bindings_addr = run.env_record(eaddr).obj.binding_object;
         run.set(bindings_addr, &JSValue::String(name.clone()), v, strict)
     }
@@ -380,7 +387,7 @@ impl ObjectEnv {
         eaddr: EnvRecordAddr,
         name: &Rc<JSString>,
         strict: bool,
-    ) -> JSResult {
+    ) -> CompletionRecord {
         let bindings_addr = run.env_record(eaddr).obj.binding_object;
         let p = JSValue::String(name.clone());
         if !run.has_property(bindings_addr, &p) {
@@ -395,7 +402,11 @@ impl ObjectEnv {
     }
 
     /// https://262.ecma-international.org/11.0/#sec-object-environment-records-deletebinding-n
-    fn delete_binding(run: &mut Runtime, eaddr: EnvRecordAddr, name: &Rc<JSString>) -> JSResult {
+    fn delete_binding(
+        run: &mut Runtime,
+        eaddr: EnvRecordAddr,
+        name: &Rc<JSString>,
+    ) -> CompletionRecord {
         let bindings_addr = run.env_record(eaddr).obj.binding_object;
         let p = JSValue::String(name.clone());
         Ok(Some(JSValue::Boolean((run
@@ -429,7 +440,7 @@ impl ObjectEnv {
 
 impl GlobalEnv {
     /// https://262.ecma-international.org/11.0/#sec-global-environment-records-hasbinding-n
-    fn has_binding(run: &mut Runtime, eaddr: EnvRecordAddr, n: &Rc<JSString>) -> JSResult {
+    fn has_binding(run: &mut Runtime, eaddr: EnvRecordAddr, n: &Rc<JSString>) -> CompletionRecord {
         if let Some(JSValue::Boolean(true)) = DeclarativeEnv::has_binding(run, eaddr, n)? {
             return Ok(Some(JSValue::Boolean(true)));
         }
@@ -442,7 +453,7 @@ impl GlobalEnv {
         eaddr: EnvRecordAddr,
         name: Rc<JSString>,
         deletable: bool,
-    ) -> JSResult {
+    ) -> CompletionRecord {
         if let Some(JSValue::Boolean(true)) = DeclarativeEnv::has_binding(run, eaddr, &name)? {
             return run.type_error(format!("{} is already defined", &name));
         }
@@ -455,7 +466,7 @@ impl GlobalEnv {
         eaddr: EnvRecordAddr,
         name: Rc<JSString>,
         strict: bool,
-    ) -> JSResult {
+    ) -> CompletionRecord {
         if let Some(JSValue::Boolean(true)) = DeclarativeEnv::has_binding(run, eaddr, &name)? {
             return run.type_error(format!("{} is already defined", &name));
         }
@@ -468,7 +479,7 @@ impl GlobalEnv {
         eaddr: EnvRecordAddr,
         name: &Rc<JSString>,
         v: JSValue,
-    ) -> JSResult {
+    ) -> CompletionRecord {
         if let Some(JSValue::Boolean(true)) = DeclarativeEnv::has_binding(run, eaddr, name)? {
             DeclarativeEnv::initialize_binding(run, eaddr, name, v)
         } else {
@@ -484,7 +495,7 @@ impl GlobalEnv {
         name: &Rc<JSString>,
         v: JSValue,
         strict: bool,
-    ) -> JSResult {
+    ) -> CompletionRecord {
         if let Some(JSValue::Boolean(true)) = DeclarativeEnv::has_binding(run, eaddr, name)? {
             DeclarativeEnv::set_mutable_binding(run, eaddr, name, v, strict)
         } else {
@@ -499,7 +510,7 @@ impl GlobalEnv {
         eaddr: EnvRecordAddr,
         name: &Rc<JSString>,
         strict: bool,
-    ) -> JSResult {
+    ) -> CompletionRecord {
         if let Some(JSValue::Boolean(true)) = DeclarativeEnv::has_binding(run, eaddr, name)? {
             DeclarativeEnv::get_binding_value(run, eaddr, name, strict)
         } else {
@@ -508,7 +519,11 @@ impl GlobalEnv {
     }
 
     /// https://262.ecma-international.org/11.0/#sec-global-environment-records-deletebinding-n
-    fn delete_binding(run: &mut Runtime, eaddr: EnvRecordAddr, name: &Rc<JSString>) -> JSResult {
+    fn delete_binding(
+        run: &mut Runtime,
+        eaddr: EnvRecordAddr,
+        name: &Rc<JSString>,
+    ) -> CompletionRecord {
         if let Some(JSValue::Boolean(true)) = DeclarativeEnv::has_binding(run, eaddr, name)? {
             return DeclarativeEnv::delete_binding(run, eaddr, name);
         }

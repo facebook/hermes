@@ -67,15 +67,15 @@ impl Runtime {
         run
     }
 
-    pub fn reference_error<S: Display>(&mut self, msg: S) -> JSResult {
-        Ok(Some(JSValue::String(JSString::from_str(
-            format!("ReferenceError: {}", msg).as_str(),
-        ))))
+    pub fn reference_error<S: Display>(&mut self, msg: S) -> CompletionRecord {
+        Err(AbruptCompletion::Throw(JSValue::String(
+            JSString::from_str(format!("ReferenceError: {}", msg).as_str()),
+        )))
     }
-    pub fn type_error<S: Display>(&mut self, msg: S) -> JSResult {
-        Ok(Some(JSValue::String(JSString::from_str(
-            format!("TypeError: {}", msg).as_str(),
-        ))))
+    pub fn type_error<S: Display>(&mut self, msg: S) -> CompletionRecord {
+        Err(AbruptCompletion::Throw(JSValue::String(
+            JSString::from_str(format!("TypeError: {}", msg).as_str()),
+        )))
     }
 
     pub fn global(&self) -> ObjectAddr {
@@ -131,13 +131,19 @@ impl Runtime {
     }
 
     /// https://262.ecma-international.org/11.0/#sec-get-o-p
-    pub fn get(&mut self, oaddr: ObjectAddr, p: &JSValue) -> JSResult {
+    pub fn get(&mut self, oaddr: ObjectAddr, p: &JSValue) -> CompletionRecord {
         debug_assert!(is_property_key(p));
         (self.object(oaddr).methods.get)(self, oaddr, p, &JSValue::Object(oaddr))
     }
 
     /// https://262.ecma-international.org/11.0/#sec-set-o-p-v-throw
-    pub fn set(&mut self, oaddr: ObjectAddr, p: &JSValue, v: JSValue, throw: bool) -> JSResult {
+    pub fn set(
+        &mut self,
+        oaddr: ObjectAddr,
+        p: &JSValue,
+        v: JSValue,
+        throw: bool,
+    ) -> CompletionRecord {
         debug_assert!(is_property_key(p));
         let success = (self.object(oaddr).methods.set)(self, oaddr, p, v, &JSValue::Object(oaddr))?;
         if success == Some(JSValue::Boolean(false)) && throw {
@@ -166,7 +172,7 @@ impl Runtime {
         oaddr: ObjectAddr,
         p: &JSValue,
         desc: &PropertyDescriptor,
-    ) -> JSResult {
+    ) -> CompletionRecord {
         debug_assert!(is_property_key(p));
         if !(self.object(oaddr).methods.define_own_property)(self, oaddr, p, desc) {
             self.type_error("DefineProperty error")
@@ -188,7 +194,7 @@ impl Runtime {
     }
 
     /// https://262.ecma-international.org/11.0/#sec-call
-    pub fn call(&mut self, f: &JSValue, v: &JSValue, args: &[JSValue]) -> JSResult {
+    pub fn call(&mut self, f: &JSValue, v: &JSValue, args: &[JSValue]) -> CompletionRecord {
         unimplemented!()
     }
 }
