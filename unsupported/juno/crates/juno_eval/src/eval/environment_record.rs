@@ -33,7 +33,7 @@ pub struct ObjectEnv {
     with_environment: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 enum ThisBindingStatus {
     Lexical,
     Initialized,
@@ -66,6 +66,7 @@ pub struct EnvironmentMethods {
     pub set_mutable_binding:
         fn(&mut Runtime, EnvRecordAddr, &Rc<JSString>, JSValue, bool) -> CompletionRecord,
     pub get_binding_value: fn(&mut Runtime, EnvRecordAddr, &Rc<JSString>, bool) -> CompletionRecord,
+    pub get_this_binding: fn(&mut Runtime, EnvRecordAddr) -> CompletionRecord,
     pub delete_binding: fn(&mut Runtime, EnvRecordAddr, &Rc<JSString>) -> CompletionRecord,
     pub has_this_binding: fn(&Runtime, EnvRecordAddr) -> bool,
     pub has_super_binding: fn(&Runtime, EnvRecordAddr) -> bool,
@@ -96,6 +97,10 @@ pub struct EnvironmentRecord {
     glob: GlobalEnv,
 }
 
+fn unreachable_get_this_binding(run: &mut Runtime, eaddr: EnvRecordAddr) -> CompletionRecord {
+    unimplemented!()
+}
+
 static DECL_ENV_METHODS: EnvironmentMethods = EnvironmentMethods {
     has_binding: DeclarativeEnv::has_binding,
     create_mutable_binding: DeclarativeEnv::create_mutable_binding,
@@ -103,6 +108,7 @@ static DECL_ENV_METHODS: EnvironmentMethods = EnvironmentMethods {
     initialize_binding: DeclarativeEnv::initialize_binding,
     set_mutable_binding: DeclarativeEnv::set_mutable_binding,
     get_binding_value: DeclarativeEnv::get_binding_value,
+    get_this_binding: unreachable_get_this_binding,
     delete_binding: DeclarativeEnv::delete_binding,
     has_this_binding: DeclarativeEnv::has_this_binding,
     has_super_binding: DeclarativeEnv::has_super_binding,
@@ -116,10 +122,25 @@ static OBJECT_ENV_METHODS: EnvironmentMethods = EnvironmentMethods {
     initialize_binding: ObjectEnv::initialize_binding,
     set_mutable_binding: ObjectEnv::set_mutable_binding,
     get_binding_value: ObjectEnv::get_binding_value,
+    get_this_binding: unreachable_get_this_binding,
     delete_binding: ObjectEnv::delete_binding,
     has_this_binding: ObjectEnv::has_this_binding,
     has_super_binding: ObjectEnv::has_super_binding,
     with_base_object: ObjectEnv::with_base_object,
+};
+
+static GLOBAL_ENV_METHODS: EnvironmentMethods = EnvironmentMethods {
+    has_binding: GlobalEnv::has_binding,
+    create_mutable_binding: GlobalEnv::create_mutable_binding,
+    create_immutable_binding: GlobalEnv::create_immutable_binding,
+    initialize_binding: GlobalEnv::initialize_binding,
+    set_mutable_binding: GlobalEnv::set_mutable_binding,
+    get_binding_value: GlobalEnv::get_binding_value,
+    get_this_binding: GlobalEnv::get_this_binding,
+    delete_binding: GlobalEnv::delete_binding,
+    has_this_binding: GlobalEnv::has_this_binding,
+    has_super_binding: GlobalEnv::has_super_binding,
+    with_base_object: GlobalEnv::with_base_object,
 };
 
 impl DeclarativeEnv {
@@ -516,7 +537,6 @@ impl GlobalEnv {
     }
 
     /// https://262.ecma-international.org/11.0/#sec-global-environment-records-getbindingvalue-n-s
-    //noinspection RsSelfConvention
     fn get_binding_value(
         run: &mut Runtime,
         eaddr: EnvRecordAddr,
@@ -530,6 +550,14 @@ impl GlobalEnv {
         } else {
             ObjectEnv::get_binding_value(run, eaddr, name, strict)
         }
+    }
+
+    /// https://262.ecma-international.org/11.0/#sec-global-environment-records-getthisbinding
+    fn get_this_binding(run: &mut Runtime, eaddr: EnvRecordAddr) -> CompletionRecord {
+        let env_rec = run.env_record(eaddr);
+        Ok(NormalCompletion::Value(
+            env_rec.glob.global_this_value.clone(),
+        ))
     }
 
     /// https://262.ecma-international.org/11.0/#sec-global-environment-records-deletebinding-n
