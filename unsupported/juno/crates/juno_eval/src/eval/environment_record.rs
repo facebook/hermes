@@ -551,6 +551,196 @@ impl ObjectEnv {
 }
 
 impl GlobalEnv {
+    /// https://262.ecma-international.org/11.0/#sec-hasvardeclaration
+    fn has_var_declaration(run: &Runtime, eaddr: EnvRecordAddr, n: &Rc<JSString>) -> bool {
+        // 1. Let envRec be the global Environment Record for which the method was invoked.
+        let env_rec = run.env_record(eaddr);
+        // 2. Let varDeclaredNames be envRec.[[VarNames]].
+        // 3. If varDeclaredNames contains N, return true.
+        // 4. Return false.
+        env_rec.glob.var_names.contains(n)
+    }
+
+    /// https://262.ecma-international.org/11.0/#sec-haslexicaldeclaration
+    fn has_lexical_declaration(
+        run: &mut Runtime,
+        eaddr: EnvRecordAddr,
+        n: &Rc<JSString>,
+    ) -> CompletionRecord {
+        // 1. Let envRec be the global Environment Record for which the method was invoked.
+        // 2. Let DclRec be envRec.[[DeclarativeRecord]].
+        // 3. Return DclRec.HasBinding(N).
+        DeclarativeEnv::has_binding(run, eaddr, n)
+    }
+
+    /// https://262.ecma-international.org/11.0/#sec-hasrestrictedglobalproperty
+    fn has_restricted_global_property(
+        run: &Runtime,
+        eaddr: EnvRecordAddr,
+        n: &Rc<JSString>,
+    ) -> bool {
+        // 1. Let envRec be the global Environment Record for which the method was invoked.
+        let env_rec = run.env_record(eaddr);
+        // 2. Let ObjRec be envRec.[[ObjectRecord]].
+        // 3. Let globalObject be the binding object for ObjRec.
+        let global_obj_addr = env_rec.obj.binding_object;
+        let global_obj = run.object(global_obj_addr);
+        // 4. Let existingProp be ? globalObject.[[GetOwnProperty]](N).
+        let prop = JSValue::String(n.clone());
+        let existing_prop = (global_obj.methods.get_own_property)(run, global_obj_addr, &prop);
+        match existing_prop {
+            // 5. If existingProp is undefined, return false.
+            // 6. If existingProp.[[Configurable]] is true, return false.
+            None
+            | Some(PropertyDescriptor {
+                configurable: Some(true),
+                ..
+            }) => false,
+            // 7. Return true.
+            _ => true,
+        }
+    }
+
+    /// https://262.ecma-international.org/11.0/#sec-candeclareglobalvar
+    fn can_declare_global_var(run: &Runtime, eaddr: EnvRecordAddr, n: &Rc<JSString>) -> bool {
+        // 1. Let envRec be the global Environment Record for which the method was invoked.
+        let env_rec = run.env_record(eaddr);
+        // 2. Let ObjRec be envRec.[[ObjectRecord]].
+        // 3. Let globalObject be the binding object for ObjRec.
+        let global_obj_addr = env_rec.obj.binding_object;
+        let prop = JSValue::String(n.clone());
+        // 4. Let hasProperty be ? HasOwnProperty(globalObject, N).
+        // 5. If hasProperty is true, return true.
+        if run.has_own_property(global_obj_addr, &prop) {
+            return true;
+        }
+        // 6. Return ? IsExtensible(globalObject).
+        run.is_extensible(global_obj_addr)
+    }
+
+    /// https://262.ecma-international.org/11.0/#sec-candeclareglobalfunction
+    fn can_declare_global_function(run: &Runtime, eaddr: EnvRecordAddr, n: &Rc<JSString>) -> bool {
+        // 1. Let envRec be the global Environment Record for which the method was invoked.
+        let env_rec = run.env_record(eaddr);
+        // 2. Let ObjRec be envRec.[[ObjectRecord]].
+        // 3. Let globalObject be the binding object for ObjRec.
+        let global_obj_addr = env_rec.obj.binding_object;
+        let global_obj = run.object(global_obj_addr);
+        let prop = JSValue::String(n.clone());
+        // 4. Let existingProp be ? globalObject.[[GetOwnProperty]](N).
+        let existing_prop = (global_obj.methods.get_own_property)(run, global_obj_addr, &prop);
+        match existing_prop {
+            // 5. If existingProp is undefined, return ? IsExtensible(globalObject).
+            None => run.is_extensible(global_obj_addr),
+            // 6. If existingProp.[[Configurable]] is true, return true.
+            Some(PropertyDescriptor {
+                configurable: Some(true),
+                ..
+            }) => true,
+            // 7. If IsDataDescriptor(existingProp) is true and existingProp has attribute values { [[Writable]]: true,
+            // [[Enumerable]]: true }, return true.
+            Some(
+                desc @ PropertyDescriptor {
+                    writable: Some(true),
+                    ..
+                },
+            ) => desc.is_data_descriptor(),
+            // 8. Return false.
+            _ => false,
+        }
+    }
+
+    /// https://262.ecma-international.org/11.0/#sec-createglobalvarbinding
+    fn create_global_var_binding(
+        run: &mut Runtime,
+        eaddr: EnvRecordAddr,
+        n: &Rc<JSString>,
+        d: bool,
+    ) -> CompletionRecord {
+        // 1. Let envRec be the global Environment Record for which the method was invoked.
+        let env_rec = run.env_record(eaddr);
+        // 2. Let ObjRec be envRec.[[ObjectRecord]].
+        // 3. Let globalObject be the binding object for ObjRec.
+        let global_obj_addr = env_rec.obj.binding_object;
+        let prop = JSValue::String(n.clone());
+        // 4. Let hasProperty be ? HasOwnProperty(globalObject, N).
+        let has_property = run.has_own_property(global_obj_addr, &prop);
+        // 5. Let extensible be ? IsExtensible(globalObject).
+        let extensible = run.is_extensible(global_obj_addr);
+        // 6. If hasProperty is false and extensible is true, then
+        // a. Perform ? ObjRec.CreateMutableBinding(N, D).
+        // b. Perform ? ObjRec.InitializeBinding(N, undefined).
+        if !has_property && extensible {
+            ObjectEnv::create_mutable_binding(run, eaddr, n.clone(), d)?;
+            ObjectEnv::initialize_binding(run, eaddr, n, JSValue::Undefined)?;
+        }
+        // 7. Let varDeclaredNames be envRec.[[VarNames]].
+        let var_names = &mut run.env_record_mut(eaddr).glob.var_names;
+        // 8. If varDeclaredNames does not contain N, then
+        if !var_names.contains(n) {
+            // a. Append N to varDeclaredNames.
+            var_names.push(n.clone())
+        }
+        // 9. Return NormalCompletion(empty).
+        Ok(NormalCompletion::Empty)
+    }
+
+    /// https://262.ecma-international.org/11.0/#sec-createglobalfunctionbinding
+    fn create_global_function_binding(
+        run: &mut Runtime,
+        eaddr: EnvRecordAddr,
+        n: &Rc<JSString>,
+        v: &JSValue,
+        d: bool,
+    ) -> CompletionRecord {
+        // 1. Let envRec be the global Environment Record for which the method was invoked.
+        let env_rec = run.env_record(eaddr);
+        // 2. Let ObjRec be envRec.[[ObjectRecord]].
+        // 3. Let globalObject be the binding object for ObjRec.
+        let global_obj_addr = env_rec.obj.binding_object;
+        let global_obj = run.object(global_obj_addr);
+        let prop = JSValue::String(n.clone());
+        // 4. Let existingProp be ? globalObject.[[GetOwnProperty]](N).
+        let existing_prop = (global_obj.methods.get_own_property)(run, global_obj_addr, &prop);
+        let desc = match existing_prop {
+            // 5. If existingProp is undefined or existingProp.[[Configurable]] is true, then
+            // a. Let desc be the PropertyDescriptor { [[Value]]: V, [[Writable]]: true, [[Enumerable]]: true, [[Configurable]]: D }.
+            None
+            | Some(PropertyDescriptor {
+                configurable: Some(true),
+                ..
+            }) => PropertyDescriptor {
+                value: Some(v.clone()),
+                writable: Some(true),
+                enumerable: Some(true),
+                configurable: Some(d),
+                ..Default::default()
+            },
+            // 6. Else,
+            // a. Let desc be the PropertyDescriptor { [[Value]]: V }.
+            _ => PropertyDescriptor {
+                value: Some(v.clone()),
+                ..Default::default()
+            },
+        };
+        // 7. Perform ? DefinePropertyOrThrow(globalObject, N, desc).
+        // 8. Record that the binding for N in ObjRec has been initialized.
+        run.define_property_or_throw(global_obj_addr, &prop, &desc)?;
+        // 9. Perform ? Set(globalObject, N, V, false).
+        run.set(global_obj_addr, &prop, v.clone(), false)?;
+        // 10. Let varDeclaredNames be envRec.[[VarNames]].
+        let var_names = &mut run.env_record_mut(eaddr).glob.var_names;
+        // 11. If varDeclaredNames does not contain N, then
+        if !var_names.contains(n) {
+            // a. Append N to varDeclaredNames.
+            var_names.push(n.clone())
+        }
+        // 12. Return NormalCompletion(empty).
+        Ok(NormalCompletion::Empty)
+    }
+}
+
+impl GlobalEnv {
     /// https://262.ecma-international.org/11.0/#sec-global-environment-records-hasbinding-n
     fn has_binding(run: &mut Runtime, eaddr: EnvRecordAddr, n: &Rc<JSString>) -> CompletionRecord {
         if let NormalCompletion::Value(JSValue::Boolean(true)) =
