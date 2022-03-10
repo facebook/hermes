@@ -8,6 +8,7 @@
 use super::addr::*;
 use super::completion_record::*;
 use super::environment_record::*;
+use super::execution_context::*;
 use super::jsobject::*;
 use super::operations::*;
 use crate::eval::jsvalue::{JSString, JSSymbol, JSValue};
@@ -38,17 +39,6 @@ pub enum InternalSlot {
     Prototype,
     RegExpMatcher,
     StringData,
-}
-
-/// https://262.ecma-international.org/11.0/#table-22
-pub struct ExecutionContext {
-    /// The currently executing function, or none if executing script/module.
-    pub function: Option<ObjectAddr>,
-    pub realm: Realm,
-    pub script_or_module: Option<ScriptOrModule>,
-
-    lex_env: EnvRecordAddr,
-    var_env: EnvRecordAddr,
 }
 
 pub struct Runtime {
@@ -103,6 +93,13 @@ impl Runtime {
     }
     pub fn env_record_mut(&mut self, addr: EnvRecordAddr) -> &mut EnvironmentRecord {
         &mut self.env_records[addr.as_usize()]
+    }
+
+    pub fn contexts(&self) -> &[ExecutionContext] {
+        &self.contexts
+    }
+    pub fn contexts_mut(&mut self) -> &mut Vec<ExecutionContext> {
+        &mut self.contexts
     }
 
     pub fn well_known_symbol(&self, which: WellKnownSymbol) -> JSValue {

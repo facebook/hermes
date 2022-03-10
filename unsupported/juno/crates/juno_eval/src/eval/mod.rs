@@ -11,6 +11,7 @@ mod addr;
 mod jsvalue;
 mod completion_record;
 mod environment_record;
+mod execution_context;
 mod function;
 mod jsobject;
 mod operations;
