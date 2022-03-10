@@ -29,7 +29,7 @@ pub struct DeclarativeEnv {
 
 #[derive(Debug)]
 pub struct ObjectEnv {
-    binding_object: ObjectAddr,
+    binding_object: Option<ObjectAddr>,
     with_environment: bool,
 }
 
@@ -73,7 +73,7 @@ pub struct EnvironmentMethods {
     pub with_base_object: fn(&Runtime, EnvRecordAddr) -> Option<ObjectAddr>,
 }
 
-// declarative_record: DeclarativeEnv,
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum EnvironmentRecordKind {
     /// Declarative
     Declarative,
@@ -95,6 +95,39 @@ pub struct EnvironmentRecord {
     func: FunctionEnv,
     obj: ObjectEnv,
     glob: GlobalEnv,
+}
+
+impl EnvironmentRecord {
+    pub fn new(kind: EnvironmentRecordKind) -> EnvironmentRecord {
+        EnvironmentRecord {
+            methods: match kind {
+                EnvironmentRecordKind::Declarative => &DECL_ENV_METHODS,
+                EnvironmentRecordKind::Function => &FUNCTION_ENV_METHODS,
+                EnvironmentRecordKind::Object => &OBJECT_ENV_METHODS,
+                EnvironmentRecordKind::Global => &GLOBAL_ENV_METHODS,
+            },
+            kind,
+            decl: DeclarativeEnv {
+                names: Vec::new(),
+                bindings: Vec::new(),
+            },
+            func: FunctionEnv {
+                this_value: JSValue::Undefined,
+                this_binding_status: ThisBindingStatus::Uninitialized,
+                function_object: JSValue::Undefined,
+                home_object: JSValue::Undefined,
+                new_target: JSValue::Undefined,
+            },
+            obj: ObjectEnv {
+                binding_object: None,
+                with_environment: false,
+            },
+            glob: GlobalEnv {
+                global_this_value: JSValue::Undefined,
+                var_names: Vec::new(),
+            },
+        }
+    }
 }
 
 fn unreachable_get_this_binding(run: &mut Runtime, eaddr: EnvRecordAddr) -> CompletionRecord {
@@ -415,7 +448,7 @@ impl ObjectEnv {
     fn has_binding(run: &mut Runtime, eaddr: EnvRecordAddr, n: &Rc<JSString>) -> CompletionRecord {
         let env_rec = &run.env_record(eaddr);
         let nv = JSValue::String(n.clone());
-        if !run.has_property(env_rec.obj.binding_object, &nv) {
+        if !run.has_property(env_rec.obj.binding_object.unwrap(), &nv) {
             return Ok(NormalCompletion::Value(JSValue::Boolean(false)));
         }
         if !env_rec.obj.with_environment {
@@ -423,7 +456,7 @@ impl ObjectEnv {
         }
         let unscopables = run
             .get(
-                env_rec.obj.binding_object,
+                env_rec.obj.binding_object.unwrap(),
                 &run.well_known_symbol(WellKnownSymbol::Unscopables),
             )?
             .unwrap_value();
@@ -443,7 +476,7 @@ impl ObjectEnv {
         name: Rc<JSString>,
         deletable: bool,
     ) -> CompletionRecord {
-        let bindings_addr = run.env_record(eaddr).obj.binding_object;
+        let bindings_addr = run.env_record(eaddr).obj.binding_object.unwrap();
         run.define_property_or_throw(
             bindings_addr,
             &JSValue::String(name),
@@ -486,7 +519,7 @@ impl ObjectEnv {
         v: JSValue,
         strict: bool,
     ) -> CompletionRecord {
-        let bindings_addr = run.env_record(eaddr).obj.binding_object;
+        let bindings_addr = run.env_record(eaddr).obj.binding_object.unwrap();
         run.set(bindings_addr, &JSValue::String(name.clone()), v, strict)
     }
 
@@ -498,7 +531,7 @@ impl ObjectEnv {
         name: &Rc<JSString>,
         strict: bool,
     ) -> CompletionRecord {
-        let bindings_addr = run.env_record(eaddr).obj.binding_object;
+        let bindings_addr = run.env_record(eaddr).obj.binding_object.unwrap();
         let p = JSValue::String(name.clone());
         if !run.has_property(bindings_addr, &p) {
             if !strict {
@@ -517,7 +550,7 @@ impl ObjectEnv {
         eaddr: EnvRecordAddr,
         name: &Rc<JSString>,
     ) -> CompletionRecord {
-        let bindings_addr = run.env_record(eaddr).obj.binding_object;
+        let bindings_addr = run.env_record(eaddr).obj.binding_object.unwrap();
         let p = JSValue::String(name.clone());
         Ok(NormalCompletion::Value(JSValue::Boolean((run
             .object(bindings_addr)
@@ -543,7 +576,7 @@ impl ObjectEnv {
     fn with_base_object(run: &Runtime, eaddr: EnvRecordAddr) -> Option<ObjectAddr> {
         let env_rec = run.env_record(eaddr);
         if env_rec.obj.with_environment {
-            Some(env_rec.obj.binding_object)
+            Some(env_rec.obj.binding_object.unwrap())
         } else {
             None
         }
@@ -583,7 +616,7 @@ impl GlobalEnv {
         let env_rec = run.env_record(eaddr);
         // 2. Let ObjRec be envRec.[[ObjectRecord]].
         // 3. Let globalObject be the binding object for ObjRec.
-        let global_obj_addr = env_rec.obj.binding_object;
+        let global_obj_addr = env_rec.obj.binding_object.unwrap();
         let global_obj = run.object(global_obj_addr);
         // 4. Let existingProp be ? globalObject.[[GetOwnProperty]](N).
         let prop = JSValue::String(n.clone());
@@ -607,7 +640,7 @@ impl GlobalEnv {
         let env_rec = run.env_record(eaddr);
         // 2. Let ObjRec be envRec.[[ObjectRecord]].
         // 3. Let globalObject be the binding object for ObjRec.
-        let global_obj_addr = env_rec.obj.binding_object;
+        let global_obj_addr = env_rec.obj.binding_object.unwrap();
         let prop = JSValue::String(n.clone());
         // 4. Let hasProperty be ? HasOwnProperty(globalObject, N).
         // 5. If hasProperty is true, return true.
@@ -624,7 +657,7 @@ impl GlobalEnv {
         let env_rec = run.env_record(eaddr);
         // 2. Let ObjRec be envRec.[[ObjectRecord]].
         // 3. Let globalObject be the binding object for ObjRec.
-        let global_obj_addr = env_rec.obj.binding_object;
+        let global_obj_addr = env_rec.obj.binding_object.unwrap();
         let global_obj = run.object(global_obj_addr);
         let prop = JSValue::String(n.clone());
         // 4. Let existingProp be ? globalObject.[[GetOwnProperty]](N).
@@ -661,7 +694,7 @@ impl GlobalEnv {
         let env_rec = run.env_record(eaddr);
         // 2. Let ObjRec be envRec.[[ObjectRecord]].
         // 3. Let globalObject be the binding object for ObjRec.
-        let global_obj_addr = env_rec.obj.binding_object;
+        let global_obj_addr = env_rec.obj.binding_object.unwrap();
         let prop = JSValue::String(n.clone());
         // 4. Let hasProperty be ? HasOwnProperty(globalObject, N).
         let has_property = run.has_own_property(global_obj_addr, &prop);
@@ -697,7 +730,7 @@ impl GlobalEnv {
         let env_rec = run.env_record(eaddr);
         // 2. Let ObjRec be envRec.[[ObjectRecord]].
         // 3. Let globalObject be the binding object for ObjRec.
-        let global_obj_addr = env_rec.obj.binding_object;
+        let global_obj_addr = env_rec.obj.binding_object.unwrap();
         let global_obj = run.object(global_obj_addr);
         let prop = JSValue::String(n.clone());
         // 4. Let existingProp be ? globalObject.[[GetOwnProperty]](N).
@@ -851,7 +884,7 @@ impl GlobalEnv {
             return DeclarativeEnv::delete_binding(run, eaddr, name);
         }
 
-        let global_object = run.env_record(eaddr).obj.binding_object;
+        let global_object = run.env_record(eaddr).obj.binding_object.unwrap();
         if run.has_own_property(global_object, &JSValue::String(name.clone())) {
             let status = ObjectEnv::delete_binding(run, eaddr, name)?;
             if NormalCompletion::Value(JSValue::Boolean(true)) == status {

@@ -88,6 +88,11 @@ impl Runtime {
     pub fn object_mut(&mut self, addr: ObjectAddr) -> &mut JSObject {
         &mut self.objects[addr.as_usize()]
     }
+    pub fn new_env_record(&mut self, kind: EnvironmentRecordKind) -> EnvRecordAddr {
+        let newAddr = EnvRecordAddr::new(self.env_records.len());
+        self.env_records.push(EnvironmentRecord::new(kind));
+        newAddr
+    }
     pub fn env_record(&self, addr: EnvRecordAddr) -> &EnvironmentRecord {
         &self.env_records[addr.as_usize()]
     }
