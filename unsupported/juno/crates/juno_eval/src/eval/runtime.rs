@@ -20,6 +20,22 @@ pub enum WellKnownSymbol {
     Unscopables,
 }
 
+/// Internal slots for objects.
+/// Sorted alphabetically for convenience.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum InternalSlot {
+    BooleanData,
+    DateValue,
+    ErrorData,
+    Extensible,
+    HomeObject,
+    NumberData,
+    ParameterMap,
+    Prototype,
+    RegExpMatcher,
+    StringData,
+}
+
 /// https://262.ecma-international.org/11.0/#table-22
 pub struct ExecutionContext {
     /// The currently executing function, or none if executing script/module.

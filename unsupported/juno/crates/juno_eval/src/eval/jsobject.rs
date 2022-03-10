@@ -13,6 +13,7 @@ use super::operations::*;
 use super::runtime::*;
 use crate::eval::jsvalue::JSValue;
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 declare_opaque_id!(PropertyIndex);
@@ -70,9 +71,7 @@ pub struct JSObject {
     keys: Vec<JSValue>,
     values: Vec<Property>,
 
-    /// Null or Object.
-    prototype: JSValue,
-    extensible: bool,
+    internal_slots: HashMap<InternalSlot, JSValue>,
 
     /// If this is a function, these will be populated.
     func: Option<JSFunction>,
@@ -142,11 +141,28 @@ impl JSObject {
         self.func.is_some()
     }
 
+    pub fn get_internal_slot(&self, slot: InternalSlot) -> Option<&JSValue> {
+        self.internal_slots.get(&slot)
+    }
+    pub fn set_internal_slot(&mut self, slot: InternalSlot, value: JSValue) {
+        self.internal_slots.insert(slot, value);
+    }
+
     fn property(&self, index: PropertyIndex) -> &Property {
         &self.values[index.as_usize()]
     }
     fn property_mut(&mut self, index: PropertyIndex) -> &mut Property {
         &mut self.values[index.as_usize()]
+    }
+
+    fn prototype(&self) -> &JSValue {
+        self.internal_slots.get(&InternalSlot::Prototype).unwrap()
+    }
+    fn extensible(&self) -> bool {
+        jsvalue_cast!(
+            JSValue::Boolean,
+            *self.internal_slots.get(&InternalSlot::Extensible).unwrap()
+        )
     }
 
     fn find_own_property(&self, p: &JSValue) -> Option<PropertyIndex> {
@@ -171,17 +187,17 @@ impl JSObject {
 impl JSObject {
     /// https://262.ecma-international.org/11.0/#sec-ordinarygetprototypeof
     pub fn ordinary_get_prototype_of(run: &Runtime, oaddr: ObjectAddr) -> &JSValue {
-        &run.object(oaddr).prototype
+        &run.object(oaddr).prototype()
     }
     /// https://262.ecma-international.org/11.0/#sec-ordinarysetprototypeof
     fn ordinary_set_prototype_of(run: &mut Runtime, oaddr: ObjectAddr, value: JSValue) -> bool {
         debug_assert!(matches!(value, JSValue::Object(_) | JSValue::Null));
 
         let o = run.object(oaddr);
-        if same_value(&value, &o.prototype) {
+        if same_value(&value, &o.prototype()) {
             return true;
         }
-        if !o.extensible {
+        if !o.extensible() {
             return false;
         }
 
@@ -201,22 +217,26 @@ impl JSObject {
                     {
                         break;
                     }
-                    p = &po.prototype;
+                    p = &po.prototype();
                 }
                 _ => panic!("Invalid prototype value"),
             }
         }
 
-        run.object_mut(oaddr).prototype = value;
+        run.object_mut(oaddr)
+            .internal_slots
+            .insert(InternalSlot::Prototype, value);
         true
     }
 
     fn ordinary_is_extensible(run: &Runtime, oaddr: ObjectAddr) -> bool {
-        run.object(oaddr).extensible
+        run.object(oaddr).extensible()
     }
 
     fn ordinary_prevent_extensions(run: &mut Runtime, oaddr: ObjectAddr) {
-        run.object_mut(oaddr).extensible = false;
+        run.object_mut(oaddr)
+            .internal_slots
+            .insert(InternalSlot::Extensible, JSValue::Boolean(false));
     }
 
     /// https://262.ecma-international.org/11.0/#sec-ordinarygetownproperty
