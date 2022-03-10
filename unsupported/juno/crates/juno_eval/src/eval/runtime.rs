@@ -146,10 +146,10 @@ impl Runtime {
     ) -> CompletionRecord {
         debug_assert!(is_property_key(p));
         let success = (self.object(oaddr).methods.set)(self, oaddr, p, v, &JSValue::Object(oaddr))?;
-        if success == Some(JSValue::Boolean(false)) && throw {
+        if success == NormalCompletion::Value(JSValue::Boolean(false)) && throw {
             self.type_error("property set error")
         } else {
-            Ok(Some(JSValue::Boolean(true)))
+            Ok(NormalCompletion::Value(JSValue::Boolean(true)))
         }
     }
 
@@ -177,7 +177,7 @@ impl Runtime {
         if !(self.object(oaddr).methods.define_own_property)(self, oaddr, p, desc) {
             self.type_error("DefineProperty error")
         } else {
-            Ok(Some(JSValue::Boolean(true)))
+            Ok(NormalCompletion::Value(JSValue::Boolean(true)))
         }
     }
 

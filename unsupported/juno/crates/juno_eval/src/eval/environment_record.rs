@@ -170,7 +170,7 @@ impl DeclarativeEnv {
 impl DeclarativeEnv {
     /// https://262.ecma-international.org/11.0/#sec-declarative-environment-records-hasbinding-n
     fn has_binding(run: &mut Runtime, eaddr: EnvRecordAddr, n: &Rc<JSString>) -> CompletionRecord {
-        Ok(Some(JSValue::Boolean(
+        Ok(NormalCompletion::Value(JSValue::Boolean(
             run.env_record(eaddr).decl.find_binding(&n).is_some(),
         )))
     }
@@ -185,7 +185,7 @@ impl DeclarativeEnv {
         run.env_record_mut(eaddr)
             .decl
             .create_binding(name, true, deletable, false);
-        Ok(Some(JSValue::Boolean(true)))
+        Ok(NormalCompletion::Value(JSValue::Boolean(true)))
     }
 
     /// https://262.ecma-international.org/11.0/#sec-declarative-environment-records-createimmutablebinding-n-s
@@ -198,7 +198,7 @@ impl DeclarativeEnv {
         run.env_record_mut(eaddr)
             .decl
             .create_binding(name, false, false, strict);
-        Ok(Some(JSValue::Boolean(true)))
+        Ok(NormalCompletion::Value(JSValue::Boolean(true)))
     }
 
     /// https://262.ecma-international.org/11.0/#sec-declarative-environment-records-initializebinding-n-v
@@ -211,7 +211,7 @@ impl DeclarativeEnv {
         let dcl_rec = &mut run.env_record_mut(eaddr).decl;
         dcl_rec
             .initialize_binding_impl(dcl_rec.find_binding(&name).expect("binding must exist"), v);
-        Ok(None)
+        Ok(NormalCompletion::Empty)
     }
 
     /// https://262.ecma-international.org/11.0/#sec-declarative-environment-records-setmutablebinding-n-v-s
@@ -230,7 +230,7 @@ impl DeclarativeEnv {
             }
             let index = dcl_rec.create_binding(name.clone(), true, true, false);
             dcl_rec.initialize_binding_impl(index, value);
-            return Ok(None);
+            return Ok(NormalCompletion::Empty);
         }
         let index = bindex.unwrap();
         let binding = dcl_rec.binding_mut(index);
@@ -249,7 +249,7 @@ impl DeclarativeEnv {
             ));
         }
 
-        return Ok(None);
+        return Ok(NormalCompletion::Empty);
     }
 
     /// https://262.ecma-international.org/11.0/#sec-declarative-environment-records-getbindingvalue-n-s
@@ -263,7 +263,7 @@ impl DeclarativeEnv {
         let index = dcl_rec.find_binding(&*name).expect("binding must exist");
         let binding = dcl_rec.binding(index);
         if let Some(v) = &binding.value {
-            Ok(Some(v.clone()))
+            Ok(NormalCompletion::Value(v.clone()))
         } else {
             return run.reference_error(format!("uninitialized variable '{}'", name));
         }
@@ -278,10 +278,10 @@ impl DeclarativeEnv {
         let dcl_rec = &mut run.env_record_mut(eaddr).decl;
         let index = dcl_rec.find_binding(&name).expect("binding must exist");
         if !dcl_rec.binding(index).deletable {
-            return Ok(Some(JSValue::Boolean(false)));
+            return Ok(NormalCompletion::Value(JSValue::Boolean(false)));
         }
         dcl_rec.remove_binding(index);
-        Ok(Some(JSValue::Boolean(true)))
+        Ok(NormalCompletion::Value(JSValue::Boolean(true)))
     }
 
     /// https://262.ecma-international.org/11.0/#sec-declarative-environment-records-hasthisbinding
@@ -306,24 +306,24 @@ impl ObjectEnv {
         let env_rec = &run.env_record(eaddr);
         let nv = JSValue::String(n.clone());
         if !run.has_property(env_rec.obj.binding_object, &nv) {
-            return Ok(Some(JSValue::Boolean(false)));
+            return Ok(NormalCompletion::Value(JSValue::Boolean(false)));
         }
         if !env_rec.obj.with_environment {
-            return Ok(Some(JSValue::Boolean(true)));
+            return Ok(NormalCompletion::Value(JSValue::Boolean(true)));
         }
         let unscopables = run
             .get(
                 env_rec.obj.binding_object,
                 &run.well_known_symbol(WellKnownSymbol::Unscopables),
             )?
-            .unwrap();
+            .unwrap_value();
         if let JSValue::Object(unsc_addr) = unscopables {
-            let blocked = to_boolean(&run.get(unsc_addr, &nv)?.unwrap());
+            let blocked = to_boolean(&run.get(unsc_addr, &nv)?.unwrap_value());
             if blocked {
-                return Ok(Some(JSValue::Boolean(false)));
+                return Ok(NormalCompletion::Value(JSValue::Boolean(false)));
             }
         }
-        Ok(Some(JSValue::Boolean(true)))
+        Ok(NormalCompletion::Value(JSValue::Boolean(true)))
     }
 
     /// https://262.ecma-international.org/11.0/#sec-object-environment-records-createmutablebinding-n-d
@@ -392,7 +392,7 @@ impl ObjectEnv {
         let p = JSValue::String(name.clone());
         if !run.has_property(bindings_addr, &p) {
             if !strict {
-                Ok(Some(JSValue::Undefined))
+                Ok(NormalCompletion::Value(JSValue::Undefined))
             } else {
                 run.reference_error(format!("{} is not defined", &p))
             }
@@ -409,11 +409,13 @@ impl ObjectEnv {
     ) -> CompletionRecord {
         let bindings_addr = run.env_record(eaddr).obj.binding_object;
         let p = JSValue::String(name.clone());
-        Ok(Some(JSValue::Boolean((run
+        Ok(NormalCompletion::Value(JSValue::Boolean((run
             .object(bindings_addr)
             .methods
             .delete)(
-            run, bindings_addr, &p
+            run,
+            bindings_addr,
+            &p,
         ))))
     }
 
@@ -441,8 +443,10 @@ impl ObjectEnv {
 impl GlobalEnv {
     /// https://262.ecma-international.org/11.0/#sec-global-environment-records-hasbinding-n
     fn has_binding(run: &mut Runtime, eaddr: EnvRecordAddr, n: &Rc<JSString>) -> CompletionRecord {
-        if let Some(JSValue::Boolean(true)) = DeclarativeEnv::has_binding(run, eaddr, n)? {
-            return Ok(Some(JSValue::Boolean(true)));
+        if let NormalCompletion::Value(JSValue::Boolean(true)) =
+            DeclarativeEnv::has_binding(run, eaddr, n)?
+        {
+            return Ok(NormalCompletion::Value(JSValue::Boolean(true)));
         }
         ObjectEnv::has_binding(run, eaddr, n)
     }
@@ -454,7 +458,9 @@ impl GlobalEnv {
         name: Rc<JSString>,
         deletable: bool,
     ) -> CompletionRecord {
-        if let Some(JSValue::Boolean(true)) = DeclarativeEnv::has_binding(run, eaddr, &name)? {
+        if let NormalCompletion::Value(JSValue::Boolean(true)) =
+            DeclarativeEnv::has_binding(run, eaddr, &name)?
+        {
             return run.type_error(format!("{} is already defined", &name));
         }
         DeclarativeEnv::create_mutable_binding(run, eaddr, name, deletable)
@@ -467,7 +473,9 @@ impl GlobalEnv {
         name: Rc<JSString>,
         strict: bool,
     ) -> CompletionRecord {
-        if let Some(JSValue::Boolean(true)) = DeclarativeEnv::has_binding(run, eaddr, &name)? {
+        if let NormalCompletion::Value(JSValue::Boolean(true)) =
+            DeclarativeEnv::has_binding(run, eaddr, &name)?
+        {
             return run.type_error(format!("{} is already defined", &name));
         }
         DeclarativeEnv::create_immutable_binding(run, eaddr, name, strict)
@@ -480,7 +488,9 @@ impl GlobalEnv {
         name: &Rc<JSString>,
         v: JSValue,
     ) -> CompletionRecord {
-        if let Some(JSValue::Boolean(true)) = DeclarativeEnv::has_binding(run, eaddr, name)? {
+        if let NormalCompletion::Value(JSValue::Boolean(true)) =
+            DeclarativeEnv::has_binding(run, eaddr, name)?
+        {
             DeclarativeEnv::initialize_binding(run, eaddr, name, v)
         } else {
             ObjectEnv::initialize_binding(run, eaddr, name, v)
@@ -496,7 +506,9 @@ impl GlobalEnv {
         v: JSValue,
         strict: bool,
     ) -> CompletionRecord {
-        if let Some(JSValue::Boolean(true)) = DeclarativeEnv::has_binding(run, eaddr, name)? {
+        if let NormalCompletion::Value(JSValue::Boolean(true)) =
+            DeclarativeEnv::has_binding(run, eaddr, name)?
+        {
             DeclarativeEnv::set_mutable_binding(run, eaddr, name, v, strict)
         } else {
             ObjectEnv::set_mutable_binding(run, eaddr, name, v, strict)
@@ -511,7 +523,9 @@ impl GlobalEnv {
         name: &Rc<JSString>,
         strict: bool,
     ) -> CompletionRecord {
-        if let Some(JSValue::Boolean(true)) = DeclarativeEnv::has_binding(run, eaddr, name)? {
+        if let NormalCompletion::Value(JSValue::Boolean(true)) =
+            DeclarativeEnv::has_binding(run, eaddr, name)?
+        {
             DeclarativeEnv::get_binding_value(run, eaddr, name, strict)
         } else {
             ObjectEnv::get_binding_value(run, eaddr, name, strict)
@@ -524,14 +538,16 @@ impl GlobalEnv {
         eaddr: EnvRecordAddr,
         name: &Rc<JSString>,
     ) -> CompletionRecord {
-        if let Some(JSValue::Boolean(true)) = DeclarativeEnv::has_binding(run, eaddr, name)? {
+        if let NormalCompletion::Value(JSValue::Boolean(true)) =
+            DeclarativeEnv::has_binding(run, eaddr, name)?
+        {
             return DeclarativeEnv::delete_binding(run, eaddr, name);
         }
 
         let global_object = run.env_record(eaddr).obj.binding_object;
         if run.has_own_property(global_object, &JSValue::String(name.clone())) {
             let status = ObjectEnv::delete_binding(run, eaddr, name)?;
-            if Some(JSValue::Boolean(true)) == status {
+            if NormalCompletion::Value(JSValue::Boolean(true)) == status {
                 let var_names = &mut run.env_record_mut(eaddr).glob.var_names;
                 if let Some(pos) = var_names.iter().position(|e| *e == *name) {
                     var_names.remove(pos);
@@ -540,7 +556,7 @@ impl GlobalEnv {
             return Ok(status);
         }
 
-        Ok(Some(JSValue::Boolean(true)))
+        Ok(NormalCompletion::Value(JSValue::Boolean(true)))
     }
 
     /// https://262.ecma-international.org/11.0/#sec-global-environment-records-hasthisbinding

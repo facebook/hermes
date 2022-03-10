@@ -16,12 +16,19 @@ pub enum AbruptCompletion {
     Throw(JSValue),
 }
 
-pub type CompletionRecord = Result<Option<JSValue>, AbruptCompletion>;
+#[derive(Debug, Clone, PartialEq)]
+pub enum NormalCompletion {
+    Empty,
+    Value(JSValue),
+    Reference(),
+}
+
+pub type CompletionRecord = Result<NormalCompletion, AbruptCompletion>;
 
 /// https://262.ecma-international.org/11.0/#sec-updateempty
 fn update_empty(cr: CompletionRecord, value: JSValue) -> CompletionRecord {
     match cr {
-        Ok(None) => Ok(Some(value)),
+        Ok(NormalCompletion::Empty) => Ok(NormalCompletion::Value(value)),
         Err(AbruptCompletion::Break(None)) => Err(AbruptCompletion::Break(Some(jsvalue_cast!(
             JSValue::String,
             value
@@ -30,5 +37,14 @@ fn update_empty(cr: CompletionRecord, value: JSValue) -> CompletionRecord {
             jsvalue_cast!(JSValue::String, value),
         ))),
         _ => cr,
+    }
+}
+
+impl NormalCompletion {
+    pub fn unwrap_value(self) -> JSValue {
+        if let NormalCompletion::Value(val) = self {
+            return val;
+        }
+        panic!("Attempting to unwrap non-value.");
     }
 }

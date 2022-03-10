@@ -14,6 +14,7 @@ use super::runtime::*;
 use crate::eval::jsvalue::JSValue;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::num::FpCategory::Normal;
 use std::rc::Rc;
 
 declare_opaque_id!(PropertyIndex);
@@ -478,15 +479,15 @@ impl JSObject {
                 JSValue::Object(paddr) => {
                     (run.object(*paddr).methods.get)(run, *paddr, p, receiver)
                 }
-                _ => Ok(Some(JSValue::Undefined)),
+                _ => Ok(NormalCompletion::Value(JSValue::Undefined)),
             },
             Some(desc) => {
                 if desc.is_data_descriptor() {
-                    Ok(Some(desc.value.unwrap()))
+                    Ok(NormalCompletion::Value(desc.value.unwrap()))
                 } else {
                     debug_assert!(desc.is_accessor_descriptor());
                     match desc.get {
-                        None => Ok(Some(JSValue::Undefined)),
+                        None => Ok(NormalCompletion::Value(JSValue::Undefined)),
                         Some(getter) => run.call(&getter, receiver, &[]),
                     }
                 }
@@ -543,11 +544,11 @@ impl JSObject {
 
         if own_desc.is_data_descriptor() {
             if own_desc.writable == Some(false) {
-                return Ok(Some(JSValue::Boolean(false)));
+                return Ok(NormalCompletion::Value(JSValue::Boolean(false)));
             }
             let recv_addr = match receiver {
                 JSValue::Object(a) => *a,
-                _ => return Ok(Some(JSValue::Boolean(false))),
+                _ => return Ok(NormalCompletion::Value(JSValue::Boolean(false))),
             };
             let res = if let Some(existing_descriptor) =
                 (run.object(recv_addr).methods.get_own_property)(run, recv_addr, p)
@@ -555,7 +556,7 @@ impl JSObject {
                 if existing_descriptor.is_accessor_descriptor()
                     || existing_descriptor.writable == Some(false)
                 {
-                    return Ok(Some(JSValue::Boolean(false)));
+                    return Ok(NormalCompletion::Value(JSValue::Boolean(false)));
                 }
                 let value_desc = PropertyDescriptor {
                     value: Some(v),
@@ -565,13 +566,13 @@ impl JSObject {
             } else {
                 run.create_data_property(recv_addr, p, v)
             };
-            return Ok(Some(JSValue::Boolean(res)));
+            return Ok(NormalCompletion::Value(JSValue::Boolean(res)));
         }
         debug_assert!(own_desc.is_accessor_descriptor());
         if let Some(setter) = &own_desc.set {
             run.call(setter, receiver, &[v])
         } else {
-            Ok(Some(JSValue::Boolean(false)))
+            Ok(NormalCompletion::Value(JSValue::Boolean(false)))
         }
     }
 
