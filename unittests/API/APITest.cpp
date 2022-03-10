@@ -586,4 +586,53 @@ TEST_F(HermesRuntimeTestWithDisableGenerator, WithDisableGenerator) {
   }
 }
 
+TEST_F(HermesRuntimeTest, DiagnosticHandlerTestError) {
+  using DiagnosticHandler = hermes::DiagnosticHandler;
+
+  struct BufferingDiagnosticHandler : DiagnosticHandler {
+    void handle(const DiagnosticHandler::Diagnostic &d) {
+      ds.push_back(d);
+    }
+    std::vector<DiagnosticHandler::Diagnostic> ds;
+  } diagHandler;
+  std::string bytecode;
+  ASSERT_FALSE(hermes::compileJS("x++1", "", bytecode, true, &diagHandler));
+  ASSERT_EQ(1, diagHandler.ds.size());
+  EXPECT_EQ(DiagnosticHandler::Error, diagHandler.ds[0].kind);
+  EXPECT_EQ(1, diagHandler.ds[0].line);
+  EXPECT_EQ(4, diagHandler.ds[0].column);
+}
+
+TEST_F(HermesRuntimeTest, DiagnosticHandlerTestWarning) {
+  using DiagnosticHandler = hermes::DiagnosticHandler;
+
+  struct BufferingDiagnosticHandler : DiagnosticHandler {
+    void handle(const DiagnosticHandler::Diagnostic &d) {
+      ds.push_back(d);
+    }
+    std::vector<DiagnosticHandler::Diagnostic> ds;
+  } diagHandler;
+  std::string bytecode;
+  // Succeeds with a warning + associated note.
+  ASSERT_TRUE(
+      hermes::compileJS("({a:1,a:2})", "", bytecode, true, &diagHandler));
+  ASSERT_EQ(2, diagHandler.ds.size());
+
+  // warning: the property "a" was set multiple times in the object definition.
+  EXPECT_EQ(DiagnosticHandler::Warning, diagHandler.ds[0].kind);
+  EXPECT_EQ(1, diagHandler.ds[0].line);
+  EXPECT_EQ(7, diagHandler.ds[0].column);
+  ASSERT_EQ(1, diagHandler.ds[0].ranges.size());
+  EXPECT_EQ(6, diagHandler.ds[0].ranges[0].first);
+  EXPECT_EQ(9, diagHandler.ds[0].ranges[0].second);
+
+  // The first definition was here.
+  EXPECT_EQ(DiagnosticHandler::Note, diagHandler.ds[1].kind);
+  EXPECT_EQ(1, diagHandler.ds[1].line);
+  EXPECT_EQ(3, diagHandler.ds[1].column);
+  ASSERT_EQ(1, diagHandler.ds[1].ranges.size());
+  EXPECT_EQ(2, diagHandler.ds[1].ranges[0].first);
+  EXPECT_EQ(5, diagHandler.ds[1].ranges[0].second);
+}
+
 } // namespace
