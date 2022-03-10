@@ -11,10 +11,14 @@ use super::environment_record::*;
 use super::jsobject::*;
 use super::operations::*;
 use crate::eval::jsvalue::{JSString, JSSymbol, JSValue};
+use std::collections::HashMap;
 use std::fmt::Display;
 
 pub type Realm = ();
 pub type ScriptOrModule = ();
+
+declare_opaque_id!(ObjectAddr);
+declare_opaque_id!(EnvRecordAddr);
 
 pub enum WellKnownSymbol {
     Unscopables,
@@ -105,6 +109,13 @@ impl Runtime {
 /// Operations on Objects
 /// https://262.ecma-international.org/11.0/#sec-operations-on-objects
 impl Runtime {
+    /// https://262.ecma-international.org/11.0/#sec-makebasicobject
+    pub fn make_basic_object(&mut self, internal_slots_list: &[InternalSlot]) -> ObjectAddr {
+        self.objects
+            .push(JSObject::new_basic_object(internal_slots_list));
+        ObjectAddr::new(self.objects.len() - 1)
+    }
+
     /// https://262.ecma-international.org/11.0/#sec-get-o-p
     pub fn get(&mut self, oaddr: ObjectAddr, p: &JSValue) -> JSResult {
         debug_assert!(is_property_key(p));

@@ -6,6 +6,7 @@
  */
 
 use super::addr::*;
+use super::runtime::*;
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter, Pointer};
 use std::hash::{Hash, Hasher};

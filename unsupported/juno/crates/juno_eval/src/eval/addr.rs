@@ -25,6 +25,3 @@ macro_rules! declare_opaque_id {
         }
     };
 }
-
-declare_opaque_id!(ObjectAddr);
-declare_opaque_id!(EnvRecordAddr);

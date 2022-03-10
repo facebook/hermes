@@ -134,6 +134,21 @@ static OBJECT_METHODS: ObjectMethods = ObjectMethods {
 };
 
 impl JSObject {
+    /// Make a new basic object (to be used by MakeBasicObject) with the OBJECT_METHODS methods.
+    pub fn new_basic_object(internal_slots_list: &[InternalSlot]) -> JSObject {
+        let mut internal_slots = HashMap::new();
+        for slot in internal_slots_list {
+            internal_slots.insert(*slot, JSValue::Undefined);
+        }
+        JSObject {
+            methods: &OBJECT_METHODS,
+            keys: Default::default(),
+            values: Default::default(),
+            internal_slots,
+            func: None,
+        }
+    }
+
     pub fn function(&self) -> Option<&JSFunction> {
         self.func.as_ref()
     }
@@ -607,5 +622,23 @@ impl JSObject {
         });
 
         res
+    }
+
+    // https://262.ecma-international.org/11.0/#sec-ordinaryobjectcreate
+    pub fn ordinary_object_create(
+        run: &mut Runtime,
+        proto: JSValue,
+        additional_internal_slots_list: Option<&[InternalSlot]>,
+    ) -> ObjectAddr {
+        let mut internal_slots_list = vec![InternalSlot::Prototype, InternalSlot::Extensible];
+        if let Some(additional) = additional_internal_slots_list {
+            internal_slots_list.extend(additional);
+        }
+        let mut o = run.make_basic_object(&internal_slots_list);
+        *run.object_mut(o)
+            .internal_slots
+            .get_mut(&InternalSlot::Prototype)
+            .unwrap() = proto;
+        o
     }
 }
