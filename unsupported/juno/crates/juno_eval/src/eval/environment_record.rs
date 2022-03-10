@@ -33,7 +33,7 @@ pub struct ObjectEnv {
     with_environment: bool,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum ThisBindingStatus {
     Lexical,
     Initialized,
@@ -127,6 +127,20 @@ static OBJECT_ENV_METHODS: EnvironmentMethods = EnvironmentMethods {
     has_this_binding: ObjectEnv::has_this_binding,
     has_super_binding: ObjectEnv::has_super_binding,
     with_base_object: ObjectEnv::with_base_object,
+};
+
+static FUNCTION_ENV_METHODS: EnvironmentMethods = EnvironmentMethods {
+    has_binding: DeclarativeEnv::has_binding,
+    create_mutable_binding: DeclarativeEnv::create_mutable_binding,
+    create_immutable_binding: DeclarativeEnv::create_immutable_binding,
+    initialize_binding: DeclarativeEnv::initialize_binding,
+    set_mutable_binding: DeclarativeEnv::set_mutable_binding,
+    get_binding_value: DeclarativeEnv::get_binding_value,
+    get_this_binding: FunctionEnv::get_this_binding,
+    delete_binding: DeclarativeEnv::delete_binding,
+    has_this_binding: FunctionEnv::has_this_binding,
+    has_super_binding: FunctionEnv::has_super_binding,
+    with_base_object: DeclarativeEnv::with_base_object,
 };
 
 static GLOBAL_ENV_METHODS: EnvironmentMethods = EnvironmentMethods {
@@ -318,6 +332,81 @@ impl DeclarativeEnv {
     /// https://262.ecma-international.org/11.0/#sec-declarative-environment-records-withbaseobject
     fn with_base_object(run: &Runtime, eaddr: EnvRecordAddr) -> Option<ObjectAddr> {
         None
+    }
+}
+
+impl FunctionEnv {
+    /// https://262.ecma-international.org/11.0/#sec-bindthisvalue
+    fn bind_this_value(run: &mut Runtime, eaddr: EnvRecordAddr, v: JSValue) -> CompletionRecord {
+        // 1. Let envRec be the function Environment Record for which the method was invoked.
+        // 2. Assert: envRec.[[ThisBindingStatus]] is not lexical.
+        let env_rec = run.env_record_mut(eaddr);
+        // 3. If envRec.[[ThisBindingStatus]] is initialized, throw a ReferenceError exception.
+        if env_rec.func.this_binding_status == ThisBindingStatus::Initialized {
+            return run.reference_error("this binding is already initialized");
+        }
+        // 4. Set envRec.[[ThisValue]] to V.
+        env_rec.func.this_value = v.clone();
+        // 5. Set envRec.[[ThisBindingStatus]] to initialized.
+        env_rec.func.this_binding_status = ThisBindingStatus::Initialized;
+        // 6. Return V.
+        Ok(NormalCompletion::Value(v))
+    }
+
+    /// https://262.ecma-international.org/11.0/#sec-getsuperbase
+    fn get_super_base(run: &mut Runtime, eaddr: EnvRecordAddr) -> CompletionRecord {
+        // 1. Let envRec be the function Environment Record for which the method was invoked.
+        let env_rec = run.env_record(eaddr);
+        // 2. Let home be envRec.[[HomeObject]].
+        let home = &env_rec.func.home_object;
+        match home {
+            // 3. If home has the value undefined, return undefined.
+            JSValue::Undefined => Ok(NormalCompletion::Value(JSValue::Undefined)),
+            // 4. Assert: Type(home) is Object.
+            // 5. Return ? home.[[GetPrototypeOf]]().
+            JSValue::Object(obj_addr) => {
+                let obj = run.object(*obj_addr);
+                let proto = (obj.methods.get_prototype_of)(run, *obj_addr);
+                Ok(NormalCompletion::Value(proto.clone()))
+            }
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl FunctionEnv {
+    /// https://262.ecma-international.org/11.0/#sec-function-environment-records-hasthisbinding
+    fn has_this_binding(run: &Runtime, eaddr: EnvRecordAddr) -> bool {
+        // 1. Let envRec be the function Environment Record for which the method was invoked.
+        let env_rec = run.env_record(eaddr);
+        // 2. If envRec.[[ThisBindingStatus]] is lexical, return false; otherwise, return true.
+        env_rec.func.this_binding_status != ThisBindingStatus::Lexical
+    }
+
+    /// https://262.ecma-international.org/11.0/#sec-function-environment-records-hassuperbinding
+    fn has_super_binding(run: &Runtime, eaddr: EnvRecordAddr) -> bool {
+        // 1. Let envRec be the function Environment Record for which the method was invoked.
+        let env_rec = run.env_record(eaddr);
+        // 2. If envRec.[[ThisBindingStatus]] is lexical, return false.
+        if env_rec.func.this_binding_status == ThisBindingStatus::Lexical {
+            return false;
+        }
+        // 3. If envRec.[[HomeObject]] has the value undefined, return false; otherwise, return true.
+        !matches!(env_rec.func.home_object, JSValue::Undefined)
+    }
+
+    /// https://262.ecma-international.org/11.0/#sec-function-environment-records-getthisbinding
+    fn get_this_binding(run: &mut Runtime, eaddr: EnvRecordAddr) -> CompletionRecord {
+        // 1. Let envRec be the function Environment Record for which the method was invoked.
+        // 2. Assert: envRec.[[ThisBindingStatus]] is not lexical.
+        let env_rec = run.env_record_mut(eaddr);
+        // 3. If envRec.[[ThisBindingStatus]] is uninitialized, throw a ReferenceError exception.
+        let binding_status = env_rec.func.this_binding_status;
+        if binding_status == ThisBindingStatus::Uninitialized {
+            return run.reference_error("this binding is uninitialized");
+        }
+        // 4. Return envRec.[[ThisValue]].
+        Ok(NormalCompletion::Value(env_rec.func.this_value.clone()))
     }
 }
 
