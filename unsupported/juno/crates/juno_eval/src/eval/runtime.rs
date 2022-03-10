@@ -56,6 +56,7 @@ pub struct Runtime {
     env_records: Vec<EnvironmentRecord>,
     contexts: Vec<ExecutionContext>,
     well_known_symbols: Box<[JSValue]>,
+    global: JSValue,
 }
 
 impl Runtime {
@@ -63,12 +64,17 @@ impl Runtime {
         let well_known_symbols =
             vec![JSValue::Symbol(JSSymbol::new_with_str("@@unscopables"))].into_boxed_slice();
 
-        Runtime {
+        let mut run = Runtime {
             objects: Default::default(),
             env_records: Default::default(),
             contexts: Default::default(),
             well_known_symbols,
-        }
+            global: JSValue::Undefined,
+        };
+
+        run.init_global();
+
+        run
     }
 
     pub fn reference_error<S: Display>(&mut self, msg: S) -> JSResult {
@@ -80,6 +86,10 @@ impl Runtime {
         Ok(Some(JSValue::String(JSString::from_str(
             format!("TypeError: {}", msg).as_str(),
         ))))
+    }
+
+    pub fn global(&self) -> ObjectAddr {
+        jsvalue_cast!(JSValue::Object, self.global)
     }
 
     pub fn object(&self, addr: ObjectAddr) -> &JSObject {
@@ -97,6 +107,13 @@ impl Runtime {
 
     pub fn well_known_symbol(&self, which: WellKnownSymbol) -> JSValue {
         self.well_known_symbols[which as usize].clone()
+    }
+
+    /// https://262.ecma-international.org/11.0/#sec-global-object
+    fn init_global(&mut self) {
+        let proto = JSObject::ordinary_object_create(self, JSValue::Null, None);
+        let global = JSObject::ordinary_object_create(self, JSValue::Object(proto), None);
+        self.global = JSValue::Object(global);
     }
 }
 
