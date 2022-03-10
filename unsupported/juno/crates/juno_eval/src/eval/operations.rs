@@ -6,6 +6,8 @@
  */
 
 use super::jsvalue::*;
+use crate::eval::completion_record::{CompletionRecord, NormalCompletion};
+use crate::eval::runtime::Runtime;
 use num::Zero;
 
 /// https://262.ecma-international.org/11.0/#array-index
@@ -51,6 +53,21 @@ pub fn to_boolean(a: &JSValue) -> bool {
         JSValue::Object(_) | JSValue::Symbol(_) => true,
         JSValue::Number(n) => !(n.is_zero() || n.is_nan()),
         JSValue::BigInt(bi) => !bi.is_zero(),
+    }
+}
+
+/// https://262.ecma-international.org/11.0/#sec-toobject
+pub fn to_object(run: &mut Runtime, a: &JSValue) -> CompletionRecord {
+    match a {
+        JSValue::Undefined | JSValue::Null => {
+            run.type_error("Cannot convert undefined or null to object")
+        }
+        JSValue::Boolean(_)
+        | JSValue::String(_)
+        | JSValue::Symbol(_)
+        | JSValue::Number(_)
+        | JSValue::BigInt(_) => unimplemented!("ToObject()"),
+        JSValue::Object(_) => Ok(NormalCompletion::Value(a.clone())),
     }
 }
 

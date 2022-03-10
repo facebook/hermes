@@ -6,6 +6,7 @@
  */
 
 use super::jsvalue::*;
+use super::reference::Reference;
 use std::rc::Rc;
 
 #[derive(Debug, Clone)]
@@ -20,7 +21,7 @@ pub enum AbruptCompletion {
 pub enum NormalCompletion {
     Empty,
     Value(JSValue),
-    Reference(),
+    Reference(Reference),
 }
 
 pub type CompletionRecord = Result<NormalCompletion, AbruptCompletion>;
@@ -46,5 +47,11 @@ impl NormalCompletion {
             return val;
         }
         panic!("Attempting to unwrap non-value.");
+    }
+    pub fn unwrap_reference(self) -> Reference {
+        if let NormalCompletion::Reference(r) = self {
+            return r;
+        }
+        panic!("Attempting to unwrap non-reference.");
     }
 }

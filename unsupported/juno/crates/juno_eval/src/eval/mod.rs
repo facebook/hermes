@@ -15,4 +15,5 @@ mod execution_context;
 mod function;
 mod jsobject;
 mod operations;
+mod reference;
 mod runtime;

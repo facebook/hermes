@@ -87,7 +87,7 @@ pub enum EnvironmentRecordKind {
 
 // declarative_record: DeclarativeEnv,
 pub struct EnvironmentRecord {
-    methods: &'static EnvironmentMethods,
+    pub methods: &'static EnvironmentMethods,
     /// This field used for debugging.
     kind: EnvironmentRecordKind,
 

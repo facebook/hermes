@@ -44,6 +44,15 @@ impl Default for JSValue {
     }
 }
 
+impl JSValue {
+    pub fn cast_object(&self) -> ObjectAddr {
+        *jsvalue_cast!(JSValue::Object, self)
+    }
+    pub fn cast_string(&self) -> &Rc<JSString> {
+        jsvalue_cast!(JSValue::String, self)
+    }
+}
+
 impl Display for JSValue {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
