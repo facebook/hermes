@@ -9,6 +9,8 @@ use std::rc::Rc;
 
 use super::completion_record::*;
 use super::environment_record::*;
+use super::function::*;
+use super::jsobject::*;
 use super::jsvalue::*;
 use super::reference::*;
 use super::runtime::*;
@@ -102,21 +104,55 @@ impl LexicalEnvironment {
     }
 
     /// https://262.ecma-international.org/11.0/#sec-newfunctionenvironment
-    pub fn new_function_environment(_run: &mut Runtime, _f: &JSValue) -> LexicalEnvAddr {
+    pub fn new_function_environment(
+        run: &mut Runtime,
+        f: &JSValue,
+        new_target: &JSValue,
+    ) -> LexicalEnvAddr {
         // 1. Assert: F is an ECMAScript function.
+        let f = *jsvalue_cast!(JSValue::Object, f);
         // 2. Assert: Type(newTarget) is Undefined or Object.
         // 3. Let env be a new Lexical Environment.
         // 4. Let envRec be a new function Environment Record containing no bindings.
-        // 5. Set envRec.[[FunctionObject]] to F.
-        // 6. If F.[[ThisMode]] is lexical, set envRec.[[ThisBindingStatus]] to lexical.
-        // 7. Else, set envRec.[[ThisBindingStatus]] to uninitialized.
+        let env_rec = run.new_env_record(EnvironmentRecordKind::Function);
+        // 5. set envrec.[[functionobject]] to f.
+        run.env_record_mut(env_rec).func.function_object = JSValue::Object(f);
+        if let InternalSlotValue::ThisMode(ThisMode::Lexical) = run
+            .object(f)
+            .get_internal_slot(InternalSlotName::ThisMode)
+            .unwrap()
+        {
+            // 6. If F.[[ThisMode]] is lexical, set envRec.[[ThisBindingStatus]] to lexical.
+            run.env_record_mut(env_rec).func.this_binding_status = ThisBindingStatus::Lexical;
+        } else {
+            // 7. Else, set envRec.[[ThisBindingStatus]] to uninitialized.
+            run.env_record_mut(env_rec).func.this_binding_status = ThisBindingStatus::Uninitialized;
+        }
         // 8. Let home be F.[[HomeObject]].
+        let home = run
+            .object(f)
+            .get_internal_slot(InternalSlotName::HomeObject)
+            .unwrap()
+            .get_value();
+
         // 9. Set envRec.[[HomeObject]] to home.
+        run.env_record_mut(env_rec).func.home_object = home.clone();
+
         // 10. Set envRec.[[NewTarget]] to newTarget.
+        run.env_record_mut(env_rec).func.new_target = new_target.clone();
+
         // 11. Set env's EnvironmentRecord to envRec.
         // 12. Set the outer lexical environment reference of env to F.[[Environment]].
         // 13. Return env.
-        todo!();
+        run.new_lexical_env(
+            env_rec,
+            Some(
+                run.object(f)
+                    .get_internal_slot(InternalSlotName::Environment)
+                    .unwrap()
+                    .get_lexical_environment(),
+            ),
+        )
     }
 
     /// https://262.ecma-international.org/11.0/#sec-newglobalenvironment

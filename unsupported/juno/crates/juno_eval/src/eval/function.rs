@@ -9,10 +9,13 @@ use super::completion_record::*;
 use super::jsobject::*;
 use super::runtime::*;
 
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum ConstructorKind {
     Base,
     Derived,
 }
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum ThisMode {
     Lexical,
     Strict,

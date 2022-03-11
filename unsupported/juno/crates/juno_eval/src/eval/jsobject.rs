@@ -54,6 +54,7 @@ pub struct PropertyDescriptor {
 pub enum InternalSlotName {
     BooleanData,
     DateValue,
+    Environment,
     ErrorData,
     Extensible,
     HomeObject,
@@ -62,17 +63,26 @@ pub enum InternalSlotName {
     Prototype,
     RegExpMatcher,
     StringData,
+    ThisMode,
 }
 
 #[derive(Debug)]
 pub enum InternalSlotValue {
     Empty,
     Value(JSValue),
+    ThisMode(ThisMode),
+    LexicalEnvironment(LexicalEnvAddr),
 }
 
 impl From<JSValue> for InternalSlotValue {
     fn from(val: JSValue) -> Self {
         InternalSlotValue::Value(val)
+    }
+}
+
+impl From<ThisMode> for InternalSlotValue {
+    fn from(val: ThisMode) -> Self {
+        InternalSlotValue::ThisMode(val)
     }
 }
 
@@ -134,11 +144,17 @@ impl PropertyDescriptor {
 }
 
 impl InternalSlotValue {
-    fn get_value(&self) -> &JSValue {
+    pub fn get_value(&self) -> &JSValue {
         if let InternalSlotValue::Value(val) = self {
             return val;
         }
         panic!("Internal slot is not a value.");
+    }
+    pub fn get_lexical_environment(&self) -> LexicalEnvAddr {
+        if let InternalSlotValue::LexicalEnvironment(val) = self {
+            return *val;
+        }
+        panic!("Internal slot is not a lexical env.");
     }
 }
 
