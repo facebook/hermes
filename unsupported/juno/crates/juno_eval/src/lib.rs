@@ -5,10 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use crate::eval::*;
 use juno_ast::NodeRc;
 
 mod eval;
 
 pub fn run(ast: &NodeRc) {
-    eprintln!("Sorry, running not supported");
+    eval::script::script_evaluation(&mut runtime::Runtime::new(), ast);
 }

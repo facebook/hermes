@@ -11,15 +11,22 @@ use super::environment_record::*;
 use super::execution_context::*;
 use super::jsobject::*;
 use super::operations::*;
+use super::script::*;
 use crate::eval::jsvalue::{JSString, JSSymbol, JSValue};
-use std::collections::HashMap;
+use juno_ast::NodeRc;
 use std::fmt::Display;
 
 pub type Realm = ();
-pub type ScriptOrModule = ();
+
+#[derive(Debug)]
+pub enum ScriptOrModule {
+    Script(ScriptRecord),
+    Module(),
+}
 
 declare_opaque_id!(ObjectAddr);
 declare_opaque_id!(EnvRecordAddr);
+declare_opaque_id!(LexicalEnvAddr);
 
 pub enum WellKnownSymbol {
     Unscopables,
@@ -202,4 +209,8 @@ impl Runtime {
     pub fn call(&mut self, f: &JSValue, v: &JSValue, args: &[JSValue]) -> CompletionRecord {
         unimplemented!()
     }
+}
+
+pub fn evaluate_program(run: &mut Runtime, ast: &NodeRc) -> CompletionRecord {
+    todo!()
 }

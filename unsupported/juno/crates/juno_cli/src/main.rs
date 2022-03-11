@@ -12,7 +12,6 @@ use juno::hparser::{self, MagicCommentKind, ParsedJS, ParserDialect};
 use juno::sema::SemContext;
 use juno::sourcemap::merge_sourcemaps;
 use juno::{gen_js, resolve_dependency, sema};
-use juno_eval;
 use juno_pass::PassManager;
 use juno_support::source_manager::SourceId;
 use juno_support::NullTerminatedBuf;

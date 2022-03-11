@@ -16,4 +16,5 @@ mod function;
 mod jsobject;
 mod operations;
 mod reference;
-mod runtime;
+pub mod runtime;
+pub mod script;

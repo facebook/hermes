@@ -16,14 +16,27 @@ pub struct ExecutionContext {
     pub realm: Realm,
     pub script_or_module: Option<ScriptOrModule>,
 
-    lex_env: EnvRecordAddr,
+    lex_env: LexicalEnvAddr,
     var_env: EnvRecordAddr,
+}
+
+impl ExecutionContext {
+    pub fn new_script(script_or_module: ScriptOrModule) -> Self {
+        ExecutionContext {
+            function: None,
+            realm: (),
+            script_or_module: Some(script_or_module),
+
+            lex_env: todo!(),
+            var_env: todo!(),
+        }
+    }
 }
 
 impl ExecutionContext {
     /// https://262.ecma-international.org/11.0/#sec-getactivescriptormodule
     /// "Return null" here will return `None`.
-    pub fn get_active_script_or_module(run: &Runtime) -> Option<ScriptOrModule> {
+    pub fn get_active_script_or_module(run: &Runtime) -> Option<&ScriptOrModule> {
         // 1. If the execution context stack is empty, return null.
         if run.contexts().is_empty() {
             return None;
@@ -33,7 +46,10 @@ impl ExecutionContext {
         //   whose ScriptOrModule component is not null.
         // 3. If no such execution context exists, return null.
         //   Otherwise, return ec's ScriptOrModule.
-        run.contexts().iter().rev().find_map(|c| c.script_or_module)
+        run.contexts()
+            .iter()
+            .rev()
+            .find_map(|c| c.script_or_module.as_ref())
     }
 
     /// https://262.ecma-international.org/11.0/#sec-getglobalobject
