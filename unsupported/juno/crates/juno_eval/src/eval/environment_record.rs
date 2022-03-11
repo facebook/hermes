@@ -238,7 +238,7 @@ impl DeclarativeEnv {
     /// https://262.ecma-international.org/11.0/#sec-declarative-environment-records-hasbinding-n
     fn has_binding(run: &mut Runtime, eaddr: EnvRecordAddr, n: &Rc<JSString>) -> CompletionRecord {
         Ok(NormalCompletion::Value(JSValue::Boolean(
-            run.env_record(eaddr).decl.find_binding(&n).is_some(),
+            run.env_record(eaddr).decl.find_binding(n).is_some(),
         )))
     }
 
@@ -276,8 +276,7 @@ impl DeclarativeEnv {
         v: JSValue,
     ) -> CompletionRecord {
         let dcl_rec = &mut run.env_record_mut(eaddr).decl;
-        dcl_rec
-            .initialize_binding_impl(dcl_rec.find_binding(&name).expect("binding must exist"), v);
+        dcl_rec.initialize_binding_impl(dcl_rec.find_binding(name).expect("binding must exist"), v);
         Ok(NormalCompletion::Empty)
     }
 
@@ -316,7 +315,7 @@ impl DeclarativeEnv {
             ));
         }
 
-        return Ok(NormalCompletion::Empty);
+        Ok(NormalCompletion::Empty)
     }
 
     /// https://262.ecma-international.org/11.0/#sec-declarative-environment-records-getbindingvalue-n-s
@@ -343,7 +342,7 @@ impl DeclarativeEnv {
         name: &Rc<JSString>,
     ) -> CompletionRecord {
         let dcl_rec = &mut run.env_record_mut(eaddr).decl;
-        let index = dcl_rec.find_binding(&name).expect("binding must exist");
+        let index = dcl_rec.find_binding(name).expect("binding must exist");
         if !dcl_rec.binding(index).deletable {
             return Ok(NormalCompletion::Value(JSValue::Boolean(false)));
         }
@@ -505,7 +504,7 @@ impl ObjectEnv {
         name: &Rc<JSString>,
         v: JSValue,
     ) -> CompletionRecord {
-        Self::set_mutable_binding(run, eaddr, &name, v, false)
+        Self::set_mutable_binding(run, eaddr, name, v, false)
     }
 
     /// https://262.ecma-international.org/11.0/#sec-object-environment-records-setmutablebinding-n-v-s
@@ -619,6 +618,7 @@ impl GlobalEnv {
         // 4. Let existingProp be ? globalObject.[[GetOwnProperty]](N).
         let prop = JSValue::String(n.clone());
         let existing_prop = (global_obj.methods.get_own_property)(run, global_obj_addr, &prop);
+        #[allow(clippy::match_like_matches_macro)]
         match existing_prop {
             // 5. If existingProp is undefined, return false.
             // 6. If existingProp.[[Configurable]] is true, return false.

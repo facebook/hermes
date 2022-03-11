@@ -258,14 +258,14 @@ impl JSObject {
 impl JSObject {
     /// https://262.ecma-international.org/11.0/#sec-ordinarygetprototypeof
     pub fn ordinary_get_prototype_of(run: &Runtime, oaddr: ObjectAddr) -> &JSValue {
-        &run.object(oaddr).prototype()
+        run.object(oaddr).prototype()
     }
     /// https://262.ecma-international.org/11.0/#sec-ordinarysetprototypeof
     fn ordinary_set_prototype_of(run: &mut Runtime, oaddr: ObjectAddr, value: JSValue) -> bool {
         debug_assert!(matches!(value, JSValue::Object(_) | JSValue::Null));
 
         let o = run.object(oaddr);
-        if same_value(&value, &o.prototype()) {
+        if same_value(&value, o.prototype()) {
             return true;
         }
         if !o.extensible() {
@@ -288,7 +288,7 @@ impl JSObject {
                     {
                         break;
                     }
-                    p = &po.prototype();
+                    p = po.prototype();
                 }
                 _ => panic!("Invalid prototype value"),
             }
@@ -660,9 +660,9 @@ impl JSObject {
             };
 
             match (a_index, b_index) {
-                (Some(ai), Some(bi)) => return ai.cmp(&bi),
-                (Some(_), _) => return Ordering::Less,
-                (_, Some(_)) => return Ordering::Greater,
+                (Some(ai), Some(bi)) => ai.cmp(&bi),
+                (Some(_), _) => Ordering::Less,
+                (_, Some(_)) => Ordering::Greater,
                 _ => match (a, b) {
                     (JSValue::String(_), JSValue::Symbol(_)) => Ordering::Less,
                     (JSValue::Symbol(_), JSValue::String(_)) => Ordering::Greater,

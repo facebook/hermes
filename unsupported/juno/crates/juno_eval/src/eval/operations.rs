@@ -73,10 +73,7 @@ pub fn to_object(run: &mut Runtime, a: &JSValue) -> CompletionRecord {
 
 /// https://262.ecma-international.org/11.0/#sec-ispropertykey
 pub fn is_property_key(a: &JSValue) -> bool {
-    match a {
-        JSValue::String(_) | JSValue::Symbol(_) => true,
-        _ => false,
-    }
+    matches!(a, JSValue::String(_) | JSValue::Symbol(_))
 }
 
 /// https://262.ecma-international.org/11.0/#sec-samevalue

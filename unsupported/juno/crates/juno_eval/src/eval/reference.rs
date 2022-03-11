@@ -61,14 +61,14 @@ impl Reference {
         self.strict
     }
     pub fn has_primitive_base(&self) -> bool {
-        match self.base {
+        matches!(
+            self.base,
             ReferenceBase::Value(JSValue::Boolean(_))
-            | ReferenceBase::Value(JSValue::String(_))
-            | ReferenceBase::Value(JSValue::Symbol(_))
-            | ReferenceBase::Value(JSValue::BigInt(_))
-            | ReferenceBase::Value(JSValue::Number(_)) => true,
-            _ => false,
-        }
+                | ReferenceBase::Value(JSValue::String(_))
+                | ReferenceBase::Value(JSValue::Symbol(_))
+                | ReferenceBase::Value(JSValue::BigInt(_))
+                | ReferenceBase::Value(JSValue::Number(_))
+        )
     }
     pub fn get_base_value(&self) -> &JSValue {
         match &self.base {
