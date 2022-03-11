@@ -14,27 +14,27 @@ use crate::eval::operations::to_boolean;
 use std::rc::Rc;
 
 #[derive(Debug)]
-struct Binding {
-    mutable: bool,
-    deletable: bool,
-    strict: bool,
-    value: Option<JSValue>,
+pub struct Binding {
+    pub mutable: bool,
+    pub deletable: bool,
+    pub strict: bool,
+    pub value: Option<JSValue>,
 }
 
 #[derive(Debug)]
 pub struct DeclarativeEnv {
-    names: Vec<Rc<JSString>>,
-    bindings: Vec<Binding>,
+    pub names: Vec<Rc<JSString>>,
+    pub bindings: Vec<Binding>,
 }
 
 #[derive(Debug)]
 pub struct ObjectEnv {
-    binding_object: Option<ObjectAddr>,
-    with_environment: bool,
+    pub binding_object: Option<ObjectAddr>,
+    pub with_environment: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum ThisBindingStatus {
+pub enum ThisBindingStatus {
     Lexical,
     Initialized,
     Uninitialized,
@@ -42,17 +42,17 @@ enum ThisBindingStatus {
 
 #[derive(Debug)]
 pub struct FunctionEnv {
-    this_value: JSValue,
-    this_binding_status: ThisBindingStatus,
-    function_object: JSValue,
-    home_object: JSValue,
-    new_target: JSValue,
+    pub this_value: JSValue,
+    pub this_binding_status: ThisBindingStatus,
+    pub function_object: JSValue,
+    pub home_object: JSValue,
+    pub new_target: JSValue,
 }
 
 #[derive(Debug)]
 pub struct GlobalEnv {
-    global_this_value: JSValue,
-    var_names: Vec<Rc<JSString>>,
+    pub global_this_value: JSValue,
+    pub var_names: Vec<Rc<JSString>>,
 }
 
 pub struct EnvironmentMethods {
@@ -89,12 +89,12 @@ pub enum EnvironmentRecordKind {
 pub struct EnvironmentRecord {
     pub methods: &'static EnvironmentMethods,
     /// This field used for debugging.
-    kind: EnvironmentRecordKind,
+    pub kind: EnvironmentRecordKind,
 
-    decl: DeclarativeEnv,
-    func: FunctionEnv,
-    obj: ObjectEnv,
-    glob: GlobalEnv,
+    pub decl: DeclarativeEnv,
+    pub func: FunctionEnv,
+    pub obj: ObjectEnv,
+    pub glob: GlobalEnv,
 }
 
 impl EnvironmentRecord {

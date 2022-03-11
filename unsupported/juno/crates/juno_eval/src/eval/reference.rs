@@ -8,6 +8,7 @@
 use super::addr::*;
 use super::completion_record::CompletionRecord;
 use super::completion_record::NormalCompletion;
+use super::environment_record::EnvironmentRecord;
 use super::execution_context::ExecutionContext;
 use super::jsvalue::JSValue;
 use super::operations::{to_boolean, to_object};
@@ -26,6 +27,28 @@ pub struct Reference {
     name: JSValue,
     strict: bool,
     this_value: Option<JSValue>,
+}
+
+impl Reference {
+    /// Make a "Reference" type.
+    pub fn value(base: JSValue, name: JSValue, strict: bool) -> Self {
+        Reference {
+            base: ReferenceBase::Value(base),
+            name,
+            strict,
+            this_value: None,
+        }
+    }
+
+    /// Make a "Reference" type with base environment record.
+    pub fn env_rec(base: EnvRecordAddr, name: JSValue, strict: bool) -> Self {
+        Reference {
+            base: ReferenceBase::EnvRec(base),
+            name,
+            strict,
+            this_value: None,
+        }
+    }
 }
 
 /// https://262.ecma-international.org/11.0/#sec-reference-specification-type

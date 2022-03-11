@@ -10,6 +10,7 @@ use super::completion_record::*;
 use super::environment_record::*;
 use super::execution_context::*;
 use super::jsobject::*;
+use super::lexical_environment::*;
 use super::operations::*;
 use super::script::*;
 use crate::eval::jsvalue::{JSString, JSSymbol, JSValue};
@@ -52,6 +53,7 @@ pub struct Runtime {
     objects: Vec<JSObject>,
     env_records: Vec<EnvironmentRecord>,
     contexts: Vec<ExecutionContext>,
+    lexical_environments: Vec<LexicalEnvironment>,
     well_known_symbols: Box<[JSValue]>,
     global: JSValue,
 }
@@ -65,6 +67,7 @@ impl Runtime {
             objects: Default::default(),
             env_records: Default::default(),
             contexts: Default::default(),
+            lexical_environments: Default::default(),
             well_known_symbols,
             global: JSValue::Undefined,
         };
@@ -105,6 +108,22 @@ impl Runtime {
     }
     pub fn env_record_mut(&mut self, addr: EnvRecordAddr) -> &mut EnvironmentRecord {
         &mut self.env_records[addr.as_usize()]
+    }
+    pub fn new_lexical_env(
+        &mut self,
+        env_rec: EnvRecordAddr,
+        outer: Option<LexicalEnvAddr>,
+    ) -> LexicalEnvAddr {
+        let new_addr = LexicalEnvAddr::new(self.lexical_environments.len());
+        self.lexical_environments
+            .push(LexicalEnvironment::new(env_rec, outer));
+        new_addr
+    }
+    pub fn lexical_env(&self, addr: LexicalEnvAddr) -> &LexicalEnvironment {
+        &self.lexical_environments[addr.as_usize()]
+    }
+    pub fn lexical_env_mut(&mut self, addr: LexicalEnvAddr) -> &mut LexicalEnvironment {
+        &mut self.lexical_environments[addr.as_usize()]
     }
 
     pub fn contexts(&self) -> &[ExecutionContext] {

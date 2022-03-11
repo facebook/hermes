@@ -14,6 +14,7 @@ mod environment_record;
 mod execution_context;
 mod function;
 mod jsobject;
+mod lexical_environment;
 mod operations;
 mod reference;
 pub mod runtime;
