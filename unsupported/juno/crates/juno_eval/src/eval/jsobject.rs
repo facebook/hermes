@@ -52,6 +52,34 @@ pub struct PropertyDescriptor {
     pub configurable: Option<bool>,
 }
 
+/// Internal slots for objects.
+/// Sorted alphabetically for convenience.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum InternalSlotName {
+    BooleanData,
+    DateValue,
+    ErrorData,
+    Extensible,
+    HomeObject,
+    NumberData,
+    ParameterMap,
+    Prototype,
+    RegExpMatcher,
+    StringData,
+}
+
+#[derive(Debug)]
+pub enum InternalSlotValue {
+    Empty,
+    Value(JSValue),
+}
+
+impl From<JSValue> for InternalSlotValue {
+    fn from(val: JSValue) -> Self {
+        InternalSlotValue::Value(val)
+    }
+}
+
 pub struct ObjectMethods {
     pub get_prototype_of: fn(&Runtime, ObjectAddr) -> &JSValue,
     pub set_prototype_of: fn(&mut Runtime, ObjectAddr, JSValue) -> bool,
@@ -72,7 +100,7 @@ pub struct JSObject {
     keys: Vec<JSValue>,
     values: Vec<Property>,
 
-    internal_slots: HashMap<InternalSlot, JSValue>,
+    internal_slots: HashMap<InternalSlotName, InternalSlotValue>,
 
     /// If this is a function, these will be populated.
     func: Option<JSFunction>,
@@ -109,6 +137,15 @@ impl PropertyDescriptor {
     }
 }
 
+impl InternalSlotValue {
+    fn get_value(&self) -> &JSValue {
+        if let InternalSlotValue::Value(val) = self {
+            return val;
+        }
+        panic!("Internal slot is not a value.");
+    }
+}
+
 static OBJECT_METHODS: ObjectMethods = ObjectMethods {
     /// https://262.ecma-international.org/11.0/#sec-ordinary-object-internal-methods-and-internal-slots-getprototypeof
     get_prototype_of: JSObject::ordinary_get_prototype_of,
@@ -136,10 +173,10 @@ static OBJECT_METHODS: ObjectMethods = ObjectMethods {
 
 impl JSObject {
     /// Make a new basic object (to be used by MakeBasicObject) with the OBJECT_METHODS methods.
-    pub fn new_basic_object(internal_slots_list: &[InternalSlot]) -> JSObject {
+    pub fn new_basic_object(internal_slots_list: &[InternalSlotName]) -> JSObject {
         let mut internal_slots = HashMap::new();
         for slot in internal_slots_list {
-            internal_slots.insert(*slot, JSValue::Undefined);
+            internal_slots.insert(*slot, InternalSlotValue::Empty);
         }
         JSObject {
             methods: &OBJECT_METHODS,
@@ -157,10 +194,10 @@ impl JSObject {
         self.func.is_some()
     }
 
-    pub fn get_internal_slot(&self, slot: InternalSlot) -> Option<&JSValue> {
+    pub fn get_internal_slot(&self, slot: InternalSlotName) -> Option<&InternalSlotValue> {
         self.internal_slots.get(&slot)
     }
-    pub fn set_internal_slot(&mut self, slot: InternalSlot, value: JSValue) {
+    pub fn set_internal_slot(&mut self, slot: InternalSlotName, value: InternalSlotValue) {
         self.internal_slots.insert(slot, value);
     }
 
@@ -172,12 +209,18 @@ impl JSObject {
     }
 
     fn prototype(&self) -> &JSValue {
-        self.internal_slots.get(&InternalSlot::Prototype).unwrap()
+        self.internal_slots
+            .get(&InternalSlotName::Prototype)
+            .unwrap()
+            .get_value()
     }
     fn extensible(&self) -> bool {
-        jsvalue_cast!(
+        *jsvalue_cast!(
             JSValue::Boolean,
-            *self.internal_slots.get(&InternalSlot::Extensible).unwrap()
+            self.internal_slots
+                .get(&InternalSlotName::Extensible)
+                .unwrap()
+                .get_value()
         )
     }
 
@@ -241,7 +284,7 @@ impl JSObject {
 
         run.object_mut(oaddr)
             .internal_slots
-            .insert(InternalSlot::Prototype, value);
+            .insert(InternalSlotName::Prototype, value.into());
         true
     }
 
@@ -252,7 +295,7 @@ impl JSObject {
     fn ordinary_prevent_extensions(run: &mut Runtime, oaddr: ObjectAddr) {
         run.object_mut(oaddr)
             .internal_slots
-            .insert(InternalSlot::Extensible, JSValue::Boolean(false));
+            .insert(InternalSlotName::Extensible, JSValue::Boolean(false).into());
     }
 
     /// https://262.ecma-international.org/11.0/#sec-ordinarygetownproperty
@@ -629,17 +672,17 @@ impl JSObject {
     pub fn ordinary_object_create(
         run: &mut Runtime,
         proto: JSValue,
-        additional_internal_slots_list: Option<&[InternalSlot]>,
+        additional_internal_slots_list: Option<&[InternalSlotName]>,
     ) -> ObjectAddr {
-        let mut internal_slots_list = vec![InternalSlot::Prototype, InternalSlot::Extensible];
+        let mut internal_slots_list =
+            vec![InternalSlotName::Prototype, InternalSlotName::Extensible];
         if let Some(additional) = additional_internal_slots_list {
             internal_slots_list.extend(additional);
         }
         let mut o = run.make_basic_object(&internal_slots_list);
-        *run.object_mut(o)
+        run.object_mut(o)
             .internal_slots
-            .get_mut(&InternalSlot::Prototype)
-            .unwrap() = proto;
+            .insert(InternalSlotName::Prototype, proto.into());
         o
     }
 }

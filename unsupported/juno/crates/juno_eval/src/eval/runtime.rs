@@ -33,22 +33,6 @@ pub enum WellKnownSymbol {
     Unscopables,
 }
 
-/// Internal slots for objects.
-/// Sorted alphabetically for convenience.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub enum InternalSlot {
-    BooleanData,
-    DateValue,
-    ErrorData,
-    Extensible,
-    HomeObject,
-    NumberData,
-    ParameterMap,
-    Prototype,
-    RegExpMatcher,
-    StringData,
-}
-
 pub struct Runtime {
     objects: Vec<JSObject>,
     env_records: Vec<EnvironmentRecord>,
@@ -155,7 +139,7 @@ impl Runtime {
 /// https://262.ecma-international.org/11.0/#sec-operations-on-objects
 impl Runtime {
     /// https://262.ecma-international.org/11.0/#sec-makebasicobject
-    pub fn make_basic_object(&mut self, internal_slots_list: &[InternalSlot]) -> ObjectAddr {
+    pub fn make_basic_object(&mut self, internal_slots_list: &[InternalSlotName]) -> ObjectAddr {
         self.objects
             .push(JSObject::new_basic_object(internal_slots_list));
         ObjectAddr::new(self.objects.len() - 1)
