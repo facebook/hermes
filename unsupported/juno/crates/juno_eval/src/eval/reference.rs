@@ -5,18 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use super::addr::*;
 use super::completion_record::CompletionRecord;
 use super::completion_record::NormalCompletion;
-use super::environment_record::EnvironmentRecord;
 use super::execution_context::ExecutionContext;
 use super::jsvalue::JSValue;
-use super::operations::{to_boolean, to_object};
+use super::operations::to_object;
 use super::runtime::EnvRecordAddr;
 use super::runtime::Runtime;
 
 #[derive(Clone, Debug, PartialEq)]
-enum ReferenceBase {
+pub enum ReferenceBase {
     Value(JSValue),
     EnvRec(EnvRecordAddr),
 }

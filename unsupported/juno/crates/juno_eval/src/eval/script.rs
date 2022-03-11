@@ -30,7 +30,7 @@ impl ScriptRecord {
 }
 
 /// https://262.ecma-international.org/11.0/#sec-globaldeclarationinstantiation
-pub fn global_declaration_instantiation(run: &mut Runtime, ast: &NodeRc) -> CompletionRecord {
+pub fn global_declaration_instantiation(_run: &mut Runtime, _ast: &NodeRc) -> CompletionRecord {
     todo!();
 }
 

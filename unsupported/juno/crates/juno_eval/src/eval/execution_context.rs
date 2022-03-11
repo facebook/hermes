@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use super::jsvalue::*;
 use super::runtime::*;
 
 /// https://262.ecma-international.org/11.0/#table-22
@@ -21,15 +20,16 @@ pub struct ExecutionContext {
 }
 
 impl ExecutionContext {
-    pub fn new_script(script_or_module: ScriptOrModule) -> Self {
-        ExecutionContext {
-            function: None,
-            realm: (),
-            script_or_module: Some(script_or_module),
-
-            lex_env: todo!(),
-            var_env: todo!(),
-        }
+    pub fn new_script(_script_or_module: ScriptOrModule) -> Self {
+        unimplemented!();
+        // ExecutionContext {
+        //     function: None,
+        //     realm: (),
+        //     script_or_module: Some(script_or_module),
+        //
+        //     lex_env: todo!(),
+        //     var_env: todo!(),
+        // }
     }
 }
 

@@ -8,8 +8,9 @@
 use crate::eval::*;
 use juno_ast::NodeRc;
 
+#[allow(dead_code)]
 mod eval;
 
 pub fn run(ast: &NodeRc) {
-    eval::script::script_evaluation(&mut runtime::Runtime::new(), ast);
+    let _ = eval::script::script_evaluation(&mut runtime::Runtime::new(), ast);
 }

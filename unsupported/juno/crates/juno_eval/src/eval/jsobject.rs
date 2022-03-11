@@ -5,17 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use super::addr::*;
 use super::completion_record::*;
 use super::function::*;
-use super::jsvalue::*;
 use super::operations::*;
 use super::runtime::*;
 use crate::eval::jsvalue::JSValue;
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::num::FpCategory::Normal;
-use std::rc::Rc;
 
 declare_opaque_id!(PropertyIndex);
 
@@ -91,7 +87,7 @@ pub struct ObjectMethods {
     pub get: fn(&mut Runtime, ObjectAddr, &JSValue, &JSValue) -> CompletionRecord,
     pub set: fn(&mut Runtime, ObjectAddr, &JSValue, JSValue, &JSValue) -> CompletionRecord,
     pub delete: fn(&mut Runtime, ObjectAddr, &JSValue) -> bool,
-    pub own_property_keys: fn(&Runtime, ObjectAddr, JSValue) -> Vec<JSValue>,
+    pub own_property_keys: fn(&Runtime, ObjectAddr) -> Vec<JSValue>,
 }
 
 pub struct JSObject {
@@ -502,7 +498,7 @@ impl JSObject {
             return true;
         }
         let parent = (methods.get_prototype_of)(run, oaddr);
-        if let (JSValue::Object(pa)) = parent {
+        if let JSValue::Object(pa) = parent {
             (methods.has_property)(run, *pa, p)
         } else {
             false
@@ -520,7 +516,9 @@ impl JSObject {
         match (run.object(oaddr).methods.get_own_property)(run, oaddr, p) {
             None => match (run.object(oaddr).methods.get_prototype_of)(run, oaddr) {
                 JSValue::Object(paddr) => {
-                    (run.object(*paddr).methods.get)(run, *paddr, p, receiver)
+                    // Copy to avoid the borrows checker.
+                    let paddr = *paddr;
+                    (run.object(paddr).methods.get)(run, paddr, p, receiver)
                 }
                 _ => Ok(NormalCompletion::Value(JSValue::Undefined)),
             },
@@ -566,13 +564,9 @@ impl JSObject {
                 if let JSValue::Object(parent_addr) =
                     (run.object(oaddr).methods.get_prototype_of)(run, oaddr)
                 {
-                    return (run.object(*parent_addr).methods.set)(
-                        run,
-                        *parent_addr,
-                        p,
-                        v,
-                        receiver,
-                    );
+                    // Avoid the borrows checker.
+                    let parent_addr = *parent_addr;
+                    return (run.object(parent_addr).methods.set)(run, parent_addr, p, v, receiver);
                 }
                 PropertyDescriptor {
                     value: Some(JSValue::Undefined),
@@ -633,11 +627,7 @@ impl JSObject {
     }
 
     /// https://262.ecma-international.org/11.0/#sec-ordinaryownpropertykeys
-    pub fn ordinary_own_property_keys(
-        run: &Runtime,
-        oaddr: ObjectAddr,
-        p: JSValue,
-    ) -> Vec<JSValue> {
+    pub fn ordinary_own_property_keys(run: &Runtime, oaddr: ObjectAddr) -> Vec<JSValue> {
         let mut res = run.object(oaddr).keys.clone();
 
         // Sort: indexes first, strings next, symbols last.
@@ -679,7 +669,7 @@ impl JSObject {
         if let Some(additional) = additional_internal_slots_list {
             internal_slots_list.extend(additional);
         }
-        let mut o = run.make_basic_object(&internal_slots_list);
+        let o = run.make_basic_object(&internal_slots_list);
         run.object_mut(o)
             .internal_slots
             .insert(InternalSlotName::Prototype, proto.into());

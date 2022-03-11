@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use super::addr::*;
 use super::completion_record::*;
 use super::jsobject::*;
 use super::runtime::*;

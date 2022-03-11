@@ -102,7 +102,7 @@ impl LexicalEnvironment {
     }
 
     /// https://262.ecma-international.org/11.0/#sec-newfunctionenvironment
-    pub fn new_function_environment(run: &mut Runtime, f: &JSValue) -> LexicalEnvAddr {
+    pub fn new_function_environment(_run: &mut Runtime, _f: &JSValue) -> LexicalEnvAddr {
         // 1. Assert: F is an ECMAScript function.
         // 2. Assert: Type(newTarget) is Undefined or Object.
         // 3. Let env be a new Lexical Environment.

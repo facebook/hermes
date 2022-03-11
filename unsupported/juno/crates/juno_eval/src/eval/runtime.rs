@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use super::addr::*;
 use super::completion_record::*;
 use super::environment_record::*;
 use super::execution_context::*;
@@ -83,9 +82,9 @@ impl Runtime {
         &mut self.objects[addr.as_usize()]
     }
     pub fn new_env_record(&mut self, kind: EnvironmentRecordKind) -> EnvRecordAddr {
-        let newAddr = EnvRecordAddr::new(self.env_records.len());
+        let new_addr = EnvRecordAddr::new(self.env_records.len());
         self.env_records.push(EnvironmentRecord::new(kind));
-        newAddr
+        new_addr
     }
     pub fn env_record(&self, addr: EnvRecordAddr) -> &EnvironmentRecord {
         &self.env_records[addr.as_usize()]
@@ -209,11 +208,11 @@ impl Runtime {
     }
 
     /// https://262.ecma-international.org/11.0/#sec-call
-    pub fn call(&mut self, f: &JSValue, v: &JSValue, args: &[JSValue]) -> CompletionRecord {
+    pub fn call(&mut self, _f: &JSValue, _v: &JSValue, _args: &[JSValue]) -> CompletionRecord {
         unimplemented!()
     }
 }
 
-pub fn evaluate_program(run: &mut Runtime, ast: &NodeRc) -> CompletionRecord {
+pub fn evaluate_program(_run: &mut Runtime, _ast: &NodeRc) -> CompletionRecord {
     todo!()
 }

@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use super::addr::*;
 use super::completion_record::*;
 use super::jsvalue::*;
 use super::runtime::*;
@@ -130,7 +129,7 @@ impl EnvironmentRecord {
     }
 }
 
-fn unreachable_get_this_binding(run: &mut Runtime, eaddr: EnvRecordAddr) -> CompletionRecord {
+fn unreachable_get_this_binding(_run: &mut Runtime, _eaddr: EnvRecordAddr) -> CompletionRecord {
     unimplemented!()
 }
 
@@ -363,7 +362,7 @@ impl DeclarativeEnv {
     }
 
     /// https://262.ecma-international.org/11.0/#sec-declarative-environment-records-withbaseobject
-    fn with_base_object(run: &Runtime, eaddr: EnvRecordAddr) -> Option<ObjectAddr> {
+    fn with_base_object(_run: &Runtime, _eaddr: EnvRecordAddr) -> Option<ObjectAddr> {
         None
     }
 }
@@ -446,7 +445,7 @@ impl FunctionEnv {
 impl ObjectEnv {
     /// https://262.ecma-international.org/11.0/#sec-object-environment-records-hasbinding-n
     fn has_binding(run: &mut Runtime, eaddr: EnvRecordAddr, n: &Rc<JSString>) -> CompletionRecord {
-        let env_rec = &run.env_record(eaddr);
+        let env_rec = run.env_record(eaddr);
         let nv = JSValue::String(n.clone());
         if !run.has_property(env_rec.obj.binding_object.unwrap(), &nv) {
             return Ok(NormalCompletion::Value(JSValue::Boolean(false)));
@@ -454,11 +453,10 @@ impl ObjectEnv {
         if !env_rec.obj.with_environment {
             return Ok(NormalCompletion::Value(JSValue::Boolean(true)));
         }
+        let unscopables_sym = run.well_known_symbol(WellKnownSymbol::Unscopables);
+        let binding_object_addr = env_rec.obj.binding_object.unwrap();
         let unscopables = run
-            .get(
-                env_rec.obj.binding_object.unwrap(),
-                &run.well_known_symbol(WellKnownSymbol::Unscopables),
-            )?
+            .get(binding_object_addr, &unscopables_sym)?
             .unwrap_value();
         if let JSValue::Object(unsc_addr) = unscopables {
             let blocked = to_boolean(&run.get(unsc_addr, &nv)?.unwrap_value());
@@ -910,7 +908,7 @@ impl GlobalEnv {
     }
 
     /// https://262.ecma-international.org/11.0/#sec-global-environment-records-withbaseobject
-    fn with_base_object(run: &Runtime, eaddr: EnvRecordAddr) -> Option<ObjectAddr> {
+    fn with_base_object(_run: &Runtime, _eaddr: EnvRecordAddr) -> Option<ObjectAddr> {
         None
     }
 }
