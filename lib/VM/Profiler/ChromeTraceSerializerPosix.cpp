@@ -400,7 +400,7 @@ static void emitProfileNode(
 
 static void processNode(JSONEmitter &json, const ChromeStackFrameNode &node) {
   std::string name;
-  std::string url = "unknown";
+  std::string url;
   uint32_t scriptId = 0;
   uint32_t lineNumber = 0;
   uint32_t columnNumber = 0;
@@ -413,6 +413,7 @@ static void processNode(JSONEmitter &json, const ChromeStackFrameNode &node) {
       llvh::raw_string_ostream os(name);
       os << getJSFunctionName(bcProvider, frame.jsFrame.functionId);
 
+      url = "unknown";
       OptValue<hbc::DebugSourceLocation> sourceLocOpt = getSourceLocation(
           bcProvider, frame.jsFrame.functionId, frame.jsFrame.offset);
       if (sourceLocOpt.hasValue()) {
