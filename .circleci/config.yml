@@ -564,13 +564,15 @@ jobs:
           install-yarn: true
           lts: true
       - run:
-          name: Setup dependencies
+          name: Set up workspace and install dependencies
           command: |
             (yes | sdkmanager "cmake;3.18.1" --verbose) || true
+            ln -sf /usr/bin/ninja /opt/android/sdk/cmake/3.18.1/bin/ninja
+
       - run:
           name: Prepare RNTester
           command: |
-            git clone https://github.com/facebook/react-native
+            git clone --depth=1 https://github.com/facebook/react-native
             cd react-native
             yarn install
             npm install /tmp/input/hermes-engine-v*.tgz
