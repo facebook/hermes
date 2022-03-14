@@ -275,6 +275,53 @@ type A = (number, ...number) => number;
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
+type A = (this & T) => void;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "A"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "FunctionTypeAnnotation",
+// CHECK-NEXT:         "params": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "FunctionTypeParam",
+// CHECK-NEXT:             "name": null,
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "IntersectionTypeAnnotation",
+// CHECK-NEXT:               "types": [
+// CHECK-NEXT:                 {
+// CHECK-NEXT:                   "type": "GenericTypeAnnotation",
+// CHECK-NEXT:                   "id": {
+// CHECK-NEXT:                     "type": "Identifier",
+// CHECK-NEXT:                     "name": "this"
+// CHECK-NEXT:                   },
+// CHECK-NEXT:                   "typeParameters": null
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 {
+// CHECK-NEXT:                   "type": "GenericTypeAnnotation",
+// CHECK-NEXT:                   "id": {
+// CHECK-NEXT:                     "type": "Identifier",
+// CHECK-NEXT:                     "name": "T"
+// CHECK-NEXT:                   },
+// CHECK-NEXT:                   "typeParameters": null
+// CHECK-NEXT:                 }
+// CHECK-NEXT:               ]
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "optional": false
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "this": null,
+// CHECK-NEXT:         "returnType": {
+// CHECK-NEXT:           "type": "VoidTypeAnnotation"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "rest": null,
+// CHECK-NEXT:         "typeParameters": null
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
 type A = (...foo: number) => number;
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "TypeAlias",
