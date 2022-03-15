@@ -165,6 +165,25 @@ std::vector<std::u16string> lookupSupportedLocales(
   // 3. Return subset.
   return subset;
 }
+
+/// https://402.ecma-international.org/8.0/#sec-supportedlocales
+std::vector<std::u16string> supportedLocales(
+    const std::vector<std::u16string> &availableLocales,
+    const std::vector<std::u16string> &requestedLocales) {
+  // 1. Set options to ? CoerceOptionsToObject(options).
+  // 2. Let matcher be ? GetOption(options, "localeMatcher", "string", «
+  //    "lookup", "best fit" », "best fit").
+  // 3. If matcher is "best fit", then
+  //   a. Let supportedLocales be BestFitSupportedLocales(availableLocales,
+  //      requestedLocales).
+  // 4. Else,
+  //   a. Let supportedLocales be LookupSupportedLocales(availableLocales,
+  //      requestedLocales).
+  // 5. Return CreateArrayFromList(supportedLocales).
+
+  // We do not implement a BestFitMatcher, so we can just use LookupMatcher.
+  return lookupSupportedLocales(availableLocales, requestedLocales);
+}
 }
 
 // Implementation of https://tc39.es/ecma402/#sec-canonicalizelocalelist
@@ -302,11 +321,19 @@ struct Collator::Impl {
 Collator::Collator() : impl_(std::make_unique<Impl>()) {}
 Collator::~Collator() {}
 
+/// https://402.ecma-international.org/8.0/#sec-intl.collator.supportedlocalesof
 vm::CallResult<std::vector<std::u16string>> Collator::supportedLocalesOf(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
-  return std::vector<std::u16string>{u"en-CA", u"de-DE"};
+  // 1. Let availableLocales be %Collator%.[[AvailableLocales]].
+  const auto &availableLocales = getAvailableLocales();
+  // 2. Let requestedLocales be ? CanonicalizeLocaleList(locales).
+  auto requestedLocalesRes = canonicalizeLocaleList(runtime, locales);
+  if (LLVM_UNLIKELY(requestedLocalesRes == vm::ExecutionStatus::EXCEPTION))
+    return vm::ExecutionStatus::EXCEPTION;
+  // 3. Return ? SupportedLocales(availableLocales, requestedLocales, options)
+  return supportedLocales(availableLocales, *requestedLocalesRes);
 }
 
 vm::ExecutionStatus Collator::initialize(
