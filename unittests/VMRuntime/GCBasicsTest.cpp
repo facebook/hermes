@@ -289,7 +289,7 @@ TEST_F(GCBasicsTest, WeakRootTest) {
     ASSERT_EQ(wr.get(rt, &gc), *obj);
   }
   rt.collect();
-  ASSERT_EQ(wr.get(rt, &gc), nullptr);
+  ASSERT_TRUE(wr.get(rt, &gc) == nullptr);
 }
 
 TEST_F(GCBasicsTest, VariableSizeRuntimeCellOffsetTest) {

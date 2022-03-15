@@ -222,7 +222,7 @@ TEST(StorageProviderTest, SucceedsWithoutReducing) {
   auto result = vmAllocateAllowLess(8 * MB, 1 * MB, 1 * MB);
   ASSERT_TRUE(result);
   auto memAndSize = result.get();
-  EXPECT_NE(memAndSize.first, nullptr);
+  EXPECT_TRUE(memAndSize.first != nullptr);
   EXPECT_EQ(memAndSize.second, 8 * MB);
 }
 
@@ -233,7 +233,7 @@ TEST(StorageProviderTest, SucceedsAfterReducing) {
     auto result = vmAllocateAllowLess(100 * MB, 25 * MB, 1 * MB);
     ASSERT_TRUE(result);
     auto memAndSize = result.get();
-    EXPECT_NE(memAndSize.first, nullptr);
+    EXPECT_TRUE(memAndSize.first != nullptr);
     EXPECT_GE(memAndSize.second, 25 * MB);
     EXPECT_LE(memAndSize.second, 40 * MB);
   }
@@ -246,7 +246,7 @@ TEST(StorageProviderTest, SucceedsAfterReducing) {
         AlignedStorage::size());
     ASSERT_TRUE(result);
     auto memAndSize = result.get();
-    EXPECT_NE(memAndSize.first, nullptr);
+    EXPECT_TRUE(memAndSize.first != nullptr);
     EXPECT_GE(memAndSize.second, 30 * AlignedStorage::size());
     EXPECT_LE(memAndSize.second, 50 * AlignedStorage::size());
   }

@@ -170,7 +170,7 @@ foo();
   ASSERT_EQ(JSArray::getLength(*arrayToHold, runtime), 500);
 
   JSONObject *root = TAKE_PROFILE(runtime, jsonFactory);
-  ASSERT_NE(root, nullptr);
+  ASSERT_TRUE(root != nullptr);
   const JSONObject &jsonTree = *llvh::cast<JSONObject>(root->at("head"));
   const JSONArray &samples = *llvh::cast<JSONArray>(root->at("samples"));
   EXPECT_NE(jsonTree.size(), 0ul);
@@ -179,7 +179,7 @@ foo();
   // objects were sampled, or what size they'll be. So we'll just test that the
   // correct keys exist, and reference existing nodes in the tree.
   SamplingProfileTree tree{jsonTree};
-  EXPECT_NE(tree.getRoot(), nullptr);
+  EXPECT_TRUE(tree.getRoot() != nullptr);
 
   EXPECT_NE(samples.size(), 0ul) << "Should be at least one sample";
   for (auto it = samples.begin(), end = samples.end(); it != end; ++it) {

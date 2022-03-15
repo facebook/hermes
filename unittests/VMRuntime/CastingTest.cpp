@@ -53,35 +53,35 @@ TEST(CastingTest, SmokeTest) {
   EXPECT_EQ(TAG1, vmcast_or_null<ArrayStorage>(v1)->at(0).getNumber());
   EXPECT_EQ(TAG2, vmcast_or_null<ArrayStorageSmall>(v2)->at(0).getSymbol());
 
-  EXPECT_EQ(nullptr, vmcast_or_null<ArrayStorage>(nullptr));
-  EXPECT_EQ(nullptr, vmcast_or_null<ArrayStorage>(nullv));
+  EXPECT_TRUE(nullptr == vmcast_or_null<ArrayStorage>(nullptr));
+  EXPECT_TRUE(nullptr == vmcast_or_null<ArrayStorage>(nullv));
 
-  EXPECT_NE(nullptr, dyn_vmcast<ArrayStorage>(p1));
-  EXPECT_NE(nullptr, dyn_vmcast<ArrayStorageSmall>(p2));
-  EXPECT_NE(nullptr, dyn_vmcast<ArrayStorage>(v1));
-  EXPECT_NE(nullptr, dyn_vmcast<ArrayStorageSmall>(v2));
+  EXPECT_TRUE(nullptr != dyn_vmcast<ArrayStorage>(p1));
+  EXPECT_TRUE(nullptr != dyn_vmcast<ArrayStorageSmall>(p2));
+  EXPECT_TRUE(nullptr != dyn_vmcast<ArrayStorage>(v1));
+  EXPECT_TRUE(nullptr != dyn_vmcast<ArrayStorageSmall>(v2));
 
-  EXPECT_EQ(nullptr, dyn_vmcast<ArrayStorage>(p2));
-  EXPECT_EQ(nullptr, dyn_vmcast<ArrayStorageSmall>(p1));
-  EXPECT_EQ(nullptr, dyn_vmcast<ArrayStorage>(v2));
-  EXPECT_EQ(nullptr, dyn_vmcast<ArrayStorageSmall>(v1));
+  EXPECT_TRUE(nullptr == dyn_vmcast<ArrayStorage>(p2));
+  EXPECT_TRUE(nullptr == dyn_vmcast<ArrayStorageSmall>(p1));
+  EXPECT_TRUE(nullptr == dyn_vmcast<ArrayStorage>(v2));
+  EXPECT_TRUE(nullptr == dyn_vmcast<ArrayStorageSmall>(v1));
 
   EXPECT_EQ(TAG1, dyn_vmcast<ArrayStorage>(p1)->at(0).getNumber());
   EXPECT_EQ(TAG2, dyn_vmcast<ArrayStorageSmall>(p2)->at(0).getSymbol());
   EXPECT_EQ(TAG1, dyn_vmcast<ArrayStorage>(v1)->at(0).getNumber());
   EXPECT_EQ(TAG2, dyn_vmcast<ArrayStorageSmall>(v2)->at(0).getSymbol());
 
-  EXPECT_NE(nullptr, dyn_vmcast_or_null<ArrayStorage>(p1));
-  EXPECT_NE(nullptr, dyn_vmcast_or_null<ArrayStorageSmall>(p2));
-  EXPECT_NE(nullptr, dyn_vmcast_or_null<ArrayStorage>(v1));
-  EXPECT_NE(nullptr, dyn_vmcast_or_null<ArrayStorageSmall>(v2));
+  EXPECT_TRUE(nullptr != dyn_vmcast_or_null<ArrayStorage>(p1));
+  EXPECT_TRUE(nullptr != dyn_vmcast_or_null<ArrayStorageSmall>(p2));
+  EXPECT_TRUE(nullptr != dyn_vmcast_or_null<ArrayStorage>(v1));
+  EXPECT_TRUE(nullptr != dyn_vmcast_or_null<ArrayStorageSmall>(v2));
 
-  EXPECT_EQ(nullptr, dyn_vmcast_or_null<ArrayStorage>(p2));
-  EXPECT_EQ(nullptr, dyn_vmcast_or_null<ArrayStorageSmall>(p1));
-  EXPECT_EQ(nullptr, dyn_vmcast_or_null<ArrayStorage>(v2));
-  EXPECT_EQ(nullptr, dyn_vmcast_or_null<ArrayStorageSmall>(v1));
-  EXPECT_EQ(nullptr, dyn_vmcast_or_null<ArrayStorage>(nullptr));
-  EXPECT_EQ(nullptr, dyn_vmcast_or_null<ArrayStorage>(nullv));
+  EXPECT_TRUE(nullptr == dyn_vmcast_or_null<ArrayStorage>(p2));
+  EXPECT_TRUE(nullptr == dyn_vmcast_or_null<ArrayStorageSmall>(p1));
+  EXPECT_TRUE(nullptr == dyn_vmcast_or_null<ArrayStorage>(v2));
+  EXPECT_TRUE(nullptr == dyn_vmcast_or_null<ArrayStorageSmall>(v1));
+  EXPECT_TRUE(nullptr == dyn_vmcast_or_null<ArrayStorage>(nullptr));
+  EXPECT_TRUE(nullptr == dyn_vmcast_or_null<ArrayStorage>(nullv));
 
   EXPECT_EQ(TAG1, dyn_vmcast_or_null<ArrayStorage>(p1)->at(0).getNumber());
   EXPECT_EQ(TAG2, dyn_vmcast_or_null<ArrayStorageSmall>(p2)->at(0).getSymbol());

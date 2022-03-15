@@ -452,7 +452,7 @@ TEST(HeapSnapshotTest, HeaderTest) {
   auto &gc = rt.getHeap();
 
   JSONObject *root = TAKE_SNAPSHOT(gc, jsonFactory);
-  ASSERT_NE(root, nullptr);
+  ASSERT_TRUE(root != nullptr);
 
   JSONObject *snapshot = llvh::cast<JSONObject>(root->at("snapshot"));
 
@@ -587,7 +587,7 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
   const auto blockSize = dummy->getAllocatedSize();
 
   JSONObject *root = TAKE_SNAPSHOT(gc, jsonFactory);
-  ASSERT_NE(root, nullptr);
+  ASSERT_TRUE(root != nullptr);
 
   // Check the nodes and edges.
   JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
@@ -704,7 +704,7 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
   JSONFactory::Allocator alloc;
   JSONFactory jsonFactory{alloc};
   JSONObject *root = PARSE_SNAPSHOT(stream.str(), jsonFactory);
-  ASSERT_NE(root, nullptr);
+  ASSERT_TRUE(root != nullptr);
 
   JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
   const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
@@ -749,7 +749,7 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationForLazyCode) {
   const auto funcID = runtime.getHeap().getObjectID(func.get());
 
   JSONObject *root = TAKE_SNAPSHOT(runtime.getHeap(), jsonFactory);
-  ASSERT_NE(root, nullptr);
+  ASSERT_TRUE(root != nullptr);
 
   const JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
   const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
@@ -792,7 +792,7 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationAndNameTest) {
   const auto funcID = runtime.getHeap().getObjectID(func.get());
 
   JSONObject *root = TAKE_SNAPSHOT(runtime.getHeap(), jsonFactory);
-  ASSERT_NE(root, nullptr);
+  ASSERT_TRUE(root != nullptr);
 
   const JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
   const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
@@ -836,7 +836,7 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionDisplayNameTest) {
   const auto funcID = runtime.getHeap().getObjectID(func.get());
 
   JSONObject *root = TAKE_SNAPSHOT(runtime.getHeap(), jsonFactory);
-  ASSERT_NE(root, nullptr);
+  ASSERT_TRUE(root != nullptr);
 
   const JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
   const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
@@ -865,7 +865,7 @@ TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
   ASSERT_FALSE(isException(JSWeakMap::setValue(map, runtime, key, value)));
 
   JSONObject *root = TAKE_SNAPSHOT(runtime.getHeap(), jsonFactory);
-  ASSERT_NE(root, nullptr);
+  ASSERT_TRUE(root != nullptr);
   const JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
   const JSONArray &edges = *llvh::cast<JSONArray>(root->at("edges"));
   const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
@@ -954,7 +954,7 @@ TEST_F(HeapSnapshotRuntimeTest, PropertyUpdatesTest) {
   clazz->clearPropertyMap(&runtime.getHeap());
 
   JSONObject *root = TAKE_SNAPSHOT(runtime.getHeap(), jsonFactory);
-  ASSERT_NE(root, nullptr);
+  ASSERT_TRUE(root != nullptr);
   const JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
   const JSONArray &edges = *llvh::cast<JSONArray>(root->at("edges"));
   const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
@@ -1012,7 +1012,7 @@ TEST_F(HeapSnapshotRuntimeTest, ArrayElements) {
   const auto arrayID = runtime.getHeap().getObjectID(array.get());
 
   JSONObject *root = TAKE_SNAPSHOT(runtime.getHeap(), jsonFactory);
-  ASSERT_NE(root, nullptr);
+  ASSERT_TRUE(root != nullptr);
 
   const JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
   const JSONArray &edges = *llvh::cast<JSONArray>(root->at("edges"));
@@ -1186,7 +1186,7 @@ baz();
       runtime.getHeap().getObjectID(vmcast<JSObject>(barObj->get()));
 
   JSONObject *root = TAKE_SNAPSHOT(runtime.getHeap(), jsonFactory);
-  ASSERT_NE(root, nullptr);
+  ASSERT_TRUE(root != nullptr);
 
   const JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
   const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
@@ -1278,7 +1278,7 @@ objects[0];
   auto objID = runtime.getHeap().getObjectID(*obj);
 
   JSONObject *root = TAKE_SNAPSHOT(runtime.getHeap(), jsonFactory);
-  ASSERT_NE(root, nullptr);
+  ASSERT_TRUE(root != nullptr);
 
   const JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
   const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));

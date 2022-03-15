@@ -644,11 +644,11 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
     PseudoHandle<> accessor = std::move(
         JSObject::getNamedSlotValue(objectCons, runtime, desc).getValue());
     ASSERT_TRUE(accessor->isPointer());
-    ASSERT_NE(accessor->getPointer(), nullptr);
+    ASSERT_TRUE(accessor->getPointer() != nullptr);
 
     auto accessorPtr =
         PseudoHandle<PropertyAccessor>::dyn_vmcast(std::move(accessor));
-    ASSERT_NE(accessorPtr.get(), nullptr);
+    ASSERT_TRUE(accessorPtr.get() != nullptr);
     EXPECT_EQ(
         accessorPtr->getter.get(runtime),
         vmcast<Callable>(toStringFn.getHermesValue()));

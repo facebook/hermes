@@ -41,7 +41,7 @@ TEST_F(BytecodeProviderTest, IdentifierHashesPreserved) {
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
           std::make_unique<Buffer>(&bytecode[0], bytecode.size()))
           .first;
-  ASSERT_NE(nullptr, bcProvider);
+  ASSERT_TRUE(nullptr != bcProvider);
 
   // Run it multiple times.
   // Each time the identifiers are incremented, so we expect the sum to be the

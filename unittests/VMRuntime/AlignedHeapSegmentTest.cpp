@@ -93,7 +93,7 @@ TEST_F(AlignedHeapSegmentTest, FullSize) {
   AllocResult res = s.alloc(s.size());
 
   EXPECT_TRUE(res.success);
-  EXPECT_NE(nullptr, res.ptr);
+  EXPECT_TRUE(nullptr != res.ptr);
 }
 
 TEST_F(AlignedHeapSegmentTest, SmallSize) {
@@ -105,11 +105,11 @@ TEST_F(AlignedHeapSegmentTest, SmallSize) {
 
   AllocResult failed = s.alloc(heapAlignSize(s.available() + 1));
   EXPECT_FALSE(failed.success);
-  EXPECT_EQ(nullptr, failed.ptr);
+  EXPECT_TRUE(nullptr == failed.ptr);
 
   AllocResult res = s.alloc(PS);
   EXPECT_TRUE(res.ptr);
-  EXPECT_NE(nullptr, res.ptr);
+  EXPECT_TRUE(nullptr != res.ptr);
 }
 
 TEST_F(AlignedHeapSegmentTest, ResetLevel) {
