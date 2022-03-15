@@ -64,8 +64,8 @@ const std::u16string &getDefaultLocale() {
   }());
   return *defLocale;
 }
-// Implementer note: This method corresponds roughly to
-// https://tc39.es/ecma402/#sec-bestavailablelocale
+
+/// https://402.ecma-international.org/8.0/#sec-bestavailablelocale
 llvh::Optional<std::u16string> bestAvailableLocale(
     const std::vector<std::u16string> &availableLocales,
     const std::u16string &locale) {
@@ -98,12 +98,11 @@ llvh::Optional<std::u16string> bestAvailableLocale(
   }
 }
 
-// Implementer note: This method corresponds roughly to
-// https://tc39.es/ecma402/#sec-lookupmatcher
 struct LocaleMatch {
   std::u16string locale;
   std::map<std::u16string, std::u16string> extensions;
 };
+/// https://402.ecma-international.org/8.0/#sec-lookupmatcher
 LocaleMatch lookupMatcher(
     const std::vector<std::u16string> &availableLocales,
     const std::vector<std::u16string> &requestedLocales) {
@@ -255,8 +254,7 @@ ResolvedLocale resolveLocale(
   return result;
 }
 
-// Implementer note: This method corresponds roughly to
-// https://402.ecma-international.org/7.0/#sec-lookupsupportedlocales
+/// https://402.ecma-international.org/8.0/#sec-lookupsupportedlocales
 std::vector<std::u16string> lookupSupportedLocales(
     const std::vector<std::u16string> &availableLocales,
     const std::vector<std::u16string> &requestedLocales) {
@@ -301,7 +299,7 @@ std::vector<std::u16string> supportedLocales(
 }
 }
 
-// Implementation of https://tc39.es/ecma402/#sec-canonicalizelocalelist
+/// https://402.ecma-international.org/8.0/#sec-canonicalizelocalelist
 vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales) {
@@ -338,10 +336,12 @@ vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
   return seen;
 }
 
-// https://tc39.es/ecma402/#sec-canonicalizelocalelist
+/// https://402.ecma-international.org/8.0/#sec-intl.getcanonicallocales
 vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales) {
+  // 1. Let ll be ? CanonicalizeLocaleList(locales).
+  // 2. Return CreateArrayFromList(ll).
   return canonicalizeLocaleList(runtime, locales);
 }
 
@@ -377,8 +377,7 @@ vm::CallResult<std::u16string> localeListToLocaleString(
   // 9. If locale is undefined, let locale be "und".
   return locale.getValueOr(u"und");
 }
-// Implementer note: This method corresponds roughly to
-// https://tc39.es/ecma402/#sup-string.prototype.tolocalelowercase
+/// https://402.ecma-international.org/8.0/#sup-string.prototype.tolocalelowercase
 vm::CallResult<std::u16string> toLocaleLowerCase(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
@@ -403,8 +402,7 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
       lowercaseStringWithLocale:[[NSLocale alloc] initWithLocaleIdentifier:L]]);
 }
 
-// Implementer note: This method corresponds roughly to
-// https://tc39.es/ecma402/#sup-string.prototype.tolocaleuppercase
+/// https://402.ecma-international.org/8.0/#sup-string.prototype.tolocaleuppercase
 vm::CallResult<std::u16string> toLocaleUpperCase(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
