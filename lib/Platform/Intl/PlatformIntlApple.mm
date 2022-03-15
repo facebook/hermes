@@ -81,54 +81,28 @@ llvh::Optional<std::u16string> bestAvailableLocale(
   }
 }
 
-// Implementer note: For more information review
-// https://402.ecma-international.org/7.0/#sec-unicode-locale-extension-sequences
-std::u16string toNoUnicodeExtensionsLocale(const std::u16string &locale) {
-  std::vector<std::u16string> subtags;
-  auto s = locale.begin();
-  const auto e = locale.end();
-  while (true) {
-    auto tagEnd = std::find(s, e, u'-');
-    subtags.emplace_back(s, tagEnd);
-    if (tagEnd == e)
-      break;
-    s = tagEnd + 1;
-  }
-  std::u16string result;
-  size_t size = subtags.size();
-  for (size_t i = 0; i < size;) {
-    if (i > 0)
-      result.append(u"-");
-    result.append(subtags[i]);
-    i++;
-    // If next tag is a private marker and there are remaining tags
-    if (subtags[i] == u"u" && i < size - 1)
-      // Skip those tags until you reach end or another singleton subtag
-      while (i < size && subtags[i].size() > 1)
-        i++;
-  }
-  return result;
-}
 // Implementer note: This method corresponds roughly to
 // https://tc39.es/ecma402/#sec-lookupmatcher
 struct LocaleMatch {
   std::u16string locale;
-  std::u16string extension;
+  std::map<std::u16string, std::u16string> extensions;
 };
 LocaleMatch lookupMatcher(
-    const std::vector<std::u16string> &requestedLocales,
-    const std::vector<std::u16string> &availableLocales) {
+    const std::vector<std::u16string> &availableLocales,
+    const std::vector<std::u16string> &requestedLocales) {
   // 1. Let result be a new Record.
   LocaleMatch result;
   // 2. For each element locale of requestedLocales, do
   for (const std::u16string &locale : requestedLocales) {
     // a. Let noExtensionsLocale be the String value that is locale with
     // any Unicode locale extension sequences removed.
-    std::u16string noExtensionsLocale = toNoUnicodeExtensionsLocale(locale);
+    // In practice, we can skip this step because availableLocales never
+    // contains any extensions, so bestAvailableLocale will trim away any
+    // unicode extensions.
     // b. Let availableLocale be BestAvailableLocale(availableLocales,
     // noExtensionsLocale).
     llvh::Optional<std::u16string> availableLocale =
-        bestAvailableLocale(availableLocales, noExtensionsLocale);
+        bestAvailableLocale(availableLocales, locale);
     // c. If availableLocale is not undefined, then
     if (availableLocale) {
       // i. Set result.[[locale]] to availableLocale.
@@ -138,7 +112,8 @@ LocaleMatch lookupMatcher(
       // 1. Let extension be the String value consisting of the substring of
       // the Unicode locale extension sequence within locale.
       // 2. Set result.[[extension]] to extension.
-      result.extension = locale.substr(noExtensionsLocale.length());
+      auto parsed = ParsedLocaleIdentifier::parse(locale);
+      result.extensions = std::move(parsed->unicodeExtensionKeywords);
       // iii. Return result.
       return result;
     }
@@ -159,11 +134,11 @@ std::vector<std::u16string> lookupSupportedLocales(
   for (const std::u16string &locale : requestedLocales) {
     // a. Let noExtensionsLocale be the String value that is locale with all
     // Unicode locale extension sequences removed.
-    std::u16string noExtensionsLocale = toNoUnicodeExtensionsLocale(locale);
+    // We can skip this step, see the comment in lookupMatcher.
     // b. Let availableLocale be BestAvailableLocale(availableLocales,
     // noExtensionsLocale).
     llvh::Optional<std::u16string> availableLocale =
-        bestAvailableLocale(availableLocales, noExtensionsLocale);
+        bestAvailableLocale(availableLocales, locale);
     // c. If availableLocale is not undefined, append locale to the end of
     // subset.
     if (availableLocale) {
@@ -238,9 +213,7 @@ vm::CallResult<std::u16string> localeListToLocaleString(
       : std::move(requestedLocales->front());
   // 6. Let noExtensionsLocale be the String value that is requestedLocale with
   // any Unicode locale extension sequences (6.2.1) removed.
-  std::u16string noExtensionsLocale =
-      toNoUnicodeExtensionsLocale(requestedLocale);
-
+  // We can skip this step, see the comment in lookupMatcher.
   // 7. Let availableLocales be a List with language tags that includes the
   // languages for which the Unicode Character Database contains language
   // sensitive case mappings. Implementations may add additional language tags
@@ -249,7 +222,7 @@ vm::CallResult<std::u16string> localeListToLocaleString(
   // Convert to C++ array for bestAvailableLocale function
   const std::vector<std::u16string> &availableLocales = getAvailableLocales();
   llvh::Optional<std::u16string> locale =
-      bestAvailableLocale(availableLocales, noExtensionsLocale);
+      bestAvailableLocale(availableLocales, requestedLocale);
   // 9. If locale is undefined, let locale be "und".
   return locale.getValueOr(u"und");
 }
