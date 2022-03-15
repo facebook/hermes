@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "hermes/Platform/Intl/BCP47Parser.h"
 #include "hermes/Platform/Intl/PlatformIntl.h"
 
 #import <Foundation/Foundation.h>
@@ -193,13 +194,15 @@ vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
   // 5. Let len be ? ToLength(? Get(O, "length")).
   // 6. Let k be 0.
   // 7. Repeat, while k < len
-  for (std::u16string locale : locales) {
-    // TODO - BCP 47 tag validation
+  for (const auto &locale : locales) {
     // 7.c.vi. Let canonicalizedTag be CanonicalizeUnicodeLocaleId(tag).
-    auto *localeNSString = u16StringToNSString(locale);
-    NSString *canonicalizedTagNSString =
-        [NSLocale canonicalLocaleIdentifierFromString:localeNSString];
-    auto canonicalizedTag = nsStringToU16String(canonicalizedTagNSString);
+    auto parsedOpt = ParsedLocaleIdentifier::parse(locale);
+    if (!parsedOpt)
+      return runtime.raiseRangeError(
+          vm::TwineChar16("Invalid language tag: ") +
+          vm::TwineChar16(locale.c_str()));
+    auto canonicalizedTag = parsedOpt->canonicalize();
+
     // 7.c.vii. If canonicalizedTag is not an element of seen, append
     // canonicalizedTag as the last element of seen.
     if (std::find(seen.begin(), seen.end(), canonicalizedTag) == seen.end()) {
