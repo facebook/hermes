@@ -140,6 +140,121 @@ LocaleMatch lookupMatcher(
   // 5. Return result.
   return result;
 }
+
+struct ResolvedLocale {
+  std::u16string locale;
+  std::u16string dataLocale;
+  std::unordered_map<std::u16string, std::u16string> extensions;
+};
+/// https://402.ecma-international.org/8.0/#sec-resolvelocale
+ResolvedLocale resolveLocale(
+    const std::vector<std::u16string> &availableLocales,
+    const std::vector<std::u16string> &requestedLocales,
+    const std::unordered_map<std::u16string, std::u16string> &options,
+    llvh::ArrayRef<std::u16string> relevantExtensionKeys) {
+  // 1. Let matcher be options.[[localeMatcher]].
+  // 2. If matcher is "lookup", then
+  // a. Let r be LookupMatcher(availableLocales, requestedLocales).
+  // 3. Else,
+  // a. Let r be BestFitMatcher(availableLocales, requestedLocales).
+  auto r = lookupMatcher(availableLocales, requestedLocales);
+  // 4. Let foundLocale be r.[[locale]].
+  auto foundLocale = r.locale;
+  // 5. Let result be a new Record.
+  ResolvedLocale result;
+  // 6. Set result.[[dataLocale]] to foundLocale.
+  result.dataLocale = foundLocale;
+  // 7. If r has an [[extension]] field, then
+  // a. Let components be ! UnicodeExtensionComponents(r.[[extension]]).
+  // b. Let keywords be components.[[Keywords]].
+  // 8. Let supportedExtension be "-u".
+  std::u16string supportedExtension = u"-u";
+  // 9. For each element key of relevantExtensionKeys, do
+  for (const auto &key : relevantExtensionKeys) {
+    // a. Let foundLocaleData be localeData.[[<foundLocale>]].
+    // NOTE: We don't actually have access to the underlying locale data, so we
+    // accept everything and defer to NSLocale.
+    // b. Assert: Type(foundLocaleData) is Record.
+    // c. Let keyLocaleData be foundLocaleData.[[<key>]].
+    // d. Assert: Type(keyLocaleData) is List.
+    // e. Let value be keyLocaleData[0].
+    // f. Assert: Type(value) is either String or Null.
+    // g. Let supportedExtensionAddition be "".
+    // h. If r has an [[extension]] field, then
+    auto extIt = r.extensions.find(key);
+    llvh::Optional<std::u16string> value;
+    std::u16string supportedExtensionAddition;
+    // i. If keywords contains an element whose [[Key]] is the same as key, then
+    if (extIt != r.extensions.end()) {
+      // 1. Let entry be the element of keywords whose [[Key]] is the same as
+      // key.
+      // 2. Let requestedValue be entry.[[Value]].
+      // 3. If requestedValue is not the empty String, then
+      // a. If keyLocaleData contains requestedValue, then
+      // i. Let value be requestedValue.
+      // ii. Let supportedExtensionAddition be the string-concatenation of "-",
+      // key, "-", and value.
+      // 4. Else if keyLocaleData contains "true", then
+      // a. Let value be "true".
+      // b. Let supportedExtensionAddition be the string-concatenation of "-"
+      // and key.
+      supportedExtensionAddition.append(u"-").append(key);
+      if (extIt->second.empty())
+        value = u"true";
+      else {
+        value = extIt->second;
+        supportedExtensionAddition.append(u"-").append(*value);
+      }
+    }
+    // i. If options has a field [[<key>]], then
+    auto optIt = options.find(key);
+    if (optIt != options.end()) {
+      // i. Let optionsValue be options.[[<key>]].
+      std::u16string optionsValue = optIt->second;
+      // ii. Assert: Type(optionsValue) is either String, Undefined, or Null.
+      // iii. If Type(optionsValue) is String, then
+      // 1. Let optionsValue be the string optionsValue after performing the
+      // algorithm steps to transform Unicode extension values to canonical
+      // syntax per Unicode Technical Standard #35 LDML § 3.2.1 Canonical
+      // Unicode Locale Identifiers, treating key as ukey and optionsValue as
+      // uvalue productions.
+      // 2. Let optionsValue be the string optionsValue after performing the
+      // algorithm steps to replace Unicode extension values with their
+      // canonical form per Technical Standard #35 LDML § 3.2.1 Canonical
+      // Unicode Locale Identifiers, treating key as ukey and optionsValue as
+      // uvalue productions
+      // 3. If optionsValue is the empty String, then
+      if (optionsValue.empty()) {
+        // a. Let optionsValue be "true".
+        optionsValue = u"true";
+      }
+      // iv. If keyLocaleData contains optionsValue, then
+      // 1. If SameValue(optionsValue, value) is false, then
+      if (optionsValue != value) {
+        // a. Let value be optionsValue.
+        value = optionsValue;
+        // b. Let supportedExtensionAddition be "".
+        supportedExtensionAddition = u"";
+      }
+    }
+    // j. Set result.[[<key>]] to value.
+    if (value)
+      result.extensions.emplace(key, std::move(*value));
+    // k. Append supportedExtensionAddition to supportedExtension.
+    supportedExtension.append(supportedExtensionAddition);
+  }
+  // 10. If the number of elements in supportedExtension is greater than 2, then
+  if (supportedExtension.size() > 2) {
+    // a. Let foundLocale be InsertUnicodeExtensionAndCanonicalize(foundLocale,
+    // supportedExtension).
+    foundLocale.append(supportedExtension);
+  }
+  // 11. Set result.[[locale]] to foundLocale.
+  result.locale = std::move(foundLocale);
+  // 12. Return result.
+  return result;
+}
+
 // Implementer note: This method corresponds roughly to
 // https://402.ecma-international.org/7.0/#sec-lookupsupportedlocales
 std::vector<std::u16string> lookupSupportedLocales(
