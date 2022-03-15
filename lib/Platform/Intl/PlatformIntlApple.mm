@@ -31,21 +31,38 @@ const std::vector<std::u16string> &getAvailableLocales() {
         [NSLocale availableLocaleIdentifiers];
     // Intentionally leaked to avoid destruction order problems.
     auto *vec = new std::vector<std::u16string>();
-    for (id str in availableLocales)
-      vec->push_back(nsStringToU16String(str));
+    for (id str in availableLocales) {
+      auto u16str = nsStringToU16String(str);
+      // NSLocale sometimes gives locale identifiers with an underscore instead
+      // of a dash. We only consider dashes valid, so fix up any identifiers we
+      // get from NSLocale.
+      std::replace(u16str.begin(), u16str.end(), u'_', u'-');
+      // Some locales may still not be properly canonicalized (e.g. en_US_POSIX
+      // should be en-US-posix).
+      if (auto parsed = ParsedLocaleIdentifier::parse(u16str))
+        vec->push_back(parsed->canonicalize());
+    }
     return vec;
   }();
   return *availableLocales;
 }
-std::u16string getDefaultLocale() {
-  // Environment variable used for testing only
-  const char *testLocale = std::getenv("_HERMES_TEST_LOCALE");
-  if (testLocale) {
-    NSString *nsTestLocale = [NSString stringWithUTF8String:testLocale];
-    return nsStringToU16String(nsTestLocale);
-  }
-  NSString *defLocale = [[NSLocale currentLocale] localeIdentifier];
-  return nsStringToU16String(defLocale);
+const std::u16string &getDefaultLocale() {
+  static const std::u16string *defLocale = new std::u16string([] {
+    // Environment variable used for testing only
+    const char *testLocale = std::getenv("_HERMES_TEST_LOCALE");
+    if (testLocale) {
+      NSString *nsTestLocale = [NSString stringWithUTF8String:testLocale];
+      return nsStringToU16String(nsTestLocale);
+    }
+    NSString *nsDefLocale = [[NSLocale currentLocale] localeIdentifier];
+    auto defLocale = nsStringToU16String(nsDefLocale);
+    // See the comment in getAvailableLocales.
+    std::replace(defLocale.begin(), defLocale.end(), u'_', u'-');
+    if (auto parsed = ParsedLocaleIdentifier::parse(defLocale))
+      return parsed->canonicalize();
+    return std::u16string(u"und");
+  }());
+  return *defLocale;
 }
 // Implementer note: This method corresponds roughly to
 // https://tc39.es/ecma402/#sec-bestavailablelocale
