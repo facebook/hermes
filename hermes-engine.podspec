@@ -24,7 +24,7 @@ Pod::Spec.new do |spec|
   # The podspec would be serialized to JSON and people will download prebuilt binaries instead of the source.
   # TODO(use the hash field as a validation mechanism when the process is stable)
   spec.source      = ENV['hermes-artifact-url'] ? { http: ENV['hermes-artifact-url'] } : { git: "https://github.com/facebook/hermes.git", tag: "v#{spec.version}" }
-  spec.platforms   = { :osx => "10.13", :ios => "12.4" }
+  spec.platforms   = { :osx => "10.13", :ios => "11.0" }
 
   spec.preserve_paths      = ["destroot/bin/*"].concat(HermesHelper::BUILD_TYPE == :debug ? ["**/*.{h,c,cpp}"] : [])
   spec.source_files        = "destroot/include/**/*.h"
