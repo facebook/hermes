@@ -295,8 +295,16 @@ class TypeVisitor extends Visitor {
       currentNode = currentNode.qualification;
     }
 
-    // qualified names can only reference values!
-    this._referencer.currentScope().referenceValue(currentNode);
+    // qualified names *usually* only reference values like
+    //     import * as Foo from 'foo';
+    //     type T = Foo.Bar;
+    // however, it is possible for a module to do something like
+    //     class Class { ... }
+    //     export default { Class }
+    // meaning this is also valid
+    //     import type Foo from 'foo';
+    //     type T = Foo.Class;
+    this._referencer.currentScope().referenceDualValueType(currentNode);
   }
 
   TypeAlias(node: TypeAlias): void {
