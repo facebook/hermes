@@ -56,6 +56,7 @@ import type {
   MetaProperty,
   NewExpression,
   OpaqueType,
+  OptionalCallExpression,
   OptionalMemberExpression,
   PrivateName,
   Program,
@@ -193,6 +194,11 @@ class Referencer extends Visitor {
   ///////////////////
   // Visit helpers //
   ///////////////////
+
+  visitCallExpression(node: CallExpression | OptionalCallExpression): void {
+    this.visitChildren(node, ['typeArguments']);
+    this.visitType(node.typeArguments);
+  }
 
   visitClass(node: ClassDeclaration | ClassExpression): void {
     ClassVisitor.visit(this, node);
@@ -429,8 +435,7 @@ class Referencer extends Visitor {
   }
 
   CallExpression(node: CallExpression): void {
-    this.visitChildren(node, ['typeArguments']);
-    this.visitType(node.typeArguments);
+    this.visitCallExpression(node);
   }
 
   CatchClause(node: CatchClause): void {
@@ -611,6 +616,10 @@ class Referencer extends Visitor {
   NewExpression(node: NewExpression): void {
     this.visitChildren(node, ['typeArguments']);
     this.visitType(node.typeArguments);
+  }
+
+  OptionalCallExpression(node: OptionalCallExpression): void {
+    this.visitCallExpression(node);
   }
 
   OptionalMemberExpression(node: MemberExpression): void {

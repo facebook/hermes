@@ -418,6 +418,42 @@ describe('Identifiers not mistakenly treated as references', () => {
     );
   });
 
+  test('CallExpression', () => {
+    verifyHasReferences(
+      `
+        import Foo from 'Foo';
+        import Bar from 'Bar';
+        import type Baz from 'Baz';
+
+        Foo.Bar<Baz>();
+        Bar<Baz>();
+      `,
+      [
+        {name: 'Foo', count: 1},
+        {name: 'Bar', count: 1},
+        {name: 'Baz', count: 2},
+      ],
+    );
+  });
+
+  test('OptionalCallExpression', () => {
+    verifyHasReferences(
+      `
+        import Foo from 'Foo';
+        import Bar from 'Bar';
+        import type Baz from 'Baz';
+
+        Foo.Bar?.<Baz>();
+        Bar?.<Baz>();
+      `,
+      [
+        {name: 'Foo', count: 1},
+        {name: 'Bar', count: 1},
+        {name: 'Baz', count: 2},
+      ],
+    );
+  });
+
   test('ClassProperty', () => {
     verifyHasReferences(
       `

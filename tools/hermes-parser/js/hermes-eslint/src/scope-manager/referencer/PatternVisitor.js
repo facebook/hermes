@@ -21,6 +21,8 @@ import type {
   ESNode,
   Identifier,
   MemberExpression,
+  OptionalCallExpression,
+  OptionalMemberExpression,
   ObjectPattern,
   Property,
   RestElement,
@@ -78,6 +80,34 @@ class PatternVisitor extends VisitorBase {
     this._typeAnnotationCallback = typeAnnotationCallback;
   }
 
+  //
+  // Helpers
+  //
+
+  visitCallExpression(node: CallExpression | OptionalCallExpression): void {
+    // arguments are right hand nodes.
+    node.arguments.forEach(a => {
+      this.rightHandNodes.push(a);
+    });
+    this.visit(node.callee);
+  }
+
+  visitMemberExpression(
+    node: MemberExpression | OptionalMemberExpression,
+  ): void {
+    // Computed property's key is a right hand node.
+    if (node.computed === true) {
+      this.rightHandNodes.push(node.property);
+    }
+
+    // the object is only read, write to its property.
+    this.rightHandNodes.push(node.object);
+  }
+
+  //
+  // Visitors
+  //
+
   ArrayExpression(node: ArrayExpression): void {
     this.visitArray(node.elements);
   }
@@ -106,11 +136,7 @@ class PatternVisitor extends VisitorBase {
   }
 
   CallExpression(node: CallExpression): void {
-    // arguments are right hand nodes.
-    node.arguments.forEach(a => {
-      this.rightHandNodes.push(a);
-    });
-    this.visit(node.callee);
+    this.visitCallExpression(node);
   }
 
   Identifier(pattern: Identifier): void {
@@ -128,13 +154,15 @@ class PatternVisitor extends VisitorBase {
   }
 
   MemberExpression(node: MemberExpression): void {
-    // Computed property's key is a right hand node.
-    if (node.computed === true) {
-      this.rightHandNodes.push(node.property);
-    }
+    this.visitMemberExpression(node);
+  }
 
-    // the object is only read, write to its property.
-    this.rightHandNodes.push(node.object);
+  OptionalCallExpression(node: OptionalCallExpression): void {
+    this.visitCallExpression(node);
+  }
+
+  OptionalMemberExpression(node: OptionalMemberExpression): void {
+    this.visitMemberExpression(node);
   }
 
   ObjectPattern(pattern: ObjectPattern): void {
