@@ -29,7 +29,8 @@ buildscript {
     hermesC = ""
     for (f in [
         "${hermesHostBuild}/build/ImportHermesc.cmake",
-        "${hermesHostBuild}/build_release/ImportHermesc.cmake"]) {
+        "${hermesHostBuild}/build_release/ImportHermesc.cmake",
+        "${hermesHostBuild}/build_host_hermesc/ImportHermesc.cmake"]) {
       if(file(f).exists()) hermesC = f;
     }
     assert hermesC != "" : "Hermes host build not found"
