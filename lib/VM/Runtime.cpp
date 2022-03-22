@@ -1252,27 +1252,29 @@ ExecutionStatus Runtime::raiseTypeErrorForValue(
       return raiseTypeError(
           msg1 + TwineChar16("'") + vmcast<StringPrimitive>(*value) + "'" +
           msg2);
-    case BoolTag:
-      if (value->getBool()) {
-        return raiseTypeError(msg1 + TwineChar16("true") + msg2);
-      } else {
-        return raiseTypeError(msg1 + TwineChar16("false") + msg2);
+    case BoolSymbolTag:
+      if (value->isBool()) {
+        if (value->getBool()) {
+          return raiseTypeError(msg1 + TwineChar16("true") + msg2);
+        } else {
+          return raiseTypeError(msg1 + TwineChar16("false") + msg2);
+        }
       }
+      break;
     case UndefinedNullTag:
       if (value->isUndefined())
         return raiseTypeError(msg1 + TwineChar16("undefined") + msg2);
       else
         return raiseTypeError(msg1 + TwineChar16("null") + msg2);
-    default:
-      if (value->isNumber()) {
-        char buf[hermes::NUMBER_TO_STRING_BUF_SIZE];
-        size_t len = numberToString(
-            value->getNumber(), buf, hermes::NUMBER_TO_STRING_BUF_SIZE);
-        return raiseTypeError(
-            msg1 + TwineChar16(llvh::StringRef{buf, len}) + msg2);
-      }
-      return raiseTypeError(msg1 + TwineChar16("Value") + msg2);
   }
+
+  if (value->isNumber()) {
+    char buf[hermes::NUMBER_TO_STRING_BUF_SIZE];
+    size_t len = numberToString(
+        value->getNumber(), buf, hermes::NUMBER_TO_STRING_BUF_SIZE);
+    return raiseTypeError(msg1 + TwineChar16(llvh::StringRef{buf, len}) + msg2);
+  }
+  return raiseTypeError(msg1 + TwineChar16("Value") + msg2);
 }
 
 ExecutionStatus Runtime::raiseTypeError(const TwineChar16 &msg) {

@@ -140,14 +140,13 @@ static constexpr TagKind LastTag = 0xffff;
 
 static constexpr TagKind EmptyInvalidTag = FirstTag;
 static constexpr TagKind UndefinedNullTag = FirstTag + 1;
-static constexpr TagKind BoolTag = FirstTag + 2;
-static constexpr TagKind SymbolTag = FirstTag + 3;
+static constexpr TagKind BoolSymbolTag = FirstTag + 2;
 
 // Tags with 48-bit data start here.
-static constexpr TagKind NativeValueTag = FirstTag + 4;
+static constexpr TagKind NativeValueTag = FirstTag + 3;
 
 // Pointer tags start here.
-static constexpr TagKind StrTag = FirstTag + 5;
+static constexpr TagKind StrTag = FirstTag + 4;
 static constexpr TagKind ObjectTag = FirstTag + 6;
 
 static_assert(ObjectTag == LastTag, "Tags mismatch");
@@ -168,8 +167,8 @@ class HermesValue {
 #endif
     Undefined = UndefinedNullTag * 2,
     Null = UndefinedNullTag * 2 + 1,
-    Bool = BoolTag * 2,
-    Symbol = SymbolTag * 2,
+    Bool = BoolSymbolTag * 2,
+    Symbol = BoolSymbolTag * 2 + 1,
     Native1 = NativeValueTag * 2,
     Native2 = NativeValueTag * 2 + 1,
     Str1 = StrTag * 2,
@@ -282,13 +281,13 @@ class HermesValue {
   }
 
   inline static HermesValue encodeSymbolValue(SymbolID val) {
-    HermesValue RV(val.unsafeGetRaw(), SymbolTag);
+    HermesValue RV(val.unsafeGetRaw(), ETag::Symbol);
     assert(RV.isSymbol());
     return RV;
   }
 
   constexpr inline static HermesValue encodeBoolValue(bool val) {
-    return HermesValue((uint64_t)(val), BoolTag);
+    return HermesValue((uint64_t)(val), ETag::Bool);
   }
 
   inline static constexpr HermesValue encodeNullValue() {
@@ -375,10 +374,10 @@ class HermesValue {
     return getTag() == NativeValueTag;
   }
   inline bool isSymbol() const {
-    return getTag() == SymbolTag;
+    return getETag() == ETag::Symbol;
   }
   inline bool isBool() const {
-    return getTag() == BoolTag;
+    return getETag() == ETag::Bool;
   }
   inline bool isObject() const {
     return getTag() == ObjectTag;

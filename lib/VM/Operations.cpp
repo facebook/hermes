@@ -851,11 +851,11 @@ abstractEqualityTailCall:
         // Return true if x and y refer to the same object.
         result = x->getPointer() == y->getPointer();
         break;
-      case BoolTag:
-        result = x->getBool() == y->getBool();
-        break;
-      case SymbolTag:
-        result = x->getSymbol() == y->getSymbol();
+      case BoolSymbolTag:
+        // Return true if x's and y's bits are exactly the same. This works
+        // because the ETag as well as the value (i.e., symbol id, true,
+        // or false) all being encoded in HermesValue's payload.
+        result = x->getRaw() == y->getRaw();
         break;
       default: {
         result = x->getNumber() == y->getNumber();
