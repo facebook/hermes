@@ -68,6 +68,7 @@ import type {
   UpdateExpression,
   VariableDeclaration,
   WithStatement,
+  DeclareModuleExports,
 } from 'hermes-estree';
 import type {ReferenceImplicitGlobal} from './Reference';
 import type {VisitorOptions} from './Visitor';
@@ -763,6 +764,10 @@ class Referencer extends Visitor {
   }
 
   DeclareModule(node: DeclareModule): void {
+    this.visitType(node);
+  }
+
+  DeclareModuleExports(node: DeclareModuleExports): void {
     this.visitType(node);
   }
 

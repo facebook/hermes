@@ -17,6 +17,7 @@ import type {
   DeclareFunction,
   DeclareInterface,
   DeclareModule,
+  DeclareModuleExports,
   DeclareOpaqueType,
   DeclareTypeAlias,
   DeclareVariable,
@@ -182,6 +183,10 @@ class TypeVisitor extends Visitor {
         // also ignore the exported name
       }
     }
+  }
+
+  DeclareModuleExports(node: DeclareModuleExports): void {
+    this.visit(node.typeAnnotation);
   }
 
   DeclareFunction(node: DeclareFunction): void {

@@ -1063,6 +1063,27 @@ describe('Declare statements', () => {
     );
   });
 
+  test('DeclareModuleExports', () => {
+    verifyHasScopes(
+      `
+        import type {Foo} from 'foo';
+        declare module.exports: Foo;
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'Foo',
+              type: DefinitionType.ImportBinding,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ],
+    );
+  });
+
   test('DeclareModule', () => {
     verifyHasScopes(
       `
@@ -1131,7 +1152,7 @@ describe('Declare statements', () => {
     expect(references[1].resolved).toBe(null);
   });
 
-  test('DeclareModuleExports', () => {
+  test('DeclareModule DeclareModuleExports', () => {
     verifyHasScopes(
       `
         import {module, exports} from 'Foo';
@@ -1170,7 +1191,7 @@ describe('Declare statements', () => {
     );
   });
 
-  test('DeclareExportDeclaration', () => {
+  test('DeclareModule DeclareExportDeclaration', () => {
     // Verify that all declare export nodes introduce a definition, with a single
     // additional reference in the declare module body.
     verifyHasScopes(
