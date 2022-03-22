@@ -16,6 +16,7 @@
 
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/WeakRef.h"
+#include "hermes/VM/WeakRoot.h"
 
 #include "llvh/ADT/simple_ilist.h"
 

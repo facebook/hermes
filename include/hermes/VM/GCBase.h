@@ -32,6 +32,7 @@
 #include "hermes/VM/StorageProvider.h"
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/VTable.h"
+#include "hermes/VM/WeakRefSlot.h"
 
 #include "llvh/ADT/ArrayRef.h"
 #include "llvh/ADT/BitVector.h"
@@ -64,112 +65,6 @@ class GCCell;
 #ifdef HERMESVM_GC_RUNTIME
 #define RUNTIME_GC_KINDS GC_KIND(HadesGC)
 #endif
-
-/// This is a single slot in the weak reference table. It contains a pointer to
-/// a GC managed object. The GC will make sure it is updated when the object is
-/// moved; if the object is garbage-collected, the pointer will be cleared.
-class WeakRefSlot {
- public:
-  /// State of this slot for the purpose of reusing slots.
-  enum State {
-    Unmarked = 0, /// Unknown whether this slot is in use by the mutator.
-    Marked, /// Proven to be in use by the mutator.
-    Free /// Proven to NOT be in use by the mutator.
-  };
-
-  // Mutator methods.
-
-  WeakRefSlot(HermesValue v) {
-    reset(v);
-  }
-
-  bool hasValue() const {
-    // An empty value means the pointer has been cleared, and a native value
-    // means it is free.
-    // Don't use state_ here since that can be modified concurrently by the GC.
-    assert(!value_.isNativeValue() && "Should never query a free WeakRef");
-    return !value_.isEmpty();
-  }
-
-  /// Return the object as a HermesValue.
-  const HermesValue value() const {
-    // Cannot check state() here because it can race with marking code.
-    assert(hasValue() && "tried to access collected referent");
-    return value_;
-  }
-
-  // GC methods to update slot when referent moves/dies.
-
-  /// Return true if this slot stores a non-null pointer to something. For any
-  /// slot reachable by the mutator, that something is a GCCell.
-  bool hasPointer() const {
-    return value_.isPointer();
-  }
-
-  /// Return the pointer to a GCCell, whether or not this slot is marked.
-  GCCell *getPointer() const {
-    // Cannot check state() here because it can race with marking code.
-    return static_cast<GCCell *>(value_.getPointer());
-  }
-
-  /// Update the stored pointer (because the object moved).
-  void setPointer(void *newPtr) {
-    // Cannot check state() here because it can race with marking code.
-    value_ = value_.updatePointer(newPtr);
-  }
-
-  /// Clear the pointer (because the object died).
-  void clearPointer() {
-    value_ = HermesValue::encodeEmptyValue();
-  }
-
-  // GC methods to recycle slots.
-
-  State state() const {
-    return state_;
-  }
-
-  void mark() {
-    assert(state() == Unmarked && "already marked");
-    state_ = Marked;
-  }
-
-  void unmark() {
-    assert(state() == Marked && "not yet marked");
-    state_ = Unmarked;
-  }
-
-  void free(WeakRefSlot *nextFree) {
-    assert(state() == Unmarked && "cannot free a reachable slot");
-    state_ = Free;
-    value_ = HermesValue::encodeNativePointer(nextFree);
-    assert(state() == Free);
-  }
-
-  WeakRefSlot *nextFree() const {
-    // nextFree is only called during a STW pause, so it's fine to access both
-    // state and value here.
-    assert(state() == Free);
-    return value_.getNativePointer<WeakRefSlot>();
-  }
-
-  /// Re-initialize a freed slot.
-  void reset(HermesValue v) {
-    static_assert(Unmarked == 0, "unmarked state should not need tagging");
-    state_ = Unmarked;
-    assert(v.isPointer() && "Only pointers are currently supported");
-    value_ = v;
-    assert(state() == Unmarked && "initial state should be unmarked");
-  }
-
- private:
-  // value_ and state_ are read and written by different threads. We rely on
-  // them being independent words so that they can be used without
-  // synchronization.
-  PinnedHermesValue value_;
-  State state_;
-};
-using WeakSlotState = WeakRefSlot::State;
 
 // A specific GC class extend GCBase, and override its virtual functions.
 // In addition, it must implement the following methods:
@@ -1707,35 +1602,6 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const SizeFormatObj &sfo);
 inline SizeFormatObj formatSize(uint64_t size) {
   return {size};
 }
-
-/// This is a concrete base of \c WeakRef<T> that can be passed to concrete
-/// functions in GC.
-class WeakRefBase {
- protected:
-  WeakRefSlot *slot_;
-  WeakRefBase(WeakRefSlot *slot) : slot_(slot) {}
-
- public:
-  /// \return true if the referenced object hasn't been freed.
-  bool isValid() const {
-    return isSlotValid(slot_);
-  }
-
-  /// \return true if the given slot stores a non-empty value.
-  static bool isSlotValid(const WeakRefSlot *slot) {
-    assert(slot && "slot must not be null");
-    return slot->hasValue();
-  }
-
-  /// \return a pointer to the slot used by this WeakRef.
-  /// Used primarily when populating a DenseMap with WeakRef keys.
-  WeakRefSlot *unsafeGetSlot() {
-    return slot_;
-  }
-  const WeakRefSlot *unsafeGetSlot() const {
-    return slot_;
-  }
-};
 
 } // namespace vm
 } // namespace hermes

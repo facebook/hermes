@@ -18,6 +18,35 @@ namespace vm {
 
 class HandleRootOwner;
 
+/// This is a concrete base of \c WeakRef<T> that can be passed to concrete
+/// functions in GC.
+class WeakRefBase {
+ protected:
+  WeakRefSlot *slot_;
+  WeakRefBase(WeakRefSlot *slot) : slot_(slot) {}
+
+ public:
+  /// \return true if the referenced object hasn't been freed.
+  bool isValid() const {
+    return isSlotValid(slot_);
+  }
+
+  /// \return true if the given slot stores a non-empty value.
+  static bool isSlotValid(const WeakRefSlot *slot) {
+    assert(slot && "slot must not be null");
+    return slot->hasValue();
+  }
+
+  /// \return a pointer to the slot used by this WeakRef.
+  /// Used primarily when populating a DenseMap with WeakRef keys.
+  WeakRefSlot *unsafeGetSlot() {
+    return slot_;
+  }
+  const WeakRefSlot *unsafeGetSlot() const {
+    return slot_;
+  }
+};
+
 /// This class encapsulates a weak reference - a reference that does not cause
 /// the object it points to to be retained by the GC. The weak ref is considered
 /// "valid" when the stored value is not an object reference at all (e.g. it is
@@ -107,71 +136,6 @@ getNoHandle(const WeakRef<T> &wr, GC *gc) {
   }
   return nullptr;
 }
-
-/// WeakRoot is used for weak pointers that are stored in roots, and therefore
-/// do not need to take up a WeakRefSlot (since we always know where to update
-/// them). Use protected inheritance to avoid callers casting this to its base
-/// class and accidentally missing the read barrier.
-class WeakRootBase : protected CompressedPointer {
- protected:
-  explicit WeakRootBase() : CompressedPointer(nullptr) {}
-  explicit WeakRootBase(std::nullptr_t) : CompressedPointer(nullptr) {}
-  explicit WeakRootBase(GCCell *ptr, PointerBase &base)
-      : CompressedPointer(CompressedPointer::encode(ptr, base)) {}
-
-  void *get(PointerBase &base, GC *gc) const {
-    GCCell *ptr = CompressedPointer::get(base);
-    gc->weakRefReadBarrier(ptr);
-    return ptr;
-  }
-
- public:
-  using CompressedPointer::StorageType;
-  using CompressedPointer::operator bool;
-  using CompressedPointer::operator!=;
-  using CompressedPointer::operator==;
-
-  /// This function should only be used in cases where it is known that no read
-  /// barrier is necessary.
-  GCCell *getNoBarrierUnsafe(PointerBase &base) {
-    return CompressedPointer::get(base);
-  }
-
-  WeakRootBase &operator=(CompressedPointer ptr) {
-    // No need for a write barrier on weak roots currently.
-    setNoBarrier(ptr);
-    return *this;
-  }
-
-  WeakRootBase &operator=(std::nullptr_t) {
-    // No need for a write barrier on weak roots currently.
-    setNoBarrier(CompressedPointer{nullptr});
-    return *this;
-  }
-};
-
-/// A wrapper around a pointer meant to be used as a weak root. It adds a read
-/// barrier so that the GC is aware when the field is read.
-template <typename T>
-class WeakRoot final : public WeakRootBase {
- public:
-  explicit WeakRoot() : WeakRootBase() {}
-  explicit WeakRoot(std::nullptr_t) : WeakRootBase(nullptr) {}
-  explicit WeakRoot(T *ptr, PointerBase &base) : WeakRootBase(ptr, base) {}
-
-  T *get(PointerBase &base, GC *gc) const {
-    return static_cast<T *>(WeakRootBase::get(base, gc));
-  }
-
-  void set(PointerBase &base, T *ptr) {
-    WeakRootBase::operator=(CompressedPointer::encode(ptr, base));
-  }
-
-  WeakRoot &operator=(CompressedPointer ptr) {
-    WeakRootBase::operator=(ptr);
-    return *this;
-  }
-};
 
 } // namespace vm
 } // namespace hermes

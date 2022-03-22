@@ -10,7 +10,7 @@
 
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/SymbolID.h"
-#include "hermes/VM/WeakRef.h"
+#include "hermes/VM/WeakRoot.h"
 
 namespace hermes {
 namespace vm {

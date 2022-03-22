@@ -11,6 +11,7 @@
 #include "hermes/VM/PointerBase.h"
 #include "hermes/VM/SlotAcceptor.h"
 #include "hermes/VM/WeakRef.h"
+#include "hermes/VM/WeakRoot.h"
 
 namespace hermes {
 namespace vm {
