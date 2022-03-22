@@ -226,9 +226,11 @@ class HermesValue {
     return (ETag)(raw_ >> (kNumDataBits - 1));
   }
 
-  /// Combine two tags into an 8-bit value.
-  inline static constexpr unsigned combineTags(TagKind a, TagKind b) {
-    return ((a & kTagMask) << kTagWidth) | (b & kTagMask);
+  /// Combine two tags into an 10-bit value.
+  inline static constexpr unsigned combineETags(ETag a, ETag b) {
+    unsigned au = static_cast<unsigned>(a);
+    unsigned bu = static_cast<unsigned>(b);
+    return ((au & kETagMask) << kETagWidth) | (bu & kETagMask);
   }
 
   /// Special functions that allow nullptr to be stored in a HermesValue.

@@ -57,21 +57,25 @@ CallResult<Handle<SymbolID>> valueToSymbolID(
 }
 
 HermesValue typeOf(Runtime &runtime, Handle<> valueHandle) {
-  switch (valueHandle->getTag()) {
-    case UndefinedNullTag:
-      return HermesValue::encodeStringValue(runtime.getPredefinedString(
-          valueHandle->isUndefined() ? Predefined::undefined
-                                     : Predefined::object));
-    case StrTag:
+  switch (valueHandle->getETag()) {
+    case HermesValue::ETag::Undefined:
+      return HermesValue::encodeStringValue(
+          runtime.getPredefinedString(Predefined::undefined));
+    case HermesValue::ETag::Null:
+      return HermesValue::encodeStringValue(
+          runtime.getPredefinedString(Predefined::object));
+    case HermesValue::ETag::Str1:
+    case HermesValue::ETag::Str2:
       return HermesValue::encodeStringValue(
           runtime.getPredefinedString(Predefined::string));
-    case BoolTag:
+    case HermesValue::ETag::Bool:
       return HermesValue::encodeStringValue(
           runtime.getPredefinedString(Predefined::boolean));
-    case SymbolTag:
+    case HermesValue::ETag::Symbol:
       return HermesValue::encodeStringValue(
           runtime.getPredefinedString(Predefined::symbol));
-    case ObjectTag:
+    case HermesValue::ETag::Object1:
+    case HermesValue::ETag::Object2:
       if (vmisa<Callable>(*valueHandle))
         return HermesValue::encodeStringValue(
             runtime.getPredefinedString(Predefined::function));
@@ -237,19 +241,27 @@ toPrimitive_RJS(Runtime &runtime, Handle<> valueHandle, PreferredType hint) {
 }
 
 bool toBoolean(HermesValue value) {
-  switch (value.getTag()) {
-    case EmptyInvalidTag:
+  switch (value.getETag()) {
+#ifdef HERMES_SLOW_DEBUG
+    case HermesValue::ETag::Invalid:
+      llvm_unreachable("invalid value");
+#endif // HERMES_SLOW_DEBUG
+    case HermesValue::ETag::Empty:
       llvm_unreachable("empty value");
-    case NativeValueTag:
+    case HermesValue::ETag::Native1:
+    case HermesValue::ETag::Native2:
       llvm_unreachable("native value");
-    case UndefinedNullTag:
+    case HermesValue::ETag::Undefined:
+    case HermesValue::ETag::Null:
       return false;
-    case BoolTag:
+    case HermesValue::ETag::Bool:
       return value.getBool();
-    case SymbolTag:
-    case ObjectTag:
+    case HermesValue::ETag::Symbol:
+    case HermesValue::ETag::Object1:
+    case HermesValue::ETag::Object2:
       return true;
-    case StrTag:
+    case HermesValue::ETag::Str1:
+    case HermesValue::ETag::Str2:
       return value.getString()->getStringLength() != 0;
     default: {
       auto m = value.getNumber();
@@ -314,31 +326,40 @@ CallResult<PseudoHandle<StringPrimitive>> toString_RJS(
     Handle<> valueHandle) {
   HermesValue value = valueHandle.get();
   StringPrimitive *result;
-  switch (value.getTag()) {
-    case EmptyInvalidTag:
+  switch (value.getETag()) {
+#ifdef HERMES_SLOW_DEBUG
+    case HermesValue::ETag::Invalid:
+      llvm_unreachable("invalid value");
+#endif // HERMES_SLOW_DEBUG
+    case HermesValue::ETag::Empty:
       llvm_unreachable("empty value");
-    case NativeValueTag:
+    case HermesValue::ETag::Native1:
+    case HermesValue::ETag::Native2:
       llvm_unreachable("native value");
-    case StrTag:
+    case HermesValue::ETag::Str1:
+    case HermesValue::ETag::Str2:
       result = vmcast<StringPrimitive>(value);
       break;
-    case UndefinedNullTag:
-      result = runtime.getPredefinedString(
-          value.isUndefined() ? Predefined::undefined : Predefined::null);
+    case HermesValue::ETag::Undefined:
+      result = runtime.getPredefinedString(Predefined::undefined);
       break;
-    case BoolTag:
+    case HermesValue::ETag::Null:
+      result = runtime.getPredefinedString(Predefined::null);
+      break;
+    case HermesValue::ETag::Bool:
       result = value.getBool()
           ? runtime.getPredefinedString(Predefined::trueStr)
           : runtime.getPredefinedString(Predefined::falseStr);
       break;
-    case ObjectTag: {
+    case HermesValue::ETag::Object1:
+    case HermesValue::ETag::Object2: {
       auto res = toPrimitive_RJS(runtime, valueHandle, PreferredType::STRING);
       if (res == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
       return toString_RJS(runtime, runtime.makeHandle(res.getValue()));
     }
-    case SymbolTag:
+    case HermesValue::ETag::Symbol:
       return runtime.raiseTypeError("Cannot convert Symbol to string");
     default:
       return numberToString(runtime, value.getNumber());
@@ -462,30 +483,39 @@ static inline double stringToNumber(
 CallResult<HermesValue> toNumber_RJS(Runtime &runtime, Handle<> valueHandle) {
   auto value = valueHandle.get();
   double result;
-  switch (value.getTag()) {
-    case EmptyInvalidTag:
+  switch (value.getETag()) {
+#ifdef HERMES_SLOW_DEBUG
+    case HermesValue::ETag::Invalid:
+      llvm_unreachable("invalid value");
+#endif // HERMES_SLOW_DEBUG
+    case HermesValue::ETag::Empty:
       llvm_unreachable("empty value");
-    case NativeValueTag:
+    case HermesValue::ETag::Native1:
+    case HermesValue::ETag::Native2:
       llvm_unreachable("native value");
-    case ObjectTag: {
+    case HermesValue::ETag::Object1:
+    case HermesValue::ETag::Object2: {
       auto res = toPrimitive_RJS(runtime, valueHandle, PreferredType::NUMBER);
       if (res == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
       return toNumber_RJS(runtime, runtime.makeHandle(res.getValue()));
     }
-    case StrTag:
+    case HermesValue::ETag::Str1:
+    case HermesValue::ETag::Str2:
       result =
           stringToNumber(runtime, Handle<StringPrimitive>::vmcast(valueHandle));
       break;
-    case UndefinedNullTag:
-      result =
-          value.isUndefined() ? std::numeric_limits<double>::quiet_NaN() : +0.0;
+    case HermesValue::ETag::Undefined:
+      result = std::numeric_limits<double>::quiet_NaN();
       break;
-    case BoolTag:
+    case HermesValue::ETag::Null:
+      result = +0.0;
+      break;
+    case HermesValue::ETag::Bool:
       result = value.getBool();
       break;
-    case SymbolTag:
+    case HermesValue::ETag::Symbol:
       return runtime.raiseTypeError("Cannot convert Symbol to number");
     default:
       // Already have a number, just return it.
@@ -652,22 +682,29 @@ CallResult<HermesValue> toUInt32_RJS(Runtime &runtime, Handle<> valueHandle) {
 CallResult<Handle<JSObject>> getPrimitivePrototype(
     Runtime &runtime,
     Handle<> base) {
-  switch (base->getTag()) {
-    case EmptyInvalidTag:
+  switch (base->getETag()) {
+#ifdef HERMES_SLOW_DEBUG
+    case HermesValue::ETag::Invalid:
+      llvm_unreachable("invalid value");
+#endif // HERMES_SLOW_DEBUG
+    case HermesValue::ETag::Empty:
       llvm_unreachable("empty value");
-    case NativeValueTag:
+    case HermesValue::ETag::Native1:
+    case HermesValue::ETag::Native2:
       llvm_unreachable("native value");
-    case ObjectTag:
+    case HermesValue::ETag::Object1:
+    case HermesValue::ETag::Object2:
       llvm_unreachable("object value");
-    case UndefinedNullTag:
-      return runtime.raiseTypeError(
-          base->isUndefined() ? "Cannot convert undefined value to object"
-                              : "Cannot convert null value to object");
-    case StrTag:
+    case HermesValue::ETag::Undefined:
+      return runtime.raiseTypeError("Cannot convert undefined value to object");
+    case HermesValue::ETag::Null:
+      return runtime.raiseTypeError("Cannot convert null value to object");
+    case HermesValue::ETag::Str1:
+    case HermesValue::ETag::Str2:
       return Handle<JSObject>::vmcast(&runtime.stringPrototype);
-    case BoolTag:
+    case HermesValue::ETag::Bool:
       return Handle<JSObject>::vmcast(&runtime.booleanPrototype);
-    case SymbolTag:
+    case HermesValue::ETag::Symbol:
       return Handle<JSObject>::vmcast(&runtime.symbolPrototype);
     default:
       assert(base->isNumber() && "Unknown tag in getPrimitivePrototype.");
@@ -677,24 +714,31 @@ CallResult<Handle<JSObject>> getPrimitivePrototype(
 
 CallResult<HermesValue> toObject(Runtime &runtime, Handle<> valueHandle) {
   auto value = valueHandle.get();
-  switch (value.getTag()) {
-    case EmptyInvalidTag:
+  switch (value.getETag()) {
+#ifdef HERMES_SLOW_DEBUG
+    case HermesValue::ETag::Invalid:
+      llvm_unreachable("invalid value");
+#endif // HERMES_SLOW_DEBUG
+    case HermesValue::ETag::Empty:
       llvm_unreachable("empty value");
-    case NativeValueTag:
+    case HermesValue::ETag::Native1:
+    case HermesValue::ETag::Native2:
       llvm_unreachable("native value");
-    case UndefinedNullTag:
-      return runtime.raiseTypeError(
-          value.isUndefined() ? "Cannot convert undefined value to object"
-                              : "Cannot convert null value to object");
-    case ObjectTag:
+    case HermesValue::ETag::Undefined:
+      return runtime.raiseTypeError("Cannot convert undefined value to object");
+    case HermesValue::ETag::Null:
+      return runtime.raiseTypeError("Cannot convert null value to object");
+    case HermesValue::ETag::Object1:
+    case HermesValue::ETag::Object2:
       return value;
-    case BoolTag:
+    case HermesValue::ETag::Bool:
       return JSBoolean::create(
                  runtime,
                  value.getBool(),
                  Handle<JSObject>::vmcast(&runtime.booleanPrototype))
           .getHermesValue();
-    case StrTag: {
+    case HermesValue::ETag::Str1:
+    case HermesValue::ETag::Str2: {
       auto res = JSString::create(
           runtime,
           runtime.makeHandle(value.getString()),
@@ -704,7 +748,7 @@ CallResult<HermesValue> toObject(Runtime &runtime, Handle<> valueHandle) {
       }
       return res->getHermesValue();
     }
-    case SymbolTag:
+    case HermesValue::ETag::Symbol:
       return JSSymbol::create(
                  runtime,
                  *Handle<SymbolID>::vmcast(valueHandle),
@@ -828,50 +872,87 @@ abstractEqualityTailCall:
   assert(
       !y->isNativeValue() && !y->isEmpty() && "invalid value for comparison");
 
-  constexpr TagKind NumberTag = NativeValueTag;
+  // The following macros are used to generate the switch cases using
+  // HermesValue::combineETags; an S in the name means it is a single ETag
+  // (e.g., ETag::Bool), while M means it is a multi ETag (e.g., ETag::Object1
+  // and ETag::Object2).
+#define CASE_S_S(typeA, typeB)    \
+  case HermesValue::combineETags( \
+      HermesValue::ETag::typeA, HermesValue::ETag::typeB):
 
-  // Tag numbers as numbers, and use default tag values for everything else.
-  TagKind xType = x->isNumber() ? NumberTag : x->getTag();
-  TagKind yType = y->isNumber() ? NumberTag : y->getTag();
+#define CASE_S_M(typeA, typeB) \
+  CASE_S_S(typeA, typeB##1)    \
+  CASE_S_S(typeA, typeB##2)
 
-  switch (HermesValue::combineTags(xType, yType)) {
-    case HermesValue::combineTags(UndefinedNullTag, UndefinedNullTag):
+#define CASE_M_S(typeA, typeB) \
+  CASE_S_S(typeA##1, typeB)    \
+  CASE_S_S(typeA##2, typeB)
+
+#define CASE_M_M(typeA, typeB) \
+  CASE_M_S(typeA, typeB##1)    \
+  CASE_M_S(typeA, typeB##2)
+
+  // NUMBER_TAG is a "virtual" ETag member that is used to tag numbers (which
+  // don't have a tag assigned to them). It reuses ETag::Native1 there will
+  // never be any native values in this part of the code.
+#define NUMBER_TAG Native1
+
+  // Tag numbers as with the "virtual" ETag member NUMBER_TAG, and use default
+  // tag values for everything else.
+  HermesValue::ETag xType =
+      x->isNumber() ? HermesValue::ETag::NUMBER_TAG : x->getETag();
+  HermesValue::ETag yType =
+      y->isNumber() ? HermesValue::ETag::NUMBER_TAG : y->getETag();
+
+  switch (HermesValue::combineETags(xType, yType)) {
+    CASE_S_S(Undefined, Undefined)
+    CASE_S_S(Undefined, Null)
+    CASE_S_S(Null, Undefined)
+    CASE_S_S(Null, Null) {
       return HermesValue::encodeBoolValue(true);
+    }
 
-    case HermesValue::combineTags(NumberTag, StrTag):
+    CASE_S_M(NUMBER_TAG, Str) {
       return HermesValue::encodeBoolValue(
           x->getNumber() ==
           stringToNumber(runtime, Handle<StringPrimitive>::vmcast(y)));
-    case HermesValue::combineTags(StrTag, NumberTag):
+    }
+    CASE_M_S(Str, NUMBER_TAG) {
       return HermesValue::encodeBoolValue(
           stringToNumber(runtime, Handle<StringPrimitive>::vmcast(x)) ==
           y->getNumber());
+    }
 
-    case HermesValue::combineTags(BoolTag, NumberTag):
+    CASE_S_S(Bool, NUMBER_TAG) {
       // Do both conversions and check numerical equality.
       return HermesValue::encodeBoolValue(x->getBool() == y->getNumber());
-    case HermesValue::combineTags(BoolTag, StrTag):
+    }
+    CASE_S_M(Bool, Str) {
       // Do string parsing and check double equality.
       return HermesValue::encodeBoolValue(
           x->getBool() ==
           stringToNumber(runtime, Handle<StringPrimitive>::vmcast(y)));
-    case HermesValue::combineTags(BoolTag, ObjectTag):
+    }
+    CASE_S_M(Bool, Object) {
       x = HermesValue::encodeDoubleValue(x->getBool());
       goto abstractEqualityTailCall;
+    }
 
-    case HermesValue::combineTags(NumberTag, BoolTag):
+    CASE_S_S(NUMBER_TAG, Bool) {
       return HermesValue::encodeBoolValue(x->getNumber() == y->getBool());
-    case HermesValue::combineTags(StrTag, BoolTag):
+    }
+    CASE_M_S(Str, Bool) {
       return HermesValue::encodeBoolValue(
           stringToNumber(runtime, Handle<StringPrimitive>::vmcast(x)) ==
           y->getBool());
-    case HermesValue::combineTags(ObjectTag, BoolTag):
+    }
+    CASE_M_S(Object, Bool) {
       y = HermesValue::encodeDoubleValue(y->getBool());
       goto abstractEqualityTailCall;
-
-    case HermesValue::combineTags(StrTag, ObjectTag):
-    case HermesValue::combineTags(SymbolTag, ObjectTag):
-    case HermesValue::combineTags(NumberTag, ObjectTag): {
+    }
+    CASE_M_M(Str, Object)
+    CASE_S_M(Symbol, Object)
+    CASE_S_M(NUMBER_TAG, Object) {
       auto status = toPrimitive_RJS(runtime, y, PreferredType::NONE);
       if (status == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
@@ -879,9 +960,9 @@ abstractEqualityTailCall:
       y = status.getValue();
       goto abstractEqualityTailCall;
     }
-    case HermesValue::combineTags(ObjectTag, StrTag):
-    case HermesValue::combineTags(ObjectTag, SymbolTag):
-    case HermesValue::combineTags(ObjectTag, NumberTag): {
+    CASE_M_M(Object, Str)
+    CASE_M_S(Object, Symbol)
+    CASE_M_S(Object, NUMBER_TAG) {
       auto status = toPrimitive_RJS(runtime, x, PreferredType::NONE);
       if (status == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
@@ -894,6 +975,12 @@ abstractEqualityTailCall:
       // Final case, return false.
       return HermesValue::encodeBoolValue(false);
   } // namespace vm
+
+#undef CASE_S_S
+#undef CASE_S_M
+#undef CASE_M_S
+#undef CASE_M_M
+#undef NUMBER_TAG
 } // namespace hermes
 
 bool strictEqualityTest(HermesValue x, HermesValue y) {
