@@ -194,6 +194,12 @@ DEFINE_OPCODE_3(BitXor, Reg8, Reg8, Reg8)
 /// Arg1 = Arg2 | Arg3 (JS bitwise OR)
 DEFINE_OPCODE_3(BitOr, Reg8, Reg8, Reg8)
 
+/// Arg1 = Arg2 + 1 (JS increment, skips number check)
+DEFINE_OPCODE_2(Inc, Reg8, Reg8)
+
+/// Arg1 = Arg2 - 1 (JS decrement, skips number check)
+DEFINE_OPCODE_2(Dec, Reg8, Reg8)
+
 /// Check whether Arg2 contains Arg3 in its prototype chain.
 /// Note that this is not the same as JS instanceof.
 /// Pseudocode: Arg1 = prototypechain(Arg2).contains(Arg3)

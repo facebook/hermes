@@ -425,6 +425,14 @@ void HBCISel::generateUnaryOperatorInst(
       BCFGen_->emitLoadConstUndefined(resReg);
       break;
     }
+    case OpKind::IncKind: { // ++
+      BCFGen_->emitInc(resReg, opReg);
+      break;
+    }
+    case OpKind::DecKind: { // --
+      BCFGen_->emitDec(resReg, opReg);
+      break;
+    }
     default:
       llvm_unreachable("Can't handle this operation");
       break;

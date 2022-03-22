@@ -1221,6 +1221,14 @@ tailCall:
     DISPATCH;                                                            \
   }
 
+#define INCDECOP(name, oper)                                            \
+  CASE(name) {                                                          \
+    O1REG(name) =                                                       \
+        HermesValue::encodeDoubleValue(O2REG(name).getNumber() oper 1); \
+    ip = NEXTINST(name);                                                \
+    DISPATCH;                                                           \
+  }
+
 /// Implement a shift instruction with a fast path where both
 /// operands are numbers.
 /// \param name the name of the instruction.
@@ -2797,6 +2805,8 @@ tailCall:
           ip = NEXTINST(JmpUndefinedLong);
         DISPATCH;
       }
+      INCDECOP(Inc, +)
+      INCDECOP(Dec, -)
       CASE(Add) {
         if (LLVM_LIKELY(
                 O2REG(Add).isNumber() &&

@@ -1487,6 +1487,8 @@ class UnaryOperatorInst : public SingleOperandInst {
     MinusKind, // -
     TildeKind, // ~
     BangKind, // !
+    IncKind, // + 1
+    DecKind, // - 1
     LAST_OPCODE
   };
 

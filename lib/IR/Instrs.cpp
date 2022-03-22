@@ -53,7 +53,7 @@ bool hermes::isSideEffectFree(Type T) {
 }
 
 const char *UnaryOperatorInst::opStringRepr[] =
-    {"delete", "void", "typeof", "+", "-", "~", "!"};
+    {"delete", "void", "typeof", "+", "-", "~", "!", "++", "--"};
 
 const char *BinaryOperatorInst::opStringRepr[] = {
     "",   "==", "!=",  "===", "!==", "<", "<=", ">",         ">=",

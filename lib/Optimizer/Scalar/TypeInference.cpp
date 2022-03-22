@@ -78,6 +78,8 @@ static bool inferUnaryInst(UnaryOperatorInst *UOI) {
       return true;
     case OpKind::PlusKind: // +
     case OpKind::MinusKind: // -
+    case OpKind::IncKind: // ++
+    case OpKind::DecKind: // --
       UOI->setType(Type::createNumber());
       return true;
     case OpKind::TildeKind: // ~
