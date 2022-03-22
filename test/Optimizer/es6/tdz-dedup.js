@@ -74,7 +74,7 @@ function check_after_check() {
 //CHECK-NEXT:  %1 = LoadFrameInst [x@check_after_check]
 //CHECK-NEXT:  %2 = ThrowIfEmptyInst %1
 //CHECK-NEXT:  %3 = AsNumberInst %2
-//CHECK-NEXT:  %4 = BinaryOperatorInst '+', %3 : number, 1 : number
+//CHECK-NEXT:  %4 = UnaryOperatorInst '++', %3 : number
 //CHECK-NEXT:  %5 = LoadFrameInst [x@check_after_check]
 //CHECK-NEXT:  %6 = ThrowIfEmptyInst %5
 //CHECK-NEXT:  %7 = StoreFrameInst %4, [x@check_after_check]
@@ -84,7 +84,7 @@ function check_after_check() {
 //CHECK-NEXT:  %10 = LoadFrameInst [x@check_after_check]
 //CHECK-NEXT:  %11 = ThrowIfEmptyInst %10
 //CHECK-NEXT:  %12 = AsNumberInst %11
-//CHECK-NEXT:  %13 = BinaryOperatorInst '+', %12 : number, 1 : number
+//CHECK-NEXT:  %13 = UnaryOperatorInst '++', %12 : number
 //CHECK-NEXT:  %14 = LoadFrameInst [x@check_after_check]
 //CHECK-NEXT:  %15 = ThrowIfEmptyInst %14
 //CHECK-NEXT:  %16 = StoreFrameInst %13, [x@check_after_check]
@@ -106,14 +106,14 @@ function check_after_check() {
 //CHKOPT-NEXT:  %1 = LoadFrameInst [x@check_after_check]
 //CHKOPT-NEXT:  %2 = ThrowIfEmptyInst %1
 //CHKOPT-NEXT:  %3 = AsNumberInst %2 : undefined|null|boolean|string|number|object|closure|regexp
-//CHKOPT-NEXT:  %4 = BinaryOperatorInst '+', %3 : number, 1 : number
+//CHKOPT-NEXT:  %4 = UnaryOperatorInst '++', %3 : number
 //CHKOPT-NEXT:  %5 = StoreFrameInst %4 : number, [x@check_after_check]
 //CHKOPT-NEXT:  %6 = LoadFrameInst [p]
 //CHKOPT-NEXT:  %7 = CondBranchInst %6, %BB1, %BB2
 //CHKOPT-NEXT:%BB1:
 //CHKOPT-NEXT:  %8 = LoadFrameInst [x@check_after_check]
 //CHKOPT-NEXT:  %9 = AsNumberInst %8
-//CHKOPT-NEXT:  %10 = BinaryOperatorInst '+', %9 : number, 1 : number
+//CHKOPT-NEXT:  %10 = UnaryOperatorInst '++', %9 : number
 //CHKOPT-NEXT:  %11 = StoreFrameInst %10 : number, [x@check_after_check]
 //CHKOPT-NEXT:  %12 = BranchInst %BB3
 //CHKOPT-NEXT:%BB2:

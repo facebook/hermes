@@ -24,4 +24,3 @@ function foo() {
 }
 
 foo()
-
